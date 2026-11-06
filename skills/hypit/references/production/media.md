@@ -203,31 +203,18 @@ consumer needs that Segment's boundaries. The alignment contributes the real Seg
 identities and no Tokens; the media Extent can construct Timeline without it. A silent action inside
 that passage needs its own authored or measured event if another component must respond to it.
 
-## Give a still a duration when that is its role
+## Give a still duration at the occurrence that uses it
 
-A still B-roll Clip already occupies an authored Window. To make one or several images into a
-time-bearing clip, use StillVideo:
-
-```svml
-<import as="mediaop" from="@hypit/media-operations@1"/>
-
-<mediaop:StillVideo id="opening-still" source={product} duration="6s" clock={clock}/>
-<media:Video id="opening-media" source={opening-still.video}
-   audio="none" />
-```
-
-StillVideo produces a video-only Blob. Multiple `media:Still` children divide the authored
-duration by their optional weights. Preparation then makes that clip usable as prepared moving
-media. Choose it when one or more held images need to become a time-bearing video Artifact; its role
-is assigned by the downstream Source relationships just like any other video.
+A still picture does not become video merely because it remains visible for a while. Keep the image
+as an image and give its audiovisual occurrence an authored Window. The renderer samples that Picture
+for the requested programme time. Do not manufacture a frame-rate-bearing MP4 as an intermediate.
 
 ## Extract material explicitly; keep timing edits in the occurrence
 
-```svml
-<mediaop:ExtractAudio id="voice-reference" source={performance} audio="default"/>
-<mediaop:ExtractFrame id="frame-reference" source={performance}
-  video="primary-moving" at="last"/>
-```
+Use the `hypit media` file tools when the selected source is already an ordinary project file. When
+an upstream graph result must directly feed another model, a project component can request Media's
+audio or frame materialization capability; stream selection and extraction belong to Media rather
+than a generic root transformation language.
 
 Trim, retime, reverse, loop, hold and speed curves belong to the Film/NLE occurrence that uses the
 Media. Compose them there into that use's target-to-source relation; do not publish another

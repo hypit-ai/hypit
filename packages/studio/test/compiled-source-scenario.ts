@@ -11,6 +11,7 @@ export function compiledSourceScenario(input: {
 }): CompiledSource {
   const provenance = input.recordNames?.length ? [{
     id: "scenario::element",
+    source: "main.svml",
     sourceName: "main.svml",
     range: { start: 0, end: 1 },
     records: input.recordNames,

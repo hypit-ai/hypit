@@ -1,0 +1,159 @@
+module prompt from "@hypit/prompt@1"
+
+prompt.Template "call-v1" {
+  separator: paragraph
+
+  fixed "base" {
+    text: <<PROMPT
+Create a realistic vertical edited two-person video-call clip from two final video-call interface reference images.
+    PROMPT
+  }
+
+  fixed "reference" {
+    text: <<PROMPT
+REFERENCE CONTRACT: @image1 has Host A in the main tile and Host B in the picture-in-picture tile; @image2 reverses those roles. Preserve identity, outfit, rooms, lighting, webcam perspective, interface layout, borders, controls, and geometry.
+    PROMPT
+  }
+
+  fixed "live" {
+    text: <<PROMPT
+LIVE TILE CONTRACT: both tiles are live feeds. The speaker has richer face and body action; the other participant stays silent but responsive.
+    PROMPT
+  }
+
+  fixed "speaker" {
+    text: "SPEAKER MAP: follow A: and B: exactly. A: uses @image1 as the visible call view; B: uses @image2."
+  }
+
+  fixed "voice" {
+    text: <<PROMPT
+VOICE MAP: Host A uses @audio1 and speaks only A: lines. Host B uses @audio2 and speaks only B: lines.
+    PROMPT
+  }
+
+  choose "framing" {
+    default: locked-view
+
+    option "locked-view" {
+      text: "FRAMING: preserve the exact baseline call layout, crop, scale, and tile relationship."
+    }
+
+    option "soft-push-in" {
+      text: "FRAMING: use one subtle digital push-in inside the main tile, then return to baseline."
+    }
+
+    option "emphasis-closeup" {
+      text: "FRAMING: use one modest emphasis close-up inside the main tile while preserving the call UI."
+    }
+  }
+
+  choose "edit-language" {
+    default: speaker-cuts
+
+    option "speaker-cuts" {
+      text: "CUT PATTERN: speaker-following reverse views; the current speaker occupies the main tile."
+    }
+
+    option "reaction-cuts" {
+      text: <<PROMPT
+CUT PATTERN: add brief listener-view reaction cutaways during longer explanations, then return to the speaker.
+      PROMPT
+    }
+  }
+
+  choose "pacing" {
+    default: compact
+
+    option "measured" {
+      text: "PACING: measured; each line finishes cleanly before a short natural response beat."
+    }
+
+    option "compact" {
+      text: "PACING: compact responsive handoffs with enough articulation for every line."
+    }
+
+    option "rapid-banter" {
+      text: "PACING: rapid banter with interruption-like momentum while remaining intelligible."
+    }
+
+    option "varied-emphasis" {
+      text: "PACING: compact overall, slowing slightly for important names, numbers, doubts, and payoffs."
+    }
+  }
+
+  choose "performance" {
+    default: natural-banter
+
+    option "natural-banter" {
+      text: "PERFORMANCE: natural responsive video-call banter."
+    }
+
+    option "high-energy" {
+      text: "PERFORMANCE: vivid, quick, expressive short-form video-call energy."
+    }
+
+    option "calm-expert" {
+      text: "PERFORMANCE: composed, precise, trustworthy expert discussion."
+    }
+
+    option "playful-skeptic" {
+      text: "PERFORMANCE: playful skeptical chemistry with teasing smiles and amused disbelief."
+    }
+  }
+
+  choose "reaction" {
+    default: active-listening
+
+    option "subtle-listening" {
+      text: "EXPRESSION: both tiles stay alive through tiny nods, eye focus, breath, and small changes."
+    }
+
+    option "active-listening" {
+      text: "EXPRESSION: both tiles track the conversation with nods, smiles, and readable facial shifts."
+    }
+
+    option "skeptical-reacts" {
+      text: "EXPRESSION: skeptical eyebrows, amused disbelief, tiny laughs, and attentive eye movement."
+    }
+
+    option "big-reacts" {
+      text: "EXPRESSION: lively surprise, laughter, disbelief, and recognition while remaining coherent."
+    }
+  }
+
+  choose "gesture" {
+    default: natural
+
+    option "restrained" {
+      text: "GESTURE: restrained on-camera body language with very small hand beats."
+    }
+
+    option "compact" {
+      text: "GESTURE: compact semantic gestures kept inside each tile."
+    }
+
+    option "natural" {
+      text: "GESTURE: natural open palms, small points, nods, and posture shifts."
+    }
+
+    option "expressive" {
+      text: "GESTURE: richer hand, shoulder, posture, and face changes within the call framing."
+    }
+  }
+
+  fixed "hygiene" {
+    text: <<PROMPT
+AUDIO AND TEXTURE: clean dialogue and realistic screen-recorded call footage. Add no subtitles, captions, chat bubbles, notification cards, or readable overlays; preserve interface elements already present in the references.
+    PROMPT
+  }
+
+  slot "dialogue" {
+    required: true
+    label: "DIALOGUE SCRIPT TO DELIVER:"
+  }
+
+  slot "action" {
+    required: false
+    label: "ACTION DIRECTION:"
+  }
+}

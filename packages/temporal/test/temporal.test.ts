@@ -5,6 +5,7 @@ import {
   composeTemporalMaps,
   createTemporalMapEvaluator,
   evaluateTemporalMap,
+  exactTemporalValueFromExtent,
   exactTemporalValueFromFrames,
   frameSampleBoundary,
   frameSpanSamples,
@@ -13,6 +14,8 @@ import {
   moduloExactTemporalValue,
   parseTemporalRelationFields,
   parseTemporalCubicRelationFields,
+  preimageTemporalMap,
+  preimageTemporalMapRegions,
   resolveTemporalBoundary,
   resolveExactTemporalRelation,
   resolveTemporalRelation,
@@ -20,6 +23,8 @@ import {
   temporalDurationInSamples,
   temporalExtentFromDomain,
   temporalMapMayContain,
+  temporalMapPointRegionSet,
+  uniqueTemporalMapRegionSetPoint,
 } from "../src/index.js";
 
 const timeline = { id: "film", frameRate: { numerator: 30, denominator: 1 }, frameCount: 300 };
@@ -67,6 +72,7 @@ test("TemporalExtent preserves an exact unpositioned duration without owning a C
     id: "voice-local", duration: exactTemporalValueFromFrames(90, timeline),
   });
   assert.deepEqual(extent, { duration: { ticks: "3", timeBase: { numerator: 1, denominator: 1 } } });
+  assert.deepEqual(exactTemporalValueFromExtent(extent), extent.duration);
   assert.equal(resolveTemporalBoundary(extent.duration, timeline, "exact"), 90);
   assert.equal(resolveTemporalBoundary(extent.duration,
     { frameRate: { numerator: 24, denominator: 1 } }, "exact"), 72);
@@ -354,4 +360,115 @@ test("frame and authored durations enter one exact sample-boundary rule", () => 
   assert.equal(temporalDurationInSamples(frames(15), ntsc), 24_024);
   assert.equal(temporalDurationInSamples({ unit: "milliseconds", value: 125 }, ntsc), 6_000);
   assert.equal(temporalDurationInSamples(seconds(1, 3), ntsc), 16_000);
+});
+
+test("Temporal Map preimage returns every exact loop solution without sampling time", () => {
+  const value = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } } as const);
+  const target = { id: "loop-occurrence", duration: value("4") };
+  const source = { id: "loop-source", duration: value("2") };
+  const map = sealTemporalMap({ stages: [{ target, source, pieces: [{
+    target: { start: value("0"), end: target.duration },
+    sourceAtStart: value("0"), rate: { numerator: 1, denominator: 1 },
+    wrap: { start: value("0"), end: source.duration },
+  }] }] });
+  const anchor = { position: value("1"), side: "after" as const };
+  assert.deepEqual(preimageTemporalMap(map, { start: anchor, end: anchor }), {
+    domain: target,
+    regions: [value("1"), value("3")].map((position) => ({
+      start: { position, side: "after" }, end: { position, side: "after" },
+    })),
+  });
+  const seam = { position: source.duration, side: "before" as const };
+  assert.deepEqual(preimageTemporalMap(map, { start: seam, end: seam }).regions, [
+    { start: { position: value("2"), side: "before" }, end: { position: value("2"), side: "before" } },
+    { start: { position: value("4"), side: "before" }, end: { position: value("4"), side: "before" } },
+  ]);
+  const reverse = sealTemporalMap({ stages: [{ target, source, pieces: [{
+    target: { start: value("0"), end: target.duration },
+    sourceAtStart: source.duration, rate: { numerator: -1, denominator: 1 },
+    wrap: { start: value("0"), end: source.duration },
+  }] }] });
+  const reverseAnchor = { position: value("1"), side: "before" as const };
+  assert.deepEqual(preimageTemporalMap(reverse, { start: reverseAnchor, end: reverseAnchor }).regions,
+    [value("1"), value("3")].map((position) => ({
+      start: { position, side: "after" }, end: { position, side: "after" },
+    })));
+});
+
+test("Temporal Map preimage maps an exact source region back through rational rate", () => {
+  const value = (ticks: string, denominator = 1) => ({ ticks, timeBase: { numerator: 1, denominator } });
+  const target = { id: "rate-target", duration: value("2") };
+  const source = { id: "rate-source", duration: value("4") };
+  const map = sealTemporalMap({ stages: [{ target, source, pieces: [{
+    target: { start: value("0"), end: target.duration },
+    sourceAtStart: value("0"), rate: { numerator: 2, denominator: 1 },
+  }] }] });
+  assert.deepEqual(preimageTemporalMap(map, {
+    start: { position: value("1"), side: "after" },
+    end: { position: value("3"), side: "before" },
+  }).regions, [{
+    start: { position: value("1", 2), side: "after" },
+    end: { position: value("3", 2), side: "before" },
+  }]);
+});
+
+test("domain-bearing temporal events reject an unrelated Map source domain", () => {
+  const value = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } } as const);
+  const target = { id: "event-target", duration: value("4") };
+  const source = { id: "event-source", duration: value("4") };
+  const map = identityTemporalMap(source);
+  const point = { position: value("2"), side: "after" as const };
+  const event = temporalMapPointRegionSet(source, point);
+  assert.deepEqual(uniqueTemporalMapRegionSetPoint(preimageTemporalMapRegions(map, event)), point);
+  assert.throws(() => preimageTemporalMapRegions(map, {
+    ...event, domain: { ...target, id: "different-source" },
+  }), /not source domain/u);
+});
+
+test("Temporal Map preimage carries a hold region exactly through a reverse stage", () => {
+  const value = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } } as const);
+  const parent = { id: "preimage-parent", duration: value("8") };
+  const occurrence = { id: "preimage-occurrence", duration: value("8") };
+  const source = { id: "preimage-source", duration: value("10") };
+  const reverse = sealTemporalMap({ stages: [{ target: parent, source: occurrence, pieces: [{
+    target: { start: value("0"), end: parent.duration },
+    sourceAtStart: occurrence.duration, rate: { numerator: -1, denominator: 1 },
+  }] }] });
+  const selection = sealTemporalMap({ stages: [{ target: occurrence, source, pieces: [
+    { target: { start: value("0"), end: value("2") },
+      sourceAtStart: value("1"), rate: { numerator: 1, denominator: 1 } },
+    { target: { start: value("2"), end: value("4") },
+      sourceAtStart: value("5"), rate: { numerator: 0, denominator: 1 } },
+    { target: { start: value("4"), end: value("8") },
+      sourceAtStart: value("0"), rate: { numerator: 1, denominator: 1 },
+      wrap: { start: value("0"), end: value("2") } },
+  ] }] });
+  const held = { position: value("5"), side: "after" as const };
+  assert.deepEqual(preimageTemporalMap(composeTemporalMaps(reverse, selection), {
+    start: held, end: held,
+  }), {
+    domain: parent,
+    regions: [{
+      start: { position: value("4"), side: "after" },
+      end: { position: value("6"), side: "before" },
+    }],
+  });
+  const missing = { position: value("9"), side: "after" as const };
+  assert.deepEqual(preimageTemporalMap(composeTemporalMaps(reverse, selection), {
+    start: missing, end: missing,
+  }).regions, []);
+});
+
+test("Temporal Map preimage refuses to disguise an inexact cubic root as exact time", () => {
+  const value = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } } as const);
+  const target = { id: "cubic-target", duration: value("2") };
+  const source = { id: "cubic-source", duration: value("2") };
+  const map = sealTemporalMap({ stages: [{ target, source, pieces: [{
+    target: { start: value("0"), end: target.duration },
+    sourceAtStart: value("0"), sourceControl1: value("0"),
+    sourceControl2: value("2"), sourceAtEnd: value("2"),
+  }] }] });
+  const anchor = { position: value("1"), side: "after" as const };
+  assert.throws(() => preimageTemporalMap(map, { start: anchor, end: anchor }),
+    /does not approximate cubic roots/u);
 });

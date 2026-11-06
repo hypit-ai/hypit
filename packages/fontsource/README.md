@@ -3,14 +3,15 @@
 This package adapts font packages already selected by an authored project's ordinary
 `package.json` and lockfile into Hypit's generic `FontArtifactRef` value.
 
-```xml
-<import module="@hypit/fontsource@1" as="fontsource"/>
-<fontsource:Face
-  id="inter"
-  package="@fontsource-variable/inter"
-  weight="700"
-  style="normal"
-/>
+```svml
+module fontsource from "@hypit/fontsource@1"
+
+fontsource.face {
+  id: inter
+  package: "@fontsource-variable/inter"
+  weight: 700
+  style: normal
+}
 ```
 
 The official `@hypit/hypit` Distribution supplies this adapter as an ordinary versioned dependency.

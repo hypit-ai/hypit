@@ -2,16 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { audioType, pictureType } from "@hypit/audiovisual";
-import { prepareMedia, SRGB_STRAIGHT_PICTURE } from "@hypit/media";
-import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
+import { prepareMedia } from "@hypit/media";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
   audiovisualMediaComponent,
   audiovisualMediaProducers,
+  audiovisualMediaSourceAuthorDeclaration,
   programSourceFromPreparedMedia,
-  programSourceFromStillPicture,
-  resolveStillPictureSource,
 } from "../src/index.js";
 
 const timestamp = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1_000 } });
@@ -65,43 +63,66 @@ test("the adapter Producer publishes the same factual ProgramSource", async () =
   assert.deepEqual(result.value, programSourceFromPreparedMedia(media));
 });
 
-test("a still picture becomes a constant Picture Source without a fabricated clock", async () => {
-  const spec = {
-    id: "poster",
-    space: sealLocalSpatialDomain({
-      id: "poster:pixels",
-      region: { x: 0, y: 0, width: 1200, height: 1600 },
-    }),
+test("the package-owned Source declaration exposes PreparedMedia to Program authoring", async () => {
+  const declaration = {
+    module: { name: "@hypit/audiovisual-media", version: "1" },
+    name: "Source",
+    label: "a-roll",
+    fields: [{ name: "media", value: { kind: "reference" as const, path: "generated.source" } }],
+    children: [],
+    range: { start: 0, end: 1 },
   };
+  assert.deepEqual(audiovisualMediaSourceAuthorDeclaration.bindings(declaration, { sourceName: "main.svml" }), [{
+    name: "a-roll",
+    ref: { kind: "component-output", component: "a-roll:media-source", output: "source" },
+    type: { module: { name: "@hypit/audiovisual", version: "1" }, name: "ProgramSource" },
+  }]);
+  const compiled = await audiovisualMediaSourceAuthorDeclaration.compile({
+    sourceName: "main.svml",
+    declaration,
+    resolveReference: (path) => path === "generated.source" ? {
+      ref: { kind: "component-output", component: "generated-media", output: "source" },
+      type: { module: { name: "@hypit/media", version: "1" }, name: "PreparedMedia" },
+    } : undefined,
+    resolveAsset: () => { throw new Error("unused"); },
+    readAsset: () => { throw new Error("unused"); },
+  });
+  assert.equal(compiled.components[0]?.id, "a-roll:media-source");
+  assert.deepEqual(compiled.components[0]?.inputs.media,
+    { kind: "component-output", component: "generated-media", output: "source" });
+});
+
+test("a still image PreparedMedia becomes a constant Picture Source without a fabricated clock", async () => {
   const artifact = {
     kind: "blob" as const,
     resource: fixtureResource("audiovisual-media:poster"),
     size: 1,
     mediaType: "image/png",
   };
-  const picture = resolveStillPictureSource(spec, artifact, SRGB_STRAIGHT_PICTURE);
-  const source = programSourceFromStillPicture(picture);
+  const media = prepareMedia({
+    id: "poster", source: artifact,
+    inspection: { streams: [{
+      kind: "video", index: 0, codecName: "png",
+      disposition: { default: true, attachedPicture: false }, decodedUnitCount: 1,
+      width: 1200, height: 1600, sampleAspectRatio: { numerator: 1, denominator: 1 },
+      rotationDegrees: 0, picture: { colorPrimaries: "bt709", colorTransfer: "srgb",
+        colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" },
+    }] },
+    selection: { videoStreamIndex: 0, picture: { colorPrimaries: "bt709", colorTransfer: "srgb",
+      colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } },
+  });
+  const source = programSourceFromPreparedMedia(media);
   assert.equal(source.id, "poster");
   assert.deepEqual(source.outputs, { picture: {
     kind: "constant",
     type: pictureType,
-    spatialDomain: spec.space,
+    spatialDomain: { id: "poster:picture", region: { x: 0, y: 0, width: 1200, height: 1600 } },
   } });
   assert.equal("domain" in source.outputs.picture!, false);
 
-  const producer = (name: string) => audiovisualMediaComponent.producers.find((candidate) =>
-    candidate.producer.name === name)!;
-  const resolved = await producer(audiovisualMediaProducers.resolveStillPicture.name).handler({
-    inputs: {
-      spec: { value: spec as never },
-      artifact: { value: artifact as never },
-      picture: { value: SRGB_STRAIGHT_PICTURE as never },
-    },
-  } as never);
-  assert.equal(resolved.kind, "output");
-  const projected = await producer(audiovisualMediaProducers.stillPictureSource.name).handler({
-    inputs: { picture: { value: resolved.value } },
-  } as never);
+  const producer = audiovisualMediaComponent.producers.find((candidate) =>
+    candidate.producer.name === audiovisualMediaProducers.source.name)!;
+  const projected = await producer.handler({ inputs: { media: { value: media as never } } } as never);
   assert.equal(projected.kind, "output");
   assert.deepEqual(projected.value, source);
 });

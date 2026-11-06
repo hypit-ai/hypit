@@ -8,7 +8,7 @@ import {
 } from "@hypit/hypit/author";
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
-import { textTypes } from "@hypit/hypit/text";
+import { promptTypes } from "@hypit/hypit/prompt";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import {
   createFieldModelPrimaryFragment,
@@ -56,8 +56,8 @@ async function reference(
 function commonFields(aspectRatio: boolean) {
   return [
     { name: "id", kind: "identifier" as const, required: true, summary: "Names the generated video." },
-    { name: "prompt", kind: "reference" as const, required: true, accepts: [textTypes.text],
-      summary: "Selects the generation prompt." },
+    { name: "prompt", kind: "reference" as const, required: true, accepts: [promptTypes.prompt],
+      summary: "Selects the generation Prompt." },
     { name: "duration", kind: "literal" as const, required: true,
       summary: "Sets whole seconds from 4 through 15." },
     { name: "resolution", kind: "literal" as const, required: false, values: ["768P", "2K"], fallback: "2K",
@@ -72,7 +72,7 @@ async function common(
   declaration: AuthorDeclaration,
   resolveReference: (path: string) => Promise<AuthorResolvedReference | undefined> | AuthorResolvedReference | undefined,
 ) {
-  const prompt = await reference(declaration, "prompt", textTypes.text, resolveReference);
+  const prompt = await reference(declaration, "prompt", promptTypes.prompt, resolveReference);
   const duration = Number(literal(declaration, "duration"));
   if (!Number.isSafeInteger(duration)) throw new Error("MiniMax H3 duration must be an integer.");
   const fields: Record<string, readonly ModelFieldValue[]> = { duration: [duration] };
@@ -100,7 +100,7 @@ async function output(
     fragment: createFieldModelPrimaryFragment(endpoint, mediaInputs, [{ name: "prompt", field: "prompt" }]),
     outputs: { video: `${id}.video` },
     artifacts: media,
-    text: [{ name: "prompt", field: "prompt", source: prompt }],
+    textFields: [{ name: "prompt", field: "prompt", source: prompt }],
   });
 }
 
@@ -121,7 +121,7 @@ export const minimaxH3TextVideoAuthorDeclaration: AuthorDeclarationCompiler = {
   module: minimaxH3ModuleRef,
   declaration: "text-video",
   outputs: outputTypes([]),
-  shape: { summary: "Generates video from a Text prompt with MiniMax H3.", fields: commonFields(true) },
+  shape: { summary: "Generates video from a Prompt with MiniMax H3.", fields: commonFields(true) },
   bindings,
   async compile({ declaration, resolveReference }) {
     return await output(declaration, resolveReference, []);
@@ -201,10 +201,4 @@ export const minimaxH3AuthorDeclarations = [
   minimaxH3TextVideoAuthorDeclaration,
   minimaxH3FrameVideoAuthorDeclaration,
   minimaxH3ReferenceVideoAuthorDeclaration,
-] as const;
-
-export const minimaxH3MarkupDeclarations = [
-  { name: "text-video", tag: "TextVideo" },
-  { name: "frame-video", tag: "FrameVideo" },
-  { name: "reference-video", tag: "ReferenceVideo" },
 ] as const;

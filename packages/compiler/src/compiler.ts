@@ -1,6 +1,8 @@
 import { verifyRecordStructure } from "@hypit/kernel";
 import type {
   AuthorDocument,
+  AuthorStructureDocument,
+  AuthorStructureOperation,
   AuthorFrontendRegistryLike,
   AuthorSourceDiscovery,
   CompiledSourceClosure,
@@ -123,6 +125,15 @@ export type ProjectedCompiledAuthorSource = ProjectedCompiledSourceClosure & {
   readonly attachments: readonly BlobAttachment[];
 };
 
+export type PreparedAuthorStructureEdit = {
+  /** Candidate Source; no external storage has been changed. */
+  readonly source: ResolvedSource;
+  /** Fresh locators for the candidate revision. */
+  readonly document: AuthorStructureDocument;
+  /** Full closure validation result for the candidate entry. */
+  readonly compiled: ProjectedCompiledAuthorSource;
+};
+
 export type CompileAuthorSourceOptions = {
   readonly authorProjection?: boolean;
 };
@@ -177,6 +188,51 @@ export class Compiler {
       );
     }
     return await frontend.document.openDocument(source.unit);
+  }
+
+  /** Open the canonical lossless structure projection of one resolved Source revision. */
+  async openAuthorStructure(source: ResolvedSource): Promise<AuthorStructureDocument> {
+    const frontend = this.#options.frontends.resolve(source.frontend);
+    if (frontend === undefined) {
+      throw new CompilerError("UNKNOWN_FRONTEND", `Frontend ${source.frontend} is not registered`, source.frontend);
+    }
+    if (frontend.structure === undefined) {
+      throw new CompilerError(
+        "AUTHOR_STRUCTURE_UNAVAILABLE",
+        `Frontend ${source.frontend} does not expose an editable author structure`,
+        source.frontend,
+      );
+    }
+    return await frontend.structure.openStructure(source.unit);
+  }
+
+  /**
+   * Apply one operation batch to the entry Source and virtually compile its full
+   * closure. This is a pure candidate transaction; a Host may publish `source`
+   * only after performing its own base-revision check and atomic replacement.
+   */
+  async prepareEntryStructureEdit(
+    workspace: WorkspaceSession,
+    operations: readonly AuthorStructureOperation[],
+  ): Promise<PreparedAuthorStructureEdit> {
+    const frontend = this.#options.frontends.resolve(workspace.entry.frontend);
+    if (frontend === undefined) {
+      throw new CompilerError("UNKNOWN_FRONTEND",
+        `Frontend ${workspace.entry.frontend} is not registered`, workspace.entry.frontend);
+    }
+    if (frontend.structure === undefined) {
+      throw new CompilerError(
+        "AUTHOR_STRUCTURE_UNAVAILABLE",
+        `Frontend ${workspace.entry.frontend} does not expose an editable author structure`,
+        workspace.entry.frontend,
+      );
+    }
+    const base = await frontend.structure.openStructure(workspace.entry.unit);
+    const unit = await frontend.structure.applyStructureOperations(base, operations);
+    const source = { frontend: workspace.entry.frontend, unit };
+    const compiled = await this.compileResolvedSource(source, workspace, { authorProjection: true });
+    const document = await frontend.structure.openStructure(unit);
+    return { source, document, compiled };
   }
 
   /** Compile an explicitly resolved Source inside one already isolated Workspace. */

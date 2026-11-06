@@ -19,3 +19,12 @@ export {
   audioGainProducers,
   audioGainTypes,
 } from "./manifest.js";
+export {
+  assertAudioGainNleParameters,
+  audioGainControlFromNleParameters,
+  audioGainNleAuthoring,
+  audioGainNleResolver,
+  audioGainNleSymbol,
+  editAudioGainNleParameters,
+} from "./nle.js";
+export type * from "./nle.js";

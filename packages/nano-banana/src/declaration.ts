@@ -7,7 +7,7 @@ import {
 } from "@hypit/hypit/author";
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
-import { textTypes } from "@hypit/hypit/text";
+import { promptTypes } from "@hypit/hypit/prompt";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import {
   createFieldModelPrimaryFragment,
@@ -56,8 +56,8 @@ function compiler(options: {
       summary: `Generates an image with ${options.endpoint.fields.model}.`,
       fields: [
         { name: "id", kind: "identifier", required: true, summary: "Names the generated image." },
-        { name: "prompt", kind: "reference", required: true, accepts: [textTypes.text],
-          summary: "Selects the generation prompt." },
+        { name: "prompt", kind: "reference", required: true, accepts: [promptTypes.prompt],
+          summary: "Selects the generation Prompt." },
         { name: "aspect-ratio", kind: "literal", required: true, values: options.ratios,
           summary: "Sets the output frame shape." },
         { name: "resolution", kind: "literal", required: true, values: ["1K", "2K", "4K"],
@@ -79,7 +79,7 @@ function compiler(options: {
         throw new Error(`${options.endpoint.fields.model} accepts at most ${options.maxImages} reference images.`);
       }
       const id = literal(declaration, "id");
-      const prompt = await reference(declaration, "prompt", textTypes.text, resolveReference);
+      const prompt = await reference(declaration, "prompt", promptTypes.prompt, resolveReference);
       const images: FieldModelAuthorArtifactInput[] = [];
       for (const child of declaration.children) {
         if (child.name !== "Reference") throw new Error(`${declaration.name} does not accept ${child.name}.`);
@@ -104,7 +104,7 @@ function compiler(options: {
           images.map(({ name, field }) => ({ name, field })), [{ name: "prompt", field: "prompt" }]),
         outputs: { image: `${id}.image` },
         artifacts: images,
-        text: [{ name: "prompt", field: "prompt", source: prompt }],
+        textFields: [{ name: "prompt", field: "prompt", source: prompt }],
       });
     },
   };
@@ -125,8 +125,4 @@ export const nanoBananaProImageAuthorDeclaration = compiler({
 export const nanoBananaAuthorDeclarations = [
   nanoBananaImageAuthorDeclaration,
   nanoBananaProImageAuthorDeclaration,
-] as const;
-export const nanoBananaMarkupDeclarations = [
-  { name: "image", tag: "Image" },
-  { name: "pro-image", tag: "ProImage" },
 ] as const;

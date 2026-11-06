@@ -142,19 +142,16 @@ export class BuildCompiler {
     return await this.compileAuthorResolvedSource(workspace.entry, workspace, request, options);
   }
 
-  prepareBuild(
+  #prepareBuild(
     compilation: CompiledBuild,
-    options: PrepareBuildOptions & { readonly executionView: true },
-  ): ProjectedPreparedBuild;
-  prepareBuild(compilation: CompiledBuild, options?: PrepareBuildOptions): PreparedBuild;
-  prepareBuild(
-    compilation: CompiledBuild,
-    options: PrepareBuildOptions = {},
+    requestedOutputs: readonly string[],
+    execution: PlannedExecution,
+    options: PrepareBuildOptions,
   ): PreparedBuild | ProjectedPreparedBuild {
     const sliced = sliceExecution(
       compilation.author.program,
-      outputIds(compilation.selection),
-      compilation.execution,
+      requestedOutputs,
+      execution,
     );
     const definition = defineBuild({ program: sliced.program, plan: sliced.plan });
     const outputsById = new Map(sliced.outputs.map((output) => [output.output, output]));
@@ -165,7 +162,9 @@ export class BuildCompiler {
       if (resolved === undefined) throw new Error(`Target ${target.name} has no resolved Record`);
       targets.push({ name: target.name, type: target.type, record: resolved.record });
     }
+    const durableOutputs = new Set(compilation.execution.outputs.map((output) => output.output));
     for (const retained of compilation.author.retainedOutputs) {
+      if (!durableOutputs.has(retained.ref.id)) continue;
       const resolved = outputsById.get(retained.ref.id);
       if (resolved === undefined) continue;
       resultOutputs.push({ name: retained.name, record: resolved.record });
@@ -174,6 +173,37 @@ export class BuildCompiler {
     const prepared: PreparedBuild = { compilation, targets, result, definition };
     if (options.executionView !== true) return prepared;
     return { ...prepared, outputs: sliced.outputs, state: materializeBuild(definition, []) };
+  }
+
+  prepareBuild(
+    compilation: CompiledBuild,
+    options: PrepareBuildOptions & { readonly executionView: true },
+  ): ProjectedPreparedBuild;
+  prepareBuild(compilation: CompiledBuild, options?: PrepareBuildOptions): PreparedBuild;
+  prepareBuild(
+    compilation: CompiledBuild,
+    options: PrepareBuildOptions = {},
+  ): PreparedBuild | ProjectedPreparedBuild {
+    return this.#prepareBuild(compilation, outputIds(compilation.selection), compilation.execution, options);
+  }
+
+  /**
+   * Extend one disposable execution view with exact logical outputs requested by authoring projections.
+   * Additional observations never become author Targets or durable Result outputs.
+   */
+  prepareExecutionView(
+    compilation: CompiledBuild,
+    additionalOutputs: readonly LogicalOutputId[],
+  ): ProjectedPreparedBuild {
+    const known = new Set(compilation.author.graph.outputs.map((output) => output.id));
+    const requested = new Set(outputIds(compilation.selection));
+    for (const output of additionalOutputs) {
+      if (!known.has(output)) throw new Error(`Execution view requests unknown logical output ${output}`);
+      requested.add(output);
+    }
+    const outputs = [...requested].sort();
+    const execution = planBuild(compilation.author.program, compilation.author.graph, outputs);
+    return this.#prepareBuild(compilation, outputs, execution, { executionView: true }) as ProjectedPreparedBuild;
   }
 
   /** Prepare another transient Target selection without changing the Author Source. */
@@ -198,7 +228,7 @@ export class BuildCompiler {
       execution: planBuild(compilation.author.program, compilation.author.graph, outputIds(selection)),
     };
     return options.executionView === true
-      ? this.prepareBuild(selected, { executionView: true })
-      : this.prepareBuild(selected);
+      ? this.#prepareBuild(selected, outputIds(selection), selected.execution, { executionView: true })
+      : this.#prepareBuild(selected, outputIds(selection), selected.execution, {});
   }
 }

@@ -1,15 +1,11 @@
 import { declarationField, type AuthorDeclaration, type AuthorDeclarationChild,
   type AuthorDeclarationCompiler, type AuthorResolvedReference } from "@hypit/hypit/author";
 import { blobTypes } from "@hypit/hypit/blob";
-import { canonicalize, sameType, type TypeRef } from "@hypit/hypit/protocol";
-import { textTypes } from "@hypit/hypit/text";
+import { sameType, type TypeRef } from "@hypit/hypit/protocol";
+import { promptTypes } from "@hypit/hypit/prompt";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import { createFieldModelPrimaryFragment } from "@hypit/generation/model-fields";
-import { rasterTransformTypes } from "@hypit/raster-transform";
-
-import { gptImageCleanupProgram } from "./cleanup-program.js";
-import { createGptImageCleanFragment } from "./fragment.js";
-import { gptImageCleanModuleRef, gptImageEndpoints, gptImageModuleRef, sealGptImage2Draft } from "./index.js";
+import { gptImageEndpoints, gptImageModuleRef, sealGptImage2Draft } from "./index.js";
 
 type DeclarationLike = AuthorDeclaration | AuthorDeclarationChild;
 const endpoint = gptImageEndpoints.image!;
@@ -37,7 +33,7 @@ async function reference(declaration: DeclarationLike, name: string, expected: T
 
 const fields = [
   { name: "id", kind: "identifier" as const, required: true, summary: "Names the generated image." },
-  { name: "prompt", kind: "reference" as const, required: true, accepts: [textTypes.text], summary: "Selects the generation prompt." },
+  { name: "prompt", kind: "reference" as const, required: true, accepts: [promptTypes.prompt], summary: "Selects the generation Prompt." },
   { name: "aspect-ratio", kind: "literal" as const, required: true,
     values: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "2:1", "1:2", "3:1", "1:3", "21:9", "9:21", "5:4", "4:5"],
     summary: "Sets the output frame shape." },
@@ -45,15 +41,12 @@ const fields = [
   { name: "background", kind: "literal" as const, required: false, values: ["transparent", "opaque", "auto"], summary: "Controls generated background transparency." },
 ];
 
-function compiler(clean: boolean): AuthorDeclarationCompiler {
+function compiler(): AuthorDeclarationCompiler {
   return {
-    module: clean ? gptImageCleanModuleRef : gptImageModuleRef,
+    module: gptImageModuleRef,
     declaration: "image",
-    outputs: [endpoint.draftType, endpoint.mediaBindings.images!.type,
-      ...(clean ? [rasterTransformTypes.program] : []), blobTypes.blob],
-    shape: { summary: clean
-      ? "Generates an image with GPT Image 2 and applies the package cleanup Program."
-      : "Generates an image with GPT Image 2.",
+    outputs: [endpoint.draftType, endpoint.mediaBindings.images!.type, blobTypes.blob],
+    shape: { summary: "Generates an image with GPT Image 2.",
       fields,
       children: [{ name: "Reference", cardinality: "many", summary: "Attaches one reference image.",
         fields: [{ name: "image", kind: "reference", required: true, accepts: [blobTypes.blob], summary: "Selects the reference image." }] }] },
@@ -65,7 +58,7 @@ function compiler(clean: boolean): AuthorDeclarationCompiler {
     async compile({ declaration, resolveReference }) {
       if (declaration.children.length > 16) throw new Error("GPT Image accepts at most 16 Reference children.");
       const id = literal(declaration, "id");
-      const prompt = await reference(declaration, "prompt", textTypes.text, resolveReference);
+      const prompt = await reference(declaration, "prompt", promptTypes.prompt, resolveReference);
       const images: FieldModelAuthorArtifactInput[] = [];
       for (const child of declaration.children) {
         if (child.name !== "Reference") throw new Error(`GPT Image does not accept ${child.name}.`);
@@ -78,25 +71,13 @@ function compiler(clean: boolean): AuthorDeclarationCompiler {
         ...(background === undefined ? {} : { background: [background] }) });
       const media = images.map(({ name, field }) => ({ name, field }));
       const text = [{ name: "prompt", field: "prompt" }] as const;
-      const output = fieldModelAuthorComponent({ id, range: declaration.range, endpoint, draft,
-        fragment: clean ? createGptImageCleanFragment(media, text) : createFieldModelPrimaryFragment(endpoint, media, text),
+      return fieldModelAuthorComponent({ id, range: declaration.range, endpoint, draft,
+        fragment: createFieldModelPrimaryFragment(endpoint, media, text),
         outputs: { image: `${id}.image` }, artifacts: images,
-        text: [{ name: "prompt", field: "prompt", source: prompt }] });
-      if (!clean) return output;
-      return {
-        records: [...output.records, { id: `${id}.cleanup`, type: rasterTransformTypes.program,
-          value: canonicalize(gptImageCleanupProgram), range: declaration.range }],
-        components: output.components.map((component) => ({ ...component,
-          inputs: { ...component.inputs, cleanup: { kind: "record", id: `${id}.cleanup` } } })),
-      };
+        textFields: [{ name: "prompt", field: "prompt", source: prompt }] });
     },
   };
 }
 
-export const gptImageAuthorDeclaration = compiler(false);
-export const cleanGptImageAuthorDeclaration = compiler(true);
-export const gptImageAuthorDeclarations = [gptImageAuthorDeclaration, cleanGptImageAuthorDeclaration] as const;
-export const gptImageMarkupDeclarations = [
-  { module: gptImageModuleRef, declaration: { name: "image", tag: "Image" } },
-  { module: gptImageCleanModuleRef, declaration: { name: "image", tag: "Image" } },
-] as const;
+export const gptImageAuthorDeclaration = compiler();
+export const gptImageAuthorDeclarations = [gptImageAuthorDeclaration] as const;

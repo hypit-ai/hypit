@@ -13,7 +13,6 @@ type ProgramSourceOutputBase = {
   /** Required when this output is a Picture signal. */
   readonly spatialDomain?: LocalSpatialDomain;
 };
-
 /** A finite time-varying signal whose factual local Domain belongs to the Source. */
 export type ProgramSignalOutput = ProgramSourceOutputBase & {
   readonly kind: "signal";
@@ -65,17 +64,6 @@ export type OccurrenceOutputSelection =
     }
   | { readonly kind: "constant" };
 
-export type SplitOccurrenceOptions = {
-  readonly at: ExactTemporalValue;
-  readonly leftId: string;
-  readonly rightId: string;
-};
-
-export type SplitUseNodeIds = {
-  readonly left: string;
-  readonly right: string;
-};
-
 /** One total, resolved signal over an exact local temporal Domain. */
 export type TemporalControlSegment<Value, Interpolation> = {
   readonly range: TemporalRange;
@@ -100,26 +88,6 @@ export type TemporalControlBinding =
 /** First value-owned interpolation policy; it linearly interpolates affine coefficients. */
 export type SpatialMapInterpolation = { readonly kind: "affine-linear" };
 export type SpatialMapControl = TemporalControl<SpatialMap, SpatialMapInterpolation>;
-
-/** Explicit graph identities required to close a Programme-level Occurrence split. */
-export type SplitProgramOccurrenceOptions = SplitOccurrenceOptions & {
-  readonly pictureUses?: Readonly<Record<string, SplitUseNodeIds>>;
-  readonly audioUses?: Readonly<Record<string, SplitUseNodeIds>>;
-};
-
-/** Transient command input for one atomic shared-boundary edit; it is not Programme state. */
-export type RollProgramOccurrencesOptions = {
-  readonly left: string;
-  readonly right: string;
-  readonly at: ExactTemporalValue;
-};
-
-/** Explicit transient ripple scope. Core never derives it from Track, lane or chronology. */
-export type RippleTrimProgramOccurrenceOptions = {
-  readonly active: TemporalRange;
-  readonly boundary: "start" | "end";
-  readonly scope: readonly string[];
-};
 
 /** Opaque package-owned execution programme; consumers support formats, not effect names. */
 export type SignalOperatorProgram = {
@@ -233,81 +201,6 @@ export type AudiovisualProgram = {
   readonly audio?: AudioGraph;
 };
 
-type NleOccurrenceOutputProjectionBase = {
-  readonly name: string;
-  readonly type: TypeRef;
-  readonly usedBy: readonly ("picture" | "audio")[];
-};
-
-export type NleOccurrenceOutputProjection = NleOccurrenceOutputProjectionBase & (
-  | {
-      readonly kind: "signal";
-      readonly sourceDomain: LocalTemporalDomain;
-      readonly mapping: TemporalMap;
-      readonly reconstruction?: SignalReconstruction;
-    }
-  | { readonly kind: "constant" }
-);
-
-/** One read-only NLE rectangle derived from an Occurrence, never a second time owner. */
-export type NleOccurrenceProjection = {
-  readonly id: string;
-  readonly source: string;
-  readonly parentRange: TemporalRange;
-  readonly activeLocalRange: TemporalRange;
-  readonly outputs: readonly NleOccurrenceOutputProjection[];
-};
-
-/** Track/lane-free projection. A View may group these identities without copying their ranges. */
-export type NleOccurrenceIndex = {
-  readonly program: string;
-  readonly domain: LocalTemporalDomain;
-  readonly occurrences: readonly NleOccurrenceProjection[];
-};
-
-/** A View selects one Source output facet of an Occurrence; it never copies placement. */
-export type NleViewMember = {
-  readonly occurrence: string;
-  readonly output: string;
-};
-
-export type NleViewLane = {
-  readonly id: string;
-  readonly label?: string;
-  readonly members: readonly NleViewMember[];
-};
-
-/** Optional NLE presentation data. Deleting it cannot change the Programme. */
-export type NleView = {
-  readonly id: string;
-  readonly program: string;
-  readonly lanes: readonly NleViewLane[];
-};
-
-export type NleViewItemProjection = NleViewMember & {
-  readonly source: string;
-  readonly type: TypeRef;
-  readonly parentRange: TemporalRange;
-  readonly activeLocalRange: TemporalRange;
-  readonly usedBy: readonly ("picture" | "audio")[];
-} & (
-  | { readonly kind: "signal"; readonly sourceDomain: LocalTemporalDomain; readonly mapping: TemporalMap }
-  | { readonly kind: "constant" }
-);
-
-export type NleViewLaneProjection = {
-  readonly id: string;
-  readonly label?: string;
-  readonly items: readonly NleViewItemProjection[];
-};
-
-export type NleViewProjection = {
-  readonly id: string;
-  readonly program: string;
-  readonly domain: LocalTemporalDomain;
-  readonly lanes: readonly NleViewLaneProjection[];
-};
-
 export type EvaluatedSourceSample = {
   readonly occurrence: string;
   readonly output: string;
@@ -366,19 +259,4 @@ export type AudiovisualEvaluation = {
   readonly at: ExactTemporalValue;
   readonly picture?: EvaluatedPictureGraph;
   readonly audio?: EvaluatedAudioGraph;
-};
-
-/** Terminal video sampling choice. It is not an authored global Timeline. */
-export type VideoFrameSampling = {
-  readonly frameRate: {
-    readonly numerator: number;
-    readonly denominator: number;
-  };
-};
-
-export type AudiovisualFrameEvaluation = {
-  readonly frame: number;
-  readonly frameCount: number;
-  readonly sampling: VideoFrameSampling;
-  readonly evaluation: AudiovisualEvaluation;
 };

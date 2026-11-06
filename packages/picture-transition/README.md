@@ -36,3 +36,7 @@ Each configuration produces the same public `PictureOperator` Type with the exac
 AVIR.
 Content-aware morphs, optical-flow effects, and true 3D page or cube geometry require their own
 implementation rather than an approximation in this package.
+
+The package also contributes an `hypit.nle-package@1` Transition resolver. A persistent NLE stores only the
+outgoing/incoming Item identities, package symbol and operator parameters; the NLE derives the exact overlap
+domain and binds the Operator's `progress` Control during one-way AVIR lowering.

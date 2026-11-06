@@ -1,5 +1,3 @@
-import type { Recipe } from "@hypit/hypit/recipe";
-
 import { sealSpeechEstimatePolicy } from "./program.js";
 import type {
   SpeechEstimateLanguage,
@@ -10,7 +8,7 @@ import type {
 
 const POLICY_PROPERTIES = ["language", "pace", "rate", "rounding", "padding"] as const;
 
-/** The property names an estimate policy is written with, in an SVS Recipe or as element attributes. */
+/** CLI option names accepted by the local speech estimator. */
 export const speechEstimatePolicyProperties: readonly string[] = POLICY_PROPERTIES;
 
 function policyFrom(
@@ -52,15 +50,7 @@ function policyFrom(
     : sealSpeechEstimatePolicy({ ...common, rate: finite("rate") });
 }
 
-/** One reusable estimate policy written as an SVS Recipe; it configures an estimate, nothing executable. */
-export function speechEstimatePolicyFromRecipe(
-  recipe: Recipe,
-  subject = `SVS Recipe ${recipe.path}`,
-): SpeechEstimatePolicy {
-  return policyFrom(recipe.properties, subject);
-}
-
-/** The same policy written inline as attributes or options: strings are read as the values they name. */
+/** CLI strings are decoded into one local estimate policy; the policy never enters AuthorGraph. */
 export function speechEstimatePolicyFromAttributes(
   attributes: Readonly<Record<string, unknown>>,
   subject: string,

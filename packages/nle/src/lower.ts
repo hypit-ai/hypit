@@ -1,0 +1,674 @@
+import {
+  assertAudioOperator,
+  assertPictureOperator,
+  assertProgramSource,
+  audiovisualProgramSource,
+  audioType,
+  pictureType,
+  pointwiseOperatorTemporalSupport,
+  sealAudiovisualProgram,
+  sealOccurrence,
+  type AudioNode,
+  type AudioOperator,
+  type AudiovisualProgram,
+  type Occurrence,
+  type PictureOperator,
+  type PictureNode,
+  type ProgramSource,
+  type TemporalControlBinding,
+} from "@hypit/audiovisual";
+import { sealAudioProgram } from "@hypit/audio-program";
+import type { AudioOutputSampling, AudioProgram } from "@hypit/audio-program";
+import {
+  appendAudiovisualAudioSource,
+  createAudiovisualAudioSourceSet,
+  lowerAudiovisualAudioProgram,
+  preparedMediaAudioSource,
+  sealAudiovisualAudioSource,
+} from "@hypit/audiovisual-audio";
+import {
+  assertAudiovisualHtmlSourceSet,
+  audiovisualProgramHtmlSource,
+  lowerAudiovisualPictureProgramToHtmlProgram,
+  preparedMediaHtmlSource,
+  type AudiovisualHtmlSource,
+  type AudiovisualHtmlSourceSet,
+} from "@hypit/audiovisual-html";
+import type { AudiovisualAudioSource } from "@hypit/audiovisual-audio";
+import { programSourceFromPreparedMedia } from "@hypit/audiovisual-media";
+import type { HtmlProgram } from "@hypit/html-program";
+import { sameType } from "@hypit/protocol";
+import { compareExactTemporalValues, sealLocalTemporalDomain, sealTemporalMap } from "@hypit/temporal/algebra";
+import { exactTemporalValueFromFrames } from "@hypit/temporal/sampling";
+import {
+  sealLocalSpatialDomain,
+  sealSpatialMap,
+  type LocalSpatialDomain,
+  type SpatialMap,
+} from "@hypit/spatial/algebra";
+
+import { assertNleProject, findNleMedia, nleProjectEndFrame } from "./project.js";
+import type {
+  NleEffect,
+  NleItem,
+  NleLoweringContext,
+  NleLoweringHost,
+  NlePictureAppearance,
+  NleProject,
+  NleResolvedItemSource,
+  NleTrack,
+} from "./types.js";
+
+export type NleAudiovisualLowering = {
+  readonly program: AudiovisualProgram;
+  readonly htmlSources: AudiovisualHtmlSourceSet;
+  readonly audioSources: readonly {
+    readonly source: string;
+    readonly output: string;
+    readonly resolve: (sampling: AudioOutputSampling) => AudiovisualAudioSource;
+  }[];
+};
+
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
+
+function frame(project: NleProject, value: number) {
+  return exactTemporalValueFromFrames(value, { frameRate: project.frameRate });
+}
+
+function programmeSpace(project: NleProject): LocalSpatialDomain {
+  return sealLocalSpatialDomain({
+    id: `${project.id}:picture`,
+    region: { x: 0, y: 0, width: project.canvas.width, height: project.canvas.height },
+  });
+}
+
+function fitMap(
+  target: LocalSpatialDomain,
+  source: LocalSpatialDomain,
+  appearance: NlePictureAppearance,
+): SpatialMap {
+  const layout = appearance.layout;
+  const sourceWidth = source.region.width;
+  const sourceHeight = source.region.height;
+  let width = layout.width;
+  let height = layout.height;
+  if (layout.fit !== "fill") {
+    const scale = layout.fit === "contain"
+      ? Math.min(layout.width / sourceWidth, layout.height / sourceHeight)
+      : Math.max(layout.width / sourceWidth, layout.height / sourceHeight);
+    width = sourceWidth * scale;
+    height = sourceHeight * scale;
+  }
+  const x = layout.x + (layout.width - width) / 2;
+  const y = layout.y + (layout.height - height) / 2;
+  const xx = sourceWidth / width;
+  const yy = sourceHeight / height;
+  return sealSpatialMap({
+    target,
+    source,
+    transform: { kind: "affine", xx, xy: 0, yx: 0, yy, tx: -x * xx, ty: -y * yy },
+  });
+}
+
+function addHtmlSource(sources: Map<string, AudiovisualHtmlSource>, source: AudiovisualHtmlSource): void {
+  const key = `${source.source}\u0000${source.output}`;
+  const existing = sources.get(key);
+  if (existing !== undefined) {
+    assert(JSON.stringify(existing) === JSON.stringify(source),
+      `NLE lowering resolved conflicting HTML implementations for ${source.source}.${source.output}.`);
+    return;
+  }
+  sources.set(key, structuredClone(source));
+}
+
+function validateResolvedSource(value: NleResolvedItemSource, item: NleItem): void {
+  assertProgramSource(value.source);
+  assert((value.pictureOutput === undefined) === (value.html === undefined),
+    `NLE ${item.kind} Item ${item.id} resolved an incomplete Picture implementation.`);
+  if (value.pictureOutput !== undefined) {
+    const picture = value.source.outputs[value.pictureOutput];
+    assert(picture !== undefined && sameType(picture.type, pictureType) && picture.spatialDomain !== undefined,
+      `NLE ${item.kind} Item ${item.id} resolved no Picture output ${value.pictureOutput}.`);
+    assert(value.html!.source === value.source.id && value.html!.output === value.pictureOutput,
+      `NLE ${item.kind} Item ${item.id} HTML implementation disagrees with its ProgramSource.`);
+  }
+  if (value.audioOutput !== undefined) {
+    const audio = value.source.outputs[value.audioOutput];
+    assert(audio !== undefined && sameType(audio.type, audioType),
+      `NLE ${item.kind} Item ${item.id} resolved no Audio output ${value.audioOutput}.`);
+    assert(typeof value.audio === "function",
+      `NLE ${item.kind} Item ${item.id} resolved no terminal Audio implementation.`);
+  } else {
+    assert(value.audio === undefined,
+      `NLE ${item.kind} Item ${item.id} resolved Audio implementation without an output.`);
+  }
+}
+
+function sourceForItem(
+  project: NleProject,
+  track: NleTrack,
+  item: NleItem,
+  host: NleLoweringHost,
+): NleResolvedItemSource {
+  if (item.kind === "caption") {
+    const value = host.resolveCaption(item, { project, track });
+    validateResolvedSource(value, item);
+    return value;
+  }
+  if (item.kind === "component") {
+    const value = host.resolveComponent(item, { project, track });
+    validateResolvedSource(value, item);
+    return value;
+  }
+  if (item.kind === "compound") {
+    const child = lowerNleProjectToAudiovisual(item.project, host);
+    const source = audiovisualProgramSource(child.program);
+    return {
+      source,
+      ...(child.program.picture === undefined ? {} : {
+        pictureOutput: "picture",
+        html: audiovisualProgramHtmlSource(child.program, child.htmlSources),
+      }),
+      ...(child.program.audio === undefined ? {} : { audioOutput: "audio" }),
+      ...(child.program.audio === undefined ? {} : {
+        audio: (sampling: AudioOutputSampling) => ({
+          source: child.program.id,
+          output: "audio",
+          program: lowerNleProjectToAudioProgram(item.project, host, sampling),
+        }),
+      }),
+    };
+  }
+  const media = findNleMedia(project, item.media).prepared;
+  const source = programSourceFromPreparedMedia(media);
+  const pictureOutput = source.outputs.picture === undefined ? undefined : "picture";
+  return {
+    source,
+    ...(pictureOutput === undefined ? {} : { pictureOutput }),
+    ...(source.outputs.audio === undefined ? {} : { audioOutput: "audio" }),
+    ...(source.outputs.audio === undefined ? {} : {
+      audio: (sampling: AudioOutputSampling) => preparedMediaAudioSource(media, sampling),
+    }),
+    ...(pictureOutput === undefined ? {} : { html: preparedMediaHtmlSource(media) }),
+  };
+}
+
+function audioEffectNode(
+  nodes: Record<string, AudioNode>,
+  input: string,
+  effect: NleEffect,
+  item: NleItem,
+  context: NleLoweringContext,
+  host: NleLoweringHost,
+): string {
+  const resolved = host.resolveAudioEffect(effect, item, context);
+  assertAudioOperator(resolved.operator);
+  assert(resolved.operator.inputs.length === 1,
+    `NLE Audio Effect ${effect.id} must expose exactly one Audio input.`);
+  const port = resolved.operator.inputs[0]!;
+  const bindings: Record<string, TemporalControlBinding> = {};
+  for (const name of Object.keys(resolved.operator.temporalControls)) {
+    bindings[name] = resolved.controlBindings?.[name] ?? { kind: "occurrence", occurrence: item.id };
+  }
+  const id = `${item.id}:audio-effect:${effect.id}`;
+  nodes[id] = {
+    kind: "apply",
+    operator: resolved.operator,
+    inputs: { [port]: input },
+    controlBindings: bindings,
+  };
+  return id;
+}
+
+function selection(project: NleProject, item: NleItem, source: ProgramSource, outputName: string) {
+  const output = source.outputs[outputName];
+  assert(output !== undefined, `NLE Item ${item.id} selected missing Source output ${outputName}.`);
+  if (output.kind === "constant") return { kind: "constant" as const };
+  const local = sealLocalTemporalDomain({ id: `${item.id}:time`, duration: frame(project, item.durationFrames) });
+  const sourceAtStart = frame(project, item.localStartFrame);
+  const sourceAtEnd = frame(project, item.localStartFrame + item.durationFrames);
+  assert(compareExactTemporalValues(sourceAtEnd, output.domain.duration) <= 0,
+    `NLE Item ${item.id} exceeds Source output ${source.id}.${outputName}.`);
+  return { kind: "signal" as const, mapping: sealTemporalMap({ stages: [{
+    target: local,
+    source: output.domain,
+    pieces: [{
+      target: { start: frame(project, 0), end: local.duration },
+      sourceAtStart,
+      rate: { numerator: 1, denominator: 1 },
+    }],
+  }] }) };
+}
+
+function occurrence(
+  project: NleProject,
+  item: NleItem,
+  parent: AudiovisualProgram["domain"],
+  source: ProgramSource,
+  outputs: readonly string[],
+): Occurrence {
+  const domain = sealLocalTemporalDomain({ id: `${item.id}:time`, duration: frame(project, item.durationFrames) });
+  return sealOccurrence({
+    id: item.id,
+    source,
+    domain,
+    placement: {
+      parent,
+      start: frame(project, item.startFrame),
+      active: { start: frame(project, 0), end: domain.duration },
+    },
+    selections: Object.fromEntries(outputs.map((output) => [output, selection(project, item, source, output)])),
+  });
+}
+
+function effectNode(
+  nodes: Record<string, PictureNode>,
+  input: string,
+  effect: NleEffect,
+  item: NleItem,
+  context: NleLoweringContext,
+  host: NleLoweringHost,
+): string {
+  const resolved = host.resolveEffect(effect, item, context);
+  assertPictureOperator(resolved.operator);
+  assert(resolved.operator.inputs.length === 1,
+    `NLE Effect ${effect.id} must expose exactly one Picture input.`);
+  const port = resolved.operator.inputs[0]!;
+  const bindings: Record<string, TemporalControlBinding> = {};
+  for (const name of Object.keys(resolved.operator.temporalControls)) {
+    bindings[name] = resolved.controlBindings?.[name] ?? { kind: "occurrence", occurrence: item.id };
+  }
+  const id = `${item.id}:effect:${effect.id}`;
+  nodes[id] = {
+    kind: "apply",
+    operator: resolved.operator,
+    inputs: { [port]: input },
+    controlBindings: bindings,
+  };
+  return id;
+}
+
+export function lowerNleProjectToAudiovisual(
+  project: NleProject,
+  host: NleLoweringHost,
+): NleAudiovisualLowering {
+  assertNleProject(project);
+  const endFrame = nleProjectEndFrame(project);
+  assert(endFrame > 0, "NLE Project has no enabled Items to lower.");
+  const domain = sealLocalTemporalDomain({ id: `${project.id}:time`, duration: frame(project, endFrame) });
+  const pictureDomain = programmeSpace(project);
+  const occurrences: Record<string, Occurrence> = {};
+  const pictureNodes: Record<string, PictureNode> = {};
+  const audioNodes: Record<string, AudioNode> = {};
+  const audioInputs: string[] = [];
+  const htmlSources = new Map<string, AudiovisualHtmlSource>();
+  const audioSources = new Map<string, NleAudiovisualLowering["audioSources"][number]>();
+  const located = new Map<string, { readonly item: NleItem; readonly track: NleTrack }>();
+  const matteByContent = new Map(project.mattes.map((matte) => [matte.content, matte] as const));
+  const matteSources = new Set(project.mattes.map((matte) => matte.matte));
+  const paintOrder: string[] = [];
+  for (const track of project.tracks) {
+    for (const item of track.items) located.set(item.id, { item, track });
+    if (track.kind !== "picture" || track.muted) continue;
+    for (const item of track.items) {
+      if (item.enabled && !matteSources.has(item.id)) paintOrder.push(item.id);
+    }
+  }
+  const requiredPicture = new Set(paintOrder);
+  const requireMatte = (id: string): void => {
+    const matte = matteByContent.get(id);
+    if (matte === undefined || requiredPicture.has(matte.matte)) return;
+    requiredPicture.add(matte.matte);
+    requireMatte(matte.matte);
+  };
+  for (const id of [...requiredPicture]) requireMatte(id);
+
+  const requiredAudio = new Set<string>();
+  for (const track of project.tracks) {
+    if (track.muted) continue;
+    for (const item of track.items) {
+      if (!item.enabled) continue;
+      if (item.kind !== "caption" && item.audio !== undefined) requiredAudio.add(item.id);
+    }
+  }
+
+  const itemRoots = new Map<string, string>();
+  for (const [id, value] of located) {
+    const needsPicture = requiredPicture.has(id);
+    const needsAudio = requiredAudio.has(id);
+    if (!needsPicture && !needsAudio) continue;
+    const { item, track } = value;
+    const context = { project, track } as const;
+    const resolved = sourceForItem(project, track, item, host);
+    const outputs: string[] = [];
+    if (needsPicture) {
+      assert(resolved.pictureOutput !== undefined && resolved.html !== undefined,
+        `NLE Item ${item.id} resolved no Picture implementation.`);
+      outputs.push(resolved.pictureOutput);
+    }
+    if (needsAudio) {
+      assert(resolved.audioOutput !== undefined,
+        `NLE ${item.kind} Item ${item.id} requests Audio but resolved no Audio output.`);
+      outputs.push(resolved.audioOutput);
+      const key = `${resolved.source.id}\u0000${resolved.audioOutput}`;
+      if (!audioSources.has(key)) {
+        audioSources.set(key, {
+          source: resolved.source.id,
+          output: resolved.audioOutput,
+          resolve: resolved.audio!,
+        });
+      }
+    }
+    occurrences[item.id] = occurrence(project, item, domain, resolved.source, [...new Set(outputs)]);
+
+    if (needsPicture) {
+      const pictureOutput = resolved.pictureOutput!;
+      addHtmlSource(htmlSources, resolved.html!);
+      const appearance = item.picture!;
+      const use = `${item.id}:picture`;
+      const placed = `${item.id}:placed`;
+      const clipped = `${item.id}:clipped`;
+      pictureNodes[use] = { kind: "use", occurrence: item.id, output: pictureOutput };
+      pictureNodes[placed] = {
+        kind: "remap",
+        input: use,
+        mapping: fitMap(pictureDomain, resolved.source.outputs[pictureOutput]!.spatialDomain!, appearance),
+      };
+      pictureNodes[clipped] = {
+        kind: "crop",
+        input: placed,
+        region: {
+          x: appearance.layout.x,
+          y: appearance.layout.y,
+          width: appearance.layout.width,
+          height: appearance.layout.height,
+        },
+      };
+      let root = clipped;
+      for (const effect of appearance.effects) {
+        root = effectNode(pictureNodes, root, effect, item, context, host);
+      }
+      itemRoots.set(id, root);
+    }
+    if (needsAudio) {
+      const audioOutput = resolved.audioOutput!;
+      const audioId = `${item.id}:audio`;
+      audioNodes[audioId] = { kind: "use", occurrence: item.id, output: audioOutput };
+      let audioRoot = audioId;
+      if (item.kind !== "caption") {
+        for (const effect of item.audio!.effects) {
+          audioRoot = audioEffectNode(audioNodes, audioRoot, effect, item, context, host);
+        }
+      }
+      audioInputs.push(audioRoot);
+    }
+  }
+
+  const matteRoots = new Map<string, string>();
+  const resolveMatteRoot = (id: string): string => {
+    const cached = matteRoots.get(id);
+    if (cached !== undefined) return cached;
+    const input = itemRoots.get(id);
+    assert(input !== undefined, `NLE Matte content ${id} has no Picture root.`);
+    const matte = matteByContent.get(id);
+    if (matte === undefined) {
+      matteRoots.set(id, input);
+      return input;
+    }
+    const source = resolveMatteRoot(matte.matte);
+    const content = located.get(id)!;
+    const matteItem = located.get(matte.matte)!;
+    const resolved = host.resolveMatte(matte, {
+      project,
+      track: content.track,
+      content: content.item,
+      matte: matteItem.item,
+    });
+    assertPictureOperator(resolved.operator);
+    assert(resolved.operator.inputs.length === 2
+      && resolved.operator.inputs.includes("content") && resolved.operator.inputs.includes("matte"),
+    `NLE Matte ${matte.id} operator must expose content and matte Picture inputs.`);
+    const bindings: Record<string, TemporalControlBinding> = {};
+    for (const name of Object.keys(resolved.operator.temporalControls)) {
+      bindings[name] = resolved.controlBindings?.[name]
+        ?? { kind: "occurrence", occurrence: content.item.id };
+    }
+    const node = `${matte.content}:matte:${matte.id}`;
+    pictureNodes[node] = {
+      kind: "apply",
+      operator: resolved.operator,
+      inputs: { content: input, matte: source },
+      controlBindings: bindings,
+    };
+    matteRoots.set(id, node);
+    return node;
+  };
+  for (const id of requiredPicture) resolveMatteRoot(id);
+
+  const transitionByOutgoing = new Map(project.transitions
+    .filter((transition) => requiredPicture.has(transition.outgoing) && requiredPicture.has(transition.incoming))
+    .map((transition) => [transition.outgoing, transition] as const));
+  const transitionByIncoming = new Map([...transitionByOutgoing.values()]
+    .map((transition) => [transition.incoming, transition] as const));
+  const transitionRoot = (transition: NleProject["transitions"][number]): string => {
+    const outgoing = located.get(transition.outgoing)!;
+    const incoming = located.get(transition.incoming)!;
+    const start = incoming.item.startFrame;
+    const end = outgoing.item.startFrame + outgoing.item.durationFrames;
+    const transitionDomain = sealLocalTemporalDomain({
+      id: `${transition.id}:time`, duration: frame(project, end - start),
+    });
+    const resolved = host.resolveTransition(transition, {
+      project,
+      track: outgoing.track,
+      outgoing: outgoing.item,
+      incoming: incoming.item,
+      domain: transitionDomain,
+    });
+    assertPictureOperator(resolved.operator);
+    assert(resolved.operator.inputs.length === 2
+      && resolved.operator.inputs.includes("outgoing") && resolved.operator.inputs.includes("incoming"),
+    `NLE Transition ${transition.id} operator must expose outgoing and incoming Picture inputs.`);
+    const bindings: Record<string, TemporalControlBinding> = {};
+    for (const [name, control] of Object.entries(resolved.operator.temporalControls)) {
+      assert(compareExactTemporalValues(control.duration, transitionDomain.duration) === 0,
+        `NLE Transition ${transition.id} Control ${name} has another duration.`);
+      bindings[name] = resolved.controlBindings?.[name] ?? { kind: "mapping", mapping: sealTemporalMap({ stages: [{
+        target: domain,
+        source: control,
+        pieces: [{
+          target: { start: frame(project, start), end: frame(project, end) },
+          sourceAtStart: frame(project, 0),
+          rate: { numerator: 1, denominator: 1 },
+        }],
+      }] }) };
+    }
+    const applied = `${transition.id}:apply`;
+    const restricted = `${transition.id}:range`;
+    pictureNodes[applied] = {
+      kind: "apply",
+      operator: resolved.operator,
+      inputs: {
+        outgoing: resolveMatteRoot(transition.outgoing),
+        incoming: resolveMatteRoot(transition.incoming),
+      },
+      controlBindings: bindings,
+    };
+    pictureNodes[restricted] = {
+      kind: "restrict",
+      input: applied,
+      range: { start: frame(project, start), end: frame(project, end) },
+    };
+    return restricted;
+  };
+
+  const chainByMember = new Map<string, { readonly root: string; readonly emit: string }>();
+  for (const first of paintOrder) {
+    if (transitionByIncoming.has(first) || !transitionByOutgoing.has(first)) continue;
+    const members: string[] = [];
+    const segments: string[] = [];
+    let current: string | undefined = first;
+    let previous: NleProject["transitions"][number] | undefined;
+    while (current !== undefined) {
+      members.push(current);
+      const value: NleItem = located.get(current)!.item;
+      const next = transitionByOutgoing.get(current);
+      const visibleStart: number = previous === undefined
+        ? value.startFrame
+        : located.get(previous.outgoing)!.item.startFrame
+          + located.get(previous.outgoing)!.item.durationFrames;
+      const visibleEnd: number = next === undefined ? value.startFrame + value.durationFrames
+        : located.get(next.incoming)!.item.startFrame;
+      assert(visibleStart <= visibleEnd, `NLE Transition chain around Item ${current} overlaps itself.`);
+      if (visibleStart < visibleEnd) {
+        const restricted = `${current}:transition-visible:${visibleStart}:${visibleEnd}`;
+        pictureNodes[restricted] = {
+          kind: "restrict",
+          input: resolveMatteRoot(current),
+          range: { start: frame(project, visibleStart), end: frame(project, visibleEnd) },
+        };
+        segments.push(restricted);
+      }
+      if (next === undefined) break;
+      segments.push(transitionRoot(next));
+      previous = next;
+      current = next.incoming;
+    }
+    const root = `${first}:transition-chain`;
+    pictureNodes[root] = { kind: "over", inputs: segments };
+    const emit = members.reduce((latest, member) =>
+      paintOrder.indexOf(member) > paintOrder.indexOf(latest) ? member : latest, members[0]!);
+    for (const member of members) chainByMember.set(member, { root, emit });
+  }
+
+  const pictureLayers: string[] = [];
+  for (const id of paintOrder) {
+    const chain = chainByMember.get(id);
+    if (chain !== undefined) {
+      if (chain.emit === id) pictureLayers.push(chain.root);
+      continue;
+    }
+    pictureLayers.push(resolveMatteRoot(id));
+  }
+
+  assert(pictureLayers.length > 0 || audioInputs.length > 0, "NLE Project contains no active Picture or Audio output.");
+  let picture: AudiovisualProgram["picture"];
+  if (pictureLayers.length === 1) picture = { nodes: pictureNodes, root: pictureLayers[0]! };
+  else if (pictureLayers.length > 1) {
+    pictureNodes[`${project.id}:picture-root`] = { kind: "over", inputs: pictureLayers };
+    picture = { nodes: pictureNodes, root: `${project.id}:picture-root` };
+  }
+  let audio: AudiovisualProgram["audio"];
+  if (audioInputs.length === 1) audio = { nodes: audioNodes, root: audioInputs[0]! };
+  else if (audioInputs.length > 1) {
+    audioNodes[`${project.id}:audio-root`] = { kind: "mix", inputs: audioInputs };
+    audio = { nodes: audioNodes, root: `${project.id}:audio-root` };
+  }
+  const program = sealAudiovisualProgram({
+    id: project.id,
+    domain,
+    occurrences,
+    ...(picture === undefined ? {} : { pictureDomain, picture }),
+    ...(audio === undefined ? {} : { audio }),
+  });
+  const sources = { sources: [...htmlSources.values()] };
+  assertAudiovisualHtmlSourceSet(sources);
+  return { program, htmlSources: structuredClone(sources), audioSources: [...audioSources.values()] };
+}
+
+export function lowerNleAudiovisualToHtmlProgram(
+  project: NleProject,
+  lowering: NleAudiovisualLowering,
+): HtmlProgram {
+  assert(lowering.program.picture !== undefined && lowering.program.pictureDomain !== undefined,
+    "NLE Project has no Picture output for HTML lowering.");
+  const viewport = sealLocalSpatialDomain({
+    id: `${project.id}:viewport`,
+    region: { x: 0, y: 0, width: project.canvas.width, height: project.canvas.height },
+  });
+  return lowerAudiovisualPictureProgramToHtmlProgram({
+    program: lowering.program,
+    sources: lowering.htmlSources,
+    output: {
+      id: `${project.id}:html`,
+      sampling: { frameRate: project.frameRate },
+      canvas: structuredClone(project.canvas),
+      pictureMapping: sealSpatialMap({
+        target: viewport,
+        source: lowering.program.pictureDomain,
+        transform: { kind: "affine", xx: 1, xy: 0, yx: 0, yy: 1, tx: 0, ty: 0 },
+      }),
+    },
+  });
+}
+
+export function lowerNleProjectToHtmlProgram(project: NleProject, host: NleLoweringHost): HtmlProgram {
+  return lowerNleAudiovisualToHtmlProgram(project, lowerNleProjectToAudiovisual(project, host));
+}
+
+export function lowerNleAudiovisualToAudioProgram(
+  lowering: NleAudiovisualLowering,
+  sampling: AudioOutputSampling,
+  options: { readonly silenceWhenAbsent?: boolean } = {},
+): AudioProgram {
+  if (lowering.program.audio === undefined) {
+    assert(options.silenceWhenAbsent === true,
+      "NLE Project has no Audio output for AudioProgram lowering.");
+    return sealAudioProgram({
+      domain: structuredClone(lowering.program.domain),
+      sampling: structuredClone(sampling),
+      graph: { nodes: [{ kind: "silence", id: `${lowering.program.id}:silence` }],
+        output: { node: `${lowering.program.id}:silence` } },
+    });
+  }
+  let sources = createAudiovisualAudioSourceSet();
+  for (const implementation of lowering.audioSources) {
+    const resolved = implementation.resolve(sampling);
+    sources = appendAudiovisualAudioSource(sources, sealAudiovisualAudioSource({
+      ...resolved,
+      source: implementation.source,
+      output: implementation.output,
+    }));
+  }
+  return lowerAudiovisualAudioProgram({ program: lowering.program, sampling, sources });
+}
+
+/** Lower the same flat project to the continuous Audio terminal without a Build or author graph. */
+export function lowerNleProjectToAudioProgram(
+  project: NleProject,
+  host: NleLoweringHost,
+  sampling: AudioOutputSampling,
+): AudioProgram {
+  const lowering = lowerNleProjectToAudiovisual(project, host);
+  return lowerNleAudiovisualToAudioProgram(lowering, sampling);
+}
+
+/** Useful for simple package resolvers and tests that need a pointwise one-input HTML effect. */
+export function nlePointwisePictureEffect(
+  id: string,
+  program: PictureOperator["program"],
+): PictureOperator {
+  return {
+    id,
+    inputs: ["picture"],
+    temporalControls: {},
+    temporalSupport: pointwiseOperatorTemporalSupport(["picture"]),
+    program,
+  };
+}
+
+/** Useful for simple package resolvers that need a pointwise one-input Audio effect. */
+export function nlePointwiseAudioEffect(
+  id: string,
+  program: AudioOperator["program"],
+): AudioOperator {
+  return {
+    id,
+    inputs: ["signal"],
+    temporalControls: {},
+    temporalSupport: pointwiseOperatorTemporalSupport(["signal"]),
+    program,
+  };
+}

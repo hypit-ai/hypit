@@ -1,6 +1,6 @@
 
 import type { BlobRef } from "@hypit/hypit/protocol";
-import type { PictureInterpretation, PreparedVisualSource } from "@hypit/media";
+import type { PictureInterpretation, PreparedSignalPictureSource } from "@hypit/media";
 import type { FrameSpan, TemporalMap, TemporalSamplingGrid } from "@hypit/temporal";
 import type { HtmlPictureReconstruction } from "./picture-reconstruction.js";
 
@@ -51,7 +51,7 @@ export type HtmlVideoSource = FrameSpan & {
   /** Exact absolute frames where this occurrence can contribute pixels. */
   readonly usage: HtmlArtifactUsage;
   readonly kind: "media";
-  readonly source: PreparedVisualSource;
+  readonly source: PreparedSignalPictureSource;
   /** Exact occurrence-local target-to-source relation. */
   readonly sampling: TemporalMap;
   readonly reconstruction?: HtmlPictureReconstruction;

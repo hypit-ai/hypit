@@ -102,14 +102,14 @@ test("multiple moving streams without one default fail closed instead of guessin
   assert.equal(selectMediaStreams(ambiguous, explicit).videoStreamIndex, 3);
 });
 
-test("an attached picture cannot be forced into the moving-video preparation path", () => {
+test("an attached container picture cannot be forced into the selected Picture facet", () => {
   const request = sealMediaSelectionRequest({
     video: { mode: "stream-index", streamIndex: 2 },
     audio: { mode: "none" },
     spanAuthority: "video",
     picture: { mode: "source" },
   });
-  assert.throws(() => selectMediaStreams(grokInspection(), request), /not a moving visual stream/u);
+  assert.throws(() => selectMediaStreams(grokInspection(), request), /not a usable picture stream/u);
 });
 
 test("a stream without an observed presentation span cannot be selected for exact preparation", () => {

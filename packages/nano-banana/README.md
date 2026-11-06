@@ -8,12 +8,15 @@ network execution. The selected Provider implements its exact capability.
 
 Import the model variant you mean and connect prompt and references as ordinary graph edges:
 
-```xml
-<nano:Image id="draft" prompt={prompt} aspect-ratio="9:16" resolution="2K" output-format="png">
-  <nano:Reference image={person.image}/>
-</nano:Image>
+```svml
+module nano from "@hypit/nano-banana@1"
 
-<nano:ProImage id="final" prompt={finalPrompt} aspect-ratio="9:16" resolution="4K" output-format="png"/>
+nano.image {
+  id: draft prompt: @prompt aspect-ratio: 9:16 resolution: 2K output-format: png
+  Reference { image: @person.image }
+}
+
+nano.pro-image { id: final prompt: @finalPrompt aspect-ratio: 9:16 resolution: 4K output-format: png }
 ```
 
 The declaration compiler only lowers this syntax into the package's exact model request. It does not select a Provider.

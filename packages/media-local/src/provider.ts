@@ -7,19 +7,16 @@ import {
   executeMuxProgramMedia,
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
-  executeRenderStillVideo,
 } from "./execute.js";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "./execute.js";
-import { mediaExtractionCapabilities } from "@hypit/media-extraction";
-import { stillVideoCapabilities } from "@hypit/still-video";
 import { audioProgramCapabilities } from "@hypit/audio-program";
 import { mediaDeliveryCapabilities } from "@hypit/media-delivery";
-import { isStreamingResourceStore } from "@hypit/hypit/endpoint";
 import { speechEvidenceCapabilities, speechEvidenceTypes } from "@hypit/speech-evidence";
 import { defineEndpoint } from "@hypit/hypit/endpoint";
 import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
 import type { Value } from "@hypit/hypit/protocol";
 import { supportsLocalAudioProgram, supportsLocalSpeechEvidenceAudio } from "./support.js";
+import { createMediaExecutionEnvironment } from "./environment.js";
 
 export const localMediaProviderModuleRef = { name: "@hypit/media-local", version: "1" } as const;
 
@@ -33,15 +30,6 @@ export type CreateLocalMediaProviderOptions = {
   readonly maxProbeOutputBytes?: number;
 };
 
-function assert(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new Error(message);
-}
-
-function positiveInteger(value: number, subject: string): number {
-  assert(Number.isSafeInteger(value) && value > 0, `${subject} must be a positive integer`);
-  return value;
-}
-
 function fulfillment(result: MediaOperationResult): Value {
   return result.value;
 }
@@ -51,27 +39,8 @@ function fulfillment(result: MediaOperationResult): Value {
  * FFmpeg toolchain selected for this local Provider.
  */
 export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions) {
-  const ffmpegPath = config.ffmpegPath ?? "ffmpeg";
-  const ffprobePath = config.ffprobePath ?? "ffprobe";
-  const processTimeoutMs = positiveInteger(config.processTimeoutMs ?? 10 * 60_000, "processTimeoutMs");
-  const maxProbeOutputBytes = positiveInteger(config.maxProbeOutputBytes ?? 256 * 1024 * 1024,
-    "maxProbeOutputBytes");
-  const common = { ffmpegPath, ffprobePath, processTimeoutMs, maxProbeOutputBytes };
-  const environment = (context: EndpointInvocationContext): MediaExecutionEnvironment => ({
-    ...common,
-    artifacts: {
-      get: async (source) => await context.resources.get(source.resource),
-      open: async (source) => isStreamingResourceStore(context.resources)
-        ? await context.resources.open(source.resource)
-        : await context.resources.get(source.resource).then((bytes) => bytes === undefined
-          ? undefined
-          : (async function* () { yield bytes; })()),
-      put: async (bytes, mediaType) => await context.resources.put(bytes, mediaType),
-      putFile: async (path, mediaType) => isStreamingResourceStore(context.resources)
-        ? await context.resources.putStream(createReadStream(path), mediaType)
-        : await context.resources.put(await readFile(path), mediaType),
-    },
-  });
+  const environment = (context: EndpointInvocationContext): MediaExecutionEnvironment =>
+    createMediaExecutionEnvironment(context.resources, config);
   const operation = (
     execute: (env: MediaExecutionEnvironment, constraints: never) => Promise<MediaOperationResult>,
   ) => async (context: EndpointInvocationContext): Promise<Value> =>
@@ -93,23 +62,16 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
       {
         lifecycle: "immediate" as const,
         transient: true,
-        capability: mediaExtractionCapabilities.audio,
+        capability: mediaCapabilities.extractAudio,
         returns: blobTypes.blob,
         handler: operation(executeExtractAudio),
       },
       {
         lifecycle: "immediate" as const,
         transient: true,
-        capability: mediaExtractionCapabilities.frame,
+        capability: mediaCapabilities.extractFrame,
         returns: blobTypes.blob,
         handler: operation(executeExtractFrame),
-      },
-      {
-        lifecycle: "immediate" as const,
-        transient: true,
-        capability: stillVideoCapabilities.render,
-        returns: blobTypes.blob,
-        handler: operation(executeRenderStillVideo),
       },
       {
         lifecycle: "immediate" as const,
@@ -134,5 +96,3 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
     ],
   });
 }
-import { createReadStream } from "node:fs";
-import { readFile } from "node:fs/promises";

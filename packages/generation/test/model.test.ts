@@ -145,27 +145,27 @@ test("media binding reaches the finalized exact-model request", async () => {
 test("one authored Text edge fills the exact model prompt before finalization", async () => {
   const endpoint = definition.endpoints.image!;
   const textFacet = definition.component.producers.find((facet) =>
-    facet.producer.name === endpoint.textBindings.prompt?.producer.name);
+    facet.producer.name === endpoint.textFieldBindings.prompt?.producer.name);
   assert.ok(textFacet);
   const draft = sealModelFieldBuilder(fields, {});
   const bound = await textFacet.handler({ inputs: {
     draft: { value: (draft) },
-    text: { value: (sealText("draw it")) },
+    value: { value: (sealText("draw it")) },
   } } as never);
   assert.equal(bound.kind, "output");
   assert.deepEqual((bound.value as { fields: unknown }).fields, { prompt: ["draw it"] });
 });
 
-test("the dynamic Fragment exposes every Text and media edge as an explicit semantic input", () => {
+test("the dynamic Fragment exposes every typed text field and media edge as an explicit semantic input", () => {
   const fragment = createFieldModelPrimaryFragment(definition.endpoints.image!, [
     { name: "first", field: "images" },
     { name: "second", field: "images" },
   ], [{ name: "prompt", field: "prompt" }]);
   assert.deepEqual(fragment.inputs.map((input) => input.name), [
-    "draft", "first:artifact", "first:binding", "prompt:text", "second:artifact", "second:binding",
+    "draft", "first:artifact", "first:binding", "prompt:value", "second:artifact", "second:binding",
   ]);
   assert.deepEqual(fragment.operations.map((operation) => operation.producer.name), [
-    "bind-request-graph-native-image-prompt-text",
+    "bind-request-graph-native-image-prompt-text-field",
     "bind-request-graph-native-image-images",
     "bind-request-graph-native-image-images",
     "finalize-request-graph-native-image",

@@ -1,14 +1,11 @@
 import {
   assertAudiovisualProgram,
   evaluateAudiovisualProgramAt,
-  evaluateAudiovisualProgramFrame,
-  outputFrameCount,
   isPointwiseOperatorTemporalSupport,
   type AudiovisualProgram,
   type EvaluatedPictureGraph,
   type EvaluatedPictureNode,
   type PictureGraph,
-  type VideoFrameSampling,
 } from "@hypit/audiovisual";
 import {
   assertHtmlProgram,
@@ -18,7 +15,7 @@ import {
   type HtmlPictureElement,
   type HtmlProgram,
 } from "@hypit/html-program";
-import { preparedVisualExtent, preparedVisualSource, verifyPreparedMedia } from "@hypit/media";
+import { preparedPictureExtent, preparedSignalPictureSource, verifyPreparedMedia } from "@hypit/media";
 import {
   assertLocalSpatialDomain,
   assertSpatialRegion,
@@ -38,11 +35,13 @@ import {
   type FrameSpan,
   type LocalTemporalDomain,
   type TemporalMap,
+  type TemporalSamplingGrid,
 } from "@hypit/temporal";
 import type { Rational } from "@hypit/temporal/algebra";
 
 import { assertAudiovisualHtmlOutput, resolveAudiovisualHtmlSource } from "./source.js";
 import type { AudiovisualHtmlOutput, AudiovisualHtmlSourceSet } from "./source.js";
+import { evaluateAudiovisualProgramFrame, outputFrameCount } from "./sampling.js";
 
 export type AudiovisualHtmlLowering = {
   readonly program: AudiovisualProgram;
@@ -174,7 +173,7 @@ function sampledTemporalMap(
   id: string,
   flags: readonly boolean[],
   positions: readonly (ExactTemporalValue | undefined)[],
-  sampling: VideoFrameSampling,
+  sampling: TemporalSamplingGrid,
   source: LocalTemporalDomain,
 ): TemporalMap {
   const extent = bounds(flags);
@@ -218,7 +217,7 @@ function lowerGraph(
   program: AudiovisualProgram,
   graph: PictureGraph,
   sequence: PictureSequence,
-  sampling: VideoFrameSampling,
+  sampling: TemporalSamplingGrid,
   sources: AudiovisualHtmlSourceSet,
   prefix: string,
   available: readonly boolean[],
@@ -258,29 +257,28 @@ function lowerGraph(
           return { ...common, kind: "program", program: structuredClone(source.implementation.program),
             slots: [], renderFrames };
         }
-        if (source.implementation.kind === "still-picture") {
-          assert(reconstruction === undefined, "A constant Still Picture cannot select signal reconstruction.");
-          const picture = source.implementation.picture;
-          assert(samples.every((sample) => sample === undefined || sample.temporal.kind === "constant"),
-            `Still Picture ${picture.id} cannot implement a signal Source output.`);
-          assert(sameSpatialDomain(picture.space, domain),
-            `Still Picture ${picture.id} does not close Source Space ${domain.id}.`);
-          return { ...common, kind: "image", artifact: structuredClone(picture.artifact),
-            picture: structuredClone(picture.picture) };
-        }
         if (source.implementation.kind === "prepared-media") {
           const media = source.implementation.media;
           verifyPreparedMedia(media);
-          assert(media.visual !== undefined, `Prepared Media ${media.domain.id} has no selected Picture member.`);
-          const extent = preparedVisualExtent(media);
+          assert(media.picture !== undefined, `Prepared Media ${media.id} has no selected Picture member.`);
+          const extent = preparedPictureExtent(media);
           assert(extent.widthPx === domain.region.width && extent.heightPx === domain.region.height,
             `Prepared Picture extent does not match Source Space ${domain.id}.`);
+          if (media.picture.kind === "constant") {
+            assert(reconstruction === undefined,
+              `Constant Picture ${media.id} cannot select signal reconstruction.`);
+            assert(samples.every((sample) => sample === undefined || sample.temporal.kind === "constant"),
+              `Constant Picture ${media.id} cannot implement a signal Source output.`);
+            return { ...common, kind: "image", artifact: structuredClone(media.source),
+              picture: structuredClone(media.picture.interpretation.picture) };
+          }
+          assert(media.domain !== undefined, `Signal Picture ${media.id} has no temporal domain.`);
           const positions = samples.map((sample) => sample?.temporal.kind === "signal"
             ? sample.temporal.at : undefined);
-          return { ...common, kind: "video", source: preparedVisualSource(media), muted: true,
+          return { ...common, kind: "video", source: preparedSignalPictureSource(media), muted: true,
             ...(reconstruction === undefined ? {} : { reconstruction }),
             sampling: composeTemporalMaps(
-              sampledTemporalMap(id, active, positions, sampling, media.domain), media.visual.map,
+              sampledTemporalMap(id, active, positions, sampling, media.domain), media.picture.map,
             ) };
         }
         const child = source.implementation.program;

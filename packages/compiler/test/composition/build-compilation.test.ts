@@ -57,3 +57,29 @@ test("Result intent keeps reachable package Outputs without retaining derived or
   assert.deepEqual(prepared.targets.map((target) => target.name), ["final.result"]);
   assert.deepEqual(prepared.result.outputs.map((output) => output.name), ["material.result"]);
 });
+
+test("an execution view observes extra logical outputs without creating Targets or Result lifetime", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-observation-build-"));
+  const authorFile = join(root, "main.svml");
+  await writeFile(authorFile, [
+    "<?svml using=\"@hypit/markup@1\"?>",
+    "<svml>",
+    "  <import as=\"lab\" from=\"example.compiler-lab@1\"/>",
+    "  <lab:Result id=\"main\"/>",
+    "  <lab:Result id=\"projection\"/>",
+    "</svml>",
+  ].join("\n"), "utf8");
+
+  const buildCompiler = new BuildCompiler({ authorCompiler: compiler(root) });
+  const compiled = await buildCompiler.compileAuthorEntry(authorFile, { targets: ["main.result"] });
+  const projection = compiled.author.exports.find((output) => output.name === "projection.result")?.ref;
+  assert(projection?.kind === "logical-output");
+  const prepared = buildCompiler.prepareExecutionView(compiled, [projection.id]);
+
+  assert.equal(prepared.definition.plan.steps.length, 2);
+  assert.deepEqual(prepared.targets.map((target) => target.name), ["main.result"]);
+  assert.deepEqual(prepared.result.outputs.map((output) => output.name), ["main.result"]);
+  assert.equal(prepared.outputs.some((output) => output.output === projection.id), true);
+  assert.throws(() => buildCompiler.prepareExecutionView(compiled, ["missing"]),
+    /unknown logical output missing/u);
+});

@@ -1,6 +1,7 @@
 import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
 import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+import { promptTypes } from "@hypit/hypit/prompt";
 
 export const wanModuleRef = { name: "@hypit/wan", version: "1" } as const;
 export const wanModels = ["wan-2.7-image", "wan-2.7-image-pro"] as const;
@@ -18,7 +19,7 @@ function wanFieldTable(model: WanModel): ModelFieldTable {
   return defineModelFields({
     model,
     fields: [
-      { name: "prompt", value: { kind: "text", maxChars: 5_000 }, minItems: 1, maxItems: 1 },
+      { name: "prompt", value: { kind: "text", inputType: promptTypes.prompt, maxChars: 5_000 }, minItems: 1, maxItems: 1 },
       { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 9 },
       {
         name: "resolution",

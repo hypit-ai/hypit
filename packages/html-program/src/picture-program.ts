@@ -1,7 +1,7 @@
 import { assertBlobRef, canonicalStringify, compareCodeUnits } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue, ResourceId } from "@hypit/hypit/protocol";
 import { verifyPictureInterpretation } from "@hypit/media";
-import type { PictureInterpretation, PreparedVisualSource } from "@hypit/media";
+import type { PictureInterpretation, PreparedSignalPictureSource } from "@hypit/media";
 import { assertFrameSpan } from "@hypit/temporal";
 import type { ExactTemporalValue, FrameSpan, TemporalMap } from "@hypit/temporal";
 
@@ -40,7 +40,7 @@ export type HtmlPictureElement =
     })
   | (HtmlPictureElementBase & {
       readonly kind: "video";
-      readonly source: PreparedVisualSource;
+      readonly source: PreparedSignalPictureSource;
       readonly sampling: TemporalMap;
       readonly reconstruction?: HtmlPictureReconstruction;
       readonly muted?: boolean;
@@ -146,7 +146,7 @@ function collectArtifacts(input: HtmlPictureProgramInput): readonly HtmlArtifact
   }));
 }
 
-function preparedVisualExtent(source: PreparedVisualSource): { width: number; height: number } {
+function preparedPictureExtent(source: PreparedSignalPictureSource): { width: number; height: number } {
   const picture = source.interpretation;
   let width = picture.codedWidth * picture.sampleAspectRatio.numerator / picture.sampleAspectRatio.denominator;
   let height = picture.codedHeight;
@@ -269,7 +269,7 @@ export function compileHtmlPictureProgram(input: HtmlPictureProgramInput): HtmlP
       verifyPictureInterpretation(element.picture, `HTML Picture ${element.id}`);
       return `<img ${common} data-hypit-artifact-src="${htmlArtifactUri(element.artifact.resource)}"/>`;
     }
-    const extent = preparedVisualExtent(element.source);
+    const extent = preparedPictureExtent(element.source);
     videoSources.push({
       kind: "media", id: domId, elementId: element.id,
       startFrame, endFrameExclusive,
@@ -283,7 +283,9 @@ export function compileHtmlPictureProgram(input: HtmlPictureProgramInput): HtmlP
     return `<span id="${domId}" data-hypit-element-id="${escapeHtml(element.id)}" data-hypit-contribution-start-frame="${startFrame}" data-hypit-contribution-end-frame="${endFrameExclusive}" data-hypit-contribution-spans="${encodedSpans}" data-hypit-media-display-plane style="${escapeHtml(plane)}"><span data-hypit-media-payload-host style="position:relative;display:block;width:100%;height:100%;object-fit:inherit;object-position:inherit"><video data-hypit-video-source="media" data-hypit-start-frame="${startFrame}" data-hypit-end-frame="${endFrameExclusive}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:inherit;object-position:inherit;pointer-events:none" muted playsinline data-hypit-artifact-src="${htmlArtifactUri(element.source.source.resource)}"></video><span data-hypit-decoded-media-slot style="position:absolute;inset:0;overflow:hidden;object-fit:inherit;object-position:inherit;pointer-events:none"></span></span></span>`;
   };
   const frames = `<div data-hypit-capture-root data-hypit-contribution-start-frame="0" data-hypit-contribution-end-frame="${input.frameCount}" data-hypit-contribution-spans="0:${input.frameCount}" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;isolation:isolate">${render(input.root)}</div>`;
-  const initializers = programs.length === 0 ? "" : `<script>htmlRegisterFrameProgramInitializer(() => {\n${htmlVisualScript(programs, input.canvas)}\n});</script>`;
+  const initializers = programs.length === 0 ? "" : `<script>htmlRegisterFrameProgramInitializer(() => {\n${htmlVisualScript(programs, {
+    ...input.canvas, frameRate: input.frameRate,
+  })}\n});</script>`;
   let html = `<!doctype html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}[data-hypit-program-root]{position:relative;overflow:hidden;background:transparent}:where([data-hypit-media-display-plane]){display:inline-block;width:var(--hypit-media-intrinsic-width);height:var(--hypit-media-intrinsic-height)}*,*::before,*::after{box-sizing:border-box}${css.join("\n")}</style></head>

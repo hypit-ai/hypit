@@ -1,7 +1,5 @@
 import { blobRefSchema, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, ObjectFieldSchema, ValueSchema } from "@hypit/hypit/protocol";
-import { verifyText } from "@hypit/hypit/text";
-import type { Text } from "@hypit/hypit/text";
 
 import { assertGenerationBlobRef } from "./identity.js";
 import { objectSchema } from "./schema.js";
@@ -363,21 +361,21 @@ export function bindModelArtifact(
   });
 }
 
-/** Attach one graph Text edge to an exact text field without hiding it in metadata. */
-export function bindModelText(
+/** Attach one typed textual graph value to an exact Model text field. */
+export function bindModelTextField(
   table: ModelFieldTable,
   draft: ModelFieldBuilder,
   fieldName: string,
-  text: Text,
+  value: { readonly value: string },
 ): ModelFieldBuilder {
   verifyModelFieldBuilder(table, draft);
-  verifyText(text);
+  assert(typeof value.value === "string", `${table.model} field ${fieldName} textual input must carry a string value`);
   const field = table.fields.find((candidate) =>
     candidate.name === fieldName && candidate.value.kind === "text");
   assert(field !== undefined, `${table.model} has no text field ${fieldName}`);
   return sealModelFieldBuilder(table, {
     ...draft.fields,
-    [fieldName]: [...(draft.fields[fieldName] ?? []), text.value],
+    [fieldName]: [...(draft.fields[fieldName] ?? []), value.value],
   });
 }
 

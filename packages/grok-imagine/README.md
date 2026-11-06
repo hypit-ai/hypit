@@ -6,13 +6,15 @@ It exposes the standard and 1.5-preview models as distinct declarations. Each re
 validated before yielding an ordinary video Artifact. The package declares the model
 choice; it does not route to another model or access a Provider. The selected Provider implements its exact capability.
 
-```xml
-<grok:Video id="clip" prompt={prompt} duration="6" aspect-ratio="9:16" resolution="720p">
-  <grok:Reference image={person.image}/>
-</grok:Video>
+```svml
+module grok from "@hypit/grok-imagine@1"
 
-<grok:PreviewVideo id="preview" prompt={previewPrompt} duration="6"
-  aspect-ratio="9:16" resolution="720p"/>
+grok.video {
+  id: clip prompt: @prompt duration: 6 aspect-ratio: 9:16 resolution: 720p
+  Reference { image: @person.image }
+}
+
+grok.preview-video { id: preview prompt: @previewPrompt duration: 6 aspect-ratio: 9:16 resolution: 720p }
 ```
 
 Both declarations accept up to seven reference images. `Video` accepts 6–30 seconds; `PreviewVideo`

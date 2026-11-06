@@ -6,7 +6,6 @@ import { blobTypes } from "@hypit/blob";
 import {
   createLocalOpenCvImageProvider,
 } from "@hypit/provider-image-opencv-local";
-import { rasterTransformCapabilities } from "@hypit/raster-transform";
 import { rasterCompositionCapabilities } from "@hypit/raster-composition";
 import { endpointOffers } from "@hypit/hypit/endpoint";
 
@@ -17,13 +16,10 @@ test("the OpenCV package is one replaceable Endpoint with no second queue", asyn
   const provider = createLocalOpenCvImageProvider({ defaultConcurrency: 3 });
   assert.equal(provider.instance.id, "image.opencv.local");
   assert.deepEqual(endpointOffers(provider), [{
-    capability: rasterTransformCapabilities.transform,
-    returns: blobTypes.blob,
-    endpoint: "image.opencv.local",
-  }, {
     capability: rasterCompositionCapabilities.render,
     returns: blobTypes.blob,
     endpoint: "image.opencv.local",
+    transient: true,
   }]);
 });
 

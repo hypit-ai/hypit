@@ -224,6 +224,7 @@ function hygienizeSource(
     retainedOutputs,
     provenance: authorProjection ? (decoded.provenance ?? []).map((element) => ({
       id: hygienicId("element", unitId, `${element.range.start}:${element.range.end}`),
+      source: source.id,
       sourceName: source.name,
       range: { ...element.range },
       records: element.records.map((id) => ({ local: id, id: recordIds.get(id) ?? id })),

@@ -84,4 +84,3 @@ export const portraitMattingAuthorDeclaration: AuthorDeclarationCompiler = {
 };
 
 export const volcengineMattingAuthorDeclarations = [portraitMattingAuthorDeclaration] as const;
-export const volcengineMattingMarkupDeclarations = [{ name: "portrait", tag: "Portrait" }] as const;

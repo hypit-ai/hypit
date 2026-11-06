@@ -24,16 +24,15 @@ zero-origin Canvas, while the source must match the Programme root Space. Output
 not rewrite or have to equal the authored Programme Space.
 
 Source packages publish terminal values independently from `ProgramSource`. A value binds one nominal Source
-output to either a package-owned opaque visual programme, a fully interpreted still picture, a PreparedMedia
-picture implementation, or a nested
+output to either a package-owned opaque visual programme, a PreparedMedia Picture implementation, or a nested
 AudiovisualProgram plus its own terminal Source set. These are HTML execution forms, not AVIR Source kinds.
 Operator packages publish their named-port programme as part of the typed `PictureOperator`; the adapter does
 not call a resolver or recover parameters by id. It has no package scan or Operator registry. Unsupported
 programme formats fail at the terminal capability boundary.
 
-`still-picture-source` lowers a constant Picture directly to one typed image Artifact. The Artifact remains
-observable across the Occurrence's output frames, but the Source never receives a fake clock or sampling Map.
-`prepared-media-source` handles time-varying media. One stable video occurrence carries the complete
+`prepared-media-source` lowers a constant PreparedMedia Picture directly to one typed image Artifact. The
+Artifact remains observable across the Occurrence's output frames, but the Source never receives a fake clock
+or sampling Map. The same binding handles signal Picture. One stable video occurrence carries the complete
 output-to-source `TemporalMap`, including hold, loop, fractional speed and reverse pieces. `program-source` recursively
 evaluates a child Programme without materializing it. The official
 Cross Dissolve package publishes its complete Picture Operator and the adapter closes its inputs through

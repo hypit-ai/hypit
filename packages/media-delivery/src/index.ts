@@ -7,3 +7,4 @@ export {
   mediaDeliveryProducers,
 } from "./manifest.js";
 export type * from "./types.js";
+export { createMuxMediaNeed, verifyMuxedMediaForNeed } from "./request.js";

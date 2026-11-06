@@ -19,12 +19,15 @@
     "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-delivery": "workspace:^0.1.0",
+    "@hypit/nle": "workspace:^0.1.0",
     "@hypit/temporal": "workspace:^0.1.1"
   },
   "peerDependencies": {
     "@hypit/hypit": "workspace:^0.4.0"
   },
   "devDependencies": {
+    "@hypit/audiovisual": "workspace:*",
+    "@hypit/audiovisual-html": "workspace:*",
     "@hypit/compiler": "workspace:*",
     "@hypit/blob": "workspace:*",
     "@hypit/author": "workspace:*",
@@ -32,11 +35,9 @@
     "@hypit/html-program": "workspace:*",
     "@hypit/media": "workspace:*",
     "@hypit/producer": "workspace:*",
-    "@hypit/markup": "workspace:*",
     "@hypit/temporal": "workspace:*",
     "@hypit/kernel": "workspace:*",
     "@hypit/executor": "workspace:*",
-    "@hypit/recipe": "workspace:*",
     "@hypit/refinement": "workspace:*",
     "@hypit/hypit": "workspace:*",
     "@hypit/protocol": "workspace:*"

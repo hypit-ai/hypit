@@ -1,0 +1,161 @@
+module prompt from "@hypit/prompt@1"
+
+prompt.Template "podcast-v1" {
+  separator: paragraph
+
+  fixed "base" {
+    text: <<PROMPT
+Create a realistic vertical edited two-person podcast clip from two final camera-view reference images.
+    PROMPT
+  }
+
+  fixed "reference" {
+    text: <<PROMPT
+REFERENCE CONTRACT: @image1 is Host A's final camera view and @image2 is Host B's final camera view. Preserve both identities, outfits, room, lighting, props, camera sides, lens feel, and seating relationship.
+    PROMPT
+  }
+
+  fixed "speaker-map" {
+    text: <<PROMPT
+SPEAKER MAP: follow the A: and B: dialogue order exactly. Only the host assigned to the current line moves their mouth; any listener cutaway remains silent.
+    PROMPT
+  }
+
+  fixed "voice-map" {
+    text: <<PROMPT
+VOICE MAP: Host A uses @audio1 and speaks only A: lines. Host B uses @audio2 and speaks only B: lines.
+    PROMPT
+  }
+
+  choose "framing" {
+    default: locked-view
+
+    option "locked-view" {
+      text: "FRAMING: keep each host's baseline reference crop and scale."
+    }
+
+    option "soft-push-in" {
+      text: "FRAMING: use one subtle push-in on an important phrase or reaction, then return to baseline."
+    }
+
+    option "emphasis-closeup" {
+      text: "FRAMING: use one modest emphasis close-up, then return to the baseline view."
+    }
+  }
+
+  choose "edit-language" {
+    default: speaker-cuts
+
+    option "speaker-cuts" {
+      text: "CUT PATTERN: stay on the host who is currently speaking."
+    }
+
+    option "reaction-cuts" {
+      text: <<PROMPT
+CUT PATTERN: briefly cut to the silent listener during longer explanations, then return to the speaker.
+      PROMPT
+    }
+  }
+
+  choose "pacing" {
+    default: compact
+
+    option "measured" {
+      text: "PACING: measured turn-taking, readable articulation, and breathing room between thoughts."
+    }
+
+    option "compact" {
+      text: "PACING: compact immediate handoffs while each line remains a natural continuous take."
+    }
+
+    option "rapid-banter" {
+      text: "PACING: rapid banter with quick backchannel energy while every line remains intelligible."
+    }
+
+    option "varied-emphasis" {
+      text: "PACING: compact handoffs, slowing slightly for important names, numbers, doubts, and payoffs."
+    }
+  }
+
+  choose "performance" {
+    default: natural-banter
+
+    option "natural-banter" {
+      text: "PERFORMANCE: natural podcast banter with warm eye focus and believable intonation."
+    }
+
+    option "high-energy" {
+      text: "PERFORMANCE: vivid high-energy short-form podcast delivery."
+    }
+
+    option "calm-expert" {
+      text: "PERFORMANCE: composed, precise, trustworthy expert discussion."
+    }
+
+    option "playful-skeptic" {
+      text: "PERFORMANCE: playful skeptical chemistry with teasing smiles and amused disbelief."
+    }
+  }
+
+  choose "reaction" {
+    default: active-listening
+
+    option "subtle-listening" {
+      text: "REACTIONS: tiny nods, eye focus, breath, and small expression changes."
+    }
+
+    option "active-listening" {
+      text: "REACTIONS: readable nods, smiles, eye movement, and line-by-line facial shifts."
+    }
+
+    option "skeptical-reacts" {
+      text: "REACTIONS: skeptical eyebrows, amused disbelief, small laughs, and attentive eye movement."
+    }
+
+    option "big-reacts" {
+      text: "REACTIONS: strong but believable surprise, laughter, disbelief, and recognition."
+    }
+  }
+
+  choose "gesture" {
+    default: natural
+
+    option "restrained" {
+      text: "GESTURE: restrained podcast body language with very small hand beats."
+    }
+
+    option "compact" {
+      text: "GESTURE: compact semantic hand beats near the torso and table."
+    }
+
+    option "natural" {
+      text: "GESTURE: natural open palms, small points, nods, and posture shifts."
+    }
+
+    option "expressive" {
+      text: "GESTURE: richer hand, shoulder, posture, and face changes while staying coherent."
+    }
+  }
+
+  fixed "action-contract" {
+    text: <<PROMPT
+ACTION PROMPT: optional segment direction controls specified lines, gestures, expressions, and timing.
+    PROMPT
+  }
+
+  fixed "audio" {
+    text: <<PROMPT
+AUDIO AND TEXTURE: clean dialogue, natural room tone, stable faces and hands, microphones, props, and photoreal motion. Add no subtitles, captions, labels, UI text, or floating words.
+    PROMPT
+  }
+
+  slot "dialogue" {
+    required: true
+    label: "DIALOGUE SCRIPT TO DELIVER:"
+  }
+
+  slot "action" {
+    required: false
+    label: "ACTION DIRECTION:"
+  }
+}

@@ -15,6 +15,7 @@ export type {
   CompileAuthorSourceOptions,
   CompiledAuthorSource,
   ProjectedCompiledAuthorSource,
+  PreparedAuthorStructureEdit,
 } from "./compiler.js";
 export type {
   BuildAuthorCompiler,

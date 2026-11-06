@@ -5,6 +5,8 @@ export const mediaModuleRef = { name: "@hypit/media", version: "1" } as const;
 export const mediaTypes = {
   inspection: { module: mediaModuleRef, name: "MediaInspection" },
   selectionRequest: { module: mediaModuleRef, name: "MediaSelectionRequest" },
+  audioExtractionRequest: { module: mediaModuleRef, name: "AudioExtractionRequest" },
+  frameExtractionRequest: { module: mediaModuleRef, name: "FrameExtractionRequest" },
   streamSelection: { module: mediaModuleRef, name: "MediaStreamSelection" },
   prepared: { module: mediaModuleRef, name: "PreparedMedia" },
   domainSpec: { module: mediaModuleRef, name: "MediaDomainSpec" },
@@ -13,17 +15,20 @@ export const mediaTypes = {
   timelineVisual: { module: mediaModuleRef, name: "TimelineVisual" }, timelineAudio: { module: mediaModuleRef, name: "TimelineAudio" },
   muxed: { module: mediaModuleRef, name: "MuxedMedia" }, fontArtifact: { module: mediaModuleRef, name: "FontArtifactRef" },
   fontStack: { module: mediaModuleRef, name: "FontStackRef" },
-  compositableSurface: { module: mediaModuleRef, name: "CompositableSurfaceRef" },
   pictureInterpretation: { module: mediaModuleRef, name: "PictureInterpretation" },
   /** Declared by `@hypit/blob`. A Type is identified by the Module that owns it, not the one that re-exports it. */
   blobArtifact: blobTypes.blob,
 } satisfies Record<string, TypeRef>;
 export const mediaCapabilities = {
   inspect: { module: mediaModuleRef, name: "inspect-media" },
+  extractAudio: { module: mediaModuleRef, name: "extract-audio" },
+  extractFrame: { module: mediaModuleRef, name: "extract-frame" },
 } satisfies Record<string, CapabilityRef>;
 export const mediaProducers = {
   resource: { module: mediaModuleRef, name: "media-resource" },
   inspect: { module: mediaModuleRef, name: "request-media-inspection" },
+  extractAudio: { module: mediaModuleRef, name: "request-audio-extraction" },
+  extractFrame: { module: mediaModuleRef, name: "request-frame-extraction" },
   select: { module: mediaModuleRef, name: "select-media-streams" },
   prepare: { module: mediaModuleRef, name: "prepare-media" },
   localDomain: { module: mediaModuleRef, name: "local-domain" },
@@ -35,6 +40,8 @@ export const mediaManifest: ModuleManifest = {
   types: [
     mediaTypes.inspection.name,
     mediaTypes.selectionRequest.name,
+    mediaTypes.audioExtractionRequest.name,
+    mediaTypes.frameExtractionRequest.name,
     mediaTypes.streamSelection.name,
     mediaTypes.prepared.name,
     mediaTypes.domainSpec.name,
@@ -44,10 +51,11 @@ export const mediaManifest: ModuleManifest = {
     mediaTypes.timelineAudio.name,
     mediaTypes.muxed.name,
     mediaTypes.fontArtifact.name, mediaTypes.fontStack.name,
-    mediaTypes.compositableSurface.name,
     mediaTypes.pictureInterpretation.name,
   ], capabilities: [
     { name: mediaCapabilities.inspect.name, returns: mediaTypes.inspection },
+    { name: mediaCapabilities.extractAudio.name, returns: blobTypes.blob },
+    { name: mediaCapabilities.extractFrame.name, returns: blobTypes.blob },
   ], producers: [
     { name: mediaProducers.resource.name,
       inputs: [{ name: "resource", type: blobTypes.blob }],
@@ -55,6 +63,20 @@ export const mediaManifest: ModuleManifest = {
     { name: mediaProducers.inspect.name,
       inputs: [{ name: "source", type: blobTypes.blob }],
       result: { kind: "need" as const, name: "inspection", capability: mediaCapabilities.inspect } },
+    { name: mediaProducers.extractAudio.name,
+      inputs: [
+        { name: "source", type: blobTypes.blob },
+        { name: "inspection", type: mediaTypes.inspection },
+        { name: "request", type: mediaTypes.audioExtractionRequest },
+      ],
+      result: { kind: "need" as const, name: "audio", capability: mediaCapabilities.extractAudio } },
+    { name: mediaProducers.extractFrame.name,
+      inputs: [
+        { name: "source", type: blobTypes.blob },
+        { name: "inspection", type: mediaTypes.inspection },
+        { name: "request", type: mediaTypes.frameExtractionRequest },
+      ],
+      result: { kind: "need" as const, name: "image", capability: mediaCapabilities.extractFrame } },
     { name: mediaProducers.select.name,
       inputs: [
         { name: "inspection", type: mediaTypes.inspection },

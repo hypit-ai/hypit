@@ -6,10 +6,9 @@ import type {
 } from "@hypit/hypit/author";
 import { blobTypes } from "@hypit/hypit/blob";
 import { canonicalize, isBlobRef, sameType } from "@hypit/hypit/protocol";
-import { textTypes, verifyText } from "@hypit/hypit/text";
 
 import type { FieldModelOperation } from "./model.js";
-import { modelArtifactInputNames, modelTextInputName } from "./model.js";
+import { modelArtifactInputNames, modelTextFieldInputName } from "./model.js";
 import { isArtifactField, modelField } from "./fields.js";
 import type { ModelArtifactBinding, ModelFieldBuilder } from "./request.js";
 import { sealModelArtifactBinding } from "./request.js";
@@ -22,10 +21,10 @@ export type FieldModelAuthorArtifactInput = ModelArtifactBinding & {
   readonly source: AuthorResolvedReference;
 };
 
-export type FieldModelAuthorTextInput = {
+export type FieldModelAuthorTextFieldInput = {
   /** Stable local input name inside this Fragment shape. */
   readonly name: string;
-  /** Exact Model field receiving the Text value. */
+  /** Exact Model text field receiving this typed textual value. */
   readonly field: string;
   readonly source: AuthorResolvedReference;
 };
@@ -38,7 +37,7 @@ export type FieldModelAuthorComponentOptions = {
   readonly fragment: GraphFragment;
   readonly outputs: Readonly<Record<string, string>>;
   readonly artifacts?: readonly FieldModelAuthorArtifactInput[];
-  readonly text?: readonly FieldModelAuthorTextInput[];
+  readonly textFields?: readonly FieldModelAuthorTextFieldInput[];
 };
 
 /**
@@ -55,15 +54,15 @@ export function fieldModelAuthorComponent(options: FieldModelAuthorComponentOpti
   const inputs: Record<string, AuthorValueRef> = {
     draft: { kind: "record", id: `${options.id}.draft` },
   };
-  for (const input of options.text ?? []) {
-    if (!sameType(input.source.type, textTypes.text)) {
-      throw new Error(`${options.endpoint.fields.model}.${input.field} must reference Text.`);
-    }
-    if (input.source.record !== undefined) verifyText(input.source.record.value);
-    if (options.endpoint.textBindings[input.field] === undefined) {
+  for (const input of options.textFields ?? []) {
+    const binding = options.endpoint.textFieldBindings[input.field];
+    if (binding === undefined) {
       throw new Error(`${options.endpoint.fields.model} has no text field ${input.field}.`);
     }
-    inputs[modelTextInputName(input.name)] = input.source.ref;
+    if (!sameType(input.source.type, binding.type)) {
+      throw new Error(`${options.endpoint.fields.model}.${input.field} must reference ${binding.type.module.name}.${binding.type.name}.`);
+    }
+    inputs[modelTextFieldInputName(input.name)] = input.source.ref;
   }
   for (const input of options.artifacts ?? []) {
     if (!sameType(input.source.type, blobTypes.blob)) {

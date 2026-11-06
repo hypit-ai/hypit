@@ -8,7 +8,7 @@ import { blobDependency, blobTypes } from "@hypit/hypit/blob";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import {
   bindModelArtifact,
-  bindModelText,
+  bindModelTextField,
   sealModelFieldRequest,
   verifyModelArtifactBinding,
   verifyModelFieldBuilder,
@@ -25,7 +25,6 @@ import type {
 } from "./fields.js";
 import { generationProducers, generationTypes } from "./manifest.js";
 import { textDependency, textTypes } from "@hypit/hypit/text";
-import type { Text } from "@hypit/hypit/text";
 import {
   canonicalize,
   isBlobRef,
@@ -221,7 +220,7 @@ export type FieldModelOperation = {
   readonly draftType: TypeRef;
   readonly finalizeProducer: ProducerRef;
   readonly mediaBindings: Readonly<Record<string, ModelArtifactBindingOperation>>;
-  readonly textBindings: Readonly<Record<string, ModelTextBindingOperation>>;
+  readonly textFieldBindings: Readonly<Record<string, ModelTextFieldBindingOperation>>;
   readonly fields: ModelFieldTable;
   readonly validateRequest: (request: unknown) => void;
   readonly validateDraft: (draft: unknown) => void;
@@ -235,8 +234,9 @@ export type ModelArtifactBindingOperation = {
   readonly producer: ProducerRef;
 };
 
-export type ModelTextBindingOperation = {
+export type ModelTextFieldBindingOperation = {
   readonly field: string;
+  readonly type: TypeRef;
   readonly producer: ProducerRef;
 };
 
@@ -247,10 +247,10 @@ export type ModelArtifactInput = {
   readonly field: string;
 };
 
-export type ModelTextInput = {
+export type ModelTextFieldInput = {
   /** Stable local input name inside this Fragment shape. */
   readonly name: string;
-  /** Exact Model field receiving the Text value. */
+  /** Exact Model text field receiving this typed textual value. */
   readonly field: string;
 };
 
@@ -291,17 +291,19 @@ function fieldEndpointRefs(module: ModuleRef, spec: FieldModelOperationSpec) {
       type: { module, name: `${spec.requestTypeName}${pascal(field.name)}Binding` },
       producer: { module, name: `bind-${spec.producerName}-${field.name}` },
     } satisfies ModelArtifactBindingOperation]));
-  const textBindings = Object.fromEntries(spec.fields.fields
-    .filter((field) => field.value.kind === "text")
-    .map((field) => [field.name, {
+  const textFieldBindings = Object.fromEntries(spec.fields.fields.flatMap((field) => {
+    if (field.value.kind !== "text") return [];
+    return [[field.name, {
       field: field.name,
-      producer: { module, name: `bind-${spec.producerName}-${field.name}-text` },
-    } satisfies ModelTextBindingOperation]));
+      type: field.value.inputType ?? textTypes.text,
+      producer: { module, name: `bind-${spec.producerName}-${field.name}-text-field` },
+    } satisfies ModelTextFieldBindingOperation] as const];
+  }));
   return {
     draftType,
     finalizeProducer,
     mediaBindings,
-    textBindings,
+    textFieldBindings,
   };
 }
 
@@ -370,7 +372,9 @@ export function defineFieldModelModule<const Key extends string>(
     ...(sameModule(item.spec.result.primary.producer.module, options.module)
       ? [] : [item.spec.result.primary.producer.module]),
     ...(item.spec.fields.fields.some((field) => field.value.kind === "media") ? [blobDependency] : []),
-    ...(item.spec.fields.fields.some((field) => field.value.kind === "text") ? [textDependency] : []),
+    ...item.spec.fields.fields.flatMap((field) => field.value.kind === "text"
+      ? [field.value.inputType?.module ?? textDependency]
+      : []),
   ]);
 
   const manifest: ModuleManifest = {
@@ -402,11 +406,11 @@ export function defineFieldModelModule<const Key extends string>(
           ],
           result: { kind: "output" as const, name: "draft", type: item.draftType },
         })),
-        ...Object.values(item.textBindings).map((binding) => ({
+        ...Object.values(item.textFieldBindings).map((binding) => ({
           name: binding.producer.name,
           inputs: [
             { name: "draft", type: item.draftType },
-            { name: "text", type: textTypes.text },
+            { name: "value", type: binding.type },
           ],
           result: { kind: "output" as const, name: "draft", type: item.draftType },
         })),
@@ -430,7 +434,7 @@ export function defineFieldModelModule<const Key extends string>(
       draftType: item.draftType,
       finalizeProducer: item.finalizeProducer,
       mediaBindings: item.mediaBindings,
-      textBindings: item.textBindings,
+      textFieldBindings: item.textFieldBindings,
       fields: item.spec.fields,
       validateRequest: item.validateRequest,
       validateDraft: item.validateDraft,
@@ -477,12 +481,12 @@ export function defineFieldModelModule<const Key extends string>(
               return { kind: "output" as const, value: (canonicalize(bound)) };
             },
           })),
-          ...Object.values(item.textBindings).map((binding) => ({
+          ...Object.values(item.textFieldBindings).map((binding) => ({
             producer: binding.producer,
             handler: ({ inputs }: ProducerHandlerContext) => {
               const draft = inlineValue<ModelFieldBuilder>(inputs.draft!.value, `${item.spec.key} draft`);
-              const text = inlineValue<Text>(inputs.text!.value, `${binding.field} Text`);
-              const bound = bindModelText(item.spec.fields, draft, binding.field, text);
+              const value = inlineValue<{ readonly value: string }>(inputs.value!.value, `${binding.field} textual input`);
+              const bound = bindModelTextField(item.spec.fields, draft, binding.field, value);
               endpoints[item.spec.key]!.validateDraft(bound);
               return { kind: "output" as const, value: (canonicalize(bound)) };
             },
@@ -510,9 +514,9 @@ export function modelArtifactInputNames(name: string): {
   return { artifact: `${name}:artifact`, binding: `${name}:binding` };
 }
 
-export function modelTextInputName(name: string): string {
-  assert(name.trim().length > 0, "Model Text input name is empty");
-  return `${name}:text`;
+export function modelTextFieldInputName(name: string): string {
+  assert(name.trim().length > 0, "Model text-field input name is empty");
+  return `${name}:value`;
 }
 
 /**
@@ -524,10 +528,10 @@ export function modelTextInputName(name: string): string {
 export function createFieldModelGenerationFragment(
   endpoint: FieldModelOperation,
   mediaInputs: readonly ModelArtifactInput[] = [],
-  textInputs: readonly ModelTextInput[] = [],
+  textFieldInputs: readonly ModelTextFieldInput[] = [],
   outputNames: FieldModelFragmentExports,
 ) {
-  const names = [...mediaInputs, ...textInputs].map((item) => item.name);
+  const names = [...mediaInputs, ...textFieldInputs].map((item) => item.name);
   assert(new Set(names).size === names.length, "Model input names must be unique");
   const inputs = [{ name: "draft", type: endpoint.draftType }];
   const operations: Array<{
@@ -540,16 +544,16 @@ export function createFieldModelGenerationFragment(
   const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
   let draft = input("draft") as ReturnType<typeof input> | ReturnType<typeof operation>;
 
-  for (const [index, item] of textInputs.entries()) {
-    const binding = endpoint.textBindings[item.field];
+  for (const [index, item] of textFieldInputs.entries()) {
+    const binding = endpoint.textFieldBindings[item.field];
     assert(binding !== undefined, `${endpoint.fields.model} has no text field ${item.field}`);
-    const inputName = modelTextInputName(item.name);
-    inputs.push({ name: inputName, type: textTypes.text });
-    const id = `bind-text:${String(index + 1).padStart(4, "0")}:${item.field}`;
+    const inputName = modelTextFieldInputName(item.name);
+    inputs.push({ name: inputName, type: binding.type });
+    const id = `bind-text-field:${String(index + 1).padStart(4, "0")}:${item.field}`;
     operations.push({
       id,
       producer: binding.producer,
-      inputs: { draft, text: input(inputName) },
+      inputs: { draft, value: input(inputName) },
       result: { kind: "output" as const, name: "draft" },
     });
     draft = operation(id);
@@ -623,9 +627,9 @@ export function createFieldModelGenerationFragment(
 export function createFieldModelPrimaryFragment(
   endpoint: FieldModelOperation,
   mediaInputs: readonly ModelArtifactInput[] = [],
-  textInputs: readonly ModelTextInput[] = [],
+  textFieldInputs: readonly ModelTextFieldInput[] = [],
 ) {
-  return createFieldModelGenerationFragment(endpoint, mediaInputs, textInputs, {
+  return createFieldModelGenerationFragment(endpoint, mediaInputs, textFieldInputs, {
     primary: endpoint.result.primary.output,
   });
 }

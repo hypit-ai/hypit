@@ -10,12 +10,15 @@ The selected Provider implements its exact capability.
 
 Import the model variant you mean and connect prompt and references as ordinary graph edges:
 
-```xml
-<wan:Image id="draft" prompt={prompt} resolution="2K">
-  <wan:Reference image={product.image}/>
-</wan:Image>
+```svml
+module wan from "@hypit/wan@1"
 
-<wan:ProImage id="hero" prompt={heroPrompt} resolution="4K"/>
+wan.image {
+  id: draft prompt: @prompt resolution: 2K
+  Reference { image: @product.image }
+}
+
+wan.pro-image { id: hero prompt: @heroPrompt resolution: 4K }
 ```
 
 The declaration compiler only lowers this syntax into the package's exact model request. It does not select a

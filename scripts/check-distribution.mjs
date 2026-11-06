@@ -118,41 +118,40 @@ try {
   // font families it selected, through its ordinary package.json and lockfile.
   await npm("install", "--save-exact", "@fontsource-variable/inter@5.3.0", "--no-audit", "--no-fund");
   await hypit(["check", "chat.svml", "--project", project]);
-  await writeFile(join(project, "gpt-image.svml"), `<?svml using="@hypit/markup@1"?>
-<svml>
-  <import as="text" from="@hypit/text@1"/>
-  <import as="gpt" from="@hypit/gpt-image/clean@1"/>
-  <import as="ugc" source="@hypit/gpt-image-kits/phone-ugc-v1"/>
-  <text:Value id="shot">A candid close portrait in window light.</text:Value>
-  <text:Render id="prompt" template={ugc.phone-ugc-v1}>
-    <text:Set name="shot" text={shot}/>
-  </text:Render>
-  <gpt:Image id="portrait" prompt={prompt} aspect-ratio="1:1" resolution="1K"/>
-</svml>
+  await writeFile(join(project, "gpt-image.svml"), `module prompt from "@hypit/prompt@1"
+module gpt from "@hypit/gpt-image@1"
+source ugc from "@hypit/gpt-image-kits/phone-ugc-v1"
+
+prompt.Render "portrait-prompt" {
+  template: @ugc.phone-ugc-v1
+  bind "shot" { value: "A candid close portrait in window light." }
+}
+
+gpt.image {
+  id: portrait
+  prompt: @portrait-prompt
+  aspect-ratio: 1:1
+  resolution: 1K
+}
 `);
   await hypit(["check", "gpt-image.svml", "--project", project]);
-  await writeFile(join(project, "default-models.svml"), `<?svml using="@hypit/markup@1"?>
-<svml>
-  <import as="text" from="@hypit/text@1"/>
-  <import as="h3" from="@hypit/minimax-h3@1"/>
-  <import as="nano" from="@hypit/nano-banana@1"/>
-  <import as="seedream" from="@hypit/seedream@1"/>
-  <import as="grok" from="@hypit/grok-imagine@1"/>
-  <import as="pix" from="@hypit/pixverse@1"/>
-  <import as="wan" from="@hypit/wan@1"/>
-  <import as="mimo" from="@hypit/mimo-speech@1"/>
-  <import as="fish" from="@hypit/fishaudio-speech@1"/>
-  <import as="eleven" from="@hypit/elevenlabs-speech@1"/>
-  <import as="matte" from="@hypit/volcengine-matting@1"/>
-  <text:Value id="videoPrompt">A paper boat crossing a rain puddle in one continuous shot.</text:Value>
-  <text:Value id="imagePrompt">A small red chair against a quiet blue wall.</text:Value>
-  <h3:TextVideo id="boat" prompt={videoPrompt} duration="6" resolution="768P" aspect-ratio="16:9"/>
-  <nano:Image id="chair" prompt={imagePrompt} aspect-ratio="1:1" resolution="2K" output-format="png"/>
-  <seedream:TextImage id="wall" prompt={imagePrompt} aspect-ratio="1:1" quality="high" output-format="png" nsfw-check="true"/>
-  <grok:PreviewVideo id="puddle" prompt={videoPrompt} duration="6" aspect-ratio="16:9" resolution="720p"/>
-  <pix:Video id="boat-alt" model="v6" prompt={videoPrompt} duration="5" quality="720p" aspect-ratio="16:9" generate-audio="false"/>
-  <wan:Image id="chair-alt" prompt={imagePrompt} resolution="2K"/>
-</svml>
+  await writeFile(join(project, "default-models.svml"), `module prompt from "@hypit/prompt@1"
+module h3 from "@hypit/minimax-h3@1"
+module nano from "@hypit/nano-banana@1"
+module seedream from "@hypit/seedream@1"
+module grok from "@hypit/grok-imagine@1"
+module pix from "@hypit/pixverse@1"
+module wan from "@hypit/wan@1"
+
+prompt.Prompt "video-prompt" { text: "A paper boat crossing a rain puddle in one continuous shot." }
+prompt.Prompt "image-prompt" { text: "A small red chair against a quiet blue wall." }
+
+h3.text-video { id: boat prompt: @video-prompt duration: 6 resolution: 768P aspect-ratio: 16:9 }
+nano.image { id: chair prompt: @image-prompt aspect-ratio: 1:1 resolution: 2K output-format: png }
+seedream.text-image { id: wall prompt: @image-prompt aspect-ratio: 1:1 quality: high output-format: png nsfw-check: true }
+grok.preview-video { id: puddle prompt: @video-prompt duration: 6 aspect-ratio: 16:9 resolution: 720p }
+pix.video { id: boat-alt model: v6 prompt: @video-prompt duration: 5 quality: 720p aspect-ratio: 16:9 generate-audio: false }
+wan.image { id: chair-alt prompt: @image-prompt resolution: 2K }
 `);
   await hypit(["check", "default-models.svml", "--project", project]);
   const missingBrowser = await hypit(["doctor", ...scope, "--json"], true, 1);

@@ -21,8 +21,8 @@
     "@hypit/blob": "workspace:*",
     "@hypit/generation": "workspace:*",
     "@hypit/hypit": "workspace:*",
-    "@hypit/markup": "workspace:*",
-    "@hypit/protocol": "workspace:*"
+    "@hypit/protocol": "workspace:*",
+    "@hypit/svml": "workspace:*"
   },
   "dependencies": {
     "@hypit/generation": "workspace:^0.2.0"

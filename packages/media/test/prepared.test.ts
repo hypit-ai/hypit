@@ -5,11 +5,11 @@ import { fixtureResource } from "../../../test/fixture-resource.js";
 import {
   prepareMedia,
   preparedAudioSource,
-  preparedVisualExtent,
-  preparedVisualSource,
+  preparedPictureExtent,
+  preparedSignalPictureSource,
   verifyPreparedAudioSource,
   verifyPreparedMedia,
-  verifyPreparedVisualSource,
+  verifyPreparedSignalPictureSource,
 } from "../src/index.js";
 import type { MediaInspection, MediaVideoStream } from "../src/index.js";
 
@@ -42,7 +42,7 @@ test("PreparedMedia preserves source identity, exact member offsets and display 
   });
   verifyPreparedMedia(media);
   assert.deepEqual(media.source, source);
-  assert.deepEqual(media.domain.duration, { ticks: "10", timeBase: { numerator: 1, denominator: 1 } });
+  assert.deepEqual(media.domain?.duration, { ticks: "10", timeBase: { numerator: 1, denominator: 1 } });
   assert.deepEqual(media.audio?.map.stages[0]?.pieces[0], {
     target: {
       start: { ticks: "1", timeBase: { numerator: 1, denominator: 4 } },
@@ -51,7 +51,7 @@ test("PreparedMedia preserves source identity, exact member offsets and display 
     sourceAtStart: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
     rate: { numerator: 1, denominator: 1 },
   });
-  assert.deepEqual(preparedVisualExtent(media), { widthPx: 576, heightPx: 768 });
+  assert.deepEqual(preparedPictureExtent(media), { widthPx: 576, heightPx: 768 });
 });
 
 test("PreparedMedia rejects a stream without an observed presentation span", () => {
@@ -68,7 +68,7 @@ test("PreparedMedia rejects a stream without an observed presentation span", () 
     source: { kind: "blob", resource: fixtureResource("prepared-missing-span"), size: 128, mediaType: "video/mp4" },
     inspection: missing,
     selection: { videoStreamIndex: 0, spanAuthority: "video", picture: VIDEO_PICTURE },
-  }), /has no observed presentation span/u);
+  }), /without an observed presentation span/u);
 });
 
 test("square-pixel display extent preserves actual dimensions instead of reducing an aspect ratio", () => {
@@ -84,7 +84,7 @@ test("square-pixel display extent preserves actual dimensions instead of reducin
     inspection: squareInspection,
     selection: { videoStreamIndex: 0, spanAuthority: "video", picture: VIDEO_PICTURE },
   });
-  assert.deepEqual(preparedVisualExtent(media), { widthPx: 64, heightPx: 64 });
+  assert.deepEqual(preparedPictureExtent(media), { widthPx: 64, heightPx: 64 });
 });
 
 test("signal projections retain source selection without choosing an execution format", () => {
@@ -94,14 +94,40 @@ test("signal projections retain source selection without choosing an execution f
     inspection,
     selection: { videoStreamIndex: 0, audioStreamIndex: 1, spanAuthority: "video", picture: VIDEO_PICTURE },
   });
-  const visual = preparedVisualSource(media);
+  const visual = preparedSignalPictureSource(media);
   const audio = preparedAudioSource(media);
-  verifyPreparedVisualSource(visual);
+  verifyPreparedSignalPictureSource(visual);
   verifyPreparedAudioSource(audio);
   assert.equal(visual.streamIndex, 0);
   assert.equal(audio.streamIndex, 1);
-  assert.deepEqual(visual.sourceDomain, media.visual?.sourceDomain);
+  assert.deepEqual(visual.sourceDomain, media.picture?.kind === "signal" ? media.picture.sourceDomain : undefined);
   assert.deepEqual(audio.sourceDomain, media.audio?.sourceDomain);
   assert.equal("artifact" in visual, false);
   assert.equal("artifact" in audio, false);
+});
+
+test("a still image is the constant Picture facet of ordinary PreparedMedia", () => {
+  const source = { kind: "blob" as const, resource: fixtureResource("prepared-image"),
+    size: 256, mediaType: "image/png" };
+  const media = prepareMedia({
+    id: "poster",
+    source,
+    inspection: { streams: [{
+      kind: "video", index: 0, codecName: "png",
+      disposition: { default: true, attachedPicture: false },
+      decodedUnitCount: 1, width: 1200, height: 1600,
+      sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0,
+      picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb",
+        colorRange: "full", bitDepth: 8, alphaMode: "straight" },
+    }] },
+    selection: { videoStreamIndex: 0, picture: {
+      colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb",
+      colorRange: "full", bitDepth: 8, alphaMode: "straight",
+    } },
+  });
+  verifyPreparedMedia(media);
+  assert.equal(media.id, "poster");
+  assert.equal(media.domain, undefined);
+  assert.equal(media.picture?.kind, "constant");
+  assert.deepEqual(preparedPictureExtent(media), { widthPx: 1200, heightPx: 1600 });
 });

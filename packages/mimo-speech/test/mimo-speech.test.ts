@@ -61,7 +61,7 @@ test("VoiceDesign publishes one reusable voice reference", async () => {
   assert.deepEqual(result.components[0]!.outputs, { audio: "host.reference" });
   const exported = result.components[0]!.fragment.exports.find((item) => item.name === "audio");
   assert.deepEqual(exported?.type, blobTypes.blob);
-  assert.deepEqual(result.components[0]!.inputs["speech:text"], {
+  assert.deepEqual(result.components[0]!.inputs["speech:value"], {
     kind: "record",
     id: "story.segment.opening.speech",
   });

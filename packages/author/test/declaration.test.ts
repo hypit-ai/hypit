@@ -329,3 +329,91 @@ test("Author Declaration shapes express package-local recursive child grammars",
       && error.code === "AUTHOR_DECLARATION_CHILD_UNKNOWN",
   );
 });
+
+test("Author leaves declaration-local references to the owning package", async () => {
+  const localRegistry = new AuthorDeclarationRegistry();
+  localRegistry.register({
+    module,
+    declaration: "owned",
+    outputs: [textType],
+    shape: {
+      summary: "Keeps one package-local endpoint reference.",
+      label: "required",
+      fields: [{
+        name: "endpoint",
+        kind: "reference",
+        referenceScope: "declaration",
+        required: true,
+        summary: "Names an endpoint owned by this declaration.",
+      }],
+      children: [{
+        name: "part",
+        label: "required",
+        cardinality: "many",
+        summary: "Owns one locally named part.",
+        fields: [],
+      }],
+    },
+    bindings(declaration) {
+      return [{
+        name: declaration.label!,
+        ref: { kind: "record", id: declaration.label! },
+        type: textType,
+      }];
+    },
+    compile({ declaration }) {
+      const endpoint = declarationField(declaration, "endpoint");
+      assert.equal(endpoint?.kind, "reference");
+      return {
+        records: [{
+          id: declaration.label!,
+          type: textType,
+          value: endpoint?.kind === "reference" ? endpoint.path : "",
+          range: declaration.range,
+        }],
+        components: [],
+      };
+    },
+  });
+  let externalResolutions = 0;
+  const decoded = await compileAuthorDeclarations({
+    sourceName: "owned.svml",
+    registry: localRegistry,
+    declarations: [{
+      module,
+      name: "owned",
+      label: "whole",
+      fields: [{ name: "endpoint", value: {
+        kind: "reference", path: "part.inner", range: range(8, 20),
+      } }],
+      children: [{ name: "part", label: "inner", fields: [], children: [] }],
+      range: range(0, 40),
+    }],
+    resolveReference() {
+      externalResolutions += 1;
+      return undefined;
+    },
+    resolveAsset: () => { throw new Error("unused"); },
+  });
+  assert.equal(externalResolutions, 0);
+  assert.equal(decoded.records[0]?.value, "part.inner");
+  assert.deepEqual(decoded.provenance?.[0]?.inputs, [{ name: "endpoint" }]);
+
+  await assert.rejects(
+    compileAuthorDeclarations({
+      sourceName: "owned-invalid.svml",
+      registry: localRegistry,
+      declarations: [{
+        module,
+        name: "owned",
+        label: "whole",
+        fields: [{ name: "endpoint", value: { kind: "reference", path: "part.inner" } }],
+        children: [{ name: "part", fields: [], children: [] }],
+        range: range(0, 40),
+      }],
+      resolveAsset: () => { throw new Error("unused"); },
+    }),
+    (error: unknown) => error instanceof AuthorDeclarationError
+      && error.code === "AUTHOR_DECLARATION_LABEL_REQUIRED",
+  );
+});

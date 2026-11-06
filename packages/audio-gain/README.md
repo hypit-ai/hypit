@@ -15,3 +15,9 @@ ordinary uses of this Operator, not concepts added to Occurrence, Track, Clip, A
 Additive mixing itself is the closed Audio algebra's ordinary `mix` node. It therefore needs no package
 declaration, `AudioTrack`, Timeline, Mixer lane or intermediate set. Dry/wet branches, parallel copies and
 sidechain routing are expressed by signal graph edges and package-owned named Operator ports.
+
+The package also publishes its NLE facets. An Item may place the `gain` symbol in `audio.effects` with either a
+constant gain or an Item-local ordered frame envelope. The package validates that spelling, compiles frame positions
+to an exact `AudioGainControl`, supplies the AVIR `AudioOperator`, and owns headless parameter edits. NLE Core only
+stores the symbol and canonical parameters; moving an Item moves its envelope, while trimming rejects envelope
+frames left outside the new Item duration.

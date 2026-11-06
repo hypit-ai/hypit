@@ -24,8 +24,8 @@
     "@hypit/blob": "workspace:*",
     "@hypit/producer": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/markup": "workspace:*",
     "@hypit/refinement": "workspace:*",
-    "@hypit/hypit": "workspace:*"
+    "@hypit/hypit": "workspace:*",
+    "@hypit/svml": "workspace:*"
   }
 }

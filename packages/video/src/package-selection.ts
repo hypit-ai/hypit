@@ -1,20 +1,12 @@
 import { discoverSourcePackages } from "@hypit/hypit/cli";
-import {
-  createMarkupDeclarationAuthorFrontend,
-  MarkupDeclarationRegistry,
-} from "@hypit/hypit/markup";
 import { AuthorDeclarationRegistry } from "@hypit/hypit/author";
+import { createSvmlAuthorFrontend } from "@hypit/hypit/svml";
+import { svmlAuthorFrontendId } from "@hypit/hypit/svml";
 import type { LoadedPackage } from "@hypit/hypit/loader";
 
-const markupFrontend = createMarkupDeclarationAuthorFrontend({
-  syntax: new MarkupDeclarationRegistry(),
-  compilers: new AuthorDeclarationRegistry(),
-  resolveModule(request) {
-    throw new Error(`Markup discovery unexpectedly resolved Module ${request.from}`);
-  },
-});
+const svmlFrontend = createSvmlAuthorFrontend({ compilers: new AuthorDeclarationRegistry() });
 
-/** Video Distribution bootstrap: generic Source discovery plus the bare Markup Frontend. */
+/** Video Distribution bootstrap: the Host selects canonical SVML before package discovery. */
 export async function discoverVideoSourcePackages(
   sourcePath: string,
   options: {
@@ -31,6 +23,7 @@ export async function discoverVideoSourcePackages(
       ? {}
       : { distributionPackageRoot: options.distributionPackageRoot }),
     ...(options.packages === undefined ? {} : { packages: options.packages }),
-    bootstrapAuthorFrontends: [markupFrontend],
+    bootstrapAuthorFrontends: [svmlFrontend],
+    sourceAdapter: (unit) => ({ unit, frontend: svmlAuthorFrontendId }),
   });
 }

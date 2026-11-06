@@ -36,6 +36,7 @@ export type PictureInterpretation =
 
 export type MediaVideoSelector =
   | { readonly mode: "primary-moving" }
+  | { readonly mode: "primary-picture" }
   | { readonly mode: "stream-index"; readonly streamIndex: number }
   | { readonly mode: "none" };
 
@@ -49,7 +50,8 @@ export type MediaAudioSelector =
 export type MediaSelectionRequest = {
   readonly video: MediaVideoSelector;
   readonly audio: MediaAudioSelector;
-  readonly spanAuthority: "video" | "audio";
+  /** Required only when the selected media has a temporal signal. */
+  readonly spanAuthority?: "video" | "audio";
   readonly picture:
     | { readonly mode: "none" }
     | { readonly mode: "source" }
@@ -59,6 +61,36 @@ export type MediaSelectionRequest = {
 /** Runtime observation request. The Resource identity remains on the graph edge. */
 export type InspectMediaNeed = {
   readonly source: BlobRef;
+};
+
+/** Selects one audio member for physical materialization as a standalone Blob. */
+export type AudioExtractionRequest = {
+  readonly audio: Exclude<MediaAudioSelector,
+    { readonly mode: "none" } | { readonly mode: "default-if-present" }>;
+};
+
+/** Selects one decoded picture from a moving visual member. */
+export type FrameExtractionRequest = {
+  readonly video: Exclude<MediaVideoSelector, { readonly mode: "none" }>;
+  readonly at:
+    | { readonly kind: "first" }
+    | { readonly kind: "last" }
+    | { readonly kind: "frame"; readonly index: number }
+    | { readonly kind: "time"; readonly seconds: number };
+};
+
+/** Byte-level audio extraction after stream selection has been resolved. */
+export type ExtractAudioNeed = {
+  readonly source: BlobRef;
+  readonly streamIndex: number;
+};
+
+/** Byte-level frame extraction after stream selection has been resolved. */
+export type ExtractFrameNeed = {
+  readonly source: BlobRef;
+  readonly streamIndex: number;
+  readonly sourceFrameCount: number;
+  readonly at: FrameExtractionRequest["at"];
 };
 
 export type PictureSignal = Omit<PictureInterpretation, "alphaMode">;
@@ -123,26 +155,37 @@ export type MediaInspection = {
 export type MediaStreamSelection = {
   readonly videoStreamIndex?: number;
   readonly audioStreamIndex?: number;
-  readonly spanAuthority: "video" | "audio";
+  readonly spanAuthority?: "video" | "audio";
   /** Complete author-resolved interpretation of the selected visual stream. */
   readonly picture?: PictureInterpretation;
 };
 
-export type PreparedVisualMember = {
+type PreparedPictureInterpretation = {
+  readonly codedWidth: number;
+  readonly codedHeight: number;
+  readonly sampleAspectRatio: MediaRational;
+  readonly rotationDegrees: 0 | 90 | 180 | 270;
+  readonly picture: PictureInterpretation;
+};
+
+export type PreparedConstantPictureMember = {
+  readonly kind: "constant";
+  readonly streamIndex: number;
+  readonly interpretation: PreparedPictureInterpretation;
+};
+
+export type PreparedSignalPictureMember = {
+  readonly kind: "signal";
   readonly streamIndex: number;
   /** Original presentation timestamp corresponding to source-domain zero. */
   readonly presentationStart: ExactTemporalValue;
   readonly sourceDomain: LocalTemporalDomain;
   /** Prepared-local to this member's source-presentation domain. */
   readonly map: TemporalMap;
-  readonly interpretation: {
-    readonly codedWidth: number;
-    readonly codedHeight: number;
-    readonly sampleAspectRatio: MediaRational;
-    readonly rotationDegrees: 0 | 90 | 180 | 270;
-    readonly picture: PictureInterpretation;
-  };
+  readonly interpretation: PreparedPictureInterpretation;
 };
+
+export type PreparedPictureMember = PreparedConstantPictureMember | PreparedSignalPictureMember;
 
 export type PreparedAudioMember = {
   readonly streamIndex: number;
@@ -153,15 +196,16 @@ export type PreparedAudioMember = {
   readonly map: TemporalMap;
 };
 
-/** Signal-specific terminal facts projected from PreparedMedia for visual execution. */
-export type PreparedVisualSource = {
+export type PreparedConstantPictureSource = {
   readonly source: BlobRef;
-  readonly streamIndex: number;
-  /** Original presentation timestamp corresponding to source-domain zero. */
-  readonly presentationStart: ExactTemporalValue;
-  readonly sourceDomain: LocalTemporalDomain;
-  readonly interpretation: PreparedVisualMember["interpretation"];
-};
+} & PreparedConstantPictureMember;
+
+/** Signal-specific terminal facts projected from PreparedMedia for visual execution. */
+export type PreparedSignalPictureSource = {
+  readonly source: BlobRef;
+} & Omit<PreparedSignalPictureMember, "map">;
+
+export type PreparedPictureSource = PreparedConstantPictureSource | PreparedSignalPictureSource;
 
 /** Signal-specific terminal facts projected from PreparedMedia for audio execution. */
 export type PreparedAudioSource = {
@@ -177,9 +221,11 @@ export type PreparedAudioSource = {
  * time-bearing media source. Renderer evaluation and Film placement stay outside.
  */
 export type PreparedMedia = {
+  readonly id: string;
   readonly source: BlobRef;
-  readonly domain: LocalTemporalDomain;
-  readonly visual?: PreparedVisualMember;
+  /** Present exactly when at least one selected facet is time-bearing. */
+  readonly domain?: LocalTemporalDomain;
+  readonly picture?: PreparedPictureMember;
   readonly audio?: PreparedAudioMember;
 };
 

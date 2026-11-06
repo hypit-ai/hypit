@@ -1,16 +1,27 @@
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
+import { createAuthorEditPlannerFacet } from "@hypit/hypit/author";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
-import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
-import { captionComponent, captionManifest, captionModuleRef, hiddenCaptionStyleAuthorDeclaration, hiddenCaptionStyleMarkupDeclaration } from "./index.js";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
+import { createNleSubjectProjectorFacet } from "@hypit/nle-view";
+import { createNlePackageFacet } from "@hypit/nle";
+
+import { captionComponent } from "./component.js";
+import { captionAuthorFacets } from "./declaration.js";
+import { captionComponentEditPlanner } from "./edit.js";
+import { captionHtmlManifest, captionManifest } from "./manifest.js";
+import { captionNleSubjectProjector } from "./nle.js";
+import { captionBasicNleResolver } from "./nle-package.js";
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
-  modules: [{ manifest: captionManifest }],
+  modules: [{ manifest: captionManifest }, { manifest: captionHtmlManifest }],
   facets: [
-    ...[captionComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
-    createAuthorDeclarationFacet(hiddenCaptionStyleAuthorDeclaration),
-    createMarkupDeclarationFacet({ module: captionModuleRef, declaration: hiddenCaptionStyleMarkupDeclaration }),
+    createProducerPackageFacet(captionComponent.producers),
+    createRefinementPackageFacet(captionComponent.refinements),
+    createAuthorEditPlannerFacet(captionComponentEditPlanner),
+    createNleSubjectProjectorFacet(captionNleSubjectProjector),
+    createNlePackageFacet({ captions: [captionBasicNleResolver] }),
+    ...captionAuthorFacets,
   ],
 };
+
 export default hypitPackage;

@@ -1,58 +1,49 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { AuthorDeclarationRegistry, compileAuthorDeclarations } from "@hypit/author";
-import type { AuthorDeclaration } from "@hypit/author";
+import { compileSvmlDeclaration } from "../../../test/compile-svml-declaration.js";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import { mediaTypes } from "@hypit/media";
-import { fontsourceFaceAuthorDeclaration } from "../src/index.js";
+import { fontsourceAuthorDeclarations, fontsourceModuleRef } from "../src/index.js";
 
-const range = { start: 0, end: 120 };
 const encoder = new TextEncoder();
 
-function declaration(packageValue = "@fontsource-variable/inter"): AuthorDeclaration {
-  return {
-    module: fontsourceFaceAuthorDeclaration.module,
-    name: fontsourceFaceAuthorDeclaration.declaration,
-    fields: [
-      { name: "id", value: { kind: "literal", value: "inter" } },
-      { name: "package", value: { kind: "literal", value: packageValue } },
-      { name: "weight", value: { kind: "literal", value: "700" } },
-      { name: "style", value: { kind: "literal", value: "normal" } },
-    ],
-    children: [],
-    range,
-  };
+function declaration(packageValue = "@fontsource-variable/inter"): string {
+  return `fontsource.face {
+  id: inter
+  package: "${packageValue}"
+  weight: 700
+  style: normal
+}`;
 }
 
-async function compile(value: AuthorDeclaration, requests: string[], reads: string[]) {
-  const registry = new AuthorDeclarationRegistry();
-  registry.register(fontsourceFaceAuthorDeclaration);
-  return await compileAuthorDeclarations({
-    sourceName: "fontsource.test.svml",
-    declarations: [value],
-    registry,
-    readAsset(request) {
-      reads.push(request.from);
-      if (request.from.endsWith("/metadata.json")) {
+async function compile(source: string, requests: string[], reads: string[]) {
+  return await compileSvmlDeclaration({
+    source,
+    module: fontsourceModuleRef,
+    alias: "fontsource",
+    compilers: fontsourceAuthorDeclarations,
+    readAsset(from) {
+      reads.push(from);
+      if (from.endsWith("/metadata.json")) {
         return encoder.encode(JSON.stringify({
           id: "inter", family: "Inter", weights: [400, 700], styles: ["normal", "italic"],
           variable: { wght: { min: "100", max: "900", step: "1" } },
         }));
       }
-      if (request.from.endsWith("/wght.css")) {
+      if (from.endsWith("/wght.css")) {
         return encoder.encode(`@font-face { src: url(./files/inter-latin.woff2); unicode-range: U+0000-00FF; }
 @font-face { src: url(./files/inter-cjk.woff2); unicode-range: U+3000-9FFF; }`);
       }
-      throw new Error(`Unexpected readable asset ${request.from}`);
+      throw new Error(`Unexpected readable asset ${from}`);
     },
-    resolveAsset(request) {
-      requests.push(request.from);
+    resolveAsset(from, mediaType) {
+      requests.push(from);
       return {
         kind: "blob",
-        resource: fixtureResource(`fontsource:${request.from}`),
+        resource: fixtureResource(`fontsource:${from}`),
         size: 2_048,
-        mediaType: request.mediaType,
+        mediaType: mediaType!,
       };
     },
   });

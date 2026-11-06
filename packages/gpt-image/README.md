@@ -12,32 +12,24 @@ network code. The selected Provider implements its exact capability.
 Provider-specific combination limits are checked by that Provider before any paid operation. They
 do not narrow this model-owned vocabulary or leak into author source.
 
-The one physical package exposes two independently importable logical modules:
-
-- `@hypit/gpt-image@1`: the raw exact model;
-- `@hypit/gpt-image/clean@1`: generation followed by an explicit shared image transform
-  Program, exporting one cleaned image while retaining both operations in the graph.
-
-Both modules expose an `Image` author declaration. They use the same author shape, so choosing the clean
-module changes the visible graph expansion rather than the document structure:
+The package exposes one exact `@hypit/gpt-image@1` module and one `Image` author declaration:
 
 ```svml
-<import as="text" from="@hypit/text@1"/>
-<import as="gpt" from="@hypit/gpt-image/clean@1"/>
+module prompt from "@hypit/prompt@1"
+module gpt from "@hypit/gpt-image@1"
 
-<text:Value id="prompt">
-  A woman holding the product, editorial photography.
-</text:Value>
+prompt.Prompt "direction" {
+  text: "A woman holding the product, editorial photography."
+}
 
-<gpt:Image
-  id="holding"
-  prompt={prompt}
-  aspect-ratio="9:16"
-  resolution="2K"
->
-  <gpt:Reference image={person.image}/>
-  <gpt:Reference image={product.image}/>
-</gpt:Image>
+gpt.image {
+  id: holding
+  prompt: @direction
+  aspect-ratio: 9:16
+  resolution: 2K
+  Reference "person" { image: @person-image }
+  Reference "product" { image: @product-image }
+}
 ```
 
 Set the optional `background` attribute to `transparent` when the generated image should carry
@@ -46,12 +38,10 @@ Omitting it leaves that choice to the model and selected Provider. Provider-spec
 including which resolution tiers accept an explicit background choice, are reported by that
 Provider before generation.
 
-`prompt` is an ordinary `Text` graph edge. Every `Reference` is an ordinary image Artifact edge.
-The raw module expands to request
-assembly, generation and primary-image selection. The clean module then adds its package-owned
-`gptImageCleanupProgram` and the shared `Transform` Need as one further visible operation. The
-generic raster-transform package owns the Program shape and operation semantics; this package owns
-the selected cleanup recipe.
+`prompt` is a nominal `Prompt` graph edge. Every `Reference` is an ordinary image Artifact edge.
+The module expands to request assembly, generation and primary-image selection. It returns the
+Provider's selected image unchanged. Denoising, grading or other project-specific asset preparation
+is not hidden inside the model contract.
 
 The declaration compiler belongs to this package. The public
 `@hypit/generation/model` helpers remain responsible only for the exact request and Fragment

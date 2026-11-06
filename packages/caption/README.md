@@ -1,79 +1,149 @@
 # `@hypit/caption`
 
-External components import `@hypit/caption`. Source uses the `@hypit/caption@1` Module
-identity for shared declarations such as `Hidden`.
+Clock-free caption content, source-local timing, and the first data-driven audiovisual component.
 
-`Hidden` is owned by Caption's syntax-neutral Author declaration compiler. Markup contributes the
-`Hidden` tag spelling, while direct and textual authorship produce the same `CaptionStyle` Record.
+Caption deliberately separates five facts:
 
-Caption has independent content, timing and presentation structures: CaptionDocument owns display
-Words, correspondence Units and authored Cues; CaptionTiming locates every Unit; and each rendering
-family presents those Cues before timed Uses choose how they appear. A Use may begin inside a Cue. It
-changes presentation without changing that Cue's content or restarting its Unit timing.
+- `CaptionDocument` owns words, correspondence units, and authored cue grouping. It contains no time.
+- `LocalCaptionTiming` maps unit identities to exact sided regions in one named local temporal domain.
+- `CaptionSelection` says which document content one component instance owns.
+- `CaptionStyle` is an opaque family-owned presentation value.
+- `CaptionPresentation` is one component instance's ordered, source-local style/visibility policy.
 
-`CaptionDocument` owns displayed words with authored separators, display units, word attributes and
-complete Cue membership. Every Word belongs to exactly one Unit and every Unit belongs to exactly
-one Cue, in document order. A Cue may carry one Role. The document contains no Narrative token or
-Segment identities and no time. `CaptionTiming` independently owns one
-complete, flat table of absolute unit boundaries on one Timeline. A domain adapter can produce that
-timing from speech, SRT/VTT can publish it directly, and authored absolute timing can use the same
-renderer. Cue membership belongs to the document; visibility envelopes, handoff, layout and motion
-belong to the selected rendering family.
+The package does not know whether timing came from WhisperX, an SRT/WebVTT adapter, authored data, or
+another matcher. Those producers converge on `LocalCaptionTiming`; they do not create different Caption
+or NLE paths.
 
-A rendering family's Track accepts `document`, `timing`, `timeline`, the spatial inputs its renderer
-actually needs and ordered `Use` children. Fine takes one placement Frame:
+## Component path: one instance, one parent Source
+
+`caption.Component` consumes the four typed facts and publishes one `ProgramSource`. Selecting three cues
+does not create three Cards, Sources, Occurrences, rectangles, or NLE items. Cue elements and their display
+schedule are internal to the component implementation. Authors may still declare any number of independent
+Caption component instances, with overlapping or disjoint selections, when the work actually calls for them.
 
 ```svml
-<caption:Hidden id="hidden"/>
-<narrative-caption:Timing id="story-captions" document={story.caption}
-  binding={story.caption-binding} projection={story-time}/>
-<time:Window id="impact-window" timeline={film.timeline} from="12s" for="2s"/>
-<caption-fine:Caption id="captions" document={story.caption} timing={story-captions}
-  timeline={film.timeline} within={vertical.bounds}>
-  <caption-fine:Use style={plain}/>
-  <caption-fine:Use role="GUEST" style={guest}/>
-  <caption-fine:Use during={demo-window} style={hidden}/>
-  <caption-fine:Use during={impact-window} style={impact}/>
-</caption-fine:Caption>
+caption.Component "captions" {
+  document: @transcript
+  timing: @transcript-timing
+  style: @main-caption-style
+  selection: { cues: [cue-one, cue-two, cue-three] }
+  width: 1920px
+  height: 1080px
+
+  override "host" {
+    roles: [HOST]
+    style: @host-caption-style
+  }
+  override "guest" {
+    roles: [GUEST]
+    style: @guest-caption-style
+  }
+  override "pause-middle" {
+    cues: [cue-two]
+    hidden: true
+  }
+  override "impact-ending" {
+    cues: [cue-three]
+    style: @impact-caption-style
+  }
+}
 ```
 
-Each bounded Use consumes one resolved Window through `during`. Omitted time means the Use applies
-to the complete Caption document; it is the deliberate batch-caption form, not an anonymous Timeline
-Window. Domain adapters must resolve semantic or other domain references to ordinary absolute values
-before a Caption family consumes them. `role` filters content independently of time. Later matching
-Uses replace earlier presentation inside their windows, including a Hidden Style. Separate Tracks
-remain independent and can intentionally display simultaneous captions.
+Overrides are evaluated in source order and the last matching rule wins. Role rules naturally cover
+non-contiguous turns; a cue rule can hide one passage or restyle just one passage. These rules do not split
+the document, alter unit timing, or create additional parent Sources. Styles in one presentation must share
+the same family, so a rendering family keeps ownership of its parameters and behavior.
 
-## Rendering-family extension
+The parent Programme uses that Source exactly like media or another component. Source-bound time reuses the
+video output's complete occurrence-to-source `TemporalMap`, so trim, slip, speed, reverse, hold, and loop do
+not require Caption-specific synchronization:
 
-A family owns its Style, schedule, renderer and Track declaration. It can use ordinary VisualTrack
-objects or an explicit HTML visual; no central renderer dispatch is required.
+```svml
+source "video" { value: @prepared-video }
+source "captions" { value: @captions }
 
-The public helpers and Types are in [index.ts](src/index.ts):
+occurrence "video" {
+  source: @source.video
+  at: 0s
+  outputs: { picture: {} }
+}
 
-- `CaptionStyleIntent` carries a family identifier and parameters, or `rendering: null` for Hidden.
-- `CaptionProgram` is the Track's internal collection of ordered, resolved Uses and referenced Styles.
-  It is not a separate author element. `create-caption-uses` and `append-caption-use` assemble it from
-  typed Windows. The Track may export it for its Companion, like Visual and Audio Clips.
-- `captionUseVisibility(program, index, role, envelope)` intersects a Cue envelope with a Use and
-  subtracts later matching windows. Hidden participates even though it renders nothing.
-- `CaptionTiming` retains only `timelineId`, `documentId` and complete absolute unit boundaries.
-  Narrative-specific binding and projection belong to `@hypit/narrative-caption`.
+occurrence "captions" {
+  source: @source.captions
+  outputs: { picture: {} }
+  time { bound: source to: @occurrence.video.picture }
+}
+```
 
-Derive layout and animation from authored Cue content and original timing. Apply Use coverage as a
-visibility mask. Fine keeps the original Present span and element animations, with separate
-`visibility` intervals; changing or briefly hiding a Style does not restart karaoke, typing or motion.
-A family may define lead/tail, handoff, lines, pages and local states, but it does not split or merge
-authored Cues. Its resulting visibility stays inside the winning Use window. Empty content produces
-no drawing.
+There is no Caption clock, Timeline registration, or parent expansion of cue geometry. Terminal sampling is
+supplied separately by the selected audiovisual renderer.
 
-Word attributes remain on `CaptionDocument.words`. A structural family can interpret an explicit
-attribute as a keyword role while retaining complete display/alignment units. Time selection does
-not split `<display|speech>` text, and elapsed Cue progress is not a replacement for word timing.
-The content query helpers for Role and attributes remain here. Narrative Selection-to-unit queries
-belong to `@hypit/narrative-caption`; neither defines the Use time language.
+## Editorial import path: materialize ordinary Caption blocks
 
-See Fine's [declaration compiler](../caption-fine/src/declaration.ts), [schedule](../caption-fine/src/schedule.ts) and
-[renderer](../caption-fine/src/render.ts) for a concrete implementation. New family behavior belongs
-in its own project package. The selected family interprets its own Styles; mixed-family dispatch,
-when useful, is an explicit component responsibility.
+The same `CaptionDocument + LocalCaptionTiming + CaptionPresentation` can instead be baked once into an NLE
+transaction. `createCaptionNleMaterialization` resolves the chosen cues, visibility and styles, quantizes exact
+source-local regions at the destination project frame rate, and emits one direct Caption item for each visible
+cue. A hidden cue emits no item. Each resulting block owns its start, duration, text, renderer symbol, style
+parameters and rectangle, so later move, trim, restyle or delete operations are ordinary NLE edits and do not
+write back to the transcript or Caption component.
+
+The built-in `basic` renderer is only a minimal package-owned HTML implementation. Other style families must
+select their own renderer explicitly; the NLE does not interpret family parameters.
+
+## Live component inspection and edits
+
+For a Caption kept as one live Component Source, Caption owns an expandable inspection projection of its
+internal cues. The projection returns cue identity, text,
+role, source-local regions, resolved presentation, and—when given an Occurrence Map—the exact occurrence-local
+preimage. Those cue rows are views inside one Caption Occurrence, not independent Programme objects.
+
+The Cue rectangles are temporally read-only. Caption consumes `LocalCaptionTiming` but does not own it, so
+the projection grants no move, trim or split action. A Timing producer may separately expose such actions when
+its facts are authored; derived alignment remains read-only unless the author explicitly materialises it.
+
+The package also owns `style-roles`, `style-cues`, and `hide-cues` edit actions. An NLE invokes one of those
+actions against the parent `caption.Component`; the resulting edit appends an `override` child to that owner.
+The generic `nle-view` package therefore needs no Caption-specific grammar, matching policy, or knowledge of
+where timing came from.
+
+The complete headless route is now Programme endpoint → Programme Source declaration provenance →
+`caption.Component` declaration → declared `document` / `presentation` / `schedule` edges → Cue rows. The
+preparation phase lists `presentation` and `schedule` as required logical outputs before values are observed;
+the projection phase only reads already materialized Records. Existing transcription or subtitle files may
+feed those facts, but this package does not launch WhisperX or any other upstream producer.
+
+## Caption timing as an event source
+
+`caption.UnitEvent` publishes a chosen unit boundary as a domain-bearing temporal region set:
+
+```svml
+caption.UnitEvent "important-start" {
+  timing: @transcript-timing
+  unit: unit-two
+  edge: start
+}
+```
+
+Another component can consume that event through an already placed video occurrence:
+
+```svml
+occurrence "callout" {
+  source: @source.callout
+  outputs: { picture: {} }
+  time {
+    bound: event
+    through: @occurrence.video.picture
+    event: @important-start
+    require: unique
+  }
+}
+```
+
+This is the two-level follow relationship: the event remains local data that is not itself rendered, while
+the callout asks for its bounded preimage through the video's existing Map. Zero, multiple, or interval
+solutions are not guessed; this convenience relation explicitly requires one sided point.
+
+The current HTML companion is intentionally a minimal vertical implementation. It proves that all selected
+cues render from one Source, ordered presentation rules apply, and timing remains source-local. Rich layout,
+karaoke, word animation, within-cue styling, and concrete file/alignment adapters remain family- or
+producer-owned work; none requires changing the parent Programme representation.

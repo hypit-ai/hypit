@@ -5,20 +5,21 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./speaker": "./kits/speaker-v1.svs",
-    "./broll": "./kits/broll-v1.svs",
-    "./podcast": "./kits/podcast-v1.svs",
-    "./call": "./kits/call-v1.svs",
-    "./street-interview": "./kits/street-interview-v1.svs",
-    "./motion-reference": "./kits/motion-reference-v1.svs",
-    "./camera-reference": "./kits/camera-reference-v1.svs"
+    "./speaker": "./kits/speaker-v1.svml",
+    "./broll": "./kits/broll-v1.svml",
+    "./podcast": "./kits/podcast-v1.svml",
+    "./call": "./kits/call-v1.svml",
+    "./street-interview": "./kits/street-interview-v1.svml",
+    "./motion-reference": "./kits/motion-reference-v1.svml",
+    "./camera-reference": "./kits/camera-reference-v1.svml"
   },
   "files": [
     "kits",
     "README.md"
   ],
   "devDependencies": {
-    "@hypit/recipe": "workspace:*",
-    "@hypit/text": "workspace:*"
+    "@hypit/author": "workspace:*",
+    "@hypit/prompt": "workspace:*",
+    "@hypit/svml": "workspace:*"
   }
 }

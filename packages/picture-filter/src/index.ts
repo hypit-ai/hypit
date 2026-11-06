@@ -20,3 +20,16 @@ export type {
   PictureFilterInterpolation,
   PictureFilterState,
 } from "./program.js";
+export {
+  assertPictureFilterNleParameters,
+  editPictureFilterNleParameters,
+  pictureFilterControlFromNleParameters,
+  pictureFilterNleAuthoring,
+  pictureFilterNleResolver,
+  pictureFilterNleSymbol,
+} from "./nle.js";
+export type {
+  PictureFilterNleEdit,
+  PictureFilterNleFrame,
+  PictureFilterNleParameters,
+} from "./nle.js";

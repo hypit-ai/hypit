@@ -161,4 +161,3 @@ export const fontsourceFaceAuthorDeclaration: AuthorDeclarationCompiler = {
 };
 
 export const fontsourceAuthorDeclarations = [fontsourceFaceAuthorDeclaration] as const;
-export const fontsourceMarkupDeclarations = [{ name: "face", tag: "Face" }] as const;

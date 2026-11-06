@@ -31,6 +31,12 @@ export function temporalExtentFromDomain(domain: LocalTemporalDomain): TemporalE
   return sealTemporalExtent({ duration: structuredClone(domain.duration) });
 }
 
+/** Project the exact scalar carried by an extent without introducing a Clock or sampling grid. */
+export function exactTemporalValueFromExtent(extent: TemporalExtent): TemporalExtent["duration"] {
+  assertTemporalExtent(extent);
+  return structuredClone(extent.duration);
+}
+
 export function temporalExtentFromDuration(duration: TemporalDuration, grid: TemporalSamplingGrid): TemporalExtent {
   return sealTemporalExtent({ duration: exactTemporalValueFromDuration(duration, grid) });
 }

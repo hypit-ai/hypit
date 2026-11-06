@@ -7,6 +7,7 @@ import type {
   ModelFieldRequest,
 } from "@hypit/generation/model-fields";
 import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+import { promptTypes } from "@hypit/hypit/prompt";
 
 import { pixverseRequestValidator } from "./validation.js";
 
@@ -48,7 +49,7 @@ function pixverseFieldTable(model: PixverseModel): ModelFieldTable {
   return defineModelFields({
     model,
     fields: [
-      { name: "prompt", value: { kind: "text", maxChars: 5_000 }, minItems: 1, maxItems: 1 },
+      { name: "prompt", value: { kind: "text", inputType: promptTypes.prompt, maxChars: 5_000 }, minItems: 1, maxItems: 1 },
       { name: "firstFrame", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 1 },
       { name: "lastFrame", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 1 },
       { name: "referenceImage", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: v6 ? 10 : 7 },

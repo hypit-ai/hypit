@@ -23,6 +23,7 @@ import type {
   AuthorValueRef,
 } from "./author.js";
 import type { AuthorDocumentFrontend } from "./document.js";
+import type { AuthorStructureFrontend } from "./structural-document.js";
 
 export type AuthorSourceUnit = SourceUnit;
 export type AuthorSourceImport = SourceImportRequest;
@@ -90,6 +91,8 @@ export type AuthorFrontend = {
   readonly id: string;
   /** Present only when this Frontend supports lossless author-document editing. */
   readonly document?: AuthorDocumentFrontend;
+  /** Canonical structural editing surface for declaration-oriented Frontends. */
+  readonly structure?: AuthorStructureFrontend;
   discover(source: SourceUnit): Awaitable<AuthorSourceDiscovery>;
   decode(source: SourceUnit, context: AuthorSourceDecodeContext): Awaitable<DecodedAuthorSource>;
 };
@@ -145,6 +148,8 @@ export type AuthorInputProvenance = {
 
 export type AuthorElementProvenance = {
   readonly id: string;
+  /** Stable Source unit identity; names are display metadata and need not be unique in a closure. */
+  readonly source: string;
   readonly sourceName: string;
   readonly range: SourceRange;
   readonly records: readonly { readonly local: string; readonly id: string }[];

@@ -98,7 +98,7 @@ export const mediaInspectionSchema: ValueSchema = object({
 });
 export const mediaStreamSelectionSchema: ValueSchema = object({
   videoStreamIndex: { schema: integer, optional: true }, audioStreamIndex: { schema: integer, optional: true },
-  spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
+  spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] }, optional: true },
   picture: { schema: pictureInterpretationSchema, optional: true },
 });
 const preparedMemberBase = {
@@ -107,7 +107,7 @@ const preparedMemberBase = {
   sourceDomain: { schema: localTemporalDomainSchema },
   map: { schema: temporalMapSchema },
 } as const;
-const preparedVisualInterpretation = object({
+const preparedPictureInterpretation = object({
   codedWidth: { schema: { kind: "number", integer: true, minimum: 1 } },
   codedHeight: { schema: { kind: "number", integer: true, minimum: 1 } },
   sampleAspectRatio: { schema: rational },
@@ -116,20 +116,30 @@ const preparedVisualInterpretation = object({
   picture: { schema: pictureInterpretationSchema },
 });
 export const preparedMediaSchema: ValueSchema = object({
+  id: { schema: string },
   source: { schema: blobRefSchema() },
-  domain: { schema: localTemporalDomainSchema },
-  visual: { optional: true, schema: object({
-    ...preparedMemberBase,
-    interpretation: { schema: preparedVisualInterpretation },
-  }) },
+  domain: { schema: localTemporalDomainSchema, optional: true },
+  picture: { optional: true, schema: { kind: "oneOf", variants: [
+    object({ kind: { schema: { kind: "literal", value: "constant" } }, streamIndex: { schema: integer },
+      interpretation: { schema: preparedPictureInterpretation } }),
+    object({ kind: { schema: { kind: "literal", value: "signal" } }, ...preparedMemberBase,
+      interpretation: { schema: preparedPictureInterpretation } }),
+  ] } },
   audio: { optional: true, schema: object({
     ...preparedMemberBase,
   }) },
 });
-export const preparedVisualSourceSchema: ValueSchema = object({
-  source: { schema: blobRefSchema() }, streamIndex: { schema: integer },
-  presentationStart: { schema: exactTemporalValueSchema }, sourceDomain: { schema: localTemporalDomainSchema },
-  interpretation: { schema: preparedVisualInterpretation },
+export const preparedPictureSourceSchema: ValueSchema = { kind: "oneOf", variants: [
+  object({ source: { schema: blobRefSchema() }, kind: { schema: { kind: "literal", value: "constant" } },
+    streamIndex: { schema: integer }, interpretation: { schema: preparedPictureInterpretation } }),
+  object({ source: { schema: blobRefSchema() }, kind: { schema: { kind: "literal", value: "signal" } },
+    streamIndex: { schema: integer }, presentationStart: { schema: exactTemporalValueSchema },
+    sourceDomain: { schema: localTemporalDomainSchema }, interpretation: { schema: preparedPictureInterpretation } }),
+] };
+export const preparedSignalPictureSourceSchema: ValueSchema = object({
+  source: { schema: blobRefSchema() }, kind: { schema: { kind: "literal", value: "signal" } },
+  streamIndex: { schema: integer }, presentationStart: { schema: exactTemporalValueSchema },
+  sourceDomain: { schema: localTemporalDomainSchema }, interpretation: { schema: preparedPictureInterpretation },
 });
 export const preparedAudioSourceSchema: ValueSchema = object({
   source: { schema: blobRefSchema() }, streamIndex: { schema: integer },
@@ -152,14 +162,6 @@ const fontSourceSchema: ValueSchema = object({
 export const fontArtifactSchema: ValueSchema = object({ sources: { schema: { kind: "array", minItems: 1, items: fontSourceSchema } },
   weight: { schema: { kind: "number", integer: true, minimum: 1, maximum: 1_000 } }, style: { schema: { kind: "string", enum: ["normal", "italic", "oblique"] } } });
 export const fontStackSchema: ValueSchema = object({ faces: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema } } });
-const surfaceTiming: ValueSchema = { kind: "oneOf", variants: [
-  object({ kind: { schema: { kind: "literal", value: "still" } } }),
-  object({ kind: { schema: { kind: "literal", value: "frames" } }, frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } } }),
-] };
-export const compositableSurfaceSchema: ValueSchema = object({ artifact: { schema: blobRefSchema() }, width: { schema: { kind: "number", integer: true, minimum: 1 } },
-  height: { schema: { kind: "number", integer: true, minimum: 1 } }, picture: { schema: pictureInterpretationSchema },
-  timing: { schema: surfaceTiming } });
-
 const selectionMode = (name: string): ValueSchema => object({
   mode: { schema: { kind: "literal", value: name } },
 });
@@ -169,12 +171,12 @@ const streamSelectionMode: ValueSchema = object({
 });
 export const mediaSelectionRequestSchema: ValueSchema = object({
   video: { schema: { kind: "oneOf", variants: [
-    selectionMode("primary-moving"), streamSelectionMode, selectionMode("none"),
+    selectionMode("primary-moving"), selectionMode("primary-picture"), streamSelectionMode, selectionMode("none"),
   ] } },
   audio: { schema: { kind: "oneOf", variants: [
     selectionMode("default"), selectionMode("default-if-present"), streamSelectionMode, selectionMode("none"),
   ] } },
-  spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
+  spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] }, optional: true },
   picture: { schema: { kind: "oneOf", variants: [
     selectionMode("none"), selectionMode("source"),
     object({

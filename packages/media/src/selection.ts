@@ -30,7 +30,8 @@ export function verifyMediaSelectionRequest(value: unknown): asserts value is Me
   assert(value !== null && typeof value === "object" && !Array.isArray(value),
     "MediaSelectionRequest must be an object");
   const item = value as MediaSelectionRequest;
-  assert(item.video?.mode === "primary-moving" || item.video?.mode === "stream-index" || item.video?.mode === "none",
+  assert(item.video?.mode === "primary-moving" || item.video?.mode === "primary-picture"
+    || item.video?.mode === "stream-index" || item.video?.mode === "none",
     "MediaSelectionRequest video mode is invalid");
   assert(item.audio?.mode === "default" || item.audio?.mode === "default-if-present"
     || item.audio?.mode === "stream-index" || item.audio?.mode === "none",
@@ -50,10 +51,12 @@ export function verifyMediaSelectionRequest(value: unknown): asserts value is Me
   if (item.picture.mode === "explicit") {
     verifyPictureInterpretation(item.picture.interpretation, "MediaSelectionRequest.picture.interpretation");
   }
-  assert(item.spanAuthority === "video" || item.spanAuthority === "audio",
-    "MediaSelectionRequest authority is invalid");
-  assert(item.spanAuthority === "video" ? item.video.mode !== "none" : item.audio.mode !== "none",
-    "MediaSelectionRequest authority stream is disabled");
+  if (item.spanAuthority !== undefined) {
+    assert(item.spanAuthority === "video" || item.spanAuthority === "audio",
+      "MediaSelectionRequest authority is invalid");
+    assert(item.spanAuthority === "video" ? item.video.mode !== "none" : item.audio.mode !== "none",
+      "MediaSelectionRequest authority stream is disabled");
+  }
 }
 
 export function namedPictureInterpretation(name: "sdr-bt709"): PictureInterpretation {
@@ -101,13 +104,18 @@ export function selectVideoStream(
       && stream.startPts !== undefined
       && stream.endPts !== undefined);
   if (request.mode === "primary-moving") return selectUniqueDefault(moving, "Primary moving video");
+  if (request.mode === "primary-picture") {
+    const pictures = inspection.streams.filter((stream): stream is MediaVideoStream =>
+      stream.kind === "video" && stream.decodedUnitCount === 1 && stream.disposition.attachedPicture === false);
+    return selectUniqueDefault(pictures, "Primary still picture");
+  }
   const selected = inspection.streams.find((stream): stream is MediaVideoStream =>
     stream.kind === "video" && stream.index === request.streamIndex);
   assert(selected !== undefined, `Video stream ${request.streamIndex} does not exist`);
-  assert(selected.decodedUnitCount >= 2 && selected.disposition.attachedPicture === false,
-    `Video stream ${request.streamIndex} is not a moving visual stream`);
-  assert(selected.startPts !== undefined && selected.endPts !== undefined,
-    `Video stream ${request.streamIndex} has no presentation interval`);
+  assert(selected.decodedUnitCount >= 1 && selected.disposition.attachedPicture === false,
+    `Video stream ${request.streamIndex} is not a usable picture stream`);
+  if (selected.decodedUnitCount >= 2) assert(selected.startPts !== undefined && selected.endPts !== undefined,
+    `Moving video stream ${request.streamIndex} has no presentation interval`);
   return selected;
 }
 
@@ -151,6 +159,6 @@ export function selectMediaStreams(
   return sealMediaStreamSelection({
     ...(video === undefined ? {} : { videoStreamIndex: video.index, picture: selectedPicture(video, request) }),
     ...(audio === undefined ? {} : { audioStreamIndex: audio.index }),
-    spanAuthority: request.spanAuthority,
+    ...(request.spanAuthority === undefined ? {} : { spanAuthority: request.spanAuthority }),
   });
 }

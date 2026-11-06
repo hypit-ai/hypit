@@ -21,7 +21,7 @@ JavaScript packages remain trusted code and may still possess ambient authority 
 A component normally lives in the video's `packages/` and is installed through that project's
 ordinary package manager. Use the owner's scope, such as `@studio/score-strip`; the active
 Hypit project publishes under `@hypit/*`. A Source imports the package's logical Module ABI, for example
-`<import as="score" from="@studio/score-strip@1"/>`. That `1` is not its npm release version.
+`module score from "@studio/score-strip@1"`. That `1` is not its npm release version.
 
 External Author Packages use the released Distribution's narrow public subpaths. There is no central
 Author Kit; import only the owner of each responsibility:
@@ -32,7 +32,6 @@ Author Kit; import only the owner of each responsibility:
 | `@hypit/hypit/producer` | deterministic Producer handlers and Producer package facets |
 | `@hypit/hypit/refinement` | package-owned Type refinements and Refinement package facets |
 | `@hypit/hypit/author` | syntax-neutral Author Declarations, compilers and sealed Graph Fragments |
-| `@hypit/hypit/markup` | Markup spelling for package-owned Author Declarations |
 | `@hypit/temporal` | exact duration, rate and relation values and literal parsing |
 | `@hypit/audiovisual` | resolved Source, Occurrence, Picture, Audio, Operator and Programme values |
 | `@hypit/audiovisual-author` | syntax-neutral audiovisual Author Spec compilation |
@@ -52,16 +51,14 @@ dependencies must actually be included. A TypeScript entry can be used when the 
 Host supports it; a compiled JavaScript entry avoids depending on a TypeScript loader.
 
 The activation module connects the implementation pieces; this is a wiring excerpt, assuming the
-local Manifest, Producer/Refinement packages, declaration compilers and Markup spellings already exist:
+local Manifest, Producer/Refinement packages and declaration compilers already exist:
 
 ```ts
 import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
-import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { authorDeclarations } from "./declaration.js";
-import { manifest, moduleRef } from "./manifest.js";
-import { markupDeclarations } from "./declaration.js";
+import { manifest } from "./manifest.js";
 import { component } from "./component.js";
 
 export const hypitPackage = {
@@ -71,17 +68,15 @@ export const hypitPackage = {
     createProducerPackageFacet(component.producers ?? []),
     createRefinementPackageFacet(component.refinements ?? []),
     ...authorDeclarations.map(createAuthorDeclarationFacet),
-    ...markupDeclarations.map((declaration) => createMarkupDeclarationFacet({
-      module: moduleRef, declaration,
-    })),
   ],
 };
 export default hypitPackage;
 ```
 
-The Author compiler owns fields, children, accepted reference Types, bindings and graph lowering.
-Markup owns only the tag and syntax projection into that declaration. A direct API or another Frontend
-can construct the same declaration without importing Markup.
+The Author compiler owns the declaration name, fields, children, accepted reference Types, bindings and graph lowering.
+The canonical SVML Frontend projects Block syntax into that syntax-neutral declaration; an Author Package does not
+register a second tag spelling or choose the project's Frontend. A direct API or another Frontend can construct the
+same declaration without changing the package activation.
 
 Structured handlers return `records`, `components` and optionally explicit `exports`; each component
 directly carries the Graph Fragment it instantiates.
@@ -106,7 +101,7 @@ Timeline, the framework loader or Runtime.
 A component can enter the audiovisual Programme without custom editor behavior. When it
 needs meaningful projected Items or Inspector fields, put a Companion in a separate file and
 merge `createStudioTrackCompanionFacet(companions)` into the same activation's `facets`.
-Retain the existing Module, Producer, Author Declaration and Markup spelling contributions. The selected project's package
+Retain the existing Module, Producer and Author Declaration contributions. The selected project's package
 supplies the extension; do not edit Studio's registry or add editor metadata to the domain Manifest.
 
 The [Studio Companion README](../studio-companion/README.md) owns the working declaration and activation

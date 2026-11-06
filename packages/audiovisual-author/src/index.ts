@@ -1,17 +1,63 @@
-export { compileAudiovisualAuthorSpec } from "./compile.js";
+export {
+  assertAudiovisualAuthorOccurrenceSet,
+  assertAudiovisualAuthorOccurrenceUse,
+  audiovisualAuthorOccurrenceUseEnd,
+  closeAudiovisualAuthorOccurrence,
+  closeResolvedAudiovisualAuthorProgram,
+  compileAudiovisualAuthorSpec,
+  createAudiovisualAuthorProgramDomain,
+  bindAudiovisualAuthorOccurrenceUseToOccurrence,
+  bindAudiovisualAuthorOccurrenceUseToSource,
+  inferAudiovisualAuthorOccurrenceDuration,
+  projectAudiovisualAuthorOccurrenceUsePosition,
+  projectAudiovisualAuthorOccurrenceUseOutputMapping,
+  resolveAudiovisualAuthorOccurrenceUse,
+} from "./compile.js";
+export {
+  assertAudiovisualAuthorOccurrenceBoundSpec,
+  assertAudiovisualAuthorOccurrenceOutputSpec,
+  assertAudiovisualAuthorOccurrenceUseSpec,
+  assertAudiovisualAuthorProgramDomainSpec,
+  assertAudiovisualAuthorSpec,
+  assertAudiovisualAuthorSourceBoundSpec,
+} from "./validation.js";
 export {
   appendAudiovisualAuthorAudioOperator,
   appendAudiovisualAuthorPictureOperator,
   appendAudiovisualAuthorReconstruction,
-  appendAudiovisualAuthorSource,
+  appendAudiovisualAuthorValue,
   assertAudiovisualAuthorBindingSet,
   assertAudiovisualAuthorOperatorBinding,
   assertAudiovisualAuthorReconstructionBinding,
-  assertAudiovisualAuthorSourceBinding,
+  assertAudiovisualAuthorValueBinding,
   createAudiovisualAuthorBindingSet,
+  resolveAudiovisualAuthorValue,
 } from "./bindings.js";
 export { audiovisualAuthorComponent } from "./component.js";
-export { createAudiovisualAuthorFragment } from "./fragment.js";
+export {
+  audiovisualAuthorDeclarations,
+  audiovisualProgramAuthorDeclaration,
+} from "./declaration.js";
+export {
+  createAudiovisualProgramDomainFragment,
+  createOccurrenceBoundOccurrenceUseFragment,
+  createOccurrenceClosureFragment,
+  createOccurrenceUseFragment,
+  createOccurrenceUsePositionFragment,
+  createSourceBoundOccurrenceUseFragment,
+  createUniqueSourceEventPositionFragment,
+  createResolvedAudiovisualProgramFragment,
+} from "./fragment.js";
+export { audiovisualProgramEditPlanner, planMoveAudiovisualOccurrence } from "./edit.js";
+export {
+  locateAudiovisualNleSubject,
+  realizeAudiovisualNleSubject,
+  resolveAudiovisualNleSubject,
+} from "./nle.js";
+export type {
+  AudiovisualNleSubjectLocation,
+  AudiovisualNleSubjectReference,
+} from "./nle.js";
 export {
   audiovisualAuthorDependency,
   audiovisualAuthorManifest,
@@ -19,5 +65,4 @@ export {
   audiovisualAuthorProducers,
   audiovisualAuthorTypes,
 } from "./manifest.js";
-export { assertAudiovisualAuthorSpec } from "./validation.js";
 export type * from "./types.js";

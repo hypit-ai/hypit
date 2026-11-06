@@ -1,4 +1,4 @@
-import { mediaDependency, mediaTypes, pictureInterpretationSchema, preparedVisualSourceSchema } from "@hypit/media";
+import { mediaDependency, mediaTypes, pictureInterpretationSchema, preparedSignalPictureSourceSchema } from "@hypit/media";
 import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { frameSpanSchema, temporalDependency, temporalMapSchema, temporalTypes } from "@hypit/temporal";
@@ -77,7 +77,7 @@ export const htmlProgramSchema: ValueSchema = {
         { kind: "object", fields: { kind: { schema: { kind: "literal", value: "frames" } },
           spans: { schema: { kind: "array", minItems: 1, items: frameSpanSchema } } } },
       ] } },
-      source: { schema: preparedVisualSourceSchema }, sampling: { schema: temporalMapSchema },
+      source: { schema: preparedSignalPictureSourceSchema }, sampling: { schema: temporalMapSchema },
       reconstruction: { schema: { kind: "object", fields: {
         kind: { schema: { kind: "literal", value: "nearest" } },
       } }, optional: true },

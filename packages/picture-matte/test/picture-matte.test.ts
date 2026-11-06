@@ -3,13 +3,16 @@ import test from "node:test";
 
 import { HTML_VISUAL_FORMAT, type HtmlVisual } from "@hypit/html-program";
 import { canonicalize } from "@hypit/hypit/protocol";
+import { createNleLoweringHostFromFacets } from "@hypit/nle";
 
 import {
   pictureMatteComponent,
   pictureMatteEffect,
   pictureMatteOperator,
   pictureMatteProducers,
+  pictureMatteNleSymbol,
 } from "../src/index.js";
+import { hypitPackage as pictureMatteHypitPackage } from "../src/activation.js";
 
 test("Picture Matte publishes one explicit two-Picture process contract", () => {
   for (const channel of ["alpha", "luminance"] as const) for (const invert of [false, true]) {
@@ -40,4 +43,13 @@ test("Picture Matte publishes its package-owned Picture Operator through a typed
     assert.deepEqual(result.value, pictureMatteOperator(spec.channel, spec.invert));
     assert.deepEqual((result.value as unknown as { inputs: string[] }).inputs, ["content", "matte"]);
   }
+});
+
+test("the package resolves a direct NLE Matte relation", () => {
+  const spec = { channel: "luminance", invert: true } as const;
+  const resolved = createNleLoweringHostFromFacets(pictureMatteHypitPackage.facets).resolveMatte({
+    id: "key", content: "content", matte: "mask",
+    operator: pictureMatteNleSymbol, parameters: canonicalize(spec),
+  }, {} as never);
+  assert.deepEqual(resolved, { operator: pictureMatteOperator("luminance", true) });
 });

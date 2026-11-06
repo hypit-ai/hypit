@@ -1,12 +1,11 @@
 # `@hypit/provider-image-opencv-local`
 
-Local OpenCV/NumPy realization of the two deterministic capabilities owned by
-`@hypit/raster-transform` and `@hypit/raster-composition`: `transform-raster` and
-`render-raster-composition`.
+Local OpenCV/NumPy realization of `@hypit/raster-composition`'s
+`render-raster-composition` capability.
 
-Transform and Compose remain separate Needs. One Provider implements both while its private Python
-interpreter shares decoding, fit, interpolation, alpha and encoding primitives. Each Need runs in a
-bounded child process and returns one new image Resource. Temporary paths, OpenCV details and
+Each Need runs in a bounded child process and returns one baked PNG Resource. Decoding, spatial
+sampling, interpolation, alpha composition and encoding remain private implementation steps rather
+than a public generic image-transform language. Temporary paths, OpenCV details and
 diagnostics stay inside the Endpoint and never enter the author language.
 
 The Provider ships its frozen deployment source in `runtime/`. With the Runtime

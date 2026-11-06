@@ -4,6 +4,12 @@ export {
 export type {
   AudiovisualHtmlLowering,
 } from "./lower.js";
+export {
+  evaluateAudiovisualProgramFrame,
+  outputFrameCount,
+  outputFramePosition,
+} from "./sampling.js";
+export type { AudiovisualHtmlFrameEvaluation } from "./sampling.js";
 export { compileAudiovisualHtmlProgram } from "./compile.js";
 export {
   appendAudiovisualHtmlSource,
@@ -12,7 +18,6 @@ export {
   audiovisualProgramHtmlSource,
   createAudiovisualHtmlSourceSet,
   preparedMediaHtmlSource,
-  stillPictureHtmlSource,
   resolveAudiovisualHtmlSource,
   sealAudiovisualHtmlSource,
   visualProgramHtmlSource,
@@ -23,7 +28,6 @@ export {
   createAudiovisualHtmlFragment,
   createAudiovisualProgramHtmlSourceFragment,
   preparedMediaHtmlSourceFragment,
-  stillPictureHtmlSourceFragment,
 } from "./fragment.js";
 export {
   audiovisualHtmlDependency,

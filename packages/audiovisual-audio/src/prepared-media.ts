@@ -16,6 +16,8 @@ export function preparedMediaAudioSource(
   sampling: AudioOutputSampling,
 ): AudiovisualAudioSource {
   verifyPreparedMedia(media);
+  assert(media.domain !== undefined,
+    `Prepared Media ${media.id} Audio has no temporal domain.`);
   assert(media.audio !== undefined,
     `Prepared Media ${media.domain.id} has no selected Audio member.`);
   assert(Number.isSafeInteger(sampling.sampleRate) && sampling.sampleRate > 0,

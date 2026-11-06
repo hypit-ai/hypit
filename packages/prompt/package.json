@@ -1,0 +1,23 @@
+{
+  "name": "@hypit/prompt",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@hypit/author": "workspace:*",
+    "@hypit/producer": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/refinement": "workspace:*",
+    "@hypit/text": "workspace:*"
+  },
+  "devDependencies": {
+    "@hypit/svml": "workspace:*"
+  }
+}

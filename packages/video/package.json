@@ -16,10 +16,12 @@
     "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/audiovisual-audio": "workspace:^0.1.0",
     "@hypit/audiovisual-author": "workspace:^0.1.0",
+    "@hypit/audiovisual-edit": "workspace:^0.1.0",
     "@hypit/audiovisual-html": "workspace:^0.1.0",
     "@hypit/audiovisual-media": "workspace:^0.1.0",
     "@hypit/audio-gain": "workspace:^0.1.0",
     "@hypit/audio-preserve-pitch": "workspace:^0.1.0",
+    "@hypit/canvas-view": "workspace:^0.1.0",
     "@hypit/credential-store-env": "workspace:^0.1.2",
     "@hypit/credential-store-local": "workspace:^0.1.2",
     "@hypit/document": "workspace:^0.1.0",
@@ -35,12 +37,13 @@
     "@hypit/html-document": "workspace:^0.1.0",
     "@hypit/html-video": "workspace:^0.2.1",
     "@hypit/raster-composition": "workspace:^0.1.0",
-    "@hypit/raster-transform": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/mimo-speech": "workspace:^0.3.0",
     "@hypit/minimax-h3": "workspace:^0.3.0",
     "@hypit/nano-banana": "workspace:^0.3.0",
+    "@hypit/nle-view": "workspace:^0.1.0",
     "@hypit/pixverse": "workspace:^0.3.0",
+    "@hypit/prompt": "workspace:^0.1.0",
     "@hypit/provider-html-local": "workspace:^0.2.1",
     "@hypit/provider-hypihub": "workspace:^0.3.0",
     "@hypit/provider-image-opencv-local": "workspace:^0.2.1",
@@ -63,7 +66,6 @@
   "devDependencies": {
     "@hypit/cli": "workspace:*",
     "@hypit/hypit": "workspace:*",
-    "@hypit/loader": "workspace:*",
-    "@hypit/markup": "workspace:*"
+    "@hypit/loader": "workspace:*"
   }
 }

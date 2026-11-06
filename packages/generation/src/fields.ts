@@ -1,4 +1,4 @@
-import type { BlobRef } from "@hypit/hypit/protocol";
+import type { BlobRef, TypeRef } from "@hypit/hypit/protocol";
 
 /**
  * Optional field vocabulary describing what one exact Model accepts.
@@ -13,7 +13,12 @@ export type ModelArtifactRole = "image" | "video" | "audio";
 export const MODEL_ARTIFACT_ROLES: readonly ModelArtifactRole[] = ["image", "video", "audio"];
 
 export type ModelScalarKind =
-  | { readonly kind: "text"; readonly maxChars?: number }
+  | {
+      readonly kind: "text";
+      readonly maxChars?: number;
+      /** Exact graph value accepted by this textual model field. Defaults to ordinary Text. */
+      readonly inputType?: TypeRef;
+    }
   | { readonly kind: "token"; readonly minLength: number; readonly maxLength: number }
   | { readonly kind: "enum"; readonly values: readonly (string | number)[] }
   | {

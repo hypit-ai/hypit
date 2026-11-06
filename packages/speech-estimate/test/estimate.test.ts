@@ -8,7 +8,6 @@ import {
   estimateSpeechDuration,
   sealSpeechEstimatePolicy,
   speechEstimatePolicyFromAttributes,
-  speechEstimatePolicyFromRecipe,
 } from "@hypit/speech-estimate";
 
 const normal = sealSpeechEstimatePolicy({
@@ -46,7 +45,7 @@ test("English pace choices give a passage room for deliberate or brisk delivery"
   assert.deepEqual([estimate("slow"), estimate("normal"), estimate("fast")], [12, 11, 9]);
 });
 
-test("a numeric rate gives SVS a continuous author-controlled pace", () => {
+test("a numeric CLI rate gives a continuous author-controlled pace", () => {
   const source = sealText(Array.from({ length: 49 }, () => "day").join(" "));
   const result = estimateSpeechDuration(source, sealSpeechEstimatePolicy({
     language: normal.language,
@@ -66,20 +65,10 @@ test("optional padding extends speech before rounding", () => {
   });
   assert.equal(estimateSpeechDuration(source, policy), 6);
 
-  const recipe = speechEstimatePolicyFromRecipe({
-    path: "speech.padded",
-    properties: {
-      language: "en",
-      pace: "normal",
-      rounding: "none",
-      padding: 1,
-    },
-  });
-  assert.equal(recipe.paddingSec, 1);
   assert.throws(() => sealSpeechEstimatePolicy({ ...policy, paddingSec: -1 }), /invalid/u);
 });
 
-test("a policy written as attributes reads the same values a Recipe would", () => {
+test("CLI options decode one explicit local estimate policy", () => {
   const policy = speechEstimatePolicyFromAttributes(
     { language: "en", rate: "4.75", rounding: "round" },
     "example:MeasuredDuration",
@@ -102,27 +91,6 @@ test("short and long passages retain their estimated duration", () => {
 test("rounding a short passage to zero reports how to retain a positive duration", () => {
   assert.throws(() => estimateSpeechDuration(sealText("Hello."), normal), /rounds to zero.*none or ceil/u);
   assert.equal(estimateSpeechDuration(sealText("Hello."), { ...normal, rounding: "ceil" }), 1);
-});
-
-test("an SVS Recipe configures one reusable estimate policy without becoming executable", () => {
-  const policy = speechEstimatePolicyFromRecipe({
-    path: "speech.normal",
-    properties: {
-      language: "en",
-      rate: 4.75,
-      rounding: "round",
-    },
-  });
-  assert.equal(policy.language, "en");
-  assert.equal(policy.rate, 4.75);
-  assert.throws(() => speechEstimatePolicyFromRecipe({
-    path: "speech.ambiguous",
-    properties: { pace: "normal", rate: 4.6 },
-  }), /exactly one|requires/u);
-  assert.throws(() => speechEstimatePolicyFromRecipe({
-    path: "speech.invalid",
-    properties: { provider: "unknown-provider" },
-  }), /unknown property/u);
 });
 
 test("Chinese estimates count Han pronunciation units, including names outside the basic Unicode plane", () => {

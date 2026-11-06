@@ -8,7 +8,7 @@ import {
 } from "@hypit/hypit/author";
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
-import { textTypes } from "@hypit/hypit/text";
+import { promptTypes } from "@hypit/hypit/prompt";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import { createFieldModelPrimaryFragment, sealModelFieldBuilder } from "@hypit/generation/model-fields";
 
@@ -42,8 +42,8 @@ async function reference(
 const endpoint = seedreamEndpoints.image!;
 const fields = [
   { name: "id", kind: "identifier" as const, required: true, summary: "Names the generated image." },
-  { name: "prompt", kind: "reference" as const, required: true, accepts: [textTypes.text],
-    summary: "Selects the generation prompt." },
+  { name: "prompt", kind: "reference" as const, required: true, accepts: [promptTypes.prompt],
+    summary: "Selects the generation Prompt." },
   { name: "aspect-ratio", kind: "literal" as const, required: true,
     values: ["1:1", "4:3", "3:4", "16:9", "9:16", "2:3", "3:2", "21:9"],
     summary: "Sets the output frame shape." },
@@ -81,7 +81,7 @@ function compiler(referenceMode: boolean): AuthorDeclarationCompiler {
       if (referenceMode && declaration.children.length === 0) {
         throw new Error("Seedream ReferenceImage requires at least one Reference.");
       }
-      const prompt = await reference(declaration, "prompt", textTypes.text, resolveReference);
+      const prompt = await reference(declaration, "prompt", promptTypes.prompt, resolveReference);
       const images: FieldModelAuthorArtifactInput[] = [];
       for (const child of declaration.children) {
         if (!referenceMode || child.name !== "Reference") throw new Error(`${declaration.name} does not accept ${child.name}.`);
@@ -109,7 +109,7 @@ function compiler(referenceMode: boolean): AuthorDeclarationCompiler {
           images.map(({ name, field }) => ({ name, field })), [{ name: "prompt", field: "prompt" }]),
         outputs: { image: `${id}.image` },
         artifacts: images,
-        text: [{ name: "prompt", field: "prompt", source: prompt }],
+        textFields: [{ name: "prompt", field: "prompt", source: prompt }],
       });
     },
   };
@@ -120,8 +120,4 @@ export const seedreamReferenceImageAuthorDeclaration = compiler(true);
 export const seedreamAuthorDeclarations = [
   seedreamTextImageAuthorDeclaration,
   seedreamReferenceImageAuthorDeclaration,
-] as const;
-export const seedreamMarkupDeclarations = [
-  { name: "text-image", tag: "TextImage" },
-  { name: "reference-image", tag: "ReferenceImage" },
 ] as const;

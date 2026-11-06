@@ -1,0 +1,133 @@
+module prompt from "@hypit/prompt@1"
+
+prompt.Template "speaker-v1" {
+  separator: paragraph
+
+  fixed "base" {
+    text: <<PROMPT
+Create a realistic vertical phone-shot talking-head video. @image1 is the visible speaker and scene reference. Preserve the person's identity, face, outfit, setting, lighting, lens feel, and broad composition. @audio1 is the speaker's voice-timbre reference.
+    PROMPT
+  }
+
+  fixed "script-contract" {
+    text: <<PROMPT
+Deliver the supplied script exactly in order with clear lip-sync. The visible person speaks every line. Do not rewrite, summarize, add, remove, or reorder words.
+    PROMPT
+  }
+
+  choose "composition-stability" {
+    default: soft-locked
+
+    option "flexible-ugc" {
+      text: <<PROMPT
+COMPOSITION: preserve the reference person and setup while allowing normal lively creator-video framing variation.
+      PROMPT
+    }
+
+    option "soft-locked" {
+      text: <<PROMPT
+COMPOSITION: keep the speaker in the same general region and preserve the reference composition, allowing natural posture changes and tiny crop or scale breathing.
+      PROMPT
+    }
+
+    option "strict-locked" {
+      text: <<PROMPT
+COMPOSITION: preserve subject placement, perspective, left-right orientation, background relationship, and framing envelope throughout the shot.
+      PROMPT
+    }
+  }
+
+  choose "camera-motion" {
+    default: none
+
+    option "none" {
+      text: "CAMERA: hold a steady fixed framing."
+    }
+
+    option "subtle-punch-in-return" {
+      text: <<PROMPT
+CAMERA: use one subtle push-in on the most important phrase, then return smoothly to the original framing.
+      PROMPT
+    }
+  }
+
+  choose "edit-rhythm" {
+    default: continuous-take
+
+    option "continuous-take" {
+      text: "EDIT RHYTHM: one continuous creator explanation with natural breath timing."
+    }
+
+    option "pause-trim-jump-cuts" {
+      text: "EDIT RHYTHM: polished pause-trim jump cuts at phrase boundaries while keeping the framing coherent."
+    }
+  }
+
+  choose "performance" {
+    default: natural-explainer
+
+    option "natural-explainer" {
+      text: <<PROMPT
+PERFORMANCE: engaged, friendly conversation with responsive intonation and clear emphasis as the thought develops. Let gaze, expression, and gesture convey the speaker's attitude to what they are saying.
+      PROMPT
+    }
+
+    option "high-energy-ugc" {
+      text: <<PROMPT
+PERFORMANCE: vivid, energetic short-form delivery with nimble phrasing, animated intonation, and emphatic key ideas. Let the voice and visible reactions develop together as the speaker makes their point.
+      PROMPT
+    }
+
+    option "calm-authority" {
+      text: <<PROMPT
+PERFORMANCE: composed, thoughtful conviction with measured phrasing and purposeful vocal emphasis. Let focused attention and small, deliberate reactions express how the speaker weighs the idea and reaches a judgment.
+      PROMPT
+    }
+
+    option "reactive-playful" {
+      text: <<PROMPT
+PERFORMANCE: playful, responsive delivery with teasing inflection, lively timing, and an audible smile where the thought amuses the speaker. Let curiosity, skepticism, or delight come through in the voice and matching visible reactions as the passage calls for them.
+      PROMPT
+    }
+  }
+
+  choose "gesture" {
+    default: natural
+
+    option "restrained" {
+      text: "GESTURE: restrained body language; let face, eyes, and voice carry the meaning."
+    }
+
+    option "compact" {
+      text: "GESTURE: compact explanatory hand movement close to the torso and inside the frame."
+    }
+
+    option "natural" {
+      text: <<PROMPT
+GESTURE: natural creator gestures such as open palms, small pointing beats, nods, and posture shifts where the script calls for them.
+      PROMPT
+    }
+
+    option "expressive" {
+      text: <<PROMPT
+GESTURE: richer hand, shoulder, and posture changes that support the spoken idea while remaining physically coherent.
+      PROMPT
+    }
+  }
+
+  fixed "hygiene" {
+    text: <<PROMPT
+Keep face, hands, skin texture, lighting, and motion photoreal and stable. Add no subtitles, captions, labels, logos, UI text, floating words, or other readable on-screen text.
+    PROMPT
+  }
+
+  slot "dialogue" {
+    required: true
+    label: "SCRIPT TO DELIVER:"
+  }
+
+  slot "action" {
+    required: false
+    label: "PERFORMANCE AND ACTION DIRECTION:"
+  }
+}

@@ -145,20 +145,9 @@ Seedance 2.5 复用同样的声明，而不是由 Runtime 把别的模型偷偷�
 `id`、`model`、`prompt`、`duration`、`resolution`、
 `aspect-ratio`、`generate-audio`；`duration` 是模型范围内的整秒字面量，事先用 `hypit estimate` 估算。
 
-可以直接抽取前一段生成视频里的音频，并显式引用为后续片段的参考。抽取结果只是音频；需要语音证据时应另行转写：
-
-```svml
-<mediaop:ExtractAudio id="voice-from-opening"
-  source={opening.video} audio="default"/>
-
-<seedance:ReferenceVideo id="follow-up" model="mini"
-  prompt={follow-up-direction} duration="5" generate-audio="true">
-  <seedance:Reference image={presenter-reference} person-reference="true"/>
-  <seedance:Reference audio={voice-from-opening.audio}/>
-</seedance:ReferenceVideo>
-```
-
-同一个媒体操作包还提供 `Transform`（按顺序截取、恒速变速，以及根据 PreparedMedia 实际时长解析的精确速率剖面）和 `ExtractFrame`（首帧、尾帧、指定帧或指定时间取图）。本地 FFmpeg 实现这些操作；也可以通过 Runtime Profile 选择兼容的 Runtime Endpoint。
+前一段生成视频里的音频或某一解码帧可以复用为后续模型参考。绑定前，先把选中的 Media
+成员物化为 WAV 或 PNG。它只产生新的物理 Blob，不附加语音、说话人或剪辑含义。裁剪、变速、
+倒放和停帧仍然是使用该 Media 的视听 occurrence 关系，不是可复用的根部媒体变换。
 
 ## Seedance 语义 Kit
 

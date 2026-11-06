@@ -11,13 +11,19 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/temporal": "workspace:^0.1.1",
-    "@hypit/timeline": "workspace:^0.1.1"
+    "@hypit/audiovisual": "workspace:*",
+    "@hypit/audiovisual-html": "workspace:*",
+    "@hypit/html-program": "workspace:*",
+    "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/nle-view": "workspace:^0.1.0",
+    "@hypit/spatial": "workspace:*",
+    "@hypit/temporal": "workspace:^0.1.1"
   },
   "devDependencies": {
     "@hypit/producer": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/markup": "workspace:*",
+    "@hypit/author": "workspace:*",
     "@hypit/refinement": "workspace:*",
     "@hypit/hypit": "workspace:*"
   },

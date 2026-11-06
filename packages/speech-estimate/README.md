@@ -3,8 +3,8 @@
 Provider-free speech-duration estimation, used at creation time. The `hypit estimate` command performs
 this deterministic calculation; it does not observe generated audio.
 
-A duration is the author's decision, written as a literal on the element that needs it:
-`<seedance:TextVideo … duration="8"/>`, `<media:StillVideo … duration="6s"/>`. This package is how the
+A duration is the author's decision, written as a literal on the declaration that needs it:
+`seedance.text-video { … duration: 8 }`. This package is how the
 author arrives at that number before writing it. It counts pronunciation units of a Text with a
 language-aware delivery density (English dictionary words use CMUdict; unknown words use a
 deterministic spelling fallback), then applies optional padding and the selected rounding. The Text remains
@@ -71,12 +71,13 @@ needs merging, fuller wording, tightening, or splitting, then choose the request
 selected model's supported values in mind.
 
 `SpeechEstimatePolicy` holds the language, pace or rate, rounding and optional padding used by the
-estimation API. `speechEstimatePolicyFromRecipe` reads those values from a Recipe for package authors.
-The calculation produces a duration estimate for authoring; actual word positions come from the
-performed media's semantic preparation when downstream relationships need those positions.
+local estimation API. CLI strings may be decoded with `speechEstimatePolicyFromAttributes`.
+The policy and estimate never become AuthorGraph Records, Producers or dependencies: the author
+uses the answer before writing the literal request duration. Actual word positions come from the
+performed media when downstream relationships need those positions.
 
 ```ts
-import { estimateSpeechDuration, sealSpeechEstimatePolicy, speechEstimatePolicyFromRecipe } from "@hypit/speech-estimate";
+import { estimateSpeechDuration, sealSpeechEstimatePolicy } from "@hypit/speech-estimate";
 ```
 
 ## Research basis and limits

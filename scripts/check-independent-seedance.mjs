@@ -72,7 +72,7 @@ try {
   const installedKitsManifest = JSON.parse(await readFile(join(installedKitsRoot, "package.json"), "utf8"));
   assert.equal(installedKitsManifest.private, undefined);
   assert.equal(installedKitsManifest.hypit, undefined);
-  await access(join(installedKitsRoot, "kits", "speaker-v1.svs"));
+  await access(join(installedKitsRoot, "kits", "speaker-v1.svml"));
   await access(join(installedKitsRoot, "LICENSE"));
 
   await mkdir(join(distribution, "packages"), { recursive: true });

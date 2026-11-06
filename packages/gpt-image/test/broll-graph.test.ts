@@ -18,16 +18,12 @@ import {
   sealModelFieldBuilder,
 } from "@hypit/generation/model-fields";
 import {
-  createGptImageCleanFragment,
   gptImage2Fields,
-  gptImageCleanManifest,
-  gptImageCleanupProgram,
   gptImageEndpoints,
   gptImageManifest,
   sealGptImage2Draft,
 } from "@hypit/gpt-image";
-import { rasterTransformManifest, rasterTransformTypes } from "@hypit/raster-transform";
-import { modelArtifactInputNames } from "@hypit/generation/model-fields";
+import { createFieldModelPrimaryFragment, modelArtifactInputNames, modelTextFieldInputName } from "@hypit/generation/model-fields";
 import { mediaManifest } from "@hypit/media";
 import { narrativeManifest } from "@hypit/narrative";
 import { temporalManifest } from "@hypit/temporal";
@@ -39,7 +35,7 @@ import {
   seedanceFields,
 } from "@hypit/seedance";
 import { spatialManifest } from "@hypit/spatial";
-import { recipeManifest } from "@hypit/recipe";
+import { promptManifest, promptTypes, sealPrompt } from "@hypit/prompt";
 import { textManifest } from "@hypit/text";
 
 function buildState(
@@ -64,15 +60,13 @@ function fixture() {
   const manifests: ModuleManifest[] = [
     blobManifest,
     textManifest,
+    promptManifest,
     generationManifest,
-    rasterTransformManifest,
     gptImageManifest,
-    gptImageCleanManifest,
     narrativeManifest,
     mediaManifest,
     temporalManifest,
     spatialManifest,
-    recipeManifest,
     seedanceManifest,
   ];
   const closure = createResolvedClosure(manifests);
@@ -90,19 +84,18 @@ function fixture() {
   const add = (id: string, type: TypeRef, value: Value) => records.push({ id, type, value });
   add("person", blobTypes.blob, image("person"));
   add("product", blobTypes.blob, image("product"));
-  add("cleanup", rasterTransformTypes.program, (gptImageCleanupProgram as unknown as CanonicalValue));
-
   const gptFragments = {
-    holding: createGptImageCleanFragment([
+    holding: createFieldModelPrimaryFragment(gpt, [
       { name: "person", field: "images" }, { name: "product", field: "images" },
-    ]),
-    walking: createGptImageCleanFragment([{ name: "holding", field: "images" }]),
-    interview: createGptImageCleanFragment([{ name: "holding", field: "images" }]),
+    ], [{ name: "prompt", field: "prompt" }]),
+    walking: createFieldModelPrimaryFragment(gpt, [{ name: "holding", field: "images" }], [{ name: "prompt", field: "prompt" }]),
+    interview: createFieldModelPrimaryFragment(gpt, [{ name: "holding", field: "images" }], [{ name: "prompt", field: "prompt" }]),
   };
   const addGptInputs = (id: string, names: readonly string[]) => {
     add(`${id}.draft`, gpt.draftType, (sealGptImage2Draft({
-        prompt: [`${id} prompt`], aspectRatio: ["9:16"], resolution: ["1K"],
+        aspectRatio: ["9:16"], resolution: ["1K"],
       }) as unknown as CanonicalValue));
+    add(`${id}.prompt`, promptTypes.prompt, sealPrompt(`${id} prompt`) as unknown as CanonicalValue);
     for (const name of names) add(`${id}.${name}.binding`, gpt.mediaBindings.images!.type, (sealModelArtifactBinding(gptBindingPort as never, { role: "image" }) as unknown as CanonicalValue));
   };
   addGptInputs("holding", ["person", "product"]);
@@ -110,11 +103,13 @@ function fixture() {
   addGptInputs("interview", ["holding"]);
 
   const seedanceMedia = ["holding", "walking", "interview"].map((name) => ({ name, field: "referenceImage" }));
-  const seedanceFragment = createSeedanceAssembledGenerationFragment(seedance, seedanceMedia);
+  const seedanceFragment = createSeedanceAssembledGenerationFragment(seedance, seedanceMedia,
+    [{ name: "prompt", field: "prompt" }]);
   add("montage.draft", seedance.draftType, (sealModelFieldBuilder(seedanceFields["seedance-2-mini"], {
-      prompt: ["A fast montage from all three reference images."],
       resolution: ["720p"], aspectRatio: ["9:16"], duration: [6], generateAudio: [false], webSearch: [false],
     }) as unknown as CanonicalValue));
+  add("montage.prompt", promptTypes.prompt,
+    sealPrompt("A fast montage from all three reference images.") as unknown as CanonicalValue);
   for (const name of ["holding", "walking", "interview"]) add(`montage.${name}.binding`, seedance.mediaBindings.referenceImage!.type, (sealModelArtifactBinding(seedanceBindingPort as never, { role: "image", fields: { personReference: true } }) as unknown as CanonicalValue));
 
   const componentInputs = (
@@ -122,7 +117,7 @@ function fixture() {
     media: readonly { readonly name: string; readonly source: { readonly kind: "record"; readonly id: string } | { readonly kind: "component-output"; readonly component: string; readonly output: string } }[],
   ) => Object.fromEntries([
     ["draft", { kind: "record" as const, id: `${id}.draft` }],
-    ["cleanup", { kind: "record" as const, id: "cleanup" }],
+    [modelTextFieldInputName("prompt"), { kind: "record" as const, id: `${id}.prompt` }],
     ...media.flatMap((item) => {
       const names = modelArtifactInputNames(item.name);
       return [
@@ -158,6 +153,7 @@ function fixture() {
     fragment: seedanceFragment,
     inputs: Object.fromEntries([
       ["draft", { kind: "record" as const, id: "montage.draft" }],
+      [modelTextFieldInputName("prompt"), { kind: "record" as const, id: "montage.prompt" }],
       ...["holding", "walking", "interview"].flatMap((name) => {
         const names = modelArtifactInputNames(name);
         return [
@@ -178,7 +174,6 @@ test("the common B-roll topology is one graph with one shared holding image", ()
   const state = buildState(program, graph, ["montage.video"]);
   const producers = state.plan.steps.map((step) => step.producer.name);
   assert.equal(producers.filter((name) => name === "request-gpt-image-2").length, 3);
-  assert.equal(producers.filter((name) => name === "request-raster-transform").length, 3);
   assert.equal(producers.filter((name) => name === "request-seedance-2-mini").length, 1);
   const holding = graph.outputs.find((output) => output.id === "holding.image");
   assert.ok(holding);

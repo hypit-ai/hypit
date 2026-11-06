@@ -1,4 +1,4 @@
-import { verifyPictureInterpretation, verifyPreparedVisualSource } from "@hypit/media";
+import { verifyPictureInterpretation, verifyPreparedSignalPictureSource } from "@hypit/media";
 import { assertFrameSpan } from "@hypit/temporal";
 import type { FrameSpan } from "@hypit/temporal";
 import {
@@ -153,7 +153,7 @@ export function assertHtmlProgram(document: HtmlProgram): void {
     || source.kind !== "media"
     || (source.reconstruction !== undefined && source.reconstruction.kind !== "nearest") || (() => {
       try {
-        verifyPreparedVisualSource(source.source);
+        verifyPreparedSignalPictureSource(source.source);
         assertTemporalMap(source.sampling);
         const target = source.sampling.stages[0]!.target;
         const terminal = source.sampling.stages.at(-1)!.source;

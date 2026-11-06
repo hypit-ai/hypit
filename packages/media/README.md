@@ -2,15 +2,16 @@
 
 Author-facing media declarations for the neutral `@hypit/media` contract module.
 
-`<media:Image>`, `<media:Audio>`, `<media:Video>` and `<media:Font>` may request bytes through the Host-owned source-asset
-capability. `Audio` and `Video` can instead bind `source` to a Blob produced by generation, a media operation or another Source.
-Image emits one Resource-backed `Blob`; Font wraps the same immutable bytes with exact weight/style metadata as a one-source
+`media.image`, `media.audio`, `media.video` and `media.font` declarations may request bytes through the Host-owned source-asset
+capability. Image, Audio and Video can instead bind `source` to a Blob produced by generation or another Source.
+Font wraps the same immutable bytes with exact weight/style metadata as a one-source
 `FontArtifactRef`. A logical font face may also contain several exact Unicode-range sources when another package, such as
 `@hypit/fontsource`, adapts a sharded installed font. `FontStackRef` is the generic ordered value for one primary face followed
 by exact glyph fallbacks.
 
-Audio and Video are complete Media author objects. Their default binding and `.resource` facet project the original Blob;
-`.source`, `.domain` and `.extent` derive PreparedMedia through `inspect -> select -> prepare`. Kernel target closure makes
+Image, Audio and Video are the same kind of complete Media author object. Their default binding and `.resource` facet project
+the original Blob; `.source` derives PreparedMedia through `inspect -> select -> prepare`. Signal media additionally publishes
+`.domain` and `.extent`. Kernel target closure makes
 the two branches genuinely lazy: a generation request that consumes only the Resource never issues the inspection Need,
 while Film, Evidence or temporal construction can demand the prepared branch after the actual Resource exists. Neither the
 author declaration nor Host guesses an AIGC duration.
@@ -21,12 +22,13 @@ on the same Media object. Selecting audio still does not promote it to speech; d
 Resource or prepared signal is a voice reference, soundtrack, evidence source or occurrence.
 
 Media's syntax-neutral Author declarations own these fields, conditional Font shape, asset requests,
-reference Types, graph branches and output Records. Markup contributes only the Image, Audio, Video, Font, FontStack
-and Delivery spellings. Asset resolution remains an explicit compiler capability, and FontStack may
+reference Types, graph branches and output Records. Standard SVML reads those declarations directly; Media publishes no second
+tag spelling table. Asset resolution remains an explicit compiler capability, and FontStack may
 reference authored Font Records regardless of their textual order.
 
-The same module owns `PreparedMedia`: one immutable source Blob, one exact finite local domain and
-the selected visual/audio members' exact maps back to source presentation time. Visual interpretation
+The same module owns `PreparedMedia`: one identity, one immutable source Blob, an optional exact finite local domain and
+selected Picture/Audio members. A constant Picture has no temporal domain or Map. Signal members keep exact maps back to
+source presentation time. Picture interpretation
 retains coded extent, sample aspect ratio, rotation and the complete `PictureInterpretation` selected
 for those samples. Audio preparation retains only the selected stream, exact presentation origin, source domain and Map; decoder input
 shape is observed where bytes are decoded instead of being copied through every Programme. Decoding, Film placement, semantic evidence, renderer choice and
@@ -34,11 +36,23 @@ Provider cache remain separate downstream values.
 Inspection publishes presentation endpoints only when decoded-unit facts establish both boundaries.
 Without a complete span, the stream cannot establish an exact local domain; probe diagnostics do not enter this value.
 
-`preparedVisualExtent` projects those facts to the actual display width and height after pixel aspect
+## Materializing one selected member
+
+Media also owns explicit audio and decoded-frame materialization. The pure Producer resolves the
+ordinary default or explicit stream selector against `MediaInspection`, then emits an `extract-audio`
+or `extract-frame` Need. The result is a new WAV or PNG Blob; it does not become PreparedMedia and
+does not acquire speech, speaker, first-frame, continuity or editing meaning.
+
+This is the physical branch used when a model or external tool needs one standalone member. The
+prepared branch remains the information-preserving path for audiovisual use. Target closure naturally
+executes only the branch a consumer requests. Local FFmpeg execution belongs to `@hypit/media-local`;
+another Provider may implement the same Media capabilities without changing their meaning.
+
+`preparedPictureExtent` projects those facts to the actual display width and height after pixel aspect
 and quarter-turn rotation. It is geometry, not a reduced aspect-ratio pair: a square-pixel 64×64 source
 therefore remains 64×64.
 
-`PictureInterpretation` is shared by still images, selected video streams and compositable Surfaces.
+`PictureInterpretation` is shared by constant images and selected video streams.
 It states primaries, transfer, matrix, range, source sample bit depth and alpha semantics. Sharing this
 value does not give a still image a source clock or erase a video's local domain: it unifies what the
 pixels mean, not how time is represented. `PictureObservation` is the incomplete inspection form;
@@ -47,20 +61,19 @@ profile before publishing prepared picture.
 
 ## Prepared media stays neutral
 
-Preparation also publishes a complete exact `LocalTemporalDomain` and clock-independent
-`TemporalExtent`. A Timeline may resolve the Extent on its own Clock to determine its end, and a
-semantic projector may use the Domain with a placed Window to publish absolute anchors. Neither
-operation changes the media's identity or wraps it in an A-roll-specific value.
+Signal preparation also publishes a complete exact `LocalTemporalDomain` and clock-independent
+`TemporalExtent`. Constant Picture intentionally publishes neither. Any later output sampling grid
+resolves exact time without changing media identity or wrapping it in an A-roll-specific value.
 
-Visual and Audio author Clips each accept the same ordinary `PreparedMedia` with an explicit
-absolute Window. Each Clip contributes its own exact occurrence-to-prepared sampling relation. Visual lowering projects
+Picture and Audio occurrences accept the same ordinary `PreparedMedia`. Each signal use contributes its own exact
+occurrence-to-prepared sampling relation. Picture lowering projects
 the selected visual stream and carries the composed relation into `HtmlProgram`; audio lowering carries the prepared source and
 its preparation relation into the terminal Audio Track, while `AudioProgram` lowers those audio-only facts onto samples. A media value is therefore equally
 usable as foreground performance, B-roll, music, an effect or a model input; its earlier contribution
 to Timeline construction is not observable downstream.
 
-`PreparedVisualSource` and `PreparedAudioSource` are signal-specific projections of source selection and exact source domains;
-only the visual projection carries pixel interpretation because visual renderers consume it.
+`PreparedSignalPictureSource` and `PreparedAudioSource` are signal-specific projections of source selection and exact source
+domains; only the Picture projection carries pixel interpretation because visual renderers consume it.
 They choose no file format, frame grid, sample buffer, decoder or cache. A renderer may decode, cache or transcode privately,
 but those choices do not become graph values or fields of `PreparedMedia`.
 
@@ -89,7 +102,9 @@ The current delivery contract is deliberately one complete family: opaque BT.709
 H.264/yuv420p visual, 48 kHz stereo AAC audio and MP4. The author selects quality and opaque matte:
 
 ```svml
-<media:Delivery id="delivery" profile="bt709-h264" quality="high" matte="#000000"/>
+module media from "@hypit/media@1"
+
+media.delivery { id: delivery profile: bt709-h264 quality: high matte: "#000000" }
 ```
 
 The declaration does not select Chromium, Electron, an encoder or a display mode. Runtime binding selects
@@ -100,7 +115,7 @@ an Endpoint that implements the same complete request.
 `Font` takes an explicit source path and the selected face's real weight and style:
 
 ```svml
-<media:Font id="caption-font" src="./assets/fonts/creator-bold.otf" weight="700" style="normal"/>
+media.font { id: caption-font src: "./assets/fonts/creator-bold.otf" weight: 700 style: normal }
 ```
 
 The source can be a project font, a user-supplied file, or an npm package resource such as
@@ -117,11 +132,13 @@ does not carry a font catalog or limit which package and project-owned files an 
 A face split across Unicode ranges uses `Source` children. A stack is a separate, generic value:
 
 ```svml
-<media:Font id="latin" src="package:@company/type/files/latin.woff2" weight="600" style="normal"/>
-<media:Font id="han" weight="600" style="normal">
-  <media:Source src="./assets/fonts/han-1.woff2" unicode-range="U+4E00-9FFF"/>
-</media:Font>
-<media:FontStack id="caption" primary={latin}>
-  <media:Fallback font={han}/>
-</media:FontStack>
+media.font { id: latin src: "package:@company/type/files/latin.woff2" weight: 600 style: normal }
+media.font {
+  id: han weight: 600 style: normal
+  Source { src: "./assets/fonts/han-1.woff2" unicode-range: "U+4E00-9FFF" }
+}
+media.font-stack {
+  id: caption primary: @latin
+  Fallback { font: @han }
+}
 ```

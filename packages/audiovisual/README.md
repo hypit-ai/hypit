@@ -3,7 +3,9 @@
 Low-level authored audiovisual relationships before Track, Film, Composition or renderer lowering.
 
 All exact-time imports come from the clock-free `@hypit/temporal/algebra` entry. This package cannot observe
-Timeline, Instant, Window, frame-projection or Studio APIs; those are owned by Timeline and Timeline Author.
+Timeline, Instant, Window, frame-projection or Studio APIs. Output sampling belongs to terminal adapters,
+author relations belong to `@hypit/audiovisual-author`, and transient edit policy belongs to
+`@hypit/audiovisual-edit`; no replacement global Timeline owner is required.
 All spatial relationships similarly come from `@hypit/spatial/algebra`; AVIR does not import Canvas, Frame,
 author declarations or the legacy source-to-picture placement type.
 
@@ -18,17 +20,16 @@ The first implemented slice owns one resolved use of a typed Source:
 - a selected signal may carry one package-owned `SignalReconstruction`. It says how this particular mapped read
   becomes a signal, while the Mapping remains the only target-to-source coordinate fact.
 
-Move changes only parent placement. Trim changes the active occurrence-local range while preserving the
-parent positions of retained content. Remap changes only the target-to-source relation. Split creates two
-explicit identities that retain the same Source and Mapping. None of these operations resolves frames or
-requires a global Timeline.
+The algebra exposes validation, evaluation and factual projections only. Move, trim, slip, roll, ripple and
+split are pure transformations owned by `@hypit/audiovisual-edit`; none requires a global Timeline, but their
+editing policy is not part of the factual Core.
 
 This package accepts only resolved, positive finite domains wherever time exists. `constant` is a tagged absence
 of a time dimension, not an unknown or nullable Domain. Future graph values remain ordinary typed
 Operation results until their real Source closes; AVIR does not add nullable or symbolic domains.
 `@hypit/audiovisual-author` owns the syntax-neutral finite author linker, while terminal Programme lowering
-belongs to downstream adapters. This package deliberately has no activation, Markup, Studio, Runtime or
-renderer entry point.
+belongs to downstream adapters. This package deliberately has no Markup, Studio, Runtime, renderer or
+NLE-view entry point.
 
 The Programme owns Occurrences once and its Picture and Audio DAGs refer to `occurrence + output port`.
 This lets one media, component or nested Programme carry coordinated Picture and Audio through one edit
@@ -96,35 +97,8 @@ exact time into the ordinary static `remap` node. The first slice intentionally 
 syntax, easing catalogue, normalized-progress Domain, tracking document conversion or automatic
 shortest-path rotation. Those require their real owner rather than branches in generic Control.
 
-`projectNleOccurrences()` is the first read-only workbench projection. It emits one exact parent range
-per Occurrence and keeps each selected output's Mapping. It emits no Track, lane, frame index or copied
-source range.
-
-An optional `NleView` stores only ordered lanes and `occurrence + output` membership. That distinction lets
-one shared audiovisual Occurrence appear as separate Picture and Audio rectangles without duplicating its
-identity or timing. `projectNleView()` joins membership with derived Occurrence facts; empty lanes are valid,
-and deleting the whole View leaves Programme evaluation unchanged. A View never owns placement, Mapping,
-paint order or audio routing.
-
-Programme-level Move, Trim and Remap replace the one authoritative Occurrence and then validate the closed
-Programme. Existing Views remain unchanged and derive their next rectangles from the edited Programme. There
-is no second frontend timeline to synchronize.
-
-`slipProgramOccurrence()` atomically replaces an explicit subset of output Maps while preserving placement.
-Reverse, hold, loop and variable speed use the same primitive after their owner constructs the exact Map; AVIR
-does not add gesture-specific nodes. `rollProgramOccurrences()` requires two named Occurrences that already
-share one parent boundary, then trims their active local ranges to the new boundary in one Programme update.
-It never derives adjacency from a View.
-
-`rippleTrimProgramOccurrence()` trims one named boundary and shifts only an explicit transient list of
-Occurrence identities by that boundary's delta. The scope is command input, not persisted Programme or View
-state; Core never guesses “everything later on this Track.” Validation seals the whole result atomically.
-
-Programme-level Split replaces the Occurrence and every affected Picture and Audio `use` atomically. The old
-Picture node id becomes an ordered `over` of the two new uses; the old Audio node id becomes their `mix`, so
-downstream effect references stay stable. New Occurrence and graph node identities are explicit inputs. An
-optional View transform replaces old membership with the two identities; an unchanged View fails as a dangling
-reference instead of silently displaying stale rectangles.
+NLE lanes, grouping, folding and rectangle layout are external workspace projections. This package does not
+publish a canonical `NleView`, index or frontend timeline that must be synchronized with Programme facts.
 
 `evaluateAudiovisualProgramAt()` is the first execution-facing seam. Given one exact Programme-local position,
 it preserves the Picture and Audio DAGs, including crop and remap nodes. Each active signal `use` resolves through
@@ -135,11 +109,10 @@ recover a Canvas or inspect author structure to interpret its coordinates.
 It selects no frame rate, sample rate, Canvas, DOM or renderer: an Output policy chooses the exact positions to
 evaluate later. The legacy HTML Programme is therefore not the new author ABI.
 
-`VideoFrameSampling` is the first such terminal policy. It contains only an exact rational frame rate, derives
-the frame count needed to cover the Programme duration, and maps each frame index to an exact Programme-local
-position before calling the same evaluator. It has no Timeline identity and never rewrites Programme Domains,
-Mappings or Occurrences. Rendering the same Programme at another frame rate is therefore a new output choice,
-not an author-model migration.
+Frame sampling belongs to the terminal. `@hypit/audiovisual-html` accepts an exact rational sampling grid,
+derives the frame count needed to cover the Programme duration and maps each frame index to an exact
+Programme-local position before calling the same evaluator. Rendering at another frame rate is a new output
+choice, not an AVIR migration.
 
 `@hypit/audiovisual-html` is the first downstream terminal adapter. It accepts a complete Output frame sequence,
 consumes an explicit fold of typed terminal Source implementations,
@@ -161,16 +134,15 @@ Programme-to-Control Maps declared by its corresponding `apply`; a terminal can 
 package-owned automation continuously without turning it into Clip fields or video-frame samples.
 This package does not import that adapter, PreparedMedia, AudioProgram or a Renderer.
 
-`@hypit/audiovisual-media` is the one-way upstream adapter for real media. It publishes the selected visual
-and audio members of one `PreparedMedia` as coordinated `ProgramSource` outputs with their actual temporal
+`@hypit/audiovisual-media` is the one-way upstream adapter for real media. It publishes the selected Picture
+and Audio members of one `PreparedMedia` as coordinated `ProgramSource` outputs with their actual temporal
 and spatial domains. It does not prepare media or apply occurrence edits. A Programme must explicitly remap
 a media Picture domain into its own Picture domain; matching pixel dimensions do not make two named spaces
 identical.
 
-The same adapter owns the direct still-picture branch. An explicit identity, image Artifact, complete
-`PictureInterpretation` and local spatial Domain close one `StillPictureSource`; its AVIR projection is a
-`constant` Picture and therefore has no temporal Domain. The finite use duration belongs only to an Occurrence.
-Artifact and interpretation facts do not enter this package.
+An image is ordinary PreparedMedia whose selected Picture is `constant`; its AVIR projection therefore has no
+temporal Domain. There is no direct `StillPictureSource` branch. The finite use duration belongs only to an
+Occurrence, while Artifact and interpretation facts stay on the terminal Media binding.
 
 The inverse nesting edge is now an ordinary `program-source` Producer owned by this package. It projects a
 closed `AudiovisualProgram` to the same `ProgramSource` facts as `audiovisualProgramSource()`; the graph edge

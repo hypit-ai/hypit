@@ -5,6 +5,7 @@ import type {
   ModelFieldRequest,
 } from "@hypit/generation/model-fields";
 import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+import { promptTypes } from "@hypit/hypit/prompt";
 import { validateSeedanceInputs } from "./validation.js";
 
 export const seedanceModuleRef = { name: "@hypit/seedance", version: "1" } as const;
@@ -31,7 +32,8 @@ function seedanceFieldTable(model: SeedanceModel): ModelFieldTable {
   return defineModelFields({
     model,
     fields: [
-      { name: "prompt", value: { kind: "text", maxChars: is25 ? 30_000 : 20_000 }, minItems: 1, maxItems: 1 },
+      { name: "prompt", value: { kind: "text", inputType: promptTypes.prompt,
+        maxChars: is25 ? 30_000 : 20_000 }, minItems: 1, maxItems: 1 },
       { name: "referenceImage", value: { kind: "media", accepts: ["image"], itemFields: PERSON_REFERENCE_FIELDS }, minItems: 0 },
       { name: "referenceVideo", value: { kind: "media", accepts: ["video"], itemFields: PERSON_REFERENCE_FIELDS }, minItems: 0 },
       { name: "referenceAudio", value: { kind: "media", accepts: ["audio"] }, minItems: 0 },

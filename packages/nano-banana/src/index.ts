@@ -1,6 +1,7 @@
 import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
 import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+import { promptTypes } from "@hypit/hypit/prompt";
 
 export const nanoBananaModuleRef = { name: "@hypit/nano-banana", version: "1" } as const;
 export const nanoBananaModels = ["nano-banana-2", "nano-banana-pro"] as const;
@@ -16,7 +17,8 @@ function nanoBananaFieldTable(model: NanoBananaModel): ModelFieldTable {
   return defineModelFields({
     model,
     fields: [
-      { name: "prompt", value: { kind: "text", maxChars: pro ? 10_000 : 20_000 }, minItems: 1, maxItems: 1 },
+      { name: "prompt", value: { kind: "text", inputType: promptTypes.prompt,
+        maxChars: pro ? 10_000 : 20_000 }, minItems: 1, maxItems: 1 },
       { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: pro ? 8 : 14 },
       {
         name: "aspectRatio",

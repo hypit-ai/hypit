@@ -7,8 +7,6 @@ import { installEndpoint } from "@hypit/hypit/endpoint";
 
 import { blobTypes } from "@hypit/blob";
 import { EndpointRegistry, MemoryResourceStore } from "@hypit/executor";
-import { rasterTransformCapabilities, sealImageTransformProgram } from "@hypit/raster-transform";
-import type { ImageTransformProgram } from "@hypit/raster-transform";
 import { rasterCompositionCapabilities } from "@hypit/raster-composition";
 import { createLocalOpenCvImageProvider } from "@hypit/provider-image-opencv-local";
 import { assertBlobRef, canonicalize } from "@hypit/protocol";
@@ -19,31 +17,6 @@ const managedPython = process.platform === "win32"
   ? join(runtime, ".venv", "Scripts", "python.exe")
   : join(runtime, ".venv", "bin", "python");
 const openCvPython = process.env.HYPIT_OPENCV_PYTHON ?? managedPython;
-
-const denoiseProgram = sealImageTransformProgram({
-  operations: [{
-    kind: "denoise",
-    method: "nlm-ycrcb",
-    lumaStrength: 1,
-    chromaStrength: 3,
-    templateWindow: 7,
-    searchWindow: 21,
-    saturationRecovery: 1,
-  }, {
-    kind: "encode",
-    format: "png",
-  }],
-});
-
-function need(source: BlobRef, program: ImageTransformProgram = denoiseProgram): Need {
-  return {
-    id: "need:image-transform",
-    capability: rasterTransformCapabilities.transform,
-    returns: blobTypes.blob,
-    constraints: canonicalize({ source, operations: program.operations }),
-    result: "record:image-transform",
-  };
-}
 
 function composeNeed(source: BlobRef): Need {
   const target = { id: "output", region: { x: 0, y: 0, width: 3, height: 2 } } as const;
@@ -68,38 +41,6 @@ function composeNeed(source: BlobRef): Need {
     result: "record:image-compose",
   };
 }
-
-test("the local Provider returns only a new image Blob", async () => {
-  const resources = new MemoryResourceStore();
-  const png = Buffer.from(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
-    "base64",
-  );
-  const source = await resources.put(png, "image/png");
-  const program = sealImageTransformProgram({
-    operations: [{
-      kind: "resize", width: 64, height: 64, fit: "stretch", interpolation: "nearest",
-    }, ...denoiseProgram.operations],
-  });
-  const request = need(source, program);
-  const registry = new EndpointRegistry();
-  await installEndpoint(createLocalOpenCvImageProvider({ pythonExecutable: openCvPython }), registry);
-  const resolution = registry.select(request);
-  assert.equal(resolution.status, "resolved");
-  assert.equal(resolution.registration.kind, "immediate");
-  const result = await resolution.registration.handler({
-
-    request: request, resources, credentials: {},
-  });
-  assertBlobRef(result);
-  assert.equal(result.mediaType, "image/png");
-  assert.equal(await resources.has(result.resource), true);
-  const output = await resources.get(result.resource);
-  assert(output !== undefined);
-  const encoded = Buffer.from(output);
-  assert.equal(encoded.readUInt32BE(16), 64);
-  assert.equal(encoded.readUInt32BE(20), 64);
-});
 
 test("the local Provider samples ordered Layers through Spatial Maps", async () => {
   const resources = new MemoryResourceStore();

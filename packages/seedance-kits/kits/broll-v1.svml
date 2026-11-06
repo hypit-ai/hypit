@@ -1,0 +1,156 @@
+module prompt from "@hypit/prompt@1"
+
+prompt.Template "broll-v1" {
+  separator: paragraph
+
+  fixed "base" {
+    text: "Create a silent B-roll micro-film using the provided reference image or images."
+  }
+
+  fixed "contract" {
+    text: <<PROMPT
+B-ROLL CONTRACT: create visual support footage. Focus on visible action, object behavior, camera movement, and editing rhythm. Visible people perform visual actions rather than speaking to camera.
+    PROMPT
+  }
+
+  fixed "reference" {
+    text: <<PROMPT
+REFERENCE CONTRACT: preserve the intended identity, product, UI, props, setting, lighting, texture, wardrobe, and composition from the reference images. Use the references in their authored order and follow the story's explicit description of each reference's role.
+    PROMPT
+  }
+
+  choose "material-mode" {
+    default: practical-real
+
+    option "practical-real" {
+      text: <<PROMPT
+MATERIAL MODE: practical real-world UGC footage with believable physical causality and a lived-in phone-camera feeling.
+      PROMPT
+    }
+
+    option "screen-demo" {
+      text: <<PROMPT
+MATERIAL MODE: a practical filmed screen demo. Interface elements remain physically contained on the device screen.
+      PROMPT
+    }
+
+    option "product-beauty" {
+      text: <<PROMPT
+MATERIAL MODE: product beauty footage focused on object presence, packaging, texture, tabletop detail, or studio product motion.
+      PROMPT
+    }
+
+    option "proof-capture" {
+      text: <<PROMPT
+MATERIAL MODE: proof capture such as a website, certificate, receipt, review, chart, or credibility page, treated as visual evidence.
+      PROMPT
+    }
+
+    option "stylized-vfx" {
+      text: <<PROMPT
+MATERIAL MODE: an intentional visual-effects metaphor used as an expressive explainer rather than practical documentation.
+      PROMPT
+    }
+  }
+
+  choose "story-shape" {
+    default: single-moment
+
+    option "single-moment" {
+      text: "STORY SHAPE: one continuous visual moment with a small readable change or payoff."
+    }
+
+    option "reaction-beat" {
+      text: "STORY SHAPE: stimulus, realization, then a clearly visible reaction."
+    }
+
+    option "process-demo" {
+      text: "STORY SHAPE: a stepwise demonstration whose practical stages remain legible."
+    }
+
+    option "before-after" {
+      text: "STORY SHAPE: a clear and visually legible contrast between before and after states."
+    }
+
+    option "montage-sequence" {
+      text: "STORY SHAPE: several short shots around one idea, each adding distinct evidence or feeling."
+    }
+  }
+
+  choose "edit-language" {
+    default: continuous-shot
+
+    option "continuous-shot" {
+      text: "EDIT LANGUAGE: continuous-shot timing; let the visual action play as one coherent moment."
+    }
+
+    option "jump-cut-beats" {
+      text: "EDIT LANGUAGE: crisp jump-cut beats, with each meaningful action stage landing cleanly."
+    }
+
+    option "match-cut-montage" {
+      text: "EDIT LANGUAGE: match-cut montage connecting similar framing, motion, or composition across shots."
+    }
+
+    option "insert-cutaway" {
+      text: "EDIT LANGUAGE: relevant detail cutaways such as hand, screen, product, face, or reaction."
+    }
+  }
+
+  choose "camera-language" {
+    default: reference-locked
+
+    option "reference-locked" {
+      text: <<PROMPT
+CAMERA LANGUAGE: preserve the reference framing with minimal drift and let subject action carry the shot.
+      PROMPT
+    }
+
+    option "selfie-vlog" {
+      text: "CAMERA LANGUAGE: intimate selfie, mirror, or vlog phone camera with natural arm and camera bob."
+    }
+
+    option "handheld-follow" {
+      text: "CAMERA LANGUAGE: a handheld follow camera moving with the subject or object through space."
+    }
+
+    option "push-reveal" {
+      text: "CAMERA LANGUAGE: a motivated push, tilt, or reveal guiding attention to the key discovery."
+    }
+
+    option "product-macro" {
+      text: "CAMERA LANGUAGE: close product macro, orbit, parallax, or detail-focused movement."
+    }
+  }
+
+  choose "motion-intensity" {
+    default: readable
+
+    option "micro" {
+      text: "MOTION INTENSITY: micro motion only, prioritizing proof, product, or still-evidence clarity."
+    }
+
+    option "readable" {
+      text: "MOTION INTENSITY: readable action with clear movement that remains easy to understand."
+    }
+
+    option "lively" {
+      text: "MOTION INTENSITY: lively UGC body, camera, or object movement."
+    }
+
+    option "impact" {
+      text: "MOTION INTENSITY: high-impact physical or sensory motion such as splash, burst, or fast reveal."
+    }
+  }
+
+  fixed "hygiene" {
+    text: <<PROMPT
+SCREEN AND TEXT HYGIENE: add no subtitles, captions, floating words, labels, logos, or ad overlays. Referenced physical labels, screens, websites, and documents remain attached to their objects.
+    PROMPT
+  }
+
+  slot "story" {
+    required: true
+    label: "MICRO-STORY PROMPT:"
+  }
+}

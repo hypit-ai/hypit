@@ -5,28 +5,28 @@ two exact models, `pixverse-v6` and `pixverse-c1`, and selects no Provider, API 
 execution. The selected Provider implements the exact capability.
 
 Both models render 1 to 15 seconds at `540p` or `720p` from a prompt of up to
-5,000 characters. `<pix:Video>` generates from the prompt, from a first frame, or from a first and
-last frame; `<pix:ReferenceVideo>` generates from the image and video subjects its `Reference`
+5,000 characters. `pix.video` generates from the prompt, from a first frame, or from a first and
+last frame; `pix.reference-video` generates from the image and video subjects its `Reference`
 children carry.
 
-```xml
-<pix:Video
-  id="opening"
-  model="v6"
-  prompt={line}
-  duration="5"
-  quality="720p"
-  aspect-ratio="9:16"
-  generate-audio="true"
-/>
+```svml
+module pix from "@hypit/pixverse@1"
 
-<pix:Video id="bridge" model="c1" prompt={motion} duration="5" quality="720p"
-  first-frame={hero.image} last-frame={product.image}/>
+pix.video {
+  id: opening model: v6 prompt: @line duration: 5 quality: 720p
+  aspect-ratio: 9:16 generate-audio: true
+}
 
-<pix:ReferenceVideo id="fusion" model="v6" prompt={outfit} duration="5" quality="720p" aspect-ratio="16:9">
-  <pix:Reference image={character.image}/>
-  <pix:Reference image={clothes.image}/>
-</pix:ReferenceVideo>
+pix.video {
+  id: bridge model: c1 prompt: @motion duration: 5 quality: 720p
+  first-frame: @hero.image last-frame: @product.image
+}
+
+pix.reference-video {
+  id: fusion model: v6 prompt: @outfit duration: 5 quality: 720p aspect-ratio: 16:9
+  Reference { image: @character.image }
+  Reference { image: @clothes.image }
+}
 ```
 
 The prompt addresses the references in the order they appear, as `@ref_1`, `@ref_2` and so on. V6

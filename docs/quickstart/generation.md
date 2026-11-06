@@ -166,24 +166,10 @@ Common attributes are `id`, `model`, `prompt`, `duration`, `resolution`, `aspect
 `generate-audio`. `duration` is a literal in whole seconds inside the model's range, estimated
 beforehand with `hypit estimate`.
 
-The audio generated in an earlier take can be reused as a later reference. Extraction preserves it
-as audio without attaching speech evidence or speaker meaning:
-
-```svml
-<mediaop:ExtractAudio id="voice-from-opening"
-  source={opening.video} audio="default"/>
-
-<seedance:ReferenceVideo id="follow-up" model="mini"
-  prompt={follow-up-direction} duration="5" generate-audio="true">
-  <seedance:Reference image={presenter-reference} person-reference="true"/>
-  <seedance:Reference audio={voice-from-opening.audio}/>
-</seedance:ReferenceVideo>
-```
-
-The same media-operation package exposes `Transform` for ordered trim, constant retime and exact
-rate profiles resolved against the prepared source's actual duration, plus `ExtractFrame` for
-first, last, indexed or timestamped still extraction. Local FFmpeg implements these operations. A
-compatible Runtime Endpoint can be selected through the Runtime Profile.
+Audio or one decoded frame from an earlier take can be reused as a later model reference. Materialize
+the selected Media member as WAV or PNG before binding it. This creates a new physical Blob without
+attaching speech, speaker or editing meaning. Trim, retime, reverse and hold remain relationships on
+the audiovisual occurrence that uses the Media; they are not reusable root media transforms.
 
 ## Seedance semantic Kits
 

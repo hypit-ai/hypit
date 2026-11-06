@@ -9,12 +9,6 @@ import { defineEndpoint } from "@hypit/hypit/endpoint";
 import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
 import type { CanonicalValue, Value } from "@hypit/hypit/protocol";
 import {
-  assertImageTransformRequest,
-  imageTransformOutputMediaType,
-  rasterTransformCapabilities,
-} from "@hypit/raster-transform";
-import type { ImageTransformRequest } from "@hypit/raster-transform";
-import {
   assertRasterComposition,
   rasterCompositionCapabilities,
   rasterCompositionSources,
@@ -45,13 +39,6 @@ function positiveInteger(value: number, subject: string): number {
   return value;
 }
 
-function transformRequest(value: CanonicalValue): ImageTransformRequest {
-  assert(value !== null && typeof value === "object" && !Array.isArray(value), "Image transform request must be an object");
-  const item = value as unknown as ImageTransformRequest;
-  assertImageTransformRequest(item);
-  return item;
-}
-
 function compositionRequest(value: CanonicalValue): RasterComposition {
   assert(value !== null && typeof value === "object" && !Array.isArray(value),
     "Raster composition request must be an object");
@@ -75,12 +62,12 @@ async function runProcess(options: {
       failed ??= error;
       child.kill("SIGKILL");
     };
-    const timer = setTimeout(() => fail(new Error(`OpenCV image transform exceeded ${options.timeoutMs}ms`)),
+    const timer = setTimeout(() => fail(new Error(`OpenCV raster composition exceeded ${options.timeoutMs}ms`)),
       options.timeoutMs);
     child.stderr.on("data", (chunk: Buffer) => {
       stderrBytes += chunk.byteLength;
       if (stderrBytes > options.maxStderrBytes) {
-        fail(new Error("OpenCV image transform stderr exceeded its limit"));
+        fail(new Error("OpenCV raster composition stderr exceeded its limit"));
         return;
       }
       stderr.push(chunk);
@@ -91,7 +78,7 @@ async function runProcess(options: {
       if (failed !== undefined) reject(failed);
       else if (code !== 0) {
         const detail = Buffer.concat(stderr).toString("utf8").trim();
-        reject(new Error(`OpenCV image transform exited with ${code ?? `signal ${signal ?? "unknown"}`}`
+        reject(new Error(`OpenCV raster composition exited with ${code ?? `signal ${signal ?? "unknown"}`}`
           + (detail.length === 0 ? "" : `: ${detail}`)));
       }
       else resolve();
@@ -107,13 +94,10 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
   const script = fileURLToPath(new URL("../runtime/raster_execute.py", import.meta.url));
 
   const execute = async (
-    kind: "transform" | "compose",
-    need: ImageTransformRequest | RasterComposition,
+    need: RasterComposition,
     context: EndpointInvocationContext,
   ): Promise<Value> => {
-    const sources = kind === "transform"
-      ? [(need as ImageTransformRequest).source]
-      : rasterCompositionSources(need as RasterComposition);
+    const sources = rasterCompositionSources(need);
     const uniqueSources = [...new Map(sources.map((source) => [source.resource, source])).values()];
     const totalInputBytes = uniqueSources.reduce((sum, source) => sum + source.size, 0);
     assert(totalInputBytes <= maxInputBytes, "Image operation inputs exceed their configured byte limit");
@@ -128,21 +112,15 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
         await writeFile(path, bytes);
         paths.set(source.resource, path);
       }
-      const runtimeRequest = kind === "transform"
-        ? {
-            kind,
-            source: paths.get((need as ImageTransformRequest).source.resource),
-            operations: (need as ImageTransformRequest).operations,
-          }
-        : {
-            kind,
-            target: (need as RasterComposition).target,
-            background: (need as RasterComposition).background,
-            layers: (need as RasterComposition).layers.map((layer) => ({
-              source: paths.get(layer.source.resource), mapping: layer.mapping,
-              interpolation: layer.interpolation, opacity: layer.opacity,
-            })),
-          };
+      const runtimeRequest = {
+        kind: "compose",
+        target: need.target,
+        background: need.background,
+        layers: need.layers.map((layer) => ({
+          source: paths.get(layer.source.resource), mapping: layer.mapping,
+          interpolation: layer.interpolation, opacity: layer.opacity,
+        })),
+      };
       const program = join(work, "request.json");
       const output = join(work, "output.bin");
       await writeFile(program, JSON.stringify(runtimeRequest), "utf8");
@@ -155,10 +133,7 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
       const info = await stat(output);
       assert(info.isFile() && info.size > 0 && info.size <= maxOutputBytes,
         "OpenCV image execution produced an invalid output size");
-      const mediaType = kind === "transform"
-        ? imageTransformOutputMediaType(need as ImageTransformRequest)
-        : "image/png";
-      return await context.resources.put(await readFile(output), mediaType);
+      return await context.resources.put(await readFile(output), "image/png");
     } finally {
       await rm(work, { recursive: true, force: true }).catch(() => {});
     }
@@ -171,16 +146,11 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [{
       lifecycle: "immediate" as const,
-      capability: rasterTransformCapabilities.transform,
-      returns: blobTypes.blob,
-      handler: async (context): Promise<Value> =>
-        await execute("transform", transformRequest(context.request.constraints), context),
-    }, {
-      lifecycle: "immediate" as const,
+      transient: true,
       capability: rasterCompositionCapabilities.render,
       returns: blobTypes.blob,
       handler: async (context): Promise<Value> =>
-        await execute("compose", compositionRequest(context.request.constraints), context),
+        await execute(compositionRequest(context.request.constraints), context),
     }],
   });
 }

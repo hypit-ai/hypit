@@ -36,7 +36,29 @@ export type AuthorDeclarationReference = {
   readonly range?: SourceRange;
 };
 
-export type AuthorDeclarationFieldValue = AuthorDeclarationLiteral | AuthorDeclarationReference;
+export type AuthorDeclarationList = {
+  readonly kind: "list";
+  readonly items: readonly AuthorDeclarationFieldValue[];
+  readonly range?: SourceRange;
+};
+
+export type AuthorDeclarationRecordEntry = {
+  readonly name: string;
+  readonly value: AuthorDeclarationFieldValue;
+  readonly range?: SourceRange;
+};
+
+export type AuthorDeclarationRecord = {
+  readonly kind: "record";
+  readonly entries: readonly AuthorDeclarationRecordEntry[];
+  readonly range?: SourceRange;
+};
+
+export type AuthorDeclarationFieldValue =
+  | AuthorDeclarationLiteral
+  | AuthorDeclarationReference
+  | AuthorDeclarationList
+  | AuthorDeclarationRecord;
 
 export type AuthorDeclarationField = {
   readonly name: string;
@@ -57,6 +79,8 @@ export type AuthorDeclarationBodyPart =
  */
 export type AuthorDeclarationChild = {
   readonly name: string;
+  /** Stable only inside the declaration parent that owns this child. */
+  readonly label?: string;
   readonly fields: readonly AuthorDeclarationField[];
   readonly children: readonly AuthorDeclarationChild[];
   /** Present when direct text and child declarations have meaningful interleaving. */
@@ -71,6 +95,8 @@ export type AuthorDeclarationChild = {
 export type AuthorDeclaration = {
   readonly module: ModuleRef;
   readonly name: string;
+  /** Source-local identity of this independent package-owned subject. */
+  readonly label?: string;
   readonly fields: readonly AuthorDeclarationField[];
   readonly children: readonly AuthorDeclarationChild[];
   /** Present when direct text and child declarations have meaningful interleaving. */
@@ -152,11 +178,20 @@ export type AuthorDeclarationBindingContext = {
 
 export type AuthorDeclarationFieldKind = "identifier" | "literal" | "reference" | "expression";
 
+/**
+ * A reference either addresses another independently authored Source binding,
+ * or is a declaration-local path interpreted solely by the owning package.
+ * Author orders and resolves only Source references; it never gives meaning to
+ * package-local endpoint names.
+ */
+export type AuthorDeclarationReferenceScope = "source" | "declaration";
+
 export type AuthorDeclarationFieldShape = {
   readonly name: string;
   readonly kind: AuthorDeclarationFieldKind;
   readonly required: boolean;
   readonly summary: string;
+  readonly referenceScope?: AuthorDeclarationReferenceScope;
   readonly accepts?: readonly TypeRef[];
   readonly values?: readonly string[];
   readonly schema?: ValueSchema;
@@ -165,6 +200,7 @@ export type AuthorDeclarationFieldShape = {
 
 export type AuthorDeclarationChildShape = {
   readonly name: string;
+  readonly label?: "required" | "optional" | "forbidden";
   readonly cardinality: "one" | "optional" | "many";
   readonly summary: string;
   readonly fields: readonly AuthorDeclarationFieldShape[];
@@ -183,6 +219,7 @@ export type AuthorDeclarationChildrenShape =
 
 export type AuthorDeclarationShape = {
   readonly summary: string;
+  readonly label?: "required" | "optional" | "forbidden";
   readonly fields: readonly AuthorDeclarationFieldShape[];
   readonly children?: AuthorDeclarationChildrenShape;
   readonly childGroups?: Readonly<Record<string, readonly AuthorDeclarationChildShape[]>>;
@@ -243,6 +280,10 @@ function validateShapeList(
     fieldNames.add(field.name);
     if (field.accepts !== undefined && field.kind !== "reference" && field.kind !== "expression") {
       throw new Error(`${subject}.${field.name} cannot declare accepted Types for ${field.kind}.`);
+    }
+    if (field.referenceScope !== undefined
+      && field.kind !== "reference" && field.kind !== "expression") {
+      throw new Error(`${subject}.${field.name} cannot scope a ${field.kind} field reference.`);
     }
   }
   const childNames = new Set<string>();
@@ -325,7 +366,18 @@ type ReferenceUse = {
   readonly shape: AuthorDeclarationFieldShape;
 };
 
-type DeclarationLike = Pick<AuthorDeclaration, "fields" | "children" | "body" | "text" | "textRange" | "range">
+function referencesInValue(
+  value: AuthorDeclarationFieldValue,
+  shape: AuthorDeclarationFieldShape,
+): ReferenceUse[] {
+  if (shape.referenceScope === "declaration") return [];
+  if (value.kind === "reference") return [{ reference: value, shape }];
+  if (value.kind === "list") return value.items.flatMap((item) => referencesInValue(item, shape));
+  if (value.kind === "record") return value.entries.flatMap((entry) => referencesInValue(entry.value, shape));
+  return [];
+}
+
+type DeclarationLike = Pick<AuthorDeclaration, "label" | "fields" | "children" | "body" | "text" | "textRange" | "range">
   | AuthorDeclarationChild;
 
 type DeclarationProvenanceGroup = {
@@ -341,7 +393,7 @@ function rangeKey(range: SourceRange): string {
 
 function declarationProvenanceGroups(
   declaration: AuthorDeclaration,
-  resolvedReferences: ReadonlyMap<string, AuthorResolvedReference>,
+  resolvedReferences: ReadonlyMap<AuthorDeclarationReference, AuthorResolvedReference>,
 ): Map<string, DeclarationProvenanceGroup> {
   const groups = new Map<string, DeclarationProvenanceGroup>();
   const visit = (node: DeclarationLike): void => {
@@ -356,7 +408,7 @@ function declarationProvenanceGroups(
     for (const field of node.fields) {
       if (field.value.range === undefined) continue;
       const ref = field.value.kind === "reference"
-        ? resolvedReferences.get(field.value.path)?.ref
+        ? resolvedReferences.get(field.value)?.ref
         : undefined;
       group.inputs.push({
         name: field.name,
@@ -372,6 +424,7 @@ function declarationProvenanceGroups(
 
 function validateDeclarationStructure(
   declaration: DeclarationLike,
+  labelRule: "required" | "optional" | "forbidden",
   fields: readonly AuthorDeclarationFieldShape[],
   children: AuthorDeclarationChildrenShape | undefined,
   groups: Readonly<Record<string, readonly AuthorDeclarationChildShape[]>>,
@@ -379,6 +432,12 @@ function validateDeclarationStructure(
   subject: string,
 ): ReferenceUse[] {
   const range = declaration.range;
+  if (labelRule === "required" && declaration.label === undefined) {
+    throw new AuthorDeclarationError("AUTHOR_DECLARATION_LABEL_REQUIRED", `${subject} requires a label.`, range);
+  }
+  if (labelRule === "forbidden" && declaration.label !== undefined) {
+    throw new AuthorDeclarationError("AUTHOR_DECLARATION_LABEL_FORBIDDEN", `${subject} does not accept a label.`, range);
+  }
   const byName = new Map(fields.map((field) => [field.name, field]));
   const seen = new Set<string>();
   const references: ReferenceUse[] = [];
@@ -400,7 +459,7 @@ function validateDeclarationStructure(
     if (field.value.kind === "literal" && shape.values !== undefined && !shape.values.includes(field.value.value)) {
       throw new AuthorDeclarationError("AUTHOR_DECLARATION_FIELD_VALUE", `${subject}.${field.name} has an unsupported value.`, field.value.range ?? range);
     }
-    if (field.value.kind === "reference") references.push({ reference: field.value, shape });
+    references.push(...referencesInValue(field.value, shape));
   }
   const missing = fields.find((field) => field.required && !seen.has(field.name));
   if (missing !== undefined) {
@@ -417,6 +476,7 @@ function validateDeclarationStructure(
     childCounts.set(child.name, (childCounts.get(child.name) ?? 0) + 1);
     references.push(...validateDeclarationStructure(
       child,
+      shape.label ?? "optional",
       shape.fields,
       shape.children,
       groups,
@@ -512,6 +572,7 @@ export async function compileAuthorDeclarations(
     }
     const references = validateDeclarationStructure(
       declaration,
+      compiler.shape.label ?? "optional",
       compiler.shape.fields,
       compiler.shape.children,
       compiler.shape.childGroups ?? {},
@@ -568,11 +629,11 @@ export async function compileAuthorDeclarations(
   const componentIds = new Set<string>();
   const componentsById = new Map<string, AuthorComponent>();
   const provenance: AuthorElementProvenanceDraft[] = [];
-  const resolvedReferences = new Map<string, AuthorResolvedReference>();
   const externalReferences = new Map<string, AuthorResolvedReference | null>();
 
   for (const index of order) {
     const item = prepared[index]!;
+    const resolvedReferences = new Map<AuthorDeclarationReference, AuthorResolvedReference>();
     const resolveReference = async (path: string): Promise<AuthorResolvedReference | undefined> => {
       const local = localBindings.get(path);
       if (local !== undefined) {
@@ -584,14 +645,12 @@ export async function compileAuthorDeclarations(
           type: local.binding.type,
           ...(record === undefined ? {} : { record: structuredClone(record) }),
         };
-        resolvedReferences.set(path, result);
         return result;
       }
       const retained = externalReferences.get(path);
       if (retained !== undefined) return retained === null ? undefined : retained;
       const result = await options.resolveReference?.(path);
       externalReferences.set(path, result ?? null);
-      if (result !== undefined) resolvedReferences.set(path, result);
       return result;
     };
     for (const { reference, shape } of item.references) {
@@ -610,6 +669,7 @@ export async function compileAuthorDeclarations(
           reference.range ?? item.declaration.range,
         );
       }
+      resolvedReferences.set(reference, resolved);
     }
     const output = await item.compiler.compile({
       sourceName: options.sourceName,

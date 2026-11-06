@@ -543,7 +543,9 @@ function escapeLiteral(value: string): string {
 }
 
 function serializeValue(value: AuthorDeclarationFieldValue): string {
-  return value.kind === "reference" ? `{${value.path}}` : `"${escapeLiteral(value.value)}"`;
+  if (value.kind === "reference") return `{${value.path}}`;
+  if (value.kind === "literal") return `"${escapeLiteral(value.value)}"`;
+  throw new Error(`Markup cannot serialize structural ${value.kind} values.`);
 }
 
 function serializeChild(child: AuthorDeclarationChild, indent: string): string {

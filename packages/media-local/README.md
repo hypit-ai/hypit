@@ -11,15 +11,27 @@ orthogonal ports:
 The Provider is Runtime configuration and is never imported by author `.svml`. The file and CLI ports
 do not manufacture a Graph, Build, Result or Runtime state.
 
+An embedding that already owns a `ResourceStore` may also construct the same local execution
+environment directly. This is the byte/tool boundary reused by the Provider and by direct delivery;
+it does not infer a project directory or create Runtime state:
+
+```ts
+import { createMediaExecutionEnvironment } from "@hypit/media-local";
+
+const execution = createMediaExecutionEnvironment(resources, {
+  ffmpegPath: "ffmpeg",
+  ffprobePath: "ffprobe",
+});
+```
+
 This Provider owns its FFmpeg commands, media inspection, animated-WebP handling and audio-program
 execution. They are implementation details of this machine executor, not a shared domain package or
 a root `@hypit/hypit` facade. Another Provider implements the same Needs against the public operation
 contracts rather than importing this Provider's process code.
 
 The local process runner is shared by the Provider and file ports, so bounds, shell avoidance and
-failure reporting do not fork into two executors. Material contracts remain in
-`@hypit/media-extraction` and `@hypit/still-video`, audio Programme execution in
-`@hypit/audio-program`, and terminal assembly
+failure reporting do not fork into two executors. Inspection and extraction contracts remain in
+`@hypit/media`, audio Programme execution in `@hypit/audio-program`, and terminal assembly
 in `@hypit/media-delivery`; paths, subprocesses and ffprobe output remain here.
 
 ## File authoring and inspection
@@ -98,8 +110,6 @@ The Endpoint:
   span authority inside the Provider;
 - emits exactly the requested terminal signal: a silent CFR visual or an exact-length 48 kHz stereo PCM WAV;
 - evaluates source-preserving trim/retime relations privately, extracts generic reference audio and extracts exact source frames;
-- encodes authored image frames as ordinary finite video-only MP4 with explicit BT.709 conversion and
-  colour metadata before preparation;
 - renders a supported explicit `AudioProgram` into one exact-length 48 kHz stereo PCM `TimelineAudio`;
 - muxes exactly one verified silent visual stream and one verified program-audio stream into MP4, including a valid one-frame video;
 - re-observes the TimelineVisual bytes at that terminal boundary and requires their frame rate, canvas, codec,
@@ -140,7 +150,7 @@ guarantee every codec or filter for every task; an unsupported operation reports
 remain valid; the package neither pins a semantic Capability to one FFmpeg version nor mutates a
 system package manager.
 
-The reusable byte operations—inspection, extraction and StillVideo—also opt into transient authoring execution. Speech-evidence projection,
+The reusable byte operations—inspection and extraction—also opt into transient authoring execution. Speech-evidence projection,
 timeline-audio rendering and final muxing remain Build-only. This is declared per capability; the
 Runtime and Studio contain no media capability allowlist.
 

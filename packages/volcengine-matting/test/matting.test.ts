@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { blobTypes } from "@hypit/blob";
-import { compileMarkupDeclaration } from "../../../test/compile-markup-declaration.js";
-import { portraitMattingAuthorDeclaration, volcengineMattingMarkupDeclarations } from "../src/declaration.js";
+import { compileSvmlDeclaration } from "../../../test/compile-svml-declaration.js";
+import { portraitMattingAuthorDeclaration } from "../src/declaration.js";
 import { sealPortraitMattingRequest, volcengineMattingModuleRef } from "../src/index.js";
 
 const source = { kind: "blob" as const, resource: "res_matting-source" as const, size: 4, mediaType: "video/mp4" };
@@ -14,12 +14,11 @@ test("portrait matting binds a source video and publishes an ordinary video edge
   assert.throws(() => sealPortraitMattingRequest({ source: [{ role: "video", artifact: source }], format: ["MP4"] }), /format/u);
   const reference = { ref: { kind: "record" as const, id: "performance.video" },
     type: blobTypes.blob, record: { id: "performance.video", type: blobTypes.blob, value: source } };
-  const result = await compileMarkupDeclaration({
-    source: '<matte:Portrait id="cutout" source={performance.video}/>',
+  const result = await compileSvmlDeclaration({
+    source: 'matte.portrait { id: cutout source: @performance.video }',
     module: volcengineMattingModuleRef,
     alias: "matte",
     compilers: [portraitMattingAuthorDeclaration],
-    syntax: volcengineMattingMarkupDeclarations,
     references: new Map([["performance.video", reference]]),
   });
   assert.deepEqual(result.components[0]!.outputs, { video: "cutout.video" });

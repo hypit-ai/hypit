@@ -15,6 +15,15 @@ import {
   readAudioGainProcess,
 } from "../src/index.js";
 import { exactTemporalValue, sealLocalTemporalDomain } from "@hypit/temporal/algebra";
+import {
+  applyNleTransaction,
+  createNleAuthoringHostFromFacets,
+  createNleLoweringHostFromFacets,
+  createNleProject,
+  findNleItem,
+  type NleComponentItem,
+} from "@hypit/nle";
+import hypitPackage from "../src/activation.js";
 
 const at = (numerator: number, denominator = 1) => exactTemporalValue({
   numerator: BigInt(numerator), denominator: BigInt(denominator),
@@ -69,4 +78,40 @@ test("Audio Gain owns temporal automation instead of adding fade semantics to AV
   } as never);
   assert.equal(result.kind, "output");
   assert.deepEqual(result.value, operator);
+});
+
+test("Audio Gain owns NLE Audio effect parameters, lowering and authoring", () => {
+  const symbol = { module: { name: "@example/synth", version: "1" }, name: "tone" } as const;
+  const item: NleComponentItem = {
+    id: "tone", kind: "component", component: symbol, parameters: {},
+    startFrame: 0, durationFrames: 30, localStartFrame: 0, enabled: true,
+    audio: { effects: [{
+      id: "fade", effect: { module: { name: "@hypit/audio-gain", version: "1" }, name: "gain" },
+      parameters: {
+        kind: "frames", frames: [{ atFrame: 0, gain: 0 }, { atFrame: 15, gain: 1 }],
+        interpolation: { kind: "linear" },
+      },
+    }] },
+  };
+  const base = createNleProject({ id: "audio-edit", name: "Audio edit" });
+  const project = applyNleTransaction(base, { revision: 0, commands: [{
+    kind: "track.add", track: {
+      id: "audio", name: "Audio", kind: "audio", locked: false, muted: false, items: [item],
+    },
+  }] });
+  const effect = item.audio!.effects[0]!;
+  const lowering = createNleLoweringHostFromFacets(hypitPackage.facets)
+    .resolveAudioEffect(effect, item, { project, track: project.tracks[0]! });
+  assert.deepEqual(Object.keys(lowering.operator.temporalControls), ["gain"]);
+
+  const authoring = createNleAuthoringHostFromFacets(hypitPackage.facets);
+  const transaction = authoring.planEffectParameterEdit(project, "tone", "fade", {
+    kind: "set-frame-gain", atFrame: 15, gain: 0.5,
+  });
+  const edited = applyNleTransaction(project, transaction);
+  const next = findNleItem(edited, "tone").item;
+  const parameters = next.kind === "component"
+    ? next.audio?.effects[0]?.parameters as unknown as { readonly frames?: readonly { readonly gain: number }[] }
+    : undefined;
+  assert.equal(parameters?.frames?.[1]?.gain, 0.5);
 });

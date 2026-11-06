@@ -1,31 +1,21 @@
 # `@hypit/audiovisual-media`
 
-Media-owned adapters that publish already resolved source facts to AVIR without moving media policy into NLE.
-
-The adapter publishes `picture` and `audio` output facets only when the selected media members exist.
-Both facets retain the real prepared local domain; Picture additionally publishes its display-pixel
-spatial domain. The adapter does not inspect a Resource, choose streams, transform time, create another
-PreparedMedia value or lower into a Renderer.
+One-way adaptation of an already resolved `PreparedMedia` value into AVIR `ProgramSource` facts.
 
 ```text
 PreparedMedia -> ProgramSource
-                   ├─ picture : Picture + temporal domain + spatial domain
-                   └─ audio   : Audio + temporal domain
+                   ├─ picture : constant | signal + spatial domain
+                   └─ audio   : signal + temporal domain
 ```
 
-Film/NLE occurrences own every trim, slip, retime, loop, hold and curve applied to these outputs.
-Terminal packages later combine the occurrence relation with the PreparedMedia member presentation map.
+The adapter publishes only members that exist. A signal Picture and Audio retain the real prepared
+local temporal domain; a constant Picture has no temporal domain. Picture always publishes its
+display-pixel spatial domain.
 
-A still picture takes the direct branch instead of pretending to be PreparedMedia:
-
-```text
-explicit StillPictureSourceSpec + image Blob + PictureInterpretation
-  -> StillPictureSource
-     ├─ -> constant Picture ProgramSource
-     └─ -> terminal-specific source implementation
-```
-
-`StillPictureSource` owns an explicit Source id and local spatial domain. Neither identity is recovered from
-the Blob resource, URL, file name or byte hash. Its AVIR projection has no temporal domain: the finite duration
-belongs to each Occurrence that uses the constant Picture. The Blob and colour interpretation remain outside
-AVIR and travel only to terminal packages that need them.
+Image, video and audio preparation all belong to `@hypit/media`. There is no separate
+`StillPictureSource`, image identity recovery, Resource inspection or stream-selection path here.
+This adapter also owns no trim, retime, occurrence placement or renderer lowering. Those relationships
+remain respectively in the audiovisual Programme and terminal packages.
+The package-owned `Source` author declaration accepts one typed `PreparedMedia` reference and exports one
+`ProgramSource`. This is the normal bridge from Media selection into audiovisual composition; it does not
+copy media metadata into SVML and it does not infer a generated asset's actual extent from request fields.

@@ -3,14 +3,23 @@ import {
   addExactTemporalValues,
   assertExactTemporalRelationSpec,
   assertExactTemporalValue,
+  assertTemporalMap,
+  assertTemporalMapRegionSet,
   compareExactTemporalValues,
   exactTemporalZero,
 } from "@hypit/temporal/algebra";
 
 import type {
   AudiovisualAuthorAudioExpression,
+  AudiovisualAuthorControlBinding,
+  AudiovisualAuthorOccurrenceBoundSpec,
+  AudiovisualAuthorOccurrenceOutputSpec,
+  AudiovisualAuthorOccurrenceUseSpec,
   AudiovisualAuthorPictureExpression,
+  AudiovisualAuthorProgramDomainSpec,
+  AudiovisualAuthorSourceBoundSpec,
   AudiovisualAuthorSpec,
+  AudiovisualAuthorValue,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -21,18 +30,137 @@ function assertIdentity(value: string, label: string): void {
   assert(/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(value), `${label} is invalid.`);
 }
 
+export function assertAudiovisualAuthorOccurrenceUseSpec(
+  spec: AudiovisualAuthorOccurrenceUseSpec,
+): void {
+  assert(spec !== null && typeof spec === "object" && !Array.isArray(spec),
+    "Audiovisual Author Occurrence Use Spec must be an object.");
+  assertIdentity(spec.id, "Audiovisual Author Occurrence Use id");
+  assertIdentity(spec.domainId, `Audiovisual Author Occurrence Use ${spec.id} Domain id`);
+  const outputs = Object.entries(spec.outputs);
+  assert(outputs.length > 0,
+    `Audiovisual Author Occurrence Use ${spec.id} selects no Source outputs.`);
+  for (const [name, output] of outputs) {
+    assertIdentity(name, `Audiovisual Author Occurrence Use ${spec.id} output`);
+    assert(output !== null && typeof output === "object" && !Array.isArray(output),
+      `Audiovisual Author Occurrence Use ${spec.id}.${name} must be an object.`);
+    if (output.relation !== undefined) {
+      assertExactTemporalRelationSpec(output.relation,
+        `Audiovisual Author Occurrence Use ${spec.id}.${name} relation`);
+    }
+    if (output.reconstruction !== undefined) {
+      assertIdentity(output.reconstruction,
+        `Audiovisual Author Occurrence Use ${spec.id}.${name} reconstruction`);
+    }
+  }
+}
+
+function assertBoundOutputs(id: string, outputsValue: readonly string[], label: string): void {
+  assert(Array.isArray(outputsValue) && outputsValue.length > 0,
+    `${label} ${id} selects no Source outputs.`);
+  const outputs = new Set<string>();
+  for (const output of outputsValue) {
+    assertIdentity(output, `${label} ${id} output`);
+    assert(!outputs.has(output), `${label} ${id} repeats Source output ${output}.`);
+    outputs.add(output);
+  }
+}
+
+export function assertAudiovisualAuthorSourceBoundSpec(spec: AudiovisualAuthorSourceBoundSpec): void {
+  assert(spec !== null && typeof spec === "object" && !Array.isArray(spec),
+    "Audiovisual Author Source-bound Spec must be an object.");
+  assertIdentity(spec.id, "Audiovisual Author Source-bound id");
+  assertIdentity(spec.targetOutput, `Audiovisual Author Source-bound ${spec.id} target output`);
+  assertBoundOutputs(spec.id, spec.outputs, "Audiovisual Author Source-bound");
+}
+
+export function assertAudiovisualAuthorOccurrenceBoundSpec(spec: AudiovisualAuthorOccurrenceBoundSpec): void {
+  assert(spec !== null && typeof spec === "object" && !Array.isArray(spec),
+    "Audiovisual Author Occurrence-bound Spec must be an object.");
+  assertIdentity(spec.id, "Audiovisual Author Occurrence-bound id");
+  assertBoundOutputs(spec.id, spec.outputs, "Audiovisual Author Occurrence-bound");
+}
+
+export function assertAudiovisualAuthorOccurrenceOutputSpec(spec: AudiovisualAuthorOccurrenceOutputSpec): void {
+  assert(spec !== null && typeof spec === "object" && !Array.isArray(spec),
+    "Audiovisual Author Occurrence Output Spec must be an object.");
+  assertIdentity(spec.output, "Audiovisual Author Occurrence Output");
+}
+
+export function assertAudiovisualAuthorProgramDomainSpec(
+  spec: AudiovisualAuthorProgramDomainSpec,
+): void {
+  assert(spec !== null && typeof spec === "object" && !Array.isArray(spec),
+    "Audiovisual Author Programme Domain Spec must be an object.");
+  assertIdentity(spec.id, "Audiovisual Author Programme Domain id");
+}
+
+function literal<Value>(value: AudiovisualAuthorValue<Value>): Value | undefined {
+  return typeof value === "object" && value !== null && "kind" in value && value.kind === "binding"
+    ? undefined : value as Value;
+}
+
+function assertAuthorValue<Value>(value: AudiovisualAuthorValue<Value>, label: string,
+  validate: (value: Value, label: string) => void): void {
+  if (typeof value === "object" && value !== null && "kind" in value && value.kind === "binding") {
+    assertIdentity(value.name, `${label} binding`);
+    return;
+  }
+  validate(value as Value, label);
+}
+
 function assertRange(
   range: { readonly start: import("@hypit/temporal/algebra").ExactTemporalValue;
     readonly end: import("@hypit/temporal/algebra").ExactTemporalValue },
-  spec: AudiovisualAuthorSpec,
   label: string,
 ): void {
   assertExactTemporalValue(range.start, `${label}.start`);
   assertExactTemporalValue(range.end, `${label}.end`);
   assert(compareExactTemporalValues(range.start, range.end) < 0, `${label} must be non-empty.`);
-  assert(compareExactTemporalValues(range.start, exactTemporalZero()) >= 0
-    && compareExactTemporalValues(range.end, spec.duration) <= 0,
-  `${label} lies outside Author Programme ${spec.id}.`);
+  assert(compareExactTemporalValues(range.start, exactTemporalZero()) >= 0,
+    `${label} begins before zero.`);
+}
+
+function assertAuthorControlBindings(
+  bindings: Readonly<Record<string, AudiovisualAuthorControlBinding>>,
+  spec: AudiovisualAuthorSpec,
+  label: string,
+): void {
+  assert(bindings !== null && typeof bindings === "object" && !Array.isArray(bindings),
+    `${label} Control bindings must be an object.`);
+  for (const [name, binding] of Object.entries(bindings)) {
+    assertIdentity(name, `${label} Control name`);
+    assert(binding !== null && typeof binding === "object" && !Array.isArray(binding),
+      `${label} Control ${name} binding must be an object.`);
+    switch (binding.kind) {
+      case "program": break;
+      case "occurrence": {
+        assertIdentity(binding.occurrence, `${label} Control ${name} Occurrence`);
+        assert(Object.hasOwn(spec.occurrences, binding.occurrence),
+          `${label} Control ${name} references missing Occurrence ${binding.occurrence}.`);
+        break;
+      }
+      case "source": {
+        assertIdentity(binding.occurrence, `${label} Control ${name} Occurrence`);
+        assertIdentity(binding.output, `${label} Control ${name} Source output`);
+        const occurrence = Object.hasOwn(spec.occurrences, binding.occurrence)
+          ? spec.occurrences[binding.occurrence] : undefined;
+        assert(occurrence !== undefined,
+          `${label} Control ${name} references missing Occurrence ${binding.occurrence}.`);
+        assert(Object.hasOwn(occurrence.outputs, binding.output),
+          `${label} Control ${name} references unselected Source output ${binding.output}.`);
+        break;
+      }
+      case "relation":
+        assertExactTemporalRelationSpec(binding.relation, `${label} Control ${name} relation`);
+        break;
+      case "mapping":
+        assertAuthorValue(binding.mapping, `${label} Control ${name} Mapping`,
+          (value) => assertTemporalMap(value));
+        break;
+      default: throw new Error(`${label} Control ${name} binding kind is invalid.`);
+    }
+  }
 }
 
 function assertPictureAuthorGraph(
@@ -71,7 +199,7 @@ function assertPictureAuthorGraph(
         usedOccurrences.add(expression.occurrence);
         return;
       case "restrict":
-        assertRange(expression.range, spec, `${label} restrict`);
+        assertRange(expression.range, `${label} restrict`);
         visit(expression.input, `${label} input`);
         return;
       case "crop":
@@ -79,7 +207,7 @@ function assertPictureAuthorGraph(
         visit(expression.input, `${label} input`);
         return;
       case "remap":
-        assertSpatialMap(expression.mapping);
+        assertAuthorValue(expression.mapping, `${label} remap`, (value) => assertSpatialMap(value));
         visit(expression.input, `${label} input`);
         return;
       case "over":
@@ -93,6 +221,8 @@ function assertPictureAuthorGraph(
           assertIdentity(port, `${label} Operator port`);
           visit(input, `${label}.${port}`);
         }
+        assertAuthorControlBindings(expression.controlBindings, spec, `${label} apply`);
+        return;
     }
   };
 
@@ -139,7 +269,7 @@ function assertAudioAuthorGraph(
         usedOccurrences.add(expression.occurrence);
         return;
       case "restrict":
-        assertRange(expression.range, spec, `${label} restrict`);
+        assertRange(expression.range, `${label} restrict`);
         visit(expression.input, `${label} input`);
         return;
       case "mix":
@@ -153,6 +283,8 @@ function assertAudioAuthorGraph(
           assertIdentity(port, `${label} Operator port`);
           visit(input, `${label}.${port}`);
         }
+        assertAuthorControlBindings(expression.controlBindings, spec, `${label} apply`);
+        return;
     }
   };
 
@@ -166,8 +298,9 @@ function assertAudioAuthorGraph(
 /** Validate only author facts and references; no future Source value is needed. */
 export function assertAudiovisualAuthorSpec(spec: AudiovisualAuthorSpec): void {
   assertIdentity(spec.id, "Audiovisual Author Spec id");
-  assertExactTemporalValue(spec.duration, `Audiovisual Author Spec ${spec.id} duration`);
-  assert(compareExactTemporalValues(spec.duration, exactTemporalZero()) > 0,
+  assertAuthorValue(spec.duration, `Audiovisual Author Spec ${spec.id} duration`, assertExactTemporalValue);
+  const programDuration = literal(spec.duration);
+  if (programDuration !== undefined) assert(compareExactTemporalValues(programDuration, exactTemporalZero()) > 0,
     `Audiovisual Author Spec ${spec.id} duration must be positive.`);
   assert(spec.picture !== undefined || spec.audio !== undefined,
     `Audiovisual Author Spec ${spec.id} has no outputs.`);
@@ -177,7 +310,8 @@ export function assertAudiovisualAuthorSpec(spec: AudiovisualAuthorSpec): void {
   } else {
     assert(spec.pictureDomain !== undefined,
       `Audiovisual Author Spec ${spec.id} Picture has no output spatial domain.`);
-    assertLocalSpatialDomain(spec.pictureDomain);
+    assertAuthorValue(spec.pictureDomain, `Audiovisual Author Spec ${spec.id} Picture domain`,
+      (value) => assertLocalSpatialDomain(value));
   }
 
   const usedSources = new Set<string>();
@@ -187,15 +321,53 @@ export function assertAudiovisualAuthorSpec(spec: AudiovisualAuthorSpec): void {
     assert(Object.hasOwn(spec.sources, occurrence.source),
       `Author Occurrence ${id} references missing Source ${occurrence.source}.`);
     usedSources.add(occurrence.source);
-    assertExactTemporalValue(occurrence.at, `Author Occurrence ${id} at`);
-    assert(compareExactTemporalValues(occurrence.at, exactTemporalZero()) >= 0,
+    assert((occurrence.at === undefined) !== (occurrence.time === undefined),
+      `Author Occurrence ${id} must declare exactly one of at or time binding.`);
+    if (occurrence.time !== undefined) {
+      assertIdentity(occurrence.time.occurrence, `Author Occurrence ${id} time target`);
+      assert(Object.hasOwn(spec.occurrences, occurrence.time.occurrence),
+        `Author Occurrence ${id} time binding references missing Occurrence ${occurrence.time.occurrence}.`);
+      assert(occurrence.time.occurrence !== id,
+        `Author Occurrence ${id} time binding references itself.`);
+      if (occurrence.time.kind === "source" || occurrence.time.kind === "event") {
+        assertIdentity(occurrence.time.output, `Author Occurrence ${id} time target output`);
+      }
+      if (occurrence.time.kind === "event") {
+        assert(occurrence.time.require === "unique",
+          `Author Occurrence ${id} event binding must explicitly require one solution.`);
+        assertAuthorValue(occurrence.time.event, `Author Occurrence ${id} event`, assertTemporalMapRegionSet);
+        if (occurrence.time.offset !== undefined) {
+          assertAuthorValue(occurrence.time.offset, `Author Occurrence ${id} event offset`, assertExactTemporalValue);
+        }
+      }
+    }
+    if (occurrence.time?.kind === "source" || occurrence.time?.kind === "occurrence") {
+      assert(occurrence.duration === undefined,
+        `Author Occurrence ${id} ${occurrence.time.kind}-bound duration comes from its target.`);
+    }
+    if (occurrence.time !== undefined && occurrence.time.kind !== "event") {
+      for (const [name, output] of Object.entries(occurrence.outputs)) {
+        assert(output.relation === undefined,
+          `Author Occurrence ${id}.${name} cannot add a relation to a ${occurrence.time.kind}-bound use.`);
+        assert(output.reconstruction === undefined,
+          `Author Occurrence ${id}.${name} cannot reconstruct a ${occurrence.time.kind}-bound use.`);
+      }
+    }
+    const occurrenceAt = occurrence.at === undefined ? undefined : literal(occurrence.at);
+    if (occurrence.at !== undefined) {
+      assertAuthorValue(occurrence.at, `Author Occurrence ${id} at`, assertExactTemporalValue);
+    }
+    if (occurrenceAt !== undefined) assert(compareExactTemporalValues(occurrenceAt, exactTemporalZero()) >= 0,
       `Author Occurrence ${id} begins before the Programme.`);
     if (occurrence.duration !== undefined) {
-      assertExactTemporalValue(occurrence.duration, `Author Occurrence ${id} duration`);
-      assert(compareExactTemporalValues(occurrence.duration, exactTemporalZero()) > 0,
+      assertAuthorValue(occurrence.duration, `Author Occurrence ${id} duration`, assertExactTemporalValue);
+      const occurrenceDuration = literal(occurrence.duration);
+      if (occurrenceDuration !== undefined) assert(compareExactTemporalValues(occurrenceDuration, exactTemporalZero()) > 0,
         `Author Occurrence ${id} duration must be positive.`);
-      assert(compareExactTemporalValues(addExactTemporalValues(occurrence.at, occurrence.duration), spec.duration) <= 0,
-        `Author Occurrence ${id} lies outside Author Programme ${spec.id}.`);
+      if (occurrenceAt !== undefined && occurrenceDuration !== undefined && programDuration !== undefined) {
+        assert(compareExactTemporalValues(addExactTemporalValues(occurrenceAt, occurrenceDuration), programDuration) <= 0,
+          `Author Occurrence ${id} lies outside Author Programme ${spec.id}.`);
+      }
     }
     assert(Object.keys(occurrence.outputs).length > 0,
       `Author Occurrence ${id} selects no Source outputs.`);

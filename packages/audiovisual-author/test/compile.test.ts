@@ -6,8 +6,8 @@ import { preservePitch } from "@hypit/audio-preserve-pitch";
 import { verifyAudioProgram } from "@hypit/audio-program";
 import {
   audioType,
+  occurrenceParentRange,
   pictureType,
-  projectNleOccurrences,
   type ProgramSource,
 } from "@hypit/audiovisual";
 import {
@@ -26,11 +26,24 @@ import { sealLocalSpatialDomain, sealSpatialMap } from "@hypit/spatial/algebra";
 import {
   evaluateTemporalMap,
   exactTemporalValue,
+  preimageTemporalMapRegions,
   sealLocalTemporalDomain,
+  sealTemporalMap,
+  temporalMapPointRegionSet,
+  uniqueTemporalMapRegionSetPoint,
 } from "@hypit/temporal/algebra";
 
 import {
+  audiovisualAuthorOccurrenceUseEnd,
+  closeAudiovisualAuthorOccurrence,
   compileAudiovisualAuthorSpec,
+  createAudiovisualAuthorProgramDomain,
+  bindAudiovisualAuthorOccurrenceUseToOccurrence,
+  bindAudiovisualAuthorOccurrenceUseToSource,
+  projectAudiovisualAuthorOccurrenceUseOutputMapping,
+  projectAudiovisualAuthorOccurrenceUsePosition,
+  resolveAudiovisualAuthorOccurrenceUse,
+  assertAudiovisualAuthorSpec,
   type AudiovisualAuthorBindings,
   type AudiovisualAuthorSpec,
 } from "../src/index.js";
@@ -53,6 +66,14 @@ const sampleFrom = (sourceAt: ReturnType<typeof at>) => ({ relations: [{
 const temporalDomain = (id: string, duration: number) => sealLocalTemporalDomain({
   id, duration: at(duration),
 });
+const identityMap = (id: string, duration: number) => {
+  const domain = temporalDomain(id, duration);
+  return sealTemporalMap({ stages: [{ target: domain, source: domain, pieces: [{
+    target: { start: at(0), end: at(duration) },
+    sourceAtStart: at(0),
+    rate: { numerator: 1, denominator: 1 },
+  }] }] });
+};
 const pictureDomain = sealLocalSpatialDomain({
   id: "main:picture-space",
   region: { x: 0, y: 0, width: 1920, height: 1080 },
@@ -225,7 +246,7 @@ test("A-roll, material B-roll and a component compile into one resolved Programm
   assert.equal(program.occurrences.presenter?.source.id, "generated-a-roll");
   assert.equal(program.occurrences.product?.source.id, "product-material");
   assert.equal(program.occurrences["opening-title"]?.source.id, "opening-component");
-  assert.deepEqual(projectNleOccurrences(program).occurrences.map((item) => [item.id, item.parentRange]), [
+  assert.deepEqual(Object.values(program.occurrences).map((item) => [item.id, occurrenceParentRange(item)]), [
     ["opening-title", { start: at(0), end: at(3) }],
     ["presenter", { start: at(0), end: at(12) }],
     ["product", { start: at(4), end: at(9) }],
@@ -253,6 +274,161 @@ test("A-roll, material B-roll and a component compile into one resolved Programm
     inputs: { signal: "audio:binding:voice" },
     controlBindings: {},
   });
+});
+
+test("future graph facts close the same Programme without an AIGC or time-specific compiler path", () => {
+  const spec = authorSpec();
+  const product = spec.occurrences.product!;
+  const transition = spec.picture!.bindings!.transition;
+  assert.equal(transition?.kind, "apply");
+  if (transition?.kind !== "apply") throw new Error("transition fixture is not an apply expression");
+  const deferred: AudiovisualAuthorSpec = {
+    ...spec,
+    duration: { kind: "binding", name: "program-duration" },
+    pictureDomain: { kind: "binding", name: "program-space" },
+    occurrences: {
+      ...spec.occurrences,
+      product: {
+        ...product,
+        at: { kind: "binding", name: "product-at" },
+        duration: { kind: "binding", name: "product-duration" },
+      },
+    },
+    picture: {
+      ...spec.picture!,
+      bindings: {
+        ...spec.picture!.bindings,
+        transition: {
+          ...transition,
+          controlBindings: {
+            progress: { kind: "mapping", mapping: { kind: "binding", name: "transition-map" } },
+          },
+        },
+      },
+    },
+  };
+  const closed = compileAudiovisualAuthorSpec(deferred, {
+    ...bindings,
+    values: {
+      "program-duration": at(12),
+      "program-space": pictureDomain,
+      "product-at": at(4),
+      "product-duration": at(5),
+      "transition-map": identityMap("main:time", 12),
+    },
+  });
+  const literal: AudiovisualAuthorSpec = {
+    ...spec,
+    picture: {
+      ...spec.picture!,
+      bindings: {
+        ...spec.picture!.bindings,
+        transition: {
+          ...transition,
+          controlBindings: {
+            progress: { kind: "mapping", mapping: identityMap("main:time", 12) },
+          },
+        },
+      },
+    },
+  };
+  assert.deepEqual(closed, compileAudiovisualAuthorSpec(literal, bindings));
+});
+
+test("an author Control relation closes against the Operator-owned Control domain", () => {
+  const spec = authorSpec();
+  const transition = spec.picture!.bindings!.transition;
+  assert.equal(transition?.kind, "apply");
+  if (transition?.kind !== "apply") throw new Error("transition fixture is not an apply expression");
+  const program = compileAudiovisualAuthorSpec({
+    ...spec,
+    picture: {
+      ...spec.picture!,
+      bindings: {
+        ...spec.picture!.bindings,
+        transition: {
+          ...transition,
+          controlBindings: { progress: { kind: "relation", relation: sampleFrom(at(0)) } },
+        },
+      },
+    },
+  }, bindings);
+  const applied = Object.values(program.picture!.nodes).find((node) =>
+    node.kind === "apply" && node.operator.id === "hypit.picture-transition:cross-dissolve");
+  assert.equal(applied?.kind, "apply");
+  if (applied?.kind !== "apply") throw new Error("compiled transition is missing");
+  const progress = applied.controlBindings.progress;
+  assert.equal(progress?.kind, "mapping");
+  if (progress?.kind !== "mapping") throw new Error("relation did not close into a Mapping");
+  assert.deepEqual(evaluateTemporalMap(progress.mapping, at(3), "after")?.position, at(3));
+});
+
+test("author-local Occurrence and Source Control bindings close without Core identities in the Spec", () => {
+  const spec = authorSpec();
+  const transition = spec.picture!.bindings!.transition;
+  assert.equal(transition?.kind, "apply");
+  if (transition?.kind !== "apply") throw new Error("transition fixture is not an apply expression");
+  const withControl = (
+    control: import("../src/index.js").AudiovisualAuthorControlBinding,
+  ): AudiovisualAuthorSpec => ({
+    ...spec,
+    picture: {
+      ...spec.picture!,
+      bindings: {
+        ...spec.picture!.bindings,
+        transition: { ...transition, controlBindings: { progress: control } },
+      },
+    },
+  });
+  const occurrenceDomain = temporalDomain("main:occurrence:product:time", 5);
+  const occurrenceBound = compileAudiovisualAuthorSpec(withControl({
+    kind: "occurrence", occurrence: "product",
+  }), {
+    ...bindings,
+    pictureOperators: { transition: crossDissolveOperator(occurrenceDomain) },
+  });
+  const occurrenceApply = Object.values(occurrenceBound.picture!.nodes).find((node) =>
+    node.kind === "apply");
+  assert.equal(occurrenceApply?.kind, "apply");
+  if (occurrenceApply?.kind === "apply") assert.deepEqual(occurrenceApply.controlBindings,
+    { progress: { kind: "occurrence", occurrence: "product" } });
+
+  const productPicture = bindings.sources["product-material"]!.outputs.picture!;
+  assert.equal(productPicture.kind, "signal");
+  if (productPicture.kind !== "signal") throw new Error("product Picture is not a signal");
+  const sourceBound = compileAudiovisualAuthorSpec(withControl({
+    kind: "source", occurrence: "product", output: "picture",
+  }), {
+    ...bindings,
+    pictureOperators: { transition: crossDissolveOperator(productPicture.domain) },
+  });
+  const sourceApply = Object.values(sourceBound.picture!.nodes).find((node) => node.kind === "apply");
+  assert.equal(sourceApply?.kind, "apply");
+  if (sourceApply?.kind === "apply") assert.deepEqual(sourceApply.controlBindings,
+    { progress: { kind: "source", occurrence: "product", output: "picture" } });
+});
+
+test("author Control bindings validate local Occurrence and selected Source output names", () => {
+  const spec = authorSpec();
+  const transition = spec.picture!.bindings!.transition;
+  assert.equal(transition?.kind, "apply");
+  if (transition?.kind !== "apply") throw new Error("transition fixture is not an apply expression");
+  const withBinding = (binding: import("../src/index.js").AudiovisualAuthorControlBinding): AudiovisualAuthorSpec => ({
+    ...spec,
+    picture: {
+      ...spec.picture!,
+      bindings: {
+        ...spec.picture!.bindings,
+        transition: { ...transition, controlBindings: { progress: binding } },
+      },
+    },
+  });
+  assert.throws(() => assertAudiovisualAuthorSpec(withBinding({
+    kind: "occurrence", occurrence: "missing",
+  })), /missing Occurrence missing/u);
+  assert.throws(() => assertAudiovisualAuthorSpec(withBinding({
+    kind: "source", occurrence: "presenter", output: "captions",
+  })), /unselected Source output captions/u);
 });
 
 test("the author intermediate layer binds reconstruction without a Clip or time special case", () => {
@@ -395,6 +571,141 @@ test("constant outputs require occurrence duration and never acquire a Source Do
     ...spec,
     occurrences: { poster: { ...spec.occurrences.poster!, outputs: { picture: { relation: sampleFrom(at(0)) } } } },
   }, { sources: { poster: still } }), /constant and cannot have a temporal relation/u);
+});
+
+test("one occurrence use publishes its end before a Programme Domain exists", () => {
+  const sourceValue = source("local-video", { picture: { kind: "picture", duration: 5 } });
+  const use = resolveAudiovisualAuthorOccurrenceUse({
+    id: "video",
+    domainId: "main:occurrence:video:time",
+    outputs: { picture: {} },
+  }, sourceValue, at(2), at(5), { sources: {} });
+  assert.deepEqual(audiovisualAuthorOccurrenceUseEnd(use), at(7));
+
+  const domain = createAudiovisualAuthorProgramDomain({ id: "main" },
+    audiovisualAuthorOccurrenceUseEnd(use));
+  const occurrence = closeAudiovisualAuthorOccurrence({ ...use, id: "video" }, domain);
+  assert.deepEqual(occurrenceParentRange(occurrence), { start: at(2), end: at(7) });
+  assert.throws(() => closeAudiovisualAuthorOccurrence({ ...use, id: "video" },
+    createAudiovisualAuthorProgramDomain({ id: "short" }, at(6))), /outside Programme domain/u);
+});
+
+test("a following use reuses reverse, hold and loop mappings without projecting absolute anchors", () => {
+  const cases = [{
+    name: "reverse",
+    sourceDuration: 2,
+    useDuration: 2,
+    relation: { relations: [{
+      kind: "rate" as const,
+      target: full(), targetAt: start(), sourceAt: end(),
+      rate: { numerator: -1, denominator: 1 }, source: full(),
+    }] },
+    positions: [at(0), at(1), at(2)],
+  }, {
+    name: "hold",
+    sourceDuration: 2,
+    useDuration: 2,
+    relation: { relations: [{
+      kind: "rate" as const,
+      target: full(), targetAt: start(), sourceAt: start(at(1)),
+      rate: { numerator: 0, denominator: 1 }, source: full(),
+    }] },
+    positions: [at(0), at(1), at(2)],
+  }, {
+    name: "loop",
+    sourceDuration: 2,
+    useDuration: 6,
+    relation: { relations: [{
+      kind: "rate" as const,
+      target: full(), targetAt: start(), sourceAt: start(),
+      rate: { numerator: 1, denominator: 1 }, source: full(), wrap: full(),
+    }] },
+    positions: [at(0), at(1), at(2), at(3), at(4), at(5), at(6)],
+  }] as const;
+
+  for (const item of cases) {
+    const local = temporalDomain(`media-${item.name}:time`, item.sourceDuration);
+    const video: ProgramSource = { id: `video-${item.name}`, outputs: { audio: {
+      kind: "signal", type: audioType, domain: local,
+    } } };
+    const captions: ProgramSource = { id: `captions-${item.name}`, outputs: { picture: {
+      kind: "signal", type: pictureType, domain: local, spatialDomain: pictureDomain,
+    } } };
+    const target = resolveAudiovisualAuthorOccurrenceUse({
+      id: `video-${item.name}`,
+      domainId: `main:occurrence:video-${item.name}:time`,
+      outputs: { audio: { relation: item.relation } },
+    }, video, at(3), at(item.useDuration), { sources: {} });
+    const follower = bindAudiovisualAuthorOccurrenceUseToSource({
+      id: `main:occurrence:captions-${item.name}`,
+      targetOutput: "audio",
+      outputs: ["picture"],
+    }, target, captions);
+    const targetMap = target.selections.audio;
+    const followerMap = follower.selections.picture;
+    assert.equal(targetMap?.kind, "signal");
+    assert.equal(followerMap?.kind, "signal");
+    if (targetMap?.kind !== "signal" || followerMap?.kind !== "signal") throw new Error("missing signal mapping");
+    for (const position of item.positions) {
+      assert.deepEqual(
+        evaluateTemporalMap(followerMap.mapping, position, "after"),
+        evaluateTemporalMap(targetMap.mapping, position, "after"),
+      );
+    }
+    assert.deepEqual(follower.start, target.start);
+    assert.deepEqual(follower.active, target.active);
+  }
+});
+
+test("occurrence-bound content shares placement while keeping occurrence-local time", () => {
+  const local = temporalDomain("video-source:time", 20);
+  const video: ProgramSource = { id: "video", outputs: { picture: {
+    kind: "signal", type: pictureType, domain: local, spatialDomain: pictureDomain,
+  } } };
+  const target = resolveAudiovisualAuthorOccurrenceUse({
+    id: "video", domainId: "main:occurrence:video:time", outputs: { picture: { relation: {
+      relations: [{ kind: "rate", target: full(), targetAt: start(), sourceAt: end(),
+        rate: { numerator: -1, denominator: 1 }, source: full() }],
+    } } },
+  }, video, at(12), at(20), { sources: {} });
+  const title: ProgramSource = { id: "title", outputs: { picture: {
+    kind: "signal", type: pictureType, domain: target.domain, spatialDomain: pictureDomain,
+  } } };
+  const bound = bindAudiovisualAuthorOccurrenceUseToOccurrence({
+    id: "title", outputs: ["picture"],
+  }, target, title);
+  const selection = bound.selections.picture;
+  assert.equal(selection?.kind, "signal");
+  if (selection?.kind !== "signal") throw new Error("missing occurrence-bound mapping");
+  assert.deepEqual(evaluateTemporalMap(selection.mapping, at(3), "after"), {
+    position: at(3), sourceSide: "after",
+  });
+  assert.deepEqual(bound.start, target.start);
+  assert.deepEqual(bound.active, target.active);
+});
+
+test("event-bound construction uses the complete source preimage before projecting placement", () => {
+  const sourceDomain = temporalDomain("event-source:time", 2);
+  const video: ProgramSource = { id: "event-video", outputs: { audio: {
+    kind: "signal", type: audioType, domain: sourceDomain,
+  } } };
+  const target = resolveAudiovisualAuthorOccurrenceUse({
+    id: "event-video", domainId: "event-video:occurrence-time", outputs: { audio: {} },
+  }, video, at(10), at(2), { sources: {} });
+  const mapping = projectAudiovisualAuthorOccurrenceUseOutputMapping({ output: "audio" }, target);
+  const event = temporalMapPointRegionSet(sourceDomain, { position: at(1), side: "after" });
+  const local = uniqueTemporalMapRegionSetPoint(preimageTemporalMapRegions(mapping, event));
+  assert.deepEqual(projectAudiovisualAuthorOccurrenceUsePosition(target, local.position), at(11));
+
+  const loopTarget = resolveAudiovisualAuthorOccurrenceUse({
+    id: "loop-video", domainId: "loop-video:occurrence-time", outputs: { audio: { relation: {
+      relations: [{ kind: "rate", target: full(), targetAt: start(), sourceAt: start(),
+        rate: { numerator: 1, denominator: 1 }, source: full(), wrap: full() }],
+    } } },
+  }, video, at(10), at(4), { sources: {} });
+  const loopMapping = projectAudiovisualAuthorOccurrenceUseOutputMapping({ output: "audio" }, loopTarget);
+  assert.throws(() => uniqueTemporalMapRegionSetPoint(preimageTemporalMapRegions(loopMapping, event)),
+    /2 regions/u);
 });
 
 test("the authored Programme enters the existing Picture and Audio terminal seams", () => {

@@ -1,5 +1,4 @@
 import type { AudiovisualProgram } from "@hypit/audiovisual";
-import type { StillPictureSource } from "@hypit/audiovisual-media";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { Value } from "@hypit/hypit/protocol";
 import type { ProducerPackage } from "@hypit/hypit/producer";
@@ -15,7 +14,6 @@ import {
   audiovisualProgramHtmlSource,
   createAudiovisualHtmlSourceSet,
   preparedMediaHtmlSource,
-  stillPictureHtmlSource,
   sealAudiovisualHtmlSource,
 } from "./source.js";
 import type {
@@ -46,12 +44,6 @@ export const audiovisualHtmlComponent = {
       producer: audiovisualHtmlProducers.preparedMediaSource,
       handler: ({ inputs }) => ({ kind: "output", value: canonicalize(preparedMediaHtmlSource(
         valueOf<PreparedMedia>(inputs.media?.value, "PreparedMedia"),
-      )) }),
-    },
-    {
-      producer: audiovisualHtmlProducers.stillPictureSource,
-      handler: ({ inputs }) => ({ kind: "output", value: canonicalize(stillPictureHtmlSource(
-        valueOf<StillPictureSource>(inputs.picture?.value, "StillPictureSource"),
       )) }),
     },
     {

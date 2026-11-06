@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { loadDiscoveredSourcePackages } from "@hypit/hypit/cli";
 import type { CliApplicationContext, CliCommandModule, CliIo } from "@hypit/hypit/cli";
 import { sameType } from "@hypit/hypit/protocol";
+import type { TypedRecord } from "@hypit/hypit/protocol";
 import { sealText, textTypes } from "@hypit/hypit/text";
 
 import {
@@ -74,7 +75,7 @@ async function segmentSpeech(
   const workspace = await compiler.openEntry(source);
   const compiled = await compiler.compileResolvedSource(workspace.entry, workspace);
   const suffix = `.segment.${segment}.speech`;
-  const record = compiled.program.records.find((item) =>
+  const record = compiled.program.records.find((item: TypedRecord) =>
     sameType(item.type, textTypes.text) && item.id.endsWith(suffix));
   assert(record !== undefined, `${source} declares no Segment ${segment} with speech; Segments are named by the Script's <segment id>`);
   const text = (record.value as { readonly value?: unknown } | null)?.value;

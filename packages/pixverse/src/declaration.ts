@@ -2,7 +2,7 @@ import { declarationField, type AuthorDeclaration, type AuthorDeclarationChild,
   type AuthorDeclarationBinding, type AuthorDeclarationCompiler, type AuthorResolvedReference } from "@hypit/hypit/author";
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
-import { textTypes } from "@hypit/hypit/text";
+import { promptTypes } from "@hypit/hypit/prompt";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import { createFieldModelPrimaryFragment, sealModelFieldBuilder,
   type FieldModelOperation, type ModelFieldValue } from "@hypit/generation/model-fields";
@@ -63,7 +63,7 @@ const commonFields = [
   { name: "id", kind: "identifier" as const, required: true, summary: "Names the generated video." },
   { name: "model", kind: "literal" as const, required: true,
     values: ["v6", "pixverse-v6", "c1", "pixverse-c1"], summary: "Chooses the exact PixVerse model." },
-  { name: "prompt", kind: "reference" as const, required: true, accepts: [textTypes.text], summary: "Selects the generation prompt." },
+  { name: "prompt", kind: "reference" as const, required: true, accepts: [promptTypes.prompt], summary: "Selects the generation Prompt." },
   { name: "quality", kind: "literal" as const, required: true, values: ["540p", "720p"], summary: "Sets the output size band." },
   { name: "aspect-ratio", kind: "literal" as const, required: false,
     values: ["16:9", "4:3", "1:1", "3:4", "9:16", "2:3", "3:2", "21:9", "auto"],
@@ -84,14 +84,14 @@ function bindings(declaration: AuthorDeclaration): readonly AuthorDeclarationBin
 async function output(declaration: AuthorDeclaration, resolveReference: Parameters<AuthorDeclarationCompiler["compile"]>[0]["resolveReference"],
   endpoint: FieldModelOperation, media: readonly FieldModelAuthorArtifactInput[], stated: Record<string, readonly ModelFieldValue[] | undefined>) {
   const id = literal(declaration, "id");
-  const prompt = await reference(declaration, "prompt", textTypes.text, resolveReference);
+  const prompt = await reference(declaration, "prompt", promptTypes.prompt, resolveReference);
   const draft = sealModelFieldBuilder(endpoint.fields, Object.fromEntries(
     Object.entries(stated).filter((entry): entry is [string, readonly ModelFieldValue[]] => entry[1] !== undefined)));
   return fieldModelAuthorComponent({ id, range: declaration.range, endpoint, draft,
     fragment: createFieldModelPrimaryFragment(endpoint, media.map(({ name, field }) => ({ name, field })),
       [{ name: "prompt", field: "prompt" }]),
     outputs: { video: `${id}.video` }, artifacts: media,
-    text: [{ name: "prompt", field: "prompt", source: prompt }] });
+    textFields: [{ name: "prompt", field: "prompt", source: prompt }] });
 }
 
 export const pixverseVideoAuthorDeclaration: AuthorDeclarationCompiler = {
@@ -161,5 +161,3 @@ export const pixverseReferenceVideoAuthorDeclaration: AuthorDeclarationCompiler 
 };
 
 export const pixverseAuthorDeclarations = [pixverseVideoAuthorDeclaration, pixverseReferenceVideoAuthorDeclaration] as const;
-export const pixverseMarkupDeclarations = [{ name: "video", tag: "Video" },
-  { name: "reference-video", tag: "ReferenceVideo" }] as const;

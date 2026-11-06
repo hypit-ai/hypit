@@ -23,40 +23,6 @@ const runCli = (
   });
 };
 
-test("a pure Markdown SVML selects the bundled Document Frontend without components", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-document-package-selection-"));
-  try {
-    const source = join(root, "notes.svml");
-    await writeFile(source, `<?svml using="@hypit/document@1"?>
-# Production notes
-
-This is a **complete document** with no component declarations.
-`, "utf8");
-    const packages = await loadDiscoveredSourcePackages(videoDistribution, {
-      source,
-      workspaceRoot: root,
-      packageRoot: root,
-      ...(videoDistribution.packageRoot === undefined
-        ? {}
-        : { distributionPackageRoot: videoDistribution.packageRoot }),
-    });
-    const discovered = await videoDistribution.discoverSourcePackages!(source, {
-      workspaceRoot: root,
-      packages,
-    });
-    assert.deepEqual(discovered.selected, ["@hypit/document"]);
-    let output = "";
-    await runCli(["check", source, "--project", root], {
-      write: (text) => { output += text; },
-    });
-    const checked = JSON.parse(output) as { readonly sourceKind: string; readonly units: number };
-    assert.equal(checked.sourceKind, "author");
-    assert.equal(checked.units, 1);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
 test("check compiles a data-only package Source export without a project copy", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-package-source-"));
   try {
@@ -66,23 +32,23 @@ test("check compiles a data-only package Source export without a project copy", 
       name: "@acme/image-kits",
       version: "1.0.0",
       type: "module",
-      exports: { "./ugc-v1": "./kits/ugc-v1.svs" },
+      exports: { "./ugc-v1": "./kits/ugc-v1.svml" },
     }), "utf8");
-    await writeFile(join(kitRoot, "kits", "ugc-v1.svs"), `<?svml using="@hypit/text/svs@1"?>
-<sheet version="1" id="ugc-v1">
-  text-template.ugc-v1 { separator: paragraph; }
-  text-template.ugc-v1.block.direction { kind: slot; order: 10; slot: direction; optional: false; }
-</sheet>`, "utf8");
+    await writeFile(join(kitRoot, "kits", "ugc-v1.svml"), `module prompt from "@hypit/prompt@1"
+
+prompt.Template "ugc-v1" {
+  slot "direction" { required: true }
+}
+`, "utf8");
     const source = join(root, "main.svml");
-    await writeFile(source, `<?svml using="@hypit/markup@1"?>
-<svml>
-  <import as="text" from="@hypit/text@1"/>
-  <import as="kit" source="@acme/image-kits/ugc-v1"/>
-  <text:Value id="direction">A useful photographed scene.</text:Value>
-  <text:Render id="prompt" template={kit.ugc-v1}>
-    <text:Set name="direction" text={direction}/>
-  </text:Render>
-</svml>`, "utf8");
+    await writeFile(source, `module prompt from "@hypit/prompt@1"
+source kit from "@acme/image-kits/ugc-v1"
+
+prompt.Render "prompt" {
+  template: @kit.ugc-v1
+  bind "direction" { value: "A useful photographed scene." }
+}
+`, "utf8");
     let output = "";
     await runCli(["check", source, "--project", root], {
       write: (text) => { output += text; },
@@ -99,13 +65,17 @@ test("pricing sends complete requests to the Provider without copying parameters
   const root = await mkdtemp(join(tmpdir(), "hypit-pricing-"));
   try {
     const ids = Array.from({ length: 25 }, (_, index) => `portrait-${index}`);
-    await writeFile(join(root, "main.svml"), `<?svml using="@hypit/markup@1"?>
-<svml>
-  <import as="copy" from="@hypit/text@1"/>
-  <import as="gpt" from="@hypit/gpt-image@1"/>
-  ${ids.map((id) => `<copy:Value id="${id}-prompt">An original ${id}.</copy:Value>
-  <gpt:Image id="${id}" prompt={${id}-prompt} aspect-ratio="9:16" resolution="2K"/>`).join("\n")}
-</svml>`);
+    await writeFile(join(root, "main.svml"), `module prompt from "@hypit/prompt@1"
+module gpt from "@hypit/gpt-image@1"
+
+${ids.map((id) => `prompt.Prompt "${id}-prompt" { text: "An original ${id}." }
+gpt.image {
+  id: ${id}
+  prompt: @${id}-prompt
+  aspect-ratio: 9:16
+  resolution: 2K
+}`).join("\n\n")}
+`);
     await writeFile(join(root, "runtime.json"), JSON.stringify(videoDistribution.initialRuntimeProfile));
     const source = join(root, "main.svml");
     let queried = 0;

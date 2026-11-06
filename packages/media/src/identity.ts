@@ -27,8 +27,10 @@ import type {
   PreparedAudioMember,
   PreparedMedia,
   PreparedAudioSource,
-  PreparedVisualSource,
-  PreparedVisualMember,
+  PreparedPictureSource,
+  PreparedPictureMember,
+  PreparedSignalPictureMember,
+  PreparedSignalPictureSource,
   TimelineAudio,
   VisualDeliverySpec,
 } from "./types.js";
@@ -252,16 +254,18 @@ export function verifyMediaStreamSelection(value: unknown): asserts value is Med
   if (item.audioStreamIndex !== undefined) nonNegativeInteger(item.audioStreamIndex, "MediaStreamSelection.audioStreamIndex");
   assert(item.videoStreamIndex !== undefined || item.audioStreamIndex !== undefined,
     "MediaStreamSelection selects no stream");
-  assert(item.spanAuthority === "video" || item.spanAuthority === "audio", "MediaStreamSelection authority is invalid");
-  assert(item.spanAuthority === "video" ? item.videoStreamIndex !== undefined : item.audioStreamIndex !== undefined,
-    "MediaStreamSelection authority stream is absent");
+  if (item.spanAuthority !== undefined) {
+    assert(item.spanAuthority === "video" || item.spanAuthority === "audio", "MediaStreamSelection authority is invalid");
+    assert(item.spanAuthority === "video" ? item.videoStreamIndex !== undefined : item.audioStreamIndex !== undefined,
+      "MediaStreamSelection authority stream is absent");
+  }
   assert((item.videoStreamIndex === undefined) === (item.picture === undefined),
     "MediaStreamSelection visual picture must exist exactly when a video stream is selected");
   if (item.picture !== undefined) verifyPictureInterpretation(item.picture, "MediaStreamSelection.picture");
 }
 
 function verifyPreparedMember(
-  member: PreparedVisualMember | PreparedAudioMember,
+  member: PreparedSignalPictureMember | PreparedAudioMember,
   preparedDomain: import("@hypit/temporal").LocalTemporalDomain,
   label: string,
 ): void {
@@ -284,41 +288,59 @@ export function sealPreparedMedia(value: PreparedMedia): PreparedMedia {
 
 export function verifyPreparedMedia(value: unknown): asserts value is PreparedMedia {
   const item = object(value, "PreparedMedia") as unknown as PreparedMedia;
+  assert(typeof item.id === "string" && /^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(item.id),
+    "PreparedMedia.id is invalid");
   verifyBlob(item.source, "PreparedMedia.source");
-  assertLocalTemporalDomain(item.domain);
-  assert(item.visual !== undefined || item.audio !== undefined, "PreparedMedia selects no media member");
-  if (item.visual !== undefined) {
-    const visual = object(item.visual, "PreparedMedia.visual") as unknown as PreparedVisualMember;
-    verifyPreparedMember(visual, item.domain, "PreparedMedia.visual");
-    const interpretation = object(visual.interpretation, "PreparedMedia.visual.interpretation");
-    positiveInteger(interpretation.codedWidth, "PreparedMedia.visual.interpretation.codedWidth");
-    positiveInteger(interpretation.codedHeight, "PreparedMedia.visual.interpretation.codedHeight");
-    verifyRational(interpretation.sampleAspectRatio, "PreparedMedia.visual.interpretation.sampleAspectRatio");
+  if (item.domain !== undefined) assertLocalTemporalDomain(item.domain);
+  assert(item.picture !== undefined || item.audio !== undefined, "PreparedMedia selects no media member");
+  if (item.picture !== undefined) {
+    const picture = object(item.picture, "PreparedMedia.picture") as unknown as PreparedPictureMember;
+    assert(picture.kind === "constant" || picture.kind === "signal", "PreparedMedia.picture kind is invalid");
+    nonNegativeInteger(picture.streamIndex, "PreparedMedia.picture.streamIndex");
+    if (picture.kind === "signal") {
+      assert(item.domain !== undefined, "PreparedMedia signal Picture has no temporal domain");
+      verifyPreparedMember(picture, item.domain, "PreparedMedia.picture");
+    }
+    const interpretation = object(picture.interpretation, "PreparedMedia.picture.interpretation");
+    positiveInteger(interpretation.codedWidth, "PreparedMedia.picture.interpretation.codedWidth");
+    positiveInteger(interpretation.codedHeight, "PreparedMedia.picture.interpretation.codedHeight");
+    verifyRational(interpretation.sampleAspectRatio, "PreparedMedia.picture.interpretation.sampleAspectRatio");
     assert(interpretation.rotationDegrees === 0 || interpretation.rotationDegrees === 90
       || interpretation.rotationDegrees === 180 || interpretation.rotationDegrees === 270,
-    "PreparedMedia.visual.interpretation.rotationDegrees is invalid");
-    verifyPictureInterpretation(interpretation.picture, "PreparedMedia.visual.interpretation.picture");
+    "PreparedMedia.picture.interpretation.rotationDegrees is invalid");
+    verifyPictureInterpretation(interpretation.picture, "PreparedMedia.picture.interpretation.picture");
   }
   if (item.audio !== undefined) {
+    assert(item.domain !== undefined, "PreparedMedia Audio has no temporal domain");
     const audio = object(item.audio, "PreparedMedia.audio") as unknown as PreparedAudioMember;
     verifyPreparedMember(audio, item.domain, "PreparedMedia.audio");
   }
+  assert(item.domain !== undefined || item.picture?.kind === "constant",
+    "PreparedMedia without temporal signals must contain a constant Picture");
 }
 
-export function verifyPreparedVisualSource(value: unknown): asserts value is PreparedVisualSource {
-  const item = object(value, "PreparedVisualSource") as unknown as PreparedVisualSource;
-  verifyBlob(item.source, "PreparedVisualSource.source");
-  nonNegativeInteger(item.streamIndex, "PreparedVisualSource.streamIndex");
-  assertExactTemporalValue(item.presentationStart, "PreparedVisualSource.presentationStart");
-  assertLocalTemporalDomain(item.sourceDomain);
-  const interpretation = object(item.interpretation, "PreparedVisualSource.interpretation");
-  positiveInteger(interpretation.codedWidth, "PreparedVisualSource.interpretation.codedWidth");
-  positiveInteger(interpretation.codedHeight, "PreparedVisualSource.interpretation.codedHeight");
-  verifyRational(interpretation.sampleAspectRatio, "PreparedVisualSource.interpretation.sampleAspectRatio");
+export function verifyPreparedPictureSource(value: unknown): asserts value is PreparedPictureSource {
+  const item = object(value, "PreparedPictureSource") as unknown as PreparedPictureSource;
+  verifyBlob(item.source, "PreparedPictureSource.source");
+  assert(item.kind === "constant" || item.kind === "signal", "PreparedPictureSource.kind is invalid");
+  nonNegativeInteger(item.streamIndex, "PreparedPictureSource.streamIndex");
+  if (item.kind === "signal") {
+    assertExactTemporalValue(item.presentationStart, "PreparedPictureSource.presentationStart");
+    assertLocalTemporalDomain(item.sourceDomain);
+  }
+  const interpretation = object(item.interpretation, "PreparedPictureSource.interpretation");
+  positiveInteger(interpretation.codedWidth, "PreparedPictureSource.interpretation.codedWidth");
+  positiveInteger(interpretation.codedHeight, "PreparedPictureSource.interpretation.codedHeight");
+  verifyRational(interpretation.sampleAspectRatio, "PreparedPictureSource.interpretation.sampleAspectRatio");
   assert(interpretation.rotationDegrees === 0 || interpretation.rotationDegrees === 90
     || interpretation.rotationDegrees === 180 || interpretation.rotationDegrees === 270,
-  "PreparedVisualSource.interpretation.rotationDegrees is invalid");
-  verifyPictureInterpretation(interpretation.picture, "PreparedVisualSource.interpretation.picture");
+  "PreparedPictureSource.interpretation.rotationDegrees is invalid");
+  verifyPictureInterpretation(interpretation.picture, "PreparedPictureSource.interpretation.picture");
+}
+
+export function verifyPreparedSignalPictureSource(value: unknown): asserts value is PreparedSignalPictureSource {
+  verifyPreparedPictureSource(value);
+  assert(value.kind === "signal", "PreparedSignalPictureSource is not a temporal signal");
 }
 
 export function verifyPreparedAudioSource(value: unknown): asserts value is PreparedAudioSource {

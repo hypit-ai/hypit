@@ -1,49 +1,33 @@
 # `@hypit/gpt-image-kits`
 
-`phone-ugc-v1` is a data-only Text Template for assembling image prompts. Its
-[source](kits/phone-ugc-v1.svs) emits a fixed iPhone-video capture paragraph, followed by the supplied
-Text slots in `person` → `shot` → `setting` order, with paragraph separators.
-Import it as `@hypit/gpt-image-kits/phone-ugc-v1`.
+`phone-ugc-v1` is a GPT Image-specific Prompt Template authored as an ordinary `.svml` Source.
+Its [source](kits/phone-ugc-v1.svml) emits fixed phone-capture direction, followed by the optional
+`person`, required `shot`, and optional `setting` Text slots in that order.
 
-For creative direction, see the Image direction page in the Hypit Skill.
-
-## Blocks and inputs
-
-The capture block is fixed by this template version. Selecting a different capture language means
-selecting or authoring another Text Template. The caller supplies the variable direction:
-
-| Text slot | Required | Content |
-| --- | --- | --- |
-| `person` | No | Person or cast, appearance and styling; identity references and what they preserve. |
-| `shot` | Yes | Camera view, framing, posture, gaze, action and interaction with people or props. |
-| `setting` | No | Surrounding place, palette, structures and objects; scene references and what they preserve. |
-
-For a complete new character-and-scene image, supply all three as ordinary paragraphs. A derived
-view may inherit its person or setting from connected references and omit those slots. Omitted
-blocks add no empty paragraphs. State the necessary reference responsibilities in the slot they
-affect. Each slot accepts an ordinary Text Output and can describe more than one person or relationship.
-The template produces Text; the image declaration consumes it. Actual reference Resources and model
-parameters are connected on that declaration.
-
-## Assemble the prompt
-
-Given authored Text Outputs `portrait-person`, `portrait-shot` and `portrait-setting`, this fragment assembles the
-prompt and passes it to `gpt:Image`:
+There is no separate SVS or generic Text-template frontend. Import the Source, render its typed
+Template through `@hypit/prompt`, and pass the resulting `Prompt` to GPT Image:
 
 ```svml
-<import as="text" from="@hypit/text@1"/>
-<import as="gpt" from="@hypit/gpt-image@1"/>
-<import as="ugc" source="@hypit/gpt-image-kits/phone-ugc-v1"/>
+module prompt from "@hypit/prompt@1"
+module gpt from "@hypit/gpt-image@1"
+source ugc from "@hypit/gpt-image-kits/phone-ugc-v1"
 
-<text:Render id="portrait-prompt" template={ugc.phone-ugc-v1}>
-  <text:Set name="person" text={portrait-person}/>
-  <text:Set name="shot" text={portrait-shot}/>
-  <text:Set name="setting" text={portrait-setting}/>
-</text:Render>
+prompt.Render "portrait-prompt" {
+  template: @ugc.phone-ugc-v1
+  bind "person" { value: "The person from reference image 1, preserving identity and styling." }
+  bind "shot" { value: "A waist-up view while holding the product from reference image 2." }
+  bind "setting" { value: "A bright lived-in kitchen in the morning." }
+}
 
-<gpt:Image id="portrait" prompt={portrait-prompt} aspect-ratio="9:16" resolution="2K"/>
+gpt.image {
+  id: portrait
+  prompt: @portrait-prompt
+  aspect-ratio: 9:16
+  resolution: 2K
+  Reference "person" { image: @person-image }
+  Reference "product" { image: @product-image }
+}
 ```
 
-Connect reference images through `gpt:Reference` children on `gpt:Image` in the order described by
-the prompt. For example, a `person` paragraph can inherit identity from reference 1 while `shot`
-describes holding the product from reference 2. The Text does not create Resource bindings.
+Slots describe the responsibilities of those references; they do not create resource bindings.
+Selecting different capture language means selecting or authoring another Prompt Template.

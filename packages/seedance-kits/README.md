@@ -1,169 +1,62 @@
 # `@hypit/seedance-kits`
 
-Data-only authoring Kits for recurring Seedance semantics. They are `TextTemplate` source modules,
-not model wrappers, Providers or new execution nodes.
+Seedance-specific Prompt Templates authored as ordinary `.svml` Sources. A Kit owns directing
+wording, finite choices and named Text slots; it does not own media edges, model parameters,
+Provider behavior or execution.
 
-This package has no activation and no Runtime dependency. Running
-`npm run pack:independent -- packages/seedance-kits` preserves the ordinary package exports, the SVS files and their documentation;
-projects select its npm release through their package manager and lockfile.
+There is no separate SVS language or Text-template frontend. The package exports normal Source
+modules which declare `prompt.Template` values:
 
-The official Hypit Distribution currently obtains this data package as a default npm dependency; it
-is not copied into the root tarball and does not share the root package's release cadence.
-
-Import a selected public Source from the installed package, for example
-`@hypit/seedance-kits/speaker`. The package manager or active Distribution owns the installed
-version; Source Closure reads that Source and its relative dependencies without copying it into the
-video project or reaching through a physical `../../packages/...` path.
-
-Each Kit is rendered by the domain-neutral `text:Render` declaration. Its Text output then feeds one of
-the three low-level `@hypit/seedance` invocation modes. Reference media and duration remain
-ordinary explicit graph edges:
-
-```svml
-<import as="text" from="@hypit/text@1"/>
-<import as="seedance" from="@hypit/seedance@1"/>
-<import as="broll-kit" source="@hypit/seedance-kits/broll"/>
-
-<text:Render id="broll-prompt" template={broll-kit.broll-v1} recipe={recipes.broll}>
-  <text:Set name="story" text={copy.broll}/>
-</text:Render>
-
-<seedance:ReferenceVideo id="broll" model="mini" prompt={broll-prompt}
-  duration="5" resolution="720p" aspect-ratio="9:16">
-  <seedance:Reference image={scene} person-reference="false"/>
-  <seedance:Reference image={product} person-reference="false"/>
-</seedance:ReferenceVideo>
-```
-
-Speaker uses the same graph vocabulary. The Kit assumes `@image1` is the visible person and
-`@audio1` is the voice-timbre reference; it owns no media counting or generation wrapper:
-
-```svml
-<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
-
-<text:Render id="hook-prompt"
-  template={speaker-kit.speaker-v1}
-  recipe={recipes.speaker.host}>
-  <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
-  <text:Set name="action" text={hook-action}/>
-</text:Render>
-
-<seedance:ReferenceVideo id="hook-take" model="mini"
-  prompt={hook-prompt} duration="8"
-  resolution="720p" aspect-ratio="9:16" generate-audio="true">
-  <seedance:Reference image={presenter} person-reference="true"/>
-  <seedance:Reference audio={voice}/>
-</seedance:ReferenceVideo>
-```
-
-## Choose a template
-
-Each import below has the prefix `@hypit/seedance-kits/`. The selected Source exports the listed
-template id. Its linked `.svs` file owns the exact fixed wording, default choices and allowed values.
-
-| Import suffix / template | Intended relationship and media references | Text slots |
+| Export | Meaning | Slots |
 | --- | --- | --- |
-| `speaker` / [`speaker-v1`](kits/speaker-v1.svs) | One visible speaker: `@image1` is the character-and-scene view; `@audio1` is that speaker's voice. | Required `dialogue`; optional `action` |
-| `broll` / [`broll-v1`](kits/broll-v1.svs) | A silent visual micro-story; images appear in authored reference order, with their roles explained in the story. | Required `story` |
-| `podcast` / [`podcast-v1`](kits/podcast-v1.svs) | Two fixed views: images 1/2 show A/B, and audio 1/2 supplies their corresponding voices. | Required `dialogue`; optional `action` |
-| `call` / [`call-v1`](kits/call-v1.svs) | Image 1 shows A in the main tile and B in the inset; image 2 reverses them. Both are live views, with audio 1/2 for A/B. | Required `dialogue`; optional `action` |
-| `street-interview` / [`street-interview-v1`](kits/street-interview-v1.svs) | Images 1/2/3 are interviewer A, guest B and shared street setups; audio 1/2 is A/B. A holds the microphone. | Required `dialogue`; optional `action` |
-| `motion-reference` / [`motion-reference-v1`](kits/motion-reference-v1.svs) | Image 1 supplies the subject; video 1 supplies body motion, gestures and pose dynamics. | Optional `direction` |
-| `camera-reference` / [`camera-reference-v1`](kits/camera-reference-v1.svs) | Image 1 supplies the subject; video 1 supplies camera framing, lens, movement and photographic rhythm. | Optional `direction` |
+| `./speaker` | One visible speaker; image 1 is the character and scene, audio 1 is the voice reference. | required `dialogue`, optional `action` |
+| `./broll` | A silent visual micro-story whose reference roles are described in the story. | required `story` |
+| `./podcast` | Two fixed speaker views and their corresponding voices. | required `dialogue`, optional `action` |
+| `./call` | Two live call views with main and inset roles. | required `dialogue`, optional `action` |
+| `./street-interview` | Interviewer, guest, shared street setup and microphone responsibility. | required `dialogue`, optional `action` |
+| `./motion-reference` | Image 1 supplies subject appearance; video 1 supplies body motion. | optional `direction` |
+| `./camera-reference` | Image 1 supplies subject appearance; video 1 supplies camera behavior. | optional `direction` |
 
-For example, `source="@hypit/seedance-kits/call"` imported as `kit` exposes `kit.call-v1`.
-Text slots use `text:Set`; scalar Recipe choices use the selected template's named axes. Reading the
-template reveals what each choice actually asks the generator to do. Rendering the Text Output as a
-Build Target lets an author inspect the assembled prompt without generating media.
+The Source binding exported by each file is the file's `*-v1` label. A caller may select reusable
+finite choices with `prompt.Preset`, then bind exact authored Text when it renders the Prompt:
 
-Speaker, B-roll, Podcast, Call and Street Interview expose prompt choices through their Text
-Templates. The examples above use author-chosen literal durations. Measure the selected speech with
-`hypit estimate` first, then choose a duration within the selected model's declared range; there is
-no duration-estimation node on the generation route.
+```svml
+module prompt from "@hypit/prompt@1"
+module seedance from "@hypit/seedance@1"
+source kit from "@hypit/seedance-kits/speaker"
 
-## Recipe, dialogue and action
+prompt.Preset "speaker-style" {
+  template: @kit.speaker-v1
+  values: {
+    composition-stability: soft-locked
+    camera-motion: subtle-punch-in-return
+    performance: natural-explainer
+    gesture: natural
+  }
+}
 
-The Recipe carries recurring choices exposed by the selected template. `dialogue` receives the
-Script Segment's `.dialogue` Text, retaining pronunciation and Role turns. Optional `action` supplies
-this passage's attitude, vocal delivery, attention, interaction and any motivated cuts supported by
-the Kit. In Speaker, `performance` selects the recurring approach to voice and visible expression;
-`gesture` selects body language, while `action` directs the particular thought and response.
-Do not retype the complete spoken text into action or treat each Role turn as a required new generated clip.
-For B-roll, `story` carries the silent visual events rather than spoken dialogue.
+prompt.Render "direction" {
+  template: @kit.speaker-v1
+  preset: @speaker-style
+  bind "dialogue" { value: "Today we are going to test this product." }
+  bind "action" { value: "Raise the package on the final phrase." }
+}
 
-These files are reusable packaged authoring material. When one production needs a different prompt
-structure, author a project-local Text Template and import that Source explicitly rather than
-modifying the installed package. A Kit is not a Core restriction or a hidden media-generation wrapper.
-Reference order, duration, audio generation and output aspect ratio remain explicit on the model
-declaration. Setting a prompt option cannot create a media reference or execute a postprocess.
-
-## Speaker: edited UGC from one useful view
-
-For ordinary direct-to-camera social video, explicitly select
-`edit-rhythm: pause-trim-jump-cuts` as the starting rhythm. Read the Hypit Skill's Video direction page
-for the directing judgment, and the [Speaker template](kits/speaker-v1.svs) for the exact wording of
-its Recipe choices. Choose `performance` and `gesture` for the character's intended presence.
-
-Reuse the same person-and-scene image and voice for ordinary generated clips belonging to one UGC performance.
-Each clip can begin from that shared reference and meet the others at a natural cut. There is no
-required previous-tail-frame chain. Independent generation follows the intended edited form.
-
-For example, a lively ranking host can use:
-
-```svs
-speaker.host {
-  composition-stability: strict-locked;
-  camera-motion: none;
-  edit-rhythm: pause-trim-jump-cuts;
-  performance: high-energy-ugc;
-  gesture: expressive;
+seedance.reference-video {
+  id: take
+  model: mini
+  prompt: @direction
+  duration: 8
+  aspect-ratio: 9:16
+  Reference "speaker" { image: @speaker-image person-reference: true }
+  Reference "voice" { audio: @speaker-voice }
 }
 ```
 
-`edit-rhythm: pause-trim-jump-cuts` asks the model for an edited pause-trim rhythm at phrase boundaries.
-It is compatible with a fixed camera and active performance. The template uses `continuous-take`
-when `edit-rhythm` is omitted; select that value when the passage calls for a continuous
-shot. Actual speed changes, trimming or audio extraction are explicit media operations; selecting
-this Recipe does not perform them on the returned video.
+The template and preset are ordinary typed authored values. `prompt.Render` is the only assembly
+step: its result has the nominal `Prompt` type required by Seedance. A plain `Text` cannot be wired
+to the model merely because it also contains a string.
 
-## Podcast: two views and living listeners
-
-`@image1` is Host A's view, `@image2` is Host B's view; `@audio1` and `@audio2` correspond to those hosts.
-If Script uses names such as GIRL and GUY, state their correspondence to A/B in action. One Segment
-can contain the entire short exchange. Choose speaker or reaction cuts for the conversation rather
-than splitting it into a generation per line.
-
-Derive a complementary host view from the first useful scene image. Product variations normally
-derive from each host's own view plus the product reference. Action can state the meaningful handoff
-and resulting possession. Silent listeners can adjust posture, glance down and look back up; they
-must not speak the partner's lines. A split-screen opening has a different layout from this two-view
-template and can use its own explicit prompt and combined reference image.
-
-## Street interview: three supplied setups
-
-The image order is interviewer A, guest B, shared two-person setup; the voice order is A, then B.
-The interviewer always holds the microphone, moving it between speaking positions. The guest does
-not take ownership merely because the microphone is extended toward them.
-
-Action chooses cuts among the supplied setups. Guest answers can favor the guest close view, brief
-neutral questions the shared view, and a meaningful interviewer reaction their close view. Small
-opening and closing actions can establish an encounter: the guest looks up from another activity
-as the interviewer approaches, and begins to leave after the final answer. These are examples of
-motivated direction, not mandatory actions on every request.
-
-## Keep gesture and scene direction readable
-
-Use attitude and a few decisive actions. Prefer an explanatory hand movement or emphatic gesture
-over exact numerical finger arrangements; speech or downstream graphics can state the number.
-Avoid exaggerated reactions or constantly moving every person simply to prevent stillness.
-
-For a multi-scene B-roll montage, `story` can name the references in scene order and give each a small
-action. Choose an edit language compatible with cuts. “Continuous within each scene” and “one
-continuous shot for the whole montage” ask for different results.
-
-Every Seedance image/video Reference requires `person-reference="true|false"`: true if the supplied
-material contains a person, false otherwise. Audio must omit it. The
-[Seedance author package](https://www.npmjs.com/package/@hypit/seedance#visual-reference-metadata) explains `person-reference`
-and its frame variants. The Kit supplies direction; the actual reference edges supply media and
-metadata. For movement-led work, a reference video can carry the motion while the text explains what
-to preserve and change.
+Project-specific wording belongs in a project Prompt Template. Changing a Kit means changing its
+directing vocabulary; changing how Templates are parsed, compiled or executed is framework work.
+Prompt slots explain semantics, but never create or reorder media references.

@@ -1,6 +1,6 @@
 # `@hypit/video`
 
-Assembly for the official Hypit video application. This package chooses the Markup author language,
+Assembly for the official Hypit video application. This package chooses the canonical SVML Block Frontend,
 the filesystem Workspace, Source-package discovery and the starter Runtime Profile. It also owns the
 `hypit vocabulary` view because that view describes the author packages selected by this video
 Distribution.
@@ -32,8 +32,8 @@ Installing or importing an arbitrary Source package never grants it CLI or proce
 
 `createVideoDistribution()` supplies the generic CLI Host with video-product choices:
 
-- `createVideoCompiler()` assembles the selected Author Frontends, package declaration compilers,
-  Markup spellings, Modules and refinements for one Author compilation;
+- `createVideoCompiler()` installs the SVML Frontend and assembles selected package declaration compilers,
+  Modules and refinements for one Author compilation;
 - `createVideoWorkspace()` resolves Source and asset imports from the project and selected
   Distribution without treating arbitrary package directories as projects;
 - `discoverVideoSourcePackages()` discovers the closure named by explicit Author imports;
@@ -52,7 +52,7 @@ hypit vocabulary --visual text
 ```
 
 The command reports installed Author-package manifests, their fully qualified Capabilities and their
-declared author tags. Capability identity and result Type come directly from the named package's Module
+syntax-neutral declaration names. Capability identity and result Type come directly from the named package's Module
 Manifest after ordinary package loading; dependency capabilities are not attributed to the package
 being listed. It does not keep a registry, scan the network, install packages or make creative
 choices. Package managers and the project lockfile own physical package versions; Source imports own

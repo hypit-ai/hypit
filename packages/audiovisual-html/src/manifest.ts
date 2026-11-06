@@ -1,5 +1,4 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import { audiovisualMediaDependency, audiovisualMediaTypes } from "@hypit/audiovisual-media";
 import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
 import { htmlProgramModuleRef, htmlProgramTypes } from "@hypit/html-program";
 import { mediaDependency, mediaTypes } from "@hypit/media";
@@ -16,7 +15,6 @@ export const audiovisualHtmlProducers = {
   createSources: { module: audiovisualHtmlModuleRef, name: "create-sources" },
   appendSource: { module: audiovisualHtmlModuleRef, name: "append-source" },
   preparedMediaSource: { module: audiovisualHtmlModuleRef, name: "prepared-media-source" },
-  stillPictureSource: { module: audiovisualHtmlModuleRef, name: "still-picture-source" },
   programSource: { module: audiovisualHtmlModuleRef, name: "program-source" },
   compile: { module: audiovisualHtmlModuleRef, name: "compile" },
 } satisfies Record<string, ProducerRef>;
@@ -24,7 +22,7 @@ export const audiovisualHtmlProducers = {
 export const audiovisualHtmlManifest: ModuleManifest = {
   format: "hypit.module@1",
   ...audiovisualHtmlModuleRef,
-  dependencies: [audiovisualDependency, audiovisualMediaDependency, htmlProgramModuleRef, mediaDependency],
+  dependencies: [audiovisualDependency, htmlProgramModuleRef, mediaDependency],
   types: Object.values(audiovisualHtmlTypes).map((type) => type.name),
   capabilities: [],
   producers: [
@@ -44,11 +42,6 @@ export const audiovisualHtmlManifest: ModuleManifest = {
     {
       name: audiovisualHtmlProducers.preparedMediaSource.name,
       inputs: [{ name: "media", type: mediaTypes.prepared }],
-      result: { kind: "output", name: "source", type: audiovisualHtmlTypes.source },
-    },
-    {
-      name: audiovisualHtmlProducers.stillPictureSource.name,
-      inputs: [{ name: "picture", type: audiovisualMediaTypes.stillPicture }],
       result: { kind: "output", name: "source", type: audiovisualHtmlTypes.source },
     },
     {

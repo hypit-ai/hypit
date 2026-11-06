@@ -2,7 +2,7 @@ import { declarationField, type AuthorDeclaration, type AuthorDeclarationChild,
   type AuthorDeclarationBinding, type AuthorDeclarationCompiler, type AuthorResolvedReference } from "@hypit/hypit/author";
 import { blobTypes } from "@hypit/hypit/blob";
 import { isBlobRef, sameType, type TypeRef } from "@hypit/hypit/protocol";
-import { textTypes } from "@hypit/hypit/text";
+import { promptTypes } from "@hypit/hypit/prompt";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import { sealModelFieldBuilder, type FieldModelOperation,
   type ModelFieldValue } from "@hypit/generation/model-fields";
@@ -69,7 +69,7 @@ const commonFields = [
   { name: "model", kind: "literal" as const, required: true,
     values: ["standard", "seedance-2", "fast", "seedance-2-fast", "mini", "seedance-2-mini", "2.5", "seedance-2.5"],
     summary: "Chooses the exact Seedance model." },
-  { name: "prompt", kind: "reference" as const, required: true, accepts: [textTypes.text], summary: "Selects the generation prompt." },
+  { name: "prompt", kind: "reference" as const, required: true, accepts: [promptTypes.prompt], summary: "Selects the generation Prompt." },
   { name: "duration", kind: "literal" as const, required: true, summary: "Sets the generated duration." },
   { name: "resolution", kind: "literal" as const, required: false,
     values: ["480p", "720p", "1080p", "4k"], summary: "Sets the output size band." },
@@ -91,7 +91,7 @@ async function output(declaration: AuthorDeclaration,
   resolveReference: Parameters<AuthorDeclarationCompiler["compile"]>[0]["resolveReference"],
   endpoint: FieldModelOperation, media: readonly FieldModelAuthorArtifactInput[], extra: Record<string, readonly ModelFieldValue[]> = {}) {
   const id = literal(declaration, "id");
-  const prompt = await reference(declaration, "prompt", textTypes.text, resolveReference);
+  const prompt = await reference(declaration, "prompt", promptTypes.prompt, resolveReference);
   const draft = sealModelFieldBuilder(endpoint.fields, {
     duration: [integer(declaration, "duration")],
     resolution: [optionalLiteral(declaration, "resolution") ?? "720p"],
@@ -104,14 +104,14 @@ async function output(declaration: AuthorDeclaration,
     fragment: createSeedanceAssembledGenerationFragment(endpoint,
       media.map(({ name, field }) => ({ name, field })), [{ name: "prompt", field: "prompt" }]),
     outputs: { video: `${id}.video` }, artifacts: media,
-    text: [{ name: "prompt", field: "prompt", source: prompt }] });
+    textFields: [{ name: "prompt", field: "prompt", source: prompt }] });
 }
 
 export const seedanceTextVideoAuthorDeclaration: AuthorDeclarationCompiler = {
   module: seedanceModuleRef,
   declaration: "text-video",
   outputs,
-  shape: { summary: "Generates a Seedance video from a Text prompt.", fields: [
+  shape: { summary: "Generates a Seedance video from a Prompt.", fields: [
     ...commonFields,
     { name: "web-search", kind: "literal", required: false, values: ["true", "false"], summary: "Allows the model to consult Web Search." },
   ] },
@@ -187,5 +187,3 @@ export const seedanceReferenceVideoAuthorDeclaration: AuthorDeclarationCompiler 
 
 export const seedanceAuthorDeclarations = [seedanceTextVideoAuthorDeclaration,
   seedanceFrameVideoAuthorDeclaration, seedanceReferenceVideoAuthorDeclaration] as const;
-export const seedanceMarkupDeclarations = [{ name: "text-video", tag: "TextVideo" },
-  { name: "frame-video", tag: "FrameVideo" }, { name: "reference-video", tag: "ReferenceVideo" }] as const;

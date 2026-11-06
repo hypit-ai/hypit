@@ -58,6 +58,18 @@ An executor that evaluates the same immutable Map for many frames or samples bin
 `createTemporalMapEvaluator` once at its Programme boundary. It uses this same sided evaluator while
 keeping structural validation out of the hot loop; it is not a second sampling rule or a relaxed Map.
 
+`preimageTemporalMap` performs the opposite query without creating an opposite Map. Given an inclusive
+source region in sided temporal order, it returns every exact target region whose forward image is in
+that set. The bounded result naturally represents no match, one or many loop matches, and hold ranges;
+composed stages are traversed in reverse. Affine pieces are exact. A query intersecting a non-constant
+cubic piece fails explicitly because a cubic root is not generally rational and this algebra does not
+silently introduce an epsilon or sampling grid.
+
+Graph values use `TemporalMapRegionSet`, which pairs those regions with the local domain that owns their
+coordinates. `preimageTemporalMapRegions` verifies that identity against the Map source before returning a
+set in the Map target domain. `uniqueTemporalMapRegionSetPoint` is an intentionally strict consumer policy:
+it accepts exactly one zero-width sided region and rejects absence, loops, holds and other ambiguity.
+
 `ExactTemporalRelationSpec` is the clock-free construction form used by an occurrence owner before its
 Map can close. Its points are exact inward offsets from the start or end of the finite target and source
 domains; its rate, fit and cubic relations can form one piecewise specification. The resolver accepts no

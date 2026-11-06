@@ -1,0 +1,23 @@
+module prompt from "@hypit/prompt@1"
+
+prompt.Template "phone-ugc-v1" {
+  separator: paragraph
+
+  fixed "capture" {
+    text: <<PROMPT
+A photograph captured as a single frame from a video actually shot on an iPhone, with the texture of real iPhone footage. The image looks real, without an oily, overprocessed finish. The background is clearly visible, with no depth-of-field blur. Skin texture is natural and fine, and the lighting is natural. The image is coherent and free of visual artifacts.
+    PROMPT
+  }
+
+  slot "person" {
+    required: false
+  }
+
+  slot "shot" {
+    required: true
+  }
+
+  slot "setting" {
+    required: false
+  }
+}

@@ -1,6 +1,7 @@
 import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
 import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+import { promptTypes } from "@hypit/hypit/prompt";
 
 export const minimaxH3ModuleRef = { name: "@hypit/minimax-h3", version: "1" } as const;
 
@@ -16,7 +17,7 @@ export const minimaxH3ModuleRef = { name: "@hypit/minimax-h3", version: "1" } as
 export const minimaxH3Fields: ModelFieldTable = defineModelFields({
   model: "minimax-h3",
   fields: [
-    { name: "prompt", value: { kind: "text", maxChars: 7_000 }, minItems: 1, maxItems: 1 },
+    { name: "prompt", value: { kind: "text", inputType: promptTypes.prompt, maxChars: 7_000 }, minItems: 1, maxItems: 1 },
     {
       name: "duration",
       value: { kind: "number", integer: true, minimum: 4, maximum: 15 },

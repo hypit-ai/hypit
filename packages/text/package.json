@@ -11,12 +11,7 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/producer": "workspace:*",
-    "@hypit/author": "workspace:*",
-    "@hypit/markup": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/recipe": "workspace:*",
-    "@hypit/source": "workspace:*",
     "@hypit/refinement": "workspace:*"
   }
 }

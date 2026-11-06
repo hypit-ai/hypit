@@ -8,6 +8,7 @@ import { logicalPackageAddressKey } from "@hypit/loader";
 import type { LogicalPackageAddress, LoadedPackage } from "@hypit/loader";
 import { compareCodeUnits, moduleKey, modulePackageAbi } from "@hypit/protocol";
 import { sourceFrontendPackageAbi } from "@hypit/source";
+import type { ResolvedSource, SourceUnit } from "@hypit/source";
 import { resolveSelfDescribedTextSource } from "@hypit/source/text";
 
 function isWithin(root: string, path: string): boolean {
@@ -22,9 +23,10 @@ function selectedPackage(request: string): string {
 }
 
 /**
- * Discover the package requirements reachable from a self-described Source closure.
+ * Discover the package requirements reachable from a Host-resolved Source closure.
  * A Distribution supplies only its bootstrap Frontends; every further language,
- * Module is resolved from package-owned logical offers.
+ * Module is resolved from package-owned logical offers. Self-described text is only the explicit
+ * legacy fallback when a Host does not supply `sourceAdapter`.
  */
 export async function discoverSourcePackages(
   sourcePath: string,
@@ -34,6 +36,8 @@ export async function discoverSourcePackages(
     readonly distributionPackageRoot?: string;
     readonly packages?: readonly LoadedPackage[];
     readonly bootstrapAuthorFrontends?: readonly AuthorFrontend[];
+    /** Host-owned canonical Source association. Omit only for explicit legacy self-described Sources. */
+    readonly sourceAdapter?: (source: SourceUnit) => ResolvedSource;
   } = {},
 ): Promise<{ readonly selected: readonly string[]; readonly logical: readonly LogicalPackageAddress[] }> {
   const canonicalSource = await realpath(resolve(sourcePath));
@@ -88,9 +92,11 @@ export async function discoverSourcePackages(
     }
     if (visited.has(canonical)) return;
     visited.add(canonical);
-    const text = await readFile(canonical, "utf8");
     const name = relative(canonicalRoot, canonical);
-    const resolved = resolveSelfDescribedTextSource({ id: canonical, name, text });
+    const bytes = await readFile(canonical);
+    const unit: SourceUnit = { id: canonical, name, bytes };
+    const resolved = options.sourceAdapter?.(unit)
+      ?? resolveSelfDescribedTextSource({ id: canonical, name, text: bytes.toString("utf8") });
     const authors = authorFrontends.filter((item) => item.frontend.id === resolved.frontend);
     if (authors.length > 1) throw new Error(`Source Frontend ${resolved.frontend} is ambiguously provided`);
     if (authors.length === 0) {

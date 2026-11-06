@@ -4,7 +4,7 @@ import type { BlobRef } from "@hypit/hypit/protocol";
 /** Seedance's reference-audio rule, shared by known imports and request assembly. */
 export function validateSeedanceAudio(artifact: BlobRef, subject = "Seedance reference audio"): void {
   if (artifact.mediaType === "audio/mp4" || artifact.mediaType === "audio/x-m4a") {
-    throw new Error(`${subject} does not accept m4a; convert the reference audio to WAV or MP3 before using it (media:ExtractAudio produces WAV)`);
+    throw new Error(`${subject} does not accept m4a; materialize the selected Media audio as WAV or MP3 before using it`);
   }
 }
 

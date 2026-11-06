@@ -32,7 +32,7 @@ function placement(sourcePath: string): StudioPlacement {
 
 test("Studio joins repeated local names through compiler-owned provenance", async () => {
   const element = (source: string, output: string) => ({
-    id: `${source}::element::10:20`, sourceName: source,
+    id: `${source}::element::10:20`, source, sourceName: source,
     range: { start: 10, end: 20 }, records: [],
     outputs: [{ component: `${source}::component::track`, name: "visual", local: "visual", id: output }],
     inputs: [{ id: `${source}::endpoint::10:id`, name: "id" }],

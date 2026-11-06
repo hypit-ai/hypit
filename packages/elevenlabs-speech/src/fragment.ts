@@ -1,11 +1,11 @@
 import { createFieldModelPrimaryFragment } from "@hypit/generation/model-fields";
-import type { FieldModelOperation, ModelArtifactInput, ModelTextInput } from "@hypit/generation/model-fields";
+import type { FieldModelOperation, ModelArtifactInput, ModelTextFieldInput } from "@hypit/generation/model-fields";
 
 /** Model result projection over the same graph-native request assembly as every exact model. */
 export function createElevenLabsSpeechAudioFragment(
   endpoint: FieldModelOperation,
   mediaInputs: readonly ModelArtifactInput[] = [],
-  textInputs: readonly ModelTextInput[] = [],
+  textFieldInputs: readonly ModelTextFieldInput[] = [],
 ) {
-  return createFieldModelPrimaryFragment(endpoint, mediaInputs, textInputs);
+  return createFieldModelPrimaryFragment(endpoint, mediaInputs, textFieldInputs);
 }

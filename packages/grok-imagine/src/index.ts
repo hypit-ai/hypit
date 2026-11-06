@@ -1,6 +1,7 @@
 import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
 import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+import { promptTypes } from "@hypit/hypit/prompt";
 
 export const grokImagineModuleRef = { name: "@hypit/grok-imagine", version: "1" } as const;
 export const grokImagineModels = ["grok-imagine-video", "grok-imagine-video-1.5-preview"] as const;
@@ -9,7 +10,7 @@ export type GrokImagineModel = typeof grokImagineModels[number];
 export const grokImagineVideoFields: ModelFieldTable = defineModelFields({
   model: "grok-imagine-video",
   fields: [
-    { name: "prompt", value: { kind: "text", maxChars: 5_000 }, minItems: 1, maxItems: 1 },
+    { name: "prompt", value: { kind: "text", inputType: promptTypes.prompt, maxChars: 5_000 }, minItems: 1, maxItems: 1 },
     {
       name: "aspectRatio",
       value: { kind: "enum", values: ["2:3", "3:2", "1:1", "16:9", "9:16"] },
@@ -26,7 +27,7 @@ export const grokImagineVideoFields: ModelFieldTable = defineModelFields({
 export const grokImagine15PreviewFields: ModelFieldTable = defineModelFields({
   model: "grok-imagine-video-1.5-preview",
   fields: [
-    { name: "prompt", value: { kind: "text", maxChars: 4_096 }, minItems: 1, maxItems: 1 },
+    { name: "prompt", value: { kind: "text", inputType: promptTypes.prompt, maxChars: 4_096 }, minItems: 1, maxItems: 1 },
     {
       name: "aspectRatio",
       value: { kind: "enum", values: ["auto", "2:3", "3:2", "1:1", "16:9", "9:16"] },

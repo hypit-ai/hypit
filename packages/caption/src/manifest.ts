@@ -1,92 +1,96 @@
-import { timelineTypes } from "@hypit/timeline";
+import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
+import { audiovisualHtmlDependency, audiovisualHtmlTypes } from "@hypit/audiovisual-html";
+import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
+import { spatialDependency } from "@hypit/spatial";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
-import { temporalWindowSchema } from "@hypit/timeline";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
-import { frameSpanSchema, timelineDependency } from "@hypit/timeline";
 
 export const captionModuleRef = { name: "@hypit/caption", version: "1" } as const;
-export const captionProducers = {
-  create: { module: captionModuleRef, name: "create-caption-uses" },
-  append: { module: captionModuleRef, name: "append-caption-use" },
-  appendUnbounded: { module: captionModuleRef, name: "append-unbounded-caption-use" },
-} satisfies Record<string, ProducerRef>;
+export const captionHtmlModuleRef = { name: "@hypit/caption/html", version: "1" } as const;
+
 export const captionTypes = {
   document: { module: captionModuleRef, name: "CaptionDocument" },
-  header: { module: captionModuleRef, name: "CaptionTrackSpec" },
-  filter: { module: captionModuleRef, name: "CaptionContentFilter" },
+  timing: { module: captionModuleRef, name: "LocalCaptionTiming" },
+  selection: { module: captionModuleRef, name: "CaptionSelection" },
   style: { module: captionModuleRef, name: "CaptionStyle" },
-  program: { module: captionModuleRef, name: "CaptionProgram" },
-  timing: { module: captionModuleRef, name: "CaptionTiming" },
+  presentationOverrideSpec: { module: captionModuleRef, name: "CaptionPresentationOverrideSpec" },
+  presentation: { module: captionModuleRef, name: "CaptionPresentation" },
+  schedule: { module: captionModuleRef, name: "CaptionPresentationSchedule" },
+  componentSpec: { module: captionModuleRef, name: "CaptionComponentSpec" },
+  unitEventSpec: { module: captionModuleRef, name: "CaptionUnitEventSpec" },
 } satisfies Record<string, TypeRef>;
 
-const string = { kind: "string", minLength: 1 } as const;
-const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
-const captionDisplayWord = object({
-  separatorBefore: { schema: { kind: "string", enum: ["", " "] } },
-  id: { schema: string }, unitId: { schema: string }, text: { schema: string },
-  attributes: { schema: { kind: "array", items: object({
-    name: { schema: string },
-    value: { schema: { kind: "oneOf", variants: [string, { kind: "number" }, { kind: "boolean" }] } },
-  }) } },
-});
-const captionUnit = object({
-  id: { schema: string },
-  wordIds: { schema: { kind: "array", minItems: 1, items: string } },
-});
-const captionCue = object({
-  id: { schema: string }, unitIds: { schema: { kind: "array", minItems: 1, items: string } },
-  role: { schema: string, optional: true },
-});
-export const captionDocumentSchema: ValueSchema = object({
-  id: { schema: string },
-  units: { schema: { kind: "array", items: captionUnit } },
-  words: { schema: { kind: "array", items: captionDisplayWord } },
-  cues: { schema: { kind: "array", items: captionCue } },
-});
-export const captionStyleSchema: ValueSchema = object({
-  id: { schema: string },
-  rendering: { schema: { kind: "oneOf", variants: [{ kind: "null" }, object({
-    family: { schema: string },
-    parameters: { schema: { kind: "object", fields: {}, allowUnknown: true } },
-  })] } },
-});
-export const captionProgramSchema: ValueSchema = object({
-  id: { schema: string }, documentId: { schema: string },
-  styles: { schema: { kind: "array", items: captionStyleSchema } },
-  uses: { schema: { kind: "array", items: object({
-    id: { schema: string }, window: { schema: temporalWindowSchema, optional: true },
-    styleId: { schema: string }, role: { schema: string, optional: true },
-  }) } },
-});
-const timedUnit = object({
-  unitId: { schema: string },
-  ...(frameSpanSchema.kind === "object" ? frameSpanSchema.fields : {}),
-});
-export const captionTimingSchema: ValueSchema = object({
-  timelineId: { schema: string },
-  documentId: { schema: string },
-  units: { schema: { kind: "array", items: timedUnit } },
-});
+export const captionProducers = {
+  createPresentation: { module: captionModuleRef, name: "create-presentation" },
+  appendStyleOverride: { module: captionModuleRef, name: "append-style-override" },
+  appendHiddenOverride: { module: captionModuleRef, name: "append-hidden-override" },
+  schedule: { module: captionModuleRef, name: "schedule-presentation" },
+  source: { module: captionModuleRef, name: "caption-source" },
+  unitEvent: { module: captionModuleRef, name: "caption-unit-event" },
+  htmlSource: { module: captionHtmlModuleRef, name: "caption-html-source" },
+} satisfies Record<string, ProducerRef>;
 
 export const captionManifest: ModuleManifest = {
-  format: "hypit.module@1", name: captionModuleRef.name, version: captionModuleRef.version,
-  dependencies: [temporalDependency, timelineDependency], types: [
-    captionTypes.document.name, captionTypes.header.name, captionTypes.filter.name,
-    captionTypes.style.name, captionTypes.program.name, captionTypes.timing.name,
-  ], capabilities: [], producers: [{
-    name: captionProducers.create.name,
-    inputs: [{ name: "document", type: captionTypes.document }, { name: "header", type: captionTypes.header }],
-    result: { kind: "output" as const, name: "program", type: captionTypes.program },
+  format: "hypit.module@1", ...captionModuleRef,
+  dependencies: [audiovisualDependency, temporalDependency, spatialDependency],
+  types: Object.values(captionTypes).map((type) => type.name), capabilities: [],
+  producers: [{
+    name: captionProducers.createPresentation.name,
+    inputs: [{ name: "style", type: captionTypes.style }],
+    result: { kind: "output", name: "presentation", type: captionTypes.presentation },
   }, {
-    name: captionProducers.append.name,
-    inputs: [{ name: "program", type: captionTypes.program }, { name: "window", type: timelineTypes.window },
-      { name: "style", type: captionTypes.style }, { name: "filter", type: captionTypes.filter }],
-    result: { kind: "output" as const, name: "program", type: captionTypes.program },
+    name: captionProducers.appendStyleOverride.name,
+    inputs: [
+      { name: "presentation", type: captionTypes.presentation },
+      { name: "spec", type: captionTypes.presentationOverrideSpec },
+      { name: "style", type: captionTypes.style },
+    ],
+    result: { kind: "output", name: "presentation", type: captionTypes.presentation },
   }, {
-    name: captionProducers.appendUnbounded.name,
-    inputs: [{ name: "program", type: captionTypes.program },
-      { name: "style", type: captionTypes.style }, { name: "filter", type: captionTypes.filter }],
-    result: { kind: "output" as const, name: "program", type: captionTypes.program },
+    name: captionProducers.appendHiddenOverride.name,
+    inputs: [
+      { name: "presentation", type: captionTypes.presentation },
+      { name: "spec", type: captionTypes.presentationOverrideSpec },
+    ],
+    result: { kind: "output", name: "presentation", type: captionTypes.presentation },
+  }, {
+    name: captionProducers.schedule.name,
+    inputs: [
+      { name: "spec", type: captionTypes.componentSpec },
+      { name: "document", type: captionTypes.document },
+      { name: "timing", type: captionTypes.timing },
+      { name: "presentation", type: captionTypes.presentation },
+    ],
+    result: { kind: "output", name: "schedule", type: captionTypes.schedule },
+  }, {
+    name: captionProducers.source.name,
+    inputs: [
+      { name: "spec", type: captionTypes.componentSpec },
+      { name: "document", type: captionTypes.document },
+      { name: "timing", type: captionTypes.timing },
+      { name: "presentation", type: captionTypes.presentation },
+    ],
+    result: { kind: "output", name: "source", type: audiovisualTypes.programSource },
+  }, {
+    name: captionProducers.unitEvent.name,
+    inputs: [{ name: "timing", type: captionTypes.timing },
+      { name: "spec", type: captionTypes.unitEventSpec }],
+    result: { kind: "output", name: "event", type: temporalTypes.regionSet },
   }],
 };
+
+export const captionHtmlManifest: ModuleManifest = {
+  format: "hypit.module@1", ...captionHtmlModuleRef,
+  dependencies: [captionModuleRef, audiovisualHtmlDependency], types: [], capabilities: [],
+  producers: [{
+    name: captionProducers.htmlSource.name,
+    inputs: [
+      { name: "spec", type: captionTypes.componentSpec },
+      { name: "document", type: captionTypes.document },
+      { name: "timing", type: captionTypes.timing },
+      { name: "presentation", type: captionTypes.presentation },
+    ],
+    result: { kind: "output", name: "source", type: audiovisualHtmlTypes.source },
+  }],
+};
+
 export const captionDependency = captionModuleRef;

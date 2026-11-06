@@ -63,16 +63,7 @@ try {
   }
 
   const tarballs = [];
-  const rasterTransformTarball = await packIndependentPackage("packages/raster-transform", output, {
-    buildPublicTypes: true,
-  });
   const rasterCompositionTarball = await packIndependentPackage("packages/raster-composition", output, {
-    buildPublicTypes: false,
-  });
-  const mediaExtractionTarball = await packIndependentPackage("packages/media-extraction", output, {
-    buildPublicTypes: false,
-  });
-  const stillVideoTarball = await packIndependentPackage("packages/still-video", output, {
     buildPublicTypes: false,
   });
   const narrativeSpeechAlignmentTarball = await packIndependentPackage(
@@ -89,7 +80,7 @@ try {
 
   const dependencies = await packConsumerDependencies([
     ...packageDirectories,
-    "raster-transform", "raster-composition", "media-extraction", "still-video",
+    "raster-composition",
     "narrative-speech-alignment", "whisperx",
   ], output);
   await mkdir(consumer);
@@ -106,10 +97,7 @@ try {
     "--no-fund",
     "--legacy-peer-deps",
     ...dependencies,
-    rasterTransformTarball,
     rasterCompositionTarball,
-    mediaExtractionTarball,
-    stillVideoTarball,
     narrativeSpeechAlignmentTarball,
     ...tarballs,
   ], {
@@ -161,7 +149,7 @@ try {
   await writeFile(join(distribution, "package.json"), `${JSON.stringify(distributionManifest, null, 2)}\n`);
   const independent = new Set([
     ...packageDirectories, "whisperx",
-    "raster-transform", "raster-composition", "media-extraction", "still-video",
+    "raster-composition",
   ]);
   for (const entry of await readdir(join(repositoryRoot, "packages"), { withFileTypes: true })) {
     if (!entry.isDirectory() || independent.has(entry.name)) continue;

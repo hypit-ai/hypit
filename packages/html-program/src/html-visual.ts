@@ -146,7 +146,11 @@ export function htmlVisualScript(entries: readonly {
   readonly controlPositions?: Readonly<Record<string, readonly (import("@hypit/temporal").ExactTemporalValue | null)[]>>;
   readonly renderFrames?: readonly (number | null)[];
   readonly program: Pick<HtmlVisual, "data" | "html" | "setup">;
-}[], context: { readonly width: number; readonly height: number } = { width: 0, height: 0 }): string {
+}[], context: {
+  readonly width: number;
+  readonly height: number;
+  readonly frameRate?: { readonly numerator: number; readonly denominator: number };
+} = { width: 0, height: 0 }): string {
   return `(() => {
     const fail = error => { window.__hypitHtmlVisualError = String(error?.stack || error); };
     const entries = ${scriptJson(entries)}.filter(entry =>
@@ -159,6 +163,7 @@ export function htmlVisualScript(entries: readonly {
             durationFrames: entry.durationFrames,
             width: ${context.width},
             height: ${context.height},
+            frameRate: ${scriptJson(context.frameRate ?? { numerator: 1, denominator: 1 })},
             controlPosition(name, localFrame) {
               const positions = entry.controlPositions?.[name];
               if (positions === undefined) throw new Error('HTML visual requested undeclared Control ' + name + '.');

@@ -1,22 +1,48 @@
+export { captionComponent } from "./component.js";
 export {
+  captionAuthorFacets,
+  captionComponentDeclaration,
+  captionUnitEventDeclaration,
+} from "./declaration.js";
+export { captionComponentEditPlanner } from "./edit.js";
+export {
+  captionSourceFragment,
+  captionUnitEventFragment,
+  createCaptionSourceFragment,
+} from "./fragment.js";
+export {
+  captionDependency,
+  captionHtmlManifest,
+  captionHtmlModuleRef,
+  captionManifest,
+  captionModuleRef,
+  captionProducers,
+  captionTypes,
+} from "./manifest.js";
+export { captionNleSubjectProjector } from "./nle.js";
+export { captionHtmlSource } from "./picture.js";
+export {
+  appendCaptionHiddenOverride,
+  appendCaptionStyleOverride,
+  assertCaptionComponentSpec,
   assertCaptionDocument,
-  assertCaptionUnitSubset,
-  captionUnitsForRole,
-} from "./display.js";
-export type { CaptionUnitSubset } from "./display.js";
-export { captionWordsForAttribute } from "./display.js";
-export { assertCaptionDocumentIdentity } from "./identity.js";
-export { captionComponent } from "./component.js";export { captionDocumentSchema, captionDependency, captionProgramSchema, captionStyleSchema, captionTimingSchema, captionManifest, captionModuleRef, captionProducers, captionTypes } from "./manifest.js";
-export {
-  assertCaptionProgram,
-  assertCaptionProgramForDocument,
+  assertCaptionInputs,
+  assertCaptionPresentation,
+  assertCaptionPresentationOverrideSpec,
+  assertCaptionPresentationSchedule,
+  assertCaptionSelection,
   assertCaptionStyle,
-  appendCaptionUse,
-  sealCaptionProgram,
-  sealCaptionStyle,
-} from "./style.js";
-export { assertCaptionTiming, assertCaptionTimingForDocument } from "./temporalize.js";
+  assertCaptionUnitEventSpec,
+  assertLocalCaptionTiming,
+  captionProgramSource,
+  captionSelectedUnitIds,
+  captionUnitEvent,
+  createCaptionPresentation,
+  projectCaptionNle,
+  projectCaptionScheduleNle,
+  scheduleCaptionPresentation,
+} from "./source.js";
 export type * from "./types.js";
-
-export { captionUseVisibility } from "./visibility.js";
-export { hiddenCaptionStyleAuthorDeclaration } from "./declaration.js";export { hiddenCaptionStyleMarkupDeclaration } from "./declaration.js";
+export { captionBasicNleRendererSymbol, captionBasicNleResolver } from "./nle-package.js";
+export { createCaptionNleMaterialization } from "./materialize.js";
+export type { CaptionNleRendererSelection } from "./materialize.js";

@@ -1,0 +1,147 @@
+module prompt from "@hypit/prompt@1"
+
+prompt.Template "street-interview-v1" {
+  separator: paragraph
+
+  fixed "base" {
+    text: "Create a realistic vertical street-interview clip from three final reference views."
+  }
+
+  fixed "reference" {
+    text: <<PROMPT
+REFERENCE CONTRACT: @image1 is interviewer A's final camera setup, @image2 is guest B's final camera setup, and @image3 is their final shared two-person camera setup. These three supplied setups are a closed shot set, not loose subject references: every authored shot selects exactly one of them as its complete frame, and cuts go directly from one supplied setup to another. Never invent a fourth camera position or pass through an intermediate framing. Within each selected setup, obey the FRAMING direction below. Preserve both identities, outfits, street location, props, microphone, lighting, camera sides, and spatial relationship.
+    PROMPT
+  }
+
+  fixed "roles" {
+    text: <<PROMPT
+ROLE MAP: A is the interviewer holding the microphone. B is the guest. Follow A: and B: exactly. A uses @audio1; B uses @audio2; only the current speaker moves their mouth.
+    PROMPT
+  }
+
+  fixed "microphone" {
+    text: <<PROMPT
+MICROPHONE CONTRACT: A always holds the same microphone. On A: lines it stays near A's mouth; on B: lines A naturally extends it toward B with realistic wrist, hand, and arm adjustments.
+    PROMPT
+  }
+
+  fixed "order" {
+    text: <<PROMPT
+Follow the authored ACTION DIRECTION in order for camera changes, performance, and physical interaction.
+    PROMPT
+  }
+
+  choose "framing" {
+    default: soft-handheld
+
+    option "locked-scene" {
+      text: <<PROMPT
+FRAMING: locked camera. Hold the selected reference setup as the exact complete frame, preserving its composition, crop, scale, camera height, angle, and lens feel. No handheld drift, push, pan, tilt, zoom, reframe, orbit, or transitional camera movement.
+      PROMPT
+    }
+
+    option "soft-handheld" {
+      text: <<PROMPT
+FRAMING: realistic tiny handheld sway and operator breathing inside the selected camera setup while preserving its composition and camera side. Never turn that movement into a new crop, angle, camera position, or transition between setups.
+      PROMPT
+    }
+
+    option "subject-push" {
+      text: <<PROMPT
+FRAMING: make one modest push toward the active speaker inside the selected camera setup, then settle back to that same supplied composition. Never create another angle or camera position.
+      PROMPT
+    }
+  }
+
+  choose "pacing" {
+    default: compact
+
+    option "measured" {
+      text: "PACING: measured question and answer delivery with a natural beat between thoughts."
+    }
+
+    option "compact" {
+      text: "PACING: compact responsive handoffs while every line remains understandable."
+    }
+
+    option "rapid-qna" {
+      text: "PACING: rapid street Q and A with crisp short-form momentum."
+    }
+
+    option "varied-emphasis" {
+      text: "PACING: compact handoffs with important punchlines slowed slightly to land meaning."
+    }
+  }
+
+  choose "performance" {
+    default: natural-street
+
+    option "natural-street" {
+      text: "PERFORMANCE: curious interviewer and candid, spontaneous, believable guest."
+    }
+
+    option "high-energy" {
+      text: "PERFORMANCE: vivid, fast, charismatic short-form street energy."
+    }
+
+    option "calm-expert" {
+      text: "PERFORMANCE: composed thoughtful guest and visibly attentive interviewer."
+    }
+
+    option "playful-skeptic" {
+      text: "PERFORMANCE: playful skepticism, teasing smiles, reversals, and small laughs."
+    }
+  }
+
+  choose "reaction" {
+    default: active
+
+    option "subtle" {
+      text: "REACTIONS: tiny nods, eye focus, breath, and small expression changes."
+    }
+
+    option "active" {
+      text: "REACTIONS: visible nods, smiles, eye movement, and readable facial shifts."
+    }
+
+    option "big" {
+      text: "REACTIONS: lively but realistic surprise, laughter, disbelief, and delight."
+    }
+  }
+
+  choose "gesture" {
+    default: natural
+
+    option "restrained" {
+      text: "GESTURE: restrained body language; face, voice, and microphone movement carry meaning."
+    }
+
+    option "compact" {
+      text: "GESTURE: compact semantic beats near the body, bag, and microphone."
+    }
+
+    option "natural" {
+      text: "GESTURE: natural open palms, small points, nods, and posture shifts."
+    }
+
+    option "expressive" {
+      text: "GESTURE: richer hand, shoulder, posture, and face changes while preserving candid realism."
+    }
+  }
+
+  fixed "hygiene" {
+    text: <<PROMPT
+AUDIO AND TEXTURE: clean dialogue, natural outdoor room tone, stable faces, hands, microphone, and photoreal motion. Add no subtitles, captions, labels, cards, or overlays; preserve physical signs and text already in the scene.
+    PROMPT
+  }
+
+  slot "dialogue" {
+    required: true
+    label: "DIALOGUE SCRIPT TO DELIVER:"
+  }
+
+  slot "action" {
+    required: false
+    label: "ACTION DIRECTION:"
+  }
+}

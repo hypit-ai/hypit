@@ -69,7 +69,7 @@ export const elevenLabsVoiceDesignAuthorDeclaration: AuthorDeclarationCompiler =
       draft: sealElevenLabsSpeechRequestDraft("eleven_ttv_v3", { voiceDescription: [body(declaration)] }),
       fragment: createElevenLabsSpeechAudioFragment(endpoint, [], [{ name: "speech", field: "text" }]),
       outputs: { audio: `${id}.reference` },
-      text: [{ name: "speech", field: "text", source: spoken }],
+      textFields: [{ name: "speech", field: "text", source: spoken }],
     });
   },
 };

@@ -21,8 +21,9 @@ The three model invocation shapes are deliberately separate:
 - `ReferenceVideo`: one or more image, video or audio references within the Model's field limits.
 
 All three preserve the remote result as one atomic `GeneratedVideoSet`, then expose its first ordered
-member as an ordinary `Blob`. Their prompt fields consume ordinary `Text`, so a Script projection,
-generic Text Template or third-party author module can feed them without becoming part of Seedance.
+member as an ordinary `Blob`. Their prompt fields consume the nominal `@hypit/prompt#Prompt` Type.
+Prompt assembly stays outside Seedance: a Kit or project package may produce it, while an unrelated
+ordinary `Text` cannot be connected merely because it has the same string-shaped payload.
 
 `standard`, `fast`, `mini` and `2.5` select model variants independently of the invocation shape.
 Duration is the author's literal inside the model's declared range: `standard`, `fast` and `mini`
@@ -38,11 +39,17 @@ the request creates new material. Seedance 2.5 can also treat a supplied video a
 edited while preserving the relationships the prompt does not ask to change. For that strict
 source-edit relationship, author `duration="-1"` and `aspect-ratio="adaptive"`:
 
-```xml
-<seedance:ReferenceVideo id="edit" model="2.5" prompt={direction}
-  duration="-1" aspect-ratio="adaptive">
-  <seedance:Reference video={source.video} person-reference="true"/>
-</seedance:ReferenceVideo>
+```svml
+module seedance from "@hypit/seedance@1"
+
+seedance.reference-video {
+  id: edit
+  model: 2.5
+  prompt: @direction
+  duration: -1
+  aspect-ratio: adaptive
+  Reference "source" { video: @source-video person-reference: true }
+}
 ```
 
 This pair is not a default for every video reference or every clone. Use an ordinary authored
@@ -52,7 +59,7 @@ material. The selected Provider owns whether and how it implements each exact mo
 ## Reference audio
 
 The Seedance package rejects reference audio declared as `audio/mp4` or `audio/x-m4a`. Convert the
-audio to WAV or MP3 before using it; `media:ExtractAudio` produces WAV and can consume an upstream
+audio to WAV or MP3 before using it; Media audio extraction produces WAV and can consume an upstream
 component's media output. Renaming a file or changing its declared media type is not conversion.
 
 Known imports are checked during declaration compilation. Future audio stays a graph input and is checked
@@ -68,12 +75,16 @@ responsible for any additional service-specific input limits.
 Every supplied image or video must explicitly declare `person-reference`: `true` if it contains
 a person, `false` otherwise. Classify the supplied material, not the requested result.
 
-```xml
-<seedance:ReferenceVideo id="take" model="mini" prompt={direction} duration="8">
-  <seedance:Reference image={presenter.image} person-reference="true"/>
-  <seedance:Reference video={presenter.video} person-reference="true"/>
-  <seedance:Reference image={room.image} person-reference="false"/>
-</seedance:ReferenceVideo>
+```svml
+seedance.reference-video {
+  id: take
+  model: mini
+  prompt: @direction
+  duration: 8
+  Reference "presenter-image" { image: @presenter-image person-reference: true }
+  Reference "presenter-video" { video: @presenter-video person-reference: true }
+  Reference "room" { image: @room-image person-reference: false }
+}
 ```
 
 Missing or non-boolean declarations are rejected; there is no default or automatic face detection.
@@ -89,10 +100,17 @@ frame is supplied, `last-frame-person-reference`. A last-frame classification re
 
 These forms apply to `standard`, `fast`, `mini` and `2.5`. For example:
 
-```xml
-<seedance:FrameVideo id="turn" model="fast" prompt={direction} duration="5"
-  first-frame={presenter.image} first-frame-person-reference="true"
-  last-frame={empty-room.image} last-frame-person-reference="false"/>
+```svml
+seedance.frame-video {
+  id: turn
+  model: fast
+  prompt: @direction
+  duration: 5
+  first-frame: @presenter-image
+  first-frame-person-reference: true
+  last-frame: @empty-room-image
+  last-frame-person-reference: false
+}
 ```
 
 Inspect the selected video excerpt, not only its opening frame. An empty room stays `false` when

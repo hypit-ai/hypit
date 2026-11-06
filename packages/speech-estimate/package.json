@@ -16,7 +16,6 @@
   },
   "devDependencies": {
     "@hypit/hypit": "workspace:*",
-    "@hypit/recipe": "workspace:*",
     "@hypit/text": "workspace:*"
   }
 }

@@ -8,9 +8,10 @@ subgraphs without making declaration order semantic. The linker resolves Host-ow
 bindings, derives occurrence-local temporal Domains and exact Maps, then emits one fully validated
 `AudiovisualProgram`.
 
-The package deliberately does not parse HCL or XML and contains no Track, lane, frame clock, Script,
-Speech, Runtime, Result, Renderer or Studio type. A future textual or block Frontend should produce this
-same Author Spec rather than compiling directly to AVIR or Kernel Graph data.
+The package deliberately does not parse SVML Block or XML and contains no Track, lane, frame clock, Script,
+Speech, Runtime, Result, Renderer or Studio type. Its package-owned `Program` declaration compiler consumes
+syntax-neutral Author Declarations and produces this same Author Spec plus the existing fixed Graph Fragment;
+`@hypit/svml` owns parsing and lossless writeback.
 
 Media, generated material, project components and nested audiovisual Programmes are not different author
 node categories here. Their owners resolve each one to a `ProgramSource`; the Author Spec gives that
@@ -34,17 +35,91 @@ unequal audiovisual extent likewise requires an explicit duration. Each selected
 clock-free exact relation which resolves only after the real Source domain exists. Chained NLE gestures
 collapse into that occurrence relation; they never publish another Source or PreparedMedia value.
 
+One parent-free `AudiovisualAuthorOccurrenceUse` now closes the actual Source, its local Domain, selected
+output Maps, active range and start before a Programme Domain exists. It publishes `end` and local-position
+projections as ordinary exact values. Any later relation may consume those values, including the relation
+that creates the Programme Domain; only afterward does a separate operation attach that finite parent and
+seal the resolved Occurrence.
+
+Occurrence time binding has three explicit forms:
+
+- `source` binds a consumer output to one target output's source domain and reuses its complete selected
+  `TemporalMap`; this is the ordinary Caption-over-video case and preserves trim, slip, retime, reverse,
+  hold and loop.
+- `occurrence` gives the consumer the target occurrence's local domain and placement, with identity mapping
+  for compatible consumer signals; this is useful for component state defined directly over another
+  occurrence rather than one selected source output.
+- `event` takes a domain-bearing local event set, computes its bounded preimage through a selected output
+  Map, requires exactly one sided point, and uses the projected Programme position plus an optional offset.
+  Zero, multiple and hold-region solutions fail instead of hiding a matching policy.
+
+```svml
+time { bound: source to: @occurrence.video.picture }
+time { bound: occurrence to: @occurrence.scene }
+time {
+  bound: event
+  through: @occurrence.video.picture
+  event: @unit-two-start
+  require: unique
+  offset: 250ms
+}
+```
+
+The event form also supports a semantic second-level follow without making semantics special: a matcher,
+Caption package, tracker, or file adapter may publish local events; a visible component then follows one
+event through an already placed occurrence. The author layer knows only domains, Maps, preimages and the
+consumer's explicit cardinality requirement.
+
+These operations know neither media provenance nor caption semantics. A component instance remains one
+parent Source use and one parent Occurrence unless the author explicitly creates more instances; its internal
+cues, rectangles and animation states are not expanded into parent AuthorGraph or NLE objects.
+
+For a closed Programme, `resolveAudiovisualNleSubject` owns the reverse authoring join for
+`<programme>.occurrence.<name>.<output>`. It follows the occurrence's authored `source` reference to the
+Programme `source` child and then reads that child's exact provenance edge. It never searches for a matching
+ProgramSource value or assumes a component package. Signal endpoints additionally return the factual
+Occurrence-to-Source `TemporalMap`; constant endpoints correctly have no temporal Map.
+
+The join is available in two phases. `locateAudiovisualNleSubject` resolves the owner edge before Programme
+execution, allowing projector outputs to join the same finite Build selection. After closure,
+`realizeAudiovisualNleSubject` reads only the selected occurrence output and adds its factual Map. The
+one-call resolver remains a convenience for an already closed Programme.
+
+An Operator Control use has a separate syntax-neutral `AudiovisualAuthorControlBinding`. It may follow the
+Programme, one Occurrence, or one selected Source output; alternatively an exact author relation is resolved
+from the Programme domain into the Operator-owned Control domain. A factual `TemporalMap` may be supplied
+directly or through an ordinary future typed graph value. The author package owns only this use relation:
+Filter, Transition, Gain and project packages continue to own their Control value, interpolation and Operator
+programme. There is no central Keyframe declaration or Control registry in AVIR.
+
 The vertical fixture authors generated A-roll, material B-roll and a project motion component, then sends
 the compiled Programme through the existing HTML Picture and continuous Audio terminal adapters. No
-terminal-specific field or compatibility representation is added to the Author Spec.
+terminal-specific field or compatibility representation is added to the Author Spec. Its fixed AuthorGraph
+also sends real `PictureFilterControl` and `AudioGainControl` Records through the Producers owned by
+`@hypit/picture-filter` and `@hypit/audio-gain`, and sends a Transition Spec plus Control Domain through
+`@hypit/picture-transition`. The resulting opaque Operators enter the Programme, where the Transition's
+`progress` use closes from an exact author relation.
+This is the complete vertical ownership seam: AVIR does not decode any owner value and the owner packages
+do not create Occurrences, Programme structure or author identities.
 
-`compileAudiovisualAuthorSpec()` is the finite closing function, not a second unknown-value system. The
-package now exposes `AudiovisualAuthorSpec`, local binding, binding-set and resolved Programme protocol Types
-plus ordinary `create-bindings`, `append-source`, `append-picture-operator`, `append-audio-operator` and
-`close-program` Producers. `createAudiovisualAuthorFragment()` expands any static number of Source and Operator
-inputs into that fold. Every input is a normal `GraphValueRef`, so it may name an authored Record, a public
-output or a future Operation result whose `TypeRef` is known before execution. The closer still receives only
-actual resolved values.
+Programme authoring no longer depends on one opaque finite closer. Package-owned fragments now expose the
+forward chain as ordinary typed Producers: infer or accept use duration, resolve a parent-free use, project
+its end, create the Programme Domain from any explicit boundary value, close each Occurrence against that
+Domain, fold the resolved Occurrences, and finally compile only the Picture/Audio graph. Every edge is a normal
+`GraphValueRef`, so Kernel planning detects missing values and cycles without a Timeline-specific finalize
+phase or an `end` special case. `compileAudiovisualAuthorSpec()` remains a pure convenience API and performs
+the same construction steps without publishing a second Graph protocol path. The former aggregate
+`close-program` Producer and Source-binding fold have been removed.
+
+Bindings remain only where a variable number of values must enter a fixed fragment, such as package-owned
+Operators, reconstructions and authored Maps. Source, start, duration, Programme Domain and closed Occurrence
+are explicit typed ports in the new path; they are not hidden in one mutable binding set.
+
+The package-owned Block declaration now exposes the same algebra rather than a reduced NLE dialect:
+Picture bindings cover use, transparent, over, apply, restrict, crop and typed Spatial Map remap; Audio
+bindings cover use, silence, mix, apply and restrict. Occurrence outputs own exact temporal relations and
+optional package-owned reconstruction. Control bindings may consume a future typed Temporal Map. These are
+declaration mappings to existing values, not new root transforms or parser concepts.
 
 The integration deliberately adds no temporal-only `ExtentReference`, nullable Domain or partially filled
 Source. Its graph fixture proves that changing a generation request's duration preference leaves the

@@ -9,7 +9,6 @@ import {
 import type {
   ExactTemporalValue,
   LocalTemporalDomain,
-  TemporalMap,
   TemporalRange,
 } from "@hypit/temporal/algebra";
 import { isTypeRef, sameType } from "@hypit/protocol";
@@ -22,13 +21,11 @@ import type {
   Occurrence,
   OccurrencePlacement,
   ProgramSource,
-  SplitOccurrenceOptions,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
-
 function assertIdentity(value: string, label: string): void {
   assert(/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(value), `${label} is invalid.`);
 }
@@ -126,77 +123,4 @@ export function assertOccurrence(value: Occurrence): void {
 export function sealOccurrence(value: Occurrence): Occurrence {
   assertOccurrence(value);
   return structuredClone(value);
-}
-
-/** Move without changing the active local range or any Source output Mapping. */
-export function moveOccurrence(value: Occurrence, start: ExactTemporalValue): Occurrence {
-  assertOccurrence(value);
-  assertExactTemporalValue(start, "Occurrence move start");
-  return sealOccurrence({
-    ...structuredClone(value),
-    placement: { ...structuredClone(value.placement), start: structuredClone(start) },
-  });
-}
-
-/**
- * Select a new active local range while preserving the parent position of every retained local point.
- * Extending the leading edge before parent zero or beyond either finite domain is rejected.
- */
-export function trimOccurrence(value: Occurrence, active: TemporalRange): Occurrence {
-  assertOccurrence(value);
-  assertRange(active, value.domain, "Occurrence trim range");
-  const leadingDelta = subtractExactTemporalValues(active.start, value.placement.active.start);
-  return sealOccurrence({
-    ...structuredClone(value),
-    placement: {
-      ...structuredClone(value.placement),
-      start: addExactTemporalValues(value.placement.start, leadingDelta),
-      active: structuredClone(active),
-    },
-  });
-}
-
-/** Replace only one occurrence-local to Source-output-local relation. */
-export function remapOccurrence(value: Occurrence, output: string, mapping: TemporalMap): Occurrence {
-  assertOccurrence(value);
-  assertIdentity(output, "Occurrence remap output");
-  const selection = value.selections[output];
-  assert(selection !== undefined, `Occurrence ${value.id} does not select Source output ${output}.`);
-  assert(selection.kind === "signal", `Occurrence ${value.id}.${output} is constant and cannot be remapped.`);
-  assertTemporalMap(mapping);
-  return sealOccurrence({
-    ...structuredClone(value),
-    selections: {
-      ...structuredClone(value.selections),
-      [output]: { ...structuredClone(selection), mapping: structuredClone(mapping) },
-    },
-  });
-}
-
-/** Split one active use into two explicitly named uses without copying its Source or Mapping semantics. */
-export function splitOccurrence(
-  value: Occurrence,
-  options: SplitOccurrenceOptions,
-): readonly [Occurrence, Occurrence] {
-  assertOccurrence(value);
-  assertIdentity(options.leftId, "Split left Occurrence id");
-  assertIdentity(options.rightId, "Split right Occurrence id");
-  assert(options.leftId !== options.rightId, "Split Occurrence ids must be distinct.");
-  assertExactTemporalValue(options.at, "Occurrence split position");
-  assert(compareExactTemporalValues(options.at, value.placement.active.start) > 0
-    && compareExactTemporalValues(options.at, value.placement.active.end) < 0,
-  "Occurrence split position must lie inside its active local range.");
-
-  const left = trimOccurrence(value, {
-    start: value.placement.active.start,
-    end: options.at,
-  });
-  const right = trimOccurrence(value, {
-    start: options.at,
-    end: value.placement.active.end,
-  });
-  return [
-    sealOccurrence({ ...left, id: options.leftId }),
-    sealOccurrence({ ...right, id: options.rightId }),
-  ];
 }

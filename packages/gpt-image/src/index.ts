@@ -5,14 +5,14 @@ import {
 } from "@hypit/generation/model-fields";
 import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
-import { rasterTransformModuleRef } from "@hypit/raster-transform";
+import { promptTypes } from "@hypit/hypit/prompt";
 
 export const gptImageModuleRef = { name: "@hypit/gpt-image", version: "1" } as const;
 
 export const gptImage2Fields: ModelFieldTable = defineModelFields({
   model: "gpt-image-2",
   fields: [
-    { name: "prompt", value: { kind: "text", maxChars: 20_000 }, minItems: 1, maxItems: 1 },
+    { name: "prompt", value: { kind: "text", inputType: promptTypes.prompt, maxChars: 20_000 }, minItems: 1, maxItems: 1 },
     {
       name: "aspectRatio",
       value: {
@@ -71,21 +71,3 @@ export const gptImageDefinition = {
   ...gptImageBaseDefinition,
   manifest: gptImageManifest,
 };
-
-/** Optional authoring submodule; the exact GPT model remains independent of post-processing. */
-export const gptImageCleanModuleRef = { name: "@hypit/gpt-image/clean", version: "1" } as const;
-
-export const gptImageCleanManifest = {
-  format: "hypit.module@1" as const,
-  name: gptImageCleanModuleRef.name,
-  version: gptImageCleanModuleRef.version,
-  dependencies: [
-    gptImageModuleRef,
-    rasterTransformModuleRef,
-  ],
-  types: [],
-  capabilities: [],
-  producers: [],
-};
-export { gptImageCleanupProgram } from "./cleanup-program.js";
-export { createGptImageCleanFragment } from "./fragment.js";

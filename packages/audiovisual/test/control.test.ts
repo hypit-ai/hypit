@@ -20,10 +20,8 @@ import {
 import {
   evaluateAudiovisualProgramAt,
   evaluateTemporalControl,
-  moveProgramOccurrence,
   pictureType,
   pointwiseOperatorTemporalSupport,
-  remapProgramOccurrence,
   sealAudiovisualProgram,
   sealOccurrence,
   sealSpatialMapControl,
@@ -75,14 +73,14 @@ const source: ProgramSource = { id: "title", outputs: { picture: {
   spatialDomain: sourceSpace,
 } } };
 
-function occurrence(sourceAtStart = seconds(5)): Occurrence {
+function occurrence(sourceAtStart = seconds(5), start = seconds(2)): Occurrence {
   return sealOccurrence({
     id: "title-use",
     source,
     domain: occurrenceTime,
     placement: {
       parent: mainTime,
-      start: seconds(2),
+      start,
       active: { start: seconds(0), end: seconds(6) },
     },
     selections: { picture: { kind: "signal", mapping: temporalMap(occurrenceTime, sourceTime, sourceAtStart) } },
@@ -148,12 +146,13 @@ test("occurrence-local motion follows Move and ignores source Slip", () => {
   const original = program(control(occurrenceTime), { kind: "occurrence", occurrence: "title-use" });
   assert.equal(evaluatedTx(original, seconds(5)), -300);
 
-  const moved = moveProgramOccurrence(original, "title-use", seconds(4));
+  const moved = program(control(occurrenceTime),
+    { kind: "occurrence", occurrence: "title-use" }, occurrence(seconds(5), seconds(4)));
   assert.equal(evaluatedTx(moved, seconds(7)), -300);
   assert.equal(evaluatedTx(moved, seconds(3)), undefined);
 
-  const slipped = remapProgramOccurrence(original, "title-use", "picture",
-    temporalMap(occurrenceTime, sourceTime, seconds(7)));
+  const slipped = program(control(occurrenceTime),
+    { kind: "occurrence", occurrence: "title-use" }, occurrence(seconds(7)));
   assert.equal(evaluatedTx(slipped, seconds(5)), -300);
 });
 
@@ -163,11 +162,12 @@ test("source-local motion follows Slip while Move only relocates its occurrence"
   });
   assert.equal(evaluatedTx(original, seconds(5)), -240);
 
-  const slipped = remapProgramOccurrence(original, "title-use", "picture",
-    temporalMap(occurrenceTime, sourceTime, seconds(7)));
+  const slipped = program(control(sourceTime),
+    { kind: "source", occurrence: "title-use", output: "picture" }, occurrence(seconds(7)));
   assert.equal(evaluatedTx(slipped, seconds(5)), -300);
 
-  const moved = moveProgramOccurrence(original, "title-use", seconds(4));
+  const moved = program(control(sourceTime),
+    { kind: "source", occurrence: "title-use", output: "picture" }, occurrence(seconds(5), seconds(4)));
   assert.equal(evaluatedTx(moved, seconds(7)), -240);
 });
 
@@ -175,12 +175,11 @@ test("program-local motion stays at its absolute parent position", () => {
   const original = program(control(mainTime), { kind: "program" });
   assert.equal(evaluatedTx(original, seconds(5)), -300);
 
-  const moved = moveProgramOccurrence(original, "title-use", seconds(4));
+  const moved = program(control(mainTime), { kind: "program" }, occurrence(seconds(5), seconds(4)));
   assert.equal(evaluatedTx(moved, seconds(5)), -300);
   assert.equal(evaluatedTx(moved, seconds(7)), -420);
 
-  const slipped = remapProgramOccurrence(original, "title-use", "picture",
-    temporalMap(occurrenceTime, sourceTime, seconds(7)));
+  const slipped = program(control(mainTime), { kind: "program" }, occurrence(seconds(7)));
   assert.equal(evaluatedTx(slipped, seconds(5)), -300);
 });
 
@@ -202,7 +201,9 @@ test("every Control binding closes as one Programme-to-Control Temporal Map", ()
   }, sourceBound);
   assert.deepEqual(evaluateTemporalMap(sourceMap, seconds(5), "after")?.position, seconds(8));
 
-  const moved = moveProgramOccurrence(sourceBound, "title-use", seconds(4));
+  const moved = program(control(sourceTime), {
+    kind: "source", occurrence: "title-use", output: "picture",
+  }, occurrence(seconds(5), seconds(4)));
   const movedMap = temporalControlBindingMap(sourceTime, {
     kind: "source", occurrence: "title-use", output: "picture",
   }, moved);

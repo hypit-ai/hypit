@@ -1,13 +1,14 @@
 import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
 import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+import { promptTypes } from "@hypit/hypit/prompt";
 
 export const seedreamModuleRef = { name: "@hypit/seedream", version: "1" } as const;
 
 export const seedream5LiteFields: ModelFieldTable = defineModelFields({
   model: "seedream-5-lite",
   fields: [
-    { name: "prompt", value: { kind: "text", maxChars: 3_000 }, minItems: 1, maxItems: 1 },
+    { name: "prompt", value: { kind: "text", inputType: promptTypes.prompt, maxChars: 3_000 }, minItems: 1, maxItems: 1 },
     {
       name: "aspectRatio",
       value: { kind: "enum", values: ["1:1", "4:3", "3:4", "16:9", "9:16", "2:3", "3:2", "21:9"] },

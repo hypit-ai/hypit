@@ -1,0 +1,15 @@
+{
+  "name": "@hypit/svml",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@hypit/author": "workspace:^0.1.0",
+    "@hypit/protocol": "workspace:^0.1.0",
+    "@hypit/source": "workspace:^0.1.0"
+  }
+}

@@ -30,10 +30,23 @@ export const temporalTypes = {
   frameSpan: { module: temporalModuleRef, name: "FrameSpan" },
   samplingGrid: { module: temporalModuleRef, name: "TemporalSamplingGrid" },
   map: { module: temporalModuleRef, name: "TemporalMap" },
+  mapPoint: { module: temporalModuleRef, name: "TemporalMapPoint" },
+  mapRegion: { module: temporalModuleRef, name: "TemporalMapRegion" },
+  mapPreimage: { module: temporalModuleRef, name: "TemporalMapPreimage" },
+  regionSet: { module: temporalModuleRef, name: "TemporalMapRegionSet" },
   localDomain: { module: temporalModuleRef, name: "LocalTemporalDomain" },
 } satisfies Record<string, TypeRef>;
 export const temporalProducers = {
   extentFromDomain: { module: temporalModuleRef, name: "extent-from-domain" },
+  exactValueFromExtent: { module: temporalModuleRef, name: "exact-value-from-extent" },
+  addExactValues: { module: temporalModuleRef, name: "add-exact-values" },
+  pointRegion: { module: temporalModuleRef, name: "point-region" },
+  preimageMap: { module: temporalModuleRef, name: "preimage-map" },
+  uniquePreimagePoint: { module: temporalModuleRef, name: "unique-preimage-point" },
+  pointPosition: { module: temporalModuleRef, name: "point-position" },
+  pointRegionSet: { module: temporalModuleRef, name: "point-region-set" },
+  preimageMapRegions: { module: temporalModuleRef, name: "preimage-map-regions" },
+  uniqueRegionSetPoint: { module: temporalModuleRef, name: "unique-region-set-point" },
 } satisfies Record<string, ProducerRef>;
 export const temporalManifest: ModuleManifest = {
   format: "hypit.module@1",
@@ -47,6 +60,10 @@ export const temporalManifest: ModuleManifest = {
     temporalTypes.frameSpan.name,
     temporalTypes.samplingGrid.name,
     temporalTypes.map.name,
+    temporalTypes.mapPoint.name,
+    temporalTypes.mapRegion.name,
+    temporalTypes.mapPreimage.name,
+    temporalTypes.regionSet.name,
     temporalTypes.localDomain.name,
   ],
   capabilities: [],
@@ -54,6 +71,37 @@ export const temporalManifest: ModuleManifest = {
     { name: temporalProducers.extentFromDomain.name,
       inputs: [{ name: "domain", type: temporalTypes.localDomain }],
       result: { kind: "output" as const, name: "extent", type: temporalTypes.extent } },
+    { name: temporalProducers.exactValueFromExtent.name,
+      inputs: [{ name: "extent", type: temporalTypes.extent }],
+      result: { kind: "output" as const, name: "value", type: temporalTypes.exactValue } },
+    { name: temporalProducers.addExactValues.name,
+      inputs: [{ name: "left", type: temporalTypes.exactValue },
+        { name: "right", type: temporalTypes.exactValue }],
+      result: { kind: "output" as const, name: "value", type: temporalTypes.exactValue } },
+    { name: temporalProducers.pointRegion.name,
+      inputs: [{ name: "point", type: temporalTypes.mapPoint }],
+      result: { kind: "output" as const, name: "region", type: temporalTypes.mapRegion } },
+    { name: temporalProducers.preimageMap.name,
+      inputs: [{ name: "map", type: temporalTypes.map },
+        { name: "region", type: temporalTypes.mapRegion }],
+      result: { kind: "output" as const, name: "preimage", type: temporalTypes.mapPreimage } },
+    { name: temporalProducers.uniquePreimagePoint.name,
+      inputs: [{ name: "preimage", type: temporalTypes.mapPreimage }],
+      result: { kind: "output" as const, name: "point", type: temporalTypes.mapPoint } },
+    { name: temporalProducers.pointPosition.name,
+      inputs: [{ name: "point", type: temporalTypes.mapPoint }],
+      result: { kind: "output" as const, name: "position", type: temporalTypes.exactValue } },
+    { name: temporalProducers.pointRegionSet.name,
+      inputs: [{ name: "domain", type: temporalTypes.localDomain },
+        { name: "point", type: temporalTypes.mapPoint }],
+      result: { kind: "output" as const, name: "regions", type: temporalTypes.regionSet } },
+    { name: temporalProducers.preimageMapRegions.name,
+      inputs: [{ name: "map", type: temporalTypes.map },
+        { name: "regions", type: temporalTypes.regionSet }],
+      result: { kind: "output" as const, name: "preimage", type: temporalTypes.regionSet } },
+    { name: temporalProducers.uniqueRegionSetPoint.name,
+      inputs: [{ name: "regions", type: temporalTypes.regionSet }],
+      result: { kind: "output" as const, name: "point", type: temporalTypes.mapPoint } },
   ],
 };
 export const temporalDependency = temporalModuleRef;
@@ -130,4 +178,16 @@ export const temporalMapSchema: ValueSchema = object({
     pieces: { schema: { kind: "array", items: temporalMapPieceSchema } },
   }) } },
 });
+export const temporalMapPointSchema: ValueSchema = object({
+  position: { schema: exactTemporalValueSchema },
+  side: { schema: { kind: "string", enum: ["before", "after"] } },
+});
+export const temporalMapRegionSchema: ValueSchema = object({
+  start: { schema: temporalMapPointSchema }, end: { schema: temporalMapPointSchema },
+});
+export const temporalMapPreimageSchema: ValueSchema = object({
+  domain: { schema: localTemporalDomainSchema },
+  regions: { schema: { kind: "array", items: temporalMapRegionSchema } },
+});
+export const temporalMapRegionSetSchema = temporalMapPreimageSchema;
 export const temporalDurationSchema: ValueSchema = duration;

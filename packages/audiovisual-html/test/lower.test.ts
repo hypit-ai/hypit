@@ -13,8 +13,7 @@ import {
   type ProgramSource,
 } from "@hypit/audiovisual";
 import {
-  programSourceFromStillPicture,
-  resolveStillPictureSource,
+  programSourceFromPreparedMedia,
 } from "@hypit/audiovisual-media";
 import {
   assertHtmlProgram,
@@ -22,7 +21,7 @@ import {
   htmlVisual,
   selectHtmlVideoSources,
 } from "@hypit/html-program";
-import { prepareMedia, SRGB_STRAIGHT_PICTURE } from "@hypit/media";
+import { prepareMedia } from "@hypit/media";
 import {
   exactTemporalValue,
   sealLocalTemporalDomain,
@@ -48,7 +47,6 @@ import {
   preparedMediaHtmlSource,
   lowerAudiovisualPictureProgramToHtmlProgram,
   visualProgramHtmlSource,
-  stillPictureHtmlSource,
 } from "../src/index.js";
 
 const seconds = (value: number): ExactTemporalValue => exactTemporalValue({
@@ -365,13 +363,21 @@ test("terminal lowering refuses unsupported Operator programmes and closes an ex
 });
 
 test("a constant Picture Source renders for its Occurrence without a fabricated Source clock", () => {
-  const picture = resolveStillPictureSource({ id: "poster", space: pictureSpace }, {
-    kind: "blob",
-    resource: fixtureResource("audiovisual-html:poster"),
-    size: 1,
-    mediaType: "image/png",
-  }, SRGB_STRAIGHT_PICTURE);
-  const still = programSourceFromStillPicture(picture);
+  const media = prepareMedia({
+    id: "poster",
+    source: { kind: "blob", resource: fixtureResource("audiovisual-html:poster"),
+      size: 1, mediaType: "image/png" },
+    inspection: { streams: [{
+      kind: "video", index: 0, codecName: "png",
+      disposition: { default: true, attachedPicture: false }, decodedUnitCount: 1,
+      width: 100, height: 100, sampleAspectRatio: { numerator: 1, denominator: 1 },
+      rotationDegrees: 0, picture: { colorPrimaries: "bt709", colorTransfer: "srgb",
+        colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" },
+    }] },
+    selection: { videoStreamIndex: 0, picture: { colorPrimaries: "bt709", colorTransfer: "srgb",
+      colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } },
+  });
+  const still = programSourceFromPreparedMedia(media);
   const use = sealOccurrence({
     id: "poster-use",
     source: still,
@@ -388,12 +394,14 @@ test("a constant Picture Source renders for its Occurrence without a fabricated 
     domain: programTime,
     pictureDomain: pictureSpace,
     occurrences: { [use.id]: use },
-    picture: { root: "poster", nodes: {
+    picture: { root: "placed", nodes: {
       poster: { kind: "use", occurrence: use.id, output: "picture" },
+      placed: { kind: "remap", input: "poster",
+        mapping: map(pictureSpace, still.outputs.picture!.spatialDomain!) },
     } },
   });
   const document = compileAudiovisualHtmlProgram(program, { sources: [
-    stillPictureHtmlSource(picture),
+    preparedMediaHtmlSource(media),
   ] }, htmlOutput("poster-html"));
   assert.equal(document.frameCount, 2);
   assert.equal(selectHtmlVideoSources(document).length, 0);

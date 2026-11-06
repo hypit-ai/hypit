@@ -1,20 +1,23 @@
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import { projectVisualDeliverySpec, verifyMediaDeliverySpec, verifyMediaDomainSpec, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyPictureInterpretation, verifyPreparedMedia, verifyTimelineVisual, verifyTimelineAudio, verifyVisualDeliverySpec } from "./identity.js";
-import type { InspectMediaNeed, MediaDomainSpec, MediaInspection, MediaSelectionRequest, PreparedMedia } from "./types.js";
+import type { AudioExtractionRequest, ExtractAudioNeed, ExtractFrameNeed, FrameExtractionRequest, InspectMediaNeed, MediaDomainSpec, MediaInspection, MediaSelectionRequest, PreparedMedia } from "./types.js";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { Value } from "@hypit/hypit/protocol";
 import { mediaProducers } from "./manifest.js";
 import { mediaTypes } from "./manifest.js";
 import { prepareMedia } from "./prepared.js";
 import { assertBlobRef } from "@hypit/hypit/protocol";
-import { assertCompositableSurfaceRef, assertFontArtifactRef, assertFontStackRef } from "./render.js";
-import { selectMediaStreams, verifyMediaSelectionRequest } from "./selection.js";
+import { assertFontArtifactRef, assertFontStackRef } from "./render.js";
+import { selectAudioStream, selectMediaStreams, selectVideoStream, verifyMediaSelectionRequest } from "./selection.js";
+import { verifyAudioExtractionRequest, verifyFrameExtractionRequest } from "./extraction.js";
 function valueOf(value: Value | undefined, subject: string): unknown { if (value === undefined) throw new Error(`${subject} is missing`); return value; }
 export const mediaComponent = {
   refinements: [
     { type: mediaTypes.inspection, handler: ({ value }) => verifyMediaInspection(valueOf(value, "MediaInspection")) },
     { type: mediaTypes.selectionRequest, handler: ({ value }) => verifyMediaSelectionRequest(valueOf(value, "MediaSelectionRequest")) },
+    { type: mediaTypes.audioExtractionRequest, handler: ({ value }) => verifyAudioExtractionRequest(valueOf(value, "AudioExtractionRequest")) },
+    { type: mediaTypes.frameExtractionRequest, handler: ({ value }) => verifyFrameExtractionRequest(valueOf(value, "FrameExtractionRequest")) },
     { type: mediaTypes.streamSelection, handler: ({ value }) => verifyMediaStreamSelection(valueOf(value, "MediaStreamSelection")) },
     { type: mediaTypes.prepared, handler: ({ value }) => verifyPreparedMedia(valueOf(value, "PreparedMedia")) },
     { type: mediaTypes.pictureInterpretation, handler: ({ value }) => verifyPictureInterpretation(valueOf(value, "PictureInterpretation")) },
@@ -30,9 +33,6 @@ export const mediaComponent = {
     { type: mediaTypes.fontStack, handler: ({ value }) => assertFontStackRef(
       valueOf(value, "FontStackRef") as Parameters<typeof assertFontStackRef>[0],
     ) },
-    { type: mediaTypes.compositableSurface, handler: ({ value }) => assertCompositableSurfaceRef(
-      valueOf(value, "CompositableSurfaceRef") as Parameters<typeof assertCompositableSurfaceRef>[0],
-    ) },
   ],
   producers: [
     { producer: mediaProducers.resource, handler: ({ inputs }) => {
@@ -44,6 +44,36 @@ export const mediaComponent = {
       const source = valueOf(inputs.source!.value, "Media inspection source");
       assertBlobRef(source, "Media inspection source");
       const need: InspectMediaNeed = { source };
+      return { kind: "need", constraints: canonicalize(need) };
+    } },
+    { producer: mediaProducers.extractAudio, handler: ({ inputs }) => {
+      const source = valueOf(inputs.source!.value, "Audio extraction source");
+      assertBlobRef(source, "Audio extraction source");
+      const inspection = valueOf(inputs.inspection!.value, "MediaInspection") as MediaInspection;
+      const request = valueOf(inputs.request!.value, "AudioExtractionRequest") as AudioExtractionRequest;
+      verifyMediaInspection(inspection);
+      verifyAudioExtractionRequest(request);
+      const selected = selectAudioStream(inspection, request.audio);
+      const need: ExtractAudioNeed = { source, streamIndex: selected.index };
+      return { kind: "need", constraints: canonicalize(need) };
+    } },
+    { producer: mediaProducers.extractFrame, handler: ({ inputs }) => {
+      const source = valueOf(inputs.source!.value, "Frame extraction source");
+      assertBlobRef(source, "Frame extraction source");
+      const inspection = valueOf(inputs.inspection!.value, "MediaInspection") as MediaInspection;
+      const request = valueOf(inputs.request!.value, "FrameExtractionRequest") as FrameExtractionRequest;
+      verifyMediaInspection(inspection);
+      verifyFrameExtractionRequest(request);
+      const selected = selectVideoStream(inspection, request.video);
+      if (request.at.kind === "frame" && request.at.index >= selected.decodedUnitCount) {
+        throw new Error(`Frame ${request.at.index} is outside the selected stream (${selected.decodedUnitCount} frames)`);
+      }
+      const need: ExtractFrameNeed = {
+        source,
+        streamIndex: selected.index,
+        sourceFrameCount: selected.decodedUnitCount,
+        at: request.at,
+      };
       return { kind: "need", constraints: canonicalize(need) };
     } },
     { producer: mediaProducers.select, handler: ({ inputs }) => {
@@ -67,6 +97,7 @@ export const mediaComponent = {
     { producer: mediaProducers.localDomain, handler: ({ inputs }) => {
       const media = valueOf(inputs.media!.value, "PreparedMedia") as PreparedMedia;
       verifyPreparedMedia(media);
+      if (media.domain === undefined) throw new Error("PreparedMedia has no temporal domain");
       return { kind: "output", value: canonicalize(media.domain) };
     } },
     { producer: mediaProducers.visualDelivery, handler: ({ inputs }) => {

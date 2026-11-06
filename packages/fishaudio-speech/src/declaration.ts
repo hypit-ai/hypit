@@ -64,7 +64,7 @@ export const fishAudioVoiceDesignAuthorDeclaration: AuthorDeclarationCompiler = 
     return fieldModelAuthorComponent({ id, range: declaration.range, endpoint,
       draft: sealFishAudioSpeechRequestDraft("voice-design-1", { voiceDescription: [body(declaration, true)!] }),
       fragment: createFishAudioSpeechAudioFragment(endpoint, [], [{ name: "speech", field: "text" }]),
-      outputs: { audio: `${id}.reference` }, text: [{ name: "speech", field: "text", source: speech }] });
+      outputs: { audio: `${id}.reference` }, textFields: [{ name: "speech", field: "text", source: speech }] });
   },
 };
 
@@ -94,7 +94,7 @@ export const fishAudioVoiceCloneAuthorDeclaration: AuthorDeclarationCompiler = {
       fragment: createFishAudioSpeechAudioFragment(endpoint, [{ name: "voice", field: "voiceReference" }],
         [{ name: "speech", field: "text" }]),
       outputs: { audio: `${id}.audio` },
-      text: [{ name: "speech", field: "text", source: speech }],
+      textFields: [{ name: "speech", field: "text", source: speech }],
       artifacts: [{ name: "voice", field: "voiceReference", role: "audio", source: voice }] });
   },
 };

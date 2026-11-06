@@ -27,7 +27,7 @@ export type {
 export {
   artifactBindingSchema,
   bindModelArtifact,
-  bindModelText,
+  bindModelTextField,
   finalizeModelFieldBuilder,
   modelFieldBuilderSchema,
   modelFieldRequestSchema,
@@ -45,7 +45,7 @@ export {
   createFieldModelPrimaryFragment,
   defineFieldModelModule,
   modelArtifactInputNames,
-  modelTextInputName,
+  modelTextFieldInputName,
   standardGenerationResults,
 } from "./model.js";
 export type {
@@ -54,7 +54,7 @@ export type {
   ModelArtifactInput,
   FieldModelFragmentExports,
   FieldModelModule,
-  ModelTextInput,
+  ModelTextFieldInput,
   FieldModelOperationSpec,
 } from "./model.js";
 export type {

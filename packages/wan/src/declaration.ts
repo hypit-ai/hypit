@@ -7,7 +7,7 @@ import {
 } from "@hypit/hypit/author";
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
-import { textTypes } from "@hypit/hypit/text";
+import { promptTypes } from "@hypit/hypit/prompt";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import {
   createFieldModelGenerationFragment,
@@ -73,7 +73,7 @@ function compiler(options: {
       summary: `Generates one or more images with ${options.endpoint.fields.model}.`,
       fields: [
         { name: "id", kind: "identifier", required: true, summary: "Names the generated image set." },
-        { name: "prompt", kind: "reference", required: true, accepts: [textTypes.text], summary: "Selects the generation prompt." },
+        { name: "prompt", kind: "reference", required: true, accepts: [promptTypes.prompt], summary: "Selects the generation Prompt." },
         { name: "resolution", kind: "literal", required: false, values: options.resolutions, summary: "Sets the output size band." },
         { name: "count", kind: "literal", required: false, summary: "Sets the number of requested images." },
         { name: "image-set", kind: "literal", required: false, values: ["true", "false"], summary: "Requests a coherent image set." },
@@ -95,7 +95,7 @@ function compiler(options: {
     async compile({ declaration, resolveReference }) {
       if (declaration.children.length > 9) throw new Error(`${options.endpoint.fields.model} accepts at most 9 reference images.`);
       const id = literal(declaration, "id");
-      const prompt = await reference(declaration, "prompt", textTypes.text, resolveReference);
+      const prompt = await reference(declaration, "prompt", promptTypes.prompt, resolveReference);
       const images: FieldModelAuthorArtifactInput[] = [];
       for (const child of declaration.children) {
         if (child.name !== "Reference") throw new Error(`${declaration.name} does not accept ${child.name}.`);
@@ -124,7 +124,7 @@ function compiler(options: {
           { result: "images", primary: "image" }),
         outputs: { images: `${id}.images`, image: `${id}.image` },
         artifacts: images,
-        text: [{ name: "prompt", field: "prompt", source: prompt }],
+        textFields: [{ name: "prompt", field: "prompt", source: prompt }],
       });
     },
   };
@@ -133,4 +133,3 @@ function compiler(options: {
 export const wanImageAuthorDeclaration = compiler({ declaration: "image", endpoint: wanEndpoints.image!, resolutions: ["1K", "2K"] });
 export const wanProImageAuthorDeclaration = compiler({ declaration: "pro-image", endpoint: wanEndpoints.pro!, resolutions: ["1K", "2K", "4K"] });
 export const wanAuthorDeclarations = [wanImageAuthorDeclaration, wanProImageAuthorDeclaration] as const;
-export const wanMarkupDeclarations = [{ name: "image", tag: "Image" }, { name: "pro-image", tag: "ProImage" }] as const;

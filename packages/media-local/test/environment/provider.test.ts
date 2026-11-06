@@ -17,8 +17,6 @@ import {
 import type { EndpointRegistration } from "@hypit/executor";
 import type { ImmediateEndpointHandler } from "@hypit/endpoint";
 import { installEndpoint } from "@hypit/endpoint";
-import { mediaExtractionCapabilities } from "@hypit/media-extraction";
-import { stillVideoCapabilities } from "@hypit/still-video";
 import { audioProgramCapabilities, audioProgramGraphFromMediaSources, sealAudioProgram } from "@hypit/audio-program";
 import type { AudioProgramGraph } from "@hypit/audio-program";
 import { audioGainControlProcess, audioGainProcess } from "@hypit/audio-gain";
@@ -298,7 +296,7 @@ test("local media Provider inspects moving picture, audio and attached picture w
     }));
     const prepared = prepareMedia({ id: "fixture", source, inspection, selection });
     assert.equal(prepared.source.resource, source.resource);
-    assert.equal(prepared.visual?.streamIndex, 0);
+    assert.equal(prepared.picture?.streamIndex, 0);
     assert.equal(prepared.audio?.streamIndex, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -353,7 +351,7 @@ test("local media Provider derives exact 16 kHz evidence from Prepared Media", {
   }
 });
 
-test("local media Provider extracts ordinary audio and frame Artifacts and renders still video", {
+test("local media Provider extracts ordinary audio and frame Artifacts", {
   skip: !hasMediaBinaries,
 }, async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-provider-media-ordinary-ops-"));
@@ -377,7 +375,7 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
     const audioIndex = inspection.streams.find((item) => item.kind === "audio")!.index;
     const extractedAudio = await executeArtifact(need(
       "need:extract-audio",
-      mediaExtractionCapabilities.audio,
+      mediaCapabilities.extractAudio,
       blobTypes.blob,
       canonicalize({
         source,
@@ -393,7 +391,7 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
       && !item.disposition.attachedPicture && item.decodedUnitCount >= 2)!;
     const extractedFrame = await executeArtifact(need(
       "need:extract-frame",
-      mediaExtractionCapabilities.frame,
+      mediaCapabilities.extractFrame,
       blobTypes.blob,
       canonicalize({
         source,
@@ -406,153 +404,6 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
     const frameInspection = await inspectArtifact(resources, extractedFrame);
     assert.equal(frameInspection.streams.find((item) => item.kind === "video")?.decodedUnitCount, 1);
 
-    const stillVideo = await executeArtifact(need(
-      "need:render-still-video",
-      stillVideoCapabilities.render,
-      blobTypes.blob,
-      canonicalize({
-        request: {
-          frameRate: { numerator: 30, denominator: 1 },
-          frameCount: 15,
-          segments: [{ startFrame: 0, endFrameExclusive: 15, source: extractedFrame }],
-        },
-      }),
-    ));
-    assert.equal(stillVideo.mediaType, "video/mp4");
-    const stillInspection = await inspectArtifact(resources, stillVideo);
-    assert.equal(stillInspection.streams.length, 1);
-    assert.equal(stillInspection.streams[0]?.kind, "video");
-    assert.equal(stillInspection.streams[0]?.kind === "video"
-      && stillInspection.streams[0].decodedUnitCount, 15);
-
-    const spread = await executeArtifact(need(
-      "need:render-still-spread",
-      stillVideoCapabilities.render,
-      blobTypes.blob,
-      canonicalize({
-        request: {
-          frameRate: { numerator: 30, denominator: 1 },
-          frameCount: 15,
-          segments: [
-            { startFrame: 0, endFrameExclusive: 10, source: extractedFrame },
-            { startFrame: 10, endFrameExclusive: 15, source: extractedFrame },
-          ],
-        },
-      }),
-    ));
-    const spreadInspection = await inspectArtifact(resources, spread);
-    assert.equal(spreadInspection.streams.length, 1);
-    assert.equal(spreadInspection.streams[0]?.kind === "video"
-      && spreadInspection.streams[0].decodedUnitCount, 15, "two pictures spread over the same frame count");
-    const twentyFourSpread = await executeArtifact(need(
-      "need:render-still-24fps-spread",
-      stillVideoCapabilities.render,
-      blobTypes.blob,
-      canonicalize({
-        request: {
-          frameRate: { numerator: 24, denominator: 1 },
-          frameCount: 144,
-          segments: [
-            { startFrame: 0, endFrameExclusive: 24, source: extractedFrame },
-            { startFrame: 24, endFrameExclusive: 96, source: extractedFrame },
-            { startFrame: 96, endFrameExclusive: 144, source: extractedFrame },
-          ],
-        },
-      }),
-    ));
-    const twentyFourInspection = await inspectArtifact(resources, twentyFourSpread);
-    assert.equal(twentyFourInspection.streams[0]?.kind === "video"
-      && twentyFourInspection.streams[0].decodedUnitCount, 144,
-      "three Still segments at 24 fps must preserve the complete frame domain");
-  } finally {
-    await rm(root, { recursive: true, force: true }).catch(() => {});
-  }
-});
-
-test("StillVideo converts authored RGB pictures to tagged BT.709 in both render paths", {
-  skip: !hasMediaBinaries,
-}, async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-provider-media-bt709-"));
-  try {
-    const width = 1280;
-    const height = 720;
-    const expected = [0x20, 0xc0, 0x40] as const;
-    const rgb = Buffer.alloc(width * height * 3);
-    for (let offset = 0; offset < rgb.length; offset += 3) {
-      rgb[offset] = expected[0];
-      rgb[offset + 1] = expected[1];
-      rgb[offset + 2] = expected[2];
-    }
-    const png = runBytes("ffmpeg", [
-      "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", `${width}x${height}`,
-      "-i", "pipe:0", "-frames:v", "1", "-f", "image2pipe", "-c:v", "png", "pipe:1",
-    ], rgb);
-    const resources = new MemoryResourceStore();
-    const source = await resources.put(png, "image/png");
-    const render = async (id: string, segments: readonly {
-      readonly startFrame: number;
-      readonly endFrameExclusive: number;
-      readonly source: typeof source;
-    }[]) => {
-      const request = need(
-        `need:${id}`,
-        stillVideoCapabilities.render,
-        blobTypes.blob,
-        canonicalize({
-          request: {
-            frameRate: { numerator: 30, denominator: 1 },
-            frameCount: 4,
-            segments,
-          },
-        }),
-      );
-      const provider = await handlerFor(request);
-      const result = await provider.handler({
-
-        request: request,
-        resources,
-        credentials: {},
-      });
-      assertBlobRef(result);
-      assert.equal(result.mediaType, "video/mp4");
-      const artifact = result;
-      const bytes = await resources.get(artifact.resource);
-      assert(bytes !== undefined);
-      const path = join(root, `${id}.mp4`);
-      await writeFile(path, bytes);
-      return path;
-    };
-    const paths = await Promise.all([
-      render("single", [{ startFrame: 0, endFrameExclusive: 4, source }]),
-      render("spread", [
-        { startFrame: 0, endFrameExclusive: 2, source },
-        { startFrame: 2, endFrameExclusive: 4, source },
-      ]),
-    ]);
-    for (const path of paths) {
-      const probe = spawnSync("ffprobe", [
-        "-v", "error", "-select_streams", "v:0",
-        "-show_entries", "stream=color_range,color_space,color_transfer,color_primaries",
-        "-of", "json", path,
-      ], { encoding: "utf8", windowsHide: true });
-      assert.equal(probe.status, 0, probe.stderr);
-      const stream = (JSON.parse(probe.stdout) as { streams: Record<string, string>[] }).streams[0]!;
-      assert.equal(stream.color_range, "tv");
-      assert.equal(stream.color_space, "bt709");
-      assert.equal(stream.color_transfer, "bt709");
-      assert.equal(stream.color_primaries, "bt709");
-
-      const decoded = runBytes("ffmpeg", [
-        "-v", "error", "-i", path, "-frames:v", "1",
-        "-vf", "scale=in_color_matrix=bt709:in_range=tv:out_range=pc,format=rgb24",
-        "-f", "rawvideo", "pipe:1",
-      ]);
-      const center = (Math.floor(height / 2) * width + Math.floor(width / 2)) * 3;
-      expected.forEach((channel, index) => {
-        assert.ok(Math.abs(decoded[center + index]! - channel) <= 3,
-          `${path} channel ${index} decoded as ${decoded[center + index]}, expected ${channel}`);
-      });
-    }
   } finally {
     await rm(root, { recursive: true, force: true }).catch(() => {});
   }

@@ -5,14 +5,13 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./phone-ugc-v1": "./kits/phone-ugc-v1.svs"
+    "./phone-ugc-v1": "./kits/phone-ugc-v1.svml"
   },
   "files": [
     "kits",
     "README.md"
   ],
   "devDependencies": {
-    "@hypit/recipe": "workspace:*",
-    "@hypit/text": "workspace:*"
+    "@hypit/prompt": "workspace:*"
   }
 }

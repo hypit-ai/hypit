@@ -7,11 +7,8 @@ import {
   installAuthorDeclarationFacets,
   installAuthorFrontendFacets,
 } from "@hypit/hypit/author";
-import {
-  createMarkupDeclarationAuthorFrontend,
-  installMarkupDeclarationFacets,
-  MarkupDeclarationRegistry,
-} from "@hypit/hypit/markup";
+import { createSvmlAuthorFrontend } from "@hypit/hypit/svml";
+import { svmlAuthorFrontendId } from "@hypit/hypit/svml";
 import {
   resolveNodePackageResourceSpecifier,
   resolveNodePackageSource,
@@ -24,6 +21,7 @@ export function createVideoWorkspace(options: Pick<CliCompilerOptions,
   return new NodeFilesystemWorkspace({
     ...(options.workspaceRoot === undefined ? {} : { root: options.workspaceRoot }),
     ...(options.assetRoots === undefined ? {} : { assetRoots: options.assetRoots }),
+    sourceAdapter: (unit) => ({ unit, frontend: svmlAuthorFrontendId }),
     externalSourceResolver(importer, request) {
       const located = resolveNodePackageSource(request.from, {
         from: importer.path,
@@ -47,32 +45,22 @@ export function createVideoWorkspace(options: Pick<CliCompilerOptions,
   });
 }
 
-/** Assemble the Markup compiler Host from only the packages selected for this compilation. */
+/** Assemble the canonical SVML Video Host from only the packages selected for this compilation. */
 export function createVideoCompiler(options: CliCompilerOptions) {
   const modules = new ModulePackageRegistry();
   const declarations = new AuthorDeclarationRegistry();
-  const syntax = new MarkupDeclarationRegistry();
   const frontends = new AuthorFrontendRegistry();
   const refinements = new RefinementRegistry();
   for (const item of options.packageContributions) {
     for (const module of item.modules ?? []) modules.register(module);
     const facets = item.facets ?? [];
     installAuthorDeclarationFacets(facets, declarations);
-    installMarkupDeclarationFacets(facets, syntax);
     installAuthorFrontendFacets(facets, frontends);
     for (const pack of refinementPackagesFromFacets(facets)) {
       registerTypeRefinements(refinements, pack);
     }
   }
-  frontends.register(createMarkupDeclarationAuthorFrontend({
-    syntax,
-    compilers: declarations,
-    resolveModule(request) {
-      const resolved = modules.resolve(request.from);
-      if (resolved === undefined) throw new Error(`No selected author package satisfies ${request.from}`);
-      return resolved;
-    },
-  }));
+  frontends.register(createSvmlAuthorFrontend({ compilers: declarations }));
   return new Compiler({
     modules,
     frontends,

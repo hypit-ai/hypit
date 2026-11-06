@@ -15,8 +15,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@hypit/generation": "workspace:^0.2.0",
-    "@hypit/raster-transform": "workspace:^0.1.0"
+    "@hypit/generation": "workspace:^0.2.0"
   },
   "peerDependencies": {
     "@hypit/hypit": "workspace:^0.4.0"
@@ -27,14 +26,13 @@
     "@hypit/author": "workspace:*",
     "@hypit/generation": "workspace:*",
     "@hypit/hypit": "workspace:*",
-    "@hypit/markup": "workspace:*",
     "@hypit/media": "workspace:*",
     "@hypit/narrative": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/seedance": "workspace:*",
     "@hypit/spatial": "workspace:*",
-    "@hypit/recipe": "workspace:*",
-    "@hypit/temporal": "workspace:*",
-    "@hypit/text": "workspace:*"
+    "@hypit/prompt": "workspace:*",
+    "@hypit/svml": "workspace:*",
+    "@hypit/temporal": "workspace:*"
   }
 }

@@ -43,6 +43,12 @@ facet or rebuild the request Capability separately.
 `@hypit/generation/model-fields/author` contains the corresponding optional declaration-compiler
 assembly helper. It is nested under `model-fields` because it composes that optional field vocabulary.
 
+A field whose wire kind is `text` may declare an exact `inputType`. The binding Producer accepts that
+nominal graph Type and extracts its string payload only at request assembly. Generation therefore does
+not equate ordinary Text, Prompt or another package's textual value. Current image/video generation
+packages declare their prompt field as `@hypit/prompt#Prompt`; speech packages may still select ordinary
+`@hypit/text#Text`. The helper names this boundary `textFieldBindings`, not a generic Text input.
+
 A required scalar field may declare Model-owned `defaultItems`. It may then be absent from the
 authoring draft, but request finalization inserts the value and every complete request carries it
 explicitly. Provider mappings have no defaulting mechanism: deployments can rename or encode a

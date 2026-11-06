@@ -1,0 +1,68 @@
+// The nominal Prompt is authored independently; this Source only composes typed results.
+source brief from "./brief.svml"
+
+module seedance from "@hypit/seedance@1"
+module media from "@hypit/media@1"
+module avmedia from "@hypit/audiovisual-media@1"
+module title from "@example/audiovisual-title-card@1"
+module video from "@hypit/audiovisual-author@1"
+
+seedance.text-video {
+  id: generated
+  model: fast
+  prompt: @brief.prompt
+  duration: 5
+  resolution: 720p
+  aspect-ratio: "16:9"
+  generate-audio: true
+}
+
+// A requested generation duration is Provider input, not the resulting Media extent.
+media.video {
+  id: generated-media
+  source: @generated.video
+}
+
+avmedia.Source "a-roll" {
+  media: @generated-media.source
+}
+
+title.Card "opening-title" {
+  duration: 2s
+  width: 1920px
+  height: 1080px
+  title: "A real project component"
+  subtitle: "Package-owned visual semantics"
+  background: "#101828"
+  foreground: "#ffffff"
+}
+
+video.Program "main" {
+  duration: 10s
+  picture-domain: { width: 1920px, height: 1080px }
+
+  source "generated" { value: @a-roll }
+  source "title" { value: @opening-title }
+
+  occurrence "generated" {
+    source: @source.generated
+    at: 0s
+    outputs: { picture: {}, audio: {} }
+  }
+
+  occurrence "title" {
+    source: @source.title
+    at: 0s
+    outputs: { picture: {} }
+  }
+
+  picture "generated" { use: @occurrence.generated.picture }
+  picture "title" { use: @occurrence.title.picture }
+  picture "final" { over: [@picture.generated, @picture.title] }
+  audio "final" { use: @occurrence.generated.audio }
+
+  output {
+    picture: @picture.final
+    audio: @audio.final
+  }
+}

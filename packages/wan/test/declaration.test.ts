@@ -2,24 +2,23 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { AuthorResolvedReference } from "@hypit/author";
-import { textTypes } from "@hypit/text";
-import { compileMarkupDeclaration } from "../../../test/compile-markup-declaration.js";
+import { promptTypes } from "@hypit/prompt";
+import { compileSvmlDeclaration } from "../../../test/compile-svml-declaration.js";
 
-import { wanImageAuthorDeclaration, wanMarkupDeclarations } from "../src/declaration.js";
+import { wanImageAuthorDeclaration } from "../src/declaration.js";
 import { wanEndpoints, wanModuleRef } from "../src/index.js";
 
 const prompt: AuthorResolvedReference = {
   ref: { kind: "component-output", component: "direction", output: "text" },
-  type: textTypes.text,
+  type: promptTypes.prompt,
 };
 
 test("Wan publishes the complete generated set and an explicit primary image", async () => {
-  const decoded = await compileMarkupDeclaration({
-    source: '<wan:Image id="story" prompt={prompt} count="4" image-set="true"/>',
+  const decoded = await compileSvmlDeclaration({
+    source: 'wan.image { id: story prompt: @prompt count: 4 image-set: true }',
     module: wanModuleRef,
     alias: "wan",
     compilers: [wanImageAuthorDeclaration],
-    syntax: wanMarkupDeclarations,
     references: new Map([["prompt", prompt]]),
   });
   assert.deepEqual(decoded.components[0]?.outputs, {
@@ -31,7 +30,7 @@ test("Wan publishes the complete generated set and an explicit primary image", a
     { name: "images", type: wanEndpoints.image!.returns },
   ]);
   assert.deepEqual(decoded.components[0]?.fragment.operations.map((item) => item.id), [
-    "bind-text:0001:prompt",
+    "bind-text-field:0001:prompt",
     "finalize-request",
     "generate",
     "select-primary-image",

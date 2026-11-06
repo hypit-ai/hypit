@@ -9,5 +9,4 @@ export {
 export {
   portraitMattingAuthorDeclaration,
   volcengineMattingAuthorDeclarations,
-  volcengineMattingMarkupDeclarations,
 } from "./declaration.js";

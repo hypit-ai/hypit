@@ -5,16 +5,12 @@ import {
 import type {
   AudiovisualProgram,
   SignalOperatorProgram,
-  VideoFrameSampling,
 } from "@hypit/audiovisual";
-import {
-  sealStillPictureSource,
-  type StillPictureSource,
-} from "@hypit/audiovisual-media";
 import { verifyPreparedMedia } from "@hypit/media";
 import type { PreparedMedia } from "@hypit/media";
 import { assertSpatialMap } from "@hypit/spatial/algebra";
 import type { SpatialMap } from "@hypit/spatial/algebra";
+import type { TemporalSamplingGrid } from "@hypit/temporal";
 
 export type AudiovisualHtmlSourceImplementation =
   | {
@@ -24,10 +20,6 @@ export type AudiovisualHtmlSourceImplementation =
   | {
       readonly kind: "prepared-media";
       readonly media: PreparedMedia;
-    }
-  | {
-      readonly kind: "still-picture";
-      readonly picture: StillPictureSource;
     }
   | {
       readonly kind: "audiovisual";
@@ -47,7 +39,7 @@ export type AudiovisualHtmlSourceSet = {
 
 export type AudiovisualHtmlOutput = {
   readonly id: string;
-  readonly sampling: VideoFrameSampling;
+  readonly sampling: TemporalSamplingGrid;
   readonly canvas: {
     readonly width: number;
     readonly height: number;
@@ -94,11 +86,10 @@ export function sealAudiovisualHtmlSource(value: AudiovisualHtmlSource): Audiovi
     ); break;
     case "prepared-media": {
       verifyPreparedMedia(value.implementation.media);
-      assert(value.implementation.media.visual !== undefined,
-        `Prepared Media ${value.implementation.media.domain.id} has no selected Picture member.`);
+      assert(value.implementation.media.picture !== undefined,
+        `Prepared Media ${value.implementation.media.id} has no selected Picture member.`);
       break;
     }
-    case "still-picture": sealStillPictureSource(value.implementation.picture); break;
     case "audiovisual": {
       assertAudiovisualProgram(value.implementation.program);
       assert(value.implementation.program.picture !== undefined,
@@ -162,18 +153,9 @@ export function visualProgramHtmlSource(
 
 export function preparedMediaHtmlSource(media: PreparedMedia): AudiovisualHtmlSource {
   return sealAudiovisualHtmlSource({
-    source: media.domain.id,
+    source: media.id,
     output: "picture",
     implementation: { kind: "prepared-media", media },
-  });
-}
-
-export function stillPictureHtmlSource(picture: StillPictureSource): AudiovisualHtmlSource {
-  const source = sealStillPictureSource(picture);
-  return sealAudiovisualHtmlSource({
-    source: source.id,
-    output: "picture",
-    implementation: { kind: "still-picture", picture: source },
   });
 }
 

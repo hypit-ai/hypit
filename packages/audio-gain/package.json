@@ -11,10 +11,12 @@
   "devDependencies": {
     "@hypit/hypit": "workspace:*",
     "@hypit/producer": "workspace:*",
-    "@hypit/protocol": "workspace:*", "@hypit/refinement": "workspace:*"
+    "@hypit/refinement": "workspace:*"
   },
   "dependencies": {
     "@hypit/audiovisual": "workspace:^0.1.0",
+    "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/protocol": "workspace:*",
     "@hypit/temporal": "workspace:^0.1.0"
   }
 }

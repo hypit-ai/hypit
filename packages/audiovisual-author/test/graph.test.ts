@@ -42,6 +42,11 @@ import {
   sealGraphFragment,
 } from "@hypit/author";
 import type { FragmentContribution } from "@hypit/author";
+import {
+  audioGainManifest,
+  audioGainProducers,
+  audioGainTypes,
+} from "@hypit/audio-gain";
 import { blobManifest } from "@hypit/hypit/blob";
 import {
   createResolvedClosure,
@@ -52,9 +57,26 @@ import {
 import { canonicalize } from "@hypit/protocol";
 import type { AuthorGraph, LinkedProgram, ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 import { mediaManifest, mediaTypes, prepareMedia } from "@hypit/media";
+import {
+  IDENTITY_PICTURE_FILTER,
+  pictureFilterManifest,
+  pictureFilterProducers,
+  pictureFilterTypes,
+} from "@hypit/picture-filter";
+import {
+  pictureTransitionManifest,
+  pictureTransitionProducers,
+  pictureTransitionTypes,
+} from "@hypit/picture-transition";
 import { spatialManifest } from "@hypit/spatial";
 import { sealLocalSpatialDomain, sealSpatialMap } from "@hypit/spatial/algebra";
-import { exactTemporalValue, sealLocalTemporalDomain, temporalManifest } from "@hypit/temporal";
+import {
+  exactTemporalValue,
+  sealLocalTemporalDomain,
+  temporalManifest,
+  temporalProducers,
+  temporalTypes,
+} from "@hypit/temporal";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
@@ -63,15 +85,19 @@ import {
   audiovisualAuthorProducers,
   audiovisualAuthorTypes,
   compileAudiovisualAuthorSpec,
-  createAudiovisualAuthorFragment,
+  createAudiovisualProgramDomainFragment,
+  createOccurrenceClosureFragment,
+  createOccurrenceBoundOccurrenceUseFragment,
+  createOccurrenceUseFragment,
+  createResolvedAudiovisualProgramFragment,
+  createSourceBoundOccurrenceUseFragment,
+  createUniqueSourceEventPositionFragment,
   type AudiovisualAuthorSpec,
 } from "../src/index.js";
 
 const fixtureModule = { name: "example.future-source", version: "1" } as const;
 const sourceRequestType = { module: fixtureModule, name: "SourceRequest" } satisfies TypeRef;
 const resolveSourceProducer = { module: fixtureModule, name: "resolve-source" } satisfies ProducerRef;
-const resolvePictureOperatorProducer = { module: fixtureModule, name: "resolve-picture-operator" } satisfies ProducerRef;
-const resolveAudioOperatorProducer = { module: fixtureModule, name: "resolve-audio-operator" } satisfies ProducerRef;
 const resolveReconstructionProducer = { module: fixtureModule, name: "resolve-reconstruction" } satisfies ProducerRef;
 const fixtureManifest: ModuleManifest = {
   format: "hypit.module@1",
@@ -84,14 +110,6 @@ const fixtureManifest: ModuleManifest = {
     name: resolveSourceProducer.name,
     inputs: [{ name: "request", type: sourceRequestType }],
     result: { kind: "output", name: "source", type: audiovisualTypes.programSource },
-  }, {
-    name: resolvePictureOperatorProducer.name,
-    inputs: [],
-    result: { kind: "output", name: "operator", type: audiovisualTypes.pictureOperator },
-  }, {
-    name: resolveAudioOperatorProducer.name,
-    inputs: [],
-    result: { kind: "output", name: "operator", type: audiovisualTypes.audioOperator },
   }, {
     name: resolveReconstructionProducer.name,
     inputs: [],
@@ -111,15 +129,70 @@ const closure = createResolvedClosure([
   audiovisualAudioManifest,
   audiovisualHtmlManifest,
   audiovisualAuthorManifest,
+  pictureFilterManifest,
+  pictureTransitionManifest,
+  audioGainManifest,
   fixtureManifest,
 ]);
+
+test("three time bindings elaborate to ordinary typed operations", () => {
+  const sourceBound = createSourceBoundOccurrenceUseFragment();
+  assert.deepEqual(sourceBound.operations.map((operation) => operation.producer.name).toSorted(), [
+    audiovisualAuthorProducers.bindOccurrenceUseToSource.name,
+    audiovisualAuthorProducers.projectOccurrenceUseEnd.name,
+  ].toSorted());
+  const occurrenceBound = createOccurrenceBoundOccurrenceUseFragment();
+  assert.deepEqual(occurrenceBound.operations.map((operation) => operation.producer.name).toSorted(), [
+    audiovisualAuthorProducers.bindOccurrenceUseToOccurrence.name,
+    audiovisualAuthorProducers.projectOccurrenceUseEnd.name,
+  ].toSorted());
+  const eventBound = createUniqueSourceEventPositionFragment({ offset: true });
+  assert.deepEqual(eventBound.operations.map((operation) => operation.producer.name).toSorted(), [
+    audiovisualAuthorProducers.projectOccurrenceUseOutputMapping.name,
+    temporalProducers.preimageMapRegions.name,
+    temporalProducers.uniqueRegionSetPoint.name,
+    temporalProducers.pointPosition.name,
+    audiovisualAuthorProducers.projectOccurrenceUsePosition.name,
+    temporalProducers.addExactValues.name,
+  ].toSorted());
+});
 const at = (numerator: number, denominator = 1) => exactTemporalValue({
   numerator: BigInt(numerator), denominator: BigInt(denominator),
 });
+const start = (offset = at(0)) => ({ edge: "start" as const, offset });
+const end = (offset = at(0)) => ({ edge: "end" as const, offset });
+const full = () => ({ from: start(), until: end() });
+const sampleFrom = (sourceAt = at(0)) => ({ relations: [{
+  kind: "rate" as const,
+  target: full(),
+  targetAt: start(),
+  sourceAt: start(sourceAt),
+  rate: { numerator: 1, denominator: 1 },
+  source: full(),
+}] });
 const space = sealLocalSpatialDomain({
   id: "main:picture-space",
   region: { x: 0, y: 0, width: 1920, height: 1080 },
 });
+const programTime = sealLocalTemporalDomain({ id: "main:time", duration: at(12) });
+const filterControl = {
+  domain: programTime,
+  segments: [{
+    range: { start: at(0), end: at(12) },
+    from: IDENTITY_PICTURE_FILTER,
+    to: { ...IDENTITY_PICTURE_FILTER, opacity: 0.5, blurRadius: 8 },
+    interpolation: { kind: "linear" as const },
+  }],
+};
+const gainControl = {
+  domain: programTime,
+  segments: [{
+    range: { start: at(0), end: at(12) },
+    from: 1,
+    to: 0.5,
+    interpolation: { kind: "linear" as const },
+  }],
+};
 
 function spec(): AudiovisualAuthorSpec {
   return {
@@ -136,14 +209,14 @@ function spec(): AudiovisualAuthorSpec {
       product: { source: "b-roll", at: at(4), duration: at(5), outputs: { picture: {} } },
     },
     picture: { output: { kind: "apply", operator: "picture-effect", inputs: {
-      picture: { kind: "over", inputs: [
-        { kind: "use", occurrence: "presenter", output: "picture" },
-        { kind: "use", occurrence: "product", output: "picture" },
-      ] },
-    }, controlBindings: {} } },
+      picture: { kind: "apply", operator: "transition", inputs: {
+        outgoing: { kind: "use", occurrence: "presenter", output: "picture" },
+        incoming: { kind: "use", occurrence: "product", output: "picture" },
+      }, controlBindings: { progress: { kind: "relation", relation: sampleFrom() } } },
+    }, controlBindings: { filter: { kind: "program" } } } },
     audio: { output: { kind: "apply", operator: "audio-effect", inputs: {
       signal: { kind: "use", occurrence: "presenter", output: "audio" },
-    }, controlBindings: {} } },
+    }, controlBindings: { gain: { kind: "program" } } } },
   };
 }
 
@@ -163,6 +236,14 @@ function futureSourceFragment() {
     }],
   });
 }
+
+test("the Author Fragment accepts a future TemporalMap through the ordinary typed value fold", () => {
+  const fragment = createResolvedAudiovisualProgramFragment({ occurrences: 0, temporalMaps: 1 });
+  assert.deepEqual(fragment.inputs.find((input) => input.name === "temporal-map-0001")?.type,
+    temporalTypes.map);
+  assert.equal(fragment.operations.some((operation) =>
+    operation.producer.name === audiovisualAuthorProducers.appendTemporalMap.name), true);
+});
 
 function futureOperatorFragment(
   producer: ProducerRef,
@@ -185,19 +266,59 @@ function futureOperatorFragment(
   });
 }
 
+function ownerOperatorFragment(
+  producer: ProducerRef,
+  inputs: Readonly<Record<string, TypeRef>>,
+  outputType: TypeRef,
+) {
+  return sealGraphFragment({
+    inputs: Object.entries(inputs).map(([name, type]) => ({ name, type })),
+    operations: [{
+      id: "operator",
+      producer,
+      inputs: Object.fromEntries(Object.keys(inputs).map((name) =>
+        [name, { kind: "fragment-input" as const, name }])),
+      result: { kind: "output", name: "operator" },
+    }],
+    exports: [{
+      name: "operator",
+      type: outputType,
+      root: { kind: "fragment-operation", operation: "operator" },
+    }],
+  });
+}
+
 function program(requestedDuration: number): LinkedProgram {
   return link(closure, [
     { id: "spec", type: audiovisualAuthorTypes.spec, value: canonicalize(spec()) },
-    { id: "binding:a", type: audiovisualAuthorTypes.sourceBinding,
-      value: canonicalize({ name: "generated-a-roll" }) },
-    { id: "binding:b", type: audiovisualAuthorTypes.sourceBinding,
-      value: canonicalize({ name: "product-material" }) },
+    { id: "use:presenter:spec", type: audiovisualAuthorTypes.occurrenceUseSpec,
+      value: canonicalize({ id: "presenter", domainId: "main:presenter:time",
+        outputs: { picture: {}, audio: { reconstruction: "natural" } } }) },
+    { id: "use:product:spec", type: audiovisualAuthorTypes.occurrenceUseSpec,
+      value: canonicalize({ id: "product", domainId: "main:product:time",
+        outputs: { picture: {} } }) },
+    { id: "use:presenter:start", type: temporalTypes.exactValue, value: canonicalize(at(0)) },
+    { id: "use:product:start", type: temporalTypes.exactValue, value: canonicalize(at(4)) },
+    { id: "use:product:duration", type: temporalTypes.exactValue, value: canonicalize(at(5)) },
+    { id: "main:domain:spec", type: audiovisualAuthorTypes.programDomainSpec,
+      value: canonicalize({ id: "main" }) },
+    { id: "main:duration", type: temporalTypes.exactValue, value: canonicalize(at(12)) },
     { id: "binding:picture-effect", type: audiovisualAuthorTypes.operatorBinding,
       value: canonicalize({ name: "picture-effect" }) },
+    { id: "binding:transition", type: audiovisualAuthorTypes.operatorBinding,
+      value: canonicalize({ name: "transition" }) },
     { id: "binding:audio-effect", type: audiovisualAuthorTypes.operatorBinding,
       value: canonicalize({ name: "audio-effect" }) },
     { id: "binding:natural", type: audiovisualAuthorTypes.reconstructionBinding,
       value: canonicalize({ name: "natural" }) },
+    { id: "control:filter", type: pictureFilterTypes.control,
+      value: canonicalize(filterControl) },
+    { id: "transition:spec", type: pictureTransitionTypes.operatorSpec,
+      value: canonicalize({ kind: "cross-dissolve", easing: "linear" }) },
+    { id: "transition:domain", type: temporalTypes.localDomain,
+      value: canonicalize(programTime) },
+    { id: "control:gain", type: audioGainTypes.gainControl,
+      value: canonicalize(gainControl) },
     { id: "request:a", type: sourceRequestType,
       value: canonicalize({ durationPreferenceSeconds: requestedDuration }) },
     { id: "request:b", type: sourceRequestType, value: canonicalize({ asset: "product.mp4" }) },
@@ -215,12 +336,27 @@ function graph(linked: LinkedProgram): AuthorGraph {
     inputs: { request: { kind: "record", id: "request:b" } },
   }), { source: "future.b" });
   const pictureOperator = bindAuthorFragment(elaborateGraphFragment(linked,
-    futureOperatorFragment(resolvePictureOperatorProducer, audiovisualTypes.pictureOperator), {
-      id: "future-picture-operator", inputs: {},
+    ownerOperatorFragment(pictureFilterProducers.controlOperator,
+      { control: pictureFilterTypes.control }, audiovisualTypes.pictureOperator), {
+      id: "future-picture-operator",
+      inputs: { control: { kind: "record", id: "control:filter" } },
     }), { operator: "future.picture-operator" });
+  const transitionOperator = bindAuthorFragment(elaborateGraphFragment(linked,
+    ownerOperatorFragment(pictureTransitionProducers.operator, {
+      spec: pictureTransitionTypes.operatorSpec,
+      domain: temporalTypes.localDomain,
+    }, audiovisualTypes.pictureOperator), {
+      id: "future-transition-operator",
+      inputs: {
+        spec: { kind: "record", id: "transition:spec" },
+        domain: { kind: "record", id: "transition:domain" },
+      },
+    }), { operator: "future.transition-operator" });
   const audioOperator = bindAuthorFragment(elaborateGraphFragment(linked,
-    futureOperatorFragment(resolveAudioOperatorProducer, audiovisualTypes.audioOperator), {
-      id: "future-audio-operator", inputs: {},
+    ownerOperatorFragment(audioGainProducers.gainControlOperator,
+      { control: audioGainTypes.gainControl }, audiovisualTypes.audioOperator), {
+      id: "future-audio-operator",
+      inputs: { control: { kind: "record", id: "control:gain" } },
     }), { operator: "future.audio-operator" });
   const reconstruction = bindAuthorFragment(elaborateGraphFragment(linked,
     futureOperatorFragment(
@@ -228,27 +364,66 @@ function graph(linked: LinkedProgram): AuthorGraph {
     ), {
       id: "future-reconstruction", inputs: {},
     }), { operator: "future.reconstruction" });
-  const author = bindAuthorFragment(elaborateGraphFragment(linked,
-    createAudiovisualAuthorFragment({
-      sources: 2, pictureOperators: 1, audioOperators: 1, reconstructions: 1,
-    }), {
-      id: "main",
+  const presenterUse = bindAuthorFragment(elaborateGraphFragment(linked,
+    createOccurrenceUseFragment({ inferDuration: true, reconstructions: 1 }), {
+      id: "main-presenter-use",
       inputs: {
-        spec: { kind: "record", id: "spec" },
-        "binding-0001": { kind: "record", id: "binding:a" },
-        "source-0001": { kind: "logical-output", id: "future.a" },
-        "binding-0002": { kind: "record", id: "binding:b" },
-        "source-0002": { kind: "logical-output", id: "future.b" },
-        "picture-operator-binding-0001": { kind: "record", id: "binding:picture-effect" },
-        "picture-operator-0001": { kind: "logical-output", id: "future.picture-operator" },
-        "audio-operator-binding-0001": { kind: "record", id: "binding:audio-effect" },
-        "audio-operator-0001": { kind: "logical-output", id: "future.audio-operator" },
+        spec: { kind: "record", id: "use:presenter:spec" },
+        source: { kind: "logical-output", id: "future.a" },
+        start: { kind: "record", id: "use:presenter:start" },
         "reconstruction-binding-0001": { kind: "record", id: "binding:natural" },
         "reconstruction-0001": { kind: "logical-output", id: "future.reconstruction" },
       },
+    }), { use: "main.presenter.use", end: "main.presenter.end" });
+  const productUse = bindAuthorFragment(elaborateGraphFragment(linked,
+    createOccurrenceUseFragment({ inferDuration: false }), {
+      id: "main-product-use",
+      inputs: {
+        spec: { kind: "record", id: "use:product:spec" },
+        source: { kind: "logical-output", id: "future.b" },
+        start: { kind: "record", id: "use:product:start" },
+        duration: { kind: "record", id: "use:product:duration" },
+      },
+    }), { use: "main.product.use", end: "main.product.end" });
+  const domain = bindAuthorFragment(elaborateGraphFragment(linked,
+    createAudiovisualProgramDomainFragment(), {
+      id: "main-domain",
+      inputs: {
+        spec: { kind: "record", id: "main:domain:spec" },
+        duration: { kind: "record", id: "main:duration" },
+      },
+    }), { domain: "main.domain" });
+  const closeUse = (name: string) => bindAuthorFragment(elaborateGraphFragment(linked,
+    createOccurrenceClosureFragment(), {
+      id: `main-${name}-close`,
+      inputs: {
+        use: { kind: "logical-output", id: `main.${name}.use` },
+        parent: { kind: "logical-output", id: "main.domain" },
+      },
+    }), { occurrence: `main.${name}.occurrence` });
+  const presenter = closeUse("presenter");
+  const product = closeUse("product");
+  const author = bindAuthorFragment(elaborateGraphFragment(linked,
+    createResolvedAudiovisualProgramFragment({
+      occurrences: 2, pictureOperators: 2, audioOperators: 1,
+    }), {
+      id: "main-program",
+      inputs: {
+        spec: { kind: "record", id: "spec" },
+        domain: { kind: "logical-output", id: "main.domain" },
+        "occurrence-0001": { kind: "logical-output", id: "main.presenter.occurrence" },
+        "occurrence-0002": { kind: "logical-output", id: "main.product.occurrence" },
+        "picture-operator-binding-0001": { kind: "record", id: "binding:picture-effect" },
+        "picture-operator-0001": { kind: "logical-output", id: "future.picture-operator" },
+        "picture-operator-binding-0002": { kind: "record", id: "binding:transition" },
+        "picture-operator-0002": { kind: "logical-output", id: "future.transition-operator" },
+        "audio-operator-binding-0001": { kind: "record", id: "binding:audio-effect" },
+        "audio-operator-0001": { kind: "logical-output", id: "future.audio-operator" },
+      },
     }), { program: "main.program" });
   const contributions: readonly FragmentContribution[] = [
-    a, b, pictureOperator, audioOperator, reconstruction, author,
+    a, b, pictureOperator, transitionOperator, audioOperator, reconstruction,
+    presenterUse, productUse, domain, presenter, product, author,
   ];
   const merged = mergeFragmentContributions(
     { outputs: [], operations: [] }, ...contributions,
@@ -256,7 +431,7 @@ function graph(linked: LinkedProgram): AuthorGraph {
   return sealAuthorGraph({ ...merged });
 }
 
-test("future typed Sources keep one fixed AuthorGraph and BuildPlan", () => {
+test("future Sources and package-owned Controls keep one fixed AuthorGraph and BuildPlan", () => {
   const requestedFive = program(5);
   const requestedTen = program(10);
   const fiveGraph = graph(requestedFive);
@@ -269,22 +444,42 @@ test("future typed Sources keep one fixed AuthorGraph and BuildPlan", () => {
   assert.deepEqual(fivePlan.steps.map((step) => step.producer.name).sort(), [
     "resolve-source",
     "resolve-source",
-    resolvePictureOperatorProducer.name,
-    resolveAudioOperatorProducer.name,
+    pictureFilterProducers.controlOperator.name,
+    pictureTransitionProducers.operator.name,
+    audioGainProducers.gainControlOperator.name,
     resolveReconstructionProducer.name,
-    audiovisualAuthorProducers.appendSource.name,
-    audiovisualAuthorProducers.appendSource.name,
+    audiovisualAuthorProducers.appendPictureOperator.name,
     audiovisualAuthorProducers.appendPictureOperator.name,
     audiovisualAuthorProducers.appendAudioOperator.name,
     audiovisualAuthorProducers.appendReconstruction.name,
     audiovisualAuthorProducers.createBindings.name,
-    audiovisualAuthorProducers.closeProgram.name,
+    audiovisualAuthorProducers.createBindings.name,
+    audiovisualAuthorProducers.createBindings.name,
+    audiovisualAuthorProducers.inferOccurrenceDuration.name,
+    audiovisualAuthorProducers.resolveOccurrenceUse.name,
+    audiovisualAuthorProducers.resolveOccurrenceUse.name,
+    audiovisualAuthorProducers.createProgramDomain.name,
+    audiovisualAuthorProducers.closeOccurrence.name,
+    audiovisualAuthorProducers.closeOccurrence.name,
+    audiovisualAuthorProducers.createOccurrences.name,
+    audiovisualAuthorProducers.appendOccurrence.name,
+    audiovisualAuthorProducers.appendOccurrence.name,
+    audiovisualAuthorProducers.closeResolvedProgram.name,
   ].sort());
-  const appendSteps = fivePlan.steps.filter((step) =>
-    step.producer.name === audiovisualAuthorProducers.appendSource.name);
-  assert.equal(appendSteps.length, 2);
-  assert.equal(appendSteps.every((step) => Object.values(step.inputs)
+  const useSteps = fivePlan.steps.filter((step) =>
+    step.producer.name === audiovisualAuthorProducers.resolveOccurrenceUse.name);
+  assert.equal(useSteps.length, 2);
+  assert.equal(useSteps.every((step) => Object.values(step.inputs)
     .some((record) => record.includes("future-a") || record.includes("future-b"))), true);
+  assert.deepEqual(fivePlan.steps.find((step) =>
+    step.producer.name === pictureFilterProducers.controlOperator.name)?.inputs,
+  { control: "control:filter" });
+  assert.deepEqual(fivePlan.steps.find((step) =>
+    step.producer.name === pictureTransitionProducers.operator.name)?.inputs,
+  { spec: "transition:spec", domain: "transition:domain" });
+  assert.deepEqual(fivePlan.steps.find((step) =>
+    step.producer.name === audioGainProducers.gainControlOperator.name)?.inputs,
+  { control: "control:gain" });
 });
 
 function actualSource(durationNumerator: number): ProgramSource {
@@ -307,6 +502,82 @@ function actualSource(durationNumerator: number): ProgramSource {
   };
 }
 
+test("one forward AuthorGraph derives its boundary from a Source use and closes afterward", () => {
+  const source = actualSource(49);
+  const author: AudiovisualAuthorSpec = {
+    id: "forward",
+    duration: at(49, 10),
+    pictureDomain: space,
+    sources: { generated: { binding: "generated" } },
+    occurrences: {
+      generated: { source: "generated", at: at(0), outputs: { picture: {} } },
+    },
+    picture: { output: { kind: "use", occurrence: "generated", output: "picture" } },
+  };
+  const linked = link(closure, [
+    { id: "forward:use-spec", type: audiovisualAuthorTypes.occurrenceUseSpec,
+      value: canonicalize({ id: "generated", domainId: "forward:generated:time",
+        outputs: { picture: {} } }) },
+    { id: "forward:source", type: audiovisualTypes.programSource, value: canonicalize(source) },
+    { id: "forward:start", type: temporalTypes.exactValue, value: canonicalize(at(0)) },
+    { id: "forward:domain-spec", type: audiovisualAuthorTypes.programDomainSpec,
+      value: canonicalize({ id: "forward" }) },
+    { id: "forward:spec", type: audiovisualAuthorTypes.spec, value: canonicalize(author) },
+  ]);
+  const use = bindAuthorFragment(elaborateGraphFragment(linked,
+    createOccurrenceUseFragment({ inferDuration: true }), {
+      id: "forward:use",
+      inputs: {
+        spec: { kind: "record", id: "forward:use-spec" },
+        source: { kind: "record", id: "forward:source" },
+        start: { kind: "record", id: "forward:start" },
+      },
+    }), { use: "forward.use", end: "forward.end" });
+  const domain = bindAuthorFragment(elaborateGraphFragment(linked,
+    createAudiovisualProgramDomainFragment(), {
+      id: "forward:domain",
+      inputs: {
+        spec: { kind: "record", id: "forward:domain-spec" },
+        duration: { kind: "logical-output", id: "forward.end" },
+      },
+    }), { domain: "forward.domain" });
+  const occurrence = bindAuthorFragment(elaborateGraphFragment(linked,
+    createOccurrenceClosureFragment(), {
+      id: "forward:occurrence",
+      inputs: {
+        use: { kind: "logical-output", id: "forward.use" },
+        parent: { kind: "logical-output", id: "forward.domain" },
+      },
+    }), { occurrence: "forward.occurrence" });
+  const program = bindAuthorFragment(elaborateGraphFragment(linked,
+    createResolvedAudiovisualProgramFragment({ occurrences: 1 }), {
+      id: "forward:program",
+      inputs: {
+        spec: { kind: "record", id: "forward:spec" },
+        domain: { kind: "logical-output", id: "forward.domain" },
+        "occurrence-0001": { kind: "logical-output", id: "forward.occurrence" },
+      },
+    }), { program: "forward.program" });
+  const merged = mergeFragmentContributions(
+    { outputs: [], operations: [] }, use, domain, occurrence, program,
+  );
+  const plan = planBuild(linked, sealAuthorGraph({ ...merged }), ["forward.program"]).plan;
+  const step = (name: string) => plan.steps.find((candidate) => candidate.producer.name === name)!;
+  const resolve = step(audiovisualAuthorProducers.resolveOccurrenceUse.name);
+  const end = step(audiovisualAuthorProducers.projectOccurrenceUseEnd.name);
+  const createDomain = step(audiovisualAuthorProducers.createProgramDomain.name);
+  const closeOccurrence = step(audiovisualAuthorProducers.closeOccurrence.name);
+  const appendOccurrence = step(audiovisualAuthorProducers.appendOccurrence.name);
+  const closeProgram = step(audiovisualAuthorProducers.closeResolvedProgram.name);
+  assert.equal(end.inputs.use, resolve.result.record);
+  assert.equal(createDomain.inputs.duration, end.result.record);
+  assert.equal(closeOccurrence.inputs.use, resolve.result.record);
+  assert.equal(closeOccurrence.inputs.parent, createDomain.result.record);
+  assert.equal(appendOccurrence.inputs.occurrence, closeOccurrence.result.record);
+  assert.equal(closeProgram.inputs.domain, createDomain.result.record);
+  assert.equal(closeProgram.inputs.occurrences, appendOccurrence.result.record);
+});
+
 test("actual 4.9 and 5.1 second Sources change only the closed Programme value", () => {
   const author: AudiovisualAuthorSpec = {
     id: "actual-duration",
@@ -326,21 +597,52 @@ test("actual 4.9 and 5.1 second Sources change only the closed Programme value",
   assert.deepEqual(short.domain, long.domain);
 });
 
-test("ordinary Producer facets materialize the future Source fold and finite close", async () => {
+test("ordinary Producer facets materialize the forward use, boundary and Programme close", async () => {
   const facet = (name: string) => audiovisualAuthorComponent.producers.find((candidate) =>
     candidate.producer.name === name)!;
   const created = await facet(audiovisualAuthorProducers.createBindings.name).handler({
     inputs: {},
   } as never);
   assert.equal(created.kind, "output");
-  const appended = await facet(audiovisualAuthorProducers.appendSource.name).handler({
+  const source = actualSource(49);
+  const useSpec = { id: "generated", domainId: "producer-close:generated:time",
+    outputs: { picture: {}, audio: {} } };
+  const duration = await facet(audiovisualAuthorProducers.inferOccurrenceDuration.name).handler({
     inputs: {
-      bindings: { value: created.value },
-      binding: { value: canonicalize({ name: "generated" }) },
-      source: { value: canonicalize(actualSource(49)) },
+      spec: { value: canonicalize(useSpec) },
+      source: { value: canonicalize(source) },
     },
   } as never);
-  assert.equal(appended.kind, "output");
+  assert.equal(duration.kind, "output");
+  const use = await facet(audiovisualAuthorProducers.resolveOccurrenceUse.name).handler({
+    inputs: {
+      spec: { value: canonicalize(useSpec) },
+      source: { value: canonicalize(source) },
+      start: { value: canonicalize(at(0)) },
+      duration: { value: duration.value },
+      bindings: { value: created.value },
+    },
+  } as never);
+  assert.equal(use.kind, "output");
+  const domain = await facet(audiovisualAuthorProducers.createProgramDomain.name).handler({
+    inputs: {
+      spec: { value: canonicalize({ id: "producer-close" }) },
+      duration: { value: canonicalize(at(6)) },
+    },
+  } as never);
+  assert.equal(domain.kind, "output");
+  const occurrence = await facet(audiovisualAuthorProducers.closeOccurrence.name).handler({
+    inputs: { use: { value: use.value }, parent: { value: domain.value } },
+  } as never);
+  assert.equal(occurrence.kind, "output");
+  const empty = await facet(audiovisualAuthorProducers.createOccurrences.name).handler({
+    inputs: {},
+  } as never);
+  assert.equal(empty.kind, "output");
+  const occurrences = await facet(audiovisualAuthorProducers.appendOccurrence.name).handler({
+    inputs: { occurrences: { value: empty.value }, occurrence: { value: occurrence.value } },
+  } as never);
+  assert.equal(occurrences.kind, "output");
   const author: AudiovisualAuthorSpec = {
     id: "producer-close",
     duration: at(6),
@@ -352,8 +654,13 @@ test("ordinary Producer facets materialize the future Source fold and finite clo
     picture: { output: { kind: "use", occurrence: "generated", output: "picture" } },
     audio: { output: { kind: "use", occurrence: "generated", output: "audio" } },
   };
-  const closed = await facet(audiovisualAuthorProducers.closeProgram.name).handler({
-    inputs: { spec: { value: canonicalize(author) }, bindings: { value: appended.value } },
+  const closed = await facet(audiovisualAuthorProducers.closeResolvedProgram.name).handler({
+    inputs: {
+      spec: { value: canonicalize(author) },
+      bindings: { value: created.value },
+      domain: { value: domain.value },
+      occurrences: { value: occurrences.value },
+    },
   } as never);
   assert.equal(closed.kind, "output");
   const value = closed.value as unknown as { readonly occurrences: Readonly<Record<string, {
@@ -493,13 +800,38 @@ function nestedGraph(linked: LinkedProgram): AuthorGraph {
       id: "nested-media-source",
       inputs: { media: { kind: "record", id: "nested:media" } },
     }), { source: "nested.media.source" });
+  const childUse = bindAuthorFragment(elaborateGraphFragment(linked,
+    createOccurrenceUseFragment({ inferDuration: true }), {
+      id: "nested-child-use",
+      inputs: {
+        spec: { kind: "record", id: "nested:child:use-spec" },
+        source: { kind: "logical-output", id: "nested.media.source" },
+        start: { kind: "record", id: "nested:child:start" },
+      },
+    }), { use: "nested.child.use", end: "nested.child.end" });
+  const childDomain = bindAuthorFragment(elaborateGraphFragment(linked,
+    createAudiovisualProgramDomainFragment(), {
+      id: "nested-child-domain",
+      inputs: {
+        spec: { kind: "record", id: "nested:child:domain-spec" },
+        duration: { kind: "record", id: "nested:child:duration" },
+      },
+    }), { domain: "nested.child.domain" });
+  const childOccurrence = bindAuthorFragment(elaborateGraphFragment(linked,
+    createOccurrenceClosureFragment(), {
+      id: "nested-child-occurrence",
+      inputs: {
+        use: { kind: "logical-output", id: "nested.child.use" },
+        parent: { kind: "logical-output", id: "nested.child.domain" },
+      },
+    }), { occurrence: "nested.child.occurrence" });
   const child = bindAuthorFragment(elaborateGraphFragment(linked,
-    createAudiovisualAuthorFragment({ sources: 1 }), {
-      id: "nested-child",
+    createResolvedAudiovisualProgramFragment({ occurrences: 1 }), {
+      id: "nested-child-program",
       inputs: {
         spec: { kind: "record", id: "nested:child:spec" },
-        "binding-0001": { kind: "record", id: "nested:child:binding" },
-        "source-0001": { kind: "logical-output", id: "nested.media.source" },
+        domain: { kind: "logical-output", id: "nested.child.domain" },
+        "occurrence-0001": { kind: "logical-output", id: "nested.child.occurrence" },
       },
     }), { program: "nested.child.program" });
   const childSource = bindAuthorFragment(elaborateGraphFragment(linked,
@@ -507,13 +839,38 @@ function nestedGraph(linked: LinkedProgram): AuthorGraph {
       id: "nested-child-source",
       inputs: { program: { kind: "logical-output", id: "nested.child.program" } },
     }), { source: "nested.child.source" });
+  const parentUse = bindAuthorFragment(elaborateGraphFragment(linked,
+    createOccurrenceUseFragment({ inferDuration: true }), {
+      id: "nested-parent-use",
+      inputs: {
+        spec: { kind: "record", id: "nested:parent:use-spec" },
+        source: { kind: "logical-output", id: "nested.child.source" },
+        start: { kind: "record", id: "nested:parent:start" },
+      },
+    }), { use: "nested.parent.use", end: "nested.parent.end" });
+  const parentDomain = bindAuthorFragment(elaborateGraphFragment(linked,
+    createAudiovisualProgramDomainFragment(), {
+      id: "nested-parent-domain",
+      inputs: {
+        spec: { kind: "record", id: "nested:parent:domain-spec" },
+        duration: { kind: "record", id: "nested:parent:duration" },
+      },
+    }), { domain: "nested.parent.domain" });
+  const parentOccurrence = bindAuthorFragment(elaborateGraphFragment(linked,
+    createOccurrenceClosureFragment(), {
+      id: "nested-parent-occurrence",
+      inputs: {
+        use: { kind: "logical-output", id: "nested.parent.use" },
+        parent: { kind: "logical-output", id: "nested.parent.domain" },
+      },
+    }), { occurrence: "nested.parent.occurrence" });
   const parent = bindAuthorFragment(elaborateGraphFragment(linked,
-    createAudiovisualAuthorFragment({ sources: 1 }), {
-      id: "nested-parent",
+    createResolvedAudiovisualProgramFragment({ occurrences: 1 }), {
+      id: "nested-parent-program",
       inputs: {
         spec: { kind: "record", id: "nested:parent:spec" },
-        "binding-0001": { kind: "record", id: "nested:parent:binding" },
-        "source-0001": { kind: "logical-output", id: "nested.child.source" },
+        domain: { kind: "logical-output", id: "nested.parent.domain" },
+        "occurrence-0001": { kind: "logical-output", id: "nested.parent.occurrence" },
       },
     }), { program: "nested.parent.program" });
   const mediaAudio = bindAuthorFragment(elaborateGraphFragment(linked,
@@ -565,7 +922,9 @@ function nestedGraph(linked: LinkedProgram): AuthorGraph {
       },
     }), { program: "nested.parent.html-program" });
   return sealAuthorGraph(mergeFragmentContributions(
-    { outputs: [], operations: [] }, media, child, childSource, parent,
+    { outputs: [], operations: [] }, media,
+    childUse, childDomain, childOccurrence, child, childSource,
+    parentUse, parentDomain, parentOccurrence, parent,
     mediaAudio, childAudio, parentAudio, mediaHtml, childHtml, parentHtml,
   ));
 }
@@ -585,10 +944,20 @@ test("PreparedMedia closes through a child Programme into one parent AuthorGraph
 
   const linked = link(closure, [
     { id: "nested:media", type: mediaTypes.prepared, value: canonicalize(values.media) },
-    { id: "nested:child:binding", type: audiovisualAuthorTypes.sourceBinding,
-      value: canonicalize({ name: "media" }) },
-    { id: "nested:parent:binding", type: audiovisualAuthorTypes.sourceBinding,
-      value: canonicalize({ name: "child" }) },
+    { id: "nested:child:use-spec", type: audiovisualAuthorTypes.occurrenceUseSpec,
+      value: canonicalize({ id: "interview", domainId: "nested-child:interview:time",
+        outputs: { picture: {}, audio: {} } }) },
+    { id: "nested:child:start", type: temporalTypes.exactValue, value: canonicalize(at(0)) },
+    { id: "nested:child:domain-spec", type: audiovisualAuthorTypes.programDomainSpec,
+      value: canonicalize({ id: "nested-child" }) },
+    { id: "nested:child:duration", type: temporalTypes.exactValue, value: canonicalize(at(5)) },
+    { id: "nested:parent:use-spec", type: audiovisualAuthorTypes.occurrenceUseSpec,
+      value: canonicalize({ id: "child", domainId: "nested-parent:child:time",
+        outputs: { picture: {}, audio: {} } }) },
+    { id: "nested:parent:start", type: temporalTypes.exactValue, value: canonicalize(at(1)) },
+    { id: "nested:parent:domain-spec", type: audiovisualAuthorTypes.programDomainSpec,
+      value: canonicalize({ id: "nested-parent" }) },
+    { id: "nested:parent:duration", type: temporalTypes.exactValue, value: canonicalize(at(7)) },
     { id: "nested:child:spec", type: audiovisualAuthorTypes.spec, value: canonicalize(values.child) },
     { id: "nested:parent:spec", type: audiovisualAuthorTypes.spec, value: canonicalize(values.parent) },
     { id: "nested:audio-output", type: audiovisualAudioTypes.output,
@@ -601,27 +970,29 @@ test("PreparedMedia closes through a child Programme into one parent AuthorGraph
   ]);
   const graph = nestedGraph(linked);
   const plan = planBuild(linked, graph, ["nested.parent.program"]).plan;
-  assert.deepEqual(plan.steps.map((step) => step.producer.name).sort(), [
+  const forwardProgrammeSteps = [
+    audiovisualAuthorProducers.createBindings.name,
+    audiovisualAuthorProducers.inferOccurrenceDuration.name,
+    audiovisualAuthorProducers.resolveOccurrenceUse.name,
+    audiovisualAuthorProducers.createProgramDomain.name,
+    audiovisualAuthorProducers.closeOccurrence.name,
+    audiovisualAuthorProducers.createBindings.name,
+    audiovisualAuthorProducers.createOccurrences.name,
+    audiovisualAuthorProducers.appendOccurrence.name,
+    audiovisualAuthorProducers.closeResolvedProgram.name,
+  ];
+  const nestedProgrammeSteps = [
     audiovisualMediaProducers.source.name,
-    audiovisualAuthorProducers.createBindings.name,
-    audiovisualAuthorProducers.appendSource.name,
-    audiovisualAuthorProducers.closeProgram.name,
+    ...forwardProgrammeSteps,
     audiovisualProducers.programSource.name,
-    audiovisualAuthorProducers.createBindings.name,
-    audiovisualAuthorProducers.appendSource.name,
-    audiovisualAuthorProducers.closeProgram.name,
-  ].sort());
+    ...forwardProgrammeSteps,
+  ];
+  assert.deepEqual(plan.steps.map((step) => step.producer.name).sort(),
+    nestedProgrammeSteps.toSorted());
 
   const audioPlan = planBuild(linked, graph, ["nested.parent.audio-program"]).plan;
   assert.deepEqual(audioPlan.steps.map((step) => step.producer.name).sort(), [
-    audiovisualMediaProducers.source.name,
-    audiovisualAuthorProducers.createBindings.name,
-    audiovisualAuthorProducers.appendSource.name,
-    audiovisualAuthorProducers.closeProgram.name,
-    audiovisualProducers.programSource.name,
-    audiovisualAuthorProducers.createBindings.name,
-    audiovisualAuthorProducers.appendSource.name,
-    audiovisualAuthorProducers.closeProgram.name,
+    ...nestedProgrammeSteps,
     audiovisualAudioProducers.preparedMediaSource.name,
     audiovisualAudioProducers.createSources.name,
     audiovisualAudioProducers.appendSource.name,
@@ -633,14 +1004,7 @@ test("PreparedMedia closes through a child Programme into one parent AuthorGraph
 
   const htmlPlan = planBuild(linked, graph, ["nested.parent.html-program"]).plan;
   assert.deepEqual(htmlPlan.steps.map((step) => step.producer.name).sort(), [
-    audiovisualMediaProducers.source.name,
-    audiovisualAuthorProducers.createBindings.name,
-    audiovisualAuthorProducers.appendSource.name,
-    audiovisualAuthorProducers.closeProgram.name,
-    audiovisualProducers.programSource.name,
-    audiovisualAuthorProducers.createBindings.name,
-    audiovisualAuthorProducers.appendSource.name,
-    audiovisualAuthorProducers.closeProgram.name,
+    ...nestedProgrammeSteps,
     audiovisualHtmlProducers.preparedMediaSource.name,
     audiovisualHtmlProducers.createSources.name,
     audiovisualHtmlProducers.appendSource.name,

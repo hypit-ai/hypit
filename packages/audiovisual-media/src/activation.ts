@@ -1,7 +1,7 @@
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 
 import { audiovisualMediaComponent } from "./component.js";
+import { audiovisualMediaAuthorFacets } from "./declaration.js";
 import { audiovisualMediaManifest } from "./manifest.js";
 
 export const hypitPackage = {
@@ -9,7 +9,7 @@ export const hypitPackage = {
   modules: [{ manifest: audiovisualMediaManifest }],
   facets: [
     createProducerPackageFacet(audiovisualMediaComponent.producers),
-    createRefinementPackageFacet(audiovisualMediaComponent.refinements),
+    ...audiovisualMediaAuthorFacets,
   ],
 };
 

@@ -95,6 +95,11 @@
       "types": "./dist/public/markup.d.ts",
       "import": "./packages/markup/src/index.ts"
     },
+    "./svml": {
+      "hypit-source": "./packages/svml/src/index.ts",
+      "types": "./dist/public/svml.d.ts",
+      "import": "./packages/svml/src/index.ts"
+    },
     "./result": {
       "hypit-source": "./packages/result/src/index.ts",
       "types": "./dist/public/result.d.ts",
@@ -144,6 +149,11 @@
       "hypit-source": "./packages/text/src/index.ts",
       "types": "./dist/public/text.d.ts",
       "import": "./packages/text/src/index.ts"
+    },
+    "./prompt": {
+      "hypit-source": "./packages/prompt/src/index.ts",
+      "types": "./dist/public/prompt.d.ts",
+      "import": "./packages/prompt/src/index.ts"
     }
   },
   "bin": {
@@ -227,17 +237,16 @@
     "@hypit/author": "workspace:*",
     "@hypit/markup": "workspace:*",
     "@hypit/media": "workspace:*",
-    "@hypit/media-extraction": "workspace:*",
     "@hypit/narrative": "workspace:*",
     "@hypit/narrative-caption": "workspace:*",
     "@hypit/narrative-speech-alignment": "workspace:*",
     "@hypit/narrative-temporal": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/prompt": "workspace:*",
     "@hypit/raster-composition": "workspace:*",
-    "@hypit/raster-transform": "workspace:*",
     "@hypit/script": "workspace:*",
+    "@hypit/svml": "workspace:*",
     "@hypit/speech-evidence": "workspace:*",
-    "@hypit/still-video": "workspace:*",
     "@hypit/temporal": "workspace:*",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/league-spartan": "5.3.0",

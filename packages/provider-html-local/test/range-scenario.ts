@@ -4,7 +4,7 @@ import {
   type HtmlPictureElement,
 } from "@hypit/html-program";
 import type { BlobRef } from "@hypit/protocol";
-import type { PictureInterpretation, PreparedVisualSource } from "@hypit/media";
+import type { PictureInterpretation, PreparedSignalPictureSource } from "@hypit/media";
 import {
   exactTemporalZero,
 } from "@hypit/temporal";
@@ -17,8 +17,9 @@ const picture: PictureInterpretation = {
   colorRange: "limited", bitDepth: 8, alphaMode: "opaque",
 };
 
-function preparedSource(artifact: BlobRef, sourceDomain: PreparedVisualSource["sourceDomain"]): PreparedVisualSource {
+function preparedSource(artifact: BlobRef, sourceDomain: PreparedSignalPictureSource["sourceDomain"]): PreparedSignalPictureSource {
   return {
+    kind: "signal",
     source: artifact,
     streamIndex: 0,
     presentationStart: exactTemporalZero(),

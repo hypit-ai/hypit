@@ -82,3 +82,23 @@ const visual = await rasterizeChromiumHtmlProgram(
   { resources, workers: "auto" },
 );
 ```
+
+An application that already owns a complete HTML Video Delivery Plan can select the concrete local
+picture, audio and mux implementation together without introducing a Runtime Build:
+
+```ts
+import { executeHtmlVideoDeliveryPlan } from "@hypit/html-video";
+import { createLocalHtmlVideoDeliveryExecutor } from "@hypit/provider-html-local";
+
+const executor = createLocalHtmlVideoDeliveryExecutor({
+  resources,
+  html: { workers: "auto" },
+  media: { ffmpegPath: "ffmpeg", ffprobePath: "ffprobe" },
+});
+const output = await executeHtmlVideoDeliveryPlan(plan, executor);
+```
+
+The caller selects and owns `resources`. Authored media, the silent visual, rendered programme audio
+and final MP4 all meet only through that store. The returned `MuxedMedia.artifact` remains a resource
+identity; copying it to a user-selected path is an outer application or CLI operation, not an NLE or
+Provider-domain fact.

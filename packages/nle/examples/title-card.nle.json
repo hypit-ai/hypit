@@ -1,0 +1,108 @@
+{
+  "format": "hypit.nle@1",
+  "id": "title-card-project",
+  "name": "Title Card Project",
+  "revision": 0,
+  "frameRate": {
+    "numerator": 30,
+    "denominator": 1
+  },
+  "canvas": {
+    "width": 1920,
+    "height": 1080,
+    "clearColor": "#000000"
+  },
+  "media": [],
+  "tracks": [
+    {
+      "id": "picture-main",
+      "name": "Picture",
+      "kind": "picture",
+      "locked": false,
+      "muted": false,
+      "items": [
+        {
+          "id": "opening-title",
+          "kind": "component",
+          "startFrame": 0,
+          "durationFrames": 90,
+          "localStartFrame": 0,
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@example/audiovisual-title-card",
+              "version": "1"
+            },
+            "name": "title-card"
+          },
+          "parameters": {
+            "title": "Project files store instances",
+            "subtitle": "Packages own behavior",
+            "background": "#101820",
+            "foreground": "#f2f2f2"
+          },
+          "picture": {
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1080,
+              "fit": "fill"
+            },
+            "effects": [
+              {
+                "id": "opening-filter",
+                "effect": {
+                  "module": {
+                    "name": "@hypit/picture-filter",
+                    "version": "1"
+                  },
+                  "name": "filter"
+                },
+                "parameters": {
+                  "kind": "frames",
+                  "frames": [
+                    {
+                      "atFrame": 0,
+                      "state": {
+                        "opacity": 0,
+                        "blurRadius": 20,
+                        "brightness": 1,
+                        "contrast": 1,
+                        "saturation": 1,
+                        "hue": 0,
+                        "grayscale": 0,
+                        "sepia": 0,
+                        "invert": 0
+                      }
+                    },
+                    {
+                      "atFrame": 15,
+                      "state": {
+                        "opacity": 1,
+                        "blurRadius": 0,
+                        "brightness": 1,
+                        "contrast": 1,
+                        "saturation": 1,
+                        "hue": 0,
+                        "grayscale": 0,
+                        "sepia": 0,
+                        "invert": 0
+                      }
+                    }
+                  ],
+                  "interpolation": {
+                    "kind": "linear"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "transitions": [],
+  "mattes": [],
+  "groups": []
+}

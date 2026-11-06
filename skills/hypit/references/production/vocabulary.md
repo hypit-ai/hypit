@@ -19,7 +19,7 @@ Query the likely package owners:
 ```bash
 hypit vocabulary
 hypit vocabulary @hypit/caption-fine
-hypit vocabulary @hypit/media-operations --tag StillVideo
+hypit vocabulary @hypit/media --tag Video
 hypit vocabulary --visual text
 ```
 

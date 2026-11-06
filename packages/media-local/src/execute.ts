@@ -3,17 +3,10 @@ import { createReadStream } from "node:fs";
 import { copyFile, mkdir, mkdtemp, open, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { sameVisualDeliverySpec, sealMediaInspection, sealMuxedMedia, sealTimelineAudio, verifyMediaDeliverySpec, verifyPreparedAudioSource, verifyTimelineVisual, verifyTimelineAudio } from "@hypit/media";
-import type { InspectMediaNeed, MediaAudioStream, MediaInspection, MediaTimestamp, MediaVideoStream, MuxedMedia, PreparedAudioSource, TimelineAudio } from "@hypit/media";
+import { sameVisualDeliverySpec, sealMediaInspection, sealMuxedMedia, sealTimelineAudio, verifyAudioExtractionRequest, verifyFrameExtractionRequest, verifyMediaDeliverySpec, verifyPreparedAudioSource, verifyTimelineVisual, verifyTimelineAudio } from "@hypit/media";
+import type { ExtractAudioNeed, ExtractFrameNeed, InspectMediaNeed, MediaAudioStream, MediaInspection, MediaTimestamp, MediaVideoStream, MuxedMedia, PreparedAudioSource, TimelineAudio } from "@hypit/media";
 import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvidenceSampleFrames } from "@hypit/speech-evidence";
 import type { ProjectSpeechEvidenceAudioNeed, SpeechEvidenceAudio } from "@hypit/speech-evidence";
-import {
-  verifyAudioExtractionRequest,
-  verifyFrameExtractionRequest,
-  type ExtractAudioNeed,
-  type ExtractFrameNeed,
-} from "@hypit/media-extraction";
-import { type RenderStillVideoNeed, verifyStillVideoRequest } from "@hypit/still-video";
 import { audioProgramSampleFrames, verifyAudioProgram } from "@hypit/audio-program";
 import type { AudioProgram, AudioProgramMediaSource, AudioProgramNode, RenderAudioNeed } from "@hypit/audio-program";
 import { readPreservePitch } from "@hypit/audio-preserve-pitch";
@@ -395,14 +388,6 @@ function extractFrameNeed(value: CanonicalValue): ExtractFrameNeed {
   return item;
 }
 
-function renderStillVideoNeed(value: CanonicalValue): RenderStillVideoNeed {
-  const item = object(value, "RenderStillVideoNeed") as unknown as RenderStillVideoNeed;
-  verifyStillVideoRequest(item.request);
-  assert(item.request.segments.every((segment) => segment.source?.kind === "blob" && segment.source.mediaType.startsWith("image/")),
-    "RenderStillVideoNeed needs an image Artifact for every segment");
-  return item;
-}
-
 function evidenceAudioNeed(value: CanonicalValue): ProjectSpeechEvidenceAudioNeed {
   const item = object(value, "ProjectSpeechEvidenceAudioNeed") as unknown as ProjectSpeechEvidenceAudioNeed;
   verifyPreparedAudioSource(item.source);
@@ -645,104 +630,6 @@ async function decodePreparedAudioBase(
     streamIndex: source.streamIndex,
     sourceDuration: source.sourceDomain.duration,
   });
-}
-
-/**
- * Encode authored images into an exact video-only CFR clip. One picture is held for the whole frame
- * count; several are each held for their planned segment, fitted into the first picture's frame
- * and letterboxed on black, then concatenated in order.
- */
-export async function executeRenderStillVideo(
-  env: MediaExecutionEnvironment,
-  constraints: CanonicalValue,
-): Promise<MediaOperationResult> {
-  const need = renderStillVideoNeed(constraints);
-  const work = await mkdtemp(join(tmpdir(), "hypit-media-still-"));
-  try {
-    const output = join(work, "still.mp4");
-    const staged = new Map<string, string>();
-    const inputs: string[] = [];
-    for (const segment of need.request.segments) {
-      const source = segment.source!;
-      let path = staged.get(source.resource);
-      if (path === undefined) {
-        path = join(work, `picture-${staged.size}.image`);
-        await stageArtifact(env, source, path);
-        staged.set(source.resource, path);
-      }
-      inputs.push(path);
-    }
-    const { numerator, denominator } = need.request.frameRate;
-    const fps = `${numerator}/${denominator}`;
-    const hold = (frames: number): string => [
-      "select=eq(n\\,0)",
-      "loop=loop=-1:size=1:start=0",
-      `trim=start_frame=0:end_frame=${frames}`,
-      `settb=expr=${denominator}/${numerator}`,
-      `setpts=N*${denominator}/(${numerator}*TB)`,
-    ].join(",");
-    const bt709Output = [
-      "scale=out_color_matrix=bt709:out_range=tv",
-      "format=yuv420p",
-      "setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv",
-    ].join(",");
-    let argv: string[];
-    if (need.request.segments.length === 1) {
-      const filter = `${hold(need.request.frameCount)},pad=ceil(iw/2)*2:ceil(ih/2)*2:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,${bt709Output}`;
-      argv = ["-y", "-i", inputs[0]!, "-map", "0:v:0", "-an", "-vf", filter];
-    } else {
-      const first = await outputInspection({
-        path: inputs[0]!,
-        ffprobePath: env.ffprobePath,
-        timeoutMs: env.processTimeoutMs,
-        maxProbeOutputBytes: env.maxProbeOutputBytes,
-        ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
-      });
-      const picture = first.streams.find((item): item is MediaVideoStream => item.kind === "video");
-      assert(picture !== undefined, "Still video first picture has no decodable image");
-      const width = Math.ceil(picture.width / 2) * 2;
-      const height = Math.ceil(picture.height / 2) * 2;
-      const chains = need.request.segments.map((segment, index) =>
-        `[${index}:v]${hold(segment.endFrameExclusive - segment.startFrame)},`
-        + `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1[s${index}]`);
-      const concat = `${need.request.segments.map((_, index) => `[s${index}]`).join("")}concat=n=${need.request.segments.length}:v=1:a=0[joined];[joined]${bt709Output}[v]`;
-      argv = ["-y", ...inputs.flatMap((path) => ["-i", path]), "-filter_complex", `${chains.join(";")};${concat}`, "-map", "[v]", "-an"];
-    }
-    await runProcess({
-      executable: env.ffmpegPath,
-      argv: [
-        ...argv,
-        "-frames:v", String(need.request.frameCount), "-r", fps, "-fps_mode", "cfr",
-        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart", output,
-      ],
-      timeoutMs: env.processTimeoutMs,
-      maxStdoutBytes: 64 * 1024,
-      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
-    });
-    const inspected = await outputInspection({
-      path: output,
-      ffprobePath: env.ffprobePath,
-      timeoutMs: env.processTimeoutMs,
-      maxProbeOutputBytes: env.maxProbeOutputBytes,
-      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
-    });
-    const videos = inspected.streams.filter((item): item is MediaVideoStream => item.kind === "video");
-    assert(videos.length === 1 && inspected.streams.length === 1
-      && videos[0]!.decodedUnitCount === need.request.frameCount,
-    "Still media output differs from its requested frame domain");
-    const visual = videos[0]!;
-    assert(visual.sampleAspectRatio.numerator === 1 && visual.sampleAspectRatio.denominator === 1
-      && visual.rotationDegrees === 0,
-    "Still media output retains non-square samples or display rotation");
-    assert(visual.averageFrameRate !== undefined
-      && visual.averageFrameRate.numerator * need.request.frameRate.denominator
-        === need.request.frameRate.numerator * visual.averageFrameRate.denominator,
-    "Still media output differs from its requested frame rate");
-    return artifactResult(await env.artifacts.putFile(output, "video/mp4"));
-  } finally {
-    await rm(work, { recursive: true, force: true }).catch(() => {});
-  }
 }
 
 /** Generic model-reference audio: no Narrative or alignment claim is introduced. */

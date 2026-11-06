@@ -1,4 +1,5 @@
 import {
+  assertExactTemporalValue,
   compareExactTemporalValues,
   exactTemporalRational,
   exactTemporalValue,
@@ -37,6 +38,60 @@ export type TemporalMapEvaluation = {
   /** Which side of `position` is the image of the requested target side. */
   readonly sourceSide: TemporalMapSide;
 };
+
+/** One exact germ at a temporal position. `before` and `after` remain distinct at cuts. */
+export type TemporalMapPoint = {
+  readonly position: ExactTemporalValue;
+  readonly side: TemporalMapSide;
+};
+
+/**
+ * One inclusive interval in sided temporal order.
+ *
+ * At an equal position `before` sorts before `after`. Consequently a normal
+ * piece occupies `[target.start/after, target.end/before]` without pretending
+ * that either side across a cut belongs to the piece.
+ */
+export type TemporalMapRegion = {
+  readonly start: TemporalMapPoint;
+  readonly end: TemporalMapPoint;
+};
+
+export type TemporalMapRegionSet = {
+  readonly domain: LocalTemporalDomain;
+  readonly regions: readonly TemporalMapRegion[];
+};
+
+export type TemporalMapPreimage = TemporalMapRegionSet;
+
+export function assertTemporalMapPoint(value: TemporalMapPoint, label = "Temporal Map point"): void {
+  assert(value !== null && typeof value === "object", `${label} must be an object.`);
+  assertExactTemporalValue(value.position, `${label}.position`);
+  assert(value.side === "before" || value.side === "after", `${label}.side is invalid.`);
+}
+
+export function assertTemporalMapRegion(value: TemporalMapRegion, label = "Temporal Map region"): void {
+  assert(value !== null && typeof value === "object", `${label} must be an object.`);
+  assertTemporalMapPoint(value.start, `${label}.start`);
+  assertTemporalMapPoint(value.end, `${label}.end`);
+  assert(compareMapPoints(value.start, value.end) <= 0, `${label} is reversed.`);
+}
+
+export function assertTemporalMapPreimage(value: TemporalMapPreimage): void {
+  assert(value !== null && typeof value === "object", "Temporal Map preimage must be an object.");
+  assertLocalTemporalDomain(value.domain);
+  for (const [index, region] of value.regions.entries()) {
+    assertTemporalMapRegion(region, `Temporal Map preimage region ${index}`);
+    assertMapPointInDomain(region.start, value.domain);
+    assertMapPointInDomain(region.end, value.domain);
+    if (index > 0) {
+      assert(compareMapPoints(value.regions[index - 1]!.end, region.start) < 0,
+        "Temporal Map preimage regions overlap or are out of order.");
+    }
+  }
+}
+
+export const assertTemporalMapRegionSet = assertTemporalMapPreimage;
 
 export type TemporalMapEvaluator = (
   targetAt: ExactTemporalValue,
@@ -278,6 +333,302 @@ export function createTemporalMapEvaluator(value: TemporalMap): TemporalMapEvalu
   assertTemporalMap(value);
   return (targetAt, side) => evaluateTemporalMapCore(value, targetAt, side);
 }
+
+function compareMapPoints(left: TemporalMapPoint, right: TemporalMapPoint): number {
+  const position = compareExactTemporalValues(left.position, right.position);
+  if (position !== 0) return position;
+  return left.side === right.side ? 0 : left.side === "before" ? -1 : 1;
+}
+
+/** Exact ordering of sided positions; useful to domain owners building local schedules. */
+export const compareTemporalMapPoints = compareMapPoints;
+
+function flipMapSide(side: TemporalMapSide): TemporalMapSide {
+  return side === "before" ? "after" : "before";
+}
+
+function mapPoint(position: ExactTemporalValue, side: TemporalMapSide): TemporalMapPoint {
+  return { position: structuredClone(position), side };
+}
+
+function mapRegion(start: TemporalMapPoint, end: TemporalMapPoint): TemporalMapRegion {
+  assert(compareMapPoints(start, end) <= 0, "Temporal Map region is reversed.");
+  return { start, end };
+}
+
+function intersectMapRegions(
+  left: TemporalMapRegion,
+  right: TemporalMapRegion,
+): TemporalMapRegion | undefined {
+  const start = compareMapPoints(left.start, right.start) >= 0 ? left.start : right.start;
+  const end = compareMapPoints(left.end, right.end) <= 0 ? left.end : right.end;
+  return compareMapPoints(start, end) <= 0 ? mapRegion(start, end) : undefined;
+}
+
+function normalizeMapRegions(regions: readonly TemporalMapRegion[]): readonly TemporalMapRegion[] {
+  const sorted = [...regions].sort((left, right) => compareMapPoints(left.start, right.start)
+    || compareMapPoints(left.end, right.end));
+  const result: TemporalMapRegion[] = [];
+  for (const region of sorted) {
+    const previous = result.at(-1);
+    if (previous === undefined || compareMapPoints(region.start, previous.end) > 0) {
+      result.push(mapRegion(region.start, region.end));
+      continue;
+    }
+    if (compareMapPoints(region.end, previous.end) > 0) {
+      result[result.length - 1] = mapRegion(previous.start, region.end);
+    }
+  }
+  return result;
+}
+
+function floorRational(value: Rational): bigint {
+  let quotient = value.numerator / value.denominator;
+  if (value.numerator < 0n && value.numerator % value.denominator !== 0n) quotient -= 1n;
+  return quotient;
+}
+
+function ceilRational(value: Rational): bigint {
+  return -floorRational(rational(-value.numerator, value.denominator));
+}
+
+type AffineBranch = {
+  readonly piece: TemporalAffineMapPiece;
+  readonly target: TemporalMapRegion;
+};
+
+function rawAffinePosition(piece: TemporalAffineMapPiece, target: Rational): Rational {
+  const rate = rational(BigInt(piece.rate.numerator), BigInt(piece.rate.denominator));
+  return add(exactTemporalRational(piece.sourceAtStart), multiply(
+    subtract(target, exactTemporalRational(piece.target.start)), rate,
+  ));
+}
+
+function affinePointValue(piece: TemporalAffineMapPiece, target: TemporalMapPoint): TemporalMapPoint {
+  const direction = Math.sign(piece.rate.numerator) as -1 | 0 | 1;
+  const sourceSide = direction === 0 ? "after"
+    : direction > 0 ? target.side : flipMapSide(target.side);
+  return mapPoint(sidedPieceValue(piece, target.position, sourceSide), sourceSide);
+}
+
+function affineBranches(piece: TemporalAffineMapPiece): readonly AffineBranch[] {
+  const targetStart = exactTemporalRational(piece.target.start);
+  const targetEnd = exactTemporalRational(piece.target.end);
+  const boundaries: Rational[] = [targetStart, targetEnd];
+  if (piece.wrap !== undefined && piece.rate.numerator !== 0) {
+    const wrapStart = exactTemporalRational(piece.wrap.start);
+    const wrapLength = subtract(exactTemporalRational(piece.wrap.end), wrapStart);
+    const rawStart = rawAffinePosition(piece, targetStart);
+    const rawEnd = rawAffinePosition(piece, targetEnd);
+    const low = compare(rawStart, rawEnd) <= 0 ? rawStart : rawEnd;
+    const high = compare(rawStart, rawEnd) >= 0 ? rawStart : rawEnd;
+    const first = ceilRational(divide(subtract(low, wrapStart), wrapLength));
+    const last = floorRational(divide(subtract(high, wrapStart), wrapLength));
+    const rate = rational(BigInt(piece.rate.numerator), BigInt(piece.rate.denominator));
+    for (let cycle = first; cycle <= last; cycle += 1n) {
+      const seamSource = add(wrapStart, multiply(wrapLength, rational(cycle)));
+      const seamTarget = add(targetStart, divide(
+        subtract(seamSource, exactTemporalRational(piece.sourceAtStart)), rate,
+      ));
+      if (compare(seamTarget, targetStart) > 0 && compare(seamTarget, targetEnd) < 0) {
+        boundaries.push(seamTarget);
+      }
+    }
+    boundaries.sort(compare);
+  }
+  return boundaries.slice(0, -1).map((start, index) => ({
+    piece,
+    target: mapRegion(
+      mapPoint(exactTemporalValue(start), "after"),
+      mapPoint(exactTemporalValue(boundaries[index + 1]!), "before"),
+    ),
+  }));
+}
+
+function branchImage(branch: AffineBranch): TemporalMapRegion {
+  const left = affinePointValue(branch.piece, branch.target.start);
+  const right = affinePointValue(branch.piece, branch.target.end);
+  return compareMapPoints(left, right) <= 0 ? mapRegion(left, right) : mapRegion(right, left);
+}
+
+function pointInsideRegion(point: TemporalMapPoint, region: TemporalMapRegion): boolean {
+  return compareMapPoints(point, region.start) >= 0 && compareMapPoints(point, region.end) <= 0;
+}
+
+function inverseAffineBranchPoint(branch: AffineBranch, source: TemporalMapPoint): TemporalMapPoint {
+  const piece = branch.piece;
+  const rate = rational(BigInt(piece.rate.numerator), BigInt(piece.rate.denominator));
+  assert(rate.numerator !== 0n, "A held Temporal Map branch has no point inverse.");
+  const sourcePosition = exactTemporalRational(source.position);
+  const candidates: Rational[] = [];
+  if (piece.wrap === undefined) {
+    candidates.push(sourcePosition);
+  } else {
+    const wrapStart = exactTemporalRational(piece.wrap.start);
+    const wrapLength = subtract(exactTemporalRational(piece.wrap.end), wrapStart);
+    const rawStart = rawAffinePosition(piece, exactTemporalRational(branch.target.start.position));
+    const approximateCycle = floorRational(divide(subtract(rawStart, sourcePosition), wrapLength));
+    for (let offset = -1n; offset <= 2n; offset += 1n) {
+      candidates.push(add(sourcePosition, multiply(wrapLength, rational(approximateCycle + offset))));
+    }
+  }
+  for (const rawSource of candidates) {
+    const target = add(exactTemporalRational(piece.target.start), divide(
+      subtract(rawSource, exactTemporalRational(piece.sourceAtStart)), rate,
+    ));
+    const result = mapPoint(exactTemporalValue(target),
+      piece.rate.numerator > 0 ? source.side : flipMapSide(source.side));
+    if (!pointInsideRegion(result, branch.target)) continue;
+    const evaluated = affinePointValue(piece, result);
+    if (compareMapPoints(evaluated, source) === 0) return result;
+  }
+  throw new Error("Temporal Map affine branch inverse is internally inconsistent.");
+}
+
+function affineBranchPreimage(
+  branch: AffineBranch,
+  source: TemporalMapRegion,
+): TemporalMapRegion | undefined {
+  const piece = branch.piece;
+  if (piece.rate.numerator === 0) {
+    const held = affinePointValue(piece, branch.target.start);
+    return pointInsideRegion(held, source) ? branch.target : undefined;
+  }
+  const overlap = intersectMapRegions(branchImage(branch), source);
+  if (overlap === undefined) return undefined;
+  const left = inverseAffineBranchPoint(branch, overlap.start);
+  const right = inverseAffineBranchPoint(branch, overlap.end);
+  return compareMapPoints(left, right) <= 0 ? mapRegion(left, right) : mapRegion(right, left);
+}
+
+function pieceImage(piece: TemporalMapPiece): TemporalMapRegion {
+  const direction = pieceDirection(piece);
+  const start = mapPoint(piece.target.start, "after");
+  const end = mapPoint(piece.target.end, "before");
+  const left = mapPoint(sidedPieceValue(piece, start.position,
+    direction === 0 ? "after" : direction > 0 ? start.side : flipMapSide(start.side)),
+  direction === 0 ? "after" : direction > 0 ? start.side : flipMapSide(start.side));
+  const right = mapPoint(sidedPieceValue(piece, end.position,
+    direction === 0 ? "after" : direction > 0 ? end.side : flipMapSide(end.side)),
+  direction === 0 ? "after" : direction > 0 ? end.side : flipMapSide(end.side));
+  return compareMapPoints(left, right) <= 0 ? mapRegion(left, right) : mapRegion(right, left);
+}
+
+function stagePreimage(
+  stage: TemporalMapStage,
+  source: readonly TemporalMapRegion[],
+): readonly TemporalMapRegion[] {
+  const results: TemporalMapRegion[] = [];
+  for (const piece of stage.pieces) {
+    if (isAffineTemporalMapPiece(piece)) {
+      for (const branch of affineBranches(piece)) for (const region of source) {
+        const inverse = affineBranchPreimage(branch, region);
+        if (inverse !== undefined) results.push(inverse);
+      }
+      continue;
+    }
+    const image = pieceImage(piece);
+    const intersects = source.some((region) => intersectMapRegions(image, region) !== undefined);
+    if (pieceDirection(piece) === 0) {
+      const held = mapPoint(piece.sourceAtStart, "after");
+      if (source.some((region) => pointInsideRegion(held, region))) {
+        results.push(mapRegion(mapPoint(piece.target.start, "after"), mapPoint(piece.target.end, "before")));
+      }
+    } else if (intersects) {
+      throw new Error("Exact Temporal Map preimage does not approximate cubic roots; split or resolve the curve before inversion.");
+    }
+  }
+  return normalizeMapRegions(results);
+}
+
+function assertMapPointInDomain(point: TemporalMapPoint, domain: LocalTemporalDomain): void {
+  const position = exactTemporalRational(point.position);
+  assert(compare(position, rational(0n)) >= 0
+    && compare(position, exactTemporalRational(domain.duration)) <= 0,
+  `Temporal Map preimage query lies outside source domain ${domain.id}.`);
+}
+
+/**
+ * Return the complete exact target set whose forward image lies in `source`.
+ *
+ * This is a bounded set-valued preimage, not a second serialized Map and not a
+ * nearest-match policy. It preserves cuts, gaps, reverse direction, holds,
+ * loops and every stage in the supplied Map. A point query is written as a
+ * region whose start and end are the same sided point.
+ *
+ * Non-constant cubic position pieces are rejected when the query intersects
+ * them: their exact roots are not generally rational, so silently sampling or
+ * applying an epsilon would contradict this package's exact-time contract.
+ */
+export function preimageTemporalMap(
+  value: TemporalMap,
+  source: TemporalMapRegion,
+): TemporalMapPreimage {
+  assertTemporalMap(value);
+  const sourceDomain = value.stages.at(-1)!.source;
+  assertMapPointInDomain(source.start, sourceDomain);
+  assertMapPointInDomain(source.end, sourceDomain);
+  assert(compareMapPoints(source.start, source.end) <= 0, "Temporal Map preimage query is reversed.");
+  let regions: readonly TemporalMapRegion[] = [mapRegion(source.start, source.end)];
+  for (let index = value.stages.length - 1; index >= 0 && regions.length > 0; index -= 1) {
+    regions = stagePreimage(value.stages[index]!, regions);
+  }
+  return {
+    domain: structuredClone(value.stages[0]!.target),
+    regions: structuredClone(regions),
+  };
+}
+
+export function preimageTemporalMapRegions(
+  value: TemporalMap,
+  source: TemporalMapRegionSet,
+): TemporalMapRegionSet {
+  assertTemporalMap(value);
+  assertTemporalMapRegionSet(source);
+  const sourceDomain = value.stages.at(-1)!.source;
+  assert(source.domain.id === sourceDomain.id
+    && compareExactTemporalValues(source.domain.duration, sourceDomain.duration) === 0,
+  `Temporal Map region set belongs to ${source.domain.id}, not source domain ${sourceDomain.id}.`);
+  let regions: readonly TemporalMapRegion[] = source.regions;
+  for (let index = value.stages.length - 1; index >= 0 && regions.length > 0; index -= 1) {
+    regions = stagePreimage(value.stages[index]!, regions);
+  }
+  return {
+    domain: structuredClone(value.stages[0]!.target),
+    regions: structuredClone(regions),
+  };
+}
+
+export function temporalMapPointRegion(point: TemporalMapPoint): TemporalMapRegion {
+  assertTemporalMapPoint(point);
+  return { start: structuredClone(point), end: structuredClone(point) };
+}
+
+export function temporalMapPointRegionSet(
+  domain: LocalTemporalDomain,
+  point: TemporalMapPoint,
+): TemporalMapRegionSet {
+  assertLocalTemporalDomain(domain);
+  assertTemporalMapPoint(point);
+  assertMapPointInDomain(point, domain);
+  return {
+    domain: structuredClone(domain),
+    regions: [temporalMapPointRegion(point)],
+  };
+}
+
+export function uniqueTemporalMapPreimagePoint(value: TemporalMapPreimage): TemporalMapPoint {
+  assertTemporalMapPreimage(value);
+  assert(value.regions.length === 1, value.regions.length === 0
+    ? "Temporal Map preimage has no solution; exactly one point is required."
+    : `Temporal Map preimage has ${value.regions.length} regions; exactly one point is required.`);
+  const [region] = value.regions;
+  assert(compareMapPoints(region!.start, region!.end) === 0,
+    "Temporal Map preimage is a region; exactly one point is required.");
+  return structuredClone(region!.start);
+}
+
+export const uniqueTemporalMapRegionSetPoint = uniqueTemporalMapPreimagePoint;
 
 type StructuralRegion =
   | { readonly kind: "range"; readonly start: ExactTemporalValue; readonly end: ExactTemporalValue }

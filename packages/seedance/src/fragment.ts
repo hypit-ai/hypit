@@ -2,7 +2,7 @@ import { blobTypes } from "@hypit/hypit/blob";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import { generationProducers } from "@hypit/generation";
 import { createFieldModelPrimaryFragment } from "@hypit/generation/model-fields";
-import type { FieldModelOperation, ModelArtifactInput, ModelTextInput } from "@hypit/generation/model-fields";
+import type { FieldModelOperation, ModelArtifactInput, ModelTextFieldInput } from "@hypit/generation/model-fields";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
@@ -40,7 +40,7 @@ export function createSeedanceGenerationFragment(endpoint: FieldModelOperation) 
 export function createSeedanceAssembledGenerationFragment(
   endpoint: FieldModelOperation,
   mediaInputs: readonly ModelArtifactInput[] = [],
-  textInputs: readonly ModelTextInput[] = [],
+  textFieldInputs: readonly ModelTextFieldInput[] = [],
 ) {
-  return createFieldModelPrimaryFragment(endpoint, mediaInputs, textInputs);
+  return createFieldModelPrimaryFragment(endpoint, mediaInputs, textFieldInputs);
 }

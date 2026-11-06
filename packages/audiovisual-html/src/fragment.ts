@@ -1,5 +1,4 @@
 import { audiovisualTypes } from "@hypit/audiovisual";
-import { audiovisualMediaTypes } from "@hypit/audiovisual-media";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import type { FragmentOperation } from "@hypit/hypit/author";
 import { htmlProgramTypes } from "@hypit/html-program";
@@ -87,17 +86,6 @@ export const preparedMediaHtmlSourceFragment = sealGraphFragment({
     id: "source",
     producer: audiovisualHtmlProducers.preparedMediaSource,
     inputs: { media: input("media") },
-    result: { kind: "output", name: "source" },
-  }],
-  exports: [{ name: "source", type: audiovisualHtmlTypes.source, root: operation("source") }],
-});
-
-export const stillPictureHtmlSourceFragment = sealGraphFragment({
-  inputs: [{ name: "picture", type: audiovisualMediaTypes.stillPicture }],
-  operations: [{
-    id: "source",
-    producer: audiovisualHtmlProducers.stillPictureSource,
-    inputs: { picture: input("picture") },
     result: { kind: "output", name: "source" },
   }],
   exports: [{ name: "source", type: audiovisualHtmlTypes.source, root: operation("source") }],

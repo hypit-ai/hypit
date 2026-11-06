@@ -19,8 +19,9 @@
   },
   "devDependencies": {
     "@hypit/hypit": "workspace:*",
-    "@hypit/markup": "workspace:*",
+    "@hypit/prompt": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/svml": "workspace:*",
     "typescript": "5.9.3"
   },
   "dependencies": {

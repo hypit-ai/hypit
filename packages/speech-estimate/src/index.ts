@@ -1,6 +1,5 @@
 export {
   speechEstimatePolicyFromAttributes,
-  speechEstimatePolicyFromRecipe,
   speechEstimatePolicyProperties,
 } from "./policy.js";
 export {

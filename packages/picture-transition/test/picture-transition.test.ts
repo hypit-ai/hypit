@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { HTML_VISUAL_FORMAT, type HtmlVisual } from "@hypit/html-program";
 import { canonicalize } from "@hypit/hypit/protocol";
+import { createNleLoweringHostFromFacets } from "@hypit/nle";
 import { exactTemporalValue, sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 import {
   assertIrisShape,
@@ -26,9 +27,11 @@ import {
   transitionOperator,
   pictureTransitionComponent,
   pictureTransitionProducers,
+  pictureTransitionNleSymbol,
   zoomDissolveEffect,
   zoomDissolveOperator,
 } from "../src/index.js";
+import { hypitPackage as pictureTransitionHypitPackage } from "../src/activation.js";
 
 type Layer = { style: Record<string, string> };
 const domain = sealLocalTemporalDomain({ id: "transition:time", duration: exactTemporalValue({
@@ -196,4 +199,14 @@ test("effect packages reject invalid author parameters at their own boundary", (
   assert.throws(() => assertTransitionDirection("diagonal"), /direction diagonal is invalid/u);
   assert.throws(() => assertIrisShape("star"), /shape star is invalid/u);
   assert.throws(() => assertTransitionColor("black"), /hexadecimal color/u);
+});
+
+test("the package resolves a direct NLE Transition against its overlap domain", () => {
+  const spec = { kind: "cross-dissolve", easing: "ease-in-out" } as const;
+  const resolved = createNleLoweringHostFromFacets(pictureTransitionHypitPackage.facets)
+    .resolveTransition({
+      id: "join", outgoing: "left", incoming: "right",
+      operator: pictureTransitionNleSymbol, parameters: canonicalize(spec),
+    }, { domain } as never);
+  assert.deepEqual(resolved, { operator: transitionOperator(spec, domain) });
 });

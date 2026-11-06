@@ -13,24 +13,10 @@ import {
   audiovisualProgramOccurrences,
   audiovisualProgramSource,
   evaluateAudiovisualProgramAt,
-  evaluateAudiovisualProgramFrame,
-  moveProgramOccurrence,
-  occurrenceParentRange,
-  outputFrameCount,
   pictureType,
   pointwiseOperatorTemporalSupport,
-  projectNleOccurrences,
-  projectNleView,
-  remapProgramOccurrence,
-  rippleTrimProgramOccurrence,
-  rollProgramOccurrences,
   sealAudiovisualProgram,
-  sealNleView,
   sealOccurrence,
-  splitNleViewOccurrence,
-  splitProgramOccurrence,
-  slipProgramOccurrence,
-  trimProgramOccurrence,
 } from "../src/index.js";
 import type { AudioOperator, AudiovisualProgram, Occurrence, PictureOperator, ProgramSource } from "../src/index.js";
 
@@ -223,222 +209,6 @@ test("one nested Picture Source can enter two parent regions without inheriting 
     { kind: "remap", input: "leftSource", mapping: leftMap });
   assert.deepEqual(evaluated.picture?.nodes.right,
     { kind: "crop", input: "rightPlaced", region: { x: 960, y: 0, width: 960, height: 540 } });
-  assert.deepEqual(evaluateAudiovisualProgramFrame(program,
-    { frameRate: { numerator: 24, denominator: 1 } }, 0).evaluation.picture?.nodes.leftPlaced,
-  evaluateAudiovisualProgramFrame(program,
-    { frameRate: { numerator: 30, denominator: 1 } }, 0).evaluation.picture?.nodes.leftPlaced);
-});
-
-test("NLE projection derives one rectangle per Occurrence without Track or frame data", () => {
-  const projection = projectNleOccurrences(fixture());
-  assert.deepEqual(projection.occurrences.map((item) => item.id), ["b-roll", "interview-use", "music-use"]);
-  const interview = projection.occurrences.find((item) => item.id === "interview-use")!;
-  assert.deepEqual(interview.parentRange, { start: seconds(0), end: seconds(12) });
-  assert.deepEqual(interview.outputs.map((output) => [output.name, output.usedBy]), [
-    ["audio", ["audio"]],
-    ["picture", ["picture"]],
-  ]);
-  assert.equal(Object.hasOwn(interview, "track"), false);
-  assert.equal(Object.hasOwn(interview.parentRange, "startFrame"), false);
-});
-
-test("NLE View groups output facets while Programme remains the only time owner", () => {
-  const program = fixture();
-  const before = structuredClone(program);
-  const view = sealNleView({
-    id: "edit",
-    program: "main",
-    lanes: [
-      { id: "motion", label: "Motion", members: [] },
-      { id: "b-roll", label: "B-roll", members: [{ occurrence: "b-roll", output: "picture" }] },
-      { id: "a-roll-picture", label: "A-roll Picture",
-        members: [{ occurrence: "interview-use", output: "picture" }] },
-      { id: "a-roll-audio", label: "A-roll Audio",
-        members: [{ occurrence: "interview-use", output: "audio" }] },
-      { id: "music", label: "Music", members: [{ occurrence: "music-use", output: "audio" }] },
-    ],
-  }, program);
-  const projection = projectNleView(view, program);
-  assert.equal(projection.lanes.length, 5);
-  assert.equal(projection.lanes[0]!.items.length, 0);
-  assert.deepEqual(projection.lanes[2]!.items[0]!.parentRange,
-    projection.lanes[3]!.items[0]!.parentRange);
-  assert.equal(projection.lanes[2]!.items[0]!.occurrence,
-    projection.lanes[3]!.items[0]!.occurrence);
-  assert.deepEqual(program, before);
-  assert.equal(Object.hasOwn(view.lanes[2]!.members[0]!, "parentRange"), false);
-  assert.throws(() => sealNleView({ ...view, lanes: [...view.lanes,
-    { id: "duplicate", members: [{ occurrence: "interview-use", output: "picture" }] }] }, program),
-  /repeats member/u);
-});
-
-test("Programme edits reproject through an unchanged NLE View", () => {
-  const original = fixture();
-  const view = sealNleView({
-    id: "edit",
-    program: "main",
-    lanes: [{ id: "a-roll", members: [
-      { occurrence: "interview-use", output: "picture" },
-      { occurrence: "interview-use", output: "audio" },
-    ] }],
-  }, original);
-  const shortened = trimProgramOccurrence(original, "interview-use",
-    { start: seconds(0), end: seconds(8) });
-  const moved = moveProgramOccurrence(shortened, "interview-use", seconds(2));
-  const movedProjection = projectNleView(view, moved);
-  assert.deepEqual(movedProjection.lanes[0]!.items.map((item) => item.parentRange), [
-    { start: seconds(2), end: seconds(10) },
-    { start: seconds(2), end: seconds(10) },
-  ]);
-  assert.deepEqual(projectNleView(view, original).lanes[0]!.items.map((item) => item.parentRange), [
-    { start: seconds(0), end: seconds(12) },
-    { start: seconds(0), end: seconds(12) },
-  ]);
-
-  const trimmed = trimProgramOccurrence(original, "interview-use",
-    { start: seconds(2), end: seconds(10) });
-  const trimmedProjection = projectNleView(view, trimmed);
-  assert.deepEqual(trimmedProjection.lanes[0]!.items.map((item) => item.parentRange), [
-    { start: seconds(2), end: seconds(10) },
-    { start: seconds(2), end: seconds(10) },
-  ]);
-  assert.deepEqual(view.lanes[0]!.members, [
-    { occurrence: "interview-use", output: "picture" },
-    { occurrence: "interview-use", output: "audio" },
-  ]);
-  assert.throws(() => moveProgramOccurrence(original, "interview-use", seconds(2)),
-    /outside parent domain/u);
-});
-
-function editingFixture(): AudiovisualProgram {
-  const parent = domain("edit:time", 20);
-  const make = (id: string, start: number, duration: number): Occurrence => {
-    const local = domain(`${id}:time`, 10);
-    const input = source(`${id}:source`, ["audio"], 10);
-    return sealOccurrence({
-      id,
-      source: input,
-      domain: local,
-      placement: {
-        parent,
-        start: seconds(start),
-        active: { start: seconds(0), end: seconds(duration) },
-      },
-      selections: { audio: { kind: "signal", mapping: mapping(local,
-        (input.outputs.audio as Extract<(typeof input.outputs)[string], { kind: "signal" }>).domain) } },
-    });
-  };
-  const left = make("left", 0, 5);
-  const right = make("right", 5, 5);
-  const independent = make("independent", 12, 2);
-  return sealAudiovisualProgram({
-    id: "edit",
-    domain: parent,
-    occurrences: { left, right, independent },
-    audio: { root: "mix", nodes: {
-      left: { kind: "use", occurrence: "left", output: "audio" },
-      right: { kind: "use", occurrence: "right", output: "audio" },
-      independent: { kind: "use", occurrence: "independent", output: "audio" },
-      mix: { kind: "mix", inputs: ["left", "right", "independent"] },
-    } },
-  });
-}
-
-test("Roll moves one explicit shared boundary without Track adjacency", () => {
-  const original = editingFixture();
-  const rolled = rollProgramOccurrences(original, { left: "left", right: "right", at: seconds(6) });
-  assert.deepEqual(occurrenceParentRange(rolled.occurrences.left!),
-    { start: seconds(0), end: seconds(6) });
-  assert.deepEqual(occurrenceParentRange(rolled.occurrences.right!),
-    { start: seconds(6), end: seconds(10) });
-  assert.deepEqual(rolled.occurrences.left?.selections, original.occurrences.left?.selections);
-  assert.deepEqual(rolled.occurrences.right?.selections, original.occurrences.right?.selections);
-  assert.deepEqual(rolled.occurrences.independent, original.occurrences.independent);
-  assert.throws(() => rollProgramOccurrences(original,
-    { left: "left", right: "independent", at: seconds(6) }), /do not share/u);
-});
-
-test("Ripple moves only its explicit transient scope", () => {
-  const original = editingFixture();
-  const rippled = rippleTrimProgramOccurrence(original, "left", {
-    active: { start: seconds(0), end: seconds(3) },
-    boundary: "end",
-    scope: ["right"],
-  });
-  assert.deepEqual(occurrenceParentRange(rippled.occurrences.left!),
-    { start: seconds(0), end: seconds(3) });
-  assert.deepEqual(occurrenceParentRange(rippled.occurrences.right!),
-    { start: seconds(3), end: seconds(8) });
-  assert.deepEqual(occurrenceParentRange(rippled.occurrences.independent!),
-    { start: seconds(12), end: seconds(14) });
-  assert.throws(() => rippleTrimProgramOccurrence(original, "left", {
-    active: { start: seconds(0), end: seconds(3) }, boundary: "end", scope: ["left"],
-  }), /cannot contain its target/u);
-  assert.throws(() => rippleTrimProgramOccurrence(original, "left", {
-    active: { start: seconds(0), end: seconds(3) }, boundary: "end", scope: ["right", "right"],
-  }), /repeats Occurrence/u);
-});
-
-test("Slip atomically replaces explicit output Maps and preserves placement", () => {
-  const original = fixture();
-  const occurrence = original.occurrences["interview-use"]!;
-  const hold = (output: "picture" | "audio", at: number) => sealTemporalMap({ stages: [{
-    target: occurrence.domain,
-    source: (occurrence.source.outputs[output] as Extract<(typeof occurrence.source.outputs)[string], { kind: "signal" }>).domain,
-    pieces: [{
-      target: { start: seconds(0), end: occurrence.domain.duration },
-      sourceAtStart: seconds(at),
-      rate: { numerator: 0, denominator: 1 },
-    }],
-  }] });
-  const slipped = slipProgramOccurrence(original, occurrence.id, {
-    picture: hold("picture", 3),
-    audio: hold("audio", 4),
-  });
-  assert.deepEqual(slipped.occurrences[occurrence.id]?.placement, occurrence.placement);
-  assert.deepEqual(slipped.occurrences[occurrence.id]?.selections.picture,
-    { kind: "signal", mapping: hold("picture", 3) });
-  assert.deepEqual(slipped.occurrences[occurrence.id]?.selections.audio,
-    { kind: "signal", mapping: hold("audio", 4) });
-  assert.throws(() => slipProgramOccurrence(original, occurrence.id, {}), /at least one/u);
-});
-
-test("Programme Split closes Picture, Audio and optional View membership explicitly", () => {
-  const original = fixture();
-  const view = sealNleView({ id: "edit", program: "main", lanes: [
-    { id: "picture", members: [{ occurrence: "interview-use", output: "picture" }] },
-    { id: "audio", members: [{ occurrence: "interview-use", output: "audio" }] },
-  ] }, original);
-  const split = splitProgramOccurrence(original, "interview-use", {
-    at: seconds(6), leftId: "interview-left", rightId: "interview-right",
-    pictureUses: { interview: { left: "interview-picture-left", right: "interview-picture-right" } },
-    audioUses: { dialogue: { left: "interview-audio-left", right: "interview-audio-right" } },
-  });
-  assert.deepEqual(Object.keys(split.occurrences).sort(),
-    ["b-roll", "interview-left", "interview-right", "music-use"]);
-  assert.deepEqual(split.picture?.nodes.interview, {
-    kind: "over", inputs: ["interview-picture-left", "interview-picture-right"],
-  });
-  assert.deepEqual(split.audio?.nodes.dialogue, {
-    kind: "mix", inputs: ["interview-audio-left", "interview-audio-right"],
-  });
-  assert.throws(() => projectNleView(view, split), /missing Occurrence interview-use/u);
-  const splitView = sealNleView(splitNleViewOccurrence(view,
-    "interview-use", "interview-left", "interview-right"), split);
-  assert.deepEqual(projectNleView(splitView, split).lanes.map((lane) =>
-    lane.items.map((item) => [item.occurrence, item.parentRange])), [
-    [
-      ["interview-left", { start: seconds(0), end: seconds(6) }],
-      ["interview-right", { start: seconds(6), end: seconds(12) }],
-    ],
-    [
-      ["interview-left", { start: seconds(0), end: seconds(6) }],
-      ["interview-right", { start: seconds(6), end: seconds(12) }],
-    ],
-  ]);
-  assert.throws(() => splitProgramOccurrence(original, "interview-use", {
-    at: seconds(6), leftId: "left", rightId: "right",
-  }), /missing use node identities/u);
 });
 
 test("exact Programme evaluation resolves active Source positions without a Clock", () => {
@@ -477,29 +247,23 @@ test("exact Programme evaluation resolves active Source positions without a Cloc
       sourceAtStart: seconds(0), rate: { numerator: 1, denominator: 1 },
     }],
   }] });
-  const remapped = remapProgramOccurrence(program, "interview-use", "picture", gapMapping);
+  const originalOccurrence = program.occurrences["interview-use"]!;
+  const remapped = sealAudiovisualProgram({
+    ...program,
+    occurrences: {
+      ...program.occurrences,
+      "interview-use": sealOccurrence({
+        ...originalOccurrence,
+        selections: {
+          ...originalOccurrence.selections,
+          picture: { kind: "signal", mapping: gapMapping },
+        },
+      }),
+    },
+  });
   assert.deepEqual(evaluateAudiovisualProgramAt(remapped, seconds(5)).picture?.nodes.interview,
     { kind: "transparent" });
   assert.equal(evaluateAudiovisualProgramAt(remapped, seconds(5)).audio?.nodes.dialogue?.kind, "sample");
-});
-
-test("Output frame sampling selects exact positions without changing the Programme", () => {
-  const program = fixture();
-  const before = structuredClone(program);
-  const twentyFour = { frameRate: { numerator: 24, denominator: 1 } };
-  const ntsc = { frameRate: { numerator: 30_000, denominator: 1_001 } };
-  assert.equal(outputFrameCount(program.domain.duration, twentyFour), 288);
-  assert.equal(outputFrameCount(program.domain.duration, ntsc), 360);
-  const evaluated = evaluateAudiovisualProgramFrame(program, twentyFour, 72);
-  assert.equal(evaluated.frameCount, 288);
-  assert.deepEqual(evaluated.evaluation.at, seconds(3));
-  assert.deepEqual(evaluated.evaluation.picture?.nodes.interview, {
-    kind: "sample", occurrence: "interview-use", output: "picture", source: "interview",
-    temporal: { kind: "signal", domain: domain("interview:picture-time", 12), at: seconds(3), side: "after" },
-    sourceSpace: space("interview:picture-space"),
-  });
-  assert.deepEqual(program, before);
-  assert.throws(() => evaluateAudiovisualProgramFrame(program, twentyFour, 288), /outside/u);
 });
 
 test("Programme rejects hidden unused facts, graph cycles and wrong signal ports", () => {

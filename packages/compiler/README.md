@@ -65,6 +65,11 @@ joins graph values back to source elements requests `authorProjection: true`; th
 `ProjectedCompiledAuthorSource` carries that disposable projection. Check, plan and build do not
 precompute or transport it for a hypothetical interface.
 
+For a Frontend that exposes `AuthorStructureDocument`, `openAuthorStructure` returns revision-local
+locators. `prepareEntryStructureEdit` applies one operation batch, reopens fresh candidate locators and
+virtually compiles the complete candidate Source closure with author projection. It never writes storage;
+base-revision comparison and atomic publication remain the embedding Host's responsibility.
+
 `prepareBuild` turns that completed structural selection into a `PreparedBuild`: it derives
 one immutable `ResultIntent` and seals the `BuildDefinition`. An interactive authoring consumer may
 request `executionView: true` to receive resolved outputs and the Kernel's disposable `BuildView`;
@@ -73,6 +78,11 @@ contains only reachable package-owned retained outputs and carries their Result 
 without leaking Logical Output identities into Result storage.
 CLI catalogs, Runtime submission and Result writing consume
 this intent; they do not repeat structural selection or interpret Result history as author input.
+
+`prepareExecutionView` may add exact logical outputs requested by an authoring projection to the same finite
+plan. Those outputs are observations only: they do not become author-facing Targets, do not extend
+`ResultIntent`, and do not acquire cross-Build lifetime. The Compiler does not know which View or package
+requested them.
 
 The package contains no Script, video, Provider, queue, credentials or rendering knowledge. A
 non-video application can use it with only its own manifests, Frontends, declarations and chosen

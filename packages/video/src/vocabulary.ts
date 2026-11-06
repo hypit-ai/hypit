@@ -7,8 +7,6 @@ import type {
   AuthorDeclarationCompiler,
   AuthorDeclarationFieldShape,
 } from "@hypit/hypit/author";
-import { markupDeclarationFacetAbi } from "@hypit/hypit/markup";
-import type { RegisteredMarkupDeclaration } from "@hypit/hypit/markup";
 import { loadNodePackageSelection, locateNodePackage, distributionPackageRoots } from "@hypit/hypit/loader/node";
 import type { NodePackageLoadOptions } from "@hypit/hypit/loader/node";
 import { compareCodeUnits, moduleKey, typeKey } from "@hypit/hypit/protocol";
@@ -55,7 +53,7 @@ function manifestCapabilities(manifest: ModuleManifest): readonly CapabilityList
 export type PackageListing = {
   readonly name: string;
   readonly description?: string;
-  readonly tags: readonly string[];
+  readonly declarations: readonly string[];
   readonly capabilities?: readonly CapabilityListing[];
   readonly unreadable?: string;
 };
@@ -93,22 +91,22 @@ export async function listPackages(projectRoot: string, distributionRoot?: strin
   for (const { name, directory } of candidates) {
     const manifest = await readJson<{ readonly hypit?: { readonly activation?: string }; readonly description?: string }>(join(directory, "package.json"));
     if (manifest?.hypit?.activation === undefined) continue;
-    const tags: string[] = [];
+    const declarations: string[] = [];
     const capabilities: CapabilityListing[] = [];
     let unreadable: string | undefined;
     try {
       for (const pack of await loadNodePackageSelection([name], projectRoot, loading(distributionRoot))) {
         if (pack.specifier !== name) continue;
         for (const module of pack.contribution.modules ?? []) capabilities.push(...manifestCapabilities(module.manifest));
-        for (const facet of pack.contribution.facets ?? []) {
-          if (facet.abi === markupDeclarationFacetAbi) tags.push((facet.implementation as RegisteredMarkupDeclaration).tag);
+        for (const facet of pack.contribution.facets ?? []) if (facet.abi === authorDeclarationFacetAbi) {
+          declarations.push((facet.implementation as AuthorDeclarationCompiler).declaration);
         }
       }
     } catch (error) { unreadable = error instanceof Error ? error.message : String(error); }
     listing.push({
       name,
       ...(manifest.description === undefined ? {} : { description: manifest.description }),
-      tags: [...new Set(tags)].sort(),
+      declarations: [...new Set(declarations)].sort(),
       ...(capabilities.length === 0 ? {} : { capabilities: capabilities.toSorted((left, right) =>
         compareCodeUnits(`${left.module}#${left.name}`, `${right.module}#${right.name}`)) }),
       ...(unreadable === undefined ? {} : { unreadable }),
@@ -122,10 +120,8 @@ export async function listPackages(projectRoot: string, distributionRoot?: strin
 
 export type DeclarationListing = {
   readonly package: string;
-  readonly module: RegisteredMarkupDeclaration["module"];
+  readonly module: AuthorDeclarationCompiler["module"];
   readonly declaration: string;
-  readonly tag: string;
-  readonly body?: RegisteredMarkupDeclaration["body"];
   readonly outputs: AuthorDeclarationCompiler["outputs"];
   readonly shape: AuthorDeclarationCompiler["shape"];
   readonly readme?: string;
@@ -145,13 +141,13 @@ function readmePath(name: string, projectRoot: string, distributionRoot?: string
 export async function listDeclarations(
   projectRoot: string,
   packages: readonly string[],
-  tags?: readonly string[],
+  names?: readonly string[],
   distributionRoot?: string,
 ): Promise<readonly DeclarationListing[]> {
   assert(packages.length > 0, "name at least one package");
   const loaded = await loadNodePackageSelection(packages, projectRoot, loading(distributionRoot));
   const named = new Set(packages);
-  const wanted = tags === undefined ? undefined : new Set(tags);
+  const wanted = names === undefined ? undefined : new Set(names);
   const declarations: DeclarationListing[] = [];
   for (const pack of loaded) {
     // Loading a package brings its dependencies with it; the answer is about the ones named.
@@ -160,20 +156,13 @@ export async function listDeclarations(
     const compilers = facets
       .filter((facet) => facet.abi === authorDeclarationFacetAbi)
       .map((facet) => facet.implementation as AuthorDeclarationCompiler);
-    for (const facet of facets) {
-      if (facet.abi !== markupDeclarationFacetAbi) continue;
-      const syntax = facet.implementation as RegisteredMarkupDeclaration;
-      if (wanted !== undefined && !wanted.has(syntax.tag) && !wanted.has(syntax.declaration)) continue;
-      const compiler = compilers.find((candidate) => moduleKey(candidate.module) === moduleKey(syntax.module)
-        && candidate.declaration === syntax.declaration);
-      if (compiler === undefined) throw new Error(`${moduleKey(syntax.module)}#${syntax.declaration} has Markup spelling but no Author Declaration compiler.`);
+    for (const compiler of compilers) {
+      if (wanted !== undefined && !wanted.has(compiler.declaration)) continue;
       const readme = readmePath(pack.specifier, projectRoot, distributionRoot);
       declarations.push({
         package: pack.specifier,
-        module: syntax.module,
-        declaration: syntax.declaration,
-        tag: syntax.tag,
-        ...(syntax.body === undefined ? {} : { body: syntax.body }),
+        module: compiler.module,
+        declaration: compiler.declaration,
         outputs: compiler.outputs,
         shape: compiler.shape,
         ...(readme === undefined ? {} : { readme }),
@@ -235,16 +224,16 @@ function moduleSpecifier(declaration: DeclarationListing): string {
 
 function declarationText(declaration: DeclarationListing): string {
   const lines = [
-    `  <${declaration.tag}>  ${declaration.body ?? "structured"}`,
+    `  owner.${declaration.declaration}`,
     `    package  ${declaration.package}`,
     `    module   ${moduleSpecifier(declaration)}`,
-    `    import   <import from="${moduleSpecifier(declaration)}"/>`,
+    `    import   module owner from "${moduleSpecifier(declaration)}"`,
     `    ${declaration.shape.summary}`,
   ];
   if (declaration.shape.fields.length > 0) lines.push("    fields", ...declaration.shape.fields.map(fieldLine));
   if (Array.isArray(declaration.shape.children)) {
     for (const child of declaration.shape.children) {
-      lines.push(`    child <${child.name}> (${child.cardinality})  ${child.summary}`,
+      lines.push(`    child ${child.name} (${child.cardinality})  ${child.summary}`,
         ...child.fields.map(fieldLine));
     }
   }
@@ -259,8 +248,8 @@ export function writeVocabularyHelp(io: CliIo): void {
     "hypit vocabulary",
     "What a Source may write. Prints installed package manifests; no Runtime Profile, no request, no state.",
     "",
-    "  hypit vocabulary                         every installed package with its tags and capabilities",
-    "  hypit vocabulary <package…> [--tag <tag>] the author Declarations a package contributes",
+    "  hypit vocabulary                                      every installed package with its Declarations and capabilities",
+    "  hypit vocabulary <package…> [--declaration <name>]    the author Declarations a package contributes",
     "",
     "Read the package README the listing names before writing its elements. Add --json for a machine view.",
     "",
@@ -279,14 +268,14 @@ export async function runVocabularyCli(
   const words = rest.filter((item) => item !== "--json" && item !== "--debug" && item !== "--verbose" && item !== "--no-color");
   const projectRoot = await findProjectRoot({ cwd }) ?? distributionRoot ?? resolve(cwd);
 
-  const tags: string[] = [];
+  const names: string[] = [];
   const packages: string[] = [];
   for (let index = 0; index < words.length; index += 1) {
     const word = words[index]!;
-    if (word === "--tag") {
+    if (word === "--declaration") {
       const value = words[index + 1];
-      assert(value !== undefined && !value.startsWith("--"), "--tag requires a value");
-      tags.push(value);
+      assert(value !== undefined && !value.startsWith("--"), "--declaration requires a value");
+      names.push(value);
       index += 1;
     } else {
       assert(!word.startsWith("--"), `unknown option ${word}`);
@@ -295,13 +284,13 @@ export async function runVocabularyCli(
   }
 
   if (packages.length === 0) {
-    assert(tags.length === 0, "--tag narrows a named package; name the package first");
+    assert(names.length === 0, "--declaration narrows a named package; name the package first");
     const listing = await listPackages(projectRoot, distributionRoot);
     if (json) { io.write(`${JSON.stringify({ projectRoot, packages: listing }, null, 2)}\n`); return; }
     assert(listing.length > 0, `no Hypit packages installed under ${projectRoot} or the Distribution`);
     io.write(`${listing.map((item) => {
       const parts = [item.name];
-      if (item.tags.length > 0) parts.push(`tags: ${item.tags.join(", ")}`);
+      if (item.declarations.length > 0) parts.push(`declarations: ${item.declarations.join(", ")}`);
       if (item.capabilities !== undefined) parts.push(`capabilities: ${item.capabilities.map((capability) =>
         `${capability.module}#${capability.name} -> ${capability.returns}`).join(", ")}`);
       if (item.unreadable !== undefined) parts.push(`unreadable: ${item.unreadable}`);
@@ -310,8 +299,8 @@ export async function runVocabularyCli(
     return;
   }
 
-  const declarations = await listDeclarations(projectRoot, packages, tags.length === 0 ? undefined : tags, distributionRoot);
+  const declarations = await listDeclarations(projectRoot, packages, names.length === 0 ? undefined : names, distributionRoot);
   if (json) { io.write(`${JSON.stringify({ projectRoot, packages, declarations }, null, 2)}\n`); return; }
-  assert(declarations.length > 0, `${packages.join(", ")} ${packages.length === 1 ? "declares" : "declare"} no author Declaration${tags.length === 0 ? "" : ` tagged ${tags.join(", ")}`}`);
+  assert(declarations.length > 0, `${packages.join(", ")} ${packages.length === 1 ? "declares" : "declare"} no author Declaration${names.length === 0 ? "" : ` named ${names.join(", ")}`}`);
   io.write(`${declarations.map(declarationText).join("\n\n")}\n`);
 }

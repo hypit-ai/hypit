@@ -2,7 +2,7 @@ import { declarationField, type AuthorDeclaration, type AuthorDeclarationChild,
   type AuthorDeclarationCompiler, type AuthorResolvedReference } from "@hypit/hypit/author";
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
-import { textTypes } from "@hypit/hypit/text";
+import { promptTypes } from "@hypit/hypit/prompt";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import { createFieldModelPrimaryFragment, sealModelFieldBuilder,
   type FieldModelOperation } from "@hypit/generation/model-fields";
@@ -38,7 +38,7 @@ function compiler(options: { declaration: "video" | "preview-video"; endpoint: F
       summary: `Generates video with ${options.endpoint.fields.model}.`,
       fields: [
         { name: "id", kind: "identifier", required: true, summary: "Names the generated video." },
-        { name: "prompt", kind: "reference", required: true, accepts: [textTypes.text], summary: "Selects the generation prompt." },
+        { name: "prompt", kind: "reference", required: true, accepts: [promptTypes.prompt], summary: "Selects the generation Prompt." },
         { name: "duration", kind: "literal", required: true, summary: "Sets the duration in whole seconds." },
         { name: "aspect-ratio", kind: "literal", required: true, values: options.ratios, summary: "Sets the output frame shape." },
         { name: "resolution", kind: "literal", required: true, values: ["480p", "720p", "1080p"], summary: "Sets the output height." },
@@ -56,7 +56,7 @@ function compiler(options: { declaration: "video" | "preview-video"; endpoint: F
       const duration = Number(literal(declaration, "duration"));
       if (!Number.isSafeInteger(duration)) throw new Error("Grok Imagine duration must be an integer.");
       const id = literal(declaration, "id");
-      const prompt = await reference(declaration, "prompt", textTypes.text, resolveReference);
+      const prompt = await reference(declaration, "prompt", promptTypes.prompt, resolveReference);
       const images: FieldModelAuthorArtifactInput[] = [];
       for (const child of declaration.children) {
         if (child.name !== "Reference") throw new Error(`${declaration.name} does not accept ${child.name}.`);
@@ -72,7 +72,7 @@ function compiler(options: { declaration: "video" | "preview-video"; endpoint: F
         fragment: createFieldModelPrimaryFragment(options.endpoint,
           images.map(({ name, field }) => ({ name, field })), [{ name: "prompt", field: "prompt" }]),
         outputs: { video: `${id}.video` }, artifacts: images,
-        text: [{ name: "prompt", field: "prompt", source: prompt }],
+        textFields: [{ name: "prompt", field: "prompt", source: prompt }],
       });
     },
   };
@@ -83,5 +83,3 @@ export const grokImagineVideoAuthorDeclaration = compiler({ declaration: "video"
 export const grokImaginePreviewVideoAuthorDeclaration = compiler({ declaration: "preview-video",
   endpoint: grokImagineEndpoints["preview-1.5"]!, ratios: ["auto", "2:3", "3:2", "1:1", "16:9", "9:16"] });
 export const grokImagineAuthorDeclarations = [grokImagineVideoAuthorDeclaration, grokImaginePreviewVideoAuthorDeclaration] as const;
-export const grokImagineMarkupDeclarations = [{ name: "video", tag: "Video" },
-  { name: "preview-video", tag: "PreviewVideo" }] as const;
