@@ -187,7 +187,19 @@ function parseValue(sourceName: string, text: string, offset: number): Canonical
     (value.startsWith('"') && value.endsWith('"'))
     || (value.startsWith("'") && value.endsWith("'"))
   ) {
-    return value.slice(1, -1);
+    const quote = value[0] as "\"" | "'";
+    let unescaped = "";
+    for (let index = 1; index < value.length - 1; index += 1) {
+      const character = value[index]!;
+      const next = value[index + 1];
+      if (character === "\\" && (next === quote || next === "\\")) {
+        unescaped += next;
+        index += 1;
+        continue;
+      }
+      unescaped += character;
+    }
+    return unescaped;
   }
   return value;
 }

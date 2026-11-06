@@ -313,6 +313,23 @@ test("quoted Recipe values may contain Prompt punctuation without changing SVS s
   assert.equal(sheet.recipes[0]?.value.properties.text, "first; second } /* literal */");
 });
 
+test("quoted Recipe values unescape the escaped quote and backslash the scanners honor", () => {
+  const sheet = parseRecipe(
+    "escape.svs",
+    `<sheet version="1">
+  caption.host {
+    text: "He said \\"hi\\" twice";
+    note: "path C:\\\\caps ends here";
+    aside: 'It\\'s minimal';
+  }
+</sheet>`,
+  );
+  const properties = sheet.recipes[0]?.value.properties;
+  assert.equal(properties.text, 'He said "hi" twice');
+  assert.equal(properties.note, "path C:\\caps ends here");
+  assert.equal(properties.aside, "It's minimal");
+});
+
 test("quoted Recipe values may contain the sheet closing text without ending the document", () => {
   const sheet = parseRecipe(
     "literal-close.svs",
