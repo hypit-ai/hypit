@@ -1,4 +1,4 @@
-import type { AudioOperator, PictureOperator, ProgramSource, TemporalControlBinding } from "@hypit/audiovisual";
+import type { AudioOperator, PictureOperator, ProgramSource } from "@hypit/audiovisual";
 import type { AudioOutputSampling } from "@hypit/audio-program";
 import type { AudiovisualAudioSource } from "@hypit/audiovisual-audio";
 import type { AudiovisualHtmlSource } from "@hypit/audiovisual-html";
@@ -157,14 +157,10 @@ export type NleResolvedItemSource = {
 
 export type NleResolvedEffect = {
   readonly operator: PictureOperator;
-  /** Missing bindings default each declared Control to the owning Occurrence. */
-  readonly controlBindings?: Readonly<Record<string, TemporalControlBinding>>;
 };
 
 export type NleResolvedAudioEffect = {
   readonly operator: AudioOperator;
-  /** Missing bindings default each declared Control to the owning Occurrence. */
-  readonly controlBindings?: Readonly<Record<string, TemporalControlBinding>>;
 };
 
 export type NleLoweringContext = {

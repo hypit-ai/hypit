@@ -27,7 +27,15 @@ format, not HCL, SVML or TypeScript: direct frame values and string ids replace 
 Package instances store an exact Module symbol plus canonical JSON parameters; installed package code supplies
 their behavior. See [`examples/title-card.nle.json`](examples/title-card.nle.json) for a complete component-only
 project with a package-owned animated Picture Filter. The filter's Item-local frame spelling is not an NLE Core
-Keyframe format: its package validates and compiles those frames to an exact AVIR `TemporalControl`.
+Keyframe format: its package validates and compiles those frames to an exact AVIR `TemporalControl`. NLE lowering
+then closes the Item-local clock to a factual Programme-to-Control `TemporalMap`; a package resolver cannot return
+a named occurrence/source binding.
+
+Source-owned markers, semantic boundaries and media observations may be projected by an editor as snap guides.
+Snapping is one authoring gesture: the accepted transaction stores the resulting frame or package parameter, not
+the guide name or a live dependency on its owner. Moving or retiming the guide owner later therefore does not make
+NLE export perform a named lookup. A product that wants linked editing updates the affected direct values together
+in one transaction; it does not add a second temporal authority to the project.
 
 `prepareNleProjectSave` freezes one exact JSON snapshot and logical history position. A Host writes its text and
 then calls `completeNleProjectSave`; later edits remain dirty, and a save from a discarded undo branch cannot

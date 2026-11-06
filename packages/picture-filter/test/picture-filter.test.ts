@@ -140,7 +140,7 @@ test("the package compiles its own NLE frame parameters into the shared exact Co
   }), /must lie inside the Item duration/u);
 });
 
-test("an animated NLE Effect round-trips and follows its moved Item occurrence", () => {
+test("an animated NLE Effect round-trips and lowers its moved Item to a factual mapping", () => {
   const baseComponent = {
     module: { name: "@example/base-picture", version: "1" },
     name: "base-picture",
@@ -225,15 +225,11 @@ test("an animated NLE Effect round-trips and follows its moved Item occurrence",
   const initialNode = initial.program.picture?.nodes["clip:effect:animated"];
   assert.equal(initialNode?.kind, "apply");
   if (initialNode?.kind !== "apply") throw new Error("Animated Effect did not lower to apply.");
-  assert.deepEqual(initialNode.controlBindings, {
-    filter: { kind: "occurrence", occurrence: "clip" },
-  });
   const initialBinding = initialNode.controlBindings.filter;
-  if (initialBinding?.kind !== "occurrence") throw new Error("Animated Effect did not bind to its Occurrence.");
-  const initialOccurrenceBinding = { kind: "occurrence" as const, occurrence: initialBinding.occurrence };
+  if (initialBinding?.kind !== "mapping") throw new Error("Animated Effect did not lower to a factual Mapping.");
   assert.deepEqual(resolveTemporalControlPosition(
     initialNode.operator.temporalControls.filter!,
-    initialOccurrenceBinding,
+    initialBinding,
     initial.program,
     at(1, 2),
   ), at(1, 2));
@@ -245,11 +241,10 @@ test("an animated NLE Effect round-trips and follows its moved Item occurrence",
   const movedNode = movedProgram.picture?.nodes["clip:effect:animated"];
   if (movedNode?.kind !== "apply") throw new Error("Moved animated Effect did not lower to apply.");
   const movedBinding = movedNode.controlBindings.filter;
-  if (movedBinding?.kind !== "occurrence") throw new Error("Moved Effect lost its Occurrence binding.");
-  const movedOccurrenceBinding = { kind: "occurrence" as const, occurrence: movedBinding.occurrence };
+  if (movedBinding?.kind !== "mapping") throw new Error("Moved Effect did not lower to a factual Mapping.");
   assert.deepEqual(resolveTemporalControlPosition(
     movedNode.operator.temporalControls.filter!,
-    movedOccurrenceBinding,
+    movedBinding,
     movedProgram,
     at(3, 2),
   ), at(1, 2));

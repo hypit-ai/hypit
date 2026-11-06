@@ -77,6 +77,34 @@ function frame(project: NleProject, value: number) {
   return exactTemporalValueFromFrames(value, { frameRate: project.frameRate });
 }
 
+/**
+ * NLE automation is already materialized in Item-local frames. Lowering closes that local clock to
+ * one factual Programme mapping; package resolvers never publish a named occurrence/source lookup.
+ */
+function itemControlBinding(
+  project: NleProject,
+  item: NleItem,
+  parent: AudiovisualProgram["domain"],
+  control: import("@hypit/temporal/algebra").LocalTemporalDomain,
+  label: string,
+): TemporalControlBinding {
+  const duration = frame(project, item.durationFrames);
+  assert(compareExactTemporalValues(control.duration, duration) === 0,
+    `${label} Control ${control.id} has another duration.`);
+  return { kind: "mapping", mapping: sealTemporalMap({ stages: [{
+    target: parent,
+    source: control,
+    pieces: [{
+      target: {
+        start: frame(project, item.startFrame),
+        end: frame(project, item.startFrame + item.durationFrames),
+      },
+      sourceAtStart: frame(project, 0),
+      rate: { numerator: 1, denominator: 1 },
+    }],
+  }] }) };
+}
+
 function programmeSpace(project: NleProject): LocalSpatialDomain {
   return sealLocalSpatialDomain({
     id: `${project.id}:picture`,
@@ -202,6 +230,7 @@ function audioEffectNode(
   item: NleItem,
   context: NleLoweringContext,
   host: NleLoweringHost,
+  parent: AudiovisualProgram["domain"],
 ): string {
   const resolved = host.resolveAudioEffect(effect, item, context);
   assertAudioOperator(resolved.operator);
@@ -209,8 +238,9 @@ function audioEffectNode(
     `NLE Audio Effect ${effect.id} must expose exactly one Audio input.`);
   const port = resolved.operator.inputs[0]!;
   const bindings: Record<string, TemporalControlBinding> = {};
-  for (const name of Object.keys(resolved.operator.temporalControls)) {
-    bindings[name] = resolved.controlBindings?.[name] ?? { kind: "occurrence", occurrence: item.id };
+  for (const [name, control] of Object.entries(resolved.operator.temporalControls)) {
+    bindings[name] = itemControlBinding(context.project, item, parent, control,
+      `NLE Audio Effect ${effect.id}`);
   }
   const id = `${item.id}:audio-effect:${effect.id}`;
   nodes[id] = {
@@ -270,6 +300,7 @@ function effectNode(
   item: NleItem,
   context: NleLoweringContext,
   host: NleLoweringHost,
+  parent: AudiovisualProgram["domain"],
 ): string {
   const resolved = host.resolveEffect(effect, item, context);
   assertPictureOperator(resolved.operator);
@@ -277,8 +308,9 @@ function effectNode(
     `NLE Effect ${effect.id} must expose exactly one Picture input.`);
   const port = resolved.operator.inputs[0]!;
   const bindings: Record<string, TemporalControlBinding> = {};
-  for (const name of Object.keys(resolved.operator.temporalControls)) {
-    bindings[name] = resolved.controlBindings?.[name] ?? { kind: "occurrence", occurrence: item.id };
+  for (const [name, control] of Object.entries(resolved.operator.temporalControls)) {
+    bindings[name] = itemControlBinding(context.project, item, parent, control,
+      `NLE Effect ${effect.id}`);
   }
   const id = `${item.id}:effect:${effect.id}`;
   nodes[id] = {
@@ -388,7 +420,7 @@ export function lowerNleProjectToAudiovisual(
       };
       let root = clipped;
       for (const effect of appearance.effects) {
-        root = effectNode(pictureNodes, root, effect, item, context, host);
+        root = effectNode(pictureNodes, root, effect, item, context, host, domain);
       }
       itemRoots.set(id, root);
     }
@@ -399,7 +431,7 @@ export function lowerNleProjectToAudiovisual(
       let audioRoot = audioId;
       if (item.kind !== "caption") {
         for (const effect of item.audio!.effects) {
-          audioRoot = audioEffectNode(audioNodes, audioRoot, effect, item, context, host);
+          audioRoot = audioEffectNode(audioNodes, audioRoot, effect, item, context, host, domain);
         }
       }
       audioInputs.push(audioRoot);
@@ -431,9 +463,9 @@ export function lowerNleProjectToAudiovisual(
       && resolved.operator.inputs.includes("content") && resolved.operator.inputs.includes("matte"),
     `NLE Matte ${matte.id} operator must expose content and matte Picture inputs.`);
     const bindings: Record<string, TemporalControlBinding> = {};
-    for (const name of Object.keys(resolved.operator.temporalControls)) {
-      bindings[name] = resolved.controlBindings?.[name]
-        ?? { kind: "occurrence", occurrence: content.item.id };
+    for (const [name, control] of Object.entries(resolved.operator.temporalControls)) {
+      bindings[name] = itemControlBinding(project, content.item, domain, control,
+        `NLE Matte ${matte.id}`);
     }
     const node = `${matte.content}:matte:${matte.id}`;
     pictureNodes[node] = {
@@ -475,7 +507,7 @@ export function lowerNleProjectToAudiovisual(
     for (const [name, control] of Object.entries(resolved.operator.temporalControls)) {
       assert(compareExactTemporalValues(control.duration, transitionDomain.duration) === 0,
         `NLE Transition ${transition.id} Control ${name} has another duration.`);
-      bindings[name] = resolved.controlBindings?.[name] ?? { kind: "mapping", mapping: sealTemporalMap({ stages: [{
+      bindings[name] = { kind: "mapping", mapping: sealTemporalMap({ stages: [{
         target: domain,
         source: control,
         pieces: [{
