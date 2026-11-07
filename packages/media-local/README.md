@@ -76,7 +76,7 @@ const transaction = createMediaAssetMaterialization(project, {
   asset: { path: "./media/interview.media.json" },
   interpretation: imported.document.media.interpretation,
   track: "picture-main",
-  atFrame: 0,
+  at: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
 });
 ```
 

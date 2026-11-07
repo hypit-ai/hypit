@@ -35,6 +35,8 @@ export {
   prepareNleProjectSave,
 } from "./store.js";
 export type { NleProjectSaveTicket } from "./store.js";
+export { snapNleTime } from "./snap.js";
+export type { NleSnapGuide, NleSnapResult } from "./snap.js";
 export {
   lowerNleProjectToAudiovisual,
   nlePointwiseAudioEffect,

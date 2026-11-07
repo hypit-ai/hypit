@@ -10,21 +10,39 @@ import {
   type ExactTemporalValue,
 } from "@hypit/temporal/algebra";
 import type {
+  NleCanvas,
+  NleEditRate,
   NleGroup,
   NleItem,
   NleMatte,
   NleMedia,
+  NleMediaAssetReference,
   NleProject,
   NleTrack,
   NleTransition,
 } from "./types.js";
 
 export type NleCommand =
+  | {
+      readonly kind: "project.update";
+      readonly name?: string;
+      readonly editRate?: NleEditRate;
+      readonly canvas?: NleCanvas;
+    }
   | { readonly kind: "media.add"; readonly media: NleMedia }
+  | { readonly kind: "media.rename"; readonly id: string; readonly name: string }
+  | { readonly kind: "media.relink"; readonly id: string; readonly asset: NleMediaAssetReference }
   | { readonly kind: "media.replace"; readonly media: NleMedia }
   | { readonly kind: "media.remove"; readonly id: string }
   | { readonly kind: "track.add"; readonly track: NleTrack; readonly before?: string }
   | { readonly kind: "track.move"; readonly id: string; readonly before?: string }
+  | {
+      readonly kind: "track.update";
+      readonly id: string;
+      readonly name?: string;
+      readonly locked?: boolean;
+      readonly muted?: boolean;
+    }
   | { readonly kind: "track.replace"; readonly track: NleTrack }
   | { readonly kind: "track.remove"; readonly id: string }
   | { readonly kind: "item.add"; readonly track: string; readonly item: NleItem; readonly before?: string }
@@ -35,7 +53,15 @@ export type NleCommand =
       readonly track?: string;
     }
   | { readonly kind: "item.trim"; readonly id: string; readonly edge: "start" | "end"; readonly at: ExactTemporalValue }
+  | { readonly kind: "item.slip"; readonly id: string; readonly delta: ExactTemporalValue }
   | { readonly kind: "item.split"; readonly id: string; readonly at: ExactTemporalValue; readonly rightId: string }
+  | {
+      readonly kind: "item.detach-audio";
+      readonly id: string;
+      readonly audioItemId: string;
+      readonly track: string;
+      readonly before?: string;
+    }
   | { readonly kind: "item.replace"; readonly item: NleItem }
   | { readonly kind: "item.remove"; readonly ids: readonly string[] }
   | { readonly kind: "transition.add"; readonly transition: NleTransition }
@@ -60,9 +86,17 @@ export class NleRevisionConflict extends Error {
   }
 }
 
-type MutableTrack = Omit<NleTrack, "items"> & { items: NleItem[] };
-type MutableProject = Omit<NleProject, "revision" | "media" | "tracks"> & {
+type MutableTrack = Omit<NleTrack, "name" | "locked" | "muted" | "items"> & {
+  name: string;
+  locked: boolean;
+  muted: boolean;
+  items: NleItem[];
+};
+type MutableProject = Omit<NleProject, "revision" | "name" | "editRate" | "canvas" | "media" | "tracks"> & {
   revision: number;
+  name: string;
+  editRate: NleEditRate;
+  canvas: NleCanvas;
   media: NleMedia[];
   tracks: MutableTrack[];
   transitions: NleTransition[];
@@ -88,6 +122,12 @@ function editable(track: NleTrack): void {
   if (track.locked) throw new Error(`NLE Track ${track.id} is locked.`);
 }
 
+function editableItems(project: MutableProject, ids: readonly string[]): void {
+  const tracks = new Set<MutableTrack>();
+  for (const id of ids) tracks.add(mutableItem(project, id).track);
+  for (const track of tracks) editable(track);
+}
+
 function insert<T extends { readonly id: string }>(values: readonly T[], value: T, before?: string): T[] {
   const next = [...values];
   const index = before === undefined ? next.length : next.findIndex((candidate) => candidate.id === before);
@@ -105,9 +145,26 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
   const next = structuredClone(project) as MutableProject;
   for (const command of transaction.commands) {
     switch (command.kind) {
+      case "project.update":
+        if (command.name !== undefined) next.name = command.name;
+        if (command.editRate !== undefined) next.editRate = structuredClone(command.editRate);
+        if (command.canvas !== undefined) next.canvas = structuredClone(command.canvas);
+        break;
       case "media.add":
         next.media.push(structuredClone(command.media));
         break;
+      case "media.rename": {
+        const index = next.media.findIndex((candidate) => candidate.id === command.id);
+        if (index < 0) throw new Error(`Unknown NLE Media: ${command.id}`);
+        next.media.splice(index, 1, { ...next.media[index]!, name: command.name });
+        break;
+      }
+      case "media.relink": {
+        const index = next.media.findIndex((candidate) => candidate.id === command.id);
+        if (index < 0) throw new Error(`Unknown NLE Media: ${command.id}`);
+        next.media.splice(index, 1, { ...next.media[index]!, asset: structuredClone(command.asset) });
+        break;
+      }
       case "media.replace": {
         const index = next.media.findIndex((candidate) => candidate.id === command.media.id);
         if (index < 0) throw new Error(`Unknown NLE Media: ${command.media.id}`);
@@ -132,6 +189,13 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         editable(track);
         const remaining = next.tracks.filter((candidate) => candidate.id !== command.id);
         next.tracks = insert(remaining, track, command.before);
+        break;
+      }
+      case "track.update": {
+        const track = mutableTrack(next, command.id);
+        if (command.name !== undefined) track.name = command.name;
+        if (command.locked !== undefined) track.locked = command.locked;
+        if (command.muted !== undefined) track.muted = command.muted;
         break;
       }
       case "track.replace": {
@@ -183,6 +247,16 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         }
         break;
       }
+      case "item.slip": {
+        const { track, item } = mutableItem(next, command.id);
+        editable(track);
+        assertExactTemporalValue(command.delta, "NLE Item slip delta");
+        (item as { localStart: ExactTemporalValue }).localStart = addExactTemporalValues(
+          item.localStart,
+          command.delta,
+        );
+        break;
+      }
       case "item.split": {
         const { track, item } = mutableItem(next, command.id);
         editable(track);
@@ -202,6 +276,26 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         track.items.splice(index + 1, 0, right);
         break;
       }
+      case "item.detach-audio": {
+        const { track, item } = mutableItem(next, command.id);
+        const destination = mutableTrack(next, command.track);
+        editable(track);
+        editable(destination);
+        if (track.kind !== "picture") throw new Error(`NLE Item ${item.id} is not on a Picture Track.`);
+        if (destination.kind !== "audio") throw new Error(`NLE Track ${destination.id} is not an Audio Track.`);
+        if (item.picture === undefined || item.audio === undefined) {
+          throw new Error(`NLE Item ${item.id} does not have attached Picture and Audio.`);
+        }
+        const { audio, ...pictureItem } = item;
+        const { picture: _picture, ...audioItem } = item;
+        track.items.splice(track.items.indexOf(item), 1, pictureItem as NleItem);
+        destination.items = insert(destination.items, {
+          ...audioItem,
+          id: command.audioItemId,
+          audio,
+        } as NleItem, command.before);
+        break;
+      }
       case "item.replace": {
         const { track, item } = mutableItem(next, command.item.id);
         editable(track);
@@ -216,47 +310,63 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         }
         break;
       case "transition.add":
+        editableItems(next, [command.transition.outgoing, command.transition.incoming]);
         next.transitions.push(structuredClone(command.transition));
         break;
       case "transition.replace": {
         const index = next.transitions.findIndex((value) => value.id === command.transition.id);
         if (index < 0) throw new Error(`Unknown NLE Transition: ${command.transition.id}`);
+        const current = next.transitions[index]!;
+        editableItems(next, [
+          current.outgoing, current.incoming,
+          command.transition.outgoing, command.transition.incoming,
+        ]);
         next.transitions.splice(index, 1, structuredClone(command.transition));
         break;
       }
       case "transition.remove": {
         const index = next.transitions.findIndex((value) => value.id === command.id);
         if (index < 0) throw new Error(`Unknown NLE Transition: ${command.id}`);
+        const current = next.transitions[index]!;
+        editableItems(next, [current.outgoing, current.incoming]);
         next.transitions.splice(index, 1);
         break;
       }
       case "matte.add":
+        editableItems(next, [command.matte.content, command.matte.matte]);
         next.mattes.push(structuredClone(command.matte));
         break;
       case "matte.replace": {
         const index = next.mattes.findIndex((value) => value.id === command.matte.id);
         if (index < 0) throw new Error(`Unknown NLE Matte: ${command.matte.id}`);
+        const current = next.mattes[index]!;
+        editableItems(next, [current.content, current.matte, command.matte.content, command.matte.matte]);
         next.mattes.splice(index, 1, structuredClone(command.matte));
         break;
       }
       case "matte.remove": {
         const index = next.mattes.findIndex((value) => value.id === command.id);
         if (index < 0) throw new Error(`Unknown NLE Matte: ${command.id}`);
+        const current = next.mattes[index]!;
+        editableItems(next, [current.content, current.matte]);
         next.mattes.splice(index, 1);
         break;
       }
       case "group.add":
+        editableItems(next, command.group.items);
         next.groups.push(structuredClone(command.group));
         break;
       case "group.replace": {
         const index = next.groups.findIndex((value) => value.id === command.group.id);
         if (index < 0) throw new Error(`Unknown NLE Group: ${command.group.id}`);
+        editableItems(next, [...next.groups[index]!.items, ...command.group.items]);
         next.groups.splice(index, 1, structuredClone(command.group));
         break;
       }
       case "group.remove": {
         const index = next.groups.findIndex((value) => value.id === command.id);
         if (index < 0) throw new Error(`Unknown NLE Group: ${command.id}`);
+        editableItems(next, next.groups[index]!.items);
         next.groups.splice(index, 1);
         break;
       }

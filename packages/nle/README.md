@@ -8,10 +8,24 @@ Compound projects. Opening or editing the project does
 not compile an AuthorGraph, run a Provider, close an audiovisual Programme or recover declarations through
 provenance.
 
-Edits are immutable revisioned transactions. The command set covers media and track management; add, move,
-trim, split, replace and remove for Items; and add, replace and remove for Transition, matte and Group relations.
+Edits are immutable revisioned transactions. The command set covers Project settings; Media add, rename, relink,
+replace and remove; Track add, move, update, replace and remove; add, move, trim, slip, split, detach-audio,
+replace and remove for Items; and add, replace and remove for Transition, matte and Group relations.
 A failed multi-command transaction leaves
 the input revision untouched.
+
+These are direct editing operations, not declarations. `item.move` changes programme placement, `item.trim`
+changes a visible edge, and `item.slip` changes only the exact source-local `localStart`. The current source-time
+model is deliberately the ordinary one-times mapping `localStart + programme offset`; rate, reverse, hold, loop
+and variable-speed behavior are not implied by these commands and have not been added as ad-hoc flags.
+`item.detach-audio` copies the same direct range and source-local start into an existing Audio Track, removes Audio
+participation from the Picture Item and creates no hidden A/V link. A Host may add an editing Group in the same
+transaction when linked selection is desired.
+
+`Track.locked` is the familiar editor guard against accidental Track edits. It does not affect lowering and is not
+a runtime or concurrency lock. `track.update` can always change the lock itself; Item, Transition, matte and Group
+commands touching a locked Track are rejected. Optimistic document concurrency remains the separate Project
+`revision` check.
 
 The serialized `NleProject` is the current editable work, not its editing history. Undo/redo belongs to a
 document session: one accepted gesture records one atomic transaction and enough before/after state to restore
@@ -37,6 +51,7 @@ items. Preview/export receives a separate output frame rate and samples the exac
 continues to use its own sample rate.
 
 Source-owned markers, semantic boundaries and media observations may be projected by an editor as snap guides.
+`snapNleTime()` chooses the exactly nearest guide within a pixel tolerance that remains stable across zoom levels.
 Snapping is one authoring gesture: the accepted transaction stores the resulting exact time or package parameter, not
 the guide name or a live dependency on its owner. Moving or retiming the guide owner later therefore does not make
 NLE export perform a named lookup. A product that wants linked editing updates the affected direct values together

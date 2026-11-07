@@ -19,8 +19,9 @@ The first implemented slice owns one resolved use of a typed Source:
 - a selected signal may carry one package-owned `SignalReconstruction`. It says how this particular mapped read
   becomes a signal, while the Mapping remains the only target-to-source coordinate fact.
 
-The algebra exposes validation, evaluation and factual projections only. An editable NLE Project owns move,
-trim, slip, roll, ripple and split policy and recompiles AVIR after each accepted transaction. AVIR is a closed,
+The algebra exposes validation, evaluation and factual projections only. An editable NLE Project owns direct move,
+trim, slip and split policy and lowers a fresh AVIR value after an accepted edit. Roll, ripple, retime and other
+multi-item editing policies remain NLE concerns but are not claimed as current commands. AVIR is a closed,
 disposable result rather than a second editable document.
 
 This package accepts only resolved, positive finite domains wherever time exists. `constant` is a tagged absence
