@@ -46,8 +46,8 @@ test("a failed filesystem sync cannot make a later resource inherit stale bytes"
     const outputs = (await result.read()).outputs;
     for (const name of ["a", "b", "z"]) {
       const value = outputs[name]?.value;
-      assert.equal(value?.kind, "build-file");
-      if (value?.kind !== "build-file") throw new Error("expected file Output");
+      assert.equal(value?.kind, "product-file");
+      if (value?.kind !== "product-file") throw new Error("expected file Output");
       assert.equal(await readFile(join(result.directory, value.path), "utf8"), name.toUpperCase());
     }
   } finally {

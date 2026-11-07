@@ -1534,9 +1534,9 @@ importers:
 
   packages/product:
     dependencies:
-      '@hypit/hypit':
-        specifier: workspace:^0.4.0
-        version: link:../..
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
 
   packages/project: {}
 
@@ -2108,6 +2108,9 @@ importers:
       '@hypit/facet':
         specifier: workspace:^0.0.0-dev
         version: link:../facet
+      '@hypit/product':
+        specifier: workspace:^0.0.0-dev
+        version: link:../product
       '@hypit/protocol':
         specifier: workspace:^0.0.0-dev
         version: link:../protocol

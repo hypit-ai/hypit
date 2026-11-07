@@ -10,3 +10,14 @@ export const productPublisher = "hypit.product@1";
 export const productPublication = Object.freeze({
   publisher: productPublisher,
 });
+
+export { assertProductFileRef, assertProductPath, materializeProducts } from "./materialize.js";
+export type {
+  ProductFileRef,
+  ProductMaterializationState,
+  ProductMaterializationTarget,
+  ProductResourceSource,
+  ProductValueDocument,
+  ProductValuePath,
+  StoredProduct,
+} from "./materialize.js";

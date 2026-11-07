@@ -4,6 +4,8 @@ import {
   createTypeRef,
 } from "@hypit/protocol";
 import type { CanonicalValue, TypeRef } from "@hypit/protocol";
+import { assertProductFileRef, assertProductPath } from "@hypit/product";
+import type { ProductFileRef, ProductValueDocument, StoredProduct } from "@hypit/product";
 import type { BuildResultOperation } from "./types.js";
 
 export type StoredBuildResultFile = {
@@ -13,24 +15,9 @@ export type StoredBuildResultFile = {
   readonly mediaType: string;
 };
 
-export type StoredBuildResultOutput = {
-  readonly type: TypeRef;
-  readonly publisher: string;
-  readonly publicationParameters?: CanonicalValue;
-  readonly value:
-    | StoredBuildResultFile
-    | { readonly kind: "inline"; readonly value: null | boolean | number | string }
-    | { readonly kind: "value"; readonly path: string };
-};
+export type StoredBuildResultOutput = StoredProduct;
 
-export type StoredBuildResultValueDocument = {
-  readonly format: "hypit.result-value@1";
-  readonly value: CanonicalValue;
-  readonly resources: readonly {
-    readonly at: readonly (string | number)[];
-    readonly file: StoredBuildResultFile;
-  }[];
-};
+export type StoredBuildResultValueDocument = ProductValueDocument;
 
 export type StoredFinishedBuildResult = {
   readonly format: "hypit.build-result@1";
@@ -90,6 +77,11 @@ function fileRef(value: unknown, subject: string): StoredBuildResultFile {
   };
 }
 
+function productFileRef(value: unknown, subject: string): ProductFileRef {
+  assertProductFileRef(value, subject);
+  return { kind: "product-file", path: value.path, size: value.size, mediaType: value.mediaType };
+}
+
 function typeRef(value: unknown, subject: string): TypeRef {
   const item = object(value, subject);
   const module = object(item.module, `${subject}.module`);
@@ -105,10 +97,13 @@ function outputs(value: unknown, subject: string): Readonly<Record<string, Store
     const item = object(raw, `${subject}[${JSON.stringify(name)}]`);
     const stored = object(item.value, `${subject}[${JSON.stringify(name)}].value`);
     let decoded: StoredBuildResultOutput["value"];
-    if (stored.kind === "build-file") decoded = fileRef(stored, `${subject}[${JSON.stringify(name)}].value`);
+    if (stored.kind === "product-file") decoded = productFileRef(stored, `${subject}[${JSON.stringify(name)}].value`);
     else if (stored.kind === "value") decoded = {
       kind: "value",
-      path: resultPath(stored.path, `${subject}[${JSON.stringify(name)}].value.path`),
+      path: (() => {
+        assertProductPath(stored.path, `${subject}[${JSON.stringify(name)}].value.path`);
+        return stored.path;
+      })(),
     };
     else if (stored.kind === "inline") {
       const scalar = stored.value;
@@ -228,13 +223,13 @@ export function decodeFinishedBuildResult(
 
 export function decodeBuildResultValueDocument(
   value: unknown,
-  subject = "Build Result value",
+  subject = "Product value",
 ): StoredBuildResultValueDocument {
   const item = object(value, subject);
-  if (item.format !== "hypit.result-value@1") throw new Error(`${subject} is not a Result value document`);
+  if (item.format !== "hypit.product-value@1") throw new Error(`${subject} is not a Product value document`);
   if (!Array.isArray(item.resources)) throw new Error(`${subject}.resources must be an array`);
   return {
-    format: "hypit.result-value@1",
+    format: "hypit.product-value@1",
     value: canonicalValue(item.value, `${subject}.value`),
     resources: item.resources.map((raw, index) => {
       const binding = object(raw, `${subject}.resources[${index}]`);
@@ -246,7 +241,7 @@ export function decodeBuildResultValueDocument(
         if (typeof segment === "number" && Number.isSafeInteger(segment) && segment >= 0) return segment;
         throw new Error(`${subject}.resources[${index}].at[${segmentIndex}] is invalid`);
       });
-      return { at, file: fileRef(binding.file, `${subject}.resources[${index}].file`) };
+      return { at, file: productFileRef(binding.file, `${subject}.resources[${index}].file`) };
     }),
   };
 }

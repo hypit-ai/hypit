@@ -5,6 +5,7 @@ import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { assertOrderedBuildId, buildIdCreatedAt, compareCodeUnits } from "@hypit/protocol";
 import type { BlobRef, CanonicalValue, Value, ValuePath } from "@hypit/protocol";
+import type { ProductFileRef } from "@hypit/product";
 import {
   decodeBuildResultJson,
   decodeBuildResultValueDocument,
@@ -66,7 +67,7 @@ function historyOutput(output: StoredBuildResultOutput): BuildResultOutput {
       ? {}
       : { publicationParameters: output.publicationParameters }),
   };
-  if (output.value.kind === "build-file") {
+  if (output.value.kind === "product-file") {
     return { type: output.type, ...publication,
       representation: "file", mediaType: output.value.mediaType, size: output.value.size };
   }
@@ -148,7 +149,7 @@ export async function browseBuildResults(
 
 async function openContainedResultFile(
   directory: string,
-  file: StoredBuildResultFile,
+  file: StoredBuildResultFile | ProductFileRef,
   range?: BuildResultFileRange,
 ): Promise<AsyncIterable<Uint8Array> | undefined> {
   const path = containedResultPath(directory, file.path);
@@ -172,9 +173,9 @@ export async function resolveBuildResultOutput(
     ? undefined
     : manifest.outputs[output];
   if (entry === undefined) return undefined;
-  const resources = new Map<string, { readonly blob: BlobRef; readonly file: StoredBuildResultFile }>();
+  const resources = new Map<string, { readonly blob: BlobRef; readonly file: ProductFileRef }>();
   const boundFiles = new Map<string, BlobRef>();
-  const bind = (file: StoredBuildResultFile, index: number): BlobRef => {
+  const bind = (file: ProductFileRef, index: number): BlobRef => {
     const identity = JSON.stringify([file.path, file.size, file.mediaType]);
     const existing = boundFiles.get(identity);
     if (existing !== undefined) return existing;
@@ -206,7 +207,7 @@ export async function resolveBuildResultOutput(
       return item;
     };
     value = inflate(document.value, []);
-  } else if (entry.value.kind === "build-file") value = bind(entry.value, 0);
+  } else if (entry.value.kind === "product-file") value = bind(entry.value, 0);
   else value = entry.value.value;
   return {
     type: entry.type,

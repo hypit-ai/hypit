@@ -59,9 +59,9 @@ test("one same-Build resource backs a retained video and a structured value", as
       },
     });
     assert.deepEqual(Object.keys(manifest.outputs).sort(), ["shot.take", "shot.take-copy", "shot.video"]);
-    assert.equal(manifest.outputs["shot.video"]?.value.kind, "build-file");
+    assert.equal(manifest.outputs["shot.video"]?.value.kind, "product-file");
     assert.equal(manifest.outputs["shot.take"]?.value.kind, "value");
-    const videoPath = manifest.outputs["shot.video"]?.value.kind === "build-file"
+    const videoPath = manifest.outputs["shot.video"]?.value.kind === "product-file"
       ? manifest.outputs["shot.video"].value.path
       : undefined;
     const takePath = manifest.outputs["shot.take"]?.value.kind === "value"
@@ -78,7 +78,7 @@ test("one same-Build resource backs a retained video and a structured value", as
       readonly value: { readonly media: { readonly visual: { readonly artifact: null } } };
       readonly resources: readonly [{ readonly at: readonly string[]; readonly file: { readonly path: string } }];
     };
-    assert.equal(take.format, "hypit.result-value@1");
+    assert.equal(take.format, "hypit.product-value@1");
     assert.equal(take.value.media.visual.artifact, null);
     assert.deepEqual(take.resources[0].at, ["media", "visual", "artifact"]);
     assert.equal(take.resources[0].file.path, videoPath);

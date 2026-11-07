@@ -147,7 +147,9 @@ The submission passes known Resource references to the Result writer, separately
 graph. Staging bytes for a running Build does not make them new Result files: external and reused
 resources keep their addresses even when a Producer embeds them inside a new array or object value.
 
-While execution advances, Result synchronization stores newly completed publications. The
+While execution advances, Result synchronization delegates newly completed publications to the
+Product materializer. Runtime Local supplies only the current Records, resource opener and physical
+write target; it no longer interprets Blob or structured Product representation. The
 repository leaves its files or objects untouched when no new publication is available; internal
 execution progress remains in SQLite. Once execution has a final decision, all completed publications
 and the outcome are saved before active state and working Resources are removed. This order applies

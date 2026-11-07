@@ -10,3 +10,8 @@ export format.
 
 `hypit.product@1` names product lifecycle only. It is not a Provider, Endpoint, storage location or
 permission to execute package code.
+
+Product also owns the neutral materialization of typed values. Scalars remain inline, Blob resources
+become `product-file` references, and arrays or objects use `hypit.product-value@1` documents whose
+resource leaves point to Product-owned files. The materializer receives an abstract write target and
+resource opener; it contains no filesystem, Runtime, model or Result implementation.

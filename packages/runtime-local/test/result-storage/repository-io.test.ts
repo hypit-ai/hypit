@@ -74,12 +74,12 @@ test("filesystem decodes Result and writer data before exposing it", async () =>
       outputs: {
         video: {
           type: videoType,
-          value: { kind: "build-file", path: "../outside.mp4", size: 1, mediaType: "video/mp4" },
+          value: { kind: "product-file", path: "../outside.mp4", size: 1, mediaType: "video/mp4" },
         },
       },
     }));
     const repository = new FileBuildResultStore(root);
-    await assert.rejects(repository.read(malformed), /outputs\["video"\]\.value\.path is not a Result-relative path/u);
+    await assert.rejects(repository.read(malformed), /outputs\["video"\]\.value\.path is not a Product-relative path/u);
 
     const writer = await repository.create({
       id: unfinished,
@@ -117,7 +117,7 @@ test("reserved-looking domain objects remain ordinary domain data", async () => 
         value: { kind: "value", path: "values/value-0001.json" } } },
     }));
     await writeFile(join(directory, "values", "value-0001.json"), JSON.stringify({
-      format: "hypit.result-value@1",
+      format: "hypit.product-value@1",
       value: { nested: { kind: "value", path: "domain-authored" } },
       resources: [],
     }));

@@ -14,11 +14,12 @@ hidden in this package.
 
 | Value source | Persisted representation |
 | --- | --- |
-| Published `BlobRef` produced by this Build | One file owned by this Result |
-| Array or object value | A Value Document whose `BlobRef` bindings point to files owned by this Result |
+| Published `BlobRef` produced by this Build | One Product file, temporarily colocated with this Result |
+| Array or object value | A Product Value Document whose `BlobRef` bindings point to colocated Product files |
 
-Every `build-file` path is relative to the containing Result. The writer recognizes `BlobRef` leaves
-independently of their domain Type or field name and writes each Resource identity once, so a direct
+Every `product-file` path is currently relative to the containing transitional Result. Product's
+materializer recognizes `BlobRef` leaves independently of their domain Type or field name and writes
+each Resource identity once, so a direct
 published media Output and a nested use in a structured value share one file inside that Result.
 
 Workspace attachments and Runtime working resources are execution inputs, not durable Result
@@ -52,7 +53,7 @@ Callers never receive a general Result-relative path opener. A custom repository
 physical implementation without changing Result identity or publication semantics.
 
 The manifest reports domain `type` separately from storage representation. An Output is stored inline,
-as a file, or as a Result-local value document; those forms do not claim a domain value category.
+as a Product file, or as a `hypit.product-value@1` document; those forms do not claim a domain value category.
 
 A `complete` outcome is published only after every Output named by the Publication Intent has been stored.
 Failed and cancelled Results may intentionally contain the subset that completed. This is a local per-Build

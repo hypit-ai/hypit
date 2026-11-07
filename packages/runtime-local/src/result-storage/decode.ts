@@ -6,6 +6,8 @@ import {
 } from "@hypit/hypit/protocol";
 import type { TypeRef } from "@hypit/hypit/protocol";
 import type { BuildResultOperation } from "@hypit/hypit/result";
+import { assertProductFileRef, assertProductPath } from "@hypit/hypit/product";
+import type { ProductFileRef } from "@hypit/hypit/product";
 
 import {
   assertBuildResultFileRef,
@@ -96,10 +98,15 @@ function fileRef(value: unknown, subject: string): BuildResultFileRef {
   };
 }
 
+function productFileRef(value: unknown, subject: string): ProductFileRef {
+  assertProductFileRef(value, subject);
+  return { kind: "product-file", path: value.path, size: value.size, mediaType: value.mediaType };
+}
+
 function outputValue(value: unknown, subject: string): StoredBuildResultOutputValue {
   const item = object(value, subject);
-  if (item.kind === "build-file") {
-    return fileRef(item, subject);
+  if (item.kind === "product-file") {
+    return productFileRef(item, subject);
   }
   if (item.kind === "inline") {
     const scalar = item.value;
@@ -110,7 +117,8 @@ function outputValue(value: unknown, subject: string): StoredBuildResultOutputVa
     return { kind: "inline", value: scalar };
   }
   if (item.kind === "value") {
-    return { kind: "value", path: resultPath(item.path, `${subject}.path`) };
+    assertProductPath(item.path, `${subject}.path`);
+    return { kind: "value", path: item.path };
   }
   throw new Error(`${subject}.kind is not a Result value kind`);
 }
@@ -298,13 +306,13 @@ export function decodeBuildResultWriterState(
 
 export function decodeBuildResultValueDocument(
   value: unknown,
-  subject = "Build Result value",
+  subject = "Product value",
 ): BuildResultValueDocument {
   const item = object(value, subject);
-  if (item.format !== "hypit.result-value@1") throw new Error(`${subject} is not a Result value document`);
+  if (item.format !== "hypit.product-value@1") throw new Error(`${subject} is not a Product value document`);
   if (!Array.isArray(item.resources)) throw new Error(`${subject}.resources must be an array`);
   const document: BuildResultValueDocument = {
-    format: "hypit.result-value@1",
+    format: "hypit.product-value@1",
     value: canonicalValue(item.value, `${subject}.value`),
     resources: item.resources.map((raw, index) => {
       const binding = object(raw, `${subject}.resources[${index}]`);
@@ -316,7 +324,7 @@ export function decodeBuildResultValueDocument(
       });
       return {
         at,
-        file: fileRef(binding.file, `${subject}.resources[${index}].file`),
+        file: productFileRef(binding.file, `${subject}.resources[${index}].file`),
       };
     }),
   };

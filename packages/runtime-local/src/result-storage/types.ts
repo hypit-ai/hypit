@@ -7,6 +7,13 @@ import type {
   TypedRecord,
 } from "@hypit/hypit/protocol";
 import { assertPublicationIntent } from "@hypit/hypit/protocol";
+import { assertProductFileRef } from "@hypit/hypit/product";
+import type {
+  ProductFileRef,
+  ProductValueDocument,
+  ProductValuePath,
+  StoredProduct,
+} from "@hypit/hypit/product";
 import type { BuildResultHistory, BuildResultOperation } from "@hypit/hypit/result";
 
 export type BuildResultFileRef = {
@@ -17,12 +24,12 @@ export type BuildResultFileRef = {
   readonly path: string;
 };
 
-export type BuildResultValuePath = readonly (string | number)[];
+export type BuildResultValuePath = ProductValuePath;
 
 export type BuildResultResourceBinding = {
   /** Location of one Resource inside `value`; the encoded slot itself is `null`. */
   readonly at: BuildResultValuePath;
-  readonly file: BuildResultFileRef;
+  readonly file: ProductFileRef;
 };
 
 /**
@@ -30,11 +37,7 @@ export type BuildResultResourceBinding = {
  * Resource references live beside it, so reserved-looking domain objects cannot be
  * mistaken for persistence metadata.
  */
-export type BuildResultValueDocument = {
-  readonly format: "hypit.result-value@1";
-  readonly value: CanonicalValue;
-  readonly resources: readonly BuildResultResourceBinding[];
-};
+export type BuildResultValueDocument = ProductValueDocument;
 
 function assertCanonicalValue(value: unknown, subject: string): asserts value is CanonicalValue {
   if (value === null || typeof value === "boolean" || typeof value === "string") return;
@@ -96,14 +99,14 @@ function valueAtPath(value: CanonicalValue, path: BuildResultValuePath, subject:
 /** Validate the storage document before its Resource paths are decoded into Runtime values. */
 export function assertBuildResultValueDocument(
   value: unknown,
-  subject = "Build Result value",
+  subject = "Product value",
 ): asserts value is BuildResultValueDocument {
   if (value === null || Array.isArray(value) || typeof value !== "object") {
-    throw new Error(`${subject} is not a Result value document`);
+    throw new Error(`${subject} is not a Product value document`);
   }
   const document = value as Readonly<Record<string, unknown>>;
-  if (document.format !== "hypit.result-value@1" || !Array.isArray(document.resources)) {
-    throw new Error(`${subject} is not a Result value document`);
+  if (document.format !== "hypit.product-value@1" || !Array.isArray(document.resources)) {
+    throw new Error(`${subject} is not a Product value document`);
   }
   const canonicalValue = document.value;
   assertCanonicalValue(canonicalValue, `${subject}.value`);
@@ -128,21 +131,13 @@ export function assertBuildResultValueDocument(
     if (valueAtPath(canonicalValue, binding.at, `${subject}.resources[${index}].at`) !== null) {
       throw new Error(`${subject}.resources[${index}].at must address a null Resource slot`);
     }
-    assertBuildResultFileRef(binding.file, `${subject}.resources[${index}].file`);
+    assertProductFileRef(binding.file, `${subject}.resources[${index}].file`);
   });
 }
 
-export type StoredBuildResultOutputValue =
-  | BuildResultFileRef
-  | { readonly kind: "inline"; readonly value: null | boolean | number | string }
-  | { readonly kind: "value"; readonly path: string };
+export type StoredBuildResultOutputValue = StoredProduct["value"];
 
-export type StoredBuildResultOutput = {
-  readonly type: TypeRef;
-  readonly publisher: string;
-  readonly publicationParameters?: CanonicalValue;
-  readonly value: StoredBuildResultOutputValue;
-};
+export type StoredBuildResultOutput = StoredProduct;
 
 type StoredBuildResultBase = {
   readonly format: "hypit.build-result@1";

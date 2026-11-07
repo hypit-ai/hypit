@@ -73,10 +73,10 @@ test("Result decoders reconstruct owned values from untrusted documents", () => 
   });
 
   const value = decodeBuildResultValueDocument({
-    format: "hypit.result-value@1",
+    format: "hypit.product-value@1",
     value: { title: "hello" },
     resources: [],
     extra: "not owned",
   });
-  assert.deepEqual(value, { format: "hypit.result-value@1", value: { title: "hello" }, resources: [] });
+  assert.deepEqual(value, { format: "hypit.product-value@1", value: { title: "hello" }, resources: [] });
 });
