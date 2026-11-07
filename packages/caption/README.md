@@ -78,17 +78,18 @@ occurrence "captions" {
 There is no Caption clock, Timeline registration, or parent expansion of cue geometry. Terminal sampling is
 supplied separately by the selected audiovisual renderer.
 
-## Editorial import path: materialize ordinary Caption blocks
+## Editorial import path: materialize ordinary Component blocks
 
 The same `CaptionDocument + LocalCaptionTiming + CaptionPresentation` can instead be baked once into an NLE
 transaction. `createCaptionNleMaterialization` resolves the chosen cues, visibility and styles, quantizes exact
-source-local regions at the destination project frame rate, and emits one direct Caption item for each visible
-cue. A hidden cue emits no item. Each resulting block owns its start, duration, text, renderer symbol, style
+source-local regions at the destination project frame rate, and emits one direct Component item for each visible
+cue. A hidden cue emits no item. Each resulting block owns its start, duration, caption Component symbol, text, style
 parameters and rectangle, so later move, trim, restyle or delete operations are ordinary NLE edits and do not
 write back to the transcript or Caption component.
 
-The built-in `basic` renderer is only a minimal package-owned HTML implementation. Other style families must
-select their own renderer explicitly; the NLE does not interpret family parameters.
+The built-in `basic` Component is only a minimal package-owned HTML implementation. Other style families must
+select their own Component explicitly; the NLE does not interpret family parameters or grant Caption a special
+Item kind.
 
 ## Live component inspection and edits
 

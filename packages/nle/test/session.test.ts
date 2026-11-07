@@ -14,7 +14,7 @@ import {
   markNleEditSessionSaved,
   redoNleEdit,
   undoNleEdit,
-  type NleCaptionItem,
+  type NleComponentItem,
   type NleEditSession,
 } from "../src/index.js";
 
@@ -23,17 +23,16 @@ const picture = {
   effects: [],
 } as const;
 
-function caption(id: string, text: string, startFrame: number): NleCaptionItem {
+function caption(id: string, text: string, startFrame: number): NleComponentItem {
   return {
     id,
-    kind: "caption",
+    kind: "component",
     startFrame,
     durationFrames: 4,
     localStartFrame: 0,
     enabled: true,
-    text,
-    renderer: { module: { name: "@example/caption", version: "1" }, name: "basic" },
-    parameters: {},
+    component: { module: { name: "@example/caption", version: "1" }, name: "basic" },
+    parameters: { text },
     picture,
   };
 }

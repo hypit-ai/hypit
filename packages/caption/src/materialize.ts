@@ -9,7 +9,7 @@ import { assertNleProject, findNleTrack } from "@hypit/nle";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
 import { resolveTemporalBoundary } from "@hypit/temporal/sampling";
 
-import { captionBasicNleRendererSymbol } from "./nle-package.js";
+import { captionBasicNleComponentSymbol } from "./nle-package.js";
 import {
   createCaptionPresentation,
   projectCaptionScheduleNle,
@@ -27,18 +27,18 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-export type CaptionNleRendererSelection = (
+export type CaptionNleComponentSelection = (
   style: CaptionStyle,
-) => { readonly renderer: NlePackageSymbol; readonly parameters?: Readonly<Record<string, unknown>> };
+) => { readonly component: NlePackageSymbol; readonly parameters?: Readonly<Record<string, unknown>> };
 
-const defaultRenderer: CaptionNleRendererSelection = (style) => {
+const defaultComponent: CaptionNleComponentSelection = (style) => {
   if (style.family !== "basic") {
-    throw new Error(`Caption style family ${style.family} has no selected NLE renderer.`);
+    throw new Error(`Caption style family ${style.family} has no selected NLE Component.`);
   }
-  return { renderer: captionBasicNleRendererSymbol };
+  return { component: captionBasicNleComponentSymbol };
 };
 
-/** Bake source-local Caption timing into independent, directly editable NLE Caption Items. */
+/** Bake source-local Caption timing into independent, directly editable NLE Component Items. */
 export function createCaptionNleMaterialization(project: NleProject, input: {
   readonly id: string;
   readonly track: string;
@@ -49,7 +49,7 @@ export function createCaptionNleMaterialization(project: NleProject, input: {
   readonly picture: NlePictureAppearance;
   readonly selection?: CaptionSelection;
   readonly itemId?: (cueId: string) => string;
-  readonly rendererForStyle?: CaptionNleRendererSelection;
+  readonly componentForStyle?: CaptionNleComponentSelection;
 }): NleTransaction {
   assertNleProject(project);
   const track = findNleTrack(project, input.track);
@@ -66,7 +66,7 @@ export function createCaptionNleMaterialization(project: NleProject, input: {
   };
   const schedule = scheduleCaptionPresentation(spec, input.document, input.timing, presentation);
   const projected = projectCaptionScheduleNle(input.id, input.document, schedule, presentation);
-  const rendererForStyle = input.rendererForStyle ?? defaultRenderer;
+  const componentForStyle = input.componentForStyle ?? defaultComponent;
   const styles = new Map(schedule.styles.map((style) => [style.id, style] as const));
   const commands: NleTransaction["commands"][number][] = [];
   for (const cue of projected.cues) {
@@ -81,20 +81,20 @@ export function createCaptionNleMaterialization(project: NleProject, input: {
     const end = input.atFrame + resolveTemporalBoundary(region.end.position,
       { frameRate: project.frameRate }, "cover");
     assert(end > start, `Caption Cue ${cue.cueId} does not cover one NLE frame.`);
-    const selected = rendererForStyle(style);
+    const selected = componentForStyle(style);
     commands.push({
       kind: "item.add",
       track: track.id,
       item: {
         id: input.itemId?.(cue.cueId) ?? `${input.id}:${cue.cueId}`,
-        kind: "caption",
+        kind: "component",
         startFrame: start,
         durationFrames: end - start,
         localStartFrame: 0,
         enabled: true,
-        text: cue.text,
-        renderer: structuredClone(selected.renderer),
+        component: structuredClone(selected.component),
         parameters: canonicalize({
+          text: cue.text,
           cueId: cue.cueId,
           styleId: style.id,
           family: style.family,

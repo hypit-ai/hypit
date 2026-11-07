@@ -24,7 +24,6 @@ import {
   lowerNleProjectToAudioProgram,
   lowerNleProjectToHtmlProgram,
   nlePointwisePictureEffect,
-  type NleCaptionItem,
   type NleComponentItem,
   type NlePictureAppearance,
   type NleProject,
@@ -108,9 +107,8 @@ const audioEffectRenderer = { module: { name: "@example/audio", version: "1" }, 
 const transitionRenderer = { module: { name: "@example/transition", version: "1" }, name: "dissolve" };
 const matteRenderer = { module: { name: "@example/matte", version: "1" }, name: "alpha" };
 const host = createNleLoweringHost([{
-  captions: [{ renderer: captionRenderer,
-    resolve: (item) => visualSource(`${item.id}:source`, "caption") }],
-  components: [{ component: componentRenderer,
+  components: [{ component: captionRenderer,
+    resolve: (item) => visualSource(`${item.id}:source`, "caption") }, { component: componentRenderer,
     resolve: (item) => visualSource(`${item.id}:source`, "component") }, {
     component: audioComponentRenderer,
     resolve: (item) => audioComponentSource(`${item.id}:source`),
@@ -160,11 +158,11 @@ function project(): NleProject {
     frameRate: { numerator: 2, denominator: 1 },
     canvas: { width: 100, height: 100, clearColor: "#101010" },
   });
-  const caption: NleCaptionItem = {
-    id: "subtitle-one", kind: "caption", startFrame: 1, durationFrames: 2, localStartFrame: 0,
-    enabled: true, text: "A direct caption block",
-    renderer: captionRenderer,
-    parameters: { color: "white" },
+  const caption: NleComponentItem = {
+    id: "subtitle-one", kind: "component", startFrame: 1, durationFrames: 2, localStartFrame: 0,
+    enabled: true,
+    component: captionRenderer,
+    parameters: { text: "A direct caption block", color: "white" },
     picture: { layout: { x: 10, y: 70, width: 80, height: 20, fit: "contain" }, effects: [] },
   };
   const component: NleComponentItem = {
@@ -191,7 +189,7 @@ function project(): NleProject {
   ] });
 }
 
-test("Media, Caption, Component and Effect lower into one audiovisual Programme", () => {
+test("Media, caption Component and Effect lower into one audiovisual Programme", () => {
   const lowering = lowerNleProjectToAudiovisual(project(), host);
 
   assert.deepEqual(Object.keys(lowering.program.occurrences), ["camera-use", "subtitle-one", "title"]);

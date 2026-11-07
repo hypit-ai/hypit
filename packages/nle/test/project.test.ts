@@ -13,7 +13,6 @@ import {
   findNleItem,
   parseNleProject,
   serializeNleProject,
-  type NleCaptionItem,
   type NleComponentItem,
   type NleMediaItem,
   type NlePictureAppearance,
@@ -62,16 +61,15 @@ const mediaItem: NleMediaItem = {
   audio: { effects: [] },
 };
 
-const captionItem: NleCaptionItem = {
+const captionItem: NleComponentItem = {
   id: "caption-one",
-  kind: "caption",
+  kind: "component",
   startFrame: 1,
   durationFrames: 2,
   localStartFrame: 0,
   enabled: true,
-  text: "Hello NLE",
-  renderer: { module: { name: "@example/caption", version: "1" }, name: "default" },
-  parameters: { color: "white" },
+  component: { module: { name: "@example/caption", version: "1" }, name: "default" },
+  parameters: { text: "Hello NLE", color: "white" },
   picture: {
     layout: { x: 10, y: 70, width: 80, height: 20, fit: "contain" },
     effects: [],
@@ -90,7 +88,7 @@ const componentItem: NleComponentItem = {
   picture: fullPicture,
 };
 
-test("one revision stores Media, Caption and Component Items directly", () => {
+test("one revision stores Media and Component Items directly", () => {
   const project = createNleProject({
     id: "editorial",
     name: "Editorial",
@@ -109,7 +107,7 @@ test("one revision stores Media, Caption and Component Items directly", () => {
   assert.equal(project.revision, 0);
   assert.equal(project.tracks.length, 0);
   assert.equal(edited.revision, 1);
-  assert.deepEqual(edited.tracks[0]?.items.map((item) => item.kind), ["media", "caption", "component"]);
+  assert.deepEqual(edited.tracks[0]?.items.map((item) => item.kind), ["media", "component", "component"]);
   assert.deepEqual(parseNleProject(serializeNleProject(edited)), edited);
 });
 

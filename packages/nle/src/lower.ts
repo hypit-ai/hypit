@@ -180,11 +180,6 @@ function sourceForItem(
   item: NleItem,
   host: NleLoweringHost,
 ): NleResolvedItemSource {
-  if (item.kind === "caption") {
-    const value = host.resolveCaption(item, { project, track });
-    validateResolvedSource(value, item);
-    return value;
-  }
   if (item.kind === "component") {
     const value = host.resolveComponent(item, { project, track });
     validateResolvedSource(value, item);
@@ -362,7 +357,7 @@ export function lowerNleProjectToAudiovisual(
     if (track.muted) continue;
     for (const item of track.items) {
       if (!item.enabled) continue;
-      if (item.kind !== "caption" && item.audio !== undefined) requiredAudio.add(item.id);
+      if (item.audio !== undefined) requiredAudio.add(item.id);
     }
   }
 
@@ -429,10 +424,8 @@ export function lowerNleProjectToAudiovisual(
       const audioId = `${item.id}:audio`;
       audioNodes[audioId] = { kind: "use", occurrence: item.id, output: audioOutput };
       let audioRoot = audioId;
-      if (item.kind !== "caption") {
-        for (const effect of item.audio!.effects) {
-          audioRoot = audioEffectNode(audioNodes, audioRoot, effect, item, context, host, domain);
-        }
+      for (const effect of item.audio!.effects) {
+        audioRoot = audioEffectNode(audioNodes, audioRoot, effect, item, context, host, domain);
       }
       audioInputs.push(audioRoot);
     }

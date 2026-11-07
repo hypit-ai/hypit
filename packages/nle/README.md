@@ -2,8 +2,8 @@
 
 Persistent, flat editing authority for Hypit's HTML-capable non-linear editor.
 
-An `NleProject` stores direct frame positions, media, picture/audio tracks, concrete Caption items,
-package-owned Component and Picture/Audio Effect instances, Transition and matte relations, editing Groups and nested
+An `NleProject` stores direct frame positions, media, picture/audio tracks, package-owned Component and
+Picture/Audio Effect instances, Transition and matte relations, editing Groups and nested
 Compound projects. Opening or editing the project does
 not compile an AuthorGraph, run a Provider, close an audiovisual Programme or recover declarations through
 provenance.
@@ -50,20 +50,22 @@ NleProject
   `-> @hypit/audiovisual-audio -> AudioProgram
 ```
 
-Prepared media is adapted directly. Caption and Component items retain only their package reference,
-parameters and NLE-owned placement; the selected Host resolves their package-owned `ProgramSource` and terminal
+Prepared media is adapted directly. Component items retain only their package reference, parameters and
+NLE-owned placement; the selected Host resolves their package-owned `ProgramSource` and terminal
 implementation at lowering time. A Component may be Picture-only, Audio-only or expose both. Effects follow the
 same rule and resolve to ordinary Picture or Audio Operators.
+Materialized Caption cues are ordinary Component items whose package parameters own text and style; NLE Core has
+no Caption item kind or resolver category.
 The NLE therefore contains media and HTML effects in one paint graph without storing DOM or making package
 internals into parent timeline items.
 
-Package behavior enters the Host through the `hypit.nle-package@1` facet. Caption renderers, Components and
-Effects, Transitions and mattes are dispatched by exact Module symbol; missing and duplicate implementations fail instead of falling
+Package behavior enters the Host through the `hypit.nle-package@1` facet. Components, Effects, Transitions and
+mattes are dispatched by exact Module symbol; missing and duplicate implementations fail instead of falling
 back to a central kind table. The assembled registry is process-local and is never serialized into the NLE
 project.
 
-The Project is a central assembly authority, not a central behavior registry. Packages own Component, Caption,
-Effect, Transition and matte semantics. Parameters are stored as package-owned canonical values; the Core does
+The Project is a central assembly authority, not a central behavior registry. Packages own Component, Effect,
+Transition and matte semantics. Parameters are stored as package-owned canonical values; the Core does
 not interpret them or infer editing handles from rendered rectangles. An optional package authoring facet may
 independently expose parameter editors, Canvas handles or custom edit plans. None of those affordances is
 required for a package instance to render, save, lower or participate in Project undo.
@@ -79,7 +81,7 @@ The first one-way materializers are deliberately small:
 
 - `createPreparedMediaMaterialization` adds already prepared media plus one direct Media item;
 - `createComponentMaterialization` adds one direct package Component instance;
-- `@hypit/caption` owns Caption timing/presentation expansion into ordinary Caption item commands.
+- `@hypit/caption` owns Caption timing/presentation expansion into ordinary caption Component commands.
 
 Applying these transactions retains no live relation to a generator, transcript, SVML source or Build run.
 
@@ -96,7 +98,7 @@ The spatial policy stores an explicit rectangle and `fill | contain | cover` fit
 Tracks and item arrays are ordered back-to-front. This package deliberately contains no SVML parser, Build,
 Runtime, Result, Provider, Narrative matcher, NLE View projection or reverse author writeback.
 
-Audio participation is equally direct: a non-Caption Item has an `audio` appearance when its Audio output belongs
+Audio participation is equally direct: an Item has an `audio` appearance when its Audio output belongs
 to the mix. `audio.effects` is an ordered source-to-output chain of package-owned unary Audio Operators. Track mute
 removes its Items from the mix; active Item roots join through the AVIR `mix` node and lower to `AudioProgram`
 `program`, `process` and `mix` nodes. NLE Core contains no gain, fade, EQ, pan or compressor enum. The first real

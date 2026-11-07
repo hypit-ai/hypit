@@ -164,8 +164,8 @@ test("Caption timing and presentation bake once into ordinary editable NLE block
   assert.deepEqual(materialized.tracks[0]?.items.map((item) => [
     item.id, item.kind, item.startFrame, item.durationFrames,
   ]), [
-    ["transcript-use:cue-one", "caption", 3, 2],
-    ["transcript-use:cue-three", "caption", 11, 2],
+    ["transcript-use:cue-one", "component", 3, 2],
+    ["transcript-use:cue-three", "component", 11, 2],
   ]);
 
   const html = lowerNleProjectToHtmlProgram(materialized,

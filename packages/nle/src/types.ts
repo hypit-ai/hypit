@@ -71,14 +71,6 @@ export type NleMediaItem = NleItemBase & {
   readonly audio?: NleAudioAppearance;
 };
 
-export type NleCaptionItem = NleItemBase & {
-  readonly kind: "caption";
-  readonly text: string;
-  readonly renderer: NlePackageSymbol;
-  readonly parameters: CanonicalValue;
-  readonly picture: NlePictureAppearance;
-};
-
 export type NleComponentItem = NleItemBase & {
   readonly kind: "component";
   readonly component: NlePackageSymbol;
@@ -95,7 +87,7 @@ export type NleCompoundItem = NleItemBase & {
   readonly audio?: NleAudioAppearance;
 };
 
-export type NleItem = NleMediaItem | NleCaptionItem | NleComponentItem | NleCompoundItem;
+export type NleItem = NleMediaItem | NleComponentItem | NleCompoundItem;
 
 export type NleTrack = {
   readonly id: string;
@@ -181,7 +173,6 @@ export type NleMatteLoweringContext = NleLoweringContext & {
 
 /** Package behavior is selected by the Host; it is not serialized into the NLE project. */
 export type NleLoweringHost = {
-  readonly resolveCaption: (item: NleCaptionItem, context: NleLoweringContext) => NleResolvedItemSource;
   readonly resolveComponent: (item: NleComponentItem, context: NleLoweringContext) => NleResolvedItemSource;
   readonly resolveEffect: (
     effect: NleEffect,

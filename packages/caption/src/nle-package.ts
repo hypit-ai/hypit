@@ -1,12 +1,12 @@
 import { pictureType, type ProgramSource } from "@hypit/audiovisual";
 import { visualProgramHtmlSource } from "@hypit/audiovisual-html";
 import { htmlVisual } from "@hypit/html-program";
-import type { NleCaptionResolver, NlePackageSymbol } from "@hypit/nle";
+import type { NleComponentResolver, NlePackageSymbol } from "@hypit/nle";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
 
 import { captionModuleRef } from "./manifest.js";
 
-export const captionBasicNleRendererSymbol: NlePackageSymbol = {
+export const captionBasicNleComponentSymbol: NlePackageSymbol = {
   module: captionModuleRef,
   name: "basic",
 };
@@ -40,13 +40,16 @@ function optionalFont(value: unknown): string {
   return value;
 }
 
-/** Minimal official renderer for materialized editorial Caption blocks. */
-export const captionBasicNleResolver: NleCaptionResolver = {
-  renderer: captionBasicNleRendererSymbol,
+/** Minimal official Component for materialized editorial Caption blocks. */
+export const captionBasicNleResolver: NleComponentResolver = {
+  component: captionBasicNleComponentSymbol,
   resolve: (item) => {
+    assert(item.picture !== undefined, `NLE Caption ${item.id} has no Picture appearance.`);
     assert(item.parameters !== null && typeof item.parameters === "object" && !Array.isArray(item.parameters),
       `NLE Caption ${item.id} parameters must be a record.`);
     const parameters = item.parameters as Readonly<Record<string, unknown>>;
+    assert(typeof parameters.text === "string" && parameters.text.length > 0,
+      `NLE Caption ${item.id} text is empty.`);
     assert(parameters.family === "basic", `NLE Caption ${item.id} requires the basic style family.`);
     assert(parameters.style !== null && typeof parameters.style === "object" && !Array.isArray(parameters.style),
       `NLE Caption ${item.id} basic style must be a record.`);
@@ -72,7 +75,7 @@ export const captionBasicNleResolver: NleCaptionResolver = {
       source,
       pictureOutput: "picture",
       html: visualProgramHtmlSource(sourceId, "picture", htmlVisual({
-        html: `<div data-hypit-nle-caption><span>${escapeHtml(item.text)}</span></div>`,
+        html: `<div data-hypit-nle-caption><span>${escapeHtml(parameters.text)}</span></div>`,
         css: `:scope>[data-hypit-nle-caption]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;font-family:${optionalFont(style.fontFamily)};font-size:${fontSize}px;font-weight:${fontWeight};color:${color}}:scope>[data-hypit-nle-caption]>span{padding:${padding}px;background:${background};border-radius:${borderRadius}px}`,
       })),
     };

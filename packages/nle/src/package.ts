@@ -2,7 +2,6 @@ import type { Facet } from "@hypit/facet";
 import { isModuleRef, moduleKey } from "@hypit/protocol";
 
 import type {
-  NleCaptionItem,
   NleResolvedAudioEffect,
   NleComponentItem,
   NleEffect,
@@ -19,11 +18,6 @@ import type {
 } from "./types.js";
 
 export const nlePackageFacetAbi = "hypit.nle-package@1";
-
-export type NleCaptionResolver = {
-  readonly renderer: NlePackageSymbol;
-  readonly resolve: (item: NleCaptionItem, context: NleLoweringContext) => NleResolvedItemSource;
-};
 
 export type NleComponentResolver = {
   readonly component: NlePackageSymbol;
@@ -51,7 +45,6 @@ export type NleMatteResolver = {
 };
 
 export type NlePackage = {
-  readonly captions?: readonly NleCaptionResolver[];
   readonly components?: readonly NleComponentResolver[];
   readonly effects?: readonly NleEffectResolver[];
   readonly audioEffects?: readonly NleAudioEffectResolver[];
@@ -77,12 +70,6 @@ export function nlePackageSymbolKey(symbol: NlePackageSymbol): string {
 function assertPackage(value: NlePackage): void {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), "NLE package must be an object.");
   const keys = new Set<string>();
-  for (const resolver of value.captions ?? []) {
-    const key = `caption:${nlePackageSymbolKey(resolver.renderer)}`;
-    assert(!keys.has(key), `NLE package repeats resolver ${key}.`);
-    keys.add(key);
-    assert(typeof resolver.resolve === "function", `NLE resolver ${key} is not callable.`);
-  }
   for (const resolver of value.components ?? []) {
     const key = `component:${nlePackageSymbolKey(resolver.component)}`;
     assert(!keys.has(key), `NLE package repeats resolver ${key}.`);
@@ -128,7 +115,6 @@ export function nlePackagesFromFacets(facets: readonly Facet[]): readonly NlePac
 
 /** Assemble only explicitly selected installed package contributions. Missing and duplicate symbols fail. */
 export function createNleLoweringHost(packages: readonly NlePackage[]): NleLoweringHost {
-  const captions = new Map<string, NleCaptionResolver>();
   const components = new Map<string, NleComponentResolver>();
   const effects = new Map<string, NleEffectResolver>();
   const audioEffects = new Map<string, NleAudioEffectResolver>();
@@ -140,7 +126,6 @@ export function createNleLoweringHost(packages: readonly NlePackage[]): NleLower
   };
   for (const value of packages) {
     assertPackage(value);
-    for (const resolver of value.captions ?? []) add(captions, nlePackageSymbolKey(resolver.renderer), resolver);
     for (const resolver of value.components ?? []) add(components, nlePackageSymbolKey(resolver.component), resolver);
     for (const resolver of value.effects ?? []) add(effects, nlePackageSymbolKey(resolver.effect), resolver);
     for (const resolver of value.audioEffects ?? []) {
@@ -150,12 +135,6 @@ export function createNleLoweringHost(packages: readonly NlePackage[]): NleLower
     for (const resolver of value.mattes ?? []) add(mattes, nlePackageSymbolKey(resolver.matte), resolver);
   }
   return {
-    resolveCaption: (item, context) => {
-      const key = nlePackageSymbolKey(item.renderer);
-      const resolver = captions.get(key);
-      if (resolver === undefined) throw new Error(`NLE Caption renderer ${key} is not installed.`);
-      return resolver.resolve(item, context);
-    },
     resolveComponent: (item, context) => {
       const key = nlePackageSymbolKey(item.component);
       const resolver = components.get(key);

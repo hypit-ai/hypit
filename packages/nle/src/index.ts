@@ -54,7 +54,6 @@ export {
 } from "./package.js";
 export type {
   NleAudioEffectResolver,
-  NleCaptionResolver,
   NleComponentResolver,
   NleEffectResolver,
   NleMatteResolver,

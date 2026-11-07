@@ -43,6 +43,6 @@ export {
   scheduleCaptionPresentation,
 } from "./source.js";
 export type * from "./types.js";
-export { captionBasicNleRendererSymbol, captionBasicNleResolver } from "./nle-package.js";
+export { captionBasicNleComponentSymbol, captionBasicNleResolver } from "./nle-package.js";
 export { createCaptionNleMaterialization } from "./materialize.js";
-export type { CaptionNleRendererSelection } from "./materialize.js";
+export type { CaptionNleComponentSelection } from "./materialize.js";

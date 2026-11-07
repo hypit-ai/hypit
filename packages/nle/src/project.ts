@@ -4,7 +4,6 @@ import { canonicalize, isModuleRef } from "@hypit/protocol";
 import type {
   NleAudioAppearance,
   NleCanvas,
-  NleCaptionItem,
   NleFrameRate,
   NleItem,
   NleMedia,
@@ -79,7 +78,7 @@ function assertAudio(value: NleAudioAppearance, label: string): void {
 }
 
 function assertAppearances(
-  value: Exclude<NleItem, NleCaptionItem>,
+  value: NleItem,
   track: NleTrack,
   project: NleProject,
 ): void {
@@ -115,14 +114,6 @@ function assertItem(
     identity(value.media, `NLE Media Item ${value.id} media`);
     assert(media.has(value.media), `NLE Media Item ${value.id} references missing Media ${value.media}.`);
     assertAppearances(value, track, project);
-    return;
-  }
-  if (value.kind === "caption") {
-    assert(track.kind === "picture", `NLE Caption Item ${value.id} must belong to a Picture Track.`);
-    assertPicture(value.picture, project, `NLE Caption Item ${value.id} Picture`);
-    assert(value.text.length > 0, `NLE Caption Item ${value.id} is empty.`);
-    assertSymbol(value.renderer, `NLE Caption Item ${value.id} renderer`);
-    canonicalize(value.parameters);
     return;
   }
   assertAppearances(value, track, project);

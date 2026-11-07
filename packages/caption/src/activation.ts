@@ -19,7 +19,7 @@ export const hypitPackage = {
     createRefinementPackageFacet(captionComponent.refinements),
     createAuthorEditPlannerFacet(captionComponentEditPlanner),
     createNleSubjectProjectorFacet(captionNleSubjectProjector),
-    createNlePackageFacet({ captions: [captionBasicNleResolver] }),
+    createNlePackageFacet({ components: [captionBasicNleResolver] }),
     ...captionAuthorFacets,
   ],
 };

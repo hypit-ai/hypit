@@ -118,9 +118,7 @@ function locateEffect(
 ): NleEffectParameterAuthoringContext {
   const { item } = findNleItem(project, itemId);
   const pictureEffect = item.picture?.effects.find((candidate) => candidate.id === effectId);
-  const audioEffect = item.kind === "caption"
-    ? undefined
-    : item.audio?.effects.find((candidate) => candidate.id === effectId);
+  const audioEffect = item.audio?.effects.find((candidate) => candidate.id === effectId);
   if (pictureEffect !== undefined) return { project, item, effect: pictureEffect, medium: "picture" };
   if (audioEffect !== undefined) return { project, item, effect: audioEffect, medium: "audio" };
   throw new Error(`Unknown NLE Effect ${itemId}.${effectId}.`);
@@ -132,7 +130,7 @@ function replaceEffectParameters(
   parameters: CanonicalValue,
 ): NleItem {
   const next = structuredClone(item) as NleItem;
-  const appearances = [next.picture, next.kind === "caption" ? undefined : next.audio]
+  const appearances = [next.picture, next.audio]
     .filter((value): value is NlePictureAppearance | { readonly effects: readonly NleEffect[] } => value !== undefined);
   const appearance = appearances.find((value) => value.effects.some((candidate) => candidate.id === effectId));
   if (appearance === undefined) throw new Error(`Unknown NLE Effect ${item.id}.${effectId}.`);
