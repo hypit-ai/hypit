@@ -20,8 +20,8 @@ The first implemented slice owns one resolved use of a typed Source:
   becomes a signal, while the Mapping remains the only target-to-source coordinate fact.
 
 The algebra exposes validation, evaluation and factual projections only. An editable NLE Project owns direct move,
-trim, slip and split policy and lowers a fresh AVIR value after an accepted edit. Roll, ripple, retime and other
-multi-item editing policies remain NLE concerns but are not claimed as current commands. AVIR is a closed,
+trim, slip, roll, explicit-scope ripple-trim and split policy and lowers a fresh AVIR value after an accepted edit.
+Retime and other source-mapping policies remain NLE concerns but are not claimed as current commands. AVIR is a closed,
 disposable result rather than a second editable document.
 
 This package accepts only resolved, positive finite domains wherever time exists. `constant` is a tagged absence

@@ -10,7 +10,7 @@ provenance.
 
 Edits are immutable revisioned transactions. The command set covers Project settings; Media add, rename, relink,
 replace and remove; Track add, move, update, replace and remove; add, move, trim, slip, split, detach-audio,
-replace and remove for Items; and add, replace and remove for Transition, matte and Group relations.
+roll, ripple-trim, replace and remove for Items; and add, replace and remove for Transition, matte and Group relations.
 A failed multi-command transaction leaves
 the input revision untouched.
 
@@ -21,6 +21,12 @@ and variable-speed behavior are not implied by these commands and have not been 
 `item.detach-audio` copies the same direct range and source-local start into an existing Audio Track, removes Audio
 participation from the Picture Item and creates no hidden A/V link. A Host may add an editing Group in the same
 transaction when linked selection is desired.
+
+`item.roll` moves the one shared Programme boundary between two touching Items on the same Track. It preserves
+their outer edges and advances or retreats the right Item's `localStart` by the same exact delta. `item.ripple-trim`
+trims one edge and moves only its explicit Item `scope` by the resulting boundary delta. Core never guesses that
+scope from Track order, visual overlap or a phrase such as “everything later”; a Host can form a multi-Track edit
+from its current selection and policy, and the whole gesture remains one atomic transaction.
 
 `Track.locked` is the familiar editor guard against accidental Track edits. It does not affect lowering and is not
 a runtime or concurrency lock. `track.update` can always change the lock itself; Item, Transition, matte and Group

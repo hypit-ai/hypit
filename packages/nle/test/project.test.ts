@@ -246,6 +246,76 @@ test("slip and detach-audio preserve direct programme and source time facts", ()
   assert.deepEqual(audio.item.duration, picture.item.duration);
 });
 
+test("roll moves one shared cut while preserving the two outer Item edges", () => {
+  const left: NleComponentItem = {
+    ...componentItem, id: "left", start: frame(0), duration: frame(4), localStart: frame(0),
+  };
+  const right: NleComponentItem = {
+    ...componentItem, id: "right", start: frame(4), duration: frame(4), localStart: frame(2),
+  };
+  const base = applyNleTransaction(createNleProject({
+    id: "roll-edit", name: "Roll edit", editRate: { numerator: 2, denominator: 1 },
+    canvas: { width: 100, height: 100, clearColor: "black" },
+  }), { revision: 0, commands: [{
+    kind: "track.add",
+    track: { id: "picture", name: "V1", kind: "picture", locked: false, muted: false,
+      items: [left, right] },
+  }] });
+
+  const edited = applyNleTransaction(base, { revision: 1, commands: [
+    { kind: "item.roll", left: "left", right: "right", at: frame(5) },
+  ] });
+
+  assert.deepEqual(findNleItem(edited, "left").item, { ...left, duration: frame(5) });
+  assert.deepEqual(findNleItem(edited, "right").item, {
+    ...right, start: frame(5), duration: frame(3), localStart: frame(3),
+  });
+  assert.deepEqual(nleProjectDuration(edited), frame(8));
+  assert.throws(() => applyNleTransaction(base, { revision: 1, commands: [
+    { kind: "item.roll", left: "left", right: "right", at: frame(8) },
+  ] }), /outer Item edges/u);
+});
+
+test("ripple-trim moves only the caller's explicit scope", () => {
+  const target: NleComponentItem = {
+    ...componentItem, id: "target", start: frame(0), duration: frame(4), localStart: frame(0),
+  };
+  const following: NleComponentItem = {
+    ...componentItem, id: "following", start: frame(4), duration: frame(2), localStart: frame(0),
+  };
+  const overlay: NleComponentItem = {
+    ...componentItem, id: "overlay", start: frame(6), duration: frame(2), localStart: frame(0),
+  };
+  const untouched: NleComponentItem = {
+    ...componentItem, id: "untouched", start: frame(8), duration: frame(2), localStart: frame(0),
+  };
+  const base = applyNleTransaction(createNleProject({
+    id: "ripple-edit", name: "Ripple edit", editRate: { numerator: 2, denominator: 1 },
+    canvas: { width: 100, height: 100, clearColor: "black" },
+  }), { revision: 0, commands: [
+    { kind: "track.add", track: { id: "main", name: "V1", kind: "picture",
+      locked: false, muted: false, items: [target, following, untouched] } },
+    { kind: "track.add", track: { id: "overlay-track", name: "V2", kind: "picture",
+      locked: true, muted: false, items: [overlay] } },
+  ] });
+
+  assert.throws(() => applyNleTransaction(base, { revision: 1, commands: [{
+    kind: "item.ripple-trim", id: "target", edge: "end", at: frame(3),
+    scope: ["following", "overlay"],
+  }] }), /is locked/u);
+  assert.deepEqual(findNleItem(base, "target").item, target);
+
+  const edited = applyNleTransaction(base, { revision: 1, commands: [
+    { kind: "track.update", id: "overlay-track", locked: false },
+    { kind: "item.ripple-trim", id: "target", edge: "end", at: frame(3),
+      scope: ["following", "overlay"] },
+  ] });
+  assert.deepEqual(findNleItem(edited, "target").item.duration, frame(3));
+  assert.deepEqual(findNleItem(edited, "following").item.start, frame(3));
+  assert.deepEqual(findNleItem(edited, "overlay").item.start, frame(5));
+  assert.deepEqual(findNleItem(edited, "untouched").item.start, frame(8));
+});
+
 test("Track lock protects Transition, matte and Group relations and can be explicitly released", () => {
   const operator = { module: { name: "@example/relations", version: "1" }, name: "default" } as const;
   const item = (id: string, start: number, duration: number): NleComponentItem => ({

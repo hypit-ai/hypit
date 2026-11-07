@@ -54,6 +54,19 @@ export type NleCommand =
     }
   | { readonly kind: "item.trim"; readonly id: string; readonly edge: "start" | "end"; readonly at: ExactTemporalValue }
   | { readonly kind: "item.slip"; readonly id: string; readonly delta: ExactTemporalValue }
+  | {
+      readonly kind: "item.roll";
+      readonly left: string;
+      readonly right: string;
+      readonly at: ExactTemporalValue;
+    }
+  | {
+      readonly kind: "item.ripple-trim";
+      readonly id: string;
+      readonly edge: "start" | "end";
+      readonly at: ExactTemporalValue;
+      readonly scope: readonly string[];
+    }
   | { readonly kind: "item.split"; readonly id: string; readonly at: ExactTemporalValue; readonly rightId: string }
   | {
       readonly kind: "item.detach-audio";
@@ -126,6 +139,21 @@ function editableItems(project: MutableProject, ids: readonly string[]): void {
   const tracks = new Set<MutableTrack>();
   for (const id of ids) tracks.add(mutableItem(project, id).track);
   for (const track of tracks) editable(track);
+}
+
+function itemEnd(item: NleItem): ExactTemporalValue {
+  return addExactTemporalValues(item.start, item.duration);
+}
+
+function trimItem(item: NleItem, edge: "start" | "end", at: ExactTemporalValue): void {
+  if (edge === "start") {
+    const delta = subtractExactTemporalValues(at, item.start);
+    (item as { start: ExactTemporalValue }).start = structuredClone(at);
+    (item as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(item.duration, delta);
+    (item as { localStart: ExactTemporalValue }).localStart = addExactTemporalValues(item.localStart, delta);
+  } else {
+    (item as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(at, item.start);
+  }
 }
 
 function insert<T extends { readonly id: string }>(values: readonly T[], value: T, before?: string): T[] {
@@ -237,14 +265,7 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         const { track, item } = mutableItem(next, command.id);
         editable(track);
         assertExactTemporalValue(command.at, "NLE Item trim position");
-        if (command.edge === "start") {
-          const delta = subtractExactTemporalValues(command.at, item.start);
-          (item as { start: ExactTemporalValue }).start = structuredClone(command.at);
-          (item as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(item.duration, delta);
-          (item as { localStart: ExactTemporalValue }).localStart = addExactTemporalValues(item.localStart, delta);
-        } else {
-          (item as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(command.at, item.start);
-        }
+        trimItem(item, command.edge, command.at);
         break;
       }
       case "item.slip": {
@@ -255,6 +276,60 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
           item.localStart,
           command.delta,
         );
+        break;
+      }
+      case "item.roll": {
+        if (command.left === command.right) throw new Error("NLE roll Items must be distinct.");
+        assertExactTemporalValue(command.at, "NLE roll boundary");
+        const left = mutableItem(next, command.left);
+        const right = mutableItem(next, command.right);
+        editableItems(next, [command.left, command.right]);
+        if (left.track.id !== right.track.id) {
+          throw new Error("NLE roll Items must belong to the same Track.");
+        }
+        const previousBoundary = itemEnd(left.item);
+        if (compareExactTemporalValues(previousBoundary, right.item.start) !== 0) {
+          throw new Error("NLE roll Items must share one Programme boundary.");
+        }
+        const rightEnd = itemEnd(right.item);
+        if (compareExactTemporalValues(command.at, left.item.start) <= 0
+          || compareExactTemporalValues(command.at, rightEnd) >= 0) {
+          throw new Error("NLE roll boundary must remain inside both outer Item edges.");
+        }
+        const delta = subtractExactTemporalValues(command.at, previousBoundary);
+        (left.item as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(
+          command.at,
+          left.item.start,
+        );
+        (right.item as { start: ExactTemporalValue }).start = structuredClone(command.at);
+        (right.item as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(
+          rightEnd,
+          command.at,
+        );
+        (right.item as { localStart: ExactTemporalValue }).localStart = addExactTemporalValues(
+          right.item.localStart,
+          delta,
+        );
+        break;
+      }
+      case "item.ripple-trim": {
+        assertExactTemporalValue(command.at, "NLE ripple-trim position");
+        const scope = new Set<string>();
+        for (const id of command.scope) {
+          if (id === command.id) throw new Error("NLE ripple-trim scope cannot contain its target Item.");
+          if (scope.has(id)) throw new Error(`NLE ripple-trim scope repeats Item ${id}.`);
+          scope.add(id);
+        }
+        editableItems(next, [command.id, ...scope]);
+        const target = mutableItem(next, command.id).item;
+        const before = command.edge === "start" ? target.start : itemEnd(target);
+        trimItem(target, command.edge, command.at);
+        const after = command.edge === "start" ? target.start : itemEnd(target);
+        const delta = subtractExactTemporalValues(after, before);
+        for (const id of scope) {
+          const item = mutableItem(next, id).item;
+          (item as { start: ExactTemporalValue }).start = addExactTemporalValues(item.start, delta);
+        }
         break;
       }
       case "item.split": {
