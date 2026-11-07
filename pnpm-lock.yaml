@@ -2342,6 +2342,9 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/media-asset':
+        specifier: workspace:^0.1.0
+        version: link:../media-asset
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal

@@ -3,9 +3,10 @@ import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
 import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createProductExporterFacet } from "@hypit/hypit/product";
+import { createMediaRepresentationFacet } from "@hypit/media-asset";
 import type { SpeechTranscriptEvidence } from "./index.js";
 import { speechEvidenceComponent } from "./component.js";
-import { speechTranscriptAuthorDeclaration, speechTranscriptMarkupDeclaration, speechEvidenceManifest, speechEvidenceModuleRef, speechEvidenceTypes, speechTranscriptSource } from "./index.js";
+import { speechEvidenceMediaRepresentationPackage, speechTranscriptAuthorDeclaration, speechTranscriptMarkupDeclaration, speechEvidenceManifest, speechEvidenceModuleRef, speechEvidenceTypes, speechTranscriptSource } from "./index.js";
 export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: speechEvidenceManifest }],
@@ -26,6 +27,7 @@ export const hypitPackage = {
         return { bytes: new TextEncoder().encode(source) };
       },
     }),
+    createMediaRepresentationFacet(speechEvidenceMediaRepresentationPackage),
   ],
 };
 export default hypitPackage;

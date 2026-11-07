@@ -2,6 +2,12 @@
 
 Provider-neutral acoustic and word-alignment observations. Evidence is not the authored semantic truth.
 
+The package also owns the exact Media Representation type
+`@hypit/speech-evidence@1#SpeechTranscriptEvidence`. A file-backed instance must be attached through
+both temporal and audio bindings. Opening it decodes the ordinary editable transcript Source and checks
+that its exact 16 kHz sample span equals the Representation-local temporal domain. Media Asset Core does
+not decode the document or know whether WhisperX, another detector or an imported file produced it.
+
 External package authors import these contracts from `@hypit/speech-evidence`; their logical
 Module identity remains `@hypit/speech-evidence@1`.
 

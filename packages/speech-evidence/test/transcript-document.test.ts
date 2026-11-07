@@ -17,6 +17,45 @@ import {
 } from "../src/index.js";
 import { hypitPackage } from "../src/activation.js";
 import { productExporterForType, productExportersFromFacets } from "@hypit/hypit/product";
+import { createMediaRepresentationHostFromFacets } from "@hypit/media-asset";
+import type { ResolvedMediaAsset } from "@hypit/media-asset";
+import { identityTemporalMap, sealLocalTemporalDomain } from "@hypit/temporal";
+
+function representedSpeechAsset(sampleFrames = 16_000): ResolvedMediaAsset {
+  const mediaDomain = sealLocalTemporalDomain({
+    id: "media",
+    duration: { ticks: "1", timeBase: { numerator: 1, denominator: 1 } },
+  });
+  const evidenceDomain = sealLocalTemporalDomain({
+    id: "speech-evidence",
+    duration: { ticks: String(sampleFrames), timeBase: { numerator: 1, denominator: 16_000 } },
+  });
+  const map = identityTemporalMap(mediaDomain);
+  return {
+    id: "interview",
+    media: {
+      id: "interview-media",
+      source: { kind: "blob", resource: "res_media", size: 1, mediaType: "video/mp4" },
+      domain: mediaDomain,
+      audio: {
+        streamIndex: 0,
+        presentationStart: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
+        sourceDomain: mediaDomain,
+        map,
+      },
+    },
+    representations: [{
+      id: "speech.zh",
+      type: speechEvidenceTypes.transcript,
+      document: { kind: "blob", resource: "res_transcript", size: 1, mediaType: "text/plain" },
+      resources: {},
+      binding: {
+        temporal: { mapToMedia: { stages: [{ ...map.stages[0]!, target: evidenceDomain }] } },
+        audio: { member: "audio" },
+      },
+    }],
+  };
+}
 
 test("editable transcript Source compiles back to the exact evidence Record", async () => {
   const evidence = {
@@ -64,6 +103,19 @@ test("the Speech Evidence package exports structured transcripts as editable aut
   });
   assert(exported.bytes instanceof Uint8Array);
   assert.deepEqual(decodeSpeechTranscriptSource(new TextDecoder().decode(exported.bytes)), evidence);
+});
+
+test("the Speech Evidence package opens its exact file-backed Media Representation", async () => {
+  const evidence = { sampleFrames: 16_000, passages: [{
+    words: [{ text: "known", startSample: 1_000, endSampleExclusive: 8_000 }], chars: [],
+  }] };
+  const host = createMediaRepresentationHostFromFacets(hypitPackage.facets);
+  const opened = await host.open(representedSpeechAsset(), "speech.zh", async () =>
+    new TextEncoder().encode(speechTranscriptSource("transcript", evidence)));
+  assert.deepEqual(opened, evidence);
+
+  await assert.rejects(() => host.open(representedSpeechAsset(8_000), "speech.zh", async () =>
+    new TextEncoder().encode(speechTranscriptSource("transcript", evidence))), /sample span differs/u);
 });
 
 test("word annotations retain missing times and distinguish word boundaries, overlap and gaps", () => {

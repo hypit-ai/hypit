@@ -16,6 +16,7 @@ export {
 } from "./transcript-document.js";
 export type { FrameWords, TranscriptWord } from "./transcript-document.js";export { speechTranscriptMarkupDeclaration } from "./declaration.js";
 export { speechTranscriptAuthorDeclaration } from "./declaration.js";
+export { speechEvidenceMediaRepresentationPackage } from "./representation.js";
 export {
   speechEvidenceCapabilities,
   speechEvidenceModuleRef,
