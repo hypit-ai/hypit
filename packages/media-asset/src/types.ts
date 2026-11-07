@@ -1,6 +1,6 @@
 import type { PreparedMedia } from "@hypit/media";
 import type { MediaInspection, MediaSelectionRequest } from "@hypit/media";
-import type { BlobRef, TypeRef } from "@hypit/hypit/protocol";
+import type { BlobRef, TypeRef } from "@hypit/protocol";
 import type { TemporalMap } from "@hypit/temporal/algebra";
 
 /** One portable file address, resolved relative to the Media Asset document. */

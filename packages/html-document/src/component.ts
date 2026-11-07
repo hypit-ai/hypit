@@ -1,9 +1,9 @@
 import type { AudioProgram } from "@hypit/audio-program";
 import type { HtmlProgram } from "@hypit/html-program";
-import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { Value } from "@hypit/hypit/protocol";
-import { canonicalize } from "@hypit/hypit/protocol";
+import type { ProducerPackage } from "@hypit/producer";
+import type { RefinementPackage } from "@hypit/refinement";
+import type { Value } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 import { compileHtmlDocument, assertHtmlDocument } from "./document.js";
 import { htmlDocumentProducers, htmlDocumentTypes } from "./manifest.js";
 

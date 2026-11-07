@@ -2,10 +2,10 @@ import { createReadStream } from "node:fs";
 import { link, mkdir, mkdtemp, open as openFile, rm, stat } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
 
-import type { Facet } from "@hypit/hypit/facet";
-import { loadNodePackageSelection } from "@hypit/hypit/loader/node";
-import { moduleKey, modulePackageAbi } from "@hypit/hypit/protocol";
-import type { ModuleRef } from "@hypit/hypit/protocol";
+import type { Facet } from "@hypit/facet";
+import { loadNodePackageSelection } from "@hypit/loader/node";
+import { moduleKey, modulePackageAbi } from "@hypit/protocol";
+import type { ModuleRef } from "@hypit/protocol";
 import type { ResourceStore } from "@hypit/resource-store";
 import {
   createNleTerminalLinkHostFromFacets,

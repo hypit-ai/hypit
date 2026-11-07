@@ -6,7 +6,7 @@ import type { AudioProgram, AudioProgramMediaSource, AudioProgramSignalRef } fro
 import { readAudioGainProgram } from "@hypit/audio-gain";
 import type { AudioGainControl } from "@hypit/audio-gain";
 import { readPreservePitch } from "@hypit/audio-preserve-pitch";
-import type { BlobRef } from "@hypit/hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 import {
   addExactTemporalValues,
   compareExactTemporalValues,

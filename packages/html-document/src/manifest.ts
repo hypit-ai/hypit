@@ -1,6 +1,6 @@
 import { htmlProgramModuleRef, htmlProgramSchema, htmlProgramTypes } from "@hypit/html-program";
 import { audioProgramModuleRef, audioProgramSchema, audioProgramTypes } from "@hypit/audio-program";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
 export const htmlDocumentModuleRef = { name: "@hypit/html-document", version: "1" } as const;
 export const htmlDocumentTypes = {

@@ -1,6 +1,6 @@
 import { dirname, resolve } from "node:path";
 
-import type { CliIo } from "@hypit/hypit/cli";
+import type { CliIo } from "@hypit/cli";
 import { exportLocalNleProject } from "./export.js";
 import type { LocalNleExportProgress } from "./export.js";
 

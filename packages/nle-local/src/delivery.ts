@@ -9,7 +9,7 @@ import {
   executeRenderAudioProgram,
 } from "@hypit/media-local/execution";
 import type { CreateMediaExecutionEnvironmentOptions } from "@hypit/media-local/execution";
-import { canonicalize } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 import type { ResourceStore } from "@hypit/resource-store";
 import { rasterizeChromiumHtmlProgram } from "@hypit/html-chromium-local";
 import type { ChromiumHtmlRasterOptions } from "@hypit/html-chromium-local";

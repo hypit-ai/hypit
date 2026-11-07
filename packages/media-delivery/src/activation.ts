@@ -1,4 +1,4 @@
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
+import { createProducerPackageFacet } from "@hypit/producer";
 
 import { mediaDeliveryComponent } from "./component.js";
 import { mediaDeliveryManifest } from "./manifest.js";

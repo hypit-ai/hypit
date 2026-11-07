@@ -1,4 +1,4 @@
-import type { CliCommandModule } from "@hypit/hypit/cli";
+import type { CliCommandModule } from "@hypit/cli";
 
 import { runNleCli, writeNleHelp } from "./cli.js";
 

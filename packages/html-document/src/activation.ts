@@ -1,5 +1,5 @@
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
+import { createProducerPackageFacet } from "@hypit/producer";
+import { createRefinementPackageFacet } from "@hypit/refinement";
 import { htmlDocumentManifest } from "./manifest.js";
 import { htmlDocumentComponent } from "./component.js";
 

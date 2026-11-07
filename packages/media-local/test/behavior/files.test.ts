@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { CliIo } from "@hypit/hypit/cli";
+import type { CliIo } from "@hypit/cli";
 
 import { gridFrameCount, gridSampleTimes, runMediaCli } from "../../src/files.js";
 

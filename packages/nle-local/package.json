@@ -13,21 +13,20 @@
     "README.md"
   ],
   "dependencies": {
+    "@hypit/cli": "workspace:^0.0.0-dev",
+    "@hypit/facet": "workspace:^0.0.0-dev",
     "@hypit/html-chromium-local": "workspace:^0.1.0",
     "@hypit/html-video": "workspace:^0.2.1",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-asset": "workspace:^0.1.0",
     "@hypit/media-local": "workspace:^0.3.0",
+    "@hypit/loader": "workspace:^0.0.0-dev",
     "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/temporal": "workspace:^0.1.1"
   },
-  "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
-  },
   "devDependencies": {
-    "@hypit/audio-program": "workspace:*",
-    "@hypit/hypit": "workspace:*",
-    "@hypit/protocol": "workspace:*"
+    "@hypit/audio-program": "workspace:*"
   }
 }

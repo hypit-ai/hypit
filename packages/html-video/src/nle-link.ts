@@ -17,7 +17,7 @@ import {
   type AudiovisualHtmlSource,
   type AudiovisualHtmlSourceSet,
 } from "@hypit/audiovisual-html";
-import type { Facet } from "@hypit/hypit/facet";
+import type { Facet } from "@hypit/facet";
 import type { HtmlProgram } from "@hypit/html-program";
 import {
   createNleLoweringHost,

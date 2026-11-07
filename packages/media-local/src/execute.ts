@@ -11,8 +11,8 @@ import { audioProgramSampleFrames, verifyAudioProgram } from "@hypit/audio-progr
 import type { AudioProgram, AudioProgramMediaSource, AudioProgramNode, RenderAudioNeed } from "@hypit/audio-program";
 import { readPreservePitch } from "@hypit/audio-preserve-pitch";
 import type { MuxMediaNeed } from "@hypit/media-delivery";
-import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, CanonicalValue, Value } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalize } from "@hypit/protocol";
+import type { BlobRef, CanonicalValue, Value } from "@hypit/protocol";
 import { addExactTemporalValues, assertExactTemporalValue, assertTemporalMap, compareExactTemporalValues, exactTemporalZero, isAffineTemporalMapPiece, resolveTemporalBoundary, scaleExactTemporalValue, subtractExactTemporalValues } from "@hypit/temporal";
 import type { ExactTemporalValue, TemporalMapStage } from "@hypit/temporal";
 

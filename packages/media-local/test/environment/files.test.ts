@@ -6,7 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 import sharp from "sharp";
 
-import type { CliIo } from "@hypit/hypit/cli";
+import type { CliIo } from "@hypit/cli";
 import { speechTranscriptSource } from "@hypit/speech-evidence";
 
 import { cutFrame, probeMedia, runMediaCli, visualBoundaries } from "../../src/files.js";

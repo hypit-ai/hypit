@@ -1,5 +1,5 @@
 import { verifyPreparedMedia } from "@hypit/media";
-import { assertBlobRef, isTypeRef } from "@hypit/hypit/protocol";
+import { assertBlobRef, isTypeRef } from "@hypit/protocol";
 import {
   assertTemporalMap,
   compareExactTemporalValues,
@@ -183,7 +183,7 @@ async function resolveFile(
   file: MediaAssetFile,
   resolver: MediaAssetFileResolver,
   resolution: Parameters<MediaAssetFileResolver>[1],
-): Promise<import("@hypit/hypit/protocol").BlobRef> {
+): Promise<import("@hypit/protocol").BlobRef> {
   const blob = await resolver(structuredClone(file), resolution);
   assertBlobRef(blob, `${resolution.kind} file ${file.path}`);
   assert(blob.mediaType === file.mediaType,

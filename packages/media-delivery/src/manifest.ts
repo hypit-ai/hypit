@@ -1,6 +1,6 @@
-import { blobDependency, blobTypes } from "@hypit/hypit/blob";
+import { blobDependency, blobTypes } from "@hypit/blob";
 import { mediaDependency, mediaTypes } from "@hypit/media";
-import type { CapabilityRef, ModuleManifest, ProducerRef } from "@hypit/hypit/protocol";
+import type { CapabilityRef, ModuleManifest, ProducerRef } from "@hypit/protocol";
 
 export const mediaDeliveryModuleRef = { name: "@hypit/media-delivery", version: "1" } as const;
 export const mediaDeliveryCapabilities = {

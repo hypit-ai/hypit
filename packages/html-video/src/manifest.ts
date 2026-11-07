@@ -1,8 +1,8 @@
-import { blobDependency } from "@hypit/hypit/blob";
+import { blobDependency } from "@hypit/blob";
 import { mediaDependency } from "@hypit/media";
 import { temporalDependency } from "@hypit/temporal";
 import { htmlProgramModuleRef } from "@hypit/html-program";
-import type { ModuleManifest } from "@hypit/hypit/protocol";
+import type { ModuleManifest } from "@hypit/protocol";
 import { audioProgramModuleRef } from "@hypit/audio-program";
 import { mediaDeliveryModuleRef } from "@hypit/media-delivery";
 

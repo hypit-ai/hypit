@@ -2,7 +2,7 @@ import { copyFile, link, mkdir, mkdtemp, readFile, rename, rm, stat } from "node
 import { tmpdir } from "node:os";
 import { basename, dirname, extname, join, resolve } from "node:path";
 
-import type { CliIo } from "@hypit/hypit/cli";
+import type { CliIo } from "@hypit/cli";
 import sharp from "sharp";
 
 import { decodeMediaFrames } from "./file-frames.js";

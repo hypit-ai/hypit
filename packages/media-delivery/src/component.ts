@@ -1,8 +1,8 @@
 import { verifyMuxedMedia } from "@hypit/media";
 import type { MediaDeliverySpec, RenderedAudio, RenderedVisual } from "@hypit/media";
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { Value } from "@hypit/hypit/protocol";
-import type { ProducerPackage } from "@hypit/hypit/producer";
+import { canonicalize } from "@hypit/protocol";
+import type { Value } from "@hypit/protocol";
+import type { ProducerPackage } from "@hypit/producer";
 
 import { mediaDeliveryProducers } from "./manifest.js";
 import { createMuxMediaNeed } from "./request.js";

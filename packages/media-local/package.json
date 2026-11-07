@@ -18,22 +18,19 @@
     "@hypit/audio-gain": "workspace:^0.1.0",
     "@hypit/audio-program": "workspace:^0.1.0",
     "@hypit/audio-preserve-pitch": "workspace:^0.1.0",
+    "@hypit/cli": "workspace:^0.0.0-dev",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-asset": "workspace:^0.1.0",
     "@hypit/media-delivery": "workspace:^0.1.0",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/speech-evidence": "workspace:^0.2.0",
     "@hypit/temporal": "workspace:^0.1.1",
     "sharp": "0.35.4"
   },
-  "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
-  },
   "devDependencies": {
     "@hypit/blob": "workspace:*",
     "@hypit/media": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/speech-evidence": "workspace:*",
-    "@hypit/hypit": "workspace:*"
+    "@hypit/speech-evidence": "workspace:*"
   }
 }

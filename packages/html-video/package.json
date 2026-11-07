@@ -16,23 +16,22 @@
   },
   "dependencies": {
     "@hypit/audio-program": "workspace:^0.1.0",
+    "@hypit/author": "workspace:^0.0.0-dev",
     "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/audiovisual-audio": "workspace:^0.1.0",
     "@hypit/audiovisual-html": "workspace:^0.1.0",
+    "@hypit/blob": "workspace:^0.0.0-dev",
+    "@hypit/facet": "workspace:^0.0.0-dev",
     "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-delivery": "workspace:^0.1.0",
     "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/spatial": "workspace:^0.1.1",
     "@hypit/temporal": "workspace:^0.1.1"
   },
-  "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
-  },
   "devDependencies": {
     "@hypit/compiler": "workspace:*",
-    "@hypit/blob": "workspace:*",
-    "@hypit/author": "workspace:*",
     "@hypit/source": "workspace:*",
     "@hypit/html-program": "workspace:*",
     "@hypit/media": "workspace:*",
@@ -40,9 +39,6 @@
     "@hypit/temporal": "workspace:*",
     "@hypit/kernel": "workspace:*",
     "@hypit/executor": "workspace:*",
-    "@hypit/facet": "workspace:*",
-    "@hypit/refinement": "workspace:*",
-    "@hypit/hypit": "workspace:*",
-    "@hypit/protocol": "workspace:*"
+    "@hypit/refinement": "workspace:*"
   }
 }

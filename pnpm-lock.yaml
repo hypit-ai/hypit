@@ -872,15 +872,24 @@ importers:
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:../audio-program
+      '@hypit/author':
+        specifier: workspace:^0.0.0-dev
+        version: link:../author
       '@hypit/html-playback':
         specifier: workspace:^0.1.0
         version: link:../html-playback
       '@hypit/html-program':
         specifier: workspace:^0.2.0
         version: link:../html-program
-      '@hypit/hypit':
-        specifier: workspace:^0.4.0
-        version: link:../..
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:^0.0.0-dev
+        version: link:../refinement
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
@@ -909,9 +918,9 @@ importers:
       '@hypit/html-program':
         specifier: workspace:^0.2.0
         version: link:../html-program
-      '@hypit/hypit':
-        specifier: workspace:^0.4.0
-        version: link:../..
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
@@ -987,6 +996,15 @@ importers:
       '@hypit/audiovisual-html':
         specifier: workspace:^0.1.0
         version: link:../audiovisual-html
+      '@hypit/author':
+        specifier: workspace:^0.0.0-dev
+        version: link:../author
+      '@hypit/blob':
+        specifier: workspace:^0.0.0-dev
+        version: link:../blob
+      '@hypit/facet':
+        specifier: workspace:^0.0.0-dev
+        version: link:../facet
       '@hypit/html-program':
         specifier: workspace:^0.2.0
         version: link:../html-program
@@ -999,6 +1017,9 @@ importers:
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../nle
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
@@ -1006,33 +1027,18 @@ importers:
         specifier: workspace:^0.1.1
         version: link:../temporal
     devDependencies:
-      '@hypit/author':
-        specifier: workspace:*
-        version: link:../author
-      '@hypit/blob':
-        specifier: workspace:*
-        version: link:../blob
       '@hypit/compiler':
         specifier: workspace:*
         version: link:../compiler
       '@hypit/executor':
         specifier: workspace:*
         version: link:../executor
-      '@hypit/facet':
-        specifier: workspace:*
-        version: link:../facet
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
       '@hypit/kernel':
         specifier: workspace:*
         version: link:../kernel
       '@hypit/producer':
         specifier: workspace:*
         version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
       '@hypit/refinement':
         specifier: workspace:*
         version: link:../refinement
@@ -1114,44 +1120,36 @@ importers:
 
   packages/media-asset:
     dependencies:
+      '@hypit/facet':
+        specifier: workspace:^0.0.0-dev
+        version: link:../facet
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
-    devDependencies:
-      '@hypit/facet':
-        specifier: workspace:*
-        version: link:../facet
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
 
   packages/media-delivery:
     dependencies:
+      '@hypit/blob':
+        specifier: workspace:^0.0.0-dev
+        version: link:../blob
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
-    devDependencies:
-      '@hypit/blob':
-        specifier: workspace:*
-        version: link:../blob
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/producer':
-        specifier: workspace:*
-        version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
 
   packages/media-local:
     dependencies:
@@ -1164,6 +1162,9 @@ importers:
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:../audio-program
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
@@ -1173,6 +1174,9 @@ importers:
       '@hypit/media-delivery':
         specifier: workspace:^0.1.0
         version: link:../media-delivery
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
       '@hypit/resource-store':
         specifier: workspace:^0.1.0
         version: link:../resource-store
@@ -1189,12 +1193,6 @@ importers:
       '@hypit/blob':
         specifier: workspace:*
         version: link:../blob
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
 
   packages/mimo-speech:
     dependencies:
@@ -1381,12 +1379,21 @@ importers:
 
   packages/nle-local:
     dependencies:
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
+      '@hypit/facet':
+        specifier: workspace:^0.0.0-dev
+        version: link:../facet
       '@hypit/html-chromium-local':
         specifier: workspace:^0.1.0
         version: link:../html-chromium-local
       '@hypit/html-video':
         specifier: workspace:^0.2.1
         version: link:../html-video
+      '@hypit/loader':
+        specifier: workspace:^0.0.0-dev
+        version: link:../loader
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
@@ -1399,6 +1406,9 @@ importers:
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../nle
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
       '@hypit/resource-store':
         specifier: workspace:^0.1.0
         version: link:../resource-store
@@ -1409,12 +1419,6 @@ importers:
       '@hypit/audio-program':
         specifier: workspace:*
         version: link:../audio-program
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
 
   packages/picture-filter:
     dependencies:

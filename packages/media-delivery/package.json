@@ -8,14 +8,10 @@
   "files": ["dist", "README.md"],
   "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
+    "@hypit/blob": "workspace:^0.0.0-dev",
     "@hypit/media": "workspace:^0.2.0",
+    "@hypit/producer": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/temporal": "workspace:^0.1.1"
-  },
-  "peerDependencies": { "@hypit/hypit": "workspace:^0.4.0" },
-  "devDependencies": {
-    "@hypit/blob": "workspace:*",
-    "@hypit/producer": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/hypit": "workspace:*"
   }
 }

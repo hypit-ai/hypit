@@ -1,8 +1,8 @@
 import { temporalTypes } from "@hypit/temporal";
-import { blobTypes } from "@hypit/hypit/blob";
+import { blobTypes } from "@hypit/blob";
 
 import { mediaProducers, mediaTypes } from "@hypit/media";
-import { sealGraphFragment } from "@hypit/hypit/author";
+import { sealGraphFragment } from "@hypit/author";
 import { htmlProgramProducers, htmlProgramTypes } from "@hypit/html-program";
 import { audioProgramProducers, audioProgramTypes } from "@hypit/audio-program";
 import { mediaDeliveryProducers } from "@hypit/media-delivery";

@@ -1,4 +1,4 @@
-import { sealGraphFragment } from "@hypit/hypit/author";
+import { sealGraphFragment } from "@hypit/author";
 import { audioProgramTypes } from "@hypit/audio-program";
 import { htmlProgramTypes } from "@hypit/html-program";
 import { htmlDocumentProducers, htmlDocumentTypes } from "./manifest.js";

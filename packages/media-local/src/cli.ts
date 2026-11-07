@@ -1,4 +1,4 @@
-import type { CliCommandModule } from "@hypit/hypit/cli";
+import type { CliCommandModule } from "@hypit/cli";
 
 import { isMediaCommand, mediaCommands, runMediaCli, writeMediaHelp } from "./files.js";
 

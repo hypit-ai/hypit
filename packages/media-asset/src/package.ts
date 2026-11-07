@@ -1,5 +1,5 @@
-import type { Facet } from "@hypit/hypit/facet";
-import { isTypeRef, typeIdentity } from "@hypit/hypit/protocol";
+import type { Facet } from "@hypit/facet";
+import { isTypeRef, typeIdentity } from "@hypit/protocol";
 
 import type {
   ResolvedMediaAsset,
@@ -12,11 +12,11 @@ export type MediaRepresentationOpenContext = {
   readonly asset: ResolvedMediaAsset;
   readonly representation: ResolvedMediaRepresentation;
   /** The Host exposes bytes without revealing ResourceStore or filesystem policy. */
-  readonly read: (resource: import("@hypit/hypit/protocol").BlobRef) => Promise<Uint8Array>;
+  readonly read: (resource: import("@hypit/protocol").BlobRef) => Promise<Uint8Array>;
 };
 
 export type MediaRepresentationOwner = {
-  readonly type: import("@hypit/hypit/protocol").TypeRef;
+  readonly type: import("@hypit/protocol").TypeRef;
   readonly open: (context: MediaRepresentationOpenContext) => unknown | Promise<unknown>;
 };
 
