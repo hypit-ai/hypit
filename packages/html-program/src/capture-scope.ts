@@ -23,7 +23,7 @@ htmlRegisterFrameProgramInitializer(() => {
         const deferred = 'data-hypit-artifact-' + attribute;
         const value = element.getAttribute(deferred);
         if (value === null) continue;
-        // Compiler-planned temporal sampling is decoded once by the Provider
+        // Compiler-planned temporal sampling is decoded once by the renderer
         // and supplied as exact source frames. Leaving its URL inert prevents
         // every browser Worker from independently traversing the same video.
         // Studio has no frame selection and therefore keeps native playback.

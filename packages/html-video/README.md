@@ -14,8 +14,10 @@ Its Fragment:
 The same assembly is also available without an Author/Build Graph. `createHtmlVideoDeliveryPlan` validates one
 `HtmlProgram`, one `AudioProgram` and one explicit delivery policy, producing the exact visual and audio requests.
 `executeHtmlVideoDeliveryPlan` runs those two independent requests in parallel through an injected executor, creates
-the validated mux request only after both products exist, and verifies the returned `MuxedMedia`. The executor owns
-Provider/Endpoint selection and resource storage; the plan contains no Chromium, FFmpeg, file-path or Runtime state.
+the validated mux request only after both products exist, and verifies the returned `MuxedMedia`. The caller owns
+the execution implementations and resource storage; the plan contains no Chromium, FFmpeg, file-path, Endpoint or
+Runtime state. A Build host may bind the same requests through Providers, while a local NLE host may call direct
+rendering engines.
 
 `lowerNleProjectToHtmlVideoDeliveryPlan` is the downstream NLE adapter. It structurally lowers one `NleProject`
 once, derives both terminal programmes from that same AVIR value, and supplies an exact silent `AudioProgram` when a
@@ -36,4 +38,4 @@ Those are request-time selections, not a Timeline author model.
 The delivery plan does not interpret Composition or Track values, does not own browser execution, and does
 not select a Provider. The optional NLE adapter delegates structural project lowering to `@hypit/nle`; terminal
 Picture/Audio compilation belongs to `@hypit/audiovisual-html` and `@hypit/audiovisual-audio`; concrete
-rasterization, audio processing and muxing belong to the selected Runtime capabilities.
+rasterization, audio processing and muxing belong to the caller's selected execution implementations.

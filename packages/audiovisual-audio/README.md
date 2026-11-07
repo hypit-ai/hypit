@@ -31,7 +31,7 @@ For every `apply`, the adapter also closes each named temporal binding as one ex
 `TemporalMap` and writes those Maps onto the terminal Process node. It neither samples Controls at video
 frames nor interprets their values. The programme owner remains responsible for the Control value and
 interpolation policy; the terminal only supplies continuous coordinates. The Operator's general temporal-support
-contract is copied onto the same Process node, so a Provider can plan look-around, state/pre-roll, latency and
+contract is copied onto the same Process node, so a Renderer can plan look-around, state/pre-roll, latency and
 tail without recovering an effect name. The Audio Gain proof exercises an
 Occurrence-local Control through AVIR lowering and real 48 kHz sample rendering.
 

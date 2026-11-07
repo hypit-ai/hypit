@@ -79,7 +79,7 @@ export function browserExecutablePath(options: BrowserOptions): string {
       browser: Browser.CHROMEHEADLESSSHELL, buildId: version, cacheDir: browserCacheDirectory(options),
     });
   } catch (error) {
-    throw new Error("The managed HTML browser is unavailable for this host. Select an installed Chrome/Chromium with the Provider's chromePath.", { cause: error });
+    throw new Error("The managed HTML browser is unavailable for this host. Select an installed Chrome/Chromium with chromePath.", { cause: error });
   }
 }
 

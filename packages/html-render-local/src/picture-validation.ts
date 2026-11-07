@@ -85,7 +85,7 @@ function assertExactPicture(
   const videoLike = picture.colorPrimaries === "bt709" && picture.colorTransfer === "bt709"
     && picture.colorMatrix === "bt709" && picture.colorRange === "limited";
   assert(picture.bitDepth === 8 && (imageLike || videoLike),
-    `${subject} is outside the local Provider's exact SDR picture support`);
+    `${subject} is outside the local renderer's exact SDR picture support`);
   const expected = [
     ["color_primaries", new Set(["bt709"])],
     ["color_transfer", imageLike ? new Set(["iec61966-2-1"]) : new Set(["bt709"])],

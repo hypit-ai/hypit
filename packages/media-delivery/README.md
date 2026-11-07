@@ -8,5 +8,5 @@ The package checks that one `RenderedVisual` and one `RenderedAudio` implement t
 Provider, or own container bytes.
 
 `createMuxMediaNeed` is the shared pure request boundary used by both the Producer and direct delivery callers. It
-checks visual delivery identity and exact frame-to-audio duration before any mux Provider runs.
+checks visual delivery identity and exact frame-to-audio duration before any mux implementation runs.
 `verifyMuxedMediaForNeed` then checks that the returned MP4 implements that exact request.

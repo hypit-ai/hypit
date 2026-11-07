@@ -64,7 +64,7 @@ export type HtmlProgram = HtmlFrameDomain & {
   readonly artifacts: readonly HtmlArtifact[];
   /** Exact selected streams and sampling functions; execution never parses them back out of markup. */
   readonly videoSources: readonly HtmlVideoSource[];
-  /** Media URLs remain hypit-artifact:// placeholders until a Runtime materializes them. */
+  /** Media URLs remain hypit-artifact:// placeholders until the execution host materializes them. */
   readonly html: string;
 };
 

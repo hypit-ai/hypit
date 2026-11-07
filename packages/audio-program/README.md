@@ -17,10 +17,10 @@ nodes are its complete execution topology. A nested Programme node applies one e
 the child signal closed instead of rendering it to a temporary Media identity. Media is
 therefore a leaf source, not the universal representation of every signal. Process ports are freely named by
 their programme format. Process nodes also carry complete Programme-to-Control temporal Maps; value meaning
-and interpolation remain owned by the package that owns the process programme. A concrete Provider may
+and interpolation remain owned by the package that owns the process programme. A concrete Renderer may
 support a narrower subset and must reject unsupported ports or programmes at its capability boundary. Process
 nodes additionally preserve the AVIR Operator's per-input before/after support, state/pre-roll, latency and tail;
-the current Local Audio Provider executes only pointwise Gain and rejects non-pointwise contracts accurately.
+the current local media engine executes only pointwise Gain and rejects non-pointwise contracts accurately.
 
 The local renderer traverses nested Programme nodes recursively, discovers only the media leaves demanded by
 the selected output range, and evaluates each child through its explicit map. Nested programmes must use the
@@ -28,7 +28,7 @@ same selected terminal sample rate; this is a renderer-facing signal constraint,
 
 It does not turn a relation into `trim`, `loop` or `playbackRate` modes. A selected Renderer privately
 lowers the preserved graph and maps according to its signal capability and reports unsupported Process
-formats or map shapes through its request-local Endpoint support decision. This package does not choose that Provider, own media
+formats or map shapes at its capability boundary. This package does not choose that Renderer, own media
 bytes, author Audio Tracks, reconstruct the origin of a map, or mux the rendered signal into a
 delivery container.
 

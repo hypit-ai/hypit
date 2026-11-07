@@ -6,7 +6,7 @@ export type HtmlExecutionOptions = {
   readonly ffprobePath?: string;
   /** Selected FFmpeg command for portable source extraction/encoding and GPU H.264 muxing. */
   readonly ffmpegPath?: string;
-  /** Parallel Chrome workers inside one render. This is separate from Provider request concurrency. */
+  /** Parallel Chrome workers inside one render. This is separate from outer request concurrency. */
   readonly workers?: HtmlWorkers;
   /** Upper bound for auto's browser reservation; explicit workers remain fixed. */
   readonly maxWorkers?: number;

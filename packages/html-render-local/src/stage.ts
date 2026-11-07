@@ -45,7 +45,7 @@ export function htmlArtifactRelativePath(document: HtmlProgram, id: string): str
 /**
  * Lay one document out as a directory HTML renderer can render.
  *
- * This local Provider serves the staged document to its browser workers.
+ * The selected local backend serves the staged document to its browser workers.
  * Resource names are local to this staged project and carry no content claim.
  */
 export async function stageHtmlProgram(options: {

@@ -44,7 +44,7 @@ window.__hypitFrameProgram.applyFrame(frame: number): Promise<void>
 frame; sequential playback is not required. `prepare(spans)` projects one render request before
 resources and component programmes are initialized.
 
-Resource URLs remain inert `hypit-artifact://` placeholders until the executing Runtime materializes
+Resource URLs remain inert `hypit-artifact://` placeholders until the execution host materializes
 them. Each placeholder names an `HtmlProgram`-local Artifact id. The paired `BlobRef` remains the
 typed byte dependency and is not recovered by parsing markup.
 
@@ -67,7 +67,7 @@ terminal records its prepared stream and complete `TemporalMap` in `videoSources
 `hypit.html-picture-reconstruction@1` is the first portable media reconstruction format. Its current
 `nearest` programme chooses the discrete source frame closest to the exact position supplied by the Map.
 The format neither owns speed nor rewrites that Map; future blend or optical-flow formats may demand a
-wider Provider capability instead of changing this terminal contract implicitly.
+wider renderer capability instead of changing this terminal contract implicitly.
 
 Effect-specific programme formats belong to their owning packages. This terminal only validates and
 executes the generic `hypit.html-visual@1` envelope.
@@ -81,8 +81,8 @@ The module publishes two capability contracts:
 - `rasterize-frames`: `HtmlProgram` + sRGB/full-range `FrameOutputPictureSpec` + selected absolute
   frames -> typed PNG `FrameImages`.
 
-These contracts do not name a browser, FFmpeg, filesystem, machine or Provider. Local and remote
-Providers may implement them differently while consuming the same programme.
+These contracts do not name a browser, FFmpeg, filesystem, machine or Provider. Direct and Provider-backed
+execution implementations may realize them differently while consuming the same programme.
 
 ## Ownership
 
@@ -90,7 +90,7 @@ Providers may implement them differently while consuming the same programme.
 - Component and effect packages own their opaque execution programmes.
 - Output policy owns frame rate and canvas closure.
 - `@hypit/html-program` owns the terminal document, resource plan and frame-page ABI.
-- Providers own staging, decoding, browser lifecycle, capture and encoding.
+- Execution implementations own staging, decoding, browser lifecycle, capture and encoding.
 - `@hypit/html-video` owns final visual/audio delivery assembly.
 
 Lowering is one-way: upstream audiovisual relations produce this terminal programme, while renderers consume it.
