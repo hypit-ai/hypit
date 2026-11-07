@@ -280,8 +280,8 @@ export type MediaDeliverySpec = {
   readonly container: "mp4";
 };
 
-/** Silent, frame-exact visual output produced from a timeline composition. */
-export type TimelineVisual = {
+/** Silent, frame-exact visual product of one completed render. */
+export type RenderedVisual = {
   readonly frameRate: MediaRational;
   readonly frameCount: number;
   readonly canvas: {
@@ -294,7 +294,7 @@ export type TimelineVisual = {
 };
 
 /** Exact 48 kHz stereo PCM result of one explicit AudioProgram. */
-export type TimelineAudio = {
+export type RenderedAudio = {
   readonly artifact: BlobRef;
   readonly sampleFrames: number;
 };

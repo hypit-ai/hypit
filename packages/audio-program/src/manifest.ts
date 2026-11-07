@@ -9,7 +9,7 @@ export const audioProgramTypes = {
   renderRange: { module: audioProgramModuleRef, name: "AudioRenderRange" },
 } satisfies Record<string, TypeRef>;
 export const audioProgramCapabilities = {
-  render: { module: audioProgramModuleRef, name: "render-timeline-audio" },
+  render: { module: audioProgramModuleRef, name: "render-audio" },
 } satisfies Record<string, CapabilityRef>;
 export const audioProgramProducers = {
   render: { module: audioProgramModuleRef, name: "request-audio-render" },
@@ -104,7 +104,7 @@ export const audioProgramManifest: ModuleManifest = {
   ...audioProgramModuleRef,
   dependencies: [audiovisualDependency, mediaDependency, temporalDependency],
   types: Object.values(audioProgramTypes).map((type) => type.name),
-  capabilities: [{ name: audioProgramCapabilities.render.name, returns: mediaTypes.timelineAudio }],
+  capabilities: [{ name: audioProgramCapabilities.render.name, returns: mediaTypes.renderedAudio }],
   producers: [
     {
       name: audioProgramProducers.render.name,

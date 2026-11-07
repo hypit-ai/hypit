@@ -1,5 +1,5 @@
 import { verifyMuxedMedia } from "@hypit/media";
-import type { MediaDeliverySpec, TimelineAudio, TimelineVisual } from "@hypit/media";
+import type { MediaDeliverySpec, RenderedAudio, RenderedVisual } from "@hypit/media";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { Value } from "@hypit/hypit/protocol";
 import type { ProducerPackage } from "@hypit/hypit/producer";
@@ -18,8 +18,8 @@ export const mediaDeliveryComponent = {
     {
       producer: mediaDeliveryProducers.mux,
       handler: ({ inputs }) => {
-        const visual = valueOf(inputs.visual?.value, "TimelineVisual") as unknown as TimelineVisual;
-        const audio = valueOf(inputs.audio?.value, "TimelineAudio") as unknown as TimelineAudio;
+        const visual = valueOf(inputs.visual?.value, "RenderedVisual") as unknown as RenderedVisual;
+        const audio = valueOf(inputs.audio?.value, "RenderedAudio") as unknown as RenderedAudio;
         const delivery = valueOf(inputs.delivery?.value, "MediaDeliverySpec") as unknown as MediaDeliverySpec;
         return {
           kind: "need",

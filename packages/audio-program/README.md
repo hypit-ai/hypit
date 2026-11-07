@@ -5,7 +5,7 @@ Renderer-facing continuous audio Programme on one exact local temporal Domain.
 The Programme preserves source, nested Programme, restrict, mix, process and shared-upstream topology. It chooses an
 explicit terminal sample rate independently of any video frame rate. Every Programme node has one signal output,
 so internal references name only the node instead of repeating a literal port.
-It declares the `render-timeline-audio` capability. A media source leaf contains only the selected
+It declares the `render-audio` capability. A media source leaf contains only the selected
 `PreparedAudioSource` and its Prepared-local-to-source relation. Placement and occurrence sampling exist only on a
 parent nested Programme use. Process automation exists only as package-owned Process programmes and complete
 Programme-to-Control Maps. Target sample spans and total sample count remain projections of exact ranges and the
@@ -32,6 +32,6 @@ formats or map shapes through its request-local Endpoint support decision. This 
 bytes, author Audio Tracks, reconstruct the origin of a map, or mux the rendered signal into a
 delivery container.
 
-There is no `AudioProgramClip`, `Composition -> AudioProgram` compiler or legacy Track bridge. Typed upstream
-lowering must supply an `AudioProgram` directly. This deliberately prevents media identity from regaining placement,
-sampling, gain, fade, envelope or reconstruction fields merely to keep an older author model running.
+Typed upstream lowering supplies an `AudioProgram` directly. Media identity remains a leaf input; placement,
+sampling, gain, fade, envelope and reconstruction are expressed by the programme graph and its package-owned
+process programmes.

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sealMediaDeliverySpec, sealTimelineVisual, sealTimelineAudio } from "@hypit/media";
+import { sealMediaDeliverySpec, sealRenderedVisual, sealRenderedAudio } from "@hypit/media";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import { mediaDeliveryComponent } from "../src/component.js";
 import { mediaDeliveryProducers } from "../src/manifest.js";
@@ -23,11 +23,11 @@ const cases = [
 
 for (const { frameRate, frameCount, sampleFrames } of cases) {
   test(`mux accepts the nearest PCM sample boundary for ${frameCount} frames at ${frameRate.numerator}/${frameRate.denominator}`, async () => {
-    const visual = sealTimelineVisual({ frameRate, frameCount, canvas: { width: 540, height: 960 },
+    const visual = sealRenderedVisual({ frameRate, frameCount, canvas: { width: 540, height: 960 },
       delivery: delivery.visual,
       artifact: { kind: "blob", resource: fixtureResource("mux:visual"), size: 1, mediaType: "video/mp4" } });
     const run = (samples: number) => {
-      const audio = sealTimelineAudio({ sampleFrames: samples,
+      const audio = sealRenderedAudio({ sampleFrames: samples,
         artifact: { kind: "blob", resource: fixtureResource("mux:audio"), size: 1, mediaType: "audio/wav" } });
       return mux.handler({ inputs: {
         visual: { value: (visual) },
@@ -44,14 +44,14 @@ for (const { frameRate, frameCount, sampleFrames } of cases) {
 }
 
 test("mux rejects visual bytes rendered for a different delivery requirement", async () => {
-  const visual = sealTimelineVisual({
+  const visual = sealRenderedVisual({
     frameRate: { numerator: 30, denominator: 1 },
     frameCount: 30,
     canvas: { width: 540, height: 960 },
     delivery: { ...delivery.visual, encoding: { ...delivery.visual.encoding, quality: "draft" } },
     artifact: { kind: "blob", resource: fixtureResource("mux:draft-visual"), size: 1, mediaType: "video/mp4" },
   });
-  const audio = sealTimelineAudio({
+  const audio = sealRenderedAudio({
     sampleFrames: 48_000,
     artifact: { kind: "blob", resource: fixtureResource("mux:draft-audio"), size: 1, mediaType: "audio/wav" },
   });

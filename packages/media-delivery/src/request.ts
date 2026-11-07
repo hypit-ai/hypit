@@ -3,14 +3,14 @@ import {
   sameVisualDeliverySpec,
   verifyMediaDeliverySpec,
   verifyMuxedMedia,
-  verifyTimelineAudio,
-  verifyTimelineVisual,
+  verifyRenderedAudio,
+  verifyRenderedVisual,
 } from "@hypit/media";
 import type {
   MediaDeliverySpec,
   MuxedMedia,
-  TimelineAudio,
-  TimelineVisual,
+  RenderedAudio,
+  RenderedVisual,
 } from "@hypit/media";
 
 import type { MuxMediaNeed } from "./types.js";
@@ -21,12 +21,12 @@ function assert(condition: unknown, message: string): asserts condition {
 
 /** Close two rendered terminal products into one exact mux request. */
 export function createMuxMediaNeed(
-  visual: TimelineVisual,
-  audio: TimelineAudio,
+  visual: RenderedVisual,
+  audio: RenderedAudio,
   delivery: MediaDeliverySpec,
 ): MuxMediaNeed {
-  verifyTimelineVisual(visual);
-  verifyTimelineAudio(audio);
+  verifyRenderedVisual(visual);
+  verifyRenderedAudio(audio);
   verifyMediaDeliverySpec(delivery);
   if (!sameVisualDeliverySpec(visual.delivery, delivery.visual)) {
     throw new Error("Rendered visual implements a different delivery requirement.");
@@ -37,7 +37,7 @@ export function createMuxMediaNeed(
     delivery.audio.sampleRate,
   );
   if (audio.sampleFrames !== sampleFrames) {
-    throw new Error("Rendered visual and TimelineAudio have different presentation durations.");
+    throw new Error("Rendered visual and RenderedAudio have different presentation durations.");
   }
   return structuredClone({ visual, audio, delivery });
 }

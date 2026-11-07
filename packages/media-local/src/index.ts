@@ -6,7 +6,7 @@ export {
   executeInspectMedia,
   executeMuxProgramMedia,
   executeProjectSpeechEvidenceAudio,
-  executeRenderTimelineAudio,
+  executeRenderAudioProgram,
 } from "./execute.js";
 export { inspectMediaFile } from "./execute.js";
 export {

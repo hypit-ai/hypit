@@ -14,7 +14,7 @@ import type {
   MediaInspection,
   MuxedMedia,
   MediaRational,
-  TimelineVisual,
+  RenderedVisual,
   MediaStream,
   MediaStreamSelection,
   MediaTimestamp,
@@ -31,7 +31,7 @@ import type {
   PreparedPictureMember,
   PreparedSignalPictureMember,
   PreparedSignalPictureSource,
-  TimelineAudio,
+  RenderedAudio,
   VisualDeliverySpec,
 } from "./types.js";
 
@@ -351,32 +351,32 @@ export function verifyPreparedAudioSource(value: unknown): asserts value is Prep
   assertLocalTemporalDomain(item.sourceDomain);
 }
 
-export function sealTimelineVisual(value: TimelineVisual): TimelineVisual {
-  verifyTimelineVisual(value);
-  return canonicalize(value) as unknown as TimelineVisual;
+export function sealRenderedVisual(value: RenderedVisual): RenderedVisual {
+  verifyRenderedVisual(value);
+  return canonicalize(value) as unknown as RenderedVisual;
 }
 
-export function verifyTimelineVisual(value: unknown): asserts value is TimelineVisual {
-  const item = object(value, "TimelineVisual") as unknown as TimelineVisual;
-  verifyRational(item.frameRate, "TimelineVisual.frameRate");
-  positiveInteger(item.frameCount, "TimelineVisual.frameCount");
-  positiveInteger(item.canvas?.width, "TimelineVisual.canvas.width");
-  positiveInteger(item.canvas?.height, "TimelineVisual.canvas.height");
+export function verifyRenderedVisual(value: unknown): asserts value is RenderedVisual {
+  const item = object(value, "RenderedVisual") as unknown as RenderedVisual;
+  verifyRational(item.frameRate, "RenderedVisual.frameRate");
+  positiveInteger(item.frameCount, "RenderedVisual.frameCount");
+  positiveInteger(item.canvas?.width, "RenderedVisual.canvas.width");
+  positiveInteger(item.canvas?.height, "RenderedVisual.canvas.height");
   verifyVisualDeliverySpec(item.delivery);
-  verifyBlob(item.artifact, "TimelineVisual.artifact");
-  assert(item.artifact.mediaType.startsWith("video/"), "TimelineVisual Artifact must be video");
+  verifyBlob(item.artifact, "RenderedVisual.artifact");
+  assert(item.artifact.mediaType.startsWith("video/"), "RenderedVisual Artifact must be video");
 }
 
-export function sealTimelineAudio(value: TimelineAudio): TimelineAudio {
-  verifyTimelineAudio(value);
-  return canonicalize(value) as unknown as TimelineAudio;
+export function sealRenderedAudio(value: RenderedAudio): RenderedAudio {
+  verifyRenderedAudio(value);
+  return canonicalize(value) as unknown as RenderedAudio;
 }
 
-export function verifyTimelineAudio(value: unknown): asserts value is TimelineAudio {
-  const item = object(value, "TimelineAudio") as unknown as TimelineAudio;
-  verifyBlob(item.artifact, "TimelineAudio.artifact");
-  assert(item.artifact.mediaType === "audio/wav", "TimelineAudio Artifact must be WAV");
-  positiveInteger(item.sampleFrames, "TimelineAudio.sampleFrames");
+export function verifyRenderedAudio(value: unknown): asserts value is RenderedAudio {
+  const item = object(value, "RenderedAudio") as unknown as RenderedAudio;
+  verifyBlob(item.artifact, "RenderedAudio.artifact");
+  assert(item.artifact.mediaType === "audio/wav", "RenderedAudio Artifact must be WAV");
+  positiveInteger(item.sampleFrames, "RenderedAudio.sampleFrames");
 }
 
 export function sealMuxedMedia(value: MuxedMedia): MuxedMedia {

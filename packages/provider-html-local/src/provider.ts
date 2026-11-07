@@ -49,7 +49,7 @@ function createLocalHtmlProvider(config: LocalHtmlProviderOptions) {
     capabilities: [{
       lifecycle: "immediate" as const,
       capability: htmlProgramCapabilities.rasterizeVisual,
-      returns: mediaTypes.timelineVisual,
+      returns: mediaTypes.renderedVisual,
       supports: (request: import("@hypit/hypit/endpoint").EndpointRequest) => {
         try {
           verifyHtmlRasterRequest(request.constraints);

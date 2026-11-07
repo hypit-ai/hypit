@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MemoryResourceStore } from "@hypit/resource-store";
-import { verifyTimelineVisual } from "@hypit/media";
-import type { TimelineVisual } from "@hypit/media";
+import { verifyRenderedVisual } from "@hypit/media";
+import type { RenderedVisual } from "@hypit/media";
 import type { CanonicalValue } from "@hypit/protocol";
 import { browserExecutablePath, rasterizeChromiumHtmlProgram } from "@hypit/html-chromium-local";
 import { rasterizeElectronHtmlProgram } from "../../src/index.js";
@@ -32,8 +32,8 @@ test("local HTML renderer Provider really renders a silent frame-exact MP4 with 
     request: request, resources, credentials: {},
   });
   const value: CanonicalValue = output;
-  verifyTimelineVisual(value);
-  const visual = value as unknown as TimelineVisual;
+  verifyRenderedVisual(value);
+  const visual = value as unknown as RenderedVisual;
   assert.equal(visual.frameCount, 12);
   assert.deepEqual(visual.canvas, { width: 160, height: 96 });
   assert.equal(await resources.has(visual.artifact.resource), true);
@@ -55,7 +55,7 @@ test("Electron renders the final visual through browser decode, shared texture a
     resources,
     onDiagnostic: async event => { diagnostics.push(event.message); },
   });
-  verifyTimelineVisual(visual);
+  verifyRenderedVisual(visual);
   assert.equal(visual.frameCount, 12);
   assert.equal(await resources.has(visual.artifact.resource), true);
   assert.ok(diagnostics.some(message => message.includes("browser decode, WebCodecs H.264 and FFmpeg mux")));

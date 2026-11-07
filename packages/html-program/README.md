@@ -77,7 +77,7 @@ executes the generic `hypit.html-visual@1` envelope.
 The module publishes two capability contracts:
 
 - `rasterize-visual`: `HtmlProgram` + `VisualDeliverySpec` + optional absolute `FrameSpan` ->
-  `TimelineVisual`;
+  `RenderedVisual`;
 - `rasterize-frames`: `HtmlProgram` + sRGB/full-range `FrameOutputPictureSpec` + selected absolute
   frames -> typed PNG `FrameImages`.
 
@@ -93,5 +93,4 @@ Providers may implement them differently while consuming the same programme.
 - Providers own staging, decoding, browser lifecycle, capture and encoding.
 - `@hypit/html-video` owns final visual/audio delivery assembly.
 
-There is no reverse compiler from generated HTML, and no legacy Composition compiler or compile
-Producer in this package.
+Lowering is one-way: upstream audiovisual relations produce this terminal programme, while renderers consume it.

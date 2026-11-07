@@ -22,7 +22,7 @@ test("Electron exposes one encoded-visual Endpoint", () => {
   const provider = createLocalElectronHtmlProvider({ electronPath: "/configured/Electron" });
   assert.deepEqual(endpointOffers(provider).map(({ supports: _supports, ...offer }) => offer), [{
     capability: htmlProgramCapabilities.rasterizeVisual,
-    returns: mediaTypes.timelineVisual,
+    returns: mediaTypes.renderedVisual,
     endpoint: "html.electron.local",
   }]);
   const visual = endpointOffers(provider)[0]!;
@@ -56,7 +56,7 @@ test("Runtime Profile activates Electron without constructing a managed Chrome P
   const offers = endpointOffers(activation.endpoint);
   assert.deepEqual(offers.map(({ supports: _supports, ...offer }) => offer), [{
     capability: htmlProgramCapabilities.rasterizeVisual,
-    returns: mediaTypes.timelineVisual,
+    returns: mediaTypes.renderedVisual,
     endpoint: "html.gpu",
   }]);
   assert.equal(typeof offers[0]!.supports, "function");

@@ -36,7 +36,7 @@ test("local HTML renderer Provider exposes visual and frame capabilities and two
   const offers = endpointOffers(provider);
   assert.deepEqual(offers.map(({ supports: _supports, ...offer }) => offer), [{
     capability: htmlProgramCapabilities.rasterizeVisual,
-    returns: mediaTypes.timelineVisual,
+    returns: mediaTypes.renderedVisual,
     endpoint: "html.local",
   }, { capability: htmlProgramCapabilities.rasterizeFrames, returns: htmlProgramTypes.frameImages, endpoint: "html.local" }]);
   assert.equal(offers.every(offer => typeof offer.supports === "function"), true);

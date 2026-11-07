@@ -1,6 +1,6 @@
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import { projectVisualDeliverySpec, verifyMediaDeliverySpec, verifyMediaDomainSpec, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyPictureInterpretation, verifyPreparedMedia, verifyTimelineVisual, verifyTimelineAudio, verifyVisualDeliverySpec } from "./identity.js";
+import { projectVisualDeliverySpec, verifyMediaDeliverySpec, verifyMediaDomainSpec, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyPictureInterpretation, verifyPreparedMedia, verifyRenderedVisual, verifyRenderedAudio, verifyVisualDeliverySpec } from "./identity.js";
 import type { AudioExtractionRequest, ExtractAudioNeed, ExtractFrameNeed, FrameExtractionRequest, InspectMediaNeed, MediaDomainSpec, MediaInspection, MediaSelectionRequest, PreparedMedia } from "./types.js";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { Value } from "@hypit/hypit/protocol";
@@ -23,8 +23,8 @@ export const mediaComponent = {
     { type: mediaTypes.pictureInterpretation, handler: ({ value }) => verifyPictureInterpretation(valueOf(value, "PictureInterpretation")) },
     { type: mediaTypes.delivery, handler: ({ value }) => verifyMediaDeliverySpec(valueOf(value, "MediaDeliverySpec")) },
     { type: mediaTypes.visualDelivery, handler: ({ value }) => verifyVisualDeliverySpec(valueOf(value, "VisualDeliverySpec")) },
-    { type: mediaTypes.timelineVisual, handler: ({ value }) => verifyTimelineVisual(valueOf(value, "TimelineVisual")) },
-    { type: mediaTypes.timelineAudio, handler: ({ value }) => verifyTimelineAudio(valueOf(value, "TimelineAudio")) },
+    { type: mediaTypes.renderedVisual, handler: ({ value }) => verifyRenderedVisual(valueOf(value, "RenderedVisual")) },
+    { type: mediaTypes.renderedAudio, handler: ({ value }) => verifyRenderedAudio(valueOf(value, "RenderedAudio")) },
     { type: mediaTypes.muxed, handler: ({ value }) => verifyMuxedMedia(valueOf(value, "MuxedMedia")) },
     { type: mediaTypes.domainSpec, handler: ({ value }) => verifyMediaDomainSpec(valueOf(value, "MediaDomainSpec")) },
     { type: mediaTypes.fontArtifact, handler: ({ value }) => assertFontArtifactRef(

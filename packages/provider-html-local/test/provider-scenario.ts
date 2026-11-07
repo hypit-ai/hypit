@@ -54,7 +54,7 @@ export function htmlProviderNeed(document = htmlProviderDocument()): Need {
   return {
     id: "need:local-html-fixture",
     capability: htmlProgramCapabilities.rasterizeVisual,
-    returns: mediaTypes.timelineVisual,
+    returns: mediaTypes.renderedVisual,
     constraints: htmlRasterRequest(document, htmlProviderDelivery()),
     result: "record:local-html-fixture",
   };

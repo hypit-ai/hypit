@@ -3,9 +3,8 @@
 One-way terminal lowering from a resolved `@hypit/audiovisual` Picture Programme into the
 `@hypit/html-program` renderer contract.
 
-The package is intentionally downstream. `@hypit/audiovisual` does not import it, and AVIR contains
-no HtmlProgram, DOM, CSS, Timeline, Canvas or legacy Composition value. The adapter selects terminal
-terminal facts only after exact temporal relations and an Output sampling policy are both available.
+The package is intentionally downstream. `@hypit/audiovisual` remains renderer-independent; this adapter
+selects HTML terminal facts only after exact temporal relations and an Output sampling policy are both available.
 
 `lowerAudiovisualPictureProgramToHtmlProgram()` accepts one Programme, its terminal Source set and one
 typed Output policy. It evaluates exact relations at the requested output positions, but lowers every

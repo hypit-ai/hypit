@@ -21,8 +21,8 @@ export const mediaDeliveryManifest: ModuleManifest = {
     {
       name: mediaDeliveryProducers.mux.name,
       inputs: [
-        { name: "visual", type: mediaTypes.timelineVisual },
-        { name: "audio", type: mediaTypes.timelineAudio },
+        { name: "visual", type: mediaTypes.renderedVisual },
+        { name: "audio", type: mediaTypes.renderedAudio },
         { name: "delivery", type: mediaTypes.delivery },
       ],
       result: { kind: "need", name: "media", capability: mediaDeliveryCapabilities.mux },

@@ -1,12 +1,12 @@
 import type { HtmlVideoDeliveryExecutor } from "@hypit/html-video";
 import {
   verifyMuxedMedia,
-  verifyTimelineAudio,
+  verifyRenderedAudio,
 } from "@hypit/media";
 import {
   createMediaExecutionEnvironment,
   executeMuxProgramMedia,
-  executeRenderTimelineAudio,
+  executeRenderAudioProgram,
 } from "@hypit/media-local/execution";
 import type { CreateMediaExecutionEnvironmentOptions } from "@hypit/media-local/execution";
 import { canonicalize } from "@hypit/hypit/protocol";
@@ -32,8 +32,8 @@ export function createLocalNleDeliveryExecutor(
       resources: options.resources,
     }),
     renderAudio: async request => {
-      const result = await executeRenderTimelineAudio(media, canonicalize(request));
-      verifyTimelineAudio(result.value);
+      const result = await executeRenderAudioProgram(media, canonicalize(request));
+      verifyRenderedAudio(result.value);
       return structuredClone(result.value);
     },
     mux: async request => {

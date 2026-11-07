@@ -7,8 +7,8 @@ import { visualProgramHtmlSource } from "@hypit/audiovisual-html";
 import { htmlVisual } from "@hypit/html-program";
 import {
   sealMuxedMedia,
-  sealTimelineAudio,
-  sealTimelineVisual,
+  sealRenderedAudio,
+  sealRenderedVisual,
 } from "@hypit/media";
 import { sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 import { exactTemporalValueFromFrames } from "@hypit/temporal/sampling";
@@ -58,14 +58,14 @@ test("terminal programmes close into one provider-independent delivery plan", ()
 test("direct delivery renders terminals in parallel and muxes only their exact products", async () => {
   const plan = createHtmlVideoDeliveryPlan(html, audio, htmlVideoDeliverySpec());
   const calls: string[] = [];
-  const visual = sealTimelineVisual({
+  const visual = sealRenderedVisual({
     frameRate,
     frameCount,
     canvas: html.canvas,
     delivery: plan.delivery.visual,
     artifact: { kind: "blob", resource: fixtureResource("delivery:visual"), size: 1, mediaType: "video/mp4" },
   });
-  const renderedAudio = sealTimelineAudio({
+  const renderedAudio = sealRenderedAudio({
     sampleFrames: 48_000,
     artifact: { kind: "blob", resource: fixtureResource("delivery:audio"), size: 1, mediaType: "audio/wav" },
   });

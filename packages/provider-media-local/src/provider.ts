@@ -6,7 +6,7 @@ import {
   executeInspectMedia,
   executeMuxProgramMedia,
   executeProjectSpeechEvidenceAudio,
-  executeRenderTimelineAudio,
+  executeRenderAudioProgram,
 } from "@hypit/media-local/execution";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@hypit/media-local/execution";
 import { audioProgramCapabilities } from "@hypit/audio-program";
@@ -83,9 +83,9 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
       {
         lifecycle: "immediate" as const,
         capability: audioProgramCapabilities.render,
-        returns: mediaTypes.timelineAudio,
+        returns: mediaTypes.renderedAudio,
         supports: (request) => supportsLocalAudioProgram(request.constraints),
-        handler: operation(executeRenderTimelineAudio),
+        handler: operation(executeRenderAudioProgram),
       },
       {
         lifecycle: "immediate" as const,

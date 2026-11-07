@@ -7,8 +7,8 @@ import test from "node:test";
 import { audioProgramSampleFrames } from "@hypit/audio-program";
 import {
   sealMuxedMedia,
-  sealTimelineAudio,
-  sealTimelineVisual,
+  sealRenderedAudio,
+  sealRenderedVisual,
   prepareMedia,
 } from "@hypit/media";
 import { serializeMediaAssetDocument } from "@hypit/media-asset";
@@ -99,7 +99,7 @@ test("whole-project export stages files, closes the delivery plan and atomically
       createExecutor(resources) {
         return {
           async renderVisual(request) {
-            return sealTimelineVisual({
+            return sealRenderedVisual({
               frameRate: request.program.frameRate,
               frameCount: request.program.frameCount,
               canvas: request.program.canvas,
@@ -108,7 +108,7 @@ test("whole-project export stages files, closes the delivery plan and atomically
             });
           },
           async renderAudio(request) {
-            return sealTimelineAudio({
+            return sealRenderedAudio({
               sampleFrames: audioProgramSampleFrames(request.program),
               artifact: await resources.put(new TextEncoder().encode("audio"), "audio/wav"),
             });

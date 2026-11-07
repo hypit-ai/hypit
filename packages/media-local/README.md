@@ -133,21 +133,21 @@ The engine:
   span authority inside the executor;
 - emits exactly the requested terminal signal: a silent CFR visual or an exact-length 48 kHz stereo PCM WAV;
 - evaluates source-preserving trim/retime relations privately, extracts generic reference audio and extracts exact source frames;
-- renders a supported explicit `AudioProgram` into one exact-length 48 kHz stereo PCM `TimelineAudio`;
+- renders a supported explicit `AudioProgram` into one exact-length 48 kHz stereo PCM `RenderedAudio`;
 - muxes exactly one verified silent visual stream and one verified program-audio stream into MP4, including a valid one-frame video;
-- re-observes the TimelineVisual bytes at that terminal boundary and requires their frame rate, canvas, codec,
+- re-observes the RenderedVisual bytes at that terminal boundary and requires their frame rate, canvas, codec,
   pixel format and picture metadata to match the declared delivery; a value declaration is not treated as evidence
   about arbitrary bytes supplied under its Artifact reference;
 - distinguishes AAC coding-frame padding from the authoritative packet presentation span.
 
-During one `render-timeline-audio` request, selected sources and transform working files stay in that request's temporary
+During one `render-audio` request, selected sources and transform working files stay in that request's temporary
 directory. The requested output sample range is projected through the closed AudioProgram into one request-local demand plan.
 Source preparation and the signal reader consume that same plan, so a partial render neither decodes
 nor later asks for an unrelated signal use. Each Prepared Media and occurrence Map is validated and bound once while building
 that plan; range projection and sample reading retain the same sided evaluator instance. Reverse, hold, gaps, wrapping and cubic
 relations therefore cannot acquire a separate demand interpretation, and structural Map checks do not run once per output sample.
 A selected source may still be decoded as a complete canonical PCM track in this first implementation; that execution choice does
-not widen the plan or become Programme metadata. Only the final `TimelineAudio`
+not widen the plan or become Programme metadata. Only the final `RenderedAudio`
 Artifact enters the supplied resource gateway; decoder intermediates remain request-private.
 
 Private visual evaluation preserves alpha across trim/retime: transparent input becomes

@@ -2,14 +2,14 @@ import { mediaDeliveryProfile } from "@hypit/media";
 import {
   sameVisualDeliverySpec,
   verifyMediaDeliverySpec,
-  verifyTimelineAudio,
-  verifyTimelineVisual,
+  verifyRenderedAudio,
+  verifyRenderedVisual,
 } from "@hypit/media";
 import type {
   MediaDeliverySpec,
   MuxedMedia,
-  TimelineAudio,
-  TimelineVisual,
+  RenderedAudio,
+  RenderedVisual,
   VisualDeliverySpec,
 } from "@hypit/media";
 import { audioProgramSampleFrames, verifyAudioProgram } from "@hypit/audio-program";
@@ -28,8 +28,8 @@ export type HtmlVideoDeliveryPlan = {
 
 /** Execution remains injectable: this contract names products, not Providers or file paths. */
 export type HtmlVideoDeliveryExecutor = {
-  readonly renderVisual: (request: HtmlRasterRequest) => Promise<TimelineVisual>;
-  readonly renderAudio: (request: RenderAudioNeed) => Promise<TimelineAudio>;
+  readonly renderVisual: (request: HtmlRasterRequest) => Promise<RenderedVisual>;
+  readonly renderAudio: (request: RenderAudioNeed) => Promise<RenderedAudio>;
   readonly mux: (request: MuxMediaNeed) => Promise<MuxedMedia>;
 };
 
@@ -92,8 +92,8 @@ export async function executeHtmlVideoDeliveryPlan(
     executor.renderVisual(structuredClone(plan.visual)),
     executor.renderAudio(structuredClone(plan.audio)),
   ]);
-  verifyTimelineVisual(visual);
-  verifyTimelineAudio(audio);
+  verifyRenderedVisual(visual);
+  verifyRenderedAudio(audio);
   const request = createMuxMediaNeed(visual, audio, plan.delivery);
   const media = await executor.mux(request);
   verifyMuxedMediaForNeed(media, request);

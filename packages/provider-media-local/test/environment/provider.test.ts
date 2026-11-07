@@ -5,8 +5,8 @@ import { join } from "node:path";
 import test from "node:test";
 import { pointwiseOperatorTemporalSupport } from "@hypit/audio-program";
 import { blobTypes } from "@hypit/blob";
-import { mediaCapabilities, mediaTypes, preparedAudioSource, prepareMedia, sealMediaDeliverySpec, sealMediaSelectionRequest, sealTimelineVisual, sealTimelineAudio, selectMediaStreams, verifyMediaInspection, verifyMuxedMedia, verifyTimelineAudio } from "@hypit/media";
-import type { MediaAudioStream, MediaInspection, MediaVideoStream, MuxedMedia, TimelineAudio, TimelineVisual } from "@hypit/media";
+import { mediaCapabilities, mediaTypes, preparedAudioSource, prepareMedia, sealMediaDeliverySpec, sealMediaSelectionRequest, sealRenderedVisual, sealRenderedAudio, selectMediaStreams, verifyMediaInspection, verifyMuxedMedia, verifyRenderedAudio } from "@hypit/media";
+import type { MediaAudioStream, MediaInspection, MediaVideoStream, MuxedMedia, RenderedAudio, RenderedVisual } from "@hypit/media";
 import { assertSpeechEvidenceAudioIdentity, speechEvidenceCapabilities, speechEvidenceTypes } from "@hypit/speech-evidence";
 import type { SpeechEvidenceAudio } from "@hypit/speech-evidence";
 import assert from "node:assert/strict";
@@ -84,7 +84,7 @@ const audioProgramTiming = (id: string, sampleFrames: number) => ({
   sampling: { sampleRate: 48_000 },
 } as const);
 
-/** Test authoring helper: media leaves stay closed; every timeline occurrence is a Programme use. */
+/** Test authoring helper: media leaves stay closed; every placed use is a nested Programme. */
 function audioProgramGraphFromOccurrences(occurrences: readonly {
   readonly id: string;
   readonly source: ReturnType<typeof preparedAudioSource>;
@@ -472,12 +472,12 @@ test("local media Provider renders one frame-domain audio program and muxes exac
     const audioRequest = need(
       "need:render-program-audio",
       audioProgramCapabilities.render,
-      mediaTypes.timelineAudio,
+      mediaTypes.renderedAudio,
       canonicalize({ program }),
     );
     const audioValue = await fulfillInline(resources, audioRequest);
-    verifyTimelineAudio(audioValue);
-    const audio = audioValue as unknown as TimelineAudio;
+    verifyRenderedAudio(audioValue);
+    const audio = audioValue as unknown as RenderedAudio;
     assert.equal(audio.sampleFrames, 48_000);
     assert.equal(await resources.has(audio.artifact.resource), true);
 
@@ -502,14 +502,14 @@ test("local media Provider renders one frame-domain audio program and muxes exac
     const partialValue = await fulfillInline(partialResources, need(
       "need:render-first-half-audio",
       audioProgramCapabilities.render,
-      mediaTypes.timelineAudio,
+      mediaTypes.renderedAudio,
       canonicalize({ program: partialProgram, range: audioTarget(0, 24_000) }),
     ));
-    verifyTimelineAudio(partialValue);
-    assert.equal((partialValue as unknown as TimelineAudio).sampleFrames, 24_000,
+    verifyRenderedAudio(partialValue);
+    assert.equal((partialValue as unknown as RenderedAudio).sampleFrames, 24_000,
       "partial rendering must not prepare the absent second-half source");
 
-    const visual = sealTimelineVisual({
+    const visual = sealRenderedVisual({
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: 30,
       canvas: { width: 160, height: 96 },
@@ -531,7 +531,7 @@ test("local media Provider renders one frame-domain audio program and muxes exac
       ...delivery,
       visual: { ...delivery.visual, encoding: { ...delivery.visual.encoding, codec: "hevc" } },
     } as unknown as typeof delivery;
-    const mislabeledVisual = { ...visual, delivery: mislabeledDelivery.visual } as unknown as TimelineVisual;
+    const mislabeledVisual = { ...visual, delivery: mislabeledDelivery.visual } as unknown as RenderedVisual;
     await assert.rejects(fulfillInline(resources, need(
       "need:mux-mislabeled-program-media",
       mediaDeliveryCapabilities.mux,
@@ -558,12 +558,12 @@ test("local media Provider renders one frame-domain audio program and muxes exac
       resources.put(await readFile(oneFrameVisualPath), "video/mp4"),
       resources.put(await readFile(oneFrameAudioPath), "audio/wav"),
     ]);
-    const oneFrameVisual = sealTimelineVisual({
+    const oneFrameVisual = sealRenderedVisual({
       frameRate: { numerator: 30, denominator: 1 }, frameCount: 1,
       canvas: { width: 160, height: 96 }, delivery: delivery.visual,
       artifact: oneFrameVisualArtifact,
     });
-    const oneFrameAudio = sealTimelineAudio({
+    const oneFrameAudio = sealRenderedAudio({
       artifact: oneFrameAudioArtifact, sampleFrames: 1_600,
     });
     const oneFrameValue = await fulfillInline(resources, need(
@@ -605,8 +605,8 @@ test("local media Provider preserves the audio tail for a 30000/1001 frame domai
       resources.put(await readFile(audioPath), "audio/wav"),
       resources.put(await readFile(visualPath), "video/mp4"),
     ]);
-    const audio = sealTimelineAudio({ artifact: audioArtifact, sampleFrames });
-    const visual = sealTimelineVisual({
+    const audio = sealRenderedAudio({ artifact: audioArtifact, sampleFrames });
+    const visual = sealRenderedVisual({
       frameRate,
       frameCount,
       canvas: { width: 160, height: 96 },
@@ -626,9 +626,9 @@ test("local media Provider preserves the audio tail for a 30000/1001 frame domai
     assert.ok(audioStream);
     const presentedSamples = presentationSampleFrames(audioStream);
     assert.ok(Math.abs(presentedSamples - sampleFrames) < 64,
-      `AAC presentation span must retain the complete NTSC timeline audio (delta ${presentedSamples - sampleFrames})`);
+      `AAC presentation span must retain the complete NTSC rendered audio (delta ${presentedSamples - sampleFrames})`);
     assert.ok(audioStream.decodedSampleFrames >= sampleFrames,
-      "AAC coding frames must cover the complete NTSC timeline audio");
+      "AAC coding frames must cover the complete NTSC rendered audio");
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -656,11 +656,11 @@ test("local media Provider executes an end-aligned loop from the exact authored 
     const value = await fulfillInline(resources, need(
       "need:render-loop-audio",
       audioProgramCapabilities.render,
-      mediaTypes.timelineAudio,
+      mediaTypes.renderedAudio,
       canonicalize({ program }),
     ));
-    verifyTimelineAudio(value);
-    const audio = value as unknown as TimelineAudio;
+    verifyRenderedAudio(value);
+    const audio = value as unknown as RenderedAudio;
     assert.equal(audio.sampleFrames, 48_000);
     const wav = await resources.get(audio.artifact.resource);
     assert(wav);
@@ -742,12 +742,12 @@ test("audio signal evaluation treats reverse, hold, cubic motion and gaps as pee
     });
     const value = await fulfillInline(resources, need(
       "need:render-signal-map-audio", audioProgramCapabilities.render,
-      mediaTypes.timelineAudio, canonicalize({ program }),
+      mediaTypes.renderedAudio, canonicalize({ program }),
     ));
-    verifyTimelineAudio(value);
+    verifyRenderedAudio(value);
     const wavPath = join(root, "signal-map.wav");
     const rawPath = join(root, "signal-map.raw");
-    await writeFile(wavPath, (await resources.get((value as unknown as TimelineAudio).artifact.resource))!);
+    await writeFile(wavPath, (await resources.get((value as unknown as RenderedAudio).artifact.resource))!);
     await run("ffmpeg", ["-v", "error", "-y", "-i", wavPath, "-f", "s16le", rawPath]);
     const raw = await readFile(rawPath);
     const values = (start: number, count: number) => Array.from({ length: count }, (_, index) =>
@@ -790,9 +790,9 @@ test("audio range preserves loop phase, tempo and intersected fades from the ful
     });
     const pcm = async (name: string, range?: ReturnType<typeof audioTarget>) => {
       const value = await fulfillInline(resources, need(`need:${name}`, audioProgramCapabilities.render,
-        mediaTypes.timelineAudio, canonicalize({ program, ...(range === undefined ? {} : { range }) })));
-      verifyTimelineAudio(value);
-      const audio = value as unknown as TimelineAudio;
+        mediaTypes.renderedAudio, canonicalize({ program, ...(range === undefined ? {} : { range }) })));
+      verifyRenderedAudio(value);
+      const audio = value as unknown as RenderedAudio;
       const path = join(root, `${name}.wav`), raw = join(root, `${name}.raw`);
       await writeFile(path, (await resources.get(audio.artifact.resource))!);
       await run("ffmpeg", ["-v", "error", "-y", "-i", path, "-f", "s16le", raw]);
@@ -849,10 +849,10 @@ test("pitch-preserving reconstruction follows the same explicit rate without cha
     };
     const crossings = async (name: string, program: ReturnType<typeof makeProgram>) => {
       const value = await fulfillInline(resources, need(`need:${name}`, audioProgramCapabilities.render,
-        mediaTypes.timelineAudio, canonicalize({ program })));
-      verifyTimelineAudio(value);
+        mediaTypes.renderedAudio, canonicalize({ program })));
+      verifyRenderedAudio(value);
       const wav = join(root, `${name}.wav`), raw = join(root, `${name}.raw`);
-      await writeFile(wav, (await resources.get((value as unknown as TimelineAudio).artifact.resource))!);
+      await writeFile(wav, (await resources.get((value as unknown as RenderedAudio).artifact.resource))!);
       await run("ffmpeg", ["-v", "error", "-y", "-i", wav, "-f", "s16le", raw]);
       const pcm = await readFile(raw);
       let count = 0;
@@ -898,10 +898,10 @@ test("audio envelopes and audible regions preserve sample phase through gaps and
     });
     const pcm = async (name: string, range?: ReturnType<typeof audioTarget>) => {
       const value = await fulfillInline(resources, need(`need:${name}`, audioProgramCapabilities.render,
-        mediaTypes.timelineAudio, canonicalize({ program, ...(range === undefined ? {} : { range }) })));
-      verifyTimelineAudio(value);
+        mediaTypes.renderedAudio, canonicalize({ program, ...(range === undefined ? {} : { range }) })));
+      verifyRenderedAudio(value);
       const path = join(root, `${name}.wav`), raw = join(root, `${name}.raw`);
-      await writeFile(path, (await resources.get((value as unknown as TimelineAudio).artifact.resource))!);
+      await writeFile(path, (await resources.get((value as unknown as RenderedAudio).artifact.resource))!);
       await run("ffmpeg", ["-v", "error", "-y", "-i", path, "-f", "s16le", raw]);
       return readFile(raw);
     };

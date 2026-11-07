@@ -93,7 +93,7 @@ export const htmlProgramManifest: ModuleManifest = {
   dependencies: [mediaDependency, temporalDependency],
   types: [htmlProgramTypes.program.name, htmlProgramTypes.frameImages.name],
   capabilities: [
-    { name: htmlProgramCapabilities.rasterizeVisual.name, returns: mediaTypes.timelineVisual },
+    { name: htmlProgramCapabilities.rasterizeVisual.name, returns: mediaTypes.renderedVisual },
     { name: htmlProgramCapabilities.rasterizeFrames.name, returns: htmlProgramTypes.frameImages },
   ],
   producers: [{

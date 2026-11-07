@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import type { HtmlRasterRequest } from "@hypit/html-program";
-import type { TimelineVisual } from "@hypit/media";
+import type { RenderedVisual } from "@hypit/media";
 import {
   rasterizeHtmlWithBackend,
 } from "@hypit/html-render-local";
@@ -34,7 +34,7 @@ function electronWorkerLaunch(electronPath: string, directory: string): CaptureW
 export async function rasterizeElectronHtmlProgram(
   request: HtmlRasterRequest,
   options: ElectronHtmlRasterOptions,
-): Promise<TimelineVisual> {
+): Promise<RenderedVisual> {
   const electronPath = options.electronPath.trim();
   if (electronPath.length === 0) throw new Error("Electron rendering requires an explicit electronPath");
   return rasterizeHtmlWithBackend(request, options, {

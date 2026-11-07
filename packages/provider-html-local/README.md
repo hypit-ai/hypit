@@ -3,7 +3,7 @@
 Endpoint and Runtime adapter for the direct Chromium implementation in
 `@hypit/html-chromium-local`:
 
-- `@hypit/html-program@1#rasterize-visual` → `TimelineVisual`;
+- `@hypit/html-program@1#rasterize-visual` → `RenderedVisual`;
 - `@hypit/html-program@1#rasterize-frames` → self-describing sRGB PNG frame images.
 
 The Provider consumes a typed `HtmlProgram`. The direct renderer stages only the Artifacts selected by the request,

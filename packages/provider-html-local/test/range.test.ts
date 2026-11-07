@@ -133,7 +133,7 @@ test("page selection compacts arbitrary requested frames without inventing cover
 test("HTML claims actual browser count including a range shorter than workers", async () => {
   const document = htmlRangeDocument({ kind: "blob", resource: "res_range_source", size: 1, mediaType: "video/mp4" });
   const request = { id: "visual", capability: htmlProgramCapabilities.rasterizeVisual,
-    returns: mediaTypes.timelineVisual, constraints: canonicalize({ program: document, delivery: htmlProviderDelivery() }), result: "visual-result" };
+    returns: mediaTypes.renderedVisual, constraints: canonicalize({ program: document, delivery: htmlProviderDelivery() }), result: "visual-result" };
   const facet = hypitPackage.facets.find((item) => item.abi === runtimeEndpointAdapterFacetAbi);
   assert.ok(facet);
   const adapter = facet.implementation as RuntimeEndpointAdapterImplementation;

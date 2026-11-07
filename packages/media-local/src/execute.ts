@@ -3,8 +3,8 @@ import { createReadStream } from "node:fs";
 import { copyFile, mkdir, mkdtemp, open, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { sameVisualDeliverySpec, sealMediaInspection, sealMuxedMedia, sealTimelineAudio, verifyAudioExtractionRequest, verifyFrameExtractionRequest, verifyMediaDeliverySpec, verifyPreparedAudioSource, verifyTimelineVisual, verifyTimelineAudio } from "@hypit/media";
-import type { ExtractAudioNeed, ExtractFrameNeed, InspectMediaNeed, MediaAudioStream, MediaInspection, MediaTimestamp, MediaVideoStream, MuxedMedia, PreparedAudioSource, TimelineAudio } from "@hypit/media";
+import { sameVisualDeliverySpec, sealMediaInspection, sealMuxedMedia, sealRenderedAudio, verifyAudioExtractionRequest, verifyFrameExtractionRequest, verifyMediaDeliverySpec, verifyPreparedAudioSource, verifyRenderedVisual, verifyRenderedAudio } from "@hypit/media";
+import type { ExtractAudioNeed, ExtractFrameNeed, InspectMediaNeed, MediaAudioStream, MediaInspection, MediaTimestamp, MediaVideoStream, MuxedMedia, PreparedAudioSource, RenderedAudio } from "@hypit/media";
 import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvidenceSampleFrames } from "@hypit/speech-evidence";
 import type { ProjectSpeechEvidenceAudioNeed, SpeechEvidenceAudio } from "@hypit/speech-evidence";
 import { audioProgramSampleFrames, verifyAudioProgram } from "@hypit/audio-program";
@@ -445,8 +445,8 @@ function renderAudioNeed(value: CanonicalValue): RenderAudioNeed {
 
 function muxMediaNeed(value: CanonicalValue): MuxMediaNeed {
   const item = object(value, "MuxMediaNeed") as unknown as MuxMediaNeed;
-  verifyTimelineVisual(item.visual);
-  verifyTimelineAudio(item.audio);
+  verifyRenderedVisual(item.visual);
+  verifyRenderedAudio(item.audio);
   verifyMediaDeliverySpec(item.delivery);
   assert(sameVisualDeliverySpec(item.visual.delivery, item.delivery.visual),
     "MuxMediaNeed visual differs from its delivery requirement");
@@ -573,32 +573,32 @@ function sameRational(
 }
 
 /**
- * A TimelineVisual declaration is not evidence about the bytes it names. Mux is
+ * A RenderedVisual declaration is not evidence about the bytes it names. Mux is
  * the last boundary before a delivery Artifact is published, so it observes the
  * selected stream and proves the exact facts it promises to preserve by copy.
  */
-async function assertTimelineVisualBytes(
+async function assertRenderedVisualBytes(
   env: MediaExecutionEnvironment,
   path: string,
-  visual: import("@hypit/media").TimelineVisual,
+  visual: import("@hypit/media").RenderedVisual,
   inspection: MediaInspection,
 ): Promise<MediaVideoStream> {
   const streams = inspection.streams.filter((item): item is MediaVideoStream => item.kind === "video");
   assert(streams.length === 1 && inspection.streams.length === 1,
-    "TimelineVisual Artifact must contain exactly one silent video stream");
+    "RenderedVisual Artifact must contain exactly one silent video stream");
   const stream = streams[0]!;
   assert(!stream.disposition.attachedPicture && stream.startPts !== undefined && stream.endPts !== undefined
       && stream.decodedUnitCount === visual.frameCount
       && stream.width === visual.canvas.width && stream.height === visual.canvas.height,
-  "TimelineVisual bytes differ from their declared frame domain");
+  "RenderedVisual bytes differ from their declared frame domain");
   assert(sameRational(stream.averageFrameRate, visual.frameRate),
-    "TimelineVisual bytes differ from their declared frame rate");
+    "RenderedVisual bytes differ from their declared frame rate");
 
   const encoding = await sourceVideoEncoding(env, path, stream.index);
   assert(encoding.stream.codec_name === visual.delivery.encoding.codec,
-    "TimelineVisual codec differs from its declared delivery");
+    "RenderedVisual codec differs from its declared delivery");
   assert(encoding.pixelFormat === visual.delivery.encoding.pixelFormat,
-    "TimelineVisual pixel format differs from its declared delivery");
+    "RenderedVisual pixel format differs from its declared delivery");
   const picture = visual.delivery.picture;
   assert(stream.picture.colorPrimaries === picture.colorPrimaries
       && stream.picture.colorTransfer === picture.colorTransfer
@@ -606,7 +606,7 @@ async function assertTimelineVisualBytes(
       && stream.picture.colorRange === picture.colorRange
       && stream.picture.bitDepth === picture.bitDepth
       && stream.picture.alphaMode === "opaque",
-  "TimelineVisual picture metadata differs from its declared delivery");
+  "RenderedVisual picture metadata differs from its declared delivery");
   return stream;
 }
 
@@ -889,7 +889,7 @@ export async function executeProjectSpeechEvidenceAudio(
   }
 }
 
-export async function executeRenderTimelineAudio(
+export async function executeRenderAudioProgram(
   env: MediaExecutionEnvironment,
   constraints: CanonicalValue,
 ): Promise<MediaOperationResult> {
@@ -1011,8 +1011,8 @@ export async function executeRenderTimelineAudio(
       ...(env.signal === undefined ? {} : { signal: env.signal }),
     });
     assert(audio.decodedSampleFrames === window.sampleFrames,
-      "Rendered TimelineAudio sample count differs from its program");
-    const value: TimelineAudio = sealTimelineAudio({
+      "RenderedAudio sample count differs from its program");
+    const value: RenderedAudio = sealRenderedAudio({
       artifact,
       sampleFrames: window.sampleFrames,
     });
@@ -1055,9 +1055,9 @@ export async function executeMuxProgramMedia(
         ...(env.signal === undefined ? {} : { signal: env.signal }),
       }),
     ]);
-    const visual = await assertTimelineVisualBytes(env, visualPath, need.visual, visualInspection);
+    const visual = await assertRenderedVisualBytes(env, visualPath, need.visual, visualInspection);
     assert(audio.decodedSampleFrames === need.audio.sampleFrames,
-      "TimelineAudio bytes differ from their declared sample domain");
+      "RenderedAudio bytes differ from their declared sample domain");
     await runProcess({
       executable: env.ffmpegPath,
       argv: [
@@ -1087,11 +1087,11 @@ export async function executeMuxProgramMedia(
     assert(finalVideo[0]!.startPts !== undefined && finalVideo[0]!.endPts !== undefined
       && finalVideo[0]!.decodedUnitCount === need.visual.frameCount
       && finalVideo[0]!.codecName === need.delivery.visual.encoding.codec,
-      "Final mux video frame count differs from TimelineVisual");
+      "Final mux video frame count differs from RenderedVisual");
     assert(finalAudio[0]!.startPts !== undefined && finalAudio[0]!.endPts !== undefined
       && finalAudio[0]!.codecName === need.delivery.audio.codec
       && finalAudio[0]!.sampleRate === 48_000 && finalAudio[0]!.channels === 2,
-      "Final mux audio shape differs from TimelineAudio");
+      "Final mux audio shape differs from RenderedAudio");
     assert(finalVideo[0]!.startPts !== undefined && finalAudio[0]!.startPts !== undefined
       && compareTimestamp(finalVideo[0]!.startPts, finalAudio[0]!.startPts) === 0,
     "Final mux audio and video do not share one presentation origin");
@@ -1115,7 +1115,7 @@ export async function executeMuxProgramMedia(
     const AAC_FRAME_SAMPLES = 1_024;
     const finalAudioSamples = roundPositive(finalAudioSpan.numerator * 48_000n, finalAudioSpan.denominator);
     assert(Math.abs(finalAudioSamples - need.audio.sampleFrames) < AAC_FRAME_SAMPLES,
-      `Final mux audio presentation span differs from TimelineAudio by ${
+      `Final mux audio presentation span differs from RenderedAudio by ${
         String(finalAudioSamples - need.audio.sampleFrames)} samples`);
     const artifact = await env.artifacts.putFile(output, "video/mp4");
     const value: MuxedMedia = sealMuxedMedia({

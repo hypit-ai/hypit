@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import type { HtmlFrameImages, HtmlFrameRequest, HtmlRasterRequest } from "@hypit/html-program";
-import type { TimelineVisual } from "@hypit/media";
+import type { RenderedVisual } from "@hypit/media";
 import {
   rasterizeHtmlWithBackend,
   resolveLocalHtmlExecutionOptions,
@@ -58,7 +58,7 @@ function backend(options: BrowserOptions) {
 export async function rasterizeChromiumHtmlProgram(
   request: HtmlRasterRequest,
   options: ChromiumHtmlRasterOptions,
-): Promise<TimelineVisual> {
+): Promise<RenderedVisual> {
   return await rasterizeHtmlWithBackend(request, options, backend(options));
 }
 

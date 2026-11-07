@@ -3,8 +3,8 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { BlobRef } from "@hypit/protocol";
-import { sealTimelineVisual } from "@hypit/media";
-import type { TimelineVisual } from "@hypit/media";
+import { sealRenderedVisual } from "@hypit/media";
+import type { RenderedVisual } from "@hypit/media";
 import type { FrameSpan } from "@hypit/temporal";
 import { verifyPictureArtifactFile } from "./picture-validation.js";
 import { verifyHtmlRasterRequest, verifyHtmlFrameRequest } from "@hypit/html-program";
@@ -89,7 +89,7 @@ export function rasterizeHtmlWithBackend(
   request: HtmlRasterRequest,
   options: HtmlRasterOptions,
   backend: HtmlRasterBackend,
-): Promise<TimelineVisual>;
+): Promise<RenderedVisual>;
 export function rasterizeHtmlWithBackend(
   request: HtmlFrameRequest,
   options: HtmlRasterOptions,
@@ -99,7 +99,7 @@ export async function rasterizeHtmlWithBackend(
   request: HtmlRasterRequest | HtmlFrameRequest,
   options: HtmlRasterOptions,
   backend: HtmlRasterBackend,
-): Promise<TimelineVisual | HtmlFrameImages> {
+): Promise<RenderedVisual | HtmlFrameImages> {
   const frames = "frames" in request ? request.frames : undefined;
   if (frames === undefined) verifyHtmlRasterRequest(request as HtmlRasterRequest);
   else verifyHtmlFrameRequest(request as HtmlFrameRequest);
@@ -197,9 +197,9 @@ export async function rasterizeHtmlWithBackend(
       }
       return options.resources.put(await readFile(output, { signal }), mediaType, { signal });
     };
-    let result: TimelineVisual | HtmlFrameImages;
+    let result: RenderedVisual | HtmlFrameImages;
     if (frames === undefined) {
-      result = sealTimelineVisual({ frameRate: document.frameRate, frameCount, canvas: document.canvas,
+      result = sealRenderedVisual({ frameRate: document.frameRate, frameCount, canvas: document.canvas,
         delivery: (request as HtmlRasterRequest).delivery,
         artifact: await store(join(work, "visual.mp4"), "video/mp4") });
     } else {

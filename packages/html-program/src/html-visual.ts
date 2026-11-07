@@ -34,7 +34,7 @@ export type HtmlVisualAuthoring = Omit<HtmlVisual, "dependencies"> & {
   readonly dependencies?: readonly HtmlVisualDependency[];
 };
 
-/** Package-owned execution carrier; it is independent of legacy Composition elements. */
+/** Package-owned execution carrier for a terminal visual programme. */
 export type HtmlVisualProgram = {
   readonly format: string;
   readonly payload: { readonly [key: string]: CanonicalValue };

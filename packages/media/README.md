@@ -95,8 +95,8 @@ profile and matte policy, coded video target, audio target and container once. T
 `project-visual-delivery` Producer derives the `VisualDeliverySpec` needed by a visual renderer;
 the complete value independently reaches final mux.
 
-`TimelineVisual` records the exact visual requirement implemented by its encoded Artifact.
-`TimelineAudio` records its canonical PCM Artifact and actual sample count; its type already means 48 kHz stereo PCM.
+`RenderedVisual` records the exact visual requirement implemented by its encoded Artifact.
+`RenderedAudio` records its canonical PCM Artifact and actual sample count; its type already means 48 kHz stereo PCM.
 `MuxedMedia` records
 the complete delivery requirement. Final mux rejects inputs prepared for a different requirement;
 it does not silently transcode them or recover policy from a Provider configuration.

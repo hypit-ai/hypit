@@ -145,11 +145,11 @@ export const preparedAudioSourceSchema: ValueSchema = object({
   source: { schema: blobRefSchema() }, streamIndex: { schema: integer },
   presentationStart: { schema: exactTemporalValueSchema }, sourceDomain: { schema: localTemporalDomainSchema },
 });
-export const timelineVisualSchema: ValueSchema = object({ frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
+export const renderedVisualSchema: ValueSchema = object({ frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
   canvas: { schema: object({ width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
   delivery: { schema: visualDeliverySpecSchema },
   artifact: { schema: blobRefSchema() } });
-export const timelineAudioSchema: ValueSchema = object({ artifact: { schema: blobRefSchema(["audio/wav"]) },
+export const renderedAudioSchema: ValueSchema = object({ artifact: { schema: blobRefSchema(["audio/wav"]) },
   sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } } });
 export const muxedMediaSchema: ValueSchema = object({ frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
   canvas: { schema: object({ width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } } }) },

@@ -36,5 +36,5 @@ codec and filter. Custom paths remain valid and unsupported operations report th
 error.
 
 Inspection, audio extraction and frame extraction are transient authoring capabilities.
-Speech-evidence projection, timeline-audio rendering and terminal muxing remain Build capabilities.
+Speech-evidence projection, audio-program rendering and terminal muxing remain Build capabilities.
 These choices belong to the Provider adapter and do not alter the direct media engine.

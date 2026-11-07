@@ -1,7 +1,7 @@
-import type { MediaDeliverySpec, TimelineAudio, TimelineVisual } from "@hypit/media";
+import type { MediaDeliverySpec, RenderedAudio, RenderedVisual } from "@hypit/media";
 
 export type MuxMediaNeed = {
-  readonly visual: TimelineVisual;
-  readonly audio: TimelineAudio;
+  readonly visual: RenderedVisual;
+  readonly audio: RenderedAudio;
   readonly delivery: MediaDeliverySpec;
 };
