@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 
-import type { CliDistribution } from "../../src/distribution.js";
+import type { BuildCliServices } from "../../src/services.js";
 import { createLocalCredentialControl } from "@hypit/runtime-local";
 import { commandHint } from "@hypit/cli";
-import { cliDistribution } from "../distribution-scenario.js";
+import { buildCliServices } from "../services-scenario.js";
 import { credentialControl, runtimeControl } from "../control-scenario.js";
 import { applicationCwd, runCli } from "./control-command-scenario.js";
 
@@ -27,7 +27,7 @@ test("activity opens Runtime control without constructing execution Providers", 
       calls.push("control.close");
     },
   });
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     openRuntimeHost: async (path: string) => ({
       profile: path,
       openControl: async () => {
@@ -67,7 +67,7 @@ test("doctor retains later errors even with a small display limit", async () => 
   const diagnostics = Array.from({ length: 25 }, (_, index) => ({
     severity: "warning" as const, code: `NOTICE_${index}`, message: "setup note",
   }));
-  const selected = cliDistribution({ diagnoseProjectResults: async () => ({ diagnostics: [
+  const selected = buildCliServices({ diagnoseProjectResults: async () => ({ diagnostics: [
     ...diagnostics, { severity: "error", code: "BROKEN_RESULT", message: "selected repository unavailable" },
   ] }) });
   let output = "";
@@ -80,7 +80,7 @@ test("doctor retains later errors even with a small display limit", async () => 
 });
 
 test("finished status reports failure details and a nonzero exit without a Runtime", async () => {
-  const selected = cliDistribution({ openProjectResults: async () => ({
+  const selected = buildCliServices({ openProjectResults: async () => ({
     history: { read: async () => ({ id: "failed", outcome: "failed", targets: [], outputs: {}, failure: "renderer exited", operations: [] }) },
     products: noProducts,
     close() {},
@@ -117,7 +117,7 @@ test("status --watch follows active execution, then reads its finished Result", 
     },
     async close() { calls.push("control.close"); },
   });
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     openRuntimeHost: async (path: string) => ({
       profile: path,
       openControl: async () => control,
@@ -174,7 +174,7 @@ test("status --watch follows active execution, then reads its finished Result", 
 
 test("status reads a finished project Result without a Runtime", async () => {
   const calls: string[] = [];
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     openRuntimeHost: async () => {
       throw new Error("finished Result lookup must not open a Runtime");
     },
@@ -213,7 +213,7 @@ test("status reads a finished project Result without a Runtime", async () => {
 });
 
 test("finished status defaults to the Result outcome without repeating internal layers", async () => {
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     openProjectResults: async () => ({
       history: {
         async read() {
@@ -252,7 +252,7 @@ test("status separates execution from publication while the Run is being finaliz
     targets: ["final.video"],
     operations: [],
   };
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     openRuntimeHost: async (path: string) => ({
       profile: path,
       openControl: async () => ({ async inspect() { return view; }, async close() {} }),
@@ -290,7 +290,7 @@ test("status preserves Runtime decision and attention when its Result Store is u
     async inspect() { return view; },
     async close() {},
   });
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     openRuntimeHost: async (path: string) => ({
       profile: path,
       openControl: async () => control,
@@ -331,7 +331,7 @@ test("status preserves Runtime decision and attention when its Result Store is u
 
 
 test("command options fail closed instead of being silently ignored", async () => {
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     openRuntimeHost: async (path: string) => {
       throw new Error(`profile delegated: ${path}`);
     },
@@ -373,7 +373,7 @@ test("doctor diagnoses project Results without requiring a Runtime Profile", asy
   const projectRoot = await realpath(await mkdtemp(join(tmpdir(), "hypit-doctor-project-")));
   t.after(async () => await rm(projectRoot, { recursive: true, force: true }));
   const calls: string[] = [];
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     async diagnoseProjectResults(projectRoot: string) {
       calls.push(`results:${projectRoot}`);
       return { diagnostics: [] };
@@ -404,7 +404,7 @@ test("cancelling a completed Build reports that no cancellation was requested", 
     async cancel() { return undefined; },
     async close() {},
   });
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     openRuntimeHost: async (path: string) => ({
       profile: path,
       openControl: async () => control,
@@ -452,7 +452,7 @@ test("cancelling an already failed execution preserves and reports its stop reas
     targets: [], operations: [],
   } as const;
   const control = runtimeControl({ async cancel() { return active; }, async close() {} });
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     openRuntimeHost: async (path: string) => ({ profile: path, openControl: async () => control }),
   });
   let output = "";
@@ -473,7 +473,7 @@ test("a stopped Worker ends observation with scoped evidence commands, not a Res
   const runtimeProfile = resolve("/tmp/selected runtime.json");
   let closed = false;
   let resultOpened = false;
-  const selected = cliDistribution({
+  const selected = buildCliServices({
     openRuntimeHost: async () => ({
       openControl: async () => ({
         inspect: async () => ({

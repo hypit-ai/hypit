@@ -6,10 +6,10 @@ import type {
 } from "@hypit/loader";
 import { packageSelectionSatisfied } from "@hypit/loader";
 
-import type { CliDistribution } from "./distribution.js";
+import type { BuildCliServices } from "./services.js";
 
-type CliSourcePackageDiscovery = Pick<
-  CliDistribution,
+type BuildSourcePackageServices = Pick<
+  BuildCliServices,
   "bootstrapPackages" | "discoverSourcePackages"
 >;
 
@@ -27,11 +27,11 @@ function mergePackages(
 }
 
 async function discover(
-  distribution: CliSourcePackageDiscovery,
+  services: BuildSourcePackageServices,
   options: DiscoveryOptions,
   packages: readonly LoadedPackage[],
 ) {
-  const selection = await distribution.discoverSourcePackages?.(options.source, {
+  const selection = await services.discoverSourcePackages?.(options.source, {
     ...(options.workspaceRoot === undefined ? {} : { workspaceRoot: options.workspaceRoot }),
     packageRoot: options.packageRoot,
     ...(options.distributionPackageRoot === undefined
@@ -39,25 +39,25 @@ async function discover(
       : { distributionPackageRoot: options.distributionPackageRoot }),
     packages,
   });
-  if (selection === undefined) throw new Error("this Distribution cannot discover Source packages");
+  if (selection === undefined) throw new Error("these Build CLI services cannot discover Source packages");
   return selection;
 }
 
 /** Load only the installed packages reached by recursive Frontend discovery. */
 export async function loadDiscoveredSourcePackages(
-  distribution: CliSourcePackageDiscovery,
+  services: BuildSourcePackageServices,
   options: DiscoveryOptions,
 ): Promise<readonly LoadedPackage[]> {
-  let packages = distribution.bootstrapPackages;
+  let packages = services.bootstrapPackages;
   while (true) {
-    const selection = await discover(distribution, options, packages);
+    const selection = await discover(services, options, packages);
     if (packageSelectionSatisfied(selection, packages)) return packages;
     const loaded = await loadNodePackageSelection(selection, options.packageRoot, {
       ...(options.distributionPackageRoot === undefined
         ? {}
         : { fallbackRoots: [options.distributionPackageRoot] }),
     });
-    const next = mergePackages(distribution.bootstrapPackages, loaded);
+    const next = mergePackages(services.bootstrapPackages, loaded);
     if (next.map((item) => item.specifier).join("\u0000") === packages.map((item) => item.specifier).join("\u0000")) {
       throw new Error("Source package discovery did not satisfy its logical package requirements");
     }

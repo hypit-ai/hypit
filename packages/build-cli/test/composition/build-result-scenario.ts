@@ -7,9 +7,9 @@ import type { ProductExporter } from "@hypit/product";
 import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
 import { sameType } from "@hypit/protocol";
 
-import type { CliDistribution } from "../../src/distribution.js";
+import type { BuildCliServices } from "../../src/services.js";
 import { runCli } from "../../src/main.js";
-import { cliDistribution } from "../distribution-scenario.js";
+import { buildCliServices } from "../services-scenario.js";
 
 export const valueType: TypeRef = {
   module: { name: "example.result", version: "1" },
@@ -51,8 +51,8 @@ export async function fixture(root: string, id = "bld_20260902T110000000Z_000000
   await result.finish({ outcome: "complete" });
 }
 
-export function resultDistribution(): CliDistribution {
-  return cliDistribution({
+export function resultDistribution(): BuildCliServices {
+  return buildCliServices({
     async openProjectResults(projectRoot: string) {
       const finalization = new FileRunFinalizationStore(
         join(projectRoot, ".hypit", "results"),

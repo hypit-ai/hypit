@@ -6,12 +6,12 @@ import test from "node:test";
 
 import { runCliApplication } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
-import type { CliDistribution } from "@hypit/build-cli";
+import type { BuildCliServices } from "@hypit/build-cli";
 import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";
 import type { LocalRuntimeHost } from "@hypit/runtime-local";
-import { cliDistribution } from "./distribution-scenario.js";
+import { buildCliServices } from "./services-scenario.js";
 
-const runCli = async (argv: readonly string[], output: CliIo, selected: CliDistribution) => await runCliApplication(
+const runCli = async (argv: readonly string[], output: CliIo, selected: BuildCliServices) => await runCliApplication(
   argv,
   output,
   {
@@ -26,7 +26,7 @@ const runCli = async (argv: readonly string[], output: CliIo, selected: CliDistr
 );
 
 test("runtime logs returns only the requested tail and hides its path by default", async () => {
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     openRuntimeHost: async (path: string) => ({
       profile: path,
       controller: async () => ({

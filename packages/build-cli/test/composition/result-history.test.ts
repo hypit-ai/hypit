@@ -12,8 +12,8 @@ import {
 } from "../../../runtime-local/src/result-storage/index.js";
 import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
 
-import type { CliDistribution } from "../../src/distribution.js";
-import { cliDistribution } from "../distribution-scenario.js";
+import type { BuildCliServices } from "../../src/services.js";
+import { buildCliServices } from "../services-scenario.js";
 import { runCli } from "../../src/main.js";
 import {
   completedRecords,

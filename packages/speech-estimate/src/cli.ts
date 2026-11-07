@@ -2,7 +2,7 @@ import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { loadDiscoveredSourcePackages } from "@hypit/build-cli";
-import type { CliDistribution } from "@hypit/build-cli";
+import type { BuildCliServices } from "@hypit/build-cli";
 import type { CliApplicationContext, CliCommandModule, CliIo } from "@hypit/cli";
 import { sameType } from "@hypit/hypit/protocol";
 import type { TypedRecord } from "@hypit/hypit/protocol";
@@ -15,6 +15,11 @@ import {
   resolveSpeechEstimateRate,
 } from "./program.js";
 import { speechEstimatePolicyFromAttributes } from "./policy.js";
+
+export type SpeechEstimateCliServices = Pick<
+  BuildCliServices,
+  "packageRoot" | "bootstrapPackages" | "createCompiler" | "discoverSourcePackages"
+>;
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -58,18 +63,18 @@ async function segmentSpeech(
   source: string,
   segment: string,
   projectRoot: string,
-  distribution: CliDistribution,
+  services: SpeechEstimateCliServices,
 ): Promise<string> {
-  const loaded = await loadDiscoveredSourcePackages({ ...distribution, bootstrapPackages: [] }, {
+  const loaded = await loadDiscoveredSourcePackages({ ...services, bootstrapPackages: [] }, {
     source,
     workspaceRoot: projectRoot,
     packageRoot: projectRoot,
-    ...(distribution.packageRoot === undefined ? {} : { distributionPackageRoot: distribution.packageRoot }),
+    ...(services.packageRoot === undefined ? {} : { distributionPackageRoot: services.packageRoot }),
   });
-  const compiler = distribution.createCompiler({
+  const compiler = services.createCompiler({
     workspaceRoot: projectRoot,
     packageRoot: projectRoot,
-    ...(distribution.packageRoot === undefined ? {} : { distributionPackageRoot: distribution.packageRoot }),
+    ...(services.packageRoot === undefined ? {} : { distributionPackageRoot: services.packageRoot }),
     packageContributions: loaded.map((item) => item.contribution),
   });
   const workspace = await compiler.openEntry(source);
@@ -94,7 +99,7 @@ export async function runEstimateCli(
   argv: readonly string[],
   io: CliIo,
   application: CliApplicationContext,
-  distribution: CliDistribution,
+  services: SpeechEstimateCliServices,
 ): Promise<void> {
   if (argv.includes("--help")) { writeEstimateHelp(io); return; }
   const parsed = parse(argv);
@@ -114,7 +119,7 @@ export async function runEstimateCli(
     const projectRoot = await application.resolveProjectRoot(
       project === undefined ? undefined : resolve(application.cwd, project),
     );
-    text = await segmentSpeech(source, segment, projectRoot, distribution);
+    text = await segmentSpeech(source, segment, projectRoot, services);
     where = { source, segment };
   }
   const pace = parsed.options.get("--pace");
@@ -140,7 +145,7 @@ export async function runEstimateCli(
 }
 
 export function createSpeechEstimateCliCommandModules(
-  distribution: CliDistribution,
+  services: SpeechEstimateCliServices,
 ): readonly CliCommandModule[] {
   return [{
     format: "hypit.cli-command@1",
@@ -148,6 +153,6 @@ export function createSpeechEstimateCliCommandModules(
     commands: ["estimate"],
     writeRootHelp(io) { io.write("\nSpeech estimation\n  estimate\n  hypit estimate --help for inputs and delivery options\n"); },
     writeHelp(_argv, io) { writeEstimateHelp(io); },
-    async run(argv, io, context) { await runEstimateCli(argv, io, context, distribution); },
+    async run(argv, io, context) { await runEstimateCli(argv, io, context, services); },
   }];
 }

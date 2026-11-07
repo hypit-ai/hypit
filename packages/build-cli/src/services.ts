@@ -6,7 +6,7 @@ import type { TypeRef } from "@hypit/protocol";
 import type { Workspace } from "@hypit/workspace";
 import type { CliDiagnostic, CliPublicationStoreLocation, CliRuntimeHost } from "./runtime-port.js";
 
-export type CliCompilerOptions = {
+export type BuildCliCompilerOptions = {
   /** Canonical containment boundary for Author Sources plus source assets. */
   readonly workspaceRoot?: string;
   /** Additional Host-authorized asset roots. These never widen Source imports. */
@@ -21,25 +21,25 @@ export type CliCompilerOptions = {
 /**
  * Explicit service assembly for the long-compilation command module.
  *
- * A Distribution selects author vocabulary/compiler semantics and trusted Runtime-config adapters.
- * It is Host configuration, never Core state or source-import authority.
+ * Application composition selects author vocabulary/compiler semantics and trusted Runtime adapters.
+ * These services never become Core state or Source-import authority.
  */
-export type CliDistribution = {
+export type BuildCliServices = {
   /** Packages shipped with this CLI distribution. */
   readonly packageRoot?: string;
   /** Explicit Host bootstrap packages; never inferred from Source contents. */
   readonly bootstrapPackages: readonly LoadedPackage[];
-  /** Resolve the execution environment explicitly selected for this project, if the Distribution supports one. */
+  /** Resolve the execution environment explicitly selected for this project, when supported. */
   resolveProjectRuntime?(projectRoot: string): Promise<{ readonly profile: string } | undefined>;
-  /** Open the definition environment selected by this product Distribution. */
-  createWorkspace(options: Pick<CliCompilerOptions,
+  /** Open the definition environment selected by this application. */
+  createWorkspace(options: Pick<BuildCliCompilerOptions,
     "workspaceRoot" | "assetRoots" | "packageRoot" | "distributionPackageRoot">): Workspace;
-  createCompiler(options: CliCompilerOptions): Compiler;
+  createCompiler(options: BuildCliCompilerOptions): Compiler;
   /**
    * Read the selected Source and its explicit closure, then return only the installed
    * package roots those sources select.
    *
-   * This is Distribution syntax work. The build CLI never scans a directory,
+   * This is application-selected syntax work. The build CLI never scans a directory,
    * guesses an entry filename or teaches Core about package names.
    */
   discoverSourcePackages?(path: string, options?: {

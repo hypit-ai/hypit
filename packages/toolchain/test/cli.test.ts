@@ -4,27 +4,28 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { createToolchainDistribution } from "@hypit/toolchain";
+import { createToolchainApplicationServices } from "@hypit/toolchain";
 import { createToolchainCliCommandModules } from "@hypit/toolchain/cli";
 import { createBuildCliCommandModules } from "@hypit/build-cli";
 import { runCliApplication } from "@hypit/cli";
 import { loadDiscoveredSourcePackages, runCli as runCommand } from "@hypit/build-cli";
 import { installDistributionPackageResolution } from "@hypit/loader/node";
 
-const toolchainDistribution = createToolchainDistribution();
+const toolchainServices = createToolchainApplicationServices();
+const buildServices = toolchainServices.build;
 
 const runCli = (
   argv: readonly string[],
   io: { readonly write: (text: string) => void },
 ) => {
-  installDistributionPackageResolution(toolchainDistribution.packageRoot === undefined
-    ? [] : [toolchainDistribution.packageRoot]);
+  installDistributionPackageResolution(buildServices.packageRoot === undefined
+    ? [] : [buildServices.packageRoot]);
   return runCliApplication([...argv, "--json"], io, {
     commandModules: [
-      ...createBuildCliCommandModules(toolchainDistribution),
-      ...createToolchainCliCommandModules(toolchainDistribution.packageRoot === undefined
+      ...createBuildCliCommandModules(buildServices),
+      ...createToolchainCliCommandModules(buildServices.packageRoot === undefined
         ? {}
-        : { distributionPackageRoot: toolchainDistribution.packageRoot }),
+        : { distributionPackageRoot: buildServices.packageRoot }),
     ],
   });
 };
@@ -82,16 +83,16 @@ gpt.image {
   resolution: 2K
 }`).join("\n\n")}
 `);
-    await writeFile(join(root, "runtime.json"), JSON.stringify(toolchainDistribution.initialRuntimeProfile));
+    await writeFile(join(root, "runtime.json"), JSON.stringify(toolchainServices.localRuntime.initialRuntimeProfile));
     const source = join(root, "main.svml");
     let queried = 0;
     let output = "";
     await runCommand(["pricing", source, ...ids.flatMap((id) => ["--target", `${id}.image`]),
       "--project", root, "--runtime", join(root, "runtime.json"),
       "--json", "--limit", "1"], { write: (text) => { output += text; } }, {
-      ...toolchainDistribution,
+      ...buildServices,
       openRuntimeHost: async (path, options) => ({
-        ...await toolchainDistribution.openRuntimeHost(path, options),
+        ...await buildServices.openRuntimeHost(path, options),
         openInspection: async (queries) => {
           queried = queries.length;
           for (const query of queries) {

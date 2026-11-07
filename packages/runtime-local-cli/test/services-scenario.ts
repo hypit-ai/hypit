@@ -1,13 +1,13 @@
-import type { CliDistribution } from "@hypit/build-cli";
+import type { BuildCliServices } from "@hypit/build-cli";
 
 function unopened(name: string): never {
   throw new Error(`${name} must not open in this CLI scenario`);
 }
 
-type CliDistributionScenario = Partial<Record<keyof CliDistribution, unknown>>;
+type BuildCliServicesScenario = Partial<Record<keyof BuildCliServices, unknown>>;
 
-export function cliDistribution(overrides: CliDistributionScenario = {}): CliDistribution {
-  const defaults: CliDistribution = {
+export function buildCliServices(overrides: BuildCliServicesScenario = {}): BuildCliServices {
+  const defaults: BuildCliServices = {
     bootstrapPackages: [],
     createWorkspace() { return unopened("workspace"); },
     createCompiler() { return unopened("compiler"); },
@@ -15,5 +15,5 @@ export function cliDistribution(overrides: CliDistributionScenario = {}): CliDis
     async openProjectResults() { return unopened("project results"); },
     async diagnoseProjectResults() { return unopened("project result diagnosis"); },
   };
-  return { ...defaults, ...overrides } as CliDistribution;
+  return { ...defaults, ...overrides } as BuildCliServices;
 }

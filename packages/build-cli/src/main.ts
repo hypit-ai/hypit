@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { isBlobRef, moduleKey, orderedBuildId } from "@hypit/protocol";
 import { BuildCompiler } from "@hypit/compiler";
 
-import type { CliDistribution } from "./distribution.js";
+import type { BuildCliServices } from "./services.js";
 import type { CliApplicationContext } from "@hypit/cli";
 import type { CliRuntime, CliRuntimeHost, CliRuntimeInspection } from "./runtime-port.js";
 import { CliUsageError, commandHint } from "@hypit/cli";
@@ -46,7 +46,7 @@ function acceptsRuntimeContext(command: CliCommand): command is CliCommand & Run
 export async function runCli(
   argv: readonly string[],
   io: CliIo,
-  distribution: CliDistribution,
+  services: BuildCliServices,
   context?: Pick<CliApplicationContext, "cwd" | "resolveProjectRoot">,
 ): Promise<void> {
   if (argv.length === 0 || argv[0] === "help" || argv.includes("--help")) {
@@ -83,11 +83,11 @@ export async function runCli(
     const key = `${profile}\u0000${packageRoot}`;
     let opened = runtimeHosts.get(key);
     if (opened === undefined) {
-      opened = distribution.openRuntimeHost(profile, {
+      opened = services.openRuntimeHost(profile, {
         packageRoot,
-        ...(distribution.packageRoot === undefined
+        ...(services.packageRoot === undefined
           ? {}
-          : { distributionPackageRoot: distribution.packageRoot }),
+          : { distributionPackageRoot: services.packageRoot }),
       });
       runtimeHosts.set(key, opened);
     }
@@ -96,15 +96,15 @@ export async function runCli(
   const projectResults = async (requestedProjectRoot?: string) => {
     const projectRoot = requestedProjectRoot ?? await commandProjectRoot();
     const packageRoot = await packageRootForProject(projectRoot);
-    return await distribution.openProjectResults(projectRoot, {
+    return await services.openProjectResults(projectRoot, {
       packageRoot,
-      ...(distribution.packageRoot === undefined ? {} : { distributionPackageRoot: distribution.packageRoot }),
+      ...(services.packageRoot === undefined ? {} : { distributionPackageRoot: services.packageRoot }),
     });
   };
   let runtimeProfile = acceptsRuntimeContext(args) ? args.runtimeProfile : undefined;
   let runtimeFromProject = false;
   if (acceptsRuntimeContext(args) && runtimeProfile === undefined && args.command !== "logs") {
-    const selected = await distribution.resolveProjectRuntime?.(await commandProjectRoot());
+    const selected = await services.resolveProjectRuntime?.(await commandProjectRoot());
     if (selected !== undefined) {
       runtimeProfile = selected.profile;
       runtimeFromProject = true;
@@ -119,11 +119,11 @@ export async function runCli(
       projectRoot: await commandProjectRoot(),
       diagnoseProjectResults: async () => {
         const projectRoot = await commandProjectRoot();
-        return await distribution.diagnoseProjectResults(projectRoot, {
+        return await services.diagnoseProjectResults(projectRoot, {
           packageRoot: await packageRootForProject(projectRoot),
-          ...(distribution.packageRoot === undefined
+          ...(services.packageRoot === undefined
             ? {}
-            : { distributionPackageRoot: distribution.packageRoot }),
+            : { distributionPackageRoot: services.packageRoot }),
         });
       },
       runtimeHost,
@@ -139,13 +139,13 @@ export async function runCli(
         projectRoot: await commandProjectRoot(),
         history: results.history,
         products: results.products,
-        ...(distribution.resolveProductExporter === undefined ? {} : {
-          resolveProductExporter: async (type: Parameters<NonNullable<typeof distribution.resolveProductExporter>>[0]) =>
-            await distribution.resolveProductExporter!(type, {
+        ...(services.resolveProductExporter === undefined ? {} : {
+          resolveProductExporter: async (type: Parameters<NonNullable<typeof services.resolveProductExporter>>[0]) =>
+            await services.resolveProductExporter!(type, {
               packageRoot: await packageRootForProject(await commandProjectRoot()),
-              ...(distribution.packageRoot === undefined
+              ...(services.packageRoot === undefined
                 ? {}
-                : { distributionPackageRoot: distribution.packageRoot }),
+                : { distributionPackageRoot: services.packageRoot }),
             }),
         }),
         write: writeOperational,
@@ -163,7 +163,7 @@ export async function runCli(
       io,
       runtimeHost,
       openProjectResults: projectResults,
-      resolveProjectRuntime: async () => (await distribution.resolveProjectRuntime?.(await commandProjectRoot()))?.profile,
+      resolveProjectRuntime: async () => (await services.resolveProjectRuntime?.(await commandProjectRoot()))?.profile,
       write: writeOperational,
     });
     return;
@@ -171,25 +171,25 @@ export async function runCli(
   const effectiveWorkspaceRoot = await commandProjectRoot();
   const projectResultsRoot = effectiveWorkspaceRoot;
   const sourcePackageRoot = args.packageRoot ?? effectiveWorkspaceRoot;
-  const loadedPackageSet = distribution.discoverSourcePackages === undefined
+  const loadedPackageSet = services.discoverSourcePackages === undefined
     ? undefined
-    : await loadDiscoveredSourcePackages(distribution, {
+    : await loadDiscoveredSourcePackages(services, {
           source: args.source,
           ...(effectiveWorkspaceRoot === undefined ? {} : { workspaceRoot: effectiveWorkspaceRoot }),
           packageRoot: sourcePackageRoot,
-          ...(distribution.packageRoot === undefined
+          ...(services.packageRoot === undefined
             ? {}
-            : { distributionPackageRoot: distribution.packageRoot }),
+            : { distributionPackageRoot: services.packageRoot }),
         });
-  const packageContributions = (loadedPackageSet ?? distribution.bootstrapPackages)
+  const packageContributions = (loadedPackageSet ?? services.bootstrapPackages)
     .map((item) => item.contribution);
-  const compiler = distribution.createCompiler({
+  const compiler = services.createCompiler({
     ...(effectiveWorkspaceRoot === undefined ? {} : { workspaceRoot: effectiveWorkspaceRoot }),
     ...(args.assetRoots.length === 0 ? {} : { assetRoots: args.assetRoots }),
     packageRoot: sourcePackageRoot,
-    ...(distribution.packageRoot === undefined
+    ...(services.packageRoot === undefined
       ? {}
-      : { distributionPackageRoot: distribution.packageRoot }),
+      : { distributionPackageRoot: services.packageRoot }),
     packageContributions,
   });
   const workspace = await compiler.openEntry(args.source);

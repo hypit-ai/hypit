@@ -13,9 +13,9 @@ import type { LinkedProgram, TypedRecord } from "@hypit/protocol";
 
 import { runCli as runCliEngine } from "../../src/main.js";
 import { commandHint } from "@hypit/cli";
-import type { CliDistribution } from "../../src/distribution.js";
+import type { BuildCliServices } from "../../src/services.js";
 import type { CliDiagnostic as RuntimeDoctorDiagnostic } from "../../src/runtime-port.js";
-import { cliDistribution } from "../distribution-scenario.js";
+import { buildCliServices } from "../services-scenario.js";
 
 const io = { write: () => {} };
 const runCli: typeof runCliEngine = async (argv, output, selected) => await runCliEngine(argv, output, selected, {
@@ -34,8 +34,8 @@ function distribution(
   producerError?: string,
   producerOutput?: string,
   producerInlineValueBytes?: number,
-): CliDistribution {
-  return cliDistribution({
+): BuildCliServices {
+  return buildCliServices({
     bootstrapPackages: producerError === undefined && producerOutput === undefined ? [] : [{
       specifier: "@example/run-frontend",
       contribution: {

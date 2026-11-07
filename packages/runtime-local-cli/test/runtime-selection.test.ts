@@ -6,21 +6,21 @@ import test from "node:test";
 
 import { runCliApplication } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
-import type { CliDistribution } from "@hypit/build-cli";
+import type { BuildCliServices } from "@hypit/build-cli";
 import { createBuildCliCommandModules } from "@hypit/build-cli";
 import { resolveProjectRoot } from "@hypit/project";
 import { findRuntimeProfile, selectRuntimeProfile } from "@hypit/runtime-local";
 import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";
-import type { LocalRuntimeCliDistribution } from "@hypit/runtime-local-cli";
+import type { LocalRuntimeCliServices } from "@hypit/runtime-local-cli";
 import type { LocalRuntimeHost } from "@hypit/runtime-local";
-import { cliDistribution } from "./distribution-scenario.js";
+import { buildCliServices } from "./services-scenario.js";
 import { runtimeControl } from "./control-scenario.js";
 
 const runCli = async (
   argv: readonly string[],
   io: CliIo,
-  distribution: CliDistribution,
-  local: Pick<LocalRuntimeCliDistribution, "initialRuntimeProfile"> = {},
+  distribution: BuildCliServices,
+  local: Pick<LocalRuntimeCliServices, "initialRuntimeProfile"> = {},
 ): Promise<void> =>
   await runCliApplication(argv, io, {
     commandModules: [
@@ -49,7 +49,7 @@ test("paths reports project selection, argument override and no selection withou
     const override = join(root, "override.json");
     await writeFile(profile, "{}\n");
     await writeFile(override, "{}\n");
-    const distribution = cliDistribution({
+    const distribution = buildCliServices({
       openRuntimeHost: async (path: string) => ({ resolvePaths: async () => ({ runtimeDataRoot: `${path}.data` }) }),
     });
     const readPaths = async (options: string[] = []) => {
@@ -167,7 +167,7 @@ test("runtime use lets later CLI commands reuse the selected Profile", async () 
     const control = runtimeControl({
       async activity() { return { builds: [], capacity: [] }; },
     });
-    const distribution = cliDistribution({
+    const distribution = buildCliServices({
       openRuntimeHost: async (path: string) => ({
         profile: path,
         resolvePaths: async () => ({}),
@@ -212,7 +212,7 @@ test("runtime init writes and selects the Distribution starter without opening a
       credentials: {},
       endpoints: {},
     };
-    const distribution = cliDistribution({
+    const distribution = buildCliServices({
       openRuntimeHost: async () => {
         opened = true;
         throw new Error("runtime init must not open the Runtime");
@@ -247,7 +247,7 @@ test("runtime status without a selected Profile reports the missing context inst
     await writeFile(join(root, "package.json"), '{"hypit":{"project":true}}\n', "utf8");
     process.chdir(root);
     await assert.rejects(
-      async () => await runCli(["runtime", "status"], { write() {} }, cliDistribution()),
+      async () => await runCli(["runtime", "status"], { write() {} }, buildCliServices()),
       /runtime requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>/u,
     );
   } finally {

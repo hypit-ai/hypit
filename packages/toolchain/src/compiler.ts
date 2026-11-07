@@ -1,4 +1,4 @@
-import type { CliCompilerOptions } from "@hypit/build-cli";
+import type { BuildCliCompilerOptions } from "@hypit/build-cli";
 import { refinementPackagesFromFacets, registerTypeRefinements, RefinementRegistry } from "@hypit/refinement";
 import { ModulePackageRegistry, Compiler } from "@hypit/compiler";
 import {
@@ -15,7 +15,7 @@ import {
 } from "@hypit/loader/node";
 import { NodeFilesystemWorkspace } from "@hypit/workspace/node";
 
-export function createToolchainWorkspace(options: Pick<CliCompilerOptions,
+export function createToolchainWorkspace(options: Pick<BuildCliCompilerOptions,
   "workspaceRoot" | "assetRoots" | "packageRoot" | "distributionPackageRoot">) {
   const packageRoot = options.packageRoot ?? options.workspaceRoot ?? process.cwd();
   return new NodeFilesystemWorkspace({
@@ -46,7 +46,7 @@ export function createToolchainWorkspace(options: Pick<CliCompilerOptions,
 }
 
 /** Assemble the canonical SVML compiler from only the packages selected for this compilation. */
-export function createToolchainCompiler(options: CliCompilerOptions) {
+export function createToolchainCompiler(options: BuildCliCompilerOptions) {
   const modules = new ModulePackageRegistry();
   const declarations = new AuthorDeclarationRegistry();
   const frontends = new AuthorFrontendRegistry();

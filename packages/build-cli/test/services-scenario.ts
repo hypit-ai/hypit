@@ -1,4 +1,4 @@
-import type { CliDistribution } from "../src/distribution.js";
+import type { BuildCliServices } from "../src/services.js";
 
 function unopened(name: string): never {
   throw new Error(`${name} must not open in this CLI scenario`);
@@ -10,10 +10,10 @@ function unopened(name: string): never {
  * A scenario overrides only the ports it expects to reach. Every other port
  * fails at the boundary, so a command cannot silently acquire a broader Host.
  */
-type CliDistributionScenario = Partial<Record<keyof CliDistribution, unknown>>;
+type BuildCliServicesScenario = Partial<Record<keyof BuildCliServices, unknown>>;
 
-export function cliDistribution(overrides: CliDistributionScenario = {}): CliDistribution {
-  const defaults: CliDistribution = {
+export function buildCliServices(overrides: BuildCliServicesScenario = {}): BuildCliServices {
+  const defaults: BuildCliServices = {
     bootstrapPackages: [],
     createWorkspace() { return unopened("workspace"); },
     createCompiler() { return unopened("compiler"); },
@@ -21,5 +21,5 @@ export function cliDistribution(overrides: CliDistributionScenario = {}): CliDis
     async openProjectResults() { return unopened("project results"); },
     async diagnoseProjectResults() { return unopened("project result diagnosis"); },
   };
-  return { ...defaults, ...overrides } as CliDistribution;
+  return { ...defaults, ...overrides } as BuildCliServices;
 }

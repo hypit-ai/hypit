@@ -1,7 +1,7 @@
 import type { CliCommandModule } from "@hypit/cli";
 
 import { runCli } from "./main.js";
-import type { CliDistribution } from "./distribution.js";
+import type { BuildCliServices } from "./services.js";
 import { writeBuildCliRootHelp, writeCliHelp } from "./output.js";
 
 export const buildCliCommandNames = [
@@ -23,7 +23,7 @@ export const buildCliCommandNames = [
 
 /** Bind long-compilation commands to one exact application service assembly. */
 export function createBuildCliCommandModules(
-  distribution: CliDistribution,
+  services: BuildCliServices,
 ): readonly CliCommandModule[] {
   return [{
     format: "hypit.cli-command@1",
@@ -35,7 +35,7 @@ export function createBuildCliCommandModules(
       writeCliHelp(io, topic);
     },
     async run(argv, io, context) {
-      await runCli(argv, io, distribution, context);
+      await runCli(argv, io, services, context);
     },
   }];
 }
@@ -43,7 +43,7 @@ export function createBuildCliCommandModules(
 export { runCli } from "./main.js";
 export { discoverSourcePackages } from "./source-discovery.js";
 export { loadDiscoveredSourcePackages } from "./source-packages.js";
-export type { CliCompilerOptions, CliDistribution } from "./distribution.js";
+export type { BuildCliCompilerOptions, BuildCliServices } from "./services.js";
 export type * from "./runtime-port.js";
 export type {
   CliBuildResultView,

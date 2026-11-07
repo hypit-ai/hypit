@@ -6,15 +6,15 @@ import test from "node:test";
 
 import { commandHint, runCliApplication } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
-import type { CliDistribution } from "@hypit/build-cli";
+import type { BuildCliServices } from "@hypit/build-cli";
 import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";
 import type { ManagedProgramProgress as CliManagedProgramProgress, ManagedProgramReport as CliManagedProgramReport } from "@hypit/runtime-local/programs";
 import type { LocalRuntimeHost, RuntimeController as CliRuntimeController } from "@hypit/runtime-local";
-import { cliDistribution } from "./distribution-scenario.js";
+import { buildCliServices } from "./services-scenario.js";
 
 const io = { write: () => {} };
 const applicationCwd = tmpdir();
-const runCli = async (argv: readonly string[], output: CliIo, selected: CliDistribution) =>
+const runCli = async (argv: readonly string[], output: CliIo, selected: BuildCliServices) =>
   await runCliApplication(argv, output, {
     // This suite mounts the Local Runtime command contribution onto deliberately
     // small Distribution doubles. Assemble its product-specific Host port just
@@ -55,8 +55,8 @@ function controller(
   };
 }
 
-function distribution(calls: string[], reports: readonly CliManagedProgramReport[] = []): CliDistribution {
-  return cliDistribution({
+function distribution(calls: string[], reports: readonly CliManagedProgramReport[] = []): BuildCliServices {
+  return buildCliServices({
     bootstrapPackages: [],
     openRuntimeHost: async (path: string) => ({
       profile: path,
@@ -222,7 +222,7 @@ test("programs down accepts a ready probe-only Program with nothing to stop", as
 });
 
 test("Runtime headlines preserve a running Worker when Programs are down or stop fails", async () => {
-  const selected = cliDistribution({
+  const selected = buildCliServices({
     bootstrapPackages: [],
     openRuntimeHost: async () => ({
       controller: async () => ({
@@ -249,7 +249,7 @@ test("Runtime headlines preserve a running Worker when Programs are down or stop
 
 test("program startup reports actions, not no-op checks", async () => {
   let output = "";
-  const selected = cliDistribution({
+  const selected = buildCliServices({
     bootstrapPackages: [],
     openRuntimeHost: async (path: string) => ({
       profile: path,
@@ -325,7 +325,7 @@ test("programs and runtime startup retain failure evidence in human and JSON out
 test("JSON startup keeps live preparation evidence on stderr and one result on stdout", async () => {
   let output = "";
   let progress = "";
-  const selected = cliDistribution({
+  const selected = buildCliServices({
     bootstrapPackages: [],
     openRuntimeHost: async () => ({
       controller: async () => ({
@@ -350,7 +350,7 @@ test("JSON startup keeps live preparation evidence on stderr and one result on s
 test("runtime up validates the Runtime before it starts Programs", async () => {
   const calls: string[] = [];
   const base = distribution(calls);
-  const selected = cliDistribution({
+  const selected = buildCliServices({
     ...base,
     openRuntimeHost: async (path: string) => ({
       profile: path,
@@ -367,7 +367,7 @@ test("runtime up validates the Runtime before it starts Programs", async () => {
 
 test("runtime status keeps scheduling phases out of the default view", async () => {
   let output = "";
-  const selected = cliDistribution({
+  const selected = buildCliServices({
     bootstrapPackages: [],
     openRuntimeHost: async (path: string) => ({
       profile: path,

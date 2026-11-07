@@ -18,18 +18,23 @@ respective packages and contribute their own CLI roots:
 | --- | --- |
 | `capture` | `@hypit/browser-capture/cli` |
 | `media` | `@hypit/media-local-cli` |
-| `measure` | `@hypit/speech-estimate/cli` |
+| `estimate` | `@hypit/speech-estimate/cli` |
 | `transcribe` | `@hypit/whisperx/cli` |
 | `nle export` | `@hypit/nle-local-cli` |
 | `vocabulary` | `@hypit/toolchain/cli` |
 
-The root executable is the composition root. Its explicit `hypit.cli.use` list installs these command
-contributions under one `hypit` command; `@hypit/toolchain/cli` does not forward or rediscover them.
+The root executable is the composition root. It binds service-aware command modules explicitly;
+pure installed command exports may additionally be selected through `hypit.cli.use`.
+`@hypit/toolchain/cli` does not forward or rediscover either kind.
 Installing or importing an arbitrary Source package never grants it CLI or process authority.
 
 ## Application assembly
 
-`createToolchainDistribution()` supplies the generic CLI Host with the official toolchain choices:
+`createToolchainApplicationServices()` returns two explicit ports: `build` for long compilation and
+Result work, and `localRuntime` for Local Runtime lifecycle commands. The generic CLI Host receives
+neither service object; the executable captures each one in its owning command module.
+
+The application services select the official toolchain choices:
 
 - `createToolchainCompiler()` installs the SVML Frontend and assembles selected package declaration compilers,
   Modules and refinements for one Author compilation;

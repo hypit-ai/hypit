@@ -33,7 +33,7 @@ type LocalCommand = {
 };
 
 /** Product choice consumed only by the Local Runtime command contribution. */
-export type LocalRuntimeCliDistribution = {
+export type LocalRuntimeCliServices = {
   /** Physical Distribution root shown by path diagnostics and passed to the Worker Host. */
   readonly packageRoot?: string;
   readonly initialRuntimeProfile?: CanonicalValue;
@@ -154,17 +154,17 @@ async function runLocal(
   argv: readonly string[],
   io: CliIo,
   context: CliApplicationContext,
-  localDistribution: LocalRuntimeCliDistribution,
+  services: LocalRuntimeCliServices,
 ): Promise<void> {
   const args = parse(argv, context.cwd);
   if (args.root === "_worker") {
-    const workerPackageRoot = args.packageRoot ?? localDistribution.packageRoot;
+    const workerPackageRoot = args.packageRoot ?? services.packageRoot;
     if (args.profile === undefined || args.readyFile === undefined || args.workerOwner === undefined || workerPackageRoot === undefined) {
       throw new Error("internal Worker launch is incomplete");
     }
-    const workerHost = await localDistribution.openLocalRuntimeHost(args.profile, {
+    const workerHost = await services.openLocalRuntimeHost(args.profile, {
       packageRoot: workerPackageRoot,
-      ...(localDistribution.packageRoot === undefined ? {} : { distributionPackageRoot: localDistribution.packageRoot }),
+      ...(services.packageRoot === undefined ? {} : { distributionPackageRoot: services.packageRoot }),
     });
     await workerHost.runWorker(args.readyFile, args.workerOwner,
       args.executionRoot === undefined ? undefined : { dataRoot: args.executionRoot });
@@ -174,9 +174,9 @@ async function runLocal(
   const packageRoot = args.packageRoot ?? projectRoot;
   const selected = args.profile === undefined ? await findRuntimeProfile(projectRoot) : undefined;
   const profile = args.profile ?? selected?.profile;
-  const host = async (path: string): Promise<LocalRuntimeHost> => await localDistribution.openLocalRuntimeHost(path, {
+  const host = async (path: string): Promise<LocalRuntimeHost> => await services.openLocalRuntimeHost(path, {
     packageRoot,
-    ...(localDistribution.packageRoot === undefined ? {} : { distributionPackageRoot: localDistribution.packageRoot }),
+    ...(services.packageRoot === undefined ? {} : { distributionPackageRoot: services.packageRoot }),
   });
   const progress = args.presentation.json ? io.writeProgress : io.writeProgress ?? io.write;
   const onProgress = progress === undefined ? undefined : (event: ManagedProgramProgress): void => {
@@ -186,12 +186,12 @@ async function runLocal(
   };
 
   if (args.root === "runtime" && args.action === "init") {
-    if (localDistribution.initialRuntimeProfile === undefined) {
+    if (services.initialRuntimeProfile === undefined) {
       throw new Error("This Hypit Distribution does not provide an initial Runtime Profile");
     }
     const target = args.profile ?? resolve(projectRoot, "hypit.runtime.json");
     try {
-      await writeFile(target, `${JSON.stringify(localDistribution.initialRuntimeProfile, undefined, 2)}\n`, { encoding: "utf8", flag: "wx" });
+      await writeFile(target, `${JSON.stringify(services.initialRuntimeProfile, undefined, 2)}\n`, { encoding: "utf8", flag: "wx" });
     } catch (error) {
       if (error instanceof Error && "code" in error && error.code === "EEXIST") {
         throw new Error(`Runtime Profile already exists: ${target}; select it with hypit runtime use or choose another path`);
@@ -230,13 +230,13 @@ async function runLocal(
       ...(profile === undefined ? {} : { profile }),
       ...(runtimePaths === undefined ? {} : { runtimeData: runtimePaths.runtimeDataRoot }),
       hostState: hypitHostStateRoot(),
-      ...(localDistribution.packageRoot === undefined ? {} : { distribution: localDistribution.packageRoot }),
+      ...(services.packageRoot === undefined ? {} : { distribution: services.packageRoot }),
     } as const;
     write(io, args, machine, "Hypit paths", "info", [
       ["Project", projectRoot], ["Project state", machine.projectState], ["Runtime Profile", profile ?? "not selected"],
       ["Runtime selection", args.profile === undefined ? selected?.selectionFile ?? "none" : "command argument (this command only)"],
       ["Runtime data", runtimePaths?.runtimeDataRoot ?? "not selected"], ["Host state", machine.hostState],
-      ["Distribution", localDistribution.packageRoot ?? "embedded"],
+      ["Distribution", services.packageRoot ?? "embedded"],
     ]);
     return;
   }
@@ -375,7 +375,7 @@ function writeHelp(argv: readonly string[], io: CliIo): void {
 
 /** Bind Local Runtime commands to their exact Host port at application assembly. */
 export function createLocalRuntimeCliCommandModules(
-  distribution: LocalRuntimeCliDistribution,
+  services: LocalRuntimeCliServices,
 ): readonly CliCommandModule[] {
   return [{
     format: "hypit.cli-command@1",
@@ -383,6 +383,6 @@ export function createLocalRuntimeCliCommandModules(
     commands: ["runtime", "programs", "paths", "_worker"],
     writeRootHelp,
     writeHelp,
-    run: async (argv, io, context) => await runLocal(argv, io, context, distribution),
+    run: async (argv, io, context) => await runLocal(argv, io, context, services),
   }];
 }

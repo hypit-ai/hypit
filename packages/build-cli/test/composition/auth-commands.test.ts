@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 
-import type { CliDistribution } from "../../src/distribution.js";
+import type { BuildCliServices } from "../../src/services.js";
 import { createLocalCredentialControl } from "@hypit/runtime-local";
 import { commandHint } from "@hypit/cli";
-import { cliDistribution } from "../distribution-scenario.js";
+import { buildCliServices } from "../services-scenario.js";
 import { credentialControl, runtimeControl } from "../control-scenario.js";
 import { runCli } from "./control-command-scenario.js";
 
@@ -28,7 +28,7 @@ test("auth opens only one Endpoint credential control, never the execution Runti
     },
     async close() { calls.push("credentials.close"); },
   });
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     openRuntimeHost: async (path: string) => ({
       profile: path,
       openCredentials: async (endpoint: string) => {
@@ -63,7 +63,7 @@ test("auth status exposes declared acquisition without acquiring or revealing cr
     kind: "oauth2-pkce", authorizationEndpoint: "https://service.example/authorize",
     tokenEndpoint: "https://service.example/token", clientId: "example-client", scopes: ["inference"],
   };
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     openRuntimeHost: async () => ({
       openCredentials: async () => ({
         credentials: async () => [
@@ -122,7 +122,7 @@ test("auth login explains an environment-owned credential before asking for a se
     },
     async close() { closed = true; },
   });
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     openRuntimeHost: async (path: string) => ({
       profile: path,
       openCredentials: async () => credentials,
@@ -160,7 +160,7 @@ test("auth can replace and delete a credential whose Store cannot read its old v
     async put(_ref: unknown, input: { secret: string }) { value = input.secret; },
     async delete() { value = ""; return true; },
   };
-  const distribution = cliDistribution({
+  const distribution = buildCliServices({
     openRuntimeHost: async () => ({
       openCredentials: async () => createLocalCredentialControl({ credentialStore, endpoints: [endpoint] }),
     }),

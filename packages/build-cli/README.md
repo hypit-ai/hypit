@@ -3,18 +3,18 @@
 Long-compilation and execution commands for Hypit projects.
 
 This package owns `check`, `plan`, `pricing`, `build`, observation, Result browsing, credentials and
-their human and machine presentations. It receives one explicit `CliDistribution`: the compiler,
+their human and machine presentations. It receives one explicit `BuildCliServices`: the compiler,
 trusted bootstrap packages, Source package discovery, Product/Result access and a Runtime Host needed
 by those commands. The name describes this adapter's service assembly, not a global application
 container.
 
-`createBuildCliCommandModules(distribution)` captures that assembly in a
+`createBuildCliCommandModules(services)` captures that assembly in a
 `hypit.cli-command@1` module. The domain-neutral [`@hypit/cli`](../cli/README.md) Host owns process
 I/O, help routing, command conflict checks and final dispatch. Local Runtime lifecycle commands are
 owned by `@hypit/runtime-local-cli`; media and NLE commands are other sibling modules. Their common
 appearance beneath one `hypit` executable does not merge their services or domain models.
 
-`CliDistribution` and the command surface remain separate axes: another application can reuse this
+`BuildCliServices` and the command surface remain separate axes: another application can reuse this
 long-compilation vocabulary with a different Runtime Host, or omit it entirely. The package does not
 discover application commands, scan arbitrary packages or infer product capabilities from installed
 dependencies.
