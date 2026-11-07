@@ -8,7 +8,7 @@ import {
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
 import { promptTypes } from "@hypit/hypit/prompt";
-import { generationProductPublication } from "@hypit/generation";
+import { productPublication } from "@hypit/hypit/product";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import {
   createFieldModelGenerationFragment,
@@ -90,7 +90,7 @@ function compiler(options: {
       return [
         { name: `${id}.images`, ref: { kind: "component-output", component: id, output: "images" }, type: options.endpoint.returns },
         { name: `${id}.image`, ref: { kind: "component-output", component: id, output: "image" }, type: blobTypes.blob,
-          publication: generationProductPublication },
+          publication: productPublication },
       ];
     },
     async compile({ declaration, resolveReference }) {

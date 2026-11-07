@@ -85,6 +85,11 @@
       "types": "./dist/public/protocol.d.ts",
       "import": "./packages/protocol/src/index.ts"
     },
+    "./product": {
+      "hypit-source": "./packages/product/src/index.ts",
+      "types": "./dist/public/product.d.ts",
+      "import": "./packages/product/src/index.ts"
+    },
     "./author": {
       "hypit-source": "./packages/author/src/index.ts",
       "types": "./dist/public/author.d.ts",

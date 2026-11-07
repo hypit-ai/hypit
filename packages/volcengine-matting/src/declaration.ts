@@ -6,7 +6,7 @@ import {
 } from "@hypit/hypit/author";
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
-import { generationProductPublication } from "@hypit/generation";
+import { productPublication } from "@hypit/hypit/product";
 import {
   createFieldModelPrimaryFragment,
   sealModelFieldBuilder,
@@ -62,7 +62,7 @@ export const portraitMattingAuthorDeclaration: AuthorDeclarationCompiler = {
   bindings(declaration) {
     const id = literal(declaration, "id");
     return [{ name: `${id}.video`, ref: { kind: "component-output", component: id, output: "video" }, type: blobTypes.blob,
-      publication: generationProductPublication }];
+      publication: productPublication }];
   },
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");

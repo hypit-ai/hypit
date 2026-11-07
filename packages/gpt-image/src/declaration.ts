@@ -3,7 +3,7 @@ import { declarationField, type AuthorDeclaration, type AuthorDeclarationChild,
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
 import { promptTypes } from "@hypit/hypit/prompt";
-import { generationProductPublication } from "@hypit/generation";
+import { productPublication } from "@hypit/hypit/product";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import { createFieldModelPrimaryFragment } from "@hypit/generation/model-fields";
 import { gptImageEndpoints, gptImageModuleRef, sealGptImage2Draft } from "./index.js";
@@ -54,7 +54,7 @@ function compiler(): AuthorDeclarationCompiler {
     bindings(declaration) {
       const id = literal(declaration, "id");
       return [{ name: `${id}.image`, ref: { kind: "component-output", component: id, output: "image" }, type: blobTypes.blob,
-        publication: generationProductPublication }];
+        publication: productPublication }];
     },
     async compile({ declaration, resolveReference }) {
       if (declaration.children.length > 16) throw new Error("GPT Image accepts at most 16 Reference children.");

@@ -3,7 +3,7 @@ import { declarationField, type AuthorDeclaration, type AuthorDeclarationChild,
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
 import { promptTypes } from "@hypit/hypit/prompt";
-import { generationProductPublication } from "@hypit/generation";
+import { productPublication } from "@hypit/hypit/product";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import { createFieldModelPrimaryFragment, sealModelFieldBuilder,
   type FieldModelOperation } from "@hypit/generation/model-fields";
@@ -50,7 +50,7 @@ function compiler(options: { declaration: "video" | "preview-video"; endpoint: F
     bindings(declaration) {
       const id = literal(declaration, "id");
       return [{ name: `${id}.video`, ref: { kind: "component-output", component: id, output: "video" }, type: blobTypes.blob,
-        publication: generationProductPublication }];
+        publication: productPublication }];
     },
     async compile({ declaration, resolveReference }) {
       if (declaration.children.length > 7) throw new Error(`${options.endpoint.fields.model} accepts at most 7 reference images.`);

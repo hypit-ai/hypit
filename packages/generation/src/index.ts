@@ -15,8 +15,3 @@ export {
   generatedVideoSetSchema,
 } from "./schema.js";
 export type * from "./types.js";
-
-/** Generation-domain answer for products that enter generation history after execution. */
-export const generationProductPublication = Object.freeze({
-  publisher: "hypit.generation-product@1",
-});

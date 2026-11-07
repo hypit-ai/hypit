@@ -1532,6 +1532,12 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  packages/product:
+    dependencies:
+      '@hypit/hypit':
+        specifier: workspace:^0.4.0
+        version: link:../..
+
   packages/project: {}
 
   packages/prompt:

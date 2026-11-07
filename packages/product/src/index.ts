@@ -1,0 +1,12 @@
+/** Exact publication surface for typed products that outlive one Run. */
+export const productPublisher = "hypit.product@1";
+
+/**
+ * Common publication answer for generated and analyzed products.
+ *
+ * The producing package still owns whether an output is a product, while its Type owner owns
+ * validation and author-format export. This surface keeps no registry of models or result Types.
+ */
+export const productPublication = Object.freeze({
+  publisher: productPublisher,
+});

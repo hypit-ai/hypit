@@ -7,7 +7,7 @@ Runtime. A target is execution evidence, not an instruction to publish or store 
 Publication is no longer a boolean `retain` decision. A producing domain names an exact publisher in
 `PublicationIntent`; Runtime transports that answer but must not infer product status from value shape.
 The current filesystem history still materializes published values beside Build evidence as a migration
-boundary. Separating generation products from Run history is subsequent work, not a second meaning
+boundary. Separating typed products from Run history is subsequent work, not a second meaning
 hidden in this package.
 
 ## Values and file ownership

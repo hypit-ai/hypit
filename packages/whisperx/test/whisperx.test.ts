@@ -3,6 +3,7 @@ import { AuthorDeclarationRegistry, compileAuthorDeclarations } from "@hypit/aut
 import type { AuthorResolvedReference } from "@hypit/author";
 import { sealSpeechEvidenceAudio } from "@hypit/speech-evidence";
 import type { SpeechEvidenceAudio } from "@hypit/speech-evidence";
+import { productPublisher } from "@hypit/hypit/product";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
@@ -67,6 +68,7 @@ test("SVML language reaches an independent transcription request", async () => {
       resolveAsset: () => { throw new Error("No assets expected"); },
     });
     assert.deepEqual(output.components[0]?.outputs, { transcript: "speech.transcript" });
+    assert.equal(output.publications?.[0]?.publication.publisher, productPublisher);
     assert.deepEqual(Object.keys(output.components[0]?.inputs ?? {}).sort(), ["language", "media"]);
     const producer = whisperXComponent.producers.find((item) =>
       item.producer.name === whisperXProducers.request.name);
