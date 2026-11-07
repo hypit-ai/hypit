@@ -25,7 +25,6 @@ import {
 } from "@hypit/timeline-author/reference";
 import { renderTitle, renderTimer, renderFlag, renderStage, renderVeil } from "./render.js";
 import { module, defaults } from "./definition.js";
-import { studioFacet } from "./studio.js";
 const type = (name) => ({ module, name });
 const optionsType = type("Options"),
   itemsType = type("Items");
@@ -435,7 +434,6 @@ export const hypitPackage = {
     ].map((declaration) => createAuthorDeclarationFacet(declaration)),
     ...[...markupDeclarations, ...styles.map((style) => style.markup), ...presenter.markup]
       .map((declaration) => createMarkupDeclarationFacet({ module, declaration })),
-    studioFacet,
   ],
 };
 export default hypitPackage;

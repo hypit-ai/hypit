@@ -167,8 +167,7 @@
         "@hypit/media-local/cli",
         "@hypit/speech-estimate/cli",
         "@hypit/whisperx/cli",
-        "@hypit/video/cli",
-        "@hypit/studio/cli"
+        "@hypit/video/cli"
       ]
     },
     "packageSources": [
@@ -210,8 +209,6 @@
     "check:seedance-package": "node --import tsx scripts/check-independent-seedance.mjs",
     "check:hypihub-package": "node --import tsx scripts/check-independent-hypihub.mjs",
     "check:runtime-packages": "node --import tsx scripts/check-independent-runtime-packages.mjs",
-    "check:author-packages": "node --import tsx scripts/check-independent-author-packages.mjs",
-    "check:component-packages": "node --import tsx scripts/check-independent-components.mjs",
     "pack:distribution": "node scripts/pack-distribution.mjs",
     "check:distribution": "node scripts/check-distribution.mjs",
     "pack:release-candidate": "node scripts/pack-release-candidate.mjs",
@@ -227,7 +224,6 @@
     "test:whisperx-service": "uv run --project packages/provider-whisperx-local/runtime --frozen python -m unittest discover -s packages/provider-whisperx-local/test/service -p \"test_*.py\"",
     "test:image-opencv": "node test/run.mjs environment provider-image-opencv-local",
     "hypit": "node bin/hypit.mjs",
-    "studio": "node bin/hypit.mjs studio",
     "prepack": "npm run build:public-types"
   },
   "engines": {
@@ -264,7 +260,6 @@
     "@hypit/media-local": "workspace:^0.3.0",
     "@hypit/runtime-local": "workspace:^0.2.0",
     "@hypit/video": "workspace:^0.3.0",
-    "@hypit/studio": "workspace:^0.3.0",
     "@hypit/whisperx": "workspace:^0.3.0",
     "@hypit/yt-dlp": "workspace:^0.2.1",
     "@types/node": "24.10.1",

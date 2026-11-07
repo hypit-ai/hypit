@@ -85,7 +85,6 @@ try {
     typeConsumer,
   ]);
   await hypit(["--version"]);
-  await hypit(["studio", "--help"]);
 
   const example = join(distribution, "examples", "semantic-composition");
   for (const name of ["chat.svml", "chat.svs", "hypit.runtime.json"]) {

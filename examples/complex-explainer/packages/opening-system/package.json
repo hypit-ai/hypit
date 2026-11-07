@@ -16,7 +16,6 @@
   "dependencies": {
     "@explainer/visual-language": "file:../visual-language",
     "@hypit/hypit": "workspace:*",
-    "@hypit/studio-companion": "workspace:*",
     "@hypit/visual-track": "workspace:*",
     "@hypit/composition": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.1.0",

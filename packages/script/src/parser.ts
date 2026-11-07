@@ -114,7 +114,7 @@ export function parseScript(
   input: string,
   sourceOffset = 0,
 ): ParsedNarrative {
-  // Source ranges are a public inverse used by Studio and diagnostics. Parse
+  // Source ranges are a public inverse used by authoring hosts and diagnostics. Parse
   // the exact UTF-16 text so CRLF and decomposed Unicode never shift an edit.
   const source = input;
   const fail = (code: string, message: string, offset?: number): never => {

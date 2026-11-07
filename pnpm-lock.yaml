@@ -20,9 +20,6 @@ importers:
       '@hypit/speech-estimate':
         specifier: workspace:^0.1.2
         version: link:packages/speech-estimate
-      '@hypit/studio':
-        specifier: workspace:^0.3.0
-        version: link:packages/studio
       '@hypit/video':
         specifier: workspace:^0.3.0
         version: link:packages/video
@@ -138,9 +135,6 @@ importers:
       '@hypit/spatial':
         specifier: workspace:^0.1.0
         version: link:../../../../packages/spatial
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../../../../packages/studio-companion
       '@hypit/temporal':
         specifier: workspace:^0.1.0
         version: link:../../../../packages/temporal
@@ -171,9 +165,6 @@ importers:
       '@hypit/spatial':
         specifier: workspace:^0.1.0
         version: link:../../../../packages/spatial
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../../../../packages/studio-companion
       '@hypit/temporal':
         specifier: workspace:^0.1.0
         version: link:../../../../packages/temporal
@@ -195,9 +186,6 @@ importers:
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../../../..
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../../../../packages/studio-companion
 
   examples/complex-explainer/packages/visual-language: {}
 
@@ -221,9 +209,6 @@ importers:
       '@hypit/spatial':
         specifier: workspace:^0.1.0
         version: link:../../../../packages/spatial
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../../../../packages/studio-companion
       '@hypit/temporal':
         specifier: workspace:^0.1.0
         version: link:../../../../packages/temporal
@@ -580,9 +565,6 @@ importers:
       '@hypit/speech-evidence':
         specifier: workspace:*
         version: link:../speech-evidence
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../studio-companion
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -879,9 +861,6 @@ importers:
       '@hypit/script':
         specifier: workspace:*
         version: link:../script
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../studio-companion
       sharp:
         specifier: 0.35.4
         version: 0.35.4(@types/node@24.10.1)
@@ -971,9 +950,6 @@ importers:
       '@hypit/recipe':
         specifier: workspace:*
         version: link:../recipe
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../studio-companion
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
@@ -1130,9 +1106,6 @@ importers:
       '@hypit/recipe':
         specifier: workspace:*
         version: link:../recipe
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../studio-companion
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
@@ -1267,9 +1240,6 @@ importers:
       '@hypit/source':
         specifier: workspace:*
         version: link:../source
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../studio-companion
       '@hypit/temporal':
         specifier: workspace:*
         version: link:../temporal
@@ -1311,9 +1281,6 @@ importers:
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../..
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../studio-companion
 
   packages/generation:
     devDependencies:
@@ -1935,9 +1902,6 @@ importers:
       '@hypit/narrative':
         specifier: workspace:^0.1.1
         version: link:../narrative
-      '@hypit/studio-companion':
-        specifier: workspace:^0.1.3
-        version: link:../studio-companion
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
@@ -2434,9 +2398,6 @@ importers:
       '@hypit/recipe':
         specifier: workspace:*
         version: link:../recipe
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../studio-companion
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
@@ -2566,9 +2527,6 @@ importers:
       '@hypit/speech-estimate':
         specifier: workspace:*
         version: link:../speech-estimate
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../studio-companion
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
@@ -2725,89 +2683,6 @@ importers:
         specifier: workspace:*
         version: link:../refinement
 
-  packages/studio:
-    dependencies:
-      '@hypit/audio-program':
-        specifier: workspace:^0.1.0
-        version: link:../audio-program
-      '@hypit/composition':
-        specifier: workspace:^0.2.0
-        version: link:../composition
-      '@hypit/html-playback':
-        specifier: workspace:^0.1.0
-        version: link:../html-playback
-      '@hypit/html-program':
-        specifier: workspace:^0.2.0
-        version: link:../html-program
-      '@hypit/media-local':
-        specifier: workspace:^0.3.0
-        version: link:../media-local
-      '@hypit/media-operations':
-        specifier: workspace:^0.3.0
-        version: link:../media-operations
-      '@hypit/studio-companion':
-        specifier: workspace:^0.1.3
-        version: link:../studio-companion
-      '@hypit/temporal':
-        specifier: workspace:^0.1.1
-        version: link:../temporal
-      '@hypit/timeline':
-        specifier: workspace:^0.1.1
-        version: link:../timeline
-      vite:
-        specifier: 8.2.2
-        version: 8.2.2(@types/node@24.10.1)(esbuild@0.27.7)(tsx@4.21.0)
-    devDependencies:
-      '@hypit/audio-track':
-        specifier: workspace:*
-        version: link:../audio-track
-      '@hypit/caption':
-        specifier: workspace:*
-        version: link:../caption
-      '@hypit/cli':
-        specifier: workspace:*
-        version: link:../cli
-      '@hypit/compiler':
-        specifier: workspace:*
-        version: link:../compiler
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/result':
-        specifier: workspace:*
-        version: link:../result
-      '@hypit/script':
-        specifier: workspace:*
-        version: link:../script
-      '@hypit/timeline-author':
-        specifier: workspace:*
-        version: link:../timeline-author
-      '@hypit/video':
-        specifier: workspace:*
-        version: link:../video
-      '@hypit/visual-track':
-        specifier: workspace:*
-        version: link:../visual-track
-      sharp:
-        specifier: 0.35.4
-        version: 0.35.4(@types/node@24.10.1)
-
-  packages/studio-companion:
-    dependencies:
-      '@hypit/timeline':
-        specifier: workspace:^0.1.1
-        version: link:../timeline
-    devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-
   packages/temporal:
     devDependencies:
       '@hypit/hypit':
@@ -2904,9 +2779,6 @@ importers:
       '@hypit/source':
         specifier: workspace:*
         version: link:../source
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../studio-companion
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
@@ -2953,9 +2825,6 @@ importers:
       '@hypit/script':
         specifier: workspace:*
         version: link:../script
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../studio-companion
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
@@ -3193,9 +3062,6 @@ importers:
       '@hypit/recipe':
         specifier: workspace:*
         version: link:../recipe
-      '@hypit/studio-companion':
-        specifier: workspace:*
-        version: link:../studio-companion
       typescript:
         specifier: 5.9.3
         version: 5.9.3

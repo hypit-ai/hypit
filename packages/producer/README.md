@@ -35,11 +35,9 @@ Author Kit; import only the owner of each responsibility:
 | `@hypit/temporal` | exact duration, rate and relation values and literal parsing |
 | `@hypit/audiovisual` | resolved Source, Occurrence, Picture, Audio, Operator and Programme values |
 | `@hypit/audiovisual-author` | syntax-neutral audiovisual Author Spec compilation |
-| `@hypit/studio-companion` (optional, in Companion code) | editor Item projection, Inspector bindings and executed temporal lineage |
 
-The Author Package keeps `@hypit/hypit` as its framework development dependency. A package that
-contributes a Companion also declares `@hypit/studio-companion` as a development dependency. It
-compiles its activation to JavaScript and publishes only its own files. The active Distribution
+The Author Package keeps `@hypit/hypit` as its framework development dependency. It compiles its activation
+to JavaScript and publishes only its own files. The active Distribution
 supplies these APIs at execution, so a component does not carry a second Core or choose its own
 framework version. This
 package remains the deterministic-handler owner; the public subpaths do not create a second package
@@ -95,16 +93,3 @@ prepared media Sources, `@hypit/picture-transition` for a two-Picture Operator, 
 `@hypit/picture-filter` for a unary Picture Operator. A new component owns its local mechanics and
 publishes the corresponding typed Source or Operator; it does not recreate Track, Composition,
 Timeline, the framework loader or Runtime.
-
-## Optional Studio presentation
-
-A component can enter the audiovisual Programme without custom editor behavior. When it
-needs meaningful projected Items or Inspector fields, put a Companion in a separate file and
-merge `createStudioTrackCompanionFacet(companions)` into the same activation's `facets`.
-Retain the existing Module, Producer and Author Declaration contributions. The selected project's package
-supplies the extension; do not edit Studio's registry or add editor metadata to the domain Manifest.
-
-The [Studio Companion README](../studio-companion/README.md) owns the working declaration and activation
-example. Expose any required deterministic schedule/program values through actual declaration outputs,
-and retain the real temporal input edges. The Companion describes those facts and writable Source
-parameters; it neither renders the video nor performs Source filesystem writes.

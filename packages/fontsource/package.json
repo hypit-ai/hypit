@@ -15,12 +15,10 @@
     "activation": "./src/activation.ts"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0",
-    "@hypit/studio-companion": "workspace:^0.1.3"
+    "@hypit/hypit": "workspace:^0.4.0"
   },
   "devDependencies": {
-    "@hypit/hypit": "workspace:*",
-    "@hypit/studio-companion": "workspace:*"
+    "@hypit/hypit": "workspace:*"
   },
   "dependencies": {
     "@hypit/media": "workspace:^0.2.0"

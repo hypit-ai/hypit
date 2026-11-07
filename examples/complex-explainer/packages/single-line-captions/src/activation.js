@@ -1,6 +1,4 @@
-import { captionFineStudioTrackCompanions } from "@hypit/caption-fine/studio";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createStudioTrackCompanionFacet } from "@hypit/studio-companion";
 import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createAuthorDeclarationFacet, sealGraphFragment } from "@hypit/hypit/author";
 import { canonicalize } from "@hypit/hypit/protocol";
@@ -113,12 +111,6 @@ export const hypitPackage = {
   modules: [{ manifest }],
   facets: [
     createProducerPackageFacet(producers),
-    createStudioTrackCompanionFacet(
-      captionFineStudioTrackCompanions.map((companion) => ({
-        ...companion,
-        output: { ...companion.output, modules: [module] },
-      })),
-    ),
     createAuthorDeclarationFacet(declaration),
     createMarkupDeclarationFacet({
       module,

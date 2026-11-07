@@ -31,7 +31,7 @@ Shared ordinary modules under `src/shared/` own html-visual assembly and media s
 
 ## Companion and sound
 
-`src/studio.js` declares scene identity, concise descriptions, temporal lineage and drawing-order controls through Hypit's public Companion facet. Studio does not know these scene names. Detailed design remains in the package instead of exposing every internal dimension.
+Detailed design remains in the package instead of exposing every internal dimension through framework dispatch.
 
 All outputs are visual contributions. Music and pixel effects are explicit Audio Tracks in the main Source; these scenes neither play hidden audio nor infer routing.
 

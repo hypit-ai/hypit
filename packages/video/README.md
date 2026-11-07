@@ -12,7 +12,7 @@ these installed defaults from their owner without relying on node_modules hoisti
 remain higher priority. The root explicitly declares the command packages it invokes.
 
 It is deliberately **not** a general video utility package. Browser capture, local media inspection,
-speech measurement, WhisperX transcription and Studio snapshots are owned by their respective
+speech measurement and WhisperX transcription are owned by their respective
 packages and contribute their own CLI roots:
 
 | Command | Owner |
@@ -21,7 +21,6 @@ packages and contribute their own CLI roots:
 | `media` | `@hypit/media-local/cli` |
 | `measure` | `@hypit/speech-estimate/cli` |
 | `transcribe` | `@hypit/whisperx/cli` |
-| `studio`, `snapshot` | `@hypit/studio/cli` |
 | `nle export` | `@hypit/video/cli` |
 | `vocabulary` | `@hypit/video/cli` |
 

@@ -1,7 +1,5 @@
-import { sceneCompanions } from "./studio.js";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createStudioTrackCompanionFacet } from "@hypit/studio-companion";
 import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
 import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/author";
@@ -274,7 +272,6 @@ export const hypitPackage = {
   facets: [
     createProducerPackageFacet(component.producers ?? []),
     createRefinementPackageFacet(component.refinements ?? []),
-    createStudioTrackCompanionFacet(sceneCompanions(module, tags)),
     ...declarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
     ...Object.entries(tags).map(([tag, spec]) => createMarkupDeclarationFacet({
       module, declaration: { name: spec.name, tag, body: "structured" },

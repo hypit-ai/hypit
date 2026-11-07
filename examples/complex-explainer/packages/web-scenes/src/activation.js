@@ -5,8 +5,6 @@ import { renderSemanticWorkshop } from "./scenes/semantic-time/index.js";
 import { renderDeliveryWorkshop } from "./scenes/delivery/index.js";
 import { renderCodeJourney } from "./scenes/code-route/index.js";
 import { renderOutro } from "./scenes/outro/index.js";
-import { sceneCompanions } from "./studio.js";
-import { createStudioTrackCompanionFacet } from "@hypit/studio-companion";
 import { renderRoad } from "./scenes/editor-route/index.js";
 import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
@@ -399,7 +397,6 @@ export const hypitPackage = {
   facets: [
     createProducerPackageFacet(component.producers ?? []),
     createRefinementPackageFacet(component.refinements ?? []),
-    createStudioTrackCompanionFacet(sceneCompanions(module, tags)),
     ...declarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
     ...Object.entries(tags).map(([tag, spec]) => createMarkupDeclarationFacet({
       module, declaration: { name: spec.name, tag, body: "structured" },

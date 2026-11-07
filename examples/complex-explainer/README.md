@@ -41,7 +41,6 @@ After extraction, `.hypit/media.tar.gz` can be removed to reclaim the archive's 
 cd productions/explainer
 hypit check authors/main.svml
 hypit plan authors/main.svml --target complete-film.video --runtime ../../hypit.runtime.json
-hypit studio --source authors/main.svml --target complete-film.video --runtime ../../hypit.runtime.json
 ```
 
 Open the printed **Comments** URL (`#comments`) to review the composition before export and leave
@@ -97,7 +96,7 @@ Read the [Treatment](productions/explainer/TREATMENT.md) and
 beyond a list of objects, the style change, scene boundaries, semantic events, framing and review.
 The [presenter-led visual explainer playbook](https://github.com/hypit-ai/hypit/blob/main/skills/hypit/references/playbooks/formats/presenter-led-explainer.md)
 draws out the whole-work relationship for other productions. Components use public
-Author Package and Companion interfaces; Studio and Core contain no dispatch for this example.
+Author Package interfaces; Core contains no dispatch for this example.
 
 ## Materials and editorial copy
 

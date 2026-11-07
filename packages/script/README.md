@@ -11,8 +11,7 @@ lossless Author Document. The Script package alone owns body parsing, shape vali
 Records and source ranges. Core and Markup do not know that Script, Segment or Narrative exist.
 
 The official video Distribution installs this package as an ordinary default npm dependency. Script
-owns its parser, formatter, source inverse and Studio temporal-domain facet; `@hypit/script/studio`
-exposes that facet for reuse. Packages that need Script-specific parsing depend on this package,
+owns its parser, formatter and source inverse. Packages that need Script-specific parsing depend on this package,
 while consumers of the result depend on the public Narrative, Caption and Text values instead.
 
 ```svml
@@ -56,7 +55,7 @@ The semantic projection is intentionally not a printer: comments, trivia and equ
 not enter Narrative. Reversible editing comes from retaining the original Author Document alongside
 the projection. Compiler provenance associates the whole declaration with Narrative and Caption,
 each Segment with its three narrow views, and each Selection or Moment with its exact marker range.
-Studio therefore edits the owning source range instead of regenerating Script from semantic values.
+An authoring host therefore edits the owning source range instead of regenerating Script from semantic values.
 
 The declaration exports one full Narrative plus narrow, immutable views:
 
@@ -102,7 +101,7 @@ Use groups where the expression should be treated together; ordinary prose needs
 Caption Styles choose whether to highlight, reveal or keep the text steady.
 
 In a shared side, markers and display attributes do not enter either text projection. Its speech
-Tokens retain offsets into the actually written left-hand text, so Studio can move an anchor inside
+Tokens retain offsets into the actually written left-hand text, so an authoring host can move an anchor inside
 `<组@{beat!}件化|>` without expanding the shorthand. Attributes still annotate the preceding display
 word, not the whole group. Whitespace-only speech is omitted; a group with no spoken text on either
 side is invalid. This adds no new public value type or protocol version.

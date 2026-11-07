@@ -9,7 +9,6 @@ From this production directory:
 ```sh
 hypit check authors/main.svml
 hypit plan authors/main.svml --target complete-film.video
-hypit studio --source authors/main.svml --target complete-film.video
 ```
 
 The accepted performances and supporting media are ordinary project assets selected by the Author Source.
