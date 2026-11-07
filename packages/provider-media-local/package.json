@@ -1,0 +1,41 @@
+{
+  "name": "@hypit/provider-media-local",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@hypit/audio-program": "workspace:^0.1.0",
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/media-delivery": "workspace:^0.1.0",
+    "@hypit/media-local": "workspace:^0.3.0",
+    "@hypit/speech-evidence": "workspace:^0.2.0"
+  },
+  "peerDependencies": {
+    "@hypit/hypit": "workspace:^0.4.0",
+    "@hypit/runtime-local": "workspace:^0.2.0"
+  },
+  "devDependencies": {
+    "@hypit/audio-gain": "workspace:*",
+    "@hypit/audio-preserve-pitch": "workspace:*",
+    "@hypit/blob": "workspace:*",
+    "@hypit/endpoint": "workspace:*",
+    "@hypit/executor": "workspace:*",
+    "@hypit/hypit": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/resource-store": "workspace:*",
+    "@hypit/runtime": "workspace:*",
+    "@hypit/runtime-local": "workspace:*",
+    "@hypit/temporal": "workspace:*"
+  }
+}

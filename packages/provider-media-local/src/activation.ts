@@ -14,7 +14,7 @@ import { createLocalMediaProvider } from "./provider.js";
 import { localMediaToolchainProgram } from "./program.js";
 
 const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
-  use: "@hypit/media-local",
+  use: "@hypit/provider-media-local",
   activate(context) {
     if (context.pool === undefined) throw new Error("local media Provider Pool is required");
     const config = runtimeConfigObject(context.config, "local media");

@@ -1,9 +1,13 @@
-export { createLocalMediaProvider, localMediaProviderModuleRef } from "./provider.js";
-export type { CreateLocalMediaProviderOptions } from "./provider.js";
-export { supportsLocalAudioProgram } from "./support.js";
 export { createMediaExecutionEnvironment } from "./environment.js";
 export type { CreateMediaExecutionEnvironmentOptions } from "./environment.js";
-export { executeMuxProgramMedia, executeRenderTimelineAudio } from "./execute.js";
+export {
+  executeExtractAudio,
+  executeExtractFrame,
+  executeInspectMedia,
+  executeMuxProgramMedia,
+  executeProjectSpeechEvidenceAudio,
+  executeRenderTimelineAudio,
+} from "./execute.js";
 export { inspectMediaFile } from "./execute.js";
 export {
   importLocalMediaAsset,
@@ -20,3 +24,9 @@ export type {
   MediaExecutionEnvironment,
   MediaOperationResult,
 } from "./execute.js";
+export {
+  assertLocalAudioProgramSupported,
+  assertLocalSpeechEvidenceAudioSupported,
+} from "./support.js";
+export { probeMediaToolchain } from "./toolchain.js";
+export type { MediaToolchainState } from "./toolchain.js";

@@ -1,18 +1,17 @@
 # `@hypit/media-local`
 
-Trusted local ffprobe/ffmpeg owner. It exposes the same concrete local-media behavior through three
-orthogonal ports:
+Trusted direct ffprobe/ffmpeg engine. It exposes three direct ports:
 
-- a Provider port implements material operations, audio Programme rendering and media delivery Needs
-  against a Build's ResourceStore;
+- the main and `@hypit/media-local/execution` entries execute byte operations against an explicitly
+  supplied `ResourceStore`;
 - `@hypit/media-local/files` inspects or creates files explicitly named by an authoring tool;
 - `@hypit/media-local/cli` presents that file port as `hypit media`.
 
-The Provider is Runtime configuration and is never imported by author `.svml`. The file and CLI ports
-do not manufacture a Graph, Build, Result or Runtime state.
+None of these ports creates a Graph, Build, Result, Endpoint or Runtime state. The optional Runtime
+adapter is the separate `@hypit/provider-media-local` package.
 
 An embedding that already owns a `ResourceStore` may also construct the same local execution
-environment directly. This is the byte/tool boundary reused by the Provider and by direct delivery;
+environment directly. This is the byte/tool boundary reused by direct delivery and optional adapters;
 it does not infer a project directory or create Runtime state:
 
 ```ts
@@ -24,12 +23,12 @@ const execution = createMediaExecutionEnvironment(resources, {
 });
 ```
 
-This Provider owns its FFmpeg commands, media inspection, animated-WebP handling and audio-program
-execution. They are implementation details of this machine executor, not a shared domain package or
-a root `@hypit/hypit` facade. Another Provider implements the same Needs against the public operation
-contracts rather than importing this Provider's process code.
+This package owns its FFmpeg commands, media inspection, animated-WebP handling and audio-program
+execution. They are implementation details of this direct machine executor, not shared domain models
+or a root `@hypit/hypit` facade. A Provider may adapt these operations to public Needs without moving
+Endpoint policy back into this package.
 
-The local process runner is shared by the Provider and file ports, so bounds, shell avoidance and
+The local process runner is shared by execution and file ports, so bounds, shell avoidance and
 failure reporting do not fork into two executors. Inspection and extraction contracts remain in
 `@hypit/media`, audio Programme execution in `@hypit/audio-program`, and terminal assembly
 in `@hypit/media-delivery`; paths, subprocesses and ffprobe output remain here.
@@ -118,27 +117,20 @@ consume a `<speech:Transcript>` SVML Source; exact decoding and phrase matching 
 `@hypit/speech-evidence`, while
 this package only joins those ranges to file decoding.
 
-```ts
-import { createLocalMediaProvider } from "@hypit/media-local";
+## Direct media execution
 
-const media = createLocalMediaProvider({ instance: "media.local", defaultConcurrency: 1 });
-```
-
-An embedding adds `media` to a complete explicit Runtime assembly and grants `process:media`; the
-declarative form selects this package through the Runtime Profile.
-
-The Endpoint:
+The engine:
 
 - bounds subprocess duration and metadata response size; decoded frame facts are consumed one compact
   line at a time, so long media does not require one complete frame JSON document in memory;
 - invokes binaries without a shell;
-- enumerates all streams while the Runtime-owned toolchain reports its executable versions separately;
+- enumerates all streams while toolchain inspection reports executable versions separately;
 - publishes presentation endpoints only when decoded-unit facts support the final boundary;
   it does not promote cadence estimates or gap thresholds into exact timing;
 - maps explicit stream indexes into ffmpeg instead of relying on `0:v:0` / `0:a:0` guesses;
 - evaluates each selected signal through its Prepared Media map onto the shared local domain when a concrete operation needs bytes;
 - preserves source A/V offset as transparent visual gaps or silent audio gaps without reconstructing
-  span authority inside the Provider;
+  span authority inside the executor;
 - emits exactly the requested terminal signal: a silent CFR visual or an exact-length 48 kHz stereo PCM WAV;
 - evaluates source-preserving trim/retime relations privately, extracts generic reference audio and extracts exact source frames;
 - renders a supported explicit `AudioProgram` into one exact-length 48 kHz stereo PCM `TimelineAudio`;
@@ -156,7 +148,7 @@ that plan; range projection and sample reading retain the same sided evaluator i
 relations therefore cannot acquire a separate demand interpretation, and structural Map checks do not run once per output sample.
 A selected source may still be decoded as a complete canonical PCM track in this first implementation; that execution choice does
 not widen the plan or become Programme metadata. Only the final `TimelineAudio`
-Artifact enters the Build resource gateway; decoder intermediates are not Results.
+Artifact enters the supplied resource gateway; decoder intermediates remain request-private.
 
 Private visual evaluation preserves alpha across trim/retime: transparent input becomes
 VP9 / `yuva420p` WebM, while opaque input uses H.264 / `yuv420p` MP4. The input pixel format and WebM alpha metadata
@@ -172,18 +164,8 @@ prepared-time relation rather than an FFmpeg operation identity.
 
 Timeline construction consumes PreparedMedia's exact Extent; a Visual Clip or project scene requests
 its transparent picture according to the authored relationship. The
-local HTML Provider extracts alpha-preserving PNGs and composites them against the authored
+local HTML renderer extracts alpha-preserving PNGs and composites them against the authored
 Canvas and lower visual layers before encoding the final MP4.
-
-The Runtime Adapter declares the selected `ffmpeg`/`ffprobe` pair as an external, non-daemon Program.
-Its probe checks that the selected executables start in the media execution environment. It does not
-guarantee every codec or filter for every task; an unsupported operation reports FFmpeg’s actual error. Custom paths
-remain valid; the package neither pins a semantic Capability to one FFmpeg version nor mutates a
-system package manager.
-
-The reusable byte operations—inspection and extraction—also opt into transient authoring execution. Speech-evidence projection,
-timeline-audio rendering and final muxing remain Build-only. This is declared per capability; the
-Runtime and Studio contain no media capability allowlist.
 
 Visual and audio requests independently consume their own Prepared Media member map. Either selected
 signal may have established the shared domain: an audio-authoritative A/V value therefore yields
@@ -198,7 +180,7 @@ execution path. Selected source streams are decoded once per request to canonica
 the Renderer reads them through a bounded page cache, evaluates the closed signal graph and adds the resulting
 signals in output blocks. The AudioProgram is one closed signal graph.
 It does not infer pitch-preserving stretch from a temporal relation: such a
-reconstruction policy belongs to the mapped nested Programme use and has its own package owner. The Provider
+reconstruction policy belongs to the mapped nested Programme use and has its own package owner. The renderer
 implements `@hypit/audio-preserve-pitch` PreservePitch when that use has a direct one-media-leaf child Programme and a
 complete positive-affine, non-looping Mapping;
 its source trim keeps exact rational boundaries through Map composition and uses Temporal's shared nearest-boundary
@@ -206,3 +188,9 @@ rule on the 48 kHz grid. Only the final FFmpeg tempo parameter is floating point
 Other relations, child Programme shapes or reconstruction formats are accurately unsupported rather than silently resampled.
 Speech-evidence projection remains intentionally narrower and reports its positive-affine, non-looping
 signal boundary instead of rewriting the preserved media relation.
+
+## Optional Runtime adapter
+
+`@hypit/provider-media-local` maps these direct operations to Endpoint capabilities, declares which
+operations are transient, owns Runtime capacity, and diagnoses explicitly selected tool paths. Direct
+NLE export, file import and authoring commands do not load that adapter.

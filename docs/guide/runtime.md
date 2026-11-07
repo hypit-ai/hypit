@@ -46,7 +46,7 @@ A small local-processing Profile looks like this:
   "dataRoot": ".hypit/runtimes/local",
   "credentials": {},
   "endpoints": {
-    "media.local": { "use": "@hypit/media-local" }
+    "media.local": { "use": "@hypit/provider-media-local" }
   },
   "bindings": {}
 }

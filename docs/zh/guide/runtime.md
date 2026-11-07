@@ -43,7 +43,7 @@ hypit runtime init
   "dataRoot": ".hypit/runtimes/local",
   "credentials": {},
   "endpoints": {
-    "media.local": { "use": "@hypit/media-local" }
+    "media.local": { "use": "@hypit/provider-media-local" }
   },
   "bindings": {}
 }

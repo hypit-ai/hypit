@@ -14,15 +14,12 @@
     "dist",
     "README.md"
   ],
-  "hypit": {
-    "activation": "./src/activation.ts"
-  },
   "dependencies": {
     "@hypit/audio-gain": "workspace:^0.1.0",
     "@hypit/audio-program": "workspace:^0.1.0",
     "@hypit/audio-preserve-pitch": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.2.0",
-    "@hypit/media-asset": "workspace:*",
+    "@hypit/media-asset": "workspace:^0.1.0",
     "@hypit/media-delivery": "workspace:^0.1.0",
     "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/speech-evidence": "workspace:^0.2.0",
@@ -30,18 +27,13 @@
     "sharp": "0.35.4"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0",
-    "@hypit/runtime-local": "workspace:^0.2.0"
+    "@hypit/hypit": "workspace:^0.4.0"
   },
   "devDependencies": {
     "@hypit/blob": "workspace:*",
-    "@hypit/endpoint": "workspace:*",
     "@hypit/media": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/runtime": "workspace:*",
-    "@hypit/runtime-local": "workspace:*",
     "@hypit/speech-evidence": "workspace:*",
-    "@hypit/hypit": "workspace:*",
-    "@hypit/executor": "workspace:*"
+    "@hypit/hypit": "workspace:*"
   }
 }

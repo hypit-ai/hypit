@@ -7,8 +7,8 @@ import {
   executeMuxProgramMedia,
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
-} from "./execute.js";
-import type { MediaExecutionEnvironment, MediaOperationResult } from "./execute.js";
+} from "@hypit/media-local/execution";
+import type { MediaExecutionEnvironment, MediaOperationResult } from "@hypit/media-local/execution";
 import { audioProgramCapabilities } from "@hypit/audio-program";
 import { mediaDeliveryCapabilities } from "@hypit/media-delivery";
 import { speechEvidenceCapabilities, speechEvidenceTypes } from "@hypit/speech-evidence";
@@ -16,9 +16,9 @@ import { defineEndpoint } from "@hypit/hypit/endpoint";
 import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
 import type { Value } from "@hypit/hypit/protocol";
 import { supportsLocalAudioProgram, supportsLocalSpeechEvidenceAudio } from "./support.js";
-import { createMediaExecutionEnvironment } from "./environment.js";
+import { createMediaExecutionEnvironment } from "@hypit/media-local/execution";
 
-export const localMediaProviderModuleRef = { name: "@hypit/media-local", version: "1" } as const;
+export const localMediaProviderModuleRef = { name: "@hypit/provider-media-local", version: "1" } as const;
 
 export type CreateLocalMediaProviderOptions = {
   readonly instance?: string;

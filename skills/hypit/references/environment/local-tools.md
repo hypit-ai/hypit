@@ -91,7 +91,7 @@ actual paths into the selected Endpoint. For example, replace these illustrative
 {
   "endpoints": {
     "media.local": {
-      "use": "@hypit/media-local",
+      "use": "@hypit/provider-media-local",
       "config": {
         "ffmpegPath": "/opt/media/bin/ffmpeg",
         "ffprobePath": "/opt/media/bin/ffprobe"

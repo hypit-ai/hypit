@@ -3,7 +3,7 @@
   "dataRoot": ".hypit/execution",
   "endpoints": {
     "media.local": {
-      "use": "@hypit/media-local",
+      "use": "@hypit/provider-media-local",
       "config": {
         "defaultConcurrency": 2
       }

@@ -59,7 +59,7 @@ A complete minimal Profile for credential-free local media work is:
   "credentials": {},
   "endpoints": {
     "media.local": {
-      "use": "@hypit/media-local"
+      "use": "@hypit/provider-media-local"
     }
   },
   "bindings": {}

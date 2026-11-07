@@ -86,7 +86,7 @@ function run(
   });
 }
 
-/** Shared bounded process boundary for the Provider and direct-file ports of local media. */
+/** Shared bounded process boundary for execution and direct-file ports of local media. */
 export async function runBoundedMediaProcess(options: {
   readonly executable: string;
   readonly argv: readonly string[];

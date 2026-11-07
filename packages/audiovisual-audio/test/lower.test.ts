@@ -17,7 +17,7 @@ import {
   type ProgramSource,
 } from "@hypit/audiovisual";
 import { prepareMedia } from "@hypit/media";
-import { supportsLocalAudioProgram } from "@hypit/media-local";
+import { supportsLocalAudioProgram } from "@hypit/provider-media-local";
 import { canonicalize } from "@hypit/hypit/protocol";
 import {
   exactTemporalValue,

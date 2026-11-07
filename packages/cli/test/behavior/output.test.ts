@@ -138,7 +138,7 @@ test("plan names the Provider and price page behind each request, and points at 
       pricing: { kind: "page", url: "https://hypit.ai/commercial/pricing/" },
       pending: [],
     },
-    { capability: "@hypit/media@1#inspect", readiness: "concrete", pending: [], resolution: "resolved", support: "supported", endpoint: "media.local", use: "@hypit/media-local", pricing: { kind: "local" } },
+    { capability: "@hypit/media@1#inspect", readiness: "concrete", pending: [], resolution: "resolved", support: "supported", endpoint: "media.local", use: "@hypit/provider-media-local", pricing: { kind: "local" } },
     { capability: "@hypit/whisperx@1#whisperx-transcription", readiness: "concrete", pending: [], resolution: "resolved", support: "supported", endpoint: "whisperx.remote", use: "@hypit/provider-example" },
     {
       capability: "@hypit/gpt-image@1#gpt-image-2",

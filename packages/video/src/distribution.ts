@@ -63,7 +63,7 @@ export function createVideoDistribution(options: VideoDistributionOptions = {}):
           },
         },
         "media.local": {
-          use: "@hypit/media-local",
+          use: "@hypit/provider-media-local",
         },
         "html.local": {
           use: "@hypit/provider-html-local",

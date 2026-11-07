@@ -2,8 +2,6 @@ import { isPointwiseOperatorTemporalSupport, verifyAudioProgram } from "@hypit/a
 import type { AudioProgram } from "@hypit/audio-program";
 import { readAudioGainProgram } from "@hypit/audio-gain";
 import { readPreservePitch } from "@hypit/audio-preserve-pitch";
-import type { EndpointSupport } from "@hypit/hypit/endpoint";
-import type { CanonicalValue } from "@hypit/hypit/protocol";
 import { verifyPreparedAudioSource } from "@hypit/media";
 import {
   assertTemporalMap,
@@ -12,10 +10,6 @@ import {
 } from "@hypit/temporal";
 import type { TemporalMap } from "@hypit/temporal";
 import { planDirectProgrammeReconstruction } from "./audio-render.js";
-
-function unsupported(reason: string): EndpointSupport {
-  return { status: "unsupported", reason };
-}
 
 function assertSupportedAudioProgram(program: AudioProgram): void {
   if (program.sampling.sampleRate !== 48_000) {
@@ -55,40 +49,38 @@ function assertSupportedAudioProgram(program: AudioProgram): void {
   }
 }
 
-/** Request-local capability decision owned by this local signal renderer. */
-export function supportsLocalAudioProgram(constraints: CanonicalValue): EndpointSupport {
-  const program = (constraints as { readonly program?: unknown }).program;
+/** Validate the exact AudioProgram subset implemented by this local signal renderer. */
+export function assertLocalAudioProgramSupported(program: unknown): asserts program is AudioProgram {
   try {
     verifyAudioProgram(program);
   } catch (error) {
-    return unsupported(`Invalid AudioProgram: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Invalid AudioProgram: ${error instanceof Error ? error.message : String(error)}`);
   }
   try {
-    assertSupportedAudioProgram(program as AudioProgram);
+    assertSupportedAudioProgram(program);
   } catch (error) {
-    return unsupported(`AudioProgram capability is unsupported: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`AudioProgram capability is unsupported: ${error instanceof Error ? error.message : String(error)}`);
   }
-  return { status: "supported" };
 }
 
-/** Speech projection has its own signal boundary even when it consumes the same Prepared Media map. */
-export function supportsLocalSpeechEvidenceAudio(constraints: CanonicalValue): EndpointSupport {
-  const request = constraints as { readonly source?: unknown; readonly preparation?: unknown };
-  const source = request.source;
-  const preparation = request.preparation as TemporalMap;
+/** Validate the narrower signal boundary implemented by local speech projection. */
+export function assertLocalSpeechEvidenceAudioSupported(
+  source: unknown,
+  preparation: unknown,
+): void {
+  const map = preparation as TemporalMap;
   try {
     verifyPreparedAudioSource(source);
-    assertTemporalMap(preparation);
+    assertTemporalMap(map);
   } catch (error) {
-    return unsupported(`Invalid speech-evidence audio request: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Invalid speech-evidence audio request: ${error instanceof Error ? error.message : String(error)}`);
   }
-  if (preparation.stages.at(-1)!.source.id !== source.sourceDomain.id) {
-    return unsupported("Speech-evidence preparation does not end at its selected audio source.");
+  if (map.stages.at(-1)!.source.id !== source.sourceDomain.id) {
+    throw new Error("Speech-evidence preparation does not end at its selected audio source.");
   }
-  if (preparation.stages.some((stage) =>
+  if (map.stages.some((stage) =>
     stage.pieces.some((piece) => !isAffineTemporalMapPiece(piece)
       || piece.wrap !== undefined || piece.rate.numerator <= 0))) {
-    return unsupported("Speech-evidence audio requires positive affine, non-looping Prepared Media relations.");
+    throw new Error("Speech-evidence audio requires positive affine, non-looping Prepared Media relations.");
   }
-  return { status: "supported" };
 }

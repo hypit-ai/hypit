@@ -32,9 +32,9 @@ import {
 /**
  * Where the bytes live and which binaries transform them.
  *
- * These byte operations are written once behind an Artifact gateway. The local Provider supplies
- * the Build's ResourceStore and the ffmpeg on its PATH. Another execution owner may reuse the same
- * algorithms with a different gateway and tool bundle; nothing here claims a Provider or deployment.
+ * These byte operations are written once behind an Artifact gateway. A direct caller supplies the
+ * ResourceStore and selected ffmpeg toolchain. An optional adapter may reuse the same algorithms;
+ * nothing here claims an Endpoint, Runtime or deployment.
  */
 export type MediaArtifactGateway = {
   get(source: BlobRef): Promise<Uint8Array | undefined>;
@@ -56,7 +56,7 @@ export type MediaExecutionEnvironment = {
 
 /**
  * A request-private Artifact gateway for decoder working files. Reads fall
- * through to authored resources; writes never enter the Build's repository.
+ * through to authored resources; writes never enter the caller's retained repository.
  */
 async function privateMediaExecutionEnvironment(
   env: MediaExecutionEnvironment,

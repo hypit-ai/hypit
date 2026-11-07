@@ -329,9 +329,9 @@ importers:
       '@hypit/hypit':
         specifier: workspace:^0.4.0
         version: link:../..
-      '@hypit/media-local':
+      '@hypit/provider-media-local':
         specifier: workspace:^0.1.0
-        version: link:../media-local
+        version: link:../provider-media-local
 
   packages/audiovisual-author:
     dependencies:
@@ -1165,7 +1165,7 @@ importers:
         specifier: workspace:^0.2.0
         version: link:../media
       '@hypit/media-asset':
-        specifier: workspace:*
+        specifier: workspace:^0.1.0
         version: link:../media-asset
       '@hypit/media-delivery':
         specifier: workspace:^0.1.0
@@ -1186,24 +1186,12 @@ importers:
       '@hypit/blob':
         specifier: workspace:*
         version: link:../blob
-      '@hypit/endpoint':
-        specifier: workspace:*
-        version: link:../endpoint
-      '@hypit/executor':
-        specifier: workspace:*
-        version: link:../executor
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../..
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      '@hypit/runtime-local':
-        specifier: workspace:*
-        version: link:../runtime-local
 
   packages/mimo-speech:
     dependencies:
@@ -1868,6 +1856,58 @@ importers:
         specifier: workspace:*
         version: link:../runtime-local
 
+  packages/provider-media-local:
+    dependencies:
+      '@hypit/audio-program':
+        specifier: workspace:^0.1.0
+        version: link:../audio-program
+      '@hypit/media':
+        specifier: workspace:^0.2.0
+        version: link:../media
+      '@hypit/media-delivery':
+        specifier: workspace:^0.1.0
+        version: link:../media-delivery
+      '@hypit/media-local':
+        specifier: workspace:^0.3.0
+        version: link:../media-local
+      '@hypit/speech-evidence':
+        specifier: workspace:^0.2.0
+        version: link:../speech-evidence
+    devDependencies:
+      '@hypit/audio-gain':
+        specifier: workspace:*
+        version: link:../audio-gain
+      '@hypit/audio-preserve-pitch':
+        specifier: workspace:*
+        version: link:../audio-preserve-pitch
+      '@hypit/blob':
+        specifier: workspace:*
+        version: link:../blob
+      '@hypit/endpoint':
+        specifier: workspace:*
+        version: link:../endpoint
+      '@hypit/executor':
+        specifier: workspace:*
+        version: link:../executor
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/resource-store':
+        specifier: workspace:*
+        version: link:../resource-store
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@hypit/runtime-local':
+        specifier: workspace:*
+        version: link:../runtime-local
+      '@hypit/temporal':
+        specifier: workspace:*
+        version: link:../temporal
+
   packages/provider-monid:
     dependencies:
       '@hypit/generation':
@@ -2404,6 +2444,9 @@ importers:
       '@hypit/provider-image-opencv-local':
         specifier: workspace:^0.2.1
         version: link:../provider-image-opencv-local
+      '@hypit/provider-media-local':
+        specifier: workspace:^0.1.0
+        version: link:../provider-media-local
       '@hypit/provider-whisperx-local':
         specifier: workspace:^0.3.0
         version: link:../provider-whisperx-local

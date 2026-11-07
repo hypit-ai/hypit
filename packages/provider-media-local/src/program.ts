@@ -1,4 +1,4 @@
-import { probeMediaToolchain } from "./toolchain.js";
+import { probeMediaToolchain } from "@hypit/media-local";
 import type { ManagedProgram } from "@hypit/runtime-local/extension";
 
 /** A system/custom FFmpeg deployment is external: programs up probes it but never mutates a package manager. */
