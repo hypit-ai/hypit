@@ -577,9 +577,6 @@ importers:
       '@hypit/workspace':
         specifier: workspace:*
         version: link:../workspace
-      typescript:
-        specifier: 5.9.3
-        version: 5.9.3
     devDependencies:
       '@hypit/runtime-local':
         specifier: workspace:*
@@ -1718,9 +1715,6 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
-      '@hypit/temporal':
-        specifier: workspace:^0.1.1
-        version: link:../temporal
       tsx:
         specifier: 4.21.0
         version: 4.21.0
@@ -1752,6 +1746,9 @@ importers:
       '@hypit/script':
         specifier: workspace:*
         version: link:../script
+      '@hypit/temporal':
+        specifier: workspace:*
+        version: link:../temporal
       puppeteer-core:
         specifier: 25.10.0
         version: 25.10.0
@@ -2175,9 +2172,6 @@ importers:
       '@hypit/narrative-caption':
         specifier: workspace:^0.1.1
         version: link:../narrative-caption
-      '@hypit/narrative-temporal':
-        specifier: workspace:^0.1.1
-        version: link:../narrative-temporal
     devDependencies:
       '@hypit/hypit':
         specifier: workspace:*

@@ -25,14 +25,12 @@
     "@hypit/markup": "workspace:*",
     "@hypit/narrative": "workspace:*",
     "@hypit/narrative-caption": "workspace:*",
-    "@hypit/narrative-temporal": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/text": "workspace:*"
   },
   "dependencies": {
     "@hypit/caption": "workspace:^0.1.1",
     "@hypit/narrative": "workspace:^0.1.1",
-    "@hypit/narrative-caption": "workspace:^0.1.1",
-    "@hypit/narrative-temporal": "workspace:^0.1.1"
+    "@hypit/narrative-caption": "workspace:^0.1.1"
   }
 }

@@ -20,7 +20,6 @@
     "@hypit/html-render-local": "workspace:^0.1.0",
     "@hypit/html-runtime-local": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.2.0",
-    "@hypit/temporal": "workspace:^0.1.1",
     "tsx": "4.21.0"
   },
   "peerDependencies": {
@@ -39,6 +38,7 @@
     "@hypit/runtime": "workspace:*",
     "@hypit/runtime-local": "workspace:*",
     "@hypit/script": "workspace:*",
+    "@hypit/temporal": "workspace:*",
     "puppeteer-core": "25.10.0",
     "sharp": "0.35.4"
   }
