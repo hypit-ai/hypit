@@ -4,8 +4,13 @@ import type {
   NlePackageSymbol,
 } from "@hypit/nle";
 import { canonicalize } from "@hypit/protocol";
-import { sealLocalTemporalDomain } from "@hypit/temporal/algebra";
-import { exactTemporalValueFromFrames } from "@hypit/temporal/sampling";
+import {
+  assertExactTemporalValue,
+  compareExactTemporalValues,
+  exactTemporalZero,
+  sealLocalTemporalDomain,
+  type ExactTemporalValue,
+} from "@hypit/temporal/algebra";
 
 import { pictureFilterModuleRef } from "./manifest.js";
 import {
@@ -17,8 +22,8 @@ import {
   type PictureFilterState,
 } from "./program.js";
 
-export type PictureFilterNleFrame = {
-  readonly atFrame: number;
+export type PictureFilterNleKeyframe = {
+  readonly at: ExactTemporalValue;
   readonly state: PictureFilterState;
 };
 
@@ -26,14 +31,14 @@ export type PictureFilterNleFrame = {
 export type PictureFilterNleParameters =
   | { readonly kind: "constant"; readonly state: PictureFilterState }
   | {
-      readonly kind: "frames";
-      readonly frames: readonly PictureFilterNleFrame[];
+      readonly kind: "keyframes";
+      readonly keyframes: readonly PictureFilterNleKeyframe[];
       readonly interpolation: { readonly kind: "linear" };
     };
 
 export type PictureFilterNleEdit =
   | { readonly kind: "set-constant-state"; readonly state: PictureFilterState }
-  | { readonly kind: "set-frame-state"; readonly atFrame: number; readonly state: PictureFilterState };
+  | { readonly kind: "set-keyframe-state"; readonly at: ExactTemporalValue; readonly state: PictureFilterState };
 
 export const pictureFilterNleSymbol: NlePackageSymbol = {
   module: pictureFilterModuleRef,
@@ -54,7 +59,7 @@ function exactFields(value: Readonly<Record<string, unknown>>, fields: readonly 
 
 export function assertPictureFilterNleParameters(
   value: unknown,
-  durationFrames?: number,
+  duration?: ExactTemporalValue,
 ): asserts value is PictureFilterNleParameters {
   const label = "NLE Picture Filter parameters";
   record(value, label);
@@ -63,63 +68,61 @@ export function assertPictureFilterNleParameters(
     assertPictureFilterState(value.state as PictureFilterState, `${label}.state`);
     return;
   }
-  if (value.kind !== "frames") throw new Error(`${label}.kind is invalid.`);
-  exactFields(value, ["frames", "interpolation", "kind"], label);
+  if (value.kind !== "keyframes") throw new Error(`${label}.kind is invalid.`);
+  exactFields(value, ["interpolation", "keyframes", "kind"], label);
   record(value.interpolation, `${label}.interpolation`);
   exactFields(value.interpolation, ["kind"], `${label}.interpolation`);
   if (value.interpolation.kind !== "linear") {
     throw new Error(`${label}.interpolation.kind is invalid.`);
   }
-  if (!Array.isArray(value.frames) || value.frames.length === 0) {
-    throw new Error(`${label}.frames must contain at least one frame.`);
+  if (!Array.isArray(value.keyframes) || value.keyframes.length === 0) {
+    throw new Error(`${label}.keyframes must contain at least one keyframe.`);
   }
-  let previous = -1;
-  for (const [index, candidate] of value.frames.entries()) {
-    const frameLabel = `${label}.frames[${index}]`;
-    record(candidate, frameLabel);
-    exactFields(candidate, ["atFrame", "state"], frameLabel);
-    const atFrame = candidate.atFrame;
-    if (typeof atFrame !== "number" || !Number.isSafeInteger(atFrame) || atFrame < 0
-      || atFrame <= previous) {
-      throw new Error(`${frameLabel}.atFrame must be a strictly increasing non-negative safe integer.`);
+  let previous: ExactTemporalValue | undefined;
+  for (const [index, candidate] of value.keyframes.entries()) {
+    const keyframeLabel = `${label}.keyframes[${index}]`;
+    record(candidate, keyframeLabel);
+    exactFields(candidate, ["at", "state"], keyframeLabel);
+    assertExactTemporalValue(candidate.at as ExactTemporalValue, `${keyframeLabel}.at`);
+    const at = candidate.at as ExactTemporalValue;
+    if (compareExactTemporalValues(at, exactTemporalZero()) < 0
+      || (previous !== undefined && compareExactTemporalValues(at, previous) <= 0)) {
+      throw new Error(`${keyframeLabel}.at must be a strictly increasing non-negative exact time.`);
     }
-    if (durationFrames !== undefined && atFrame >= durationFrames) {
-      throw new Error(`${frameLabel}.atFrame must lie inside the Item duration.`);
+    if (duration !== undefined && compareExactTemporalValues(at, duration) >= 0) {
+      throw new Error(`${keyframeLabel}.at must lie inside the Item duration.`);
     }
-    if (index === 0 && atFrame !== 0) {
-      throw new Error(`${label}.frames must begin at Item-local frame 0.`);
+    if (index === 0 && compareExactTemporalValues(at, exactTemporalZero()) !== 0) {
+      throw new Error(`${label}.keyframes must begin at Item-local time zero.`);
     }
-    assertPictureFilterState(candidate.state as PictureFilterState, `${frameLabel}.state`);
-    previous = atFrame;
+    assertPictureFilterState(candidate.state as PictureFilterState, `${keyframeLabel}.state`);
+    previous = at;
   }
 }
 
 export function pictureFilterControlFromNleParameters(
-  parameters: Extract<PictureFilterNleParameters, { readonly kind: "frames" }>,
+  parameters: Extract<PictureFilterNleParameters, { readonly kind: "keyframes" }>,
   input: {
     readonly itemId: string;
-    readonly durationFrames: number;
-    readonly frameRate: { readonly numerator: number; readonly denominator: number };
+    readonly duration: ExactTemporalValue;
   },
 ): PictureFilterControl {
-  assertPictureFilterNleParameters(parameters, input.durationFrames);
+  assertPictureFilterNleParameters(parameters, input.duration);
   const domain = sealLocalTemporalDomain({
     id: `${input.itemId}:time`,
-    duration: exactTemporalValueFromFrames(input.durationFrames, { frameRate: input.frameRate }),
+    duration: structuredClone(input.duration),
   });
   return sealPictureFilterControl({
     domain,
-    segments: parameters.frames.map((frame, index) => {
-      const next = parameters.frames[index + 1];
+    segments: parameters.keyframes.map((keyframe, index) => {
+      const next = parameters.keyframes[index + 1];
       return {
         range: {
-          start: exactTemporalValueFromFrames(frame.atFrame, { frameRate: input.frameRate }),
-          end: exactTemporalValueFromFrames(next?.atFrame ?? input.durationFrames, {
-            frameRate: input.frameRate,
-          }),
+          start: structuredClone(keyframe.at),
+          end: structuredClone(next?.at ?? input.duration),
         },
-        from: structuredClone(frame.state),
-        to: structuredClone(next?.state ?? frame.state),
+        from: structuredClone(keyframe.state),
+        to: structuredClone(next?.state ?? keyframe.state),
         interpolation: { kind: "linear" as const },
       };
     }),
@@ -129,50 +132,51 @@ export function pictureFilterControlFromNleParameters(
 export function editPictureFilterNleParameters(
   parameters: PictureFilterNleParameters,
   operation: PictureFilterNleEdit,
-  durationFrames: number,
+  duration: ExactTemporalValue,
 ): PictureFilterNleParameters {
-  assertPictureFilterNleParameters(parameters, durationFrames);
+  assertPictureFilterNleParameters(parameters, duration);
   record(operation, "NLE Picture Filter edit");
   if (operation.kind === "set-constant-state") {
     exactFields(operation, ["kind", "state"], "NLE Picture Filter edit");
     assertPictureFilterState(operation.state, "NLE Picture Filter edit.state");
     return { kind: "constant", state: structuredClone(operation.state) };
   }
-  if (operation.kind !== "set-frame-state") throw new Error("NLE Picture Filter edit.kind is invalid.");
-  exactFields(operation, ["atFrame", "kind", "state"], "NLE Picture Filter edit");
-  if (parameters.kind !== "frames") {
-    throw new Error("NLE Picture Filter frame edit requires frame parameters.");
+  if (operation.kind !== "set-keyframe-state") throw new Error("NLE Picture Filter edit.kind is invalid.");
+  exactFields(operation, ["at", "kind", "state"], "NLE Picture Filter edit");
+  if (parameters.kind !== "keyframes") {
+    throw new Error("NLE Picture Filter keyframe edit requires keyframe parameters.");
   }
-  if (!Number.isSafeInteger(operation.atFrame) || operation.atFrame < 0
-    || operation.atFrame >= durationFrames) {
-    throw new Error("NLE Picture Filter edit.atFrame must lie inside the Item duration.");
+  assertExactTemporalValue(operation.at, "NLE Picture Filter edit.at");
+  if (compareExactTemporalValues(operation.at, exactTemporalZero()) < 0
+    || compareExactTemporalValues(operation.at, duration) >= 0) {
+    throw new Error("NLE Picture Filter edit.at must lie inside the Item duration.");
   }
   assertPictureFilterState(operation.state, "NLE Picture Filter edit.state");
-  const frames = parameters.frames.filter((frame) => frame.atFrame !== operation.atFrame);
-  frames.push({ atFrame: operation.atFrame, state: structuredClone(operation.state) });
-  frames.sort((left, right) => left.atFrame - right.atFrame);
+  const keyframes = parameters.keyframes.filter((keyframe) =>
+    compareExactTemporalValues(keyframe.at, operation.at) !== 0);
+  keyframes.push({ at: structuredClone(operation.at), state: structuredClone(operation.state) });
+  keyframes.sort((left, right) => compareExactTemporalValues(left.at, right.at));
   const next: PictureFilterNleParameters = {
-    kind: "frames",
-    frames,
+    kind: "keyframes",
+    keyframes,
     interpolation: structuredClone(parameters.interpolation),
   };
-  assertPictureFilterNleParameters(next, durationFrames);
+  assertPictureFilterNleParameters(next, duration);
   return next;
 }
 
 /** NLE instance parameters and their interpolation remain package-owned. */
 export const pictureFilterNleResolver: NleEffectResolver = {
   effect: pictureFilterNleSymbol,
-  resolve: (effect, item, { project }) => {
+  resolve: (effect, item) => {
     const parameters = effect.parameters as unknown;
-    assertPictureFilterNleParameters(parameters, item.durationFrames);
+    assertPictureFilterNleParameters(parameters, item.duration);
     if (parameters.kind === "constant") {
       return { operator: pictureFilterOperator(parameters.state) };
     }
     return { operator: pictureFilterControlOperator(pictureFilterControlFromNleParameters(parameters, {
       itemId: item.id,
-      durationFrames: item.durationFrames,
-      frameRate: project.frameRate,
+      duration: item.duration,
     })) };
   },
 };
@@ -181,16 +185,16 @@ export const pictureFilterNleAuthoring: NleEffectParameterAuthoring = {
   effect: pictureFilterNleSymbol,
   inspect: ({ effect, item }) => {
     const parameters = effect.parameters as unknown;
-    assertPictureFilterNleParameters(parameters, item.durationFrames);
+    assertPictureFilterNleParameters(parameters, item.duration);
     return canonicalize(parameters);
   },
   edit: (operation, { effect, item }) => {
     const parameters = effect.parameters as unknown;
-    assertPictureFilterNleParameters(parameters, item.durationFrames);
+    assertPictureFilterNleParameters(parameters, item.duration);
     return canonicalize(editPictureFilterNleParameters(
       parameters,
       operation as unknown as PictureFilterNleEdit,
-      item.durationFrames,
+      item.duration,
     ));
   },
 };

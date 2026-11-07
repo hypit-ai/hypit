@@ -7,7 +7,13 @@ import type {
 } from "@hypit/nle";
 import { assertNleProject, findNleTrack } from "@hypit/nle";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
-import { resolveTemporalBoundary } from "@hypit/temporal/sampling";
+import {
+  addExactTemporalValues,
+  compareExactTemporalValues,
+  exactTemporalZero,
+  subtractExactTemporalValues,
+  type ExactTemporalValue,
+} from "@hypit/temporal/algebra";
 
 import { captionBasicNleComponentSymbol } from "./nle-package.js";
 import {
@@ -45,7 +51,7 @@ export function createCaptionNleMaterialization(project: NleProject, input: {
   readonly document: CaptionDocument;
   readonly timing: LocalCaptionTiming;
   readonly presentation: CaptionPresentation | CaptionStyle;
-  readonly atFrame: number;
+  readonly at: ExactTemporalValue;
   readonly picture: NlePictureAppearance;
   readonly selection?: CaptionSelection;
   readonly itemId?: (cueId: string) => string;
@@ -76,11 +82,9 @@ export function createCaptionNleMaterialization(project: NleProject, input: {
     const region = cue.regions[0];
     assert(region !== undefined && cue.regions.length === 1,
       `Caption Cue ${cue.cueId} must materialize as one source-local region.`);
-    const start = input.atFrame + resolveTemporalBoundary(region.start.position,
-      { frameRate: project.frameRate }, "inside");
-    const end = input.atFrame + resolveTemporalBoundary(region.end.position,
-      { frameRate: project.frameRate }, "cover");
-    assert(end > start, `Caption Cue ${cue.cueId} does not cover one NLE frame.`);
+    const start = addExactTemporalValues(input.at, region.start.position);
+    const end = addExactTemporalValues(input.at, region.end.position);
+    assert(compareExactTemporalValues(end, start) > 0, `Caption Cue ${cue.cueId} has no positive duration.`);
     const selected = componentForStyle(style);
     commands.push({
       kind: "item.add",
@@ -88,9 +92,9 @@ export function createCaptionNleMaterialization(project: NleProject, input: {
       item: {
         id: input.itemId?.(cue.cueId) ?? `${input.id}:${cue.cueId}`,
         kind: "component",
-        startFrame: start,
-        durationFrames: end - start,
-        localStartFrame: 0,
+        start,
+        duration: subtractExactTemporalValues(end, start),
+        localStart: exactTemporalZero(),
         enabled: true,
         component: structuredClone(selected.component),
         parameters: canonicalize({

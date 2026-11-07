@@ -84,11 +84,11 @@ test("Audio Gain owns NLE Audio effect parameters, lowering and authoring", () =
   const symbol = { module: { name: "@example/synth", version: "1" }, name: "tone" } as const;
   const item: NleComponentItem = {
     id: "tone", kind: "component", component: symbol, parameters: {},
-    startFrame: 0, durationFrames: 30, localStartFrame: 0, enabled: true,
+    start: at(0), duration: at(1), localStart: at(0), enabled: true,
     audio: { effects: [{
       id: "fade", effect: { module: { name: "@hypit/audio-gain", version: "1" }, name: "gain" },
       parameters: {
-        kind: "frames", frames: [{ atFrame: 0, gain: 0 }, { atFrame: 15, gain: 1 }],
+        kind: "keyframes", keyframes: [{ at: at(0), gain: 0 }, { at: at(1, 2), gain: 1 }],
         interpolation: { kind: "linear" },
       },
     }] },
@@ -106,12 +106,12 @@ test("Audio Gain owns NLE Audio effect parameters, lowering and authoring", () =
 
   const authoring = createNleAuthoringHostFromFacets(hypitPackage.facets);
   const transaction = authoring.planEffectParameterEdit(project, "tone", "fade", {
-    kind: "set-frame-gain", atFrame: 15, gain: 0.5,
+    kind: "set-keyframe-gain", at: at(1, 2), gain: 0.5,
   });
   const edited = applyNleTransaction(project, transaction);
   const next = findNleItem(edited, "tone").item;
   const parameters = next.kind === "component"
-    ? next.audio?.effects[0]?.parameters as unknown as { readonly frames?: readonly { readonly gain: number }[] }
+    ? next.audio?.effects[0]?.parameters as unknown as { readonly keyframes?: readonly { readonly gain: number }[] }
     : undefined;
-  assert.equal(parameters?.frames?.[1]?.gain, 0.5);
+  assert.equal(parameters?.keyframes?.[1]?.gain, 0.5);
 });

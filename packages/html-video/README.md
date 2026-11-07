@@ -20,7 +20,8 @@ Provider/Endpoint selection and resource storage; the plan contains no Chromium,
 `lowerNleProjectToHtmlVideoDeliveryPlan` is the downstream NLE adapter. It structurally lowers one `NleProject`
 once, derives both terminal programmes from that same AVIR value, and supplies an exact silent `AudioProgram` when a
 picture-only project is exported. NLE Core therefore remains unaware of terminal Source implementations, delivery
-policy and provider execution.
+policy and provider execution. The caller supplies the output frame rate explicitly: it samples exact NLE programme
+time and is independent of the project's editing/snap rate.
 
 The adapter's link session is transient. The `hypit.nle-package@1` facet supplies only `ProgramSource` contracts and
 AVIR Operators. A package that supports this HTML-plus-Audio delivery path may independently publish

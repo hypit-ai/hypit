@@ -39,10 +39,10 @@ const at = (numerator: number, denominator = 1) => exactTemporalValue({
 const domain = sealLocalTemporalDomain({ id: "filter:time", duration: at(1) });
 const faded = { ...IDENTITY_PICTURE_FILTER, opacity: 0, blurRadius: 12 };
 const animatedParameters = {
-  kind: "frames" as const,
-  frames: [
-    { atFrame: 0, state: faded },
-    { atFrame: 30, state: IDENTITY_PICTURE_FILTER },
+  kind: "keyframes" as const,
+  keyframes: [
+    { at: at(0), state: faded },
+    { at: at(1), state: IDENTITY_PICTURE_FILTER },
   ],
   interpolation: { kind: "linear" as const },
 };
@@ -105,17 +105,14 @@ test("the package resolves a materialized NLE Effect through its ordinary state"
     parameters: canonicalize({ kind: "constant", state: faded }),
   };
   const resolved = createNleLoweringHostFromFacets(pictureFilterHypitPackage.facets)
-    .resolveEffect(effect, { durationFrames: 60 } as never, {
-      project: { frameRate: { numerator: 30, denominator: 1 } },
-    } as never);
+    .resolveEffect(effect, { duration: at(2) } as never, {} as never);
   assert.deepEqual(resolved, { operator: pictureFilterOperator(faded) });
 });
 
-test("the package compiles its own NLE frame parameters into the shared exact Control", () => {
+test("the package compiles its own exact NLE keyframes into the shared Control", () => {
   const compiled = pictureFilterControlFromNleParameters(animatedParameters, {
     itemId: "clip",
-    durationFrames: 60,
-    frameRate: { numerator: 30, denominator: 1 },
+    duration: at(2),
   });
   assert.equal(compiled.domain.id, "clip:time");
   assert.deepEqual(compiled.domain.duration, at(2));
@@ -127,16 +124,14 @@ test("the package compiles its own NLE frame parameters into the shared exact Co
   assert.deepEqual(evaluatePictureFilterControl(compiled, at(3, 2)), IDENTITY_PICTURE_FILTER);
   assert.throws(() => pictureFilterControlFromNleParameters({
     ...animatedParameters,
-    frames: [{ atFrame: 1, state: faded }],
+    keyframes: [{ at: at(1, 30), state: faded }],
   }, {
     itemId: "clip",
-    durationFrames: 60,
-    frameRate: { numerator: 30, denominator: 1 },
-  }), /begin at Item-local frame 0/u);
+    duration: at(2),
+  }), /begin at Item-local time zero/u);
   assert.throws(() => pictureFilterControlFromNleParameters(animatedParameters, {
     itemId: "trimmed-clip",
-    durationFrames: 30,
-    frameRate: { numerator: 30, denominator: 1 },
+    duration: at(1),
   }), /must lie inside the Item duration/u);
 });
 
@@ -171,7 +166,7 @@ test("an animated NLE Effect round-trips and lowers its moved Item to a factual 
   const empty = createNleProject({
     id: "animated-filter",
     name: "Animated filter",
-    frameRate: { numerator: 30, denominator: 1 },
+    editRate: { numerator: 30, denominator: 1 },
     canvas: { width: 100, height: 100, clearColor: "black" },
   });
   const project = applyNleTransaction(empty, { revision: 0, commands: [{
@@ -179,9 +174,9 @@ test("an animated NLE Effect round-trips and lowers its moved Item to a factual 
     track: { id: "picture", name: "Picture", kind: "picture", locked: false, muted: false, items: [{
       id: "clip",
       kind: "component",
-      startFrame: 0,
-      durationFrames: 60,
-      localStartFrame: 0,
+      start: at(0),
+      duration: at(2),
+      localStart: at(0),
       enabled: true,
       component: baseComponent,
       parameters: {},
@@ -203,8 +198,8 @@ test("an animated NLE Effect round-trips and lowers its moved Item to a factual 
     canonicalize(animatedParameters));
   const insertedState = { ...IDENTITY_PICTURE_FILTER, opacity: 0.75, grayscale: 1 };
   const editTransaction = authoringHost.planEffectParameterEdit(reopened, "clip", "animated", {
-    kind: "set-frame-state",
-    atFrame: 15,
+    kind: "set-keyframe-state",
+    at: at(1, 2),
     state: insertedState,
   });
   let editSession = createNleEditSession(reopened);
@@ -214,8 +209,7 @@ test("an animated NLE Effect round-trips and lowers its moved Item to a factual 
   const editedParameters = editedItem.picture?.effects[0]?.parameters as unknown;
   const editedControl = pictureFilterControlFromNleParameters(editedParameters as typeof animatedParameters, {
     itemId: editedItem.id,
-    durationFrames: editedItem.durationFrames,
-    frameRate: editSession.current.frameRate,
+    duration: editedItem.duration,
   });
   assert.deepEqual(evaluatePictureFilterControl(editedControl, at(1, 2)), insertedState);
   editSession = undoNleEdit(editSession);
@@ -235,7 +229,7 @@ test("an animated NLE Effect round-trips and lowers its moved Item to a factual 
   ), at(1, 2));
 
   const moved = applyNleTransaction(reopened, { revision: 1, commands: [{
-    kind: "item.move", ids: ["clip"], deltaFrames: 30,
+    kind: "item.move", ids: ["clip"], delta: at(1),
   }] });
   const movedProgram = lowerNleProjectToAudiovisual(moved, host);
   const movedNode = movedProgram.picture?.nodes["clip:effect:animated"];

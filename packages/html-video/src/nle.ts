@@ -1,5 +1,6 @@
 import type { NleProject } from "@hypit/nle";
 import type { MediaDeliverySpec } from "@hypit/media";
+import type { TemporalRate } from "@hypit/temporal/algebra";
 
 import { createHtmlVideoDeliveryPlan } from "./delivery.js";
 import type { HtmlVideoDeliveryPlan } from "./delivery.js";
@@ -17,10 +18,11 @@ import {
 export function lowerNleProjectToHtmlVideoDeliveryPlan(
   project: NleProject,
   host: NleTerminalLinkHost,
+  frameRate: TemporalRate,
   delivery: MediaDeliverySpec,
 ): HtmlVideoDeliveryPlan {
   const lowering = linkNleProjectTerminals(project, host);
-  const visual = lowerNleAudiovisualToHtmlProgram(project, lowering);
+  const visual = lowerNleAudiovisualToHtmlProgram(project, lowering, frameRate);
   const audio = lowerNleAudiovisualToAudioProgram(
     lowering,
     { sampleRate: delivery.audio.sampleRate },

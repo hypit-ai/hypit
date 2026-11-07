@@ -32,6 +32,9 @@ import {
   type NleProject,
 } from "../src/index.js";
 
+const outputRate = { numerator: 2, denominator: 1 } as const;
+const frame = (value: number) => exactTemporalValueFromFrames(value, { frameRate: outputRate });
+
 function prepared() {
   const timestamp = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 2 } });
   return prepareMedia({
@@ -174,18 +177,18 @@ function project(): NleProject {
   const document = createNleProject({
     id: "html-editorial",
     name: "HTML Editorial",
-    frameRate: { numerator: 2, denominator: 1 },
+    editRate: outputRate,
     canvas: { width: 100, height: 100, clearColor: "#101010" },
   });
   const caption: NleComponentItem = {
-    id: "subtitle-one", kind: "component", startFrame: 1, durationFrames: 2, localStartFrame: 0,
+    id: "subtitle-one", kind: "component", start: frame(1), duration: frame(2), localStart: frame(0),
     enabled: true,
     component: captionRenderer,
     parameters: { text: "A direct caption block", color: "white" },
     picture: { layout: { x: 10, y: 70, width: 80, height: 20, fit: "contain" }, effects: [] },
   };
   const component: NleComponentItem = {
-    id: "title", kind: "component", startFrame: 0, durationFrames: 4, localStartFrame: 0,
+    id: "title", kind: "component", start: frame(0), duration: frame(4), localStart: frame(0),
     enabled: true,
     component: componentRenderer,
     parameters: { title: "HTML component" }, picture: full,
@@ -196,8 +199,8 @@ function project(): NleProject {
     { kind: "track.add", track: { id: "main", name: "Main picture", kind: "picture",
       locked: false, muted: false, items: [] } },
     { kind: "item.add", track: "main", item: {
-      id: "camera-use", kind: "media", media: "camera", startFrame: 0, durationFrames: 4,
-      localStartFrame: 0, enabled: true, audio: { effects: [{
+      id: "camera-use", kind: "media", media: "camera", start: frame(0), duration: frame(4),
+      localStart: frame(0), enabled: true, audio: { effects: [{
         id: "quiet", effect: audioEffectRenderer, parameters: { gain: 0.5 },
       }] },
       picture: { ...full, effects: [{ id: "mono", effect: {
@@ -223,7 +226,7 @@ test("Media, caption Component and Effect lower into one audiovisual Programme",
 });
 
 test("the same project lowers directly to a browser HtmlProgram without Build execution", () => {
-  const html = lowerNleProjectToHtmlProgram(project(), host);
+  const html = lowerNleProjectToHtmlProgram(project(), host, outputRate);
 
   assert.doesNotThrow(() => assertHtmlProgram(html));
   assert.equal(html.frameCount, 4);
@@ -238,12 +241,12 @@ test("the same project lowers directly to a browser HtmlProgram without Build ex
 
 test("Transition, matte and editing Group remain direct NLE relations", () => {
   const empty = createNleProject({
-    id: "relations", name: "Relations", frameRate: { numerator: 2, denominator: 1 },
+    id: "relations", name: "Relations", editRate: outputRate,
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const component = (id: string, startFrame: number, durationFrames: number): NleComponentItem => ({
     id, kind: "component", component: componentRenderer, parameters: { title: id },
-    startFrame, durationFrames, localStartFrame: 0, enabled: true, picture: full,
+    start: frame(startFrame), duration: frame(durationFrames), localStart: frame(0), enabled: true, picture: full,
   });
   const document = applyNleTransaction(empty, { revision: 0, commands: [{
     kind: "track.add", track: { id: "main", name: "Main", kind: "picture",
@@ -268,13 +271,13 @@ test("Transition, matte and editing Group remain direct NLE relations", () => {
   assert.equal(program.picture?.nodes["join:apply"]?.kind, "apply");
   assert.equal(program.picture?.nodes["content:matte:content-alpha"]?.kind, "apply");
   assert.equal(Object.hasOwn(program.picture?.nodes ?? {}, "pair"), false);
-  const html = lowerNleProjectToHtmlProgram(document, host);
+  const html = lowerNleProjectToHtmlProgram(document, host, outputRate);
   assert.match(html.html, /data-nle-transition/u);
   assert.match(html.html, /data-nle-matte/u);
   assert.throws(() => applyNleTransaction(document, { revision: document.revision, commands: [{
-    kind: "item.move", ids: ["incoming"], deltaFrames: 3,
+    kind: "item.move", ids: ["incoming"], delta: frame(3),
   }] }), /canonical outgoing\/incoming overlap/u);
-  assert.equal(document.tracks[0]?.items.find((item) => item.id === "incoming")?.startFrame, 3);
+  assert.deepEqual(document.tracks[0]?.items.find((item) => item.id === "incoming")?.start, frame(3));
 });
 
 test("the NLE Audio DAG lowers directly to a continuous AudioProgram", () => {
@@ -288,14 +291,14 @@ test("the NLE Audio DAG lowers directly to a continuous AudioProgram", () => {
 
 test("an Audio-only package Component closes through the same NLE and terminal chain", () => {
   const base = createNleProject({
-    id: "synth-project", name: "Synth project", frameRate: { numerator: 2, denominator: 1 },
+    id: "synth-project", name: "Synth project", editRate: outputRate,
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const document = applyNleTransaction(base, { revision: 0, commands: [{
     kind: "track.add", track: {
       id: "audio", name: "Audio", kind: "audio", locked: false, muted: false, items: [{
         id: "tone", kind: "component", component: audioComponentRenderer, parameters: { frequency: 440 },
-        startFrame: 0, durationFrames: 4, localStartFrame: 0, enabled: true,
+        start: frame(0), duration: frame(4), localStart: frame(0), enabled: true,
         audio: { effects: [{
           id: "quiet", effect: audioEffectRenderer, parameters: { gain: 0.5 },
         }] },
@@ -312,7 +315,7 @@ test("an Audio-only package Component closes through the same NLE and terminal c
 
 test("a Compound Item closes one child NLE Project as an ordinary nested Source", () => {
   const childBase = createNleProject({
-    id: "child", name: "Child", frameRate: { numerator: 2, denominator: 1 },
+    id: "child", name: "Child", editRate: outputRate,
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const child = applyNleTransaction(childBase, { revision: 0, commands: [
@@ -320,24 +323,24 @@ test("a Compound Item closes one child NLE Project as an ordinary nested Source"
       asset: { path: "./media/camera.media.json" } } },
     { kind: "track.add", track: { id: "child-main", name: "Child main", kind: "picture",
       locked: false, muted: false, items: [{
-        id: "child-camera", kind: "media", media: "camera", startFrame: 0, durationFrames: 4,
-        localStartFrame: 0, enabled: true, picture: full, audio: { effects: [] },
+        id: "child-camera", kind: "media", media: "camera", start: frame(0), duration: frame(4),
+        localStart: frame(0), enabled: true, picture: full, audio: { effects: [] },
       }] } },
   ] });
   const parentBase = createNleProject({
-    id: "parent", name: "Parent", frameRate: { numerator: 2, denominator: 1 },
+    id: "parent", name: "Parent", editRate: outputRate,
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const parent = applyNleTransaction(parentBase, { revision: 0, commands: [{
     kind: "track.add", track: { id: "parent-main", name: "Parent main", kind: "picture",
       locked: false, muted: false, items: [{
-        id: "nested", kind: "compound", project: child, startFrame: 0, durationFrames: 4,
-        localStartFrame: 0, enabled: true, picture: full, audio: { effects: [] },
+        id: "nested", kind: "compound", project: child, start: frame(0), duration: frame(4),
+        localStart: frame(0), enabled: true, picture: full, audio: { effects: [] },
       }] },
   }] });
   const program = lowerNleProjectToAudiovisual(parent, host);
   assert.equal(program.occurrences.nested?.source.id, "child");
-  const html = lowerNleProjectToHtmlProgram(parent, host);
+  const html = lowerNleProjectToHtmlProgram(parent, host, outputRate);
   assert.equal(selectHtmlVideoSources(html).length, 1);
   const audio = lowerNleProjectToAudioProgram(parent, host, { sampleRate: 48_000 });
   assert.doesNotThrow(() => verifyAudioProgram(audio));

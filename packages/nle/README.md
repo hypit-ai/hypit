@@ -2,7 +2,7 @@
 
 Persistent, flat editing authority for Hypit's HTML-capable non-linear editor.
 
-An `NleProject` stores direct frame positions, file-backed media references, picture/audio tracks, package-owned Component and
+An `NleProject` stores direct exact rational times, file-backed media references, picture/audio tracks, package-owned Component and
 Picture/Audio Effect instances, Transition and matte relations, editing Groups and nested
 Compound projects. Opening or editing the project does
 not compile an AuthorGraph, run a Provider, close an audiovisual Programme or recover declarations through
@@ -23,16 +23,21 @@ The full boundary and history semantics are recorded in
 [`design/html-effects-nle-project-and-undo.md`](../../design/html-effects-nle-project-and-undo.md).
 
 The project-file language is strict, pretty-printed JSON with the `hypit.nle@1` format marker. It is a data
-format, not HCL, SVML or TypeScript: direct frame values and string ids replace expressions and imports.
+format, not HCL, SVML or TypeScript: direct exact values and string ids replace expressions and imports.
 Package instances store an exact Module symbol plus canonical JSON parameters; installed package code supplies
 their behavior. See [`examples/title-card.nle.json`](examples/title-card.nle.json) for a complete component-only
-project with a package-owned animated Picture Filter. The filter's Item-local frame spelling is not an NLE Core
-Keyframe format: its package validates and compiles those frames to an exact AVIR `TemporalControl`. NLE lowering
+project with a package-owned animated Picture Filter. The filter's Item-local keyframe spelling is not an NLE Core
+Keyframe format: its package validates and compiles those exact times to an AVIR `TemporalControl`. NLE lowering
 then closes the Item-local clock to a factual Programme-to-Control `TemporalMap`; a package resolver cannot return
 a named occurrence/source binding.
 
+Every persisted `start`, `duration` and `localStart` is an `ExactTemporalValue`: integer ticks plus a rational
+time base. `editRate` is only the editor's display and snap grid. Changing it never retimes or quantizes existing
+items. Preview/export receives a separate output frame rate and samples the exact programme at that rate; audio
+continues to use its own sample rate.
+
 Source-owned markers, semantic boundaries and media observations may be projected by an editor as snap guides.
-Snapping is one authoring gesture: the accepted transaction stores the resulting frame or package parameter, not
+Snapping is one authoring gesture: the accepted transaction stores the resulting exact time or package parameter, not
 the guide name or a live dependency on its owner. Moving or retiming the guide owner later therefore does not make
 NLE export perform a named lookup. A product that wants linked editing updates the affected direct values together
 in one transaction; it does not add a second temporal authority to the project.
@@ -107,7 +112,8 @@ The sampled matte Item is not painted independently.
 
 A Group is editing-only and disappears during lowering. A Compound is different: it recursively stores another
 flat `NleProject`, closes that child as an ordinary multi-output AVIR Source and can be trimmed or reused like any
-other Item. Child and parent currently use the same frame rate, keeping `localStartFrame` unambiguous.
+other Item. Child and parent may use different editing grids because `localStart` and all programme placements are
+exact times rather than grid indices.
 
 The spatial policy stores an explicit rectangle and `fill | contain | cover` fit on each picture item.
 Tracks and item arrays are ordered back-to-front. This package deliberately contains no SVML parser, Build,
@@ -117,7 +123,7 @@ Audio participation is equally direct: an Item has an `audio` appearance when it
 to the mix. `audio.effects` is an ordered source-to-output chain of package-owned unary Audio Operators. Track mute
 removes its Items from the mix; active Item roots join through the AVIR `mix` node and can be linked downstream to `AudioProgram`
 `program`, `process` and `mix` nodes. NLE Core contains no gain, fade, EQ, pan or compressor enum. The first real
-owner, `@hypit/audio-gain`, accepts constant or Item-local frame parameters and compiles them into its exact
+owner, `@hypit/audio-gain`, accepts constant or Item-local exact-time parameters and compiles them into its exact
 `TemporalControl`; a crossfade is two ordinary gain envelopes over overlapping Items, not another timeline primitive.
 
 Final video delivery remains downstream. `@hypit/html-video` consumes one structural NLE lowering through

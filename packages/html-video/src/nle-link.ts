@@ -37,6 +37,7 @@ import {
 } from "@hypit/nle";
 import { nlePackageSymbolKey } from "@hypit/nle";
 import { sealLocalSpatialDomain, sealSpatialMap } from "@hypit/spatial/algebra";
+import type { TemporalRate } from "@hypit/temporal/algebra";
 
 export type NleTerminalComponentResolution = {
   readonly html?: AudiovisualHtmlSource;
@@ -284,6 +285,7 @@ export function linkNleProjectTerminals(
 export function lowerNleAudiovisualToHtmlProgram(
   project: NleProject,
   lowering: NleTerminalLink,
+  frameRate: TemporalRate,
 ): HtmlProgram {
   assert(lowering.program.picture !== undefined && lowering.program.pictureDomain !== undefined,
     "NLE Project has no Picture output for HTML lowering.");
@@ -296,7 +298,7 @@ export function lowerNleAudiovisualToHtmlProgram(
     sources: lowering.htmlSources,
     output: {
       id: `${project.id}:html`,
-      sampling: { frameRate: project.frameRate },
+      sampling: { frameRate: structuredClone(frameRate) },
       canvas: structuredClone(project.canvas),
       pictureMapping: sealSpatialMap({
         target: viewport,
@@ -310,8 +312,9 @@ export function lowerNleAudiovisualToHtmlProgram(
 export function lowerNleProjectToHtmlProgram(
   project: NleProject,
   host: NleTerminalLinkHost,
+  frameRate: TemporalRate,
 ): HtmlProgram {
-  return lowerNleAudiovisualToHtmlProgram(project, linkNleProjectTerminals(project, host));
+  return lowerNleAudiovisualToHtmlProgram(project, linkNleProjectTerminals(project, host), frameRate);
 }
 
 export function lowerNleAudiovisualToAudioProgram(

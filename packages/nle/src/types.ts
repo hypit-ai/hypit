@@ -1,12 +1,10 @@
 import type { AudioOperator, PictureOperator, ProgramSource } from "@hypit/audiovisual";
 import type { PreparedMedia } from "@hypit/media";
 import type { CanonicalValue, ModuleRef } from "@hypit/protocol";
-import type { LocalTemporalDomain } from "@hypit/temporal/algebra";
+import type { ExactTemporalValue, LocalTemporalDomain, TemporalRate } from "@hypit/temporal/algebra";
 
-export type NleFrameRate = {
-  readonly numerator: number;
-  readonly denominator: number;
-};
+/** Editor display and snap grid. It never changes the meaning of persisted exact times. */
+export type NleEditRate = TemporalRate;
 
 export type NleCanvas = {
   readonly width: number;
@@ -63,10 +61,12 @@ export type NleAudioAppearance = {
 
 type NleItemBase = {
   readonly id: string;
-  readonly startFrame: number;
-  readonly durationFrames: number;
-  /** Item-local position read at the first visible frame. */
-  readonly localStartFrame: number;
+  /** Exact Programme-local position. */
+  readonly start: ExactTemporalValue;
+  /** Exact visible duration. */
+  readonly duration: ExactTemporalValue;
+  /** Exact Source-local position read at the first visible instant. */
+  readonly localStart: ExactTemporalValue;
   readonly enabled: boolean;
 };
 
@@ -107,7 +107,7 @@ export type NleTrack = {
   readonly items: readonly NleItem[];
 };
 
-/** Direct overlap relation. Its active range is [incoming.startFrame, outgoing.endFrame). */
+/** Direct overlap relation. Its active range is [incoming.start, outgoing.end). */
 export type NleTransition = {
   readonly id: string;
   readonly outgoing: string;
@@ -137,7 +137,8 @@ export type NleProject = {
   readonly id: string;
   readonly name: string;
   readonly revision: number;
-  readonly frameRate: NleFrameRate;
+  /** Editor display and snap grid; Programme time remains exact and independent of this rate. */
+  readonly editRate: NleEditRate;
   readonly canvas: NleCanvas;
   readonly media: readonly NleMedia[];
   readonly tracks: readonly NleTrack[];

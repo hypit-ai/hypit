@@ -17,6 +17,7 @@ const effectSymbol = {
   module: { name: "@example/amount", version: "1" },
   name: "amount",
 } as const;
+const second = (value: number) => ({ ticks: String(value), timeBase: { numerator: 1, denominator: 1 } });
 
 const authoring: NleEffectParameterAuthoring = {
   effect: effectSymbol,
@@ -49,9 +50,9 @@ function project(locked = false) {
     track: { id: "picture", name: "Picture", kind: "picture", locked, muted: false, items: [{
       id: "title",
       kind: "component",
-      startFrame: 0,
-      durationFrames: 30,
-      localStartFrame: 0,
+      start: second(0),
+      duration: second(1),
+      localStart: second(0),
       enabled: true,
       component: { module: { name: "@example/title", version: "1" }, name: "title" },
       parameters: {},

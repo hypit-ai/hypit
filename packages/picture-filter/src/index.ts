@@ -30,6 +30,6 @@ export {
 } from "./nle.js";
 export type {
   PictureFilterNleEdit,
-  PictureFilterNleFrame,
+  PictureFilterNleKeyframe,
   PictureFilterNleParameters,
 } from "./nle.js";

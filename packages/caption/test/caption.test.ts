@@ -147,7 +147,7 @@ test("Caption timing and presentation bake once into ordinary editable NLE block
   ), { id: "style-ending", selector: { cues: ["cue-three"] } }, impact);
   const empty = createNleProject({
     id: "caption-materialization", name: "Caption materialization",
-    frameRate: { numerator: 2, denominator: 1 },
+    editRate: { numerator: 2, denominator: 1 },
     canvas: { width: 1920, height: 1080, clearColor: "#000000" },
   });
   const project = applyNleTransaction(empty, { revision: 0, commands: [{
@@ -156,7 +156,7 @@ test("Caption timing and presentation bake once into ordinary editable NLE block
     },
   }] });
   const transaction = createCaptionNleMaterialization(project, {
-    id: "transcript-use", track: "captions", document, timing, presentation, atFrame: 3,
+    id: "transcript-use", track: "captions", document, timing, presentation, at: at(3),
     picture: {
       layout: { x: 0, y: 800, width: 1920, height: 280, fit: "fill" }, effects: [],
     },
@@ -164,14 +164,15 @@ test("Caption timing and presentation bake once into ordinary editable NLE block
   assert.deepEqual(transaction.commands.map((command) => command.kind), ["item.add", "item.add"]);
   const materialized = applyNleTransaction(project, transaction);
   assert.deepEqual(materialized.tracks[0]?.items.map((item) => [
-    item.id, item.kind, item.startFrame, item.durationFrames,
+    item.id, item.kind, item.start, item.duration,
   ]), [
-    ["transcript-use:cue-one", "component", 3, 2],
-    ["transcript-use:cue-three", "component", 11, 2],
+    ["transcript-use:cue-one", "component", at(3), at(1)],
+    ["transcript-use:cue-three", "component", at(7), at(1)],
   ]);
 
   const html = lowerNleProjectToHtmlProgram(materialized,
-    createNleTerminalLinkHostFromFacets(captionHypitPackage.facets));
+    createNleTerminalLinkHostFromFacets(captionHypitPackage.facets),
+    { numerator: 2, denominator: 1 });
   assert.match(html.html, />First</u);
   assert.doesNotMatch(html.html, />Second</u);
   assert.match(html.html, />Third</u);

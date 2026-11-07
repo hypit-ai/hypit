@@ -18,7 +18,7 @@ function session(): NleEditSession {
   return createNleEditSession(createNleProject({
     id: "project-file",
     name: "Project file",
-    frameRate: { numerator: 30, denominator: 1 },
+    editRate: { numerator: 30, denominator: 1 },
     canvas: { width: 1920, height: 1080, clearColor: "#000000" },
   }));
 }

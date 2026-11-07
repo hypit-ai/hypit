@@ -17,7 +17,7 @@ declaration, `AudioTrack`, Timeline, Mixer lane or intermediate set. Dry/wet bra
 sidechain routing are expressed by signal graph edges and package-owned named Operator ports.
 
 The package also publishes its NLE facets. An Item may place the `gain` symbol in `audio.effects` with either a
-constant gain or an Item-local ordered frame envelope. The package validates that spelling, compiles frame positions
-to an exact `AudioGainControl`, supplies the AVIR `AudioOperator`, and owns headless parameter edits. NLE Core only
+constant gain or an Item-local ordered `{ at: ExactTemporalValue, gain }` envelope. The package validates that
+spelling, compiles exact positions to an `AudioGainControl`, supplies the AVIR `AudioOperator`, and owns headless parameter edits. NLE Core only
 stores the symbol and canonical parameters; moving an Item moves its envelope, while trimming rejects envelope
-frames left outside the new Item duration.
+keyframes left outside the new Item duration.

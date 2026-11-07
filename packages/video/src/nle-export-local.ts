@@ -18,6 +18,7 @@ import { resolveMediaAssetMediaFile } from "@hypit/media-asset/node";
 import type { MuxedMedia, VisualDeliverySpec } from "@hypit/media";
 import type { CreateMediaExecutionEnvironmentOptions } from "@hypit/media-local";
 import type { NleItem, NleProject } from "@hypit/nle";
+import type { TemporalRate } from "@hypit/temporal/algebra";
 import { createNodeNleMediaResolver, readNleProjectFile } from "@hypit/nle/node";
 import type {
   ChromiumHtmlRasterOptions,
@@ -40,6 +41,8 @@ export type LocalNleExportRequest = {
   /** Read-only application Distribution used only as an installed-package fallback. */
   readonly distributionPackageRoot?: string;
   readonly quality?: VisualDeliverySpec["encoding"]["quality"];
+  /** Output sampling only. Defaults to the project's editor display rate. */
+  readonly frameRate?: TemporalRate;
   readonly signal?: AbortSignal;
   readonly onProgress?: (progress: LocalNleExportProgress) => void;
   readonly html?: Omit<ChromiumHtmlRasterOptions, "resources" | "signal" | "onProgress">;
@@ -229,6 +232,7 @@ export async function exportLocalNleProject(
     const plan = lowerNleProjectToHtmlVideoDeliveryPlan(
       project,
       host,
+      request.frameRate ?? project.editRate,
       htmlVideoDeliverySpec(request.quality ?? "standard"),
     );
     report({ phase: "lower", state: "complete" });

@@ -1,9 +1,16 @@
 import { canonicalize, isModuleRef } from "@hypit/protocol";
+import {
+  addExactTemporalValues,
+  assertExactTemporalValue,
+  compareExactTemporalValues,
+  exactTemporalZero,
+  type ExactTemporalValue,
+} from "@hypit/temporal/algebra";
 
 import type {
   NleAudioAppearance,
   NleCanvas,
-  NleFrameRate,
+  NleEditRate,
   NleItem,
   NleMedia,
   NlePackageSymbol,
@@ -31,22 +38,36 @@ function assertMediaAssetReference(value: NleMedia["asset"], label: string): voi
     `${label} must not contain empty, current or parent segments.`);
 }
 
-function nonNegativeFrame(value: number, label: string): void {
+function nonNegativeInteger(value: number, label: string): void {
   assert(Number.isSafeInteger(value) && value >= 0, `${label} must be a non-negative safe integer.`);
 }
 
-function positiveFrame(value: number, label: string): void {
+function positiveInteger(value: number, label: string): void {
   assert(Number.isSafeInteger(value) && value > 0, `${label} must be a positive safe integer.`);
 }
 
-function assertFrameRate(value: NleFrameRate): void {
-  positiveFrame(value.numerator, "NLE frame-rate numerator");
-  positiveFrame(value.denominator, "NLE frame-rate denominator");
+function assertEditRate(value: NleEditRate): void {
+  positiveInteger(value.numerator, "NLE edit-rate numerator");
+  positiveInteger(value.denominator, "NLE edit-rate denominator");
+}
+
+function assertNonNegativeTime(value: ExactTemporalValue, label: string): void {
+  assertExactTemporalValue(value, label);
+  assert(compareExactTemporalValues(value, exactTemporalZero()) >= 0, `${label} must not be negative.`);
+}
+
+function assertPositiveTime(value: ExactTemporalValue, label: string): void {
+  assertExactTemporalValue(value, label);
+  assert(compareExactTemporalValues(value, exactTemporalZero()) > 0, `${label} must be positive.`);
+}
+
+function itemEnd(value: NleItem): ExactTemporalValue {
+  return addExactTemporalValues(value.start, value.duration);
 }
 
 function assertCanvas(value: NleCanvas): void {
-  positiveFrame(value.width, "NLE Canvas width");
-  positiveFrame(value.height, "NLE Canvas height");
+  positiveInteger(value.width, "NLE Canvas width");
+  positiveInteger(value.height, "NLE Canvas height");
   assert(value.clearColor.trim().length > 0, "NLE Canvas clear color is empty.");
 }
 
@@ -116,9 +137,9 @@ function assertItem(
   ancestors: Set<object>,
 ): void {
   identity(value.id, "NLE Item id");
-  nonNegativeFrame(value.startFrame, `NLE Item ${value.id} startFrame`);
-  positiveFrame(value.durationFrames, `NLE Item ${value.id} durationFrames`);
-  nonNegativeFrame(value.localStartFrame, `NLE Item ${value.id} localStartFrame`);
+  assertNonNegativeTime(value.start, `NLE Item ${value.id} start`);
+  assertPositiveTime(value.duration, `NLE Item ${value.id} duration`);
+  assertNonNegativeTime(value.localStart, `NLE Item ${value.id} localStart`);
   assert(typeof value.enabled === "boolean", `NLE Item ${value.id} enabled is invalid.`);
   if (value.kind === "media") {
     identity(value.media, `NLE Media Item ${value.id} media`);
@@ -129,12 +150,10 @@ function assertItem(
   assertAppearances(value, track, project);
   if (value.kind === "compound") {
     assertNleProjectValue(value.project, ancestors);
-    assert(value.project.frameRate.numerator === project.frameRate.numerator
-      && value.project.frameRate.denominator === project.frameRate.denominator,
-    `NLE Compound Item ${value.id} child Project must use the parent frame rate.`);
-    const end = nleProjectEndFrame(value.project);
-    assert(end > 0, `NLE Compound Item ${value.id} child Project is empty.`);
-    assert(value.localStartFrame + value.durationFrames <= end,
+    const duration = nleProjectDuration(value.project);
+    assert(compareExactTemporalValues(duration, exactTemporalZero()) > 0,
+      `NLE Compound Item ${value.id} child Project is empty.`);
+    assert(compareExactTemporalValues(addExactTemporalValues(value.localStart, value.duration), duration) <= 0,
       `NLE Compound Item ${value.id} exceeds child Project ${value.project.id}.`);
     return;
   }
@@ -149,8 +168,8 @@ function assertNleProjectValue(value: NleProject, ancestors: Set<object>): void 
   assert(value.format === "hypit.nle@1", "Unsupported NLE project format.");
   identity(value.id, "NLE Project id");
   assert(value.name.trim().length > 0, "NLE Project name is empty.");
-  nonNegativeFrame(value.revision, "NLE Project revision");
-  assertFrameRate(value.frameRate);
+  nonNegativeInteger(value.revision, "NLE Project revision");
+  assertEditRate(value.editRate);
   assertCanvas(value.canvas);
   assert(Array.isArray(value.media) && Array.isArray(value.tracks)
     && Array.isArray(value.transitions) && Array.isArray(value.mattes) && Array.isArray(value.groups),
@@ -196,10 +215,11 @@ function assertNleProjectValue(value: NleProject, ancestors: Set<object>): void 
     assert(!incoming.has(right.item.id), `NLE Item ${right.item.id} has multiple incoming Transitions.`);
     outgoing.add(left.item.id);
     incoming.add(right.item.id);
-    const leftEnd = left.item.startFrame + left.item.durationFrames;
-    const rightEnd = right.item.startFrame + right.item.durationFrames;
-    assert(left.item.startFrame < right.item.startFrame
-      && right.item.startFrame < leftEnd && leftEnd < rightEnd,
+    const leftEnd = itemEnd(left.item);
+    const rightEnd = itemEnd(right.item);
+    assert(compareExactTemporalValues(left.item.start, right.item.start) < 0
+      && compareExactTemporalValues(right.item.start, leftEnd) < 0
+      && compareExactTemporalValues(leftEnd, rightEnd) < 0,
     `NLE Transition ${transition.id} requires a canonical outgoing/incoming overlap.`);
     assertSymbol(transition.operator, `NLE Transition ${transition.id} operator`);
     canonicalize(transition.parameters);
@@ -210,7 +230,7 @@ function assertNleProjectValue(value: NleProject, ancestors: Set<object>): void 
     if (before === undefined || after === undefined) continue;
     const beforeOutgoing = items.get(before.outgoing)!.item;
     const afterIncoming = items.get(after.incoming)!.item;
-    assert(beforeOutgoing.startFrame + beforeOutgoing.durationFrames <= afterIncoming.startFrame,
+    assert(compareExactTemporalValues(itemEnd(beforeOutgoing), afterIncoming.start) <= 0,
       `NLE Transition chain leaves Item ${item} with overlapping transition ranges.`);
   }
   const matteByContent = new Map<string, string>();
@@ -225,9 +245,10 @@ function assertNleProjectValue(value: NleProject, ancestors: Set<object>): void 
     assert(content.item.enabled && source.item.enabled, `NLE Matte ${matte.id} cannot use a disabled Item.`);
     assert(content.item.id !== source.item.id, `NLE Matte ${matte.id} cannot sample itself.`);
     assert(!matteByContent.has(content.item.id), `NLE Item ${content.item.id} has multiple Mattes.`);
-    const contentEnd = content.item.startFrame + content.item.durationFrames;
-    const sourceEnd = source.item.startFrame + source.item.durationFrames;
-    assert(source.item.startFrame <= content.item.startFrame && sourceEnd >= contentEnd,
+    const contentEnd = itemEnd(content.item);
+    const sourceEnd = itemEnd(source.item);
+    assert(compareExactTemporalValues(source.item.start, content.item.start) <= 0
+      && compareExactTemporalValues(sourceEnd, contentEnd) >= 0,
       `NLE Matte ${matte.id} does not cover content Item ${content.item.id}.`);
     assertSymbol(matte.operator, `NLE Matte ${matte.id} operator`);
     canonicalize(matte.parameters);
@@ -286,7 +307,7 @@ export function serializeNleProject(value: NleProject): string {
 export function createNleProject(input: {
   readonly id: string;
   readonly name: string;
-  readonly frameRate?: NleFrameRate;
+  readonly editRate?: NleEditRate;
   readonly canvas?: NleCanvas;
 }): NleProject {
   return sealNleProject({
@@ -294,7 +315,7 @@ export function createNleProject(input: {
     id: input.id,
     name: input.name,
     revision: 0,
-    frameRate: input.frameRate ?? { numerator: 30, denominator: 1 },
+    editRate: input.editRate ?? { numerator: 30, denominator: 1 },
     canvas: input.canvas ?? { width: 1920, height: 1080, clearColor: "#000000" },
     media: [],
     tracks: [],
@@ -304,10 +325,14 @@ export function createNleProject(input: {
   });
 }
 
-export function nleProjectEndFrame(value: NleProject): number {
+export function nleProjectDuration(value: NleProject): ExactTemporalValue {
   assertNleProject(value);
-  return Math.max(0, ...value.tracks.flatMap((track) =>
-    track.items.filter((item) => item.enabled).map((item) => item.startFrame + item.durationFrames)));
+  let duration = exactTemporalZero();
+  for (const item of value.tracks.flatMap((track) => track.items).filter((item) => item.enabled)) {
+    const end = itemEnd(item);
+    if (compareExactTemporalValues(end, duration) > 0) duration = end;
+  }
+  return duration;
 }
 
 export function findNleMedia(value: NleProject, id: string): NleMedia {

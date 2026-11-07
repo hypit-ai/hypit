@@ -19,8 +19,15 @@ import {
 import { programSourceFromPreparedMedia } from "@hypit/audiovisual-media";
 import { verifyPreparedMedia } from "@hypit/media";
 import { sameType } from "@hypit/protocol";
-import { compareExactTemporalValues, sealLocalTemporalDomain, sealTemporalMap } from "@hypit/temporal/algebra";
-import { exactTemporalValueFromFrames } from "@hypit/temporal/sampling";
+import {
+  addExactTemporalValues,
+  compareExactTemporalValues,
+  exactTemporalZero,
+  sealLocalTemporalDomain,
+  sealTemporalMap,
+  subtractExactTemporalValues,
+  type ExactTemporalValue,
+} from "@hypit/temporal/algebra";
 import {
   sealLocalSpatialDomain,
   sealSpatialMap,
@@ -28,7 +35,7 @@ import {
   type SpatialMap,
 } from "@hypit/spatial/algebra";
 
-import { assertNleProject, findNleMedia, nleProjectEndFrame } from "./project.js";
+import { assertNleProject, findNleMedia, nleProjectDuration } from "./project.js";
 import type {
   NleEffect,
   NleItem,
@@ -49,33 +56,27 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function frame(project: NleProject, value: number) {
-  return exactTemporalValueFromFrames(value, { frameRate: project.frameRate });
-}
-
 /**
- * NLE automation is already materialized in Item-local frames. Lowering closes that local clock to
+ * NLE automation is already materialized in exact Item-local time. Lowering closes that local clock to
  * one factual Programme mapping; package resolvers never publish a named occurrence/source lookup.
  */
 function itemControlMapping(
-  project: NleProject,
   item: NleItem,
   parent: AudiovisualProgram["domain"],
   control: import("@hypit/temporal/algebra").LocalTemporalDomain,
   label: string,
 ): import("@hypit/temporal/algebra").TemporalMap {
-  const duration = frame(project, item.durationFrames);
-  assert(compareExactTemporalValues(control.duration, duration) === 0,
+  assert(compareExactTemporalValues(control.duration, item.duration) === 0,
     `${label} Control ${control.id} has another duration.`);
   return sealTemporalMap({ stages: [{
     target: parent,
     source: control,
     pieces: [{
       target: {
-        start: frame(project, item.startFrame),
-        end: frame(project, item.startFrame + item.durationFrames),
+        start: structuredClone(item.start),
+        end: addExactTemporalValues(item.start, item.duration),
       },
-      sourceAtStart: frame(project, 0),
+      sourceAtStart: exactTemporalZero(),
       rate: { numerator: 1, denominator: 1 },
     }],
   }] });
@@ -179,7 +180,7 @@ function audioEffectNode(
   const port = resolved.operator.inputs[0]!;
   const mappings: Record<string, import("@hypit/temporal/algebra").TemporalMap> = {};
   for (const [name, control] of Object.entries(resolved.operator.temporalControls)) {
-    mappings[name] = itemControlMapping(context.project, item, parent, control,
+    mappings[name] = itemControlMapping(item, parent, control,
       `NLE Audio Effect ${effect.id}`);
   }
   const id = `${item.id}:audio-effect:${effect.id}`;
@@ -192,20 +193,20 @@ function audioEffectNode(
   return id;
 }
 
-function selection(project: NleProject, item: NleItem, source: ProgramSource, outputName: string) {
+function selection(item: NleItem, source: ProgramSource, outputName: string) {
   const output = source.outputs[outputName];
   assert(output !== undefined, `NLE Item ${item.id} selected missing Source output ${outputName}.`);
   if (output.kind === "constant") return { kind: "constant" as const };
-  const local = sealLocalTemporalDomain({ id: `${item.id}:time`, duration: frame(project, item.durationFrames) });
-  const sourceAtStart = frame(project, item.localStartFrame);
-  const sourceAtEnd = frame(project, item.localStartFrame + item.durationFrames);
+  const local = sealLocalTemporalDomain({ id: `${item.id}:time`, duration: structuredClone(item.duration) });
+  const sourceAtStart = structuredClone(item.localStart);
+  const sourceAtEnd = addExactTemporalValues(item.localStart, item.duration);
   assert(compareExactTemporalValues(sourceAtEnd, output.domain.duration) <= 0,
     `NLE Item ${item.id} exceeds Source output ${source.id}.${outputName}.`);
   return { kind: "signal" as const, mapping: sealTemporalMap({ stages: [{
     target: local,
     source: output.domain,
     pieces: [{
-      target: { start: frame(project, 0), end: local.duration },
+      target: { start: exactTemporalZero(), end: local.duration },
       sourceAtStart,
       rate: { numerator: 1, denominator: 1 },
     }],
@@ -213,23 +214,22 @@ function selection(project: NleProject, item: NleItem, source: ProgramSource, ou
 }
 
 function occurrence(
-  project: NleProject,
   item: NleItem,
   parent: AudiovisualProgram["domain"],
   source: ProgramSource,
   outputs: readonly string[],
 ): Occurrence {
-  const domain = sealLocalTemporalDomain({ id: `${item.id}:time`, duration: frame(project, item.durationFrames) });
+  const domain = sealLocalTemporalDomain({ id: `${item.id}:time`, duration: structuredClone(item.duration) });
   return sealOccurrence({
     id: item.id,
     source,
     domain,
     placement: {
       parent,
-      start: frame(project, item.startFrame),
-      active: { start: frame(project, 0), end: domain.duration },
+      start: structuredClone(item.start),
+      active: { start: exactTemporalZero(), end: domain.duration },
     },
-    selections: Object.fromEntries(outputs.map((output) => [output, selection(project, item, source, output)])),
+    selections: Object.fromEntries(outputs.map((output) => [output, selection(item, source, output)])),
   });
 }
 
@@ -249,7 +249,7 @@ function effectNode(
   const port = resolved.operator.inputs[0]!;
   const mappings: Record<string, import("@hypit/temporal/algebra").TemporalMap> = {};
   for (const [name, control] of Object.entries(resolved.operator.temporalControls)) {
-    mappings[name] = itemControlMapping(context.project, item, parent, control,
+    mappings[name] = itemControlMapping(item, parent, control,
       `NLE Effect ${effect.id}`);
   }
   const id = `${item.id}:effect:${effect.id}`;
@@ -268,9 +268,10 @@ export function lowerNleProjectToAudiovisual(
   observer?: NleLoweringObserver,
 ): AudiovisualProgram {
   assertNleProject(project);
-  const endFrame = nleProjectEndFrame(project);
-  assert(endFrame > 0, "NLE Project has no enabled Items to lower.");
-  const domain = sealLocalTemporalDomain({ id: `${project.id}:time`, duration: frame(project, endFrame) });
+  const duration = nleProjectDuration(project);
+  assert(compareExactTemporalValues(duration, exactTemporalZero()) > 0,
+    "NLE Project has no enabled Items to lower.");
+  const domain = sealLocalTemporalDomain({ id: `${project.id}:time`, duration });
   const pictureDomain = programmeSpace(project);
   const occurrences: Record<string, Occurrence> = {};
   const pictureNodes: Record<string, PictureNode> = {};
@@ -324,7 +325,7 @@ export function lowerNleProjectToAudiovisual(
         `NLE ${item.kind} Item ${item.id} requests Audio but resolved no Audio output.`);
       outputs.push(resolved.audioOutput);
     }
-    occurrences[item.id] = occurrence(project, item, domain, resolved.source, [...new Set(outputs)]);
+    occurrences[item.id] = occurrence(item, domain, resolved.source, [...new Set(outputs)]);
 
     if (needsPicture) {
       const pictureOutput = resolved.pictureOutput!;
@@ -392,7 +393,7 @@ export function lowerNleProjectToAudiovisual(
     `NLE Matte ${matte.id} operator must expose content and matte Picture inputs.`);
     const mappings: Record<string, import("@hypit/temporal/algebra").TemporalMap> = {};
     for (const [name, control] of Object.entries(resolved.operator.temporalControls)) {
-      mappings[name] = itemControlMapping(project, content.item, domain, control,
+      mappings[name] = itemControlMapping(content.item, domain, control,
         `NLE Matte ${matte.id}`);
     }
     const node = `${matte.content}:matte:${matte.id}`;
@@ -415,10 +416,10 @@ export function lowerNleProjectToAudiovisual(
   const transitionRoot = (transition: NleProject["transitions"][number]): string => {
     const outgoing = located.get(transition.outgoing)!;
     const incoming = located.get(transition.incoming)!;
-    const start = incoming.item.startFrame;
-    const end = outgoing.item.startFrame + outgoing.item.durationFrames;
+    const start = incoming.item.start;
+    const end = addExactTemporalValues(outgoing.item.start, outgoing.item.duration);
     const transitionDomain = sealLocalTemporalDomain({
-      id: `${transition.id}:time`, duration: frame(project, end - start),
+      id: `${transition.id}:time`, duration: subtractExactTemporalValues(end, start),
     });
     const resolved = host.resolveTransition(transition, {
       project,
@@ -439,8 +440,8 @@ export function lowerNleProjectToAudiovisual(
         target: domain,
         source: control,
         pieces: [{
-          target: { start: frame(project, start), end: frame(project, end) },
-          sourceAtStart: frame(project, 0),
+          target: { start: structuredClone(start), end: structuredClone(end) },
+          sourceAtStart: exactTemporalZero(),
           rate: { numerator: 1, denominator: 1 },
         }],
       }] });
@@ -459,7 +460,7 @@ export function lowerNleProjectToAudiovisual(
     pictureNodes[restricted] = {
       kind: "restrict",
       input: applied,
-      range: { start: frame(project, start), end: frame(project, end) },
+      range: { start: structuredClone(start), end: structuredClone(end) },
     };
     return restricted;
   };
@@ -475,19 +476,23 @@ export function lowerNleProjectToAudiovisual(
       members.push(current);
       const value: NleItem = located.get(current)!.item;
       const next = transitionByOutgoing.get(current);
-      const visibleStart: number = previous === undefined
-        ? value.startFrame
-        : located.get(previous.outgoing)!.item.startFrame
-          + located.get(previous.outgoing)!.item.durationFrames;
-      const visibleEnd: number = next === undefined ? value.startFrame + value.durationFrames
-        : located.get(next.incoming)!.item.startFrame;
-      assert(visibleStart <= visibleEnd, `NLE Transition chain around Item ${current} overlaps itself.`);
-      if (visibleStart < visibleEnd) {
-        const restricted = `${current}:transition-visible:${visibleStart}:${visibleEnd}`;
+      const visibleStart: ExactTemporalValue = previous === undefined
+        ? value.start
+        : addExactTemporalValues(
+          located.get(previous.outgoing)!.item.start,
+          located.get(previous.outgoing)!.item.duration,
+        );
+      const visibleEnd: ExactTemporalValue = next === undefined
+        ? addExactTemporalValues(value.start, value.duration)
+        : located.get(next.incoming)!.item.start;
+      assert(compareExactTemporalValues(visibleStart, visibleEnd) <= 0,
+        `NLE Transition chain around Item ${current} overlaps itself.`);
+      if (compareExactTemporalValues(visibleStart, visibleEnd) < 0) {
+        const restricted = `${current}:transition-visible:${segments.length}`;
         pictureNodes[restricted] = {
           kind: "restrict",
           input: resolveMatteRoot(current),
-          range: { start: frame(project, visibleStart), end: frame(project, visibleEnd) },
+          range: { start: structuredClone(visibleStart), end: structuredClone(visibleEnd) },
         };
         segments.push(restricted);
       }

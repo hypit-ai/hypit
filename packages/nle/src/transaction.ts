@@ -1,6 +1,14 @@
 import {
   assertNleProject,
 } from "./project.js";
+import {
+  addExactTemporalValues,
+  assertExactTemporalValue,
+  compareExactTemporalValues,
+  exactTemporalZero,
+  subtractExactTemporalValues,
+  type ExactTemporalValue,
+} from "@hypit/temporal/algebra";
 import type {
   NleGroup,
   NleItem,
@@ -23,11 +31,11 @@ export type NleCommand =
   | {
       readonly kind: "item.move";
       readonly ids: readonly string[];
-      readonly deltaFrames: number;
+      readonly delta: ExactTemporalValue;
       readonly track?: string;
     }
-  | { readonly kind: "item.trim"; readonly id: string; readonly edge: "start" | "end"; readonly frame: number }
-  | { readonly kind: "item.split"; readonly id: string; readonly frame: number; readonly rightId: string }
+  | { readonly kind: "item.trim"; readonly id: string; readonly edge: "start" | "end"; readonly at: ExactTemporalValue }
+  | { readonly kind: "item.split"; readonly id: string; readonly at: ExactTemporalValue; readonly rightId: string }
   | { readonly kind: "item.replace"; readonly item: NleItem }
   | { readonly kind: "item.remove"; readonly ids: readonly string[] }
   | { readonly kind: "transition.add"; readonly transition: NleTransition }
@@ -147,13 +155,13 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       }
       case "item.move": {
         const ids = [...new Set(command.ids)];
-        if (!Number.isSafeInteger(command.deltaFrames)) throw new Error("NLE Item move delta must be a safe integer.");
+        assertExactTemporalValue(command.delta, "NLE Item move delta");
         const destination = command.track === undefined ? undefined : mutableTrack(next, command.track);
         if (destination !== undefined) editable(destination);
         for (const id of ids) {
           const { track, item } = mutableItem(next, id);
           editable(track);
-          (item as { startFrame: number }).startFrame += command.deltaFrames;
+          (item as { start: ExactTemporalValue }).start = addExactTemporalValues(item.start, command.delta);
           if (destination !== undefined && destination.id !== track.id) {
             track.items = track.items.filter((candidate) => candidate.id !== id);
             destination.items = [...destination.items, item];
@@ -164,28 +172,32 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       case "item.trim": {
         const { track, item } = mutableItem(next, command.id);
         editable(track);
-        if (!Number.isSafeInteger(command.frame)) throw new Error("NLE Item trim frame must be a safe integer.");
+        assertExactTemporalValue(command.at, "NLE Item trim position");
         if (command.edge === "start") {
-          const delta = command.frame - item.startFrame;
-          (item as { startFrame: number }).startFrame = command.frame;
-          (item as { durationFrames: number }).durationFrames -= delta;
-          (item as { localStartFrame: number }).localStartFrame += delta;
+          const delta = subtractExactTemporalValues(command.at, item.start);
+          (item as { start: ExactTemporalValue }).start = structuredClone(command.at);
+          (item as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(item.duration, delta);
+          (item as { localStart: ExactTemporalValue }).localStart = addExactTemporalValues(item.localStart, delta);
         } else {
-          (item as { durationFrames: number }).durationFrames = command.frame - item.startFrame;
+          (item as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(command.at, item.start);
         }
         break;
       }
       case "item.split": {
         const { track, item } = mutableItem(next, command.id);
         editable(track);
-        const offset = command.frame - item.startFrame;
-        if (offset <= 0 || offset >= item.durationFrames) throw new Error("NLE split must lie inside the Item.");
+        assertExactTemporalValue(command.at, "NLE Item split position");
+        const offset = subtractExactTemporalValues(command.at, item.start);
+        if (compareExactTemporalValues(offset, item.duration) >= 0
+          || compareExactTemporalValues(offset, exactTemporalZero()) <= 0) {
+          throw new Error("NLE split must lie inside the Item.");
+        }
         const right = structuredClone(item) as NleItem;
         (right as { id: string }).id = command.rightId;
-        (right as { startFrame: number }).startFrame = command.frame;
-        (right as { durationFrames: number }).durationFrames = item.durationFrames - offset;
-        (right as { localStartFrame: number }).localStartFrame = item.localStartFrame + offset;
-        (item as { durationFrames: number }).durationFrames = offset;
+        (right as { start: ExactTemporalValue }).start = structuredClone(command.at);
+        (right as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(item.duration, offset);
+        (right as { localStart: ExactTemporalValue }).localStart = addExactTemporalValues(item.localStart, offset);
+        (item as { duration: ExactTemporalValue }).duration = offset;
         const index = track.items.indexOf(item);
         track.items.splice(index + 1, 0, right);
         break;

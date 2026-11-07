@@ -1,6 +1,6 @@
 import { verifyPreparedMedia } from "@hypit/media";
 import type { CanonicalValue } from "@hypit/protocol";
-import { resolveTemporalBoundary } from "@hypit/temporal/sampling";
+import { exactTemporalZero, type ExactTemporalValue } from "@hypit/temporal/algebra";
 
 import { assertNleProject, findNleTrack } from "./project.js";
 import type { NleTransaction } from "./transaction.js";
@@ -34,8 +34,8 @@ export function createMediaAssetMaterialization(project: NleProject, input: {
   /** File-persistent facts used only to derive and validate the direct edit. */
   readonly interpretation: NleMediaInterpretation;
   readonly track: string;
-  readonly atFrame: number;
-  readonly durationFrames?: number;
+  readonly at: ExactTemporalValue;
+  readonly duration?: ExactTemporalValue;
   /** Defaults to an empty Audio effect chain when the interpretation has Audio; false excludes it. */
   readonly audio?: Partial<NleAudioAppearance> | false;
   readonly picture?: Partial<NlePictureAppearance> & { readonly layout?: NlePictureLayout };
@@ -51,10 +51,10 @@ export function createMediaAssetMaterialization(project: NleProject, input: {
     },
   });
   const track = findNleTrack(project, input.track);
-  const durationFrames = input.durationFrames ?? (input.interpretation.domain === undefined
+  const duration = input.duration ?? (input.interpretation.domain === undefined
     ? undefined
-    : resolveTemporalBoundary(input.interpretation.domain.duration, { frameRate: project.frameRate }, "cover"));
-  assert(durationFrames !== undefined,
+    : input.interpretation.domain.duration);
+  assert(duration !== undefined,
     `Constant NLE Media ${input.mediaId} requires an explicit occurrence duration.`);
   const includeAudio = input.audio !== false && input.interpretation.audio !== undefined;
   assert(input.audio === undefined || input.audio === false || input.interpretation.audio !== undefined,
@@ -75,9 +75,9 @@ export function createMediaAssetMaterialization(project: NleProject, input: {
         id: input.itemId,
         kind: "media",
         media: input.mediaId,
-        startFrame: input.atFrame,
-        durationFrames,
-        localStartFrame: 0,
+        start: structuredClone(input.at),
+        duration: structuredClone(duration),
+        localStart: exactTemporalZero(),
         enabled: true,
         ...(includeAudio ? { audio: { effects: structuredClone(input.audio?.effects ?? []) } } : {}),
         ...(track.kind === "audio" ? {} : { picture: {
@@ -95,9 +95,9 @@ export function createComponentMaterialization(project: NleProject, input: {
   readonly track: string;
   readonly component: NlePackageSymbol;
   readonly parameters: CanonicalValue;
-  readonly atFrame: number;
-  readonly durationFrames: number;
-  readonly localStartFrame?: number;
+  readonly at: ExactTemporalValue;
+  readonly duration: ExactTemporalValue;
+  readonly localStart?: ExactTemporalValue;
   readonly layout?: NlePictureLayout;
   readonly effects?: readonly NleEffect[];
   readonly audio?: Partial<NleAudioAppearance>;
@@ -109,9 +109,9 @@ export function createComponentMaterialization(project: NleProject, input: {
     kind: "component",
     component: structuredClone(input.component),
     parameters: structuredClone(input.parameters),
-    startFrame: input.atFrame,
-    durationFrames: input.durationFrames,
-    localStartFrame: input.localStartFrame ?? 0,
+    start: structuredClone(input.at),
+    duration: structuredClone(input.duration),
+    localStart: structuredClone(input.localStart ?? exactTemporalZero()),
     enabled: true,
     ...(input.audio === undefined ? {} : { audio: {
       effects: structuredClone(input.audio.effects ?? []),

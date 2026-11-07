@@ -4,7 +4,7 @@ export {
   findNleItem,
   findNleMedia,
   findNleTrack,
-  nleProjectEndFrame,
+  nleProjectDuration,
   parseNleProject,
   sealNleProject,
   serializeNleProject,

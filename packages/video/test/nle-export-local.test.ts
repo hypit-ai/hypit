@@ -22,6 +22,7 @@ import { exportLocalNleProject, nleProjectModuleKeys } from "../src/nle-export-l
 import { cliCommandModules } from "../src/commands.js";
 
 const timestamp = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } });
+const second = (value: number) => timestamp(String(value));
 
 function mediaAsset(): MediaAssetDocument {
   const prepared = prepareMedia({
@@ -56,7 +57,7 @@ function project() {
   const base = createNleProject({
     id: "export-project",
     name: "Export project",
-    frameRate: { numerator: 30, denominator: 1 },
+    editRate: { numerator: 30, denominator: 1 },
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   return applyNleTransaction(base, { revision: 0, commands: [{
@@ -68,7 +69,7 @@ function project() {
       id: "picture", name: "Picture", kind: "picture", locked: false, muted: false,
       items: [{
         id: "clip-use", kind: "media", media: "clip", enabled: true,
-        startFrame: 0, durationFrames: 30, localStartFrame: 0,
+        start: second(0), duration: second(1), localStart: second(0),
         picture: {
           layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" },
           effects: [],
@@ -91,6 +92,7 @@ test("whole-project export stages files, closes the delivery plan and atomically
     const result = await exportLocalNleProject({
       projectFile,
       outputFile,
+      frameRate: { numerator: 60, denominator: 1 },
       onProgress: event => progress.push(event.phase),
     }, {
       createExecutor(resources) {
@@ -123,7 +125,8 @@ test("whole-project export stages files, closes the delivery plan and atomically
       },
     });
 
-    assert.equal(result.frameCount, 30);
+    assert.deepEqual(result.frameRate, { numerator: 60, denominator: 1 });
+    assert.equal(result.frameCount, 60);
     assert.equal(Buffer.from(await readFile(outputFile)).toString("utf8"), "final-mp4");
     assert(progress.includes("media") && progress.includes("lower") && progress.includes("mux"));
     await assert.rejects(exportLocalNleProject({ projectFile, outputFile }), /already exists/u);
@@ -144,7 +147,7 @@ test("module selection includes nested component and effect owners exactly once"
         id: "picture", name: "Picture", kind: "picture", locked: false, muted: false,
         items: [{
           id: "component", kind: "component", component: symbol("@example/component"), parameters: {},
-          startFrame: 0, durationFrames: 1, localStartFrame: 0, enabled: true,
+          start: second(0), duration: second(1), localStart: second(0), enabled: true,
           picture: {
             layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "fill" },
             effects: [{ id: "effect", effect: symbol("@example/effect"), parameters: {} }],
@@ -155,12 +158,12 @@ test("module selection includes nested component and effect owners exactly once"
               id: "inner", name: "Inner", kind: "picture", locked: false, muted: false,
               items: [{
                 id: "inner-component", kind: "component", component: symbol("@example/nested"), parameters: {},
-                startFrame: 0, durationFrames: 1, localStartFrame: 0, enabled: true,
+                start: second(0), duration: second(1), localStart: second(0), enabled: true,
                 picture: { layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "fill" }, effects: [] },
               }],
             },
           }] }),
-          startFrame: 1, durationFrames: 1, localStartFrame: 0, enabled: true,
+          start: second(1), duration: second(1), localStart: second(0), enabled: true,
           picture: { layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "fill" }, effects: [] },
         }],
       },

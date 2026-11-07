@@ -3,7 +3,7 @@
   "id": "title-card-project",
   "name": "Title Card Project",
   "revision": 0,
-  "frameRate": {
+  "editRate": {
     "numerator": 30,
     "denominator": 1
   },
@@ -24,9 +24,18 @@
         {
           "id": "opening-title",
           "kind": "component",
-          "startFrame": 0,
-          "durationFrames": 90,
-          "localStartFrame": 0,
+          "start": {
+            "ticks": "0",
+            "timeBase": { "numerator": 1, "denominator": 1 }
+          },
+          "duration": {
+            "ticks": "3",
+            "timeBase": { "numerator": 1, "denominator": 1 }
+          },
+          "localStart": {
+            "ticks": "0",
+            "timeBase": { "numerator": 1, "denominator": 1 }
+          },
           "enabled": true,
           "component": {
             "module": {
@@ -60,10 +69,13 @@
                   "name": "filter"
                 },
                 "parameters": {
-                  "kind": "frames",
-                  "frames": [
+                  "kind": "keyframes",
+                  "keyframes": [
                     {
-                      "atFrame": 0,
+                      "at": {
+                        "ticks": "0",
+                        "timeBase": { "numerator": 1, "denominator": 1 }
+                      },
                       "state": {
                         "opacity": 0,
                         "blurRadius": 20,
@@ -77,7 +89,10 @@
                       }
                     },
                     {
-                      "atFrame": 15,
+                      "at": {
+                        "ticks": "1",
+                        "timeBase": { "numerator": 1, "denominator": 2 }
+                      },
                       "state": {
                         "opacity": 1,
                         "blurRadius": 0,

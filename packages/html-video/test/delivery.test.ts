@@ -123,21 +123,23 @@ test("the downstream NLE adapter shares one lowering and supplies silence for pi
     }),
   }] }]);
   const base = createNleProject({
-    id: "silent-card", name: "Silent card", frameRate,
+    id: "silent-card", name: "Silent card", editRate: frameRate,
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const project = applyNleTransaction(base, { revision: 0, commands: [{
     kind: "track.add", track: {
       id: "picture", name: "Picture", kind: "picture", locked: false, muted: false, items: [{
         id: "card", kind: "component", component, parameters: {},
-        startFrame: 0, durationFrames: frameCount, localStartFrame: 0, enabled: true,
+        start: exactTemporalValueFromFrames(0, { frameRate }),
+        duration: exactTemporalValueFromFrames(frameCount, { frameRate }),
+        localStart: exactTemporalValueFromFrames(0, { frameRate }), enabled: true,
         picture: {
           layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" }, effects: [],
         },
       }],
     },
   }] });
-  const plan = lowerNleProjectToHtmlVideoDeliveryPlan(project, host, htmlVideoDeliverySpec());
+  const plan = lowerNleProjectToHtmlVideoDeliveryPlan(project, host, frameRate, htmlVideoDeliverySpec());
   assert.deepEqual(plan.audio.program.graph.nodes.map((node) => node.kind), ["silence"]);
   assert.equal(audioProgramSampleFrames(plan.audio.program), 48_000);
   assert.match(plan.visual.program.html, /card/u);

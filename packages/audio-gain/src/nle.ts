@@ -4,8 +4,13 @@ import type {
   NlePackageSymbol,
 } from "@hypit/nle";
 import { canonicalize } from "@hypit/protocol";
-import { sealLocalTemporalDomain } from "@hypit/temporal/algebra";
-import { exactTemporalValueFromFrames } from "@hypit/temporal/sampling";
+import {
+  assertExactTemporalValue,
+  compareExactTemporalValues,
+  exactTemporalZero,
+  sealLocalTemporalDomain,
+  type ExactTemporalValue,
+} from "@hypit/temporal/algebra";
 
 import {
   audioGainControlOperator,
@@ -15,8 +20,8 @@ import {
 } from "./gain.js";
 import { audioGainModuleRef } from "./manifest.js";
 
-export type AudioGainNleFrame = {
-  readonly atFrame: number;
+export type AudioGainNleKeyframe = {
+  readonly at: ExactTemporalValue;
   readonly gain: number;
 };
 
@@ -24,14 +29,14 @@ export type AudioGainNleFrame = {
 export type AudioGainNleParameters =
   | { readonly kind: "constant"; readonly gain: number }
   | {
-      readonly kind: "frames";
-      readonly frames: readonly AudioGainNleFrame[];
+      readonly kind: "keyframes";
+      readonly keyframes: readonly AudioGainNleKeyframe[];
       readonly interpolation: { readonly kind: "linear" };
     };
 
 export type AudioGainNleEdit =
   | { readonly kind: "set-constant-gain"; readonly gain: number }
-  | { readonly kind: "set-frame-gain"; readonly atFrame: number; readonly gain: number };
+  | { readonly kind: "set-keyframe-gain"; readonly at: ExactTemporalValue; readonly gain: number };
 
 export const audioGainNleSymbol: NlePackageSymbol = {
   module: audioGainModuleRef,
@@ -58,7 +63,7 @@ function assertGain(value: unknown, label: string): asserts value is number {
 
 export function assertAudioGainNleParameters(
   value: unknown,
-  durationFrames?: number,
+  duration?: ExactTemporalValue,
 ): asserts value is AudioGainNleParameters {
   const label = "NLE Audio Gain parameters";
   record(value, label);
@@ -67,60 +72,59 @@ export function assertAudioGainNleParameters(
     assertGain(value.gain, `${label}.gain`);
     return;
   }
-  if (value.kind !== "frames") throw new Error(`${label}.kind is invalid.`);
-  exactFields(value, ["frames", "interpolation", "kind"], label);
+  if (value.kind !== "keyframes") throw new Error(`${label}.kind is invalid.`);
+  exactFields(value, ["interpolation", "keyframes", "kind"], label);
   record(value.interpolation, `${label}.interpolation`);
   exactFields(value.interpolation, ["kind"], `${label}.interpolation`);
   if (value.interpolation.kind !== "linear") throw new Error(`${label}.interpolation.kind is invalid.`);
-  if (!Array.isArray(value.frames) || value.frames.length === 0) {
-    throw new Error(`${label}.frames must contain at least one frame.`);
+  if (!Array.isArray(value.keyframes) || value.keyframes.length === 0) {
+    throw new Error(`${label}.keyframes must contain at least one keyframe.`);
   }
-  let previous = -1;
-  for (const [index, candidate] of value.frames.entries()) {
-    const frameLabel = `${label}.frames[${index}]`;
-    record(candidate, frameLabel);
-    exactFields(candidate, ["atFrame", "gain"], frameLabel);
-    if (!Number.isSafeInteger(candidate.atFrame) || (candidate.atFrame as number) < 0
-      || (candidate.atFrame as number) <= previous) {
-      throw new Error(`${frameLabel}.atFrame must be a strictly increasing non-negative safe integer.`);
+  let previous: ExactTemporalValue | undefined;
+  for (const [index, candidate] of value.keyframes.entries()) {
+    const keyframeLabel = `${label}.keyframes[${index}]`;
+    record(candidate, keyframeLabel);
+    exactFields(candidate, ["at", "gain"], keyframeLabel);
+    assertExactTemporalValue(candidate.at as ExactTemporalValue, `${keyframeLabel}.at`);
+    const at = candidate.at as ExactTemporalValue;
+    if (compareExactTemporalValues(at, exactTemporalZero()) < 0
+      || (previous !== undefined && compareExactTemporalValues(at, previous) <= 0)) {
+      throw new Error(`${keyframeLabel}.at must be a strictly increasing non-negative exact time.`);
     }
-    if (index === 0 && candidate.atFrame !== 0) {
-      throw new Error(`${label}.frames must begin at Item-local frame 0.`);
+    if (index === 0 && compareExactTemporalValues(at, exactTemporalZero()) !== 0) {
+      throw new Error(`${label}.keyframes must begin at Item-local time zero.`);
     }
-    if (durationFrames !== undefined && (candidate.atFrame as number) >= durationFrames) {
-      throw new Error(`${frameLabel}.atFrame must lie inside the Item duration.`);
+    if (duration !== undefined && compareExactTemporalValues(at, duration) >= 0) {
+      throw new Error(`${keyframeLabel}.at must lie inside the Item duration.`);
     }
-    assertGain(candidate.gain, `${frameLabel}.gain`);
-    previous = candidate.atFrame as number;
+    assertGain(candidate.gain, `${keyframeLabel}.gain`);
+    previous = at;
   }
 }
 
 export function audioGainControlFromNleParameters(
-  parameters: Extract<AudioGainNleParameters, { readonly kind: "frames" }>,
+  parameters: Extract<AudioGainNleParameters, { readonly kind: "keyframes" }>,
   input: {
     readonly itemId: string;
-    readonly durationFrames: number;
-    readonly frameRate: { readonly numerator: number; readonly denominator: number };
+    readonly duration: ExactTemporalValue;
   },
 ): AudioGainControl {
-  assertAudioGainNleParameters(parameters, input.durationFrames);
+  assertAudioGainNleParameters(parameters, input.duration);
   const domain = sealLocalTemporalDomain({
     id: `${input.itemId}:time`,
-    duration: exactTemporalValueFromFrames(input.durationFrames, { frameRate: input.frameRate }),
+    duration: structuredClone(input.duration),
   });
   return sealAudioGainControl({
     domain,
-    segments: parameters.frames.map((frame, index) => {
-      const next = parameters.frames[index + 1];
+    segments: parameters.keyframes.map((keyframe, index) => {
+      const next = parameters.keyframes[index + 1];
       return {
         range: {
-          start: exactTemporalValueFromFrames(frame.atFrame, { frameRate: input.frameRate }),
-          end: exactTemporalValueFromFrames(next?.atFrame ?? input.durationFrames, {
-            frameRate: input.frameRate,
-          }),
+          start: structuredClone(keyframe.at),
+          end: structuredClone(next?.at ?? input.duration),
         },
-        from: frame.gain,
-        to: next?.gain ?? frame.gain,
+        from: keyframe.gain,
+        to: next?.gain ?? keyframe.gain,
         interpolation: { kind: "linear" as const },
       };
     }),
@@ -130,45 +134,46 @@ export function audioGainControlFromNleParameters(
 export function editAudioGainNleParameters(
   parameters: AudioGainNleParameters,
   operation: AudioGainNleEdit,
-  durationFrames: number,
+  duration: ExactTemporalValue,
 ): AudioGainNleParameters {
-  assertAudioGainNleParameters(parameters, durationFrames);
+  assertAudioGainNleParameters(parameters, duration);
   record(operation, "NLE Audio Gain edit");
   if (operation.kind === "set-constant-gain") {
     exactFields(operation, ["gain", "kind"], "NLE Audio Gain edit");
     assertGain(operation.gain, "NLE Audio Gain edit.gain");
     return { kind: "constant", gain: operation.gain };
   }
-  if (operation.kind !== "set-frame-gain") throw new Error("NLE Audio Gain edit.kind is invalid.");
-  exactFields(operation, ["atFrame", "gain", "kind"], "NLE Audio Gain edit");
-  if (parameters.kind !== "frames") throw new Error("NLE Audio Gain frame edit requires frame parameters.");
-  if (!Number.isSafeInteger(operation.atFrame) || operation.atFrame < 0
-    || operation.atFrame >= durationFrames) {
-    throw new Error("NLE Audio Gain edit.atFrame must lie inside the Item duration.");
+  if (operation.kind !== "set-keyframe-gain") throw new Error("NLE Audio Gain edit.kind is invalid.");
+  exactFields(operation, ["at", "gain", "kind"], "NLE Audio Gain edit");
+  if (parameters.kind !== "keyframes") throw new Error("NLE Audio Gain keyframe edit requires keyframe parameters.");
+  assertExactTemporalValue(operation.at, "NLE Audio Gain edit.at");
+  if (compareExactTemporalValues(operation.at, exactTemporalZero()) < 0
+    || compareExactTemporalValues(operation.at, duration) >= 0) {
+    throw new Error("NLE Audio Gain edit.at must lie inside the Item duration.");
   }
   assertGain(operation.gain, "NLE Audio Gain edit.gain");
-  const frames = parameters.frames.filter((frame) => frame.atFrame !== operation.atFrame);
-  frames.push({ atFrame: operation.atFrame, gain: operation.gain });
-  frames.sort((left, right) => left.atFrame - right.atFrame);
+  const keyframes = parameters.keyframes.filter((keyframe) =>
+    compareExactTemporalValues(keyframe.at, operation.at) !== 0);
+  keyframes.push({ at: structuredClone(operation.at), gain: operation.gain });
+  keyframes.sort((left, right) => compareExactTemporalValues(left.at, right.at));
   const next: AudioGainNleParameters = {
-    kind: "frames",
-    frames,
+    kind: "keyframes",
+    keyframes,
     interpolation: { kind: "linear" },
   };
-  assertAudioGainNleParameters(next, durationFrames);
+  assertAudioGainNleParameters(next, duration);
   return next;
 }
 
 export const audioGainNleResolver: NleAudioEffectResolver = {
   effect: audioGainNleSymbol,
-  resolve: (effect, item, { project }) => {
+  resolve: (effect, item) => {
     const parameters = effect.parameters as unknown;
-    assertAudioGainNleParameters(parameters, item.durationFrames);
+    assertAudioGainNleParameters(parameters, item.duration);
     if (parameters.kind === "constant") return { operator: audioGainOperator(parameters.gain) };
     return { operator: audioGainControlOperator(audioGainControlFromNleParameters(parameters, {
       itemId: item.id,
-      durationFrames: item.durationFrames,
-      frameRate: project.frameRate,
+      duration: item.duration,
     })) };
   },
 };
@@ -178,17 +183,17 @@ export const audioGainNleAuthoring: NleEffectParameterAuthoring = {
   inspect: ({ effect, item, medium }) => {
     if (medium !== "audio") throw new Error("Audio Gain must belong to an Audio effect chain.");
     const parameters = effect.parameters as unknown;
-    assertAudioGainNleParameters(parameters, item.durationFrames);
+    assertAudioGainNleParameters(parameters, item.duration);
     return canonicalize(parameters);
   },
   edit: (operation, { effect, item, medium }) => {
     if (medium !== "audio") throw new Error("Audio Gain must belong to an Audio effect chain.");
     const parameters = effect.parameters as unknown;
-    assertAudioGainNleParameters(parameters, item.durationFrames);
+    assertAudioGainNleParameters(parameters, item.duration);
     return canonicalize(editAudioGainNleParameters(
       parameters,
       operation as unknown as AudioGainNleEdit,
-      item.durationFrames,
+      item.duration,
     ));
   },
 };

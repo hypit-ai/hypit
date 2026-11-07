@@ -14,6 +14,7 @@ export function writeNleHelp(io: Pick<CliIo, "write">): void {
     + "Options:\n"
     + "  --to <file>             New .mp4 file to create (required; never overwrites)\n"
     + "  --quality <quality>     draft | standard | high (default: standard)\n"
+    + "  --frame-rate <rate>     Output fps, e.g. 60 or 30000/1001 (default: project edit rate)\n"
     + "  --package-root <path>   Resolve project component packages here (default: NLE directory)\n"
     + "  --workers <count|auto>  Chromium picture-render workers\n"
     + "  --json                  Write one machine-readable result\n");
@@ -43,6 +44,18 @@ function workers(raw: string | undefined): number | "auto" | undefined {
   return value;
 }
 
+function frameRate(raw: string | undefined): { readonly numerator: number; readonly denominator: number } | undefined {
+  if (raw === undefined) return undefined;
+  const match = /^(\d+)(?:\/(\d+))?$/u.exec(raw);
+  assert(match !== null, "--frame-rate must be a positive integer or rational such as 30000/1001");
+  const numerator = Number(match[1]);
+  const denominator = Number(match[2] ?? "1");
+  assert(Number.isSafeInteger(numerator) && numerator > 0
+    && Number.isSafeInteger(denominator) && denominator > 0,
+  "--frame-rate must contain positive safe integers");
+  return { numerator, denominator };
+}
+
 export async function runNleCli(
   argv: readonly string[],
   io: CliIo,
@@ -63,7 +76,7 @@ export async function runNleCli(
     if (["--debug", "--verbose", "--no-color"].includes(item)) continue;
     if (item === "--color") { index += 1; continue; }
     if (!item.startsWith("--")) { positionals.push(item); continue; }
-    assert(["--to", "--quality", "--package-root", "--workers"].includes(item), `Unknown option ${item}`);
+    assert(["--to", "--quality", "--frame-rate", "--package-root", "--workers"].includes(item), `Unknown option ${item}`);
     assert(!options.has(item), `${item} cannot be repeated`);
     const value = argv[index + 1];
     assert(value !== undefined && !value.startsWith("--"), `${item} requires a value`);
@@ -80,6 +93,7 @@ export async function runNleCli(
   const outputFile = resolve(cwd, to);
   const packageRoot = resolve(cwd, options.get("--package-root") ?? dirname(projectFile));
   const renderWorkers = workers(options.get("--workers"));
+  const outputFrameRate = frameRate(options.get("--frame-rate"));
   const controller = new AbortController();
   const abort = (): void => controller.abort(new Error("NLE export was interrupted."));
   process.once("SIGINT", abort);
@@ -90,6 +104,7 @@ export async function runNleCli(
       packageRoot,
       ...(distributionPackageRoot === undefined ? {} : { distributionPackageRoot }),
       quality: quality as "draft" | "standard" | "high",
+      ...(outputFrameRate === undefined ? {} : { frameRate: outputFrameRate }),
       signal: controller.signal,
       html: {
         ...(renderWorkers === undefined ? {} : { workers: renderWorkers }),

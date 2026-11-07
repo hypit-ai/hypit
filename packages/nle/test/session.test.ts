@@ -23,13 +23,15 @@ const picture = {
   effects: [],
 } as const;
 
-function caption(id: string, text: string, startFrame: number): NleComponentItem {
+const time = (value: number) => ({ ticks: String(value), timeBase: { numerator: 1, denominator: 1 } });
+
+function caption(id: string, text: string, start: number): NleComponentItem {
   return {
     id,
     kind: "component",
-    startFrame,
-    durationFrames: 4,
-    localStartFrame: 0,
+    start: time(start),
+    duration: time(4),
+    localStart: time(0),
     enabled: true,
     component: { module: { name: "@example/caption", version: "1" }, name: "basic" },
     parameters: { text },
@@ -108,20 +110,20 @@ test("savepoint follows the logical history cursor while revisions remain monoto
 
   session = commitNleEdit(session, {
     label: "Move first caption",
-    transaction: { revision: 1, commands: [{ kind: "item.move", ids: ["a"], deltaFrames: 5 }] },
+    transaction: { revision: 1, commands: [{ kind: "item.move", ids: ["a"], delta: time(5) }] },
   });
-  assert.equal(findNleItem(session.current, "a").item.startFrame, 5);
+  assert.deepEqual(findNleItem(session.current, "a").item.start, time(5));
   assert.equal(session.current.revision, 2);
   assert.equal(isNleEditSessionDirty(session), true);
 
   session = undoNleEdit(session);
-  assert.equal(findNleItem(session.current, "a").item.startFrame, 0);
+  assert.deepEqual(findNleItem(session.current, "a").item.start, time(0));
   assert.equal(session.current.revision, 3);
   assert.equal(session.cursor, 1);
   assert.equal(isNleEditSessionDirty(session), false);
 
   session = redoNleEdit(session);
-  assert.equal(findNleItem(session.current, "a").item.startFrame, 5);
+  assert.deepEqual(findNleItem(session.current, "a").item.start, time(5));
   assert.equal(session.current.revision, 4);
   assert.equal(isNleEditSessionDirty(session), true);
 });
@@ -142,7 +144,7 @@ test("a new edit after undo discards redo without losing exact removed state", (
 
   session = commitNleEdit(session, {
     label: "Move last caption",
-    transaction: { revision: 3, commands: [{ kind: "item.move", ids: ["c"], deltaFrames: 2 }] },
+    transaction: { revision: 3, commands: [{ kind: "item.move", ids: ["c"], delta: time(2) }] },
   });
   assert.equal(session.history.length, 2);
   assert.equal(canRedoNleEdit(session), false);
@@ -152,7 +154,7 @@ test("a new edit after undo discards redo without losing exact removed state", (
 
   session = undoNleEdit(session);
   assert.deepEqual(session.current.tracks[0]?.items.map((item) => item.id), ["a", "b", "c"]);
-  assert.equal(findNleItem(session.current, "c").item.startFrame, 16);
+  assert.deepEqual(findNleItem(session.current, "c").item.start, time(16));
   assert.equal(isNleEditSessionDirty(session), true);
 });
 
@@ -160,11 +162,11 @@ test("failed or stale commits leave the previous session usable", () => {
   const session = withCaptions();
   assert.throws(() => commitNleEdit(session, {
     label: "Stale move",
-    transaction: { revision: 0, commands: [{ kind: "item.move", ids: ["a"], deltaFrames: 1 }] },
+    transaction: { revision: 0, commands: [{ kind: "item.move", ids: ["a"], delta: time(1) }] },
   }), NleRevisionConflict);
   assert.equal(session.cursor, 1);
   assert.equal(session.current.revision, 1);
-  assert.equal(findNleItem(session.current, "a").item.startFrame, 0);
+  assert.deepEqual(findNleItem(session.current, "a").item.start, time(0));
   assert.throws(() => undoNleEdit(emptySession()), NleHistoryBoundary);
   assert.throws(() => commitNleEdit(session, {
     label: " ",
