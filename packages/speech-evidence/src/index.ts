@@ -7,15 +7,12 @@ import { resolveTemporalBoundary } from "@hypit/temporal/sampling";
 import type { LocalTemporalDomain, TemporalMap } from "@hypit/temporal";
 export {
   decodeSpeechTranscriptEvidence,
-  decodeSpeechTranscriptSource,
   encodeSpeechTranscriptEvidence,
   phraseRanges,
-  speechTranscriptSource,
   transcriptWordsFromEvidence,
   wordsAt,
 } from "./transcript-document.js";
-export type { FrameWords, TranscriptWord } from "./transcript-document.js";export { speechTranscriptMarkupDeclaration } from "./declaration.js";
-export { speechTranscriptAuthorDeclaration } from "./declaration.js";
+export type { FrameWords, TranscriptWord } from "./transcript-document.js";
 export { speechEvidenceMediaRepresentationPackage } from "./representation.js";
 export {
   speechEvidenceCapabilities,

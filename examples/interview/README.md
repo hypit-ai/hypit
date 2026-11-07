@@ -111,7 +111,7 @@ moving head placement in the result. Changing only Caption or MG needs no repeat
 the footage requires matching measurements.
 
 If reviewing the actual footage reveals a transcription timing error, use the explicit speech-evidence
-path. Produce or export an editable `.transcript.svml`, correct its word evidence, import that Source,
+path. Produce or export an editable `.transcript.json`, correct its word evidence, attach that Representation,
 and connect its published `SpeechTranscriptEvidence` to the existing Alignment declaration. The
 Alignment continues to express the relationship between the Script Segment and the accepted media
 domain; the correction belongs to the evidence rather than to the execution request.

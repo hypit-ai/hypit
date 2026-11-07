@@ -2,7 +2,7 @@ import type { MediaRepresentationPackage } from "@hypit/media-asset";
 import { compareExactTemporalValues } from "@hypit/temporal";
 
 import { speechEvidenceTypes } from "./contract.js";
-import { decodeSpeechTranscriptSource } from "./transcript-document.js";
+import { decodeSpeechTranscriptEvidence } from "./transcript-document.js";
 
 /**
  * Open one file-backed acoustic observation attached to a Media Asset.
@@ -18,7 +18,7 @@ export const speechEvidenceMediaRepresentationPackage: MediaRepresentationPackag
         || representation.binding.temporal === undefined) {
         throw new Error("SpeechTranscriptEvidence Representation requires temporal and audio media bindings.");
       }
-      const evidence = decodeSpeechTranscriptSource(
+      const evidence = decodeSpeechTranscriptEvidence(
         new TextDecoder().decode(await read(representation.document)),
         `SpeechTranscriptEvidence Representation ${representation.id}`,
       );

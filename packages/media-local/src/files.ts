@@ -8,7 +8,7 @@ import { decodeMediaFrames } from "./file-frames.js";
 import { writeFrameGrid } from "./frame-grid.js";
 import { runProcess, runProcessOutput, runProcessWithInput } from "./process.js";
 import {
-  decodeSpeechTranscriptSource,
+  decodeSpeechTranscriptEvidence,
   phraseRanges,
   transcriptWordsFromEvidence,
   wordsAt,
@@ -36,7 +36,7 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 async function readTranscript(path: string): Promise<readonly TranscriptWord[]> {
-  return transcriptWordsFromEvidence(decodeSpeechTranscriptSource(await readFile(path, "utf8"), path));
+  return transcriptWordsFromEvidence(decodeSpeechTranscriptEvidence(await readFile(path, "utf8"), path));
 }
 
 export function isMediaCommand(value: string | undefined): value is MediaCommand {
@@ -1298,9 +1298,9 @@ export function writeMediaHelp(io: MediaCommandOutput, topic?: MediaCommand): vo
     cut: ["  hypit media cut <file> [--start <s> --end <s> | --keep <start:end> ...] [--label-time] --to <clip.mp4|clip.wav>",
       "    Keep one stretch or join ordered stretches from one source. Audio-only outputs WAV; MP4 is a useful video target.",
       "    --label-time overlays source time on a single video evidence copy."],
-    frames: ["  hypit media frames <file> (--at <s,s,…> | --every <s> | --every-frame) [--start <s> --end <s>] [--label-time] [--transcript <transcript.svml>] --to <dir>",
+    frames: ["  hypit media frames <file> (--at <s,s,…> | --every <s> | --every-frame) [--start <s> --end <s>] [--label-time] [--transcript <transcript.json>] --to <dir>",
       "    Individual frames named by source time; --transcript adds word times and context below each picture."],
-    grid: ["  hypit media grid <video> [--start <s> --end <s> | --at <s,s,…>] [--every <s> | --frames <n>] [--transcript <transcript.svml>] [--no-time] [--header] [--waveform] [--spectrogram] [--cell <px>] [--columns <n>] --to <grid.jpg|grid.png>",
+    grid: ["  hypit media grid <video> [--start <s> --end <s> | --at <s,s,…>] [--every <s> | --frames <n>] [--transcript <transcript.json>] [--no-time] [--header] [--waveform] [--spectrogram] [--cell <px>] [--columns <n>] --to <grid.jpg|grid.png>",
       "  hypit media grid <video> --pages [--ranges <json> | --start <s> --end <s>] [--every <s> | --frames <n> | --every-frame] [--format jpg|png] [--rows <n>] --to <dir>",
       "    Time labels are shown by default. --no-time removes cell times and attached audio time axes; without transcript or audio tracks this produces picture-only cells.",
       "    --transcript adds width-adaptive word context using actual frame times; --word-context <n> overrides its radius. --header is independent.",
@@ -1308,9 +1308,9 @@ export function writeMediaHelp(io: MediaCommandOutput, topic?: MediaCommand): vo
       "    --spectrogram adds frequency over time; its scale, frequency range, dynamic range and height can be selected independently.",
       "    --audio-stream and --split-channels apply to attached audio observations. Numbered markers connect each sampled frame to its audio time.",
       "    Audio observations require audio and a source interval, so they cannot be combined with point-only --at selection."],
-    waveform: ["  hypit media waveform <audio-or-video> [--start <s> --end <s> | --around <phrase> --transcript <transcript.svml>] [--audio-stream <index>] [--width <px> | --pixels-per-second <n>] [--height <px>] [--filter peak|average] [--scale linear|sqrt|cbrt|log] [--split-channels] [--no-time] --to <waveform.png>",
+    waveform: ["  hypit media waveform <audio-or-video> [--start <s> --end <s> | --around <phrase> --transcript <transcript.json>] [--audio-stream <index>] [--width <px> | --pixels-per-second <n>] [--height <px>] [--filter peak|average] [--scale linear|sqrt|cbrt|log] [--split-channels] [--no-time] --to <waveform.png>",
       "    Amplitude over source time. Peak preserves transients; average exposes sustained sample energy."],
-    spectrogram: ["  hypit media spectrogram <audio-or-video> [--start <s> --end <s> | --around <phrase> --transcript <transcript.svml>] [--audio-stream <index>] [--width <px> | --pixels-per-second <n>] [--height <px>] [--scale linear|sqrt|cbrt|log] [--frequency-scale linear|log] [--start-frequency <Hz>] [--stop-frequency <Hz>] [--dynamic-range <dB>] [--split-channels] [--no-time] --to <spectrogram.png>",
+    spectrogram: ["  hypit media spectrogram <audio-or-video> [--start <s> --end <s> | --around <phrase> --transcript <transcript.json>] [--audio-stream <index>] [--width <px> | --pixels-per-second <n>] [--height <px>] [--scale linear|sqrt|cbrt|log] [--frequency-scale linear|log] [--start-frequency <Hz>] [--stop-frequency <Hz>] [--dynamic-range <dB>] [--split-channels] [--no-time] --to <spectrogram.png>",
       "    Frequency over source time. Videos are accepted when they contain audio; silent videos are not."],
     boundaries: ["  hypit media boundaries <file> [--rate <samples/s>] [--threshold <0..1>]",
       "    Mechanical adjacent-frame change candidates with scores; never editorial shot labels."],

@@ -44,11 +44,11 @@ hypit media grid reference.mp4 --start 12 --end 19.5 --no-time --to notes/pictur
 hypit media grid reference.mp4 --start 12 --end 19.5 --header --to notes/evidence.jpg
 hypit media grid reference.mp4 --start 12 --end 19.5 --waveform --to notes/hook-grid.jpg
 hypit media grid reference.mp4 --start 12 --end 19.5 --spectrogram --to notes/frequency-grid.png
-hypit media grid reference.mp4 --start 12 --end 19.5 --transcript notes/transcript.svml \
+hypit media grid reference.mp4 --start 12 --end 19.5 --transcript notes/transcript.json \
   --waveform --spectrogram --frame-marker-color '#59d8ff' --to notes/word-grid.png
 hypit media grid reference.mp4 --pages --ranges notes/ranges.json --format png --to notes/grids
 hypit media waveform reference.mp4 --start 12 --end 19.5 --to notes/hook-waveform.png
-hypit media spectrogram reference.mp4 --around 'glass breaks' --transcript notes/transcript.svml \
+hypit media spectrogram reference.mp4 --around 'glass breaks' --transcript notes/transcript.json \
   --pixels-per-second 240 --to notes/glass-break-frequency.png
 hypit media boundaries reference.mp4
 ```
@@ -113,7 +113,7 @@ selected frame-marker color.
 Audio-only media can produce either audio observation but not a frame grid, while a silent video cannot
 produce an audio observation. Multiple audio streams require an explicit container stream index. Reusing
 these local presentation functions does not transfer frame acquisition or Runtime authority. Transcript-aware ranges
-consume a `<speech:Transcript>` SVML Source; exact decoding and phrase matching are owned by
+consume a `SpeechTranscriptEvidence` JSON file; exact decoding and phrase matching are owned by
 `@hypit/speech-evidence`, while
 this package only joins those ranges to file decoding.
 

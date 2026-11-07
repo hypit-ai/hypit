@@ -13,7 +13,7 @@ import type {
   RuntimeEndpointObservation,
   RuntimeEndpointQuery,
 } from "@hypit/runtime";
-import { sealSpeechEvidenceAudio, speechEvidenceTypes, speechTranscriptSource } from "@hypit/speech-evidence";
+import { encodeSpeechTranscriptEvidence, sealSpeechEvidenceAudio, speechEvidenceTypes } from "@hypit/speech-evidence";
 import type { SpeechTranscriptEvidence } from "@hypit/speech-evidence";
 
 import { whisperXRequestForEvidenceAudio } from "./evidence.js";
@@ -164,7 +164,7 @@ function endpointLine(endpoint: RuntimeEndpointObservation): string {
 
 export function writeTranscribeHelp(io: CliIo): void {
   io.write("hypit transcribe\nCreate editable speech evidence through the WhisperX transcription Endpoint selected by the Runtime Profile.\n\n"
-    + "  hypit transcribe <audio|video> --to <name.transcript.svml> --language <code> [--runtime <profile>] [--project <directory>]\n\n"
+    + "  hypit transcribe <audio|video> --to <name.transcript.json> --language <code> [--runtime <profile>] [--project <directory>]\n\n"
     + "The local media capability projects 16 kHz mono audio; WhisperX returns exact provider-neutral evidence.\n"
     + "This is one immediate request: no Build or Result state is created.\n");
 }
@@ -207,7 +207,7 @@ export async function runTranscribeCli(
   const transcript = fulfillment as unknown as SpeechTranscriptEvidence;
   const words = transcript.passages.reduce((total, passage) => total + passage.words.length, 0);
   const audioSeconds = transcript.sampleFrames / 16_000;
-  await writeNew(to, speechTranscriptSource("transcript", transcript));
+  await writeNew(to, encodeSpeechTranscriptEvidence(transcript));
   const view = { format: "hypit.whisperx-transcribe@1", source, language,
     audio_seconds: audioSeconds, extracted: evidence.extracted, ...endpointView(endpoint),
     passages: transcript.passages.length, words, path: to };

@@ -7,7 +7,7 @@ import test from "node:test";
 import sharp from "sharp";
 
 import type { CliIo } from "@hypit/cli";
-import { speechTranscriptSource } from "@hypit/speech-evidence";
+import { encodeSpeechTranscriptEvidence } from "@hypit/speech-evidence";
 
 import { cutFrame, probeMedia, runMediaCli, visualBoundaries } from "../../src/files.js";
 import { renderWaveform, renderWaveformView } from "../../src/waveform.js";
@@ -238,8 +238,8 @@ test("waveforms accept audio and video audio tracks while grids remain video vie
     await runMediaCli(["media", "waveform", audiovisual, "--to", "video.png"], io().io, work);
     assert.ok((await stat(join(work, "video.png"))).size > 0);
 
-    const transcript = join(work, "transcript.svml");
-    await writeFile(transcript, speechTranscriptSource("transcript", { sampleFrames: 48_000, passages: [{ words: [
+    const transcript = join(work, "transcript.json");
+    await writeFile(transcript, encodeSpeechTranscriptEvidence({ sampleFrames: 48_000, passages: [{ words: [
       { text: "glass", startSample: 12_800, endSampleExclusive: 16_000 },
       { text: "breaks", startSample: 16_000, endSampleExclusive: 19_200 },
     ], chars: [] }] }));
@@ -424,8 +424,8 @@ test("word-located grids paginate dense samples without covering the source pict
   const work = await mkdtemp(join(tmpdir(), "hypit-word-grids-"));
   try {
     const source = await sample(work);
-    const transcript = join(work, "words.transcript.svml");
-    await writeFile(transcript, speechTranscriptSource("transcript", { sampleFrames: 48_000, passages: [{ words: [
+    const transcript = join(work, "words.transcript.json");
+    await writeFile(transcript, encodeSpeechTranscriptEvidence({ sampleFrames: 48_000, passages: [{ words: [
       { text: "Hello", startSample: 1_600, endSampleExclusive: 6_400 },
       { text: "world!", startSample: 6_400, endSampleExclusive: 12_800 },
       { text: "<你好 & café>" },

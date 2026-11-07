@@ -4,7 +4,7 @@ Provider-neutral acoustic and word-alignment observations. Evidence is not the a
 
 The package also owns the exact Media Representation type
 `@hypit/speech-evidence@1#SpeechTranscriptEvidence`. A file-backed instance must be attached through
-both temporal and audio bindings. Opening it decodes the ordinary editable transcript Source and checks
+both temporal and audio bindings. Opening it decodes the ordinary JSON document and checks
 that its exact 16 kHz sample span equals the Representation-local temporal domain. Media Asset Core does
 not decode the document or know whether WhisperX, another detector or an imported file produced it.
 
@@ -23,25 +23,19 @@ the acoustic-evidence contract.
 
 ## Transcript evidence document
 
-`<speech:Transcript>` is the lossless author-file form of `SpeechTranscriptEvidence`. The JSON body
-contains exactly the provider-neutral evidence value, inside an ordinary `.svml` Source that can be
-compiled and referenced like any other author input:
+The lossless file form of `SpeechTranscriptEvidence` is the exact JSON value:
 
-```svml
-<import as="speech" from="@hypit/speech-evidence@1"/>
-<speech:Transcript id="performance">
-{ "sampleFrames": 32000, "passages": [] }
-</speech:Transcript>
+```json
+{
+  "sampleFrames": 32000,
+  "passages": []
+}
 ```
 
-`hypit transcribe` writes this form. The package owns its exact codec and word/phrase inspection
+`hypit transcribe` writes this JSON directly. The package owns its exact codec and word/phrase inspection
 views because those operations concern speech evidence, not FFmpeg and not a Timeline. A local-media
 inspection tool may project sample coordinates to seconds to select frames, but it does not acquire
 ownership of transcript meaning.
-
-The Transcript Author declaration owns ID validation, evidence decoding and the resulting typed
-Record. Markup declares only the `Transcript` tag and that its body is opaque package text. The
-Frontend therefore preserves JSON exactly and never parses it as nested Markup.
 
 `wordsAt` uses half-open word spans and preserves overlaps. `phraseRanges` matches whole consecutive
 words, preserves repeated occurrences and returns each measured range; it never guesses which

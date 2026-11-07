@@ -15,23 +15,16 @@ tarball, and its npm version can advance independently.
 
 The package also owns `@hypit/whisperx/cli` and therefore `hypit transcribe`. That command projects an
 explicit audio or video file to canonical evidence audio through `@hypit/media-local`, invokes the
-selected WhisperX transcription Endpoint, and writes a lossless `<speech:Transcript>` SVML Source. It is an
+selected WhisperX transcription Endpoint, and writes a lossless `SpeechTranscriptEvidence` JSON file. It is an
 immediate authoring operation: it creates no Author Graph, Build or Result, and its transcript stays
 on the input file's local clock.
 
 ```bash
-hypit transcribe reference.mp4 --language en --to notes/reference.transcript.svml
+hypit transcribe reference.mp4 --language en --to notes/reference.transcript.json
 ```
 
-The generated Source exports `transcript`, so another author Source can use the same evidence without
-running the model again:
-
-```svml
-<import as="accepted-speech" source="./notes/reference.transcript.svml"/>
-<speechalign:Alignment id="opening" narrative={story}
-  segment={story.segment.opening} domain={opening-media.domain}
-  evidence={accepted-speech.transcript}/>
-```
+The generated file is the provider-neutral `SpeechTranscriptEvidence` JSON value. It can be attached
+to a Media Asset as a typed Representation and reused without running the model again.
 
 The reusable transcript document and phrase-range operations belong to `@hypit/speech-evidence`.
 WhisperX owns only how evidence is obtained through this model family; media decoding remains with
@@ -85,4 +78,4 @@ hypit build video.svml --target <output> --runtime hypit.runtime.json --follow
 ```
 
 The Provider README owns model cache and hardware choices. To materialize editable evidence, use
-`hypit transcribe source.mp4 --language ko --to transcript.svml` with the selected Runtime.
+`hypit transcribe source.mp4 --language ko --to transcript.json` with the selected Runtime.

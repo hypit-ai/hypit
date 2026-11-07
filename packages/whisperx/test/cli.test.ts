@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { Need } from "@hypit/hypit/protocol";
-import { decodeSpeechTranscriptSource, sealSpeechTranscriptEvidence } from "@hypit/speech-evidence";
+import { decodeSpeechTranscriptEvidence, sealSpeechTranscriptEvidence } from "@hypit/speech-evidence";
 import { interpretWhisperXTranscript } from "@hypit/whisperx";
 import type { WhisperXTranscriptionRequest } from "@hypit/whisperx";
 
@@ -106,11 +106,11 @@ test("transcribe writes exact editable evidence from the Profile's transcription
   try {
     await writeFile(join(root, "speech.wav"), wav(32_000));
     const out = capture();
-    await runTranscribeCli(["transcribe", "speech.wav", "--to", "speech.transcript.svml", "--language", "en"], out.io, environment(root, seen));
+    await runTranscribeCli(["transcribe", "speech.wav", "--to", "speech.transcript.json", "--language", "en"], out.io, environment(root, seen));
     assert.match(out.text(), /paid\.default \(@hypit\/provider-example\)  ·  https:\/\/prices\.example\/models/u);
     assert.match(out.text(), /2 words in 1 passage over 2s/u);
     assert.equal(out.text().match(/Aligning words/gu)?.length, 1);
-    const file = decodeSpeechTranscriptSource(await readFile(join(root, "speech.transcript.svml"), "utf8"));
+    const file = decodeSpeechTranscriptEvidence(await readFile(join(root, "speech.transcript.json"), "utf8"));
     assert.equal(file.sampleFrames, 32_000);
     assert.deepEqual(file.passages[0]?.words.map((word) => [word.text, word.startSample]), [["hello", 1_600], ["world", 14_400]]);
     const request = seen[0]!.constraints as unknown as WhisperXTranscriptionRequest;
@@ -139,7 +139,7 @@ test("a Profile that does not serve the capability stops before anything is spen
       } }),
     };
     await assert.rejects(
-      runTranscribeCli(["transcribe", "speech.wav", "--to", "speech.transcript.svml", "--language", "en"], capture().io, unserved),
+      runTranscribeCli(["transcribe", "speech.wav", "--to", "speech.transcript.json", "--language", "en"], capture().io, unserved),
       /No Endpoint in .*hypit\.runtime\.json serves @hypit\/whisperx@1#whisperx-transcription; configure an Endpoint/u,
     );
     assert.equal(invoked, false);
@@ -150,7 +150,7 @@ test("a Profile that does not serve the capability stops before anything is spen
 
 test("transcribe requires a spoken language before opening a host", async () => {
   const noHost: TranscribeEnvironment = { cwd: "/tmp", openHost: async () => { throw new Error("host must not open"); } };
-  await assert.rejects(runTranscribeCli(["transcribe", "speech.wav", "--to", "speech.transcript.svml"], capture().io, noHost),
+  await assert.rejects(runTranscribeCli(["transcribe", "speech.wav", "--to", "speech.transcript.json"], capture().io, noHost),
     /transcribe --language must be an explicit/u);
 });
 
@@ -159,11 +159,11 @@ test("transcribe passes Korean to the selected endpoint", async () => {
   try {
     await writeFile(join(root, "speech.wav"), wav(32_000));
     const seen: Need[] = [];
-    await runTranscribeCli(["transcribe", "speech.wav", "--language", "ko", "--to", "speech.transcript.svml"], capture().io, {
+    await runTranscribeCli(["transcribe", "speech.wav", "--language", "ko", "--to", "speech.transcript.json"], capture().io, {
       cwd: root, openHost: async () => ({ profile: join(root, "runtime.json"), host: host(seen) }),
     });
     assert.equal((seen[0]!.constraints as unknown as WhisperXTranscriptionRequest).language, "ko");
-    assert.equal(decodeSpeechTranscriptSource(await readFile(join(root, "speech.transcript.svml"), "utf8")).sampleFrames, 32_000);
+    assert.equal(decodeSpeechTranscriptEvidence(await readFile(join(root, "speech.transcript.json"), "utf8")).sampleFrames, 32_000);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
@@ -185,8 +185,8 @@ test("Chinese transcription explicitly sends zh and retains individual character
         });
       },
     } }) };
-    await runTranscribeCli(["transcribe", "speech.wav", "--language", "zh", "--to", "speech.transcript.svml"], capture().io, env);
-    const result = decodeSpeechTranscriptSource(await readFile(join(root, "speech.transcript.svml"), "utf8"));
+    await runTranscribeCli(["transcribe", "speech.wav", "--language", "zh", "--to", "speech.transcript.json"], capture().io, env);
+    const result = decodeSpeechTranscriptEvidence(await readFile(join(root, "speech.transcript.json"), "utf8"));
     assert.deepEqual(result.passages[0]!.words, [
       { text: "你", startSample: 1_600, endSampleExclusive: 3_840 },
       { text: "好！", startSample: 8_000, endSampleExclusive: 17_600 },
@@ -213,7 +213,7 @@ test("transcription explains ambiguous selection and preserves unsupported reque
         },
       }) };
       await assert.rejects(runTranscribeCli([
-        "transcribe", "speech.wav", "--to", "speech.transcript.svml", "--language", "zh",
+        "transcribe", "speech.wav", "--to", "speech.transcript.json", "--language", "zh",
       ], capture().io, env), (error: Error) => {
         if (selection.status === "ambiguous") {
           assert.match(error.message, /local\.words, hosted\.words/u);

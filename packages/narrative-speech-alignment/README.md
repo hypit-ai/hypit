@@ -30,8 +30,8 @@ span that does not equal the supplied domain duration.
 
 The package owns the syntax-neutral Alignment declaration; Markup contributes the
 `<speechalign:Alignment>` spelling only. A token-bearing Segment requires `evidence`; an empty
-Segment maps directly to the supplied domain boundaries and omits it. The same declaration accepts live
-provider evidence and evidence imported from an editable `<speech:Transcript>` Source.
+Segment maps directly to the supplied domain boundaries and omits it. File-backed evidence is opened
+through its package-owned Media Representation instead of being wrapped in an Author Source.
 
 `speechAlignmentComponent` exposes this Segment-local alignment as one enumerable deterministic Producer facet. Its
 identity is checked against `speechAlignmentManifest` and executes through the host-neutral compute

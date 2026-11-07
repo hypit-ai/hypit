@@ -1,17 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { AuthorDeclarationRegistry, installAuthorDeclarationFacets } from "@hypit/hypit/author";
 import {
-  decodeMarkupDeclarations,
-  installMarkupDeclarationFacets,
-  MarkupDeclarationRegistry,
-} from "@hypit/hypit/markup";
-import {
-  decodeSpeechTranscriptSource,
+  decodeSpeechTranscriptEvidence,
+  encodeSpeechTranscriptEvidence,
   phraseRanges,
-  speechEvidenceModuleRef,
   speechEvidenceTypes,
-  speechTranscriptSource,
   transcriptWordsFromEvidence,
   wordsAt,
 } from "../src/index.js";
@@ -47,7 +40,7 @@ function representedSpeechAsset(sampleFrames = 16_000): ResolvedMediaAsset {
     representations: [{
       id: "speech.zh",
       type: speechEvidenceTypes.transcript,
-      document: { kind: "blob", resource: "res_transcript", size: 1, mediaType: "text/plain" },
+      document: { kind: "blob", resource: "res_transcript", size: 1, mediaType: "application/json" },
       resources: {},
       binding: {
         temporal: { mapToMedia: { stages: [{ ...map.stages[0]!, target: evidenceDomain }] } },
@@ -57,7 +50,7 @@ function representedSpeechAsset(sampleFrames = 16_000): ResolvedMediaAsset {
   };
 }
 
-test("editable transcript Source compiles back to the exact evidence Record", async () => {
+test("editable transcript JSON round-trips the exact evidence value", () => {
   const evidence = {
     sampleFrames: 32_000,
     passages: [{
@@ -68,27 +61,12 @@ test("editable transcript Source compiles back to the exact evidence Record", as
       speechActivity: [{ startSample: 1_200, endSampleExclusive: 7_000 }],
     }],
   };
-  const source = speechTranscriptSource("opening", evidence);
-  assert.match(source, /<speech:Transcript id="opening">/u);
-  assert.doesNotMatch(source, /<你好/u);
-  assert.deepEqual(decodeSpeechTranscriptSource(source), evidence);
-  const compilers = new AuthorDeclarationRegistry();
-  const syntax = new MarkupDeclarationRegistry();
-  installAuthorDeclarationFacets(hypitPackage.facets, compilers);
-  installMarkupDeclarationFacets(hypitPackage.facets, syntax);
-  const declared = await decodeMarkupDeclarations({
-    name: "opening.transcript.svml",
-    text: source.slice(source.indexOf("<svml>")),
-  }, {
-    resolveModule: () => speechEvidenceModuleRef,
-    syntax,
-    compilers,
-  });
-  assert.deepEqual(declared.records.find((record) => record.id === "opening")?.value, evidence);
+  const document = encodeSpeechTranscriptEvidence(evidence);
+  assert.deepEqual(decodeSpeechTranscriptEvidence(document), evidence);
   assert.deepEqual(transcriptWordsFromEvidence(evidence), [{ text: "<你好 & café>", start: 0.1, end: 0.4 }]);
 });
 
-test("the Speech Evidence package exports structured transcripts as editable author Source", async () => {
+test("the Speech Evidence package exports structured transcripts as JSON", async () => {
   const evidence = { sampleFrames: 16_000, passages: [{ words: [], chars: [] }] };
   const exporter = productExporterForType(
     productExportersFromFacets(hypitPackage.facets),
@@ -102,7 +80,7 @@ test("the Speech Evidence package exports structured transcripts as editable aut
     async openResource() { return undefined; },
   });
   assert(exported.bytes instanceof Uint8Array);
-  assert.deepEqual(decodeSpeechTranscriptSource(new TextDecoder().decode(exported.bytes)), evidence);
+  assert.deepEqual(decodeSpeechTranscriptEvidence(new TextDecoder().decode(exported.bytes)), evidence);
 });
 
 test("the Speech Evidence package opens its exact file-backed Media Representation", async () => {
@@ -111,11 +89,11 @@ test("the Speech Evidence package opens its exact file-backed Media Representati
   }] };
   const host = createMediaRepresentationHostFromFacets(hypitPackage.facets);
   const opened = await host.open(representedSpeechAsset(), "speech.zh", async () =>
-    new TextEncoder().encode(speechTranscriptSource("transcript", evidence)));
+    new TextEncoder().encode(encodeSpeechTranscriptEvidence(evidence)));
   assert.deepEqual(opened, evidence);
 
   await assert.rejects(() => host.open(representedSpeechAsset(8_000), "speech.zh", async () =>
-    new TextEncoder().encode(speechTranscriptSource("transcript", evidence))), /sample span differs/u);
+    new TextEncoder().encode(encodeSpeechTranscriptEvidence(evidence))), /sample span differs/u);
 });
 
 test("word annotations retain missing times and distinguish word boundaries, overlap and gaps", () => {

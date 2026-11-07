@@ -16,7 +16,6 @@ export type FrameWords = {
 };
 
 const SAMPLE_RATE = 16_000;
-const RECORD_ID = /^[a-z][a-z0-9_-]{0,63}$/u;
 const seconds = (sample: number | undefined): number | undefined =>
   sample === undefined ? undefined : sample / SAMPLE_RATE;
 
@@ -24,18 +23,13 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function escapeMarkupBoundaries(json: string): string {
-  return json.replace(/[<>&\u2028\u2029]/gu, (character) =>
-    `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`);
-}
-
-/** Encode the exact provider-neutral evidence body used by the Transcript Raw Surface. */
+/** Encode one complete provider-neutral evidence file. */
 export function encodeSpeechTranscriptEvidence(evidence: SpeechTranscriptEvidence): string {
   assertSpeechTranscriptEvidence(evidence);
-  return escapeMarkupBoundaries(JSON.stringify(evidence, null, 2));
+  return `${JSON.stringify(evidence, null, 2)}\n`;
 }
 
-/** Decode the exact JSON body of a Transcript Raw Surface. */
+/** Decode one complete provider-neutral evidence file. */
 export function decodeSpeechTranscriptEvidence(
   text: string,
   subject = "speech transcript evidence",
@@ -49,31 +43,6 @@ export function decodeSpeechTranscriptEvidence(
   catch (error) {
     throw new Error(`${subject}: ${error instanceof Error ? error.message : "invalid evidence"}`);
   }
-}
-
-/** Materialize exact evidence as an ordinary author Source. */
-export function speechTranscriptSource(id: string, evidence: SpeechTranscriptEvidence): string {
-  assert(RECORD_ID.test(id), "Speech transcript id must be a canonical lower-case identifier");
-  return `<?svml using="@hypit/markup@1"?>\n<svml>\n  <import as="speech" from="@hypit/speech-evidence@1"/>\n  <speech:Transcript id="${id}">\n${encodeSpeechTranscriptEvidence(evidence)}\n  </speech:Transcript>\n</svml>\n`;
-}
-
-/** Read the canonical author Source emitted by speechTranscriptSource. */
-export function decodeSpeechTranscriptSource(
-  source: string,
-  subject = "speech transcript source",
-): SpeechTranscriptEvidence {
-  assert(source.includes('<?svml using="@hypit/markup@1"?>'), `${subject}: expected an SVML Markup header`);
-  assert(source.includes('<import as="speech" from="@hypit/speech-evidence@1"/>'),
-    `${subject}: expected the speech-evidence import`);
-  const opening = /<speech:Transcript id="[a-z][a-z0-9_-]{0,63}">/u.exec(source);
-  assert(opening !== null && opening.index !== undefined, `${subject}: expected one speech:Transcript declaration`);
-  const contentStart = opening.index + opening[0].length;
-  const close = "</speech:Transcript>";
-  const closeStart = source.indexOf(close, contentStart);
-  assert(closeStart >= 0, `${subject}: speech:Transcript is not closed`);
-  assert(source.indexOf("<speech:Transcript", contentStart) < 0,
-    `${subject}: expected exactly one speech:Transcript declaration`);
-  return decodeSpeechTranscriptEvidence(source.slice(contentStart, closeStart).trim(), subject);
 }
 
 /** Project exact sample evidence into the seconds view consumed by author tools. */
