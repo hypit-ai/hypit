@@ -6,7 +6,7 @@
     "type": "git",
     "url": "git+https://github.com/hypit-ai/hypit.git"
   },
-  "description": "Hypit video authoring Distribution for AI agents",
+  "description": "Hypit modular video production toolchain for AI agents",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "exports": {
@@ -178,11 +178,11 @@
         "@hypit/speech-estimate/cli",
         "@hypit/whisperx/cli",
         "@hypit/nle-local/cli",
-        "@hypit/video/cli"
+        "@hypit/toolchain/cli"
       ]
     },
     "packageSources": [
-      "@hypit/video"
+      "@hypit/toolchain"
     ]
   },
   "packageManager": "pnpm@10.33.0",
@@ -262,7 +262,7 @@
     "@hypit/media-local": "workspace:^0.3.0",
     "@hypit/nle-local": "workspace:^0.1.0",
     "@hypit/runtime-local": "workspace:^0.2.0",
-    "@hypit/video": "workspace:^0.3.0",
+    "@hypit/toolchain": "workspace:^0.3.0",
     "@hypit/whisperx": "workspace:^0.3.0",
     "@hypit/yt-dlp": "workspace:^0.2.1",
     "@types/node": "24.10.1",

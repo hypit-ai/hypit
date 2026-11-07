@@ -6,10 +6,10 @@ import test from "node:test";
 
 import { svmlAuthorFrontendId } from "@hypit/hypit/svml";
 
-import { createVideoWorkspace } from "../src/compiler.js";
+import { createToolchainWorkspace } from "../src/compiler.js";
 
-test("Video Host associates untouched entry and imported bytes with canonical SVML", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-video-source-"));
+test("Toolchain Host associates untouched entry and imported bytes with canonical SVML", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-toolchain-source-"));
   try {
     const entryPath = join(root, "main.svml");
     const childPath = join(root, "kit.svml");
@@ -18,7 +18,7 @@ test("Video Host associates untouched entry and imported bytes with canonical SV
     await writeFile(entryPath, entryText, "utf8");
     await writeFile(childPath, childText, "utf8");
 
-    const session = await createVideoWorkspace({ workspaceRoot: root }).open(entryPath);
+    const session = await createToolchainWorkspace({ workspaceRoot: root }).open(entryPath);
     assert.equal(session.entry.frontend, svmlAuthorFrontendId);
     assert.equal(new TextDecoder().decode(session.entry.unit.bytes), entryText);
 

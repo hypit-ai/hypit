@@ -3,8 +3,8 @@
 Domain neutral commands for checking, planning, building and inspecting Hypit projects.
 
 The command engine receives one explicit `CliDistribution`. A distribution supplies the compiler,
-trusted bootstrap packages, source package discovery and its Runtime Host. The official video
-executable assembles the Local Runtime through `@hypit/video`; another application may provide
+trusted bootstrap packages, source package discovery and its Runtime Host. The official toolchain
+executable assembles the Local Runtime through `@hypit/toolchain`; another application may provide
 another Host without changing this package or pretending that a local Profile selected it.
 
 `CliDistribution` and the command surface are separate axes. The Distribution supplies compilation,

@@ -12,24 +12,24 @@ import type { LocalRuntimeCliDistribution } from "@hypit/runtime-local/cli";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import {
-  createVideoCompiler,
-  createVideoWorkspace,
+  createToolchainCompiler,
+  createToolchainWorkspace,
 } from "./compiler.js";
 
 // The Distribution root is the replaceable Hypit tool checkout, not this
 // package's source directory and never the author's project.
-export type VideoDistributionOptions = {
-  /** Physical root of the installed Hypit video Distribution. */
+export type ToolchainDistributionOptions = {
+  /** Physical root of the installed Hypit Distribution. */
   readonly packageRoot?: string;
   /** Exact executable the Local Runtime Worker must re-enter. */
   readonly launcher?: string;
 };
 
-/** Assemble the official video application once at its executable composition root. */
-export function createVideoDistribution(options: VideoDistributionOptions = {}): CliDistribution & LocalRuntimeCliDistribution {
+/** Assemble the official Hypit toolchain once at its executable composition root. */
+export function createToolchainDistribution(options: ToolchainDistributionOptions = {}): CliDistribution & LocalRuntimeCliDistribution {
   const packageRoot = resolve(options.packageRoot ?? resolve(import.meta.dirname, "../../.."));
   const launcher = options.launcher ?? fileURLToPath(new URL("../../../bin/hypit.mjs", import.meta.url));
-  const openVideoLocalRuntime = async (path: string, runtimeOptions: {
+  const openToolchainLocalRuntime = async (path: string, runtimeOptions: {
     readonly packageRoot: string;
     readonly distributionPackageRoot?: string;
   }) => await openLocalRuntimeHost(path, {
@@ -73,18 +73,18 @@ export function createVideoDistribution(options: VideoDistributionOptions = {}):
         },
       },
     },
-    createWorkspace: createVideoWorkspace,
+    createWorkspace: createToolchainWorkspace,
     resolveProjectRuntime: async (projectRoot) => {
       const selected = await findRuntimeProfile(projectRoot);
       return selected === undefined ? undefined : { profile: selected.profile };
     },
-    createCompiler: createVideoCompiler,
+    createCompiler: createToolchainCompiler,
     discoverSourcePackages: async (path, options) => {
-      const { discoverVideoSourcePackages } = await import("./package-selection.js");
-      return await discoverVideoSourcePackages(path, options);
+      const { discoverToolchainSourcePackages } = await import("./package-selection.js");
+      return await discoverToolchainSourcePackages(path, options);
     },
-    openLocalRuntimeHost: openVideoLocalRuntime,
-    openRuntimeHost: openVideoLocalRuntime,
+    openLocalRuntimeHost: openToolchainLocalRuntime,
+    openRuntimeHost: openToolchainLocalRuntime,
     openProjectResults: async (projectRoot) => {
       const opened = await openProjectBuildResultRepository(projectRoot);
       return {

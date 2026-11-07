@@ -28,15 +28,15 @@ const { installDistributionPackageResolution } =
 installDistributionPackageResolution([distributionRoot]);
 const args = process.argv.slice(2);
 const { runInstalledCliApplication, runNodeCli } = await import(new URL("packages/cli/src/index.ts", distributionUrl).href);
-const { createVideoDistribution } = await import("@hypit/video");
+const { createToolchainDistribution } = await import("@hypit/toolchain");
 const { createLocalRuntimeCliCommandModules } = await import("@hypit/runtime-local/cli");
-const videoDistribution = createVideoDistribution({
+const toolchainDistribution = createToolchainDistribution({
   packageRoot: distributionRoot,
   launcher: fileURLToPath(import.meta.url),
 });
 await runNodeCli(args, async (argv, io) => await runInstalledCliApplication(argv, io, {
-  distribution: videoDistribution,
+  distribution: toolchainDistribution,
   distributionRoot,
-  commandModules: createLocalRuntimeCliCommandModules(videoDistribution),
+  commandModules: createLocalRuntimeCliCommandModules(toolchainDistribution),
   launcher: fileURLToPath(import.meta.url),
 }));

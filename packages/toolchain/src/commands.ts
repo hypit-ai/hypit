@@ -2,13 +2,13 @@ import type { CliCommandModule } from "@hypit/hypit/cli";
 
 import { runVocabularyCli, writeVocabularyHelp } from "./vocabulary.js";
 
-/** Author vocabulary view selected by the Video Distribution. */
+/** Author vocabulary view selected by the Toolchain Distribution. */
 export const cliCommandModules = [{
   format: "hypit.cli-command@1",
-  id: "@hypit/video",
+  id: "@hypit/toolchain",
   commands: ["vocabulary"],
   writeRootHelp(io) {
-    io.write("\nVideo author vocabulary\n  vocabulary\n  hypit vocabulary --help for package and declaration inspection\n");
+    io.write("\nAuthor vocabulary\n  vocabulary\n  hypit vocabulary --help for package and declaration inspection\n");
   },
   writeHelp(_argv, io) {
     writeVocabularyHelp(io);

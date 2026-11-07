@@ -7,7 +7,7 @@ candidate paths. A runtime adapter preserves its raw provider artifact and suppl
 word, character, score and speech-activity evidence used here in exact 16 kHz sample coordinates.
 
 This is an independently versioned and packaged algorithm, not a root SDK facade and not a WhisperX
-implementation. The official video Distribution depends on it directly; any transcription package
+implementation. Any author or transcription package may select it explicitly, and any transcription package
 producing the same provider-neutral evidence can compose with it.
 The project package manager and lockfile own the selected physical version.
 

@@ -97,7 +97,7 @@ NLE edit.
 
 ## Runtime Profile
 
-The official video Distribution has already chosen the Local Runtime. Its Profile names the
+The official Toolchain Distribution has already chosen the Local Runtime. Its Profile names the
 Credential Stores and Endpoints that local execution may use, together with deployment settings such
 as Endpoint capacity. It never selects the Runtime Host or defines the Source Workspace, Author
 packages or project Result repository.
@@ -107,7 +107,7 @@ hypit runtime init
 hypit paths
 ```
 
-`runtime init` writes the video Distribution's starter `hypit.runtime.json` and selects it. It refuses
+`runtime init` writes the Toolchain Distribution's starter `hypit.runtime.json` and selects it. It refuses
 to overwrite an existing file, installs nothing, contacts no service and starts no Worker. For an
 existing intentional Profile, use `hypit runtime use <profile>`; that command writes only
 `.hypit/runtime`. See [Runtime](../guide/runtime.md) for the Profile schema and boundaries.

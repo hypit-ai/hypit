@@ -4,22 +4,22 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { createVideoDistribution } from "@hypit/video";
-import { cliCommandModules as videoCommandModules } from "@hypit/video/cli";
+import { createToolchainDistribution } from "@hypit/toolchain";
+import { cliCommandModules as toolchainCommandModules } from "@hypit/toolchain/cli";
 import { loadDiscoveredSourcePackages, runCli as runCommand, runCliApplication } from "@hypit/cli";
 import { installDistributionPackageResolution } from "@hypit/loader/node";
 
-const videoDistribution = createVideoDistribution();
+const toolchainDistribution = createToolchainDistribution();
 
 const runCli = (
   argv: readonly string[],
   io: { readonly write: (text: string) => void },
 ) => {
-  installDistributionPackageResolution(videoDistribution.packageRoot === undefined
-    ? [] : [videoDistribution.packageRoot]);
+  installDistributionPackageResolution(toolchainDistribution.packageRoot === undefined
+    ? [] : [toolchainDistribution.packageRoot]);
   return runCliApplication([...argv, "--json"], io, {
-    distribution: videoDistribution,
-    commandModules: videoCommandModules,
+    distribution: toolchainDistribution,
+    commandModules: toolchainCommandModules,
   });
 };
 
@@ -76,16 +76,16 @@ gpt.image {
   resolution: 2K
 }`).join("\n\n")}
 `);
-    await writeFile(join(root, "runtime.json"), JSON.stringify(videoDistribution.initialRuntimeProfile));
+    await writeFile(join(root, "runtime.json"), JSON.stringify(toolchainDistribution.initialRuntimeProfile));
     const source = join(root, "main.svml");
     let queried = 0;
     let output = "";
     await runCommand(["pricing", source, ...ids.flatMap((id) => ["--target", `${id}.image`]),
       "--project", root, "--runtime", join(root, "runtime.json"),
       "--json", "--limit", "1"], { write: (text) => { output += text; } }, {
-      ...videoDistribution,
+      ...toolchainDistribution,
       openRuntimeHost: async (path, options) => ({
-        ...await videoDistribution.openRuntimeHost(path, options),
+        ...await toolchainDistribution.openRuntimeHost(path, options),
         openInspection: async (queries) => {
           queried = queries.length;
           for (const query of queries) {

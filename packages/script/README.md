@@ -10,8 +10,8 @@ Markup contributes only the opaque `<script>` spelling and preserves its body by
 lossless Author Document. The Script package alone owns body parsing, shape validation, bindings,
 Records and source ranges. Core and Markup do not know that Script, Segment or Narrative exist.
 
-The official video Distribution installs this package as an ordinary default npm dependency. Script
-owns its parser, formatter and source inverse. Packages that need Script-specific parsing depend on this package,
+Projects and author packages select Script through ordinary package dependencies. Script owns its parser,
+formatter and source inverse. Packages that need Script-specific parsing depend on this package,
 while consumers of the result depend on the public Narrative, Caption and Text values instead.
 
 ```svml

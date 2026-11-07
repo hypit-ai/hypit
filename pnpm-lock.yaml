@@ -23,9 +23,9 @@ importers:
       '@hypit/speech-estimate':
         specifier: workspace:^0.1.2
         version: link:packages/speech-estimate
-      '@hypit/video':
+      '@hypit/toolchain':
         specifier: workspace:^0.3.0
-        version: link:packages/video
+        version: link:packages/toolchain
       '@hypit/whisperx':
         specifier: workspace:^0.3.0
         version: link:packages/whisperx
@@ -2331,7 +2331,7 @@ importers:
         specifier: workspace:*
         version: link:../refinement
 
-  packages/video:
+  packages/toolchain:
     dependencies:
       '@hypit/audio-gain':
         specifier: workspace:^0.1.0

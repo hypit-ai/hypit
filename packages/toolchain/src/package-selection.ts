@@ -6,8 +6,8 @@ import type { LoadedPackage } from "@hypit/hypit/loader";
 
 const svmlFrontend = createSvmlAuthorFrontend({ compilers: new AuthorDeclarationRegistry() });
 
-/** Video Distribution bootstrap: the Host selects canonical SVML before package discovery. */
-export async function discoverVideoSourcePackages(
+/** Toolchain bootstrap: the Host selects canonical SVML before package discovery. */
+export async function discoverToolchainSourcePackages(
   sourcePath: string,
   options: {
     readonly workspaceRoot?: string;

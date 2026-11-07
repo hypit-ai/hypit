@@ -13,7 +13,7 @@ export const runCli = async (argv: readonly string[], output: CliIo, selected: C
   argv,
   output,
   {
-    // The real video application assembles both generic and Local Runtime Host
+    // The real Toolchain application assembles both generic and Local Runtime Host
     // ports. These focused doubles do the same when mounting Local commands.
     distribution: selected,
     commandModules: createLocalRuntimeCliCommandModules({

@@ -15,7 +15,7 @@ import {
 } from "@hypit/hypit/loader/node";
 import { NodeFilesystemWorkspace } from "@hypit/hypit/workspace/node";
 
-export function createVideoWorkspace(options: Pick<CliCompilerOptions,
+export function createToolchainWorkspace(options: Pick<CliCompilerOptions,
   "workspaceRoot" | "assetRoots" | "packageRoot" | "distributionPackageRoot">) {
   const packageRoot = options.packageRoot ?? options.workspaceRoot ?? process.cwd();
   return new NodeFilesystemWorkspace({
@@ -45,8 +45,8 @@ export function createVideoWorkspace(options: Pick<CliCompilerOptions,
   });
 }
 
-/** Assemble the canonical SVML Video Host from only the packages selected for this compilation. */
-export function createVideoCompiler(options: CliCompilerOptions) {
+/** Assemble the canonical SVML compiler from only the packages selected for this compilation. */
+export function createToolchainCompiler(options: CliCompilerOptions) {
   const modules = new ModulePackageRegistry();
   const declarations = new AuthorDeclarationRegistry();
   const frontends = new AuthorFrontendRegistry();
@@ -65,6 +65,6 @@ export function createVideoCompiler(options: CliCompilerOptions) {
     modules,
     frontends,
     refinements,
-    workspace: createVideoWorkspace(options),
+    workspace: createToolchainWorkspace(options),
   });
 }

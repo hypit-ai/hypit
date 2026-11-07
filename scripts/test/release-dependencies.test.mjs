@@ -33,21 +33,21 @@ test("publication selection loads without the build toolchain", async (t) => {
   `], { cwd: root, stdio: "pipe" });
 });
 
-test("default domain dependencies remain independent through the Video product", async () => {
+test("Toolchain dependencies remain independently packaged", async () => {
   const root = fileURLToPath(new URL("../../", import.meta.url));
   const embedded = await distributionEmbeddedPackageDirectories(root);
   assert.equal(embedded.has("temporal"), false);
   assert.equal(embedded.has("narrative-temporal"), false);
   assert.equal(embedded.has("compiler"), true);
-  const video = JSON.parse(await readFile(join(root, "packages/video/package.json"), "utf8"));
-  for (const name of ["@hypit/composition", "@hypit/film", "@hypit/visual-track", "@hypit/audio-track",
-    "@hypit/timeline", "@hypit/timeline-author", "@hypit/script", "@hypit/narrative-temporal"]) {
-    assert.equal(video.dependencies[name], undefined, `${name} must not be a Video product root`);
+  const toolchain = JSON.parse(await readFile(join(root, "packages/toolchain/package.json"), "utf8"));
+  for (const name of Object.keys(toolchain.dependencies).filter((item) => item.startsWith("@hypit/"))) {
+    assert.equal(embedded.has(name.slice("@hypit/".length)), false,
+      `${name} must remain an independently packaged Toolchain dependency`);
   }
   const plan = await releaseCandidatePackages();
   const index = name => plan.independent.findIndex(item => item.name === `@hypit/${name}`);
   assert.ok(index("temporal") >= 0);
-  assert.ok(index("temporal") < index("video"));
+  assert.ok(index("temporal") < index("toolchain"));
 });
 
 test("internal Core remains embedded instead of becoming an unversioned release dependency", async () => {

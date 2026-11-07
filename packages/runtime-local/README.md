@@ -57,7 +57,7 @@ A Runtime Profile selects only the environmental parts that genuinely vary:
 }
 ```
 
-The official video Distribution selects this Runtime implementation before it opens the file. The
+The official Toolchain Distribution selects this Runtime implementation before it opens the file. The
 Profile therefore describes only local execution and does not repeat a fake Runtime Host selector.
 
 Providers declare everything they can do and never hide a capability. When two selected Endpoints
@@ -135,7 +135,7 @@ The `@1` representation is the complete persisted lifecycle model.
 HypiHub can be the explicitly selected gateway for users without their own service keys. A bound
 Provider's authentication, quota or transport error never changes that selection. Separate accounts use separate pools even when they implement the same model.
 
-The official video Distribution writes Results to the project's `.hypit/results` directory, with no
+The official Toolchain Distribution writes Results to the project's `.hypit/results` directory, with no
 cloud account or service. The filesystem implementation belongs to this single-host Runtime rather
 than a public adapter registry.
 Open Result drafts, incremental output retention, writer recovery and terminal publication are private

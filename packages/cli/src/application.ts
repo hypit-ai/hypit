@@ -39,7 +39,7 @@ export type CliApplicationContext = {
  * Complete user-facing command application.
  *
  * CliDistribution supplies compilation/execution services. Command modules supply
- * the chosen product surface. These axes stay separate so a video application can
+ * the chosen product surface. These axes stay separate so an application can
  * reuse the long-compilation CLI without moving frames or media into the Host.
  */
 export type CliApplication = {
