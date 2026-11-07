@@ -1,4 +1,3 @@
-import { programSourceFromPreparedMedia } from "@hypit/audiovisual-media";
 import { verifyPreparedMedia } from "@hypit/media";
 import type { CanonicalValue } from "@hypit/protocol";
 import { resolveTemporalBoundary } from "@hypit/temporal/sampling";
@@ -14,7 +13,7 @@ import type {
   NlePictureLayout,
   NleProject,
   NleMediaAssetReference,
-  NleResolvedMedia,
+  NleMediaInterpretation,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -32,31 +31,38 @@ export function createMediaAssetMaterialization(project: NleProject, input: {
   readonly name: string;
   /** Persistent project reference. The NLE never embeds runtime BlobRefs. */
   readonly asset: NleMediaAssetReference;
-  /** Ephemeral import-time value used only to derive and validate the direct edit. */
-  readonly resolved: NleResolvedMedia;
+  /** File-persistent facts used only to derive and validate the direct edit. */
+  readonly interpretation: NleMediaInterpretation;
   readonly track: string;
   readonly atFrame: number;
   readonly durationFrames?: number;
-  /** Defaults to an empty Audio effect chain when the resolved media has Audio; false excludes it. */
+  /** Defaults to an empty Audio effect chain when the interpretation has Audio; false excludes it. */
   readonly audio?: Partial<NleAudioAppearance> | false;
   readonly picture?: Partial<NlePictureAppearance> & { readonly layout?: NlePictureLayout };
 }): NleTransaction {
   assertNleProject(project);
-  verifyPreparedMedia(input.resolved);
+  verifyPreparedMedia({
+    ...input.interpretation,
+    source: {
+      kind: "blob",
+      resource: "res_nle-media-import-validation",
+      size: 0,
+      mediaType: "application/octet-stream",
+    },
+  });
   const track = findNleTrack(project, input.track);
-  const source = programSourceFromPreparedMedia(input.resolved);
-  const durationFrames = input.durationFrames ?? (input.resolved.domain === undefined
+  const durationFrames = input.durationFrames ?? (input.interpretation.domain === undefined
     ? undefined
-    : resolveTemporalBoundary(input.resolved.domain.duration, { frameRate: project.frameRate }, "cover"));
+    : resolveTemporalBoundary(input.interpretation.domain.duration, { frameRate: project.frameRate }, "cover"));
   assert(durationFrames !== undefined,
     `Constant NLE Media ${input.mediaId} requires an explicit occurrence duration.`);
-  const includeAudio = input.audio !== false && source.outputs.audio !== undefined;
-  assert(input.audio === undefined || input.audio === false || source.outputs.audio !== undefined,
-    `Resolved Media ${input.resolved.id} cannot include missing Audio.`);
-  assert(track.kind !== "picture" || source.outputs.picture !== undefined,
-    `Resolved Media ${input.resolved.id} has no Picture for Track ${track.id}.`);
-  assert(track.kind !== "audio" || source.outputs.audio !== undefined,
-    `Resolved Media ${input.resolved.id} has no Audio for Track ${track.id}.`);
+  const includeAudio = input.audio !== false && input.interpretation.audio !== undefined;
+  assert(input.audio === undefined || input.audio === false || input.interpretation.audio !== undefined,
+    `Media Interpretation ${input.interpretation.id} cannot include missing Audio.`);
+  assert(track.kind !== "picture" || input.interpretation.picture !== undefined,
+    `Media Interpretation ${input.interpretation.id} has no Picture for Track ${track.id}.`);
+  assert(track.kind !== "audio" || input.interpretation.audio !== undefined,
+    `Media Interpretation ${input.interpretation.id} has no Audio for Track ${track.id}.`);
   return {
     revision: project.revision,
     commands: [{

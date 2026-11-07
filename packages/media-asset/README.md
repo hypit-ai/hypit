@@ -46,3 +46,7 @@ run analysis.
 `resolveMediaAssetDocumentFile()`. The latter
 anchors every declaration to the manifest directory and hands each absolute file to a Host callback. It does not
 select a ResourceStore or retain another copy of the asset.
+
+The Node port also exposes `importMediaAssetFile()`. It accepts package-owned inspection and selection callbacks,
+reports cancellable task progress, optionally copies bytes, and atomically publishes a new manifest without
+overwriting an existing file. It deliberately owns no queue, FFmpeg policy or Studio pending state.

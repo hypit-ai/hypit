@@ -21,6 +21,7 @@
     "@hypit/audio-program": "workspace:^0.1.0",
     "@hypit/audio-preserve-pitch": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.2.0",
+    "@hypit/media-asset": "workspace:*",
     "@hypit/media-delivery": "workspace:^0.1.0",
     "@hypit/speech-evidence": "workspace:^0.2.0",
     "@hypit/temporal": "workspace:^0.1.1",

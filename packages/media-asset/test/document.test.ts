@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -16,7 +16,11 @@ import {
   verifyMediaAssetDocument,
 } from "../src/index.js";
 import type { MediaAssetDocument } from "../src/index.js";
-import { resolveMediaAssetDocumentFile } from "../src/node/index.js";
+import {
+  importMediaAssetFile,
+  readMediaAssetDocumentFile,
+  resolveMediaAssetDocumentFile,
+} from "../src/node/index.js";
 
 function document(): MediaAssetDocument {
   const timestamp = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } });
@@ -196,6 +200,76 @@ test("node import anchors every explicit file at the manifest without interpreti
       "representation:objects/objects.json",
       "representation:speech/transcript.json",
     ]);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("one cancellable import task copies bytes and publishes an interpretation-only manifest", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-media-import-"));
+  try {
+    const incoming = join(directory, "incoming", "still.png");
+    const asset = join(directory, "project", "media", "still.media.json");
+    await mkdir(join(directory, "incoming"));
+    await writeFile(incoming, "picture-bytes");
+    const stages: string[] = [];
+    const result = await importMediaAssetFile({
+      sourcePath: incoming,
+      assetPath: asset,
+      id: "still",
+      mediaType: "image/png",
+      filePolicy: "copy",
+    }, {
+      inspect: async () => ({ streams: [{
+        kind: "video", index: 0, codecName: "png",
+        disposition: { default: true, attachedPicture: false },
+        decodedUnitCount: 1, width: 8, height: 6,
+        sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0,
+        picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb",
+          colorRange: "full", bitDepth: 8, alphaMode: "straight" },
+      }] }),
+      select: () => ({
+        video: { mode: "primary-picture" }, audio: { mode: "none" }, picture: { mode: "source" },
+      }),
+    }, { progress: (update) => stages.push(update.stage) });
+    assert.deepEqual(stages, ["inspect", "interpret", "copy", "publish", "complete"]);
+    assert.equal(await readFile(result.mediaPath, "utf8"), "picture-bytes");
+    const written = await readMediaAssetDocumentFile(asset);
+    assert.equal(written.media.file.path, "still.png");
+    assert.equal(written.media.interpretation.picture?.kind, "constant");
+    assert.equal(JSON.stringify(written).toLowerCase().includes("prepared"), false);
+    await assert.rejects(() => importMediaAssetFile({
+      sourcePath: incoming, assetPath: asset, id: "again", mediaType: "image/png", filePolicy: "copy",
+    }, { inspect: async () => ({ streams: [] }), select: () => { throw new Error("must not select"); } }),
+    /already exists/u);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("link import rejects outside files and cancellation publishes nothing", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-media-import-policy-"));
+  try {
+    const source = join(directory, "outside.png");
+    const asset = join(directory, "project", "media", "still.media.json");
+    await writeFile(source, "picture");
+    const host = {
+      inspect: async () => ({ streams: [] }),
+      select: () => { throw new Error("selection should not be reached"); },
+    };
+    const cancelled = new AbortController();
+    cancelled.abort();
+    await assert.rejects(() => importMediaAssetFile({
+      sourcePath: source, assetPath: asset, id: "still", mediaType: "image/png", filePolicy: "copy",
+    }, host, { signal: cancelled.signal }), /abort/u);
+    assert.equal(await stat(asset).then(() => true, () => false), false);
+
+    await assert.rejects(() => importMediaAssetFile({
+      sourcePath: source, assetPath: asset, id: "still", mediaType: "image/png", filePolicy: "link",
+    }, {
+      inspect: async () => ({ streams: [] }),
+      select: () => ({ video: { mode: "none" }, audio: { mode: "none" }, picture: { mode: "none" } }),
+    }), /must lie below/u);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

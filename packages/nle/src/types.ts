@@ -26,6 +26,9 @@ export type NleMediaAssetReference = {
 /** Ephemeral media value supplied by the Host; it is never serialized in an NLE Project. */
 export type NleResolvedMedia = PreparedMedia;
 
+/** File-persistent media facts sufficient to create a direct NLE edit. */
+export type NleMediaInterpretation = Omit<PreparedMedia, "source">;
+
 export type NleMedia = {
   readonly id: string;
   readonly name: string;

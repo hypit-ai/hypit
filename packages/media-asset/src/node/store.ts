@@ -1,5 +1,5 @@
-import { readFile } from "node:fs/promises";
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { link, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import type { BlobRef } from "@hypit/protocol";
 
@@ -7,6 +7,7 @@ import {
   parseMediaAssetDocument,
   resolveMediaAssetMedia,
   resolveMediaAssetDocument,
+  serializeMediaAssetDocument,
 } from "../index.js";
 import type {
   MediaAssetDocument,
@@ -24,6 +25,24 @@ export type NodeMediaAssetFileResolver = (
 /** Read and validate one complete `hypit.media-asset@1` JSON file. */
 export async function readMediaAssetDocumentFile(path: string): Promise<MediaAssetDocument> {
   return parseMediaAssetDocument(await readFile(path, "utf8"));
+}
+
+/** Atomically create one new manifest without replacing an existing authority. */
+export async function writeMediaAssetDocumentFile(path: string, document: MediaAssetDocument): Promise<void> {
+  const destination = resolve(path);
+  if (await stat(destination).then(() => true, () => false)) {
+    throw new Error(`Media Asset document ${destination} already exists.`);
+  }
+  const directory = dirname(destination);
+  await mkdir(directory, { recursive: true });
+  const temporaryDirectory = await mkdtemp(join(directory, ".hypit-media-asset-write-"));
+  const temporary = join(temporaryDirectory, basename(destination));
+  try {
+    await writeFile(temporary, serializeMediaAssetDocument(document), { encoding: "utf8", flag: "wx" });
+    await link(temporary, destination);
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
+  }
 }
 
 /**

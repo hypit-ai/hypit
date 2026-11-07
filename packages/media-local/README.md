@@ -37,6 +37,7 @@ in `@hypit/media-delivery`; paths, subprocesses and ffprobe output remain here.
 ## File authoring and inspection
 
 ```bash
+hypit media import reference.mp4 --to assets/reference.media.json
 hypit media probe reference.mp4
 hypit media cut reference.mp4 --start 12 --end 19.5 --to assets/hook.mp4
 hypit media frames reference.mp4 --at 12.4,13.1 --to notes/hook-frames
@@ -52,6 +53,36 @@ hypit media spectrogram reference.mp4 --around 'glass breaks' --transcript notes
   --pixels-per-second 240 --to notes/glass-break-frequency.png
 hypit media boundaries reference.mp4
 ```
+
+`media import` is the shared headless import path used by the CLI and available to a desktop Host through
+`importLocalMediaAsset()`. It performs one exact inspection, applies an explicit local stream-selection policy,
+optionally copies the source below the manifest, and atomically creates `hypit.media-asset@1`. Copy is the portable
+default. `--link` is accepted only when the source already lies below the manifest directory. Existing files are
+never overwritten.
+
+The import call accepts an `AbortSignal` and progress callback with `inspect | interpret | copy | publish | complete`
+stages. These are invocation facts, not Media Asset or NLE fields. A CLI invocation waits in the foreground; a
+Studio Host may display the same task in the background and apply `media.add + item.add` only after it completes.
+Neither path requires a persistent queue. Long-running Analyzers may later use Runtime scheduling while continuing
+to publish ordinary Representation files.
+
+A drag-and-drop Host closes the import into NLE with ordinary public APIs:
+
+```ts
+const imported = await importLocalMediaAsset(request, { signal, progress });
+const transaction = createMediaAssetMaterialization(project, {
+  mediaId: "interview",
+  itemId: "interview-use",
+  name: "Interview",
+  asset: { path: "./media/interview.media.json" },
+  interpretation: imported.document.media.interpretation,
+  track: "picture-main",
+  atFrame: 0,
+});
+```
+
+The Host applies that transaction only after import succeeds. Subsequent trim, split, layout, Effect and Audio edits
+are ordinary NLE transactions; they neither rerun inspection nor modify the asset manifest.
 
 Network acquisition is not a media-execution operation. `@hypit/yt-dlp/cli` owns
 `hypit download`; the resulting file becomes an ordinary input to these commands.

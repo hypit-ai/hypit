@@ -13,7 +13,9 @@ function run(
   onStderrLine?: (line: string) => void,
   maxStdoutBytes = Number.POSITIVE_INFINITY,
   environment?: NodeJS.ProcessEnv,
+  signal?: AbortSignal,
 ): Promise<ProcessOutput> {
+  signal?.throwIfAborted();
   return new Promise((resolveRun, reject) => {
     const child = spawn(executable, [...args], {
       stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
@@ -24,14 +26,22 @@ function run(
     let stdoutBytes = 0;
     let err = "";
     let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const finish = (error?: Error): void => {
       if (settled) return;
       settled = true;
-      clearTimeout(timer);
+      if (timer !== undefined) clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
       if (error === undefined) resolveRun({ stdout: Buffer.concat(out), stderr: err });
       else reject(error);
     };
-    const timer = setTimeout(() => { child.kill("SIGKILL"); finish(new Error(`${executable} timed out after ${timeoutMs} ms`)); }, timeoutMs);
+    const abort = (): void => {
+      child.kill("SIGKILL");
+      finish(signal?.reason instanceof Error ? signal.reason : new Error("Media process was aborted."));
+    };
+    timer = setTimeout(() => { child.kill("SIGKILL"); finish(new Error(`${executable} timed out after ${timeoutMs} ms`)); }, timeoutMs);
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) abort();
     child.stdout?.on("data", (chunk: Buffer) => {
       stdoutBytes += chunk.byteLength;
       if (stdoutBytes > maxStdoutBytes) {
@@ -83,12 +93,13 @@ export async function runBoundedMediaProcess(options: {
   readonly timeoutMs: number;
   readonly maxStdoutBytes: number;
   readonly sharedLibraryPath?: string;
+  readonly signal?: AbortSignal;
 }): Promise<Uint8Array> {
   return (await run(options.executable, options.argv, undefined, options.timeoutMs, undefined,
     options.maxStdoutBytes,
     mediaProcessEnv(options.sharedLibraryPath === undefined ? undefined : {
       LD_LIBRARY_PATH: options.sharedLibraryPath,
-    }))).stdout;
+    }), options.signal)).stdout;
 }
 
 /**
@@ -102,7 +113,9 @@ export function runMediaProcessLines(options: {
   readonly maxLineBytes: number;
   readonly onLine: (line: string) => void;
   readonly sharedLibraryPath?: string;
+  readonly signal?: AbortSignal;
 }): Promise<void> {
+  options.signal?.throwIfAborted();
   return new Promise((resolveRun, reject) => {
     const child = spawn(options.executable, [...options.argv], {
       stdio: ["ignore", "pipe", "pipe"],
@@ -114,12 +127,19 @@ export function runMediaProcessLines(options: {
     let pending = Buffer.alloc(0);
     let err = "";
     let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const finish = (error?: Error): void => {
       if (settled) return;
       settled = true;
-      clearTimeout(timer);
+      if (timer !== undefined) clearTimeout(timer);
+      options.signal?.removeEventListener("abort", abort);
       if (error === undefined) resolveRun();
       else reject(error);
+    };
+    const abort = (): void => {
+      child.kill("SIGKILL");
+      finish(options.signal?.reason instanceof Error
+        ? options.signal.reason : new Error("Media process was aborted."));
     };
     const emit = (line: Buffer): boolean => {
       if (line.byteLength > options.maxLineBytes) {
@@ -136,10 +156,12 @@ export function runMediaProcessLines(options: {
         return false;
       }
     };
-    const timer = setTimeout(() => {
+    timer = setTimeout(() => {
       child.kill("SIGKILL");
       finish(new Error(`${options.executable} timed out after ${options.timeoutMs} ms`));
     }, options.timeoutMs);
+    options.signal?.addEventListener("abort", abort, { once: true });
+    if (options.signal?.aborted) abort();
     child.stdout?.on("data", (chunk: Buffer) => {
       let bytes = pending.byteLength === 0 ? chunk : Buffer.concat([pending, chunk]);
       let newline = bytes.indexOf(0x0a);

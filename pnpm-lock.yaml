@@ -1740,6 +1740,9 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/media-asset':
+        specifier: workspace:*
+        version: link:../media-asset
       '@hypit/media-delivery':
         specifier: workspace:^0.1.0
         version: link:../media-delivery

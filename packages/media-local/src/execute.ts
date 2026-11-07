@@ -224,6 +224,7 @@ async function inspectFile(args: {
   readonly timeoutMs: number;
   readonly maxProbeOutputBytes: number;
   readonly sharedLibraryPath?: string;
+  readonly signal?: AbortSignal;
 }): Promise<MediaInspection> {
   const raw = await runProcess({
     executable: args.ffprobePath,
@@ -231,6 +232,7 @@ async function inspectFile(args: {
     timeoutMs: args.timeoutMs,
     maxStdoutBytes: args.maxProbeOutputBytes,
     ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }),
+    ...(args.signal === undefined ? {} : { signal: args.signal }),
   });
   let value: unknown;
   try {
@@ -262,8 +264,30 @@ async function inspectFile(args: {
       collector.observe(frame);
     },
     ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }),
+    ...(args.signal === undefined ? {} : { signal: args.signal }),
   });
   return collector.finish();
+}
+
+/** Direct file inspection for Importers and editor Hosts; it creates no Build or Runtime state. */
+export async function inspectMediaFile(
+  path: string,
+  options: {
+    readonly ffprobePath?: string;
+    readonly timeoutMs?: number;
+    readonly maxProbeOutputBytes?: number;
+    readonly sharedLibraryPath?: string;
+    readonly signal?: AbortSignal;
+  } = {},
+): Promise<MediaInspection> {
+  return await inspectFile({
+    input: path,
+    ffprobePath: options.ffprobePath ?? "ffprobe",
+    timeoutMs: options.timeoutMs ?? 300_000,
+    maxProbeOutputBytes: options.maxProbeOutputBytes ?? 16 * 1024 * 1024,
+    ...(options.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: options.sharedLibraryPath }),
+    ...(options.signal === undefined ? {} : { signal: options.signal }),
+  });
 }
 
 const pixelFormatsByToolchain = new Map<string, Promise<readonly unknown[]>>();

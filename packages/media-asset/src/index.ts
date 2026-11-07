@@ -7,6 +7,7 @@ export {
   verifyMediaAssetDocument,
   verifyMediaAssetReference,
 } from "./document.js";
+export { createMediaAssetDocumentFromInspection } from "./import.js";
 export {
   createMediaRepresentationFacet,
   createMediaRepresentationHost,

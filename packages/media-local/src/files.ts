@@ -21,13 +21,14 @@ import { renderSpectrogramView, writeSpectrogram } from "./spectrogram.js";
 import type { FrequencyScale, SpectrogramScale } from "./spectrogram.js";
 import { renderWaveformView, writeWaveform } from "./waveform.js";
 import type { WaveformFilter, WaveformScale } from "./waveform.js";
+import { importLocalMediaAsset } from "./asset-import.js";
 
 /**
  * Local views of media at chosen times and scales. Transcript annotations use the same seconds as
  * the input media. These commands expose evidence; editorial interpretation belongs to the author.
  */
 
-export const mediaCommands = ["probe", "cut", "frames", "grid", "waveform", "spectrogram", "boundaries"] as const;
+export const mediaCommands = ["import", "probe", "cut", "frames", "grid", "waveform", "spectrogram", "boundaries"] as const;
 export type MediaCommand = typeof mediaCommands[number];
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -711,6 +712,57 @@ async function probe(argv: readonly string[], io: CliIo, cwd: string): Promise<v
     : "audio only"}${audioStreams.length === 0 ? "" : `\n  audio ${audioStreams.length === 1 ? "stream" : "streams"}: ${audioStreams.map((stream) => stream.index).join(", ")}`}\n`);
 }
 
+async function importAsset(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
+  const parsed = parseArguments(argv, [
+    "--to", "--id", "--media-type", "--media-file", "--video-stream", "--audio-stream",
+    "--picture", "--span-authority", "--ffprobe-path",
+  ], ["--link", "--no-video", "--no-audio"]);
+  const source = await sourceFile(parsed, cwd);
+  assert(!(parsed.flags.has("--no-video") && parsed.options.has("--video-stream")),
+    "choose --no-video or --video-stream");
+  assert(!(parsed.flags.has("--no-audio") && parsed.options.has("--audio-stream")),
+    "choose --no-audio or --audio-stream");
+  const picture = parsed.options.get("--picture");
+  assert(picture === undefined || picture === "source" || picture === "srgb" || picture === "sdr-bt709",
+    `--picture must be source, srgb or sdr-bt709, got ${picture}`);
+  const spanAuthority = parsed.options.get("--span-authority");
+  assert(spanAuthority === undefined || spanAuthority === "video" || spanAuthority === "audio",
+    `--span-authority must be video or audio, got ${spanAuthority}`);
+  const result = await importLocalMediaAsset({
+    sourcePath: source,
+    assetPath: resolve(cwd, required(parsed, "--to", "the .media.json file to create")),
+    ...(parsed.options.get("--id") === undefined ? {} : { id: parsed.options.get("--id")! }),
+    ...(parsed.options.get("--media-type") === undefined ? {} : { mediaType: parsed.options.get("--media-type")! }),
+    ...(parsed.options.get("--media-file") === undefined ? {} : { mediaFile: parsed.options.get("--media-file")! }),
+    filePolicy: parsed.flags.has("--link") ? "link" : "copy",
+    ...(parsed.flags.has("--no-video") ? { videoStream: false as const }
+      : parsed.options.has("--video-stream") ? {
+        videoStream: optionalIntegerOption(parsed, "--video-stream", 0)!,
+      } : {}),
+    ...(parsed.flags.has("--no-audio") ? { audioStream: false as const }
+      : parsed.options.has("--audio-stream") ? {
+        audioStream: optionalIntegerOption(parsed, "--audio-stream", 0)!,
+      } : {}),
+    ...(picture === undefined ? {} : { picture }),
+    ...(spanAuthority === undefined ? {} : { spanAuthority }),
+    ...(parsed.options.get("--ffprobe-path") === undefined ? {} : {
+      ffprobePath: resolve(cwd, parsed.options.get("--ffprobe-path")!),
+    }),
+  });
+  if (parsed.json) {
+    io.write(`${JSON.stringify({
+      asset: result.assetPath,
+      media: result.mediaPath,
+      id: result.document.id,
+      interpretation: result.document.media.interpretation,
+    }, null, 2)}\n`);
+    return;
+  }
+  io.write(`${result.assetPath}\n  media ${result.mediaPath}\n  ${
+    result.document.media.interpretation.picture === undefined ? "no picture" : "picture"}, ${
+    result.document.media.interpretation.audio === undefined ? "no audio" : "audio"}\n`);
+}
+
 async function cut(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
   const parsed = parseArguments(argv, ["--start", "--end", "--keep", "--to"], ["--label-time"], ["--keep"]);
   const source = await sourceFile(parsed, cwd);
@@ -1240,6 +1292,8 @@ async function spectrogram(argv: readonly string[], io: CliIo, cwd: string): Pro
 
 export function writeMediaHelp(io: CliIo, topic?: MediaCommand): void {
   const sections: Record<MediaCommand, readonly string[]> = {
+    import: ["  hypit media import <file> --to <asset.media.json> [--link] [--id <id>] [--video-stream <n> | --no-video] [--audio-stream <n> | --no-audio] [--picture source|srgb|sdr-bt709]",
+      "    Inspect once and publish a file-backed Media Asset. Copy is the default; --link requires the source below the manifest directory."],
     probe: ["  hypit media probe <file>", "    Duration and available streams; video adds size and frame rate, and audio reports actual stream indexes."],
     cut: ["  hypit media cut <file> [--start <s> --end <s> | --keep <start:end> ...] [--label-time] --to <clip.mp4|clip.wav>",
       "    Keep one stretch or join ordered stretches from one source. Audio-only outputs WAV; MP4 is a useful video target.",
@@ -1262,7 +1316,7 @@ export function writeMediaHelp(io: CliIo, topic?: MediaCommand): void {
       "    Mechanical adjacent-frame change candidates with scores; never editorial shot labels."],
   };
   const chosen = topic === undefined ? mediaCommands : [topic];
-  io.write(`hypit media\nInspect and prepare media locally. No Runtime Profile, network request or project state.\n\n${
+  io.write(`hypit media\nInspect, import and transform media files locally. No Runtime Profile, network request or project state.\n\n${
     chosen.map((item) => sections[item].join("\n")).join("\n\n")}\n\nFrames, grids, waveforms and spectrograms accept --around <phrase> with --transcript instead of --start/--end.\n`
     + "Use --occurrence <n> for a repeated phrase; --padding <s> adds time on each side (default 0.3).\n"
     + "Transcript times must share the input media's clock. An untimed gap is labeled as such, without inferring silence.\n"
@@ -1277,7 +1331,8 @@ export async function runMediaCli(argv: readonly string[], io: CliIo, cwd = proc
   }
   assert(isMediaCommand(command), `unknown media command ${command}; one of ${mediaCommands.join(", ")}`);
   const rest = argv.slice(2);
-  if (command === "probe") await probe(rest, io, cwd);
+  if (command === "import") await importAsset(rest, io, cwd);
+  else if (command === "probe") await probe(rest, io, cwd);
   else if (command === "cut") await cut(rest, io, cwd);
   else if (command === "frames") await frames(rest, io, cwd);
   else if (command === "grid") await grid(rest, io, cwd);

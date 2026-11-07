@@ -13,6 +13,16 @@ export {
   visualBoundaries,
 } from "./files.js";
 export type { MediaProbe, VisualBoundary } from "./files.js";
+export {
+  importLocalMediaAsset,
+  localMediaImportSelection,
+  mediaAssetIdFromFile,
+  mediaTypeFromFile,
+} from "./asset-import.js";
+export type {
+  LocalMediaAssetImportRequest,
+  LocalMediaImportSelection,
+} from "./asset-import.js";
 export { renderWaveform, renderWaveformView, writeWaveform } from "./waveform.js";
 export type {
   AudioInspection,

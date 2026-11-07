@@ -87,8 +87,9 @@ Canvas handles.
 
 The first one-way materializers are deliberately small:
 
-- `createMediaAssetMaterialization` adds one Media Asset file reference plus one direct Media item; its ephemeral
-  resolved value is used only to validate and size that import transaction;
+- `createMediaAssetMaterialization` adds one Media Asset file reference plus one direct Media item; the manifest's
+  interpretation is used only to validate and size that import transaction, so drag-and-drop does not need a
+  runtime `BlobRef` before committing the edit;
 - `createComponentMaterialization` adds one direct package Component instance;
 - `@hypit/caption` owns Caption timing/presentation expansion into ordinary caption Component commands.
 

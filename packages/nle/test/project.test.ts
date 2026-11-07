@@ -155,9 +155,11 @@ test("Media Asset files and package Components materialize as inspectable NLE tr
     kind: "track.add",
     track: { id: "main", name: "Main", kind: "picture", locked: false, muted: false, items: [] },
   }] });
+  const resolved = prepared();
+  const { source: _source, ...interpretation } = resolved;
   const mediaTransaction = createMediaAssetMaterialization(withTrack, {
     mediaId: "interview", itemId: "interview-use", name: "Interview",
-    asset: interviewAsset, resolved: prepared(),
+    asset: interviewAsset, interpretation,
     track: "main", atFrame: 2, picture: fullPicture,
   });
   assert.deepEqual(mediaTransaction.commands.map((command) => command.kind), ["media.add", "item.add"]);

@@ -28,7 +28,7 @@ test("grid frame counts follow the measured bounds", () => {
 test("media help names the available commands and both cut forms", () => {
   const out = io();
   runMediaCli(["media"], out.io);
-  for (const name of ["probe", "cut", "frames", "grid", "waveform", "spectrogram", "boundaries"]) {
+  for (const name of ["import", "probe", "cut", "frames", "grid", "waveform", "spectrogram", "boundaries"]) {
     assert.match(out.text(), new RegExp(`hypit media ${name}`));
   }
   assert.doesNotMatch(out.text(), /hypit media tiles?\b/u);

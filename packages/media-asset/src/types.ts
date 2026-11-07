@@ -1,4 +1,5 @@
 import type { PreparedMedia } from "@hypit/media";
+import type { MediaInspection, MediaSelectionRequest } from "@hypit/media";
 import type { BlobRef, TypeRef } from "@hypit/protocol";
 import type { TemporalMap } from "@hypit/temporal/algebra";
 
@@ -86,3 +87,22 @@ export type MediaAssetFileResolver = (
   file: MediaAssetFile,
   resolution: MediaAssetFileResolution,
 ) => BlobRef | Promise<BlobRef>;
+
+export type MediaAssetImportProgress = {
+  readonly stage: "inspect" | "interpret" | "copy" | "publish" | "complete";
+  readonly source: string;
+  readonly target?: string;
+};
+
+/** Invocation-local task controls. They are never serialized into an asset or NLE project. */
+export type MediaAssetImportTaskContext = {
+  readonly signal?: AbortSignal;
+  readonly progress?: (update: MediaAssetImportProgress) => void;
+};
+
+export type MediaAssetInterpretationInput = {
+  readonly id: string;
+  readonly file: MediaAssetFile;
+  readonly inspection: MediaInspection;
+  readonly selection: MediaSelectionRequest;
+};
