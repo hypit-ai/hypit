@@ -1,17 +1,13 @@
 import { assertOrderedBuildId } from "@hypit/hypit/protocol";
 import type {
   BlobRef,
-  CanonicalValue,
   PublicationIntent,
   TypeRef,
   TypedRecord,
 } from "@hypit/hypit/protocol";
 import { assertPublicationIntent } from "@hypit/hypit/protocol";
-import { assertProductFileRef } from "@hypit/hypit/product";
 import type {
-  ProductFileRef,
   ProductValueDocument,
-  ProductValuePath,
   StoredProduct,
 } from "@hypit/hypit/product";
 import type { BuildResultHistory, BuildResultOperation } from "@hypit/hypit/result";
@@ -24,36 +20,12 @@ export type BuildResultFileRef = {
   readonly path: string;
 };
 
-export type BuildResultValuePath = ProductValuePath;
-
-export type BuildResultResourceBinding = {
-  /** Location of one Resource inside `value`; the encoded slot itself is `null`. */
-  readonly at: BuildResultValuePath;
-  readonly file: ProductFileRef;
-};
-
 /**
  * Durable encoding of one array or object value. Domain data stays ordinary canonical data while
  * Resource references live beside it, so reserved-looking domain objects cannot be
  * mistaken for persistence metadata.
  */
 export type BuildResultValueDocument = ProductValueDocument;
-
-function assertCanonicalValue(value: unknown, subject: string): asserts value is CanonicalValue {
-  if (value === null || typeof value === "boolean" || typeof value === "string") return;
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) throw new Error(`${subject} contains a non-finite number`);
-    return;
-  }
-  if (Array.isArray(value)) {
-    value.forEach((item, index) => assertCanonicalValue(item, `${subject}[${index}]`));
-    return;
-  }
-  if (typeof value !== "object") throw new Error(`${subject} is not canonical data`);
-  for (const [key, child] of Object.entries(value as Readonly<Record<string, unknown>>)) {
-    assertCanonicalValue(child, `${subject}.${key}`);
-  }
-}
 
 /** One portable address inside a Build Result; repositories map it to their own physical storage. */
 export function assertBuildResultPath(value: unknown, subject: string): asserts value is string {
@@ -76,66 +48,6 @@ export function assertBuildResultFileRef(value: unknown, subject: string): asser
   }
   assertBuildResultPath(item.path, `${subject}.path`);
 }
-
-function valueAtPath(value: CanonicalValue, path: BuildResultValuePath, subject: string): CanonicalValue {
-  let current = value;
-  for (const segment of path) {
-    if (typeof segment === "number") {
-      if (!Number.isSafeInteger(segment) || segment < 0 || !Array.isArray(current) || segment >= current.length) {
-        throw new Error(`${subject} does not address a value slot`);
-      }
-      current = current[segment]!;
-      continue;
-    }
-    if (typeof segment !== "string" || current === null || Array.isArray(current) || typeof current !== "object"
-      || !Object.hasOwn(current, segment)) {
-      throw new Error(`${subject} does not address a value slot`);
-    }
-    current = (current as Readonly<Record<string, CanonicalValue>>)[segment]!;
-  }
-  return current;
-}
-
-/** Validate the storage document before its Resource paths are decoded into Runtime values. */
-export function assertBuildResultValueDocument(
-  value: unknown,
-  subject = "Product value",
-): asserts value is BuildResultValueDocument {
-  if (value === null || Array.isArray(value) || typeof value !== "object") {
-    throw new Error(`${subject} is not a Product value document`);
-  }
-  const document = value as Readonly<Record<string, unknown>>;
-  if (document.format !== "hypit.product-value@1" || !Array.isArray(document.resources)) {
-    throw new Error(`${subject} is not a Product value document`);
-  }
-  const canonicalValue = document.value;
-  assertCanonicalValue(canonicalValue, `${subject}.value`);
-  const occupied = new Set<string>();
-  document.resources.forEach((raw, index) => {
-    if (raw === null || Array.isArray(raw) || typeof raw !== "object") {
-      throw new Error(`${subject}.resources[${index}] is invalid`);
-    }
-    const binding = raw as Readonly<Record<string, unknown>>;
-    if (!Array.isArray(binding.at) || binding.at.length === 0) {
-      throw new Error(`${subject}.resources[${index}].at is invalid`);
-    }
-    for (const segment of binding.at) {
-      if (typeof segment !== "string"
-        && !(typeof segment === "number" && Number.isSafeInteger(segment) && segment >= 0)) {
-        throw new Error(`${subject}.resources[${index}].at is invalid`);
-      }
-    }
-    const path = JSON.stringify(binding.at);
-    if (occupied.has(path)) throw new Error(`${subject} binds ${path} more than once`);
-    occupied.add(path);
-    if (valueAtPath(canonicalValue, binding.at, `${subject}.resources[${index}].at`) !== null) {
-      throw new Error(`${subject}.resources[${index}].at must address a null Resource slot`);
-    }
-    assertProductFileRef(binding.file, `${subject}.resources[${index}].file`);
-  });
-}
-
-export type StoredBuildResultOutputValue = StoredProduct["value"];
 
 export type StoredBuildResultOutput = StoredProduct;
 

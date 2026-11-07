@@ -5,17 +5,13 @@
 export {
   assertBuildResultFileRef,
   assertBuildResultPath,
-  assertBuildResultValueDocument,
   assertBuildResultSeed,
   defineStoredBuildResultOutput,
   storedBuildResultOutput,
 } from "./types.js";
 export type {
   BuildResultFileRef,
-  StoredBuildResultOutputValue,
   StoredBuildResultOutput,
-  BuildResultValuePath,
-  BuildResultResourceBinding,
   BuildResultValueDocument,
   BuildResultDraft,
   StoredFinishedBuildResult,

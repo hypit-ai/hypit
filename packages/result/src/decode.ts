@@ -1,11 +1,8 @@
 import {
   assertOrderedBuildId,
-  createModuleRef,
-  createTypeRef,
 } from "@hypit/protocol";
-import type { CanonicalValue, TypeRef } from "@hypit/protocol";
-import { assertProductFileRef, assertProductPath } from "@hypit/product";
-import type { ProductFileRef, ProductValueDocument, StoredProduct } from "@hypit/product";
+import { decodeProductValueDocument, decodeStoredProduct } from "@hypit/product";
+import type { ProductValueDocument, StoredProduct } from "@hypit/product";
 import type { BuildResultOperation } from "./types.js";
 
 export type StoredBuildResultFile = {
@@ -39,16 +36,6 @@ function object(value: unknown, subject: string): Readonly<Record<string, unknow
   return value as Readonly<Record<string, unknown>>;
 }
 
-function canonicalValue(value: unknown, subject: string): CanonicalValue {
-  if (value === null || typeof value === "boolean" || typeof value === "string") return value;
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (Array.isArray(value)) {
-    return value.map((child, index) => canonicalValue(child, `${subject}[${index}]`));
-  }
-  return Object.fromEntries(Object.entries(object(value, subject))
-    .map(([name, child]) => [name, canonicalValue(child, `${subject}.${name}`)]));
-}
-
 function text(value: unknown, subject: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${subject} must be a non-empty string`);
   return value;
@@ -77,51 +64,10 @@ function fileRef(value: unknown, subject: string): StoredBuildResultFile {
   };
 }
 
-function productFileRef(value: unknown, subject: string): ProductFileRef {
-  assertProductFileRef(value, subject);
-  return { kind: "product-file", path: value.path, size: value.size, mediaType: value.mediaType };
-}
-
-function typeRef(value: unknown, subject: string): TypeRef {
-  const item = object(value, subject);
-  const module = object(item.module, `${subject}.module`);
-  return createTypeRef(createModuleRef(
-    text(module.name, `${subject}.module.name`),
-    text(module.version, `${subject}.module.version`),
-  ), text(item.name, `${subject}.name`));
-}
-
 function outputs(value: unknown, subject: string): Readonly<Record<string, StoredBuildResultOutput>> {
   return Object.fromEntries(Object.entries(object(value, subject)).map(([name, raw]) => {
     text(name, `${subject} Output name`);
-    const item = object(raw, `${subject}[${JSON.stringify(name)}]`);
-    const stored = object(item.value, `${subject}[${JSON.stringify(name)}].value`);
-    let decoded: StoredBuildResultOutput["value"];
-    if (stored.kind === "product-file") decoded = productFileRef(stored, `${subject}[${JSON.stringify(name)}].value`);
-    else if (stored.kind === "value") decoded = {
-      kind: "value",
-      path: (() => {
-        assertProductPath(stored.path, `${subject}[${JSON.stringify(name)}].value.path`);
-        return stored.path;
-      })(),
-    };
-    else if (stored.kind === "inline") {
-      const scalar = stored.value;
-      if (scalar !== null && typeof scalar !== "boolean" && typeof scalar !== "string"
-        && !(typeof scalar === "number" && Number.isFinite(scalar))) {
-        throw new Error(`${subject}[${JSON.stringify(name)}].value must be a scalar`);
-      }
-      decoded = { kind: "inline", value: scalar };
-    } else throw new Error(`${subject}[${JSON.stringify(name)}].value.kind is invalid`);
-    return [name, {
-      type: typeRef(item.type, `${subject}[${JSON.stringify(name)}].type`),
-      publisher: text(item.publisher, `${subject}[${JSON.stringify(name)}].publisher`),
-      ...(item.publicationParameters === undefined
-        ? {}
-        : { publicationParameters: canonicalValue(item.publicationParameters,
-            `${subject}[${JSON.stringify(name)}].publicationParameters`) }),
-      value: decoded,
-    }];
+    return [name, decodeStoredProduct(raw, `${subject}[${JSON.stringify(name)}]`)];
   }));
 }
 
@@ -225,23 +171,5 @@ export function decodeBuildResultValueDocument(
   value: unknown,
   subject = "Product value",
 ): StoredBuildResultValueDocument {
-  const item = object(value, subject);
-  if (item.format !== "hypit.product-value@1") throw new Error(`${subject} is not a Product value document`);
-  if (!Array.isArray(item.resources)) throw new Error(`${subject}.resources must be an array`);
-  return {
-    format: "hypit.product-value@1",
-    value: canonicalValue(item.value, `${subject}.value`),
-    resources: item.resources.map((raw, index) => {
-      const binding = object(raw, `${subject}.resources[${index}]`);
-      if (!Array.isArray(binding.at) || binding.at.length === 0) {
-        throw new Error(`${subject}.resources[${index}].at must be a non-empty array`);
-      }
-      const at = binding.at.map((segment, segmentIndex) => {
-        if (typeof segment === "string") return segment;
-        if (typeof segment === "number" && Number.isSafeInteger(segment) && segment >= 0) return segment;
-        throw new Error(`${subject}.resources[${index}].at[${segmentIndex}] is invalid`);
-      });
-      return { at, file: productFileRef(binding.file, `${subject}.resources[${index}].file`) };
-    }),
-  };
+  return decodeProductValueDocument(value, subject);
 }

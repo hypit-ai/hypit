@@ -1,24 +1,18 @@
 import {
   assertOrderedBuildId,
   assertPublicationIntent,
-  createModuleRef,
-  createTypeRef,
 } from "@hypit/hypit/protocol";
-import type { TypeRef } from "@hypit/hypit/protocol";
 import type { BuildResultOperation } from "@hypit/hypit/result";
-import { assertProductFileRef, assertProductPath } from "@hypit/hypit/product";
-import type { ProductFileRef } from "@hypit/hypit/product";
+import { decodeProductValueDocument, decodeStoredProduct } from "@hypit/hypit/product";
 
 import {
   assertBuildResultFileRef,
   assertBuildResultPath,
-  assertBuildResultValueDocument,
 } from "./types.js";
 import type {
   BuildResultFileRef,
   StoredBuildResult,
   StoredBuildResultOutput,
-  StoredBuildResultOutputValue,
   BuildResultValueDocument,
 } from "./types.js";
 import type { BuildResultWriterState } from "./writer.js";
@@ -28,20 +22,6 @@ function object(value: unknown, subject: string): Readonly<Record<string, unknow
     throw new Error(`${subject} must be an object`);
   }
   return value as Readonly<Record<string, unknown>>;
-}
-
-function canonicalValue(
-  value: unknown,
-  subject: string,
-): import("@hypit/hypit/protocol").CanonicalValue {
-  if (value === null || typeof value === "boolean" || typeof value === "string") return value;
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (Array.isArray(value)) {
-    return value.map((child, index) => canonicalValue(child, `${subject}[${index}]`));
-  }
-  const record = object(value, subject);
-  return Object.fromEntries(Object.entries(record)
-    .map(([name, child]) => [name, canonicalValue(child, `${subject}.${name}`)]));
 }
 
 function text(value: unknown, subject: string): string {
@@ -74,15 +54,6 @@ function buildId(value: unknown, subject: string): string {
   return id;
 }
 
-function typeRef(value: unknown, subject: string): TypeRef {
-  const item = object(value, subject);
-  const module = object(item.module, `${subject}.module`);
-  return createTypeRef(createModuleRef(
-    text(module.name, `${subject}.module.name`),
-    text(module.version, `${subject}.module.version`),
-  ), text(item.name, `${subject}.name`));
-}
-
 function resultPath(value: unknown, subject: string): string {
   assertBuildResultPath(value, subject);
   return value;
@@ -98,45 +69,11 @@ function fileRef(value: unknown, subject: string): BuildResultFileRef {
   };
 }
 
-function productFileRef(value: unknown, subject: string): ProductFileRef {
-  assertProductFileRef(value, subject);
-  return { kind: "product-file", path: value.path, size: value.size, mediaType: value.mediaType };
-}
-
-function outputValue(value: unknown, subject: string): StoredBuildResultOutputValue {
-  const item = object(value, subject);
-  if (item.kind === "product-file") {
-    return productFileRef(item, subject);
-  }
-  if (item.kind === "inline") {
-    const scalar = item.value;
-    if (scalar !== null && typeof scalar !== "boolean" && typeof scalar !== "string"
-      && !(typeof scalar === "number" && Number.isFinite(scalar))) {
-      throw new Error(`${subject}.value must be a scalar`);
-    }
-    return { kind: "inline", value: scalar };
-  }
-  if (item.kind === "value") {
-    assertProductPath(item.path, `${subject}.path`);
-    return { kind: "value", path: item.path };
-  }
-  throw new Error(`${subject}.kind is not a Result value kind`);
-}
-
 function outputs(value: unknown, subject: string): Readonly<Record<string, StoredBuildResultOutput>> {
   const raw = object(value, subject);
   return Object.fromEntries(Object.entries(raw).map(([name, value]) => {
     text(name, `${subject} Output name`);
-    const item = object(value, `${subject}[${JSON.stringify(name)}]`);
-    return [name, {
-      type: typeRef(item.type, `${subject}[${JSON.stringify(name)}].type`),
-      publisher: text(item.publisher, `${subject}[${JSON.stringify(name)}].publisher`),
-      ...(item.publicationParameters === undefined
-        ? {}
-        : { publicationParameters: canonicalValue(item.publicationParameters,
-            `${subject}[${JSON.stringify(name)}].publicationParameters`) }),
-      value: outputValue(item.value, `${subject}[${JSON.stringify(name)}].value`),
-    }] as const;
+    return [name, decodeStoredProduct(value, `${subject}[${JSON.stringify(name)}]`)] as const;
   }));
 }
 
@@ -308,26 +245,5 @@ export function decodeBuildResultValueDocument(
   value: unknown,
   subject = "Product value",
 ): BuildResultValueDocument {
-  const item = object(value, subject);
-  if (item.format !== "hypit.product-value@1") throw new Error(`${subject} is not a Product value document`);
-  if (!Array.isArray(item.resources)) throw new Error(`${subject}.resources must be an array`);
-  const document: BuildResultValueDocument = {
-    format: "hypit.product-value@1",
-    value: canonicalValue(item.value, `${subject}.value`),
-    resources: item.resources.map((raw, index) => {
-      const binding = object(raw, `${subject}.resources[${index}]`);
-      if (!Array.isArray(binding.at)) throw new Error(`${subject}.resources[${index}].at must be an array`);
-      const at = binding.at.map((segment, segmentIndex) => {
-        if (typeof segment === "string") return segment;
-        if (typeof segment === "number" && Number.isSafeInteger(segment) && segment >= 0) return segment;
-        throw new Error(`${subject}.resources[${index}].at[${segmentIndex}] is invalid`);
-      });
-      return {
-        at,
-        file: productFileRef(binding.file, `${subject}.resources[${index}].file`),
-      };
-    }),
-  };
-  assertBuildResultValueDocument(document, subject);
-  return document;
+  return decodeProductValueDocument(value, subject);
 }

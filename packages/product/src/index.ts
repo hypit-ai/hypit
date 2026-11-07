@@ -27,6 +27,7 @@ export {
   productExportersFromFacets,
   productExporterFacetAbi,
 } from "./exporter.js";
+export { decodeProductValueDocument, decodeStoredProduct } from "./decode.js";
 export type {
   ProductExport,
   ProductExportBytes,
