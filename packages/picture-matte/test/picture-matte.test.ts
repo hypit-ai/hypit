@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { HTML_VISUAL_FORMAT, type HtmlVisual } from "@hypit/html-program";
-import { canonicalize } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 import { createNleLoweringHostFromFacets } from "@hypit/nle";
 
 import {

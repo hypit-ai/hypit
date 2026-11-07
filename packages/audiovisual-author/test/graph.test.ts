@@ -47,7 +47,7 @@ import {
   audioGainProducers,
   audioGainTypes,
 } from "@hypit/audio-gain";
-import { blobManifest } from "@hypit/hypit/blob";
+import { blobManifest } from "@hypit/blob";
 import {
   createResolvedClosure,
   link,

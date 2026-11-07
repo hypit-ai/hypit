@@ -1,5 +1,5 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import type { ModuleManifest, ProducerRef } from "@hypit/hypit/protocol";
+import type { ModuleManifest, ProducerRef } from "@hypit/protocol";
 
 export const audioPreservePitchModuleRef = { name: "@hypit/audio-preserve-pitch", version: "1" } as const;
 export const audioPreservePitchProducers = {

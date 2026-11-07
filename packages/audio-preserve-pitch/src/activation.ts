@@ -1,4 +1,4 @@
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
+import { createProducerPackageFacet } from "@hypit/producer";
 
 import { audioPreservePitchComponent } from "./component.js";
 import { audioPreservePitchManifest, audioPreservePitchModuleRef } from "./manifest.js";

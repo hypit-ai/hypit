@@ -1,5 +1,5 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 import { htmlProgramModuleRef, htmlProgramTypes } from "@hypit/html-program";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 

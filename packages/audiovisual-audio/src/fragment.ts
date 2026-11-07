@@ -1,7 +1,7 @@
 import { audiovisualTypes } from "@hypit/audiovisual";
 import { audioProgramTypes } from "@hypit/audio-program";
-import { sealGraphFragment } from "@hypit/hypit/author";
-import type { FragmentOperation } from "@hypit/hypit/author";
+import { sealGraphFragment } from "@hypit/author";
+import type { FragmentOperation } from "@hypit/author";
 import { mediaTypes } from "@hypit/media";
 
 import { audiovisualAudioProducers, audiovisualAudioTypes } from "./manifest.js";

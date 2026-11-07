@@ -1,5 +1,5 @@
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
+import { createProducerPackageFacet } from "@hypit/producer";
+import { createRefinementPackageFacet } from "@hypit/refinement";
 import { createNlePackageFacet } from "@hypit/nle";
 
 import { pictureMatteComponent } from "./component.js";

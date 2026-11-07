@@ -1,7 +1,7 @@
 import type { PreparedMedia } from "@hypit/media";
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { Value } from "@hypit/hypit/protocol";
-import type { ProducerPackage } from "@hypit/hypit/producer";
+import { canonicalize } from "@hypit/protocol";
+import type { Value } from "@hypit/protocol";
+import type { ProducerPackage } from "@hypit/producer";
 
 import { audiovisualMediaProducers } from "./manifest.js";
 import { programSourceFromPreparedMedia } from "./source.js";

@@ -1,7 +1,7 @@
 import { audiovisualDependency, signalOperatorProgramSchema } from "@hypit/audiovisual";
 import { mediaDependency, mediaTypes, preparedAudioSourceSchema } from "@hypit/media";
 import { exactTemporalValueSchema, temporalDependency, temporalMapSchema } from "@hypit/temporal";
-import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
+import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
 export const audioProgramModuleRef = { name: "@hypit/audio-program", version: "1" } as const;
 export const audioProgramTypes = {

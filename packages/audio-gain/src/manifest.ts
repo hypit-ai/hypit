@@ -1,6 +1,6 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
 import { temporalDependency } from "@hypit/temporal";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
 export const audioGainModuleRef = { name: "@hypit/audio-gain", version: "1" } as const;
 export const audioGainTypes = {

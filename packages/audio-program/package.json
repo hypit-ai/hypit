@@ -10,13 +10,9 @@
   "dependencies": {
     "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.2.0",
+    "@hypit/producer": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/refinement": "workspace:^0.0.0-dev",
     "@hypit/temporal": "workspace:^0.1.1"
-  },
-  "peerDependencies": { "@hypit/hypit": "workspace:^0.4.0" },
-  "devDependencies": {
-    "@hypit/producer": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/refinement": "workspace:*",
-    "@hypit/hypit": "workspace:*"
   }
 }

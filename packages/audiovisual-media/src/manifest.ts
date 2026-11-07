@@ -1,6 +1,6 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
 import { mediaDependency, mediaTypes } from "@hypit/media";
-import type { ModuleManifest, ProducerRef } from "@hypit/hypit/protocol";
+import type { ModuleManifest, ProducerRef } from "@hypit/protocol";
 
 export const audiovisualMediaModuleRef = {
   name: "@hypit/audiovisual-media",

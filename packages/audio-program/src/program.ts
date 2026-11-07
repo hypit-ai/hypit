@@ -1,5 +1,5 @@
 import { assertOperatorTemporalSupport, assertSignalOperatorProgram } from "@hypit/audiovisual";
-import { canonicalize } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 import { verifyPreparedAudioSource } from "@hypit/media";
 import {
   assertLocalTemporalDomain,

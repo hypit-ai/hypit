@@ -4,7 +4,7 @@ import type {
   AuthorStructureDocument,
   AuthorStructureFieldNode,
   AuthorStructureOperation,
-} from "@hypit/hypit/author";
+} from "@hypit/author";
 
 import { audiovisualAuthorModuleRef } from "./manifest.js";
 

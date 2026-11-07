@@ -18,7 +18,7 @@ import {
 } from "@hypit/audiovisual";
 import { prepareMedia } from "@hypit/media";
 import { supportsLocalAudioProgram } from "@hypit/provider-media-local";
-import { canonicalize } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 import {
   exactTemporalValue,
   evaluateTemporalMap,

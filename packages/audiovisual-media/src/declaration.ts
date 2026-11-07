@@ -2,8 +2,8 @@ import {
   createAuthorDeclarationFacet,
   declarationField,
   type AuthorDeclarationCompiler,
-} from "@hypit/hypit/author";
-import { sameType } from "@hypit/hypit/protocol";
+} from "@hypit/author";
+import { sameType } from "@hypit/protocol";
 import { audiovisualTypes } from "@hypit/audiovisual";
 import { mediaTypes } from "@hypit/media";
 

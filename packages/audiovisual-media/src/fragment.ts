@@ -1,5 +1,5 @@
 import { audiovisualTypes } from "@hypit/audiovisual";
-import { sealGraphFragment } from "@hypit/hypit/author";
+import { sealGraphFragment } from "@hypit/author";
 import { mediaTypes } from "@hypit/media";
 
 import { audiovisualMediaProducers } from "./manifest.js";

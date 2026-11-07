@@ -1,5 +1,5 @@
-import { sealGraphFragment } from "@hypit/hypit/author";
-import type { FragmentOperation } from "@hypit/hypit/author";
+import { sealGraphFragment } from "@hypit/author";
+import type { FragmentOperation } from "@hypit/author";
 import { audiovisualTypes } from "@hypit/audiovisual";
 import { spatialTypes } from "@hypit/spatial";
 import { temporalProducers, temporalTypes } from "@hypit/temporal";

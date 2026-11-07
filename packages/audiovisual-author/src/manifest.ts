@@ -1,5 +1,5 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
 

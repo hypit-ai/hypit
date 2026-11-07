@@ -3,7 +3,7 @@ import type {
   NleEffectParameterAuthoring,
   NlePackageSymbol,
 } from "@hypit/nle";
-import { canonicalize } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 import {
   assertExactTemporalValue,
   compareExactTemporalValues,

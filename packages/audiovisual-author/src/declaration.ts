@@ -6,8 +6,8 @@ import {
   type AuthorDeclarationFieldValue,
   type AuthorResolvedReference,
   type AuthorValueRef,
-} from "@hypit/hypit/author";
-import { canonicalize, sameType, type TypeRef } from "@hypit/hypit/protocol";
+} from "@hypit/author";
+import { canonicalize, sameType, type TypeRef } from "@hypit/protocol";
 import { audiovisualTypes } from "@hypit/audiovisual";
 import { spatialTypes } from "@hypit/spatial";
 import {

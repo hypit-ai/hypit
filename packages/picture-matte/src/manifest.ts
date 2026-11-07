@@ -1,5 +1,5 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
 export const pictureMatteModuleRef = { name: "@hypit/picture-matte", version: "1" } as const;
 export const pictureMatteTypes = {

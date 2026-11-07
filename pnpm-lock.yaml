@@ -228,38 +228,31 @@ importers:
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../nle
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:^0.0.0-dev
+        version: link:../refinement
       '@hypit/temporal':
         specifier: workspace:^0.1.0
         version: link:../temporal
-    devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/producer':
-        specifier: workspace:*
-        version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:*
-        version: link:../refinement
 
   packages/audio-preserve-pitch:
     dependencies:
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
         version: link:../audiovisual
-    devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
       '@hypit/producer':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../producer
       '@hypit/protocol':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../protocol
+    devDependencies:
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -272,22 +265,18 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:^0.0.0-dev
+        version: link:../refinement
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
-    devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/producer':
-        specifier: workspace:*
-        version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:*
-        version: link:../refinement
 
   packages/audiovisual:
     dependencies:
@@ -316,9 +305,21 @@ importers:
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
         version: link:../audiovisual
+      '@hypit/author':
+        specifier: workspace:^0.0.0-dev
+        version: link:../author
       '@hypit/media':
         specifier: workspace:^0.1.0
         version: link:../media
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:^0.0.0-dev
+        version: link:../refinement
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
@@ -329,9 +330,6 @@ importers:
       '@hypit/audio-preserve-pitch':
         specifier: workspace:^0.1.0
         version: link:../audio-preserve-pitch
-      '@hypit/hypit':
-        specifier: workspace:^0.4.0
-        version: link:../..
       '@hypit/provider-media-local':
         specifier: workspace:^0.1.0
         version: link:../provider-media-local
@@ -341,6 +339,18 @@ importers:
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
         version: link:../audiovisual
+      '@hypit/author':
+        specifier: workspace:^0.0.0-dev
+        version: link:../author
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:^0.0.0-dev
+        version: link:../refinement
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
@@ -366,15 +376,9 @@ importers:
       '@hypit/audiovisual-media':
         specifier: workspace:^0.1.0
         version: link:../audiovisual-media
-      '@hypit/author':
-        specifier: workspace:^0.1.0
-        version: link:../author
       '@hypit/html-program':
         specifier: workspace:^0.1.0
         version: link:../html-program
-      '@hypit/hypit':
-        specifier: workspace:^0.4.0
-        version: link:../..
       '@hypit/kernel':
         specifier: workspace:^0.1.0
         version: link:../kernel
@@ -384,30 +388,30 @@ importers:
       '@hypit/picture-transition':
         specifier: workspace:^0.1.0
         version: link:../picture-transition
-      '@hypit/producer':
-        specifier: workspace:^0.1.0
-        version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:^0.1.0
-        version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:^0.1.0
-        version: link:../refinement
 
   packages/audiovisual-html:
     dependencies:
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
         version: link:../audiovisual
+      '@hypit/author':
+        specifier: workspace:^0.0.0-dev
+        version: link:../author
       '@hypit/html-program':
         specifier: workspace:^0.2.0
         version: link:../html-program
-      '@hypit/hypit':
-        specifier: workspace:^0.4.0
-        version: link:../..
       '@hypit/media':
         specifier: workspace:^0.1.0
         version: link:../media
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:^0.0.0-dev
+        version: link:../refinement
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
@@ -427,25 +431,21 @@ importers:
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
         version: link:../audiovisual
+      '@hypit/author':
+        specifier: workspace:^0.0.0-dev
+        version: link:../author
       '@hypit/media':
         specifier: workspace:^0.1.0
         version: link:../media
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
-    devDependencies:
-      '@hypit/author':
-        specifier: workspace:^0.1.0
-        version: link:../author
-      '@hypit/hypit':
-        specifier: workspace:^0.4.0
-        version: link:../..
-      '@hypit/producer':
-        specifier: workspace:^0.1.0
-        version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:^0.1.0
-        version: link:../protocol
 
   packages/author:
     dependencies:
@@ -1427,22 +1427,19 @@ importers:
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../nle
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:^0.0.0-dev
+        version: link:../refinement
       '@hypit/temporal':
         specifier: workspace:^0.1.0
         version: link:../temporal
     devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/producer':
-        specifier: workspace:*
-        version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:*
-        version: link:../refinement
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1458,19 +1455,16 @@ importers:
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../nle
-    devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
       '@hypit/producer':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../producer
       '@hypit/protocol':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../protocol
       '@hypit/refinement':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../refinement
+    devDependencies:
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1486,22 +1480,19 @@ importers:
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../nle
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:^0.0.0-dev
+        version: link:../refinement
       '@hypit/temporal':
         specifier: workspace:^0.1.0
         version: link:../temporal
     devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/producer':
-        specifier: workspace:*
-        version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:*
-        version: link:../refinement
       typescript:
         specifier: 5.9.3
         version: 5.9.3

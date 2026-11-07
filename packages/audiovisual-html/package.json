@@ -11,18 +11,19 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
+    "@hypit/author": "workspace:^0.0.0-dev",
     "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.1.0",
+    "@hypit/producer": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/refinement": "workspace:^0.0.0-dev",
     "@hypit/spatial": "workspace:^0.1.1",
     "@hypit/temporal": "workspace:^0.1.1"
   },
   "devDependencies": {
     "@hypit/picture-transition": "workspace:^0.1.0",
     "@hypit/picture-filter": "workspace:^0.1.0"
-  },
-  "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
   },
   "files": [
     "dist",

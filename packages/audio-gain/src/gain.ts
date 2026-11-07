@@ -5,7 +5,7 @@ import {
   type AudioOperator,
   type TemporalControl,
 } from "@hypit/audiovisual";
-import { canonicalize } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 import type { ExactTemporalValue, Rational } from "@hypit/temporal/algebra";
 
 /** Exact process format authored by Audio Gain. */

@@ -1,7 +1,7 @@
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { Value } from "@hypit/hypit/protocol";
-import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { RefinementPackage } from "@hypit/hypit/refinement";
+import { canonicalize } from "@hypit/protocol";
+import type { Value } from "@hypit/protocol";
+import type { ProducerPackage } from "@hypit/producer";
+import type { RefinementPackage } from "@hypit/refinement";
 
 import { pictureMatteProducers, pictureMatteTypes } from "./manifest.js";
 import { pictureMatteOperator, type PictureMatteOperatorSpec } from "./program.js";

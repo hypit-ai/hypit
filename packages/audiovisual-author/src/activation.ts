@@ -1,6 +1,6 @@
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
-import { createAuthorDeclarationFacet, createAuthorEditPlannerFacet } from "@hypit/hypit/author";
+import { createProducerPackageFacet } from "@hypit/producer";
+import { createRefinementPackageFacet } from "@hypit/refinement";
+import { createAuthorDeclarationFacet, createAuthorEditPlannerFacet } from "@hypit/author";
 
 import { audiovisualAuthorComponent } from "./component.js";
 import { audiovisualAuthorManifest } from "./manifest.js";

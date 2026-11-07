@@ -1,5 +1,5 @@
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { ProducerPackage } from "@hypit/hypit/producer";
+import { canonicalize } from "@hypit/protocol";
+import type { ProducerPackage } from "@hypit/producer";
 
 import { audioPreservePitchProducers } from "./manifest.js";
 import { preservePitch } from "./program.js";

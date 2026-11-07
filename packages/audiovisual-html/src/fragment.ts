@@ -1,6 +1,6 @@
 import { audiovisualTypes } from "@hypit/audiovisual";
-import { sealGraphFragment } from "@hypit/hypit/author";
-import type { FragmentOperation } from "@hypit/hypit/author";
+import { sealGraphFragment } from "@hypit/author";
+import type { FragmentOperation } from "@hypit/author";
 import { htmlProgramTypes } from "@hypit/html-program";
 import { mediaTypes } from "@hypit/media";
 

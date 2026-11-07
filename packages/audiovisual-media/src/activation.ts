@@ -1,4 +1,4 @@
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
+import { createProducerPackageFacet } from "@hypit/producer";
 
 import { audiovisualMediaComponent } from "./component.js";
 import { audiovisualMediaAuthorFacets } from "./declaration.js";

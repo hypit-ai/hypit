@@ -1,5 +1,5 @@
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
+import { createProducerPackageFacet } from "@hypit/producer";
+import { createRefinementPackageFacet } from "@hypit/refinement";
 import { createNleAuthoringFacet, createNlePackageFacet } from "@hypit/nle";
 import { audioGainComponent } from "./component.js";
 import { audioGainManifest } from "./manifest.js";

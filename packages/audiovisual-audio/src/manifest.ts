@@ -1,6 +1,6 @@
 import { audioProgramDependency, audioProgramTypes } from "@hypit/audio-program";
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 
 export const audiovisualAudioModuleRef = { name: "@hypit/audiovisual-audio", version: "1" } as const;
