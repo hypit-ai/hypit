@@ -10,9 +10,7 @@ import {
   Executor,
   EndpointRegistry,
 } from "@hypit/hypit/executor";
-import {
-  isStreamingResourceStore,
-} from "@hypit/hypit/runtime";
+import { isStreamingResourceStore } from "@hypit/resource-store";
 import { installEndpoint } from "@hypit/hypit/endpoint";
 import { assertOrderedBuildId, parseCapabilityKey, valueBlobRefs } from "@hypit/hypit/protocol";
 import { refinementPackagesFromFacets, registerTypeRefinements, RefinementRegistry } from "@hypit/hypit/refinement";

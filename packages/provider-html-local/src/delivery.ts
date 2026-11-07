@@ -10,7 +10,7 @@ import {
 } from "@hypit/media-local";
 import type { CreateMediaExecutionEnvironmentOptions } from "@hypit/media-local";
 import { canonicalize } from "@hypit/hypit/protocol";
-import type { ResourceStore } from "@hypit/hypit/runtime";
+import type { ResourceStore } from "@hypit/resource-store";
 
 import { rasterizeChromiumHtmlProgram } from "./render.js";
 import type { ChromiumHtmlRasterOptions } from "./render.js";

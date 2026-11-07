@@ -11,9 +11,9 @@ import { assertSpeechEvidenceAudioIdentity, speechEvidenceCapabilities, speechEv
 import type { SpeechEvidenceAudio } from "@hypit/speech-evidence";
 import assert from "node:assert/strict";
 import {
-  MemoryResourceStore,
   EndpointRegistry,
 } from "@hypit/executor";
+import { MemoryResourceStore } from "@hypit/resource-store";
 import type { EndpointRegistration } from "@hypit/executor";
 import type { ImmediateEndpointHandler } from "@hypit/endpoint";
 import { installEndpoint } from "@hypit/endpoint";

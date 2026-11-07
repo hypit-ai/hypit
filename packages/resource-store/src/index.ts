@@ -1,5 +1,30 @@
 import type { BlobRef, ResourceId } from "@hypit/protocol";
-import type { ResourceIOOptions, ResourceStore } from "@hypit/runtime";
+
+export type ResourceIOOptions = {
+  /** Cancel transfer and discard unfinished writes before rejecting. */
+  readonly signal?: AbortSignal;
+};
+
+export type ResourceStore = {
+  /** Store one new resource instance. Equal bytes remain independent resources. */
+  put(bytes: Uint8Array, mediaType: string, options?: ResourceIOOptions): Promise<BlobRef>;
+  /** Write bytes for one resource already declared by the caller. */
+  write(resource: BlobRef, bytes: Uint8Array, options?: ResourceIOOptions): Promise<void>;
+  get(resource: ResourceId, options?: ResourceIOOptions): Promise<Uint8Array | undefined>;
+  has(resource: ResourceId, options?: ResourceIOOptions): Promise<boolean>;
+};
+
+export type StreamingResourceStore = ResourceStore & {
+  putStream(chunks: AsyncIterable<Uint8Array>, mediaType: string, options?: ResourceIOOptions): Promise<BlobRef>;
+  writeStream(resource: BlobRef, chunks: AsyncIterable<Uint8Array>, options?: ResourceIOOptions): Promise<void>;
+  open(resource: ResourceId, options?: ResourceIOOptions): Promise<AsyncIterable<Uint8Array> | undefined>;
+};
+
+export function isStreamingResourceStore(value: ResourceStore): value is StreamingResourceStore {
+  return "putStream" in value && typeof value.putStream === "function"
+    && "writeStream" in value && typeof value.writeStream === "function"
+    && "open" in value && typeof value.open === "function";
+}
 
 export class MemoryResourceStore implements ResourceStore {
   readonly #values = new Map<ResourceId, Uint8Array>();

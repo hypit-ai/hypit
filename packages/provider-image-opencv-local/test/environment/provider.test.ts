@@ -6,7 +6,8 @@ import test from "node:test";
 import { installEndpoint } from "@hypit/hypit/endpoint";
 
 import { blobTypes } from "@hypit/blob";
-import { EndpointRegistry, MemoryResourceStore } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/executor";
+import { MemoryResourceStore } from "@hypit/resource-store";
 import { rasterCompositionCapabilities } from "@hypit/raster-composition";
 import { createLocalOpenCvImageProvider } from "@hypit/provider-image-opencv-local";
 import { assertBlobRef, canonicalize } from "@hypit/protocol";

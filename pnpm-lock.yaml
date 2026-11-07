@@ -14,6 +14,9 @@ importers:
       '@hypit/media-local':
         specifier: workspace:^0.3.0
         version: link:packages/media-local
+      '@hypit/nle-local':
+        specifier: workspace:^0.1.0
+        version: link:packages/nle-local
       '@hypit/runtime-local':
         specifier: workspace:^0.2.0
         version: link:packages/runtime-local
@@ -130,6 +133,9 @@ importers:
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../../../..
+      '@hypit/resource-store':
+        specifier: workspace:*
+        version: link:../../../../packages/resource-store
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../../../../packages/runtime-local
@@ -149,6 +155,9 @@ importers:
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../../../..
+      '@hypit/resource-store':
+        specifier: workspace:*
+        version: link:../../../../packages/resource-store
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../../../../packages/runtime-local
@@ -553,6 +562,9 @@ importers:
       '@hypit/refinement':
         specifier: workspace:*
         version: link:../refinement
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       '@hypit/result':
         specifier: workspace:*
         version: link:../result
@@ -677,6 +689,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:^0.0.0-dev
         version: link:../protocol
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       '@hypit/runtime':
         specifier: workspace:^0.0.0-dev
         version: link:../runtime
@@ -698,6 +713,9 @@ importers:
       '@hypit/refinement':
         specifier: workspace:*
         version: link:../refinement
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       '@hypit/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -907,6 +925,9 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       '@hypit/runtime-local':
         specifier: workspace:^0.2.0
         version: link:../runtime-local
@@ -1111,6 +1132,9 @@ importers:
       '@hypit/media-delivery':
         specifier: workspace:^0.1.0
         version: link:../media-delivery
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       '@hypit/speech-evidence':
         specifier: workspace:^0.2.0
         version: link:../speech-evidence
@@ -1326,6 +1350,43 @@ importers:
         specifier: workspace:^0.1.1
         version: link:../temporal
 
+  packages/nle-local:
+    dependencies:
+      '@hypit/html-video':
+        specifier: workspace:^0.2.1
+        version: link:../html-video
+      '@hypit/media':
+        specifier: workspace:^0.2.0
+        version: link:../media
+      '@hypit/media-asset':
+        specifier: workspace:^0.1.0
+        version: link:../media-asset
+      '@hypit/media-local':
+        specifier: workspace:^0.3.0
+        version: link:../media-local
+      '@hypit/nle':
+        specifier: workspace:^0.1.0
+        version: link:../nle
+      '@hypit/provider-html-local':
+        specifier: workspace:^0.2.1
+        version: link:../provider-html-local
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
+    devDependencies:
+      '@hypit/audio-program':
+        specifier: workspace:*
+        version: link:../audio-program
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/picture-filter:
     dependencies:
       '@hypit/audiovisual':
@@ -1487,6 +1548,9 @@ importers:
       '@hypit/nano-banana':
         specifier: workspace:^0.3.0
         version: link:../nano-banana
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       '@hypit/seedance':
         specifier: workspace:^0.3.0
         version: link:../seedance
@@ -1524,6 +1588,9 @@ importers:
       '@hypit/nano-banana':
         specifier: workspace:^0.3.0
         version: link:../nano-banana
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       '@hypit/seedance':
         specifier: workspace:^0.3.0
         version: link:../seedance
@@ -1577,6 +1644,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       '@hypit/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -1610,6 +1680,9 @@ importers:
       '@hypit/media-local':
         specifier: workspace:^0.3.0
         version: link:../media-local
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
@@ -1680,6 +1753,9 @@ importers:
       '@hypit/pixverse':
         specifier: workspace:^0.3.0
         version: link:../pixverse
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       '@hypit/seedance':
         specifier: workspace:^0.3.0
         version: link:../seedance
@@ -1738,6 +1814,9 @@ importers:
       '@hypit/raster-composition':
         specifier: workspace:*
         version: link:../raster-composition
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../runtime-local
@@ -1750,6 +1829,9 @@ importers:
       '@hypit/minimax-h3':
         specifier: workspace:^0.3.0
         version: link:../minimax-h3
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       '@hypit/seedance':
         specifier: workspace:^0.3.0
         version: link:../seedance
@@ -1790,6 +1872,9 @@ importers:
       '@hypit/nano-banana':
         specifier: workspace:^0.3.0
         version: link:../nano-banana
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
     devDependencies:
       '@hypit/endpoint':
         specifier: workspace:*
@@ -1815,6 +1900,9 @@ importers:
       '@hypit/minimax-h3':
         specifier: workspace:^0.3.0
         version: link:../minimax-h3
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       '@hypit/seedance':
         specifier: workspace:^0.3.0
         version: link:../seedance
@@ -1856,6 +1944,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../runtime-local
@@ -1913,6 +2004,12 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  packages/resource-store:
+    dependencies:
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+
   packages/result:
     dependencies:
       '@hypit/facet':
@@ -1933,6 +2030,9 @@ importers:
 
   packages/runtime-local:
     dependencies:
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
       koffi:
         specifier: 3.2.1
         version: 3.2.1
@@ -2230,9 +2330,6 @@ importers:
       '@hypit/nano-banana':
         specifier: workspace:^0.3.0
         version: link:../nano-banana
-      '@hypit/nle':
-        specifier: workspace:^0.1.0
-        version: link:../nle
       '@hypit/picture-filter':
         specifier: workspace:^0.1.0
         version: link:../picture-filter

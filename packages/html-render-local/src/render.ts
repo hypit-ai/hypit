@@ -10,7 +10,7 @@ import type { FrameSpan } from "@hypit/temporal";
 import { verifyPictureArtifactFile } from "./picture-validation.js";
 import { verifyHtmlRasterRequest, verifyHtmlFrameRequest } from "@hypit/html-program";
 import type { HtmlRasterRequest, HtmlFrameRequest, HtmlFrameImages } from "@hypit/html-program";
-import { isStreamingResourceStore } from "@hypit/hypit/endpoint";
+import { isStreamingResourceStore } from "@hypit/resource-store";
 import type { HtmlExecutionOptions } from "./options.js";
 import { assert, positiveInteger } from "./process.js";
 import { runCaptureProcess } from "./capture-process.js";

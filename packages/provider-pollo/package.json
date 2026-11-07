@@ -35,6 +35,7 @@
     "@hypit/gpt-image": "workspace:^0.3.0",
     "@hypit/grok-imagine": "workspace:^0.3.0",
     "@hypit/minimax-h3": "workspace:^0.3.0",
-    "@hypit/nano-banana": "workspace:^0.3.0"
+    "@hypit/nano-banana": "workspace:^0.3.0",
+    "@hypit/resource-store": "workspace:^0.1.0"
   }
 }

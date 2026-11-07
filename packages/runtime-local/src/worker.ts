@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import type {
-  ResourceStore,
   RuntimeBuildExecution,
   RuntimeCommandExecutor,
   RuntimeExecutionResult,
@@ -8,6 +7,7 @@ import type {
   RuntimeRunnableCommand,
   ScheduledBuildResult,
 } from "@hypit/hypit/runtime";
+import type { ResourceStore } from "@hypit/resource-store";
 import type { BuildCompletion, BuildExecutionSnapshot } from "./execution.js";
 import { InProcessBuildScheduler } from "@hypit/hypit/runtime";
 import { BuildMachine } from "@hypit/hypit/kernel";

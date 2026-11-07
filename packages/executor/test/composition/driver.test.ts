@@ -5,7 +5,6 @@ import test from "node:test";
 
 import {
   ProducerRegistry,
-  MemoryResourceStore,
   Executor,
   EndpointRegistry,
 } from "@hypit/executor";
@@ -251,19 +250,6 @@ test("the finite BuildDefinition fixes the producer path before execution, never
     createGreetingBuild({ generationStep: "placeholder" }));
   assert.equal(accepted.status, "complete");
   assert.equal(accepted.state.needs.length, 0);
-});
-
-test("MemoryResourceStore keeps independent admissions and returns defensive copies", async () => {
-  const store = new MemoryResourceStore();
-  const source = new Uint8Array([1, 2, 3]);
-  const first = await store.put(source, "application/octet-stream");
-  source[0] = 9;
-  const second = await store.put(new Uint8Array([1, 2, 3]), "application/octet-stream");
-  assert.notEqual(first.resource, second.resource);
-  const loaded = await store.get(first.resource);
-  assert.deepEqual(loaded, new Uint8Array([1, 2, 3]));
-  if (loaded !== undefined) loaded[0] = 8;
-  assert.deepEqual(await store.get(first.resource), new Uint8Array([1, 2, 3]));
 });
 
 test("Core still owns command readiness when Executor has every implementation", async () => {

@@ -6,7 +6,8 @@ import type { GenerationArtifactUrlResolver } from "@hypit/generation/provider";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue, CapabilityRef } from "@hypit/hypit/protocol";
 import { credentialRef } from "@hypit/hypit/endpoint";
-import type { CredentialRef, ResourceStore } from "@hypit/hypit/endpoint";
+import type { CredentialRef } from "@hypit/hypit/endpoint";
+import type { ResourceStore } from "@hypit/resource-store";
 import { monidRouteForCapability, monidRoutes } from "./routes.js";
 import { MonidHttpError, MonidServiceError, monidRunFailure, monidTerminalStatuses } from "./errors.js";
 

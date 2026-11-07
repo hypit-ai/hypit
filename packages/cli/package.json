@@ -17,6 +17,7 @@
     "@hypit/loader": "workspace:*",
     "@hypit/project": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/runtime": "workspace:*",
     "@hypit/source": "workspace:*",
     "@hypit/refinement": "workspace:*",

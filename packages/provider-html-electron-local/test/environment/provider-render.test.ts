@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { MemoryResourceStore } from "@hypit/executor";
+import { MemoryResourceStore } from "@hypit/resource-store";
 import { verifyTimelineVisual } from "@hypit/media";
 import type { TimelineVisual } from "@hypit/media";
 import type { CanonicalValue } from "@hypit/protocol";

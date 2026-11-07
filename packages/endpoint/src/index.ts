@@ -7,7 +7,6 @@ import type {
 } from "@hypit/protocol";
 import { canonicalize, capabilityKey, compareCodeUnits } from "@hypit/protocol";
 import type {
-  ResourceStore,
   CredentialAcquisition,
   CredentialRef,
   CredentialValue,
@@ -17,6 +16,7 @@ import type {
   OperationReceipt,
 } from "@hypit/runtime";
 import { capacityUnits, verifyCredentialRef } from "@hypit/runtime";
+import type { ResourceStore } from "@hypit/resource-store";
 
 export { canonicalize } from "@hypit/protocol";
 export type { BlobRef, CanonicalValue, CapabilityRef, ModuleRef, ResourceId, Value, TypeRef } from "@hypit/protocol";
@@ -24,7 +24,6 @@ export {
   credentialRef,
   decodeOAuth2Credential,
   encodeOAuth2Credential,
-  isStreamingResourceStore,
 } from "@hypit/runtime";
 export type {
   CapacityResourceClaim,
@@ -35,8 +34,6 @@ export type {
   OperationFailure,
   OperationProgress,
   OperationReceipt,
-  ResourceIOOptions,
-  ResourceStore,
 } from "@hypit/runtime";
 
 export type Awaitable<T> = T | Promise<T>;

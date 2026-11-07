@@ -10,7 +10,8 @@ import {
   RuntimeAdapterRegistry,
 } from "@hypit/runtime-local/extension";
 import { FileBuildResultStore } from "../../src/result-storage/index.js";
-import { MemoryResourceStore, ProducerRegistry } from "@hypit/executor";
+import { ProducerRegistry } from "@hypit/executor";
+import { MemoryResourceStore } from "@hypit/resource-store";
 import { defineEndpoint } from "@hypit/endpoint";
 import { credentialRef } from "@hypit/runtime";
 import type { CanonicalValue, CapabilityRef, TypeRef } from "@hypit/protocol";

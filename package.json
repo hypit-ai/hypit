@@ -120,6 +120,16 @@
       "types": "./dist/public/endpoint-http.d.ts",
       "import": "./packages/endpoint/src/http.ts"
     },
+    "./resource-store": {
+      "hypit-source": "./packages/resource-store/src/index.ts",
+      "types": "./dist/public/resource-store.d.ts",
+      "import": "./packages/resource-store/src/index.ts"
+    },
+    "./resource-store/node": {
+      "hypit-source": "./packages/resource-store/src/node/index.ts",
+      "types": "./dist/public/resource-store-node.d.ts",
+      "import": "./packages/resource-store/src/node/index.ts"
+    },
     "./loader": {
       "hypit-source": "./packages/loader/src/index.ts",
       "types": "./dist/public/loader.d.ts",
@@ -167,6 +177,7 @@
         "@hypit/media-local/cli",
         "@hypit/speech-estimate/cli",
         "@hypit/whisperx/cli",
+        "@hypit/nle-local/cli",
         "@hypit/video/cli"
       ]
     },
@@ -249,6 +260,7 @@
     "@hypit/browser-capture": "workspace:^0.2.1",
     "@hypit/speech-estimate": "workspace:^0.1.2",
     "@hypit/media-local": "workspace:^0.3.0",
+    "@hypit/nle-local": "workspace:^0.1.0",
     "@hypit/runtime-local": "workspace:^0.2.0",
     "@hypit/video": "workspace:^0.3.0",
     "@hypit/whisperx": "workspace:^0.3.0",

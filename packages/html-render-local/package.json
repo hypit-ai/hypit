@@ -10,6 +10,7 @@
   "dependencies": {
     "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.2.0",
+    "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/temporal": "workspace:^0.1.1"
   },
   "peerDependencies": {

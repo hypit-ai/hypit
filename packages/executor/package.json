@@ -12,6 +12,7 @@
     "@hypit/kernel": "workspace:*",
     "@hypit/endpoint": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/runtime": "workspace:*",
     "@hypit/refinement": "workspace:*"
   }

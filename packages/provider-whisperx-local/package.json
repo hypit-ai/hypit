@@ -29,6 +29,7 @@
     "@hypit/endpoint": "workspace:*",
     "@hypit/hypit": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/runtime-local": "workspace:*",
     "@hypit/speech-evidence": "workspace:*",
     "@hypit/whisperx": "workspace:*",

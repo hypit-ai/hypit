@@ -5,7 +5,21 @@ import { join } from "node:path";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 
-import { FileResourceStore } from "../../src/resource-store.js";
+import { MemoryResourceStore } from "../src/index.js";
+import { FileResourceStore } from "../src/node/index.js";
+
+test("memory resources retain independent identity and defensive bytes", async () => {
+  const store = new MemoryResourceStore();
+  const bytes = new Uint8Array([1, 2, 3]);
+  const left = await store.put(bytes, "application/octet-stream");
+  const right = await store.put(bytes, "application/octet-stream");
+  bytes[0] = 9;
+  assert.notEqual(left.resource, right.resource);
+  const loaded = await store.get(left.resource);
+  assert.deepEqual(loaded, new Uint8Array([1, 2, 3]));
+  loaded![1] = 8;
+  assert.deepEqual(await store.get(left.resource), new Uint8Array([1, 2, 3]));
+});
 
 test("cancelled stream writes remove only their unfinished file", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-resources-abort-"));
@@ -43,7 +57,6 @@ test("filesystem resources are independent and survive adapter restart", async (
     const reopened = new FileResourceStore(directory);
     assert.equal(await reopened.has(left.resource), true);
     assert.deepEqual(await reopened.get(left.resource), bytes);
-
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

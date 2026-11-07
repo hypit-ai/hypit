@@ -1,9 +1,9 @@
 import { resolve } from "node:path";
 
-import { MemoryResourceStore } from "@hypit/executor";
+import { MemoryResourceStore } from "@hypit/resource-store";
 import { capabilityKey } from "@hypit/protocol";
 import type { Need } from "@hypit/protocol";
-import type { ResourceStore } from "@hypit/runtime";
+import type { ResourceStore } from "@hypit/resource-store";
 
 import type { CliApplicationContext } from "./application.js";
 import type { CliDistribution } from "./distribution.js";

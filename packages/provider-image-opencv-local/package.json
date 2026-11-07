@@ -26,6 +26,7 @@
     "@hypit/hypit": "workspace:*",
     "@hypit/raster-composition": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/runtime-local": "workspace:*"
   }
 }

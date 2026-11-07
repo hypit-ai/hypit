@@ -1,7 +1,8 @@
 import { capabilityKey } from "@hypit/hypit/protocol";
 import { readFileSync } from "node:fs";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-local/extension";
-import type { AsyncEndpoint, CredentialRef, EndpointCredential, EndpointInvocationContext, EndpointPollContext, EndpointPricingReader, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler, ResourceStore } from "@hypit/hypit/endpoint";
+import type { AsyncEndpoint, CredentialRef, EndpointCredential, EndpointInvocationContext, EndpointPollContext, EndpointPricingReader, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler } from "@hypit/hypit/endpoint";
+import type { ResourceStore } from "@hypit/resource-store";
 import { credentialRef, EndpointServiceError, defineEndpoint, wakeAfter } from "@hypit/hypit/endpoint";
 import { EndpointHttpError, EndpointResponseError, EndpointTransportError, withRequestDeadline } from "@hypit/hypit/endpoint/http";
 import { selectWireModelForRequest } from "@hypit/generation/provider";

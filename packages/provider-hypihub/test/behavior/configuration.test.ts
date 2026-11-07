@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { encodeOAuth2Credential } from "@hypit/runtime";
 
-import { EndpointRegistry, MemoryResourceStore } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/executor";
+import { MemoryResourceStore } from "@hypit/resource-store";
 import { defineEndpoint, endpointOffers, installEndpoint } from "@hypit/endpoint";
 import type { CanonicalValue, Need } from "@hypit/protocol";
 import { mimoSpeechEndpoints, sealMimoSpeechRequest } from "@hypit/mimo-speech";

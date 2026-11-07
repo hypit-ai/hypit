@@ -33,6 +33,7 @@
   "devDependencies": {
     "@hypit/executor": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/runtime": "workspace:*",
     "@hypit/script": "workspace:*",
     "electron": "45.0.0",

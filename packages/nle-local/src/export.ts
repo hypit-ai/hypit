@@ -6,7 +6,7 @@ import type { Facet } from "@hypit/hypit/facet";
 import { loadNodePackageSelection } from "@hypit/hypit/loader/node";
 import { moduleKey, modulePackageAbi } from "@hypit/hypit/protocol";
 import type { ModuleRef } from "@hypit/hypit/protocol";
-import type { ResourceStore } from "@hypit/hypit/runtime";
+import type { ResourceStore } from "@hypit/resource-store";
 import {
   createNleTerminalLinkHostFromFacets,
   executeHtmlVideoDeliveryPlan,
@@ -24,7 +24,7 @@ import type {
   ChromiumHtmlRasterOptions,
   HtmlRasterProgress,
 } from "@hypit/provider-html-local";
-import { FileResourceStore } from "@hypit/runtime-local/resource-store";
+import { FileResourceStore } from "@hypit/resource-store/node";
 
 export type LocalNleExportProgress =
   | { readonly phase: "open" | "load-packages" | "lower" | "publish"; readonly state: "start" | "complete" }

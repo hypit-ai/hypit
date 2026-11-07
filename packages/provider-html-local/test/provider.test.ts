@@ -4,7 +4,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { mediaTypes } from "@hypit/media";
 import assert from "node:assert/strict";
-import { MemoryResourceStore } from "@hypit/executor";
+import { MemoryResourceStore } from "@hypit/resource-store";
 import { htmlProgramCapabilities, htmlProgramTypes, htmlRasterRequest } from "@hypit/html-program";
 import { endpointOffers } from "@hypit/endpoint";
 

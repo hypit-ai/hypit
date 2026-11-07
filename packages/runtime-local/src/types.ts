@@ -4,11 +4,11 @@ import type { EndpointInstance } from "@hypit/hypit/endpoint";
 import type { LoadedPackage } from "@hypit/hypit/loader";
 import type { BuildResultStore } from "./result-storage/types.js";
 import type {
-  ResourceStore,
   BuildStore,
   CredentialStore,
   OperationStore,
 } from "@hypit/hypit/runtime";
+import type { ResourceStore } from "@hypit/resource-store";
 import type { BuildCompletion, BuildExecutionStore, BuildExecutionSnapshot, BuildResultRepositoryLocation } from "./execution.js";
 import type {
   RuntimeHostControl,

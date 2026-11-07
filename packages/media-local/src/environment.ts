@@ -1,8 +1,8 @@
 import { createReadStream } from "node:fs";
 import { readFile } from "node:fs/promises";
 
-import { isStreamingResourceStore } from "@hypit/hypit/runtime";
-import type { ResourceStore } from "@hypit/hypit/runtime";
+import { isStreamingResourceStore } from "@hypit/resource-store";
+import type { ResourceStore } from "@hypit/resource-store";
 
 import type { MediaExecutionEnvironment } from "./execute.js";
 

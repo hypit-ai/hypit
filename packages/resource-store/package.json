@@ -1,0 +1,18 @@
+{
+  "name": "@hypit/resource-store",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node/index.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@hypit/protocol": "workspace:^0.0.0-dev"
+  }
+}

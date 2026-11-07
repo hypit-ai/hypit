@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { MemoryResourceStore } from "../packages/executor/src/index.js";
+import { MemoryResourceStore } from "../packages/resource-store/src/index.js";
 export { MemoryResourceStore };
 import { executeInspectMedia } from "../packages/media-local/src/execute.js";
 import type { MediaExecutionEnvironment } from "../packages/media-local/src/execute.js";

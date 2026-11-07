@@ -13,12 +13,12 @@ import type {
   CredentialAcquisition,
   CredentialRef,
   OperationSnapshot,
-  ResourceStore,
   RuntimeEndpointObservation,
   RuntimeEndpointPricingObservation,
   RuntimeEndpointQuery,
   ScheduledBuildResult,
 } from "@hypit/runtime";
+import type { ResourceStore } from "@hypit/resource-store";
 
 export type CliResultRepositoryLocation = { readonly root: string; readonly path: string };
 

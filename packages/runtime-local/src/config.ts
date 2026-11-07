@@ -19,11 +19,12 @@ import {
   capacityUnits,
   writableCredentialStore,
 } from "@hypit/hypit/runtime";
-import type { CredentialStore, CredentialValue, ResourceStore } from "@hypit/hypit/runtime";
+import type { CredentialStore, CredentialValue } from "@hypit/hypit/runtime";
+import type { ResourceStore } from "@hypit/resource-store";
+import { FileResourceStore } from "@hypit/resource-store/node";
 import type { BuildResultRepositoryLocation } from "./execution.js";
 import { FileBuildResultStore } from "./result-storage/store.js";
 import type { BuildResultStore } from "./result-storage/types.js";
-import { FileResourceStore } from "./resource-store.js";
 import {
   isRuntimeAdapterFacet,
   runtimeCredentialStoreAdapterFacetAbi,

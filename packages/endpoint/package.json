@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/runtime": "workspace:^0.0.0-dev"
   }
 }

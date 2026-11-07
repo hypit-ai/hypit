@@ -5,7 +5,8 @@ import test from "node:test";
 import { installEndpoint } from "@hypit/endpoint";
 import { sealSpeechEvidenceAudio, speechEvidenceTypes } from "@hypit/speech-evidence";
 import assert from "node:assert/strict";
-import { MemoryResourceStore, EndpointRegistry } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/executor";
+import { MemoryResourceStore } from "@hypit/resource-store";
 import type { Need } from "@hypit/protocol";
 import {
   whisperXCapabilities,

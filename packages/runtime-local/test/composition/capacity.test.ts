@@ -17,7 +17,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
 
-import { FileResourceStore } from "../../src/resource-store.js";
+import { FileResourceStore } from "@hypit/resource-store/node";
 import { FileBuildResultStore } from "../../src/result-storage/index.js";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";

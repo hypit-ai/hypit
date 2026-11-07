@@ -1,5 +1,5 @@
 import { fileExecutionLogs } from "../../src/log.js";
-import { FileResourceStore } from "../../src/resource-store.js";
+import { FileResourceStore } from "@hypit/resource-store/node";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineBuild } from "@hypit/kernel";

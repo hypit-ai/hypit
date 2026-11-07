@@ -17,8 +17,10 @@ import { materializeWireRequest, planWireRequest } from "@hypit/generation/provi
 The shipped [project Provider example](../../examples/provider-package/README.md) follows an image
 request through configuration, support, upload, submission, receipt, polling, collection and pricing.
 It uses an explicitly illustrative service protocol and imports only public SDK subpaths.
-This SDK also exports `canonicalize`, `BlobRef`, `ResourceId`, `credentialRef` and
-`isStreamingResourceStore` for Providers that construct stored results or use streaming resource IO.
+This SDK also exports `canonicalize`, `BlobRef`, `ResourceId` and `credentialRef`. Resource IO is an
+independent Host port: Providers that construct stored results import `ResourceStore` and
+`isStreamingResourceStore` from `@hypit/hypit/resource-store`. Endpoint invocation receives the
+selected store but neither Endpoint nor Runtime owns its interface or adapter.
 
 For an existing model, name its exact versioned Capability and expected result Type. Map its request
 ports into the service's wire format; the Provider need not import the model's implementation.

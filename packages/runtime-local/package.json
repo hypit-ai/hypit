@@ -19,6 +19,7 @@
     "README.md"
   ],
   "dependencies": {
+    "@hypit/resource-store": "workspace:^0.1.0",
     "koffi": "3.2.1"
   },
   "peerDependencies": {

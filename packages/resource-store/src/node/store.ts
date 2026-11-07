@@ -1,17 +1,11 @@
 import { createReadStream } from "node:fs";
 import { randomUUID } from "node:crypto";
-import {
-  link,
-  mkdir,
-  open as openFile,
-  rm,
-  stat,
-} from "node:fs/promises";
+import { link, mkdir, open as openFile, rm, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-import { isResourceId } from "@hypit/hypit/protocol";
-import type { BlobRef, ResourceId } from "@hypit/hypit/protocol";
-import type { ResourceIOOptions, ResourceStore } from "@hypit/hypit/runtime";
+import { isResourceId } from "@hypit/protocol";
+import type { BlobRef, ResourceId } from "@hypit/protocol";
+import type { ResourceIOOptions, StreamingResourceStore } from "../index.js";
 
 function resourcePath(root: string, resource: ResourceId): string {
   if (!isResourceId(resource)) throw new Error("Resource id is invalid");
@@ -22,8 +16,8 @@ function isNodeError(error: unknown, code: string): boolean {
   return error instanceof Error && "code" in error && error.code === code;
 }
 
-/** Build-local files keyed by opaque resource instance identity. */
-export class FileResourceStore implements ResourceStore {
+/** Directory-backed bytes keyed by opaque resource instance identity. */
+export class FileResourceStore implements StreamingResourceStore {
   readonly root: string;
 
   constructor(root: string) {

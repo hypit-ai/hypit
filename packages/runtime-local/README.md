@@ -3,8 +3,10 @@
 The default local Runtime for Hypit. It owns the Worker, scheduler and active SQLite execution
 worklist. Project-owned Build Results hold finished retained Outputs.
 
-`@hypit/runtime-local/resource-store` exports the file-backed `FileResourceStore` separately for
-request-private local application tasks. Using that byte store does not create or select a Runtime.
+Byte storage is a separate infrastructure port. `@hypit/hypit/resource-store` owns the neutral
+interface and memory adapter, while `@hypit/hypit/resource-store/node` owns `FileResourceStore`.
+Runtime Local selects that adapter for Build-local bytes but does not define it; direct local
+applications can select the same adapter without creating or selecting a Runtime.
 
 This package also exports `createLocalRuntimeCliCommandModules()` from `@hypit/runtime-local/cli`.
 The factory binds the exact Local Host port and returns the command contribution that owns

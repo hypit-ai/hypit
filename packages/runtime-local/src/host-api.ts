@@ -7,12 +7,12 @@ import type {
   CredentialAcquisition,
   CredentialRef,
   OperationSnapshot,
-  ResourceStore,
   RuntimeEndpointObservation,
   RuntimeEndpointPricingObservation,
   RuntimeEndpointQuery,
   ScheduledBuildResult,
 } from "@hypit/hypit/runtime";
+import type { ResourceStore } from "@hypit/resource-store";
 import type { ResultIntent } from "@hypit/hypit/protocol";
 import type { BuildCompletion, BuildExecutionStop, BuildResultRepositoryLocation } from "./execution.js";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-local/extension";

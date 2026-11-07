@@ -18,7 +18,6 @@ import {
 } from "@hypit/refinement";
 import type { RefinementRegistryLike } from "@hypit/refinement";
 import type {
-  ResourceStore,
   CredentialStore,
   CredentialValue,
   OperationSnapshot,
@@ -31,8 +30,9 @@ import type {
   RuntimeRunnableCommand,
 } from "@hypit/runtime";
 import { writableCredentialStore } from "@hypit/runtime";
+import { MemoryResourceStore } from "@hypit/resource-store";
+import type { ResourceStore } from "@hypit/resource-store";
 
-import { MemoryResourceStore } from "./resources.js";
 import {
   ProducerRegistry,
   EndpointRegistry,

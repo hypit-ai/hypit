@@ -18,7 +18,7 @@ import {
   createNleProject,
 } from "@hypit/nle";
 
-import { exportLocalNleProject, nleProjectModuleKeys } from "../src/nle-export-local.js";
+import { exportLocalNleProject, nleProjectModuleKeys } from "../src/export.js";
 import { cliCommandModules } from "../src/commands.js";
 
 const timestamp = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } });
@@ -176,7 +176,7 @@ test("module selection includes nested component and effect owners exactly once"
   ]);
 });
 
-test("the video application explicitly owns the nle export command", async () => {
+test("the local NLE application explicitly owns the export command", async () => {
   const module = cliCommandModules.find(candidate => candidate.commands.some(command => command === "nle"));
   assert(module !== undefined);
   let output = "";

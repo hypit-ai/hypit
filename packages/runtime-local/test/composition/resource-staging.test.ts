@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { FileResourceStore } from "../../src/resource-store.js";
+import { FileResourceStore } from "@hypit/resource-store/node";
 import { FileBuildResultStore } from "../../src/result-storage/index.js";
 import { isBlobRef } from "@hypit/protocol";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";

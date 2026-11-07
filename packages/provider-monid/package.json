@@ -32,6 +32,7 @@
   "dependencies": {
     "@hypit/generation": "workspace:^0.2.0",
     "@hypit/minimax-h3": "workspace:^0.3.0",
+    "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/seedance": "workspace:^0.3.0",
     "@hypit/wan": "workspace:^0.3.0"
   }

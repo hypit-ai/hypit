@@ -1,10 +1,8 @@
 import type {
-  BlobRef,
   BuildDefinition,
   BuildFact,
   CommandResult,
   BuildCommand,
-  ResourceId,
   Need,
   ProducerRef,
 } from "@hypit/protocol";
@@ -81,39 +79,6 @@ export type RuntimeCommandExecutor = {
   /** Mark a received Operation completed only after its event has become a Kernel Fact. */
   completeOperation?(operation: string): Promise<void>;
 };
-
-/** Build-local byte resources. Location, retention and transport are Runtime policy. */
-export type ResourceIOOptions = {
-  /** Cancel the transfer, close its streams and discard unfinished writes before rejecting.
-   * Stream producers supplied by the caller must observe the same signal while producing chunks.
-   */
-  readonly signal?: AbortSignal;
-};
-
-export type ResourceStore = {
-  /** Store one new resource instance. Equal bytes remain independent resources. */
-  put(bytes: Uint8Array, mediaType: string, options?: ResourceIOOptions): Promise<BlobRef>;
-  /** Write bytes for one resource already declared by the current execution. */
-  write(resource: BlobRef, bytes: Uint8Array, options?: ResourceIOOptions): Promise<void>;
-  /** Read bytes previously stored under this execution identity. */
-  get(resource: ResourceId, options?: ResourceIOOptions): Promise<Uint8Array | undefined>;
-  /** Cheap presence query. */
-  has(resource: ResourceId, options?: ResourceIOOptions): Promise<boolean>;
-};
-
-/** Optional transfer capability. Core and components never require storage to expose it. */
-export type StreamingResourceStore = ResourceStore & {
-  putStream(chunks: AsyncIterable<Uint8Array>, mediaType: string, options?: ResourceIOOptions): Promise<BlobRef>;
-  writeStream(resource: BlobRef, chunks: AsyncIterable<Uint8Array>, options?: ResourceIOOptions): Promise<void>;
-  /** Stream bytes previously stored under this resource identity. */
-  open(resource: ResourceId, options?: ResourceIOOptions): Promise<AsyncIterable<Uint8Array> | undefined>;
-};
-
-export function isStreamingResourceStore(value: ResourceStore): value is StreamingResourceStore {
-  return "putStream" in value && typeof value.putStream === "function"
-    && "writeStream" in value && typeof value.writeStream === "function"
-    && "open" in value && typeof value.open === "function";
-}
 
 export type BuildSnapshot = {
   readonly build: string;

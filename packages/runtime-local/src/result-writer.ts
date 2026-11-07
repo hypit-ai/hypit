@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { BuildMachine } from "@hypit/hypit/kernel";
 import type { BuildView } from "@hypit/hypit/kernel";
-import { isStreamingResourceStore } from "@hypit/hypit/runtime";
+import { isStreamingResourceStore } from "@hypit/resource-store";
 import type {
   OperationSnapshot,
 } from "@hypit/hypit/runtime";

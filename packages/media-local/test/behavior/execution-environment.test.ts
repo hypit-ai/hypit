@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { MemoryResourceStore } from "@hypit/executor";
+import { MemoryResourceStore } from "@hypit/resource-store";
 
 import { createMediaExecutionEnvironment } from "../../src/index.js";
 
