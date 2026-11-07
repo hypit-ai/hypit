@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 
 import type { CliDistribution } from "../../src/distribution.js";
 import { runCli as runBuildCli } from "../../src/main.js";
-import type { CliIo } from "../../src/output.js";
+import type { CliIo } from "@hypit/cli";
 
 export const applicationCwd = tmpdir();
 

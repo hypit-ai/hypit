@@ -15,7 +15,7 @@ import {
   projectPath,
 } from "../view.js";
 import type { OperationalWriter } from "./types.js";
-import { commandHint } from "../command-hint.js";
+import { commandHint } from "@hypit/cli";
 
 export function isProjectResultCommand(args: CliCommand): args is ProjectResultCommand {
   return args.command === "builds" || args.command === "history" || args.command === "inspect"

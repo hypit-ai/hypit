@@ -5,7 +5,8 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 
 import { runCliApplication } from "@hypit/cli";
-import type { CliDistribution, CliIo } from "@hypit/cli";
+import type { CliIo } from "@hypit/cli";
+import type { CliDistribution } from "@hypit/build-cli";
 import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";
 import type { LocalRuntimeHost } from "@hypit/runtime-local";
 import { cliDistribution } from "./distribution-scenario.js";
@@ -14,7 +15,6 @@ const runCli = async (argv: readonly string[], output: CliIo, selected: CliDistr
   argv,
   output,
   {
-    distribution: selected,
     commandModules: createLocalRuntimeCliCommandModules({
       ...(selected.packageRoot === undefined ? {} : { packageRoot: selected.packageRoot }),
       openLocalRuntimeHost: async (path, options) =>

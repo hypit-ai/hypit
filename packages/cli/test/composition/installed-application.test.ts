@@ -6,10 +6,6 @@ import test from "node:test";
 
 import { runInstalledCliApplication } from "../../src/installed-application.js";
 import type { CliCommandModule } from "../../src/application.js";
-import { cliDistribution } from "../distribution-scenario.js";
-
-const unusedDistribution = cliDistribution();
-
 const hostModule: CliCommandModule = {
   format: "hypit.cli-command@1",
   id: "test.host-bound",
@@ -61,7 +57,7 @@ async function fixture(command = "greet"): Promise<{
 test("the root Host enables and removes one installed project command contribution", async () => {
   const value = await fixture();
   try {
-    const options = { distribution: unusedDistribution, distributionRoot: value.distribution, cwd: value.project };
+    const options = { distributionRoot: value.distribution, cwd: value.project };
     let selected = "";
     await runInstalledCliApplication(["cli", "use", "@acme/tools/cli"], {
       write: text => { selected += text; },
@@ -95,7 +91,6 @@ test("the executable contributes an already-bound command without disguising it 
   const value = await fixture("host-tool");
   try {
     const options = {
-      distribution: unusedDistribution,
       distributionRoot: value.distribution,
       cwd: value.project,
       commandModules: [hostModule],
@@ -123,7 +118,7 @@ test("installing a package does not grant commands before explicit project selec
   const value = await fixture();
   try {
     await assert.rejects(runInstalledCliApplication(["greet"], { write() {} }, {
-      distribution: unusedDistribution, distributionRoot: value.distribution, cwd: value.project,
+      distributionRoot: value.distribution, cwd: value.project,
     }), /Unknown command/u);
   } finally { await rm(value.root, { recursive: true, force: true }); }
 });
@@ -132,7 +127,7 @@ test("a project command contribution cannot replace a root command", async () =>
   const value = await fixture("build");
   try {
     await assert.rejects(runInstalledCliApplication(["cli", "use", "@acme/tools/cli"], { write() {} }, {
-      distribution: unusedDistribution, distributionRoot: value.distribution, cwd: value.project,
+      distributionRoot: value.distribution, cwd: value.project,
       commandModules: [buildModule],
     }), /owned by both test\.build and @acme\/tools/u);
     const manifest = JSON.parse(await readFile(join(value.project, "package.json"), "utf8"));
@@ -146,7 +141,7 @@ test("a project cannot select a package that its package.json does not own", asy
     const manifestPath = join(value.project, "package.json");
     await writeFile(manifestPath, JSON.stringify({ name: "example", private: true, hypit: { project: true } }));
     await assert.rejects(runInstalledCliApplication(["cli", "use", "@acme/tools/cli"], { write() {} }, {
-      distribution: unusedDistribution, distributionRoot: value.distribution, cwd: value.project,
+      distributionRoot: value.distribution, cwd: value.project,
     }), /not a direct dependency/u);
   } finally { await rm(value.root, { recursive: true, force: true }); }
 });

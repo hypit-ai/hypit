@@ -3,12 +3,8 @@ import test from "node:test";
 
 import { runCliApplication } from "../../src/application.js";
 import type { CliApplication, CliCommandModule } from "../../src/application.js";
-import { cliDistribution } from "../distribution-scenario.js";
-
-const unusedDistribution = cliDistribution();
-
 function application(commandModules: readonly CliCommandModule[]): CliApplication {
-  return { distribution: unusedDistribution, commandModules };
+  return { commandModules };
 }
 
 test("application dispatches one explicitly assembled command module", async () => {
@@ -25,7 +21,6 @@ test("application dispatches one explicitly assembled command module", async () 
   await runCliApplication(["probe", "asset.bin"], { write: text => { output += text; } }, application([module]));
   assert.equal(output, "ran");
   assert.deepEqual(calls, [["probe", "asset.bin"]]);
-  assert.equal(receivedContext?.distribution, unusedDistribution);
   assert.equal(typeof receivedContext?.cwd, "string");
   assert.equal(typeof receivedContext?.resolveProjectRoot, "function");
 });

@@ -5,9 +5,10 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { createToolchainDistribution } from "@hypit/toolchain";
-import { cliCommandModules as toolchainCommandModules } from "@hypit/toolchain/cli";
+import { createToolchainCliCommandModules } from "@hypit/toolchain/cli";
 import { createBuildCliCommandModules } from "@hypit/build-cli";
-import { loadDiscoveredSourcePackages, runCli as runCommand, runCliApplication } from "@hypit/cli";
+import { runCliApplication } from "@hypit/cli";
+import { loadDiscoveredSourcePackages, runCli as runCommand } from "@hypit/build-cli";
 import { installDistributionPackageResolution } from "@hypit/loader/node";
 
 const toolchainDistribution = createToolchainDistribution();
@@ -19,8 +20,12 @@ const runCli = (
   installDistributionPackageResolution(toolchainDistribution.packageRoot === undefined
     ? [] : [toolchainDistribution.packageRoot]);
   return runCliApplication([...argv, "--json"], io, {
-    distribution: toolchainDistribution,
-    commandModules: [...createBuildCliCommandModules(toolchainDistribution), ...toolchainCommandModules],
+    commandModules: [
+      ...createBuildCliCommandModules(toolchainDistribution),
+      ...createToolchainCliCommandModules(toolchainDistribution.packageRoot === undefined
+        ? {}
+        : { distributionPackageRoot: toolchainDistribution.packageRoot }),
+    ],
   });
 };
 

@@ -1,4 +1,4 @@
-import type { CliOutputOptions } from "./output.js";
+import type { CliOutputOptions } from "@hypit/cli";
 
 /**
  * Root command names owned by the domain-neutral long-compilation CLI.

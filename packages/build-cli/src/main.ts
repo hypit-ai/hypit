@@ -5,14 +5,14 @@ import { isBlobRef, moduleKey, orderedBuildId } from "@hypit/protocol";
 import { BuildCompiler } from "@hypit/compiler";
 
 import type { CliDistribution } from "./distribution.js";
-import type { CliApplicationContext } from "./application.js";
+import type { CliApplicationContext } from "@hypit/cli";
 import type { CliRuntime, CliRuntimeHost, CliRuntimeInspection } from "./runtime-port.js";
-import { createPlanOutput, createPricingOutput, writeCliHelp, writeCliOutput } from "./output.js";
-import type { CliIo } from "./output.js";
+import { createPlanOutput, createPricingOutput } from "@hypit/cli/output";
+import { CliUsageError, commandHint, writeCliHelp, writeCliOutput } from "@hypit/cli";
+import type { CliIo } from "@hypit/cli";
 import type { OperationalMachineView } from "./machine-view.js";
 import { parseCommand } from "./arguments.js";
 import type { CliCommand, RuntimeOption } from "./command.js";
-import { commandHint } from "./command-hint.js";
 import { assertPlannedRequests, assertPreflight, createBuildAuthoring, describePlanEndpoints, describePlanRequest, describePlanRequests, describePlanPricing, describePricingRequests, evaluatePlanNeeds, plannedEndpointQueries, preflightPlan } from "./build-planning.js";
 import { buildProgressLines, observeBuild } from "./observation.js";
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
@@ -26,7 +26,6 @@ import {
   cliTypeName,
   projectPath,
 } from "./view.js";
-import { CliUsageError } from "./usage-error.js";
 
 function createPublicBuildId(now = Date.now()): string {
   return orderedBuildId(now, randomBytes(5).toString("hex").toUpperCase());

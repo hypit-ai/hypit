@@ -183,10 +183,7 @@
     "cli": {
       "use": [
         "@hypit/browser-capture/cli",
-        "@hypit/yt-dlp/cli",
-        "@hypit/speech-estimate/cli",
-        "@hypit/whisperx/cli",
-        "@hypit/toolchain/cli"
+        "@hypit/yt-dlp/cli"
       ]
     },
     "packageSources": [

@@ -1,4 +1,4 @@
-import type { CliCompilerOptions } from "@hypit/cli";
+import type { CliCompilerOptions } from "@hypit/build-cli";
 import { refinementPackagesFromFacets, registerTypeRefinements, RefinementRegistry } from "@hypit/refinement";
 import { ModulePackageRegistry, Compiler } from "@hypit/compiler";
 import {

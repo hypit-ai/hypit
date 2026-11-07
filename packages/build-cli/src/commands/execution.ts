@@ -5,7 +5,7 @@ import type { BuildResult, BuildResultHistory } from "@hypit/result";
 
 import type { CliCommand, ExecutionCommand } from "../command.js";
 import { activityObservationKey, buildProgressLines, buildProgressView, observeBuildView } from "../observation.js";
-import type { CliIo } from "../output.js";
+import type { CliIo } from "@hypit/cli";
 import type { CliRuntimeHost } from "../runtime-port.js";
 import { formatOperationProgress } from "../runtime-view.js";
 import { buildStatusView } from "../view.js";

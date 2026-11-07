@@ -1,4 +1,4 @@
-import type { CliDistribution } from "@hypit/cli";
+import type { CliDistribution } from "@hypit/build-cli";
 import { productExporterForType, productExportersFromFacets } from "@hypit/product";
 import { loadNodePackageSelection } from "@hypit/loader/node";
 import { moduleKey, modulePackageAbi } from "@hypit/protocol";

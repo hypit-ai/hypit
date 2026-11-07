@@ -5,7 +5,9 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 
 import { runCliApplication } from "@hypit/cli";
-import type { CliDistribution, CliIo } from "@hypit/cli";
+import type { CliIo } from "@hypit/cli";
+import type { CliDistribution } from "@hypit/build-cli";
+import { createBuildCliCommandModules } from "@hypit/build-cli";
 import { resolveProjectRoot } from "@hypit/project";
 import { findRuntimeProfile, selectRuntimeProfile } from "@hypit/runtime-local";
 import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";
@@ -21,21 +23,23 @@ const runCli = async (
   local: Pick<LocalRuntimeCliDistribution, "initialRuntimeProfile"> = {},
 ): Promise<void> =>
   await runCliApplication(argv, io, {
-    distribution: {
-      ...distribution,
-      resolveProjectRuntime: async (projectRoot) => {
-        const selected = await findRuntimeProfile(projectRoot);
-        return selected === undefined ? undefined : { profile: selected.profile };
-      },
-    },
-    commandModules: createLocalRuntimeCliCommandModules({
-      ...(distribution.packageRoot === undefined ? {} : { packageRoot: distribution.packageRoot }),
-      ...(local.initialRuntimeProfile === undefined
-        ? {}
-        : { initialRuntimeProfile: local.initialRuntimeProfile }),
-      openLocalRuntimeHost: async (path, options) =>
-        await distribution.openRuntimeHost(path, options) as LocalRuntimeHost,
-    }),
+    commandModules: [
+      ...createBuildCliCommandModules({
+        ...distribution,
+        resolveProjectRuntime: async (projectRoot) => {
+          const selected = await findRuntimeProfile(projectRoot);
+          return selected === undefined ? undefined : { profile: selected.profile };
+        },
+      }),
+      ...createLocalRuntimeCliCommandModules({
+        ...(distribution.packageRoot === undefined ? {} : { packageRoot: distribution.packageRoot }),
+        ...(local.initialRuntimeProfile === undefined
+          ? {}
+          : { initialRuntimeProfile: local.initialRuntimeProfile }),
+        openLocalRuntimeHost: async (path, options) =>
+          await distribution.openRuntimeHost(path, options) as LocalRuntimeHost,
+      }),
+    ],
   });
 
 test("paths reports project selection, argument override and no selection without changing the pointer", async () => {

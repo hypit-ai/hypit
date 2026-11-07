@@ -8,10 +8,8 @@ import type {
   ProjectResultCommand,
   RuntimeOption,
 } from "./command.js";
-import type { CliOutputOptions } from "./output.js";
-import { parseCliGlobalOptions } from "./global-options.js";
-import { parseCliDecimalInteger } from "./decimal-integer.js";
-import { CliUsageError } from "./usage-error.js";
+import type { CliOutputOptions } from "@hypit/cli";
+import { CliUsageError, parseCliDecimalInteger, parseCliGlobalOptions } from "@hypit/cli";
 
 type RawOptions = {
   readonly presentation: CliOutputOptions;

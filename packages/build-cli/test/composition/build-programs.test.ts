@@ -12,7 +12,7 @@ import { verifyRecordStructure } from "@hypit/kernel";
 import type { LinkedProgram, TypedRecord } from "@hypit/protocol";
 
 import { runCli as runCliEngine } from "../../src/main.js";
-import { commandHint } from "../../src/command-hint.js";
+import { commandHint } from "@hypit/cli";
 import type { CliDistribution } from "../../src/distribution.js";
 import type { CliDiagnostic as RuntimeDoctorDiagnostic } from "../../src/runtime-port.js";
 import { cliDistribution } from "../distribution-scenario.js";

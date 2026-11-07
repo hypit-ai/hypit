@@ -18,6 +18,7 @@
     "@hypit/runtime-local": "workspace:^0.2.0"
   },
   "devDependencies": {
+    "@hypit/build-cli": "workspace:*",
     "@hypit/project": "workspace:*"
   }
 }

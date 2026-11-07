@@ -1,4 +1,4 @@
-import type { CliDistribution } from "@hypit/cli";
+import type { CliDistribution } from "@hypit/build-cli";
 
 function unopened(name: string): never {
   throw new Error(`${name} must not open in this CLI scenario`);

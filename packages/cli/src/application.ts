@@ -1,9 +1,7 @@
-import type { LoadedPackage } from "@hypit/loader";
 import { resolve } from "node:path";
 
 import { resolveProjectRoot as resolveMarkedProjectRoot } from "@hypit/project";
 
-import type { CliDistribution } from "./distribution.js";
 import { writeCliHelp } from "./output.js";
 import type { CliIo } from "./output.js";
 import { CliUsageError } from "./usage-error.js";
@@ -30,22 +28,19 @@ export type CliCommandModule = {
 /** One immutable invocation context assembled by the executable application. */
 export type CliApplicationContext = {
   readonly cwd: string;
-  readonly distribution: CliDistribution;
   resolveProjectRoot(projectRoot?: string): Promise<string>;
 };
 
 /**
  * Complete user-facing command application.
  *
- * CliDistribution supplies compilation/execution services. Command modules supply
- * the chosen product surface. These axes stay separate so an application can
- * reuse the long-compilation CLI without moving frames or media into the Host.
+ * Command modules supply the chosen product surface and capture their own exact
+ * service assembly. The Host knows only the invocation context and never grows a
+ * compilation, Runtime, media or NLE service bag.
  */
 export type CliApplication = {
-  readonly distribution: CliDistribution;
   readonly cwd?: string;
   readonly resolveProjectRoot?: (projectRoot?: string) => Promise<string>;
-  readonly bootstrapPackages?: readonly LoadedPackage[];
   readonly commandModules?: readonly CliCommandModule[];
 };
 
@@ -91,7 +86,6 @@ export async function runCliApplication(
   const cwd = resolve(application.cwd ?? process.cwd());
   const context: CliApplicationContext = Object.freeze({
     cwd,
-    distribution: application.distribution,
     resolveProjectRoot: application.resolveProjectRoot
       ?? (async (projectRoot?: string) => await resolveMarkedProjectRoot({
         ...(projectRoot === undefined ? {} : { projectRoot }),

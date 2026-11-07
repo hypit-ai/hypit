@@ -7,8 +7,9 @@ import {
   createCliScratchResources,
   openCliRuntimeHost,
   selectCliEndpoint,
-} from "@hypit/hypit/cli";
-import type { CliApplicationContext, CliCommandModule, CliIo, CliRuntimeHost } from "@hypit/hypit/cli";
+} from "@hypit/build-cli";
+import type { CliCommandModule, CliIo } from "@hypit/cli";
+import type { CliDistribution, CliRuntimeHost, CliRuntimeSelectionContext } from "@hypit/build-cli";
 import { speechEvidenceFile } from "@hypit/media-local/files";
 import type { Need } from "@hypit/hypit/protocol";
 import { sealSpeechEvidenceAudio, speechEvidenceTypes, speechTranscriptSource } from "@hypit/speech-evidence";
@@ -75,7 +76,7 @@ export type TranscribeEnvironment = {
   }>;
 };
 
-export function transcribeEnvironment(application: CliApplicationContext): TranscribeEnvironment {
+export function transcribeEnvironment(application: CliRuntimeSelectionContext): TranscribeEnvironment {
   return {
     cwd: application.cwd,
     openHost: async (runtime, project) => await openCliRuntimeHost(application, runtime, project),
@@ -136,11 +137,17 @@ export async function runTranscribeCli(
     transcript.passages.length === 1 ? "" : "s"} over ${audioSeconds}s\n  ${to}\n`);
 }
 
-export const cliCommandModules = [{
-  format: "hypit.cli-command@1",
-  id: "@hypit/whisperx",
-  commands: ["transcribe"],
-  writeRootHelp(io) { io.write("\nSpeech evidence\n  transcribe\n  hypit transcribe --help for inputs and Runtime selection\n"); },
-  writeHelp(_argv, io) { writeTranscribeHelp(io); },
-  async run(argv, io, context) { await runTranscribeCli(argv, io, transcribeEnvironment(context)); },
-}] as const satisfies readonly CliCommandModule[];
+export function createWhisperXCliCommandModules(
+  distribution: Pick<CliDistribution, "packageRoot" | "resolveProjectRuntime" | "openRuntimeHost">,
+): readonly CliCommandModule[] {
+  return [{
+    format: "hypit.cli-command@1",
+    id: "@hypit/whisperx",
+    commands: ["transcribe"],
+    writeRootHelp(io) { io.write("\nSpeech evidence\n  transcribe\n  hypit transcribe --help for inputs and Runtime selection\n"); },
+    writeHelp(_argv, io) { writeTranscribeHelp(io); },
+    async run(argv, io, context) {
+      await runTranscribeCli(argv, io, transcribeEnvironment({ ...context, distribution }));
+    },
+  }];
+}

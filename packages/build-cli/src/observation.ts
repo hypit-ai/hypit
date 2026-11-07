@@ -2,8 +2,8 @@ import type { BuildResult } from "@hypit/result";
 import { buildIdCreatedAt, compareCodeUnits } from "@hypit/protocol";
 
 import type { CliBuildSubmission, CliBuildView, CliRuntimeControl } from "./runtime-port.js";
-import { commandHint } from "./command-hint.js";
-import type { CommandScope } from "./command-hint.js";
+import { commandHint } from "@hypit/cli";
+import type { CommandScope } from "@hypit/cli";
 import { formatOperationProgress } from "./runtime-view.js";
 
 const FIRST_HEARTBEAT_MS = 30_000;

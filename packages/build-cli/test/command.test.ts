@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createBuildCliCommandModules } from "../src/index.js";
-import type { CliDistribution } from "@hypit/cli";
+import type { CliDistribution } from "../src/index.js";
 
 const unused = new Proxy({}, {
   get(_target, property) { throw new Error(`unused Build CLI service ${String(property)}`); },

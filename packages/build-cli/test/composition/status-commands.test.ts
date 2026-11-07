@@ -5,10 +5,8 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 
 import type { CliDistribution } from "../../src/distribution.js";
-import { runCliApplication } from "../../src/application.js";
-import type { CliIo } from "../../src/output.js";
 import { createLocalCredentialControl } from "@hypit/runtime-local";
-import { commandHint } from "../../src/command-hint.js";
+import { commandHint } from "@hypit/cli";
 import { cliDistribution } from "../distribution-scenario.js";
 import { credentialControl, runtimeControl } from "../control-scenario.js";
 import { applicationCwd, runCli } from "./control-command-scenario.js";

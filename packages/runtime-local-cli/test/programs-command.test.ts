@@ -5,7 +5,8 @@ import { resolve } from "node:path";
 import test from "node:test";
 
 import { commandHint, runCliApplication } from "@hypit/cli";
-import type { CliDistribution, CliIo } from "@hypit/cli";
+import type { CliIo } from "@hypit/cli";
+import type { CliDistribution } from "@hypit/build-cli";
 import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";
 import type { ManagedProgramProgress as CliManagedProgramProgress, ManagedProgramReport as CliManagedProgramReport } from "@hypit/runtime-local/programs";
 import type { LocalRuntimeHost, RuntimeController as CliRuntimeController } from "@hypit/runtime-local";
@@ -18,7 +19,6 @@ const runCli = async (argv: readonly string[], output: CliIo, selected: CliDistr
     // This suite mounts the Local Runtime command contribution onto deliberately
     // small Distribution doubles. Assemble its product-specific Host port just
     // as the real video executable does; the generic CLI port remains separate.
-    distribution: selected,
     commandModules: createLocalRuntimeCliCommandModules({
       ...(selected.packageRoot === undefined ? {} : { packageRoot: selected.packageRoot }),
       openLocalRuntimeHost: async (path, options) =>

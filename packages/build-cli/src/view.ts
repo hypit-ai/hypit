@@ -6,7 +6,7 @@ import { buildIdCreatedAt, compareCodeUnits } from "@hypit/protocol";
 import { typeKey } from "@hypit/protocol";
 import type { TypeRef } from "@hypit/protocol";
 import type { CliBuildView as BuildView } from "./runtime-port.js";
-import type { CommandScope } from "./command-hint.js";
+import type { CommandScope } from "@hypit/cli";
 
 export type PublicOutputRepresentation = "inline" | "file" | "structured";
 

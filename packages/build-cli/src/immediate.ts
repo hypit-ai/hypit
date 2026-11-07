@@ -5,7 +5,7 @@ import { capabilityKey } from "@hypit/protocol";
 import type { Need } from "@hypit/protocol";
 import type { ResourceStore } from "@hypit/resource-store";
 
-import type { CliApplicationContext } from "./application.js";
+import type { CliApplicationContext } from "@hypit/cli";
 import type { CliDistribution } from "./distribution.js";
 import type { CliEndpointObservation, CliRuntimeHost } from "./runtime-port.js";
 

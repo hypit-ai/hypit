@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, symlink, writeFi
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { commandHint } from "../../src/command-hint.js";
+import { commandHint } from "@hypit/cli";
 import test from "node:test";
 
 import {

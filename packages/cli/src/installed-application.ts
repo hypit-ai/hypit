@@ -7,7 +7,6 @@ import { findProjectRoot, resolveProjectRoot } from "@hypit/project";
 
 import { indexCliCommandModules, runCliApplication } from "./application.js";
 import type { CliApplication, CliCommandModule } from "./application.js";
-import type { CliDistribution } from "./distribution.js";
 import type { CliIo } from "./output.js";
 import { runVersionCli, writeVersionHelp } from "./version.js";
 import { parseCliGlobalOptions } from "./global-options.js";
@@ -24,7 +23,6 @@ type PackageManifest = JsonObject & {
 };
 
 export type InstalledCliApplicationOptions = {
-  readonly distribution: CliDistribution;
   readonly distributionRoot: string;
   /** Host-bound command modules assembled by the executable application. */
   readonly commandModules?: readonly CliCommandModule[];
@@ -321,7 +319,6 @@ export async function runInstalledCliApplication(
     : await resolveProjectRoot({ projectRoot: requestedProject, cwd });
   const selections = await loadSelections(distributionRoot, projectRoot);
   const application: CliApplication = {
-    distribution: options.distribution,
     cwd,
     resolveProjectRoot: async (explicit?: string) => {
       if (explicit !== undefined) return await resolveProjectRoot({ projectRoot: explicit, cwd });

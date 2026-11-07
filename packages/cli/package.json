@@ -5,27 +5,13 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./output": "./src/output.ts"
   },
   "dependencies": {
-    "@hypit/product": "workspace:*",
-    "@hypit/result": "workspace:*",
-    "@hypit/compiler": "workspace:*",
-    "@hypit/producer": "workspace:*",
-    "@hypit/kernel": "workspace:*",
-    "@hypit/executor": "workspace:*",
     "@hypit/host-paths": "workspace:^0.1.0",
-    "@hypit/author": "workspace:*",
     "@hypit/loader": "workspace:*",
     "@hypit/project": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/resource-store": "workspace:^0.1.0",
-    "@hypit/runtime": "workspace:*",
-    "@hypit/source": "workspace:*",
-    "@hypit/refinement": "workspace:*",
-    "@hypit/workspace": "workspace:*"
-  },
-  "devDependencies": {
-    "@hypit/runtime-local": "workspace:*"
+    "@hypit/protocol": "workspace:*"
   }
 }

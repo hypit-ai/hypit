@@ -1,12 +1,11 @@
 import {
-  runCli,
   writeBuildCliRootHelp,
   writeCliHelp,
 } from "@hypit/cli";
-import type {
-  CliCommandModule,
-  CliDistribution,
-} from "@hypit/cli";
+import type { CliCommandModule } from "@hypit/cli";
+
+import { runCli } from "./main.js";
+import type { CliDistribution } from "./distribution.js";
 
 export const buildCliCommandNames = [
   "check",
@@ -43,3 +42,18 @@ export function createBuildCliCommandModules(
     },
   }];
 }
+
+export { runCli } from "./main.js";
+export { cliEndpointLine, cliEndpointView, createCliScratchResources, openCliRuntimeHost, selectCliEndpoint } from "./immediate.js";
+export type { CliRuntimeSelectionContext } from "./immediate.js";
+export { discoverSourcePackages } from "./source-discovery.js";
+export { loadDiscoveredSourcePackages } from "./source-packages.js";
+export type { CliCompilerOptions, CliDistribution } from "./distribution.js";
+export type * from "./runtime-port.js";
+export type {
+  CliBuildResultView,
+  CliBuildStatusView,
+  CliBuildSummary,
+  CliOutputView,
+  PublicOutputRepresentation,
+} from "./view.js";

@@ -1,8 +1,9 @@
 import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { loadDiscoveredSourcePackages } from "@hypit/hypit/cli";
-import type { CliApplicationContext, CliCommandModule, CliIo } from "@hypit/hypit/cli";
+import { loadDiscoveredSourcePackages } from "@hypit/build-cli";
+import type { CliDistribution } from "@hypit/build-cli";
+import type { CliApplicationContext, CliCommandModule, CliIo } from "@hypit/cli";
 import { sameType } from "@hypit/hypit/protocol";
 import type { TypedRecord } from "@hypit/hypit/protocol";
 import { sealText, textTypes } from "@hypit/hypit/text";
@@ -57,9 +58,8 @@ async function segmentSpeech(
   source: string,
   segment: string,
   projectRoot: string,
-  application: CliApplicationContext,
+  distribution: CliDistribution,
 ): Promise<string> {
-  const distribution = application.distribution;
   const loaded = await loadDiscoveredSourcePackages({ ...distribution, bootstrapPackages: [] }, {
     source,
     workspaceRoot: projectRoot,
@@ -94,6 +94,7 @@ export async function runEstimateCli(
   argv: readonly string[],
   io: CliIo,
   application: CliApplicationContext,
+  distribution: CliDistribution,
 ): Promise<void> {
   if (argv.includes("--help")) { writeEstimateHelp(io); return; }
   const parsed = parse(argv);
@@ -113,7 +114,7 @@ export async function runEstimateCli(
     const projectRoot = await application.resolveProjectRoot(
       project === undefined ? undefined : resolve(application.cwd, project),
     );
-    text = await segmentSpeech(source, segment, projectRoot, application);
+    text = await segmentSpeech(source, segment, projectRoot, distribution);
     where = { source, segment };
   }
   const pace = parsed.options.get("--pace");
@@ -138,11 +139,15 @@ export async function runEstimateCli(
     + "  Choose the request duration from this estimate, the intended performance, and the selected model's supported values.\n");
 }
 
-export const cliCommandModules = [{
-  format: "hypit.cli-command@1",
-  id: "@hypit/speech-estimate",
-  commands: ["estimate"],
-  writeRootHelp(io) { io.write("\nSpeech estimation\n  estimate\n  hypit estimate --help for inputs and delivery options\n"); },
-  writeHelp(_argv, io) { writeEstimateHelp(io); },
-  async run(argv, io, context) { await runEstimateCli(argv, io, context); },
-}] as const satisfies readonly CliCommandModule[];
+export function createSpeechEstimateCliCommandModules(
+  distribution: CliDistribution,
+): readonly CliCommandModule[] {
+  return [{
+    format: "hypit.cli-command@1",
+    id: "@hypit/speech-estimate",
+    commands: ["estimate"],
+    writeRootHelp(io) { io.write("\nSpeech estimation\n  estimate\n  hypit estimate --help for inputs and delivery options\n"); },
+    writeHelp(_argv, io) { writeEstimateHelp(io); },
+    async run(argv, io, context) { await runEstimateCli(argv, io, context, distribution); },
+  }];
+}

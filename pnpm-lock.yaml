@@ -492,9 +492,58 @@ importers:
 
   packages/build-cli:
     dependencies:
+      '@hypit/author':
+        specifier: workspace:^0.0.0-dev
+        version: link:../author
       '@hypit/cli':
         specifier: workspace:^0.0.0-dev
         version: link:../cli
+      '@hypit/compiler':
+        specifier: workspace:^0.0.0-dev
+        version: link:../compiler
+      '@hypit/executor':
+        specifier: workspace:^0.0.0-dev
+        version: link:../executor
+      '@hypit/kernel':
+        specifier: workspace:^0.0.0-dev
+        version: link:../kernel
+      '@hypit/loader':
+        specifier: workspace:^0.0.0-dev
+        version: link:../loader
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/product':
+        specifier: workspace:^0.0.0-dev
+        version: link:../product
+      '@hypit/project':
+        specifier: workspace:^0.0.0-dev
+        version: link:../project
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:^0.0.0-dev
+        version: link:../refinement
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
+      '@hypit/result':
+        specifier: workspace:^0.0.0-dev
+        version: link:../result
+      '@hypit/runtime':
+        specifier: workspace:^0.0.0-dev
+        version: link:../runtime
+      '@hypit/source':
+        specifier: workspace:^0.0.0-dev
+        version: link:../source
+      '@hypit/workspace':
+        specifier: workspace:^0.0.0-dev
+        version: link:../workspace
+    devDependencies:
+      '@hypit/runtime-local':
+        specifier: workspace:*
+        version: link:../runtime-local
 
   packages/canvas-view:
     dependencies:
@@ -547,58 +596,18 @@ importers:
 
   packages/cli:
     dependencies:
-      '@hypit/author':
-        specifier: workspace:*
-        version: link:../author
-      '@hypit/compiler':
-        specifier: workspace:*
-        version: link:../compiler
-      '@hypit/executor':
-        specifier: workspace:*
-        version: link:../executor
       '@hypit/host-paths':
         specifier: workspace:^0.1.0
         version: link:../host-paths
-      '@hypit/kernel':
-        specifier: workspace:*
-        version: link:../kernel
       '@hypit/loader':
         specifier: workspace:*
         version: link:../loader
-      '@hypit/producer':
-        specifier: workspace:*
-        version: link:../producer
-      '@hypit/product':
-        specifier: workspace:*
-        version: link:../product
       '@hypit/project':
         specifier: workspace:*
         version: link:../project
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:*
-        version: link:../refinement
-      '@hypit/resource-store':
-        specifier: workspace:^0.1.0
-        version: link:../resource-store
-      '@hypit/result':
-        specifier: workspace:*
-        version: link:../result
-      '@hypit/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      '@hypit/source':
-        specifier: workspace:*
-        version: link:../source
-      '@hypit/workspace':
-        specifier: workspace:*
-        version: link:../workspace
-    devDependencies:
-      '@hypit/runtime-local':
-        specifier: workspace:*
-        version: link:../runtime-local
 
   packages/compiler:
     dependencies:
@@ -2206,6 +2215,9 @@ importers:
         specifier: workspace:^0.2.0
         version: link:../runtime-local
     devDependencies:
+      '@hypit/build-cli':
+        specifier: workspace:*
+        version: link:../build-cli
       '@hypit/project':
         specifier: workspace:*
         version: link:../project
@@ -2311,6 +2323,12 @@ importers:
 
   packages/speech-estimate:
     dependencies:
+      '@hypit/build-cli':
+        specifier: workspace:^0.1.0
+        version: link:../build-cli
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
       cmu-pronouncing-dictionary:
         specifier: 3.0.0
         version: 3.0.0
@@ -2597,6 +2615,12 @@ importers:
 
   packages/whisperx:
     dependencies:
+      '@hypit/build-cli':
+        specifier: workspace:^0.1.0
+        version: link:../build-cli
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media

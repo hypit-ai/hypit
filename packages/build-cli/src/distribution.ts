@@ -19,7 +19,7 @@ export type CliCompilerOptions = {
 };
 
 /**
- * Explicit application assembly for the generic command engine.
+ * Explicit service assembly for the long-compilation command module.
  *
  * A Distribution selects author vocabulary/compiler semantics and trusted Runtime-config adapters.
  * It is Host configuration, never Core state or source-import authority.
@@ -39,7 +39,7 @@ export type CliDistribution = {
    * Read the selected Source and its explicit closure, then return only the installed
    * package roots those sources select.
    *
-   * This is Distribution syntax work. The generic CLI never scans a directory,
+   * This is Distribution syntax work. The build CLI never scans a directory,
    * guesses an entry filename or teaches Core about package names.
    */
   discoverSourcePackages?(path: string, options?: {

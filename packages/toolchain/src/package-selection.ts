@@ -1,4 +1,4 @@
-import { discoverSourcePackages } from "@hypit/cli";
+import { discoverSourcePackages } from "@hypit/build-cli";
 import { AuthorDeclarationRegistry } from "@hypit/author";
 import { createSvmlAuthorFrontend } from "@hypit/svml";
 import { svmlAuthorFrontendId } from "@hypit/svml";

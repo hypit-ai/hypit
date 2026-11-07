@@ -15,9 +15,8 @@ test("estimate presents the deterministic speech estimate without opening a Runt
       "--language", "en", "--pace", "normal", "--rounding", "round", "--json",
     ], { write: (text) => { output += text; } }, {
       cwd: root,
-      distribution: {} as never,
       resolveProjectRoot: async () => { throw new Error("inline estimation does not resolve a project"); },
-    });
+    }, {} as never);
     const view = JSON.parse(output) as { readonly format: string; readonly seconds: number; readonly units: number; readonly rate: number };
     assert.equal(view.format, "hypit.speech-estimate@1");
     assert.equal(view.units, 20);
