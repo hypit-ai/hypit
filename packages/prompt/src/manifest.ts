@@ -1,5 +1,5 @@
 import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
-import { textDependency, textTypes } from "@hypit/text";
+import { textDependency, textTypes } from "@hypit/hypit/text";
 
 export const promptModuleRef = { name: "@hypit/prompt", version: "1" } as const;
 

@@ -10,14 +10,16 @@
   "hypit": {
     "activation": "./src/activation.ts"
   },
-  "dependencies": {
+  "peerDependencies": {
+    "@hypit/hypit": "workspace:^0.4.0"
+  },
+  "devDependencies": {
     "@hypit/author": "workspace:*",
+    "@hypit/hypit": "workspace:*",
     "@hypit/producer": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/refinement": "workspace:*",
-    "@hypit/text": "workspace:*"
-  },
-  "devDependencies": {
+    "@hypit/text": "workspace:*",
     "@hypit/svml": "workspace:*"
   }
 }

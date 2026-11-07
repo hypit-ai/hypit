@@ -9,14 +9,20 @@
     "./node": "./src/node/index.ts"
   },
   "dependencies": {
-    "@hypit/atomic-file": "workspace:*",
     "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/audiovisual-media": "workspace:^0.1.0",
-    "@hypit/facet": "workspace:*",
     "@hypit/media": "workspace:^0.2.0",
-    "@hypit/protocol": "workspace:*",
     "@hypit/spatial": "workspace:^0.1.1",
     "@hypit/temporal": "workspace:^0.1.1"
+  },
+  "peerDependencies": {
+    "@hypit/hypit": "workspace:^0.4.0"
+  },
+  "devDependencies": {
+    "@hypit/atomic-file": "workspace:*",
+    "@hypit/facet": "workspace:*",
+    "@hypit/hypit": "workspace:*",
+    "@hypit/protocol": "workspace:*"
   },
   "files": [
     "dist",

@@ -1,5 +1,6 @@
-import { canonicalize } from "@hypit/protocol";
-import { verifyText, type Text } from "@hypit/text";
+import { canonicalize } from "@hypit/hypit/protocol";
+import { verifyText } from "@hypit/hypit/text";
+import type { Text } from "@hypit/text";
 
 import type {
   Prompt,

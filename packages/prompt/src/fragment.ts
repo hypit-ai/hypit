@@ -1,6 +1,6 @@
-import { sealGraphFragment } from "@hypit/author";
-import type { GraphFragment } from "@hypit/author";
-import { textTypes } from "@hypit/text";
+import { sealGraphFragment } from "@hypit/hypit/author";
+import type { GraphFragment, FragmentOperation } from "@hypit/author";
+import { textTypes } from "@hypit/hypit/text";
 
 import { promptProducers, promptTypes } from "./manifest.js";
 
@@ -12,7 +12,7 @@ export function createPromptRenderFragment(slots: readonly string[] = []) {
     { name: "template", type: promptTypes.template },
     { name: "bindings", type: promptTypes.bindings },
   ];
-  const operations: import("@hypit/author").FragmentOperation[] = [];
+  const operations: FragmentOperation[] = [];
   let bindings = input("bindings") as ReturnType<typeof input> | ReturnType<typeof operation>;
   slots.forEach((slot, index) => {
     const prefix = `slot:${slot}`;

@@ -1,14 +1,17 @@
 import {
   declarationField,
-  type AuthorDeclaration,
-  type AuthorDeclarationBinding,
-  type AuthorDeclarationChild,
-  type AuthorDeclarationCompiler,
-  type AuthorDeclarationFieldValue,
-  type AuthorResolvedReference,
+} from "@hypit/hypit/author";
+import type {
+  AuthorDeclaration,
+  AuthorDeclarationBinding,
+  AuthorDeclarationChild,
+  AuthorDeclarationCompiler,
+  AuthorDeclarationFieldValue,
+  AuthorResolvedReference,
 } from "@hypit/author";
-import { sameType, type CanonicalValue, type TypeRef } from "@hypit/protocol";
-import { sealText, textTypes } from "@hypit/text";
+import { sameType } from "@hypit/hypit/protocol";
+import type { CanonicalValue, TypeRef } from "@hypit/protocol";
+import { sealText, textTypes } from "@hypit/hypit/text";
 
 import { createPromptRenderFragment } from "./fragment.js";
 import { promptModuleRef, promptTypes } from "./manifest.js";

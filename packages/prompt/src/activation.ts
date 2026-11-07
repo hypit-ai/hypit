@@ -1,6 +1,6 @@
-import { createAuthorDeclarationFacet } from "@hypit/author";
-import { createProducerPackageFacet } from "@hypit/producer";
-import { createRefinementPackageFacet } from "@hypit/refinement";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createProducerPackageFacet } from "@hypit/hypit/producer";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 
 import { promptAuthorDeclarations, promptComponent, promptManifest } from "./index.js";
 

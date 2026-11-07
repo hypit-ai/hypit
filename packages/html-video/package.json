@@ -19,7 +19,6 @@
     "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/audiovisual-audio": "workspace:^0.1.0",
     "@hypit/audiovisual-html": "workspace:^0.1.0",
-    "@hypit/facet": "workspace:*",
     "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-delivery": "workspace:^0.1.0",
@@ -41,6 +40,7 @@
     "@hypit/temporal": "workspace:*",
     "@hypit/kernel": "workspace:*",
     "@hypit/executor": "workspace:*",
+    "@hypit/facet": "workspace:*",
     "@hypit/refinement": "workspace:*",
     "@hypit/hypit": "workspace:*",
     "@hypit/protocol": "workspace:*"

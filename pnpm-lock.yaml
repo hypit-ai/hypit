@@ -228,9 +228,6 @@ importers:
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../nle
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
       '@hypit/temporal':
         specifier: workspace:^0.1.0
         version: link:../temporal
@@ -241,6 +238,9 @@ importers:
       '@hypit/producer':
         specifier: workspace:*
         version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
       '@hypit/refinement':
         specifier: workspace:*
         version: link:../refinement
@@ -953,9 +953,6 @@ importers:
       '@hypit/audiovisual-html':
         specifier: workspace:^0.1.0
         version: link:../audiovisual-html
-      '@hypit/facet':
-        specifier: workspace:*
-        version: link:../facet
       '@hypit/html-program':
         specifier: workspace:^0.2.0
         version: link:../html-program
@@ -987,6 +984,9 @@ importers:
       '@hypit/executor':
         specifier: workspace:*
         version: link:../executor
+      '@hypit/facet':
+        specifier: workspace:*
+        version: link:../facet
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../..
@@ -1077,18 +1077,22 @@ importers:
 
   packages/media-asset:
     dependencies:
-      '@hypit/facet':
-        specifier: workspace:*
-        version: link:../facet
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
+    devDependencies:
+      '@hypit/facet':
+        specifier: workspace:*
+        version: link:../facet
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/media-delivery:
     dependencies:
@@ -1325,30 +1329,34 @@ importers:
 
   packages/nle:
     dependencies:
-      '@hypit/atomic-file':
-        specifier: workspace:*
-        version: link:../atomic-file
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
         version: link:../audiovisual
       '@hypit/audiovisual-media':
         specifier: workspace:^0.1.0
         version: link:../audiovisual-media
-      '@hypit/facet':
-        specifier: workspace:*
-        version: link:../facet
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
+    devDependencies:
+      '@hypit/atomic-file':
+        specifier: workspace:*
+        version: link:../atomic-file
+      '@hypit/facet':
+        specifier: workspace:*
+        version: link:../facet
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/nle-local:
     dependencies:
@@ -1508,10 +1516,13 @@ importers:
   packages/project: {}
 
   packages/prompt:
-    dependencies:
+    devDependencies:
       '@hypit/author':
         specifier: workspace:*
         version: link:../author
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
       '@hypit/producer':
         specifier: workspace:*
         version: link:../producer
@@ -1521,13 +1532,12 @@ importers:
       '@hypit/refinement':
         specifier: workspace:*
         version: link:../refinement
-      '@hypit/text':
-        specifier: workspace:*
-        version: link:../text
-    devDependencies:
       '@hypit/svml':
         specifier: workspace:*
         version: link:../svml
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/protocol: {}
 
@@ -2005,9 +2015,12 @@ importers:
         version: link:../protocol
 
   packages/resource-store:
-    dependencies:
+    devDependencies:
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
       '@hypit/protocol':
-        specifier: workspace:^0.0.0-dev
+        specifier: workspace:*
         version: link:../protocol
 
   packages/result:
