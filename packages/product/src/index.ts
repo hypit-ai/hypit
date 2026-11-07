@@ -11,6 +11,9 @@ export const productPublication = Object.freeze({
   publisher: productPublisher,
 });
 
+export { productAddress } from "./address.js";
+export type { ProductAddress } from "./address.js";
+
 export { assertProductFileRef, assertProductPath, materializeProducts } from "./materialize.js";
 export type {
   ProductFileRef,

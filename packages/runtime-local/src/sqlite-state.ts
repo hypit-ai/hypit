@@ -464,7 +464,7 @@ class SqlitePendingBuildStore implements PendingBuildStore {
       this.#database.prepare(`
         INSERT INTO hypit_executions (
           build_id, execution_packages_json, result_location_json, context_json, created_at, wake_at,
-          turn_owner, turn_acquired_at, result_writer_owner, result_writer_acquired_at,
+          turn_owner, turn_acquired_at, finalization_owner, finalization_acquired_at,
           stop_cause, stop_reason,
           decision_outcome, decision_reason, attention_step, attention_error
         ) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
@@ -649,16 +649,16 @@ function parseExecutionSnapshot(row: Row): BuildExecutionSnapshot {
   assert((row.turn_owner === null && row.turn_acquired_at === null)
     || (typeof row.turn_owner === "string" && typeof row.turn_acquired_at === "number"),
   "SQLite Execution turn is invalid");
-  assert((row.result_writer_owner === null && row.result_writer_acquired_at === null)
-    || (typeof row.result_writer_owner === "string" && typeof row.result_writer_acquired_at === "number"),
-  "SQLite Result-writer lease is invalid");
+  assert((row.finalization_owner === null && row.finalization_acquired_at === null)
+    || (typeof row.finalization_owner === "string" && typeof row.finalization_acquired_at === "number"),
+  "SQLite finalization lease is invalid");
   assert((row.decision_outcome === null && row.decision_reason === null)
     || (row.decision_outcome === "complete" && row.decision_reason === null)
     || ((row.decision_outcome === "failed" || row.decision_outcome === "cancelled")
       && typeof row.decision_reason === "string"),
   "SQLite Execution decision is invalid");
   assert((row.attention_step === null && row.attention_error === null)
-    || ((row.attention_step === "result" || row.attention_step === "cleanup")
+    || ((row.attention_step === "publication" || row.attention_step === "cleanup")
       && typeof row.attention_error === "string"),
   "SQLite Execution attention is invalid");
   return {
@@ -670,8 +670,8 @@ function parseExecutionSnapshot(row: Row): BuildExecutionSnapshot {
     ...(typeof row.turn_owner === "string" ? {
       turn: { owner: row.turn_owner, acquiredAt: row.turn_acquired_at as number },
     } : {}),
-    ...(typeof row.result_writer_owner === "string" ? {
-      resultWrite: { owner: row.result_writer_owner, acquiredAt: row.result_writer_acquired_at as number },
+    ...(typeof row.finalization_owner === "string" ? {
+      finalization: { owner: row.finalization_owner, acquiredAt: row.finalization_acquired_at as number },
     } : {}),
     ...(row.stop_cause === "user-cancelled" || row.stop_cause === "execution-failed" ? {
       stop: {
@@ -686,7 +686,7 @@ function parseExecutionSnapshot(row: Row): BuildExecutionSnapshot {
     } : {}),
     ...(typeof row.attention_step === "string" ? {
       attention: {
-        step: row.attention_step as "result" | "cleanup",
+        step: row.attention_step as "publication" | "cleanup",
         error: row.attention_error as string,
       },
     } : {}),
@@ -709,7 +709,7 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
     this.#database.prepare(`
       INSERT INTO hypit_executions (
         build_id, execution_packages_json, result_location_json, context_json, created_at, wake_at,
-        turn_owner, turn_acquired_at, result_writer_owner, result_writer_acquired_at,
+        turn_owner, turn_acquired_at, finalization_owner, finalization_acquired_at,
         stop_cause, stop_reason,
         decision_outcome, decision_reason, attention_step, attention_error
       ) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
@@ -794,7 +794,7 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
       this.#database.prepare(`
         UPDATE hypit_executions SET decision_outcome = ?, decision_reason = ?,
           turn_owner = NULL, turn_acquired_at = NULL,
-          result_writer_owner = NULL, result_writer_acquired_at = NULL
+          finalization_owner = NULL, finalization_acquired_at = NULL
         WHERE build_id = ?
       `).run(current.stop?.cause === "user-cancelled" ? "cancelled" : "failed", current.stop?.reason ?? reason, build);
       return parseExecutionSnapshot(this.#database.prepare("SELECT * FROM hypit_executions WHERE build_id = ?").get(build) as Row);
@@ -880,19 +880,19 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
     });
   }
 
-  async claimResultWrite(
+  async claimFinalization(
     build: string,
     owner: string,
     now = Date.now(),
   ): Promise<BuildExecutionSnapshot | undefined> {
-    assert(owner.trim().length > 0, "Result-writer owner is empty");
-    nonNegativeInteger(now, "Result-writer acquisition time");
+    assert(owner.trim().length > 0, "Finalization owner is empty");
+    nonNegativeInteger(now, "Finalization acquisition time");
     return transaction(this.#database, () => {
       const updated = this.#database.prepare(`
         UPDATE hypit_executions
-        SET result_writer_owner = ?, result_writer_acquired_at = ?,
+        SET finalization_owner = ?, finalization_acquired_at = ?,
             attention_step = NULL, attention_error = NULL
-        WHERE build_id = ? AND decision_outcome IS NOT NULL AND result_writer_owner IS NULL
+        WHERE build_id = ? AND decision_outcome IS NOT NULL AND finalization_owner IS NULL
       `).run(owner, now, build);
       if (updated.changes !== 1) return undefined;
       return parseExecutionSnapshot(
@@ -901,36 +901,36 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
     });
   }
 
-  async releaseResultWrite(build: string, owner: string): Promise<BuildExecutionSnapshot> {
+  async releaseFinalization(build: string, owner: string): Promise<BuildExecutionSnapshot> {
     return transaction(this.#database, () => {
       const updated = this.#database.prepare(`
         UPDATE hypit_executions
-        SET result_writer_owner = NULL, result_writer_acquired_at = NULL
-        WHERE build_id = ? AND result_writer_owner = ?
+        SET finalization_owner = NULL, finalization_acquired_at = NULL
+        WHERE build_id = ? AND finalization_owner = ?
       `).run(build, owner);
-      assert(updated.changes === 1, `Execution ${build} Result writer is not owned by ${owner}`);
+      assert(updated.changes === 1, `Execution ${build} finalization is not owned by ${owner}`);
       return parseExecutionSnapshot(
         this.#database.prepare("SELECT * FROM hypit_executions WHERE build_id = ?").get(build) as Row,
       );
     });
   }
 
-  async reclaimResultWrites(): Promise<readonly string[]> {
+  async reclaimFinalizations(): Promise<readonly string[]> {
     return transaction(this.#database, () => {
       const rows = this.#database.prepare(
-        "SELECT build_id FROM hypit_executions WHERE result_writer_owner IS NOT NULL",
+        "SELECT build_id FROM hypit_executions WHERE finalization_owner IS NOT NULL",
       ).all() as Row[];
       const builds = rows.map((row) => {
-        assert(typeof row.build_id === "string", "SQLite Result-writer lease has no Build id");
+        assert(typeof row.build_id === "string", "SQLite finalization lease has no Build id");
         return row.build_id;
       });
       for (const build of builds) {
         this.#database.prepare(`
           UPDATE hypit_executions
-          SET result_writer_owner = NULL, result_writer_acquired_at = NULL,
-              attention_step = 'result',
-              attention_error = 'Result writing was interrupted; the Runtime will retry publication when it starts'
-          WHERE build_id = ? AND result_writer_owner IS NOT NULL
+          SET finalization_owner = NULL, finalization_acquired_at = NULL,
+              attention_step = 'publication',
+              attention_error = 'Finalization was interrupted; the Runtime will retry publication when it starts'
+          WHERE build_id = ? AND finalization_owner IS NOT NULL
         `).run(build);
       }
       return builds;
@@ -1181,18 +1181,18 @@ export class SqliteRuntimeState {
         operation_wait_json TEXT,
         turn_owner TEXT,
         turn_acquired_at INTEGER,
-        result_writer_owner TEXT,
-        result_writer_acquired_at INTEGER,
+        finalization_owner TEXT,
+        finalization_acquired_at INTEGER,
         stop_cause TEXT CHECK (stop_cause IS NULL OR stop_cause IN ('user-cancelled', 'execution-failed')),
         stop_reason TEXT,
         decision_outcome TEXT CHECK (
           decision_outcome IS NULL OR decision_outcome IN ('complete', 'failed', 'cancelled')
         ),
         decision_reason TEXT,
-        attention_step TEXT CHECK (attention_step IS NULL OR attention_step IN ('result', 'cleanup')),
+        attention_step TEXT CHECK (attention_step IS NULL OR attention_step IN ('publication', 'cleanup')),
         attention_error TEXT,
         CHECK ((turn_owner IS NULL) = (turn_acquired_at IS NULL)),
-        CHECK ((result_writer_owner IS NULL) = (result_writer_acquired_at IS NULL)),
+        CHECK ((finalization_owner IS NULL) = (finalization_acquired_at IS NULL)),
         CHECK ((attention_step IS NULL) = (attention_error IS NULL))
       ) STRICT;
       CREATE INDEX IF NOT EXISTS hypit_execution_ready

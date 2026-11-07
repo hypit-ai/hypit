@@ -165,6 +165,7 @@ test("a failed Build keeps published Outputs completed before removing active Ru
     assert.equal(result?.failure, "generation failed");
     assert.deepEqual(Object.keys(result?.outputs ?? {}), ["prompt.text"]);
     assert.deepEqual(result?.outputs["prompt.text"], {
+      address: { publication: "bld_20260902T120000005Z_0000000001", name: "prompt.text" },
       type: result?.outputs["prompt.text"]?.type,
       publisher: "example.test-product@1",
       representation: "inline",
@@ -293,7 +294,7 @@ test("an interrupted Result write can be retried internally without rerunning th
     });
     const blocked = await runtime.workOnce();
     assert(blocked !== undefined && "decision" in blocked);
-    assert.deepEqual(blocked.attention, { step: "result", error: "result store unavailable" });
+    assert.deepEqual(blocked.attention, { step: "publication", error: "result store unavailable" });
     assert.equal(generationCalls, 1);
     assert.equal(await runtime.workOnce(), undefined);
 

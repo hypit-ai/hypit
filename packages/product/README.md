@@ -11,6 +11,10 @@ export format.
 `hypit.product@1` names product lifecycle only. It is not a Provider, Endpoint, storage location or
 permission to execute package code.
 
+One durable Product is addressed by `{ publication, name }`. The publication identity currently
+comes from the Run that closed it, while the name is the exact declared publication name. This
+address contains no filesystem path or content hash and can be resolved without opening Run history.
+
 Product also owns the neutral materialization of typed values. Scalars remain inline, Blob resources
 become `product-file` references, and arrays or objects use `hypit.product-value@1` documents whose
 resource leaves point to Product-owned files. The materializer receives an abstract write target and

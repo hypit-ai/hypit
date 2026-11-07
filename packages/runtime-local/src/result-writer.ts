@@ -199,9 +199,9 @@ export function createLocalResultWriter(
 
   const writeResultAndCleanup = async (execution: BuildExecutionSnapshot) => {
     assert(execution.decision !== undefined, `Execution ${execution.build} has no decision`);
-    assert(execution.resultWrite?.owner === owner,
-      `Execution ${execution.build} Result writer is not owned by this process`);
-    let step: "result" | "cleanup" = "result";
+    assert(execution.finalization?.owner === owner,
+      `Execution ${execution.build} finalization is not owned by this process`);
+    let step: "publication" | "cleanup" = "publication";
     try {
       await finishResult(execution);
       step = "cleanup";
@@ -212,26 +212,26 @@ export function createLocalResultWriter(
       try {
         await options.executionStore.setAttention(execution.build, { step, error: reason });
       } catch (attentionError) {
-        await options.executionStore.releaseResultWrite(execution.build, owner).catch(() => undefined);
+        await options.executionStore.releaseFinalization(execution.build, owner).catch(() => undefined);
         throw attentionError;
       }
-      return await options.executionStore.releaseResultWrite(execution.build, owner);
+      return await options.executionStore.releaseFinalization(execution.build, owner);
     }
   };
 
-  const claimResultWrite = async (build: string): Promise<BuildExecutionSnapshot> => {
-    const claimed = await options.executionStore.claimResultWrite(build, owner);
+  const claimFinalization = async (build: string): Promise<BuildExecutionSnapshot> => {
+    const claimed = await options.executionStore.claimFinalization(build, owner);
     if (claimed !== undefined) return claimed;
     const current = await options.executionStore.read(build);
     assert(current !== undefined, `Execution ${build} does not exist`);
     assert(current.decision !== undefined, `Execution ${build} has no decision`);
-    assert(current.resultWrite === undefined,
-      `Execution ${build} Result write is already owned by another process`);
-    throw new Error(`Execution ${build} could not be claimed for Result writing`);
+    assert(current.finalization === undefined,
+      `Execution ${build} finalization is already owned by another process`);
+    throw new Error(`Execution ${build} could not be claimed for finalization`);
   };
 
   const completeResult = async (initial: BuildExecutionSnapshot) =>
-    await writeResultAndCleanup(await claimResultWrite(initial.build));
+    await writeResultAndCleanup(await claimFinalization(initial.build));
 
   const discardSubmission = async (build: string): Promise<boolean> => {
     const submission = await options.submissionStore.read(build);

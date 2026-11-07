@@ -330,7 +330,7 @@ async function runLocal(
     const counts = {
       submitting: activity.builds.filter((item) => item.activity === "submitting").length,
       working: activity.builds.filter((item) => item.activity === "ready" || item.activity === "running" || item.activity === "waiting").length,
-      savingResult: activity.builds.filter((item) => item.activity === "saving-result").length,
+      finalizing: activity.builds.filter((item) => item.activity === "finalizing").length,
     };
     write(io, args, { format: "hypit.cli-runtime-status@1", ready, attention, worker: { state: worker.state }, builds: counts,
       programs: { total: external.programs.length, ready: external.programs.length - unavailable.length, unavailable: unavailable.map(programRecord) },
@@ -341,7 +341,7 @@ async function runLocal(
       ["Worker", worker.state], ["Active Builds", String(activity.builds.length)],
       ["Programs", `${external.programs.length - unavailable.length}/${external.programs.length} ready`],
       ...(args.presentation.verbose ? [["Submitting", String(counts.submitting)] as const, ["Working", String(counts.working)] as const,
-        ["Saving Result", String(counts.savingResult)] as const, ["Capacity in use", String(activity.capacity.length)] as const] : []),
+        ["Finalizing", String(counts.finalizing)] as const, ["Capacity in use", String(activity.capacity.length)] as const] : []),
     ], unavailable.map(programDescription));
   } finally { await control.close(); }
 }

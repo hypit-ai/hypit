@@ -315,16 +315,16 @@ test("Execution stores scheduling facts, one decision and independent operator a
     assert.deepEqual(decided.decision, { outcome: "cancelled", reason: "no longer needed" });
     assert.equal(await state.execution.claim("worker-b", Date.now() + 60_000), undefined);
 
-    const writing = await state.execution.claimResultWrite("queued-build", "result-writer-a", 200);
-    assert.equal(writing?.resultWrite?.owner, "result-writer-a");
-    assert.equal(await state.execution.claimResultWrite("queued-build", "result-writer-b", 201), undefined);
-    assert.equal((await state.execution.releaseResultWrite("queued-build", "result-writer-a")).resultWrite, undefined);
+    const writing = await state.execution.claimFinalization("queued-build", "finalizer-a", 200);
+    assert.equal(writing?.finalization?.owner, "finalizer-a");
+    assert.equal(await state.execution.claimFinalization("queued-build", "finalizer-b", 201), undefined);
+    assert.equal((await state.execution.releaseFinalization("queued-build", "finalizer-a")).finalization, undefined);
 
     const attention = await state.execution.setAttention("queued-build", {
-      step: "result",
+      step: "publication",
       error: "store unavailable",
     });
-    assert.deepEqual(attention.attention, { step: "result", error: "store unavailable" });
+    assert.deepEqual(attention.attention, { step: "publication", error: "store unavailable" });
     const completion = await state.removeActiveBuild("queued-build");
     assert.deepEqual(completion, { build: "queued-build", outcome: "cancelled", reason: "no longer needed" });
     assert.equal(await state.execution.read("queued-build"), undefined);
@@ -353,7 +353,7 @@ test("each execution retains its own context and can be claimed without touching
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
 
-test("a lost executor ends its attempt while Result-writer leases can be reclaimed", async () => {
+test("a lost executor ends its attempt while finalization leases can be reclaimed", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-sqlite-turn-reclaim-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
@@ -364,15 +364,15 @@ test("a lost executor ends its attempt while Result-writer leases can be reclaim
     assert.equal(await state.execution.claim("new-worker", 200), undefined);
     assert.equal((await state.execution.read("interrupted"))?.decision?.outcome, "failed");
     assert.equal(
-      (await state.execution.claimResultWrite("interrupted", "old-result-writer", 201))?.resultWrite?.owner,
-      "old-result-writer",
+      (await state.execution.claimFinalization("interrupted", "old-finalizer", 201))?.finalization?.owner,
+      "old-finalizer",
     );
-    assert.deepEqual(await state.execution.reclaimResultWrites(), ["interrupted"]);
+    assert.deepEqual(await state.execution.reclaimFinalizations(), ["interrupted"]);
     const interrupted = await state.execution.read("interrupted");
-    assert.equal(interrupted?.resultWrite, undefined);
+    assert.equal(interrupted?.finalization, undefined);
     assert.deepEqual(interrupted?.attention, {
-      step: "result",
-      error: "Result writing was interrupted; the Runtime will retry publication when it starts",
+      step: "publication",
+      error: "Finalization was interrupted; the Runtime will retry publication when it starts",
     });
     state.close();
   } finally {

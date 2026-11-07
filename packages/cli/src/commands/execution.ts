@@ -233,7 +233,7 @@ export async function runExecutionCommand(input: {
       const activity = view?.activity;
       const resultOutcome = result?.outcome;
       const outcome = resultOutcome ?? view?.outcome;
-      const savingResult = activity === "saving-result" && resultOutcome === undefined;
+      const finalizing = activity === "finalizing" && resultOutcome === undefined;
       const issue = view?.issue;
       const build = !found ? null : buildStatusView({
         id: view?.id ?? result!.id,
@@ -248,8 +248,8 @@ export async function runExecutionCommand(input: {
         ? "Build not found"
         : attention !== undefined
           ? "Build needs attention"
-          : savingResult
-            ? "Saving Build Result"
+          : finalizing
+            ? "Finalizing Build"
             : resultOutcome === "complete"
               ? "Build complete"
               : resultOutcome === "failed"
@@ -274,9 +274,9 @@ export async function runExecutionCommand(input: {
           ...(attention !== undefined ? [
             ["Execution", build?.work.outcome ?? build?.work.state ?? "unknown"] as const,
             ["Result", build?.result.state ?? "missing"] as const,
-          ] : savingResult ? [
+          ] : finalizing ? [
             ["Execution", view?.outcome ?? "complete"] as const,
-            ["Result", "saving"] as const,
+            ["Publication", "finalizing"] as const,
           ] : resultOutcome !== undefined ? [
             ["Outcome", resultOutcome] as const,
           ] : [["State", build?.work.state ?? "unknown"] as const]),

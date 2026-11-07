@@ -13,7 +13,7 @@ const MIN_PROGRESS_INTERVAL_MS = 5_000;
 
 export type BuildProgressView = {
   readonly build: string;
-  readonly state: "submitting" | "working" | "saving-result";
+  readonly state: "submitting" | "working" | "finalizing";
   readonly requests?: { readonly total: number; readonly completed: number };
   readonly phases: Readonly<Record<string, number>>;
   /** Present when the Build id carries its submission time. */
@@ -36,7 +36,7 @@ function progressPhases(view: CliBuildView): Readonly<Record<string, number>> {
 
 function progressState(view: CliBuildView): BuildProgressView["state"] {
   if (view.activity === "submitting") return "submitting";
-  if (view.activity === "saving-result") return "saving-result";
+  if (view.activity === "finalizing") return "finalizing";
   // `ready`, `running` and `waiting` describe short Worker scheduling turns, not three stages of a
   // video. They deliberately collapse into one stable product state.
   return "working";
@@ -98,7 +98,7 @@ export function buildProgressLines(
   const state = {
     submitting: "Submitting",
     working: "Working",
-    "saving-result": "Saving Result",
+    finalizing: "Finalizing",
   }[progress.state];
   const requestProgress = progress.requests === undefined || progress.requests.total === 0
     ? []

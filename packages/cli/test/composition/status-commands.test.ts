@@ -237,10 +237,10 @@ test("finished status defaults to the Result outcome without repeating internal 
   assert.doesNotMatch(output, /\bWork\b|\bDecision\b|\bResult\s+complete/u);
 });
 
-test("status separates execution from Result only while the Result is being saved", async () => {
+test("status separates execution from publication while the Run is being finalized", async () => {
   const view = {
     id: "build-saving",
-    activity: "saving-result" as const,
+    activity: "finalizing" as const,
     outcome: "complete" as const,
 
     targets: ["final.video"],
@@ -262,18 +262,18 @@ test("status separates execution from Result only while the Result is being save
     write(text) { output += text; },
   }, distribution);
 
-  assert.match(output, /Saving Build Result/u);
+  assert.match(output, /Finalizing Build/u);
   assert.match(output, /Execution\s+complete/u);
-  assert.match(output, /Result\s+saving/u);
+  assert.match(output, /Publication\s+finalizing/u);
   assert.doesNotMatch(output, /Build complete|Outcome\s+complete/u);
 });
 
 test("status preserves Runtime decision and attention when its Result Store is unavailable", async () => {
   const view = {
     id: "build-result-unavailable",
-    activity: "saving-result" as const,
+    activity: "finalizing" as const,
     outcome: "failed" as const,
-    issue: { scope: "result" as "result" | "cleanup", message: "S3 unavailable" },
+    issue: { scope: "publication" as "publication" | "cleanup", message: "S3 unavailable" },
 
     targets: [],
     operations: [{ endpoint: "images.internal", status: "failed" as const,

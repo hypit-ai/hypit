@@ -6,6 +6,7 @@ import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { assertOrderedBuildId, buildIdCreatedAt, compareCodeUnits } from "@hypit/protocol";
 import type { BlobRef, CanonicalValue, Value, ValuePath } from "@hypit/protocol";
 import type { ProductFileRef } from "@hypit/product";
+import { productAddress } from "@hypit/product";
 import {
   decodeBuildResultJson,
   decodeBuildResultValueDocument,
@@ -60,8 +61,9 @@ async function readFinishedBuildResult(directory: string): Promise<StoredFinishe
   return decodeFinishedBuildResult(decodeBuildResultJson(bytes, path), basename(resolve(directory)), path);
 }
 
-function historyOutput(output: StoredBuildResultOutput): BuildResultOutput {
+function historyOutput(publicationId: string, name: string, output: StoredBuildResultOutput): BuildResultOutput {
   const publication = {
+    address: productAddress(publicationId, name),
     publisher: output.publisher,
     ...(output.publicationParameters === undefined
       ? {}
@@ -83,7 +85,7 @@ function historyResult(manifest: StoredFinishedBuildResult): BuildResult {
     sourcePath: manifest.sourcePath,
     targets: manifest.targets,
     outputs: Object.fromEntries(Object.entries(manifest.outputs)
-      .map(([name, output]) => [name, historyOutput(output)])),
+      .map(([name, output]) => [name, historyOutput(manifest.id, name, output)])),
     ...(manifest.executionLog === undefined ? {} : { executionLog: true as const }),
     ...(manifest.operations === undefined ? {} : { operations: manifest.operations }),
   };
@@ -210,6 +212,7 @@ export async function resolveBuildResultOutput(
   } else if (entry.value.kind === "product-file") value = bind(entry.value, 0);
   else value = entry.value.value;
   return {
+    address: productAddress(build, output),
     type: entry.type,
     publisher: entry.publisher,
     ...(entry.publicationParameters === undefined

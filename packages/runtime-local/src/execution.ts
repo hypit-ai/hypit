@@ -35,7 +35,7 @@ export type BuildExecutionStop = {
 };
 
 export type BuildExecutionAttention = {
-  readonly step: "result" | "cleanup";
+  readonly step: "publication" | "cleanup";
   readonly error: string;
 };
 
@@ -44,7 +44,7 @@ export type BuildExecutionTurn = {
   readonly acquiredAt: number;
 };
 
-export type BuildResultWriteLease = BuildExecutionTurn;
+export type BuildFinalizationLease = BuildExecutionTurn;
 
 /**
  * The complete active Runtime root for one Build.
@@ -62,19 +62,19 @@ export type BuildExecutionSnapshot = BuildExecutionRequest & {
   /** Only these Operations can advance the Build until their next outcome. */
   readonly operationWait?: readonly string[];
   readonly turn?: BuildExecutionTurn;
-  readonly resultWrite?: BuildResultWriteLease;
+  readonly finalization?: BuildFinalizationLease;
   readonly stop?: BuildExecutionStop;
   readonly decision?: BuildExecutionDecision;
   readonly attention?: BuildExecutionAttention;
 };
 
-export type BuildExecutionActivity = "ready" | "running" | "waiting" | "saving-result";
+export type BuildExecutionActivity = "ready" | "running" | "waiting" | "finalizing";
 
 export function buildExecutionActivity(
   execution: BuildExecutionSnapshot,
   now = Date.now(),
 ): BuildExecutionActivity {
-  if (execution.decision !== undefined) return "saving-result";
+  if (execution.decision !== undefined) return "finalizing";
   if (execution.turn !== undefined) return "running";
   return execution.wakeAt === undefined || execution.wakeAt > now ? "waiting" : "ready";
 }
@@ -103,10 +103,10 @@ export type BuildExecutionStore = {
   /** Record the first stop request. Repeated requests cannot replace its cause or reason. */
   requestStop(build: string, stop: BuildExecutionStop): Promise<BuildExecutionSnapshot>;
   setAttention(build: string, attention: BuildExecutionAttention | undefined): Promise<BuildExecutionSnapshot>;
-  claimResultWrite(build: string, owner: string, now?: number): Promise<BuildExecutionSnapshot | undefined>;
-  releaseResultWrite(build: string, owner: string): Promise<BuildExecutionSnapshot>;
-  /** Clear only Result-writer ownership left by the previous Runtime process before automatic recovery. */
-  reclaimResultWrites(): Promise<readonly string[]>;
+  claimFinalization(build: string, owner: string, now?: number): Promise<BuildExecutionSnapshot | undefined>;
+  releaseFinalization(build: string, owner: string): Promise<BuildExecutionSnapshot>;
+  /** Clear only finalization ownership left by the previous Runtime process before automatic recovery. */
+  reclaimFinalizations(): Promise<readonly string[]>;
   acquireCapacity(request: CapacityAcquireRequest): Promise<CapacityAcquire>;
   releaseCapacity(build: string, command: string): Promise<void>;
   releaseBuildCapacity(build: string): Promise<void>;

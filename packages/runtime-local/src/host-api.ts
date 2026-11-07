@@ -31,7 +31,7 @@ export type RuntimeHostFinishedBuildSubmission = {
 
 export type RuntimeHostBuildSubmission = RuntimeHostActiveBuildSubmission | RuntimeHostFinishedBuildSubmission;
 
-export type BuildActivity = "submitting" | "ready" | "running" | "waiting" | "saving-result";
+export type BuildActivity = "submitting" | "ready" | "running" | "waiting" | "finalizing";
 
 type BuildOperationViewEvidence = {
   readonly receipt?: import("@hypit/hypit/runtime").OperationReceipt;
@@ -49,7 +49,7 @@ export type BuildView = {
   readonly id: string;
   readonly activity: BuildActivity;
   readonly outcome?: BuildCompletion["outcome"];
-  readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
+  readonly issue?: { readonly scope: "publication" | "cleanup"; readonly message: string };
   readonly stop?: BuildExecutionStop;
   readonly sourcePath?: string;
   readonly targets: readonly string[];

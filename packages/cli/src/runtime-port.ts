@@ -37,9 +37,9 @@ export type CliBuildAuthoring = {
 
 export type CliBuildView = {
   readonly id: string;
-  readonly activity: "submitting" | "ready" | "running" | "waiting" | "saving-result";
+  readonly activity: "submitting" | "ready" | "running" | "waiting" | "finalizing";
   readonly outcome?: "complete" | "failed" | "cancelled";
-  readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
+  readonly issue?: { readonly scope: "publication" | "cleanup"; readonly message: string };
   readonly stop?: { readonly cause: "user-cancelled" | "execution-failed"; readonly reason?: string };
   readonly sourcePath?: string;
   readonly targets: readonly string[];

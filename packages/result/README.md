@@ -31,6 +31,8 @@ dependency.
 
 `PublicationIntent.outputs` supplies the published name, accepted Record and exact publisher.
 Runtime records that publisher with the accepted Type rather than inventing a lifetime policy.
+History exposes each Product's stable `{ publication, name }` address; the current adapter derives the
+publication identity from the containing Build while Product files are still colocated.
 Reusing an earlier Output is an authoring
 operation: export the accepted material into the project and reference it from the Author Source.
 Result storage never substitutes a historical Build for an authored value.

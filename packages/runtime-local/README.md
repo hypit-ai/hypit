@@ -155,11 +155,12 @@ execution progress remains in SQLite. Once execution has a final decision, all c
 and the outcome are saved before active state and working Resources are removed. This order applies
 to completed, failed and cancelled Builds alike.
 
-Saving a finished Result is a separate, idempotent storage action. If that write is interrupted, the
-Build keeps its already-decided outcome and reports exact operator attention. The Runtime retries that
-pending publication when its execution service starts; it does not rerun a Producer, call an Endpoint or
+Finalization is a separate, idempotent action after the execution decision. One per-Build lease owns
+publication and cleanup; it is not a global Runtime lock. If publication is interrupted, the Build keeps
+its already-decided outcome and reports exact operator attention. The Runtime reclaims the lease and
+retries publication when its execution service starts; it does not rerun a Producer, call an Endpoint or
 change the decision. Submission rollback removes an incomplete draft internally before the submission
-becomes active. Neither recovery path is a user mutation of Result history.
+becomes active. Neither recovery path is a user mutation of history.
 
 Source imports select author packages. Runtime Profile entries select only code allowed to access files,
 credentials, processes or networks. Installing a package changes neither selection.

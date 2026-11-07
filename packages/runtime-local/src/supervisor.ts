@@ -39,7 +39,7 @@ export async function superviseBuilds(options: {
       try { await writer.completeResult(decided); }
       finally { await writer.close(); }
     } catch (error) {
-      await state.execution.setAttention(build, { step: "result", error: error instanceof Error ? error.message : String(error) });
+      await state.execution.setAttention(build, { step: "publication", error: error instanceof Error ? error.message : String(error) });
     }
   };
   const launch = (): Carrier => {
@@ -99,7 +99,7 @@ export async function superviseBuilds(options: {
     return carrier;
   };
   try {
-    await state.execution.reclaimResultWrites();
+    await state.execution.reclaimFinalizations();
     for (const execution of await state.execution.list()) {
       if (execution.decision === undefined && execution.startedAt !== undefined) {
         await finishInterrupted(execution.build, "Build executor was lost; its code context is gone. Create a new Build to continue");
@@ -114,7 +114,7 @@ export async function superviseBuilds(options: {
         } catch (error) {
           if (await state.execution.read(execution.build) !== undefined) {
             await state.execution.setAttention(execution.build, {
-              step: "result",
+              step: "publication",
               error: error instanceof Error ? error.message : String(error),
             });
           }

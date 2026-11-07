@@ -20,6 +20,7 @@ test("inspection chooses its scope before following any Output reference", async
     outcome: "complete",
     finishedAt: 1,
     outputs: Object.fromEntries(names.map((name) => [name, {
+      address: { publication: "bld_20260913T093030369Z_55907CDA9E", name },
       type: valueType,
       publisher: "example.test-product@1",
       representation: "inline" as const,

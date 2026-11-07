@@ -1,4 +1,5 @@
 import type { CanonicalValue, NeedId, TypeRef, Value } from "@hypit/protocol";
+import type { ProductAddress } from "@hypit/product";
 
 /** The one durable conclusion of a finished Build. Active execution belongs to Runtime. */
 export type BuildResultOutcome = "complete" | "failed" | "cancelled";
@@ -11,6 +12,7 @@ export type BuildResultFileRange = {
 
 /** History projection of one published Output; storage paths remain Repository-private. */
 export type BuildResultOutput = {
+  readonly address: ProductAddress;
   readonly type: TypeRef;
   readonly publisher: string;
   readonly publicationParameters?: CanonicalValue;
@@ -78,6 +80,7 @@ export type BuildResultPage = {
 
 /** One finished published Output resolved to ordinary domain data and only its owned Resources. */
 export type ResolvedBuildResultOutput = {
+  readonly address: ProductAddress;
   readonly type: TypeRef;
   readonly publisher: string;
   readonly publicationParameters?: CanonicalValue;
