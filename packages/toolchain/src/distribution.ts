@@ -1,5 +1,5 @@
 import type { CliDistribution } from "@hypit/hypit/cli";
-import { resultOutputExporterForType, resultOutputExportersFromFacets } from "@hypit/hypit/result";
+import { productExporterForType, productExportersFromFacets } from "@hypit/hypit/product";
 import { loadNodePackageSelection } from "@hypit/hypit/loader/node";
 import { moduleKey, modulePackageAbi } from "@hypit/hypit/protocol";
 import {
@@ -93,7 +93,7 @@ export function createToolchainDistribution(options: ToolchainDistributionOption
         close() {},
       };
     },
-    resolveResultOutputExporter: async (type, resolverOptions) => {
+    resolveProductExporter: async (type, resolverOptions) => {
       const packages = await loadNodePackageSelection({
         selected: [],
         logical: [{ abi: modulePackageAbi, name: moduleKey(type.module) }],
@@ -102,8 +102,8 @@ export function createToolchainDistribution(options: ToolchainDistributionOption
           ? {}
           : { fallbackRoots: [resolverOptions.distributionPackageRoot] }),
       });
-      return resultOutputExporterForType(
-        packages.flatMap((item) => resultOutputExportersFromFacets(item.contribution.facets ?? [])),
+      return productExporterForType(
+        packages.flatMap((item) => productExportersFromFacets(item.contribution.facets ?? [])),
         type,
       );
     },

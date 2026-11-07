@@ -16,7 +16,7 @@ import {
   wordsAt,
 } from "../src/index.js";
 import { hypitPackage } from "../src/activation.js";
-import { resultOutputExporterForType, resultOutputExportersFromFacets } from "@hypit/hypit/result";
+import { productExporterForType, productExportersFromFacets } from "@hypit/hypit/product";
 
 test("editable transcript Source compiles back to the exact evidence Record", async () => {
   const evidence = {
@@ -51,8 +51,8 @@ test("editable transcript Source compiles back to the exact evidence Record", as
 
 test("the Speech Evidence package exports structured transcripts as editable author Source", async () => {
   const evidence = { sampleFrames: 16_000, passages: [{ words: [], chars: [] }] };
-  const exporter = resultOutputExporterForType(
-    resultOutputExportersFromFacets(hypitPackage.facets),
+  const exporter = productExporterForType(
+    productExportersFromFacets(hypitPackage.facets),
     speechEvidenceTypes.transcript,
   );
   assert.notEqual(exporter, undefined);

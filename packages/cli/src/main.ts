@@ -139,9 +139,9 @@ export async function runCli(
         args,
         projectRoot: await commandProjectRoot(),
         repository: results.repository,
-        ...(distribution.resolveResultOutputExporter === undefined ? {} : {
-          resolveOutputExporter: async (type: Parameters<NonNullable<typeof distribution.resolveResultOutputExporter>>[0]) =>
-            await distribution.resolveResultOutputExporter!(type, {
+        ...(distribution.resolveProductExporter === undefined ? {} : {
+          resolveProductExporter: async (type: Parameters<NonNullable<typeof distribution.resolveProductExporter>>[0]) =>
+            await distribution.resolveProductExporter!(type, {
               packageRoot: await packageRootForProject(await commandProjectRoot()),
               ...(distribution.packageRoot === undefined
                 ? {}

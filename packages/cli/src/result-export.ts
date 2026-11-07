@@ -5,8 +5,8 @@ import { basename, dirname, join, resolve } from "node:path";
 import type {
   BuildResultHistory,
   ResolvedBuildResultOutput,
-  ResultOutputExporter,
 } from "@hypit/result";
+import type { ProductExporter } from "@hypit/product";
 import { buildResultOutput } from "@hypit/result";
 import { isBlobRef, sameType } from "@hypit/protocol";
 
@@ -59,7 +59,7 @@ export async function exportBuildResultOutput(
   build: string,
   output: string,
   destination: string,
-  resolveExporter?: (type: ResolvedBuildResultOutput["type"]) => Promise<ResultOutputExporter | undefined>,
+  resolveExporter?: (type: ResolvedBuildResultOutput["type"]) => Promise<ProductExporter | undefined>,
 ): Promise<BuildResultExport> {
   const manifest = await repository.read(build);
   if (manifest === undefined) throw new Error(`Build Result ${build} does not exist`);

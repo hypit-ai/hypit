@@ -12,16 +12,3 @@ export type {
   ResolvedBuildResultOutput,
   BuildResultHistory,
 } from "./types.js";
-export {
-  createResultOutputExporterFacet,
-  resultOutputExporterForType,
-  resultOutputExportersFromFacets,
-  resultOutputExporterFacetAbi,
-} from "./exporter.js";
-export type {
-  ResultOutputExport,
-  ResultOutputExportBytes,
-  ResultOutputExportContext,
-  ResultOutputExporter,
-  ResultOutputExporterFacet,
-} from "./exporter.js";

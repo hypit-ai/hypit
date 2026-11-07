@@ -21,3 +21,16 @@ export type {
   ProductValuePath,
   StoredProduct,
 } from "./materialize.js";
+export {
+  createProductExporterFacet,
+  productExporterForType,
+  productExportersFromFacets,
+  productExporterFacetAbi,
+} from "./exporter.js";
+export type {
+  ProductExport,
+  ProductExportBytes,
+  ProductExportContext,
+  ProductExporter,
+  ProductExporterFacet,
+} from "./exporter.js";

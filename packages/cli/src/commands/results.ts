@@ -1,6 +1,7 @@
 import { realpath } from "node:fs/promises";
 
-import type { BuildResultHistory, ResultOutputExporter } from "@hypit/result";
+import type { ProductExporter } from "@hypit/product";
+import type { BuildResultHistory } from "@hypit/result";
 import type { TypeRef } from "@hypit/protocol";
 
 import type { CliCommand, ProjectResultCommand } from "../command.js";
@@ -31,10 +32,10 @@ export async function runProjectResultCommand(input: {
   readonly args: ProjectResultCommand;
   readonly projectRoot: string;
   readonly repository: BuildResultHistory;
-  readonly resolveOutputExporter?: (type: TypeRef) => Promise<ResultOutputExporter | undefined>;
+  readonly resolveProductExporter?: (type: TypeRef) => Promise<ProductExporter | undefined>;
   readonly write: OperationalWriter;
 }): Promise<void> {
-  const { args, projectRoot, repository, resolveOutputExporter, write } = input;
+  const { args, projectRoot, repository, resolveProductExporter, write } = input;
   if (args.command === "builds") {
     const page = await repository.browse({
       limit: args.limit,
@@ -147,7 +148,7 @@ export async function runProjectResultCommand(input: {
     args.build,
     args.outputName,
     args.destination,
-    resolveOutputExporter,
+    resolveProductExporter,
   );
   const machine = {
     format: "hypit.cli-result-export@1" as const,

@@ -553,6 +553,9 @@ importers:
       '@hypit/producer':
         specifier: workspace:*
         version: link:../producer
+      '@hypit/product':
+        specifier: workspace:*
+        version: link:../product
       '@hypit/project':
         specifier: workspace:*
         version: link:../project
@@ -1534,6 +1537,9 @@ importers:
 
   packages/product:
     dependencies:
+      '@hypit/facet':
+        specifier: workspace:^0.0.0-dev
+        version: link:../facet
       '@hypit/protocol':
         specifier: workspace:^0.0.0-dev
         version: link:../protocol
@@ -2105,9 +2111,6 @@ importers:
 
   packages/result:
     dependencies:
-      '@hypit/facet':
-        specifier: workspace:^0.0.0-dev
-        version: link:../facet
       '@hypit/product':
         specifier: workspace:^0.0.0-dev
         version: link:../product

@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
 import { FileBuildResult, FileBuildResultStore } from "../../../runtime-local/src/result-storage/index.js";
-import type { ResultOutputExporter } from "@hypit/result";
+import type { ProductExporter } from "@hypit/product";
 import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
 import { sameType } from "@hypit/protocol";
 
@@ -58,7 +58,7 @@ export function resultDistribution(): CliDistribution {
         close() {},
       };
     },
-    async resolveResultOutputExporter(type: TypeRef): Promise<ResultOutputExporter | undefined> {
+    async resolveProductExporter(type: TypeRef): Promise<ProductExporter | undefined> {
       if (!sameType(type, { module: { name: "example.speech", version: "1" }, name: "StructuredValue" })) {
         return undefined;
       }

@@ -1,6 +1,7 @@
 import type { Compiler } from "@hypit/compiler";
 import type { LoadedPackage, LogicalPackageAddress, PackageContribution } from "@hypit/loader";
-import type { BuildResultHistory, ResultOutputExporter } from "@hypit/result";
+import type { ProductExporter } from "@hypit/product";
+import type { BuildResultHistory } from "@hypit/result";
 import type { TypeRef } from "@hypit/protocol";
 import type { Workspace } from "@hypit/workspace";
 import type { CliDiagnostic, CliResultRepositoryLocation, CliRuntimeHost } from "./runtime-port.js";
@@ -66,10 +67,10 @@ export type CliDistribution = {
     close(): void | Promise<void>;
   }>;
   /** Resolve the package-owned author export for one published structured Type. */
-  resolveResultOutputExporter?(type: TypeRef, options: {
+  resolveProductExporter?(type: TypeRef, options: {
     readonly packageRoot: string;
     readonly distributionPackageRoot?: string;
-  }): Promise<ResultOutputExporter | undefined>;
+  }): Promise<ProductExporter | undefined>;
   /** Actively diagnose this project's Result storage without reading its history. */
   diagnoseProjectResults(projectRoot: string, options: {
     readonly packageRoot: string;

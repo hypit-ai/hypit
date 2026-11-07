@@ -15,3 +15,7 @@ Product also owns the neutral materialization of typed values. Scalars remain in
 become `product-file` references, and arrays or objects use `hypit.product-value@1` documents whose
 resource leaves point to Product-owned files. The materializer receives an abstract write target and
 resource opener; it contains no filesystem, Runtime, model or Result implementation.
+
+Structured Type owners may contribute a `hypit.product-exporter@1` facet that projects one Product
+into an author-facing file. Product resolves that decentralized capability by exact Type; it does not
+maintain an exporter registry or a switch over known media and evidence kinds.

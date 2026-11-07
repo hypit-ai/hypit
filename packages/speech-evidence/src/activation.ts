@@ -2,7 +2,7 @@ import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
 import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
-import { createResultOutputExporterFacet } from "@hypit/hypit/result";
+import { createProductExporterFacet } from "@hypit/hypit/product";
 import type { SpeechTranscriptEvidence } from "./index.js";
 import { speechEvidenceComponent } from "./component.js";
 import { speechTranscriptAuthorDeclaration, speechTranscriptMarkupDeclaration, speechEvidenceManifest, speechEvidenceModuleRef, speechEvidenceTypes, speechTranscriptSource } from "./index.js";
@@ -19,7 +19,7 @@ export const hypitPackage = {
       module: speechEvidenceModuleRef,
       declaration: speechTranscriptMarkupDeclaration,
     }),
-    createResultOutputExporterFacet({
+    createProductExporterFacet({
       type: speechEvidenceTypes.transcript,
       export({ value }) {
         const source = speechTranscriptSource("transcript", value as unknown as SpeechTranscriptEvidence);
