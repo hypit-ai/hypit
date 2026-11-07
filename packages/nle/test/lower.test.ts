@@ -7,7 +7,13 @@ import {
   pointwiseOperatorTemporalSupport,
   type ProgramSource,
 } from "@hypit/audiovisual";
-import { sealAudioProgram, verifyAudioProgram } from "@hypit/audio-program";
+import { sealAudioProgram, verifyAudioProgram, type AudioOutputSampling } from "@hypit/audio-program";
+import {
+  createNleTerminalLinkHost,
+  linkNleProjectTerminals,
+  lowerNleProjectToAudioProgram,
+  lowerNleProjectToHtmlProgram,
+} from "../../html-video/src/index.js";
 import { visualProgramHtmlSource } from "@hypit/audiovisual-html";
 import { assertHtmlProgram, htmlVisual, selectHtmlVideoSources } from "@hypit/html-program";
 import { prepareMedia } from "@hypit/media";
@@ -18,16 +24,12 @@ import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
   applyNleTransaction,
-  createNleLoweringHost,
   createNleProject,
   lowerNleProjectToAudiovisual,
-  lowerNleProjectToAudioProgram,
-  lowerNleProjectToHtmlProgram,
   nlePointwisePictureEffect,
   type NleComponentItem,
   type NlePictureAppearance,
   type NleProject,
-  type NleResolvedItemSource,
 } from "../src/index.js";
 
 function prepared() {
@@ -61,13 +63,13 @@ const full: NlePictureAppearance = {
   effects: [],
 };
 
-function visualSource(id: string, marker: string): NleResolvedItemSource {
+function visualSource(id: string, marker: string) {
   const spatialDomain = sealLocalSpatialDomain({
     id: `${id}:picture`, region: { x: 0, y: 0, width: 100, height: 100 },
   });
   const source: ProgramSource = {
     id,
-    outputs: { picture: { kind: "constant", type: pictureType, spatialDomain } },
+    outputs: { picture: { kind: "constant" as const, type: pictureType, spatialDomain } },
   };
   return {
     source,
@@ -79,15 +81,15 @@ function visualSource(id: string, marker: string): NleResolvedItemSource {
   };
 }
 
-function audioComponentSource(id: string): NleResolvedItemSource {
+function audioComponentSource(id: string) {
   const domain = sealLocalTemporalDomain({
     id: `${id}:audio`,
     duration: exactTemporalValueFromFrames(4, { frameRate: { numerator: 2, denominator: 1 } }),
   });
   return {
-    source: { id, outputs: { audio: { kind: "signal", type: audioType, domain } } },
+    source: { id, outputs: { audio: { kind: "signal" as const, type: audioType, domain } } },
     audioOutput: "audio",
-    audio: (sampling) => ({
+    audio: (sampling: AudioOutputSampling) => ({
       source: id,
       output: "audio",
       program: sealAudioProgram({
@@ -106,12 +108,20 @@ const effectRenderer = { module: { name: "@example/effects", version: "1" }, nam
 const audioEffectRenderer = { module: { name: "@example/audio", version: "1" }, name: "gain" };
 const transitionRenderer = { module: { name: "@example/transition", version: "1" }, name: "dissolve" };
 const matteRenderer = { module: { name: "@example/matte", version: "1" }, name: "alpha" };
-const host = createNleLoweringHost([{
+const coreVisualSource = (id: string, marker: string) => {
+  const { source, pictureOutput } = visualSource(id, marker);
+  return { source, pictureOutput };
+};
+const coreAudioSource = (id: string) => {
+  const { source, audioOutput } = audioComponentSource(id);
+  return { source, audioOutput };
+};
+const host = createNleTerminalLinkHost([{
   components: [{ component: captionRenderer,
-    resolve: (item) => visualSource(`${item.id}:source`, "caption") }, { component: componentRenderer,
-    resolve: (item) => visualSource(`${item.id}:source`, "component") }, {
+    resolve: (item) => coreVisualSource(`${item.id}:source`, "caption") }, { component: componentRenderer,
+    resolve: (item) => coreVisualSource(`${item.id}:source`, "component") }, {
     component: audioComponentRenderer,
-    resolve: (item) => audioComponentSource(`${item.id}:source`),
+    resolve: (item) => coreAudioSource(`${item.id}:source`),
   }],
   effects: [{ effect: effectRenderer, resolve: (effect) => ({
     operator: nlePointwisePictureEffect(`effect:${effect.id}`, htmlVisual({
@@ -149,7 +159,16 @@ const host = createNleLoweringHost([{
       }),
     },
   }) }],
-}]);
+}], [{ components: [{
+  component: captionRenderer,
+  resolve: (item) => ({ html: visualSource(`${item.id}:source`, "caption").html }),
+}, {
+  component: componentRenderer,
+  resolve: (item) => ({ html: visualSource(`${item.id}:source`, "component").html }),
+}, {
+  component: audioComponentRenderer,
+  resolve: (item) => ({ audio: audioComponentSource(`${item.id}:source`).audio }),
+}] }]);
 
 function project(): NleProject {
   const document = createNleProject({
@@ -190,14 +209,15 @@ function project(): NleProject {
 }
 
 test("Media, caption Component and Effect lower into one audiovisual Programme", () => {
-  const lowering = lowerNleProjectToAudiovisual(project(), host);
+  const document = project();
+  const program = lowerNleProjectToAudiovisual(document, host);
 
-  assert.deepEqual(Object.keys(lowering.program.occurrences), ["camera-use", "subtitle-one", "title"]);
-  assert.equal(lowering.program.picture?.nodes["camera-use:effect:mono"]?.kind, "apply");
-  assert.equal(lowering.program.picture?.nodes["html-editorial:picture-root"]?.kind, "over");
-  assert.equal(lowering.program.audio?.nodes["camera-use:audio"]?.kind, "use");
-  assert.equal(lowering.program.audio?.nodes["camera-use:audio-effect:quiet"]?.kind, "apply");
-  assert.deepEqual(lowering.htmlSources.sources.map((source) => source.source),
+  assert.deepEqual(Object.keys(program.occurrences), ["camera-use", "subtitle-one", "title"]);
+  assert.equal(program.picture?.nodes["camera-use:effect:mono"]?.kind, "apply");
+  assert.equal(program.picture?.nodes["html-editorial:picture-root"]?.kind, "over");
+  assert.equal(program.audio?.nodes["camera-use:audio"]?.kind, "use");
+  assert.equal(program.audio?.nodes["camera-use:audio-effect:quiet"]?.kind, "apply");
+  assert.deepEqual(linkNleProjectTerminals(document, host).htmlSources.sources.map((source) => source.source),
     ["camera-prepared", "subtitle-one:source", "title:source"]);
 });
 
@@ -243,10 +263,10 @@ test("Transition, matte and editing Group remain direct NLE relations", () => {
   }, {
     kind: "group.add", group: { id: "pair", name: "Pair", items: ["outgoing", "incoming"] },
   }] });
-  const lowering = lowerNleProjectToAudiovisual(document, host);
-  assert.equal(lowering.program.picture?.nodes["join:apply"]?.kind, "apply");
-  assert.equal(lowering.program.picture?.nodes["content:matte:content-alpha"]?.kind, "apply");
-  assert.equal(Object.hasOwn(lowering.program.picture?.nodes ?? {}, "pair"), false);
+  const program = lowerNleProjectToAudiovisual(document, host);
+  assert.equal(program.picture?.nodes["join:apply"]?.kind, "apply");
+  assert.equal(program.picture?.nodes["content:matte:content-alpha"]?.kind, "apply");
+  assert.equal(Object.hasOwn(program.picture?.nodes ?? {}, "pair"), false);
   const html = lowerNleProjectToHtmlProgram(document, host);
   assert.match(html.html, /data-nle-transition/u);
   assert.match(html.html, /data-nle-matte/u);
@@ -281,9 +301,9 @@ test("an Audio-only package Component closes through the same NLE and terminal c
       }],
     },
   }] });
-  const lowering = lowerNleProjectToAudiovisual(document, host);
-  assert.equal(lowering.program.picture, undefined);
-  assert.equal(lowering.program.audio?.nodes["tone:audio-effect:quiet"]?.kind, "apply");
+  const program = lowerNleProjectToAudiovisual(document, host);
+  assert.equal(program.picture, undefined);
+  assert.equal(program.audio?.nodes["tone:audio-effect:quiet"]?.kind, "apply");
   const audio = lowerNleProjectToAudioProgram(document, host, { sampleRate: 48_000 });
   assert.doesNotThrow(() => verifyAudioProgram(audio));
   assert.ok(audio.graph.nodes.some((node) => node.kind === "process"));
@@ -313,8 +333,8 @@ test("a Compound Item closes one child NLE Project as an ordinary nested Source"
         localStartFrame: 0, enabled: true, picture: full, audio: { effects: [] },
       }] },
   }] });
-  const lowering = lowerNleProjectToAudiovisual(parent, host);
-  assert.equal(lowering.program.occurrences.nested?.source.id, "child");
+  const program = lowerNleProjectToAudiovisual(parent, host);
+  assert.equal(program.occurrences.nested?.source.id, "child");
   const html = lowerNleProjectToHtmlProgram(parent, host);
   assert.equal(selectHtmlVideoSources(html).length, 1);
   const audio = lowerNleProjectToAudioProgram(parent, host, { sampleRate: 48_000 });

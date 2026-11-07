@@ -342,6 +342,9 @@ importers:
       '@hypit/html-program':
         specifier: workspace:^0.2.0
         version: link:../../../../packages/html-program
+      '@hypit/html-video':
+        specifier: workspace:^0.2.1
+        version: link:../../../../packages/html-video
       '@hypit/hypit':
         specifier: workspace:^0.4.0
         version: link:../../../..
@@ -790,6 +793,9 @@ importers:
       '@hypit/html-program':
         specifier: workspace:*
         version: link:../html-program
+      '@hypit/html-video':
+        specifier: workspace:^0.2.1
+        version: link:../html-video
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../nle
@@ -1502,6 +1508,18 @@ importers:
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:../audio-program
+      '@hypit/audiovisual':
+        specifier: workspace:^0.1.0
+        version: link:../audiovisual
+      '@hypit/audiovisual-audio':
+        specifier: workspace:^0.1.0
+        version: link:../audiovisual-audio
+      '@hypit/audiovisual-html':
+        specifier: workspace:^0.1.0
+        version: link:../audiovisual-html
+      '@hypit/facet':
+        specifier: workspace:*
+        version: link:../facet
       '@hypit/html-program':
         specifier: workspace:^0.2.0
         version: link:../html-program
@@ -1514,16 +1532,13 @@ importers:
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../nle
+      '@hypit/spatial':
+        specifier: workspace:^0.1.1
+        version: link:../spatial
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
     devDependencies:
-      '@hypit/audiovisual':
-        specifier: workspace:*
-        version: link:../audiovisual
-      '@hypit/audiovisual-html':
-        specifier: workspace:*
-        version: link:../audiovisual-html
       '@hypit/author':
         specifier: workspace:*
         version: link:../author
@@ -1810,27 +1825,15 @@ importers:
       '@hypit/atomic-file':
         specifier: workspace:*
         version: link:../atomic-file
-      '@hypit/audio-program':
-        specifier: workspace:^0.1.0
-        version: link:../audio-program
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
         version: link:../audiovisual
-      '@hypit/audiovisual-audio':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual-audio
-      '@hypit/audiovisual-html':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual-html
       '@hypit/audiovisual-media':
         specifier: workspace:^0.1.0
         version: link:../audiovisual-media
       '@hypit/facet':
         specifier: workspace:*
         version: link:../facet
-      '@hypit/html-program':
-        specifier: workspace:^0.2.0
-        version: link:../html-program
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media

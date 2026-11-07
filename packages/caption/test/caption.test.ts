@@ -12,12 +12,14 @@ import {
   compileAudiovisualHtmlProgram,
   visualProgramHtmlSource,
 } from "@hypit/audiovisual-html";
+import {
+  createNleTerminalLinkHostFromFacets,
+  lowerNleProjectToHtmlProgram,
+} from "../../html-video/src/index.js";
 import { htmlVisual } from "@hypit/html-program";
 import {
   applyNleTransaction,
-  createNleLoweringHostFromFacets,
   createNleProject,
-  lowerNleProjectToHtmlProgram,
 } from "@hypit/nle";
 import {
   NleSubjectProjectorRegistry,
@@ -169,7 +171,7 @@ test("Caption timing and presentation bake once into ordinary editable NLE block
   ]);
 
   const html = lowerNleProjectToHtmlProgram(materialized,
-    createNleLoweringHostFromFacets(captionHypitPackage.facets));
+    createNleTerminalLinkHostFromFacets(captionHypitPackage.facets));
   assert.match(html.html, />First</u);
   assert.doesNotMatch(html.html, />Second</u);
   assert.match(html.html, />Third</u);

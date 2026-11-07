@@ -222,7 +222,7 @@ test("an animated NLE Effect round-trips and lowers its moved Item to a factual 
   assert.deepEqual(editSession.current, { ...reopened, revision: 3 });
 
   const initial = lowerNleProjectToAudiovisual(reopened, host);
-  const initialNode = initial.program.picture?.nodes["clip:effect:animated"];
+  const initialNode = initial.picture?.nodes["clip:effect:animated"];
   assert.equal(initialNode?.kind, "apply");
   if (initialNode?.kind !== "apply") throw new Error("Animated Effect did not lower to apply.");
   const initialMapping = initialNode.controlMappings.filter;
@@ -230,14 +230,14 @@ test("an animated NLE Effect round-trips and lowers its moved Item to a factual 
   assert.deepEqual(resolveTemporalControlPosition(
     initialNode.operator.temporalControls.filter!,
     initialMapping,
-    initial.program.domain,
+    initial.domain,
     at(1, 2),
   ), at(1, 2));
 
   const moved = applyNleTransaction(reopened, { revision: 1, commands: [{
     kind: "item.move", ids: ["clip"], deltaFrames: 30,
   }] });
-  const movedProgram = lowerNleProjectToAudiovisual(moved, host).program;
+  const movedProgram = lowerNleProjectToAudiovisual(moved, host);
   const movedNode = movedProgram.picture?.nodes["clip:effect:animated"];
   if (movedNode?.kind !== "apply") throw new Error("Moved animated Effect did not lower to apply.");
   const movedMapping = movedNode.controlMappings.filter;

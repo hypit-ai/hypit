@@ -17,6 +17,10 @@ import {
 import type { AudiovisualAuthorSpec } from "@hypit/audiovisual-author";
 import { compileAudiovisualHtmlProgram } from "@hypit/audiovisual-html";
 import {
+  createNleTerminalLinkHostFromFacets,
+  lowerNleProjectToHtmlProgram,
+} from "../../../../../packages/html-video/src/index.js";
+import {
   bindAuthorFragment,
   elaborateGraphFragment,
   mergeFragmentContributions,
@@ -34,10 +38,8 @@ import {
   createComponentMaterialization,
   createNleAuthoringHostFromFacets,
   createNleEditSession,
-  createNleLoweringHostFromFacets,
   createNleProject,
   findNleItem,
-  lowerNleProjectToHtmlProgram,
   undoNleEdit,
 } from "@hypit/nle";
 import { spatialManifest } from "@hypit/spatial";
@@ -137,7 +139,7 @@ test("the installed project package resolves a materialized NLE Component", () =
     atFrame: 0, durationFrames: 2,
   }));
   const html = lowerNleProjectToHtmlProgram(project,
-    createNleLoweringHostFromFacets(titleCardHypitPackage.facets));
+    createNleTerminalLinkHostFromFacets(titleCardHypitPackage.facets));
   assert.match(html.html, /A materialized Component/u);
   assert.match(html.html, /resolved by its project package/u);
 
@@ -155,7 +157,7 @@ test("the installed project package resolves a materialized NLE Component", () =
   let session = createNleEditSession(project);
   session = commitNleEdit(session, { label: "Edit title", transaction });
   const editedHtml = lowerNleProjectToHtmlProgram(session.current,
-    createNleLoweringHostFromFacets(titleCardHypitPackage.facets));
+    createNleTerminalLinkHostFromFacets(titleCardHypitPackage.facets));
   assert.match(editedHtml.html, /Edited by its package/u);
   const editedItem = findNleItem(session.current, "opening").item;
   if (editedItem.kind !== "component") throw new Error("Title Card Item changed kind.");

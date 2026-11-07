@@ -16,26 +16,7 @@ import {
   type PictureNode,
   type ProgramSource,
 } from "@hypit/audiovisual";
-import { sealAudioProgram } from "@hypit/audio-program";
-import type { AudioOutputSampling, AudioProgram } from "@hypit/audio-program";
-import {
-  appendAudiovisualAudioSource,
-  createAudiovisualAudioSourceSet,
-  lowerAudiovisualAudioProgram,
-  preparedMediaAudioSource,
-  sealAudiovisualAudioSource,
-} from "@hypit/audiovisual-audio";
-import {
-  assertAudiovisualHtmlSourceSet,
-  audiovisualProgramHtmlSource,
-  lowerAudiovisualPictureProgramToHtmlProgram,
-  preparedMediaHtmlSource,
-  type AudiovisualHtmlSource,
-  type AudiovisualHtmlSourceSet,
-} from "@hypit/audiovisual-html";
-import type { AudiovisualAudioSource } from "@hypit/audiovisual-audio";
 import { programSourceFromPreparedMedia } from "@hypit/audiovisual-media";
-import type { HtmlProgram } from "@hypit/html-program";
 import { sameType } from "@hypit/protocol";
 import { compareExactTemporalValues, sealLocalTemporalDomain, sealTemporalMap } from "@hypit/temporal/algebra";
 import { exactTemporalValueFromFrames } from "@hypit/temporal/sampling";
@@ -58,14 +39,9 @@ import type {
   NleTrack,
 } from "./types.js";
 
-export type NleAudiovisualLowering = {
-  readonly program: AudiovisualProgram;
-  readonly htmlSources: AudiovisualHtmlSourceSet;
-  readonly audioSources: readonly {
-    readonly source: string;
-    readonly output: string;
-    readonly resolve: (sampling: AudioOutputSampling) => AudiovisualAudioSource;
-  }[];
+/** Read-only observation seam for downstream compilation sessions. It is never persisted in an NLE Project. */
+export type NleLoweringObserver = {
+  readonly lowered: (project: NleProject, program: AudiovisualProgram) => void;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -139,37 +115,17 @@ function fitMap(
   });
 }
 
-function addHtmlSource(sources: Map<string, AudiovisualHtmlSource>, source: AudiovisualHtmlSource): void {
-  const key = `${source.source}\u0000${source.output}`;
-  const existing = sources.get(key);
-  if (existing !== undefined) {
-    assert(JSON.stringify(existing) === JSON.stringify(source),
-      `NLE lowering resolved conflicting HTML implementations for ${source.source}.${source.output}.`);
-    return;
-  }
-  sources.set(key, structuredClone(source));
-}
-
 function validateResolvedSource(value: NleResolvedItemSource, item: NleItem): void {
   assertProgramSource(value.source);
-  assert((value.pictureOutput === undefined) === (value.html === undefined),
-    `NLE ${item.kind} Item ${item.id} resolved an incomplete Picture implementation.`);
   if (value.pictureOutput !== undefined) {
     const picture = value.source.outputs[value.pictureOutput];
     assert(picture !== undefined && sameType(picture.type, pictureType) && picture.spatialDomain !== undefined,
       `NLE ${item.kind} Item ${item.id} resolved no Picture output ${value.pictureOutput}.`);
-    assert(value.html!.source === value.source.id && value.html!.output === value.pictureOutput,
-      `NLE ${item.kind} Item ${item.id} HTML implementation disagrees with its ProgramSource.`);
   }
   if (value.audioOutput !== undefined) {
     const audio = value.source.outputs[value.audioOutput];
     assert(audio !== undefined && sameType(audio.type, audioType),
       `NLE ${item.kind} Item ${item.id} resolved no Audio output ${value.audioOutput}.`);
-    assert(typeof value.audio === "function",
-      `NLE ${item.kind} Item ${item.id} resolved no terminal Audio implementation.`);
-  } else {
-    assert(value.audio === undefined,
-      `NLE ${item.kind} Item ${item.id} resolved Audio implementation without an output.`);
   }
 }
 
@@ -178,6 +134,7 @@ function sourceForItem(
   track: NleTrack,
   item: NleItem,
   host: NleLoweringHost,
+  observer?: NleLoweringObserver,
 ): NleResolvedItemSource {
   if (item.kind === "component") {
     const value = host.resolveComponent(item, { project, track });
@@ -185,22 +142,12 @@ function sourceForItem(
     return value;
   }
   if (item.kind === "compound") {
-    const child = lowerNleProjectToAudiovisual(item.project, host);
-    const source = audiovisualProgramSource(child.program);
+    const child = lowerNleProjectToAudiovisual(item.project, host, observer);
+    const source = audiovisualProgramSource(child);
     return {
       source,
-      ...(child.program.picture === undefined ? {} : {
-        pictureOutput: "picture",
-        html: audiovisualProgramHtmlSource(child.program, child.htmlSources),
-      }),
-      ...(child.program.audio === undefined ? {} : { audioOutput: "audio" }),
-      ...(child.program.audio === undefined ? {} : {
-        audio: (sampling: AudioOutputSampling) => ({
-          source: child.program.id,
-          output: "audio",
-          program: lowerNleProjectToAudioProgram(item.project, host, sampling),
-        }),
-      }),
+      ...(child.picture === undefined ? {} : { pictureOutput: "picture" }),
+      ...(child.audio === undefined ? {} : { audioOutput: "audio" }),
     };
   }
   const media = findNleMedia(project, item.media).prepared;
@@ -210,10 +157,6 @@ function sourceForItem(
     source,
     ...(pictureOutput === undefined ? {} : { pictureOutput }),
     ...(source.outputs.audio === undefined ? {} : { audioOutput: "audio" }),
-    ...(source.outputs.audio === undefined ? {} : {
-      audio: (sampling: AudioOutputSampling) => preparedMediaAudioSource(media, sampling),
-    }),
-    ...(pictureOutput === undefined ? {} : { html: preparedMediaHtmlSource(media) }),
   };
 }
 
@@ -319,7 +262,8 @@ function effectNode(
 export function lowerNleProjectToAudiovisual(
   project: NleProject,
   host: NleLoweringHost,
-): NleAudiovisualLowering {
+  observer?: NleLoweringObserver,
+): AudiovisualProgram {
   assertNleProject(project);
   const endFrame = nleProjectEndFrame(project);
   assert(endFrame > 0, "NLE Project has no enabled Items to lower.");
@@ -329,8 +273,6 @@ export function lowerNleProjectToAudiovisual(
   const pictureNodes: Record<string, PictureNode> = {};
   const audioNodes: Record<string, AudioNode> = {};
   const audioInputs: string[] = [];
-  const htmlSources = new Map<string, AudiovisualHtmlSource>();
-  const audioSources = new Map<string, NleAudiovisualLowering["audioSources"][number]>();
   const located = new Map<string, { readonly item: NleItem; readonly track: NleTrack }>();
   const matteByContent = new Map(project.mattes.map((matte) => [matte.content, matte] as const));
   const matteSources = new Set(project.mattes.map((matte) => matte.matte));
@@ -367,31 +309,22 @@ export function lowerNleProjectToAudiovisual(
     if (!needsPicture && !needsAudio) continue;
     const { item, track } = value;
     const context = { project, track } as const;
-    const resolved = sourceForItem(project, track, item, host);
+    const resolved = sourceForItem(project, track, item, host, observer);
     const outputs: string[] = [];
     if (needsPicture) {
-      assert(resolved.pictureOutput !== undefined && resolved.html !== undefined,
-        `NLE Item ${item.id} resolved no Picture implementation.`);
+      assert(resolved.pictureOutput !== undefined,
+        `NLE Item ${item.id} resolved no Picture output.`);
       outputs.push(resolved.pictureOutput);
     }
     if (needsAudio) {
       assert(resolved.audioOutput !== undefined,
         `NLE ${item.kind} Item ${item.id} requests Audio but resolved no Audio output.`);
       outputs.push(resolved.audioOutput);
-      const key = `${resolved.source.id}\u0000${resolved.audioOutput}`;
-      if (!audioSources.has(key)) {
-        audioSources.set(key, {
-          source: resolved.source.id,
-          output: resolved.audioOutput,
-          resolve: resolved.audio!,
-        });
-      }
     }
     occurrences[item.id] = occurrence(project, item, domain, resolved.source, [...new Set(outputs)]);
 
     if (needsPicture) {
       const pictureOutput = resolved.pictureOutput!;
-      addHtmlSource(htmlSources, resolved.html!);
       const appearance = item.picture!;
       const use = `${item.id}:picture`;
       const placed = `${item.id}:placed`;
@@ -597,76 +530,8 @@ export function lowerNleProjectToAudiovisual(
     ...(picture === undefined ? {} : { pictureDomain, picture }),
     ...(audio === undefined ? {} : { audio }),
   });
-  const sources = { sources: [...htmlSources.values()] };
-  assertAudiovisualHtmlSourceSet(sources);
-  return { program, htmlSources: structuredClone(sources), audioSources: [...audioSources.values()] };
-}
-
-export function lowerNleAudiovisualToHtmlProgram(
-  project: NleProject,
-  lowering: NleAudiovisualLowering,
-): HtmlProgram {
-  assert(lowering.program.picture !== undefined && lowering.program.pictureDomain !== undefined,
-    "NLE Project has no Picture output for HTML lowering.");
-  const viewport = sealLocalSpatialDomain({
-    id: `${project.id}:viewport`,
-    region: { x: 0, y: 0, width: project.canvas.width, height: project.canvas.height },
-  });
-  return lowerAudiovisualPictureProgramToHtmlProgram({
-    program: lowering.program,
-    sources: lowering.htmlSources,
-    output: {
-      id: `${project.id}:html`,
-      sampling: { frameRate: project.frameRate },
-      canvas: structuredClone(project.canvas),
-      pictureMapping: sealSpatialMap({
-        target: viewport,
-        source: lowering.program.pictureDomain,
-        transform: { kind: "affine", xx: 1, xy: 0, yx: 0, yy: 1, tx: 0, ty: 0 },
-      }),
-    },
-  });
-}
-
-export function lowerNleProjectToHtmlProgram(project: NleProject, host: NleLoweringHost): HtmlProgram {
-  return lowerNleAudiovisualToHtmlProgram(project, lowerNleProjectToAudiovisual(project, host));
-}
-
-export function lowerNleAudiovisualToAudioProgram(
-  lowering: NleAudiovisualLowering,
-  sampling: AudioOutputSampling,
-  options: { readonly silenceWhenAbsent?: boolean } = {},
-): AudioProgram {
-  if (lowering.program.audio === undefined) {
-    assert(options.silenceWhenAbsent === true,
-      "NLE Project has no Audio output for AudioProgram lowering.");
-    return sealAudioProgram({
-      domain: structuredClone(lowering.program.domain),
-      sampling: structuredClone(sampling),
-      graph: { nodes: [{ kind: "silence", id: `${lowering.program.id}:silence` }],
-        output: { node: `${lowering.program.id}:silence` } },
-    });
-  }
-  let sources = createAudiovisualAudioSourceSet();
-  for (const implementation of lowering.audioSources) {
-    const resolved = implementation.resolve(sampling);
-    sources = appendAudiovisualAudioSource(sources, sealAudiovisualAudioSource({
-      ...resolved,
-      source: implementation.source,
-      output: implementation.output,
-    }));
-  }
-  return lowerAudiovisualAudioProgram({ program: lowering.program, sampling, sources });
-}
-
-/** Lower the same flat project to the continuous Audio terminal without a Build or author graph. */
-export function lowerNleProjectToAudioProgram(
-  project: NleProject,
-  host: NleLoweringHost,
-  sampling: AudioOutputSampling,
-): AudioProgram {
-  const lowering = lowerNleProjectToAudiovisual(project, host);
-  return lowerNleAudiovisualToAudioProgram(lowering, sampling);
+  observer?.lowered(project, program);
+  return program;
 }
 
 /** Useful for simple package resolvers and tests that need a pointwise one-input HTML effect. */

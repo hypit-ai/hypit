@@ -1,11 +1,16 @@
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createNleAuthoringFacet, createNlePackageFacet } from "@hypit/nle";
+import { createNleHtmlVideoPackageFacet } from "@hypit/html-video";
 
 import { titleCardComponent } from "./component.js";
 import { titleCardAuthorFacet } from "./declaration.js";
 import { titleCardHtmlManifest, titleCardManifest } from "./manifest.js";
-import { titleCardNleAuthoring, titleCardNleResolver } from "./nle.js";
+import {
+  titleCardNleAuthoring,
+  titleCardNleHtmlVideoResolver,
+  titleCardNleResolver,
+} from "./nle.js";
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
@@ -15,6 +20,7 @@ export const hypitPackage = {
     createRefinementPackageFacet(titleCardComponent.refinements),
     titleCardAuthorFacet,
     createNlePackageFacet({ components: [titleCardNleResolver] }),
+    createNleHtmlVideoPackageFacet({ components: [titleCardNleHtmlVideoResolver] }),
     createNleAuthoringFacet({ componentParameters: [titleCardNleAuthoring] }),
   ],
 };

@@ -1,7 +1,4 @@
 import type { AudioOperator, PictureOperator, ProgramSource } from "@hypit/audiovisual";
-import type { AudioOutputSampling } from "@hypit/audio-program";
-import type { AudiovisualAudioSource } from "@hypit/audiovisual-audio";
-import type { AudiovisualHtmlSource } from "@hypit/audiovisual-html";
 import type { PreparedMedia } from "@hypit/media";
 import type { CanonicalValue, ModuleRef } from "@hypit/protocol";
 import type { LocalTemporalDomain } from "@hypit/temporal/algebra";
@@ -142,9 +139,6 @@ export type NleResolvedItemSource = {
   readonly source: ProgramSource;
   readonly pictureOutput?: string;
   readonly audioOutput?: string;
-  readonly html?: AudiovisualHtmlSource;
-  /** Sampling-dependent terminal implementation for a package-owned Audio output. */
-  readonly audio?: (sampling: AudioOutputSampling) => AudiovisualAudioSource;
 };
 
 export type NleResolvedEffect = {

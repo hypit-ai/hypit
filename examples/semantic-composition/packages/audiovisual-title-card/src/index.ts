@@ -16,6 +16,7 @@ export {
   assertTitleCardNleParameters,
   editTitleCardNleParameters,
   titleCardNleAuthoring,
+  titleCardNleHtmlVideoResolver,
   titleCardNleResolver,
   titleCardNleSymbol,
 } from "./nle.js";

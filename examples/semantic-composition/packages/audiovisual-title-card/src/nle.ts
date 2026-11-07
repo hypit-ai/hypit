@@ -1,8 +1,11 @@
 import type {
+  NleComponentItem,
   NleComponentParameterAuthoring,
   NleComponentResolver,
+  NleLoweringContext,
   NlePackageSymbol,
 } from "@hypit/nle";
+import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
 import { canonicalize } from "@hypit/protocol";
 import { exactTemporalValueFromFrames } from "@hypit/temporal/sampling";
 
@@ -88,29 +91,39 @@ export function editTitleCardNleParameters(
   throw new Error("NLE Title Card edit.kind is invalid.");
 }
 
+function resolveTitleCard(item: NleComponentItem, { project }: NleLoweringContext) {
+  const parameters = item.parameters as unknown;
+  assertTitleCardNleParameters(parameters);
+  const spec: TitleCardSpec = {
+    id: `${item.id}:source`,
+    duration: exactTemporalValueFromFrames(item.localStartFrame + item.durationFrames, {
+      frameRate: project.frameRate,
+    }),
+    width: project.canvas.width,
+    height: project.canvas.height,
+    title: parameters.title,
+    subtitle: parameters.subtitle,
+    background: parameters.background,
+    foreground: parameters.foreground,
+  };
+  return {
+    source: titleCardProgramSource(spec),
+    pictureOutput: "picture",
+    html: titleCardHtmlSource(spec),
+  };
+}
+
 export const titleCardNleResolver: NleComponentResolver = {
   component: titleCardNleSymbol,
-  resolve: (item, { project }) => {
-    const parameters = item.parameters as unknown;
-    assertTitleCardNleParameters(parameters);
-    const spec: TitleCardSpec = {
-      id: `${item.id}:source`,
-      duration: exactTemporalValueFromFrames(item.localStartFrame + item.durationFrames, {
-        frameRate: project.frameRate,
-      }),
-      width: project.canvas.width,
-      height: project.canvas.height,
-      title: parameters.title,
-      subtitle: parameters.subtitle,
-      background: parameters.background,
-      foreground: parameters.foreground,
-    };
-    return {
-      source: titleCardProgramSource(spec),
-      pictureOutput: "picture",
-      html: titleCardHtmlSource(spec),
-    };
+  resolve: (item, context) => {
+    const { source, pictureOutput } = resolveTitleCard(item, context);
+    return { source, pictureOutput };
   },
+};
+
+export const titleCardNleHtmlVideoResolver: NleHtmlVideoComponentResolver = {
+  component: titleCardNleSymbol,
+  resolve: (item, context) => ({ html: resolveTitleCard(item, context).html }),
 };
 
 export const titleCardNleAuthoring: NleComponentParameterAuthoring = {

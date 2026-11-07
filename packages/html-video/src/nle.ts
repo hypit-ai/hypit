@@ -1,13 +1,14 @@
-import {
-  lowerNleAudiovisualToAudioProgram,
-  lowerNleAudiovisualToHtmlProgram,
-  lowerNleProjectToAudiovisual,
-} from "@hypit/nle";
-import type { NleLoweringHost, NleProject } from "@hypit/nle";
+import type { NleProject } from "@hypit/nle";
 import type { MediaDeliverySpec } from "@hypit/media";
 
 import { createHtmlVideoDeliveryPlan } from "./delivery.js";
 import type { HtmlVideoDeliveryPlan } from "./delivery.js";
+import {
+  linkNleProjectTerminals,
+  lowerNleAudiovisualToAudioProgram,
+  lowerNleAudiovisualToHtmlProgram,
+  type NleTerminalLinkHost,
+} from "./nle-link.js";
 
 /**
  * Downstream adapter from one editable NLE Project to full delivery requests.
@@ -15,10 +16,10 @@ import type { HtmlVideoDeliveryPlan } from "./delivery.js";
  */
 export function lowerNleProjectToHtmlVideoDeliveryPlan(
   project: NleProject,
-  host: NleLoweringHost,
+  host: NleTerminalLinkHost,
   delivery: MediaDeliverySpec,
 ): HtmlVideoDeliveryPlan {
-  const lowering = lowerNleProjectToAudiovisual(project, host);
+  const lowering = linkNleProjectTerminals(project, host);
   const visual = lowerNleAudiovisualToHtmlProgram(project, lowering);
   const audio = lowerNleAudiovisualToAudioProgram(
     lowering,

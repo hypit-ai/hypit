@@ -46,18 +46,23 @@ Export is one-way:
 ```text
 NleProject
   -> resolved @hypit/audiovisual Programme
-  +-> @hypit/audiovisual-html  -> HtmlProgram
-  `-> @hypit/audiovisual-audio -> AudioProgram
+       + terminal bindings -> @hypit/audiovisual-html  -> HtmlProgram
+       ` terminal bindings -> @hypit/audiovisual-audio -> AudioProgram
 ```
 
-Prepared media is adapted directly. Component items retain only their package reference, parameters and
-NLE-owned placement; the selected Host resolves their package-owned `ProgramSource` and terminal
-implementation at lowering time. A Component may be Picture-only, Audio-only or expose both. Effects follow the
-same rule and resolve to ordinary Picture or Audio Operators.
+Prepared media is adapted structurally. Component items retain only their package reference, parameters and
+NLE-owned placement; the selected NLE Host resolves only their package-owned `ProgramSource` contract and selected
+Picture/Audio output names. A Component may be Picture-only, Audio-only or expose both. Effects resolve to ordinary
+Picture or Audio Operators whose opaque execution programme travels with the Operator.
 Materialized Caption cues are ordinary Component items whose package parameters own text and style; NLE Core has
 no Caption item kind or resolver category.
-The NLE therefore contains media and HTML effects in one paint graph without storing DOM or making package
+The NLE therefore contains media and HTML-capable effects in one paint graph without storing DOM or making package
 internals into parent timeline items.
+
+`lowerNleProjectToAudiovisual()` returns the `AudiovisualProgram` itself. It does not return an HTML Source set,
+Audio Source closures, `HtmlProgram` or `AudioProgram`. `@hypit/html-video` owns the optional direct-export link
+session: it observes the one recursive structural lowering, joins selected Source outputs to independently selected
+terminal package facets, and discards that session after terminal programmes are produced.
 
 Package behavior enters the Host through the `hypit.nle-package@1` facet. Components, Effects, Transitions and
 mattes are dispatched by exact Module symbol; missing and duplicate implementations fail instead of falling
@@ -100,12 +105,13 @@ Runtime, Result, Provider, Narrative matcher, NLE View projection or reverse aut
 
 Audio participation is equally direct: an Item has an `audio` appearance when its Audio output belongs
 to the mix. `audio.effects` is an ordered source-to-output chain of package-owned unary Audio Operators. Track mute
-removes its Items from the mix; active Item roots join through the AVIR `mix` node and lower to `AudioProgram`
+removes its Items from the mix; active Item roots join through the AVIR `mix` node and can be linked downstream to `AudioProgram`
 `program`, `process` and `mix` nodes. NLE Core contains no gain, fade, EQ, pan or compressor enum. The first real
 owner, `@hypit/audio-gain`, accepts constant or Item-local frame parameters and compiles them into its exact
 `TemporalControl`; a crossfade is two ordinary gain envelopes over overlapping Items, not another timeline primitive.
 
-Final video delivery remains downstream. `@hypit/html-video` consumes one NLE lowering through
-`lowerNleProjectToHtmlVideoDeliveryPlan`, derives the matching `HtmlProgram` and `AudioProgram`, and exposes an
+Final video delivery remains downstream. `@hypit/html-video` consumes one structural NLE lowering through
+`lowerNleProjectToHtmlVideoDeliveryPlan`, links the matching terminal Source implementations, derives `HtmlProgram`
+and `AudioProgram`, and exposes an
 injectable parallel render-plus-mux executor. This keeps delivery profiles, Providers, resources and output files out
 of the persistent project while allowing a headless NLE document to export directly without an Author/Build Graph.

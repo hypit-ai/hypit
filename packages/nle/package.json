@@ -10,13 +10,9 @@
   },
   "dependencies": {
     "@hypit/atomic-file": "workspace:*",
-    "@hypit/audio-program": "workspace:^0.1.0",
     "@hypit/audiovisual": "workspace:^0.1.0",
-    "@hypit/audiovisual-audio": "workspace:^0.1.0",
-    "@hypit/audiovisual-html": "workspace:^0.1.0",
     "@hypit/audiovisual-media": "workspace:^0.1.0",
     "@hypit/facet": "workspace:*",
-    "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/protocol": "workspace:*",
     "@hypit/spatial": "workspace:^0.1.1",

@@ -37,19 +37,16 @@ export {
 export type { NleProjectSaveTicket } from "./store.js";
 export {
   lowerNleProjectToAudiovisual,
-  lowerNleProjectToAudioProgram,
-  lowerNleProjectToHtmlProgram,
-  lowerNleAudiovisualToAudioProgram,
-  lowerNleAudiovisualToHtmlProgram,
   nlePointwiseAudioEffect,
   nlePointwisePictureEffect,
 } from "./lower.js";
-export type { NleAudiovisualLowering } from "./lower.js";
+export type { NleLoweringObserver } from "./lower.js";
 export {
   createNleLoweringHost,
   createNleLoweringHostFromFacets,
   createNlePackageFacet,
   nlePackageFacetAbi,
+  nlePackageSymbolKey,
   nlePackagesFromFacets,
 } from "./package.js";
 export type {

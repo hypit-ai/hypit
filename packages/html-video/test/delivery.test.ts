@@ -15,11 +15,11 @@ import { exactTemporalValueFromFrames } from "@hypit/temporal/sampling";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import {
   applyNleTransaction,
-  createNleLoweringHost,
   createNleProject,
 } from "@hypit/nle";
 
 import {
+  createNleTerminalLinkHost,
   createHtmlVideoDeliveryPlan,
   executeHtmlVideoDeliveryPlan,
   htmlVideoDeliverySpec,
@@ -111,11 +111,12 @@ test("the downstream NLE adapter shares one lowering and supplies silence for pi
       spatialDomain: { id: "card-space", region: { x: 0, y: 0, width: 100, height: 100 } },
     } },
   };
-  const host = createNleLoweringHost([{ components: [{
+  const host = createNleTerminalLinkHost([{ components: [{
+    component,
+    resolve: () => ({ source, pictureOutput: "picture" }),
+  }] }], [{ components: [{
     component,
     resolve: () => ({
-      source,
-      pictureOutput: "picture",
       html: visualProgramHtmlSource(source.id, "picture", htmlVisual({
         html: "<div>card</div>", css: ":scope>div{position:absolute;inset:0}",
       })),
