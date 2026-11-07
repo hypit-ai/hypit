@@ -36,7 +36,6 @@ pnpm install --frozen-lockfile
 | 新增 Author 包 | [添加 Author 包](https://hypit.ai/zh/guide/author-packages/) |
 | 新增 Provider | [添加 Provider](https://hypit.ai/zh/guide/providers/) |
 | 组件内部 | [组件解剖](https://hypit.ai/zh/guide/component-anatomy/) |
-| Studio 界面翻译 | [Studio 本地化](packages/studio/LOCALIZATION.md) |
 | 编译、Run 与 Build | [Runtime](https://hypit.ai/zh/guide/runtime/) |
 
 精确 API 和脚本以最近的 package 或 service README 为准。跨包归属与仓库级边界统一维护在
@@ -100,8 +99,8 @@ main CI，下载其制品，核对版本和 npm 状态，按依赖优先、根�
 手动发布或更新独立包时，在 `main` 上打开 **Actions → Publish npm → Run workflow**，填写成功的
 **CI run ID**。不勾选 **Publish** 时只下载、检查候选，不写 npm；勾选后才发布。即使 main 后来
 继续前进，run ID 仍选择原来测试过的文件。**packages** 输入填写空格分隔的准确包名，例如
-`@hypit/studio`；留空表示完整候选。现有根依赖范围仍适用时，独立包更新不需要发布根包。
-本地对应命令是 `node scripts/publish-release-candidate.mjs dist/release/release-plan.json --package=@hypit/studio`。
+`@hypit/seedance`；留空表示完整候选。现有根依赖范围仍适用时，独立包更新不需要发布根包。
+本地对应命令是 `node scripts/publish-release-candidate.mjs dist/release/release-plan.json --package=@hypit/seedance`。
 
 发布或附件上传失败时，用同一个候选重跑发布，不重跑 CI。已存在且内容一致的 npm 版本会跳过，
 已有 Release 附件保留。发布工具修复可以提交到 main，再选择原来的 CI run ID。制品过期或丢失时，
