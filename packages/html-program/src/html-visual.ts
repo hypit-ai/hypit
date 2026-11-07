@@ -1,5 +1,5 @@
-import { assertBlobRef, canonicalize, canonicalStringify } from "@hypit/hypit/protocol";
-import type { BlobRef, CanonicalValue } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalize, canonicalStringify } from "@hypit/protocol";
+import type { BlobRef, CanonicalValue } from "@hypit/protocol";
 import { verifyPictureInterpretation } from "@hypit/media";
 import type { PictureInterpretation } from "@hypit/media";
 

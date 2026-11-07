@@ -1,5 +1,5 @@
-import type { CanonicalValue, BlobRef } from "@hypit/hypit/protocol";
-import { assertBlobRef } from "@hypit/hypit/protocol";
+import type { CanonicalValue, BlobRef } from "@hypit/protocol";
+import { assertBlobRef } from "@hypit/protocol";
 import { assertFrameSpan } from "@hypit/temporal";
 import type { FrameSpan } from "@hypit/temporal";
 import { sameOutputPictureSpec, verifyVisualDeliverySpec, verifyOutputPictureSpec } from "@hypit/media";

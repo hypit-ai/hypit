@@ -1,5 +1,5 @@
-import { blobRefSchema } from "@hypit/hypit/protocol";
-import type { ValueSchema } from "@hypit/hypit/protocol";
+import { blobRefSchema } from "@hypit/protocol";
+import type { ValueSchema } from "@hypit/protocol";
 import { exactTemporalValueSchema, localTemporalDomainSchema, temporalMapSchema } from "@hypit/temporal";
 const string = { kind: "string", minLength: 1 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;

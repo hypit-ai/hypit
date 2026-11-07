@@ -1,5 +1,5 @@
-import type { Facet } from "@hypit/hypit/facet";
-import { isModuleRef, moduleKey } from "@hypit/hypit/protocol";
+import type { Facet } from "@hypit/facet";
+import { isModuleRef, moduleKey } from "@hypit/protocol";
 
 import type {
   NleResolvedAudioEffect,

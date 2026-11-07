@@ -1,5 +1,5 @@
-import { assertBlobRef } from "@hypit/hypit/protocol";
-import type { BlobRef } from "@hypit/hypit/protocol";
+import { assertBlobRef } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 
 const FONT_MEDIA_TYPES = new Set([
   "font/otf",

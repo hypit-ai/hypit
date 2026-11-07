@@ -1,4 +1,4 @@
-import type { ModuleManifest, TypeRef } from "@hypit/hypit/protocol";
+import type { ModuleManifest, TypeRef } from "@hypit/protocol";
 export const spatialModuleRef = { name: "@hypit/spatial", version: "1" } as const;
 export const spatialTypes = {
   localDomain: { module: spatialModuleRef, name: "LocalSpatialDomain" },

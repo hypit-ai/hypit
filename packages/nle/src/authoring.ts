@@ -1,6 +1,6 @@
-import type { Facet } from "@hypit/hypit/facet";
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { CanonicalValue } from "@hypit/hypit/protocol";
+import type { Facet } from "@hypit/facet";
+import { canonicalize } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
 
 import { nlePackageSymbolKey } from "./package.js";
 import { findNleItem } from "./project.js";

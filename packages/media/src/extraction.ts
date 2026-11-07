@@ -1,4 +1,4 @@
-import { canonicalize } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 
 import type {
   AudioExtractionRequest,

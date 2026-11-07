@@ -5,9 +5,9 @@ import {
   type AuthorDeclarationCompiler,
   type AuthorResolvedReference,
   type Awaitable,
-} from "@hypit/hypit/author";
-import { blobTypes } from "@hypit/hypit/blob";
-import { sameType, type CanonicalValue, type TypeRef } from "@hypit/hypit/protocol";
+} from "@hypit/author";
+import { blobTypes } from "@hypit/blob";
+import { sameType, type CanonicalValue, type TypeRef } from "@hypit/protocol";
 import { temporalTypes } from "@hypit/temporal";
 import type { MediaDeliverySpec } from "./types.js";
 import { mediaDeliveryProfile } from "./delivery.js";

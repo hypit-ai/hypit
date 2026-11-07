@@ -1,4 +1,4 @@
-import type { BlobRef } from "@hypit/hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 import type { ExactTemporalValue, LocalTemporalDomain, TemporalMap } from "@hypit/temporal/algebra";
 
 export type MediaRational = {

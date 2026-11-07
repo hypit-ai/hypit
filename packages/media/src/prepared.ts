@@ -12,8 +12,8 @@ import type {
   LocalTemporalDomain,
   TemporalMap,
 } from "@hypit/temporal/algebra";
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 
 import { verifyMediaInspection, verifyMediaStreamSelection, verifyPreparedMedia } from "./identity.js";
 import type {

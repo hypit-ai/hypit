@@ -1,4 +1,4 @@
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
+import { createRefinementPackageFacet } from "@hypit/refinement";
 import { spatialManifest } from "./manifest.js";
 import { spatialComponent } from "./component.js";
 

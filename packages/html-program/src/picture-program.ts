@@ -1,5 +1,5 @@
-import { assertBlobRef, canonicalStringify, compareCodeUnits } from "@hypit/hypit/protocol";
-import type { BlobRef, CanonicalValue, ResourceId } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalStringify, compareCodeUnits } from "@hypit/protocol";
+import type { BlobRef, CanonicalValue, ResourceId } from "@hypit/protocol";
 import { verifyPictureInterpretation } from "@hypit/media";
 import type { PictureInterpretation, PreparedSignalPictureSource } from "@hypit/media";
 import { assertFrameSpan } from "@hypit/temporal";

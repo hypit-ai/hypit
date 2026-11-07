@@ -10,15 +10,13 @@
   "hypit": {
     "activation": "./src/activation.ts"
   },
-  "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
-  },
   "dependencies": {
+    "@hypit/producer": "workspace:^0.0.0-dev",
+    "@hypit/refinement": "workspace:^0.0.0-dev",
     "@hypit/spatial": "workspace:^0.1.1",
     "@hypit/temporal": "workspace:^0.1.1"
   },
   "devDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0",
     "@hypit/protocol": "workspace:*"
   },
   "files": [

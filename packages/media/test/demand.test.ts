@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { bindAuthorFragment, elaborateGraphFragment } from "@hypit/hypit/author";
-import { blobManifest, blobTypes } from "@hypit/hypit/blob";
-import { createResolvedClosure, link, planBuild, sealAuthorGraph } from "@hypit/hypit/kernel";
+import { bindAuthorFragment, elaborateGraphFragment } from "@hypit/author";
+import { blobManifest, blobTypes } from "@hypit/blob";
+import { createResolvedClosure, link, planBuild, sealAuthorGraph } from "@hypit/kernel";
 import { temporalManifest } from "@hypit/temporal";
 
 import { fixtureResource } from "../../../test/fixture-resource.js";

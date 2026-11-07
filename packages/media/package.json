@@ -11,21 +11,19 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
+    "@hypit/author": "workspace:^0.0.0-dev",
+    "@hypit/blob": "workspace:^0.0.0-dev",
+    "@hypit/producer": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/refinement": "workspace:^0.0.0-dev",
     "@hypit/temporal": "workspace:^0.1.1"
   },
   "files": [
     "dist",
     "README.md"
   ],
-  "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
-  },
   "devDependencies": {
-    "@hypit/blob": "workspace:*",
-    "@hypit/producer": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/refinement": "workspace:*",
-    "@hypit/hypit": "workspace:*",
+    "@hypit/kernel": "workspace:*",
     "@hypit/svml": "workspace:*"
   }
 }

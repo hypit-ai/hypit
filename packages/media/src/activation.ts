@@ -1,6 +1,6 @@
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createRefinementPackageFacet } from "@hypit/refinement";
+import { createProducerPackageFacet } from "@hypit/producer";
+import { createAuthorDeclarationFacet } from "@hypit/author";
 import { mediaComponent, mediaAuthorDeclarations, mediaManifest } from "./index.js";
 
 export const hypitPackage = {

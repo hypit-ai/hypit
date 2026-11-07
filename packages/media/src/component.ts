@@ -1,13 +1,13 @@
-import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { ProducerPackage } from "@hypit/hypit/producer";
+import type { RefinementPackage } from "@hypit/refinement";
+import type { ProducerPackage } from "@hypit/producer";
 import { projectVisualDeliverySpec, verifyMediaDeliverySpec, verifyMediaDomainSpec, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyPictureInterpretation, verifyPreparedMedia, verifyRenderedVisual, verifyRenderedAudio, verifyVisualDeliverySpec } from "./identity.js";
 import type { AudioExtractionRequest, ExtractAudioNeed, ExtractFrameNeed, FrameExtractionRequest, InspectMediaNeed, MediaDomainSpec, MediaInspection, MediaSelectionRequest, PreparedMedia } from "./types.js";
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { Value } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import type { Value } from "@hypit/protocol";
 import { mediaProducers } from "./manifest.js";
 import { mediaTypes } from "./manifest.js";
 import { prepareMedia } from "./prepared.js";
-import { assertBlobRef } from "@hypit/hypit/protocol";
+import { assertBlobRef } from "@hypit/protocol";
 import { assertFontArtifactRef, assertFontStackRef } from "./render.js";
 import { selectAudioStream, selectMediaStreams, selectVideoStream, verifyMediaSelectionRequest } from "./selection.js";
 import { verifyAudioExtractionRequest, verifyFrameExtractionRequest } from "./extraction.js";

@@ -1,5 +1,5 @@
 import { verifyPreparedMedia } from "@hypit/media";
-import type { CanonicalValue } from "@hypit/hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 
 import { assertNleProject, findNleTrack } from "./project.js";

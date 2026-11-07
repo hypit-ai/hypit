@@ -1,4 +1,4 @@
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
 const string = { kind: "string", minLength: 1 } as const;
 const integer = { kind: "number", integer: true } as const;

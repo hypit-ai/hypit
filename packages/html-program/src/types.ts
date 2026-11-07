@@ -1,5 +1,5 @@
 
-import type { BlobRef } from "@hypit/hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 import type { PictureInterpretation, PreparedSignalPictureSource } from "@hypit/media";
 import type { FrameSpan, TemporalMap, TemporalSamplingGrid } from "@hypit/temporal";
 import type { HtmlPictureReconstruction } from "./picture-reconstruction.js";

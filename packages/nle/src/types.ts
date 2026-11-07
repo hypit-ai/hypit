@@ -1,6 +1,6 @@
 import type { AudioOperator, PictureOperator, ProgramSource } from "@hypit/audiovisual";
 import type { PreparedMedia } from "@hypit/media";
-import type { CanonicalValue, ModuleRef } from "@hypit/hypit/protocol";
+import type { CanonicalValue, ModuleRef } from "@hypit/protocol";
 import type {
   ExactTemporalValue,
   LocalTemporalDomain,

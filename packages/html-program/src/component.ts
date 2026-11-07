@@ -1,6 +1,6 @@
-import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { CanonicalValue, Value } from "@hypit/hypit/protocol";
+import type { RefinementPackage } from "@hypit/refinement";
+import type { ProducerPackage } from "@hypit/producer";
+import type { CanonicalValue, Value } from "@hypit/protocol";
 
 import { assertHtmlProgram } from "./program.js";
 import type { HtmlProgram } from "./types.js";

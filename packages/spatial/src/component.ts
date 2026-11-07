@@ -1,5 +1,5 @@
-import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { Value } from "@hypit/hypit/protocol";
+import type { RefinementPackage } from "@hypit/refinement";
+import type { Value } from "@hypit/protocol";
 import { assertLocalSpatialDomain, assertSpatialMap } from "./algebra.js";
 import type { LocalSpatialDomain, SpatialMap } from "./algebra-types.js";
 import { spatialTypes } from "./manifest.js";

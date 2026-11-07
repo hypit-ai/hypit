@@ -1,8 +1,8 @@
 import {
   assertBlobRef,
   canonicalize,
-} from "@hypit/hypit/protocol";
-import type { BlobRef } from "@hypit/hypit/protocol";
+} from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 import {
   assertExactTemporalValue,
   assertLocalTemporalDomain,

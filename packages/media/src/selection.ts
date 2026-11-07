@@ -1,4 +1,4 @@
-import { canonicalize } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 
 import { BT709_OPAQUE_PICTURE } from "./picture.js";
 import {

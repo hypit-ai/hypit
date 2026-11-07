@@ -1,5 +1,5 @@
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, CanonicalValue } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import type { BlobRef, CanonicalValue } from "@hypit/protocol";
 
 export const HTML_PICTURE_RECONSTRUCTION_FORMAT = "hypit.html-picture-reconstruction@1" as const;
 

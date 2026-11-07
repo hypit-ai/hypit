@@ -1,5 +1,5 @@
-import { sealGraphFragment } from "@hypit/hypit/author";
-import { blobTypes } from "@hypit/hypit/blob";
+import { sealGraphFragment } from "@hypit/author";
+import { blobTypes } from "@hypit/blob";
 import { temporalProducers, temporalTypes } from "@hypit/temporal";
 
 import { mediaProducers, mediaTypes } from "./manifest.js";

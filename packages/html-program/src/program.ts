@@ -6,8 +6,8 @@ import {
   compareExactTemporalValues,
   exactTemporalValueFromFrames,
 } from "@hypit/temporal";
-import { assertBlobRef } from "@hypit/hypit/protocol";
-import type { BlobRef } from "@hypit/hypit/protocol";
+import { assertBlobRef } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 
 import type {
   HtmlArtifact,

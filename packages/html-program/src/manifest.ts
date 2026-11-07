@@ -1,6 +1,6 @@
 import { mediaDependency, mediaTypes, pictureInterpretationSchema, preparedSignalPictureSourceSchema } from "@hypit/media";
-import { blobRefSchema } from "@hypit/hypit/protocol";
-import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
+import { blobRefSchema } from "@hypit/protocol";
+import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 import { frameSpanSchema, temporalDependency, temporalMapSchema, temporalTypes } from "@hypit/temporal";
 
 export const htmlProgramModuleRef = { name: "@hypit/html-program", version: "1" } as const;

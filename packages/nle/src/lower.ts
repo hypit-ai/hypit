@@ -18,7 +18,7 @@ import {
 } from "@hypit/audiovisual";
 import { programSourceFromPreparedMedia } from "@hypit/audiovisual-media";
 import { verifyPreparedMedia } from "@hypit/media";
-import { sameType } from "@hypit/hypit/protocol";
+import { sameType } from "@hypit/protocol";
 import {
   addExactTemporalValues,
   compareExactTemporalValues,
