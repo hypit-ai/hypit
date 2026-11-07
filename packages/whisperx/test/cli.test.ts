@@ -10,8 +10,8 @@ import { decodeSpeechTranscriptSource, sealSpeechTranscriptEvidence } from "@hyp
 import { interpretWhisperXTranscript } from "@hypit/whisperx";
 import type { WhisperXTranscriptionRequest } from "@hypit/whisperx";
 
-import { runTranscribeCli } from "../src/cli.js";
-import type { TranscribeEnvironment } from "../src/cli.js";
+import { runTranscribeCli, transcribeEnvironment } from "../src/cli.js";
+import type { TranscribeCliServices, TranscribeEnvironment } from "../src/cli.js";
 
 /** 16 kHz mono PCM s16 WAV: the canonical evidence shape, so no ffmpeg runs in these tests. */
 function wav(sampleFrames: number): Uint8Array {
@@ -67,6 +67,38 @@ function capture() {
   let output = "";
   return { io: { write: (text: string) => { output += text; } }, text: () => output };
 }
+
+test("the CLI contribution owns its exact project and Runtime selection port", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-transcribe-services-"));
+  const project = join(root, "project");
+  const profile = join(root, "runtime.json");
+  const distribution = join(root, "distribution");
+  const opened: unknown[] = [];
+  const selectedHost = host([]);
+  const services: TranscribeCliServices = {
+    packageRoot: distribution,
+    resolveProjectRuntime: async (projectRoot) => {
+      assert.equal(projectRoot, project);
+      return { profile };
+    },
+    openRuntimeHost: async (path, options) => {
+      opened.push(path, options);
+      return selectedHost;
+    },
+  };
+  const environment = transcribeEnvironment({
+    cwd: root,
+    resolveProjectRoot: async (requested) => {
+      assert.equal(requested, project);
+      return project;
+    },
+  }, services);
+  const selected = await environment.openHost(undefined, "project");
+  assert.equal(selected.profile, profile);
+  assert.equal(selected.host, selectedHost);
+  assert.deepEqual(opened, [profile, { packageRoot: project, distributionPackageRoot: distribution }]);
+  await rm(root, { recursive: true, force: true });
+});
 
 test("transcribe writes exact editable evidence from the Profile's transcription Endpoint", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-transcribe-"));

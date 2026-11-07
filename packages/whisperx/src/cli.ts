@@ -1,17 +1,18 @@
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-import {
-  cliEndpointLine,
-  cliEndpointView,
-  createCliScratchResources,
-  openCliRuntimeHost,
-  selectCliEndpoint,
-} from "@hypit/build-cli";
-import type { CliCommandModule, CliIo } from "@hypit/cli";
-import type { CliDistribution, CliRuntimeHost, CliRuntimeSelectionContext } from "@hypit/build-cli";
+import type { CliApplicationContext, CliCommandModule, CliIo } from "@hypit/cli";
 import { speechEvidenceFile } from "@hypit/media-local/files";
-import type { Need } from "@hypit/hypit/protocol";
+import { capabilityKey } from "@hypit/hypit/protocol";
+import type { Need, Value } from "@hypit/hypit/protocol";
+import { MemoryResourceStore } from "@hypit/resource-store";
+import type { ResourceStore } from "@hypit/resource-store";
+import type {
+  ExecutionDiagnostic,
+  OperationProgress,
+  RuntimeEndpointObservation,
+  RuntimeEndpointQuery,
+} from "@hypit/runtime";
 import { sealSpeechEvidenceAudio, speechEvidenceTypes, speechTranscriptSource } from "@hypit/speech-evidence";
 import type { SpeechTranscriptEvidence } from "@hypit/speech-evidence";
 
@@ -22,6 +23,25 @@ import { parseWhisperXLanguage } from "./types.js";
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
+
+/** Exact Runtime surface required by one immediate transcription request. */
+export type TranscribeRuntimeHost = {
+  endpoints(queries: readonly RuntimeEndpointQuery[]): Promise<readonly RuntimeEndpointObservation[]>;
+  invoke(need: Need, resources: ResourceStore, observation?: {
+    readonly reportProgress?: (progress: OperationProgress) => Promise<void>;
+    readonly reportDiagnostic?: (diagnostic: ExecutionDiagnostic) => Promise<void>;
+  }): Promise<Value>;
+};
+
+/** Application services captured by the WhisperX CLI contribution, not by the generic CLI Host. */
+export type TranscribeCliServices = {
+  readonly packageRoot?: string;
+  resolveProjectRuntime?(projectRoot: string): Promise<{ readonly profile: string } | undefined>;
+  openRuntimeHost(path: string, options: {
+    readonly packageRoot: string;
+    readonly distributionPackageRoot?: string;
+  }): Promise<TranscribeRuntimeHost>;
+};
 
 type Parsed = {
   readonly positionals: readonly string[];
@@ -72,15 +92,74 @@ export type TranscribeEnvironment = {
   readonly cwd: string;
   openHost(runtime: string | undefined, project: string | undefined): Promise<{
     readonly profile: string;
-    readonly host: Pick<CliRuntimeHost, "endpoints" | "invoke">;
+    readonly host: TranscribeRuntimeHost;
   }>;
 };
 
-export function transcribeEnvironment(application: CliRuntimeSelectionContext): TranscribeEnvironment {
+export function transcribeEnvironment(
+  application: Pick<CliApplicationContext, "cwd" | "resolveProjectRoot">,
+  services: TranscribeCliServices,
+): TranscribeEnvironment {
   return {
     cwd: application.cwd,
-    openHost: async (runtime, project) => await openCliRuntimeHost(application, runtime, project),
+    openHost: async (runtime, project) => {
+      const projectRoot = await application.resolveProjectRoot(
+        project === undefined ? undefined : resolve(application.cwd, project),
+      );
+      const profile = runtime === undefined
+        ? (await services.resolveProjectRuntime?.(projectRoot))?.profile
+        : resolve(application.cwd, runtime);
+      assert(profile !== undefined,
+        `No Runtime Profile is selected for ${projectRoot}; run hypit runtime use <profile> there, or pass --runtime <profile>`);
+      const host = await services.openRuntimeHost(profile, {
+        packageRoot: projectRoot,
+        ...(services.packageRoot === undefined
+          ? {}
+          : { distributionPackageRoot: services.packageRoot }),
+      });
+      return { profile, host };
+    },
   };
+}
+
+async function selectEndpoint(
+  host: Pick<TranscribeRuntimeHost, "endpoints">,
+  need: Need,
+  profile: string,
+): Promise<RuntimeEndpointObservation> {
+  const [endpoint] = await host.endpoints([{
+    kind: "concrete",
+    need: need.id,
+    capability: need.capability,
+    returns: need.returns,
+    constraints: need.constraints,
+  }]);
+  const subject = capabilityKey(need.capability);
+  assert(endpoint !== undefined && endpoint.status !== "unresolved",
+    `No Endpoint in ${profile} serves ${subject}; configure an Endpoint that supports this capability and check its binding in that Profile`);
+  assert(endpoint.status !== "ambiguous",
+    `Several Endpoints in ${profile} serve ${subject}: ${(endpoint.endpoints ?? []).join(", ")}; select one with bindings[${JSON.stringify(subject)}] in that Profile`);
+  assert(endpoint.support !== "unsupported",
+    `The selected Endpoint in ${profile} does not support this request for ${subject}`
+    + (endpoint.binding === undefined ? "" : ` (binding: ${endpoint.binding})`)
+    + `: ${(endpoint.rejections ?? []).map((item) => `${item.endpoint}: ${item.message}`).join("; ") || "no support reason supplied"}`
+    + "; adjust the request or select a compatible Endpoint in that Profile");
+  return endpoint;
+}
+
+function endpointView(endpoint: RuntimeEndpointObservation) {
+  return {
+    endpoint: endpoint.endpoint ?? null,
+    use: endpoint.use ?? null,
+    pricing: endpoint.pricing ?? null,
+  };
+}
+
+function endpointLine(endpoint: RuntimeEndpointObservation): string {
+  const price = endpoint.pricing === undefined
+    ? "price source unknown"
+    : endpoint.pricing.kind === "local" ? "local, no Provider charge" : endpoint.pricing.url;
+  return `${endpoint.endpoint} (${endpoint.use})  ·  ${price}`;
 }
 
 export function writeTranscribeHelp(io: CliIo): void {
@@ -103,7 +182,7 @@ export async function runTranscribeCli(
   const to = await destination(parsed, environment.cwd);
   const { profile, host } = await environment.openHost(parsed.options.get("--runtime"), parsed.options.get("--project"));
   const evidence = await speechEvidenceFile(source);
-  const resources = createCliScratchResources();
+  const resources = new MemoryResourceStore();
   const artifact = await resources.put(evidence.bytes, "audio/wav");
   const audio = sealSpeechEvidenceAudio({ artifact, sampleFrames: evidence.sampleFrames });
   const need: Need = {
@@ -113,8 +192,8 @@ export async function runTranscribeCli(
     constraints: whisperXRequestForEvidenceAudio(audio, { language }),
     result: "record:hypit-transcribe",
   };
-  const endpoint = await selectCliEndpoint(host, need, profile);
-  if (!parsed.json) io.write(`Transcribing through ${cliEndpointLine(endpoint)}\n`);
+  const endpoint = await selectEndpoint(host, need, profile);
+  if (!parsed.json) io.write(`Transcribing through ${endpointLine(endpoint)}\n`);
   const report = parsed.json ? io.writeProgress : io.writeProgress ?? io.write;
   let previousPhase: string | undefined;
   const fulfillment = await host.invoke(need, resources, {
@@ -130,7 +209,7 @@ export async function runTranscribeCli(
   const audioSeconds = transcript.sampleFrames / 16_000;
   await writeNew(to, speechTranscriptSource("transcript", transcript));
   const view = { format: "hypit.whisperx-transcribe@1", source, language,
-    audio_seconds: audioSeconds, extracted: evidence.extracted, ...cliEndpointView(endpoint),
+    audio_seconds: audioSeconds, extracted: evidence.extracted, ...endpointView(endpoint),
     passages: transcript.passages.length, words, path: to };
   if (parsed.json) io.write(`${JSON.stringify(view, null, 2)}\n`);
   else io.write(`✓ Transcript written\n\n  ${words} words in ${transcript.passages.length} passage${
@@ -138,7 +217,7 @@ export async function runTranscribeCli(
 }
 
 export function createWhisperXCliCommandModules(
-  distribution: Pick<CliDistribution, "packageRoot" | "resolveProjectRuntime" | "openRuntimeHost">,
+  services: TranscribeCliServices,
 ): readonly CliCommandModule[] {
   return [{
     format: "hypit.cli-command@1",
@@ -147,7 +226,7 @@ export function createWhisperXCliCommandModules(
     writeRootHelp(io) { io.write("\nSpeech evidence\n  transcribe\n  hypit transcribe --help for inputs and Runtime selection\n"); },
     writeHelp(_argv, io) { writeTranscribeHelp(io); },
     async run(argv, io, context) {
-      await runTranscribeCli(argv, io, transcribeEnvironment({ ...context, distribution }));
+      await runTranscribeCli(argv, io, transcribeEnvironment(context, services));
     },
   }];
 }

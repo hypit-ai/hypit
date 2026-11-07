@@ -41,8 +41,6 @@ export function createBuildCliCommandModules(
 }
 
 export { runCli } from "./main.js";
-export { cliEndpointLine, cliEndpointView, createCliScratchResources, openCliRuntimeHost, selectCliEndpoint } from "./immediate.js";
-export type { CliRuntimeSelectionContext } from "./immediate.js";
 export { discoverSourcePackages } from "./source-discovery.js";
 export { loadDiscoveredSourcePackages } from "./source-packages.js";
 export type { CliCompilerOptions, CliDistribution } from "./distribution.js";

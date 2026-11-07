@@ -2612,9 +2612,6 @@ importers:
 
   packages/whisperx:
     dependencies:
-      '@hypit/build-cli':
-        specifier: workspace:^0.1.0
-        version: link:../build-cli
       '@hypit/cli':
         specifier: workspace:^0.0.0-dev
         version: link:../cli
@@ -2624,6 +2621,12 @@ importers:
       '@hypit/media-local':
         specifier: workspace:^0.3.0
         version: link:../media-local
+      '@hypit/resource-store':
+        specifier: workspace:^0.1.0
+        version: link:../resource-store
+      '@hypit/runtime':
+        specifier: workspace:^0.0.0-dev
+        version: link:../runtime
       '@hypit/speech-evidence':
         specifier: workspace:^0.2.0
         version: link:../speech-evidence
