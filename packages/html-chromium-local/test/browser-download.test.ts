@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { browserDownloadBaseUrl, browserExecutablePath } from "../src/browser.js";
+import { browserDownloadBaseUrl, browserExecutablePath } from "@hypit/html-chromium-local";
 
 test("download source accepts an archive base and rejects ignored or malformed configuration", () => {
   assert.equal(browserDownloadBaseUrl({ browserDownloadBaseUrl: "https://mirror.example/chrome///" }), "https://mirror.example/chrome");

@@ -6,8 +6,7 @@ import {
 } from "@hypit/runtime-local/extension";
 import type { RuntimeAdapterFactoryContext } from "@hypit/runtime-local/extension";
 import { resolveRuntimeExecutable } from "@hypit/runtime-local/node";
-
-import type { HtmlBrowserGpu, HtmlWorkers } from "./options.js";
+import type { HtmlBrowserGpu, HtmlWorkers } from "@hypit/html-render-local";
 
 const executionKeys = [
   "ffprobePath", "ffmpegPath", "workers", "maxWorkers", "browserGpu",
@@ -16,7 +15,7 @@ const executionKeys = [
   "maxPendingFrameBytes", "maxDecodedSourceBytes", "maxRenderedBytes",
 ] as const;
 
-/** Parse the limits shared by local HTML Endpoint implementations. */
+/** Parse deployment policy shared by local HTML Endpoint implementations. */
 export function localHtmlRuntimeConfig(context: RuntimeAdapterFactoryContext, label: string,
   endpointKeys: readonly string[]) {
   const config = runtimeConfigObject(context.config, label);
@@ -31,7 +30,11 @@ export function localHtmlRuntimeConfig(context: RuntimeAdapterFactoryContext, la
   const configuredFfmpeg = runtimeConfigString(config.ffmpegPath, "HTML renderer ffmpegPath");
   const ffmpegPath = resolveRuntimeExecutable(context.dataRoot, configuredFfmpeg ?? "ffmpeg");
   const ffprobePath = resolveRuntimeExecutable(context.dataRoot, configuredFfprobe ?? "ffprobe");
-  const optionalPositive = (key: string, label: string) => runtimeConfigPositiveInteger(config[key], label);
+  const optionalPositive = (key: string, subject: string) => runtimeConfigPositiveInteger(config[key], subject);
+  const value = (key: string, subject: string) => {
+    const parsed = optionalPositive(key, subject);
+    return parsed === undefined ? {} : { [key]: parsed };
+  };
   const shared = {
     instance: context.instance,
     ...(context.pool === undefined ? {} : { pool: context.pool }),
@@ -52,9 +55,4 @@ export function localHtmlRuntimeConfig(context: RuntimeAdapterFactoryContext, la
     ...value("maxRenderedBytes", "HTML renderer maxRenderedBytes"),
   };
   return { config, configuredFfprobe, configuredFfmpeg, ffmpegPath, ffprobePath, shared };
-
-  function value(key: string, label: string) {
-    const parsed = optionalPositive(key, label);
-    return parsed === undefined ? {} : { [key]: parsed };
-  }
 }

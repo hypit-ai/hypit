@@ -1,4 +1,4 @@
-/** Renderer-neutral local HTML execution. Concrete Endpoint packages own capture backends. */
+/** Renderer-neutral local HTML execution. Concrete renderer packages own capture backends. */
 export { captureStagedVisual } from "./capture.js";
 export type {
   CaptureInput,
@@ -14,8 +14,7 @@ export { createFramePreparer } from "./frame-preparer.js";
 export type { FramePreparationPage, FramePreparationTiming, SourceFrameUpdate } from "./frame-preparer.js";
 export { renderWorkerLimit } from "./concurrency.js";
 export { assert } from "./process.js";
-export { renderProgressReporter } from "./progress.js";
-export { endpointSupport, localHtmlFrameRejection, localHtmlRasterRejection } from "./support.js";
+export { localHtmlFrameRejection, localHtmlRasterRejection } from "./support.js";
 export { rasterizeHtmlWithBackend, resolveLocalHtmlExecutionOptions } from "./render.js";
 export type {
   HtmlRasterBackend,
@@ -23,6 +22,7 @@ export type {
   HtmlRasterProgress,
   ResolvedHtmlExecutionOptions,
 } from "./render.js";
+export type { HtmlRenderDiagnostic } from "./diagnostic.js";
 export type { HtmlBrowserGpu, HtmlExecutionOptions, HtmlWorkers } from "./options.js";
-export { localHtmlRuntimeConfig } from "./runtime-config.js";
 export { probeHtmlMediaTools } from "./program.js";
+export type { HtmlMediaToolState } from "./program.js";

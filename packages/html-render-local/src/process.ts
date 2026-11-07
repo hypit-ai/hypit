@@ -40,7 +40,7 @@ export async function mediaExecutablePath(value: string): Promise<string> {
       if (!["ENOENT", "ENOTDIR", "EACCES"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error;
     }
   }
-  throw new Error(`HTML renderer media executable ${value} is unavailable; correct the Provider's ffmpegPath or ffprobePath.`);
+  throw new Error(`HTML renderer media executable ${value} is unavailable; correct ffmpegPath or ffprobePath.`);
 }
 
 export function processEnvironment(platform: NodeJS.Platform = process.platform): NodeJS.ProcessEnv {

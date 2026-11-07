@@ -12,7 +12,7 @@ import { canonicalize } from "@hypit/protocol";
 import { runtimeEndpointAdapterFacetAbi } from "@hypit/runtime-local/extension";
 import type { RuntimeEndpointAdapterImplementation } from "@hypit/runtime-local/extension";
 import { hypitPackage } from "../../src/activation.js";
-import { browserDownloadUrl, browserExecutablePath, installHtmlBrowser, recommendedBrowserVersion, requireBrowserExecutable } from "../../src/browser.js";
+import { browserDownloadUrl, browserExecutablePath, installHtmlBrowser, recommendedBrowserVersion, requireBrowserExecutable } from "@hypit/html-chromium-local";
 
 test("Profile mirror reaches the real preparation command and installs its archive", {
   skip: process.platform === "win32" || spawnSync("zip", ["-v"], { stdio: "ignore" }).status !== 0,

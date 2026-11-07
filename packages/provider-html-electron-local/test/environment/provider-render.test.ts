@@ -4,9 +4,8 @@ import { MemoryResourceStore } from "@hypit/resource-store";
 import { verifyTimelineVisual } from "@hypit/media";
 import type { TimelineVisual } from "@hypit/media";
 import type { CanonicalValue } from "@hypit/protocol";
-import { rasterizeChromiumHtmlProgram } from "../../../provider-html-local/src/index.js";
+import { browserExecutablePath, rasterizeChromiumHtmlProgram } from "@hypit/html-chromium-local";
 import { rasterizeElectronHtmlProgram } from "../../src/index.js";
-import { browserExecutablePath } from "../../../provider-html-local/src/browser.js";
 import { localChromiumHtmlRendererProgram } from "../../../provider-html-local/src/program.js";
 import { htmlProviderDelivery, htmlProviderDocument, htmlProviderHandler, htmlProviderNeed,
 } from "../../../provider-html-local/test/provider-scenario.js";

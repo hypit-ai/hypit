@@ -1,7 +1,7 @@
-import type { ExecutionDiagnostic } from "@hypit/hypit/endpoint";
 import { spawn } from "node:child_process";
 import { killRenderTree } from "./process-tree.js";
 import type { HtmlRasterProgress } from "./render.js";
+import type { HtmlRenderDiagnostic } from "./diagnostic.js";
 
 const cleanupMs = 5_000;
 
@@ -26,7 +26,7 @@ export async function runCaptureProcess<T extends CaptureProcessInput>(
   signal: AbortSignal,
   onProgress: (event: HtmlRasterProgress) => void,
   launch: CaptureWorkerLaunch,
-  onDiagnostic?: (diagnostic: ExecutionDiagnostic) => Promise<void>,
+  onDiagnostic?: (diagnostic: HtmlRenderDiagnostic) => Promise<void>,
 ): Promise<void> {
   signal.throwIfAborted();
   await new Promise<void>((resolve, reject) => {
@@ -68,7 +68,7 @@ export async function runCaptureProcess<T extends CaptureProcessInput>(
       if (child.connected) child.send({ type: "abort", error: failure.message }, () => {});
       awaitExit();
     };
-    const diagnostic = (value: ExecutionDiagnostic) => {
+    const diagnostic = (value: HtmlRenderDiagnostic) => {
       if (onDiagnostic === undefined) return;
       diagnostics = diagnostics.then(() => onDiagnostic(value))
         .catch((error) => stop(error instanceof Error ? error : new Error(String(error))));

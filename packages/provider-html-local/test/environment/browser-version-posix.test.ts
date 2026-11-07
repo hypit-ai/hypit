@@ -3,7 +3,7 @@ import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
-import { browserExecutablePath } from "../../src/browser.js";
+import { browserExecutablePath } from "@hypit/html-chromium-local";
 import { localChromiumHtmlRendererProgram } from "../../src/program.js";
 
 test("a wrong-version managed executable cannot satisfy readiness or trigger a different selection", {

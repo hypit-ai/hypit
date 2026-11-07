@@ -1,20 +1,23 @@
 # `@hypit/provider-html-local`
 
-Local Chromium implementation of:
+Endpoint and Runtime adapter for the direct Chromium implementation in
+`@hypit/html-chromium-local`:
 
 - `@hypit/html-program@1#rasterize-visual` → `TimelineVisual`;
 - `@hypit/html-program@1#rasterize-frames` → self-describing sRGB PNG frame images.
 
-The Provider consumes a typed `HtmlProgram`. It stages only the Artifacts selected by the request,
+The Provider consumes a typed `HtmlProgram`. The direct renderer stages only the Artifacts selected by the request,
 extracts exact source samples through FFmpeg, applies absolute integer frames through
 `window.__hypitFrameProgram`, captures opaque PNG frames through Chrome DevTools Protocol and writes
 encoded visual output through an ordered FFmpeg pipe.
 
-The package owns Chromium selection, installation, frame capture and its disposable worker process.
-It does not select another renderer as a fallback. The separate
+The Chromium package owns executable selection, installation primitives, frame capture and its
+disposable worker process. This Provider owns Endpoint admission and explicit Runtime preparation;
+it does not select another renderer as a fallback. The separate
 `@hypit/provider-html-electron-local` package owns Electron execution and offers encoded visual output
-only. Both packages use a renderer-neutral local execution seam for staging, limits, progress and
-worker supervision from `@hypit/html-render-local`; that seam does not make renderer choice a request field.
+only. Both renderers use `@hypit/html-render-local` for staging, limits and worker supervision.
+Provider-specific progress and Runtime configuration live in `@hypit/html-runtime-local`; neither
+shared package makes renderer choice a request field.
 
 ## Exact request subset
 
@@ -75,7 +78,7 @@ tree on a best-effort basis.
 ## Direct use
 
 ```ts
-import { rasterizeChromiumHtmlProgram } from "@hypit/provider-html-local";
+import { rasterizeChromiumHtmlProgram } from "@hypit/html-chromium-local";
 
 const visual = await rasterizeChromiumHtmlProgram(
   { program, delivery },
@@ -83,22 +86,6 @@ const visual = await rasterizeChromiumHtmlProgram(
 );
 ```
 
-An application that already owns a complete HTML Video Delivery Plan can select the concrete local
-picture, audio and mux implementation together without introducing a Runtime Build:
-
-```ts
-import { executeHtmlVideoDeliveryPlan } from "@hypit/html-video";
-import { createLocalHtmlVideoDeliveryExecutor } from "@hypit/provider-html-local";
-
-const executor = createLocalHtmlVideoDeliveryExecutor({
-  resources,
-  html: { workers: "auto" },
-  media: { ffmpegPath: "ffmpeg", ffprobePath: "ffprobe" },
-});
-const output = await executeHtmlVideoDeliveryPlan(plan, executor);
-```
-
-The caller selects and owns `resources`. Authored media, the silent visual, rendered programme audio
-and final MP4 all meet only through that store. The returned `MuxedMedia.artifact` remains a resource
-identity; copying it to a user-selected path is an outer application or CLI operation, not an NLE or
-Provider-domain fact.
+Direct Chromium execution belongs to `@hypit/html-chromium-local`. Whole-project picture, audio and
+mux assembly belongs to the calling application, with `@hypit/nle-local` owning the local NLE case.
+This package only adapts Chromium execution to Endpoint and Runtime contracts.

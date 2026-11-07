@@ -16,15 +16,16 @@ import {
 import type { HtmlVideoDeliveryExecutor } from "@hypit/html-video";
 import { resolveMediaAssetMediaFile } from "@hypit/media-asset/node";
 import type { MuxedMedia, VisualDeliverySpec } from "@hypit/media";
-import type { CreateMediaExecutionEnvironmentOptions } from "@hypit/media-local";
+import type { CreateMediaExecutionEnvironmentOptions } from "@hypit/media-local/execution";
 import type { NleItem, NleProject } from "@hypit/nle";
 import type { TemporalRate } from "@hypit/temporal/algebra";
 import { createNodeNleMediaResolver, readNleProjectFile } from "@hypit/nle/node";
 import type {
   ChromiumHtmlRasterOptions,
   HtmlRasterProgress,
-} from "@hypit/provider-html-local";
+} from "@hypit/html-chromium-local";
 import { FileResourceStore } from "@hypit/resource-store/node";
+import { createLocalNleDeliveryExecutor } from "./delivery.js";
 
 export type LocalNleExportProgress =
   | { readonly phase: "open" | "load-packages" | "lower" | "publish"; readonly state: "start" | "complete" }
@@ -244,8 +245,7 @@ export async function exportLocalNleProject(
       ...(request.signal === undefined ? {} : { signal: request.signal }),
       onPictureProgress,
     });
-    const executor = injected ?? (await import("@hypit/provider-html-local"))
-      .createLocalHtmlVideoDeliveryExecutor({
+    const executor = injected ?? createLocalNleDeliveryExecutor({
         resources,
         html: {
           ...request.html,

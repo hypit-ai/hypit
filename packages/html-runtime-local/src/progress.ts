@@ -1,7 +1,7 @@
 import type { OperationProgress } from "@hypit/hypit/endpoint";
-import type { HtmlRasterProgress } from "./render.js";
+import type { HtmlRasterProgress } from "@hypit/html-render-local";
 
-/** Reduce parallel capture events to one readable progress report for this rasterization request. */
+/** Translate renderer-local events into one readable Endpoint activity stream. */
 export function renderProgressReporter(
   report: ((progress: OperationProgress) => Promise<void>) | undefined,
   totalFrames: number,
@@ -44,7 +44,6 @@ export function renderProgressReporter(
         && (progress.total === undefined || progress.completed !== progress.total)) return;
       lastPhase = progress.phase;
       lastAt = at;
-      // Attach rejection handling immediately; flush still propagates storage failure to the caller.
       writes = writes.then(() => report(progress));
       void writes.catch(() => {});
     },

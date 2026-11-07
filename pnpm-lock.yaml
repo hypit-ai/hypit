@@ -843,6 +843,27 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  packages/html-chromium-local:
+    dependencies:
+      '@hypit/html-program':
+        specifier: workspace:^0.2.0
+        version: link:../html-program
+      '@hypit/html-render-local':
+        specifier: workspace:^0.1.0
+        version: link:../html-render-local
+      '@hypit/media':
+        specifier: workspace:^0.2.0
+        version: link:../media
+      '@puppeteer/browsers':
+        specifier: 3.2.2
+        version: 3.2.2
+      puppeteer-core:
+        specifier: 25.10.0
+        version: 25.10.0
+      tsx:
+        specifier: 4.21.0
+        version: 4.21.0
+
   packages/html-document:
     dependencies:
       '@hypit/audio-program':
@@ -864,9 +885,9 @@ importers:
         specifier: 0.18.13
         version: 0.18.13
     devDependencies:
-      '@hypit/provider-html-local':
+      '@hypit/html-chromium-local':
         specifier: workspace:*
-        version: link:../provider-html-local
+        version: link:../html-chromium-local
       puppeteer-core:
         specifier: 25.10.0
         version: 25.10.0
@@ -928,16 +949,29 @@ importers:
       '@hypit/resource-store':
         specifier: workspace:^0.1.0
         version: link:../resource-store
-      '@hypit/runtime-local':
-        specifier: workspace:^0.2.0
-        version: link:../runtime-local
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
     devDependencies:
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/html-runtime-local:
+    dependencies:
+      '@hypit/html-render-local':
+        specifier: workspace:^0.1.0
+        version: link:../html-render-local
+    devDependencies:
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../..
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@hypit/runtime-local':
+        specifier: workspace:*
+        version: link:../runtime-local
 
   packages/html-video:
     dependencies:
@@ -1360,6 +1394,9 @@ importers:
 
   packages/nle-local:
     dependencies:
+      '@hypit/html-chromium-local':
+        specifier: workspace:^0.1.0
+        version: link:../html-chromium-local
       '@hypit/html-video':
         specifier: workspace:^0.2.1
         version: link:../html-video
@@ -1375,9 +1412,6 @@ importers:
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../nle
-      '@hypit/provider-html-local':
-        specifier: workspace:^0.2.1
-        version: link:../provider-html-local
       '@hypit/resource-store':
         specifier: workspace:^0.1.0
         version: link:../resource-store
@@ -1632,6 +1666,9 @@ importers:
       '@hypit/html-render-local':
         specifier: workspace:^0.1.0
         version: link:../html-render-local
+      '@hypit/html-runtime-local':
+        specifier: workspace:^0.1.0
+        version: link:../html-runtime-local
       '@hypit/hypit':
         specifier: workspace:^0.4.0
         version: link:../..
@@ -1651,6 +1688,9 @@ importers:
       '@hypit/executor':
         specifier: workspace:*
         version: link:../executor
+      '@hypit/html-chromium-local':
+        specifier: workspace:*
+        version: link:../html-chromium-local
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1675,33 +1715,24 @@ importers:
 
   packages/provider-html-local:
     dependencies:
+      '@hypit/html-chromium-local':
+        specifier: workspace:^0.1.0
+        version: link:../html-chromium-local
       '@hypit/html-program':
         specifier: workspace:^0.2.0
         version: link:../html-program
       '@hypit/html-render-local':
         specifier: workspace:^0.1.0
         version: link:../html-render-local
-      '@hypit/html-video':
-        specifier: workspace:^0.2.1
-        version: link:../html-video
+      '@hypit/html-runtime-local':
+        specifier: workspace:^0.1.0
+        version: link:../html-runtime-local
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
-      '@hypit/media-local':
-        specifier: workspace:^0.3.0
-        version: link:../media-local
-      '@hypit/resource-store':
-        specifier: workspace:^0.1.0
-        version: link:../resource-store
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
-      '@puppeteer/browsers':
-        specifier: 3.2.2
-        version: 3.2.2
-      puppeteer-core:
-        specifier: 25.10.0
-        version: 25.10.0
       tsx:
         specifier: 4.21.0
         version: 4.21.0
@@ -1721,6 +1752,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/resource-store':
+        specifier: workspace:*
+        version: link:../resource-store
       '@hypit/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -1730,6 +1764,9 @@ importers:
       '@hypit/script':
         specifier: workspace:*
         version: link:../script
+      puppeteer-core:
+        specifier: 25.10.0
+        version: 25.10.0
       sharp:
         specifier: 0.35.4
         version: 0.35.4(@types/node@24.10.1)

@@ -18,7 +18,7 @@
   },
   "peerDependencies": { "@hypit/hypit": "workspace:^0.4.0" },
   "devDependencies": {
-    "@hypit/provider-html-local": "workspace:*",
+    "@hypit/html-chromium-local": "workspace:*",
     "puppeteer-core": "25.10.0"
   }
 }

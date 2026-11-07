@@ -3,13 +3,12 @@ import { mediaTypes } from "@hypit/media";
 import { htmlProgramCapabilities, verifyHtmlRasterRequest } from "@hypit/html-program";
 import { canonicalize } from "@hypit/hypit/protocol";
 import {
-  endpointSupport,
   localHtmlRasterRejection,
-  renderProgressReporter,
   renderWorkerLimit,
   resolveLocalHtmlExecutionOptions,
 } from "@hypit/html-render-local";
 import type { HtmlExecutionOptions } from "@hypit/html-render-local";
+import { endpointSupport, renderProgressReporter } from "@hypit/html-runtime-local";
 
 import { rasterizeElectronHtmlProgram } from "./render.js";
 

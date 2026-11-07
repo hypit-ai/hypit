@@ -12,21 +12,15 @@
     "README.md"
   ],
   "hypit": {
-    "activation": "./src/activation.ts",
-    "htmlBrowser": {
-      "version": "152.0.7928.2"
-    }
+    "activation": "./src/activation.ts"
   },
   "dependencies": {
+    "@hypit/html-chromium-local": "workspace:^0.1.0",
     "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/html-render-local": "workspace:^0.1.0",
-    "@hypit/html-video": "workspace:^0.2.1",
+    "@hypit/html-runtime-local": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.2.0",
-    "@hypit/media-local": "workspace:^0.3.0",
-    "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/temporal": "workspace:^0.1.1",
-    "@puppeteer/browsers": "3.2.2",
-    "puppeteer-core": "25.10.0",
     "tsx": "4.21.0"
   },
   "peerDependencies": {
@@ -41,9 +35,11 @@
     "@hypit/hypit": "workspace:*",
     "@hypit/media": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/resource-store": "workspace:*",
     "@hypit/runtime": "workspace:*",
     "@hypit/runtime-local": "workspace:*",
     "@hypit/script": "workspace:*",
+    "puppeteer-core": "25.10.0",
     "sharp": "0.35.4"
   }
 }

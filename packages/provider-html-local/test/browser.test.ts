@@ -3,9 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { browserExecutablePath, recommendedBrowserVersion } from "../src/browser.js";
+import { browserExecutablePath, recommendedBrowserVersion, resolveExecutionOptions } from "@hypit/html-chromium-local";
 import { localChromiumHtmlRendererProgram } from "../src/program.js";
-import { resolveExecutionOptions } from "../src/render.js";
 
 test("browser inspection is read-only and ignores environment browser hints", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-browser-"));
@@ -23,7 +22,7 @@ test("browser inspection is read-only and ignores environment browser hints", as
   const state = await program.probe();
   assert.equal(state.state, "down");
   assert.ok(state.detail.includes(browserExecutablePath(options)));
-  assert.match(state.detail, /runtime up/u);
+  assert.match(state.detail, /Prepare that exact browser environment/u);
   assert.deepEqual(await readdir(directory), [], "diagnosis must not prepare or download anything");
   const otherProject = localChromiumHtmlRendererProgram({ ...options, id: "other-render", nodePath: process.execPath, ffprobePath: "ffprobe" });
   assert.equal(otherProject.stateRoot, program.stateRoot, "shared browser installation uses the existing shared Program lifecycle");

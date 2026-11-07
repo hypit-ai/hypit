@@ -6,7 +6,7 @@ import { sealAudioProgram } from "@hypit/audio-program";
 import { exactTemporalValueFromFrames } from "@hypit/temporal";
 import puppeteer from "puppeteer-core";
 
-import { browserExecutablePath } from "../../../provider-html-local/src/browser.js";
+import { browserExecutablePath } from "@hypit/html-chromium-local";
 import { compileHtmlDocument, materializeHtmlDocument } from "../../src/index.js";
 
 test("standalone HTML Document prepares once across ready, seek, play and pause", async () => {

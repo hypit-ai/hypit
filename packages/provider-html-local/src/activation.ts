@@ -7,12 +7,12 @@ import {
   diagnoseRuntimeExecutable,
   resolveRuntimeExecutable,
 } from "@hypit/runtime-local/node";
-import { localHtmlRuntimeConfig } from "@hypit/html-render-local";
+import { localHtmlRuntimeConfig } from "@hypit/html-runtime-local";
 
 import {
   createLocalChromiumHtmlProvider,
 } from "./provider.js";
-import { configuredBrowserPath, browserExecutablePath, selectedBrowserVersion } from "./browser.js";
+import { configuredBrowserPath, browserExecutablePath, selectedBrowserVersion } from "@hypit/html-chromium-local";
 import { localChromiumHtmlRendererProgram } from "./program.js";
 
 /**

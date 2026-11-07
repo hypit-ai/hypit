@@ -1,5 +1,8 @@
-import type { ManagedProgramState } from "@hypit/runtime-local/extension";
 import { runProcess } from "./process.js";
+
+export type HtmlMediaToolState =
+  | { readonly state: "ready" }
+  | { readonly state: "down" | "mismatch"; readonly detail: string };
 
 type MediaToolVersion =
   | { readonly state: "ready"; readonly version: string }
@@ -25,7 +28,7 @@ async function mediaToolVersion(path: string): Promise<MediaToolVersion> {
 export async function probeHtmlMediaTools(
   ffprobePath: string,
   ffmpegPath: string | undefined,
-): Promise<ManagedProgramState> {
+): Promise<HtmlMediaToolState> {
   const ffprobe = await mediaToolVersion(ffprobePath);
   if (ffprobe.state !== "ready") return { state: ffprobe.state, detail: ffprobe.detail };
   if (ffmpegPath === undefined) return { state: "ready" };

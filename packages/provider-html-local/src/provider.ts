@@ -4,15 +4,14 @@ import { mediaTypes } from "@hypit/media";
 import { htmlProgramCapabilities, htmlProgramTypes, verifyHtmlFrameRequest, verifyHtmlRasterRequest } from "@hypit/html-program";
 import { canonicalize } from "@hypit/hypit/protocol";
 import {
-  endpointSupport,
   localHtmlFrameRejection,
   localHtmlRasterRejection,
-  renderProgressReporter,
   renderWorkerLimit,
 } from "@hypit/html-render-local";
 import type { HtmlExecutionOptions } from "@hypit/html-render-local";
-import { rasterizeChromiumHtmlProgram, rasterizeHtmlFrames, resolveExecutionOptions } from "./render.js";
-import type { BrowserOptions } from "./browser.js";
+import { endpointSupport, renderProgressReporter } from "@hypit/html-runtime-local";
+import { rasterizeChromiumHtmlProgram, rasterizeHtmlFrames, resolveExecutionOptions } from "@hypit/html-chromium-local";
+import type { BrowserOptions } from "@hypit/html-chromium-local";
 
 export type { HtmlBrowserGpu, HtmlWorkers } from "@hypit/html-render-local";
 export const localHtmlProviderModuleRef = { name: "@hypit/provider-html-local", version: "1" } as const;

@@ -3,8 +3,8 @@ import { join } from "node:path";
 
 import type { ManagedProgram, ManagedProgramState } from "@hypit/runtime-local/extension";
 import { probeHtmlMediaTools } from "@hypit/html-render-local";
-import { browserCacheDirectory, browserDownloadBaseUrl, browserDownloadUrl, browserExecutablePath, configuredBrowserPath, requireBrowserExecutable, selectedBrowserVersion } from "./browser.js";
-import type { BrowserOptions } from "./browser.js";
+import { browserCacheDirectory, browserDownloadBaseUrl, browserDownloadUrl, browserExecutablePath, configuredBrowserPath, requireBrowserExecutable, selectedBrowserVersion } from "@hypit/html-chromium-local";
+import type { BrowserOptions } from "@hypit/html-chromium-local";
 
 /**
  * This Provider owns browser selection and preparation. Probes never install;

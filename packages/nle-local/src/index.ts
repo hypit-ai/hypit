@@ -9,3 +9,5 @@ export type {
   LocalNleExportRequest,
   LocalNleExportResult,
 } from "./export.js";
+export { createLocalNleDeliveryExecutor } from "./delivery.js";
+export type { LocalNleDeliveryOptions } from "./delivery.js";

@@ -10,8 +10,8 @@ import { endpointOffers } from "@hypit/endpoint";
 
 import {
   createLocalChromiumHtmlProvider,
-  rasterizeChromiumHtmlProgram,
 } from "../src/index.js";
+import { rasterizeChromiumHtmlProgram } from "@hypit/html-chromium-local";
 import { localChromiumHtmlRendererProgram } from "../src/program.js";
 import { htmlProviderDelivery, htmlProviderDocument, htmlProviderHandler, htmlProviderNeed } from "./provider-scenario.js";
 

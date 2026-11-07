@@ -23,6 +23,7 @@
     "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/html-render-local": "workspace:^0.1.0",
+    "@hypit/html-runtime-local": "workspace:^0.1.0",
     "mediabunny": "1.62.1",
     "tsx": "4.21.0"
   },
@@ -31,6 +32,7 @@
     "@hypit/runtime-local": "workspace:^0.2.0"
   },
   "devDependencies": {
+    "@hypit/html-chromium-local": "workspace:*",
     "@hypit/executor": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/resource-store": "workspace:^0.1.0",

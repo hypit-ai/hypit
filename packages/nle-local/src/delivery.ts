@@ -7,33 +7,24 @@ import {
   createMediaExecutionEnvironment,
   executeMuxProgramMedia,
   executeRenderTimelineAudio,
-} from "@hypit/media-local";
-import type { CreateMediaExecutionEnvironmentOptions } from "@hypit/media-local";
+} from "@hypit/media-local/execution";
+import type { CreateMediaExecutionEnvironmentOptions } from "@hypit/media-local/execution";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { ResourceStore } from "@hypit/resource-store";
+import { rasterizeChromiumHtmlProgram } from "@hypit/html-chromium-local";
+import type { ChromiumHtmlRasterOptions } from "@hypit/html-chromium-local";
 
-import { rasterizeChromiumHtmlProgram } from "./render.js";
-import type { ChromiumHtmlRasterOptions } from "./render.js";
-
-export type LocalHtmlVideoDeliveryOptions = {
-  /** One caller-owned byte domain shared by authored inputs and all rendered products. */
+export type LocalNleDeliveryOptions = {
+  /** One request-owned byte domain shared by authored inputs and rendered products. */
   readonly resources: ResourceStore;
   readonly html?: Omit<ChromiumHtmlRasterOptions, "resources">;
   readonly media?: CreateMediaExecutionEnvironmentOptions;
 };
 
-export type LocalHtmlVideoDeliveryExecutor = HtmlVideoDeliveryExecutor;
-
-/**
- * Concrete local execution selected by an application at its outer boundary.
- *
- * The returned object structurally implements the provider-independent HTML Video delivery
- * executor: Chromium owns picture, the local media algorithms own AudioProgram and mux, and the
- * supplied ResourceStore is the only place where their bytes meet.
- */
-export function createLocalHtmlVideoDeliveryExecutor(
-  options: LocalHtmlVideoDeliveryOptions,
-): LocalHtmlVideoDeliveryExecutor {
+/** Direct picture, audio and mux execution selected by the local NLE application. */
+export function createLocalNleDeliveryExecutor(
+  options: LocalNleDeliveryOptions,
+): HtmlVideoDeliveryExecutor {
   const media = createMediaExecutionEnvironment(options.resources, options.media);
   return {
     renderVisual: async request => await rasterizeChromiumHtmlProgram(request, {

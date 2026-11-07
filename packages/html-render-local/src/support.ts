@@ -1,4 +1,3 @@
-import type { EndpointSupport } from "@hypit/hypit/endpoint";
 import { selectHtmlArtifacts, selectHtmlVideoSources } from "@hypit/html-program";
 import type { HtmlFrameRequest, HtmlRasterRequest } from "@hypit/html-program";
 import type { FrameSpan } from "@hypit/temporal";
@@ -10,7 +9,7 @@ function sdrSourcePictureRejection(picture: PictureInterpretation, label: string
   const videoLike = picture.colorPrimaries === "bt709" && picture.colorTransfer === "bt709"
     && picture.colorMatrix === "bt709" && picture.colorRange === "limited";
   if (picture.bitDepth !== 8 || (!imageLike && !videoLike)) {
-    return `${label} is outside the local HTML Provider's exact 8-bit SDR source support`;
+    return `${label} is outside the local HTML renderer's exact 8-bit SDR source support`;
   }
   return undefined;
 }
@@ -19,7 +18,7 @@ function stillPictureRejection(picture: PictureInterpretation, label: string): s
   const imageLike = picture.colorPrimaries === "bt709" && picture.colorTransfer === "srgb"
     && picture.colorMatrix === "rgb" && picture.colorRange === "full";
   if (picture.bitDepth !== 8 || !imageLike) {
-    return `${label} is outside the local HTML Provider's exact 8-bit sRGB still-picture support`;
+    return `${label} is outside the local HTML renderer's exact 8-bit sRGB still-picture support`;
   }
   return undefined;
 }
@@ -63,7 +62,7 @@ export function localHtmlRasterRejection(request: HtmlRasterRequest): string | u
   if (picture.colorPrimaries !== "bt709" || picture.colorTransfer !== "bt709"
     || picture.colorMatrix !== "bt709" || picture.colorRange !== "limited" || picture.bitDepth !== 8
     || encoding.codec !== "h264" || encoding.pixelFormat !== "yuv420p") {
-    return "The local HTML Provider currently implements only opaque BT.709 8-bit H.264/yuv420p delivery";
+    return "The local HTML renderer currently implements only opaque BT.709 8-bit H.264/yuv420p delivery";
   }
   return undefined;
 }
@@ -75,13 +74,9 @@ export function localHtmlFrameRejection(request: HtmlFrameRequest): string | und
   const picture = request.picture;
   if (picture.colorPrimaries !== "bt709" || picture.colorTransfer !== "srgb"
     || picture.colorMatrix !== "rgb" || picture.colorRange !== "full" || picture.bitDepth !== 8) {
-    return "The local HTML Provider currently implements only opaque sRGB 8-bit PNG frame delivery";
+    return "The local HTML renderer currently implements only opaque sRGB 8-bit PNG frame delivery";
   }
   return undefined;
-}
-
-export function endpointSupport(reason: string | undefined): EndpointSupport {
-  return reason === undefined ? { status: "supported" } : { status: "unsupported", reason };
 }
 
 export function assertLocalHtmlRasterSupport(request: HtmlRasterRequest): void {

@@ -16,6 +16,9 @@ export function writeNleHelp(io: Pick<CliIo, "write">): void {
     + "  --quality <quality>     draft | standard | high (default: standard)\n"
     + "  --frame-rate <rate>     Output fps, e.g. 60 or 30000/1001 (default: project edit rate)\n"
     + "  --package-root <path>   Resolve project component packages here (default: NLE directory)\n"
+    + "  --chrome-path <path>    Use this installed Chrome/Chromium executable\n"
+    + "  --ffmpeg-path <path>    Use this FFmpeg executable\n"
+    + "  --ffprobe-path <path>   Use this FFprobe executable\n"
     + "  --workers <count|auto>  Chromium picture-render workers\n"
     + "  --json                  Write one machine-readable result\n");
 }
@@ -76,7 +79,8 @@ export async function runNleCli(
     if (["--debug", "--verbose", "--no-color"].includes(item)) continue;
     if (item === "--color") { index += 1; continue; }
     if (!item.startsWith("--")) { positionals.push(item); continue; }
-    assert(["--to", "--quality", "--frame-rate", "--package-root", "--workers"].includes(item), `Unknown option ${item}`);
+    assert(["--to", "--quality", "--frame-rate", "--package-root", "--chrome-path", "--ffmpeg-path",
+      "--ffprobe-path", "--workers"].includes(item), `Unknown option ${item}`);
     assert(!options.has(item), `${item} cannot be repeated`);
     const value = argv[index + 1];
     assert(value !== undefined && !value.startsWith("--"), `${item} requires a value`);
@@ -108,6 +112,17 @@ export async function runNleCli(
       signal: controller.signal,
       html: {
         ...(renderWorkers === undefined ? {} : { workers: renderWorkers }),
+        ...(options.get("--chrome-path") === undefined ? {} : {
+          chromePath: resolve(cwd, options.get("--chrome-path")!),
+        }),
+      },
+      media: {
+        ...(options.get("--ffmpeg-path") === undefined ? {} : {
+          ffmpegPath: resolve(cwd, options.get("--ffmpeg-path")!),
+        }),
+        ...(options.get("--ffprobe-path") === undefined ? {} : {
+          ffprobePath: resolve(cwd, options.get("--ffprobe-path")!),
+        }),
       },
       onProgress(progress) {
         if (json) return;

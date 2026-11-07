@@ -6,7 +6,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { Browser, computeExecutablePath, detectBrowserPlatform, getDownloadUrl, install, uninstall } from "@puppeteer/browsers";
 
-// The Provider's release owns this recommendation alongside its browser integration.
+// The Chromium renderer release owns this recommendation alongside its browser integration.
 // It is installation input, not a second browser discovery policy in executable code.
 const manifest = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 export const recommendedBrowserVersion: string = exactBrowserVersion(manifest.hypit?.htmlBrowser?.version);
@@ -94,11 +94,11 @@ export async function requireBrowserExecutable(path: string, version?: string): 
     }
   }
   catch (error) {
-    throw new Error(`HTML browser is unavailable at ${path}: ${error instanceof Error ? error.message : String(error)}. Prepare the selected Runtime with hypit runtime up --runtime <profile>, or correct its chromePath.`, { cause: error });
+    throw new Error(`HTML browser is unavailable at ${path}: ${error instanceof Error ? error.message : String(error)}. Prepare that exact browser environment, or correct chromePath.`, { cause: error });
   }
 }
 
-/** Called only by the selected ManagedProgram's explicit installation command. */
+/** Explicit environment preparation; ordinary rendering never installs tools. */
 export async function installHtmlBrowser(cacheDir: string, version: string, downloadBaseUrl?: string): Promise<void> {
   const buildId = exactBrowserVersion(version);
   const options = { browserVersion: buildId, ...(downloadBaseUrl === undefined ? {} : { browserDownloadBaseUrl: downloadBaseUrl }) };

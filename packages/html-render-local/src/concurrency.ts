@@ -13,7 +13,7 @@ export function autoWorkerLimit(cpu = availableParallelism(), memory = hostMemor
   return Math.max(1, Math.min(Math.max(1, cpu - 2), byMemory));
 }
 
-/** Exact browser reservation shared by Runtime admission and the admitted capture attempt. */
+/** Exact browser reservation shared by caller admission and the admitted capture attempt. */
 export function renderWorkerLimit(
   config: { readonly maxWorkers: number; readonly workers: "auto" | number },
   frameCount: number,

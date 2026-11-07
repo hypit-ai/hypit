@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import sharp from "sharp";
 import { MemoryResourceStore } from "@hypit/resource-store";
-import { rasterizeHtmlFrames } from "../../src/index.js";
+import { rasterizeHtmlFrames } from "@hypit/html-chromium-local";
 import { htmlFrameFixture } from "../frames-scenario.js";
 import { htmlProviderPicture } from "../provider-scenario.js";
 

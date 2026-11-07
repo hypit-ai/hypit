@@ -6,7 +6,7 @@ import test from "node:test";
 import { spawnSync } from "node:child_process";
 import { runCaptureProcess, resolveLocalHtmlExecutionOptions } from "@hypit/html-render-local";
 import type { CaptureWorkerLaunch } from "@hypit/html-render-local";
-import { browserExecutablePath } from "../../src/browser.js";
+import { browserExecutablePath } from "@hypit/html-chromium-local";
 
 const exitCleanup = new URL("../../../html-render-local/src/capture-exit.ts", import.meta.url).href;
 const launch = (entry: string): CaptureWorkerLaunch => ({

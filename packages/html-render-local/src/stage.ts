@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { materializeHtmlProgram, selectHtmlArtifacts } from "@hypit/html-program";
 import type { HtmlProgram } from "@hypit/html-program";
 import type { PictureInterpretation } from "@hypit/media";
-import type { BlobRef } from "@hypit/hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 import type { FrameSpan } from "@hypit/temporal";
 
 /** Reads one execution resource. Whose store it comes from is the caller's business. */
@@ -80,7 +80,7 @@ export async function stageHtmlProgram(options: {
     `./artifacts/asset-${index}${extension(entry.artifact.mediaType)}`]));
   if (options.validatePicture === undefined
     && selected.some(({ entry }) => entry.kind === "picture")) {
-    throw new Error("HTML renderer Runtime has no picture-byte validator");
+    throw new Error("HTML renderer caller supplied no picture-byte validator");
   }
   let nextArtifact = 0;
   let failure: unknown;

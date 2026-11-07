@@ -9,9 +9,9 @@ import type { ResourceIOOptions } from "@hypit/resource-store";
 import { MemoryResourceStore } from "@hypit/resource-store";
 import type { BlobRef } from "@hypit/protocol";
 import sharp from "sharp";
-import { rasterizeChromiumHtmlProgram, rasterizeHtmlFrames } from "../../../provider-html-local/src/index.js";
+import { rasterizeChromiumHtmlProgram, rasterizeHtmlFrames } from "@hypit/html-chromium-local";
 import { rasterizeElectronHtmlProgram } from "../../src/index.js";
-import type { HtmlRasterProgress } from "../../../provider-html-local/src/index.js";
+import type { HtmlRasterProgress } from "@hypit/html-chromium-local";
 import { htmlRangeDocument, htmlRetiringSourceDocument } from "../../../provider-html-local/test/range-scenario.js";
 import { htmlProviderDelivery, htmlProviderPicture } from "../../../provider-html-local/test/provider-scenario.js";
 
