@@ -13,7 +13,7 @@ The package owns:
 - NLE Component and terminal resolvers;
 - optional parameter editing for title, subtitle and colours.
 
-The persistent NLE stores direct exact rational `start`, `duration` and `localStart` values plus the
+The persistent NLE stores direct exact rational `start`, `duration` and Item-local `sourceTime.pieces` plus the
 package symbol and canonical parameters. Opening and editing the project does not compile the Block
 declaration. Export resolves the installed package, lowers the Item to AVIR and selects a terminal
 frame rate separately from the project's `editRate`.

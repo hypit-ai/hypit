@@ -12,6 +12,7 @@ import {
   createNleProject,
   createMediaAssetMaterialization,
   findNleItem,
+  nleLinearSourceTime,
   nleProjectDuration,
   parseNleProject,
   serializeNleProject,
@@ -31,6 +32,8 @@ const frame = (value: number) => exactTemporalValueFromFrames(value, {
 });
 const third = (ticks: number) => ({ ticks: String(ticks), timeBase: { numerator: 1, denominator: 3 } });
 const exactSecond = { ticks: "1", timeBase: { numerator: 1, denominator: 1 } } as const;
+const linear = (duration: ReturnType<typeof frame>, sourceAtStart = frame(0)) =>
+  nleLinearSourceTime(duration, sourceAtStart);
 
 function prepared() {
   const timestamp = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } });
@@ -64,7 +67,7 @@ const mediaItem: NleMediaItem = {
   media: "interview",
   start: frame(0),
   duration: frame(6),
-  localStart: frame(0),
+  sourceTime: linear(frame(6)),
   enabled: true,
   picture: fullPicture,
   audio: { effects: [] },
@@ -75,7 +78,7 @@ const captionItem: NleComponentItem = {
   kind: "component",
   start: frame(1),
   duration: frame(2),
-  localStart: frame(0),
+  sourceTime: linear(frame(2)),
   enabled: true,
   component: { module: { name: "@example/caption", version: "1" }, name: "default" },
   parameters: { text: "Hello NLE", color: "white" },
@@ -90,7 +93,7 @@ const componentItem: NleComponentItem = {
   kind: "component",
   start: frame(0),
   duration: frame(4),
-  localStart: frame(0),
+  sourceTime: linear(frame(4)),
   enabled: true,
   component: { module: { name: "@example/title", version: "1" }, name: "card" },
   parameters: { title: "Direct project state" },
@@ -136,7 +139,7 @@ test("edit rate is only an editing grid and never quantizes exact project time",
         ...componentItem,
         start: third(1),
         duration: third(2),
-        localStart: third(0),
+        sourceTime: nleLinearSourceTime(third(2), third(0)),
       }],
     },
   }] });
@@ -168,9 +171,10 @@ test("move, trim and split are atomic direct NLE edits", () => {
   ] });
 
   assert.deepEqual(findNleItem(edited, "interview-use").item,
-    { ...mediaItem, start: frame(1), duration: frame(2), localStart: frame(1) });
+    { ...mediaItem, start: frame(1), duration: frame(2), sourceTime: linear(frame(2), frame(1)) });
   assert.deepEqual(findNleItem(edited, "interview-use-right").item,
-    { ...mediaItem, id: "interview-use-right", start: frame(3), duration: frame(3), localStart: frame(3) });
+    { ...mediaItem, id: "interview-use-right", start: frame(3), duration: frame(3),
+      sourceTime: linear(frame(3), frame(3)) });
   assert.deepEqual(findNleItem(edited, "title-card").item.start, frame(2));
 
   assert.throws(() => applyNleTransaction(edited, { revision: 2, commands: [
@@ -179,6 +183,70 @@ test("move, trim and split are atomic direct NLE edits", () => {
   ] }));
   assert.deepEqual(findNleItem(edited, "title-card").item.start, frame(2));
   assert.throws(() => applyNleTransaction(edited, { revision: 1, commands: [] }), NleRevisionConflict);
+});
+
+test("split exactly subdivides a cubic source-time curve", () => {
+  const at = (ticks: number, denominator = 1) => ({
+    ticks: String(ticks), timeBase: { numerator: 1, denominator },
+  });
+  const curved: NleComponentItem = {
+    ...componentItem,
+    id: "curved",
+    duration: at(4),
+    sourceTime: { pieces: [{
+      target: { start: at(0), end: at(4) },
+      sourceAtStart: at(0), sourceControl1: at(1), sourceControl2: at(3), sourceAtEnd: at(4),
+    }] },
+  };
+  const base = applyNleTransaction(createNleProject({
+    id: "cubic-split", name: "Cubic split",
+    canvas: { width: 100, height: 100, clearColor: "black" },
+  }), { revision: 0, commands: [{
+    kind: "track.add", track: { id: "picture", name: "Picture", kind: "picture",
+      locked: false, muted: false, items: [curved] },
+  }] });
+  const edited = applyNleTransaction(base, { revision: 1, commands: [{
+    kind: "item.split", id: "curved", at: at(2), rightId: "curved-right",
+  }] });
+
+  assert.deepEqual(findNleItem(edited, "curved").item.sourceTime, { pieces: [{
+    target: { start: at(0), end: at(2) },
+    sourceAtStart: at(0), sourceControl1: at(1, 2), sourceControl2: at(5, 4), sourceAtEnd: at(2),
+  }] });
+  assert.deepEqual(findNleItem(edited, "curved-right").item.sourceTime, { pieces: [{
+    target: { start: at(0), end: at(2) },
+    sourceAtStart: at(2), sourceControl1: at(11, 4), sourceControl2: at(7, 2), sourceAtEnd: at(4),
+  }] });
+});
+
+test("retime replaces direct source-time facts and slip shifts every source coordinate", () => {
+  const sourceTime = { pieces: [{
+    target: { start: frame(0), end: frame(2) },
+    sourceAtStart: frame(4), rate: { numerator: -1, denominator: 1 },
+  }, {
+    target: { start: frame(2), end: frame(4) },
+    sourceAtStart: frame(1), rate: { numerator: 0, denominator: 1 },
+  }] } as const;
+  const base = applyNleTransaction(createNleProject({
+    id: "retime-edit", name: "Retime edit",
+    canvas: { width: 100, height: 100, clearColor: "black" },
+  }), { revision: 0, commands: [{
+    kind: "track.add", track: { id: "picture", name: "Picture", kind: "picture",
+      locked: false, muted: false, items: [componentItem] },
+  }] });
+  const retimed = applyNleTransaction(base, { revision: 1, commands: [{
+    kind: "item.retime", id: "title-card", sourceTime,
+  }] });
+  assert.deepEqual(findNleItem(retimed, "title-card").item.sourceTime, sourceTime);
+
+  const slipped = applyNleTransaction(retimed, { revision: 2, commands: [{
+    kind: "item.slip", id: "title-card", delta: frame(1),
+  }] });
+  assert.deepEqual(findNleItem(slipped, "title-card").item.sourceTime, { pieces: [{
+    ...sourceTime.pieces[0], sourceAtStart: frame(5),
+  }, {
+    ...sourceTime.pieces[1], sourceAtStart: frame(2),
+  }] });
 });
 
 test("project, media and Track facts remain directly editable", () => {
@@ -240,18 +308,18 @@ test("slip and detach-audio preserve direct programme and source time facts", ()
   assert.equal(audio.track.id, "audio");
   assert.equal(audio.item.picture, undefined);
   assert.deepEqual(audio.item.audio, { effects: [] });
-  assert.deepEqual(picture.item.localStart, frame(1));
-  assert.deepEqual(audio.item.localStart, frame(1));
+  assert.deepEqual(picture.item.sourceTime, linear(frame(6), frame(1)));
+  assert.deepEqual(audio.item.sourceTime, linear(frame(6), frame(1)));
   assert.deepEqual(audio.item.start, picture.item.start);
   assert.deepEqual(audio.item.duration, picture.item.duration);
 });
 
 test("roll moves one shared cut while preserving the two outer Item edges", () => {
   const left: NleComponentItem = {
-    ...componentItem, id: "left", start: frame(0), duration: frame(4), localStart: frame(0),
+    ...componentItem, id: "left", start: frame(0), duration: frame(4), sourceTime: linear(frame(4)),
   };
   const right: NleComponentItem = {
-    ...componentItem, id: "right", start: frame(4), duration: frame(4), localStart: frame(2),
+    ...componentItem, id: "right", start: frame(4), duration: frame(4), sourceTime: linear(frame(4), frame(2)),
   };
   const base = applyNleTransaction(createNleProject({
     id: "roll-edit", name: "Roll edit", editRate: { numerator: 2, denominator: 1 },
@@ -266,9 +334,11 @@ test("roll moves one shared cut while preserving the two outer Item edges", () =
     { kind: "item.roll", left: "left", right: "right", at: frame(5) },
   ] });
 
-  assert.deepEqual(findNleItem(edited, "left").item, { ...left, duration: frame(5) });
+  assert.deepEqual(findNleItem(edited, "left").item, {
+    ...left, duration: frame(5), sourceTime: linear(frame(5)),
+  });
   assert.deepEqual(findNleItem(edited, "right").item, {
-    ...right, start: frame(5), duration: frame(3), localStart: frame(3),
+    ...right, start: frame(5), duration: frame(3), sourceTime: linear(frame(3), frame(3)),
   });
   assert.deepEqual(nleProjectDuration(edited), frame(8));
   assert.throws(() => applyNleTransaction(base, { revision: 1, commands: [
@@ -278,16 +348,16 @@ test("roll moves one shared cut while preserving the two outer Item edges", () =
 
 test("ripple-trim moves only the caller's explicit scope", () => {
   const target: NleComponentItem = {
-    ...componentItem, id: "target", start: frame(0), duration: frame(4), localStart: frame(0),
+    ...componentItem, id: "target", start: frame(0), duration: frame(4), sourceTime: linear(frame(4)),
   };
   const following: NleComponentItem = {
-    ...componentItem, id: "following", start: frame(4), duration: frame(2), localStart: frame(0),
+    ...componentItem, id: "following", start: frame(4), duration: frame(2), sourceTime: linear(frame(2)),
   };
   const overlay: NleComponentItem = {
-    ...componentItem, id: "overlay", start: frame(6), duration: frame(2), localStart: frame(0),
+    ...componentItem, id: "overlay", start: frame(6), duration: frame(2), sourceTime: linear(frame(2)),
   };
   const untouched: NleComponentItem = {
-    ...componentItem, id: "untouched", start: frame(8), duration: frame(2), localStart: frame(0),
+    ...componentItem, id: "untouched", start: frame(8), duration: frame(2), sourceTime: linear(frame(2)),
   };
   const base = applyNleTransaction(createNleProject({
     id: "ripple-edit", name: "Ripple edit", editRate: { numerator: 2, denominator: 1 },
@@ -377,7 +447,7 @@ test("Media Asset files and package Components materialize as inspectable NLE tr
   const withMedia = applyNleTransaction(withTrack, mediaTransaction);
   assert.deepEqual(findNleItem(withMedia, "interview-use").item, {
     id: "interview-use", kind: "media", media: "interview", start: frame(2), duration: frame(8),
-    localStart: frame(0), enabled: true, audio: { effects: [] }, picture: fullPicture,
+    sourceTime: linear(frame(8)), enabled: true, audio: { effects: [] }, picture: fullPicture,
   });
 
   const componentTransaction = createComponentMaterialization(withMedia, {
@@ -387,7 +457,7 @@ test("Media Asset files and package Components materialize as inspectable NLE tr
   });
   const finished = applyNleTransaction(withMedia, componentTransaction);
   assert.deepEqual(findNleItem(finished, "title").item, {
-    id: "title", kind: "component", start: frame(1), duration: frame(4), localStart: frame(0),
+    id: "title", kind: "component", start: frame(1), duration: frame(4), sourceTime: linear(frame(4)),
     enabled: true,
     component: { module: { name: "@example/title", version: "1" }, name: "card" },
     parameters: { title: "Already materialized" }, picture: fullPicture,

@@ -2,6 +2,10 @@ import {
   assertNleProject,
 } from "./project.js";
 import {
+  shiftNleSourceTime,
+  sliceNleSourceTime,
+} from "./source-time.js";
+import {
   addExactTemporalValues,
   assertExactTemporalValue,
   compareExactTemporalValues,
@@ -18,6 +22,7 @@ import type {
   NleMedia,
   NleMediaAssetReference,
   NleProject,
+  NleSourceTime,
   NleTrack,
   NleTransition,
 } from "./types.js";
@@ -54,6 +59,7 @@ export type NleCommand =
     }
   | { readonly kind: "item.trim"; readonly id: string; readonly edge: "start" | "end"; readonly at: ExactTemporalValue }
   | { readonly kind: "item.slip"; readonly id: string; readonly delta: ExactTemporalValue }
+  | { readonly kind: "item.retime"; readonly id: string; readonly sourceTime: NleSourceTime }
   | {
       readonly kind: "item.roll";
       readonly left: string;
@@ -146,13 +152,25 @@ function itemEnd(item: NleItem): ExactTemporalValue {
 }
 
 function trimItem(item: NleItem, edge: "start" | "end", at: ExactTemporalValue): void {
+  const oldDuration = structuredClone(item.duration);
   if (edge === "start") {
     const delta = subtractExactTemporalValues(at, item.start);
+    const duration = subtractExactTemporalValues(oldDuration, delta);
+    const sourceTime = sliceNleSourceTime(item.sourceTime, oldDuration, {
+      start: delta,
+      end: oldDuration,
+    });
     (item as { start: ExactTemporalValue }).start = structuredClone(at);
-    (item as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(item.duration, delta);
-    (item as { localStart: ExactTemporalValue }).localStart = addExactTemporalValues(item.localStart, delta);
+    (item as { duration: ExactTemporalValue }).duration = duration;
+    (item as { sourceTime: NleSourceTime }).sourceTime = sourceTime;
   } else {
-    (item as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(at, item.start);
+    const duration = subtractExactTemporalValues(at, item.start);
+    const sourceTime = sliceNleSourceTime(item.sourceTime, oldDuration, {
+      start: exactTemporalZero(),
+      end: duration,
+    });
+    (item as { duration: ExactTemporalValue }).duration = duration;
+    (item as { sourceTime: NleSourceTime }).sourceTime = sourceTime;
   }
 }
 
@@ -272,10 +290,17 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         const { track, item } = mutableItem(next, command.id);
         editable(track);
         assertExactTemporalValue(command.delta, "NLE Item slip delta");
-        (item as { localStart: ExactTemporalValue }).localStart = addExactTemporalValues(
-          item.localStart,
+        (item as { sourceTime: NleSourceTime }).sourceTime = shiftNleSourceTime(
+          item.sourceTime,
+          item.duration,
           command.delta,
         );
+        break;
+      }
+      case "item.retime": {
+        const { track, item } = mutableItem(next, command.id);
+        editable(track);
+        (item as { sourceTime: NleSourceTime }).sourceTime = structuredClone(command.sourceTime);
         break;
       }
       case "item.roll": {
@@ -297,19 +322,24 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
           throw new Error("NLE roll boundary must remain inside both outer Item edges.");
         }
         const delta = subtractExactTemporalValues(command.at, previousBoundary);
-        (left.item as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(
+        const leftDuration = subtractExactTemporalValues(
           command.at,
           left.item.start,
         );
+        const rightDuration = subtractExactTemporalValues(rightEnd, command.at);
+        const leftSourceTime = sliceNleSourceTime(left.item.sourceTime, left.item.duration, {
+          start: exactTemporalZero(),
+          end: leftDuration,
+        });
+        const rightSourceTime = sliceNleSourceTime(right.item.sourceTime, right.item.duration, {
+          start: delta,
+          end: right.item.duration,
+        });
+        (left.item as { duration: ExactTemporalValue }).duration = leftDuration;
+        (left.item as { sourceTime: NleSourceTime }).sourceTime = leftSourceTime;
         (right.item as { start: ExactTemporalValue }).start = structuredClone(command.at);
-        (right.item as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(
-          rightEnd,
-          command.at,
-        );
-        (right.item as { localStart: ExactTemporalValue }).localStart = addExactTemporalValues(
-          right.item.localStart,
-          delta,
-        );
+        (right.item as { duration: ExactTemporalValue }).duration = rightDuration;
+        (right.item as { sourceTime: NleSourceTime }).sourceTime = rightSourceTime;
         break;
       }
       case "item.ripple-trim": {
@@ -342,10 +372,20 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
           throw new Error("NLE split must lie inside the Item.");
         }
         const right = structuredClone(item) as NleItem;
+        const oldDuration = structuredClone(item.duration);
         (right as { id: string }).id = command.rightId;
         (right as { start: ExactTemporalValue }).start = structuredClone(command.at);
-        (right as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(item.duration, offset);
-        (right as { localStart: ExactTemporalValue }).localStart = addExactTemporalValues(item.localStart, offset);
+        (right as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(oldDuration, offset);
+        (right as { sourceTime: NleSourceTime }).sourceTime = sliceNleSourceTime(
+          item.sourceTime,
+          oldDuration,
+          { start: offset, end: oldDuration },
+        );
+        (item as { sourceTime: NleSourceTime }).sourceTime = sliceNleSourceTime(
+          item.sourceTime,
+          oldDuration,
+          { start: exactTemporalZero(), end: offset },
+        );
         (item as { duration: ExactTemporalValue }).duration = offset;
         const index = track.items.indexOf(item);
         track.items.splice(index + 1, 0, right);

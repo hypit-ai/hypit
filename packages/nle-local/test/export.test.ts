@@ -16,6 +16,7 @@ import type { MediaAssetDocument } from "@hypit/media-asset";
 import {
   applyNleTransaction,
   createNleProject,
+  nleLinearSourceTime,
 } from "@hypit/nle";
 
 import { exportLocalNleProject, nleProjectModuleKeys } from "../src/export.js";
@@ -69,7 +70,7 @@ function project() {
       id: "picture", name: "Picture", kind: "picture", locked: false, muted: false,
       items: [{
         id: "clip-use", kind: "media", media: "clip", enabled: true,
-        start: second(0), duration: second(1), localStart: second(0),
+        start: second(0), duration: second(1), sourceTime: nleLinearSourceTime(second(1)),
         picture: {
           layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" },
           effects: [],
@@ -147,7 +148,7 @@ test("module selection includes nested component and effect owners exactly once"
         id: "picture", name: "Picture", kind: "picture", locked: false, muted: false,
         items: [{
           id: "component", kind: "component", component: symbol("@example/component"), parameters: {},
-          start: second(0), duration: second(1), localStart: second(0), enabled: true,
+          start: second(0), duration: second(1), sourceTime: nleLinearSourceTime(second(1)), enabled: true,
           picture: {
             layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "fill" },
             effects: [{ id: "effect", effect: symbol("@example/effect"), parameters: {} }],
@@ -158,12 +159,12 @@ test("module selection includes nested component and effect owners exactly once"
               id: "inner", name: "Inner", kind: "picture", locked: false, muted: false,
               items: [{
                 id: "inner-component", kind: "component", component: symbol("@example/nested"), parameters: {},
-                start: second(0), duration: second(1), localStart: second(0), enabled: true,
+                start: second(0), duration: second(1), sourceTime: nleLinearSourceTime(second(1)), enabled: true,
                 picture: { layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "fill" }, effects: [] },
               }],
             },
           }] }),
-          start: second(1), duration: second(1), localStart: second(0), enabled: true,
+          start: second(1), duration: second(1), sourceTime: nleLinearSourceTime(second(1)), enabled: true,
           picture: { layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "fill" }, effects: [] },
         }],
       },

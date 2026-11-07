@@ -5,9 +5,10 @@ import type {
   NleLoweringContext,
   NlePackageSymbol,
 } from "@hypit/nle";
+import { nleSourceTimeRequiredDuration } from "@hypit/nle";
 import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
 import { canonicalize } from "@hypit/protocol";
-import { addExactTemporalValues } from "@hypit/temporal/algebra";
+import { compareExactTemporalValues } from "@hypit/temporal/algebra";
 
 import { titleCardModuleRef } from "./manifest.js";
 import { titleCardHtmlSource } from "./picture.js";
@@ -94,9 +95,10 @@ export function editTitleCardNleParameters(
 function resolveTitleCard(item: NleComponentItem, { project }: NleLoweringContext) {
   const parameters = item.parameters as unknown;
   assertTitleCardNleParameters(parameters);
+  const required = nleSourceTimeRequiredDuration(item.sourceTime);
   const spec: TitleCardSpec = {
     id: `${item.id}:source`,
-    duration: addExactTemporalValues(item.localStart, item.duration),
+    duration: compareExactTemporalValues(required, item.duration) > 0 ? required : item.duration,
     width: project.canvas.width,
     height: project.canvas.height,
     title: parameters.title,

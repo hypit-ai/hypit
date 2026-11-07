@@ -5,12 +5,11 @@ import type {
   NleProject,
   NleTransaction,
 } from "@hypit/nle";
-import { assertNleProject, findNleTrack } from "@hypit/nle";
+import { assertNleProject, findNleTrack, nleLinearSourceTime } from "@hypit/nle";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
 import {
   addExactTemporalValues,
   compareExactTemporalValues,
-  exactTemporalZero,
   subtractExactTemporalValues,
   type ExactTemporalValue,
 } from "@hypit/temporal/algebra";
@@ -86,6 +85,7 @@ export function createCaptionNleMaterialization(project: NleProject, input: {
     const end = addExactTemporalValues(input.at, region.end.position);
     assert(compareExactTemporalValues(end, start) > 0, `Caption Cue ${cue.cueId} has no positive duration.`);
     const selected = componentForStyle(style);
+    const duration = subtractExactTemporalValues(end, start);
     commands.push({
       kind: "item.add",
       track: track.id,
@@ -93,8 +93,8 @@ export function createCaptionNleMaterialization(project: NleProject, input: {
         id: input.itemId?.(cue.cueId) ?? `${input.id}:${cue.cueId}`,
         kind: "component",
         start,
-        duration: subtractExactTemporalValues(end, start),
-        localStart: exactTemporalZero(),
+        duration,
+        sourceTime: nleLinearSourceTime(duration),
         enabled: true,
         component: structuredClone(selected.component),
         parameters: canonicalize({

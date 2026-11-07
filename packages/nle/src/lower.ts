@@ -198,18 +198,10 @@ function selection(item: NleItem, source: ProgramSource, outputName: string) {
   assert(output !== undefined, `NLE Item ${item.id} selected missing Source output ${outputName}.`);
   if (output.kind === "constant") return { kind: "constant" as const };
   const local = sealLocalTemporalDomain({ id: `${item.id}:time`, duration: structuredClone(item.duration) });
-  const sourceAtStart = structuredClone(item.localStart);
-  const sourceAtEnd = addExactTemporalValues(item.localStart, item.duration);
-  assert(compareExactTemporalValues(sourceAtEnd, output.domain.duration) <= 0,
-    `NLE Item ${item.id} exceeds Source output ${source.id}.${outputName}.`);
   return { kind: "signal" as const, mapping: sealTemporalMap({ stages: [{
     target: local,
     source: output.domain,
-    pieces: [{
-      target: { start: exactTemporalZero(), end: local.duration },
-      sourceAtStart,
-      rate: { numerator: 1, denominator: 1 },
-    }],
+    pieces: structuredClone(item.sourceTime.pieces),
   }] }) };
 }
 

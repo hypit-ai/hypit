@@ -4,9 +4,12 @@ import {
   assertExactTemporalValue,
   compareExactTemporalValues,
   exactTemporalZero,
+  sealLocalTemporalDomain,
+  assertTemporalMapPieces,
   type ExactTemporalValue,
 } from "@hypit/temporal/algebra";
 
+import { assertNleSourceTime } from "./source-time.js";
 import type {
   NleAudioAppearance,
   NleCanvas,
@@ -137,9 +140,11 @@ function assertItem(
   ancestors: Set<object>,
 ): void {
   identity(value.id, "NLE Item id");
+  assert(!Object.hasOwn(value, "localStart"),
+    `NLE Item ${value.id} must store one sourceTime relation, not retired localStart.`);
   assertNonNegativeTime(value.start, `NLE Item ${value.id} start`);
   assertPositiveTime(value.duration, `NLE Item ${value.id} duration`);
-  assertNonNegativeTime(value.localStart, `NLE Item ${value.id} localStart`);
+  assertNleSourceTime(value.sourceTime, value.duration, `NLE Item ${value.id} sourceTime`);
   assert(typeof value.enabled === "boolean", `NLE Item ${value.id} enabled is invalid.`);
   if (value.kind === "media") {
     identity(value.media, `NLE Media Item ${value.id} media`);
@@ -153,8 +158,11 @@ function assertItem(
     const duration = nleProjectDuration(value.project);
     assert(compareExactTemporalValues(duration, exactTemporalZero()) > 0,
       `NLE Compound Item ${value.id} child Project is empty.`);
-    assert(compareExactTemporalValues(addExactTemporalValues(value.localStart, value.duration), duration) <= 0,
-      `NLE Compound Item ${value.id} exceeds child Project ${value.project.id}.`);
+    assertTemporalMapPieces(
+      value.sourceTime.pieces,
+      sealLocalTemporalDomain({ id: `${value.id}:time`, duration: value.duration }),
+      sealLocalTemporalDomain({ id: `${value.project.id}:time`, duration }),
+    );
     return;
   }
   assertSymbol(value.component, `NLE Component Item ${value.id} component`);

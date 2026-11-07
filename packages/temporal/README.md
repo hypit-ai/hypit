@@ -47,6 +47,12 @@ monotone, so one piece has one direction; holds and direction changes use adjace
 Composition preserves a sequence of independently meaningful
 stages rather than flattening them through a registry. The relation answers where target time reads
 source time; visual interpolation and audio resampling remain signal-domain responsibilities.
+`assertTemporalMapPieces` can validate target-local structure, non-negative source coordinates, rate/wrap
+shape and cubic monotonicity before a concrete Source domain is available; attaching the Source domain in a
+complete Map adds its upper-bound checks. `sliceTemporalMapPieces` exactly subdivides and rebases affine or cubic
+pieces, `extrapolateTemporalMapPieceRange` performs exact polynomial continuation for an edited boundary, and
+`coalesceTemporalMapPieces` removes only provably equivalent adjacent affine cuts. These are relation algebra,
+not NLE commands or frame-sampling policy.
 Every evaluation names the side of its exact target position: `after` reads content beginning at a
 frame or sample boundary, while `before` reads the side ending at an exclusive boundary. Each Map
 stage carries that side to its source, reversing it for negative motion and restarting at `after` for

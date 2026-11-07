@@ -16,6 +16,7 @@ import { fixtureResource } from "../../../test/fixture-resource.js";
 import {
   applyNleTransaction,
   createNleProject,
+  nleLinearSourceTime,
 } from "@hypit/nle";
 
 import {
@@ -132,7 +133,7 @@ test("the downstream NLE adapter shares one lowering and supplies silence for pi
         id: "card", kind: "component", component, parameters: {},
         start: exactTemporalValueFromFrames(0, { frameRate }),
         duration: exactTemporalValueFromFrames(frameCount, { frameRate }),
-        localStart: exactTemporalValueFromFrames(0, { frameRate }), enabled: true,
+        sourceTime: nleLinearSourceTime(exactTemporalValueFromFrames(frameCount, { frameRate })), enabled: true,
         picture: {
           layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" }, effects: [],
         },

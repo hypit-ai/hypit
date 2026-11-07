@@ -35,6 +35,13 @@ export {
   prepareNleProjectSave,
 } from "./store.js";
 export type { NleProjectSaveTicket } from "./store.js";
+export {
+  assertNleSourceTime,
+  nleLinearSourceTime,
+  nleSourceTimeRequiredDuration,
+  shiftNleSourceTime,
+  sliceNleSourceTime,
+} from "./source-time.js";
 export { snapNleTime } from "./snap.js";
 export type { NleSnapGuide, NleSnapResult } from "./snap.js";
 export {

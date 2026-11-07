@@ -32,9 +32,15 @@
             "ticks": "3",
             "timeBase": { "numerator": 1, "denominator": 1 }
           },
-          "localStart": {
-            "ticks": "0",
-            "timeBase": { "numerator": 1, "denominator": 1 }
+          "sourceTime": {
+            "pieces": [{
+              "target": {
+                "start": { "ticks": "0", "timeBase": { "numerator": 1, "denominator": 1 } },
+                "end": { "ticks": "3", "timeBase": { "numerator": 1, "denominator": 1 } }
+              },
+              "sourceAtStart": { "ticks": "0", "timeBase": { "numerator": 1, "denominator": 1 } },
+              "rate": { "numerator": 1, "denominator": 1 }
+            }]
           },
           "enabled": true,
           "component": {

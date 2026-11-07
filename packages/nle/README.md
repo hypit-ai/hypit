@@ -9,21 +9,22 @@ not compile an AuthorGraph, run a Provider, close an audiovisual Programme or re
 provenance.
 
 Edits are immutable revisioned transactions. The command set covers Project settings; Media add, rename, relink,
-replace and remove; Track add, move, update, replace and remove; add, move, trim, slip, split, detach-audio,
+replace and remove; Track add, move, update, replace and remove; add, move, trim, slip, retime, split, detach-audio,
 roll, ripple-trim, replace and remove for Items; and add, replace and remove for Transition, matte and Group relations.
 A failed multi-command transaction leaves
 the input revision untouched.
 
 These are direct editing operations, not declarations. `item.move` changes programme placement, `item.trim`
-changes a visible edge, and `item.slip` changes only the exact source-local `localStart`. The current source-time
-model is deliberately the ordinary one-times mapping `localStart + programme offset`; rate, reverse, hold, loop
-and variable-speed behavior are not implied by these commands and have not been added as ad-hoc flags.
-`item.detach-audio` copies the same direct range and source-local start into an existing Audio Track, removes Audio
+changes a visible edge, `item.slip` shifts every exact source coordinate, and `item.retime` replaces the Item-local
+piecewise source-time fact. An affine piece owns an exact rational rate: positive values play forward, negative
+values reverse, zero holds and `wrap` loops. Adjacent affine or monotone cubic pieces express exact variable speed
+without a speed enum or package-specific flag. `item.detach-audio` copies the same direct range and source-time
+pieces into an existing Audio Track, removes Audio
 participation from the Picture Item and creates no hidden A/V link. A Host may add an editing Group in the same
 transaction when linked selection is desired.
 
 `item.roll` moves the one shared Programme boundary between two touching Items on the same Track. It preserves
-their outer edges and advances or retreats the right Item's `localStart` by the same exact delta. `item.ripple-trim`
+their outer edges while exactly slicing, rebasing or extrapolating the affected source-time pieces. `item.ripple-trim`
 trims one edge and moves only its explicit Item `scope` by the resulting boundary delta. Core never guesses that
 scope from Track order, visual overlap or a phrase such as “everything later”; a Host can form a multi-Track edit
 from its current selection and policy, and the whole gesture remains one atomic transaction.
@@ -51,8 +52,13 @@ Keyframe format: its package validates and compiles those exact times to an AVIR
 then closes the Item-local clock to a factual Programme-to-Control `TemporalMap`; a package resolver cannot return
 a named occurrence/source binding.
 
-Every persisted `start`, `duration` and `localStart` is an `ExactTemporalValue`: integer ticks plus a rational
-time base. `editRate` is only the editor's display and snap grid. Changing it never retimes or quantizes existing
+Every persisted `start`, `duration`, target range and source position is an `ExactTemporalValue`: integer ticks plus
+a rational time base. An Item persists only one `sourceTime.pieces` relation over its local `[0, duration]` domain.
+It does not persist a complete AVIR `TemporalMap`, because the concrete media or Component Source domain may be
+offline when the Project opens. Lowering resolves that Source, attaches the two finite domains and validates the
+same pieces as one complete Map. A time-bearing Component resolver can use `nleSourceTimeRequiredDuration()` when
+its generated Source extent must cover the Item's greatest direct source coordinate; constants need no fabricated
+Source clock. `editRate` is only the editor's display and snap grid. Changing it never retimes or quantizes existing
 items. Preview/export receives a separate output frame rate and samples the exact programme at that rate; audio
 continues to use its own sample rate.
 
@@ -133,8 +139,8 @@ The sampled matte Item is not painted independently.
 
 A Group is editing-only and disappears during lowering. A Compound is different: it recursively stores another
 flat `NleProject`, closes that child as an ordinary multi-output AVIR Source and can be trimmed or reused like any
-other Item. Child and parent may use different editing grids because `localStart` and all programme placements are
-exact times rather than grid indices.
+other Item. Child and parent may use different editing grids because source-time pieces and all programme placements
+are exact times rather than grid indices.
 
 The spatial policy stores an explicit rectangle and `fill | contain | cover` fit on each picture item.
 Tracks and item arrays are ordered back-to-front. This package deliberately contains no SVML parser, Build,

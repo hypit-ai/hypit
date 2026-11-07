@@ -6,11 +6,11 @@ description: 直接有理数放置、源时间与输出采样如何彼此分离�
 Hypit NLE 工程把已经接受的剪辑保存为直接值。它没有具名 Timeline 对象，也不保留帮助作者
 选出时间的表达式、转写匹配或生成来源。
 
-每个 Item 有三个精确时间值：
+每个 Item 有两个放置值和一份直接源时间关系：
 
 - `start`：Item 在节目时间中的起点；
 - `duration`：Item 参与节目的时长；
-- `localStart`：从 Item 的素材或组件局部时间何处开始读取。
+- `sourceTime.pieces`：每段 Item 局部目标范围从素材或组件局部时间的什么位置读取。
 
 每个值由整数 tick 与有理数 time base 表示：
 
@@ -22,6 +22,10 @@ Hypit NLE 工程把已经接受的剪辑保存为直接值。它没有具名 Tim
 ```
 
 它精确等于 1001/30000 秒，不会舍入到工程显示网格。
+
+普通 1× 读取是一段 affine piece；负 rate 表示倒放，零 rate 表示定格，`wrap` 表示循环，多段 affine
+或 cubic piece 可以表达精确变速。工程只保存这些 Item-local pieces。lowering 时，已经解析的媒体或组件
+输出提供真实 Source domain，AVIR 才获得完整的 `TemporalMap`。
 
 ## editRate 是网格，不是存储单位
 

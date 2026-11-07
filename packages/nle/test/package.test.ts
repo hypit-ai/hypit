@@ -6,6 +6,7 @@ import {
   createNleLoweringHostFromFacets,
   createNlePackageFacet,
   createNleProject,
+  nleLinearSourceTime,
   nlePackagesFromFacets,
   type NleComponentItem,
   type NleResolvedItemSource,
@@ -16,7 +17,7 @@ const symbol = { module: { name: "@example/title", version: "1" }, name: "card" 
 const second = (value: number) => ({ ticks: String(value), timeBase: { numerator: 1, denominator: 1 } });
 const item: NleComponentItem = {
   id: "title", kind: "component", component: symbol, parameters: {},
-  start: second(0), duration: second(1), localStart: second(0), enabled: true,
+  start: second(0), duration: second(1), sourceTime: nleLinearSourceTime(second(1)), enabled: true,
   picture: { layout: { x: 0, y: 0, width: 10, height: 10, fit: "fill" }, effects: [] },
 };
 const project = createNleProject({

@@ -1,8 +1,9 @@
 import { verifyPreparedMedia } from "@hypit/media";
 import type { CanonicalValue } from "@hypit/hypit/protocol";
-import { exactTemporalZero, type ExactTemporalValue } from "@hypit/temporal/algebra";
+import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 
 import { assertNleProject, findNleTrack } from "./project.js";
+import { nleLinearSourceTime } from "./source-time.js";
 import type { NleTransaction } from "./transaction.js";
 import type {
   NleAudioAppearance,
@@ -12,6 +13,7 @@ import type {
   NlePictureAppearance,
   NlePictureLayout,
   NleProject,
+  NleSourceTime,
   NleMediaAssetReference,
   NleMediaInterpretation,
 } from "./types.js";
@@ -77,7 +79,7 @@ export function createMediaAssetMaterialization(project: NleProject, input: {
         media: input.mediaId,
         start: structuredClone(input.at),
         duration: structuredClone(duration),
-        localStart: exactTemporalZero(),
+        sourceTime: nleLinearSourceTime(duration),
         enabled: true,
         ...(includeAudio ? { audio: { effects: structuredClone(input.audio?.effects ?? []) } } : {}),
         ...(track.kind === "audio" ? {} : { picture: {
@@ -97,7 +99,7 @@ export function createComponentMaterialization(project: NleProject, input: {
   readonly parameters: CanonicalValue;
   readonly at: ExactTemporalValue;
   readonly duration: ExactTemporalValue;
-  readonly localStart?: ExactTemporalValue;
+  readonly sourceTime?: NleSourceTime;
   readonly layout?: NlePictureLayout;
   readonly effects?: readonly NleEffect[];
   readonly audio?: Partial<NleAudioAppearance>;
@@ -111,7 +113,7 @@ export function createComponentMaterialization(project: NleProject, input: {
     parameters: structuredClone(input.parameters),
     start: structuredClone(input.at),
     duration: structuredClone(input.duration),
-    localStart: structuredClone(input.localStart ?? exactTemporalZero()),
+    sourceTime: structuredClone(input.sourceTime ?? nleLinearSourceTime(input.duration)),
     enabled: true,
     ...(input.audio === undefined ? {} : { audio: {
       effects: structuredClone(input.audio.effects ?? []),

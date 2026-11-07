@@ -1,7 +1,12 @@
 import type { AudioOperator, PictureOperator, ProgramSource } from "@hypit/audiovisual";
 import type { PreparedMedia } from "@hypit/media";
 import type { CanonicalValue, ModuleRef } from "@hypit/hypit/protocol";
-import type { ExactTemporalValue, LocalTemporalDomain, TemporalRate } from "@hypit/temporal/algebra";
+import type {
+  ExactTemporalValue,
+  LocalTemporalDomain,
+  TemporalMapPiece,
+  TemporalRate,
+} from "@hypit/temporal/algebra";
 
 /** Editor display and snap grid. It never changes the meaning of persisted exact times. */
 export type NleEditRate = TemporalRate;
@@ -59,14 +64,19 @@ export type NleAudioAppearance = {
   readonly effects: readonly NleEffect[];
 };
 
+/** Direct Item-local target-to-Source coordinates. Concrete Source domains are attached only during lowering. */
+export type NleSourceTime = {
+  readonly pieces: readonly TemporalMapPiece[];
+};
+
 type NleItemBase = {
   readonly id: string;
   /** Exact Programme-local position. */
   readonly start: ExactTemporalValue;
   /** Exact visible duration. */
   readonly duration: ExactTemporalValue;
-  /** Exact Source-local position read at the first visible instant. */
-  readonly localStart: ExactTemporalValue;
+  /** Exact source-time facts over the Item-local interval [0, duration]. */
+  readonly sourceTime: NleSourceTime;
   readonly enabled: boolean;
 };
 

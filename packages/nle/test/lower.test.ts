@@ -18,7 +18,7 @@ import { visualProgramHtmlSource } from "@hypit/audiovisual-html";
 import { assertHtmlProgram, htmlVisual, selectHtmlVideoSources } from "@hypit/html-program";
 import { prepareMedia } from "@hypit/media";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
-import { sealLocalTemporalDomain } from "@hypit/temporal/algebra";
+import { evaluateTemporalMap, sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 import { exactTemporalValueFromFrames } from "@hypit/temporal/sampling";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 
@@ -26,7 +26,9 @@ import {
   applyNleTransaction,
   createNleProject,
   lowerNleProjectToAudiovisual,
+  nleLinearSourceTime,
   nlePointwisePictureEffect,
+  serializeNleProject,
   type NleComponentItem,
   type NlePictureAppearance,
   type NleProject,
@@ -181,14 +183,16 @@ function project(): NleProject {
     canvas: { width: 100, height: 100, clearColor: "#101010" },
   });
   const caption: NleComponentItem = {
-    id: "subtitle-one", kind: "component", start: frame(1), duration: frame(2), localStart: frame(0),
+    id: "subtitle-one", kind: "component", start: frame(1), duration: frame(2),
+    sourceTime: nleLinearSourceTime(frame(2)),
     enabled: true,
     component: captionRenderer,
     parameters: { text: "A direct caption block", color: "white" },
     picture: { layout: { x: 10, y: 70, width: 80, height: 20, fit: "contain" }, effects: [] },
   };
   const component: NleComponentItem = {
-    id: "title", kind: "component", start: frame(0), duration: frame(4), localStart: frame(0),
+    id: "title", kind: "component", start: frame(0), duration: frame(4),
+    sourceTime: nleLinearSourceTime(frame(4)),
     enabled: true,
     component: componentRenderer,
     parameters: { title: "HTML component" }, picture: full,
@@ -200,7 +204,7 @@ function project(): NleProject {
       locked: false, muted: false, items: [] } },
     { kind: "item.add", track: "main", item: {
       id: "camera-use", kind: "media", media: "camera", start: frame(0), duration: frame(4),
-      localStart: frame(0), enabled: true, audio: { effects: [{
+      sourceTime: nleLinearSourceTime(frame(4)), enabled: true, audio: { effects: [{
         id: "quiet", effect: audioEffectRenderer, parameters: { gain: 0.5 },
       }] },
       picture: { ...full, effects: [{ id: "mono", effect: {
@@ -225,6 +229,50 @@ test("Media, caption Component and Effect lower into one audiovisual Programme",
     ["camera-prepared", "subtitle-one:source", "title:source"]);
 });
 
+test("NLE source-time pieces close as one resolved AVIR TemporalMap", () => {
+  const pieces = [{
+    target: { start: frame(0), end: frame(2) },
+    sourceAtStart: frame(8), rate: { numerator: -1, denominator: 1 },
+  }, {
+    target: { start: frame(2), end: frame(4) },
+    sourceAtStart: frame(6), rate: { numerator: 0, denominator: 1 },
+  }, {
+    target: { start: frame(4), end: frame(6) },
+    sourceAtStart: frame(0), rate: { numerator: 1, denominator: 1 },
+    wrap: { start: frame(0), end: frame(2) },
+  }, {
+    target: { start: frame(6), end: frame(8) },
+    sourceAtStart: frame(0), sourceControl1: frame(1), sourceControl2: frame(5), sourceAtEnd: frame(8),
+  }] as const;
+  const base = createNleProject({
+    id: "source-time", name: "Source time", editRate: outputRate,
+    canvas: { width: 100, height: 100, clearColor: "black" },
+  });
+  const document = applyNleTransaction(base, { revision: 0, commands: [
+    { kind: "media.add", media: { id: "camera", name: "Camera",
+      asset: { path: "./media/camera.media.json" } } },
+    { kind: "track.add", track: { id: "picture", name: "Picture", kind: "picture",
+      locked: false, muted: false, items: [{
+        id: "retimed", kind: "media", media: "camera", start: frame(0), duration: frame(8),
+        sourceTime: { pieces }, enabled: true, picture: full,
+      }] } },
+  ] });
+  const program = lowerNleProjectToAudiovisual(document, host);
+  const selection = program.occurrences.retimed?.selections.picture;
+  assert.equal(selection?.kind, "signal");
+  if (selection?.kind !== "signal") throw new Error("Retimed fixture did not lower as a signal.");
+  assert.deepEqual(selection.mapping.stages[0]?.pieces, pieces);
+  assert.deepEqual(evaluateTemporalMap(selection.mapping, frame(1), "after"), {
+    position: frame(7), sourceSide: "before",
+  });
+
+  const invalid = structuredClone(document);
+  const item = invalid.tracks[0]!.items[0]!;
+  (item as { sourceTime: unknown }).sourceTime = nleLinearSourceTime(frame(8), frame(8));
+  assert.doesNotThrow(() => serializeNleProject(invalid));
+  assert.throws(() => lowerNleProjectToAudiovisual(invalid, host), /source domain/u);
+});
+
 test("the same project lowers directly to a browser HtmlProgram without Build execution", () => {
   const html = lowerNleProjectToHtmlProgram(project(), host, outputRate);
 
@@ -246,7 +294,8 @@ test("Transition, matte and editing Group remain direct NLE relations", () => {
   });
   const component = (id: string, startFrame: number, durationFrames: number): NleComponentItem => ({
     id, kind: "component", component: componentRenderer, parameters: { title: id },
-    start: frame(startFrame), duration: frame(durationFrames), localStart: frame(0), enabled: true, picture: full,
+    start: frame(startFrame), duration: frame(durationFrames),
+    sourceTime: nleLinearSourceTime(frame(durationFrames)), enabled: true, picture: full,
   });
   const document = applyNleTransaction(empty, { revision: 0, commands: [{
     kind: "track.add", track: { id: "main", name: "Main", kind: "picture",
@@ -298,7 +347,7 @@ test("an Audio-only package Component closes through the same NLE and terminal c
     kind: "track.add", track: {
       id: "audio", name: "Audio", kind: "audio", locked: false, muted: false, items: [{
         id: "tone", kind: "component", component: audioComponentRenderer, parameters: { frequency: 440 },
-        start: frame(0), duration: frame(4), localStart: frame(0), enabled: true,
+        start: frame(0), duration: frame(4), sourceTime: nleLinearSourceTime(frame(4)), enabled: true,
         audio: { effects: [{
           id: "quiet", effect: audioEffectRenderer, parameters: { gain: 0.5 },
         }] },
@@ -324,7 +373,7 @@ test("a Compound Item closes one child NLE Project as an ordinary nested Source"
     { kind: "track.add", track: { id: "child-main", name: "Child main", kind: "picture",
       locked: false, muted: false, items: [{
         id: "child-camera", kind: "media", media: "camera", start: frame(0), duration: frame(4),
-        localStart: frame(0), enabled: true, picture: full, audio: { effects: [] },
+        sourceTime: nleLinearSourceTime(frame(4)), enabled: true, picture: full, audio: { effects: [] },
       }] } },
   ] });
   const parentBase = createNleProject({
@@ -335,7 +384,7 @@ test("a Compound Item closes one child NLE Project as an ordinary nested Source"
     kind: "track.add", track: { id: "parent-main", name: "Parent main", kind: "picture",
       locked: false, muted: false, items: [{
         id: "nested", kind: "compound", project: child, start: frame(0), duration: frame(4),
-        localStart: frame(0), enabled: true, picture: full, audio: { effects: [] },
+        sourceTime: nleLinearSourceTime(frame(4)), enabled: true, picture: full, audio: { effects: [] },
       }] },
   }] });
   const program = lowerNleProjectToAudiovisual(parent, host);

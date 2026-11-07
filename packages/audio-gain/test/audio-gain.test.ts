@@ -21,6 +21,7 @@ import {
   createNleLoweringHostFromFacets,
   createNleProject,
   findNleItem,
+  nleLinearSourceTime,
   type NleComponentItem,
 } from "@hypit/nle";
 import hypitPackage from "../src/activation.js";
@@ -84,7 +85,7 @@ test("Audio Gain owns NLE Audio effect parameters, lowering and authoring", () =
   const symbol = { module: { name: "@example/synth", version: "1" }, name: "tone" } as const;
   const item: NleComponentItem = {
     id: "tone", kind: "component", component: symbol, parameters: {},
-    start: at(0), duration: at(1), localStart: at(0), enabled: true,
+    start: at(0), duration: at(1), sourceTime: nleLinearSourceTime(at(1)), enabled: true,
     audio: { effects: [{
       id: "fade", effect: { module: { name: "@hypit/audio-gain", version: "1" }, name: "gain" },
       parameters: {

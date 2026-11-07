@@ -3,8 +3,10 @@ import test from "node:test";
 
 import {
   composeTemporalMaps,
+  coalesceTemporalMapPieces,
   createTemporalMapEvaluator,
   evaluateTemporalMap,
+  extrapolateTemporalMapPieceRange,
   exactTemporalValueFromExtent,
   exactTemporalValueFromFrames,
   frameSampleBoundary,
@@ -20,6 +22,7 @@ import {
   resolveExactTemporalRelation,
   resolveTemporalRelation,
   sealTemporalMap,
+  sliceTemporalMapPieces,
   temporalDurationInSamples,
   temporalExtentFromDomain,
   temporalMapMayContain,
@@ -136,6 +139,44 @@ test("Temporal Maps compose identity, scale, reverse, hold, loop and gaps withou
   assert.deepEqual(evaluateTemporalMap(identityTemporalMap(target), target.duration, "before"), {
     position: target.duration, sourceSide: "before",
   });
+});
+
+test("piece slicing exactly rebases cubic source time and affine edits coalesce", () => {
+  const at = (ticks: number, denominator = 1) => ({
+    ticks: String(ticks), timeBase: { numerator: 1, denominator },
+  });
+  const source = { id: "slice-source", duration: at(5) };
+  const originalTarget = { id: "slice-original", duration: at(4) };
+  const original = sealTemporalMap({ stages: [{ target: originalTarget, source, pieces: [{
+    target: { start: at(0), end: at(4) },
+    sourceAtStart: at(0), sourceControl1: at(1), sourceControl2: at(3), sourceAtEnd: at(4),
+  }] }] });
+  const pieces = sliceTemporalMapPieces(original.stages[0]!.pieces, { start: at(1), end: at(3) });
+  const sliced = sealTemporalMap({ stages: [{
+    target: { id: "slice-result", duration: at(2) }, source, pieces,
+  }] });
+  for (const position of [at(0), at(1), at(2)]) {
+    const originalPosition = { ...position, ticks: String(Number(position.ticks) + 1) };
+    const side = position.ticks === "2" ? "before" : "after";
+    assert.deepEqual(
+      evaluateTemporalMap(sliced, position, side),
+      evaluateTemporalMap(original, originalPosition, side),
+    );
+  }
+
+  const coalesced = coalesceTemporalMapPieces([
+    { target: { start: at(0), end: at(1) }, sourceAtStart: at(2), rate: { numerator: 1, denominator: 1 } },
+    { target: { start: at(1), end: at(3) }, sourceAtStart: at(3), rate: { numerator: 1, denominator: 1 } },
+  ]);
+  assert.deepEqual(coalesced, [{
+    target: { start: at(0), end: at(3) }, sourceAtStart: at(2), rate: { numerator: 1, denominator: 1 },
+  }]);
+
+  const extended = extrapolateTemporalMapPieceRange(original.stages[0]!.pieces[0]!, {
+    start: at(4), end: at(5),
+  });
+  assert.equal("sourceAtEnd" in extended ? extended.sourceAtEnd.ticks : undefined, "145");
+  assert.equal("sourceAtEnd" in extended ? extended.sourceAtEnd.timeBase.denominator : undefined, 32);
 });
 
 test("sided evaluation keeps gaps half-open and carries side through composed stages", () => {

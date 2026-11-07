@@ -6,11 +6,11 @@ description: How direct rational placement, source time and output sampling stay
 Hypit's NLE project stores the accepted edit as direct values. It has no named Timeline object and
 does not retain the expression, transcript match or generator that helped an author choose a time.
 
-Every Item has three exact temporal values:
+Every Item has two placement values and one direct source-time relation:
 
 - `start`: where the Item begins in programme time;
 - `duration`: how long it contributes;
-- `localStart`: where reading begins in the Item's source or component-local time.
+- `sourceTime.pieces`: where each Item-local target range reads its source or component-local time.
 
 Each value is written as integer ticks plus a rational time base:
 
@@ -22,6 +22,11 @@ Each value is written as integer ticks plus a rational time base:
 ```
 
 This is exactly 1001/30000 seconds. It is not rounded to the project's display grid.
+
+A normal one-times read is one affine piece. A negative rate reverses, zero holds, `wrap` loops, and
+multiple affine or cubic pieces express exact variable source time. The Project stores only these Item-local
+pieces. During lowering, the resolved media or Component output contributes its concrete Source domain and AVIR
+receives the complete `TemporalMap`.
 
 ## Edit rate is a grid, not storage
 

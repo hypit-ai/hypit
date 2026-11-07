@@ -21,8 +21,8 @@ The first implemented slice owns one resolved use of a typed Source:
 
 The algebra exposes validation, evaluation and factual projections only. An editable NLE Project owns direct move,
 trim, slip, roll, explicit-scope ripple-trim and split policy and lowers a fresh AVIR value after an accepted edit.
-Retime and other source-mapping policies remain NLE concerns but are not claimed as current commands. AVIR is a closed,
-disposable result rather than a second editable document.
+It also owns direct Item-local source-time pieces and retime replacement; AVIR receives the complete Map only after
+the concrete Source domain is resolved. AVIR is a closed, disposable result rather than a second editable document.
 
 This package accepts only resolved, positive finite domains wherever time exists. `constant` is a tagged absence
 of a time dimension, not an unknown or nullable Domain. Future graph values remain ordinary typed

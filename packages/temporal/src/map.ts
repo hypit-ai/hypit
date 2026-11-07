@@ -4,6 +4,7 @@ import {
   exactTemporalRational,
   exactTemporalValue,
   exactTemporalZero,
+  subtractExactTemporalValues,
 } from "./exact.js";
 import { add, compare, divide, multiply, rational, subtract } from "./rational.js";
 import type { Rational } from "./rational.js";
@@ -152,6 +153,155 @@ function pieceValue(piece: TemporalMapPiece, targetAt: ExactTemporalValue): Exac
   return exactTemporalValue(source);
 }
 
+/** Evaluate or extrapolate one affine piece without attaching it to a complete Map stage. */
+export function extrapolateTemporalAffineMapPiece(
+  piece: TemporalAffineMapPiece,
+  targetAt: ExactTemporalValue,
+): ExactTemporalValue {
+  assertExactTemporalValue(targetAt, "Temporal affine extrapolation position");
+  return pieceValue(piece, targetAt);
+}
+
+function cubicPoint(points: readonly [Rational, Rational, Rational, Rational], amount: Rational): Rational {
+  const oneMinus = subtract(rational(1n), amount);
+  const square = (value: Rational) => multiply(value, value);
+  const cube = (value: Rational) => multiply(square(value), value);
+  const three = rational(3n);
+  return add(
+    add(multiply(cube(oneMinus), points[0]),
+      multiply(multiply(three, multiply(square(oneMinus), amount)), points[1])),
+    add(multiply(multiply(three, multiply(oneMinus, square(amount))), points[2]),
+      multiply(cube(amount), points[3])),
+  );
+}
+
+/** One third of the cubic derivative, used to reparameterize any rational interval, including extrapolation. */
+function cubicDerivativeThird(
+  points: readonly [Rational, Rational, Rational, Rational],
+  amount: Rational,
+): Rational {
+  const oneMinus = subtract(rational(1n), amount);
+  return add(
+    add(multiply(multiply(oneMinus, oneMinus), subtract(points[1], points[0])),
+      multiply(multiply(rational(2n), multiply(oneMinus, amount)), subtract(points[2], points[1]))),
+    multiply(multiply(amount, amount), subtract(points[3], points[2])),
+  );
+}
+
+function slicedCubicControls(
+  piece: Exclude<TemporalMapPiece, TemporalAffineMapPiece>,
+  start: ExactTemporalValue,
+  end: ExactTemporalValue,
+): readonly [ExactTemporalValue, ExactTemporalValue, ExactTemporalValue, ExactTemporalValue] {
+  const targetStart = exactTemporalRational(piece.target.start);
+  const targetLength = subtract(exactTemporalRational(piece.target.end), targetStart);
+  const from = divide(subtract(exactTemporalRational(start), targetStart), targetLength);
+  const until = divide(subtract(exactTemporalRational(end), targetStart), targetLength);
+  const controls = [
+    exactTemporalRational(piece.sourceAtStart),
+    exactTemporalRational(piece.sourceControl1),
+    exactTemporalRational(piece.sourceControl2),
+    exactTemporalRational(piece.sourceAtEnd),
+  ] as const;
+  const span = subtract(until, from);
+  const sourceStart = cubicPoint(controls, from);
+  const sourceEnd = cubicPoint(controls, until);
+  const selected = [
+    sourceStart,
+    add(sourceStart, multiply(span, cubicDerivativeThird(controls, from))),
+    subtract(sourceEnd, multiply(span, cubicDerivativeThird(controls, until))),
+    sourceEnd,
+  ] as const;
+  return [
+    exactTemporalValue(selected[0]),
+    exactTemporalValue(selected[1]),
+    exactTemporalValue(selected[2]),
+    exactTemporalValue(selected[3]),
+  ];
+}
+
+/** Restrict or polynomially extrapolate one piece over an exact target range. */
+export function extrapolateTemporalMapPieceRange(
+  piece: TemporalMapPiece,
+  range: TemporalRange,
+): TemporalMapPiece {
+  assertExactTemporalValue(range.start, "Temporal piece range start");
+  assertExactTemporalValue(range.end, "Temporal piece range end");
+  assert(compareExactTemporalValues(range.start, range.end) < 0, "Temporal piece range must be positive.");
+  if (isAffineTemporalMapPiece(piece)) {
+    return {
+      target: structuredClone(range),
+      sourceAtStart: extrapolateTemporalAffineMapPiece(piece, range.start),
+      rate: structuredClone(piece.rate),
+      ...(piece.wrap === undefined ? {} : { wrap: structuredClone(piece.wrap) }),
+    };
+  }
+  const [sourceAtStart, sourceControl1, sourceControl2, sourceAtEnd] = slicedCubicControls(
+    piece,
+    range.start,
+    range.end,
+  );
+  return { target: structuredClone(range), sourceAtStart, sourceControl1, sourceControl2, sourceAtEnd };
+}
+
+/** Intersect target-local pieces with a range and rebase the surviving target coordinates to range start. */
+export function sliceTemporalMapPieces(
+  pieces: readonly TemporalMapPiece[],
+  range: TemporalRange,
+): readonly TemporalMapPiece[] {
+  assertExactTemporalValue(range.start, "Temporal piece slice start");
+  assertExactTemporalValue(range.end, "Temporal piece slice end");
+  assert(compareExactTemporalValues(range.start, range.end) < 0,
+    "Temporal piece slice range must be positive.");
+  const result: TemporalMapPiece[] = [];
+  for (const piece of pieces) {
+    const start = compareExactTemporalValues(piece.target.start, range.start) > 0
+      ? piece.target.start : range.start;
+    const end = compareExactTemporalValues(piece.target.end, range.end) < 0
+      ? piece.target.end : range.end;
+    if (compareExactTemporalValues(start, end) >= 0) continue;
+    const target = {
+      start: subtractExactTemporalValues(start, range.start),
+      end: subtractExactTemporalValues(end, range.start),
+    };
+    result.push({ ...extrapolateTemporalMapPieceRange(piece, { start, end }), target });
+  }
+  return result;
+}
+
+function sameRange(left: TemporalRange | undefined, right: TemporalRange | undefined): boolean {
+  if (left === undefined || right === undefined) return left === right;
+  return compareExactTemporalValues(left.start, right.start) === 0
+    && compareExactTemporalValues(left.end, right.end) === 0;
+}
+
+/** Merge adjacent affine pieces only when doing so preserves the exact sided relation. */
+export function coalesceTemporalMapPieces(pieces: readonly TemporalMapPiece[]): readonly TemporalMapPiece[] {
+  const result: TemporalMapPiece[] = [];
+  for (const piece of pieces) {
+    const previous = result.at(-1);
+    if (previous !== undefined
+      && isAffineTemporalMapPiece(previous)
+      && isAffineTemporalMapPiece(piece)
+      && compareExactTemporalValues(previous.target.end, piece.target.start) === 0
+      && previous.rate.numerator === piece.rate.numerator
+      && previous.rate.denominator === piece.rate.denominator
+      && sameRange(previous.wrap, piece.wrap)
+      && compareExactTemporalValues(
+        extrapolateTemporalAffineMapPiece(previous, piece.target.start),
+        piece.sourceAtStart,
+      ) === 0) {
+      result[result.length - 1] = {
+        ...previous,
+        target: { start: previous.target.start, end: piece.target.end },
+      };
+    } else {
+      result.push(structuredClone(piece));
+    }
+  }
+  return result;
+}
+
 function sidedPieceValue(
   piece: TemporalMapPiece,
   targetAt: ExactTemporalValue,
@@ -176,7 +326,7 @@ function pieceDirection(piece: TemporalMapPiece): -1 | 0 | 1 {
 function assertPiece(
   piece: TemporalMapPiece,
   target: LocalTemporalDomain,
-  source: LocalTemporalDomain,
+  source: LocalTemporalDomain | undefined,
   previousEnd: ExactTemporalValue | undefined,
 ): void {
   const targetStart = exactTemporalRational(piece.target.start);
@@ -189,16 +339,22 @@ function assertPiece(
       `Temporal Map pieces overlap in target domain ${target.id}.`);
   }
   const sourceStart = exactTemporalRational(piece.sourceAtStart);
-  const sourceDuration = exactTemporalRational(source.duration);
-  assert(compare(sourceStart, rational(0n)) >= 0 && compare(sourceStart, sourceDuration) <= 0,
-    `Temporal Map source position lies outside source domain ${source.id}.`);
+  const sourceDuration = source === undefined ? undefined : exactTemporalRational(source.duration);
+  assert(compare(sourceStart, rational(0n)) >= 0
+    && (sourceDuration === undefined || compare(sourceStart, sourceDuration) <= 0),
+  source === undefined
+    ? "Temporal Map source position must not be negative."
+    : `Temporal Map source position lies outside source domain ${source.id}.`);
   if (!isAffineTemporalMapPiece(piece)) {
     const control1 = exactTemporalRational(piece.sourceControl1);
     const control2 = exactTemporalRational(piece.sourceControl2);
     const sourceEnd = exactTemporalRational(piece.sourceAtEnd);
     for (const value of [control1, control2, sourceEnd]) {
-      assert(compare(value, rational(0n)) >= 0 && compare(value, sourceDuration) <= 0,
-        `Temporal Map cubic position lies outside source domain ${source.id}.`);
+      assert(compare(value, rational(0n)) >= 0
+        && (sourceDuration === undefined || compare(value, sourceDuration) <= 0),
+      source === undefined
+        ? "Temporal Map cubic positions must not be negative."
+        : `Temporal Map cubic position lies outside source domain ${source.id}.`);
     }
     const increasing = compare(sourceStart, control1) <= 0 && compare(control1, control2) <= 0
       && compare(control2, sourceEnd) <= 0;
@@ -215,8 +371,10 @@ function assertPiece(
     const wrapStart = exactTemporalRational(piece.wrap.start);
     const wrapEnd = exactTemporalRational(piece.wrap.end);
     assert(compare(wrapStart, rational(0n)) >= 0 && compare(wrapStart, wrapEnd) < 0
-      && compare(wrapEnd, sourceDuration) <= 0,
-    `Temporal Map wrap lies outside source domain ${source.id}.`);
+      && (sourceDuration === undefined || compare(wrapEnd, sourceDuration) <= 0),
+    source === undefined
+      ? "Temporal Map wrap must be a positive non-empty source range."
+      : `Temporal Map wrap lies outside source domain ${source.id}.`);
     assert(compare(sourceStart, wrapStart) >= 0 && compare(sourceStart, wrapEnd) <= 0,
       "Temporal Map wrapped source position must begin inside its wrap range.");
     return;
@@ -224,8 +382,26 @@ function assertPiece(
   const delta = subtract(targetEnd, targetStart);
   const sourceEnd = add(sourceStart, multiply(delta,
     rational(BigInt(piece.rate.numerator), BigInt(piece.rate.denominator))));
-  assert(compare(sourceEnd, rational(0n)) >= 0 && compare(sourceEnd, sourceDuration) <= 0,
-    `Temporal Map piece leaves source domain ${source.id}.`);
+  assert(compare(sourceEnd, rational(0n)) >= 0
+    && (sourceDuration === undefined || compare(sourceEnd, sourceDuration) <= 0),
+  source === undefined
+    ? "Temporal Map piece leaves non-negative source time."
+    : `Temporal Map piece leaves source domain ${source.id}.`);
+}
+
+/** Validate target-local pieces before a concrete Source domain is necessarily available. */
+export function assertTemporalMapPieces(
+  pieces: readonly TemporalMapPiece[],
+  target: LocalTemporalDomain,
+  source?: LocalTemporalDomain,
+): void {
+  assertLocalTemporalDomain(target);
+  if (source !== undefined) assertLocalTemporalDomain(source);
+  let previousEnd: ExactTemporalValue | undefined;
+  for (const piece of pieces) {
+    assertPiece(piece, target, source, previousEnd);
+    previousEnd = piece.target.end;
+  }
 }
 
 /** Validate one self-contained target-to-source relation. */
@@ -242,11 +418,7 @@ export function assertTemporalMap(value: TemporalMap): void {
         && compareExactTemporalValues(previous.duration, target.duration) === 0,
         "Temporal Map stages do not form one composable chain.");
     }
-    let previousEnd: ExactTemporalValue | undefined;
-    for (const piece of stage.pieces) {
-      assertPiece(piece, target, source, previousEnd);
-      previousEnd = piece.target.end;
-    }
+    assertTemporalMapPieces(stage.pieces, target, source);
   }
 }
 
