@@ -63,8 +63,8 @@ test("editable transcript Source compiles back to the exact evidence Record", as
     passages: [{
       startSample: 800,
       endSampleExclusive: 20_000,
-      words: [{ text: "<你好 & café>", startSample: 1_600, endSampleExclusive: 6_400, score: 0.97 }],
-      chars: [{ char: "你", wordIndex: 0, startSample: 1_600, endSampleExclusive: 2_400, score: 0.92 }],
+      words: [{ text: "<你好 & café>", startSample: 1_600, endSampleExclusive: 6_400 }],
+      chars: [{ char: "你", wordIndex: 0, startSample: 1_600, endSampleExclusive: 2_400 }],
       speechActivity: [{ startSample: 1_200, endSampleExclusive: 7_000 }],
     }],
   };

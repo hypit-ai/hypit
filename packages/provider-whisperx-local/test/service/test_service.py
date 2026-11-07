@@ -132,7 +132,7 @@ class EvidenceTests(unittest.TestCase):
             }],
         })
         words = result["segments"][0]["words"]  # type: ignore[index]
-        self.assertEqual(words[0], {"text": "one", "start": 0.1, "end": 0.2, "score": 0.9})
+        self.assertEqual(words[0], {"text": "one", "start": 0.1, "end": 0.2})
         self.assertEqual(words[1], {"text": "two"})
         self.assertEqual(words[2], {"text": "three"})
 

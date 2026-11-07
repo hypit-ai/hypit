@@ -22,15 +22,6 @@ function comparisonText(values: readonly { readonly text: string }[]): string {
   return values.map((value) => normalizeForAlignment(value.text)).join("");
 }
 
-function evidenceReliability(words: readonly SpeechWordEvidence[]): number {
-  const scores = words
-    .map((word) => word.score)
-    .filter((score): score is number => score !== undefined && Number.isFinite(score));
-  if (!scores.length) return 0.8;
-  const average = scores.reduce((sum, score) => sum + Math.max(0, Math.min(1, score)), 0) / scores.length;
-  return 0.5 + 0.5 * average;
-}
-
 function exactWordLcs(
   source: readonly NarrativeToken[],
   evidence: readonly SpeechWordEvidence[],
@@ -74,7 +65,7 @@ function pairedCost(
   const grouping = 0.055 * Math.max(0, source.length + evidence.length - 2);
   const exactWords = exactWordLcs(source, evidence);
   const unmatchedWordBoundaries = source.length + evidence.length - 2 * exactWords;
-  return distance * evidenceReliability(evidence) + grouping + 0.06 * unmatchedWordBoundaries;
+  return distance + grouping + 0.06 * unmatchedWordBoundaries;
 }
 
 function exactRunLength(target: string, parts: readonly string[], start: number): number {

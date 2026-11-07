@@ -4,7 +4,7 @@ Provider-neutral deterministic timing locator for one authored Segment on an exa
 domain. The package does not
 invoke Python, read audio, call a speech provider, use an LLM, infer speakers or retain multiple
 candidate paths. A runtime adapter preserves its raw provider artifact and supplies the provider-neutral
-word, character, score and speech-activity evidence used here in exact 16 kHz sample coordinates.
+word, character and speech-activity evidence used here in exact 16 kHz sample coordinates.
 
 This is an independently versioned and packaged algorithm, not a root SDK facade and not a WhisperX
 implementation. Any author or transcription package may select it explicitly, and any transcription package
@@ -14,6 +14,7 @@ The project package manager and lockfile own the selected physical version.
 The locator aligns one explicitly connected Script Segment against acoustic evidence with an exact
 sample span. A bounded monotonic M:N dynamic
 program accepts exact, split, merge, replacement, source-omission and evidence-insertion groups.
+Matching follows explicit text, order and structure.
 Within a selected group, timed evidence characters determine Script token boundaries; word times
 and speech-activity bounds are fallbacks. Missing token runs receive continuous weighted windows
 between their measured neighbors instead of invented point timestamps. The result preserves

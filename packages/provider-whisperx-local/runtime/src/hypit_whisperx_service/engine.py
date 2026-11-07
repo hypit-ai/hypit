@@ -65,13 +65,10 @@ def normalize_alignment(language: str, raw: Mapping[str, Any]) -> dict[str, obje
                 continue
             start = _finite(raw_word.get("start"))
             end = _finite(raw_word.get("end"))
-            score = _finite(raw_word.get("score"))
             word: dict[str, object] = {"text": text}
             # Missing or partial acoustic evidence stays missing. Never manufacture a tick.
             if start is not None and end is not None and 0 <= start <= end:
                 word.update(start=start, end=end)
-            if score is not None and 0 <= score <= 1:
-                word["score"] = score
             words.append(word)
         if not words:
             continue

@@ -5,7 +5,6 @@ type RawWord = {
   readonly word?: unknown;
   readonly start?: unknown;
   readonly end?: unknown;
-  readonly score?: unknown;
 };
 
 type RawSegment = {
@@ -54,8 +53,7 @@ function words(value: unknown, sampleFrames: number): SpeechTranscriptPassage["w
       : typeof raw.word === "string" ? raw.word.trim() : "";
     if (text.length === 0) continue;
     const window = sampleWindow(raw.start, raw.end, sampleFrames);
-    const score = finite(raw.score) && raw.score >= 0 && raw.score <= 1 ? raw.score : undefined;
-    result.push({ text, ...window, ...(score === undefined ? {} : { score }) });
+    result.push({ text, ...window });
   }
   return result;
 }

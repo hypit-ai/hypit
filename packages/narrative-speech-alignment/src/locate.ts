@@ -257,20 +257,6 @@ function timedChars(segment: SegmentEvidence): TimedEvidenceChar[] {
   return segment.words.flatMap((word, index) => timedCharsForWord(word, index, segment.chars));
 }
 
-function scoredWords(segment: SegmentEvidence): SpeechWordEvidence[] {
-  return segment.words.map((word, wordIndex) => {
-    const scores = [
-      ...(word.score === undefined ? [] : [word.score]),
-      ...segment.chars
-        .filter((char) => char.wordIndex === wordIndex && char.score !== undefined)
-        .map((char) => char.score!),
-    ];
-    return scores.length
-      ? { ...word, score: scores.reduce((sum, score) => sum + score, 0) / scores.length }
-      : word;
-  });
-}
-
 function groupWindow(
   group: AlignmentGroup,
   words: readonly SpeechWordEvidence[],
@@ -432,7 +418,7 @@ export function locateAlignedSegmentTiming(
   for (const segment of narrative.segments) {
     const aligned = evidenceBySegment.get(segment.id)!;
     const source = narrative.tokens.slice(segment.tokenStart, segment.tokenEndExclusive);
-    const segmentGroups = alignWordGroups(segment.id, source, scoredWords(aligned));
+    const segmentGroups = alignWordGroups(segment.id, source, aligned.words);
     const chars = timedChars(aligned);
     const located: Array<MutableTiming | undefined> = Array(source.length).fill(undefined);
     for (const group of segmentGroups) locatePairedGroup(group, source, aligned.words, chars, located);

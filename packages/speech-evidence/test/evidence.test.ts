@@ -42,8 +42,8 @@ test("SpeechTranscriptEvidence validates the complete provider-neutral observati
     passages: [{
       startSample: 0,
       endSampleExclusive: 16_000,
-      words: [{ text: "hello", startSample: 1_000, endSampleExclusive: 4_000, score: 0.9 }],
-      chars: [{ char: "h", wordIndex: 0, startSample: 1_000, endSampleExclusive: 1_500, score: 0.8 }],
+      words: [{ text: "hello", startSample: 1_000, endSampleExclusive: 4_000 }],
+      chars: [{ char: "h", wordIndex: 0, startSample: 1_000, endSampleExclusive: 1_500 }],
       speechActivity: [{ startSample: 800, endSampleExclusive: 4_200 }],
     }],
   });

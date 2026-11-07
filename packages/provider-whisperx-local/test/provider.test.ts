@@ -34,8 +34,8 @@ test("wire seconds are lowered once to exact evidence samples without authored S
     { startSample: 1_600, endSampleExclusive: 28_800 },
   );
   assert.deepEqual(evidence[0]!.words, [
-    { text: "hello", startSample: 1_600, endSampleExclusive: 6_400, score: 0.99 },
-    { text: "crossing", startSample: 14_400, endSampleExclusive: 17_600, score: 0.8 },
+    { text: "hello", startSample: 1_600, endSampleExclusive: 6_400 },
+    { text: "crossing", startSample: 14_400, endSampleExclusive: 17_600 },
     { text: "world", startSample: 19_200, endSampleExclusive: 25_600 },
   ]);
 });

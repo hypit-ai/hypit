@@ -18,7 +18,6 @@ type WordFixture = {
   readonly text: string;
   readonly startSec?: number;
   readonly endSec?: number;
-  readonly score?: number;
 };
 
 function parseScript(sourceName: string, source: string): Narrative {
@@ -32,7 +31,6 @@ function wordEvidence(word: WordFixture): SpeechWordEvidence {
       startSample: Math.round(word.startSec * 16_000),
       endSampleExclusive: Math.round(word.endSec * 16_000),
     }),
-    ...(word.score === undefined ? {} : { score: word.score }),
   };
 }
 
@@ -113,7 +111,6 @@ function characters(
     wordIndex,
     startSample: Math.round(starts[index]! * 16_000),
     endSampleExclusive: Math.round(ends[index]! * 16_000),
-    score: 0.95,
   }));
 }
 
@@ -121,8 +118,8 @@ test("exact transcript words cover every Script and Segment anchor", () => {
   const narrative = parseScript("exact.svml", "<line>Hello world.</line>");
   const map = locate(narrative, {
     words: [
-      { text: "Hello", startSec: 0.1, endSec: 0.4, score: 0.97 },
-      { text: "world", startSec: 0.5, endSec: 0.9, score: 0.96 },
+      { text: "Hello", startSec: 0.1, endSec: 0.4 },
+      { text: "world", startSec: 0.5, endSec: 0.9 },
     ],
   });
 
@@ -183,7 +180,7 @@ test("a measured Segment-local map becomes a media-free NarrativeAlignment", () 
 
 test("M:1 uses evidence character times instead of dividing a merged word by length", () => {
   const narrative = parseScript("merge.svml", "<line>can not</line>");
-  const merged = [{ text: "cannot", startSec: 0.1, endSec: 0.78, score: 0.93 }];
+  const merged = [{ text: "cannot", startSec: 0.1, endSec: 0.78 }];
   const map = locate(narrative, {
     endSec: 1,
     durationSec: 1,
@@ -208,8 +205,8 @@ test("M:1 uses evidence character times instead of dividing a merged word by len
 test("1:N wraps all evidence words in one Script token", () => {
   const narrative = parseScript("split.svml", "<line>website</line>");
   const split = [
-    { text: "web", startSec: 0.2, endSec: 0.45, score: 0.9 },
-    { text: "site", startSec: 0.5, endSec: 0.82, score: 0.91 },
+    { text: "web", startSec: 0.2, endSec: 0.45 },
+    { text: "site", startSec: 0.5, endSec: 0.82 },
   ];
   const map = locate(narrative, { words: split });
 
@@ -223,11 +220,11 @@ test("1:N wraps all evidence words in one Script token", () => {
 test("a recognized filler stays an insertion and does not absorb neighboring Script words", () => {
   const narrative = parseScript("insertion.svml", "<line>I really like it.</line>");
   const spoken = [
-    { text: "I", startSec: 0.1, endSec: 0.2, score: 0.98 },
-    { text: "uh", startSec: 0.24, endSec: 0.34, score: 0.88 },
-    { text: "really", startSec: 0.4, endSec: 0.62, score: 0.95 },
-    { text: "like", startSec: 0.67, endSec: 0.82, score: 0.96 },
-    { text: "it", startSec: 0.86, endSec: 0.96, score: 0.96 },
+    { text: "I", startSec: 0.1, endSec: 0.2 },
+    { text: "uh", startSec: 0.24, endSec: 0.34 },
+    { text: "really", startSec: 0.4, endSec: 0.62 },
+    { text: "like", startSec: 0.67, endSec: 0.82 },
+    { text: "it", startSec: 0.86, endSec: 0.96 },
   ];
   const map = locate(narrative, { words: spoken });
 
@@ -252,9 +249,9 @@ test("a recognized filler stays an insertion and does not absorb neighboring Scr
 test("an omitted Script word receives the complete unmeasured interval between neighbors", () => {
   const narrative = parseScript("omission.svml", "<line>This is very good.</line>");
   const spoken = [
-    { text: "This", startSec: 0.1, endSec: 0.25, score: 0.98 },
-    { text: "is", startSec: 0.3, endSec: 0.4, score: 0.97 },
-    { text: "good", startSec: 0.6, endSec: 0.82, score: 0.98 },
+    { text: "This", startSec: 0.1, endSec: 0.25 },
+    { text: "is", startSec: 0.3, endSec: 0.4 },
+    { text: "good", startSec: 0.6, endSec: 0.82 },
   ];
   const map = locate(narrative, { words: spoken });
 

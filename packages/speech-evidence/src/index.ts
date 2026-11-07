@@ -47,7 +47,6 @@ export type SpeechWordEvidence = {
   readonly text: string;
   readonly startSample?: number;
   readonly endSampleExclusive?: number;
-  readonly score?: number;
 };
 
 export type SpeechCharacterEvidence = {
@@ -56,7 +55,6 @@ export type SpeechCharacterEvidence = {
   readonly wordIndex: number;
   readonly startSample?: number;
   readonly endSampleExclusive?: number;
-  readonly score?: number;
 };
 
 export type SpeechActivitySpan = {
@@ -84,7 +82,6 @@ export type SpeechTranscriptEvidence = {
 
 const sample = { kind: "number", integer: true, minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
-const score = { kind: "number", minimum: 0, maximum: 1 } as const;
 const object = (
   fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>,
 ): ValueSchema => ({ kind: "object", fields });
@@ -93,14 +90,12 @@ const word = object({
   text: { schema: { kind: "string" } },
   startSample: { schema: sample, optional: true },
   endSampleExclusive: { schema: sample, optional: true },
-  score: { schema: score, optional: true },
 });
 const char = object({
   char: { schema: { kind: "string" } },
   wordIndex: { schema: integer },
   startSample: { schema: sample, optional: true },
   endSampleExclusive: { schema: sample, optional: true },
-  score: { schema: score, optional: true },
 });
 const activity = object({
   startSample: { schema: sample },
@@ -197,8 +192,6 @@ export function assertSpeechTranscriptEvidence(value: SpeechTranscriptEvidence):
       && candidate.startSample <= item.sampleFrames
       && candidate.endSampleExclusive <= item.sampleFrames;
   };
-  const score = (candidate: number | undefined): boolean => candidate === undefined
-    || (Number.isFinite(candidate) && candidate >= 0 && candidate <= 1);
   for (const passage of item.passages) {
     assertExactFields(passage, ["startSample", "endSampleExclusive", "words", "chars", "speechActivity"],
       "SpeechTranscriptEvidence passage");
@@ -208,19 +201,19 @@ export function assertSpeechTranscriptEvidence(value: SpeechTranscriptEvidence):
       throw new Error("SpeechTranscriptEvidence passage is invalid.");
     }
     for (const word of passage.words) {
-      assertExactFields(word, ["text", "startSample", "endSampleExclusive", "score"],
+      assertExactFields(word, ["text", "startSample", "endSampleExclusive"],
         "SpeechTranscriptEvidence word");
       if (word === null || typeof word !== "object" || typeof word.text !== "string"
-        || !window(word) || !score(word.score)) {
+        || !window(word)) {
         throw new Error("SpeechTranscriptEvidence word is invalid.");
       }
     }
     for (const character of passage.chars) {
-      assertExactFields(character, ["char", "wordIndex", "startSample", "endSampleExclusive", "score"],
+      assertExactFields(character, ["char", "wordIndex", "startSample", "endSampleExclusive"],
         "SpeechTranscriptEvidence character");
       if (character === null || typeof character !== "object" || typeof character.char !== "string"
         || !Number.isSafeInteger(character.wordIndex) || character.wordIndex < 0
-        || character.wordIndex >= passage.words.length || !window(character) || !score(character.score)) {
+        || character.wordIndex >= passage.words.length || !window(character)) {
         throw new Error("SpeechTranscriptEvidence character is invalid.");
       }
     }
