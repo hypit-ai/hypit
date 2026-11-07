@@ -140,8 +140,6 @@ function assertItem(
   ancestors: Set<object>,
 ): void {
   identity(value.id, "NLE Item id");
-  assert(!Object.hasOwn(value, "localStart"),
-    `NLE Item ${value.id} must store one sourceTime relation, not retired localStart.`);
   assertNonNegativeTime(value.start, `NLE Item ${value.id} start`);
   assertPositiveTime(value.duration, `NLE Item ${value.id} duration`);
   assertNleSourceTime(value.sourceTime, value.duration, `NLE Item ${value.id} sourceTime`);

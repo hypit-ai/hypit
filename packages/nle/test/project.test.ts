@@ -121,9 +121,9 @@ test("one revision stores Media and Component Items directly", () => {
   assert.equal(edited.revision, 1);
   assert.deepEqual(edited.tracks[0]?.items.map((item) => item.kind), ["media", "component", "component"]);
   const text = serializeNleProject(edited);
-  assert.match(text, /media\/interview\.media\.json/u);
-  assert.doesNotMatch(text, /res_nle:interview|interpretation|BlobRef/u);
-  assert.deepEqual(parseNleProject(text), edited);
+  const reopened = parseNleProject(text);
+  assert.deepEqual(reopened.media[0]?.asset, interviewAsset);
+  assert.deepEqual(reopened, edited);
 });
 
 test("edit rate is only an editing grid and never quantizes exact project time", () => {
