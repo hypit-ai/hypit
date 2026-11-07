@@ -6,7 +6,7 @@ import type {
   BuildResultHistory,
   ResolvedBuildResultOutput,
 } from "@hypit/result";
-import type { ProductExporter } from "@hypit/product";
+import type { ProductExporter, ProductHistory } from "@hypit/product";
 import { buildResultOutput } from "@hypit/result";
 import { isBlobRef, sameType } from "@hypit/protocol";
 
@@ -55,7 +55,7 @@ async function exportFile(
 
 /** Export one resolved published Output into an explicit user-owned local destination. */
 export async function exportBuildResultOutput(
-  repository: BuildResultHistory,
+  repository: BuildResultHistory & ProductHistory,
   build: string,
   output: string,
   destination: string,
@@ -65,7 +65,7 @@ export async function exportBuildResultOutput(
   if (manifest === undefined) throw new Error(`Build Result ${build} does not exist`);
   const publishedOutput = buildResultOutput(manifest, output);
   if (publishedOutput === undefined) throw new Error(`Build ${build} has no published Output ${output}`);
-  const resolvedOutput = await repository.resolve(build, output);
+  const resolvedOutput = await repository.resolveProduct(publishedOutput.address);
   if (resolvedOutput === undefined) throw new Error(`Build ${build} Output ${output} cannot be resolved`);
   const target = resolve(destination);
   if (!isBlobRef(resolvedOutput.value)

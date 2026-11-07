@@ -44,7 +44,8 @@ history. Private writer state disappears at the terminal outcome. Core still rec
 Records and Resource identities; it has no knowledge of file paths or Result repositories.
 
 Drafts are not project history. The package root exposes `BuildResultHistory`; its `read()` and
-`browse()` methods return finished `BuildResult` values only. CLI and history browsers therefore
+`browse()` methods return finished `BuildResult` values only. Exact Product lookup belongs to
+`ProductHistory`, even while the current filesystem object implements both ports. CLI and history browsers therefore
 cannot observe, finish, discard or recover an open draft. `@hypit/result/node` exposes only
 `FileBuildResultHistory` and the finished-history filesystem reader.
 

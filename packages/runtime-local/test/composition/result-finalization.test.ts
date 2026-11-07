@@ -95,7 +95,7 @@ test("a completed retained file moves into its Build Result and leaves no Runtim
     const results = new FileBuildResultStore(join(directory, "results"));
     const result = await results.read(id);
     assert.equal(result?.outputs["clip.video"]?.representation, "file");
-    const resolved = await results.resolve(id, "clip.video");
+    const resolved = await results.resolveProduct({ publication: id, name: "clip.video" });
     assert.ok(resolved !== undefined && isBlobRef(resolved.value));
     if (resolved === undefined || !isBlobRef(resolved.value)) throw new Error("expected completed Result file");
     const opened = await resolved.openResource(resolved.value);
@@ -270,7 +270,8 @@ test("an interrupted Result write can be retried internally without rerunning th
       read: async (build) => await base.read(build),
       readStored: async (build) => await base.readStored(build),
       browse: async (request) => await base.browse(request),
-      resolve: async (build, output) => await base.resolve(build, output),
+      readProduct: async (address) => await base.readProduct(address),
+      resolveProduct: async (address) => await base.resolveProduct(address),
       openExecutionLog: async (build) => await base.openExecutionLog(build),
     };
     return { repository };
@@ -321,7 +322,8 @@ test("a failed Result creation leaves no active Build", async () => {
     async read() { return undefined; },
     async readStored() { return undefined; },
     async browse() { return { results: [] }; },
-    async resolve() { return undefined; },
+    async readProduct() { return undefined; },
+    async resolveProduct() { return undefined; },
     async openExecutionLog() { return undefined; },
   };
   try {

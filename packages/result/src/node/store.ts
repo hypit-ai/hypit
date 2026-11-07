@@ -5,7 +5,7 @@ import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { assertOrderedBuildId, buildIdCreatedAt, compareCodeUnits } from "@hypit/protocol";
 import type { BlobRef, CanonicalValue, Value, ValuePath } from "@hypit/protocol";
-import type { ProductFileRef } from "@hypit/product";
+import type { ProductAddress, ProductFileRef, ProductHistory } from "@hypit/product";
 import { productAddress } from "@hypit/product";
 import {
   decodeBuildResultJson,
@@ -164,11 +164,12 @@ async function openContainedResultFile(
   return createReadStream(path, { start: range.start, end: range.endExclusive - 1 });
 }
 
-export async function resolveBuildResultOutput(
+export async function resolveProduct(
   root: string,
-  build: string,
-  output: string,
+  address: ProductAddress,
 ): Promise<ResolvedBuildResultOutput | undefined> {
+  const build = address.publication;
+  const output = address.name;
   const directory = buildResultDirectory(root, build);
   const manifest = await readFinishedBuildResult(directory);
   const entry = manifest === undefined || !Object.hasOwn(manifest.outputs, output)
@@ -228,7 +229,7 @@ export async function resolveBuildResultOutput(
 }
 
 /** Finished project history backed by one ordinary directory tree. */
-export class FileBuildResultHistory implements BuildResultHistory {
+export class FileBuildResultHistory implements BuildResultHistory, ProductHistory {
   readonly root: string;
 
   constructor(root: string) {
@@ -245,8 +246,15 @@ export class FileBuildResultHistory implements BuildResultHistory {
     return await browseBuildResults(this.root, request);
   }
 
-  async resolve(build: string, output: string): Promise<ResolvedBuildResultOutput | undefined> {
-    return await resolveBuildResultOutput(this.root, build, output);
+  async readProduct(address: ProductAddress): Promise<BuildResultOutput | undefined> {
+    const result = await this.read(address.publication);
+    return result === undefined || !Object.hasOwn(result.outputs, address.name)
+      ? undefined
+      : result.outputs[address.name];
+  }
+
+  async resolveProduct(address: ProductAddress): Promise<ResolvedBuildResultOutput | undefined> {
+    return await resolveProduct(this.root, address);
   }
 
   async openExecutionLog(build: string): Promise<AsyncIterable<Uint8Array> | undefined> {

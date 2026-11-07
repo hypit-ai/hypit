@@ -1,6 +1,6 @@
 import { realpath } from "node:fs/promises";
 
-import type { ProductExporter } from "@hypit/product";
+import type { ProductExporter, ProductHistory } from "@hypit/product";
 import type { BuildResultHistory } from "@hypit/result";
 import type { TypeRef } from "@hypit/protocol";
 
@@ -31,7 +31,7 @@ async function historySourcePath(path: string): Promise<string> {
 export async function runProjectResultCommand(input: {
   readonly args: ProjectResultCommand;
   readonly projectRoot: string;
-  readonly repository: BuildResultHistory;
+  readonly repository: BuildResultHistory & ProductHistory;
   readonly resolveProductExporter?: (type: TypeRef) => Promise<ProductExporter | undefined>;
   readonly write: OperationalWriter;
 }): Promise<void> {

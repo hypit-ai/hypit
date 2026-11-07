@@ -1,28 +1,14 @@
-import type { CanonicalValue, NeedId, TypeRef, Value } from "@hypit/protocol";
-import type { ProductAddress } from "@hypit/product";
+import type { NeedId } from "@hypit/protocol";
+import type { Product, ResolvedProduct } from "@hypit/product";
 
 /** The one durable conclusion of a finished Build. Active execution belongs to Runtime. */
 export type BuildResultOutcome = "complete" | "failed" | "cancelled";
 
 /** A normalized half-open byte range within one published Resource. */
-export type BuildResultFileRange = {
-  readonly start: number;
-  readonly endExclusive: number;
-};
+export type BuildResultFileRange = import("@hypit/product").ProductFileRange;
 
 /** History projection of one published Output; storage paths remain Repository-private. */
-export type BuildResultOutput = {
-  readonly address: ProductAddress;
-  readonly type: TypeRef;
-  readonly publisher: string;
-  readonly publicationParameters?: CanonicalValue;
-} & (
-  | { readonly representation: "inline"; readonly value: null | boolean | number | string;
-      readonly mediaType?: never; readonly size?: never }
-  | { readonly representation: "structured"; readonly value?: never;
-      readonly mediaType?: never; readonly size?: never }
-  | { readonly representation: "file"; readonly mediaType: string; readonly size: number }
-);
+export type BuildResultOutput = Product;
 
 type BuildResultOperationEvidence = {
   readonly request: NeedId;
@@ -79,22 +65,11 @@ export type BuildResultPage = {
 };
 
 /** One finished published Output resolved to ordinary domain data and only its owned Resources. */
-export type ResolvedBuildResultOutput = {
-  readonly address: ProductAddress;
-  readonly type: TypeRef;
-  readonly publisher: string;
-  readonly publicationParameters?: CanonicalValue;
-  readonly value: Value;
-  openResource(
-    blob: import("@hypit/protocol").BlobRef,
-    range?: BuildResultFileRange,
-  ): Promise<AsyncIterable<Uint8Array> | undefined>;
-};
+export type ResolvedBuildResultOutput = ResolvedProduct;
 
 /** Immutable project history. Open Runtime drafts never cross this reader boundary. */
 export type BuildResultHistory = {
   read(build: string): Promise<BuildResult | undefined>;
   browse(request: BuildResultBrowseRequest): Promise<BuildResultPage>;
-  resolve(build: string, output: string): Promise<ResolvedBuildResultOutput | undefined>;
   openExecutionLog(build: string): Promise<AsyncIterable<Uint8Array> | undefined>;
 };

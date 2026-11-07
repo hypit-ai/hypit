@@ -1,6 +1,6 @@
 import type { Compiler } from "@hypit/compiler";
 import type { LoadedPackage, LogicalPackageAddress, PackageContribution } from "@hypit/loader";
-import type { ProductExporter } from "@hypit/product";
+import type { ProductExporter, ProductHistory } from "@hypit/product";
 import type { BuildResultHistory } from "@hypit/result";
 import type { TypeRef } from "@hypit/protocol";
 import type { Workspace } from "@hypit/workspace";
@@ -63,7 +63,7 @@ export type CliDistribution = {
     readonly distributionPackageRoot?: string;
   }): Promise<{
     readonly location: CliResultRepositoryLocation;
-    readonly repository: BuildResultHistory;
+    readonly repository: BuildResultHistory & ProductHistory;
     close(): void | Promise<void>;
   }>;
   /** Resolve the package-owned author export for one published structured Type. */

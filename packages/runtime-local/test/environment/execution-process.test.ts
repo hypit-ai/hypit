@@ -117,7 +117,8 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
     return value?.outcome === undefined ? undefined : value;
   });
   const value = async (directory: string, id: string) => {
-    const output = await new FileBuildResultStore(join(directory, "results")).resolve(id, "document");
+    const output = await new FileBuildResultStore(join(directory, "results"))
+      .resolveProduct({ publication: id, name: "document" });
     return output?.value;
   };
   try {

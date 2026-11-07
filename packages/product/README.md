@@ -13,7 +13,11 @@ permission to execute package code.
 
 One durable Product is addressed by `{ publication, name }`. The publication identity currently
 comes from the Run that closed it, while the name is the exact declared publication name. This
-address contains no filesystem path or content hash and can be resolved without opening Run history.
+address contains no filesystem path or content hash and is resolved through the Product boundary,
+not through a Result-specific `(build, output)` lookup.
+`ProductHistory` exposes exact `readProduct(address)` and `resolveProduct(address)` operations. The
+transitional filesystem adapter still serves them from colocated files, but callers no longer address
+Products through a Result-specific `(build, output)` resolver.
 
 Product also owns the neutral materialization of typed values. Scalars remain inline, Blob resources
 become `product-file` references, and arrays or objects use `hypit.product-value@1` documents whose

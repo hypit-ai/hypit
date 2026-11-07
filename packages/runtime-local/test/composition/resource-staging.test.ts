@@ -139,7 +139,10 @@ test("a selected file is staged once and remains referenced in the produced stru
     assert.equal(attachmentOpens, 1);
     assert.equal(await work.has(authoredAsset.resource), false);
     const results = new FileBuildResultStore(join(directory, "results"));
-    const resolved = (await results.resolve("bld_20260902T120000009Z_0000000001", "final.document"))!;
+    const resolved = (await results.resolveProduct({
+      publication: "bld_20260902T120000009Z_0000000001",
+      name: "final.document",
+    }))!;
     const content = (resolved.value as {
       readonly layers: readonly [{ readonly content: { readonly image: unknown } }];
     }).layers[0].content.image;

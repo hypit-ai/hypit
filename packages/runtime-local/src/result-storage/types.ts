@@ -7,6 +7,7 @@ import type {
 } from "@hypit/hypit/protocol";
 import { assertPublicationIntent } from "@hypit/hypit/protocol";
 import type {
+  ProductHistory,
   ProductValueDocument,
   StoredProduct,
 } from "@hypit/hypit/product";
@@ -156,7 +157,7 @@ export type BuildResultWriter = {
 };
 
 /** Runtime-owned publication and recovery port. Applications consume `BuildResultHistory`. */
-export type BuildResultStore = BuildResultHistory & {
+export type BuildResultStore = BuildResultHistory & ProductHistory & {
   create(seed: BuildResultSeed): Promise<BuildResultWriter>;
   openWriter(build: string): Promise<BuildResultWriter | undefined>;
   /** Remove one exact unfinished Result created by a submission that never became claimable. */

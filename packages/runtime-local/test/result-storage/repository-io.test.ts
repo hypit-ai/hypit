@@ -36,11 +36,12 @@ test("finished Output readers expose only that Output's retained Resources", asy
       } },
     });
     const repository = new FileBuildResultStore(root);
-    assert.equal(await repository.resolve(build, "video"), undefined, "drafts stay outside history");
+    assert.equal(await repository.resolveProduct({ publication: build, name: "video" }), undefined,
+      "drafts stay outside history");
     await writer.finish({ outcome: "complete", executionLog: (async function* () {
       yield new TextEncoder().encode("log\n");
     })() });
-    const resolved = await repository.resolve(build, "video");
+    const resolved = await repository.resolveProduct({ publication: build, name: "video" });
     assert.ok(resolved !== undefined && isBlobRef(resolved.value));
     if (resolved === undefined || !isBlobRef(resolved.value)) throw new Error("expected retained Blob");
     const stream = await resolved.openResource(resolved.value, { start: 3, endExclusive: 7 });
@@ -49,7 +50,7 @@ test("finished Output readers expose only that Output's retained Resources", asy
     for await (const chunk of stream!) chunks.push(...chunk);
     assert.equal(new TextDecoder().decode(Uint8Array.from(chunks)), "defg");
     assert.equal(await resolved.openResource({ ...resolved.value, resource: "res_forged" }), undefined);
-    const sibling = await repository.resolve(build, "video-copy");
+    const sibling = await repository.resolveProduct({ publication: build, name: "video-copy" });
     assert.ok(sibling !== undefined && isBlobRef(sibling.value));
     if (sibling === undefined) throw new Error("expected sibling retained Blob");
     assert.equal(await sibling.openResource(resolved.value), undefined,
@@ -121,7 +122,7 @@ test("reserved-looking domain objects remain ordinary domain data", async () => 
       value: { nested: { kind: "value", path: "domain-authored" } },
       resources: [],
     }));
-    const resolved = await new FileBuildResultStore(root).resolve(id, "value");
+    const resolved = await new FileBuildResultStore(root).resolveProduct({ publication: id, name: "value" });
     assert.deepEqual(resolved?.value, {
       nested: { kind: "value", path: "domain-authored" },
     });
@@ -148,7 +149,7 @@ test("reading a value-document Output manifest does not open its document", asyn
     const repository = new FileBuildResultStore(root);
     const manifest = await repository.read(id);
     assert.equal(manifest?.outputs.take?.representation, "structured");
-    await assert.rejects(repository.resolve(id, "take"), /missing\.json/u);
+    await assert.rejects(repository.resolveProduct({ publication: id, name: "take" }), /missing\.json/u);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

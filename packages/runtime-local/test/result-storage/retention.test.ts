@@ -150,8 +150,8 @@ test("published Output names are exact data keys, including JavaScript object na
     }
 
     const repository = new FileBuildResultStore(root);
-    assert.equal((await repository.resolve(manifest.id, "constructor"))?.value, 0);
-    assert.equal(await repository.resolve(manifest.id, "valueOf"), undefined);
+    assert.equal((await repository.resolveProduct({ publication: manifest.id, name: "constructor" }))?.value, 0);
+    assert.equal(await repository.resolveProduct({ publication: manifest.id, name: "valueOf" }), undefined);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
