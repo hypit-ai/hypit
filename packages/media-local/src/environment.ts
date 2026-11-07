@@ -12,6 +12,7 @@ export type CreateMediaExecutionEnvironmentOptions = {
   readonly sharedLibraryPath?: string;
   readonly processTimeoutMs?: number;
   readonly maxProbeOutputBytes?: number;
+  readonly signal?: AbortSignal;
 };
 
 function positiveInteger(value: number, subject: string): number {
@@ -29,18 +30,19 @@ export function createMediaExecutionEnvironment(
   resources: ResourceStore,
   options: CreateMediaExecutionEnvironmentOptions = {},
 ): MediaExecutionEnvironment {
+  const io = options.signal === undefined ? {} : { signal: options.signal };
   return {
     artifacts: {
-      get: async (source) => await resources.get(source.resource),
+      get: async (source) => await resources.get(source.resource, io),
       open: async (source) => isStreamingResourceStore(resources)
-        ? await resources.open(source.resource)
-        : await resources.get(source.resource).then((bytes) => bytes === undefined
+        ? await resources.open(source.resource, io)
+        : await resources.get(source.resource, io).then((bytes) => bytes === undefined
           ? undefined
           : (async function* () { yield bytes; })()),
-      put: async (bytes, mediaType) => await resources.put(bytes, mediaType),
+      put: async (bytes, mediaType) => await resources.put(bytes, mediaType, io),
       putFile: async (path, mediaType) => isStreamingResourceStore(resources)
-        ? await resources.putStream(createReadStream(path), mediaType)
-        : await resources.put(await readFile(path), mediaType),
+        ? await resources.putStream(createReadStream(path, io), mediaType, io)
+        : await resources.put(await readFile(path), mediaType, io),
     },
     ffmpegPath: options.ffmpegPath ?? "ffmpeg",
     ffprobePath: options.ffprobePath ?? "ffprobe",
@@ -50,5 +52,6 @@ export function createMediaExecutionEnvironment(
       options.maxProbeOutputBytes ?? 256 * 1024 * 1024,
       "maxProbeOutputBytes",
     ),
+    ...(options.signal === undefined ? {} : { signal: options.signal }),
   };
 }

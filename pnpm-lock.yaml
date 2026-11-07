@@ -3062,6 +3062,9 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/media-asset':
+        specifier: workspace:^0.1.0
+        version: link:../media-asset
       '@hypit/mimo-speech':
         specifier: workspace:^0.3.0
         version: link:../mimo-speech
@@ -3071,6 +3074,9 @@ importers:
       '@hypit/nano-banana':
         specifier: workspace:^0.3.0
         version: link:../nano-banana
+      '@hypit/nle':
+        specifier: workspace:^0.1.0
+        version: link:../nle
       '@hypit/nle-view':
         specifier: workspace:^0.1.0
         version: link:../nle-view

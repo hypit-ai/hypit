@@ -271,7 +271,7 @@ export function compileHtmlPictureProgram(input: HtmlPictureProgramInput): HtmlP
     }
     const extent = preparedPictureExtent(element.source);
     videoSources.push({
-      kind: "media", id: domId, elementId: element.id,
+      kind: "media", id: domId, elementId: domId,
       startFrame, endFrameExclusive,
       usage: { kind: "frames", spans: element.spans.map((span) => ({ ...span })) },
       source: structuredClone(element.source), sampling: structuredClone(element.sampling),

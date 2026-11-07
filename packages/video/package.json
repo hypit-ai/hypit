@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./cli": "./src/commands.ts"
+    "./cli": "./src/commands.ts",
+    "./nle-export-local": "./src/nle-export-local.ts"
   },
   "files": [
     "dist",
@@ -37,9 +38,11 @@
     "@hypit/html-video": "workspace:^0.2.1",
     "@hypit/raster-composition": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.2.0",
+    "@hypit/media-asset": "workspace:^0.1.0",
     "@hypit/mimo-speech": "workspace:^0.3.0",
     "@hypit/minimax-h3": "workspace:^0.3.0",
     "@hypit/nano-banana": "workspace:^0.3.0",
+    "@hypit/nle": "workspace:^0.1.0",
     "@hypit/nle-view": "workspace:^0.1.0",
     "@hypit/pixverse": "workspace:^0.3.0",
     "@hypit/prompt": "workspace:^0.1.0",

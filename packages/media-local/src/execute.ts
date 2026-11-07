@@ -51,6 +51,7 @@ export type MediaExecutionEnvironment = {
   readonly sharedLibraryPath?: string;
   readonly processTimeoutMs: number;
   readonly maxProbeOutputBytes: number;
+  readonly signal?: AbortSignal;
 };
 
 /**
@@ -138,11 +139,13 @@ async function runProcess(args: {
   readonly timeoutMs: number;
   readonly maxStdoutBytes: number;
   readonly sharedLibraryPath?: string;
+  readonly signal?: AbortSignal;
 }): Promise<Uint8Array> {
   return await runBoundedMediaProcess(args);
 }
 
 async function sourceBytes(env: MediaExecutionEnvironment, source: BlobRef): Promise<Uint8Array> {
+  env.signal?.throwIfAborted();
   const bytes = await env.artifacts.get(source);
   assert(bytes !== undefined, `Media source ${source.resource} is unavailable`);
   assert(bytes.byteLength === source.size, `Media source ${source.resource} size differs`);
@@ -154,12 +157,14 @@ async function stageArtifact(
   source: BlobRef,
   path: string,
 ): Promise<void> {
+  env.signal?.throwIfAborted();
   const chunks = await env.artifacts.open(source);
   assert(chunks !== undefined, `Media source ${source.resource} is unavailable`);
   const file = await open(path, "w");
   let size = 0;
   try {
     for await (const chunk of chunks) {
+      env.signal?.throwIfAborted();
       await file.write(chunk);
       size += chunk.byteLength;
     }
@@ -359,10 +364,12 @@ async function outputInspection(args: {
   readonly timeoutMs: number;
   readonly maxProbeOutputBytes: number;
   readonly sharedLibraryPath?: string;
+  readonly signal?: AbortSignal;
 }): Promise<MediaInspection> {
   return await inspectFile({ input: args.path, ffprobePath: args.ffprobePath,
     timeoutMs: args.timeoutMs, maxProbeOutputBytes: args.maxProbeOutputBytes,
-    ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }) });
+    ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }),
+    ...(args.signal === undefined ? {} : { signal: args.signal }) });
 }
 
 function inlineResult(value: CanonicalValue): MediaOperationResult {
@@ -478,6 +485,7 @@ async function assertCanonicalWav(args: {
   readonly timeoutMs: number;
   readonly maxProbeOutputBytes: number;
   readonly sharedLibraryPath?: string;
+  readonly signal?: AbortSignal;
 }): Promise<MediaAudioStream> {
   const inspection = await inspectFile({
     input: args.path,
@@ -485,6 +493,7 @@ async function assertCanonicalWav(args: {
     timeoutMs: args.timeoutMs,
     maxProbeOutputBytes: args.maxProbeOutputBytes,
     ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }),
+    ...(args.signal === undefined ? {} : { signal: args.signal }),
   });
   const audio = inspection.streams.filter((item): item is MediaAudioStream => item.kind === "audio");
   assert(audio.length === 1 && inspection.streams.length === 1, "Canonical audio must contain exactly one stream");
@@ -514,6 +523,7 @@ export async function executeInspectMedia(
         timeoutMs: env.processTimeoutMs,
         maxProbeOutputBytes: env.maxProbeOutputBytes,
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+        ...(env.signal === undefined ? {} : { signal: env.signal }),
       })
       : animatedWebpInspection(animation);
     return inlineResult(canonicalize(inspection));
@@ -528,6 +538,7 @@ async function sourceVideoEncoding(env: MediaExecutionEnvironment, path: string,
     argv: ["-v", "error", "-print_format", "json", "-show_streams", "-show_pixel_formats", path],
     timeoutMs: env.processTimeoutMs, maxStdoutBytes: env.maxProbeOutputBytes,
     ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+    ...(env.signal === undefined ? {} : { signal: env.signal }),
   });
   const probe = JSON.parse(Buffer.from(bytes).toString("utf8")) as {
     streams: { index: number; codec_name?: string; profile?: string; level?: number; pix_fmt?: string;
@@ -624,6 +635,7 @@ async function decodeAudioRenderSource(
       timeoutMs: env.processTimeoutMs,
       maxStdoutBytes: 64 * 1024,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      ...(env.signal === undefined ? {} : { signal: env.signal }),
     });
     const inspected = await outputInspection({
       path: output,
@@ -631,6 +643,7 @@ async function decodeAudioRenderSource(
       timeoutMs: env.processTimeoutMs,
       maxProbeOutputBytes: env.maxProbeOutputBytes,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      ...(env.signal === undefined ? {} : { signal: env.signal }),
     });
     const audio = inspected.streams.find((item): item is MediaAudioStream => item.kind === "audio");
     assert(audio?.decodedSampleFrames === plan.sampleFrames
@@ -677,6 +690,7 @@ export async function executeExtractAudio(
       timeoutMs: env.processTimeoutMs,
       maxStdoutBytes: 64 * 1024,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      ...(env.signal === undefined ? {} : { signal: env.signal }),
     });
     const artifact = await env.artifacts.putFile(output, "audio/wav");
     await assertCanonicalWav({
@@ -685,6 +699,7 @@ export async function executeExtractAudio(
       timeoutMs: env.processTimeoutMs,
       maxProbeOutputBytes: env.maxProbeOutputBytes,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      ...(env.signal === undefined ? {} : { signal: env.signal }),
     });
     return artifactResult(artifact);
   } finally {
@@ -720,6 +735,7 @@ export async function executeExtractFrame(
       timeoutMs: env.processTimeoutMs,
       maxStdoutBytes: 64 * 1024,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      ...(env.signal === undefined ? {} : { signal: env.signal }),
     });
     let bytes: Uint8Array;
     try {
@@ -738,6 +754,7 @@ export async function executeExtractFrame(
       timeoutMs: env.processTimeoutMs,
       maxProbeOutputBytes: env.maxProbeOutputBytes,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      ...(env.signal === undefined ? {} : { signal: env.signal }),
     });
     const images = inspected.streams.filter((item): item is MediaVideoStream => item.kind === "video");
     assert(images.length === 1 && images[0]!.decodedUnitCount === 1,
@@ -846,6 +863,7 @@ export async function executeProjectSpeechEvidenceAudio(
       timeoutMs: env.processTimeoutMs,
       maxStdoutBytes: 64 * 1024,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      ...(env.signal === undefined ? {} : { signal: env.signal }),
     });
     const inspected = await outputInspection({
       path: output,
@@ -853,6 +871,7 @@ export async function executeProjectSpeechEvidenceAudio(
       timeoutMs: env.processTimeoutMs,
       maxProbeOutputBytes: env.maxProbeOutputBytes,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      ...(env.signal === undefined ? {} : { signal: env.signal }),
     });
     const streams = inspected.streams.filter((item): item is MediaAudioStream => item.kind === "audio");
     assert(streams.length === 1 && inspected.streams.length === 1
@@ -914,6 +933,7 @@ export async function executeRenderTimelineAudio(
           timeoutMs: env.processTimeoutMs,
           maxProbeOutputBytes: env.maxProbeOutputBytes,
           ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+          ...(env.signal === undefined ? {} : { signal: env.signal }),
         });
         assert(audio.decodedSampleFrames === renderSource.sampleFrames,
           `Audio renderer source ${media.id} differs from its decoded domain`);
@@ -959,6 +979,7 @@ export async function executeRenderTimelineAudio(
         timeoutMs: env.processTimeoutMs,
         maxStdoutBytes: 64 * 1024,
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+        ...(env.signal === undefined ? {} : { signal: env.signal }),
       });
       const reader = new CanonicalPcmReader(path, reconstruction.targetSampleFrames);
       readers.add(reader);
@@ -978,6 +999,7 @@ export async function executeRenderTimelineAudio(
         return reader;
       },
       reconstructedForProgram: (node) => reconstructedProgrammes.get(node),
+      ...(env.signal === undefined ? {} : { signal: env.signal }),
     });
     const artifact = await env.artifacts.putFile(output, "audio/wav");
     const audio = await assertCanonicalWav({
@@ -986,6 +1008,7 @@ export async function executeRenderTimelineAudio(
       timeoutMs: env.processTimeoutMs,
       maxProbeOutputBytes: env.maxProbeOutputBytes,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      ...(env.signal === undefined ? {} : { signal: env.signal }),
     });
     assert(audio.decodedSampleFrames === window.sampleFrames,
       "Rendered TimelineAudio sample count differs from its program");
@@ -1021,6 +1044,7 @@ export async function executeMuxProgramMedia(
         timeoutMs: env.processTimeoutMs,
         maxProbeOutputBytes: env.maxProbeOutputBytes,
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+        ...(env.signal === undefined ? {} : { signal: env.signal }),
       }),
       assertCanonicalWav({
         path: audioPath,
@@ -1028,6 +1052,7 @@ export async function executeMuxProgramMedia(
         timeoutMs: env.processTimeoutMs,
         maxProbeOutputBytes: env.maxProbeOutputBytes,
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+        ...(env.signal === undefined ? {} : { signal: env.signal }),
       }),
     ]);
     const visual = await assertTimelineVisualBytes(env, visualPath, need.visual, visualInspection);
@@ -1045,6 +1070,7 @@ export async function executeMuxProgramMedia(
       timeoutMs: env.processTimeoutMs,
       maxStdoutBytes: 64 * 1024,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      ...(env.signal === undefined ? {} : { signal: env.signal }),
     });
     const finalInspection = await outputInspection({
       path: output,
@@ -1052,6 +1078,7 @@ export async function executeMuxProgramMedia(
       timeoutMs: env.processTimeoutMs,
       maxProbeOutputBytes: env.maxProbeOutputBytes,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      ...(env.signal === undefined ? {} : { signal: env.signal }),
     });
     const finalVideo = finalInspection.streams.filter((item): item is MediaVideoStream => item.kind === "video");
     const finalAudio = finalInspection.streams.filter((item): item is MediaAudioStream => item.kind === "audio");

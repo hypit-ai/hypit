@@ -22,6 +22,7 @@ packages and contribute their own CLI roots:
 | `measure` | `@hypit/speech-estimate/cli` |
 | `transcribe` | `@hypit/whisperx/cli` |
 | `studio`, `snapshot` | `@hypit/studio/cli` |
+| `nle export` | `@hypit/video/cli` |
 | `vocabulary` | `@hypit/video/cli` |
 
 The root executable is the composition root. Its explicit `hypit.cli.use` list installs these command
@@ -43,6 +44,22 @@ Installing or importing an arbitrary Source package never grants it CLI or proce
 
 These are replaceable product-assembly decisions, not new Core concepts. A different application may
 reuse the generic compiler and CLI contracts with another Frontend or Workspace.
+
+## Local NLE export
+
+```bash
+hypit nle export edit.nle.json --to output.mp4
+```
+
+The command opens one persistent `hypit.nle@1` file, loads only the packages named by its Component,
+Effect, Transition and matte symbols, resolves primary media files from their Media Asset documents,
+then lowers the snapshot through AVIR to `HtmlProgram` and `AudioProgram`. Chromium and FFmpeg execute
+inside a request-private file ResourceStore. The completed MP4 is linked into the selected path only
+after mux succeeds; an existing output is never replaced.
+
+This is a direct file task, not a Build or Result export. It creates no Runtime Profile, queue, semantic
+dependency or durable prepare state. The same `exportLocalNleProject()` port can be called by another
+Host with progress, cancellation and an injected delivery executor.
 
 ## Vocabulary
 

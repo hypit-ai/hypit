@@ -3,6 +3,7 @@ export {
 } from "./control.js";
 export { createLocalCredentialControl } from "./credentials.js";
 export { createLocalResultWriter } from "./result-writer.js";
+export { FileResourceStore } from "./resource-store.js";
 export {
   createLocalRuntime,
 } from "./runtime.js";

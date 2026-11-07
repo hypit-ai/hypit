@@ -670,7 +670,9 @@ export async function renderAudioProgramWav(options: {
   readonly reconstructedForProgram?: (
     node: Extract<AudioProgramNode, { readonly kind: "program" }>,
   ) => CanonicalPcmReader | undefined;
+  readonly signal?: AbortSignal;
 }): Promise<void> {
+  options.signal?.throwIfAborted();
   assert(options.startSample >= 0 && options.sampleFrames >= 0
     && options.startSample + options.sampleFrames <= audioProgramSampleFrames(options.program),
   "Audio renderer range lies outside its programme");
@@ -686,6 +688,7 @@ export async function renderAudioProgramWav(options: {
     output = await open(options.path, "w");
     await output.write(wavHeader(options.sampleFrames));
     for (let blockStart = 0; blockStart < options.sampleFrames; blockStart += OUTPUT_BLOCK_FRAMES) {
+      options.signal?.throwIfAborted();
       const frames = Math.min(OUTPUT_BLOCK_FRAMES, options.sampleFrames - blockStart);
       const absoluteStart = options.startSample + blockStart;
       const bytes = Buffer.allocUnsafe(frames * BYTES_PER_FRAME);
@@ -698,6 +701,7 @@ export async function renderAudioProgramWav(options: {
       }
       await output.write(bytes);
     }
+    options.signal?.throwIfAborted();
   } finally {
     await output?.close();
   }

@@ -3,6 +3,9 @@
 The default local Runtime for Hypit. It owns the Worker, scheduler and active SQLite execution
 worklist. Project-owned Build Results hold finished retained Outputs.
 
+`@hypit/runtime-local/resource-store` exports the file-backed `FileResourceStore` separately for
+request-private local application tasks. Using that byte store does not create or select a Runtime.
+
 This package also exports `createLocalRuntimeCliCommandModules()` from `@hypit/runtime-local/cli`.
 The factory binds the exact Local Host port and returns the command contribution that owns
 `runtime`, `programs`, `paths` and the internal Worker entry. The generic `@hypit/cli` Host owns

@@ -329,3 +329,25 @@ test("Programme-use reconstruction resolves exact half-sample boundaries with Te
     targetSampleFrames: 2,
   });
 });
+
+test("audio rendering observes a task cancellation before writing its output", async () => {
+  const work = await mkdtemp(join(tmpdir(), "hypit-audio-cancel-"));
+  const controller = new AbortController();
+  controller.abort(new Error("cancel audio render"));
+  const program = sealAudioProgram({
+    ...programTiming("cancelled", 4),
+    graph: { nodes: [{ kind: "silence", id: "silence" }], output: { node: "silence" } },
+  });
+  try {
+    await assert.rejects(renderAudioProgramWav({
+      path: join(work, "output.wav"),
+      program,
+      startSample: 0,
+      sampleFrames: 4,
+      sourceForMedia: () => { throw new Error("cancelled render must not request media"); },
+      signal: controller.signal,
+    }), /cancel audio render/u);
+  } finally {
+    await rm(work, { recursive: true, force: true });
+  }
+});

@@ -267,6 +267,10 @@ test("PreparedMedia and an official Transition close through the real HTML termi
   assert.ok(selectHtmlVideoSources(document).every((source) =>
     source.startFrame === 0 && source.endFrameExclusive === 2));
   assert.equal([...document.html.matchAll(/data-hypit-video-source="media"/gu)].length, 2);
+  for (const source of selectHtmlVideoSources(document)) {
+    assert.ok(document.html.includes(`id="${source.elementId}"`),
+      `media display plane ${source.elementId} must be directly addressable`);
+  }
   assert.match(document.html, /"durationFrames":2/u);
   assert.match(document.html, /"controlPositions":\{"progress":/u);
   assert.match(document.html, /hypit-visual-process|cross/u);
