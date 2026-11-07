@@ -5,13 +5,16 @@ import type {
   NleProject,
   NleTransaction,
 } from "@hypit/nle";
-import { assertNleProject, findNleTrack, nleLinearSourceTime } from "@hypit/nle";
+import { assertNleProject, findNleItem, findNleTrack, nleLinearSourceTime } from "@hypit/nle";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
 import {
   addExactTemporalValues,
   compareExactTemporalValues,
+  sealLocalTemporalDomain,
+  sealTemporalMap,
   subtractExactTemporalValues,
   type ExactTemporalValue,
+  type TemporalMap,
 } from "@hypit/temporal/algebra";
 
 import { captionBasicNleComponentSymbol } from "./nle-package.js";
@@ -43,20 +46,24 @@ const defaultComponent: CaptionNleComponentSelection = (style) => {
   return { component: captionBasicNleComponentSymbol };
 };
 
-/** Bake source-local Caption timing into independent, directly editable NLE Component Items. */
-export function createCaptionNleMaterialization(project: NleProject, input: {
+type CaptionNleMaterializationInput = {
   readonly id: string;
   readonly track: string;
   readonly document: CaptionDocument;
   readonly timing: LocalCaptionTiming;
   readonly presentation: CaptionPresentation | CaptionStyle;
-  readonly at: ExactTemporalValue;
   readonly picture: NlePictureAppearance;
   readonly selection?: CaptionSelection;
-  readonly itemId?: (cueId: string) => string;
+  readonly itemId?: (cueId: string, occurrence: number) => string;
   readonly componentForStyle?: CaptionNleComponentSelection;
-}): NleTransaction {
-  assertNleProject(project);
+};
+
+function materializeCaptionProjection(
+  project: NleProject,
+  input: CaptionNleMaterializationInput,
+  origin: ExactTemporalValue,
+  occurrenceMapping?: TemporalMap,
+): NleTransaction {
   const track = findNleTrack(project, input.track);
   assert(track.kind === "picture", "Caption materialization requires a Picture Track.");
   const presentation = "overrides" in input.presentation
@@ -70,7 +77,13 @@ export function createCaptionNleMaterialization(project: NleProject, input: {
     selection: input.selection ?? { kind: "all" as const },
   };
   const schedule = scheduleCaptionPresentation(spec, input.document, input.timing, presentation);
-  const projected = projectCaptionScheduleCues(input.id, input.document, schedule, presentation);
+  const projected = projectCaptionScheduleCues(
+    input.id,
+    input.document,
+    schedule,
+    presentation,
+    occurrenceMapping,
+  );
   const componentForStyle = input.componentForStyle ?? defaultComponent;
   const styles = new Map(schedule.styles.map((style) => [style.id, style] as const));
   const commands: NleTransaction["commands"][number][] = [];
@@ -78,37 +91,69 @@ export function createCaptionNleMaterialization(project: NleProject, input: {
     if (cue.presentation.kind === "hidden") continue;
     const style = styles.get(cue.presentation.styleId);
     assert(style !== undefined, `Caption Cue ${cue.cueId} references missing Style ${cue.presentation.styleId}.`);
-    const region = cue.regions[0];
-    assert(region !== undefined && cue.regions.length === 1,
-      `Caption Cue ${cue.cueId} must materialize as one source-local region.`);
-    const start = addExactTemporalValues(input.at, region.start.position);
-    const end = addExactTemporalValues(input.at, region.end.position);
-    assert(compareExactTemporalValues(end, start) > 0, `Caption Cue ${cue.cueId} has no positive duration.`);
+    const regions = occurrenceMapping === undefined ? cue.regions : cue.occurrenceRegions ?? [];
     const selected = componentForStyle(style);
-    const duration = subtractExactTemporalValues(end, start);
-    commands.push({
-      kind: "item.add",
-      track: track.id,
-      item: {
-        id: input.itemId?.(cue.cueId) ?? `${input.id}:${cue.cueId}`,
-        kind: "component",
-        start,
-        duration,
-        sourceTime: nleLinearSourceTime(duration),
-        enabled: true,
-        component: structuredClone(selected.component),
-        parameters: canonicalize({
-          text: cue.text,
-          cueId: cue.cueId,
-          styleId: style.id,
-          family: style.family,
-          style: style.parameters,
-          ...(cue.role === undefined ? {} : { role: cue.role }),
-          ...(selected.parameters ?? {}),
-        }),
-        picture: structuredClone(input.picture),
-      },
-    });
+    for (const [index, region] of regions.entries()) {
+      const start = addExactTemporalValues(origin, region.start.position);
+      const end = addExactTemporalValues(origin, region.end.position);
+      if (compareExactTemporalValues(end, start) <= 0) continue;
+      const duration = subtractExactTemporalValues(end, start);
+      commands.push({
+        kind: "item.add",
+        track: track.id,
+        item: {
+          id: input.itemId?.(cue.cueId, index)
+            ?? `${input.id}:${cue.cueId}${regions.length === 1 ? "" : `:${index + 1}`}`,
+          kind: "component",
+          start,
+          duration,
+          sourceTime: nleLinearSourceTime(duration),
+          enabled: true,
+          component: structuredClone(selected.component),
+          parameters: canonicalize({
+            text: cue.text,
+            cueId: cue.cueId,
+            styleId: style.id,
+            family: style.family,
+            style: style.parameters,
+            ...(cue.role === undefined ? {} : { role: cue.role }),
+            ...(selected.parameters ?? {}),
+          }),
+          picture: structuredClone(input.picture),
+        },
+      });
+    }
   }
   return { revision: project.revision, commands };
+}
+
+/** Bake source-local Caption timing into independent, directly editable NLE Component Items. */
+export function createCaptionNleMaterialization(
+  project: NleProject,
+  input: CaptionNleMaterializationInput & { readonly at: ExactTemporalValue },
+): NleTransaction {
+  assertNleProject(project);
+  return materializeCaptionProjection(project, input, input.at);
+}
+
+/**
+ * Resolve source-local Caption cues through one explicitly selected Media Item, then bake the
+ * resulting Programme times into ordinary Component Items. No named dependency survives the edit.
+ */
+export function createCaptionNleMaterializationForMediaItem(
+  project: NleProject,
+  input: CaptionNleMaterializationInput & { readonly mediaItem: string },
+): NleTransaction {
+  assertNleProject(project);
+  const occurrence = findNleItem(project, input.mediaItem).item;
+  assert(occurrence.kind === "media", `Caption materialization target ${input.mediaItem} is not a Media Item.`);
+  const mapping = sealTemporalMap({ stages: [{
+    target: sealLocalTemporalDomain({
+      id: `${input.id}:${occurrence.id}:occurrence`,
+      duration: structuredClone(occurrence.duration),
+    }),
+    source: structuredClone(input.timing.domain),
+    pieces: structuredClone(occurrence.sourceTime.pieces),
+  }] });
+  return materializeCaptionProjection(project, input, occurrence.start, mapping);
 }

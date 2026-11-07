@@ -47,5 +47,8 @@ export {
   captionBasicNleHtmlVideoResolver,
   captionBasicNleResolver,
 } from "./nle-package.js";
-export { createCaptionNleMaterialization } from "./materialize.js";
+export {
+  createCaptionNleMaterialization,
+  createCaptionNleMaterializationForMediaItem,
+} from "./materialize.js";
 export type { CaptionNleComponentSelection } from "./materialize.js";

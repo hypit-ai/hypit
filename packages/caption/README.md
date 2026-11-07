@@ -81,11 +81,18 @@ supplied separately by the selected audiovisual renderer.
 ## Editorial import path: materialize ordinary Component blocks
 
 The same `CaptionDocument + LocalCaptionTiming + CaptionPresentation` can instead be baked once into an NLE
-transaction. `createCaptionNleMaterialization` resolves the chosen cues, visibility and styles, quantizes exact
+transaction. `createCaptionNleMaterialization` resolves the chosen cues, visibility and styles, preserves their
 source-local regions as exact rational NLE times, and emits one direct Component item for each visible
 cue. A hidden cue emits no item. Each resulting block owns its start, duration, caption Component symbol, text, style
 parameters and rectangle, so later move, trim, restyle or delete operations are ordinary NLE edits and do not
 write back to the transcript or Caption component.
+
+`createCaptionNleMaterializationForMediaItem` is the concrete media-following seam. The caller explicitly selects
+one existing NLE Media Item; the adapter takes the transient preimage of every source-local Cue through that Item's
+current trim／retime pieces, adds the Item's Programme start and emits ordinary Component commands. Cues outside the
+visible source range disappear, while looped or repeated source ranges may emit multiple independent blocks. The
+accepted Project stores only those direct blocks: `cueId` may remain an inert package parameter, but no source anchor
+dependency, Media Item binding or future reverse lookup survives.
 
 The built-in `basic` Component is only a minimal package-owned HTML implementation. Other style families must
 select their own Component explicitly; the NLE does not interpret family parameters or grant Caption a special

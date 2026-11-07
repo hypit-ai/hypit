@@ -17,6 +17,7 @@ import { htmlVisual } from "@hypit/html-program";
 import {
   applyNleTransaction,
   createNleProject,
+  nleLinearSourceTime,
 } from "@hypit/nle";
 import { sealLocalSpatialDomain, sealSpatialMap } from "@hypit/spatial/algebra";
 import { exactTemporalValue, sealLocalTemporalDomain } from "@hypit/temporal/algebra";
@@ -30,6 +31,7 @@ import {
   captionUnitEvent,
   createCaptionPresentation,
   createCaptionNleMaterialization,
+  createCaptionNleMaterializationForMediaItem,
   projectCaptionCues,
   scheduleCaptionPresentation,
   type CaptionComponentSpec,
@@ -165,6 +167,50 @@ test("Caption timing and presentation bake once into ordinary editable NLE block
   assert.doesNotMatch(html.html, />Second</u);
   assert.match(html.html, />Third</u);
   assert.match(html.html, /#ff0000/u);
+});
+
+test("Caption cues follow one selected trimmed Media Item only while materializing", () => {
+  const empty = createNleProject({
+    id: "caption-follow", name: "Caption follow", editRate: { numerator: 2, denominator: 1 },
+    canvas: { width: 1920, height: 1080, clearColor: "#000000" },
+  });
+  const project = applyNleTransaction(empty, { revision: 0, commands: [{
+    kind: "media.add", media: {
+      id: "interview", name: "Interview", asset: { path: "media/interview.media.json" },
+    },
+  }, {
+    kind: "track.add", track: {
+      id: "picture", name: "Picture", kind: "picture", locked: false, muted: false, items: [],
+    },
+  }, {
+    kind: "track.add", track: {
+      id: "captions", name: "Captions", kind: "picture", locked: false, muted: false, items: [],
+    },
+  }, {
+    kind: "item.add", track: "picture", item: {
+      id: "interview-use", kind: "media", media: "interview", start: at(10), duration: at(3),
+      sourceTime: nleLinearSourceTime(at(3), at(2)), enabled: true,
+      picture: {
+        layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "cover" }, effects: [],
+      },
+    },
+  }] });
+  const transaction = createCaptionNleMaterializationForMediaItem(project, {
+    id: "followed-captions", mediaItem: "interview-use", track: "captions",
+    document, timing, presentation: rolePresentation,
+    picture: {
+      layout: { x: 0, y: 800, width: 1920, height: 280, fit: "fill" }, effects: [],
+    },
+  });
+  assert.deepEqual(transaction.commands.map((command) => command.kind), ["item.add", "item.add"]);
+  const materialized = applyNleTransaction(project, transaction);
+  assert.deepEqual(materialized.tracks[1]?.items.map((item) => [
+    item.id, item.start, item.duration,
+  ]), [
+    ["followed-captions:cue-two", at(10), at(1)],
+    ["followed-captions:cue-three", at(12), at(1)],
+  ]);
+  assert.equal(materialized.tracks[1]?.items[0]?.sourceTime.pieces[0]?.sourceAtStart.ticks, "0");
 });
 
 test("one source-bound Caption occurrence renders all three internal cues", () => {
