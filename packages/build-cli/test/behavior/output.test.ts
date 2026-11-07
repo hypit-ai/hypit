@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createPlanOutput, createPricingOutput, renderCliError, writeCliHelp, writeCliOutput } from "@hypit/cli/output";
-import type { PlanRequest, PricingRequest } from "@hypit/cli/output";
+import { renderCliError } from "@hypit/cli";
+import { createPlanOutput, createPricingOutput, writeCliHelp, writeCliOutput } from "../../src/output.js";
+import type { PlanRequest, PricingRequest } from "../../src/output.js";
 import { parseCommand } from "../../src/arguments.js";
 
 function capture(

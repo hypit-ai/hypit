@@ -12,7 +12,7 @@ import { capabilityIdentity, capabilityKey, compareCodeUnits, typeKey } from "@h
 import type { BuildDefinition, CanonicalValue, CapabilityRef, PublicationIntent } from "@hypit/protocol";
 import type { BuildView } from "@hypit/kernel";
 import type { CliBuildAuthoring, CliEndpointQuery, CliRuntimeInspection } from "./runtime-port.js";
-import type { PlanRequest, PlanRequestOutput, PricingRequest } from "@hypit/cli/output";
+import type { PlanRequest, PlanRequestOutput, PricingRequest } from "./output.js";
 import { plannedNeeds } from "@hypit/kernel";
 import {
   refinementPackagesFromFacets,

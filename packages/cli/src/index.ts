@@ -14,7 +14,7 @@ export { runInstalledCliApplication, writeCliCompositionHelp } from "./installed
 export type { InstalledCliApplicationOptions, LoadedCliCommandSelection } from "./installed-application.js";
 export { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
 export { resolveProjectRoot } from "@hypit/project";
-export { renderCliError, writeBuildCliRootHelp, writeCliHelp, writeCliOutput } from "./output.js";
+export { renderCliError, writeCliHelp, writeCliOutput } from "./output.js";
 export type {
   CliColorMode,
   CliIo,

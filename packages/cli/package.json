@@ -5,13 +5,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./output": "./src/output.ts"
+    ".": "./src/index.ts"
   },
   "dependencies": {
     "@hypit/host-paths": "workspace:^0.1.0",
     "@hypit/loader": "workspace:*",
-    "@hypit/project": "workspace:*",
-    "@hypit/protocol": "workspace:*"
+    "@hypit/project": "workspace:*"
   }
 }

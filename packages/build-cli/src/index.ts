@@ -1,11 +1,8 @@
-import {
-  writeBuildCliRootHelp,
-  writeCliHelp,
-} from "@hypit/cli";
 import type { CliCommandModule } from "@hypit/cli";
 
 import { runCli } from "./main.js";
 import type { CliDistribution } from "./distribution.js";
+import { writeBuildCliRootHelp, writeCliHelp } from "./output.js";
 
 export const buildCliCommandNames = [
   "check",

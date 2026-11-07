@@ -4,5 +4,5 @@ export { commandHint } from "./command-hint.js";
 export type { CommandScope } from "./command-hint.js";
 export { parseCliDecimalInteger } from "./decimal-integer.js";
 export { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
-export { writeBuildCliRootHelp, writeCliHelp, writeCliOutput } from "./output.js";
+export { writeCliHelp, writeCliOutput } from "./output.js";
 export type { CliIo, CliMachineView, CliOutputOptions, CliTerminal } from "./output.js";

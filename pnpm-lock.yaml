@@ -605,9 +605,6 @@ importers:
       '@hypit/project':
         specifier: workspace:*
         version: link:../project
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
 
   packages/compiler:
     dependencies:

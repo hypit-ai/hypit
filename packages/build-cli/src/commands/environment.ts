@@ -3,8 +3,8 @@ import { resolve } from "node:path";
 
 import type { CliCommand, EnvironmentCommand } from "../command.js";
 import { acquireOAuthCredential } from "../oauth.js";
-import { writeCliOutput } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
+import { writeCliOutput } from "../output.js";
 import type { CliDiagnostic, CliPublicationStoreLocation, CliRuntimeHost } from "../runtime-port.js";
 import type { OperationalWriter } from "./types.js";
 
