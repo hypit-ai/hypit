@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 
-import { buildResultDirectory, FileBuildResult, FileBuildResultStore } from "../../src/result-storage/index.js";
+import { buildResultDirectory, FileRunFinalization, FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import { isBlobRef } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
 import { productPublicationDirectory } from "@hypit/hypit/product/node";
@@ -22,7 +22,7 @@ test("finished Product readers expose only that Product's owned Resources", asyn
   try {
     const bytes = new TextEncoder().encode("abcdefghij");
     const source: BlobRef = { kind: "blob", resource: "res_source_video", size: bytes.byteLength, mediaType: "video/mp4" };
-    const writer = await FileBuildResult.create(root, join(root, "products"), {
+    const writer = await FileRunFinalization.create(root, join(root, "products"), {
       id: build, sourcePath: "main.svml", targets: ["video"],
       publication: publicationIntent([
         { name: "video", record: "record:video" },
@@ -36,13 +36,13 @@ test("finished Product readers expose only that Product's owned Resources", asyn
         return (async function* () { yield bytes; })();
       } },
     });
-    const repository = new FileBuildResultStore(root, join(root, "products"));
-    assert.equal(await repository.resolveProduct({ publication: build, name: "video" }), undefined,
+    const repository = new FileRunFinalizationStore(root, join(root, "products"));
+    assert.equal(await repository.products.resolveProduct({ publication: build, name: "video" }), undefined,
       "drafts stay outside history");
     await writer.finish({ outcome: "complete", executionLog: (async function* () {
       yield new TextEncoder().encode("log\n");
     })() });
-    const resolved = await repository.resolveProduct({ publication: build, name: "video" });
+    const resolved = await repository.products.resolveProduct({ publication: build, name: "video" });
     assert.ok(resolved !== undefined && isBlobRef(resolved.value));
     if (resolved === undefined || !isBlobRef(resolved.value)) throw new Error("expected published Blob");
     const stream = await resolved.openResource(resolved.value, { start: 3, endExclusive: 7 });
@@ -51,7 +51,7 @@ test("finished Product readers expose only that Product's owned Resources", asyn
     for await (const chunk of stream!) chunks.push(...chunk);
     assert.equal(new TextDecoder().decode(Uint8Array.from(chunks)), "defg");
     assert.equal(await resolved.openResource({ ...resolved.value, resource: "res_forged" }), undefined);
-    const sibling = await repository.resolveProduct({ publication: build, name: "video-copy" });
+    const sibling = await repository.products.resolveProduct({ publication: build, name: "video-copy" });
     assert.ok(sibling !== undefined && isBlobRef(sibling.value));
     if (sibling === undefined) throw new Error("expected sibling published Blob");
     assert.equal(await sibling.openResource(resolved.value), undefined,
@@ -84,7 +84,7 @@ test("filesystem decodes Result and writer data before exposing it", async () =>
         },
       },
     }));
-    const repository = new FileBuildResultStore(root, join(root, "products"));
+    const repository = new FileRunFinalizationStore(root, join(root, "products"));
     await assert.rejects(repository.read(malformed), /address does not match its Run publication/u);
 
     const writer = await repository.create({
@@ -139,8 +139,8 @@ test("reserved-looking domain objects remain ordinary domain data", async () => 
       products: { value: { type: videoType, publisher: "example.test-product@1",
         value: { kind: "value", path: "values/value-0001.json" } } },
     }));
-    const resolved = await new FileBuildResultStore(root, join(root, "products"))
-      .resolveProduct({ publication: id, name: "value" });
+    const resolved = await new FileRunFinalizationStore(root, join(root, "products"))
+      .products.resolveProduct({ publication: id, name: "value" });
     assert.deepEqual(resolved?.value, {
       nested: { kind: "value", path: "domain-authored" },
     });
@@ -176,10 +176,10 @@ test("reading a value-document Output manifest does not open its document", asyn
       products: { take: { type: structuredType, publisher: "example.test-product@1",
         value: { kind: "value", path: "values/missing.json" } } },
     }));
-    const repository = new FileBuildResultStore(root, join(root, "products"));
+    const repository = new FileRunFinalizationStore(root, join(root, "products"));
     const manifest = await repository.read(id);
     assert.equal(manifest?.outputs.take?.representation, "structured");
-    await assert.rejects(repository.resolveProduct({ publication: id, name: "take" }), /missing\.json/u);
+    await assert.rejects(repository.products.resolveProduct({ publication: id, name: "take" }), /missing\.json/u);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

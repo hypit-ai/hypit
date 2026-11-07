@@ -9,7 +9,7 @@ import {
   createRuntimeEndpointAdapterFacet,
   RuntimeAdapterRegistry,
 } from "@hypit/runtime-local/extension";
-import { FileBuildResultStore } from "../../src/result-storage/index.js";
+import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import { ProducerRegistry } from "@hypit/executor";
 import { MemoryResourceStore } from "@hypit/resource-store";
 import { defineEndpoint } from "@hypit/endpoint";
@@ -28,12 +28,12 @@ import {
   createRuntimeControlFromConfig,
   createRuntimeFromConfig,
   describeRuntimeConfigEndpoints,
-  doctorProjectBuildResultRepository,
+  doctorProjectPublicationStores,
   doctorRuntimeConfig,
   invokeRuntimeConfigNeed,
   openRuntimeConfigInspection,
   openTransientRuntimeConfigExecution,
-  openProjectBuildResultRepository,
+  openProjectPublicationStores,
   parseLocalRuntimeProfile,
   preflightRuntimeConfig,
   readRuntimeConfigPricing,

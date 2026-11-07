@@ -37,8 +37,8 @@ Records and Resource identities; it has no knowledge of file paths or Result rep
 
 Drafts are not project history. The package root exposes `BuildResultHistory`; its `read()` and
 `browse()` methods return finished `BuildResult` values only. Exact Product lookup belongs to
-`ProductHistory`. Runtime Local's assembly may return one object implementing both ports, but their
-physical roots and readers remain separate. CLI and history browsers therefore
+`ProductHistory`. Runtime Local exposes Run history, Product history and writable finalization as
+three distinct ports, even when one local adapter participates in their assembly. CLI and history browsers therefore
 cannot observe, finish, discard or recover an open draft. `@hypit/result/node` exposes only
 `FileBuildResultHistory` and the finished-history filesystem reader.
 
@@ -68,7 +68,7 @@ name there.
 ## Execution evidence
 
 A finished manifest may contain `executionLog`, an ordinary Result file reference separate from
-`outputs`. `BuildResultWriter.finish({ executionLog, outcome, ... })` accepts a byte stream. Repositories
+`outputs`. `RunFinalizer.finish({ executionLog, outcome, ... })` accepts a byte stream. Repositories
 preserve it as `execution.jsonl` before the terminal manifest is committed. Repeating an already
 completed finish does not rewrite it.
 

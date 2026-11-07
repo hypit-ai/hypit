@@ -6,12 +6,14 @@ import type {
 
 export type BuildOutcome = "complete" | "failed" | "cancelled";
 
-/** Exact host-local directory chosen before a Build becomes active. */
-export type BuildResultRepositoryLocation = {
+/** Exact project-owned publication roots chosen before a Build becomes active. */
+export type PublicationStoreLocation = {
   /** Project ownership boundary used to record a portable Author Source path. */
   readonly root: string;
-  /** Host-local filesystem path below the project root. */
-  readonly path: string;
+  /** Run-history path below the project root. */
+  readonly historyPath: string;
+  /** Product-publication path below the project root. */
+  readonly productsPath: string;
 };
 
 export type BuildExecutionRequest = {
@@ -20,8 +22,8 @@ export type BuildExecutionRequest = {
   readonly context?: import("@hypit/hypit/protocol").CanonicalValue;
   /** Installed execution packages loaded when this execution context starts. */
   readonly executionPackages: readonly string[];
-  /** Exact project Result Repository selected at submission. */
-  readonly result: BuildResultRepositoryLocation;
+  /** Exact project publication stores selected at submission. */
+  readonly result: PublicationStoreLocation;
 };
 
 export type BuildExecutionDecision =

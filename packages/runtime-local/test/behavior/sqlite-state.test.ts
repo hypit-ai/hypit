@@ -12,7 +12,8 @@ import { capabilities, createGreetingBuild, types } from "../execution-scenario.
 
 const resultLocation = {
   root: "/project",
-  path: ".hypit/results",
+  historyPath: ".hypit/results",
+  productsPath: ".hypit/products",
 } as const;
 
 const operationContext = {
@@ -290,7 +291,11 @@ test("Execution stores scheduling facts, one decision and independent operator a
   const directory = await mkdtemp(join(tmpdir(), "hypit-sqlite-result-location-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
-    const result = { root: "/projects/episode-12", path: ".hypit/results" } as const;
+    const result = {
+      root: "/projects/episode-12",
+      historyPath: ".hypit/results",
+      productsPath: ".hypit/products",
+    } as const;
     const initial = createGreetingBuild();
     const buildDefinition = definition(initial);
     const request = {
@@ -553,7 +558,7 @@ test("a resource release before parking is observed and later releases wake a fi
   const directory = await mkdtemp(join(tmpdir(), "hypit-capacity-wakeup-"));
   const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
   const resource = { id: "browsers", limit: 2 };
-  const destination = { root: directory, path: "results" };
+  const destination = { root: directory, historyPath: "results", productsPath: "products" };
   try {
     for (const [now, build] of ["holder", "waiter", "later"].entries()) {
       await state.execution.create({ build, executionPackages: [], result: destination }, { now });

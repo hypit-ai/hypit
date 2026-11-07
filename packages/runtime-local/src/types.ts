@@ -2,14 +2,16 @@ import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { Awaitable, ProducerPackage } from "@hypit/hypit/producer";
 import type { EndpointInstance } from "@hypit/hypit/endpoint";
 import type { LoadedPackage } from "@hypit/hypit/loader";
-import type { BuildResultStore } from "./result-storage/types.js";
+import type { RunFinalizationStore } from "./result-storage/types.js";
+import type { ProductHistory } from "@hypit/hypit/product";
+import type { BuildResultHistory } from "@hypit/hypit/result";
 import type {
   BuildStore,
   CredentialStore,
   OperationStore,
 } from "@hypit/hypit/runtime";
 import type { ResourceStore } from "@hypit/resource-store";
-import type { BuildCompletion, BuildExecutionStore, BuildExecutionSnapshot, BuildResultRepositoryLocation } from "./execution.js";
+import type { BuildCompletion, BuildExecutionStore, BuildExecutionSnapshot, PublicationStoreLocation } from "./execution.js";
 import type {
   RuntimeHostControl,
   RuntimeHostBuildSubmission,
@@ -17,8 +19,10 @@ import type {
   RuntimeHostExecution,
 } from "./host-api.js";
 
-type BuildResultRepositoryOpened = {
-  readonly repository: BuildResultStore;
+type PublicationStoresOpened = {
+  readonly history: BuildResultHistory;
+  readonly products: ProductHistory;
+  readonly finalization: RunFinalizationStore;
   readonly close?: () => void | Promise<void>;
 };
 
@@ -41,7 +45,7 @@ export type CreateLocalRuntimeOptions = {
   readonly resourceStoreForBuild?: (build: string) => ResourceStore;
   /** Called only after a finished Build Result has materialized every completed publication. */
   readonly clearBuildResources?: (build: string) => Awaitable<void>;
-  readonly openBuildResultRepository: (location: BuildResultRepositoryLocation) => Awaitable<BuildResultRepositoryOpened>;
+  readonly openPublicationStores: (location: PublicationStoreLocation) => Awaitable<PublicationStoresOpened>;
   readonly credentialStore: CredentialStore;
   /** Deterministic implementations injected directly by an embedding. Installed packages arrive as facets. */
   readonly producers?: ProducerPackage;
@@ -59,7 +63,7 @@ export type CreateLocalRuntimeControlOptions = {
   readonly executionLogs?: import("./log.js").LocalExecutionLogs;
   readonly buildStore: BuildStore;
   readonly commandExecutionStore: import("@hypit/hypit/runtime").CommandExecutionStore;
-  readonly openBuildResultRepository: (location: BuildResultRepositoryLocation) => Awaitable<BuildResultRepositoryOpened>;
+  readonly openPublicationStores: (location: PublicationStoreLocation) => Awaitable<PublicationStoresOpened>;
   readonly operationStore: OperationStore;
   readonly executionStore: BuildExecutionStore;
   readonly submissionStore: import("./submission.js").PendingBuildStore;
@@ -67,7 +71,7 @@ export type CreateLocalRuntimeControlOptions = {
   readonly close?: () => Awaitable<void>;
 };
 
-export type CreateLocalResultWriterOptions = {
+export type CreateLocalRunFinalizerOptions = {
   readonly executionLogs?: import("./log.js").LocalExecutionLogs;
   readonly buildStore: BuildStore;
   readonly operationStore: OperationStore;
@@ -78,7 +82,7 @@ export type CreateLocalResultWriterOptions = {
   readonly resourceStore: ResourceStore;
   readonly resourceStoreForBuild?: (build: string) => ResourceStore;
   readonly clearBuildResources?: (build: string) => Awaitable<void>;
-  readonly openBuildResultRepository: (location: BuildResultRepositoryLocation) => Awaitable<BuildResultRepositoryOpened>;
+  readonly openPublicationStores: (location: PublicationStoreLocation) => Awaitable<PublicationStoresOpened>;
   readonly close?: () => Awaitable<void>;
 };
 
@@ -100,14 +104,14 @@ export type LocalRuntime = RuntimeHostExecution & {
 /** Active execution control that never opens the selected ResourceStore. */
 export type LocalRuntimeControl = RuntimeHostControl;
 
-export type LocalResultWriter = {
+export type LocalRunFinalizer = {
   /** Incrementally materialize publications whose Records have completed. */
   sync(
     execution: BuildExecutionSnapshot,
     records: readonly import("@hypit/hypit/protocol").TypedRecord[],
   ): Promise<void>;
   /** Persist the outcome just frozen by the execution Worker, then remove active Runtime state. */
-  completeResult(execution: BuildExecutionSnapshot): Promise<BuildExecutionSnapshot | BuildCompletion>;
+  finalize(execution: BuildExecutionSnapshot): Promise<BuildExecutionSnapshot | BuildCompletion>;
   /** Roll back a submission that never became active. This is not a user Result operation. */
   discardSubmission(build: string): Promise<boolean>;
   close(): void | Promise<void>;

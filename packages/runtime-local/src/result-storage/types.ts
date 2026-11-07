@@ -8,9 +8,8 @@ import type {
 import { assertPublicationIntent } from "@hypit/hypit/protocol";
 import type {
   Product,
-  ProductHistory,
 } from "@hypit/hypit/product";
-import type { BuildResultHistory, BuildResultOperation } from "@hypit/hypit/result";
+import type { BuildResultOperation } from "@hypit/hypit/result";
 
 export type BuildResultFileRef = {
   readonly kind: "build-file";
@@ -20,11 +19,6 @@ export type BuildResultFileRef = {
   readonly path: string;
 };
 
-/**
- * Durable encoding of one array or object value. Domain data stays ordinary canonical data while
- * Resource references live beside it, so reserved-looking domain objects cannot be
- * mistaken for persistence metadata.
- */
 /** One portable address inside a Build Result; repositories map it to their own physical storage. */
 export function assertBuildResultPath(value: unknown, subject: string): asserts value is string {
   if (typeof value !== "string" || value.length === 0 || value.startsWith("/")
@@ -83,7 +77,7 @@ export type StoredFinishedBuildResult = StoredBuildResultBase & StoredBuildResul
 /** Storage state used only by Runtime publication and recovery. */
 export type StoredBuildResult = BuildResultDraft | StoredFinishedBuildResult;
 
-export type BuildResultSeed = {
+export type RunFinalizationSeed = {
   readonly id: string;
   readonly sourcePath: string;
   /** Author-facing names requested by this Build; targets are execution evidence, not publications. */
@@ -92,49 +86,49 @@ export type BuildResultSeed = {
 };
 
 /** Validate the publication request before storage is touched. */
-export function assertBuildResultSeed(seed: BuildResultSeed): void {
-  if (seed.sourcePath.trim().length === 0) throw new Error("Build Result Source path must not be empty");
+export function assertRunFinalizationSeed(seed: RunFinalizationSeed): void {
+  if (seed.sourcePath.trim().length === 0) throw new Error("Run Source path must not be empty");
   const targets = new Set<string>();
   for (const target of seed.targets) {
-    if (target.trim().length === 0) throw new Error("Build Result target must not be empty");
-    if (targets.has(target)) throw new Error(`Build Result target ${target} is repeated`);
+    if (target.trim().length === 0) throw new Error("Run target must not be empty");
+    if (targets.has(target)) throw new Error(`Run target ${target} is repeated`);
     targets.add(target);
   }
   assertPublicationIntent(seed.publication);
 }
 
-export type BuildResultResourceSource = {
+export type RunFinalizationResourceSource = {
   open(blob: BlobRef): Promise<AsyncIterable<Uint8Array> | undefined>;
 };
 
-export type BuildResultSync = {
+export type RunFinalizationSync = {
   /** Already accepted Records; Result does not observe Runtime lifecycle or scheduling state. */
   readonly records: readonly TypedRecord[];
-  readonly resources: BuildResultResourceSource;
+  readonly resources: RunFinalizationResourceSource;
 };
 
-type BuildResultFinishEvidence = {
+type RunFinalizationFinishEvidence = {
   /** Closed execution evidence; Repository stores it before publishing the terminal manifest. */
   readonly executionLog?: AsyncIterable<Uint8Array>;
   readonly operations?: readonly BuildResultOperation[];
 };
 
-export type BuildResultFinish = BuildResultFinishEvidence & (
+export type RunFinalizationFinish = RunFinalizationFinishEvidence & (
   | { readonly outcome: "complete"; readonly failure?: never }
   | { readonly outcome: "failed" | "cancelled"; readonly failure: string }
 );
 
-export type BuildResultWriter = {
+export type RunFinalizer = {
   read(): Promise<StoredBuildResult>;
   /** Store newly completed publications; no storage writes when none are new. */
-  sync(input: BuildResultSync): Promise<StoredBuildResult>;
-  finish(input: BuildResultFinish): Promise<StoredFinishedBuildResult>;
+  sync(input: RunFinalizationSync): Promise<StoredBuildResult>;
+  finish(input: RunFinalizationFinish): Promise<StoredFinishedBuildResult>;
 };
 
-/** Runtime-owned publication and recovery port. Applications consume `BuildResultHistory`. */
-export type BuildResultStore = BuildResultHistory & ProductHistory & {
-  create(seed: BuildResultSeed): Promise<BuildResultWriter>;
-  openWriter(build: string): Promise<BuildResultWriter | undefined>;
+/** Runtime-owned publication and recovery port; it exposes neither history nor Product lookup. */
+export type RunFinalizationStore = {
+  create(seed: RunFinalizationSeed): Promise<RunFinalizer>;
+  openFinalizer(build: string): Promise<RunFinalizer | undefined>;
   /** Remove one exact unfinished Result created by a submission that never became claimable. */
   removeIncomplete(build: string): Promise<void>;
   /** Read private publication state for active-build observation and crash recovery. */

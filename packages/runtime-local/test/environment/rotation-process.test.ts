@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as pause } from "node:timers/promises";
 import test from "node:test";
 import { defineBuild } from "@hypit/kernel";
-import { FileBuildResultStore } from "../../src/result-storage/index.js";
+import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { createGreetingBuild, manifest, capabilities, producers, types } from "../execution-scenario.js";
 import { statePath } from "../../src/config.js";
@@ -27,7 +27,7 @@ test("a draining carrier finishes its existing Build while a new carrier shares 
   const root=await mkdtemp(join(tmpdir(),"hypit-carrier-rotation-"));
   const dataRoot=join(root,"runtime"), profile=join(root,"profile.json");
   const state=new SqliteRuntimeState(statePath(dataRoot));
-  const repository=new FileBuildResultStore(join(root,"results"),join(root,"products"));
+  const repository=new FileRunFinalizationStore(join(root,"results"),join(root,"products"));
   const local=new Map<string,number>(), starts=new Map<string,number>(), finished=new Set<string>();
   let child: ChildProcess | undefined, exited: Promise<void> | undefined, log="", release=false;
   const server=createServer(async(req,res)=>{
@@ -74,7 +74,9 @@ test("a draining carrier finishes its existing Build while a new carrier shares 
       const initial=createGreetingBuild({targetOutputs:[target]});
       const base=defineBuild({program:initial.program,plan:initial.plan});
       const record=target==='prompt'?'prompt:root':'generated:root';
-      const request={build:id,executionPackages:['fixture-rotation'],result:{root,path:'results'},
+      const request={build:id,executionPackages:['fixture-rotation'],result:{
+        root,historyPath:'results',productsPath:'products',
+      },
         context:{format:'hypit.local-execution@1',packageRoot:root,hostStateRoot:join(root,'host'),distributionPackageRoot:distribution,profile:profileValue}};
       await state.submissions.prepare(request);
       await repository.create({id,sourcePath:'main.svml',targets:[target],publication:{outputs:[{

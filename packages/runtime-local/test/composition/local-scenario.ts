@@ -3,7 +3,7 @@ import { FileResourceStore } from "@hypit/resource-store/node";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineBuild } from "@hypit/kernel";
-import { FileBuildResultStore } from "../../src/result-storage/index.js";
+import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import { buildExecutionActivity, createLocalRuntime } from "@hypit/runtime-local";
 import type { BuildCompletion } from "@hypit/runtime-local";
 import { rm } from "node:fs/promises";
@@ -37,11 +37,13 @@ export function projectRuntimeFixture(directory: string) {
     clearBuildResources: async (build: string) => {
       await rm(join(work, build), { recursive: true, force: true });
     },
-    openBuildResultRepository: async (location: import("@hypit/runtime-local").BuildResultRepositoryLocation) =>
-      ({ repository: new FileBuildResultStore(
-        join(location.root, location.path),
-        join(location.root, ".hypit/products"),
-      ) }),
+    openPublicationStores: async (location: import("@hypit/runtime-local").PublicationStoreLocation) => {
+      const finalization = new FileRunFinalizationStore(
+        join(location.root, location.historyPath),
+        join(location.root, location.productsPath),
+      );
+      return { history: finalization, products: finalization.products, finalization };
+    },
     credentialStore: new EnvironmentCredentialStore(),
     close: () => state.close(),
   } as const;
@@ -49,7 +51,11 @@ export function projectRuntimeFixture(directory: string) {
 
 export function resultDestination(directory: string) {
   return {
-    repository: { root: directory, path: "results" },
+    repository: {
+      root: directory,
+      historyPath: "results",
+      productsPath: ".hypit/products",
+    },
   } as const;
 }
 

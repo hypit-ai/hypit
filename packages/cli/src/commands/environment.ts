@@ -5,7 +5,7 @@ import type { CliCommand, EnvironmentCommand } from "../command.js";
 import { acquireOAuthCredential } from "../oauth.js";
 import { writeCliOutput } from "../output.js";
 import type { CliIo } from "../output.js";
-import type { CliDiagnostic, CliResultRepositoryLocation, CliRuntimeHost } from "../runtime-port.js";
+import type { CliDiagnostic, CliPublicationStoreLocation, CliRuntimeHost } from "../runtime-port.js";
 import type { OperationalWriter } from "./types.js";
 
 export function isEnvironmentCommand(args: CliCommand): args is EnvironmentCommand {
@@ -19,7 +19,7 @@ export async function runEnvironmentCommand(input: {
   readonly io: CliIo;
   readonly projectRoot: string;
   readonly diagnoseProjectResults: () => Promise<{
-    readonly location?: CliResultRepositoryLocation;
+    readonly location?: CliPublicationStoreLocation;
     readonly diagnostics: readonly CliDiagnostic[];
   }>;
   readonly runtimeHost: (profile: string, packageRoot?: string) => Promise<CliRuntimeHost>;

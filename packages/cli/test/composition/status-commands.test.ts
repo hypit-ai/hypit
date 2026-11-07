@@ -15,6 +15,11 @@ import { cliDistribution } from "../distribution-scenario.js";
 import { credentialControl, runtimeControl } from "../control-scenario.js";
 import { applicationCwd, runCli } from "./control-command-scenario.js";
 
+const noProducts = {
+  async readProduct() { return undefined; },
+  async resolveProduct() { return undefined; },
+};
+
 test("activity opens Runtime control without constructing execution Providers", async () => {
   const calls: string[] = [];
   const control = runtimeControl({
@@ -80,7 +85,8 @@ test("doctor retains later errors even with a small display limit", async () => 
 
 test("finished status reports failure details and a nonzero exit without a Runtime", async () => {
   const selected = cliDistribution({ openProjectResults: async () => ({
-    repository: { read: async () => ({ id: "failed", outcome: "failed", targets: [], outputs: {}, failure: "renderer exited", operations: [] }) },
+    history: { read: async () => ({ id: "failed", outcome: "failed", targets: [], outputs: {}, failure: "renderer exited", operations: [] }) },
+    products: noProducts,
     close() {},
   }) });
   let output = "";
@@ -96,7 +102,8 @@ test("status --watch follows active execution, then reads its finished Result", 
   const calls: string[] = [];
   const resultLocation = {
     root: "/project",
-    path: ".hypit/results",
+    historyPath: ".hypit/results",
+    productsPath: ".hypit/products",
   } as const;
   const view = () => ({
     id: "build-watch",
@@ -128,7 +135,7 @@ test("status --watch follows active execution, then reads its finished Result", 
     }),
     openProjectResults: async () => ({
       location: resultLocation,
-      repository: {
+      history: {
         async read() {
           return {
             format: "hypit.build-result@1",
@@ -141,6 +148,7 @@ test("status --watch follows active execution, then reads its finished Result", 
           };
         },
       },
+      products: noProducts,
       async close() {},
     }),
   });
@@ -175,7 +183,7 @@ test("status reads a finished project Result without a Runtime", async () => {
       throw new Error("finished Result lookup must not open a Runtime");
     },
     openProjectResults: async () => ({
-      repository: {
+      history: {
         async read(build: string) {
           calls.push(`result.read:${build}`);
           return {
@@ -189,6 +197,7 @@ test("status reads a finished project Result without a Runtime", async () => {
           };
         },
       },
+      products: noProducts,
       async close() { calls.push("result.close"); },
     }),
   });
@@ -210,7 +219,7 @@ test("status reads a finished project Result without a Runtime", async () => {
 test("finished status defaults to the Result outcome without repeating internal layers", async () => {
   const distribution = cliDistribution({
     openProjectResults: async () => ({
-      repository: {
+      history: {
         async read() {
           return {
             format: "hypit.build-result@1",
@@ -223,6 +232,7 @@ test("finished status defaults to the Result outcome without repeating internal 
           };
         },
       },
+      products: noProducts,
       async close() {},
     }),
   });
@@ -252,7 +262,8 @@ test("status separates execution from publication while the Run is being finaliz
       openControl: async () => ({ async inspect() { return view; }, async close() {} }),
     }),
     openProjectResults: async () => ({
-      repository: { async read() { return undefined; } },
+      history: { async read() { return undefined; } },
+      products: noProducts,
       async close() {},
     }),
   });
@@ -403,7 +414,7 @@ test("cancelling a completed Build reports that no cancellation was requested", 
       openControl: async () => control,
     }),
     openProjectResults: async () => ({
-      repository: {
+      history: {
         async read() {
           return {
             format: "hypit.build-result@1",
@@ -416,6 +427,7 @@ test("cancelling a completed Build reports that no cancellation was requested", 
           };
         },
       },
+      products: noProducts,
       async close() {},
     }),
   });

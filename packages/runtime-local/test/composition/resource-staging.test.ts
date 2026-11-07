@@ -17,7 +17,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { FileResourceStore } from "@hypit/resource-store/node";
-import { FileBuildResultStore } from "../../src/result-storage/index.js";
+import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import { isBlobRef } from "@hypit/protocol";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";
@@ -138,8 +138,8 @@ test("a selected file is staged once and remains referenced in the structured Pr
     assert.equal(endpointCalls, 1);
     assert.equal(attachmentOpens, 1);
     assert.equal(await work.has(authoredAsset.resource), false);
-    const results = new FileBuildResultStore(join(directory, "results"), join(directory, ".hypit", "products"));
-    const resolved = (await results.resolveProduct({
+    const results = new FileRunFinalizationStore(join(directory, "results"), join(directory, ".hypit", "products"));
+    const resolved = (await results.products.resolveProduct({
       publication: "bld_20260902T120000009Z_0000000001",
       name: "final.document",
     }))!;

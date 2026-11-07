@@ -20,7 +20,11 @@ import type {
 } from "@hypit/runtime";
 import type { ResourceStore } from "@hypit/resource-store";
 
-export type CliResultRepositoryLocation = { readonly root: string; readonly path: string };
+export type CliPublicationStoreLocation = {
+  readonly root: string;
+  readonly historyPath: string;
+  readonly productsPath: string;
+};
 
 export type CliDiagnostic = {
   readonly severity: "error" | "warning" | "info";
@@ -104,7 +108,7 @@ export type CliRuntime = CliRuntimeControl & CliCredentialControl & {
     readonly authoring: CliBuildAuthoring;
     readonly attachments?: readonly BlobAttachment[];
     readonly result: {
-      readonly repository: CliResultRepositoryLocation;
+      readonly repository: CliPublicationStoreLocation;
     };
   }, options?: {
     readonly follow?: boolean;

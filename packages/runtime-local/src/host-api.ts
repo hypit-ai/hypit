@@ -14,7 +14,7 @@ import type {
 } from "@hypit/hypit/runtime";
 import type { ResourceStore } from "@hypit/resource-store";
 import type { PublicationIntent } from "@hypit/hypit/protocol";
-import type { BuildCompletion, BuildExecutionStop, BuildResultRepositoryLocation } from "./execution.js";
+import type { BuildCompletion, BuildExecutionStop, PublicationStoreLocation } from "./execution.js";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-local/extension";
 
 export type RuntimeHostActiveBuildSubmission = {
@@ -78,7 +78,7 @@ export type RuntimeHostCredentialStatus = RuntimeHostCredentialDescription & {
 };
 
 export type RuntimeHostControl = {
-  /** Build evidence while active. Finished evidence is read through its Result Repository. */
+  /** Build evidence while active. Finished evidence is read through project Run history. */
   logs?(build: string, lines: number): Promise<import("@hypit/hypit/runtime").ExecutionLogView | undefined>;
   inspect(build: string): Promise<BuildView | undefined>;
   activity(): Promise<{
@@ -112,9 +112,9 @@ export type RuntimeHostExecution = RuntimeHostControl & RuntimeHostCredentialCon
       readonly publication: PublicationIntent;
     };
     readonly attachments?: readonly BlobAttachment[];
-    /** Project-owned Result destination, fixed before this Build becomes active. */
+    /** Project-owned Run-history and Product roots, fixed before this Build becomes active. */
     readonly result: {
-      readonly repository: BuildResultRepositoryLocation;
+      readonly repository: PublicationStoreLocation;
     };
   }, options?: {
     readonly follow?: boolean;

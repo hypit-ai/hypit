@@ -10,19 +10,18 @@ import { basename, dirname, join, resolve } from "node:path";
 
 import { assertOrderedBuildId } from "@hypit/hypit/protocol";
 import { FileBuildResultHistory, buildResultDirectory } from "@hypit/hypit/result/node";
-import type { ProductAddress } from "@hypit/hypit/product";
 import { productFromStored } from "@hypit/hypit/product";
 
 import type {
-  BuildResultFinish,
+  RunFinalizationFinish,
   BuildResultDraft,
-  BuildResultSeed,
-  BuildResultSync,
-  BuildResultStore,
+  RunFinalizationSeed,
+  RunFinalizationSync,
+  RunFinalizationStore,
   StoredBuildResult,
   StoredFinishedBuildResult,
 } from "./types.js";
-import { assertBuildResultSeed } from "./types.js";
+import { assertRunFinalizationSeed } from "./types.js";
 import {
   decodeBuildResultJson,
   decodeStoredBuildResult,
@@ -53,7 +52,7 @@ async function readStoredBuildResult(directory: string): Promise<StoredBuildResu
   return decodeStoredBuildResult(decodeBuildResultJson(bytes, path), build, path);
 }
 
-export class FileBuildResult {
+export class FileRunFinalization {
   readonly directory: string;
   readonly #products: ProductPublicationWriter;
 
@@ -65,10 +64,10 @@ export class FileBuildResult {
   static async create(
     root: string,
     productRoot: string,
-    seed: BuildResultSeed,
-  ): Promise<FileBuildResult> {
+    seed: RunFinalizationSeed,
+  ): Promise<FileRunFinalization> {
     assertOrderedBuildId(seed.id);
-    assertBuildResultSeed(seed);
+    assertRunFinalizationSeed(seed);
     const publication = seed.publication;
     const productStore = new FileProductPublicationStore(productRoot);
     const products = await productStore.create(seed.id, publication);
@@ -91,19 +90,19 @@ export class FileBuildResult {
       await productStore.removeIncomplete(seed.id).catch(() => undefined);
       throw error;
     }
-    return new FileBuildResult(directory, products);
+    return new FileRunFinalization(directory, products);
   }
 
   static async open(
     directory: string,
     productStore: FileProductPublicationStore,
-  ): Promise<FileBuildResult> {
+  ): Promise<FileRunFinalization> {
     const absolute = resolve(directory);
     const manifest = await readStoredBuildResult(absolute);
     if (manifest === undefined) throw new Error(`${absolute} has no Build Result`);
     const products = await productStore.openWriter(manifest.id);
     assert(products !== undefined, `${absolute} has no Product publication`);
-    return new FileBuildResult(absolute, products);
+    return new FileRunFinalization(absolute, products);
   }
 
   async read(): Promise<StoredBuildResult> {
@@ -112,7 +111,7 @@ export class FileBuildResult {
     return manifest;
   }
 
-  async sync(input: BuildResultSync): Promise<StoredBuildResult> {
+  async sync(input: RunFinalizationSync): Promise<StoredBuildResult> {
     const manifest = await this.read();
     if ("outcome" in manifest) return manifest;
     const products = await this.#products.sync(input);
@@ -126,7 +125,7 @@ export class FileBuildResult {
     return updated;
   }
 
-  async finish(input: BuildResultFinish): Promise<StoredFinishedBuildResult> {
+  async finish(input: RunFinalizationFinish): Promise<StoredFinishedBuildResult> {
     const manifest = await this.read();
     if ("outcome" in manifest) {
       assert(manifest.outcome === input.outcome && manifest.failure === input.failure,
@@ -157,7 +156,7 @@ export class FileBuildResult {
 }
 
 /** Runtime-only writable publication and recovery store. */
-export class FileBuildResultStore extends FileBuildResultHistory implements BuildResultStore {
+export class FileRunFinalizationStore extends FileBuildResultHistory implements RunFinalizationStore {
   readonly products: FileProductPublicationStore;
 
   constructor(root: string, productRoot: string) {
@@ -165,15 +164,15 @@ export class FileBuildResultStore extends FileBuildResultHistory implements Buil
     this.products = new FileProductPublicationStore(productRoot);
   }
 
-  async create(seed: BuildResultSeed): Promise<FileBuildResult> {
-    return await FileBuildResult.create(this.root, this.products.root, seed);
+  async create(seed: RunFinalizationSeed): Promise<FileRunFinalization> {
+    return await FileRunFinalization.create(this.root, this.products.root, seed);
   }
 
-  async openWriter(build: string): Promise<FileBuildResult | undefined> {
+  async openFinalizer(build: string): Promise<FileRunFinalization | undefined> {
     const directory = buildResultDirectory(this.root, build);
     return await readStoredBuildResult(directory) === undefined
       ? undefined
-      : await FileBuildResult.open(directory, this.products);
+      : await FileRunFinalization.open(directory, this.products);
   }
 
   async removeIncomplete(build: string): Promise<void> {
@@ -188,11 +187,4 @@ export class FileBuildResultStore extends FileBuildResultHistory implements Buil
     return await readStoredBuildResult(buildResultDirectory(this.root, build));
   }
 
-  async readProduct(address: ProductAddress) {
-    return await this.products.readProduct(address);
-  }
-
-  async resolveProduct(address: ProductAddress) {
-    return await this.products.resolveProduct(address);
-  }
 }

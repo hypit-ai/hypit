@@ -22,9 +22,11 @@ import {
 import type { CredentialStore, CredentialValue } from "@hypit/hypit/runtime";
 import type { ResourceStore } from "@hypit/resource-store";
 import { FileResourceStore } from "@hypit/resource-store/node";
-import type { BuildResultRepositoryLocation } from "./execution.js";
-import { FileBuildResultStore } from "./result-storage/store.js";
-import type { BuildResultStore } from "./result-storage/types.js";
+import type { ProductHistory } from "@hypit/hypit/product";
+import type { BuildResultHistory } from "@hypit/hypit/result";
+import type { PublicationStoreLocation } from "./execution.js";
+import { FileRunFinalizationStore } from "./result-storage/store.js";
+import type { RunFinalizationStore } from "./result-storage/types.js";
 import {
   isRuntimeAdapterFacet,
   runtimeCredentialStoreAdapterFacetAbi,
@@ -53,10 +55,10 @@ import {
   createLocalRuntimeControl,
 } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";
-import { createLocalResultWriter } from "./result-writer.js";
+import { createLocalRunFinalizer } from "./run-finalizer.js";
 import type {
   LocalCredentialControl,
-  LocalResultWriter,
+  LocalRunFinalizer,
   LocalRuntime,
   LocalRuntimeControl,
 } from "./types.js";
@@ -85,8 +87,8 @@ export type LocalRuntimeProfile = {
   readonly bindings: Readonly<Record<string, string>>;
 };
 
-export type ProjectBuildResultDoctorResult = {
-  readonly location?: BuildResultRepositoryLocation;
+export type ProjectPublicationStoresDoctorResult = {
+  readonly location?: PublicationStoreLocation;
   readonly diagnostics: readonly RuntimeDoctorDiagnostic[];
 };
 
@@ -335,42 +337,56 @@ async function installRuntimeAdapters(
   }
 }
 
-async function openBuildResultLocation(
-  location: BuildResultRepositoryLocation,
-): Promise<{ readonly repository: BuildResultStore }> {
-  return {
-    repository: new FileBuildResultStore(
-      resolve(location.root, location.path),
-      resolve(location.root, ".hypit/products"),
-    ),
-  };
+async function openPublicationStoresInternal(
+  location: PublicationStoreLocation,
+): Promise<{
+  readonly history: BuildResultHistory;
+  readonly products: ProductHistory;
+  readonly finalization: RunFinalizationStore;
+}> {
+  const finalization = new FileRunFinalizationStore(
+    resolve(location.root, location.historyPath),
+    resolve(location.root, location.productsPath),
+  );
+  return { history: finalization, products: finalization.products, finalization };
 }
 
-export async function openBuildResultRepositoryLocation(
-  location: BuildResultRepositoryLocation,
-): Promise<{ readonly repository: BuildResultStore }> {
-  return await openBuildResultLocation(location);
+export async function openPublicationStoresAtLocation(
+  location: PublicationStoreLocation,
+): Promise<{
+  readonly history: BuildResultHistory;
+  readonly products: ProductHistory;
+  readonly finalization: RunFinalizationStore;
+}> {
+  return await openPublicationStoresInternal(location);
 }
 
-export async function openProjectBuildResultRepository(
+export async function openProjectPublicationStores(
   projectRoot: string,
-): Promise<{ readonly repository: BuildResultStore; readonly location: BuildResultRepositoryLocation }> {
-  const location = projectBuildResultLocation(projectRoot);
-  const result = await openBuildResultLocation(location);
+): Promise<{
+  readonly history: BuildResultHistory;
+  readonly products: ProductHistory;
+  readonly finalization: RunFinalizationStore;
+  readonly location: PublicationStoreLocation;
+}> {
+  const location = projectPublicationStoreLocation(projectRoot);
+  const result = await openPublicationStoresInternal(location);
   return { ...result, location };
 }
 
-function projectBuildResultLocation(projectRoot: string): BuildResultRepositoryLocation {
-  return { root: resolve(projectRoot), path: ".hypit/results" };
+function projectPublicationStoreLocation(projectRoot: string): PublicationStoreLocation {
+  return {
+    root: resolve(projectRoot),
+    historyPath: ".hypit/results",
+    productsPath: ".hypit/products",
+  };
 }
 
-/** Diagnose the project-owned Result Store without reading Result history or mutating storage. */
-export async function doctorProjectBuildResultRepository(
-  projectRoot: string,
-): Promise<ProjectBuildResultDoctorResult> {
-  const location = projectBuildResultLocation(projectRoot);
-  const resultRoot = resolve(location.root, location.path);
-  let current = resultRoot;
+async function diagnosePublicationDirectory(
+  path: string,
+  code: string,
+): Promise<RuntimeDoctorDiagnostic | undefined> {
+  let current = path;
   try {
     while (true) {
       const found = await stat(current).catch((error: unknown) => {
@@ -380,23 +396,38 @@ export async function doctorProjectBuildResultRepository(
       if (found !== undefined) {
         if (!found.isDirectory()) throw new Error(`${current} is not a directory`);
         await access(current, constants.R_OK | constants.W_OK);
-        return { location, diagnostics: [] };
+        return undefined;
       }
       const parent = dirname(current);
-      if (parent === current) throw new Error(`no existing parent directory for ${resultRoot}`);
+      if (parent === current) throw new Error(`no existing parent directory for ${path}`);
       current = parent;
     }
   } catch (error) {
     return {
-      location,
-      diagnostics: [{
-        severity: "error",
-        code: "RESULT_DIRECTORY_UNAVAILABLE",
-        message: error instanceof Error ? error.message : String(error),
-        subject: resultRoot,
-      }],
+      severity: "error",
+      code,
+      message: error instanceof Error ? error.message : String(error),
+      subject: path,
     };
   }
+}
+
+/** Diagnose the project-owned Run-history and Product roots without reading or mutating them. */
+export async function doctorProjectPublicationStores(
+  projectRoot: string,
+): Promise<ProjectPublicationStoresDoctorResult> {
+  const location = projectPublicationStoreLocation(projectRoot);
+  const [history, products] = await Promise.all([
+    diagnosePublicationDirectory(
+      resolve(location.root, location.historyPath),
+      "RUN_HISTORY_DIRECTORY_UNAVAILABLE",
+    ),
+    diagnosePublicationDirectory(
+      resolve(location.root, location.productsPath),
+      "PRODUCT_DIRECTORY_UNAVAILABLE",
+    ),
+  ]);
+  return { location, diagnostics: [history, products].filter((item) => item !== undefined) };
 }
 
 export async function resolveRuntimeConfigPaths(
@@ -1328,7 +1359,7 @@ async function createRuntimeFromOpened(opened: OpenedRuntimeConfig, options: Loa
       clearBuildResources: async (build) => {
         await rm(buildWorkPath(root, build), { recursive: true, force: true });
       },
-      openBuildResultRepository: openBuildResultLocation,
+      openPublicationStores: openPublicationStoresInternal,
       credentialStore: credentials.store,
       loadProducerPackages: async (specifiers) => {
         const loaded = await loadNodePackageSelection(specifiers, packageRoot, {
@@ -1363,7 +1394,7 @@ export async function createRuntimeControlFromConfig(
     buildStore: state.builds,
     commandExecutionStore: state.commandExecutions,
     executionLogs: fileExecutionLogs((build) => buildWorkPath(root, build)),
-    openBuildResultRepository: openBuildResultLocation,
+    openPublicationStores: openPublicationStoresInternal,
     operationStore: state.operations,
     executionStore: state.execution,
     submissionStore: state.submissions,
@@ -1371,9 +1402,9 @@ export async function createRuntimeControlFromConfig(
   });
 }
 
-export function createRuntimeResultWriter(root: string): LocalResultWriter {
+export function createRuntimeFinalizer(root: string): LocalRunFinalizer {
   const state = new SqliteRuntimeState(statePath(root));
-  return createLocalResultWriter({
+  return createLocalRunFinalizer({
     buildStore: state.builds,
     operationStore: state.operations,
     commandExecutionStore: state.commandExecutions,
@@ -1386,7 +1417,7 @@ export function createRuntimeResultWriter(root: string): LocalResultWriter {
     clearBuildResources: async (build) => {
       await rm(buildWorkPath(root, build), { recursive: true, force: true });
     },
-    openBuildResultRepository: openBuildResultLocation,
+    openPublicationStores: openPublicationStoresInternal,
     close: () => state.close(),
   });
 }

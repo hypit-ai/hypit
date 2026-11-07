@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as pause } from "node:timers/promises";
 import test from "node:test";
 import { defineBuild } from "@hypit/kernel";
-import { FileBuildResultStore } from "../../src/result-storage/index.js";
+import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { createGreetingBuild, types } from "../execution-scenario.js";
 import { statePath } from "../../src/config.js";
@@ -18,7 +18,7 @@ test("an executor that fails before ready records a failed Build and leaves supe
   const root = await mkdtemp(join(tmpdir(), "hypit-executor-startup-"));
   const dataRoot = join(root, "runtime");
   const profile = join(root, "profile.json");
-  const result = new FileBuildResultStore(join(root, "results"), join(root, "products"));
+  const result = new FileRunFinalizationStore(join(root, "results"), join(root, "products"));
   const state = new SqliteRuntimeState(statePath(dataRoot));
   const abort = new AbortController();
   let supervision: Promise<void> | undefined;
@@ -30,7 +30,7 @@ test("an executor that fails before ready records a failed Build and leaves supe
       const request = {
         build,
         executionPackages: [],
-        result: { root, path: "results" },
+        result: { root, historyPath: "results", productsPath: "products" },
         context: { format: "hypit.local-execution@1", packageRoot: root, hostStateRoot: join(root, "host"),
           distributionPackageRoot: distribution, profile: profileValue },
       };

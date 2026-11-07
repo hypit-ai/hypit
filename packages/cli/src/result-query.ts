@@ -14,7 +14,7 @@ export type BuildOutputHistoryPage = {
  * request-local scan over the Repository's own chronological cursor; it creates no index or history.
  */
 export async function browseBuildOutputHistory(
-  repository: BuildResultHistory,
+  history: BuildResultHistory,
   request: {
     readonly projectRoot: string;
     readonly output: string;
@@ -28,7 +28,7 @@ export async function browseBuildOutputHistory(
   let before = request.before;
   const matches: BuildResult[] = [];
   while (matches.length < request.limit) {
-    const page = await repository.browse({ limit: pageSize, ...(before === undefined ? {} : { before }) });
+    const page = await history.browse({ limit: pageSize, ...(before === undefined ? {} : { before }) });
     if (page.results.length === 0) return { results: matches };
     for (let index = 0; index < page.results.length; index += 1) {
       const manifest = page.results[index]!;

@@ -55,17 +55,18 @@ async function exportFile(
 
 /** Export one resolved published Output into an explicit user-owned local destination. */
 export async function exportBuildResultOutput(
-  repository: BuildResultHistory & ProductHistory,
+  history: BuildResultHistory,
+  products: ProductHistory,
   build: string,
   output: string,
   destination: string,
   resolveExporter?: (type: ResolvedBuildResultOutput["type"]) => Promise<ProductExporter | undefined>,
 ): Promise<BuildResultExport> {
-  const manifest = await repository.read(build);
+  const manifest = await history.read(build);
   if (manifest === undefined) throw new Error(`Build Result ${build} does not exist`);
   const publishedOutput = buildResultOutput(manifest, output);
   if (publishedOutput === undefined) throw new Error(`Build ${build} has no published Output ${output}`);
-  const resolvedOutput = await repository.resolveProduct(publishedOutput.address);
+  const resolvedOutput = await products.resolveProduct(publishedOutput.address);
   if (resolvedOutput === undefined) throw new Error(`Build ${build} Output ${output} cannot be resolved`);
   const target = resolve(destination);
   if (!isBlobRef(resolvedOutput.value)

@@ -18,7 +18,7 @@ import { materializeBuild } from "@hypit/hypit/kernel";
 
 import { createLocalRuntimeControl } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";
-import { createLocalResultWriter } from "./result-writer.js";
+import { createLocalRunFinalizer } from "./run-finalizer.js";
 import { createDurableLocalWorker } from "./worker.js";
 import type {
   CreateLocalRuntimeOptions,
@@ -86,7 +86,7 @@ export function applyEndpointBindings(registry: EndpointRegistry, bindings: Read
 export async function createLocalRuntime(
   options: CreateLocalRuntimeOptions,
 ): Promise<LocalRuntime> {
-  const openBuildResultRepository = options.openBuildResultRepository;
+  const openPublicationStores = options.openPublicationStores;
   const producers = new ProducerRegistry();
   const endpoints = new EndpointRegistry();
   const refinements = new RefinementRegistry();
@@ -125,7 +125,7 @@ export async function createLocalRuntime(
     refinements,
     ...(options.producerExecutionLimits === undefined ? {} : { producerExecutionLimits: options.producerExecutionLimits }),
   });
-  const resultWriter = createLocalResultWriter({
+  const runFinalizer = createLocalRunFinalizer({
     ...(options.executionLogs === undefined ? {} : { executionLogs: options.executionLogs }),
     buildStore: options.buildStore,
     operationStore: options.operationStore,
@@ -136,7 +136,7 @@ export async function createLocalRuntime(
     resourceStore: options.resourceStore,
     ...(options.resourceStoreForBuild === undefined ? {} : { resourceStoreForBuild: options.resourceStoreForBuild }),
     ...(options.clearBuildResources === undefined ? {} : { clearBuildResources: options.clearBuildResources }),
-    openBuildResultRepository,
+    openPublicationStores,
   });
   const worker = createDurableLocalWorker(driver, {
     ...(options.executionBuild === undefined ? {} : { executionBuild: options.executionBuild }),
@@ -149,9 +149,9 @@ export async function createLocalRuntime(
     },
     resourceStore: options.resourceStore,
     ...(options.resourceStoreForBuild === undefined ? {} : { resourceStoreForBuild: options.resourceStoreForBuild }),
-    openBuildResultRepository,
+    openPublicationStores,
     installProducerPackages,
-    resultWriter,
+    runFinalizer,
   });
   const credentialControl = createLocalCredentialControl({
     credentialStore: options.credentialStore,
@@ -161,7 +161,7 @@ export async function createLocalRuntime(
     ...(options.executionLogs === undefined ? {} : { executionLogs: options.executionLogs }),
     buildStore: options.buildStore,
     commandExecutionStore: options.commandExecutionStore,
-    openBuildResultRepository,
+    openPublicationStores,
     operationStore: options.operationStore,
     executionStore: options.executionStore,
     submissionStore: options.submissionStore,
@@ -212,9 +212,9 @@ export async function createLocalRuntime(
       assert(view !== undefined, `Build ${build} has no active Runtime view`);
       return { id: build, state, view };
     }
-    const opened = await openBuildResultRepository(resultLocation);
+    const opened = await openPublicationStores(resultLocation);
     try {
-      const result = await opened.repository.read(build);
+      const result = await opened.history.read(build);
       assert(result?.outcome !== undefined, `Build ${build} has neither active execution nor a finished Result`);
       return {
         id: build,
@@ -242,9 +242,9 @@ export async function createLocalRuntime(
       await options.submissionStore.prepare(executionRequest);
       prepared = true;
       await stageAttachments(request);
-      const opened = await openBuildResultRepository(resultRequest.repository);
+      const opened = await openPublicationStores(resultRequest.repository);
       try {
-        await opened.repository.create({
+        await opened.finalization.create({
           id: request.id,
           sourcePath: projectPath(resultRequest.repository.root, request.authoring.sourcePath),
           targets: request.authoring.targets,
@@ -259,7 +259,7 @@ export async function createLocalRuntime(
       });
       return await presentation(request.id, resultRequest.repository);
     } catch (error) {
-      if (prepared) await resultWriter.discardSubmission(request.id).catch(() => undefined);
+      if (prepared) await runFinalizer.discardSubmission(request.id).catch(() => undefined);
       throw error;
     }
   };
@@ -284,7 +284,7 @@ export async function createLocalRuntime(
   return {
     ...control,
     ...credentialControl,
-    ...resultWriter,
+    ...runFinalizer,
     build: runBuild,
     async workOnce(workOptions) {
       return await worker.runOnce(workOptions);

@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { FileBuildResult, FileBuildResultStore } from "../../../runtime-local/src/result-storage/index.js";
+import { FileRunFinalization, FileRunFinalizationStore } from "../../../runtime-local/src/result-storage/index.js";
 import type { ProductExporter } from "@hypit/product";
 import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
 import { sameType } from "@hypit/protocol";
@@ -33,7 +33,7 @@ export function completedRecords(): readonly TypedRecord[] {
 }
 
 export async function fixture(root: string, id = "bld_20260902T110000000Z_0000000001", source = "main.svml"): Promise<void> {
-  const result = await FileBuildResult.create(
+  const result = await FileRunFinalization.create(
     join(root, ".hypit", "results"),
     join(root, ".hypit", "products"),
     {
@@ -52,15 +52,18 @@ export async function fixture(root: string, id = "bld_20260902T110000000Z_000000
 export function resultDistribution(): CliDistribution {
   return cliDistribution({
     async openProjectResults(projectRoot: string) {
+      const finalization = new FileRunFinalizationStore(
+        join(projectRoot, ".hypit", "results"),
+        join(projectRoot, ".hypit", "products"),
+      );
       return {
         location: {
           root: projectRoot,
-          selection: { use: "test.results", config: {} },
+          historyPath: ".hypit/results",
+          productsPath: ".hypit/products",
         },
-        repository: new FileBuildResultStore(
-          join(projectRoot, ".hypit", "results"),
-          join(projectRoot, ".hypit", "products"),
-        ),
+        history: finalization,
+        products: finalization.products,
         close() {},
       };
     },

@@ -136,7 +136,7 @@ function operationEvidence(value: unknown, subject: string): readonly BuildResul
   });
 }
 
-/** Decode one Result document and attach the Build identity supplied by its repository address. */
+/** Decode one Result document and attach the Build identity supplied by its storage address. */
 export function decodeStoredBuildResult(
   value: unknown,
   build: string,
@@ -188,7 +188,7 @@ export function decodeStoredBuildResult(
   return { ...evidence, outcome, finishedAt: finishedAt!, failure };
 }
 
-/** Persist only Result content. The repository address is the single Build identity. */
+/** Persist only Result content. The storage address is the single Build identity. */
 export function encodeStoredBuildResult(manifest: StoredBuildResult): Omit<StoredBuildResult, "id"> {
   const { id: _id, ...document } = manifest;
   return document;

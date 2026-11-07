@@ -38,7 +38,7 @@ Installing or importing an arbitrary Source package never grants it CLI or proce
 - `discoverToolchainSourcePackages()` discovers the closure named by explicit Author imports;
 - the starter Runtime Profile selects ordinary independently distributed Providers and Credential
   Stores by package name;
-- Local Runtime and Result Repository adapters remain Host concerns and do not enter Author values.
+- Local Runtime and project publication-store adapters remain Host concerns and do not enter Author values.
 
 These are replaceable product-assembly decisions, not new Core concepts. A different application may
 reuse the generic compiler and CLI contracts with another Frontend or Workspace.

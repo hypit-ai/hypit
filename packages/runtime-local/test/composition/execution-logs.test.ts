@@ -18,7 +18,7 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import { FileResourceStore } from "@hypit/resource-store/node";
-import { FileBuildResultStore } from "../../src/result-storage/index.js";
+import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";
 import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
@@ -87,7 +87,7 @@ test("local call logs survive cleanup and remain attributed across concurrent su
     while (calls < 2) await new Promise((resolve) => setTimeout(resolve, 1));
     assert.ok((await runtime.logs!(ids[0]!, 30))!.records.length > 0);
     while ((await runtime.activity()).builds.length) await new Promise((resolve) => setTimeout(resolve, 2));
-    const repository = new FileBuildResultStore(join(directory, "results"), join(directory, "products"));
+    const repository = new FileRunFinalizationStore(join(directory, "results"), join(directory, "products"));
     const seen = new Set<string>();
     for (const id of ids) {
       assert.equal(await runtime.inspect(id), undefined);

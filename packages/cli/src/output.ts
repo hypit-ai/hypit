@@ -816,7 +816,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
     ],
     logs: [
       colors.accent(colors.strong("hypit logs")),
-      colors.dim("Read Build execution evidence; finished logs need only the project Result Repository."),
+      colors.dim("Read Build execution evidence; finished logs need only the project Run history."),
       "",
       "  hypit logs <build-id> [--project <project>] [--runtime <profile>] [--lines <count>]",
       "  --lines <count>           show the last N records (default 50)",

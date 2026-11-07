@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 
-import { FileBuildResultStore } from "../../../runtime-local/src/result-storage/index.js";
+import { FileRunFinalizationStore } from "../../../runtime-local/src/result-storage/index.js";
 import { createProducerPackageFacet } from "@hypit/producer";
 import { verifyRecordStructure } from "@hypit/kernel";
 import type { LinkedProgram, TypedRecord } from "@hypit/protocol";
@@ -97,17 +97,22 @@ function distribution(
         verifyRecordStructure(program.closure, record);
       },
     }),
-    openProjectResults: async (projectRoot: string) => ({
-      location: {
-        root: projectRoot,
-        selection: { use: "test.results", config: {} },
-      },
-      repository: new FileBuildResultStore(
+    openProjectResults: async (projectRoot: string) => {
+      const finalization = new FileRunFinalizationStore(
         join(projectRoot, ".hypit", "results"),
         join(projectRoot, ".hypit", "products"),
-      ),
-      close() {},
-    }),
+      );
+      return {
+        location: {
+          root: projectRoot,
+          historyPath: ".hypit/results",
+          productsPath: ".hypit/products",
+        },
+        history: finalization,
+        products: finalization.products,
+        close() {},
+      };
+    },
     diagnoseProjectResults: async () => ({ diagnostics: [] }),
     openRuntimeHost: async (path: string) => ({
       profile: path,

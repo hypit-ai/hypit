@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { setTimeout as pause } from "node:timers/promises";
 import { SqliteRuntimeState } from "./sqlite-state.js";
 import type { RuntimeWorkerLaunch } from "./host-api.js";
-import { createRuntimeResultWriter, readRuntimeWorkerOptions, statePath } from "./config.js";
+import { createRuntimeFinalizer, readRuntimeWorkerOptions, statePath } from "./config.js";
 
 type Carrier = { readonly child: ChildProcess; readonly builds: Set<string>; readonly ready: Promise<void>;
   done: Promise<void>; exited: boolean; stopping: boolean; completed: number; rssBytes: number };
@@ -35,9 +35,9 @@ export async function superviseBuilds(options: {
     if (current === undefined) return;
     const decided = await state.execution.interrupt(build, reason);
     try {
-      const writer = createRuntimeResultWriter(options.dataRoot);
-      try { await writer.completeResult(decided); }
-      finally { await writer.close(); }
+      const finalizer = createRuntimeFinalizer(options.dataRoot);
+      try { await finalizer.finalize(decided); }
+      finally { await finalizer.close(); }
     } catch (error) {
       await state.execution.setAttention(build, { step: "publication", error: error instanceof Error ? error.message : String(error) });
     }
@@ -108,9 +108,9 @@ export async function superviseBuilds(options: {
         // idempotent Runtime responsibility, so restart recovery finishes it
         // directly instead of asking the user to mutate historical state.
         try {
-          const writer = createRuntimeResultWriter(options.dataRoot);
-          try { await writer.completeResult(execution); }
-          finally { await writer.close(); }
+          const finalizer = createRuntimeFinalizer(options.dataRoot);
+          try { await finalizer.finalize(execution); }
+          finally { await finalizer.close(); }
         } catch (error) {
           if (await state.execution.read(execution.build) !== undefined) {
             await state.execution.setAttention(execution.build, {

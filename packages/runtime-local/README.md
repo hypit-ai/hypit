@@ -139,11 +139,12 @@ Provider's authentication, quota or transport error never changes that selection
 The official Toolchain Distribution writes Run history to `.hypit/results` and Product publications to
 `.hypit/products`, with no cloud account or service. The filesystem implementation belongs to this
 single-host Runtime rather than a public adapter registry.
-Open Result drafts, incremental publication materialization, writer recovery and terminal publication are private
-Runtime Local implementation. `@hypit/result` owns only immutable history types and readers; no writable
-Result repository entry point is published for CLI or author packages.
+Open finalization state, incremental Product materialization, finalizer recovery and terminal Run history
+publication are private Runtime Local implementation. The assembly exposes separate `history`,
+`products` and `finalization` ports; no caller receives a universal repository. `@hypit/result` owns
+only immutable history types and readers; no writable Result entry point is published for CLI or author packages.
 Runtime working Resources remain internal and Build-local; there is no ResourceStore selector. After
-a Result has an outcome, history is read from the project Result repository, not Runtime SQLite.
+the Run has an outcome, history is read from the project history store, not Runtime SQLite.
 The submission passes known Resource references to the publication finalizer, separately from the execution
 graph. Staging bytes for a running Build does not make them durable Product files: external and reused
 resources keep their addresses even when a Producer embeds them inside a new array or object value.
@@ -198,14 +199,14 @@ Profile's `dataRoot`. Each record carries time, Command and Endpoint identity. P
 and repeated progress counters do not become log entries. The latest counters remain active Runtime
 state; Provider-authored diagnostics and phase changes are durable evidence.
 
-Result finishing streams this log through the project Result repository before publishing the terminal
+Run finalization streams this log into the project history store before publishing the terminal
 manifest or clearing the Build working directory. Complete, failed and cancelled Builds use the same
-finishing path. A failed archive leaves Result attention and preserves the working directory; finishing
-that Result performs no external execution. Log write failures also surface at the Result boundary,
+finalization path. A failed archive leaves publication attention and preserves the working directory;
+retrying finalization performs no external execution. Log write failures also surface at the publication boundary,
 without converting a successful Provider call into another generation attempt.
 
 `hypit logs <build-id>` reads active evidence through Runtime control or finished evidence through the
-project Result Repository. `runtime logs` remains the Worker's process log. Program installation and
+project history store. `runtime logs` remains the Worker's process log. Program installation and
 service logs remain owned by their Program; they are shared service history, not copied into every Build.
 The logger does not capture the process environment, credential values, request bodies or global console.
 

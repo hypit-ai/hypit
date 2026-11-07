@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 
-import { buildResultDirectory, FileBuildResult, FileBuildResultStore } from "../../src/result-storage/index.js";
+import { buildResultDirectory, FileRunFinalization, FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import type { BlobRef } from "@hypit/protocol";
 
 import {
@@ -16,7 +16,7 @@ import {
 
 test("filesystem Run history records one Product address per Output and browses newest first", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-build-result-browse-"));
-  const repository = new FileBuildResultStore(root, join(root, "products"));
+  const repository = new FileRunFinalizationStore(root, join(root, "products"));
   const ids = [
     "bld_20260901T100000001Z_0000000001",
     "bld_20260902T100000002Z_0000000001",

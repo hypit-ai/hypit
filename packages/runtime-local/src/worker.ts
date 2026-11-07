@@ -23,9 +23,9 @@ type LocalWorkerOptions = {
   };
   readonly resourceStore: ResourceStore;
   readonly resourceStoreForBuild?: (build: string) => ResourceStore;
-  readonly openBuildResultRepository: NonNullable<import("./types.js").CreateLocalRuntimeOptions["openBuildResultRepository"]>;
+  readonly openPublicationStores: NonNullable<import("./types.js").CreateLocalRuntimeOptions["openPublicationStores"]>;
   readonly installProducerPackages: (specifiers: readonly string[]) => Promise<void>;
-  readonly resultWriter: import("./types.js").LocalResultWriter;
+  readonly runFinalizer: import("./types.js").LocalRunFinalizer;
 };
 
 type WorkerTurnResult = BuildExecutionSnapshot | BuildCompletion;
@@ -215,13 +215,13 @@ class DurableLocalWorker {
     }
   }
 
-  async #finishResult(execution: BuildExecutionSnapshot, outcome: import("./execution.js").BuildOutcome, reason?: string): Promise<WorkerTurnResult> {
+  async #decideAndFinalize(execution: BuildExecutionSnapshot, outcome: import("./execution.js").BuildOutcome, reason?: string): Promise<WorkerTurnResult> {
     await this.#options.stores.execution.releaseBuildCapacity(execution.build);
     const decision: import("./execution.js").BuildExecutionDecision = outcome === "complete"
       ? { outcome: "complete" }
       : { outcome, reason: reason ?? (outcome === "failed" ? "Build failed" : "Build cancelled") };
     const decided = await this.#options.stores.execution.decide(execution.build, this.#owner, decision);
-    return await this.#options.resultWriter.completeResult(decided);
+    return await this.#options.runFinalizer.finalize(decided);
   }
 
   async #finishStopped(execution: BuildExecutionSnapshot): Promise<WorkerTurnResult> {
@@ -265,7 +265,7 @@ class DurableLocalWorker {
         }
       }
     }
-    return await this.#finishResult(execution,
+    return await this.#decideAndFinalize(execution,
       execution.stop.cause === "user-cancelled" ? "cancelled" : "failed", execution.stop.reason);
   }
 
@@ -280,7 +280,7 @@ class DurableLocalWorker {
       `Execution ${execution.build} is no longer owned by this Worker turn`);
     if (current.stop !== undefined) return await this.#finishStopped(current);
     if (result.status === "complete") {
-      return await this.#finishResult(execution, "complete");
+      return await this.#decideAndFinalize(execution, "complete");
     }
     if (result.status === "failed" || result.outcomes.some((item) => item.status === "error")) {
       const reason = result.outcomes.find((item) => item.status === "error")?.message
@@ -384,7 +384,7 @@ class DurableLocalWorker {
       onStateChange: async (build, state) => {
         const item = runnable.find((candidate) => candidate.execution.build === build);
         assert(item !== undefined, `Result update refers to unknown Build ${build}`);
-        await this.#options.resultWriter.sync(item.execution, state.records).catch(() => undefined);
+        await this.#options.runFinalizer.sync(item.execution, state.records).catch(() => undefined);
       },
     });
     try {

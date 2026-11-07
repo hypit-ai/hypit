@@ -375,7 +375,7 @@ function parseExecutionRequest(row: Row, subject: string): BuildExecutionRequest
   assert(Array.isArray(executionPackages) && executionPackages.every((item) => typeof item === "string"),
     `SQLite ${subject} execution packages are invalid`);
   const result = object(JSON.parse(row.result_location_json) as unknown, `SQLite ${subject} Result location`);
-  exactKeys(result, ["root", "path"], `SQLite ${subject} Result location`);
+  exactKeys(result, ["root", "historyPath", "productsPath"], `SQLite ${subject} publication stores`);
   return {
     build: row.build_id,
     ...(typeof row.context_json === "string"
@@ -384,7 +384,8 @@ function parseExecutionRequest(row: Row, subject: string): BuildExecutionRequest
     executionPackages,
     result: {
       root: nonEmptyString(result.root, `SQLite ${subject} Result root`),
-      path: nonEmptyString(result.path, `SQLite ${subject} Result path`),
+      historyPath: nonEmptyString(result.historyPath, `SQLite ${subject} history path`),
+      productsPath: nonEmptyString(result.productsPath, `SQLite ${subject} Products path`),
     },
   };
 }

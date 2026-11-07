@@ -138,7 +138,8 @@ export async function runCli(
       await runProjectResultCommand({
         args,
         projectRoot: await commandProjectRoot(),
-        repository: results.repository,
+        history: results.history,
+        products: results.products,
         ...(distribution.resolveProductExporter === undefined ? {} : {
           resolveProductExporter: async (type: Parameters<NonNullable<typeof distribution.resolveProductExporter>>[0]) =>
             await distribution.resolveProductExporter!(type, {
@@ -333,7 +334,7 @@ export async function runCli(
           ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
           executionStatus: async () => await buildInspection.executionStatus(),
           commandScope,
-          readResult: async () => await buildResults.repository.read(built.id),
+          readResult: async () => await buildResults.history.read(built.id),
           onProgress: (progress) => {
             const report = io.writeProgress ?? (args.presentation.json ? undefined : io.write);
             for (const line of buildProgressLines(progress, {
@@ -349,7 +350,7 @@ export async function runCli(
       const buildOutcome = "completion" in built ? built.completion.outcome : activeView?.outcome;
       const issue = activeView?.issue;
       const finishedResult = finished
-        ? await buildResults.repository.read(built.id)
+        ? await buildResults.history.read(built.id)
         : undefined;
       const targetOutputs = result.targets;
       const targetPresentations = targetOutputs.flatMap((target) => {

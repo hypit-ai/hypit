@@ -31,13 +31,14 @@ async function historySourcePath(path: string): Promise<string> {
 export async function runProjectResultCommand(input: {
   readonly args: ProjectResultCommand;
   readonly projectRoot: string;
-  readonly repository: BuildResultHistory & ProductHistory;
+  readonly history: BuildResultHistory;
+  readonly products: ProductHistory;
   readonly resolveProductExporter?: (type: TypeRef) => Promise<ProductExporter | undefined>;
   readonly write: OperationalWriter;
 }): Promise<void> {
-  const { args, projectRoot, repository, resolveProductExporter, write } = input;
+  const { args, projectRoot, history, products, resolveProductExporter, write } = input;
   if (args.command === "builds") {
-    const page = await repository.browse({
+    const page = await history.browse({
       limit: args.limit,
       ...(args.before === undefined ? {} : { before: args.before }),
     });
@@ -69,7 +70,7 @@ export async function runProjectResultCommand(input: {
 
   if (args.command === "history") {
     const source = args.source === undefined ? undefined : await historySourcePath(args.source);
-    const page = await browseBuildOutputHistory(repository, {
+    const page = await browseBuildOutputHistory(history, {
       projectRoot,
       output: args.outputName,
       ...(source === undefined ? {} : { source }),
@@ -105,7 +106,7 @@ export async function runProjectResultCommand(input: {
   }
 
   if (args.command === "inspect") {
-    const manifest = await repository.read(args.build);
+    const manifest = await history.read(args.build);
     if (manifest === undefined) throw new Error(`Build Result ${args.build} does not exist`);
     const build = await buildResultView(manifest, {
       projectRoot,
@@ -144,7 +145,8 @@ export async function runProjectResultCommand(input: {
   }
 
   const exported = await exportBuildResultOutput(
-    repository,
+    history,
+    products,
     args.build,
     args.outputName,
     args.destination,

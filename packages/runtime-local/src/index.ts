@@ -2,7 +2,7 @@ export {
   createLocalRuntimeControl,
 } from "./control.js";
 export { createLocalCredentialControl } from "./credentials.js";
-export { createLocalResultWriter } from "./result-writer.js";
+export { createLocalRunFinalizer } from "./run-finalizer.js";
 export {
   createLocalRuntime,
 } from "./runtime.js";
@@ -14,9 +14,9 @@ export {
   createRuntimeFromConfig,
   createRuntimeControlFromConfig,
   createRuntimeCredentialsFromConfig,
-  doctorProjectBuildResultRepository,
-  openProjectBuildResultRepository,
-  openBuildResultRepositoryLocation,
+  doctorProjectPublicationStores,
+  openProjectPublicationStores,
+  openPublicationStoresAtLocation,
   declaredManagedPrograms,
   describeRuntimeConfigEndpoints,
   doctorRuntimeConfig,

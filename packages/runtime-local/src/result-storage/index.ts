@@ -5,7 +5,7 @@
 export {
   assertBuildResultFileRef,
   assertBuildResultPath,
-  assertBuildResultSeed,
+  assertRunFinalizationSeed,
 } from "./types.js";
 export type {
   BuildResultFileRef,
@@ -13,12 +13,12 @@ export type {
   BuildResultDraft,
   StoredFinishedBuildResult,
   StoredBuildResult,
-  BuildResultSeed,
-  BuildResultResourceSource,
-  BuildResultSync,
-  BuildResultFinish,
-  BuildResultWriter,
-  BuildResultStore,
+  RunFinalizationSeed,
+  RunFinalizationResourceSource,
+  RunFinalizationSync,
+  RunFinalizationFinish,
+  RunFinalizer,
+  RunFinalizationStore,
 } from "./types.js";
 export {
   decodeStoredBuildResult,
@@ -26,7 +26,7 @@ export {
 } from "./decode.js";
 export { preserveExecutionLog } from "./execution-log.js";
 export {
-  FileBuildResult,
-  FileBuildResultStore,
+  FileRunFinalization,
+  FileRunFinalizationStore,
 } from "./store.js";
 export { buildResultDirectory } from "@hypit/hypit/result/node";

@@ -8,11 +8,11 @@ import type {
 import type { BuildExecutionSnapshot } from "./execution.js";
 import { compareCodeUnits, type CommandResult } from "@hypit/hypit/protocol";
 import type { BuildResultOperation } from "@hypit/hypit/result";
-import type { BuildResultFinish, BuildResultWriter, StoredBuildResult } from "./result-storage/types.js";
+import type { RunFinalizationFinish, RunFinalizer, StoredBuildResult } from "./result-storage/types.js";
 
 import type {
-  CreateLocalResultWriterOptions,
-  LocalResultWriter,
+  CreateLocalRunFinalizerOptions,
+  LocalRunFinalizer,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -64,8 +64,8 @@ function resultOperation(operation: OperationSnapshot): BuildResultOperation | u
 
 function resultFinish(
   decision: NonNullable<BuildExecutionSnapshot["decision"]>,
-  evidence: Omit<BuildResultFinish, "outcome" | "failure">,
-): BuildResultFinish {
+  evidence: Omit<RunFinalizationFinish, "outcome" | "failure">,
+): RunFinalizationFinish {
   if (decision.outcome === "complete") return { ...evidence, outcome: "complete" };
   return {
     ...evidence,
@@ -75,27 +75,27 @@ function resultFinish(
 }
 
 /**
- * Result writing only consumes already accepted execution facts and transient bytes. It cannot load
+ * Run finalization only consumes already accepted execution facts and transient bytes. It cannot load
  * Producers or Endpoints and it never changes the frozen execution decision.
  */
-export function createLocalResultWriter(
-  options: CreateLocalResultWriterOptions,
-): LocalResultWriter {
+export function createLocalRunFinalizer(
+  options: CreateLocalRunFinalizerOptions,
+): LocalRunFinalizer {
   const owner = randomUUID();
-  const openWriter = async (execution: BuildExecutionSnapshot): Promise<{
-    readonly writer: BuildResultWriter;
+  const openFinalizer = async (execution: BuildExecutionSnapshot): Promise<{
+    readonly finalizer: RunFinalizer;
     readonly manifest: StoredBuildResult;
     close(): Promise<void>;
   }> => {
-    const opened = await options.openBuildResultRepository(execution.result);
+    const opened = await options.openPublicationStores(execution.result);
     try {
-      const [writer, manifest] = await Promise.all([
-        opened.repository.openWriter(execution.build),
-        opened.repository.readStored(execution.build),
+      const [finalizer, manifest] = await Promise.all([
+        opened.finalization.openFinalizer(execution.build),
+        opened.finalization.readStored(execution.build),
       ]);
-      assert(writer !== undefined && manifest !== undefined, `Build ${execution.build} has no Result draft`);
+      assert(finalizer !== undefined && manifest !== undefined, `Build ${execution.build} has no Result draft`);
       return {
-        writer,
+        finalizer,
         manifest,
         close: async () => await opened.close?.(),
       };
@@ -140,15 +140,15 @@ export function createLocalResultWriter(
     return machine.view();
   };
 
-  const syncResult = async (
+  const syncPublications = async (
     execution: BuildExecutionSnapshot,
     records: readonly import("@hypit/hypit/protocol").TypedRecord[],
   ): Promise<void> => {
-    const result = await openWriter(execution);
+    const result = await openFinalizer(execution);
     try {
       if ("outcome" in result.manifest) return;
       const resources = options.resourceStoreForBuild?.(execution.build) ?? options.resourceStore;
-      await result.writer.sync({
+      await result.finalizer.sync({
         records,
         resources: {
           open: async (artifact) => {
@@ -163,17 +163,17 @@ export function createLocalResultWriter(
     }
   };
 
-  const finishResult = async (execution: BuildExecutionSnapshot): Promise<void> => {
+  const finishRun = async (execution: BuildExecutionSnapshot): Promise<void> => {
     assert(execution.decision !== undefined, `Execution ${execution.build} has no decision`);
-    const opened = await openWriter(execution);
+    const opened = await openFinalizer(execution);
     let closed = false;
     try {
       if (!("outcome" in opened.manifest)) {
         await opened.close();
         closed = true;
         const state = await acceptStoredResults(execution.build);
-        await syncResult(execution, state.records);
-        const reopened = await openWriter(execution);
+        await syncPublications(execution, state.records);
+        const reopened = await openFinalizer(execution);
         try {
           const operations = (await options.operationStore.list({ build: execution.build }))
             .flatMap((operation) => {
@@ -182,7 +182,7 @@ export function createLocalResultWriter(
             })
             .sort((left, right) => compareCodeUnits(left.request, right.request));
           const executionLog = await options.executionLogs?.open(execution.build);
-          await reopened.writer.finish(resultFinish(execution.decision, {
+          await reopened.finalizer.finish(resultFinish(execution.decision, {
             ...(executionLog === undefined ? {} : { executionLog }),
             operations,
           }));
@@ -191,19 +191,19 @@ export function createLocalResultWriter(
         }
         return;
       }
-      await opened.writer.finish(resultFinish(execution.decision, {}));
+      await opened.finalizer.finish(resultFinish(execution.decision, {}));
     } finally {
       if (!closed) await opened.close();
     }
   };
 
-  const writeResultAndCleanup = async (execution: BuildExecutionSnapshot) => {
+  const finalizeAndCleanup = async (execution: BuildExecutionSnapshot) => {
     assert(execution.decision !== undefined, `Execution ${execution.build} has no decision`);
     assert(execution.finalization?.owner === owner,
       `Execution ${execution.build} finalization is not owned by this process`);
     let step: "publication" | "cleanup" = "publication";
     try {
-      await finishResult(execution);
+      await finishRun(execution);
       step = "cleanup";
       await Promise.resolve(options.clearBuildResources?.(execution.build));
       return await options.removeActiveBuild(execution.build);
@@ -230,15 +230,15 @@ export function createLocalResultWriter(
     throw new Error(`Execution ${build} could not be claimed for finalization`);
   };
 
-  const completeResult = async (initial: BuildExecutionSnapshot) =>
-    await writeResultAndCleanup(await claimFinalization(initial.build));
+  const finalize = async (initial: BuildExecutionSnapshot) =>
+    await finalizeAndCleanup(await claimFinalization(initial.build));
 
   const discardSubmission = async (build: string): Promise<boolean> => {
     const submission = await options.submissionStore.read(build);
     if (submission === undefined) return false;
-    const opened = await options.openBuildResultRepository(submission.result);
+    const opened = await options.openPublicationStores(submission.result);
     try {
-      await opened.repository.removeIncomplete(build);
+      await opened.finalization.removeIncomplete(build);
     } finally {
       await opened.close?.();
     }
@@ -248,9 +248,9 @@ export function createLocalResultWriter(
   };
 
   return {
-    sync: syncResult,
+    sync: syncPublications,
     discardSubmission,
-    completeResult,
+    finalize,
     close() {
       return options.close?.();
     },

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 
-import { buildResultDirectory, FileBuildResult, FileBuildResultStore } from "../../src/result-storage/index.js";
+import { buildResultDirectory, FileRunFinalization, FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import type { BlobRef } from "@hypit/protocol";
 import { productPublicationDirectory } from "@hypit/hypit/product/node";
 
@@ -18,7 +18,7 @@ import {
 test("internal progress and already stored Outputs leave Result files untouched", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-progress-"));
   try {
-    const result = await FileBuildResult.create(root, join(root, "products"), {
+    const result = await FileRunFinalization.create(root, join(root, "products"), {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "/project/main.svml",
       targets: ["answer"],
@@ -67,7 +67,7 @@ test("storing and finishing preserve open readers of the previous Result files",
   const root = await mkdtemp(join(tmpdir(), "hypit-result-读者-"));
   const readers: Awaited<ReturnType<typeof open>>[] = [];
   try {
-    const result = await FileBuildResult.create(root, join(root, "products"), {
+    const result = await FileRunFinalization.create(root, join(root, "products"), {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "/project/main.svml",
       targets: ["answer"],
@@ -106,7 +106,7 @@ test("storing and finishing preserve open readers of the previous Result files",
 test("Publication intent facts are rejected before a Result directory is created", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-invalid-intent-"));
   try {
-    await assert.rejects(FileBuildResult.create(root, join(root, "products"), {
+    await assert.rejects(FileRunFinalization.create(root, join(root, "products"), {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "main.svml",
       targets: ["answer"],
@@ -116,7 +116,7 @@ test("Publication intent facts are rejected before a Result directory is created
         record: "record:answer",
         publisher: "example.test-product@1",
       }] },
-    } as unknown as Parameters<typeof FileBuildResult.create>[2]), /unexpected type field/u);
+    } as unknown as Parameters<typeof FileRunFinalization.create>[2]), /unexpected type field/u);
     assert.deepEqual(await readdir(root), []);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -126,7 +126,7 @@ test("Publication intent facts are rejected before a Result directory is created
 test("a published Output records its publisher answer and accepted Record type", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-intent-type-"));
   try {
-    const result = await FileBuildResult.create(root, join(root, "products"), {
+    const result = await FileRunFinalization.create(root, join(root, "products"), {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "main.svml",
       targets: ["answer"],
@@ -149,7 +149,7 @@ test("published Output names are exact data keys, including JavaScript object na
   const root = await mkdtemp(join(tmpdir(), "hypit-result-output-names-"));
   const names = ["constructor", "toString", "__proto__"];
   try {
-    const result = await FileBuildResult.create(root, join(root, "products"), {
+    const result = await FileRunFinalization.create(root, join(root, "products"), {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "main.svml",
       targets: names,
@@ -170,9 +170,9 @@ test("published Output names are exact data keys, including JavaScript object na
       assert.equal(output?.representation === "inline" ? output.value : undefined, index);
     }
 
-    const repository = new FileBuildResultStore(root, join(root, "products"));
-    assert.equal((await repository.resolveProduct({ publication: manifest.id, name: "constructor" }))?.value, 0);
-    assert.equal(await repository.resolveProduct({ publication: manifest.id, name: "valueOf" }), undefined);
+    const repository = new FileRunFinalizationStore(root, join(root, "products"));
+    assert.equal((await repository.products.resolveProduct({ publication: manifest.id, name: "constructor" }))?.value, 0);
+    assert.equal(await repository.products.resolveProduct({ publication: manifest.id, name: "valueOf" }), undefined);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -181,7 +181,7 @@ test("published Output names are exact data keys, including JavaScript object na
 test("a complete Result requires every published Output", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-completion-"));
   try {
-    const result = await FileBuildResult.create(root, join(root, "products"), {
+    const result = await FileRunFinalization.create(root, join(root, "products"), {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "main.svml",
       targets: ["answer"],

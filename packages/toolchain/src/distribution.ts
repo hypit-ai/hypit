@@ -3,10 +3,10 @@ import { productExporterForType, productExportersFromFacets } from "@hypit/hypit
 import { loadNodePackageSelection } from "@hypit/hypit/loader/node";
 import { moduleKey, modulePackageAbi } from "@hypit/hypit/protocol";
 import {
-  doctorProjectBuildResultRepository,
+  doctorProjectPublicationStores,
   findRuntimeProfile,
   openLocalRuntimeHost,
-  openProjectBuildResultRepository,
+  openProjectPublicationStores,
 } from "@hypit/runtime-local";
 import type { LocalRuntimeCliDistribution } from "@hypit/runtime-local/cli";
 import { fileURLToPath } from "node:url";
@@ -86,10 +86,11 @@ export function createToolchainDistribution(options: ToolchainDistributionOption
     openLocalRuntimeHost: openToolchainLocalRuntime,
     openRuntimeHost: openToolchainLocalRuntime,
     openProjectResults: async (projectRoot) => {
-      const opened = await openProjectBuildResultRepository(projectRoot);
+      const opened = await openProjectPublicationStores(projectRoot);
       return {
         location: opened.location,
-        repository: opened.repository,
+        history: opened.history,
+        products: opened.products,
         close() {},
       };
     },
@@ -107,6 +108,6 @@ export function createToolchainDistribution(options: ToolchainDistributionOption
         type,
       );
     },
-    diagnoseProjectResults: async (projectRoot) => await doctorProjectBuildResultRepository(projectRoot),
+    diagnoseProjectResults: async (projectRoot) => await doctorProjectPublicationStores(projectRoot),
   };
 }

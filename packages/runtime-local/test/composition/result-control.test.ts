@@ -9,7 +9,7 @@ import {
   createRuntimeEndpointAdapterFacet,
   RuntimeAdapterRegistry,
 } from "@hypit/runtime-local/extension";
-import { FileBuildResultStore } from "../../src/result-storage/index.js";
+import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import { ProducerRegistry } from "@hypit/executor";
 import { MemoryResourceStore } from "@hypit/resource-store";
 import { defineEndpoint } from "@hypit/endpoint";
@@ -28,12 +28,12 @@ import {
   createRuntimeControlFromConfig,
   createRuntimeFromConfig,
   describeRuntimeConfigEndpoints,
-  doctorProjectBuildResultRepository,
+  doctorProjectPublicationStores,
   doctorRuntimeConfig,
   invokeRuntimeConfigNeed,
   openRuntimeConfigInspection,
   openTransientRuntimeConfigExecution,
-  openProjectBuildResultRepository,
+  openProjectPublicationStores,
   parseLocalRuntimeProfile,
   preflightRuntimeConfig,
   readRuntimeConfigPricing,
@@ -51,16 +51,41 @@ test("Build Results belong to the project filesystem without a second selection 
   const project = join(root, "project");
   await mkdir(project, { recursive: true });
   try {
-    const local = await openProjectBuildResultRepository(project);
-    assert.ok(local.repository instanceof FileBuildResultStore);
-    assert.deepEqual(local.location, { root: project, path: ".hypit/results" });
-    const diagnosed = await doctorProjectBuildResultRepository(project);
+    const local = await openProjectPublicationStores(project);
+    assert.ok(local.finalization instanceof FileRunFinalizationStore);
+    assert.equal(local.history, local.finalization);
+    assert.equal(local.products, local.finalization.products);
+    assert.deepEqual(local.location, {
+      root: project,
+      historyPath: ".hypit/results",
+      productsPath: ".hypit/products",
+    });
+    const diagnosed = await doctorProjectPublicationStores(project);
     assert.deepEqual(diagnosed.diagnostics, []);
     assert.deepEqual(diagnosed.location, local.location);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("publication diagnosis checks Product storage independently from Run history", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-publications-"));
+  const project = join(root, "project");
+  await mkdir(join(project, ".hypit"), { recursive: true });
+  await writeFile(join(project, ".hypit", "products"), "not a directory");
+  try {
+    const diagnosed = await doctorProjectPublicationStores(project);
+    assert.deepEqual(diagnosed.diagnostics, [{
+      severity: "error",
+      code: "PRODUCT_DIRECTORY_UNAVAILABLE",
+      message: `${join(project, ".hypit", "products")} is not a directory`,
+      subject: join(project, ".hypit", "products"),
+    }]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("active Build inspection requires no selected ResourceStore", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-slice-"));
   const path = join(root, "hypit.runtime.json");

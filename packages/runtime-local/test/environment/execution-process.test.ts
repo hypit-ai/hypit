@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as pause } from "node:timers/promises";
 import test from "node:test";
 import { defineBuild } from "@hypit/kernel";
-import { FileBuildResultStore } from "../../src/result-storage/index.js";
+import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import { installDistributionPackageResolution } from "@hypit/loader/node";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { createGreetingBuild, manifest, capabilities, producers, types } from "../execution-scenario.js";
@@ -108,17 +108,21 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
       authoring: { sourcePath: join(directory, "main.svml"), targets: ["document"], publication: { outputs: [{
         name: "document", record: "document:root", publisher: "example.test-product@1",
       }] } },
-      result: { repository: { root: directory, path: "results" } },
+      result: { repository: {
+        root: directory,
+        historyPath: "results",
+        productsPath: "products",
+      } },
     });
     return id;
   }
   const completed = (directory: string, id: string) => eventually(async () => {
-    const value = await new FileBuildResultStore(join(directory, "results"), join(directory, "products")).read(id);
+    const value = await new FileRunFinalizationStore(join(directory, "results"), join(directory, "products")).read(id);
     return value?.outcome === undefined ? undefined : value;
   });
   const value = async (directory: string, id: string) => {
-    const output = await new FileBuildResultStore(join(directory, "results"), join(directory, "products"))
-      .resolveProduct({ publication: id, name: "document" });
+    const output = await new FileRunFinalizationStore(join(directory, "results"), join(directory, "products"))
+      .products.resolveProduct({ publication: id, name: "document" });
     return output?.value;
   };
   try {
@@ -162,7 +166,7 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
     const e = await submit("e", project, "remote-job", true);
     const remote = await eventually(async () => {
       const [operation] = await state.operations.list({ build: e });
-      const ended = await new FileBuildResultStore(join(project, "results"), join(project, "products")).read(e);
+      const ended = await new FileRunFinalizationStore(join(project, "results"), join(project, "products")).read(e);
       if (ended?.outcome !== undefined) throw new Error(JSON.stringify(ended));
       return operation?.receipt === undefined ? undefined : operation;
     });

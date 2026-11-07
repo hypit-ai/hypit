@@ -13,7 +13,7 @@ import type { CliBuildStatusView } from "../view.js";
 import type { OperationalWriter } from "./types.js";
 
 type OpenProjectResults = () => Promise<{
-  readonly repository: BuildResultHistory;
+  readonly history: BuildResultHistory;
   close(): void | Promise<void>;
 }>;
 
@@ -56,10 +56,10 @@ export async function runExecutionCommand(input: {
     let view: import("@hypit/runtime").ExecutionLogView | undefined;
     let finished = false;
     try {
-      const result = await opened.repository.read(args.build);
+      const result = await opened.history.read(args.build);
       finished = result?.outcome !== undefined;
       if (result?.executionLog !== undefined) {
-        const chunks = await opened.repository.openExecutionLog(args.build);
+        const chunks = await opened.history.openExecutionLog(args.build);
         if (chunks === undefined) throw new Error(`Build ${args.build} execution log file is unavailable`);
         view = await readExecutionLog(chunks, args.lines);
         source = "result";
@@ -76,9 +76,9 @@ export async function runExecutionCommand(input: {
       if (view === undefined) {
         const completed = await openProjectResults();
         try {
-          const result = await completed.repository.read(args.build);
+          const result = await completed.history.read(args.build);
           if (result?.executionLog !== undefined) {
-            const chunks = await completed.repository.openExecutionLog(args.build);
+            const chunks = await completed.history.openExecutionLog(args.build);
             if (chunks !== undefined) { view = await readExecutionLog(chunks, args.lines); source = "result"; }
           }
         } finally { await completed.close(); }
@@ -107,7 +107,7 @@ export async function runExecutionCommand(input: {
     const openedResults = await openProjectResults();
     let result;
     try {
-      result = await openedResults.repository.read(args.build);
+      result = await openedResults.history.read(args.build);
     } finally {
       await openedResults.close();
     }
@@ -223,7 +223,7 @@ export async function runExecutionCommand(input: {
       }
       try {
         openedResults = await openProjectResults();
-        result = await openedResults.repository.read(args.build);
+        result = await openedResults.history.read(args.build);
       } catch (error) {
         resultReadError = error instanceof Error ? error.message : String(error);
       } finally {
@@ -294,7 +294,7 @@ export async function runExecutionCommand(input: {
     const openedResults = active === undefined ? await openProjectResults() : undefined;
     const finished = openedResults === undefined
       ? undefined
-      : await openedResults.repository.read(args.build).finally(async () => await openedResults.close());
+      : await openedResults.history.read(args.build).finally(async () => await openedResults.close());
     const build = active === undefined && finished === undefined ? null : buildStatusView({
       id: args.build,
       commandScope,

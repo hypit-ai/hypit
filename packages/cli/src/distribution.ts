@@ -4,7 +4,7 @@ import type { ProductExporter, ProductHistory } from "@hypit/product";
 import type { BuildResultHistory } from "@hypit/result";
 import type { TypeRef } from "@hypit/protocol";
 import type { Workspace } from "@hypit/workspace";
-import type { CliDiagnostic, CliResultRepositoryLocation, CliRuntimeHost } from "./runtime-port.js";
+import type { CliDiagnostic, CliPublicationStoreLocation, CliRuntimeHost } from "./runtime-port.js";
 
 export type CliCompilerOptions = {
   /** Canonical containment boundary for Author Sources plus source assets. */
@@ -62,8 +62,9 @@ export type CliDistribution = {
     readonly packageRoot: string;
     readonly distributionPackageRoot?: string;
   }): Promise<{
-    readonly location: CliResultRepositoryLocation;
-    readonly repository: BuildResultHistory & ProductHistory;
+    readonly location: CliPublicationStoreLocation;
+    readonly history: BuildResultHistory;
+    readonly products: ProductHistory;
     close(): void | Promise<void>;
   }>;
   /** Resolve the package-owned author export for one published structured Type. */
@@ -76,7 +77,7 @@ export type CliDistribution = {
     readonly packageRoot: string;
     readonly distributionPackageRoot?: string;
   }): Promise<{
-    readonly location?: CliResultRepositoryLocation;
+    readonly location?: CliPublicationStoreLocation;
     readonly diagnostics: readonly CliDiagnostic[];
   }>;
 };
