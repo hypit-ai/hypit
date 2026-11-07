@@ -9,8 +9,8 @@ interface and memory adapter, while `@hypit/hypit/resource-store/node` owns `Fil
 Runtime Local selects that adapter for Build-local bytes but does not define it; direct local
 applications can select the same adapter without creating or selecting a Runtime.
 
-This package also exports `createLocalRuntimeCliCommandModules()` from `@hypit/runtime-local/cli`.
-The factory binds the exact Local Host port and returns the command contribution that owns
+`@hypit/runtime-local-cli` exports `createLocalRuntimeCliCommandModules()` separately.
+Its factory binds the exact Local Host port and returns the command contribution that owns
 `runtime`, `programs`, `paths` and the internal Worker entry. The generic `@hypit/cli` Host owns
 none of that local process vocabulary: it consumes a narrow `CliRuntimeHost` port for Build,
 Result, credential and transient-execution operations. The root Hypit executable binds the Local

@@ -14,6 +14,7 @@
     "@hypit/producer": "workspace:*",
     "@hypit/kernel": "workspace:*",
     "@hypit/executor": "workspace:*",
+    "@hypit/host-paths": "workspace:^0.1.0",
     "@hypit/author": "workspace:*",
     "@hypit/loader": "workspace:*",
     "@hypit/project": "workspace:*",

@@ -1,8 +1,8 @@
-import { discoverSourcePackages } from "@hypit/hypit/cli";
-import { AuthorDeclarationRegistry } from "@hypit/hypit/author";
-import { createSvmlAuthorFrontend } from "@hypit/hypit/svml";
-import { svmlAuthorFrontendId } from "@hypit/hypit/svml";
-import type { LoadedPackage } from "@hypit/hypit/loader";
+import { discoverSourcePackages } from "@hypit/cli";
+import { AuthorDeclarationRegistry } from "@hypit/author";
+import { createSvmlAuthorFrontend } from "@hypit/svml";
+import { svmlAuthorFrontendId } from "@hypit/svml";
+import type { LoadedPackage } from "@hypit/loader";
 
 const svmlFrontend = createSvmlAuthorFrontend({ compilers: new AuthorDeclarationRegistry() });
 

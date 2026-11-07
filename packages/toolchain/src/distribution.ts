@@ -1,14 +1,14 @@
-import type { CliDistribution } from "@hypit/hypit/cli";
-import { productExporterForType, productExportersFromFacets } from "@hypit/hypit/product";
-import { loadNodePackageSelection } from "@hypit/hypit/loader/node";
-import { moduleKey, modulePackageAbi } from "@hypit/hypit/protocol";
+import type { CliDistribution } from "@hypit/cli";
+import { productExporterForType, productExportersFromFacets } from "@hypit/product";
+import { loadNodePackageSelection } from "@hypit/loader/node";
+import { moduleKey, modulePackageAbi } from "@hypit/protocol";
 import {
   doctorProjectPublicationStores,
   findRuntimeProfile,
   openLocalRuntimeHost,
   openProjectPublicationStores,
 } from "@hypit/runtime-local";
-import type { LocalRuntimeCliDistribution } from "@hypit/runtime-local/cli";
+import type { LocalRuntimeCliDistribution } from "@hypit/runtime-local-cli";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import {

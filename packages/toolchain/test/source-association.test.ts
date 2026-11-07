@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { svmlAuthorFrontendId } from "@hypit/hypit/svml";
+import { svmlAuthorFrontendId } from "@hypit/svml";
 
 import { createToolchainWorkspace } from "../src/compiler.js";
 

@@ -1,17 +1,17 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-import type { CliIo } from "@hypit/hypit/cli";
-import { authorDeclarationFacetAbi } from "@hypit/hypit/author";
+import type { CliIo } from "@hypit/cli";
+import { authorDeclarationFacetAbi } from "@hypit/author";
 import type {
   AuthorDeclarationCompiler,
   AuthorDeclarationFieldShape,
-} from "@hypit/hypit/author";
-import { loadNodePackageSelection, locateNodePackage, distributionPackageRoots } from "@hypit/hypit/loader/node";
-import type { NodePackageLoadOptions } from "@hypit/hypit/loader/node";
-import { compareCodeUnits, moduleKey, typeKey } from "@hypit/hypit/protocol";
-import type { ModuleManifest, ValueSchema } from "@hypit/hypit/protocol";
-import { findProjectRoot } from "@hypit/hypit/project";
+} from "@hypit/author";
+import { loadNodePackageSelection, locateNodePackage, distributionPackageRoots } from "@hypit/loader/node";
+import type { NodePackageLoadOptions } from "@hypit/loader/node";
+import { compareCodeUnits, moduleKey, typeKey } from "@hypit/protocol";
+import type { ModuleManifest, ValueSchema } from "@hypit/protocol";
+import { findProjectRoot } from "@hypit/project";
 
 /**
  * What a Source may write: installed packages, their Module Capabilities and author Declarations.

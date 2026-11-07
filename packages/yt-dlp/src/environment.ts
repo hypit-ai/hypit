@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { hypitHostStateRoot } from "@hypit/hypit/cli";
+import { hypitHostStateRoot } from "@hypit/host-paths";
 
 function pythonEnvironmentCommand(environment: string, name: string): string {
   return process.platform === "win32"

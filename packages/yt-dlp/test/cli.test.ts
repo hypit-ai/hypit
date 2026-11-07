@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import type { CliIo } from "@hypit/hypit/cli";
+import type { CliIo } from "@hypit/cli";
 
 import { cliCommandModules, runDownloadCli } from "../src/cli.js";
 

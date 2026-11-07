@@ -12,15 +12,13 @@
     "README.md"
   ],
   "dependencies": {
+    "@hypit/endpoint": "workspace:^0.0.0-dev",
     "@hypit/html-render-local": "workspace:^0.1.0"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0",
     "@hypit/runtime-local": "workspace:^0.2.0"
   },
   "devDependencies": {
-    "@hypit/hypit": "workspace:*",
-    "@hypit/runtime": "workspace:*",
     "@hypit/runtime-local": "workspace:*"
   }
 }

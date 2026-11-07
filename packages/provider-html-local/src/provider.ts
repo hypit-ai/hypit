@@ -1,8 +1,8 @@
-import { defineEndpoint } from "@hypit/hypit/endpoint";
-import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
+import { defineEndpoint } from "@hypit/endpoint";
+import type { EndpointInvocationContext } from "@hypit/endpoint";
 import { mediaTypes } from "@hypit/media";
 import { htmlProgramCapabilities, htmlProgramTypes, verifyHtmlFrameRequest, verifyHtmlRasterRequest } from "@hypit/html-program";
-import { canonicalize } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 import {
   localHtmlFrameRejection,
   localHtmlRasterRejection,
@@ -50,7 +50,7 @@ function createLocalHtmlProvider(config: LocalHtmlProviderOptions) {
       lifecycle: "immediate" as const,
       capability: htmlProgramCapabilities.rasterizeVisual,
       returns: mediaTypes.renderedVisual,
-      supports: (request: import("@hypit/hypit/endpoint").EndpointRequest) => {
+      supports: (request: import("@hypit/endpoint").EndpointRequest) => {
         try {
           verifyHtmlRasterRequest(request.constraints);
           return endpointSupport(localHtmlRasterRejection(request.constraints));
@@ -60,7 +60,7 @@ function createLocalHtmlProvider(config: LocalHtmlProviderOptions) {
       },
       ...(config.browserCapacity === undefined ? {} : {
         resources: [{ id: browsers, limit: config.browserCapacity }],
-        unitsForRequest: (request: import("@hypit/hypit/endpoint").EndpointRequest) => {
+        unitsForRequest: (request: import("@hypit/endpoint").EndpointRequest) => {
           verifyHtmlRasterRequest(request.constraints);
           const { program, range } = request.constraints;
           return { [browsers]: renderWorkerLimit(reserved,
@@ -88,7 +88,7 @@ function createLocalHtmlProvider(config: LocalHtmlProviderOptions) {
       lifecycle: "immediate" as const,
       capability: htmlProgramCapabilities.rasterizeFrames,
       returns: htmlProgramTypes.frameImages,
-      supports: (request: import("@hypit/hypit/endpoint").EndpointRequest) => {
+      supports: (request: import("@hypit/endpoint").EndpointRequest) => {
         try {
           verifyHtmlFrameRequest(request.constraints);
           return endpointSupport(localHtmlFrameRejection(request.constraints));
@@ -98,7 +98,7 @@ function createLocalHtmlProvider(config: LocalHtmlProviderOptions) {
       },
       ...(config.browserCapacity === undefined ? {} : {
         resources: [{ id: browsers, limit: config.browserCapacity }],
-        unitsForRequest: (request: import("@hypit/hypit/endpoint").EndpointRequest) => {
+        unitsForRequest: (request: import("@hypit/endpoint").EndpointRequest) => {
           verifyHtmlFrameRequest(request.constraints);
           const document = request.constraints.program;
           return { [browsers]: renderWorkerLimit(reserved, request.constraints.frames.length,

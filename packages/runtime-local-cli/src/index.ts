@@ -1,13 +1,20 @@
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { commandHint, hypitHostStateRoot, hypitProjectStateRoot, parseCliDecimalInteger, writeCliOutput } from "@hypit/cli";
+import { commandHint, parseCliDecimalInteger, writeCliOutput } from "@hypit/cli";
 import type { CliApplicationContext, CliCommandModule, CliIo, CliMachineView, CliOutputOptions } from "@hypit/cli";
+import { hypitHostStateRoot, hypitProjectStateRoot } from "@hypit/host-paths";
 import type { CanonicalValue } from "@hypit/protocol";
-
-import type { LocalRuntimeHost } from "./host-api.js";
-import type { ManagedProgramProgress, ManagedProgramReport } from "./programs.js";
-import { clearRuntimeProfile, findRuntimeProfile, selectRuntimeProfile } from "./profile-selection.js";
+import {
+  clearRuntimeProfile,
+  findRuntimeProfile,
+  selectRuntimeProfile,
+} from "@hypit/runtime-local";
+import type {
+  LocalRuntimeHost,
+  ManagedProgramProgress,
+  ManagedProgramReport,
+} from "@hypit/runtime-local";
 
 type LocalCommand = {
   readonly root: "runtime" | "programs" | "paths" | "_worker";

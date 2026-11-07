@@ -1,7 +1,7 @@
 import { mkdir, stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-import type { CliCommandModule, CliIo } from "@hypit/hypit/cli";
+import type { CliCommandModule, CliIo } from "@hypit/cli";
 import { probeMedia } from "@hypit/media-local/files";
 
 import { downloadVideo, isVideoUrl } from "./download.js";

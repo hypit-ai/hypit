@@ -8,6 +8,7 @@ export {
   resolveDistributionPackageImport,
 } from "./distribution-resolution.js";
 export {
+  distributionPackageRoots,
   locateNodePackage,
   NodePackageNotFoundError,
   resolveNodePackageExecutable,

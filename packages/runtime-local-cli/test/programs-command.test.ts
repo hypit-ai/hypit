@@ -4,14 +4,12 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 
-import { runCliApplication } from "../../src/application.js";
-import { commandHint } from "../../src/command-hint.js";
-import type { CliDistribution } from "../../src/distribution.js";
-import type { CliIo } from "../../src/output.js";
-import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local/cli";
+import { commandHint, runCliApplication } from "@hypit/cli";
+import type { CliDistribution, CliIo } from "@hypit/cli";
+import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";
 import type { ManagedProgramProgress as CliManagedProgramProgress, ManagedProgramReport as CliManagedProgramReport } from "@hypit/runtime-local/programs";
 import type { LocalRuntimeHost, RuntimeController as CliRuntimeController } from "@hypit/runtime-local";
-import { cliDistribution } from "../distribution-scenario.js";
+import { cliDistribution } from "./distribution-scenario.js";
 
 const io = { write: () => {} };
 const applicationCwd = tmpdir();

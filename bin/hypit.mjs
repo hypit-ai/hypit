@@ -29,7 +29,7 @@ installDistributionPackageResolution([distributionRoot]);
 const args = process.argv.slice(2);
 const { runInstalledCliApplication, runNodeCli } = await import(new URL("packages/cli/src/index.ts", distributionUrl).href);
 const { createToolchainDistribution } = await import("@hypit/toolchain");
-const { createLocalRuntimeCliCommandModules } = await import("@hypit/runtime-local/cli");
+const { createLocalRuntimeCliCommandModules } = await import("@hypit/runtime-local-cli");
 const toolchainDistribution = createToolchainDistribution({
   packageRoot: distributionRoot,
   launcher: fileURLToPath(import.meta.url),

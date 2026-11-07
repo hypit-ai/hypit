@@ -1,4 +1,4 @@
-import type { OperationProgress } from "@hypit/hypit/endpoint";
+import type { OperationProgress } from "@hypit/endpoint";
 import type { HtmlRasterProgress } from "@hypit/html-render-local";
 
 /** Translate renderer-local events into one readable Endpoint activity stream. */

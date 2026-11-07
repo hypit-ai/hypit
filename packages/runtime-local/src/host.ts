@@ -3,7 +3,7 @@ import type {
   RuntimeController,
   RuntimeWorkerLaunch,
 } from "./host-api.js";
-import { hypitHostStateRoot } from "@hypit/cli";
+import { hypitHostStateRoot } from "@hypit/host-paths";
 import { resolve } from "node:path";
 import { superviseBuilds } from "./supervisor.js";
 

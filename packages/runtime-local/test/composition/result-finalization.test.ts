@@ -23,7 +23,7 @@ import type { RunFinalizationStore } from "../../src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
 import { FileProductHistory } from "@hypit/product/node";
 import { isBlobRef } from "@hypit/protocol";
-import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
+import { EnvironmentCredentialStore } from "./environment-credential-store.js";
 import { defineEndpoint } from "@hypit/endpoint";
 import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
 import { createProducerPackageFacet } from "@hypit/producer";

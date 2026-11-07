@@ -17,9 +17,9 @@ importers:
       '@hypit/nle-local':
         specifier: workspace:^0.1.0
         version: link:packages/nle-local
-      '@hypit/runtime-local':
-        specifier: workspace:^0.2.0
-        version: link:packages/runtime-local
+      '@hypit/runtime-local-cli':
+        specifier: workspace:^0.1.0
+        version: link:packages/runtime-local-cli
       '@hypit/speech-estimate':
         specifier: workspace:^0.1.2
         version: link:packages/speech-estimate
@@ -547,6 +547,9 @@ importers:
       '@hypit/executor':
         specifier: workspace:*
         version: link:../executor
+      '@hypit/host-paths':
+        specifier: workspace:^0.1.0
+        version: link:../host-paths
       '@hypit/kernel':
         specifier: workspace:*
         version: link:../kernel
@@ -614,13 +617,11 @@ importers:
         version: link:../markup
 
   packages/credential-store-env:
-    devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
+    dependencies:
       '@hypit/runtime':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../runtime
+    devDependencies:
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../runtime-local
@@ -846,6 +847,8 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  packages/host-paths: {}
+
   packages/html-chromium-local:
     dependencies:
       '@hypit/html-program':
@@ -968,16 +971,13 @@ importers:
 
   packages/html-runtime-local:
     dependencies:
+      '@hypit/endpoint':
+        specifier: workspace:^0.0.0-dev
+        version: link:../endpoint
       '@hypit/html-render-local':
         specifier: workspace:^0.1.0
         version: link:../html-render-local
     devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/runtime':
-        specifier: workspace:*
-        version: link:../runtime
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../runtime-local
@@ -1706,6 +1706,9 @@ importers:
 
   packages/provider-html-local:
     dependencies:
+      '@hypit/endpoint':
+        specifier: workspace:^0.0.0-dev
+        version: link:../endpoint
       '@hypit/html-chromium-local':
         specifier: workspace:^0.1.0
         version: link:../html-chromium-local
@@ -1721,6 +1724,9 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
       tsx:
         specifier: 4.21.0
         version: 4.21.0
@@ -1728,18 +1734,9 @@ importers:
       '@fontsource-variable/inter':
         specifier: 5.3.0
         version: 5.3.0
-      '@hypit/endpoint':
-        specifier: workspace:*
-        version: link:../endpoint
       '@hypit/executor':
         specifier: workspace:*
         version: link:../executor
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
       '@hypit/resource-store':
         specifier: workspace:*
         version: link:../resource-store
@@ -2126,9 +2123,6 @@ importers:
       '@hypit/atomic-file':
         specifier: workspace:^0.0.0-dev
         version: link:../atomic-file
-      '@hypit/cli':
-        specifier: workspace:^0.0.0-dev
-        version: link:../cli
       '@hypit/endpoint':
         specifier: workspace:^0.0.0-dev
         version: link:../endpoint
@@ -2138,6 +2132,9 @@ importers:
       '@hypit/facet':
         specifier: workspace:^0.0.0-dev
         version: link:../facet
+      '@hypit/host-paths':
+        specifier: workspace:^0.1.0
+        version: link:../host-paths
       '@hypit/kernel':
         specifier: workspace:^0.0.0-dev
         version: link:../kernel
@@ -2172,9 +2169,25 @@ importers:
         specifier: 3.2.1
         version: 3.2.1
     devDependencies:
-      '@hypit/credential-store-env':
+      '@hypit/project':
         specifier: workspace:*
-        version: link:../credential-store-env
+        version: link:../project
+
+  packages/runtime-local-cli:
+    dependencies:
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
+      '@hypit/host-paths':
+        specifier: workspace:^0.1.0
+        version: link:../host-paths
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/runtime-local':
+        specifier: workspace:^0.2.0
+        version: link:../runtime-local
+    devDependencies:
       '@hypit/project':
         specifier: workspace:*
         version: link:../project
@@ -2369,9 +2382,18 @@ importers:
       '@hypit/audiovisual-media':
         specifier: workspace:^0.1.0
         version: link:../audiovisual-media
+      '@hypit/author':
+        specifier: workspace:^0.0.0-dev
+        version: link:../author
       '@hypit/canvas-view':
         specifier: workspace:^0.1.0
         version: link:../canvas-view
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
+      '@hypit/compiler':
+        specifier: workspace:^0.0.0-dev
+        version: link:../compiler
       '@hypit/credential-store-env':
         specifier: workspace:^0.1.2
         version: link:../credential-store-env
@@ -2414,6 +2436,9 @@ importers:
       '@hypit/html-video':
         specifier: workspace:^0.2.1
         version: link:../html-video
+      '@hypit/loader':
+        specifier: workspace:^0.0.0-dev
+        version: link:../loader
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
@@ -2441,9 +2466,18 @@ importers:
       '@hypit/pixverse':
         specifier: workspace:^0.3.0
         version: link:../pixverse
+      '@hypit/product':
+        specifier: workspace:^0.0.0-dev
+        version: link:../product
+      '@hypit/project':
+        specifier: workspace:^0.0.0-dev
+        version: link:../project
       '@hypit/prompt':
         specifier: workspace:^0.1.0
         version: link:../prompt
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
       '@hypit/provider-html-local':
         specifier: workspace:^0.2.1
         version: link:../provider-html-local
@@ -2462,9 +2496,15 @@ importers:
       '@hypit/raster-composition':
         specifier: workspace:^0.1.0
         version: link:../raster-composition
+      '@hypit/refinement':
+        specifier: workspace:^0.0.0-dev
+        version: link:../refinement
       '@hypit/runtime-local':
         specifier: workspace:^0.2.0
         version: link:../runtime-local
+      '@hypit/runtime-local-cli':
+        specifier: workspace:^0.1.0
+        version: link:../runtime-local-cli
       '@hypit/seedance':
         specifier: workspace:^0.3.0
         version: link:../seedance
@@ -2477,6 +2517,9 @@ importers:
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
+      '@hypit/svml':
+        specifier: workspace:^0.1.0
+        version: link:../svml
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
@@ -2486,16 +2529,9 @@ importers:
       '@hypit/wan':
         specifier: workspace:^0.3.0
         version: link:../wan
-    devDependencies:
-      '@hypit/cli':
-        specifier: workspace:*
-        version: link:../cli
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/loader':
-        specifier: workspace:*
-        version: link:../loader
+      '@hypit/workspace':
+        specifier: workspace:^0.0.0-dev
+        version: link:../workspace
 
   packages/volcengine-matting:
     dependencies:
@@ -2589,13 +2625,15 @@ importers:
 
   packages/yt-dlp:
     dependencies:
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
+      '@hypit/host-paths':
+        specifier: workspace:^0.1.0
+        version: link:../host-paths
       '@hypit/media-local':
         specifier: workspace:^0.3.0
         version: link:../media-local
-    devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
 
 packages:
 

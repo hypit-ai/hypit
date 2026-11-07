@@ -1,4 +1,4 @@
-import type { CliCommandModule } from "@hypit/hypit/cli";
+import type { CliCommandModule } from "@hypit/cli";
 
 import { runVocabularyCli, writeVocabularyHelp } from "./vocabulary.js";
 

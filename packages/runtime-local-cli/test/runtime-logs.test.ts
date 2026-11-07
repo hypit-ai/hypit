@@ -4,16 +4,26 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 
-import type { CliDistribution } from "../../src/distribution.js";
-import { runCliApplication } from "../../src/application.js";
-import type { CliIo } from "../../src/output.js";
-import { createLocalCredentialControl } from "@hypit/runtime-local";
-import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local/cli";
+import { runCliApplication } from "@hypit/cli";
+import type { CliDistribution, CliIo } from "@hypit/cli";
+import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";
 import type { LocalRuntimeHost } from "@hypit/runtime-local";
-import { commandHint } from "../../src/command-hint.js";
-import { cliDistribution } from "../distribution-scenario.js";
-import { credentialControl, runtimeControl } from "../control-scenario.js";
-import { runCli } from "./control-command-scenario.js";
+import { cliDistribution } from "./distribution-scenario.js";
+
+const runCli = async (argv: readonly string[], output: CliIo, selected: CliDistribution) => await runCliApplication(
+  argv,
+  output,
+  {
+    distribution: selected,
+    commandModules: createLocalRuntimeCliCommandModules({
+      ...(selected.packageRoot === undefined ? {} : { packageRoot: selected.packageRoot }),
+      openLocalRuntimeHost: async (path, options) =>
+        await selected.openRuntimeHost(path, options) as LocalRuntimeHost,
+    }),
+    cwd: tmpdir(),
+    resolveProjectRoot: async (explicit) => await realpath(explicit ?? tmpdir()),
+  },
+);
 
 test("runtime logs returns only the requested tail and hides its path by default", async () => {
   const distribution = cliDistribution({

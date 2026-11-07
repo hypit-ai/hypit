@@ -13,13 +13,9 @@
     "runtime",
     "README.md"
   ],
-  "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
-  },
   "dependencies": {
+    "@hypit/cli": "workspace:^0.0.0-dev",
+    "@hypit/host-paths": "workspace:^0.1.0",
     "@hypit/media-local": "workspace:^0.3.0"
-  },
-  "devDependencies": {
-    "@hypit/hypit": "workspace:*"
   }
 }

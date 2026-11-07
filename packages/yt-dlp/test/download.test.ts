@@ -43,12 +43,12 @@ test("download resolves its locked runtime from an installed package outside the
   await cp(new URL("../package.json", import.meta.url), join(installed, "package.json"));
   await cp(new URL("../src/download.ts", import.meta.url), join(installed, "src", "download.ts"));
   await cp(new URL("../src/environment.ts", import.meta.url), join(installed, "src", "environment.ts"));
-  const host = join(modules, "hypit");
-  await mkdir(host, { recursive: true });
-  await writeFile(join(host, "package.json"), JSON.stringify({
-    name: "@hypit/hypit", type: "module", exports: { "./cli": "./cli.mjs" },
+  const hostPaths = join(modules, "host-paths");
+  await mkdir(hostPaths, { recursive: true });
+  await writeFile(join(hostPaths, "package.json"), JSON.stringify({
+    name: "@hypit/host-paths", type: "module", exports: { ".": "./index.mjs" },
   }));
-  await writeFile(join(host, "cli.mjs"), `export { hypitHostStateRoot } from ${JSON.stringify(import.meta.resolve("@hypit/hypit/cli"))};`);
+  await writeFile(join(hostPaths, "index.mjs"), `export { hypitHostStateRoot } from ${JSON.stringify(import.meta.resolve("@hypit/host-paths"))};`);
   const sourceRuntime = fileURLToPath(new URL("../runtime", import.meta.url));
   for (const name of ["pyproject.toml", "uv.lock"]) await cp(join(sourceRuntime, name), join(installed, "runtime", name));
   let calls = 0;

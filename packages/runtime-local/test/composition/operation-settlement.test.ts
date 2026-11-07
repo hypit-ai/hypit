@@ -19,7 +19,7 @@ import test from "node:test";
 
 import { FileResourceStore } from "@hypit/resource-store/node";
 import { FileBuildResultHistory } from "@hypit/result/node";
-import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
+import { EnvironmentCredentialStore } from "./environment-credential-store.js";
 import { defineEndpoint } from "@hypit/endpoint";
 import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
 import { createProducerPackageFacet } from "@hypit/producer";

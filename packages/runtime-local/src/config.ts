@@ -7,7 +7,7 @@ import {
   loadNodePackageSelection,
 } from "@hypit/loader/node";
 import type { NodePackageSelectionRequest } from "@hypit/loader/node";
-import { hypitHostStateRoot } from "@hypit/cli";
+import { hypitHostStateRoot } from "@hypit/host-paths";
 import { EndpointRegistry, Executor } from "@hypit/executor";
 import type { EndpointCredential, EndpointInstance, EndpointRegistrar, EndpointScheduling } from "@hypit/endpoint";
 import { endpointOffers, endpointResourceClaims, installEndpoint, verifyEndpointPricingDocument } from "@hypit/endpoint";

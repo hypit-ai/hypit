@@ -6,7 +6,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./cli": "./src/cli.ts",
     "./extension": "./src/extension.ts",
     "./node": "./src/node.ts",
     "./config": "./src/config.ts",
@@ -20,10 +19,10 @@
   ],
   "dependencies": {
     "@hypit/atomic-file": "workspace:^0.0.0-dev",
-    "@hypit/cli": "workspace:^0.0.0-dev",
     "@hypit/endpoint": "workspace:^0.0.0-dev",
     "@hypit/executor": "workspace:^0.0.0-dev",
     "@hypit/facet": "workspace:^0.0.0-dev",
+    "@hypit/host-paths": "workspace:^0.1.0",
     "@hypit/kernel": "workspace:^0.0.0-dev",
     "@hypit/loader": "workspace:^0.0.0-dev",
     "@hypit/producer": "workspace:^0.0.0-dev",
@@ -37,7 +36,6 @@
     "koffi": "3.2.1"
   },
   "devDependencies": {
-    "@hypit/credential-store-env": "workspace:*",
     "@hypit/project": "workspace:*"
   }
 }

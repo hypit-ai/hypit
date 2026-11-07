@@ -1,19 +1,19 @@
-import type { CliCompilerOptions } from "@hypit/hypit/cli";
-import { refinementPackagesFromFacets, registerTypeRefinements, RefinementRegistry } from "@hypit/hypit/refinement";
-import { ModulePackageRegistry, Compiler } from "@hypit/hypit/compiler";
+import type { CliCompilerOptions } from "@hypit/cli";
+import { refinementPackagesFromFacets, registerTypeRefinements, RefinementRegistry } from "@hypit/refinement";
+import { ModulePackageRegistry, Compiler } from "@hypit/compiler";
 import {
   AuthorDeclarationRegistry,
   AuthorFrontendRegistry,
   installAuthorDeclarationFacets,
   installAuthorFrontendFacets,
-} from "@hypit/hypit/author";
-import { createSvmlAuthorFrontend } from "@hypit/hypit/svml";
-import { svmlAuthorFrontendId } from "@hypit/hypit/svml";
+} from "@hypit/author";
+import { createSvmlAuthorFrontend } from "@hypit/svml";
+import { svmlAuthorFrontendId } from "@hypit/svml";
 import {
   resolveNodePackageResourceSpecifier,
   resolveNodePackageSource,
-} from "@hypit/hypit/loader/node";
-import { NodeFilesystemWorkspace } from "@hypit/hypit/workspace/node";
+} from "@hypit/loader/node";
+import { NodeFilesystemWorkspace } from "@hypit/workspace/node";
 
 export function createToolchainWorkspace(options: Pick<CliCompilerOptions,
   "workspaceRoot" | "assetRoots" | "packageRoot" | "distributionPackageRoot">) {

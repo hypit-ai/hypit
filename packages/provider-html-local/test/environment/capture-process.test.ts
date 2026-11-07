@@ -208,7 +208,7 @@ setInterval(() => {}, 1000);
 
 test("renderer stdout and stderr diagnostics are drained before reporting success", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-render-diagnostics-"));
-  const messages: import("@hypit/hypit/endpoint").ExecutionDiagnostic[] = [];
+  const messages: import("@hypit/endpoint").ExecutionDiagnostic[] = [];
   try {
     const entry = join(root, "report.mjs");
     await writeFile(entry, `import { installCaptureExitCleanup } from ${JSON.stringify(exitCleanup)};

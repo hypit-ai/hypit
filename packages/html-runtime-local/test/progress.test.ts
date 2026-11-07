@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { OperationProgress } from "@hypit/hypit/endpoint";
+import type { OperationProgress } from "@hypit/endpoint";
 import { renderProgressReporter } from "../src/progress.js";
 
 test("parallel render progress sums frames and does not regress when another browser starts", async () => {

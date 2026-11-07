@@ -4,8 +4,6 @@ import { tmpdir } from "node:os";
 import type { CliDistribution } from "../../src/distribution.js";
 import { runCliApplication } from "../../src/application.js";
 import type { CliIo } from "../../src/output.js";
-import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local/cli";
-import type { LocalRuntimeHost } from "@hypit/runtime-local";
 
 export const applicationCwd = tmpdir();
 
@@ -13,14 +11,7 @@ export const runCli = async (argv: readonly string[], output: CliIo, selected: C
   argv,
   output,
   {
-    // The real Toolchain application assembles both generic and Local Runtime Host
-    // ports. These focused doubles do the same when mounting Local commands.
     distribution: selected,
-    commandModules: createLocalRuntimeCliCommandModules({
-      ...(selected.packageRoot === undefined ? {} : { packageRoot: selected.packageRoot }),
-      openLocalRuntimeHost: async (path, options) =>
-        await selected.openRuntimeHost(path, options) as LocalRuntimeHost,
-    }),
     cwd: applicationCwd,
     resolveProjectRoot: async (explicit) => await realpath(explicit ?? tmpdir()),
   },

@@ -17,9 +17,10 @@
   "peerDependencies": {
     "@hypit/runtime-local": "workspace:^0.2.0"
   },
+  "dependencies": {
+    "@hypit/runtime": "workspace:^0.0.0-dev"
+  },
   "devDependencies": {
-    "@hypit/hypit": "workspace:*",
-    "@hypit/runtime": "workspace:*",
     "@hypit/runtime-local": "workspace:*"
   }
 }
