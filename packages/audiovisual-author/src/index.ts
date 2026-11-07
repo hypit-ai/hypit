@@ -49,15 +49,6 @@ export {
 } from "./fragment.js";
 export { audiovisualProgramEditPlanner, planMoveAudiovisualOccurrence } from "./edit.js";
 export {
-  locateAudiovisualNleSubject,
-  realizeAudiovisualNleSubject,
-  resolveAudiovisualNleSubject,
-} from "./nle.js";
-export type {
-  AudiovisualNleSubjectLocation,
-  AudiovisualNleSubjectReference,
-} from "./nle.js";
-export {
   audiovisualAuthorDependency,
   audiovisualAuthorManifest,
   audiovisualAuthorModuleRef,

@@ -18,7 +18,7 @@ import {
 import { captionBasicNleComponentSymbol } from "./nle-package.js";
 import {
   createCaptionPresentation,
-  projectCaptionScheduleNle,
+  projectCaptionScheduleCues,
   scheduleCaptionPresentation,
 } from "./source.js";
 import type {
@@ -71,7 +71,7 @@ export function createCaptionNleMaterialization(project: NleProject, input: {
     selection: input.selection ?? { kind: "all" as const },
   };
   const schedule = scheduleCaptionPresentation(spec, input.document, input.timing, presentation);
-  const projected = projectCaptionScheduleNle(input.id, input.document, schedule, presentation);
+  const projected = projectCaptionScheduleCues(input.id, input.document, schedule, presentation);
   const componentForStyle = input.componentForStyle ?? defaultComponent;
   const styles = new Map(schedule.styles.map((style) => [style.id, style] as const));
   const commands: NleTransaction["commands"][number][] = [];

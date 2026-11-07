@@ -89,8 +89,9 @@ exact time into the ordinary static `remap` node. The first slice intentionally 
 syntax, easing catalogue, normalized-progress Domain, tracking document conversion or automatic
 shortest-path rotation. Those require their real owner rather than branches in generic Control.
 
-NLE lanes, grouping, folding and rectangle layout are external workspace projections. This package does not
-publish a canonical `NleView`, index or frontend timeline that must be synchronized with Programme facts.
+NLE lanes, grouping, folding and rectangle layout belong to the persistent `NleProject`, not to AVIR. This
+package publishes no second workspace projection, index or frontend timeline that must be synchronized with
+Programme facts.
 
 `evaluateAudiovisualProgramAt()` is the first execution-facing seam. Given one exact Programme-local position,
 it preserves the Picture and Audio DAGs, including crop and remap nodes. Each active signal `use` resolves through

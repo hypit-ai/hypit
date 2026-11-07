@@ -3,10 +3,7 @@ import test from "node:test";
 
 import { pictureType, type ProgramSource } from "@hypit/audiovisual";
 import {
-  audiovisualAuthorModuleRef,
   compileAudiovisualAuthorSpec,
-  locateAudiovisualNleSubject,
-  realizeAudiovisualNleSubject,
 } from "../../audiovisual-author/src/index.js";
 import {
   compileAudiovisualHtmlProgram,
@@ -21,12 +18,6 @@ import {
   applyNleTransaction,
   createNleProject,
 } from "@hypit/nle";
-import {
-  NleSubjectProjectorRegistry,
-  nleProjectedActionInvocation,
-  prepareNleViewProjection,
-  projectPreparedNleView,
-} from "@hypit/nle-view";
 import { sealLocalSpatialDomain, sealSpatialMap } from "@hypit/spatial/algebra";
 import { exactTemporalValue, sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 
@@ -35,14 +26,11 @@ import {
   appendCaptionStyleOverride,
   assertCaptionDocument,
   captionHtmlSource,
-  captionModuleRef,
-  captionNleSubjectProjector,
-  captionTypes,
   captionProgramSource,
   captionUnitEvent,
   createCaptionPresentation,
   createCaptionNleMaterialization,
-  projectCaptionNle,
+  projectCaptionCues,
   scheduleCaptionPresentation,
   type CaptionComponentSpec,
   type CaptionDocument,
@@ -179,7 +167,7 @@ test("Caption timing and presentation bake once into ordinary editable NLE block
   assert.match(html.html, /#ff0000/u);
 });
 
-test("one source-bound Caption occurrence renders all three internal cues", async () => {
+test("one source-bound Caption occurrence renders all three internal cues", () => {
   const video: ProgramSource = { id: "video", outputs: { picture: {
     kind: "signal", type: pictureType, domain, spatialDomain: pictureDomain,
   } } };
@@ -200,117 +188,12 @@ test("one source-bound Caption occurrence renders all three internal cues", asyn
   assert.deepEqual(Object.keys(program.occurrences).sort(), ["captions", "video"]);
   const mapping = program.occurrences.captions?.selections.picture;
   assert(mapping?.kind === "signal");
-  const projection = projectCaptionNle(spec, document, timing, finalPresentation, mapping.mapping);
+  const projection = projectCaptionCues(spec, document, timing, finalPresentation, mapping.mapping);
   assert.equal(projection.cues.length, 3);
   assert.deepEqual(projection.cues.map((cue) => [cue.cueId, cue.text, cue.occurrenceRegions?.length]), [
     ["cue-one", "First", 1], ["cue-two", "Second", 1], ["cue-three", "Third", 1],
   ]);
   assert.deepEqual(Object.keys(program.occurrences).sort(), ["captions", "video"]);
-  const nleRegistry = new NleSubjectProjectorRegistry();
-  nleRegistry.register(captionNleSubjectProjector);
-  const { svmlStructureFrontend } = await import("../../svml/src/index.js");
-  const authoredSource = {
-    id: "/main.svml",
-    name: "main.svml",
-    bytes: new TextEncoder().encode(`module caption from "${captionModuleRef.name}@${captionModuleRef.version}"
-module video from "${audiovisualAuthorModuleRef.name}@${audiovisualAuthorModuleRef.version}"
-
-caption.Component "captions" {
-  document: @document
-  timing: @timing
-  style: @style
-  selection: all
-  width: 1920px
-  height: 1080px
-}
-video.Program "main" {
-  duration: 6s
-  picture-domain: { width: 1920px, height: 1080px }
-  source "captions" { value: @captions }
-  occurrence "captions" { source: @source.captions at: 0s outputs: { picture: {} } }
-  picture "captions" { use: @occurrence.captions.picture }
-  output { picture: @picture.captions }
-}
-`),
-  };
-  const authored = await svmlStructureFrontend.openStructure(authoredSource);
-  const captionDeclaration = authored.nodes.find((node) => node.kind === "declaration"
-    && node.name === "Component" && node.label === "captions")!;
-  const programDeclaration = authored.nodes.find((node) => node.kind === "declaration"
-    && node.name === "Program" && node.label === "main")!;
-  assert(programDeclaration.kind === "declaration");
-  const programChildren = authored.containers.find((item) => item.container === programDeclaration.children)!;
-  const sourceDeclaration = programChildren.items.map((id) => authored.nodes.find((node) => node.node === id))
-    .find((node) => node?.kind === "declaration" && node.name === "source" && node.label === "captions")!;
-  const provenance = { format: "hypit.author-provenance@1" as const, elements: [{
-    id: "caption-element", source: authoredSource.id, sourceName: authoredSource.name,
-    range: captionDeclaration.range, records: [],
-    outputs: [
-      { component: "caption", name: "source", local: "captions", id: "captions" },
-      { component: "caption", name: "presentation", local: "captions.presentation", id: "captions.presentation" },
-      { component: "caption", name: "schedule", local: "captions.schedule", id: "captions.schedule" },
-    ],
-    inputs: [{ id: "caption-document", name: "document", ref: { kind: "record" as const, id: "document" } }],
-  }, {
-    id: "program-source-element", source: authoredSource.id, sourceName: authoredSource.name,
-    range: sourceDeclaration.range, records: [], outputs: [],
-    inputs: [{ id: "program-source-value", name: "value",
-      ref: { kind: "component-output" as const, component: "caption", output: "source" } }],
-  }] };
-  const reference = locateAudiovisualNleSubject({
-    document: authored,
-    provenance,
-    programme: "main",
-    endpoint: "main.occurrence.captions.picture",
-  });
-  const prepared = prepareNleViewProjection({
-    view: { id: "edit", programme: "main", lanes: [{
-      id: "captions", label: "Captions", items: ["main.occurrence.captions.picture"],
-    }] },
-    documents: [authored],
-    provenance,
-    registry: nleRegistry,
-    locate(endpoint) {
-      assert.equal(endpoint, reference.endpoint);
-      return reference;
-    },
-  });
-  assert.deepEqual(prepared.requiredOutputs, ["captions.presentation", "captions.schedule"]);
-  const projectedView = projectPreparedNleView({
-    prepared,
-    observation: {
-      outputs: [
-        { output: "captions.presentation", record: "presentation" },
-        { output: "captions.schedule", record: "schedule" },
-      ],
-      records: [
-        { id: "document", type: captionTypes.document, value: document },
-        { id: "presentation", type: captionTypes.presentation, value: finalPresentation },
-        { id: "schedule", type: captionTypes.schedule,
-          value: scheduleCaptionPresentation(spec, document, timing, finalPresentation) },
-      ],
-    },
-    registry: nleRegistry,
-    realize(endpoint) {
-      assert.equal(endpoint, reference.endpoint);
-      return realizeAudiovisualNleSubject(reference, program).target;
-    },
-  });
-  const [surface] = projectedView.lanes[0]?.subjects[0]?.projections ?? [];
-  assert.equal(surface?.items.length, 3);
-  assert.deepEqual(surface?.items.map((item) => [item.id, item.regions.domain.id,
-    item.actions.map((action) => action.authority.action)]), [
-    ["cue-one", "main:occurrence:video:time", ["style-cues", "hide-cues"]],
-    ["cue-two", "main:occurrence:video:time", ["style-cues", "hide-cues"]],
-    ["cue-three", "main:occurrence:video:time", ["style-cues", "hide-cues"]],
-  ]);
-  const hide = surface?.items[0]?.actions.find((action) => action.id === "hide");
-  assert(hide !== undefined);
-  assert.deepEqual(nleProjectedActionInvocation(hide, { id: "hide-first", cues: ["wrong"] }), {
-    authority: { module: captionModuleRef, declaration: "Component", action: "hide-cues",
-      subject: { source: "/main.svml", node: captionDeclaration.node } },
-    input: { cues: ["cue-one"], id: "hide-first" },
-  });
   const html = compileAudiovisualHtmlProgram(program, { sources: [
     visualProgramHtmlSource("video", "picture", htmlVisual({ html: "<div></div>" })),
     captionHtmlSource(spec, document, timing, finalPresentation),

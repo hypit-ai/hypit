@@ -1,21 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { audiovisualTypes, type AudiovisualProgram } from "@hypit/audiovisual";
-import type { AuthorProvenance, AuthorResolvedReference } from "@hypit/author";
-import {
-  exactTemporalValue,
-  identityTemporalMap,
-  sealLocalTemporalDomain,
-  temporalTypes,
-} from "@hypit/temporal";
+import { audiovisualTypes } from "@hypit/audiovisual";
+import type { AuthorResolvedReference } from "@hypit/author";
+import { temporalTypes } from "@hypit/temporal";
 
 import { compileSvmlDeclaration } from "../../../test/compile-svml-declaration.js";
 import {
   audiovisualAuthorDeclarations,
   audiovisualAuthorModuleRef,
-  locateAudiovisualNleSubject,
-  realizeAudiovisualNleSubject,
 } from "../src/index.js";
 
 const sources = new Map<string, AuthorResolvedReference>([
@@ -127,71 +120,4 @@ test("Programme Domain may consume an occurrence end as an ordinary forward grap
   const use = decoded.components.find((component) => component.id === "main:occurrence:video:use")!;
   assert.equal(use.fragment.operations.some((operation) =>
     operation.producer.name === "infer-occurrence-duration"), true);
-});
-
-test("Programme NLE endpoints resolve through Source declaration provenance, not Source identity", async () => {
-  const body = `video.Program "main" {
-  duration: 3s
-  picture-domain: { width: 1920px, height: 1080px }
-  source "captions" { value: @caption-component }
-  occurrence "captions" {
-    source: @source.captions
-    at: 0s
-    outputs: { picture: {} }
-  }
-  picture "captions" { use: @occurrence.captions.picture }
-  output { picture: @picture.captions }
-}`;
-  const decoded = await compileSvmlDeclaration({
-    module: audiovisualAuthorModuleRef,
-    alias: "video",
-    compilers: audiovisualAuthorDeclarations,
-    references: new Map([["caption-component", {
-      ref: { kind: "component-output", component: "captions:caption", output: "source" },
-      type: audiovisualTypes.programSource,
-    }]]),
-    source: body,
-  });
-  const { svmlStructureFrontend } = await import("../../svml/src/index.js");
-  const source = {
-    id: "test.svml",
-    name: "test.svml",
-    bytes: new TextEncoder().encode(`module video from "${audiovisualAuthorModuleRef.name}@${audiovisualAuthorModuleRef.version}"
-
-${body}
-`),
-  };
-  const document = await svmlStructureFrontend.openStructure(source);
-  const provenance: AuthorProvenance = {
-    format: "hypit.author-provenance@1",
-    elements: (decoded.provenance ?? []).map((element, index) => ({
-      id: `element-${index}`, source: source.id, sourceName: source.name, range: element.range,
-      records: element.records.map((id) => ({ local: id, id })),
-      outputs: element.outputs.map((output) => ({ ...output, local: output.id })),
-      inputs: element.inputs.map((input, inputIndex) => ({
-        id: `element-${index}-input-${inputIndex}`, ...input,
-      })),
-    })),
-  };
-  const domain = sealLocalTemporalDomain({
-    id: "main:time",
-    duration: exactTemporalValue({ numerator: 3n, denominator: 1n }),
-  });
-  const mapping = identityTemporalMap(domain);
-  const reference = locateAudiovisualNleSubject({
-    document,
-    provenance,
-    programme: "main",
-    endpoint: "main.occurrence.captions.picture",
-  });
-  assert.deepEqual(reference.owner, {
-    kind: "component-output", component: "captions:caption", output: "source",
-  });
-  const location = realizeAudiovisualNleSubject(reference, {
-      id: "main",
-      occurrences: { captions: { selections: { picture: { kind: "signal", mapping } } } },
-    } as unknown as AudiovisualProgram);
-  assert.equal(location.occurrence, "captions");
-  assert.equal(location.output, "picture");
-  assert.deepEqual(location.target, { id: "main.occurrence.captions.picture", mapping });
 });

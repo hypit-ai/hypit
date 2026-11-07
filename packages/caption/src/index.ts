@@ -19,7 +19,6 @@ export {
   captionProducers,
   captionTypes,
 } from "./manifest.js";
-export { captionNleSubjectProjector } from "./nle.js";
 export { captionHtmlSource } from "./picture.js";
 export {
   appendCaptionHiddenOverride,
@@ -38,8 +37,8 @@ export {
   captionSelectedUnitIds,
   captionUnitEvent,
   createCaptionPresentation,
-  projectCaptionNle,
-  projectCaptionScheduleNle,
+  projectCaptionCues,
+  projectCaptionScheduleCues,
   scheduleCaptionPresentation,
 } from "./source.js";
 export type * from "./types.js";

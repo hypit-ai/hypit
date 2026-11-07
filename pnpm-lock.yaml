@@ -799,9 +799,6 @@ importers:
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../nle
-      '@hypit/nle-view':
-        specifier: workspace:^0.1.0
-        version: link:../nle-view
       '@hypit/spatial':
         specifier: workspace:*
         version: link:../spatial
@@ -1864,19 +1861,6 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
-
-  packages/nle-view:
-    dependencies:
-      '@hypit/audiovisual':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual
-      '@hypit/temporal':
-        specifier: workspace:^0.1.1
-        version: link:../temporal
-    peerDependencies:
-      '@hypit/hypit':
-        specifier: workspace:^0.4.0
-        version: link:../..
 
   packages/narrative:
     devDependencies:
@@ -3077,9 +3061,6 @@ importers:
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../nle
-      '@hypit/nle-view':
-        specifier: workspace:^0.1.0
-        version: link:../nle-view
       '@hypit/pixverse':
         specifier: workspace:^0.3.0
         version: link:../pixverse

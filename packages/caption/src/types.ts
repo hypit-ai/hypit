@@ -92,18 +92,18 @@ export type CaptionPresentationSchedule = {
   readonly cues: readonly CaptionScheduledCue[];
 };
 
-export type CaptionNleCueProjection = CaptionScheduledCue & {
+export type CaptionCueProjection = CaptionScheduledCue & {
   readonly text: string;
   /** Occurrence-local preimage; omitted for a source-only inspection. */
   readonly occurrenceRegions?: readonly TemporalMapRegion[];
 };
 
 /** Owner projection for an expandable Caption Occurrence; never a parent Programme object. */
-export type CaptionNleProjection = {
+export type CaptionProjection = {
   readonly componentId: string;
   readonly sourceDomain: LocalTemporalDomain;
   readonly occurrenceDomain?: LocalTemporalDomain;
-  readonly cues: readonly CaptionNleCueProjection[];
+  readonly cues: readonly CaptionCueProjection[];
   readonly overrides: CaptionPresentation["overrides"];
 };
 

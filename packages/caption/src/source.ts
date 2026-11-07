@@ -19,7 +19,7 @@ import type {
 import type {
   CaptionComponentSpec,
   CaptionDocument,
-  CaptionNleProjection,
+  CaptionProjection,
   CaptionPresentation,
   CaptionPresentationOverrideSpec,
   CaptionPresentationSchedule,
@@ -365,28 +365,28 @@ function captionCueText(document: CaptionDocument, unitIds: readonly string[]): 
     .map((word, index) => `${index === 0 ? "" : word.separatorBefore}${word.text}`).join("");
 }
 
-/** Project internal Cues for an NLE without promoting them to parent Programme objects. */
-export function projectCaptionNle(
+/** Project internal Cues without promoting them to parent Programme objects. */
+export function projectCaptionCues(
   spec: CaptionComponentSpec,
   document: CaptionDocument,
   timing: LocalCaptionTiming,
   value: CaptionPresentation | CaptionStyle,
   occurrenceMapping?: TemporalMap,
-): CaptionNleProjection {
+): CaptionProjection {
   const presentation = normalizedPresentation(value);
   const schedule = scheduleCaptionPresentation(spec, document, timing, presentation);
-  return projectCaptionScheduleNle(spec.id, document, schedule, presentation, occurrenceMapping);
+  return projectCaptionScheduleCues(spec.id, document, schedule, presentation, occurrenceMapping);
 }
 
 /** Project already-compiled owner outputs; Hosts do not need to reconstruct the Caption graph. */
-export function projectCaptionScheduleNle(
+export function projectCaptionScheduleCues(
   componentId: string,
   document: CaptionDocument,
   schedule: CaptionPresentationSchedule,
   presentation: CaptionPresentation,
   occurrenceMapping?: TemporalMap,
-): CaptionNleProjection {
-  identity(componentId, "Caption NLE component id");
+): CaptionProjection {
+  identity(componentId, "Caption component id");
   assertCaptionDocument(document);
   assertCaptionPresentationSchedule(schedule);
   assertCaptionPresentation(presentation);

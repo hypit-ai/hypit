@@ -16,7 +16,6 @@
     "@hypit/html-program": "workspace:*",
     "@hypit/html-video": "workspace:^0.2.1",
     "@hypit/nle": "workspace:^0.1.0",
-    "@hypit/nle-view": "workspace:^0.1.0",
     "@hypit/spatial": "workspace:*",
     "@hypit/temporal": "workspace:^0.1.1"
   },

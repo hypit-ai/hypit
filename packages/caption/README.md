@@ -82,7 +82,7 @@ supplied separately by the selected audiovisual renderer.
 
 The same `CaptionDocument + LocalCaptionTiming + CaptionPresentation` can instead be baked once into an NLE
 transaction. `createCaptionNleMaterialization` resolves the chosen cues, visibility and styles, quantizes exact
-source-local regions at the destination project frame rate, and emits one direct Component item for each visible
+source-local regions as exact rational NLE times, and emits one direct Component item for each visible
 cue. A hidden cue emits no item. Each resulting block owns its start, duration, caption Component symbol, text, style
 parameters and rectangle, so later move, trim, restyle or delete operations are ordinary NLE edits and do not
 write back to the transcript or Caption component.
@@ -91,27 +91,20 @@ The built-in `basic` Component is only a minimal package-owned HTML implementati
 select their own Component explicitly; the NLE does not interpret family parameters or grant Caption a special
 Item kind.
 
-## Live component inspection and edits
+## Cue projection and owner edits
 
-For a Caption kept as one live Component Source, Caption owns an expandable inspection projection of its
-internal cues. The projection returns cue identity, text,
+Caption owns a syntax-neutral projection of its internal cues. The projection returns cue identity, text,
 role, source-local regions, resolved presentation, and—when given an Occurrence Map—the exact occurrence-local
-preimage. Those cue rows are views inside one Caption Occurrence, not independent Programme objects.
+preimage. Those cue values are owner data, not a persistent NLE View or independent Programme objects.
 
 The Cue rectangles are temporally read-only. Caption consumes `LocalCaptionTiming` but does not own it, so
 the projection grants no move, trim or split action. A Timing producer may separately expose such actions when
 its facts are authored; derived alignment remains read-only unless the author explicitly materialises it.
 
-The package also owns `style-roles`, `style-cues`, and `hide-cues` edit actions. An NLE invokes one of those
-actions against the parent `caption.Component`; the resulting edit appends an `override` child to that owner.
-The generic `nle-view` package therefore needs no Caption-specific grammar, matching policy, or knowledge of
-where timing came from.
-
-The complete headless route is now Programme endpoint → Programme Source declaration provenance →
-`caption.Component` declaration → declared `document` / `presentation` / `schedule` edges → Cue rows. The
-preparation phase lists `presentation` and `schedule` as required logical outputs before values are observed;
-the projection phase only reads already materialized Records. Existing transcription or subtitle files may
-feed those facts, but this package does not launch WhisperX or any other upstream producer.
+The package also owns `style-roles`, `style-cues`, and `hide-cues` author actions. A caller with an explicitly
+authored `caption.Component` may invoke those actions directly; the resulting edit appends an `override` child
+to that owner. No NLE lane, Programme provenance join or projector registry is involved. Existing transcription
+or subtitle files may feed the Cue facts, but this package does not launch WhisperX or any other upstream producer.
 
 ## Caption timing as an event source
 

@@ -74,17 +74,6 @@ These operations know neither media provenance nor caption semantics. A componen
 parent Source use and one parent Occurrence unless the author explicitly creates more instances; its internal
 cues, rectangles and animation states are not expanded into parent AuthorGraph or NLE objects.
 
-For a closed Programme, `resolveAudiovisualNleSubject` owns the reverse authoring join for
-`<programme>.occurrence.<name>.<output>`. It follows the occurrence's authored `source` reference to the
-Programme `source` child and then reads that child's exact provenance edge. It never searches for a matching
-ProgramSource value or assumes a component package. Signal endpoints additionally return the factual
-Occurrence-to-Source `TemporalMap`; constant endpoints correctly have no temporal Map.
-
-The join is available in two phases. `locateAudiovisualNleSubject` resolves the owner edge before Programme
-execution, allowing projector outputs to join the same finite Build selection. After closure,
-`realizeAudiovisualNleSubject` reads only the selected occurrence output and adds its factual Map. The
-one-call resolver remains a convenience for an already closed Programme.
-
 An Operator Control use has a separate syntax-neutral `AudiovisualAuthorControlBinding`. It may follow the
 Programme, one Occurrence, or one selected Source output; alternatively an exact author relation is resolved
 from the Programme domain into the Operator-owned Control domain. A factual `TemporalMap` may be supplied

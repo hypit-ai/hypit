@@ -27,7 +27,6 @@ import {
   planAddCanvasViewItem,
   projectCanvasView,
 } from "../../canvas-view/src/index.js";
-import { nleViewAuthorDeclaration, planMoveNleLaneItem, projectNleView } from "../../nle-view/src/index.js";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -36,7 +35,6 @@ const sourceText = `// Packages stay independent of the SVML grammar.
 module media from "@hypit/media@1"
 module image from "@example/image@1"
 module video from "@hypit/audiovisual-author@1"
-module nle from "@hypit/nle-view@1"
 module canvas from "@hypit/canvas-view@1"
 
 media.Asset "product" {
@@ -59,15 +57,6 @@ video.Program "main" {
     source: @source.hero
     at: 0s
     outputs: { picture: {}, audio: {} }
-  }
-}
-
-nle.View "timeline" {
-  programme: @main
-
-  lane "picture" {
-    label: "Picture"
-    items: [@main.occurrence.presenter.picture]
   }
 }
 
@@ -96,8 +85,8 @@ function declaration(
 test("SVML Block parses without package grammar and prints untouched bytes exactly", () => {
   const parsed = parseSvmlDocument(source());
   assert.equal(printSvmlDocument(parsed), sourceText);
-  assert.equal(parsed.declarations.length, 5);
-  assert.deepEqual(parsed.declarations.map((item) => item.label), ["product", "hero", "main", "timeline", "creation"]);
+  assert.equal(parsed.declarations.length, 4);
+  assert.deepEqual(parsed.declarations.map((item) => item.label), ["product", "hero", "main", "creation"]);
 
   const authored = declarationsFromSvmlDocument(parsed);
   assert.equal(authored[2]?.module.name, "@hypit/audiovisual-author");
@@ -132,7 +121,7 @@ second line
   assert.equal(printSvmlDocument(parseSvmlDocument(edited)), candidate);
 });
 
-test("one NLE move replaces only the occurrence time value", async () => {
+test("one occurrence move replaces only its authored time value", async () => {
   const document = await svmlStructureFrontend.openStructure(source());
   const occurrence = declaration(document, "presenter");
   const edited = await svmlStructureFrontend.applyStructureOperations(
@@ -180,52 +169,6 @@ test("Canvas Add Image writes an independent root subject and an owned View item
   assert.deepEqual(projectedCanvas.items.map((item) => [item.id, item.subject, item.x, item.y]), [
     ["hero", "hero", 80, 120],
     ["detail", "detail", 360, 120],
-  ]);
-  const projectedNle = projectNleView(reopened, declaration(reopened, "timeline").node);
-  assert.deepEqual(projectedNle, {
-    id: "timeline",
-    programme: "main",
-    lanes: [{ id: "picture", label: "Picture", items: ["main.occurrence.presenter.picture"] }],
-  });
-});
-
-test("moving a lane item changes only View membership and preserves valid list syntax", async () => {
-  const text = sourceText.replace(
-    `  lane "picture" {
-    label: "Picture"
-    items: [@main.occurrence.presenter.picture]
-  }`,
-    `  lane "picture" {
-    label: "Picture"
-    items: [@main.occurrence.presenter.picture, @main.occurrence.presenter.audio]
-  }
-
-  lane "audio" {
-    label: "Audio"
-    items: []
-  }`,
-  );
-  const document = await svmlStructureFrontend.openStructure(source(text));
-  const timeline = declaration(document, "timeline");
-  const children = document.containers.find((candidate) => candidate.container === timeline.children)!;
-  const lanes = children.items.map((id) => document.nodes.find((candidate) => candidate.node === id))
-    .filter((item): item is AuthorStructureDeclarationNode => item?.kind === "declaration");
-  const picture = lanes.find((item) => item.label === "picture")!;
-  const audio = lanes.find((item) => item.label === "audio")!;
-  const itemsField = document.containers.find((candidate) => candidate.container === picture.fields)!.items
-    .map((id) => document.nodes.find((candidate) => candidate.node === id))
-    .find((item): item is AuthorStructureFieldNode => item?.kind === "field" && item.name === "items")!;
-  const list = document.nodes.find((item) => item.node === itemsField.value && item.kind === "list");
-  assert(list?.kind === "list");
-  const itemNodes = document.containers.find((candidate) => candidate.container === list.items)!.items;
-  const edited = await svmlStructureFrontend.applyStructureOperations(
-    document,
-    planMoveNleLaneItem(document, itemNodes[1]!, audio.node),
-  );
-  const reopened = await svmlStructureFrontend.openStructure(edited);
-  assert.deepEqual(projectNleView(reopened, declaration(reopened, "timeline").node).lanes, [
-    { id: "picture", label: "Picture", items: ["main.occurrence.presenter.picture"] },
-    { id: "audio", label: "Audio", items: ["main.occurrence.presenter.audio"] },
   ]);
 });
 
@@ -303,11 +246,9 @@ test("SVML Program declarations compile through package-owned semantics into Aut
   compilers.register(spatialMapCompiler);
   compilers.register(reconstructionCompiler);
   compilers.register(audiovisualProgramAuthorDeclaration);
-  compilers.register(nleViewAuthorDeclaration);
   compilers.register(canvasViewAuthorDeclaration);
   const text = `module fixture from "@example/source@1"
 module video from "@hypit/audiovisual-author@1"
-module nle from "@hypit/nle-view@1"
 module canvas from "@hypit/canvas-view@1"
 
 fixture.Source "generated" {}
@@ -371,14 +312,6 @@ video.Program "main" {
   }
 }
 
-nle.View "timeline" {
-  programme: @main
-  lane "picture" {
-    label: "Picture"
-    items: [@main.occurrence.presenter.picture]
-  }
-}
-
 canvas.View "creation" {
   scope: [@generated, @main]
   item "generated" {
@@ -434,12 +367,5 @@ canvas.View "creation" {
     { progress: { kind: "mapping", mapping: {
       kind: "binding", name: "main:picture:final:control:progress:mapping",
     } } });
-  const withoutViews = text.slice(0, text.indexOf("\nnle.View"));
-  const semanticOnly = await decodeSvmlDeclarations(source(withoutViews), {
-    compilers,
-    resolveAsset: () => { throw new Error("unused"); },
-  });
-  assert.deepEqual(semanticOnly.records, decoded.records);
-  assert.deepEqual(semanticOnly.components, decoded.components);
 });
 

@@ -7,7 +7,6 @@ import {
   type AuthorResolvedReference,
 } from "@hypit/author";
 import { audiovisualTypes } from "@hypit/audiovisual";
-import { nleProjectedActionInvocation } from "@hypit/nle-view";
 import { temporalTypes } from "@hypit/temporal";
 
 import { compileSvmlDeclaration } from "../../../test/compile-svml-declaration.js";
@@ -91,7 +90,7 @@ caption.Component "secondary-captions" {
   assert.equal(event.exports[0]?.type.name, temporalTypes.regionSet.name);
 });
 
-test("Caption NLE edits append owner rules instead of creating Cue declarations", async () => {
+test("Caption owner edits append rules instead of creating Cue declarations", async () => {
   const { svmlStructureFrontend } = await import("../../svml/src/index.js");
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
@@ -112,12 +111,11 @@ caption.Component "captions" {
   assert(owner?.kind === "declaration");
   const registry = new AuthorEditPlannerRegistry();
   registry.register(captionComponentEditPlanner);
-  const operations = planAuthorActionInvocation(registry, opened, nleProjectedActionInvocation({
-    id: "hide", label: "Hide",
+  const operations = planAuthorActionInvocation(registry, opened, {
     authority: { module: captionModuleRef, declaration: "Component", action: "hide-cues",
       subject: { source: "/caption.svml", node: owner.node } },
-    preset: { cues: ["cue-two"] },
-  }, { id: "mute-middle" }));
+    input: { cues: ["cue-two"], id: "mute-middle" },
+  });
   const edited = await svmlStructureFrontend.applyStructureOperations(opened, operations);
   const text = decoder.decode(edited.bytes);
   assert.match(text, /override "mute-middle" \{\s+cues: \[cue-two\]\s+hidden: true\s+\}/u);
