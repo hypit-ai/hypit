@@ -41,7 +41,7 @@ test("application composes root and topic help without teaching generic CLI the 
   };
   let root = "";
   await runCliApplication([], { write: text => { root += text; } }, application([module]));
-  assert.match(root, /check <source>/u);
+  assert.doesNotMatch(root, /check <source>/u);
   assert.match(root, /Frames\n  frames <source>/u);
 
   let topic = "";
@@ -84,8 +84,5 @@ test("application rejects command shadowing instead of silently choosing an owne
     runCliApplication(["tool"], { write() {} }, application([command("one", "tool"), command("two", "tool")])),
     /owned by both one and two/u,
   );
-  await assert.rejects(
-    runCliApplication(["build"], { write() {} }, application([command("video", "build")])),
-    /cannot replace generic command "build"/u,
-  );
+  await runCliApplication(["build"], { write() {} }, application([command("video", "build")]));
 });

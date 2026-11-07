@@ -3,11 +3,10 @@ import { resolve } from "node:path";
 
 import { resolveProjectRoot as resolveMarkedProjectRoot } from "@hypit/project";
 
-import { genericCliCommandNames } from "./command.js";
 import type { CliDistribution } from "./distribution.js";
-import { runCli } from "./main.js";
 import { writeCliHelp } from "./output.js";
 import type { CliIo } from "./output.js";
+import { CliUsageError } from "./usage-error.js";
 
 /**
  * One explicitly trusted command surface selected by an application Distribution.
@@ -53,7 +52,7 @@ export type CliApplication = {
 export function indexCliCommandModules(
   modules: readonly CliCommandModule[],
 ): ReadonlyMap<string, CliCommandModule> {
-  const reserved = new Set<string>(["help", ...genericCliCommandNames]);
+  const reserved = new Set<string>(["help"]);
   const result = new Map<string, CliCommandModule>();
   for (const module of modules) {
     if (module.format !== "hypit.cli-command@1") {
@@ -125,8 +124,5 @@ export async function runCliApplication(
     await module.run(argv, io, context);
     return;
   }
-  await runCli(argv, io, {
-    ...application.distribution,
-    bootstrapPackages: application.bootstrapPackages ?? application.distribution.bootstrapPackages,
-  }, context);
+  throw new CliUsageError(`Unknown command ${JSON.stringify(argv[0])}`, "hypit help");
 }

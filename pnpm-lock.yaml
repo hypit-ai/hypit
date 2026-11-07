@@ -11,6 +11,9 @@ importers:
       '@hypit/browser-capture':
         specifier: workspace:^0.2.1
         version: link:packages/browser-capture
+      '@hypit/build-cli':
+        specifier: workspace:^0.1.0
+        version: link:packages/build-cli
       '@hypit/media-local-cli':
         specifier: workspace:^0.1.0
         version: link:packages/media-local-cli
@@ -486,6 +489,12 @@ importers:
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../..
+
+  packages/build-cli:
+    dependencies:
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
 
   packages/canvas-view:
     dependencies:
@@ -2104,12 +2113,9 @@ importers:
         version: link:../protocol
 
   packages/resource-store:
-    devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
+    dependencies:
       '@hypit/protocol':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../protocol
 
   packages/result:
@@ -2397,6 +2403,9 @@ importers:
       '@hypit/author':
         specifier: workspace:^0.0.0-dev
         version: link:../author
+      '@hypit/build-cli':
+        specifier: workspace:^0.1.0
+        version: link:../build-cli
       '@hypit/canvas-view':
         specifier: workspace:^0.1.0
         version: link:../canvas-view

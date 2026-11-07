@@ -18,6 +18,14 @@ const hostModule: CliCommandModule = {
   run(_argv, io) { io.write("host port reached\n"); },
 };
 
+const buildModule: CliCommandModule = {
+  format: "hypit.cli-command@1",
+  id: "test.build",
+  commands: ["build"],
+  writeHelp() {},
+  run() {},
+};
+
 async function fixture(command = "greet"): Promise<{
   readonly root: string;
   readonly distribution: string;
@@ -125,7 +133,8 @@ test("a project command contribution cannot replace a root command", async () =>
   try {
     await assert.rejects(runInstalledCliApplication(["cli", "use", "@acme/tools/cli"], { write() {} }, {
       distribution: unusedDistribution, distributionRoot: value.distribution, cwd: value.project,
-    }), /cannot replace generic command "build"/u);
+      commandModules: [buildModule],
+    }), /owned by both test\.build and @acme\/tools/u);
     const manifest = JSON.parse(await readFile(join(value.project, "package.json"), "utf8"));
     assert.deepEqual(manifest.hypit, { project: true });
   } finally { await rm(value.root, { recursive: true, force: true }); }

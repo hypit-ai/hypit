@@ -14,6 +14,7 @@
   ],
   "dependencies": {
     "@hypit/author": "workspace:^0.0.0-dev",
+    "@hypit/build-cli": "workspace:^0.1.0",
     "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/audiovisual-audio": "workspace:^0.1.0",
     "@hypit/audiovisual-author": "workspace:^0.1.0",

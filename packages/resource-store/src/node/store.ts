@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { link, mkdir, open as openFile, rm, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-import { isResourceId } from "@hypit/hypit/protocol";
+import { isResourceId } from "@hypit/protocol";
 import type { BlobRef, ResourceId } from "@hypit/protocol";
 import type { ResourceIOOptions, StreamingResourceStore } from "../index.js";
 

@@ -890,6 +890,26 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
   io.write([
     colors.accent(colors.strong("Hypit")),
     "",
+    colors.strong("Installation"),
+    row("version [--check]", "show this installed Hypit Distribution"),
+    row("cli status|use|remove", "manage explicit project CLI contributions"),
+    "",
+    colors.strong("Output"),
+    row("--json", "stable machine view"),
+    row("--verbose", "add bounded operational detail"),
+    row("--color auto|always|never", "control ANSI color"),
+    row("--debug", "include internal trace frames on failure"),
+    "",
+  ].join("\n"));
+}
+
+/** Root help owned by the long-compilation command adapter, not the CLI Host. */
+export function writeBuildCliRootHelp(io: CliIo): void {
+  const colors = palette(io.terminal?.isTTY === true && io.terminal.color);
+  const row = (command: string, description: string, width = 30): string =>
+    `  ${command}${" ".repeat(Math.max(2, width - command.length))}${description}`;
+  io.write([
+    "",
     colors.strong("Authoring"),
     row("check <source>", "verify one Author source"),
     row("plan <source>", "show one explicit target selection without executing"),
@@ -909,16 +929,6 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
     row("activity [--watch]", "show active Builds and their current phases"),
     row("cancel <build-id>", "withdraw one active Build"),
     row("auth status|login|logout", "manage Endpoint credentials"),
-    "",
-    colors.strong("Installation"),
-    row("version [--check]", "show this installed Hypit Distribution"),
-    row("cli status|use|remove", "manage explicit project CLI contributions"),
-    "",
-    colors.strong("Output"),
-    row("--json", "stable machine view"),
-    row("--verbose", "add bounded operational detail"),
-    row("--color auto|always|never", "control ANSI color"),
-    row("--debug", "include internal trace frames on failure"),
     "",
   ].join("\n"));
 }

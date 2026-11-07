@@ -6,6 +6,7 @@ import test from "node:test";
 
 import { createToolchainDistribution } from "@hypit/toolchain";
 import { cliCommandModules as toolchainCommandModules } from "@hypit/toolchain/cli";
+import { createBuildCliCommandModules } from "@hypit/build-cli";
 import { loadDiscoveredSourcePackages, runCli as runCommand, runCliApplication } from "@hypit/cli";
 import { installDistributionPackageResolution } from "@hypit/loader/node";
 
@@ -19,7 +20,7 @@ const runCli = (
     ? [] : [toolchainDistribution.packageRoot]);
   return runCliApplication([...argv, "--json"], io, {
     distribution: toolchainDistribution,
-    commandModules: toolchainCommandModules,
+    commandModules: [...createBuildCliCommandModules(toolchainDistribution), ...toolchainCommandModules],
   });
 };
 

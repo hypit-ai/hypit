@@ -265,6 +265,7 @@
     "vitepress": "^1.6.4"
   },
   "dependencies": {
+    "@hypit/build-cli": "workspace:^0.1.0",
     "@hypit/browser-capture": "workspace:^0.2.1",
     "@hypit/speech-estimate": "workspace:^0.1.2",
     "@hypit/media-local-cli": "workspace:^0.1.0",

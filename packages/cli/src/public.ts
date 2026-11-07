@@ -5,7 +5,7 @@ export { parseCliDecimalInteger } from "./decimal-integer.js";
 export { cliEndpointLine, cliEndpointView, createCliScratchResources, openCliRuntimeHost, selectCliEndpoint } from "./immediate.js";
 export type { CliRuntimeSelectionContext } from "./immediate.js";
 export { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
-export { writeCliOutput } from "./output.js";
+export { writeBuildCliRootHelp, writeCliHelp, writeCliOutput } from "./output.js";
 export { loadDiscoveredSourcePackages } from "./source-packages.js";
 export { discoverSourcePackages } from "./source-discovery.js";
 export type { CliCompilerOptions, CliDistribution } from "./distribution.js";

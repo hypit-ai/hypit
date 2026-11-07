@@ -17,7 +17,7 @@ export { discoverSourcePackages } from "./source-discovery.js";
 export { loadDiscoveredSourcePackages } from "./source-packages.js";
 export { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
 export { resolveProjectRoot } from "@hypit/project";
-export { renderCliError, writeCliHelp, writeCliOutput } from "./output.js";
+export { renderCliError, writeBuildCliRootHelp, writeCliHelp, writeCliOutput } from "./output.js";
 export type {
   CliColorMode,
   CliIo,
