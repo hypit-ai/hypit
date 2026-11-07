@@ -23,7 +23,9 @@ import type { CredentialStore, CredentialValue } from "@hypit/hypit/runtime";
 import type { ResourceStore } from "@hypit/resource-store";
 import { FileResourceStore } from "@hypit/resource-store/node";
 import type { ProductHistory } from "@hypit/hypit/product";
+import { FileProductHistory } from "@hypit/hypit/product/node";
 import type { BuildResultHistory } from "@hypit/hypit/result";
+import { FileBuildResultHistory } from "@hypit/hypit/result/node";
 import type { PublicationStoreLocation } from "./execution.js";
 import { FileRunFinalizationStore } from "./result-storage/store.js";
 import type { RunFinalizationStore } from "./result-storage/types.js";
@@ -348,7 +350,9 @@ async function openPublicationStoresInternal(
     resolve(location.root, location.historyPath),
     resolve(location.root, location.productsPath),
   );
-  return { history: finalization, products: finalization.products, finalization };
+  const history = new FileBuildResultHistory(resolve(location.root, location.historyPath));
+  const products = new FileProductHistory(resolve(location.root, location.productsPath));
+  return { history, products, finalization };
 }
 
 export async function openPublicationStoresAtLocation(

@@ -1,6 +1,8 @@
 import { join } from "node:path";
 
 import { FileRunFinalization, FileRunFinalizationStore } from "../../../runtime-local/src/result-storage/index.js";
+import { FileBuildResultHistory } from "@hypit/result/node";
+import { FileProductHistory } from "@hypit/product/node";
 import type { ProductExporter } from "@hypit/product";
 import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
 import { sameType } from "@hypit/protocol";
@@ -62,8 +64,8 @@ export function resultDistribution(): CliDistribution {
           historyPath: ".hypit/results",
           productsPath: ".hypit/products",
         },
-        history: finalization,
-        products: finalization.products,
+        history: new FileBuildResultHistory(join(projectRoot, ".hypit", "results")),
+        products: new FileProductHistory(join(projectRoot, ".hypit", "products")),
         close() {},
       };
     },

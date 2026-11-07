@@ -9,7 +9,7 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 
 import { assertOrderedBuildId } from "@hypit/hypit/protocol";
-import { FileBuildResultHistory, buildResultDirectory } from "@hypit/hypit/result/node";
+import { buildResultDirectory } from "@hypit/hypit/result/node";
 import { productFromStored } from "@hypit/hypit/product";
 
 import type {
@@ -156,30 +156,31 @@ export class FileRunFinalization {
 }
 
 /** Runtime-only writable publication and recovery store. */
-export class FileRunFinalizationStore extends FileBuildResultHistory implements RunFinalizationStore {
-  readonly products: FileProductPublicationStore;
+export class FileRunFinalizationStore implements RunFinalizationStore {
+  readonly root: string;
+  readonly #products: FileProductPublicationStore;
 
   constructor(root: string, productRoot: string) {
-    super(root);
-    this.products = new FileProductPublicationStore(productRoot);
+    this.root = resolve(root);
+    this.#products = new FileProductPublicationStore(productRoot);
   }
 
   async create(seed: RunFinalizationSeed): Promise<FileRunFinalization> {
-    return await FileRunFinalization.create(this.root, this.products.root, seed);
+    return await FileRunFinalization.create(this.root, this.#products.root, seed);
   }
 
   async openFinalizer(build: string): Promise<FileRunFinalization | undefined> {
     const directory = buildResultDirectory(this.root, build);
     return await readStoredBuildResult(directory) === undefined
       ? undefined
-      : await FileRunFinalization.open(directory, this.products);
+      : await FileRunFinalization.open(directory, this.#products);
   }
 
   async removeIncomplete(build: string): Promise<void> {
     const manifest = await this.readStored(build);
     if (manifest === undefined) return;
     assert(manifest.outcome === undefined, `Finished Build Result ${build} cannot be removed`);
-    await this.products.removeIncomplete(build);
+    await this.#products.removeIncomplete(build);
     await rm(buildResultDirectory(this.root, build), { recursive: true, force: true });
   }
 

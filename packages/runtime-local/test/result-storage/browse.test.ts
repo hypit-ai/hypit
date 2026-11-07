@@ -1,29 +1,27 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, open, readFile, readdir, rm, stat, utimes, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 
-import { buildResultDirectory, FileRunFinalization, FileRunFinalizationStore } from "../../src/result-storage/index.js";
-import type { BlobRef } from "@hypit/protocol";
+import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildResultHistory } from "@hypit/result/node";
 
 import {
-  structuredType,
   publicationIntent,
-  videoType,
 } from "./repository-scenario.js";
 
 test("filesystem Run history records one Product address per Output and browses newest first", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-build-result-browse-"));
-  const repository = new FileRunFinalizationStore(root, join(root, "products"));
+  const finalization = new FileRunFinalizationStore(root, join(root, "products"));
+  const history = new FileBuildResultHistory(root);
   const ids = [
     "bld_20260901T100000001Z_0000000001",
     "bld_20260902T100000002Z_0000000001",
     "bld_20260903T100000003Z_0000000001",
   ];
   try {
-    await assert.rejects(repository.create({
+    await assert.rejects(finalization.create({
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "/project/main.svml",
       targets: ["video"],
@@ -34,7 +32,7 @@ test("filesystem Run history records one Product address per Output and browses 
     }), /name video is repeated/u);
 
     for (const id of ids) {
-      const writer = await repository.create({
+      const writer = await finalization.create({
         id,
         sourcePath: "/project/main.svml",
         targets: ["video"],
@@ -44,11 +42,11 @@ test("filesystem Run history records one Product address per Output and browses 
     }
     assert.deepEqual(await readdir(root), ["2026-09-01", "2026-09-02", "2026-09-03", "products"]);
 
-    const first = await repository.browse({ limit: 2 });
+    const first = await history.browse({ limit: 2 });
     assert.deepEqual(first.results.map((item) => item.id), [ids[2], ids[1]]);
     assert.equal(first.next, ids[1]);
     if (first.next === undefined) throw new Error("expected an older Result cursor");
-    const second = await repository.browse({ limit: 2, before: first.next });
+    const second = await history.browse({ limit: 2, before: first.next });
     assert.deepEqual(second.results.map((item) => item.id), [ids[0]]);
     assert.equal(second.next, undefined);
   } finally {

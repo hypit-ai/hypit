@@ -20,6 +20,8 @@ import test from "node:test";
 import { FileResourceStore } from "@hypit/resource-store/node";
 import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import type { RunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildResultHistory } from "@hypit/result/node";
+import { FileProductHistory } from "@hypit/hypit/product/node";
 import { isBlobRef } from "@hypit/protocol";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";
@@ -92,10 +94,10 @@ test("a completed file closes in Product storage and leaves no Runtime working c
       publicationStores: publicationStoreLocation(directory),
     });
     assert.equal((await finishClaimedBuild(runtime)).outcome, "complete");
-    const results = new FileRunFinalizationStore(join(directory, "results"), join(directory, ".hypit", "products"));
-    const result = await results.read(id);
+    const result = await new FileBuildResultHistory(join(directory, "results")).read(id);
     assert.equal(result?.outputs["clip.video"]?.representation, "file");
-    const resolved = await results.products.resolveProduct({ publication: id, name: "clip.video" });
+    const resolved = await new FileProductHistory(join(directory, ".hypit", "products"))
+      .resolveProduct({ publication: id, name: "clip.video" });
     assert.ok(resolved !== undefined && isBlobRef(resolved.value));
     if (resolved === undefined || !isBlobRef(resolved.value)) throw new Error("expected completed Result file");
     const opened = await resolved.openResource(resolved.value);
@@ -159,7 +161,7 @@ test("a failed Build keeps published Outputs completed before removing active Ru
       publicationStores: publicationStoreLocation(directory),
     });
     assert.equal((await finishClaimedBuild(runtime)).outcome, "failed");
-    const result = await new FileRunFinalizationStore(join(directory, "results"), join(directory, "products"))
+    const result = await new FileBuildResultHistory(join(directory, "results"))
       .read("bld_20260902T120000005Z_0000000001");
     assert.equal(result?.outcome, "failed");
     assert.equal(result?.failure, "generation failed");
@@ -210,7 +212,7 @@ for (const phase of ["submit", "poll"] as const) {
       const id = "bld_20260906T110000000Z_0000000001";
       await runtime.build(durableBuildRequest(directory, id, buildFixture));
       assert.equal((await finishClaimedBuild(runtime)).outcome, "failed");
-      const result = await new FileRunFinalizationStore(join(directory, "results"), join(directory, "products")).read(id);
+      const result = await new FileBuildResultHistory(join(directory, "results")).read(id);
       assert.equal(result?.failure, "first request failed");
       assert.equal(result?.outputs["target.2"]?.representation, "inline");
       assert.equal(result?.outputs["target.2"]?.value, "retained sibling output");
@@ -272,7 +274,11 @@ test("an interrupted Result write can be retried internally without rerunning th
       removeIncomplete: async (build) => await base.removeIncomplete(build),
       readStored: async (build) => await base.readStored(build),
     };
-    return { history: base, products: base.products, finalization };
+    return {
+      history: new FileBuildResultHistory(join(location.root, location.historyPath)),
+      products: new FileProductHistory(join(location.root, location.productsPath)),
+      finalization,
+    };
   };
   try {
     const runtime = await createLocalRuntime({

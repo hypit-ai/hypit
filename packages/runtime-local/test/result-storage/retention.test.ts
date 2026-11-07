@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 
-import { buildResultDirectory, FileRunFinalization, FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { buildResultDirectory, FileRunFinalization } from "../../src/result-storage/index.js";
+import { FileProductHistory } from "@hypit/hypit/product/node";
 import type { BlobRef } from "@hypit/protocol";
 import { productPublicationDirectory } from "@hypit/hypit/product/node";
 
@@ -170,9 +171,9 @@ test("published Output names are exact data keys, including JavaScript object na
       assert.equal(output?.representation === "inline" ? output.value : undefined, index);
     }
 
-    const repository = new FileRunFinalizationStore(root, join(root, "products"));
-    assert.equal((await repository.products.resolveProduct({ publication: manifest.id, name: "constructor" }))?.value, 0);
-    assert.equal(await repository.products.resolveProduct({ publication: manifest.id, name: "valueOf" }), undefined);
+    const products = new FileProductHistory(join(root, "products"));
+    assert.equal((await products.resolveProduct({ publication: manifest.id, name: "constructor" }))?.value, 0);
+    assert.equal(await products.resolveProduct({ publication: manifest.id, name: "valueOf" }), undefined);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

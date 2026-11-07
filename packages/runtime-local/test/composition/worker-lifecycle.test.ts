@@ -18,7 +18,7 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import { FileResourceStore } from "@hypit/resource-store/node";
-import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildResultHistory } from "@hypit/result/node";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";
 import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
@@ -185,7 +185,7 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
     const clientStatus = await firstRuntime.inspect("bld_20260902T120000001Z_0000000001");
     assert.equal(clientStatus, undefined);
     assert.deepEqual((await firstRuntime.activity()).builds, []);
-    const buildResult = await new FileRunFinalizationStore(join(directory, "results"), join(directory, "products"))
+    const buildResult = await new FileBuildResultHistory(join(directory, "results"))
       .read("bld_20260902T120000001Z_0000000001");
     assert.deepEqual(Object.keys(buildResult?.outputs ?? {}).sort(), [
       "final.document",
@@ -250,7 +250,7 @@ test("an immediate Command left in started state fails its Build without invokin
     const terminal = await finishClaimedBuild(runtime);
     assert.equal(terminal.outcome, "failed");
     assert.equal(calls, 0);
-    const failed = await new FileRunFinalizationStore(join(directory, "results"), join(directory, "products"))
+    const failed = await new FileBuildResultHistory(join(directory, "results"))
       .read("bld_20260902T120000008Z_0000000001");
     assert.equal(failed?.outcome, "failed");
     assert.match(failed?.failure ?? "", /stopped before its result was stored/u);

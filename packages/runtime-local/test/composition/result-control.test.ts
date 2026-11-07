@@ -10,6 +10,8 @@ import {
   RuntimeAdapterRegistry,
 } from "@hypit/runtime-local/extension";
 import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildResultHistory } from "@hypit/result/node";
+import { FileProductHistory } from "@hypit/hypit/product/node";
 import { ProducerRegistry } from "@hypit/executor";
 import { MemoryResourceStore } from "@hypit/resource-store";
 import { defineEndpoint } from "@hypit/endpoint";
@@ -53,8 +55,10 @@ test("Build Results belong to the project filesystem without a second selection 
   try {
     const local = await openProjectPublicationStores(project);
     assert.ok(local.finalization instanceof FileRunFinalizationStore);
-    assert.equal(local.history, local.finalization);
-    assert.equal(local.products, local.finalization.products);
+    assert.ok(local.history instanceof FileBuildResultHistory);
+    assert.notEqual(local.history, local.finalization);
+    assert.ok(local.products instanceof FileProductHistory);
+    assert.notEqual(local.products, local.finalization);
     assert.deepEqual(local.location, {
       root: project,
       historyPath: ".hypit/results",

@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as pause } from "node:timers/promises";
 import test from "node:test";
 import { defineBuild } from "@hypit/kernel";
-import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildResultHistory } from "@hypit/result/node";
+import { FileProductHistory } from "@hypit/hypit/product/node";
 import { installDistributionPackageResolution } from "@hypit/loader/node";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { createGreetingBuild, manifest, capabilities, producers, types } from "../execution-scenario.js";
@@ -117,12 +118,12 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
     return id;
   }
   const completed = (directory: string, id: string) => eventually(async () => {
-    const value = await new FileRunFinalizationStore(join(directory, "results"), join(directory, "products")).read(id);
+    const value = await new FileBuildResultHistory(join(directory, "results")).read(id);
     return value?.outcome === undefined ? undefined : value;
   });
   const value = async (directory: string, id: string) => {
-    const output = await new FileRunFinalizationStore(join(directory, "results"), join(directory, "products"))
-      .products.resolveProduct({ publication: id, name: "document" });
+    const output = await new FileProductHistory(join(directory, "products"))
+      .resolveProduct({ publication: id, name: "document" });
     return output?.value;
   };
   try {
@@ -166,7 +167,7 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
     const e = await submit("e", project, "remote-job", true);
     const remote = await eventually(async () => {
       const [operation] = await state.operations.list({ build: e });
-      const ended = await new FileRunFinalizationStore(join(project, "results"), join(project, "products")).read(e);
+      const ended = await new FileBuildResultHistory(join(project, "results")).read(e);
       if (ended?.outcome !== undefined) throw new Error(JSON.stringify(ended));
       return operation?.receipt === undefined ? undefined : operation;
     });

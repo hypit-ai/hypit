@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 
-import { buildResultDirectory, FileRunFinalization, FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { buildResultDirectory, FileRunFinalization } from "../../src/result-storage/index.js";
 import type { BlobRef } from "@hypit/protocol";
 import { productPublicationDirectory } from "@hypit/hypit/product/node";
 

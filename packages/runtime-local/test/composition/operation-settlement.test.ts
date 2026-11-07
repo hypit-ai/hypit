@@ -18,7 +18,7 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import { FileResourceStore } from "@hypit/resource-store/node";
-import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildResultHistory } from "@hypit/result/node";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";
 import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
@@ -107,7 +107,7 @@ for (const cancellation of ["accepted", "unsupported", "failed-build", "host-fai
       assert.equal(completion.outcome, isFailure ? "failed" : "cancelled");
       assert.equal((await fixture.executionStore.listCapacity()).length, 0);
       assert.equal(await runtime.inspect(first), undefined);
-      const result = await new FileRunFinalizationStore(join(directory, "results"), join(directory, "products")).read(first);
+      const result = await new FileBuildResultHistory(join(directory, "results")).read(first);
       assert.equal(result?.outcome, completion.outcome);
       assert.equal(result?.operations?.[0]?.receipt?.id, "job-1");
       assert.equal(result?.operations?.[0]?.outcome, isFailure ? "unsettled" : "cancelled");

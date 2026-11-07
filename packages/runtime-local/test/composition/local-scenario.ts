@@ -4,6 +4,8 @@ import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineBuild } from "@hypit/kernel";
 import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildResultHistory } from "@hypit/result/node";
+import { FileProductHistory } from "@hypit/hypit/product/node";
 import { buildExecutionActivity, createLocalRuntime } from "@hypit/runtime-local";
 import type { BuildCompletion } from "@hypit/runtime-local";
 import { rm } from "node:fs/promises";
@@ -42,7 +44,11 @@ export function projectRuntimeFixture(directory: string) {
         join(location.root, location.historyPath),
         join(location.root, location.productsPath),
       );
-      return { history: finalization, products: finalization.products, finalization };
+      return {
+        history: new FileBuildResultHistory(join(location.root, location.historyPath)),
+        products: new FileProductHistory(join(location.root, location.productsPath)),
+        finalization,
+      };
     },
     credentialStore: new EnvironmentCredentialStore(),
     close: () => state.close(),

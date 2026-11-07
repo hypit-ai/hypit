@@ -5,6 +5,8 @@ import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 
 import { FileRunFinalizationStore } from "../../../runtime-local/src/result-storage/index.js";
+import { FileBuildResultHistory } from "@hypit/result/node";
+import { FileProductHistory } from "@hypit/product/node";
 import { createProducerPackageFacet } from "@hypit/producer";
 import { verifyRecordStructure } from "@hypit/kernel";
 import type { LinkedProgram, TypedRecord } from "@hypit/protocol";
@@ -108,8 +110,8 @@ function distribution(
           historyPath: ".hypit/results",
           productsPath: ".hypit/products",
         },
-        history: finalization,
-        products: finalization.products,
+        history: new FileBuildResultHistory(join(projectRoot, ".hypit", "results")),
+        products: new FileProductHistory(join(projectRoot, ".hypit", "products")),
         close() {},
       };
     },

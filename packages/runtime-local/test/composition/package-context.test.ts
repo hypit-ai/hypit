@@ -18,7 +18,7 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import { FileResourceStore } from "@hypit/resource-store/node";
-import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildResultHistory } from "@hypit/result/node";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";
 import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
@@ -120,7 +120,7 @@ test("project local runtime accepts components loaded from an installed package"
     assert.equal(result.view.activity, "ready");
     const completed = await finishClaimedBuild(runtime);
     assert.equal(completed.outcome, "complete");
-    assert.equal((await new FileRunFinalizationStore(join(runtimeRoot, "results"), join(runtimeRoot, "products"))
+    assert.equal((await new FileBuildResultHistory(join(runtimeRoot, "results"))
       .read("bld_20260902T120000012Z_0000000001"))?.outcome, "complete");
     await runtime.close();
   } finally {

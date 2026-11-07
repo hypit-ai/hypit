@@ -8,7 +8,6 @@ import test from "node:test";
 
 import {
   FileRunFinalization,
-  FileRunFinalizationStore,
 } from "../../../runtime-local/src/result-storage/index.js";
 
 import type { CliDistribution } from "../../src/distribution.js";

@@ -101,7 +101,7 @@ test("history scans older pages for matches and compares project-relative source
   try {
     await writeFile(join(root, "main.svml"), "source", "utf8");
     await fixture(root);
-    const repository = new FileRunFinalizationStore(
+    const finalization = new FileRunFinalizationStore(
       join(root, ".hypit", "results"),
       join(root, ".hypit", "products"),
     );
@@ -109,7 +109,7 @@ test("history scans older pages for matches and compares project-relative source
       "bld_20260902T110000001Z_0000000001",
       "bld_20260902T110000002Z_0000000001",
     ]) {
-      const writer = await repository.create({
+      const writer = await finalization.create({
         id,
         sourcePath: "other.svml",
         targets: [],

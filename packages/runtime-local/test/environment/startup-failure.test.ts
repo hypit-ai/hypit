@@ -7,6 +7,7 @@ import { setTimeout as pause } from "node:timers/promises";
 import test from "node:test";
 import { defineBuild } from "@hypit/kernel";
 import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildResultHistory } from "@hypit/result/node";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { createGreetingBuild, types } from "../execution-scenario.js";
 import { statePath } from "../../src/config.js";
@@ -18,7 +19,8 @@ test("an executor that fails before ready records a failed Build and leaves supe
   const root = await mkdtemp(join(tmpdir(), "hypit-executor-startup-"));
   const dataRoot = join(root, "runtime");
   const profile = join(root, "profile.json");
-  const result = new FileRunFinalizationStore(join(root, "results"), join(root, "products"));
+  const finalization = new FileRunFinalizationStore(join(root, "results"), join(root, "products"));
+  const history = new FileBuildResultHistory(join(root, "results"));
   const state = new SqliteRuntimeState(statePath(dataRoot));
   const abort = new AbortController();
   let supervision: Promise<void> | undefined;
@@ -35,7 +37,7 @@ test("an executor that fails before ready records a failed Build and leaves supe
           distributionPackageRoot: distribution, profile: profileValue },
       };
       await state.submissions.prepare(request);
-      await result.create({ id: build, sourcePath: "main.svml", targets: ["document"], publication: { outputs: [{
+      await finalization.create({ id: build, sourcePath: "main.svml", targets: ["document"], publication: { outputs: [{
         name: "document", record: "document:root", publisher: "example.test-product@1",
       }] } });
       await state.submissions.commit({ ...request,
@@ -45,10 +47,10 @@ test("an executor that fails before ready records a failed Build and leaves supe
     };
     const failed = async (build: string) => {
       const deadline = Date.now() + 10_000;
-      let recorded = await result.read(build);
+      let recorded = await history.read(build);
       while (recorded?.outcome === undefined && Date.now() < deadline) {
         await pause(25);
-        recorded = await result.read(build);
+        recorded = await history.read(build);
       }
       assert.equal(recorded?.outcome, "failed");
       assert.match(recorded.failure ?? "", /executor startup failed/u);

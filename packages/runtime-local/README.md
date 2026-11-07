@@ -143,6 +143,8 @@ Open finalization state, incremental Product materialization, finalizer recovery
 publication are private Runtime Local implementation. The assembly exposes separate `history`,
 `products` and `finalization` ports; no caller receives a universal repository. `@hypit/result` owns
 only immutable history types and readers; no writable Result entry point is published for CLI or author packages.
+The filesystem finalization store does not inherit the history reader; sharing a directory root is assembly,
+not an API relationship.
 Runtime working Resources remain internal and Build-local; there is no ResourceStore selector. After
 the Run has an outcome, history is read from the project history store, not Runtime SQLite.
 The submission passes known Resource references to the publication finalizer, separately from the execution

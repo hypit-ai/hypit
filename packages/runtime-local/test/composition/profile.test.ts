@@ -9,7 +9,6 @@ import {
   createRuntimeEndpointAdapterFacet,
   RuntimeAdapterRegistry,
 } from "@hypit/runtime-local/extension";
-import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import { ProducerRegistry } from "@hypit/executor";
 import { MemoryResourceStore } from "@hypit/resource-store";
 import { defineEndpoint } from "@hypit/endpoint";
