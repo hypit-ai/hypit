@@ -5,10 +5,9 @@ Browser playback adapter for a compiled `HtmlProgram` and `AudioProgram`.
 `html-program` owns visual layout and exact frame evaluation. `audio-program`
 owns the audio Programme. This package lowers them into browser playback elements and
 drives both from one absolute Program frame without adding playback concepts to
-either domain value. Studio and embeddable HTML documents are hosts of this
-adapter; neither is implemented in terms of the other. `HtmlDocument` is a portable page delivery,
-whereas Studio owns an editing session and may later combine this fast browser adapter with an exact
-Provider-backed preview.
+either domain value. `@hypit/html-document` is the first host: it closes the two Programmes and
+their material URL bindings into a portable page. Other preview or embedding hosts may use the same
+adapter without changing either terminal Programme.
 
 Media playback uses `HtmlProgram.videoSources`: the adapter binds the shared sided `TemporalMap` evaluator
 to obtain source presentation timestamps for Program frames.
