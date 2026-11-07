@@ -1,4 +1,4 @@
-import { compareCodeUnits, moduleKey, sameType } from "@hypit/protocol";
+import { canonicalize, compareCodeUnits, moduleKey, sameType } from "@hypit/protocol";
 import type {
   BlobRef,
   CanonicalValue,
@@ -19,7 +19,8 @@ import type {
   AuthorInputProvenanceDraft,
   AuthorSourceAssetRequest,
   AuthorSourceExport,
-  AuthorRetainedOutput,
+  AuthorPublishedOutput,
+  AuthorOutputPublication,
   Awaitable,
   DecodedAuthorSource,
 } from "./source.js";
@@ -144,8 +145,8 @@ export type AuthorDeclarationBinding = {
   readonly name: string;
   readonly ref: AuthorValueRef;
   readonly type: TypeRef;
-  /** This declaration owns an Output whose lifetime may outlive one Build. */
-  readonly retained?: true;
+  /** Domain-owned answer for how this Output leaves the current execution. */
+  readonly publication?: AuthorOutputPublication;
 };
 
 export type AuthorRecordDraft = {
@@ -753,7 +754,7 @@ export async function compileAuthorDeclarations(
   }
 
   const exports: AuthorSourceExport[] = [];
-  const retainedOutputs: AuthorRetainedOutput[] = [];
+  const publications: AuthorPublishedOutput[] = [];
   for (const item of prepared) {
     for (const binding of item.bindings) {
       if (binding.ref.kind === "record") {
@@ -778,15 +779,32 @@ export async function compileAuthorDeclarations(
           );
         }
       }
-      if (binding.retained === true) {
+      if (binding.publication !== undefined) {
         if (binding.ref.kind !== "component-output") {
           throw new AuthorDeclarationError(
-            "AUTHOR_DECLARATION_RETAINED_RECORD",
-            `Retained Output ${binding.name} must be produced by a Component.`,
+            "AUTHOR_DECLARATION_PUBLICATION_RECORD",
+            `Published Output ${binding.name} must be produced by a Component.`,
             item.declaration.range,
           );
         }
-        retainedOutputs.push({ name: binding.name, ref: binding.ref, type: binding.type });
+        if (binding.publication.publisher.trim().length === 0) {
+          throw new AuthorDeclarationError(
+            "AUTHOR_DECLARATION_PUBLICATION_OWNER",
+            `Published Output ${binding.name} has no publisher.`,
+            item.declaration.range,
+          );
+        }
+        publications.push({
+          name: binding.name,
+          ref: binding.ref,
+          type: binding.type,
+          publication: {
+            publisher: binding.publication.publisher,
+            ...(binding.publication.parameters === undefined
+              ? {}
+              : { parameters: canonicalize(binding.publication.parameters) }),
+          },
+        });
       }
       exports.push({ name: binding.name, ref: binding.ref, type: binding.type });
     }
@@ -795,7 +813,7 @@ export async function compileAuthorDeclarations(
     records,
     components,
     exports: exports.sort((left, right) => compareCodeUnits(left.name, right.name)),
-    retainedOutputs: retainedOutputs.sort((left, right) => compareCodeUnits(left.name, right.name)),
+    publications: publications.sort((left, right) => compareCodeUnits(left.name, right.name)),
     provenance,
   };
 }

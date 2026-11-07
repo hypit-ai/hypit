@@ -16,7 +16,7 @@ import type { BlobRef } from "@hypit/protocol";
 
 import {
   structuredType,
-  resultIntent,
+  publicationIntent,
   videoType,
 } from "./repository-scenario.js";
 
@@ -27,7 +27,7 @@ test("a failed filesystem sync cannot make a later resource inherit stale bytes"
       id: "bld_20260924T100000000Z_0000000001",
       sourcePath: "/project/main.svml",
       targets: ["a", "b", "z"],
-      intent: resultIntent(["a", "b", "z"].map((name) => ({ name, record: name }))),
+      publication: publicationIntent(["a", "b", "z"].map((name) => ({ name, record: name }))),
     });
     const snapshot = (names: readonly string[]) => names.map((name) => ({
       id: name, type: videoType, value: {
@@ -72,7 +72,7 @@ test("Result writer recovers one numeric cursor across file extensions and the 9
     writer: {
       resources: { old: "files/file-9999.mp4" },
       values: { old: "values/value-9999.json" },
-      intent: resultIntent([{ name: "image" }]),
+      publication: publicationIntent([{ name: "image" }]),
     },
     sync: {
       records: [{ id: "record:image", type: videoType, value: ({ artifact }) }],
@@ -103,7 +103,7 @@ test("Result writer bounds resource writes and drains started work before a fail
     },
     writer: {
       resources: {}, values: {},
-      intent: resultIntent([{ name: "images" }]),
+      publication: publicationIntent([{ name: "images" }]),
     },
     sync: {
       records: [{ id: "record:images", type: videoType, value: (artifacts) }],

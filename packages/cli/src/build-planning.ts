@@ -9,7 +9,7 @@ import { evaluateProducerPlan, ProducerRegistry } from "@hypit/executor";
 import type { EvaluatedProducerStep } from "@hypit/executor";
 import type { PackageContribution } from "@hypit/loader";
 import { capabilityIdentity, capabilityKey, compareCodeUnits, typeKey } from "@hypit/protocol";
-import type { BuildDefinition, CanonicalValue, CapabilityRef, ResultIntent } from "@hypit/protocol";
+import type { BuildDefinition, CanonicalValue, CapabilityRef, PublicationIntent } from "@hypit/protocol";
 import type { BuildView } from "@hypit/kernel";
 import type { CliBuildAuthoring, CliEndpointQuery, CliRuntimeInspection } from "./runtime-port.js";
 import type { PlanRequest, PlanRequestOutput, PricingRequest } from "./output.js";
@@ -23,12 +23,12 @@ import {
 export function createBuildAuthoring(options: {
   readonly source: string;
   readonly targets: readonly string[];
-  readonly intent: ResultIntent;
+  readonly publication: PublicationIntent;
 }): CliBuildAuthoring {
   return {
     sourcePath: resolve(options.source),
     targets: options.targets,
-    intent: options.intent,
+    publication: options.publication,
   };
 }
 

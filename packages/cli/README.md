@@ -70,7 +70,7 @@ promising to restart failed execution or describing the interruption as a Result
 | `plan` | Targets and complete aggregate external work, Endpoint selection and diagnostics | `--verbose`: bounded individual request facts; `--request <number>`: one complete request |
 | `pricing` | Requests that may incur a Provider charge and their rate material | `--verbose`: declared no-charge requests and original documents |
 | `status`, `activity` | Current work, Provider-reported phases and failures | `--verbose`: individual operations; activity also includes capacity reservations |
-| `inspect` | Targets, retained Outputs, outcome and failure evidence | `--output <name>` selects one Output; `--verbose` adds full operation receipts and Output details |
+| `inspect` | Targets, published Outputs, outcome and failure evidence | `--output <name>` selects one Output; `--verbose` adds full operation receipts and Output details |
 | `doctor` | Complete project/Runtime diagnostics | `--verbose`: successful diagnostic detail |
 
 `runtime`, `programs`, `paths` and the private Worker entry belong to the selected Local Runtime
@@ -78,16 +78,16 @@ command module, not to this generic command engine. They still appear under the 
 because the official executable binds `createLocalRuntimeCliCommandModules()` to its exact Local
 Host port at application assembly. The module never casts the generic Distribution to discover that port.
 
-Build targets count demanded author outputs. Result output counts describe only retained outputs
+Build targets count demanded author outputs. Result output counts describe only published outputs
 actually stored by each Build; they are not a count of targets or newly generated assets. `history <output>`
 lists Builds containing that name rather than deduplicating generation events or guessing whether
 mutable external files still contain the same bytes.
-`inspect` chooses its bounded retained-Output page before resolving references, so an Output outside
+`inspect` chooses its bounded published-Output page before resolving references, so an Output outside
 that page cannot delay or break inspection. Targets remain separate execution evidence; they do not
-select or rank retained Outputs.
+select or rank published Outputs.
 
 `plan` retains every target, demanded request and preflight diagnostic in both encodings. `--limit`
-bounds expanded detail, not the work inventory before grouping. `inspect --limit` bounds the retained
+bounds expanded detail, not the work inventory before grouping. `inspect --limit` bounds the published
 Output descriptions it opens and reports the omitted count; `--verbose` changes detail, not selection.
 No-charge classification continues to belong to the selected Endpoint's pricing declaration.
 

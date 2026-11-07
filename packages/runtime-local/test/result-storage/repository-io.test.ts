@@ -11,7 +11,7 @@ import type { BlobRef } from "@hypit/protocol";
 
 import {
   structuredType,
-  resultIntent,
+  publicationIntent,
   videoType,
 } from "./repository-scenario.js";
 
@@ -23,7 +23,7 @@ test("finished Output readers expose only that Output's retained Resources", asy
     const source: BlobRef = { kind: "blob", resource: "res_source_video", size: bytes.byteLength, mediaType: "video/mp4" };
     const writer = await FileBuildResult.create(root, {
       id: build, sourcePath: "main.svml", targets: ["video"],
-      intent: resultIntent([
+      publication: publicationIntent([
         { name: "video", record: "record:video" },
         { name: "video-copy", record: "record:video" },
       ]),
@@ -85,12 +85,12 @@ test("filesystem decodes Result and writer data before exposing it", async () =>
       id: unfinished,
       sourcePath: "main.svml",
       targets: [],
-      intent: resultIntent([]),
+      publication: publicationIntent([]),
     });
     await writeFile(join(buildResultDirectory(root, unfinished), ".writer.json"), JSON.stringify({
       resources: null,
       values: {},
-      intent: { outputs: [] },
+      publication: { outputs: [] },
     }));
     await assert.rejects(writer.sync({
       records: [],
@@ -113,7 +113,8 @@ test("reserved-looking domain objects remain ordinary domain data", async () => 
       targets: ["value"],
       outcome: "complete",
       finishedAt: 1,
-      outputs: { value: { type: videoType, value: { kind: "value", path: "values/value-0001.json" } } },
+      outputs: { value: { type: videoType, publisher: "example.test-product@1",
+        value: { kind: "value", path: "values/value-0001.json" } } },
     }));
     await writeFile(join(directory, "values", "value-0001.json"), JSON.stringify({
       format: "hypit.result-value@1",
@@ -141,7 +142,8 @@ test("reading a value-document Output manifest does not open its document", asyn
       targets: ["take"],
       outcome: "complete",
       finishedAt: 1,
-      outputs: { take: { type: structuredType, value: { kind: "value", path: "values/missing.json" } } },
+      outputs: { take: { type: structuredType, publisher: "example.test-product@1",
+        value: { kind: "value", path: "values/missing.json" } } },
     }));
     const repository = new FileBuildResultStore(root);
     const manifest = await repository.read(id);

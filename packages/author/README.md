@@ -26,12 +26,12 @@ so a declaration can read a later authored Record without making source order se
 outputs expose only their reference and Type; the compiler never fabricates a Record value for work
 that has not executed.
 
-A binding may additionally mark one Component output as `retained`. This is a package-owned lifetime
-decision: it means the produced value is an independently recoverable artifact, not merely an
-intermediate value named in a Source. Authored Records cannot be retained because they already belong
-to the author project. The compiler carries retained outputs through the complete Source closure, so
-moving a declaration into an imported Source does not change whether its result survives a Build.
-Explicit Build Targets remain separate execution requests and do not imply retention.
+A binding may additionally attach a `publication` answer to one Component output. This is not a
+boolean lifetime hint. It names the exact domain-owned publisher that should receive the completed
+value and may carry publisher-owned parameters. The compiler transports that answer through the
+complete Source closure; Runtime does not infer product status from a Blob, Type, Target, price or
+Provider. A plain output remains an ordinary graph value. Explicit Build Targets are separate
+execution requests and never imply publication.
 
 The compiler's `shape` is the single structural authority for fields, nested declarations, text,
 cardinality, literal choices and accepted reference Types. Author validates that shape before package

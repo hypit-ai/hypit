@@ -70,8 +70,9 @@ test("Source Closure hygienizes author provenance across imported Sources", asyn
         components: [{ id: "generated", fragment: identityFragment, inputs: {},
           outputs: { result: "generated.value" } }],
         exports: [{ name: "value", ref: { kind: "record", id: "value" }, type: identityType }],
-        retainedOutputs: [{ name: "generated.value",
-          ref: { kind: "component-output", component: "generated", output: "result" }, type: identityType }],
+        publications: [{ name: "generated.value",
+          ref: { kind: "component-output", component: "generated", output: "result" }, type: identityType,
+          publication: { publisher: "example.identity-product@1" } }],
         provenance: [{
           range: { start: 1, end: 9 },
           records: ["value"],
@@ -100,14 +101,14 @@ test("Source Closure hygienizes author provenance across imported Sources", asyn
   assert.equal(compiled.program.records.some((record) => record.id === mainRecord), true);
   assert.equal(compiled.program.records.some((record) => record.id === childRecord), true);
   assert.notEqual(bySource.get("main")?.inputs[0]?.id, bySource.get("child")?.inputs[0]?.id);
-  assert.deepEqual(compiled.retainedOutputs.map((output) => output.name), [
+  assert.deepEqual(compiled.publications.map((output) => output.name), [
     "child/generated.value",
     "generated.value",
   ]);
-  assert.equal(compiled.retainedOutputs.every((output) => output.ref.kind === "logical-output"), true);
+  assert.equal(compiled.publications.every((output) => output.ref.kind === "logical-output"), true);
 });
 
-test("retained Output identity rejects one Source reached through multiple aliases", async () => {
+test("published Output identity rejects one Source reached through multiple aliases", async () => {
   const frontends = new AuthorFrontendRegistry();
   frontends.register({
     id: frontendId,
@@ -124,8 +125,9 @@ test("retained Output identity rejects one Source reached through multiple alias
         components: [{ id: "generated", fragment: identityFragment, inputs: {},
           outputs: { result: "generated.value" } }],
         exports: [],
-        retainedOutputs: [{ name: "generated.value",
-          ref: { kind: "component-output" as const, component: "generated", output: "result" }, type: identityType }],
+        publications: [{ name: "generated.value",
+          ref: { kind: "component-output" as const, component: "generated", output: "result" }, type: identityType,
+          publication: { publisher: "example.identity-product@1" } }],
       };
     },
   });
@@ -135,7 +137,7 @@ test("retained Output identity rejects one Source reached through multiple alias
     frontends,
     resolveSource() { return source("/project/child", "child"); },
   }), (error: unknown) => error instanceof SourceClosureError
-    && error.code === "AMBIGUOUS_RETAINED_OUTPUT_PATH"
+    && error.code === "AMBIGUOUS_PUBLICATION_PATH"
     && /first, second/u.test(error.message));
 });
 

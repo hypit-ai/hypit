@@ -111,7 +111,7 @@ export class FileBuildResult {
   static async create(root: string, seed: BuildResultSeed): Promise<FileBuildResult> {
     assertOrderedBuildId(seed.id);
     assertBuildResultSeed(seed);
-    const intent = seed.intent;
+    const publication = seed.publication;
     const directory = buildResultDirectory(root, seed.id);
     await mkdir(dirname(directory), { recursive: true });
     const temporary = join(resolve(root), `.preparing-${seed.id}-${randomUUID()}`);
@@ -128,7 +128,7 @@ export class FileBuildResult {
       await writeJsonAtomic(join(temporary, writerStateName), {
         resources: {},
         values: {},
-        intent,
+        publication,
       });
       await rename(temporary, directory);
     } catch (error) {
@@ -193,11 +193,11 @@ export class FileBuildResult {
         decodeBuildResultJson(await readFile(writerPath), writerPath),
         writerPath,
       );
-      const missing = writer.intent.outputs
+      const missing = writer.publication.outputs
         .map((output) => output.name)
         .filter((output) => storedBuildResultOutput(manifest, output) === undefined);
       assert(missing.length === 0,
-        `Build Result ${manifest.id} cannot complete before retained Outputs are stored: ${missing.join(", ")}`);
+        `Build Result ${manifest.id} cannot complete before published Outputs are stored: ${missing.join(", ")}`);
     }
     const executionLog = await preserveExecutionLog(input.executionLog,
       async (path, chunks) => await writeStreamAtomic(join(this.directory, path), chunks));

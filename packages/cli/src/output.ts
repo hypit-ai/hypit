@@ -831,10 +831,10 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
     ],
     inspect: [
       colors.accent(colors.strong("hypit inspect")),
-      colors.dim("Inspect one project-owned Build Result and its retained Outputs."),
+      colors.dim("Inspect one project-owned Build Result and its published Outputs."),
       "",
       "  hypit inspect <build-id> [--output <name>] [--limit <count>] [--project <project>]",
-      "  Lists retained Outputs independently of Targets.",
+      "  Lists published Outputs independently of Targets.",
       "  --output selects one exact name; --limit bounds the Output list.",
     ],
     history: [
@@ -851,7 +851,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
     ],
     result: [
       colors.accent(colors.strong("hypit result")),
-      colors.dim("Export one retained Output from project Result history."),
+      colors.dim("Export one published Output from project Result history."),
       "",
       "  hypit result export <build-id> --output <name> --to <path> [--project <project>]",
       "",
@@ -902,7 +902,7 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
     row("logs <build-id> [--lines <count>]", "read saved Build execution phases and diagnostics"),
     row("status <build-id> [--watch]", "show current work and Result facts"),
     row("inspect <build-id>", "inspect one Result"),
-    row("result export <build-id> --output <name> --to <path>", "export one retained Output"),
+    row("result export <build-id> --output <name> --to <path>", "export one published Output"),
     "",
     colors.strong("Runtime"),
     row("doctor [profile]", "diagnose selected external setup"),

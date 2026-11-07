@@ -90,7 +90,7 @@ function distribution(
           type: { module: { name: "example.value", version: "1" }, name: "Value" },
           ref: { kind: "logical-output", id: "result" },
         }],
-        retainedOutputs: [],
+        publications: [],
         attachments: [],
       }),
       async refineRecord(program: LinkedProgram, record: TypedRecord) {

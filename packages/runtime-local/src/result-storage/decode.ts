@@ -1,6 +1,6 @@
 import {
   assertOrderedBuildId,
-  assertResultIntent,
+  assertPublicationIntent,
   createModuleRef,
   createTypeRef,
 } from "@hypit/hypit/protocol";
@@ -26,6 +26,20 @@ function object(value: unknown, subject: string): Readonly<Record<string, unknow
     throw new Error(`${subject} must be an object`);
   }
   return value as Readonly<Record<string, unknown>>;
+}
+
+function canonicalValue(
+  value: unknown,
+  subject: string,
+): import("@hypit/hypit/protocol").CanonicalValue {
+  if (value === null || typeof value === "boolean" || typeof value === "string") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (Array.isArray(value)) {
+    return value.map((child, index) => canonicalValue(child, `${subject}[${index}]`));
+  }
+  const record = object(value, subject);
+  return Object.fromEntries(Object.entries(record)
+    .map(([name, child]) => [name, canonicalValue(child, `${subject}.${name}`)]));
 }
 
 function text(value: unknown, subject: string): string {
@@ -108,6 +122,11 @@ function outputs(value: unknown, subject: string): Readonly<Record<string, Store
     const item = object(value, `${subject}[${JSON.stringify(name)}]`);
     return [name, {
       type: typeRef(item.type, `${subject}[${JSON.stringify(name)}].type`),
+      publisher: text(item.publisher, `${subject}[${JSON.stringify(name)}].publisher`),
+      ...(item.publicationParameters === undefined
+        ? {}
+        : { publicationParameters: canonicalValue(item.publicationParameters,
+            `${subject}[${JSON.stringify(name)}].publicationParameters`) }),
       value: outputValue(item.value, `${subject}[${JSON.stringify(name)}].value`),
     }] as const;
   }));
@@ -243,34 +262,37 @@ export function decodeBuildResultWriterState(
   subject = "Build Result writer state",
 ): BuildResultWriterState {
   const item = object(value, subject);
-  const rawIntent = object(item.intent, `${subject}.intent`);
-  if (!Array.isArray(rawIntent.outputs)) throw new Error(`${subject}.intent.outputs must be an array`);
+  const rawIntent = object(item.publication, `${subject}.publication`);
+  if (!Array.isArray(rawIntent.outputs)) throw new Error(`${subject}.publication.outputs must be an array`);
   if (Object.keys(rawIntent).some((name) => name !== "outputs")) {
-    throw new Error(`${subject}.intent must contain only outputs`);
+    throw new Error(`${subject}.publication must contain only outputs`);
   }
   const names = new Set<string>();
   const outputs = rawIntent.outputs.map((value, index) => {
-    const output = object(value, `${subject}.intent.outputs[${index}]`);
+    const output = object(value, `${subject}.publication.outputs[${index}]`);
     for (const key of Object.keys(output)) {
-      if (key !== "name" && key !== "record") {
-        throw new Error(`${subject}.intent.outputs[${index}] has an unexpected ${key} field`);
+      if (key !== "name" && key !== "record" && key !== "publisher" && key !== "parameters") {
+        throw new Error(`${subject}.publication.outputs[${index}] has an unexpected ${key} field`);
       }
     }
-    const name = text(output.name, `${subject}.intent.outputs[${index}].name`);
-    if (names.has(name)) throw new Error(`${subject} repeats retained Output name ${name}`);
+    const name = text(output.name, `${subject}.publication.outputs[${index}].name`);
+    if (names.has(name)) throw new Error(`${subject} repeats published Output name ${name}`);
     names.add(name);
-    const record = text(output.record, `${subject}.intent.outputs[${index}].record`);
+    const record = text(output.record, `${subject}.publication.outputs[${index}].record`);
+    const publisher = text(output.publisher, `${subject}.publication.outputs[${index}].publisher`);
     return {
       name,
       record,
+      publisher,
+      ...(output.parameters === undefined ? {} : { parameters: output.parameters as import("@hypit/hypit/protocol").CanonicalValue }),
     };
   });
-  const intent = { outputs };
-  assertResultIntent(intent);
+  const publication = { outputs };
+  assertPublicationIntent(publication);
   return {
     resources: pathMap(item.resources, `${subject}.resources`),
     values: pathMap(item.values, `${subject}.values`),
-    intent,
+    publication,
   };
 }
 
@@ -280,17 +302,10 @@ export function decodeBuildResultValueDocument(
 ): BuildResultValueDocument {
   const item = object(value, subject);
   if (item.format !== "hypit.result-value@1") throw new Error(`${subject} is not a Result value document`);
-  const canonical = (raw: unknown, location: string): import("@hypit/hypit/protocol").CanonicalValue => {
-    if (raw === null || typeof raw === "boolean" || typeof raw === "string") return raw;
-    if (typeof raw === "number" && Number.isFinite(raw)) return raw;
-    if (Array.isArray(raw)) return raw.map((child, index) => canonical(child, `${location}[${index}]`));
-    const record = object(raw, location);
-    return Object.fromEntries(Object.entries(record).map(([name, child]) => [name, canonical(child, `${location}.${name}`)]));
-  };
   if (!Array.isArray(item.resources)) throw new Error(`${subject}.resources must be an array`);
   const document: BuildResultValueDocument = {
     format: "hypit.result-value@1",
-    value: canonical(item.value, `${subject}.value`),
+    value: canonicalValue(item.value, `${subject}.value`),
     resources: item.resources.map((raw, index) => {
       const binding = object(raw, `${subject}.resources[${index}]`);
       if (!Array.isArray(binding.at)) throw new Error(`${subject}.resources[${index}].at must be an array`);

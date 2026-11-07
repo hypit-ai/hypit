@@ -71,17 +71,16 @@ virtually compiles the complete candidate Source closure with author projection.
 base-revision comparison and atomic publication remain the embedding Host's responsibility.
 
 `prepareBuild` turns that completed structural selection into a `PreparedBuild`: it derives
-one immutable `ResultIntent` and seals the `BuildDefinition`. An interactive authoring consumer may
+one immutable `PublicationIntent` and seals the `BuildDefinition`. An interactive authoring consumer may
 request `executionView: true` to receive resolved outputs and the Kernel's disposable `BuildView`;
-ordinary Build preparation does not expose either projection. The prepared targets describe the execution goals; the intent separately
-contains only reachable package-owned retained outputs and carries their Result name and current Record
-without leaking Logical Output identities into Result storage.
-CLI catalogs, Runtime submission and Result writing consume
-this intent; they do not repeat structural selection or interpret Result history as author input.
+ordinary Build preparation does not expose either projection. The prepared targets describe execution
+goals; publication separately contains only reachable package answers, including the current Record,
+exact publisher and publisher-owned parameters, without leaking Logical Output identities into storage.
+CLI submission and Runtime transport this answer without deciding what constitutes a product.
 
 `prepareExecutionView` may add exact logical outputs requested by an authoring projection to the same finite
 plan. Those outputs are observations only: they do not become author-facing Targets, do not extend
-`ResultIntent`, and do not acquire cross-Build lifetime. The Compiler does not know which View or package
+`PublicationIntent`, and do not acquire product lifetime. The Compiler does not know which View or package
 requested them.
 
 The package contains no Script, video, Provider, queue, credentials or rendering knowledge. A

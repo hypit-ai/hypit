@@ -49,7 +49,7 @@ test("editable transcript Source compiles back to the exact evidence Record", as
   assert.deepEqual(transcriptWordsFromEvidence(evidence), [{ text: "<你好 & café>", start: 0.1, end: 0.4 }]);
 });
 
-test("the Speech Evidence package exports retained transcripts as editable author Source", async () => {
+test("the Speech Evidence package exports structured transcripts as editable author Source", async () => {
   const evidence = { sampleFrames: 16_000, passages: [{ words: [], chars: [] }] };
   const exporter = resultOutputExporterForType(
     resultOutputExportersFromFacets(hypitPackage.facets),

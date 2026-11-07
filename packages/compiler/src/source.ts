@@ -23,7 +23,7 @@ import type {
   AuthorRecordRefiner,
   AuthorSourceDiscovery,
   AuthorSourceExport,
-  AuthorRetainedOutput,
+  AuthorPublishedOutput,
   AuthorSourceUnit,
   AuthorValueRef,
   CompiledSourceClosure,
@@ -121,7 +121,7 @@ type HygienicSource = {
   readonly records: readonly TypedRecord[];
   readonly components: readonly AuthorComponent[];
   readonly exports: readonly AuthorSourceExport[];
-  readonly retainedOutputs: readonly AuthorRetainedOutput[];
+  readonly publications: readonly AuthorPublishedOutput[];
   readonly provenance: readonly AuthorElementProvenance[];
 };
 
@@ -204,7 +204,7 @@ function hygienizeSource(
     ])),
   }));
   const exports = decoded.exports.map((item) => ({ ...item, ref: mapRef(item.ref) }));
-  const retainedOutputs = (decoded.retainedOutputs ?? []).map((item) => ({ ...item, ref: mapRef(item.ref) }));
+  const publications = (decoded.publications ?? []).map((item) => ({ ...item, ref: mapRef(item.ref) }));
   const unitContent = {
     id: unitId,
     name: source.name,
@@ -221,7 +221,7 @@ function hygienizeSource(
     records,
     components,
     exports,
-    retainedOutputs,
+    publications,
     provenance: authorProjection ? (decoded.provenance ?? []).map((element) => ({
       id: hygienicId("element", unitId, `${element.range.start}:${element.range.end}`),
       source: source.id,
@@ -443,29 +443,29 @@ export async function compileSourceClosure(
   };
   const componentsById = new Map(components.map((component) => [component.id, component]));
   const paths = sourcePaths(entry, ordered);
-  const retainedOutputNames = new Set<string>();
-  const retainedOutputs = ordered.flatMap((unit) => {
+  const publicationNames = new Set<string>();
+  const publications = ordered.flatMap((unit) => {
     const importPaths = paths.get(unit.unit.id);
     if (importPaths === undefined) return [];
-    assert(unit.retainedOutputs.length === 0 || importPaths.size === 1,
-      "AMBIGUOUS_RETAINED_OUTPUT_PATH",
-      `${unit.unit.name} has retained Outputs but is reachable through multiple import paths: ${[...importPaths].sort(compareCodeUnits).join(", ")}`,
+    assert(unit.publications.length === 0 || importPaths.size === 1,
+      "AMBIGUOUS_PUBLICATION_PATH",
+      `${unit.unit.name} has published Outputs but is reachable through multiple import paths: ${[...importPaths].sort(compareCodeUnits).join(", ")}`,
       unit.unit.name);
     const prefix = importPaths.values().next().value as string;
-    return unit.retainedOutputs.map((item) => {
+    return unit.publications.map((item) => {
       const ref = graphRefForExport(item, componentsById);
-      assert(ref.kind === "logical-output", "INVALID_RETAINED_OUTPUT", `${item.name} is not a Component output`);
+      assert(ref.kind === "logical-output", "INVALID_PUBLICATION", `${item.name} is not a Component output`);
       const name = prefix.length === 0 ? item.name : `${prefix}/${item.name}`;
-      assert(!retainedOutputNames.has(name), "DUPLICATE_RETAINED_OUTPUT", `retained Output ${name} is repeated`, name);
-      retainedOutputNames.add(name);
-      return { name, type: item.type, ref };
+      assert(!publicationNames.has(name), "DUPLICATE_PUBLICATION", `published Output ${name} is repeated`, name);
+      publicationNames.add(name);
+      return { name, type: item.type, ref, publication: item.publication };
     });
   }).sort((left, right) => compareCodeUnits(left.name, right.name));
   const compiled: CompiledSourceClosure = {
     closure: sourceClosure,
     program,
     graph,
-    retainedOutputs,
+    publications,
     exports: entry.exports
       .map((item) => ({
         name: item.name,

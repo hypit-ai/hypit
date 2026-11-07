@@ -21,7 +21,7 @@ import {
   generationCapability,
   humanCommand,
   jsonCommand,
-  resultIntent,
+  publicationIntent,
   resultDistribution,
   valueType,
 } from "./build-result-scenario.js";
@@ -110,7 +110,7 @@ test("history scans older pages for matches and compares project-relative source
         id,
         sourcePath: "other.svml",
         targets: [],
-        intent: resultIntent([]),
+        publication: publicationIntent([]),
       });
       await writer.finish({ outcome: "failed", failure: "fixture without the requested Output" });
     }
@@ -145,7 +145,7 @@ test("result export writes Blob bytes and uses the Type owner's structured autho
       id: build,
       sourcePath: join(root, "main.svml"),
       targets: ["final.video"],
-      intent: resultIntent([
+      publication: publicationIntent([
         { name: "final.video", record: "record:video" },
         { name: "final.take", record: "record:take" },
       ]),
@@ -197,7 +197,7 @@ test("result export writes Blob bytes and uses the Type owner's structured autho
   }
 });
 
-test("result export requires an exact retained Output name and an explicit destination", async () => {
+test("result export requires an exact published Output name and an explicit destination", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-result-export-options-"));
   try {
     const silent = { write() {} };

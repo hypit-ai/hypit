@@ -39,7 +39,7 @@ export type CreateLocalRuntimeOptions = {
   readonly resourceStore: ResourceStore;
   /** Optional Build-local transient byte area used by Provider execution and Result writing. */
   readonly resourceStoreForBuild?: (build: string) => ResourceStore;
-  /** Called only after a finished Build Result has accepted every retained Output completed so far. */
+  /** Called only after a finished Build Result has materialized every completed publication. */
   readonly clearBuildResources?: (build: string) => Awaitable<void>;
   readonly openBuildResultRepository: (location: BuildResultRepositoryLocation) => Awaitable<BuildResultRepositoryOpened>;
   readonly credentialStore: CredentialStore;
@@ -101,7 +101,7 @@ export type LocalRuntime = RuntimeHostExecution & {
 export type LocalRuntimeControl = RuntimeHostControl;
 
 export type LocalResultWriter = {
-  /** Incrementally accept retained Outputs already completed during execution. */
+  /** Incrementally materialize publications whose Records have completed. */
   sync(
     execution: BuildExecutionSnapshot,
     records: readonly import("@hypit/hypit/protocol").TypedRecord[],

@@ -10,7 +10,7 @@ import type { BlobRef } from "@hypit/protocol";
 
 import {
   structuredType,
-  resultIntent,
+  publicationIntent,
   videoType,
 } from "./repository-scenario.js";
 
@@ -28,7 +28,7 @@ test("one same-Build resource backs a retained video and a structured value", as
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "/project/main.svml",
       targets: ["shot.video"],
-      intent: resultIntent([
+      publication: publicationIntent([
         { name: "shot.video", record: "record:video" },
         { name: "shot.take", record: "record:take" },
         { name: "shot.take-copy", record: "record:take" },

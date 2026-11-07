@@ -15,6 +15,8 @@ export type StoredBuildResultFile = {
 
 export type StoredBuildResultOutput = {
   readonly type: TypeRef;
+  readonly publisher: string;
+  readonly publicationParameters?: CanonicalValue;
   readonly value:
     | StoredBuildResultFile
     | { readonly kind: "inline"; readonly value: null | boolean | number | string }
@@ -48,6 +50,16 @@ function object(value: unknown, subject: string): Readonly<Record<string, unknow
     throw new Error(`${subject} must be an object`);
   }
   return value as Readonly<Record<string, unknown>>;
+}
+
+function canonicalValue(value: unknown, subject: string): CanonicalValue {
+  if (value === null || typeof value === "boolean" || typeof value === "string") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (Array.isArray(value)) {
+    return value.map((child, index) => canonicalValue(child, `${subject}[${index}]`));
+  }
+  return Object.fromEntries(Object.entries(object(value, subject))
+    .map(([name, child]) => [name, canonicalValue(child, `${subject}.${name}`)]));
 }
 
 function text(value: unknown, subject: string): string {
@@ -106,7 +118,15 @@ function outputs(value: unknown, subject: string): Readonly<Record<string, Store
       }
       decoded = { kind: "inline", value: scalar };
     } else throw new Error(`${subject}[${JSON.stringify(name)}].value.kind is invalid`);
-    return [name, { type: typeRef(item.type, `${subject}[${JSON.stringify(name)}].type`), value: decoded }];
+    return [name, {
+      type: typeRef(item.type, `${subject}[${JSON.stringify(name)}].type`),
+      publisher: text(item.publisher, `${subject}[${JSON.stringify(name)}].publisher`),
+      ...(item.publicationParameters === undefined
+        ? {}
+        : { publicationParameters: canonicalValue(item.publicationParameters,
+            `${subject}[${JSON.stringify(name)}].publicationParameters`) }),
+      value: decoded,
+    }];
   }));
 }
 
@@ -212,17 +232,10 @@ export function decodeBuildResultValueDocument(
 ): StoredBuildResultValueDocument {
   const item = object(value, subject);
   if (item.format !== "hypit.result-value@1") throw new Error(`${subject} is not a Result value document`);
-  const canonical = (raw: unknown, location: string): CanonicalValue => {
-    if (raw === null || typeof raw === "boolean" || typeof raw === "string") return raw;
-    if (typeof raw === "number" && Number.isFinite(raw)) return raw;
-    if (Array.isArray(raw)) return raw.map((child, index) => canonical(child, `${location}[${index}]`));
-    return Object.fromEntries(Object.entries(object(raw, location))
-      .map(([name, child]) => [name, canonical(child, `${location}.${name}`)]));
-  };
   if (!Array.isArray(item.resources)) throw new Error(`${subject}.resources must be an array`);
   return {
     format: "hypit.result-value@1",
-    value: canonical(item.value, `${subject}.value`),
+    value: canonicalValue(item.value, `${subject}.value`),
     resources: item.resources.map((raw, index) => {
       const binding = object(raw, `${subject}.resources[${index}]`);
       if (!Array.isArray(binding.at) || binding.at.length === 0) {

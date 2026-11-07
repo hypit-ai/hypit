@@ -65,7 +65,7 @@ export type CliDistribution = {
     readonly repository: BuildResultHistory;
     close(): void | Promise<void>;
   }>;
-  /** Resolve the package-owned author export for one retained structured Type. */
+  /** Resolve the package-owned author export for one published structured Type. */
   resolveResultOutputExporter?(type: TypeRef, options: {
     readonly packageRoot: string;
     readonly distributionPackageRoot?: string;

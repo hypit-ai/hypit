@@ -2,11 +2,11 @@ import { assertOrderedBuildId } from "@hypit/hypit/protocol";
 import type {
   BlobRef,
   CanonicalValue,
-  ResultIntent,
+  PublicationIntent,
   TypeRef,
   TypedRecord,
 } from "@hypit/hypit/protocol";
-import { assertResultIntent } from "@hypit/hypit/protocol";
+import { assertPublicationIntent } from "@hypit/hypit/protocol";
 import type { BuildResultHistory, BuildResultOperation } from "@hypit/hypit/result";
 
 export type BuildResultFileRef = {
@@ -139,6 +139,8 @@ export type StoredBuildResultOutputValue =
 
 export type StoredBuildResultOutput = {
   readonly type: TypeRef;
+  readonly publisher: string;
+  readonly publicationParameters?: CanonicalValue;
   readonly value: StoredBuildResultOutputValue;
 };
 
@@ -153,7 +155,7 @@ type StoredBuildResultBase = {
   readonly outputs: Readonly<Record<string, StoredBuildResultOutput>>;
 };
 
-/** Private writable state while Runtime is still accepting retained Outputs. */
+/** Private writable state while Runtime is still materializing publications. */
 export type BuildResultDraft = StoredBuildResultBase & {
   readonly outcome?: never;
   readonly finishedAt?: never;
@@ -176,7 +178,7 @@ export type StoredFinishedBuildResult = StoredBuildResultBase & StoredBuildResul
 /** Storage state used only by Runtime publication and recovery. */
 export type StoredBuildResult = BuildResultDraft | StoredFinishedBuildResult;
 
-/** Define an author-named retained Output without invoking special object setters such as `__proto__`. */
+/** Read one author-named published Output without invoking inherited object properties. */
 export function storedBuildResultOutput(
   manifest: Pick<StoredBuildResult, "outputs">,
   name: string,
@@ -201,12 +203,12 @@ export function defineStoredBuildResultOutput(
 export type BuildResultSeed = {
   readonly id: string;
   readonly sourcePath: string;
-  /** Author-facing names requested by this Build; targets are execution evidence, not retained Outputs. */
+  /** Author-facing names requested by this Build; targets are execution evidence, not publications. */
   readonly targets: readonly string[];
-  readonly intent: ResultIntent;
+  readonly publication: PublicationIntent;
 };
 
-/** Validate the one-name-per-Output retained Result surface before storage is touched. */
+/** Validate the publication request before storage is touched. */
 export function assertBuildResultSeed(seed: BuildResultSeed): void {
   if (seed.sourcePath.trim().length === 0) throw new Error("Build Result Source path must not be empty");
   const targets = new Set<string>();
@@ -215,7 +217,7 @@ export function assertBuildResultSeed(seed: BuildResultSeed): void {
     if (targets.has(target)) throw new Error(`Build Result target ${target} is repeated`);
     targets.add(target);
   }
-  assertResultIntent(seed.intent);
+  assertPublicationIntent(seed.publication);
 }
 
 export type BuildResultResourceSource = {
@@ -241,7 +243,7 @@ export type BuildResultFinish = BuildResultFinishEvidence & (
 
 export type BuildResultWriter = {
   read(): Promise<StoredBuildResult>;
-  /** Store newly accepted retained Outputs; no storage writes when none are new. */
+  /** Store newly completed publications; no storage writes when none are new. */
   sync(input: BuildResultSync): Promise<StoredBuildResult>;
   finish(input: BuildResultFinish): Promise<StoredFinishedBuildResult>;
 };

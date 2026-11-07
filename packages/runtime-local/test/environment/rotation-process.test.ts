@@ -77,8 +77,8 @@ test("a draining carrier finishes its existing Build while a new carrier shares 
       const request={build:id,executionPackages:['fixture-rotation'],result:{root,path:'results'},
         context:{format:'hypit.local-execution@1',packageRoot:root,hostStateRoot:join(root,'host'),distributionPackageRoot:distribution,profile:profileValue}};
       await state.submissions.prepare(request);
-      await repository.create({id,sourcePath:'main.svml',targets:[target],intent:{outputs:[{
-        name:target,record,
+      await repository.create({id,sourcePath:'main.svml',targets:[target],publication:{outputs:[{
+        name:target,record,publisher:"example.test-product@1",
       }]}});
       await state.submissions.commit({...request,definition:{...base,program:{...base.program,records:base.program.records.map(r=>r.id==='intent:root'?{...r,value:({name})}:r)}}});
       return id;

@@ -50,16 +50,17 @@ export function resultDestination(directory: string) {
   } as const;
 }
 
-export function resultIntent(
+export function publicationIntent(
   outputs: readonly { readonly name: string; readonly ref: { readonly id: string } }[],
   fixture: RuntimeBuildFixture,
 ) {
-  return { outputs: outputs.map((retained) => {
-    const output = fixture.outputs[retained.ref.id];
-    if (output === undefined) throw new Error(`Fixture has no Output ${retained.ref.id}`);
+  return { outputs: outputs.map((published) => {
+    const output = fixture.outputs[published.ref.id];
+    if (output === undefined) throw new Error(`Fixture has no Output ${published.ref.id}`);
     return {
-      name: retained.name,
+      name: published.name,
       record: output.record,
+      publisher: "example.test-product@1",
     };
   }) };
 }
@@ -70,7 +71,7 @@ export function durableBuildRequest(
   fixture: RuntimeBuildFixture,
 ) {
   const targets = Object.values(fixture.outputs).filter((output) => output.goal);
-  const retainedOutputs = targets.map((output, index) => ({
+  const publishedOutputs = targets.map((output, index) => ({
     name: `target.${index + 1}`,
     ref: { kind: "logical-output" as const, id: output.output },
   }));
@@ -79,8 +80,8 @@ export function durableBuildRequest(
     definition: definition(fixture.state),
     authoring: {
       sourcePath: join(directory, "main.svml"),
-      targets: retainedOutputs.map((output) => output.name),
-      intent: resultIntent(retainedOutputs, fixture),
+      targets: publishedOutputs.map((output) => output.name),
+      publication: publicationIntent(publishedOutputs, fixture),
     },
     result: resultDestination(directory),
   } as const;

@@ -265,7 +265,7 @@ export async function runCli(
       const authoring = createBuildAuthoring({
         source: loadedInvocation.authorSource,
         targets: result.targets.map((target) => target.name),
-        intent: result.result,
+        publication: result.publication,
       });
       const request = {
         // One CLI submission is one execution instance. Source and Plan identity
@@ -375,10 +375,10 @@ export async function runCli(
         build: buildView,
       };
       const resultScope = { projectRoot: projectResultsRoot };
-      const retainedOutputs = finishedResult === undefined
+      const publishedOutputs = finishedResult === undefined
         ? []
         : Object.entries(finishedResult.outputs).map(([name, output]) => ({ name, output }));
-      const finishedLines = retainedOutputs.length === 0 && targetPresentations.length === 0
+      const finishedLines = publishedOutputs.length === 0 && targetPresentations.length === 0
         ? [
             ...(completionReason === undefined ? [] : [`Reason   ${completionReason}`]),
             `Inspect  ${commandHint(["inspect", built.id], resultScope)}`,
@@ -386,12 +386,12 @@ export async function runCli(
         : [
             ...(completionReason === undefined ? [] : [`Reason   ${completionReason}`]),
             `Inspect  ${commandHint(["inspect", built.id], resultScope)}`,
-            ...retainedOutputs
+            ...publishedOutputs
               .slice(0, args.limit)
               .map((item) => item.output.representation === "inline"
                 ? `Result   ${item.name} = ${inlineValuePreview(item.output.value)}`
                 : `Export   ${commandHint(["result", "export", built.id, "--output", item.name], resultScope)} --to <path>`),
-            ...(retainedOutputs.length > 0 ? [] : targetPresentations
+            ...(publishedOutputs.length > 0 ? [] : targetPresentations
               .filter((item) => item.inline !== undefined)
               .slice(0, args.limit)
               .map((item) => `Target   ${item.target.name} = ${item.inline}`)),

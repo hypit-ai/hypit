@@ -4,7 +4,7 @@ import type {
   BuildDefinition,
   CapabilityRef,
   Need,
-  ResultIntent,
+  PublicationIntent,
   Value,
 } from "@hypit/protocol";
 import type { BuildView } from "@hypit/kernel";
@@ -32,7 +32,7 @@ export type CliDiagnostic = {
 export type CliBuildAuthoring = {
   readonly sourcePath: string;
   readonly targets: readonly string[];
-  readonly intent: ResultIntent;
+  readonly publication: PublicationIntent;
 };
 
 export type CliBuildView = {

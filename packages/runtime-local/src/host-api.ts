@@ -13,7 +13,7 @@ import type {
   ScheduledBuildResult,
 } from "@hypit/hypit/runtime";
 import type { ResourceStore } from "@hypit/resource-store";
-import type { ResultIntent } from "@hypit/hypit/protocol";
+import type { PublicationIntent } from "@hypit/hypit/protocol";
 import type { BuildCompletion, BuildExecutionStop, BuildResultRepositoryLocation } from "./execution.js";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-local/extension";
 
@@ -109,7 +109,7 @@ export type RuntimeHostExecution = RuntimeHostControl & RuntimeHostCredentialCon
     readonly authoring: {
       readonly sourcePath: string;
       readonly targets: readonly string[];
-      readonly intent: ResultIntent;
+      readonly publication: PublicationIntent;
     };
     readonly attachments?: readonly BlobAttachment[];
     /** Project-owned Result destination, fixed before this Build becomes active. */

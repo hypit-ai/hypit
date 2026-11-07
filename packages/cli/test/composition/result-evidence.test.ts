@@ -19,7 +19,7 @@ import {
   fixture,
   humanCommand,
   jsonCommand,
-  resultIntent,
+  publicationIntent,
   resultDistribution,
   valueType,
 } from "./build-result-scenario.js";
@@ -29,7 +29,7 @@ test("a failed Result exposes task receipts without a Runtime", async () => {
   const id = "bld_20260906T110000000Z_0000000001";
   try {
     const result = await FileBuildResult.create(join(root, ".hypit", "results"), {
-      id, sourcePath: "main.svml", targets: [], intent: resultIntent([]),
+      id, sourcePath: "main.svml", targets: [], publication: publicationIntent([]),
     });
     const operation = {
       request: "need:generate", endpoint: "selected-account",
@@ -59,7 +59,7 @@ test("logs reads finished evidence without a Runtime and clearly limits the tail
   try {
     const id = "bld_20260913T130000000Z_0000000001";
     const result = await FileBuildResult.create(join(root, ".hypit/results"), {
-      id, sourcePath: "main.svml", targets: [], intent: resultIntent([]),
+      id, sourcePath: "main.svml", targets: [], publication: publicationIntent([]),
     });
     const records = ["started", "completed"].map((kind, time) => ({ format: "hypit.execution-log@1", time, kind, endpoint: "renderer", request: "need:render" }));
     await result.finish({ outcome: "complete", executionLog: (async function* () {
@@ -85,7 +85,7 @@ test("logs reports unavailable evidence as unsuccessful, while an existing empty
       if (state === "no-log") await fixture(root);
       if (state === "empty-log") {
         const result = await FileBuildResult.create(join(root, ".hypit/results"), {
-          id: "bld_20260902T110000001Z_0000000001", sourcePath: "main.svml", targets: [], intent: resultIntent([]),
+          id: "bld_20260902T110000001Z_0000000001", sourcePath: "main.svml", targets: [], publication: publicationIntent([]),
         });
         await result.finish({ outcome: "complete", executionLog: (async function* () {})() });
       }

@@ -1,16 +1,20 @@
-import type { NeedId, TypeRef, Value } from "@hypit/protocol";
+import type { CanonicalValue, NeedId, TypeRef, Value } from "@hypit/protocol";
 
 /** The one durable conclusion of a finished Build. Active execution belongs to Runtime. */
 export type BuildResultOutcome = "complete" | "failed" | "cancelled";
 
-/** A normalized half-open byte range within one retained Resource. */
+/** A normalized half-open byte range within one published Resource. */
 export type BuildResultFileRange = {
   readonly start: number;
   readonly endExclusive: number;
 };
 
-/** History projection of one retained Output; storage paths remain Repository-private. */
-export type BuildResultOutput = { readonly type: TypeRef } & (
+/** History projection of one published Output; storage paths remain Repository-private. */
+export type BuildResultOutput = {
+  readonly type: TypeRef;
+  readonly publisher: string;
+  readonly publicationParameters?: CanonicalValue;
+} & (
   | { readonly representation: "inline"; readonly value: null | boolean | number | string;
       readonly mediaType?: never; readonly size?: never }
   | { readonly representation: "structured"; readonly value?: never;
@@ -51,7 +55,7 @@ export type BuildResult = BuildResultBase & (
   | { readonly outcome: "failed" | "cancelled"; readonly finishedAt: number; readonly failure: string }
 );
 
-/** Read one exact retained Output name without inherited-object aliases. */
+/** Read one exact published Output name without inherited-object aliases. */
 export function buildResultOutput(
   manifest: Pick<BuildResult, "outputs">,
   name: string,
@@ -72,9 +76,11 @@ export type BuildResultPage = {
   readonly next?: string;
 };
 
-/** One finished retained Output resolved to ordinary domain data and only its owned Resources. */
+/** One finished published Output resolved to ordinary domain data and only its owned Resources. */
 export type ResolvedBuildResultOutput = {
   readonly type: TypeRef;
+  readonly publisher: string;
+  readonly publicationParameters?: CanonicalValue;
   readonly value: Value;
   openResource(
     blob: import("@hypit/protocol").BlobRef,

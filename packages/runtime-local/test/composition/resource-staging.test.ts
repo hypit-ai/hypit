@@ -116,8 +116,8 @@ test("a selected file is staged once and remains referenced in the produced stru
       authoring: {
         sourcePath: join(directory, "main.svml"),
         targets: ["final.document"],
-        intent: { outputs: [{ name: "final.document",
-          record: "document:root" }] },
+        publication: { outputs: [{ name: "final.document",
+          record: "document:root", publisher: "example.test-product@1" }] },
       },
       attachments: [{
         blob: authoredAsset,

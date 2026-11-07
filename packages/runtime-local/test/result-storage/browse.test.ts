@@ -10,7 +10,7 @@ import type { BlobRef } from "@hypit/protocol";
 
 import {
   structuredType,
-  resultIntent,
+  publicationIntent,
   videoType,
 } from "./repository-scenario.js";
 
@@ -27,7 +27,7 @@ test("filesystem Results have one retained name per Output and browse newest fir
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "/project/main.svml",
       targets: ["video"],
-      intent: resultIntent([
+      publication: publicationIntent([
         { name: "video", record: "record:video" },
         { name: "video", record: "record:duplicate" },
       ]),
@@ -38,7 +38,7 @@ test("filesystem Results have one retained name per Output and browse newest fir
         id,
         sourcePath: "/project/main.svml",
         targets: ["video"],
-        intent: resultIntent([{ name: "video" }]),
+        publication: publicationIntent([{ name: "video" }]),
       });
       await writer.finish({ outcome: "failed", failure: "ordering fixture" });
     }

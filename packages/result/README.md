@@ -1,34 +1,40 @@
 # `@hypit/result`
 
-Build Results record one Build's targets and outcome, and retain the completed outputs whose
-declaring packages give them a lifetime beyond that Build. Execution state belongs to Runtime. A
-target is execution evidence, not an instruction to store its value.
+Build Results are the current immutable history projection for one long-running Build: targets,
+outcome, external-attempt evidence, logs and completed publications. Execution state belongs to
+Runtime. A target is execution evidence, not an instruction to publish or store its value.
+
+Publication is no longer a boolean `retain` decision. A producing domain names an exact publisher in
+`PublicationIntent`; Runtime transports that answer but must not infer product status from value shape.
+The current filesystem history still materializes published values beside Build evidence as a migration
+boundary. Separating generation products from Run history is subsequent work, not a second meaning
+hidden in this package.
 
 ## Values and file ownership
 
 | Value source | Persisted representation |
 | --- | --- |
-| Retained `BlobRef` produced by this Build | One file owned by this Result |
+| Published `BlobRef` produced by this Build | One file owned by this Result |
 | Array or object value | A Value Document whose `BlobRef` bindings point to files owned by this Result |
 
 Every `build-file` path is relative to the containing Result. The writer recognizes `BlobRef` leaves
 independently of their domain Type or field name and writes each Resource identity once, so a direct
-retained media Output and a nested use in a structured value share one file inside that Result.
+published media Output and a nested use in a structured value share one file inside that Result.
 
 Workspace attachments and Runtime working resources are execution inputs, not durable Result
-addresses. When their bytes appear in a retained Record, Result storage copies those bytes into
+addresses. When their bytes appear in a published Record, Result storage copies those bytes into
 the current Result. A Result therefore neither points at another Build nor keeps a live project-file
 dependency.
 
 ## Finished history
 
-`ResultIntent.outputs` is the single lifetime authority for Result name and the accepted Record
-that owns the value in this Build. Runtime retains only that current Record and records its
-accepted Type. Reusing an earlier Output is an authoring
+`PublicationIntent.outputs` supplies the published name, accepted Record and exact publisher.
+Runtime records that publisher with the accepted Type rather than inventing a lifetime policy.
+Reusing an earlier Output is an authoring
 operation: export the accepted material into the project and reference it from the Author Source.
 Result storage never substitutes a historical Build for an authored value.
 
-Draft creation, incremental retention, crash recovery and terminal publication belong to Runtime
+Draft creation, incremental materialization, crash recovery and terminal publication belong to Runtime
 Local. They are not Result package APIs. Runtime owns its writable filesystem implementation and
 atomically publishes the same `hypit.build-result@1` document that this package later reads as
 history. Private writer state disappears at the terminal outcome. Core still receives ordinary typed
@@ -43,24 +49,24 @@ Repositories own address access. `BuildResultHistory.resolve(build, output)` tur
 persistence representation into an ordinary domain `Value`. Its returned `openResource()` capability
 can stream only Blob resources bound into that exact Output, including a normalized byte range.
 Callers never receive a general Result-relative path opener. A custom repository can provide another
-physical implementation without changing Result identity or retention semantics.
+physical implementation without changing Result identity or publication semantics.
 
 The manifest reports domain `type` separately from storage representation. An Output is stored inline,
 as a file, or as a Result-local value document; those forms do not claim a domain value category.
 
-A `complete` outcome is published only after every retained Output named by the Result Intent has been stored.
-Failed and cancelled Results may intentionally retain the subset that completed. This is a local per-Build
+A `complete` outcome is published only after every Output named by the Publication Intent has been stored.
+Failed and cancelled Results may intentionally contain the subset that completed. This is a local per-Build
 closure check, not a central Result index or an attempt to infer missing work.
 
 Storage file references remain scoped to one containing Build. Separate Results remain separate even
-when their bytes happen to match; retention performs no content hashing or historical lookup.
+when their bytes happen to match; publication performs no content hashing or historical lookup.
 
-An explicit `hypit result export` materializes one retained Output at an author-selected destination.
+An explicit `hypit result export` materializes one published Output at an author-selected destination.
 Blob bytes and inline scalars have universal representations. A structured Type is exported through
 the `hypit.result-output-exporter@1` facet supplied by the package that owns that Type; Result does
 not expose its private Value Document layout as an author format or maintain a central Type switch.
 
-Retained Output names are fixed by the compiler-owned Result Intent. A finished Result is not renamed,
+Published Output names are fixed by the compiler-owned Publication Intent. A finished Result is not renamed,
 annotated or curated as a media catalog. Exported
 material enters a new production through an ordinary Author declaration and receives its project-facing
 name there.

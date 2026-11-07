@@ -8,6 +8,7 @@ import {
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
 import { promptTypes } from "@hypit/hypit/prompt";
+import { generationProductPublication } from "@hypit/generation";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import {
   createFieldModelPrimaryFragment,
@@ -72,7 +73,7 @@ function compiler(options: {
     bindings(declaration) {
       const id = literal(declaration, "id");
       return [{ name: `${id}.image`, ref: { kind: "component-output", component: id, output: "image" },
-        type: blobTypes.blob, retained: true }];
+        type: blobTypes.blob, publication: generationProductPublication }];
     },
     async compile({ declaration, resolveReference }) {
       if (declaration.children.length > options.maxImages) {

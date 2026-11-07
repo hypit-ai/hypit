@@ -60,12 +60,19 @@ async function readFinishedBuildResult(directory: string): Promise<StoredFinishe
 }
 
 function historyOutput(output: StoredBuildResultOutput): BuildResultOutput {
+  const publication = {
+    publisher: output.publisher,
+    ...(output.publicationParameters === undefined
+      ? {}
+      : { publicationParameters: output.publicationParameters }),
+  };
   if (output.value.kind === "build-file") {
-    return { type: output.type, representation: "file", mediaType: output.value.mediaType, size: output.value.size };
+    return { type: output.type, ...publication,
+      representation: "file", mediaType: output.value.mediaType, size: output.value.size };
   }
   return output.value.kind === "inline"
-    ? { type: output.type, representation: "inline", value: output.value.value }
-    : { type: output.type, representation: "structured" };
+    ? { type: output.type, ...publication, representation: "inline", value: output.value.value }
+    : { type: output.type, ...publication, representation: "structured" };
 }
 
 function historyResult(manifest: StoredFinishedBuildResult): BuildResult {
@@ -203,6 +210,10 @@ export async function resolveBuildResultOutput(
   else value = entry.value.value;
   return {
     type: entry.type,
+    publisher: entry.publisher,
+    ...(entry.publicationParameters === undefined
+      ? {}
+      : { publicationParameters: entry.publicationParameters }),
     value,
     async openResource(blob, range) {
       const owned = resources.get(blob.resource);

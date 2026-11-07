@@ -35,8 +35,8 @@ test("an executor that fails before ready records a failed Build and leaves supe
           distributionPackageRoot: distribution, profile: profileValue },
       };
       await state.submissions.prepare(request);
-      await result.create({ id: build, sourcePath: "main.svml", targets: ["document"], intent: { outputs: [{
-        name: "document", record: "document:root",
+      await result.create({ id: build, sourcePath: "main.svml", targets: ["document"], publication: { outputs: [{
+        name: "document", record: "document:root", publisher: "example.test-product@1",
       }] } });
       await state.submissions.commit({ ...request,
         definition: defineBuild({ program: initial.program,

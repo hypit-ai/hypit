@@ -2,8 +2,8 @@ import { compareCodeUnits, isBlobRef, mapValueBlobs } from "@hypit/hypit/protoco
 import type {
   BlobRef,
   CanonicalValue,
-  ResultIntent,
-  ResultOutputIntent,
+  PublicationIntent,
+  PublicationOutputIntent,
   TypedRecord,
 } from "@hypit/hypit/protocol";
 
@@ -21,7 +21,7 @@ import { defineStoredBuildResultOutput, storedBuildResultOutput } from "./types.
 export type BuildResultWriterState = {
   readonly resources: Readonly<Record<string, string>>;
   readonly values: Readonly<Record<string, string>>;
-  readonly intent: ResultIntent;
+  readonly publication: PublicationIntent;
 };
 
 export type BuildResultWriteTarget = {
@@ -34,7 +34,7 @@ export type BuildResultWriteTarget = {
 };
 
 export type BuildResultSyncResult = {
-  /** Whether accepted retained Outputs were added to the manifest. */
+  /** Whether completed publications were added to the transitional Build manifest. */
   readonly changed: boolean;
   readonly manifest: BuildResultDraft;
   readonly writer: BuildResultWriterState;
@@ -127,12 +127,12 @@ function scalar(value: unknown): value is null | boolean | number | string {
 }
 
 type ReadyOutput = {
-  readonly intent: ResultOutputIntent;
+  readonly publication: PublicationOutputIntent;
   readonly record: TypedRecord;
 };
 
 /**
- * Encode accepted retained Outputs exactly once, independently of the physical repository adapter.
+ * Materialize completed publications exactly once, independently of the physical repository adapter.
  * The adapter only writes bytes/documents at the paths chosen here.
  */
 export async function syncBuildResultOutputs(input: {
@@ -189,21 +189,25 @@ export async function syncBuildResultOutputs(input: {
   };
 
   const outputRank = (record: TypedRecord): number => isBlobRef(record.value) ? 0 : scalar(record.value) ? 1 : 2;
-  const ready: ReadyOutput[] = input.writer.intent.outputs.flatMap((intent): ReadyOutput[] => {
-    if (storedBuildResultOutput({ outputs }, intent.name) !== undefined) return [];
-    const record = input.sync.records.find((item) => item.id === intent.record);
+  const ready: ReadyOutput[] = input.writer.publication.outputs.flatMap((publication): ReadyOutput[] => {
+    if (storedBuildResultOutput({ outputs }, publication.name) !== undefined) return [];
+    const record = input.sync.records.find((item) => item.id === publication.record);
     if (record === undefined) return [];
-    return [{ intent, record }];
+    return [{ publication, record }];
   }).sort((left, right) => outputRank(left.record) - outputRank(right.record)
-    || compareCodeUnits(left.intent.name, right.intent.name));
+    || compareCodeUnits(left.publication.name, right.publication.name));
 
   if (ready.length === 0) {
     return { changed: false, manifest: input.manifest, writer: input.writer };
   }
 
-  for (const { intent, record } of ready) {
-    defineStoredBuildResultOutput(outputs, intent.name, {
+  for (const { publication, record } of ready) {
+    defineStoredBuildResultOutput(outputs, publication.name, {
       type: record.type,
+      publisher: publication.publisher,
+      ...(publication.parameters === undefined
+        ? {}
+        : { publicationParameters: publication.parameters }),
       value: await outputValue(record),
     });
   }

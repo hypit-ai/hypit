@@ -9,6 +9,7 @@ import {
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
 import { promptTypes } from "@hypit/hypit/prompt";
+import { generationProductPublication } from "@hypit/generation";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import { createFieldModelPrimaryFragment, sealModelFieldBuilder } from "@hypit/generation/model-fields";
 
@@ -58,7 +59,7 @@ const fields = [
 function bindings(declaration: AuthorDeclaration): readonly AuthorDeclarationBinding[] {
   const id = literal(declaration, "id");
   return [{ name: `${id}.image`, ref: { kind: "component-output" as const, component: id, output: "image" },
-    type: blobTypes.blob, retained: true }];
+    type: blobTypes.blob, publication: generationProductPublication }];
 }
 
 function compiler(referenceMode: boolean): AuthorDeclarationCompiler {

@@ -1,6 +1,7 @@
 import type {
   AuthorGraph,
   BlobRef,
+  CanonicalValue,
   GraphValueRef,
   LinkedProgram,
   ResolvedModuleClosure,
@@ -44,11 +45,18 @@ export type AuthorSourceExport = {
   readonly type: TypeRef;
 };
 
-/** Package-owned recoverable output; independent of the Source module interface. */
-export type AuthorRetainedOutput = {
+/** Domain-owned answer describing how one produced value leaves the current execution. */
+export type AuthorOutputPublication = {
+  readonly publisher: string;
+  readonly parameters?: CanonicalValue;
+};
+
+/** Published output; independent of the Source module interface. */
+export type AuthorPublishedOutput = {
   readonly name: string;
   readonly ref: AuthorValueRef;
   readonly type: TypeRef;
+  readonly publication: AuthorOutputPublication;
 };
 
 export type AuthorInputProvenanceDraft = {
@@ -83,7 +91,7 @@ export type DecodedAuthorSource = {
   readonly records: readonly TypedRecord[];
   readonly components: readonly AuthorComponent[];
   readonly exports: readonly AuthorSourceExport[];
-  readonly retainedOutputs?: readonly AuthorRetainedOutput[];
+  readonly publications?: readonly AuthorPublishedOutput[];
   readonly provenance?: readonly AuthorElementProvenanceDraft[];
 };
 
@@ -178,11 +186,12 @@ export type CompiledSourceExport = {
   readonly ref: GraphValueRef;
 };
 
-export type CompiledRetainedOutput = {
-  /** Source-qualified author name used by the Result surface. */
+export type CompiledPublication = {
+  /** Source-qualified author name used by the publisher surface. */
   readonly name: string;
   readonly type: TypeRef;
   readonly ref: Extract<GraphValueRef, { readonly kind: "logical-output" }>;
+  readonly publication: AuthorOutputPublication;
 };
 
 /** Domain result of authoring; the Compiler owns how a Source closure is assembled. */
@@ -191,7 +200,7 @@ export type CompiledSourceClosure = {
   readonly program: LinkedProgram;
   readonly graph: AuthorGraph;
   readonly exports: readonly CompiledSourceExport[];
-  readonly retainedOutputs: readonly CompiledRetainedOutput[];
+  readonly publications: readonly CompiledPublication[];
 };
 
 /** Optional author-tool projection requested independently of Build compilation. */

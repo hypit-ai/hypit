@@ -3,6 +3,7 @@ import { declarationField, type AuthorDeclaration, type AuthorDeclarationCompile
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType } from "@hypit/hypit/protocol";
 import { textTypes } from "@hypit/hypit/text";
+import { generationProductPublication } from "@hypit/generation";
 import { fieldModelAuthorComponent } from "@hypit/generation/model-fields/author";
 
 import { createMimoSpeechAudioFragment } from "./fragment.js";
@@ -53,7 +54,7 @@ export const mimoVoiceDesignAuthorDeclaration: AuthorDeclarationCompiler = {
   bindings(declaration) {
     const id = literal(declaration, "id");
     return [{ name: `${id}.reference`, ref: { kind: "component-output", component: id, output: "audio" }, type: blobTypes.blob,
-      retained: true }];
+      publication: generationProductPublication }];
   },
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");
@@ -78,7 +79,7 @@ export const mimoVoiceCloneAuthorDeclaration: AuthorDeclarationCompiler = {
   bindings(declaration) {
     const id = literal(declaration, "id");
     return [{ name: `${id}.audio`, ref: { kind: "component-output", component: id, output: "audio" }, type: blobTypes.blob,
-      retained: true }];
+      publication: generationProductPublication }];
   },
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");

@@ -10,7 +10,7 @@ import type { BlobRef } from "@hypit/protocol";
 
 import {
   structuredType,
-  resultIntent,
+  publicationIntent,
   videoType,
 } from "./repository-scenario.js";
 
@@ -21,7 +21,7 @@ test("internal progress and already stored Outputs leave Result files untouched"
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "/project/main.svml",
       targets: ["answer"],
-      intent: resultIntent([{ name: "answer" }]),
+      publication: publicationIntent([{ name: "answer" }]),
     });
     const paths = ["result.json", ".writer.json"].map((name) => join(result.directory, name));
     const resources = { async open() { throw new Error("scalar Outputs have no Resource bytes"); } };
@@ -58,7 +58,7 @@ test("storing and finishing preserve open readers of the previous Result files",
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "/project/main.svml",
       targets: ["answer"],
-      intent: resultIntent([{ name: "answer" }]),
+      publication: publicationIntent([{ name: "answer" }]),
     });
     const manifestPath = join(result.directory, "result.json");
     const oldManifest = await open(manifestPath, "r");
@@ -84,17 +84,18 @@ test("storing and finishing preserve open readers of the previous Result files",
   }
 });
 
-test("Result intent facts are rejected before a Result directory is created", async () => {
+test("Publication intent facts are rejected before a Result directory is created", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-invalid-intent-"));
   try {
     await assert.rejects(FileBuildResult.create(root, {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "main.svml",
       targets: ["answer"],
-      intent: { outputs: [{
+      publication: { outputs: [{
         name: "answer",
         type: structuredType,
         record: "record:answer",
+        publisher: "example.test-product@1",
       }] },
     } as unknown as Parameters<typeof FileBuildResult.create>[1]), /unexpected type field/u);
     assert.deepEqual(await readdir(root), []);
@@ -103,26 +104,29 @@ test("Result intent facts are rejected before a Result directory is created", as
   }
 });
 
-test("a retained Output records the accepted Record type", async () => {
+test("a published Output records its publisher answer and accepted Record type", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-intent-type-"));
   try {
     const result = await FileBuildResult.create(root, {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "main.svml",
       targets: ["answer"],
-      intent: resultIntent([{ name: "answer" }]),
+      publication: publicationIntent([{ name: "answer", parameters: { collection: "drafts" } }]),
     });
     await result.sync({
       records: [{ id: "record:answer", type: structuredType, value: (42) }],
       resources: { async open() { throw new Error("unexpected Resource read"); } },
     });
-    assert.deepEqual((await result.read()).outputs.answer?.type, structuredType);
+    const output = (await result.read()).outputs.answer;
+    assert.deepEqual(output?.type, structuredType);
+    assert.equal(output?.publisher, "example.test-product@1");
+    assert.deepEqual(output?.publicationParameters, { collection: "drafts" });
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
 
-test("retained Output names are exact data keys, including JavaScript object names", async () => {
+test("published Output names are exact data keys, including JavaScript object names", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-output-names-"));
   const names = ["constructor", "toString", "__proto__"];
   try {
@@ -130,7 +134,7 @@ test("retained Output names are exact data keys, including JavaScript object nam
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "main.svml",
       targets: names,
-      intent: resultIntent(names.map((name, index) => ({
+      publication: publicationIntent(names.map((name, index) => ({
         name,
         record: `record:${String(index)}`,
       }))),
@@ -153,16 +157,16 @@ test("retained Output names are exact data keys, including JavaScript object nam
   }
 });
 
-test("a complete Result requires every retained Output", async () => {
+test("a complete Result requires every published Output", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-completion-"));
   try {
     const result = await FileBuildResult.create(root, {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "main.svml",
       targets: ["answer"],
-      intent: resultIntent([{ name: "answer" }]),
+      publication: publicationIntent([{ name: "answer" }]),
     });
-    await assert.rejects(result.finish({ outcome: "complete" }), /retained Outputs are stored: answer/u);
+    await assert.rejects(result.finish({ outcome: "complete" }), /published Outputs are stored: answer/u);
     assert.equal((await result.read()).outcome, undefined);
     assert.equal((await result.finish({ outcome: "failed", failure: "producer stopped" })).outcome, "failed");
   } finally {

@@ -55,7 +55,7 @@ import {
   durableBuildRequest,
   finishClaimedBuild,
   projectRuntimeFixture,
-  resultIntent,
+  publicationIntent,
   resultDestination,
   runFixture,
 } from "./local-scenario.js";
@@ -86,8 +86,8 @@ test("a completed retained file moves into its Build Result and leaves no Runtim
       authoring: {
         sourcePath: join(directory, "main.svml"),
         targets: ["clip.video"],
-        intent: { outputs: [{ name: "clip.video",
-          record: "generated:placeholder" }] },
+        publication: { outputs: [{ name: "clip.video",
+          record: "generated:placeholder", publisher: "example.test-product@1" }] },
       },
       result: resultDestination(directory),
     });
@@ -110,7 +110,7 @@ test("a completed retained file moves into its Build Result and leaves no Runtim
   }
 });
 
-test("a failed Build keeps retained Outputs completed before removing active Runtime state", async () => {
+test("a failed Build keeps published Outputs completed before removing active Runtime state", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-bld_20260902T120000005Z_0000000001-"));
   const buildFixture = createGreetingBuildFixture();
   const initial = buildFixture.state;
@@ -150,7 +150,7 @@ test("a failed Build keeps retained Outputs completed before removing active Run
       authoring: {
         sourcePath: join(directory, "main.svml"),
         targets: ["final.document"],
-        intent: resultIntent([{
+        publication: publicationIntent([{
           name: "prompt.text", ref: { id: "prompt" },
         }, { name: "generated.text", ref: { id: "generated" } }, {
           name: "final.document", ref: { id: "document" },
@@ -166,6 +166,7 @@ test("a failed Build keeps retained Outputs completed before removing active Run
     assert.deepEqual(Object.keys(result?.outputs ?? {}), ["prompt.text"]);
     assert.deepEqual(result?.outputs["prompt.text"], {
       type: result?.outputs["prompt.text"]?.type,
+      publisher: "example.test-product@1",
       representation: "inline",
       value: "Greet Ada",
     });
@@ -285,8 +286,8 @@ test("an interrupted Result write can be retried internally without rerunning th
       authoring: {
         sourcePath: join(directory, "main.svml"),
         targets: ["final.document"],
-        intent: { outputs: [{ name: "final.document",
-          record: "document:root" }] },
+        publication: { outputs: [{ name: "final.document",
+          record: "document:root", publisher: "example.test-product@1" }] },
       },
       result: resultDestination(directory),
     });
@@ -333,8 +334,8 @@ test("a failed Result creation leaves no active Build", async () => {
       authoring: {
         sourcePath: join(directory, "main.svml"),
         targets: ["final.document"],
-        intent: { outputs: [{ name: "final.document",
-          record: "document:root" }] },
+        publication: { outputs: [{ name: "final.document",
+          record: "document:root", publisher: "example.test-product@1" }] },
       },
       result: resultDestination(directory),
     }), /result repository refused creation/u);

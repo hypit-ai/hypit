@@ -11,7 +11,7 @@ export type ResultOutputExportContext = {
   readonly name: string;
   readonly type: TypeRef;
   readonly value: Value;
-  /** Opens only Resource leaves present in this retained value. */
+  /** Opens only Resource leaves present in this published value. */
   readonly openResource: (blob: BlobRef) => Promise<AsyncIterable<Uint8Array> | undefined>;
 };
 
@@ -46,6 +46,6 @@ export function resultOutputExporterForType(
   type: TypeRef,
 ): ResultOutputExporter | undefined {
   const matches = exporters.filter((exporter) => sameType(exporter.type, type));
-  if (matches.length > 1) throw new Error("Retained Output Type has more than one exporter");
+  if (matches.length > 1) throw new Error("Published Output Type has more than one exporter");
   return matches[0];
 }

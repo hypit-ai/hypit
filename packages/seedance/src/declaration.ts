@@ -3,6 +3,7 @@ import { declarationField, type AuthorDeclaration, type AuthorDeclarationChild,
 import { blobTypes } from "@hypit/hypit/blob";
 import { isBlobRef, sameType, type TypeRef } from "@hypit/hypit/protocol";
 import { promptTypes } from "@hypit/hypit/prompt";
+import { generationProductPublication } from "@hypit/generation";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import { sealModelFieldBuilder, type FieldModelOperation,
   type ModelFieldValue } from "@hypit/generation/model-fields";
@@ -84,7 +85,7 @@ const outputs = Object.values(seedanceEndpoints).flatMap((endpoint) => [endpoint
 function bindings(declaration: AuthorDeclaration): readonly AuthorDeclarationBinding[] {
   const id = literal(declaration, "id");
   return [{ name: `${id}.video`, ref: { kind: "component-output" as const, component: id, output: "video" }, type: blobTypes.blob,
-    retained: true }];
+    publication: generationProductPublication }];
 }
 
 async function output(declaration: AuthorDeclaration,

@@ -82,7 +82,7 @@ const resultDeclaration: AuthorDeclarationCompiler = {
     const id = declarationField(declaration, "id");
     if (id?.kind !== "literal") throw new Error("Result id is required");
     return [{ name: `${id.value}.result`, ref: { kind: "component-output", component: id.value, output: "result" },
-      type: resultType, retained: true }];
+      type: resultType, publication: { publisher: "example.compiler-result@1" } }];
   },
   compile({ declaration }) {
     const id = declarationField(declaration, "id");

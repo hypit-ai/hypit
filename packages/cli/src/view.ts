@@ -213,7 +213,7 @@ export async function buildResultView(
   options: { readonly projectRoot: string; readonly output?: string; readonly limit: number; readonly verbose?: boolean },
 ): Promise<CliBuildResultView> {
   if (options.output !== undefined && buildResultOutput(manifest, options.output) === undefined) {
-    throw new Error(`Build Result ${manifest.id} has no retained Output ${options.output}`);
+    throw new Error(`Build Result ${manifest.id} has no published Output ${options.output}`);
   }
   const available = orderedOutputNames(manifest);
   const allNames = options.output === undefined ? available : [options.output];

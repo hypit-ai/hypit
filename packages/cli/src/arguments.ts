@@ -224,7 +224,7 @@ function parseResultCommand(tail: readonly string[], cwd: string): ProjectResult
   const [build, rest] = requiredPositional(values, `result ${action} requires one Build id`);
   const options = commandOptions("result export", rest, cwd, "--project", "--output", "--to");
   if (options.outputName === undefined) {
-    throw new Error("result export requires --output with one retained Output name");
+    throw new Error("result export requires --output with one published Output name");
   }
   if (options.destination === undefined) {
     throw new Error("result export requires --to with the export destination");
@@ -326,10 +326,10 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
       runtimeProfile = resolve(cwd, optionValue(global.remaining, index, "--runtime requires a Runtime Profile")); index += 1; continue;
     }
     if (item === "--out") {
-      throw new Error("--out does not apply to Build submission; use `result export <build-id> --output <name> --to <path>` to export one retained Result Output");
+      throw new Error("--out does not apply to Build submission; use `result export <build-id> --output <name> --to <path>` to export one published Output");
     }
     if (item === "--output") {
-      outputName = optionValue(global.remaining, index, "--output requires a retained Output name"); index += 1; continue;
+      outputName = optionValue(global.remaining, index, "--output requires a published Output name"); index += 1; continue;
     }
     if (item === "--limit") {
       limit = positiveInteger(optionValue(global.remaining, index, "--limit requires a positive integer"), "--limit");

@@ -3,6 +3,7 @@ import { declarationField, type AuthorDeclaration, type AuthorDeclarationChild,
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
 import { promptTypes } from "@hypit/hypit/prompt";
+import { generationProductPublication } from "@hypit/generation";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import { createFieldModelPrimaryFragment, sealModelFieldBuilder,
   type FieldModelOperation, type ModelFieldValue } from "@hypit/generation/model-fields";
@@ -78,7 +79,7 @@ const outputs = Object.values(pixverseEndpoints).flatMap((endpoint) => [endpoint
 function bindings(declaration: AuthorDeclaration): readonly AuthorDeclarationBinding[] {
   const id = literal(declaration, "id");
   return [{ name: `${id}.video`, ref: { kind: "component-output" as const, component: id, output: "video" }, type: blobTypes.blob,
-    retained: true }];
+    publication: generationProductPublication }];
 }
 
 async function output(declaration: AuthorDeclaration, resolveReference: Parameters<AuthorDeclarationCompiler["compile"]>[0]["resolveReference"],

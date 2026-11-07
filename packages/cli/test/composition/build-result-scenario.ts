@@ -19,11 +19,12 @@ export const generationCapability: CapabilityRef = {
   name: "generation",
 };
 
-export function resultIntent(
+export function publicationIntent(
   outputs: readonly { readonly name: string; readonly record?: string }[],
 ) {
   return { outputs: outputs.map((output) => ({ name: output.name,
     record: output.record ?? `record:${output.name}`,
+    publisher: "example.test-product@1",
   })) };
 }
 
@@ -36,7 +37,7 @@ export async function fixture(root: string, id = "bld_20260902T110000000Z_000000
     id,
     sourcePath: source,
     targets: ["stage.value"],
-    intent: resultIntent([{ name: "stage.value", record: "record:stage" }]),
+    publication: publicationIntent([{ name: "stage.value", record: "record:stage" }]),
   });
   await result.sync({
     records: completedRecords(),

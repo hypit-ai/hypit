@@ -1,7 +1,7 @@
 # `@hypit/runtime-local`
 
 The default local Runtime for Hypit. It owns the Worker, scheduler and active SQLite execution
-worklist. Project-owned Build Results hold finished retained Outputs.
+worklist. Project-owned Build Results hold finished published Outputs.
 
 Byte storage is a separate infrastructure port. `@hypit/hypit/resource-store` owns the neutral
 interface and memory adapter, while `@hypit/hypit/resource-store/node` owns `FileResourceStore`.
@@ -108,7 +108,7 @@ compute resources. SQLite retains the weighted reservation across execution turn
 coordinates Builds sharing this Runtime's Execution Store; it does not enforce a service's quotas
 across other machines. Short-action limits are described below.
 
-A failed request ends that Build's execution attempt. Runtime saves completed retained Outputs and
+A failed request ends that Build's execution attempt. Runtime saves completed published Outputs and
 non-secret Operation receipts with the failed Result, including any remote status still unknown.
 It accepts results from calls already in progress before finalizing, without starting further work
 or polling unfinished remote jobs.
@@ -138,7 +138,7 @@ Provider's authentication, quota or transport error never changes that selection
 The official Toolchain Distribution writes Results to the project's `.hypit/results` directory, with no
 cloud account or service. The filesystem implementation belongs to this single-host Runtime rather
 than a public adapter registry.
-Open Result drafts, incremental output retention, writer recovery and terminal publication are private
+Open Result drafts, incremental publication materialization, writer recovery and terminal publication are private
 Runtime Local implementation. `@hypit/result` owns only immutable history types and readers; no writable
 Result repository entry point is published for CLI or author packages.
 Runtime working Resources remain internal and Build-local; there is no ResourceStore selector. After
@@ -147,9 +147,9 @@ The submission passes known Resource references to the Result writer, separately
 graph. Staging bytes for a running Build does not make them new Result files: external and reused
 resources keep their addresses even when a Producer embeds them inside a new array or object value.
 
-While execution advances, Result synchronization stores newly accepted retained Outputs. The
-repository leaves its files or objects untouched when no new retained Output is available; internal
-execution progress remains in SQLite. Once execution has a final decision, all accepted retained Outputs
+While execution advances, Result synchronization stores newly completed publications. The
+repository leaves its files or objects untouched when no new publication is available; internal
+execution progress remains in SQLite. Once execution has a final decision, all completed publications
 and the outcome are saved before active state and working Resources are removed. This order applies
 to completed, failed and cancelled Builds alike.
 

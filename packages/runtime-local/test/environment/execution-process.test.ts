@@ -105,8 +105,8 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
     await runtime.build({ id,
       definition: defineBuild({ program: initial.program, plan: initial.plan }),
       executionPackages: ["fixture-components"],
-      authoring: { sourcePath: join(directory, "main.svml"), targets: ["document"], intent: { outputs: [{
-        name: "document", record: "document:root",
+      authoring: { sourcePath: join(directory, "main.svml"), targets: ["document"], publication: { outputs: [{
+        name: "document", record: "document:root", publisher: "example.test-product@1",
       }] } },
       result: { repository: { root: directory, path: "results" } },
     });

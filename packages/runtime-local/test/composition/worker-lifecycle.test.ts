@@ -52,7 +52,7 @@ import {
   durableBuildRequest,
   finishClaimedBuild,
   projectRuntimeFixture,
-  resultIntent,
+  publicationIntent,
   resultDestination,
   runFixture,
 } from "./local-scenario.js";
@@ -61,7 +61,7 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-"));
   const buildFixture = createGreetingBuildFixture();
   const initial = buildFixture.state;
-  const retainedOutputs = [{
+  const publishedOutputs = [{
     name: "final.document",
     ref: { kind: "logical-output" as const, id: "document" },
   }, {
@@ -74,7 +74,7 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
   const authoring = {
     sourcePath: join(directory, "main.svml"),
     targets: ["final.document"],
-    intent: resultIntent(retainedOutputs, buildFixture),
+    publication: publicationIntent(publishedOutputs, buildFixture),
   };
   let promptCalls = 0;
   let requestCalls = 0;

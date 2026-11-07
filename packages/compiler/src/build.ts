@@ -10,7 +10,7 @@ import type { WorkspaceSession } from "@hypit/workspace";
 import type {
   BuildDefinition,
   LogicalOutputId,
-  ResultIntent,
+  PublicationIntent,
   TypeRef,
 } from "@hypit/protocol";
 import type { ResolvedSource } from "@hypit/source";
@@ -52,7 +52,7 @@ export type CompiledBuild = {
   readonly authorSource: string;
   readonly author: CompiledAuthorSource;
   readonly selection: ResolvedTargetSelection;
-  /** The fixed graph resolution shared by execution slicing and Result retention. */
+  /** The fixed graph resolution shared by execution slicing and publication. */
   readonly execution: PlannedExecution;
 };
 
@@ -64,8 +64,8 @@ export type PreparedBuild = {
     readonly type: TypeRef;
     readonly record: string;
   }[];
-  /** Reachable Outputs with package-declared cross-Build lifetime. */
-  readonly result: ResultIntent;
+  /** Reachable Outputs with a domain-owned publication answer. */
+  readonly publication: PublicationIntent;
   readonly definition: BuildDefinition;
 };
 
@@ -156,21 +156,28 @@ export class BuildCompiler {
     const definition = defineBuild({ program: sliced.program, plan: sliced.plan });
     const outputsById = new Map(sliced.outputs.map((output) => [output.output, output]));
     const targets: PreparedBuild["targets"][number][] = [];
-    const resultOutputs: ResultIntent["outputs"][number][] = [];
+    const publicationOutputs: PublicationIntent["outputs"][number][] = [];
     for (const target of compilation.selection.targets) {
       const resolved = outputsById.get(target.output);
       if (resolved === undefined) throw new Error(`Target ${target.name} has no resolved Record`);
       targets.push({ name: target.name, type: target.type, record: resolved.record });
     }
     const durableOutputs = new Set(compilation.execution.outputs.map((output) => output.output));
-    for (const retained of compilation.author.retainedOutputs) {
-      if (!durableOutputs.has(retained.ref.id)) continue;
-      const resolved = outputsById.get(retained.ref.id);
+    for (const published of compilation.author.publications) {
+      if (!durableOutputs.has(published.ref.id)) continue;
+      const resolved = outputsById.get(published.ref.id);
       if (resolved === undefined) continue;
-      resultOutputs.push({ name: retained.name, record: resolved.record });
+      publicationOutputs.push({
+        name: published.name,
+        record: resolved.record,
+        publisher: published.publication.publisher,
+        ...(published.publication.parameters === undefined
+          ? {}
+          : { parameters: published.publication.parameters }),
+      });
     }
-    const result: ResultIntent = { outputs: resultOutputs };
-    const prepared: PreparedBuild = { compilation, targets, result, definition };
+    const publication: PublicationIntent = { outputs: publicationOutputs };
+    const prepared: PreparedBuild = { compilation, targets, publication, definition };
     if (options.executionView !== true) return prepared;
     return { ...prepared, outputs: sliced.outputs, state: materializeBuild(definition, []) };
   }
