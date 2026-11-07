@@ -2,7 +2,6 @@ import { copyFile, link, mkdir, mkdtemp, readFile, rename, rm, stat } from "node
 import { tmpdir } from "node:os";
 import { basename, dirname, extname, join, resolve } from "node:path";
 
-import type { CliIo } from "@hypit/cli";
 import sharp from "sharp";
 
 import { decodeMediaFrames } from "./file-frames.js";
@@ -30,6 +29,7 @@ import { importLocalMediaAsset } from "./asset-import.js";
 
 export const mediaCommands = ["import", "probe", "cut", "frames", "grid", "waveform", "spectrogram", "boundaries"] as const;
 export type MediaCommand = typeof mediaCommands[number];
+export type MediaCommandOutput = { write(text: string): void };
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -701,7 +701,7 @@ function sampleTimes(parsed: Parsed, duration: number, words?: readonly Transcri
   return times;
 }
 
-async function probe(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
+async function probe(argv: readonly string[], io: MediaCommandOutput, cwd: string): Promise<void> {
   const parsed = parseArguments(argv, []);
   const source = await sourceFile(parsed, cwd);
   const info = await probeMedia(source);
@@ -712,7 +712,7 @@ async function probe(argv: readonly string[], io: CliIo, cwd: string): Promise<v
     : "audio only"}${audioStreams.length === 0 ? "" : `\n  audio ${audioStreams.length === 1 ? "stream" : "streams"}: ${audioStreams.map((stream) => stream.index).join(", ")}`}\n`);
 }
 
-async function importAsset(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
+async function importAsset(argv: readonly string[], io: MediaCommandOutput, cwd: string): Promise<void> {
   const parsed = parseArguments(argv, [
     "--to", "--id", "--media-type", "--media-file", "--video-stream", "--audio-stream",
     "--picture", "--span-authority", "--ffprobe-path",
@@ -763,7 +763,7 @@ async function importAsset(argv: readonly string[], io: CliIo, cwd: string): Pro
     result.document.media.interpretation.audio === undefined ? "no audio" : "audio"}\n`);
 }
 
-async function cut(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
+async function cut(argv: readonly string[], io: MediaCommandOutput, cwd: string): Promise<void> {
   const parsed = parseArguments(argv, ["--start", "--end", "--keep", "--to"], ["--label-time"], ["--keep"]);
   const source = await sourceFile(parsed, cwd);
   const info = await probeMedia(source);
@@ -800,7 +800,7 @@ async function cut(argv: readonly string[], io: CliIo, cwd: string): Promise<voi
   io.write(`${target}\n  ${spans.map((span) => `${span.start}–${span.end} s`).join(" + ")} (${output.duration} s output)${labeled ? ", source time visible" : ""}\n`);
 }
 
-async function frames(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
+async function frames(argv: readonly string[], io: MediaCommandOutput, cwd: string): Promise<void> {
   const parsed = parseArguments(argv, [...SAMPLE_OPTIONS, "--to"], ["--label-time", "--every-frame"]);
   if (parsed.flags.has("--every-frame")) { await nativeFrames(parsed, io, cwd, false); return; }
   const source = await sourceFile(parsed, cwd);
@@ -1011,7 +1011,7 @@ function pageRange(
   return { start, end };
 }
 
-async function grid(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
+async function grid(argv: readonly string[], io: MediaCommandOutput, cwd: string): Promise<void> {
   const parsed = parseArguments(argv,
     [...SAMPLE_OPTIONS, "--ranges", "--frames", "--cell", "--columns", "--rows", "--audio-stream", "--waveform-scale",
       "--waveform-filter", "--waveform-height", "--spectrogram-scale", "--spectrogram-height", "--frequency-scale",
@@ -1112,7 +1112,7 @@ async function grid(argv: readonly string[], io: CliIo, cwd: string): Promise<vo
 }
 
 /** Native-frame observation: each requested interval is decoded once, then paginated. */
-async function nativeFrames(parsed: Parsed, io: CliIo, cwd: string, grid: boolean): Promise<void> {
+async function nativeFrames(parsed: Parsed, io: MediaCommandOutput, cwd: string, grid: boolean): Promise<void> {
   for (const key of ["--at", "--every", "--frames"]) assert(!parsed.options.has(key), `--every-frame cannot be combined with ${key}`);
   const source = await sourceFile(parsed, cwd);
   const info = await probeMedia(source);
@@ -1198,7 +1198,7 @@ async function nativeFrames(parsed: Parsed, io: CliIo, cwd: string, grid: boolea
   else io.write(`${to}\n  ${grid ? `${grids.length} grids` : `${written.length} frames`} from continuous source decoding\n`);
 }
 
-async function boundaries(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
+async function boundaries(argv: readonly string[], io: MediaCommandOutput, cwd: string): Promise<void> {
   const parsed = parseArguments(argv, ["--rate", "--threshold"]);
   const source = await sourceFile(parsed, cwd);
   requireVideo(await probeMedia(source), source);
@@ -1229,7 +1229,7 @@ async function audioObservationSelection(parsed: Parsed, cwd: string) {
   return { source, inspection, stream, start, end, width, pixelsPerSecond: width / (end - start) };
 }
 
-async function waveform(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
+async function waveform(argv: readonly string[], io: MediaCommandOutput, cwd: string): Promise<void> {
   const parsed = parseArguments(argv,
     ["--start", "--end", "--audio-stream", "--width", "--pixels-per-second", "--height", "--scale", "--filter",
       "--transcript", "--around", "--occurrence", "--padding", "--to"],
@@ -1254,7 +1254,7 @@ async function waveform(argv: readonly string[], io: CliIo, cwd: string): Promis
     result.splitChannels ? ", channels split" : ""}\n`);
 }
 
-async function spectrogram(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
+async function spectrogram(argv: readonly string[], io: MediaCommandOutput, cwd: string): Promise<void> {
   const parsed = parseArguments(argv,
     ["--start", "--end", "--audio-stream", "--width", "--pixels-per-second", "--height", "--scale",
       "--frequency-scale", "--start-frequency", "--stop-frequency", "--dynamic-range",
@@ -1290,7 +1290,7 @@ async function spectrogram(argv: readonly string[], io: CliIo, cwd: string): Pro
 // ---------------------------------------------------------------------------------------------------
 // Entry
 
-export function writeMediaHelp(io: CliIo, topic?: MediaCommand): void {
+export function writeMediaHelp(io: MediaCommandOutput, topic?: MediaCommand): void {
   const sections: Record<MediaCommand, readonly string[]> = {
     import: ["  hypit media import <file> --to <asset.media.json> [--link] [--id <id>] [--video-stream <n> | --no-video] [--audio-stream <n> | --no-audio] [--picture source|srgb|sdr-bt709]",
       "    Inspect once and publish a file-backed Media Asset. Copy is the default; --link requires the source below the manifest directory."],
@@ -1323,7 +1323,7 @@ export function writeMediaHelp(io: CliIo, topic?: MediaCommand): void {
     + "Commands write only what --to names and refuse to overwrite. Add --json for the complete machine view.\n");
 }
 
-export async function runMediaCli(argv: readonly string[], io: CliIo, cwd = process.cwd()): Promise<void> {
+export async function runMediaCli(argv: readonly string[], io: MediaCommandOutput, cwd = process.cwd()): Promise<void> {
   const command = argv[1];
   if (command === undefined || command === "--help" || argv.includes("--help")) {
     writeMediaHelp(io, isMediaCommand(command) ? command : undefined);

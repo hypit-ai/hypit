@@ -6,7 +6,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./cli": "./src/cli.ts",
     "./execution": "./src/execution.ts",
     "./files": "./src/file-port.ts"
   },
@@ -18,7 +17,6 @@
     "@hypit/audio-gain": "workspace:^0.1.0",
     "@hypit/audio-program": "workspace:^0.1.0",
     "@hypit/audio-preserve-pitch": "workspace:^0.1.0",
-    "@hypit/cli": "workspace:^0.0.0-dev",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-asset": "workspace:^0.1.0",
     "@hypit/media-delivery": "workspace:^0.1.0",

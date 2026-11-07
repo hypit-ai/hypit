@@ -184,10 +184,8 @@
       "use": [
         "@hypit/browser-capture/cli",
         "@hypit/yt-dlp/cli",
-        "@hypit/media-local/cli",
         "@hypit/speech-estimate/cli",
         "@hypit/whisperx/cli",
-        "@hypit/nle-local/cli",
         "@hypit/toolchain/cli"
       ]
     },
@@ -269,8 +267,8 @@
   "dependencies": {
     "@hypit/browser-capture": "workspace:^0.2.1",
     "@hypit/speech-estimate": "workspace:^0.1.2",
-    "@hypit/media-local": "workspace:^0.3.0",
-    "@hypit/nle-local": "workspace:^0.1.0",
+    "@hypit/media-local-cli": "workspace:^0.1.0",
+    "@hypit/nle-local-cli": "workspace:^0.1.0",
     "@hypit/runtime-local-cli": "workspace:^0.1.0",
     "@hypit/toolchain": "workspace:^0.3.0",
     "@hypit/whisperx": "workspace:^0.3.0",

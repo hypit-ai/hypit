@@ -17,10 +17,10 @@ respective packages and contribute their own CLI roots:
 | Command | Owner |
 | --- | --- |
 | `capture` | `@hypit/browser-capture/cli` |
-| `media` | `@hypit/media-local/cli` |
+| `media` | `@hypit/media-local-cli` |
 | `measure` | `@hypit/speech-estimate/cli` |
 | `transcribe` | `@hypit/whisperx/cli` |
-| `nle export` | `@hypit/nle-local/cli` |
+| `nle export` | `@hypit/nle-local-cli` |
 | `vocabulary` | `@hypit/toolchain/cli` |
 
 The root executable is the composition root. Its explicit `hypit.cli.use` list installs these command

@@ -5,7 +5,7 @@ Trusted direct ffprobe/ffmpeg engine. It exposes three direct ports:
 - the main and `@hypit/media-local/execution` entries execute byte operations against an explicitly
   supplied `ResourceStore`;
 - `@hypit/media-local/files` inspects or creates files explicitly named by an authoring tool;
-- `@hypit/media-local/cli` presents that file port as `hypit media`.
+- `@hypit/media-local-cli` presents those explicit file operations as `hypit media`.
 
 None of these ports creates a Graph, Build, Result, Endpoint or Runtime state. The optional Runtime
 adapter is the separate `@hypit/provider-media-local` package.

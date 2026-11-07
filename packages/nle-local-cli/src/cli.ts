@@ -1,8 +1,8 @@
 import { dirname, resolve } from "node:path";
 
 import type { CliIo } from "@hypit/cli";
-import { exportLocalNleProject } from "./export.js";
-import type { LocalNleExportProgress } from "./export.js";
+import { exportLocalNleProject } from "@hypit/nle-local";
+import type { LocalNleExportProgress } from "@hypit/nle-local";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

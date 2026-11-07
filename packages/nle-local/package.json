@@ -5,15 +5,13 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./cli": "./src/commands.ts"
+    ".": "./src/index.ts"
   },
   "files": [
     "dist",
     "README.md"
   ],
   "dependencies": {
-    "@hypit/cli": "workspace:^0.0.0-dev",
     "@hypit/facet": "workspace:^0.0.0-dev",
     "@hypit/html-chromium-local": "workspace:^0.1.0",
     "@hypit/html-video": "workspace:^0.2.1",

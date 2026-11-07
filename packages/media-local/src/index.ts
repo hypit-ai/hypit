@@ -30,3 +30,5 @@ export {
 } from "./support.js";
 export { probeMediaToolchain } from "./toolchain.js";
 export type { MediaToolchainState } from "./toolchain.js";
+export { isMediaCommand, mediaCommands, runMediaCli, writeMediaHelp } from "./files.js";
+export type { MediaCommand, MediaCommandOutput, MediaProbe } from "./files.js";

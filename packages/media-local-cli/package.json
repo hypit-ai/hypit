@@ -1,0 +1,18 @@
+{
+  "name": "@hypit/media-local-cli",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@hypit/cli": "workspace:^0.0.0-dev",
+    "@hypit/media-local": "workspace:^0.3.0"
+  }
+}

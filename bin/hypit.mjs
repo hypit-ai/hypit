@@ -30,6 +30,8 @@ const args = process.argv.slice(2);
 const { runInstalledCliApplication, runNodeCli } = await import(new URL("packages/cli/src/index.ts", distributionUrl).href);
 const { createToolchainDistribution } = await import("@hypit/toolchain");
 const { createLocalRuntimeCliCommandModules } = await import("@hypit/runtime-local-cli");
+const { createLocalMediaCliCommandModules } = await import("@hypit/media-local-cli");
+const { createLocalNleCliCommandModules } = await import("@hypit/nle-local-cli");
 const toolchainDistribution = createToolchainDistribution({
   packageRoot: distributionRoot,
   launcher: fileURLToPath(import.meta.url),
@@ -37,6 +39,10 @@ const toolchainDistribution = createToolchainDistribution({
 await runNodeCli(args, async (argv, io) => await runInstalledCliApplication(argv, io, {
   distribution: toolchainDistribution,
   distributionRoot,
-  commandModules: createLocalRuntimeCliCommandModules(toolchainDistribution),
+  commandModules: [
+    ...createLocalRuntimeCliCommandModules(toolchainDistribution),
+    ...createLocalMediaCliCommandModules(),
+    ...createLocalNleCliCommandModules({ distributionPackageRoot: distributionRoot }),
+  ],
   launcher: fileURLToPath(import.meta.url),
 }));

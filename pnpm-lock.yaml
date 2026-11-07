@@ -11,12 +11,12 @@ importers:
       '@hypit/browser-capture':
         specifier: workspace:^0.2.1
         version: link:packages/browser-capture
-      '@hypit/media-local':
-        specifier: workspace:^0.3.0
-        version: link:packages/media-local
-      '@hypit/nle-local':
+      '@hypit/media-local-cli':
         specifier: workspace:^0.1.0
-        version: link:packages/nle-local
+        version: link:packages/media-local-cli
+      '@hypit/nle-local-cli':
+        specifier: workspace:^0.1.0
+        version: link:packages/nle-local-cli
       '@hypit/runtime-local-cli':
         specifier: workspace:^0.1.0
         version: link:packages/runtime-local-cli
@@ -1162,9 +1162,6 @@ importers:
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:../audio-program
-      '@hypit/cli':
-        specifier: workspace:^0.0.0-dev
-        version: link:../cli
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
@@ -1193,6 +1190,15 @@ importers:
       '@hypit/blob':
         specifier: workspace:*
         version: link:../blob
+
+  packages/media-local-cli:
+    dependencies:
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
+      '@hypit/media-local':
+        specifier: workspace:^0.3.0
+        version: link:../media-local
 
   packages/mimo-speech:
     dependencies:
@@ -1379,9 +1385,6 @@ importers:
 
   packages/nle-local:
     dependencies:
-      '@hypit/cli':
-        specifier: workspace:^0.0.0-dev
-        version: link:../cli
       '@hypit/facet':
         specifier: workspace:^0.0.0-dev
         version: link:../facet
@@ -1419,6 +1422,15 @@ importers:
       '@hypit/audio-program':
         specifier: workspace:*
         version: link:../audio-program
+
+  packages/nle-local-cli:
+    dependencies:
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
+      '@hypit/nle-local':
+        specifier: workspace:^0.1.0
+        version: link:../nle-local
 
   packages/picture-filter:
     dependencies:
