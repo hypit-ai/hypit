@@ -24,18 +24,16 @@
     "@hypit/media-local": "workspace:^0.3.0",
     "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/runtime": "workspace:^0.0.0-dev",
-    "@hypit/speech-evidence": "workspace:^0.2.0"
+    "@hypit/speech-evidence": "workspace:^0.2.0",
+    "@hypit/timed-transcript": "workspace:^0.1.0"
   },
   "devDependencies": {
     "@hypit/hypit": "workspace:*",
     "@hypit/producer": "workspace:*",
-    "@hypit/author": "workspace:*",
     "@hypit/media": "workspace:*",
-    "@hypit/narrative": "workspace:*",
-    "@hypit/narrative-temporal": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/speech-evidence": "workspace:*",
-    "@hypit/markup": "workspace:*",
+    "@hypit/timed-transcript": "workspace:*",
     "@hypit/temporal": "workspace:*",
     "typescript": "5.9.3"
   }

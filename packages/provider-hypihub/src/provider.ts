@@ -9,7 +9,7 @@ import { selectWireModelForRequest } from "@hypit/generation/provider";
 import type { ProviderFieldRequest } from "@hypit/generation/provider";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue, CapabilityRef, Value } from "@hypit/hypit/protocol";
-import { sealSpeechTranscriptEvidence, speechEvidenceTypes } from "@hypit/speech-evidence";
+import { timedTranscriptTypes } from "@hypit/timed-transcript";
 import {
   assertWhisperXEvidenceWav,
   interpretWhisperXTranscript,
@@ -633,12 +633,9 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
         language: request.language,
         timestamp_granularities: ["segment", "word"],
       }, auth, async (message) => { await context.reportDiagnostic?.({ level: "info", message }); });
-      const evidence = sealSpeechTranscriptEvidence({
-        sampleFrames: request.sampleFrames,
-        passages: interpretWhisperXTranscript(response as WhisperXTranscriptResponse, request.sampleFrames),
-      });
+      const transcript = interpretWhisperXTranscript(response as WhisperXTranscriptResponse, request.language);
       await context.reportProgress?.({ phase: "Word timing ready" });
-      return canonicalize(evidence);
+      return canonicalize(transcript);
     } catch (error) {
       throw new Error(failureMessage(error), { cause: error });
     }
@@ -670,7 +667,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
         : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, capacity: route.capability.name, ...(route.supports === undefined ? {} : { supports: route.supports }), ...(capabilityConcurrency[route.capability.name] === undefined ? {} : { maxConcurrency: capabilityConcurrency[route.capability.name]! }) }),
       {
         capability: whisperXCapabilities.transcription,
-        returns: speechEvidenceTypes.transcript,
+        returns: timedTranscriptTypes.transcript,
         lifecycle: "immediate" as const,
         handler: whisperXEndpoint,
         capacity: "transcription",

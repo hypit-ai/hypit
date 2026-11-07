@@ -1,4 +1,5 @@
-import type { SpeechTranscriptPassage } from "@hypit/speech-evidence";
+import { timedTranscript } from "@hypit/timed-transcript";
+import type { TimedTranscript, TimedTranscriptSegment, TimedTranscriptWord } from "@hypit/timed-transcript";
 
 type RawWord = {
   readonly text?: unknown;
@@ -8,6 +9,7 @@ type RawWord = {
 };
 
 type RawSegment = {
+  readonly text?: unknown;
   readonly start?: unknown;
   readonly end?: unknown;
   readonly words?: unknown;
@@ -17,6 +19,7 @@ type RawSegment = {
 export type WhisperXTranscriptResponse = {
   readonly language?: unknown;
   readonly segments?: unknown;
+  readonly word_segments?: unknown;
   readonly words?: unknown;
 };
 
@@ -28,68 +31,67 @@ function finite(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-function sampleWindow(
-  startSec: unknown,
-  endSec: unknown,
-  sampleFrames: number,
-): { readonly startSample: number; readonly endSampleExclusive: number } | undefined {
-  if (!finite(startSec) || !finite(endSec) || startSec < 0 || endSec < startSec) return undefined;
-  const startSample = Math.round(startSec * 16_000);
-  const endSampleExclusive = Math.round(endSec * 16_000);
-  if (!Number.isSafeInteger(startSample) || !Number.isSafeInteger(endSampleExclusive)
-    || startSample > sampleFrames || endSampleExclusive > sampleFrames) return undefined;
-  return { startSample, endSampleExclusive };
+function word(rawValue: unknown): TimedTranscriptWord | undefined {
+  assert(rawValue !== null && typeof rawValue === "object" && !Array.isArray(rawValue),
+    "WhisperX response Word is invalid");
+  const raw = rawValue as RawWord;
+  const text = typeof raw.word === "string" ? raw.word.trim() : typeof raw.text === "string" ? raw.text.trim() : "";
+  if (text.length === 0) return undefined;
+  const hasTime = finite(raw.start) && finite(raw.end) && raw.start >= 0 && raw.start <= raw.end;
+  return { word: text, ...(hasTime ? { start: raw.start, end: raw.end } : {}) };
 }
 
-function words(value: unknown, sampleFrames: number): SpeechTranscriptPassage["words"] {
+function words(value: unknown): readonly TimedTranscriptWord[] {
   assert(Array.isArray(value), "WhisperX response has no Word array");
-  const result: Array<SpeechTranscriptPassage["words"][number]> = [];
-  for (const rawValue of value) {
-    assert(rawValue !== null && typeof rawValue === "object" && !Array.isArray(rawValue),
-      "WhisperX response Word is invalid");
-    const raw = rawValue as RawWord;
-    const text = typeof raw.text === "string"
-      ? raw.text.trim()
-      : typeof raw.word === "string" ? raw.word.trim() : "";
-    if (text.length === 0) continue;
-    const window = sampleWindow(raw.start, raw.end, sampleFrames);
-    result.push({ text, ...window });
-  }
-  return result;
+  return value.flatMap((item) => {
+    const parsed = word(item);
+    return parsed === undefined ? [] : [parsed];
+  });
 }
 
-/** Lower wire-level seconds once into exact 16 kHz evidence-sample boundaries. */
+function segment(rawValue: unknown): TimedTranscriptSegment | undefined {
+  assert(rawValue !== null && typeof rawValue === "object" && !Array.isArray(rawValue),
+    "WhisperX response Segment is invalid");
+  const raw = rawValue as RawSegment;
+  const aligned = raw.words === undefined ? [] : words(raw.words);
+  if (aligned.length === 0) return undefined;
+  const first = aligned.find((item) => item.start !== undefined);
+  const last = aligned.findLast((item) => item.end !== undefined);
+  const start = finite(raw.start) && raw.start >= 0 ? raw.start : first?.start;
+  const end = finite(raw.end) && raw.end >= 0 ? raw.end : last?.end;
+  assert(start !== undefined && end !== undefined && start <= end,
+    "WhisperX response Segment has no valid time range");
+  const text = typeof raw.text === "string" && raw.text.trim().length > 0
+    ? raw.text.trim()
+    : aligned.map((item) => item.word).join(" ");
+  return { start, end, text, words: aligned };
+}
+
+/** Strip provider-specific fields once while preserving the aligned WhisperX seconds shape. */
 export function interpretWhisperXTranscript(
   response: WhisperXTranscriptResponse,
-  sampleFrames: number,
-): readonly SpeechTranscriptPassage[] {
-  assert(Number.isSafeInteger(sampleFrames) && sampleFrames > 0,
-    "WhisperX evidence sample count must be a positive integer");
+  requestedLanguage?: string,
+): TimedTranscript {
+  const language = typeof response.language === "string" && response.language.trim().length > 0
+    ? response.language
+    : requestedLanguage;
+  assert(language !== undefined && language.trim().length > 0, "WhisperX response has no language");
   if (Array.isArray(response.segments)) {
-    const passages = response.segments.map((rawValue): SpeechTranscriptPassage => {
-      assert(rawValue !== null && typeof rawValue === "object" && !Array.isArray(rawValue),
-        "WhisperX response Segment is invalid");
-      const raw = rawValue as RawSegment;
-      return {
-        ...sampleWindow(raw.start, raw.end, sampleFrames),
-        words: raw.words === undefined ? [] : words(raw.words, sampleFrames),
-        chars: [],
-      };
+    const segments = response.segments.flatMap((item) => {
+      const parsed = segment(item);
+      return parsed === undefined ? [] : [parsed];
     });
-    if (passages.some((passage) => passage.words.length > 0) || response.words === undefined) {
-      return passages;
+    if (segments.length > 0 || (response.word_segments === undefined && response.words === undefined)) {
+      return timedTranscript(language, segments);
     }
   }
-  if (response.words !== undefined) {
-    const aligned = words(response.words, sampleFrames);
-    const first = aligned.find((word) => word.startSample !== undefined);
-    const last = [...aligned].reverse().find((word) => word.endSampleExclusive !== undefined);
-    return [{
-      ...(first?.startSample === undefined ? {} : { startSample: first.startSample }),
-      ...(last?.endSampleExclusive === undefined ? {} : { endSampleExclusive: last.endSampleExclusive }),
-      words: aligned,
-      chars: [],
-    }];
-  }
-  throw new Error("WhisperX response has no Segment or Word array");
+  const flat = response.word_segments ?? response.words;
+  assert(flat !== undefined, "WhisperX response has no Segment or Word array");
+  const aligned = words(flat);
+  if (aligned.length === 0) return timedTranscript(language, []);
+  const first = aligned.find((item) => item.start !== undefined);
+  const last = aligned.findLast((item) => item.end !== undefined);
+  assert(first?.start !== undefined && last?.end !== undefined, "WhisperX response words have no valid time range");
+  return timedTranscript(language, [{ start: first.start, end: last.end,
+    text: aligned.map((item) => item.word).join(" "), words: aligned }]);
 }

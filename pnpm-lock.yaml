@@ -108,6 +108,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:*
         version: link:packages/temporal
+      '@hypit/timed-transcript':
+        specifier: workspace:*
+        version: link:packages/timed-transcript
       linkedom:
         specifier: 0.18.13
         version: 0.18.13
@@ -1198,6 +1201,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
+      '@hypit/timed-transcript':
+        specifier: workspace:^0.1.0
+        version: link:../timed-transcript
       sharp:
         specifier: 0.35.4
         version: 0.35.4(@types/node@24.10.1)
@@ -1329,12 +1335,12 @@ importers:
       '@hypit/narrative-temporal':
         specifier: workspace:^0.1.1
         version: link:../narrative-temporal
-      '@hypit/speech-evidence':
-        specifier: workspace:^0.2.0
-        version: link:../speech-evidence
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
+      '@hypit/timed-transcript':
+        specifier: workspace:^0.1.0
+        version: link:../timed-transcript
     devDependencies:
       '@hypit/hypit':
         specifier: workspace:*
@@ -1824,9 +1830,9 @@ importers:
       '@hypit/seedream':
         specifier: workspace:^0.3.0
         version: link:../seedream
-      '@hypit/speech-evidence':
-        specifier: workspace:^0.2.0
-        version: link:../speech-evidence
+      '@hypit/timed-transcript':
+        specifier: workspace:^0.1.0
+        version: link:../timed-transcript
       '@hypit/volcengine-matting':
         specifier: workspace:^0.3.0
         version: link:../volcengine-matting
@@ -2042,9 +2048,9 @@ importers:
 
   packages/provider-whisperx-local:
     dependencies:
-      '@hypit/speech-evidence':
-        specifier: workspace:^0.2.0
-        version: link:../speech-evidence
+      '@hypit/timed-transcript':
+        specifier: workspace:^0.1.0
+        version: link:../timed-transcript
     devDependencies:
       '@hypit/endpoint':
         specifier: workspace:*
@@ -2342,9 +2348,6 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
-      '@hypit/media-asset':
-        specifier: workspace:^0.1.0
-        version: link:../media-asset
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
@@ -2388,6 +2391,22 @@ importers:
 
   packages/text:
     dependencies:
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:*
+        version: link:../refinement
+
+  packages/timed-transcript:
+    dependencies:
+      '@hypit/media-asset':
+        specifier: workspace:^0.1.0
+        version: link:../media-asset
+    devDependencies:
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2633,22 +2652,13 @@ importers:
       '@hypit/speech-evidence':
         specifier: workspace:^0.2.0
         version: link:../speech-evidence
+      '@hypit/timed-transcript':
+        specifier: workspace:^0.1.0
+        version: link:../timed-transcript
     devDependencies:
-      '@hypit/author':
-        specifier: workspace:*
-        version: link:../author
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../..
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/narrative':
-        specifier: workspace:*
-        version: link:../narrative
-      '@hypit/narrative-temporal':
-        specifier: workspace:*
-        version: link:../narrative-temporal
       '@hypit/producer':
         specifier: workspace:*
         version: link:../producer

@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { Need } from "@hypit/hypit/protocol";
-import { decodeSpeechTranscriptEvidence, sealSpeechTranscriptEvidence } from "@hypit/speech-evidence";
+import { decodeTimedTranscript } from "@hypit/timed-transcript";
 import { interpretWhisperXTranscript } from "@hypit/whisperx";
 import type { WhisperXTranscriptionRequest } from "@hypit/whisperx";
 
@@ -47,11 +47,9 @@ function host(seen: Need[]): Awaited<ReturnType<TranscribeEnvironment["openHost"
       seen.push(need);
       if (need.capability.name === "whisperx-transcription") {
         const request = need.constraints as unknown as WhisperXTranscriptionRequest;
-        return canonicalize(sealSpeechTranscriptEvidence({
-          sampleFrames: request.sampleFrames,
-          passages: interpretWhisperXTranscript({
-            segments: [{ start: 0, end: 1.5, words: [{ text: "hello", start: 0.1, end: 0.5 }, { text: "world", start: 0.9, end: 1.4 }] }],
-          }, request.sampleFrames),
+        return canonicalize(interpretWhisperXTranscript({
+          language: request.language,
+          segments: [{ start: 0, end: 1.5, words: [{ text: "hello", start: 0.1, end: 0.5 }, { text: "world", start: 0.9, end: 1.4 }] }],
         }));
       }
       throw new Error(`Unexpected capability ${need.capability.name}`);
@@ -108,11 +106,11 @@ test("transcribe writes exact editable evidence from the Profile's transcription
     const out = capture();
     await runTranscribeCli(["transcribe", "speech.wav", "--to", "speech.transcript.json", "--language", "en"], out.io, environment(root, seen));
     assert.match(out.text(), /paid\.default \(@hypit\/provider-example\)  ·  https:\/\/prices\.example\/models/u);
-    assert.match(out.text(), /2 words in 1 passage over 2s/u);
+    assert.match(out.text(), /2 words in 1 segment over 2s/u);
     assert.equal(out.text().match(/Aligning words/gu)?.length, 1);
-    const file = decodeSpeechTranscriptEvidence(await readFile(join(root, "speech.transcript.json"), "utf8"));
-    assert.equal(file.sampleFrames, 32_000);
-    assert.deepEqual(file.passages[0]?.words.map((word) => [word.text, word.startSample]), [["hello", 1_600], ["world", 14_400]]);
+    const file = decodeTimedTranscript(await readFile(join(root, "speech.transcript.json"), "utf8"));
+    assert.equal(file.language, "en");
+    assert.deepEqual(file.word_segments.map((word) => [word.word, word.start]), [["hello", 0.1], ["world", 0.9]]);
     const request = seen[0]!.constraints as unknown as WhisperXTranscriptionRequest;
     assert.equal(request.language, "en");
     assert.equal(request.sampleFrames, 32_000);
@@ -163,11 +161,11 @@ test("transcribe passes Korean to the selected endpoint", async () => {
       cwd: root, openHost: async () => ({ profile: join(root, "runtime.json"), host: host(seen) }),
     });
     assert.equal((seen[0]!.constraints as unknown as WhisperXTranscriptionRequest).language, "ko");
-    assert.equal(decodeSpeechTranscriptEvidence(await readFile(join(root, "speech.transcript.json"), "utf8")).sampleFrames, 32_000);
+    assert.equal(decodeTimedTranscript(await readFile(join(root, "speech.transcript.json"), "utf8")).language, "ko");
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
-test("Chinese transcription explicitly sends zh and retains individual character windows", async () => {
+test("Chinese transcription explicitly sends zh and retains individual word windows", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-transcribe-zh-"));
   try {
     await writeFile(join(root, "speech.wav"), wav(32_000));
@@ -177,19 +175,17 @@ test("Chinese transcription explicitly sends zh and retains individual character
       invoke: async (need) => {
         const request = need.constraints as unknown as WhisperXTranscriptionRequest;
         assert.equal(request.language, "zh");
-        return canonicalize({
-          sampleFrames: request.sampleFrames,
-          passages: interpretWhisperXTranscript({
-          segments: [{ words: [{ word: "你", start: 0.1, end: 0.24 }, { word: "好！", start: 0.5, end: 1.1 }] }],
-        }, request.sampleFrames),
-        });
+        return canonicalize(interpretWhisperXTranscript({
+          language: request.language,
+          segments: [{ start: 0, end: 1.1, words: [{ word: "你", start: 0.1, end: 0.24 }, { word: "好！", start: 0.5, end: 1.1 }] }],
+        }));
       },
     } }) };
     await runTranscribeCli(["transcribe", "speech.wav", "--language", "zh", "--to", "speech.transcript.json"], capture().io, env);
-    const result = decodeSpeechTranscriptEvidence(await readFile(join(root, "speech.transcript.json"), "utf8"));
-    assert.deepEqual(result.passages[0]!.words, [
-      { text: "你", startSample: 1_600, endSampleExclusive: 3_840 },
-      { text: "好！", startSample: 8_000, endSampleExclusive: 17_600 },
+    const result = decodeTimedTranscript(await readFile(join(root, "speech.transcript.json"), "utf8"));
+    assert.deepEqual(result.word_segments, [
+      { word: "你", start: 0.1, end: 0.24 },
+      { word: "好！", start: 0.5, end: 1.1 },
     ]);
   } finally { await rm(root, { recursive: true, force: true }); }
 });

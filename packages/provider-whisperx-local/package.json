@@ -31,11 +31,11 @@
     "@hypit/protocol": "workspace:*",
     "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/runtime-local": "workspace:*",
-    "@hypit/speech-evidence": "workspace:*",
+    "@hypit/timed-transcript": "workspace:*",
     "@hypit/whisperx": "workspace:*",
     "@hypit/executor": "workspace:*"
   },
   "dependencies": {
-    "@hypit/speech-evidence": "workspace:^0.2.0"
+    "@hypit/timed-transcript": "workspace:^0.1.0"
   }
 }

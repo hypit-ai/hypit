@@ -12,7 +12,8 @@ import { elevenLabsSpeechEndpoints, sealElevenLabsSpeechRequest } from "@hypit/e
 import { generationTypes } from "@hypit/generation";
 import { gptImageEndpoints, sealGptImage2Request } from "@hypit/gpt-image";
 import { sealSeedanceRequest, seedanceEndpoints } from "@hypit/seedance";
-import { sealSpeechEvidenceAudio, speechEvidenceTypes } from "@hypit/speech-evidence";
+import { sealSpeechEvidenceAudio } from "@hypit/speech-evidence";
+import { timedTranscriptTypes } from "@hypit/timed-transcript";
 import { whisperXCapabilities, whisperXRequestForEvidenceAudio } from "@hypit/whisperx";
 import { portraitMattingEndpoint, sealPortraitMattingRequest } from "@hypit/volcengine-matting";
 
@@ -26,7 +27,7 @@ test("HypiHub exposes model groups beneath its own total capacity", async () => 
     capabilityConcurrency: { "seedance-2-mini": 2, transcription: 1 } }), registry);
   const requests = [
     need({}),
-    { ...need({}), capability: whisperXCapabilities.transcription, returns: speechEvidenceTypes.transcript },
+    { ...need({}), capability: whisperXCapabilities.transcription, returns: timedTranscriptTypes.transcript },
   ];
   for (const [index, request] of requests.entries()) {
     const selected = registry.select(request);
@@ -342,7 +343,7 @@ for (const mode of ['success', 'error', 'body-timeout'] as const) {
     const artifact = await resources.put(wav(32_000), 'audio/wav');
     const request: Need = {
       id: 'request:transcription-receipt', capability: whisperXCapabilities.transcription,
-      returns: speechEvidenceTypes.transcript,
+      returns: timedTranscriptTypes.transcript,
       constraints: whisperXRequestForEvidenceAudio(sealSpeechEvidenceAudio({ artifact, sampleFrames: 32_000 }), { language: 'en' }) as unknown as CanonicalValue,
       result: 'record:transcription-receipt',
     };

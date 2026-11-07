@@ -1,8 +1,9 @@
 import type { NarrativeToken } from "@hypit/narrative";
-import type { SpeechWordEvidence } from "@hypit/speech-evidence";
 
 import { editDistance, normalizeForAlignment } from "./normalize.js";
 import type { AlignmentGroup, AlignmentRelation } from "./types.js";
+
+export type AlignmentWord = { readonly text: string };
 
 const EPSILON = 1e-9;
 const DEFAULT_MAX_GROUP = 4;
@@ -24,7 +25,7 @@ function comparisonText(values: readonly { readonly text: string }[]): string {
 
 function exactWordLcs(
   source: readonly NarrativeToken[],
-  evidence: readonly SpeechWordEvidence[],
+  evidence: readonly AlignmentWord[],
 ): number {
   const rows = Array.from({ length: source.length + 1 }, () =>
     Array<number>(evidence.length + 1).fill(0));
@@ -53,7 +54,7 @@ function relation(
 
 function pairedCost(
   source: readonly NarrativeToken[],
-  evidence: readonly SpeechWordEvidence[],
+  evidence: readonly AlignmentWord[],
 ): number {
   const sourceText = comparisonText(source);
   const evidenceText = comparisonText(evidence);
@@ -111,7 +112,7 @@ function extend(
 export function alignWordGroups(
   sourceSegmentId: string,
   source: readonly NarrativeToken[],
-  evidence: readonly SpeechWordEvidence[],
+  evidence: readonly AlignmentWord[],
   maxGroupSize = DEFAULT_MAX_GROUP,
 ): AlignmentGroup[] {
   // The overwhelmingly common exact transcript has one unambiguous zero-cost path. Returning that

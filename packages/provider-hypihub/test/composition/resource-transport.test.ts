@@ -12,7 +12,8 @@ import { elevenLabsSpeechEndpoints, sealElevenLabsSpeechRequest } from "@hypit/e
 import { generationTypes } from "@hypit/generation";
 import { gptImageEndpoints, sealGptImage2Request } from "@hypit/gpt-image";
 import { sealSeedanceRequest, seedanceEndpoints } from "@hypit/seedance";
-import { sealSpeechEvidenceAudio, speechEvidenceTypes } from "@hypit/speech-evidence";
+import { sealSpeechEvidenceAudio } from "@hypit/speech-evidence";
+import { timedTranscriptTypes } from "@hypit/timed-transcript";
 import { whisperXCapabilities, whisperXRequestForEvidenceAudio } from "@hypit/whisperx";
 import { portraitMattingEndpoint, sealPortraitMattingRequest } from "@hypit/volcengine-matting";
 
@@ -320,7 +321,7 @@ for (const language of ["en", "ko"]) test(`HypiHub forwards ${language} for the 
   const request: Need = {
     id: "need:hypihub-whisperx",
     capability: whisperXCapabilities.transcription,
-    returns: speechEvidenceTypes.transcript,
+    returns: timedTranscriptTypes.transcript,
     constraints: whisperXRequestForEvidenceAudio(sealSpeechEvidenceAudio({
       artifact,
       sampleFrames: 32_000,
@@ -392,14 +393,19 @@ for (const language of ["en", "ko"]) test(`HypiHub forwards ${language} for the 
   });
   assert.equal(submitted, true);
   assert.deepEqual(result, ({
-    sampleFrames: 32_000,
-    passages: [{
-    startSample: 1_600,
-    endSampleExclusive: 25_600,
-    words: [
-      { text: "hello", startSample: 1_600, endSampleExclusive: 6_400 },
-      { text: "world", startSample: 19_200, endSampleExclusive: 25_600 },
+    language,
+    segments: [{
+      start: 0.1,
+      end: 1.6,
+      text: "hello world",
+      words: [
+        { word: "hello", start: 0.1, end: 0.4 },
+        { word: "world", start: 1.2, end: 1.6 },
+      ],
+    }],
+    word_segments: [
+      { word: "hello", start: 0.1, end: 0.4 },
+      { word: "world", start: 1.2, end: 1.6 },
     ],
-    chars: [],
-  }] }));
+  }));
 });

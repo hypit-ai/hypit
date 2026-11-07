@@ -110,11 +110,10 @@ confirm that the second render contains no new image, voice or video request. In
 moving head placement in the result. Changing only Caption or MG needs no repeat generation; changing
 the footage requires matching measurements.
 
-If reviewing the actual footage reveals a transcription timing error, use the explicit speech-evidence
-path. Produce or export an editable `.transcript.json`, correct its word evidence, attach that Representation,
-and connect its published `SpeechTranscriptEvidence` to the existing Alignment declaration. The
-Alignment continues to express the relationship between the Script Segment and the accepted media
-domain; the correction belongs to the evidence rather than to the execution request.
+If reviewing the actual footage reveals a transcription error, edit or M:N-correct its one
+`.transcript.json` `TimedTranscript`, then replace the Media Asset Representation document. Semantic
+alignment can consume that same final transcript when needed; the NLE only receives later materialized
+times and never selects among raw and corrected recognizer files.
 
 ## Prompt provenance
 

@@ -8,9 +8,9 @@ The Provider accepts only canonical 16 kHz mono PCM s16 WAV bytes produced by th
 projection Need. It validates those bytes and stages them unchanged. WhisperX is therefore never
 allowed to hide a second ffmpeg conversion or change the speech-master clock.
 
-WhisperX's wire response uses floating-point seconds. This adapter converts those boundaries once
-to integer positions in the 16 kHz evidence-audio sample domain. It preserves WhisperX acoustic
-passages but never receives or assigns authored Script Segment identities.
+The warm service lowers WhisperX's raw aligned response once to the common `TimedTranscript` shape.
+It retains segment and word boundaries in seconds and removes scores and other recognizer-only fields;
+it never receives or assigns authored Script Segment identities.
 
 ```ts
 createLocalWhisperXProvider({
@@ -26,7 +26,7 @@ createLocalWhisperXProvider({
 The service must be on loopback because this protocol deliberately passes a local staged path. A
 future persistent remote Provider should use an Artifact URL or request payload owned by that
 Provider; it is a different deployment package but must return the same
-`SpeechTranscriptEvidence` type. Lambda is deliberately not the target for this warm model.
+`TimedTranscript` type. Lambda is deliberately not the target for this warm model.
 
 The configured model, device, compute mode and batch size are checked through `/health` before use.
 This prevents a warm process with an incompatible inference configuration from accepting work.

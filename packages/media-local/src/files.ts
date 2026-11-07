@@ -8,12 +8,12 @@ import { decodeMediaFrames } from "./file-frames.js";
 import { writeFrameGrid } from "./frame-grid.js";
 import { runProcess, runProcessOutput, runProcessWithInput } from "./process.js";
 import {
-  decodeSpeechTranscriptEvidence,
+  decodeTimedTranscript,
   phraseRanges,
-  transcriptWordsFromEvidence,
+  transcriptWords,
   wordsAt,
-} from "@hypit/speech-evidence";
-import type { FrameWords, TranscriptWord } from "@hypit/speech-evidence";
+} from "@hypit/timed-transcript";
+import type { FrameWords, TranscriptWord } from "@hypit/timed-transcript";
 import { audioViewDimensions, inspectAudio, selectAudioStream } from "./audio-view.js";
 import { ffprobeDisplayExtent } from "./ffprobe-display.js";
 import { renderSpectrogramView, writeSpectrogram } from "./spectrogram.js";
@@ -36,7 +36,7 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 async function readTranscript(path: string): Promise<readonly TranscriptWord[]> {
-  return transcriptWordsFromEvidence(decodeSpeechTranscriptEvidence(await readFile(path, "utf8"), path));
+  return transcriptWords(decodeTimedTranscript(await readFile(path, "utf8"), path));
 }
 
 export function isMediaCommand(value: string | undefined): value is MediaCommand {

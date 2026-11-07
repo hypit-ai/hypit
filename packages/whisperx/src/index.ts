@@ -1,8 +1,6 @@
 export {
   whisperXComponent,
 } from "./component.js";
-export { whisperXTranscriptionFragment } from "./fragment.js";
-export { whisperXAuthorDeclarations, whisperXMarkupDeclarations, whisperXTranscriptionAuthorDeclaration } from "./declaration.js";
 export {
   assertWhisperXEvidenceWav,
   verifyWhisperXTranscriptionRequest,

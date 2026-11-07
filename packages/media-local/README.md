@@ -113,8 +113,8 @@ selected frame-marker color.
 Audio-only media can produce either audio observation but not a frame grid, while a silent video cannot
 produce an audio observation. Multiple audio streams require an explicit container stream index. Reusing
 these local presentation functions does not transfer frame acquisition or Runtime authority. Transcript-aware ranges
-consume a `SpeechTranscriptEvidence` JSON file; exact decoding and phrase matching are owned by
-`@hypit/speech-evidence`, while
+consume a `TimedTranscript` JSON file; exact decoding and phrase matching are owned by
+`@hypit/timed-transcript`, while
 this package only joins those ranges to file decoding.
 
 ## Direct media execution

@@ -1,0 +1,28 @@
+{
+  "name": "@hypit/timed-transcript",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@hypit/media-asset": "workspace:^0.1.0"
+  },
+  "devDependencies": {
+    "@hypit/hypit": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/refinement": "workspace:*"
+  },
+  "peerDependencies": {
+    "@hypit/hypit": "workspace:^0.4.0"
+  }
+}

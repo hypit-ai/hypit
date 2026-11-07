@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import test from "node:test";
 import { installEndpoint } from "@hypit/endpoint";
 import { sealSpeechEvidenceAudio, speechEvidenceTypes } from "@hypit/speech-evidence";
+import { timedTranscriptTypes } from "@hypit/timed-transcript";
 import assert from "node:assert/strict";
 import { EndpointRegistry } from "@hypit/executor";
 import { MemoryResourceStore } from "@hypit/resource-store";
@@ -67,10 +68,14 @@ for (const language of ["en", "ko"]) test(`local Provider preserves ${language} 
         stagedMatches = Buffer.compare(Buffer.from(await readFile(body.audio_path)), Buffer.from(expected)) === 0;
         outgoing.end(JSON.stringify({
           language,
-          segments: [{ start: 0, end: 2, words: [
-            { text: "hello", start: 0.1, end: 0.4 },
-            { text: "world", start: 1.2, end: 1.6 },
+          segments: [{ start: 0, end: 2, text: "hello world", words: [
+            { word: "hello", start: 0.1, end: 0.4 },
+            { word: "world", start: 1.2, end: 1.6 },
           ] }],
+          word_segments: [
+            { word: "hello", start: 0.1, end: 0.4 },
+            { word: "world", start: 1.2, end: 1.6 },
+          ],
         }));
       })();
     });
@@ -88,7 +93,7 @@ for (const language of ["en", "ko"]) test(`local Provider preserves ${language} 
     const request: Need = {
       id: "need:whisperx-loopback",
       capability: whisperXCapabilities.transcription,
-      returns: speechEvidenceTypes.transcript,
+      returns: timedTranscriptTypes.transcript,
       constraints,
       result: "record:whisperx-loopback",
     };
@@ -109,8 +114,8 @@ for (const language of ["en", "ko"]) test(`local Provider preserves ${language} 
     });
     assert.equal(stagedMatches, true);
     const value = output;
-    assert.equal((value as { readonly passages?: readonly unknown[] }).passages?.length, 1);
-    assert.equal((value as { readonly sampleFrames?: number }).sampleFrames, evidenceAudio.sampleFrames);
+    assert.equal((value as { readonly segments?: readonly unknown[] }).segments?.length, 1);
+    assert.equal((value as { readonly language?: string }).language, language);
     assert.equal(speechEvidenceTypes.audio.name, "SpeechEvidenceAudio");
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));

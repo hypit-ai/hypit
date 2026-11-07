@@ -1,9 +1,5 @@
-import { mediaTypes } from "@hypit/media";
-import { AuthorDeclarationRegistry, compileAuthorDeclarations } from "@hypit/author";
-import type { AuthorResolvedReference } from "@hypit/author";
 import { sealSpeechEvidenceAudio } from "@hypit/speech-evidence";
 import type { SpeechEvidenceAudio } from "@hypit/speech-evidence";
-import { productPublisher } from "@hypit/hypit/product";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
@@ -14,8 +10,6 @@ import {
   whisperXComponent,
   whisperXProducers,
   whisperXRequestForEvidenceAudio,
-  whisperXTranscriptionAuthorDeclaration,
-  whisperXModuleRef,
 } from "@hypit/whisperx";
 
 function evidenceAudio(): SpeechEvidenceAudio {
@@ -43,39 +37,14 @@ test("WhisperX request contains canonical audio, its sample span and the chosen 
     /unsupported field debug/u);
 });
 
-test("SVML language reaches an independent transcription request", async () => {
-  const refs = new Map<string, AuthorResolvedReference>([
-    ["media", { ref: { kind: "record", id: "media" }, type: mediaTypes.prepared }],
-  ]);
-  const registry = new AuthorDeclarationRegistry();
-  registry.register(whisperXTranscriptionAuthorDeclaration);
+test("an explicit language reaches an independent transcription request", async () => {
   for (const language of ["en", "zh", "es", "ko", "ja", "id", "yue", "zzz"]) {
-    const output = await compileAuthorDeclarations({
-      sourceName: "speech.svml",
-      declarations: [{
-        module: whisperXModuleRef,
-        name: "transcription",
-        fields: [
-          { name: "id", value: { kind: "literal", value: "speech" } },
-          { name: "media", value: { kind: "reference", path: "media" } },
-          { name: "language", value: { kind: "literal", value: language } },
-        ],
-        children: [],
-        range: { start: 0, end: 1 },
-      }],
-      registry,
-      resolveReference: (path) => refs.get(path),
-      resolveAsset: () => { throw new Error("No assets expected"); },
-    });
-    assert.deepEqual(output.components[0]?.outputs, { transcript: "speech.transcript" });
-    assert.equal(output.publications?.[0]?.publication.publisher, productPublisher);
-    assert.deepEqual(Object.keys(output.components[0]?.inputs ?? {}).sort(), ["language", "media"]);
     const producer = whisperXComponent.producers.find((item) =>
       item.producer.name === whisperXProducers.request.name);
     assert.ok(producer);
     const result = await producer.handler({ inputs: {
       evidence: { value: (evidenceAudio()) },
-      language: { value: output.records.find((record) => record.type.name === "WhisperXLanguage")!.value },
+      language: { value: language },
     } } as never);
     assert.equal(result.kind, "need");
     assert.equal(verifyWhisperXTranscriptionRequest(result.constraints).language, language);

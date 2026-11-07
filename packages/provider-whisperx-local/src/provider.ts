@@ -3,8 +3,8 @@ import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
-import { sealSpeechTranscriptEvidence, speechEvidenceTypes } from "@hypit/speech-evidence";
-import type { SpeechTranscriptEvidence } from "@hypit/speech-evidence";
+import { sealTimedTranscript, timedTranscriptTypes } from "@hypit/timed-transcript";
+import type { TimedTranscript } from "@hypit/timed-transcript";
 import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { CanonicalValue } from "@hypit/hypit/protocol";
@@ -150,7 +150,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
     capabilities: [{
       lifecycle: "immediate" as const,
       capability: whisperXCapabilities.transcription,
-      returns: speechEvidenceTypes.transcript,
+      returns: timedTranscriptTypes.transcript,
       handler: async (context: EndpointInvocationContext) => {
         const request = verifyWhisperXTranscriptionRequest(context.request.constraints);
         const audio = await context.resources.get(request.audio.resource);
@@ -195,13 +195,9 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
           assert(raw.value !== null && typeof raw.value === "object" && !Array.isArray(raw.value),
             "WhisperX transcription response is invalid");
           const response = raw.value as WhisperXServiceResponse;
-          const passages = interpretWhisperXResponse(response, request.sampleFrames);
-          const evidence: SpeechTranscriptEvidence = sealSpeechTranscriptEvidence({
-            sampleFrames: request.sampleFrames,
-            passages,
-          });
+          const transcript = sealTimedTranscript(response as TimedTranscript);
           await context.reportProgress?.({ phase: "Word timing ready" });
-          return result(canonicalize(evidence));
+          return result(canonicalize(transcript));
         } finally {
           await rm(work, { recursive: true, force: true }).catch(() => {});
         }

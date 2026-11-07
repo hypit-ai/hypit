@@ -1,9 +1,7 @@
 import { prepareMedia, preparedAudioSource } from "@hypit/media";
 import {
   assertSpeechEvidenceAudioIdentity,
-  assertSpeechTranscriptEvidence,
   sealSpeechEvidenceAudio,
-  sealSpeechTranscriptEvidence,
   speechEvidenceSampleFrames,
   speechEvidenceProducers,
 } from "@hypit/speech-evidence";
@@ -34,55 +32,6 @@ test("SpeechEvidenceAudio carries only canonical bytes and their exact sample sp
   assert.doesNotThrow(() => assertSpeechEvidenceAudioIdentity(value));
   assert.throws(() => assertSpeechEvidenceAudioIdentity({ ...value, sampleFrames: 0 }), /identity/u);
   assert.throws(() => sealSpeechEvidenceAudio({ ...value, debug: true } as never), /unsupported field debug/u);
-});
-
-test("SpeechTranscriptEvidence validates the complete provider-neutral observation", () => {
-  const value = sealSpeechTranscriptEvidence({
-    sampleFrames: 16_000,
-    passages: [{
-      startSample: 0,
-      endSampleExclusive: 16_000,
-      words: [{ text: "hello", startSample: 1_000, endSampleExclusive: 4_000 }],
-      chars: [{ char: "h", wordIndex: 0, startSample: 1_000, endSampleExclusive: 1_500 }],
-      speechActivity: [{ startSample: 800, endSampleExclusive: 4_200 }],
-    }],
-  });
-  assert.doesNotThrow(() => assertSpeechTranscriptEvidence(value));
-  assert.throws(() => sealSpeechTranscriptEvidence({
-    ...value,
-    passages: [{ ...value.passages[0]!, words: [{ text: "hello", startSample: 1_000 }] }],
-  }), /word is invalid/u);
-  assert.throws(() => sealSpeechTranscriptEvidence({
-    ...value,
-    passages: [{ ...value.passages[0]!, chars: [{ char: "h", wordIndex: 2 }] }],
-  }), /character is invalid/u);
-  assert.throws(() => sealSpeechTranscriptEvidence({
-    ...value,
-    passages: [{ ...value.passages[0]!, speechActivity: [{ startSample: 0, endSampleExclusive: 16_001 }] }],
-  }), /speech activity is invalid/u);
-  assert.throws(() => sealSpeechTranscriptEvidence({
-    ...value,
-    passages: [{ ...value.passages[0]!, startSample: 2_000, endSampleExclusive: 2_000 }],
-  }), /passage is invalid/u);
-  assert.throws(() => sealSpeechTranscriptEvidence({
-    ...value,
-    passages: [{ ...value.passages[0]!, words: [{ ...value.passages[0]!.words[0]!,
-      startSample: 4_000, endSampleExclusive: 1_000 }] }],
-  }), /word is invalid/u);
-  assert.throws(() => sealSpeechTranscriptEvidence({
-    ...value,
-    passages: [{ ...value.passages[0]!, chars: [{ ...value.passages[0]!.chars[0]!,
-      startSample: 1_500, endSampleExclusive: 1_500 }] }],
-  }), /character is invalid/u);
-  assert.throws(() => sealSpeechTranscriptEvidence({
-    ...value,
-    passages: [{ ...value.passages[0]!, speechActivity: [{ startSample: 4_200, endSampleExclusive: 800 }] }],
-  }), /speech activity is invalid/u);
-  assert.throws(() => sealSpeechTranscriptEvidence({ ...value, debug: true } as never), /unsupported field debug/u);
-  assert.throws(() => sealSpeechTranscriptEvidence({
-    ...value,
-    passages: [{ ...value.passages[0]!, words: [{ ...value.passages[0]!.words[0]!, debug: true }] }],
-  } as never), /word has unsupported field debug/u);
 });
 
 test("Speech Evidence projects only the selected audio source and its complete preparation relation", async () => {

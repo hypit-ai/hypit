@@ -13,8 +13,9 @@ import type {
   RuntimeEndpointObservation,
   RuntimeEndpointQuery,
 } from "@hypit/runtime";
-import { encodeSpeechTranscriptEvidence, sealSpeechEvidenceAudio, speechEvidenceTypes } from "@hypit/speech-evidence";
-import type { SpeechTranscriptEvidence } from "@hypit/speech-evidence";
+import { sealSpeechEvidenceAudio } from "@hypit/speech-evidence";
+import { encodeTimedTranscript, timedTranscriptTypes } from "@hypit/timed-transcript";
+import type { TimedTranscript } from "@hypit/timed-transcript";
 
 import { whisperXRequestForEvidenceAudio } from "./evidence.js";
 import { whisperXCapabilities } from "./manifest.js";
@@ -188,7 +189,7 @@ export async function runTranscribeCli(
   const need: Need = {
     id: "need:hypit-transcribe",
     capability: whisperXCapabilities.transcription,
-    returns: speechEvidenceTypes.transcript,
+    returns: timedTranscriptTypes.transcript,
     constraints: whisperXRequestForEvidenceAudio(audio, { language }),
     result: "record:hypit-transcribe",
   };
@@ -204,16 +205,16 @@ export async function runTranscribeCli(
     },
     reportDiagnostic: async (diagnostic) => { report?.(`  · ${diagnostic.message}\n`); },
   });
-  const transcript = fulfillment as unknown as SpeechTranscriptEvidence;
-  const words = transcript.passages.reduce((total, passage) => total + passage.words.length, 0);
-  const audioSeconds = transcript.sampleFrames / 16_000;
-  await writeNew(to, encodeSpeechTranscriptEvidence(transcript));
+  const transcript = fulfillment as unknown as TimedTranscript;
+  const words = transcript.word_segments.length;
+  const audioSeconds = evidence.sampleFrames / 16_000;
+  await writeNew(to, encodeTimedTranscript(transcript));
   const view = { format: "hypit.whisperx-transcribe@1", source, language,
     audio_seconds: audioSeconds, extracted: evidence.extracted, ...endpointView(endpoint),
-    passages: transcript.passages.length, words, path: to };
+    segments: transcript.segments.length, words, path: to };
   if (parsed.json) io.write(`${JSON.stringify(view, null, 2)}\n`);
-  else io.write(`✓ Transcript written\n\n  ${words} words in ${transcript.passages.length} passage${
-    transcript.passages.length === 1 ? "" : "s"} over ${audioSeconds}s\n  ${to}\n`);
+  else io.write(`✓ Transcript written\n\n  ${words} words in ${transcript.segments.length} segment${
+    transcript.segments.length === 1 ? "" : "s"} over ${audioSeconds}s\n  ${to}\n`);
 }
 
 export function createWhisperXCliCommandModules(

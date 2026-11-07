@@ -7,7 +7,7 @@ import test from "node:test";
 import sharp from "sharp";
 
 import type { CliIo } from "@hypit/cli";
-import { encodeSpeechTranscriptEvidence } from "@hypit/speech-evidence";
+import { encodeTimedTranscript, timedTranscript } from "@hypit/timed-transcript";
 
 import { cutFrame, probeMedia, runMediaCli, visualBoundaries } from "../../src/files.js";
 import { renderWaveform, renderWaveformView } from "../../src/waveform.js";
@@ -239,10 +239,11 @@ test("waveforms accept audio and video audio tracks while grids remain video vie
     assert.ok((await stat(join(work, "video.png"))).size > 0);
 
     const transcript = join(work, "transcript.json");
-    await writeFile(transcript, encodeSpeechTranscriptEvidence({ sampleFrames: 48_000, passages: [{ words: [
-      { text: "glass", startSample: 12_800, endSampleExclusive: 16_000 },
-      { text: "breaks", startSample: 16_000, endSampleExclusive: 19_200 },
-    ], chars: [] }] }));
+    await writeFile(transcript, encodeTimedTranscript(timedTranscript("en", [{ start: 0.8, end: 1.2,
+      text: "glass breaks", words: [
+        { word: "glass", start: 0.8, end: 1 },
+        { word: "breaks", start: 1, end: 1.2 },
+      ] }] )));
     const phraseWaveform = io();
     await runMediaCli(["media", "waveform", audiovisual, "--around", "glass breaks", "--transcript", transcript,
       "--to", "phrase.png", "--json"], phraseWaveform.io, work);
@@ -425,13 +426,14 @@ test("word-located grids paginate dense samples without covering the source pict
   try {
     const source = await sample(work);
     const transcript = join(work, "words.transcript.json");
-    await writeFile(transcript, encodeSpeechTranscriptEvidence({ sampleFrames: 48_000, passages: [{ words: [
-      { text: "Hello", startSample: 1_600, endSampleExclusive: 6_400 },
-      { text: "world!", startSample: 6_400, endSampleExclusive: 12_800 },
-      { text: "<你好 & café>" },
-      { text: "Hello", startSample: 33_600, endSampleExclusive: 38_400 },
-      { text: "world!", startSample: 38_400, endSampleExclusive: 44_800 },
-    ], chars: [] }] }));
+    await writeFile(transcript, encodeTimedTranscript(timedTranscript("en", [{ start: 0.1, end: 2.8,
+      text: "Hello world <你好 & café> Hello world", words: [
+        { word: "Hello", start: 0.1, end: 0.4 },
+        { word: "world!", start: 0.4, end: 0.8 },
+        { word: "<你好 & café>" },
+        { word: "Hello", start: 2.1, end: 2.4 },
+        { word: "world!", start: 2.4, end: 2.8 },
+      ] }] )));
     await assert.rejects(runMediaCli(["media", "grid", source, "--around", "hello world", "--transcript", transcript,
       "--to", "ambiguous.jpg"], io().io, work), /occurs 2 times.*--occurrence/);
     const around = io();

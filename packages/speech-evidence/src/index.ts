@@ -1,19 +1,11 @@
 import { assertBlobRef } from "@hypit/hypit/protocol";
 import { mediaDependency, mediaTypes } from "@hypit/media";
-import type { BlobRef, ModuleManifest, ValueSchema } from "@hypit/hypit/protocol";
+import type { BlobRef, ModuleManifest } from "@hypit/hypit/protocol";
 import type { PreparedAudioSource } from "@hypit/media";
 import { assertLocalTemporalDomain } from "@hypit/temporal/algebra";
 import { resolveTemporalBoundary } from "@hypit/temporal/sampling";
 import type { LocalTemporalDomain, TemporalMap } from "@hypit/temporal";
-export {
-  decodeSpeechTranscriptEvidence,
-  encodeSpeechTranscriptEvidence,
-  phraseRanges,
-  transcriptWordsFromEvidence,
-  wordsAt,
-} from "./transcript-document.js";
-export type { FrameWords, TranscriptWord } from "./transcript-document.js";
-export { speechEvidenceMediaRepresentationPackage } from "./representation.js";
+
 export {
   speechEvidenceCapabilities,
   speechEvidenceModuleRef,
@@ -33,95 +25,18 @@ export type ProjectSpeechEvidenceAudioNeed = {
   readonly preparation: TemporalMap;
 };
 
+/** One invocation-local 16 kHz mono PCM projection accepted by speech analyzers. */
 export type SpeechEvidenceAudio = {
   readonly artifact: BlobRef;
-  /** Exact 16 kHz mono PCM sample count. */
   readonly sampleFrames: number;
 };
 
-/** Exact boundaries in the fixed 16 kHz Speech Evidence Audio sample domain. */
-export type SpeechWordEvidence = {
-  readonly text: string;
-  readonly startSample?: number;
-  readonly endSampleExclusive?: number;
-};
-
-export type SpeechCharacterEvidence = {
-  readonly char: string;
-  /** Index into the containing passage's words. */
-  readonly wordIndex: number;
-  readonly startSample?: number;
-  readonly endSampleExclusive?: number;
-};
-
-export type SpeechActivitySpan = {
-  readonly startSample: number;
-  readonly endSampleExclusive: number;
-};
-
-/**
- * One acoustic passage reported by the evidence provider. It deliberately has
- * no authored Segment identity; assigning evidence to the explicitly connected
- * Script Segment belongs to the later deterministic Speech Alignment step.
- */
-export type SpeechTranscriptPassage = {
-  readonly startSample?: number;
-  readonly endSampleExclusive?: number;
-  readonly words: readonly SpeechWordEvidence[];
-  readonly chars: readonly SpeechCharacterEvidence[];
-  readonly speechActivity?: readonly SpeechActivitySpan[];
-};
-
-export type SpeechTranscriptEvidence = {
-  readonly sampleFrames: number;
-  readonly passages: readonly SpeechTranscriptPassage[];
-};
-
-const sample = { kind: "number", integer: true, minimum: 0 } as const;
-const integer = { kind: "number", integer: true, minimum: 0 } as const;
-const object = (
-  fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>,
-): ValueSchema => ({ kind: "object", fields });
-
-const word = object({
-  text: { schema: { kind: "string" } },
-  startSample: { schema: sample, optional: true },
-  endSampleExclusive: { schema: sample, optional: true },
-});
-const char = object({
-  char: { schema: { kind: "string" } },
-  wordIndex: { schema: integer },
-  startSample: { schema: sample, optional: true },
-  endSampleExclusive: { schema: sample, optional: true },
-});
-const activity = object({
-  startSample: { schema: sample },
-  endSampleExclusive: { schema: sample },
-});
-
-export const speechTranscriptEvidenceFields = {
-  sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
-  passages: {
-    schema: {
-      kind: "array",
-      items: object({
-        startSample: { schema: sample, optional: true },
-        endSampleExclusive: { schema: sample, optional: true },
-        words: { schema: { kind: "array", items: word } },
-        chars: { schema: { kind: "array", items: char } },
-        speechActivity: { schema: { kind: "array", items: activity }, optional: true },
-      }),
-    },
-  },
-} as const satisfies Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>;
-
-export const speechTranscriptEvidenceSchema: ValueSchema = object(speechTranscriptEvidenceFields);
 export const speechEvidenceManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: speechEvidenceModuleRef.name,
   version: speechEvidenceModuleRef.version,
   dependencies: [mediaDependency],
-  types: [speechEvidenceTypes.audio.name, speechEvidenceTypes.transcript.name],
+  types: [speechEvidenceTypes.audio.name],
   capabilities: [{ name: speechEvidenceCapabilities.projectAudio.name, returns: speechEvidenceTypes.audio }],
   producers: [{
     name: speechEvidenceProducers.projectAudio.name,
@@ -131,15 +46,8 @@ export const speechEvidenceManifest: ModuleManifest = {
 };
 export const speechEvidenceDependency = speechEvidenceModuleRef;
 
-export function sealSpeechTranscriptEvidence(value: SpeechTranscriptEvidence): SpeechTranscriptEvidence {
-  assertSpeechTranscriptEvidence(value);
-  return structuredClone(value);
-}
-
 function assertExactFields(value: unknown, fields: readonly string[], subject: string): void {
-  if (value === null || Array.isArray(value) || typeof value !== "object") {
-    throw new Error(`${subject} is invalid.`);
-  }
+  if (value === null || Array.isArray(value) || typeof value !== "object") throw new Error(`${subject} is invalid.`);
   const allowed = new Set(fields);
   const unexpected = Object.keys(value).find((field) => !allowed.has(field));
   if (unexpected !== undefined) throw new Error(`${subject} has unsupported field ${unexpected}.`);
@@ -164,62 +72,5 @@ export function assertSpeechEvidenceAudioIdentity(value: SpeechEvidenceAudio): v
   if (value.artifact.mediaType !== "audio/wav"
     || !Number.isSafeInteger(value.sampleFrames) || value.sampleFrames < 1) {
     throw new Error("SpeechEvidenceAudio identity is invalid.");
-  }
-}
-
-export function assertSpeechTranscriptEvidence(value: SpeechTranscriptEvidence): void {
-  const item = value as SpeechTranscriptEvidence | null | undefined;
-  assertExactFields(item, ["sampleFrames", "passages"], "SpeechTranscriptEvidence");
-  if (item === null || item === undefined
-    || !Number.isSafeInteger(item.sampleFrames) || item.sampleFrames < 1
-    || !Array.isArray(item.passages)) {
-    throw new Error("SpeechTranscriptEvidence is invalid.");
-  }
-  const window = (candidate: {
-    readonly startSample?: number;
-    readonly endSampleExclusive?: number;
-  }): boolean => {
-    if ((candidate.startSample === undefined) !== (candidate.endSampleExclusive === undefined)) return false;
-    if (candidate.startSample === undefined || candidate.endSampleExclusive === undefined) return true;
-    return Number.isSafeInteger(candidate.startSample)
-      && Number.isSafeInteger(candidate.endSampleExclusive)
-      && candidate.startSample >= 0
-      && candidate.endSampleExclusive >= 0
-      && candidate.startSample < candidate.endSampleExclusive
-      && candidate.startSample <= item.sampleFrames
-      && candidate.endSampleExclusive <= item.sampleFrames;
-  };
-  for (const passage of item.passages) {
-    assertExactFields(passage, ["startSample", "endSampleExclusive", "words", "chars", "speechActivity"],
-      "SpeechTranscriptEvidence passage");
-    if (passage === null || typeof passage !== "object" || !window(passage)
-      || !Array.isArray(passage.words) || !Array.isArray(passage.chars)
-      || (passage.speechActivity !== undefined && !Array.isArray(passage.speechActivity))) {
-      throw new Error("SpeechTranscriptEvidence passage is invalid.");
-    }
-    for (const word of passage.words) {
-      assertExactFields(word, ["text", "startSample", "endSampleExclusive"],
-        "SpeechTranscriptEvidence word");
-      if (word === null || typeof word !== "object" || typeof word.text !== "string"
-        || !window(word)) {
-        throw new Error("SpeechTranscriptEvidence word is invalid.");
-      }
-    }
-    for (const character of passage.chars) {
-      assertExactFields(character, ["char", "wordIndex", "startSample", "endSampleExclusive"],
-        "SpeechTranscriptEvidence character");
-      if (character === null || typeof character !== "object" || typeof character.char !== "string"
-        || !Number.isSafeInteger(character.wordIndex) || character.wordIndex < 0
-        || character.wordIndex >= passage.words.length || !window(character)) {
-        throw new Error("SpeechTranscriptEvidence character is invalid.");
-      }
-    }
-    for (const activity of passage.speechActivity ?? []) {
-      assertExactFields(activity, ["startSample", "endSampleExclusive"],
-        "SpeechTranscriptEvidence speech activity");
-      if (activity === null || typeof activity !== "object" || !window(activity)) {
-        throw new Error("SpeechTranscriptEvidence speech activity is invalid.");
-      }
-    }
   }
 }

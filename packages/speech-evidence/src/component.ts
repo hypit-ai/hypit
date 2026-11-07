@@ -5,13 +5,12 @@ import type { PreparedMedia } from "@hypit/media";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { Value } from "@hypit/hypit/protocol";
 import {
-  assertSpeechTranscriptEvidence,
   assertSpeechEvidenceAudioIdentity,
   speechEvidenceProducers,
   speechEvidenceSampleFrames,
   speechEvidenceTypes,
 } from "./index.js";
-import type { ProjectSpeechEvidenceAudioNeed, SpeechEvidenceAudio, SpeechTranscriptEvidence } from "./index.js";
+import type { ProjectSpeechEvidenceAudioNeed, SpeechEvidenceAudio } from "./index.js";
 
 function valueOf<T>(value: Value, subject: string): T {
   if (value === undefined) throw new Error(`${subject} is missing.`);
@@ -22,8 +21,6 @@ export const speechEvidenceComponent = {
   refinements: [
     { type: speechEvidenceTypes.audio,
       handler: ({ value }) => assertSpeechEvidenceAudioIdentity(valueOf<SpeechEvidenceAudio>(value, "SpeechEvidenceAudio")) },
-    { type: speechEvidenceTypes.transcript,
-      handler: ({ value }) => assertSpeechTranscriptEvidence(valueOf<SpeechTranscriptEvidence>(value, "SpeechTranscriptEvidence")) },
   ],
   producers: [{
     producer: speechEvidenceProducers.projectAudio,

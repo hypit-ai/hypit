@@ -1,6 +1,7 @@
 import type { Narrative, NarrativeSegmentRef } from "@hypit/narrative";
 import type { NarrativeAlignment } from "@hypit/narrative-temporal";
-import type { SpeechTranscriptEvidence } from "@hypit/speech-evidence";
+import { timedTranscript } from "@hypit/timed-transcript";
+import type { TimedTranscript } from "@hypit/timed-transcript";
 import { resolveTemporalBoundary } from "@hypit/temporal/sampling";
 import type { LocalTemporalDomain } from "@hypit/temporal";
 
@@ -28,25 +29,57 @@ function segmentNarrative(narrative: Narrative, excerpt: NarrativeSegmentRef): N
 }
 
 /** Align one acoustic evidence source locally without turning media into a semantic aggregate. */
+function locateNarrative(
+  narrative: Narrative,
+  excerpt: NarrativeSegmentRef,
+  domain: LocalTemporalDomain,
+  transcript: TimedTranscript,
+): { readonly narrative: Narrative; readonly timing: ReturnType<typeof locateAlignedSegmentTiming> } {
+  const localNarrative = segmentNarrative(narrative, excerpt);
+  const evidenceClock = { frameRate: { numerator: 16_000, denominator: 1 } };
+  const expectedSamples = resolveTemporalBoundary(domain.duration, evidenceClock, "nearest");
+  const basis: AlignmentBasis = {
+    timeBase: { numerator: 1, denominator: 16_000 },
+    unitCount: expectedSamples,
+    segments: [{ segmentId: excerpt.id, startUnit: 0, endUnitExclusive: expectedSamples }],
+  };
+  const timing = locateAlignedSegmentTiming(localNarrative, basis, transcript);
+  return { narrative: localNarrative, timing };
+}
+
+/** Align one final transcript locally without turning media into a semantic aggregate. */
 export function alignNarrative(
   narrative: Narrative,
   excerpt: NarrativeSegmentRef,
   domain: LocalTemporalDomain,
-  evidence: SpeechTranscriptEvidence,
+  transcript: TimedTranscript,
 ): NarrativeAlignment {
-  const localNarrative = segmentNarrative(narrative, excerpt);
-  const evidenceClock = { frameRate: { numerator: 16_000, denominator: 1 } };
-  const expectedSamples = resolveTemporalBoundary(domain.duration, evidenceClock, "nearest");
-  if (evidence.sampleFrames !== expectedSamples) {
-    throw new Error("Speech evidence sample span differs from its local temporal domain.");
-  }
-  const basis: AlignmentBasis = {
-    timeBase: { numerator: 1, denominator: 16_000 },
-    unitCount: evidence.sampleFrames,
-    segments: [{ segmentId: excerpt.id, startUnit: 0, endUnitExclusive: evidence.sampleFrames }],
-  };
-  const timing = locateAlignedSegmentTiming(localNarrative, basis, evidence);
-  return materializeNarrativeAlignment(localNarrative, {
-    ...excerpt, tokenStart: 0, tokenEndExclusive: localNarrative.tokens.length,
-  }, domain, timing);
+  const located = locateNarrative(narrative, excerpt, domain, transcript);
+  return materializeNarrativeAlignment(located.narrative, {
+    ...excerpt, tokenStart: 0, tokenEndExclusive: located.narrative.tokens.length,
+  }, domain, located.timing);
+}
+
+/** Replace recognizer wording with authored wording while retaining one TimedTranscript file shape. */
+export function correctTimedTranscript(
+  narrative: Narrative,
+  excerpt: NarrativeSegmentRef,
+  domain: LocalTemporalDomain,
+  transcript: TimedTranscript,
+): TimedTranscript {
+  const located = locateNarrative(narrative, excerpt, domain, transcript);
+  const byToken = new Map(located.timing.tokens.map((token) => [token.tokenId, token]));
+  const seconds = (unit: number): number => unit * located.timing.timeBase.numerator / located.timing.timeBase.denominator;
+  const words = located.narrative.tokens.map((token) => {
+    const timing = byToken.get(token.id);
+    if (timing === undefined) throw new Error(`Transcript correction did not locate Token ${token.id}.`);
+    return { word: token.text, start: seconds(timing.startUnit), end: seconds(timing.endUnitExclusive) };
+  });
+  if (words.length === 0) return timedTranscript(transcript.language, []);
+  return timedTranscript(transcript.language, [{
+    start: words[0]!.start,
+    end: words.at(-1)!.end,
+    text: words.map((word) => word.word).join(" "),
+    words,
+  }]);
 }

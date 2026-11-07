@@ -21,12 +21,12 @@
     "@hypit/hypit": "workspace:*",
     "@hypit/script": "workspace:*",
     "@hypit/narrative": "workspace:*",
-    "@hypit/speech-evidence": "workspace:*"
+    "@hypit/timed-transcript": "workspace:*"
   },
   "dependencies": {
     "@hypit/narrative": "workspace:^0.1.1",
     "@hypit/narrative-temporal": "workspace:^0.1.1",
-    "@hypit/speech-evidence": "workspace:^0.2.0",
+    "@hypit/timed-transcript": "workspace:^0.1.0",
     "@hypit/temporal": "workspace:^0.1.1"
   }
 }

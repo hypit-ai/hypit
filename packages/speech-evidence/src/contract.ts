@@ -4,7 +4,6 @@ export const speechEvidenceModuleRef = { name: "@hypit/speech-evidence", version
 
 export const speechEvidenceTypes = {
   audio: { module: speechEvidenceModuleRef, name: "SpeechEvidenceAudio" },
-  transcript: { module: speechEvidenceModuleRef, name: "SpeechTranscriptEvidence" },
 } satisfies Record<string, TypeRef>;
 
 export const speechEvidenceCapabilities = {

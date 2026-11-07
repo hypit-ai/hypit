@@ -15,8 +15,8 @@ test("local WhisperX Provider pins the complete service runtime and is independe
   );
 });
 
-test("wire seconds are lowered once to exact evidence samples without authored Segment knowledge", () => {
-  const evidence = interpretWhisperXResponse({
+test("wire responses become one provider-neutral timed transcript without recognizer scores", () => {
+  const transcript = interpretWhisperXResponse({
     language: "en",
     segments: [{
       start: 0.1,
@@ -27,15 +27,11 @@ test("wire seconds are lowered once to exact evidence samples without authored S
         { text: "world", start: 1.2, end: 1.6 },
       ],
     }],
-  }, 32_000);
-  assert.equal(evidence.length, 1);
-  assert.deepEqual(
-    { startSample: evidence[0]!.startSample, endSampleExclusive: evidence[0]!.endSampleExclusive },
-    { startSample: 1_600, endSampleExclusive: 28_800 },
-  );
-  assert.deepEqual(evidence[0]!.words, [
-    { text: "hello", startSample: 1_600, endSampleExclusive: 6_400 },
-    { text: "crossing", startSample: 14_400, endSampleExclusive: 17_600 },
-    { text: "world", startSample: 19_200, endSampleExclusive: 25_600 },
+  });
+  assert.equal(transcript.segments.length, 1);
+  assert.deepEqual(transcript.word_segments, [
+    { word: "hello", start: 0.1, end: 0.4 },
+    { word: "crossing", start: 0.9, end: 1.1 },
+    { word: "world", start: 1.2, end: 1.6 },
   ]);
 });

@@ -1,10 +1,4 @@
-export type {
-  SpeechTranscriptEvidence,
-  SpeechActivitySpan,
-  SpeechCharacterEvidence,
-  SpeechTranscriptPassage,
-  SpeechWordEvidence,
-} from "@hypit/speech-evidence";
+export type { TimedTranscript, TimedTranscriptSegment, TimedTranscriptWord } from "@hypit/timed-transcript";
 /** Private vocabulary of the alignment implementation, not part of the public alignment value. */
 export type AlignmentRelation =
   | "exact"

@@ -1,6 +1,6 @@
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
 import { narrativeTemporalDependency, narrativeTemporalTypes } from "@hypit/narrative-temporal";
-import { speechEvidenceDependency, speechEvidenceTypes } from "@hypit/speech-evidence";
+import { timedTranscriptDependency, timedTranscriptTypes } from "@hypit/timed-transcript";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
 import type { ModuleManifest, ProducerRef } from "@hypit/hypit/protocol";
 
@@ -11,12 +11,12 @@ export const speechAlignmentProducers = {
 
 export const speechAlignmentManifest: ModuleManifest = {
   format: "hypit.module@1", name: speechAlignmentModuleRef.name, version: speechAlignmentModuleRef.version,
-  dependencies: [narrativeDependency, narrativeTemporalDependency, speechEvidenceDependency, temporalDependency],
+  dependencies: [narrativeDependency, narrativeTemporalDependency, timedTranscriptDependency, temporalDependency],
   types: [], capabilities: [], producers: [{
     name: speechAlignmentProducers.alignNarrative.name,
     inputs: [{ name: "narrative", type: narrativeTypes.narrative }, { name: "segment", type: narrativeTypes.segmentRef },
       { name: "domain", type: temporalTypes.localDomain },
-      { name: "evidence", type: speechEvidenceTypes.transcript }],
+      { name: "transcript", type: timedTranscriptTypes.transcript }],
     result: { kind: "output" as const, name: "alignment", type: narrativeTemporalTypes.narrativeAlignment },
   }],
 };

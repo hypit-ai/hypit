@@ -15,7 +15,7 @@ from hypit_whisperx_service import PROTOCOL, SERVICE_VERSION  # noqa: E402
 from hypit_whisperx_service.application import RequestError, WhisperXApplication  # noqa: E402
 from hypit_whisperx_service.audio import AudioInputError, CanonicalAudio, read_canonical_audio  # noqa: E402
 from hypit_whisperx_service.config import ServiceConfig  # noqa: E402
-from hypit_whisperx_service.engine import InferenceBusyError, normalize_alignment, normalize_language  # noqa: E402
+from hypit_whisperx_service.engine import InferenceBusyError, normalize_language, timed_transcript  # noqa: E402
 from hypit_whisperx_service.resources import assert_punkt_tab, UnpreparedResourceError  # noqa: E402
 
 
@@ -119,7 +119,7 @@ class ResourceTests(unittest.TestCase):
 
 class EvidenceTests(unittest.TestCase):
     def test_missing_word_time_stays_missing(self) -> None:
-        result = normalize_alignment("en", {
+        result = timed_transcript("en", {
             "segments": [{
                 "text": "one two three",
                 "start": 0,
@@ -132,9 +132,10 @@ class EvidenceTests(unittest.TestCase):
             }],
         })
         words = result["segments"][0]["words"]  # type: ignore[index]
-        self.assertEqual(words[0], {"text": "one", "start": 0.1, "end": 0.2})
-        self.assertEqual(words[1], {"text": "two"})
-        self.assertEqual(words[2], {"text": "three"})
+        self.assertEqual(words[0], {"word": "one", "start": 0.1, "end": 0.2})
+        self.assertEqual(words[1], {"word": "two"})
+        self.assertEqual(words[2], {"word": "three"})
+        self.assertEqual(result["word_segments"], words)
 
     def test_language_auto_is_explicitly_normalized(self) -> None:
         self.assertIsNone(normalize_language("auto"))

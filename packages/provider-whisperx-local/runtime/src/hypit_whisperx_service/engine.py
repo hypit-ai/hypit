@@ -44,7 +44,7 @@ def _finite(value: object) -> float | None:
     return number if math.isfinite(number) else None
 
 
-def normalize_alignment(language: str, raw: Mapping[str, Any]) -> dict[str, object]:
+def timed_transcript(language: str, raw: Mapping[str, Any]) -> dict[str, object]:
     raw_segments = raw.get("segments", [])
     if not isinstance(raw_segments, list):
         raise RuntimeError("WhisperX alignment returned a non-array segments value")
@@ -65,26 +65,30 @@ def normalize_alignment(language: str, raw: Mapping[str, Any]) -> dict[str, obje
                 continue
             start = _finite(raw_word.get("start"))
             end = _finite(raw_word.get("end"))
-            word: dict[str, object] = {"text": text}
-            # Missing or partial acoustic evidence stays missing. Never manufacture a tick.
+            word: dict[str, object] = {"word": text}
+            # Missing or partial acoustic timing stays missing. Never manufacture a boundary.
             if start is not None and end is not None and 0 <= start <= end:
                 word.update(start=start, end=end)
             words.append(word)
-        if not words:
+        start = _finite(raw_segment.get("start"))
+        end = _finite(raw_segment.get("end"))
+        if not words or start is None or end is None or not 0 <= start <= end:
             continue
         segment_text = raw_segment.get("text")
         segment: dict[str, object] = {
             "text": segment_text.strip() if isinstance(segment_text, str) else " ".join(
-                str(word["text"]) for word in words
+                str(word["word"]) for word in words
             ),
             "words": words,
+            "start": start,
+            "end": end,
         }
-        start = _finite(raw_segment.get("start"))
-        end = _finite(raw_segment.get("end"))
-        if start is not None and end is not None and 0 <= start <= end:
-            segment.update(start=start, end=end)
         segments.append(segment)
-    return {"language": language, "segments": segments}
+    return {
+        "language": language,
+        "segments": segments,
+        "word_segments": [word for segment in segments for word in segment["words"]],
+    }
 
 
 class WhisperXEngine:
@@ -197,7 +201,7 @@ class WhisperXEngine:
             )
             if not isinstance(aligned, Mapping):
                 raise RuntimeError("WhisperX returned an invalid alignment result")
-            result = normalize_alignment(detected, aligned)
+            result = timed_transcript(detected, aligned)
             logger.info("word timing ready in %.1fs", time.monotonic() - started)
             return result
         finally:

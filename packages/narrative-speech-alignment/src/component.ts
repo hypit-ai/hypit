@@ -3,7 +3,7 @@ import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { Narrative, NarrativeSegmentRef } from "@hypit/narrative";
 import type { Value } from "@hypit/hypit/protocol";
 import { canonicalize } from "@hypit/hypit/protocol";
-import type { SpeechTranscriptEvidence } from "@hypit/speech-evidence";
+import type { TimedTranscript } from "@hypit/timed-transcript";
 import type { LocalTemporalDomain } from "@hypit/temporal";
 
 import { alignNarrative } from "./local.js";
@@ -22,7 +22,7 @@ export const speechAlignmentComponent = {
         valueOf<Narrative>(inputs.narrative?.value, "Narrative"),
         valueOf<NarrativeSegmentRef>(inputs.segment?.value, "NarrativeSegmentRef"),
         valueOf<LocalTemporalDomain>(inputs.domain?.value, "LocalTemporalDomain"),
-        valueOf<SpeechTranscriptEvidence>(inputs.evidence?.value, "SpeechTranscriptEvidence"),
+        valueOf<TimedTranscript>(inputs.transcript?.value, "TimedTranscript"),
       );
       return { kind: "output", value: (canonicalize(result)) };
     },

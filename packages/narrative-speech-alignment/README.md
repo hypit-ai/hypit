@@ -1,48 +1,19 @@
 # `@hypit/narrative-speech-alignment`
 
-Provider-neutral deterministic timing locator for one authored Segment on an exact local temporal
-domain. The package does not
-invoke Python, read audio, call a speech provider, use an LLM, infer speakers or retain multiple
-candidate paths. A runtime adapter preserves its raw provider artifact and supplies the provider-neutral
-word, character and speech-activity evidence used here in exact 16 kHz sample coordinates.
+Deterministic M:N alignment between one authored Narrative Segment and one final `TimedTranscript` on
+an exact local temporal domain. It does not call a speech model, read audio, infer speakers or retain
+recognizer internals.
 
-This is an independently versioned and packaged algorithm, not a root SDK facade and not a WhisperX
-implementation. Any author or transcription package may select it explicitly, and any transcription package
-producing the same provider-neutral evidence can compose with it.
-The project package manager and lockfile own the selected physical version.
+The bounded monotonic matcher accepts exact, split, merge, replacement, source-omission and
+evidence-insertion groups. Timed word windows locate authored tokens; token-length interpolation is
+used inside merged windows and across genuinely unmeasured runs. The public `NarrativeAlignment`
+remains exact local time and contains every authored token.
 
-The locator aligns one explicitly connected Script Segment against acoustic evidence with an exact
-sample span. A bounded monotonic M:N dynamic
-program accepts exact, split, merge, replacement, source-omission and evidence-insertion groups.
-Matching follows explicit text, order and structure.
-Within a selected group, timed evidence characters determine Script token boundaries; word times
-and speech-activity bounds are fallbacks. Missing token runs receive continuous weighted windows
-between their measured neighbors instead of invented point timestamps. The result preserves
-sample-derived boundaries as exact local time and contains one timing for every Script token plus the
-Segment and token boundaries. Segment boundaries are exactly local zero and the domain's exact
-duration. The public result is never quantized to a frame grid.
+`correctTimedTranscript` applies the same M:N relation in the other useful direction: detected wording
+is replaced by authored wording while the result stays the same `TimedTranscript` JSON shape. This is
+the correction used before attaching a transcript to media; it does not create a second evidence type
+or active/preferred registry.
 
-The public Producer accepts Narrative, one Segment excerpt, its `LocalTemporalDomain` and
-`SpeechTranscriptEvidence` through explicit graph edges. It does not reopen `PreparedMedia` to
-recover audio or duration. Evidence carries a measured sample span but no local-domain or authored
-Segment identity; this deterministic step makes those associations explicitly and rejects a sample
-span that does not equal the supplied domain duration.
-
-The package owns the syntax-neutral Alignment declaration; Markup contributes the
-`<speechalign:Alignment>` spelling only. A token-bearing Segment requires `evidence`; an empty
-Segment maps directly to the supplied domain boundaries and omits it. File-backed evidence is opened
-through its package-owned Media Representation instead of being wrapped in an Author Source.
-
-`speechAlignmentComponent` exposes this Segment-local alignment as one enumerable deterministic Producer facet. Its
-identity is checked against `speechAlignmentManifest` and executes through the host-neutral compute
-port. Its graph boundary contains only Narrative, a local Temporal Domain, provider-neutral Evidence
-and NarrativeAlignment. The package has no Media, Driver, Provider, queue or credential authority.
-
-Caption display is outside this package. `@hypit/narrative-caption` combines an independently owned
-Caption document/binding with the resulting Narrative timing; it never asks this locator to infer
-display text or display-unit timing.
-
-The result is the `@hypit/narrative-temporal` `NarrativeAlignment`, not media and not an NLE placement.
-That package can combine Alignments already measured in the same `LocalTemporalDomain` into one
-`NarrativeLocalTiming`. Caption and other components consume the local value directly; an NLE or
-Programme adapter chooses any later occurrence mapping explicitly.
+The package exposes syntax-neutral functions and a deterministic Producer. It has no SVML/Markup
+declaration, Media, Provider, Runtime, queue or credential authority. Caption display and NLE
+materialization remain downstream concerns.
