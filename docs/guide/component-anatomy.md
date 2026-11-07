@@ -20,21 +20,20 @@ package easier to understand. The included package README owns the exact TypeScr
 
 ## Design around relationships
 
-For spoken work, an upstream Narrative Projection turns selected semantic identities into named
-absolute Windows and Instants after the performance exists. A component accepts those same absolute
-types for behavior tied to the words. For an authored animation, Timeline declarations can produce
-them directly from seconds or frames. A duration such as `12f` can still describe the component's
-local transition length.
+For spoken work, source-local transcript selections and word times can inform materialization. The
+accepted component instance receives direct placement and package parameters; it does not query a
+global Timeline during preview or export. Package-owned Item-local controls may still express exact
+internal animation time.
 
-Media presentation, spatial layout and time each have their own inputs. PreparedMedia supplies a
-finite local media domain; a Window states when the occurrence contributes; a separate temporal
-sampling relation states which part of moving media is sampled. A Frame can locate the scene, while its internal HTML/CSS or element tree coordinates videos,
-text, masks and graphics. Group content that shares behavior. Independent contributions can stay
-as peer Tracks with their own paint order.
+Media presentation, spatial layout and time remain separate relationships. The NLE Item owns its
+programme placement and trim; its source owns local media time; an explicit mapping connects them
+during AVIR lowering. The picture layout locates the instance, while its internal HTML/CSS or element
+tree coordinates videos, text, masks and graphics. Group content that shares behavior. Independent
+contributions remain separate Items with explicit paint order.
 
-A caption component benefits from the existing caption document, style selection and semantic
-timing. Use the fine-caption family for the styles it expresses; a new family can consume those
-same caption relationships and draw a different visual treatment.
+A caption family can consume a caption document and source-local timing when it materializes cues.
+Each resulting Component Item then owns package parameters for its text and treatment. A new family
+can materialize the same evidence into a different visual behavior without adding an NLE primitive.
 
 ## Make it useful to another author
 

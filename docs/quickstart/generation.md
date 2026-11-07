@@ -1,351 +1,47 @@
 ---
-title: Media & Generation
-description: Declaring media assets and generating video with Seedance.
+title: Generated media and the edit
+description: Keep generation execution separate from accepting media into an NLE project.
 ---
 
-This page covers components that declare static assets and generate new media — the raw materials
-that flow into the timing and track stages downstream.
+Hypit can describe and execute image, video and speech generation through Author Sources, Models,
+Providers and Runtime Profiles. That execution graph answers a different question from the NLE:
+what should be produced, by which selected capability, and with which retained Result?
 
-Every component shown here must be imported by its package specifier before use:
+The NLE answers where accepted material appears, how it is trimmed and how picture, audio and effects
+combine. It never reruns a model or keeps a live dependency on a generation request.
 
-```svml
-<import as="media" from="@hypit/media@1"/>
-<import as="mediaop" from="@hypit/media-operations@1"/>
-<import as="text" from="@hypit/text@1"/>
-<import as="seedance" from="@hypit/seedance@1"/>
-<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
-```
+## Generate and inspect
 
-## media:Image
-
-Declares an image Resource from a local file.
-
-```svml
-<media:Image id="presenter" src="./assets/presenter.png"/>
-```
-
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier for the component |
-| `src` | yes | Path to the image file, relative to the `.svml` source |
-
-The image is referenced downstream via `{presenter}` — for example, as a character reference in
-`seedance:ReferenceVideo` or as a B-roll source.
-
-## media:Audio
-
-Declares an audio Resource from a local file.
-
-```svml
-<media:Audio id="presenter-voice" src="./assets/presenter-voice.mp3"/>
-```
-
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `src` | yes | Path to the audio file, relative to the `.svml` source |
-
-Typically used as a voice-timbre reference for `seedance:ReferenceVideo`.
-
-## Durations are literals
-
-A generated take's length is the author's decision, written as a literal on the element that needs
-it. Estimate the line first, then write the number:
+Select the desired Author output as a Build Target:
 
 ```bash
-hypit estimate main.svml --segment hook --language en --pace normal --rounding round
-# 7s
+hypit plan main.svml --target opening.video
+hypit build main.svml --target opening.video --follow
 ```
 
-```svml
-<seedance:ReferenceVideo id="hook-take" model="mini" prompt={hook-prompt} duration="7" generate-audio="true">
-  …
-</seedance:ReferenceVideo>
+Model and Provider choices remain in the Author Source and Runtime Profile. The Build Result keeps the
+execution record and produced output according to the owning package's retention policy.
+
+## Accept the result as material
+
+When a take belongs in the edit, export that exact Result to an ordinary project file:
+
+```bash
+hypit result export <build-id> --output opening.video --to assets/opening.mp4
 ```
 
-`hypit estimate` counts pronunciation units of the Segment's speech at a delivery policy — `language`,
-`pace` (`slow = 4.2`, `normal = 4.6`, `fast = 5.6` syllables per second for English) or a numeric
-`rate` and `rounding` — with no external call. The command returns a requested duration before a
-Build starts. Use the estimate to shape the
-wording and choose a supported request duration; the produced performance supplies actual word timing.
+Import the file as a Media Asset document, then materialize one media-bin entry and Item into the NLE
+project. A frontend drag-and-drop action and an Agent using the file APIs perform the same kind of
+revisioned edit. Neither needs a queue inside the NLE document.
 
-## text:Value
+The Media Asset manifest records stable interpretation facts and can refer to optional package-owned
+representations. It does not record that the file came from Seedance, a camera, a download or another
+tool. This is how accepted media becomes source-agnostic.
 
-A reusable literal `Text` value. It is model-neutral and can feed Seedance, GPT Image or any other
-declared text port.
+## Make another take
 
-```svml
-<import as="text" from="@hypit/text@1"/>
+Generating a new take creates a new Result. It does not silently replace the file or Item already
+accepted into the edit. The author chooses whether to import it, replace a media reference or keep both
+versions. Existing placement and effect parameters remain ordinary NLE edits.
 
-<text:Value id="alice-direction">
-  Locked medium close-up. Alice speaks directly to camera in a quiet daylight studio.
-  Calm, curious delivery; natural breathing and restrained hand movement.
-  Spoken dialogue — say exactly: What if editing began with meaning?
-</text:Value>
-```
-
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-
-The element body is the exact Text value. `text:Render` can produce the same type from a template
-and explicit Source inputs.
-
-## Seedance invocation shapes
-
-Seedance exposes model capabilities, not creative usages. `standard`, `fast`, `mini` and `2.5`
-choose the exact model independently of three invocation shapes. All shapes consume a complete
-ordinary `Text` prompt and output `{id.video}`.
-
-Seedance 2.5 uses the same declarations; it is not a Runtime substitution for another model. Its exact
-contract accepts 480p/720p/1080p, up to 30 image, 10 video and 10 audio references, and either `-1` for
-model-selected duration or an integer from 4 through 30 seconds:
-
-```svml
-<seedance:ReferenceVideo id="long-take" model="2.5"
-  prompt={long-direction} duration="30" resolution="720p" generate-audio="true">
-  <seedance:Reference image={presenter-reference} person-reference="true"/>
-  <seedance:Reference audio={presenter-voice}/>
-</seedance:ReferenceVideo>
-```
-
-### seedance:TextVideo
-
-Prompt-only generation. This is the only shape that accepts `web-search`.
-
-```svml
-<seedance:TextVideo id="ambient" model="mini"
-  prompt={ambient-direction} duration="5" web-search="false"/>
-```
-For a recurring presenter, product or setting, authoring reference images first gives the video
-model a concrete visual direction. Reuse those references across takes, with the Script and action
-prompt directing each performance. TextVideo remains useful when the intended scene can be described
-directly without a particular visual identity to preserve.
-
-
-### seedance:FrameVideo
-
-First-frame generation with an optional last frame:
-
-```svml
-<seedance:FrameVideo id="transition" model="fast"
-  prompt={transition-direction} duration="5"
-  first-frame={opening-image} first-frame-person-reference="false"
-  last-frame={closing-image} last-frame-person-reference="false"/>
-```
-
-### seedance:ReferenceVideo
-
-Multimodal reference generation. It requires at least one `Reference` child and accepts image,
-video and audio references within the model's declared limits.
-
-```svml
-<seedance:ReferenceVideo id="alice-take" model="mini"
-  prompt={alice-direction}
-  duration="5"
-  generate-audio="true">
-  <seedance:Reference image={alice-reference} person-reference="true"/>
-  <seedance:Reference audio={alice-voice}/>
-</seedance:ReferenceVideo>
-```
-
-Every image/video reference requires `person-reference="true|false"`: true if the supplied material
-contains a person, false otherwise. Omission is an error;
-audio must omit the field. Frame mode requires `first-frame-person-reference` and, when a last frame
-is supplied, `last-frame-person-reference`. The selected
-Provider carries this fact through the service's media preparation; a service without such a field
-accepts the declaration without transmitting it.
-
-A video reference can guide dance, physical action or camera movement while images guide the new
-appearance. Choose an excerpt that carries the intended motion within the selected model and
-service's input-duration limits; the requested output duration is a separate choice.
-
-The component does not know that this is a talking head. That meaning lives in the supplied Text.
-
-Common attributes are `id`, `model`, `prompt`, `duration`, `resolution`, `aspect-ratio` and
-`generate-audio`. `duration` is a literal in whole seconds inside the model's range, estimated
-beforehand with `hypit estimate`.
-
-Audio or one decoded frame from an earlier take can be reused as a later model reference. Materialize
-the selected Media member as WAV or PNG before binding it. This creates a new physical Blob without
-attaching speech, speaker or editing meaning. Trim, retime, reverse and hold remain relationships on
-the audiovisual occurrence that uses the Media; they are not reusable root media transforms.
-
-## Seedance semantic Kits
-
-`@hypit/seedance-kits` contains seven data-only Text Templates. A Kit is not a model wrapper: use
-generic `text:Render` to produce the prompt, then connect that Text and the real media references to
-the low-level Seedance declaration.
-
-Import the selected public Kit Source from its installed package. The package manager or active
-Distribution owns its installed version, while the Source Closure follows that explicit package
-import. A production can instead author and import its own project Kit when the shared wording does
-not fit the work.
-
-Read the
-[`@hypit/seedance-kits` guide](https://github.com/hypit-ai/hypit/blob/main/packages/seedance-kits/README.md)
-and the [selected Kit source](https://github.com/hypit-ai/hypit/tree/main/packages/seedance-kits/kits)
-before choosing one. A Kit is useful when its shot assumptions and wording serve the intended
-performance. You can also write prompt Text directly or author a project Kit. Choose the prompt
-language for the selected model, keeping dialogue in the language it should be spoken.
-
-```svml
-<import as="text" from="@hypit/text@1"/>
-<import as="seedance" from="@hypit/seedance@1"/>
-<import as="broll-kit" source="@hypit/seedance-kits/broll"/>
-
-<text:Value id="product-story">
-  Show the product opening, the primary feature activating, and the finished result in one readable sequence.
-</text:Value>
-<text:Render id="demo-prompt"
-  template={broll-kit.broll-v1}
-  recipe={recipes.broll.product-demo}>
-  <text:Set name="story" text={product-story}/>
-</text:Render>
-
-<seedance:ReferenceVideo id="demo" model="mini"
-  prompt={demo-prompt}
-  duration="5"
-  resolution="720p"
-  aspect-ratio="9:16"
-  generate-audio="false">
-  <seedance:Reference image={scene} person-reference="false"/>
-  <seedance:Reference image={product} person-reference="false"/>
-</seedance:ReferenceVideo>
-```
-
-The project Recipe selects axes such as `material-mode`, `story-shape` and `camera-language`.
-`text:Render` reads only properties declared by the template; an explicit `text:Param` overrides a
-Recipe value. Dynamic story/dialogue/action/extra content remains a `Text` edge through `Set`.
-
-Choose the Kit by format, then provide its declared dynamic slots and ordered references:
-
-| Format | Kit | Dynamic slots | Ordered references |
-|---|---|---|---|
-| Talking head | `speaker-v1` | `dialogue`; optional `action` | image 1 = speaker/scene; audio 1 = voice |
-| Silent B-roll | `broll-v1` | `story` | one or more authored images |
-| Two-person podcast | `podcast-v1` | `dialogue`; optional `action` | images 1/2 = A/B views; audio 1/2 = A/B voices |
-| Video call | `call-v1` | `dialogue`; optional `action` | images 1/2 = reversed call layouts; audio 1/2 = A/B voices |
-| Street interview | `street-interview-v1` | `dialogue`; optional `action` | images 1/2/3 = interviewer/guest/shared views; audio 1/2 = interviewer/guest |
-| Motion transfer | `motion-reference-v1` | optional `direction` | image 1 = subject; video 1 = motion reference |
-| Camera transfer | `camera-reference-v1` | optional `direction` | image 1 = subject; video 1 = camera reference |
-
-These shapes remain visible in `seedance:ReferenceVideo`; Kit rendering does not hide media count or
-order.
-
-## Street-interview prompt assembly
-
-Use `street-interview-v1` for the stable view order, role, microphone, voice and no-overlay contracts.
-Select framing, pacing, performance, reaction and gesture through an SVS Recipe. Put each take's
-camera changes and performance in its authored action, in the exact order they should happen:
-
-```svml
-<import as="text" from="@hypit/text@1"/>
-<import as="seedance" from="@hypit/seedance@1"/>
-<import as="interview-kit" source="@hypit/seedance-kits/street-interview"/>
-
-<text:Value id="interview-action">
-  Begin with the shared view from @image3 while A asks the question.
-  Cut to B's view from @image2 as B pauses briefly, then answers.
-</text:Value>
-
-<text:Render id="interview-prompt"
-  template={interview-kit.street-interview-v1}
-  recipe={recipes.interview.street}>
-  <text:Set name="dialogue" text={story.segment.interview.dialogue}/>
-  <text:Set name="action" text={interview-action}/>
-</text:Render>
-
-<seedance:ReferenceVideo id="interview-take" model="mini"
-  prompt={interview-prompt} duration="8"
-  resolution="720p" aspect-ratio="9:16" generate-audio="true">
-  <seedance:Reference image={interviewer-view} person-reference="true"/>
-  <seedance:Reference image={guest-view} person-reference="true"/>
-  <seedance:Reference image={shared-view} person-reference="true"/>
-  <seedance:Reference audio={interviewer-voice}/>
-  <seedance:Reference audio={guest-voice}/>
-</seedance:ReferenceVideo>
-```
-
-The dialogue uses explicit `A:`/`B:` order: A is the interviewer and maps to the first audio
-reference; B is the guest and maps to the second. The Kit owns the reusable English scaffold, so do
-not duplicate it in a hand-written prompt.
-
-## Talking-head prompt assembly
-
-Talking-head authoring does not need a special executable component. The data-only `speaker-v1`
-Template, the project's Recipe and the per-take dialogue/action are assembled by the ordinary Text
-module. The result enters Seedance through the same explicit `prompt` edge as any other generation.
-
-```svml
-<import as="text" from="@hypit/text@1"/>
-<import as="seedance" from="@hypit/seedance@1"/>
-<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
-
-<text:Value id="hook-action">
-  Begin with urgent direct eye contact, then let the final admission land more quietly.
-</text:Value>
-
-<text:Render id="hook-prompt"
-  template={speaker-kit.speaker-v1}
-  recipe={recipes.speaker.host}>
-  <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
-  <text:Set name="action" text={hook-action}/>
-</text:Render>
-
-<seedance:ReferenceVideo id="hook-take" model="mini"
-  prompt={hook-prompt}
-  duration="8"
-  resolution="720p" aspect-ratio="9:16" generate-audio="true">
-  <seedance:Reference image={presenter-clean} person-reference="true"/>
-  <seedance:Reference audio={presenter-voice}/>
-</seedance:ReferenceVideo>
-```
-
-`speaker-v1.svs` selects its own Text Template Frontend. `recipes.svs` supplies the named axis values;
-`dialogue` and `action` remain explicit Source inputs. Neither the Kit nor Text chooses a model,
-reference media or generation endpoint.
-
-## Combination example
-
-A two-take setup with estimated durations written as literals, explicit Text assembly and Seedance
-generation:
-
-```svml
-<import as="media" from="@hypit/media@1"/>
-<import as="text" from="@hypit/text@1"/>
-<import as="seedance" from="@hypit/seedance@1"/>
-<import as="recipes" source="./recipes.svs"/>
-<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
-
-<media:Image id="presenter-clean" src="./assets/presenter-clean.png"/>
-<media:Image id="presenter-alt" src="./assets/presenter-alt.png"/>
-<media:Audio id="presenter-voice" src="./assets/presenter-voice.mp3"/>
-
-<text:Value id="hook-action">Start urgently, then become quieter.</text:Value>
-<text:Value id="meeting-action">Indicate the product, then return to the lens.</text:Value>
-
-<text:Render id="hook-prompt" template={speaker-kit.speaker-v1} recipe={recipes.speaker.host}>
-  <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
-  <text:Set name="action" text={hook-action}/>
-</text:Render>
-<text:Render id="meeting-prompt" template={speaker-kit.speaker-v1} recipe={recipes.speaker.host}>
-  <text:Set name="dialogue" text={story.segment.meeting.dialogue}/>
-  <text:Set name="action" text={meeting-action}/>
-</text:Render>
-
-<seedance:ReferenceVideo id="hook-take" model="mini" prompt={hook-prompt}
-  duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
-  <seedance:Reference image={presenter-clean} person-reference="true"/>
-  <seedance:Reference audio={presenter-voice}/>
-</seedance:ReferenceVideo>
-<seedance:ReferenceVideo id="meeting-take" model="mini" prompt={meeting-prompt}
-  duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
-  <seedance:Reference image={presenter-alt} person-reference="true"/>
-  <seedance:Reference audio={presenter-voice}/>
-</seedance:ReferenceVideo>
-```
-
-Each `seedance:ReferenceVideo` produces a `{*.video}` output that feeds into `time:Timeline` in the
-next stage. Different takes can use different reference images while sharing the same voice timbre
-and prompt Recipe.
+See [Targets and Builds](./run.md) for execution and [NLE project structure](./tracks.md) for the saved edit.

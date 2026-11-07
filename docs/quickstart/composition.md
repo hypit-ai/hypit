@@ -1,138 +1,50 @@
 ---
-title: Film & Rendering
-description: Assemble peer visual and audio contributions, then render the selected program range.
+title: Exporting an NLE programme
+description: Resolve files and packages, lower through AVIR, then render picture and audio.
 ---
 
-Film is an ordinary author component. It combines explicitly selected VisualTrack and AudioTrack
-outputs with one Canvas and one Timeline, producing a Composition. The renderer turns that
-Composition into a video.
+The editable NLE project is deliberately not a renderer document. Preview and export derive terminal
+programmes from one immutable snapshot:
 
-```svml
-<import as="space" from="@hypit/spatial@1"/>
-<import as="film" from="@hypit/film@1"/>
-<import as="html" from="@hypit/html-video@1"/>
+```text
+hypit.nle@1 project
+  -> AVIR programme
+       -> HTML picture programme -> Chromium frames
+       -> audio programme        -> rendered audio
+  -> muxed MP4
 ```
 
-## Assemble the Film
+AVIR is the intermediate relationship layer. It carries factual occurrences, exact temporal and
+spatial maps, paint order, audio mixing and package-owned operators. It has no editor tracks, undo
+history, DOM or output frame rate. The HTML and audio adapters consume that same resolved programme.
 
-```svml
-<space:Canvas id="vertical" width="1080" height="1920"/>
+## Local file export
 
-<film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline}
-  appearance={recipes.film.vertical}>
-  <film:Track id="picture" source={picture.visual}/>
-  <film:Track source={mix.audio}/>
-  <film:Track id="cards" source={cards.visual}/>
-  <film:Track id="captions" source={captions.visual}/>
-  <film:Track id="meaning" source={meaning.visual}/>
-</film:Film>
-```
-
-| Attribute | Required | Meaning |
-|---|---|---|
-| `id` | yes | Public composition identity |
-| `canvas` | yes | The picture coordinate system |
-| `timeline` | yes | The finite absolute program range |
-| `appearance` | yes | Film Recipe, including the clear color |
-
-Each `<film:Track>` accepts one VisualTrack or AudioTrack. Film does not discover sibling outputs.
-If one PreparedMedia source should contribute both picture and sound, author one Visual Clip and one
-Audio Clip from that media; both resulting Tracks must then be selected here.
-
-Common outputs include:
-
-| Source | Type | Role |
-|---|---|---|
-| `{picture.visual}` | VisualTrack | picture occurrences placed by Visual Track |
-| `{mix.audio}` | AudioTrack | placed voices, music and effects from Audio Track |
-| `{cards.visual}` | VisualTrack | independent image/video Clips |
-| `{captions.visual}` | VisualTrack | a Caption family |
-| `{scene.visual}` | VisualTrack | a project component |
-
-The public output is `{main.composition}`.
-
-## Visual order belongs to the parent Scope
-
-Film children select and place contributions. Every visual `<film:Track>` and `<film:Stack>` carries
-an `id` owned by its immediate parent VisualScope. Siblings paint in declaration order from back to
-front. Components publish only their reusable Track-local programme and do not carry a position in an
-unknown future Film. A Stack closes its child VisualScope and enters the parent once at its declared
-position. Ids address authored occurrences and never act as hidden paint-order fallbacks. One
-VisualTrack may be reused through several distinct member ids.
-
-```svs
-film.vertical { background: #09090B; }
-media.speaker { fit: cover; }
-media.card { fit: contain; }
-caption.base { }
-```
-
-Items remain inside their owning Track's placement. When several pictures, graphics and text need
-interleaved local order because they share layout or motion, one component should own that programme
-and its internal element tree or HTML visual. Keep independently useful contributions as peer Tracks.
-
-## Render the complete video
-
-```svml
-<html:Video id="final"
-  composition={main.composition}/>
-```
-
-The renderer compiles the visual contributions, captures requested frames, renders AudioTracks and
-muxes them into the delivered file. `{final.video}` is an ordinary Resource-backed `Blob` and
-the usual Build Target: `hypit build main.svml --target final.video`.
-
-## Render a frame interval
-
-```svml
-<html:Video id="detail" composition={main.composition}
-  start-frame="240" end-frame-exclusive="360"/>
-```
-
-The bounds use the original Timeline and a half-open interval. At 30 fps this example renders
-seconds 8–12. Animation and media sampling retain their original program positions even though the
-encoded clip starts at zero. Range rendering limits final capture and encoding; the selected
-Target slicing still produces required inputs, so reuse accepted media and alignment Outputs explicitly.
-
-## A film drawn entirely by components
-
-Timeline does not require speech or media:
-
-```svml
-<import as="time" from="@hypit/timeline-author@1"/>
-
-<time:Clock id="animation-clock" frame-rate="30"/>
-<time:Timeline id="animation" clock={animation-clock} end="8s">
-  <time:Instant id="question" at="0.5s"/>
-  <time:Instant id="answer" at="2s"/>
-</time:Timeline>
-
-<chat:Scene id="conversation" timeline={animation.timeline} within={canvas.bounds}
-  during={animation.window}>
-  <chat:Message id="question" at={animation.question} sender="Maya" text="Ready?"/>
-  <chat:Message id="answer" at={animation.answer} sender="Leo" text="Let's go."/>
-</chat:Scene>
-
-<film:Film id="main" canvas={canvas.canvas} timeline={animation.timeline}
-  appearance={recipes.film.main}>
-  <film:Track id="conversation" source={conversation.visual}/>
-</film:Film>
-<html:Video id="final" composition={main.composition}/>
-```
-
-The component owns its reading rhythm through ordinary absolute time. With no selected AudioTrack,
-the result is silent. In a spoken composition, a Narrative Projection can reveal Moments or
-Selections as the same absolute Instant and Window inputs.
-
-## Check before execution
+Use the direct NLE command when the project already refers to local Media Asset files and installed
+component/effect packages:
 
 ```bash
-hypit check main.svml
-hypit plan main.svml --target final.video
+hypit nle export edit.nle.json --to output.mp4
+hypit nle export edit.nle.json --to output.mp4 --frame-rate 30000/1001
 ```
 
-`check` validates imports, types and references without calling external services. `plan` shows the
-selected Targets and external work. Inspect that plan before paid execution.
+The command validates the snapshot, loads only the named packages, resolves primary media files,
+lowers picture and audio, renders them and publishes the completed MP4 without replacing an existing
+output.
 
-See [Timing & Assembly](./timing.md) for media preparation, Timeline construction, media presentation and
-semantic projection. See [Tracks](./tracks.md) for Visual and Audio authoring forms.
+`--frame-rate` selects picture sampling for this delivery. It never changes the exact times stored in
+the project. Without the option, `editRate` is used as a convenient default.
+
+This command is not an AIGC Build. It creates no Runtime Profile, Result history, semantic dependency
+or durable prepare state. Generated media becomes ordinary project material only after it is exported
+to files, described by a Media Asset document and inserted into the NLE through the same materializing
+edit used for camera footage or a downloaded file.
+
+## What remains editable
+
+The `.nle.json` file remains the authority after export. AVIR, HTML, audio and rendered intermediates
+are derived values and do not have to be written back. A later trim or parameter edit creates a new
+project revision; the next preview or export lowers that new snapshot.
+
+See [NLE project structure](./tracks.md) for media, Items and package instances, and
+[Exact time](./timing.md) for frame-rate independence.

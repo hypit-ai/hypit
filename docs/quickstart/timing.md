@@ -1,161 +1,51 @@
 ---
-title: Timing & Assembly
-description: Construct absolute program time, then present media and project optional semantic time explicitly.
+title: Exact time in an NLE project
+description: How direct rational placement, source time and output sampling stay separate.
 ---
 
-Hypit has one program-time axis: `Timeline`, represented by `{ id, frameRate, frameCount }`.
-Named Instants, Windows, media occurrences and semantic projections refer to that axis.
+Hypit's NLE project stores the accepted edit as direct values. It has no named Timeline object and
+does not retain the expression, transcript match or generator that helped an author choose a time.
 
-For spoken work, independent facts meet around that axis:
+Every Item has three exact temporal values:
 
-1. Let each accepted Media object expose source-preserving `PreparedMedia` plus its finite exact local temporal domain.
-2. Construct Timeline from a DAG of named Instants, Windows and Extents with one required `end`.
-3. When a consumer needs positions inside performed speech, align its Script Segment on the local domain.
-4. Project requested semantic values through the explicitly placed Window; present ordinary media through independent Visual and Audio sources.
+- `start`: where the Item begins in programme time;
+- `duration`: how long it contributes;
+- `localStart`: where reading begins in the Item's source or component-local time.
 
-This separation is useful: moving a passage changes absolute relationships without changing its media or local
-word evidence; reframing picture does not change audio; a pure animation needs Timeline but no media
-or Script.
+Each value is written as integer ticks plus a rational time base:
 
-```svml
-<import as="mediaop" from="@hypit/media-operations@1"/>
-<import as="whisperx" from="@hypit/whisperx@1"/>
-<import as="speechalign" from="@hypit/narrative-speech-alignment@1"/>
-<import as="semantic" from="@hypit/narrative-temporal@1"/>
-<import as="time" from="@hypit/timeline-author@1"/>
-<import as="media" from="@hypit/media@1"/>
-<import as="visual" from="@hypit/visual-track@1"/>
-<import as="audio" from="@hypit/audio-track@1"/>
+```json
+{
+  "ticks": "1001",
+  "timeBase": { "numerator": 1, "denominator": 30000 }
+}
 ```
 
-## Declare timed Media
+This is exactly 1001/30000 seconds. It is not rounded to the project's display grid.
 
-Timed Media publishes the original Resource directly and selects the intended members lazily to expose
-an exact local domain and Extent without choosing the final Timeline's frame grid:
+## Edit rate is a grid, not storage
 
-```svml
-<time:Clock id="clock" frame-rate="30"/>
-<media:Video id="opening-media" source={opening-video.video}
-   audio="default" />
-<media:Video id="answer-media" source={answer-video.video}
-   audio="default" />
+`editRate` tells an editor how to display time and where frame snapping normally lands:
+
+```json
+"editRate": { "numerator": 30000, "denominator": 1001 }
 ```
 
-The Media prepared branch publishes the selected members, their exact local temporal domain and Extent, and the
-source relationship needed by later consumers. Script alignment and programme placement remain
-separate author decisions.
+Changing this value does not retime, quantize or reinterpret any existing Item. Media audio retains
+its own sample domain, and final export chooses its own picture sampling rate.
 
-## Align meaning when the composition consumes it
+## Placement is already resolved
 
-Timeline construction needs the media Extent, not semantic alignment. Add Alignment when Caption,
-semantic picture changes, sound events or another consumer needs Script positions inside the
-accepted performance:
+A trim or move commits new exact values through one revisioned NLE transaction. A source marker,
+transcript word or analysis result may be shown by an editor as a snap guide, but accepting the snap
+stores the resulting value. Export never looks the guide up by name.
 
-```svml
-<whisperx:Transcription id="opening-transcription"
-  media={opening-media.source} language="en"/>
-<speechalign:Alignment id="opening-alignment" narrative={story}
-  segment={story.segment.opening} domain={opening-media.domain}
-  evidence={opening-transcription.transcript}/>
-<whisperx:Transcription id="answer-transcription"
-  media={answer-media.source} language="en"/>
-<speechalign:Alignment id="answer-alignment" narrative={story}
-  segment={story.segment.answer} domain={answer-media.domain}
-  evidence={answer-transcription.transcript}/>
-```
+When linked editing is useful, the editor updates all affected direct values in the same transaction.
+That is an editing operation, not a second timing authority in the saved project.
 
-Each Transcription publishes only `SpeechTranscriptEvidence`. Each Alignment publishes only a
-`NarrativeAlignment`: Segment and word boundaries measured on that local domain. Neither result
-contains media or chooses a Timeline position. A Segment with no Tokens uses
-`<speechalign:Alignment>` without `evidence`; its boundaries are the local domain boundaries and no
-acoustic request is needed.
+During lowering, the direct values become factual programme-to-source maps in AVIR. Components and
+effects may additionally own exact Item-local controls, but their parameter format belongs to their
+package rather than to NLE Core.
 
-To retain and edit the observation, materialize it before the Build and import that Source:
-
-```bash
-hypit transcribe opening.mp4 --language en --to opening.transcript.svml
-```
-
-```svml
-<import as="accepted-speech" source="./opening.transcript.svml"/>
-<speechalign:Alignment id="opening-alignment" narrative={story}
-  segment={story.segment.opening} domain={opening-media.domain}
-  evidence={accepted-speech.transcript}/>
-```
-
-The file stores exact 16 kHz sample boundaries. Correcting those boundaries changes the derived
-semantic and Caption timing on the next Build; it does not require changing Script meaning, media
-placement or the Alignment operation.
-
-## Construct the absolute Timeline
-
-Timeline declarations may depend on one another but must remain acyclic. `end` is required; every
-named Instant or Window can be referenced by other declarations:
-
-```svml
-<time:Timeline id="speech" clock={clock} end="answer.end">
-  <time:Window id="opening" from="start" for={opening-media.extent}/>
-  <time:Window id="answer" from="opening.end" for={answer-media.extent}/>
-</time:Timeline>
-```
-
-Each `for={...extent}` resolves an exact unpositioned duration on this Timeline's Clock. The default
-`cover` rule retains a final partial frame. Generated speech may therefore determine Timeline length
-when its Extent becomes available. Use `from="opening.end+2s"` for a gap,
-`from="opening.end-12f"` for overlap, or `latest(a.end,b.end)` for parallel branches. A pure animation
-can simply declare `<time:Timeline id="animation" clock={clock} end="8s"/>`. The Timeline retains no
-media or source-domain identity.
-
-## Project meaning independently
-
-Project semantic evidence by pairing each Alignment with its complete local domain and explicitly
-placed absolute Window:
-
-```svml
-<semantic:Projection id="story-time" narrative={story} timeline={speech.timeline}>
-  <semantic:Map alignment={opening-alignment.alignment}
-    domain={opening-media.domain} window={speech.opening}/>
-  <semantic:Map alignment={answer-alignment.alignment}
-    domain={answer-media.domain} window={speech.answer}/>
-</semantic:Projection>
-<semantic:Window id="proof" projection={story-time} during={story.selection.proof}/>
-<semantic:Instant id="claim" projection={story-time} at={story.moment.claim}/>
-```
-
-The requested outputs `proof` and `claim` are ordinary absolute Window and
-Instant values. Semantic time is one
-optional projection source; direct seconds, frames and named Timeline values remain equally valid.
-Projection reads the exact semantic boundary. Declare a separate absolute relationship such as
-`<time:Instant id="after-claim" timeline={speech.timeline} at={claim} offset="+5f"/>` when an authored
-offset is needed.
-
-## Present picture and audio
-
-```svml
-<visual:Track id="picture" timeline={speech.timeline}>
-  <visual:Clip id="opening" media={opening-media.source} during={speech.opening}
-    frame={speech-frame} fit="cover"/>
-  <visual:Clip id="answer" media={answer-media.source} during={speech.answer}
-    frame={speech-frame} fit="cover"/>
-</visual:Track>
-
-<audio:Track id="mix" timeline={speech.timeline}>
-  <audio:Clip id="opening" source={opening-media.source} during={speech.opening}/>
-  <audio:Clip id="answer" source={answer-media.source} during={speech.answer}/>
-</audio:Track>
-```
-
-Visual and Audio Clips are peer occurrences. The same prepared media can feed both, but selecting its picture never makes its audio
-audible automatically.
-
-```text
-PreparedMedia + Window ──────────────────────────────────→ Visual / Audio occurrence
-
-NarrativeAlignment + LocalDomain + Window ──────────────→ absolute Instants / Windows
-
-Instant / Window / TemporalExtent DAG ───────────────────→ Timeline
-```
-
-Components ultimately consume Timeline plus absolute Instants or Windows. A domain projection
-publishes those values upstream; general component declarations do not accept Script objects or carry
-the projector.
+See [NLE project structure](./tracks.md) for Items and paint order, and
+[Exporting the programme](./composition.md) for output sampling.

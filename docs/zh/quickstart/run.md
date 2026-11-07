@@ -53,9 +53,8 @@ Target 选择与 Runtime Profile 不会悄悄改写视频。创作性的模型�
 
 ## Target
 
-Target 表达这次 Build 要求求值到哪里，通常是成片或另一个独立目标。Target 本身不会让该值自动保存到
-Build Result；生成媒体、可编辑证据和最终编码输出由各自 package 明确声明跨 Build 生命周期。Track、
-Timeline 和 PreparedMedia 等派生值不会因为具名、可引用或成为 Target 而自动保存。
+Target 表达这次 Build 要求求值到哪里，通常是成片或另一个独立目标。Target 本身不会把派生值自动
+变成可编辑 NLE 工程；生成媒体、可编辑证据和最终编码输出由各自 package 明确声明跨 Build 生命周期。
 
 ### 多个 Target
 
@@ -81,21 +80,10 @@ hypit inspect <build-id>
 hypit result export <build-id> --output opening-generation.video --to assets/opening.mp4
 ```
 
-随后用拥有该含义的 Author 包声明文件，并让消费者直接引用这个具名 Record：
-
-```svml
-<import as="asset" from="@hypit/media@1"/>
-<import as="mediaop" from="@hypit/media-operations@1"/>
-
-<asset:Video id="accepted-opening" src="./assets/opening.mp4"/>
-<media:Video id="opening-media" source={accepted-opening}
-   audio="default" />
-```
-
-这是一次持久的作品编辑。字幕、时间线放置、视觉处理和渲染直接使用这段表演，不需要让
-Target 选择或 Result 不需要认识文件的来源。相机素材、下载文件、CLI 产物和生成 Result 都通过普通
-Author 声明进入作品。需要生成新版本时，单独 Target `opening-generation.video`；是否采用新版本，
-由之后对消费者引用的显式编辑决定。
+把导出的文件导入为 Media Asset 文档，再向 NLE 工程物化一个媒体箱条目和一个或多个直接 Item。
+这是一次持久作品编辑：工程保存放置、trim 与视觉处理，而 Target 选择和 Result 无需知道文件之后
+出现在哪里。相机素材、下载文件、CLI 产物和生成 Result 都经过同一文件入口。需要新 take 时，
+单独 Target `opening-generation.video`；是否采用它，由之后一次显式 NLE 编辑决定。
 
 ## Runtime Profile
 

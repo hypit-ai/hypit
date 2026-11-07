@@ -112,9 +112,9 @@ For manual publication or an independent-package update, open **Actions → Publ
 on `main` and enter the successful **CI run ID**. Leave **Publish** unchecked to download and inspect
 the candidate without npm writes; check it to publish. The run ID selects the tested files even if
 main has since advanced. The **packages** input selects exact space-separated names, such as
-`@hypit/studio`; empty selects the complete candidate. This does not require a new root version when
+`@hypit/seedance`; empty selects the complete candidate. This does not require a new root version when
 the existing root dependency ranges remain valid. Locally the equivalent selection is
-`node scripts/publish-release-candidate.mjs dist/release/release-plan.json --package=@hypit/studio`.
+`node scripts/publish-release-candidate.mjs dist/release/release-plan.json --package=@hypit/seedance`.
 
 If publication or attachment fails, rerun publication with the same candidate, not CI. Matching
 immutable npm versions are skipped; existing Release attachments are retained. A publishing-tool

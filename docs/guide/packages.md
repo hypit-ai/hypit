@@ -23,15 +23,16 @@ the final composition. Both use explicit inputs and outputs.
 
 ## Components follow the work
 
-A video's spatial structure is organized where that organization is useful. Visual Track can present
-an ordinary clip or picture; a project component can coordinate a moving video viewport, labels and
-a diagram inside one scene. Independent captions or overlays can remain separate contributions.
-Each component owns the content whose behavior belongs together.
+A video's spatial structure is organized where that organization is useful. A project component can
+coordinate a moving video viewport, labels and a diagram inside one scene; an ordinary media Item,
+caption cue or overlay can remain independent. Each component owns the content whose behavior belongs
+together, while the NLE project owns direct placement and paint order.
 
-For a spoken video, a Narrative Projection can reveal Script Selections and Moments as the absolute
-Windows and Instants those components consume. An authored animation can produce the same values
-directly from seconds or frames on its declared clock.
-[Film and Rendering](../quickstart/composition.md) explains how these contributions fit together.
+For spoken work, Script and transcript packages retain source-local selections and timing. An explicit
+materializer can turn the chosen presentation into ordinary Component Items. The saved NLE contains
+the resulting exact values rather than a live semantic lookup.
+[NLE project structure](../quickstart/tracks.md) and
+[export](../quickstart/composition.md) explain how these contributions fit together.
 
 New components normally live in the video's `packages/` directory and use the owner's package
 scope. The project declares them with its ordinary package manager. When cross-project reuse is

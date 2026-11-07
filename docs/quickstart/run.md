@@ -60,8 +60,8 @@ the Author Source or in packages that it explicitly imports.
 
 A Target is the Build's final intention, normally the finished video or another real deliverable.
 The Build produces the work needed for its Targets. A Target controls evaluation; it does not by itself
-store that value in the Result. Package-owned generated media, editable evidence and encoded final outputs
-declare their own cross-Build lifetime. Derived Track, Timeline and PreparedMedia values remain graph values.
+turn a derived value into an editable NLE project. Package-owned generated media, editable evidence and
+encoded outputs declare their own cross-Build lifetime.
 
 ### Multiple Targets
 
@@ -88,23 +88,12 @@ hypit inspect <build-id>
 hypit result export <build-id> --output opening-generation.video --to assets/opening.mp4
 ```
 
-Declare the exported file with the Author package that owns its meaning, then make the consumer
-reference that authored Record:
-
-```svml
-<import as="asset" from="@hypit/media@1"/>
-<import as="mediaop" from="@hypit/media-operations@1"/>
-
-<asset:Video id="accepted-opening" src="./assets/opening.mp4"/>
-<media:Video id="opening-media" source={accepted-opening}
-   audio="default" />
-```
-
-This is a durable production edit. Captions, Timeline placement, visual treatment and rendering use
-the accepted performance without teaching Target selection or Result how that file originated. Camera
-footage, a download, a CLI-produced file and a generated Result enter through the same Author
-declaration. To generate another take, target `opening-generation.video`; adopting that take is a
-separate explicit edit of the consumer reference.
+Import the exported file as a Media Asset document, then materialize it into the NLE project as one
+media-bin entry and one or more direct Items. This is a durable production edit: the project stores
+placement, trim and treatment without teaching Target selection or Result where the file will appear.
+Camera footage, a download, a CLI-produced file and a generated Result enter through the same file-first
+boundary. To generate another take, target `opening-generation.video`; adopting it is a separate explicit
+NLE edit.
 
 ## Runtime Profile
 

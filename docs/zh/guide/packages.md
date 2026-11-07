@@ -20,11 +20,13 @@ Hypit 项目把可复用组件、生成模型和服务作为普通包安装，�
 
 ## 组件随作品需要组织
 
-在适合提取秩序的地方组织空间。Visual Track 可以呈现普通视频或图片；项目组件可以把移动的视频视口、标签和流程图作为一个场景协调起来。独立字幕或叠加层仍可分开。共享行为决定哪些内容属于同一个组件。
+在适合提取秩序的地方组织空间。项目组件可以把移动的视频视口、标签和流程图作为一个场景协调；
+普通 Media Item、字幕 cue 或叠加层可以保持独立。共享行为决定组件边界，NLE 工程拥有直接放置
+和绘制顺序。
 
-对于说话视频，Narrative Projection 可以把 Script Selection 与 Moment 显影成组件消费的绝对
-Window 与 Instant；作者主导节奏的动画，则可以在声明的时钟上从秒或帧直接产生相同类型。
-[Film 与渲染](../quickstart/composition.md) 介绍这些贡献如何组成作品。
+对于说话视频，Script 与转写包保留 source-local selection 和 timing；显式 materializer 可以把
+选中的呈现变成普通 Component Item。保存后的 NLE 只有得到的精确值，不保留活的语义查找。
+[NLE 工程结构](../quickstart/tracks.md)与[导出](../quickstart/composition.md)介绍这些贡献如何组成作品。
 
 新组件通常放在视频项目的 `packages/` 中，使用所有者自己的 scope，由项目的普通包管理器声明。需要跨项目复用时，所有者可以把同一个组件发布为有版本的 npm 或私有 Registry 包。使用方安装选定版本，并将 lockfile 与项目一起保存。
 

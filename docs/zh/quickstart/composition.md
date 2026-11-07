@@ -1,131 +1,44 @@
 ---
-title: Film 与渲染
-description: 装配并列的画面与声音贡献，再渲染所选节目区间。
+title: 导出 NLE 节目
+description: 解析文件与包，经过 AVIR lowering，再渲染画面和音频。
 ---
 
-Film 是普通作者组件。它把显式选择的 VisualTrack、AudioTrack 与一个 Canvas、一个 Timeline
-组合成 Composition。渲染器再把 Composition 变成视频。
+可编辑 NLE 工程有意不兼任渲染器文档。预览和导出从一个不可变快照派生终端程序：
 
-```svml
-<import as="space" from="@hypit/spatial@1"/>
-<import as="film" from="@hypit/film@1"/>
-<import as="html" from="@hypit/html-video@1"/>
+```text
+hypit.nle@1 工程
+  -> AVIR programme
+       -> HTML picture programme -> Chromium frames
+       -> audio programme        -> rendered audio
+  -> muxed MP4
 ```
 
-## 装配 Film
+AVIR 是中间关系层：它携带事实 occurrence、精确时空映射、绘制顺序、音频混合与包拥有的
+operator，但没有编辑轨道、undo 历史、DOM 或输出帧率。HTML 与音频适配器消费同一份已解析节目。
 
-```svml
-<space:Canvas id="vertical" width="1080" height="1920"/>
+## 本地文件导出
 
-<film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline}
-  appearance={recipes.film.vertical}>
-  <film:Track id="picture" source={picture.visual}/>
-  <film:Track source={mix.audio}/>
-  <film:Track id="cards" source={cards.visual}/>
-  <film:Track id="captions" source={captions.visual}/>
-  <film:Track id="meaning" source={meaning.visual}/>
-</film:Film>
-```
-
-| 属性 | 必填 | 含义 |
-|---|---|---|
-| `id` | 是 | 公开 Composition 身份 |
-| `canvas` | 是 | 画面坐标系 |
-| `timeline` | 是 | 有限的绝对节目范围 |
-| `appearance` | 是 | Film Recipe，包括清屏颜色 |
-
-每个 `<film:Track>` 接受一个 VisualTrack 或 AudioTrack。Film 不会发现某个输出的“兄弟端口”。
-如果同一份准备媒体要同时贡献画面和声音，就分别从它声明一个 Visual Clip 和一个
-Audio Clip，并在这里显式选择两边产出的 Track。
-
-常见输出包括：
-
-| 来源 | 类型 | 角色 |
-|---|---|---|
-| `{picture.visual}` | VisualTrack | Visual Track 放置的画面出现关系 |
-| `{mix.audio}` | AudioTrack | Audio Track 中的语音、音乐与效果 |
-| `{cards.visual}` | VisualTrack | 独立图片或视频 Clip |
-| `{captions.visual}` | VisualTrack | Caption 家族 |
-| `{scene.visual}` | VisualTrack | 项目组件 |
-
-公开输出是 `{main.composition}`。
-
-## 画面顺序属于父 Scope
-
-Film 子项负责选择并放置贡献。每个视觉 `<film:Track>` 与 `<film:Stack>` 都携带由直属父
-VisualScope 拥有的 `id`；同级成员按声明顺序从后向前绘制。组件只发布可复用的 Track 局部 programme，
-不携带它在未知未来 Film 中的位置。Stack 封闭子 VisualScope，并在自身声明的位置作为一张画面进入父
-Scope。id 只负责寻址，不会暗中参与绘制顺序。同一个 VisualTrack 可以通过不同成员 id 重复放置。
-
-```svs
-film.vertical { background: #09090B; }
-media.speaker { fit: cover; }
-media.card { fit: contain; }
-caption.base { }
-```
-
-item 保持在所属 Track 的放置关系内。若多张画面、图形与文字因为共享布局或运动而需要局部交错顺序，
-应由一个组件拥有该 programme 及其内部元素树或浏览器程序；仍可独立使用的贡献保持为并列 Track。
-
-## 渲染完整视频
-
-```svml
-<html:Video id="final"
-  composition={main.composition}/>
-```
-
-渲染器编译视觉贡献、捕获所需帧、渲染 AudioTrack，并复用封装为交付文件。
-`{final.video}` 是普通 Resource-backed `Blob`，通常也是 Build Target：
-`hypit build main.svml --target final.video`。
-
-## 渲染帧区间
-
-```svml
-<html:Video id="detail" composition={main.composition}
-  start-frame="240" end-frame-exclusive="360"/>
-```
-
-边界使用原 Timeline 的半开区间。30 fps 时，这个例子渲染第 8–12 秒。即使输出片段从零
-开始，动画和媒体采样仍保留原节目位置。区间渲染只限制最终捕获与编码；构建仍会执行目标所需的
-上游工作，因此已接受的媒体与对齐证据应在 Author Source 中显式选择。
-
-## 完全由组件绘制的影片
-
-Timeline 不要求语音或媒体：
-
-```svml
-<import as="time" from="@hypit/timeline-author@1"/>
-
-<time:Clock id="animation-clock" frame-rate="30"/>
-<time:Timeline id="animation" clock={animation-clock} end="8s">
-  <time:Instant id="question" at="0.5s"/>
-  <time:Instant id="answer" at="2s"/>
-</time:Timeline>
-
-<chat:Scene id="conversation" timeline={animation.timeline} within={canvas.bounds}
-  during={animation.window}>
-  <chat:Message id="question" at={animation.question} sender="Maya" text="Ready?"/>
-  <chat:Message id="answer" at={animation.answer} sender="Leo" text="Let's go."/>
-</chat:Scene>
-
-<film:Film id="main" canvas={canvas.canvas} timeline={animation.timeline}
-  appearance={recipes.film.main}>
-  <film:Track id="conversation" source={conversation.visual}/>
-</film:Film>
-<html:Video id="final" composition={main.composition}/>
-```
-
-组件用普通绝对时间拥有自己的阅读节奏。没有选择 AudioTrack 时，结果是静音的。在语音作品
-中，Narrative Projection 可以把 Moment 或 Selection 显影成同样的绝对 Instant 与 Window 输入。
-
-## 执行前检查
+当工程已经引用本地 Media Asset 文件，所需组件/特效包也已安装时，直接使用 NLE 命令：
 
 ```bash
-hypit check main.svml
-hypit plan main.svml --target final.video
+hypit nle export edit.nle.json --to output.mp4
+hypit nle export edit.nle.json --to output.mp4 --frame-rate 30000/1001
 ```
 
-`check` 在不调用外部服务的情况下验证导入、类型和引用。`plan` 显示所选 Target 与外部工作。付费执行前应检查该计划。
+命令验证快照，只加载实例点名的包，解析主媒体文件，lower 画面与音频，完成渲染后发布 MP4，
+且不会覆盖已有输出。
 
-[时间与装配](./timing.md)解释媒体准备、Timeline 构造、媒体放置与语义投影；
-[Tracks](./tracks.md)解释 Visual 和 Audio 的作者形式。
+`--frame-rate` 只选择本次交付的画面采样，不修改工程中的精确时间。省略时，`editRate` 只是一个
+方便的默认选择。
+
+这条命令不是 AIGC Build，不创建 Runtime Profile、Result 历史、语义依赖或持久 prepare 状态。
+生成媒体只有在导出为文件、由 Media Asset 文档描述并通过普通物化编辑插入 NLE 后，才成为工程
+素材；相机拍摄和下载文件也走同一入口。
+
+## 什么仍然可编辑
+
+导出后 `.nle.json` 仍是权威。AVIR、HTML、音频和渲染中间物都是派生值，无需回写。之后一次
+trim 或参数修改产生新的工程 revision；下一次预览或导出 lower 这个新快照。
+
+继续阅读 [NLE 工程结构](./tracks.md)了解媒体、Item 和包实例，或
+[精确时间](./timing.md)了解帧率无关性。
