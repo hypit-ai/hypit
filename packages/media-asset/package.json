@@ -1,0 +1,21 @@
+{
+  "name": "@hypit/media-asset",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node/index.ts"
+  },
+  "dependencies": {
+    "@hypit/facet": "workspace:*",
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/temporal": "workspace:^0.1.1"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

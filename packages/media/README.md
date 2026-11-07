@@ -36,6 +36,11 @@ Provider cache remain separate downstream values.
 Inspection publishes presentation endpoints only when decoded-unit facts establish both boundaries.
 Without a complete span, the stream cannot establish an exact local domain; probe diagnostics do not enter this value.
 
+Persistent file import is deliberately a separate owner. `@hypit/media-asset` stores a portable relative media file,
+these already resolved preparation facts without an execution `BlobRef`, and zero or more package-owned representation
+documents. Loading that manifest projects the file into ordinary `PreparedMedia`; it does not add transcript, object,
+depth or analysis kinds to this package and does not run an Analyzer.
+
 ## Materializing one selected member
 
 Media also owns explicit audio and decoded-frame materialization. The pure Producer resolves the

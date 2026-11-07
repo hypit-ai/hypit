@@ -1689,6 +1689,21 @@ importers:
         specifier: workspace:*
         version: link:../svml
 
+  packages/media-asset:
+    dependencies:
+      '@hypit/facet':
+        specifier: workspace:*
+        version: link:../facet
+      '@hypit/media':
+        specifier: workspace:^0.2.0
+        version: link:../media
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
+
   packages/media-delivery:
     dependencies:
       '@hypit/media':
