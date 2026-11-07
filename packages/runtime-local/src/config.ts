@@ -5,27 +5,27 @@ import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 
 import {
   loadNodePackageSelection,
-} from "@hypit/hypit/loader/node";
-import type { NodePackageSelectionRequest } from "@hypit/hypit/loader/node";
-import { hypitHostStateRoot } from "@hypit/hypit/cli";
-import { EndpointRegistry, Executor } from "@hypit/hypit/executor";
-import type { EndpointCredential, EndpointInstance, EndpointRegistrar, EndpointScheduling } from "@hypit/hypit/endpoint";
-import { endpointOffers, endpointResourceClaims, installEndpoint, verifyEndpointPricingDocument } from "@hypit/hypit/endpoint";
-import { assertBuildId, canonicalize, capabilityKey, compareCodeUnits, parseCapabilityKey } from "@hypit/hypit/protocol";
-import type { CanonicalValue, CapabilityRef, Need, Value } from "@hypit/hypit/protocol";
+} from "@hypit/loader/node";
+import type { NodePackageSelectionRequest } from "@hypit/loader/node";
+import { hypitHostStateRoot } from "@hypit/cli";
+import { EndpointRegistry, Executor } from "@hypit/executor";
+import type { EndpointCredential, EndpointInstance, EndpointRegistrar, EndpointScheduling } from "@hypit/endpoint";
+import { endpointOffers, endpointResourceClaims, installEndpoint, verifyEndpointPricingDocument } from "@hypit/endpoint";
+import { assertBuildId, canonicalize, capabilityKey, compareCodeUnits, parseCapabilityKey } from "@hypit/protocol";
+import type { CanonicalValue, CapabilityRef, Need, Value } from "@hypit/protocol";
 import {
   CompositeCredentialStore,
   InProcessBuildScheduler,
   capacityUnits,
   writableCredentialStore,
-} from "@hypit/hypit/runtime";
-import type { CredentialStore, CredentialValue } from "@hypit/hypit/runtime";
+} from "@hypit/runtime";
+import type { CredentialStore, CredentialValue } from "@hypit/runtime";
 import type { ResourceStore } from "@hypit/resource-store";
 import { FileResourceStore } from "@hypit/resource-store/node";
-import type { ProductHistory } from "@hypit/hypit/product";
-import { FileProductHistory } from "@hypit/hypit/product/node";
-import type { BuildResultHistory } from "@hypit/hypit/result";
-import { FileBuildResultHistory } from "@hypit/hypit/result/node";
+import type { ProductHistory } from "@hypit/product";
+import { FileProductHistory } from "@hypit/product/node";
+import type { BuildResultHistory } from "@hypit/result";
+import { FileBuildResultHistory } from "@hypit/result/node";
 import type { PublicationStoreLocation } from "./execution.js";
 import { FileRunFinalizationStore } from "./result-storage/store.js";
 import type { RunFinalizationStore } from "./result-storage/types.js";

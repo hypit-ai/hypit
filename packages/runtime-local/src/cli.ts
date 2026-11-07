@@ -1,9 +1,9 @@
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { commandHint, hypitHostStateRoot, hypitProjectStateRoot, parseCliDecimalInteger, writeCliOutput } from "@hypit/hypit/cli";
-import type { CliApplicationContext, CliCommandModule, CliIo, CliMachineView, CliOutputOptions } from "@hypit/hypit/cli";
-import type { CanonicalValue } from "@hypit/hypit/protocol";
+import { commandHint, hypitHostStateRoot, hypitProjectStateRoot, parseCliDecimalInteger, writeCliOutput } from "@hypit/cli";
+import type { CliApplicationContext, CliCommandModule, CliIo, CliMachineView, CliOutputOptions } from "@hypit/cli";
+import type { CanonicalValue } from "@hypit/protocol";
 
 import type { LocalRuntimeHost } from "./host-api.js";
 import type { ManagedProgramProgress, ManagedProgramReport } from "./programs.js";

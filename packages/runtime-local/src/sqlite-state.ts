@@ -11,9 +11,9 @@ import type {
   CommandResult,
   Need,
   TypeRef,
-} from "@hypit/hypit/protocol";
-import { assertBuildId, compareCodeUnits, normalizeValue, valueBlobRefs } from "@hypit/hypit/protocol";
-import { applyOperationUpdate, capacityUnits } from "@hypit/hypit/runtime";
+} from "@hypit/protocol";
+import { assertBuildId, compareCodeUnits, normalizeValue, valueBlobRefs } from "@hypit/protocol";
+import { applyOperationUpdate, capacityUnits } from "@hypit/runtime";
 import type {
   BuildSnapshot,
   BuildStore,
@@ -33,7 +33,7 @@ import type {
   OperationSnapshot,
   OperationStore,
   OperationUpdate,
-} from "@hypit/hypit/runtime";
+} from "@hypit/runtime";
 import type { PendingBuildCommit, PendingBuildSubmission, PendingBuildStore } from "./submission.js";
 import type {
   BuildExecutionRequest,

@@ -7,7 +7,7 @@ import { setTimeout as pause } from "node:timers/promises";
 import test from "node:test";
 import { defineBuild } from "@hypit/kernel";
 import { FileBuildResultHistory } from "@hypit/result/node";
-import { FileProductHistory } from "@hypit/hypit/product/node";
+import { FileProductHistory } from "@hypit/product/node";
 import { installDistributionPackageResolution } from "@hypit/loader/node";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { createGreetingBuild, manifest, capabilities, producers, types } from "../execution-scenario.js";

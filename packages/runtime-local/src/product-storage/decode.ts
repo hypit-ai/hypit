@@ -1,7 +1,7 @@
-import { assertPublicationIntent } from "@hypit/hypit/protocol";
-import type { CanonicalValue, PublicationIntent } from "@hypit/hypit/protocol";
-import { assertProductPath } from "@hypit/hypit/product";
-import type { ProductMaterializationState } from "@hypit/hypit/product";
+import { assertPublicationIntent } from "@hypit/protocol";
+import type { CanonicalValue, PublicationIntent } from "@hypit/protocol";
+import { assertProductPath } from "@hypit/product";
+import type { ProductMaterializationState } from "@hypit/product";
 
 export type ProductPublicationWriterState = ProductMaterializationState & {
   readonly publication: PublicationIntent;

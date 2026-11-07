@@ -1,8 +1,8 @@
 import {
   assertOrderedBuildId,
-} from "@hypit/hypit/protocol";
-import type { BuildResultOperation } from "@hypit/hypit/result";
-import { decodeProduct } from "@hypit/hypit/product";
+} from "@hypit/protocol";
+import type { BuildResultOperation } from "@hypit/result";
+import { decodeProduct } from "@hypit/product";
 
 import {
   assertBuildResultFileRef,

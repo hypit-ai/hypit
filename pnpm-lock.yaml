@@ -2123,9 +2123,51 @@ importers:
 
   packages/runtime-local:
     dependencies:
+      '@hypit/atomic-file':
+        specifier: workspace:^0.0.0-dev
+        version: link:../atomic-file
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
+      '@hypit/endpoint':
+        specifier: workspace:^0.0.0-dev
+        version: link:../endpoint
+      '@hypit/executor':
+        specifier: workspace:^0.0.0-dev
+        version: link:../executor
+      '@hypit/facet':
+        specifier: workspace:^0.0.0-dev
+        version: link:../facet
+      '@hypit/kernel':
+        specifier: workspace:^0.0.0-dev
+        version: link:../kernel
+      '@hypit/loader':
+        specifier: workspace:^0.0.0-dev
+        version: link:../loader
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/product':
+        specifier: workspace:^0.0.0-dev
+        version: link:../product
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:^0.0.0-dev
+        version: link:../refinement
       '@hypit/resource-store':
         specifier: workspace:^0.1.0
         version: link:../resource-store
+      '@hypit/result':
+        specifier: workspace:^0.0.0-dev
+        version: link:../result
+      '@hypit/runtime':
+        specifier: workspace:^0.0.0-dev
+        version: link:../runtime
+      '@hypit/workspace':
+        specifier: workspace:^0.0.0-dev
+        version: link:../workspace
       koffi:
         specifier: 3.2.1
         version: 3.2.1
@@ -2133,39 +2175,9 @@ importers:
       '@hypit/credential-store-env':
         specifier: workspace:*
         version: link:../credential-store-env
-      '@hypit/endpoint':
-        specifier: workspace:*
-        version: link:../endpoint
-      '@hypit/executor':
-        specifier: workspace:*
-        version: link:../executor
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/kernel':
-        specifier: workspace:*
-        version: link:../kernel
-      '@hypit/loader':
-        specifier: workspace:*
-        version: link:../loader
-      '@hypit/producer':
-        specifier: workspace:*
-        version: link:../producer
       '@hypit/project':
         specifier: workspace:*
         version: link:../project
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:*
-        version: link:../refinement
-      '@hypit/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      '@hypit/workspace':
-        specifier: workspace:*
-        version: link:../workspace
 
   packages/script:
     dependencies:

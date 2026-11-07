@@ -10,9 +10,9 @@ import {
   FileRunFinalization,
 } from "../../src/result-storage/index.js";
 import type { BlobRef } from "@hypit/protocol";
-import { productPublicationDirectory } from "@hypit/hypit/product/node";
-import { materializeProducts } from "@hypit/hypit/product";
-import type { ProductMaterializationTarget } from "@hypit/hypit/product";
+import { productPublicationDirectory } from "@hypit/product/node";
+import { materializeProducts } from "@hypit/product";
+import type { ProductMaterializationTarget } from "@hypit/product";
 
 import {
   structuredType,

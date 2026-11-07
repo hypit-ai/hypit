@@ -7,10 +7,10 @@ import test from "node:test";
 
 import { buildResultDirectory, FileRunFinalization, FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
-import { FileProductHistory } from "@hypit/hypit/product/node";
+import { FileProductHistory } from "@hypit/product/node";
 import { isBlobRef } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
-import { productPublicationDirectory } from "@hypit/hypit/product/node";
+import { productPublicationDirectory } from "@hypit/product/node";
 
 import {
   structuredType,

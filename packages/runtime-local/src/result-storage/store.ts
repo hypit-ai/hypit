@@ -8,9 +8,9 @@ import {
 } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 
-import { assertOrderedBuildId } from "@hypit/hypit/protocol";
-import { buildResultDirectory } from "@hypit/hypit/result/node";
-import { productFromStored } from "@hypit/hypit/product";
+import { assertOrderedBuildId } from "@hypit/protocol";
+import { buildResultDirectory } from "@hypit/result/node";
+import { productFromStored } from "@hypit/product";
 
 import type {
   RunFinalizationFinish,

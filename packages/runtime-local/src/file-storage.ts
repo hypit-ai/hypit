@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, open, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import { replaceFile } from "@hypit/hypit/atomic-file";
+import { replaceFile } from "@hypit/atomic-file";
 
 export async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
   await mkdir(dirname(path), { recursive: true });

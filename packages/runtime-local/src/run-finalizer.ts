@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { BuildMachine } from "@hypit/hypit/kernel";
-import type { BuildView } from "@hypit/hypit/kernel";
+import { BuildMachine } from "@hypit/kernel";
+import type { BuildView } from "@hypit/kernel";
 import { isStreamingResourceStore } from "@hypit/resource-store";
 import type {
   OperationSnapshot,
-} from "@hypit/hypit/runtime";
+} from "@hypit/runtime";
 import type { BuildExecutionSnapshot } from "./execution.js";
-import { compareCodeUnits, type CommandResult } from "@hypit/hypit/protocol";
-import type { BuildResultOperation } from "@hypit/hypit/result";
+import { compareCodeUnits, type CommandResult } from "@hypit/protocol";
+import type { BuildResultOperation } from "@hypit/result";
 import type { RunFinalizationFinish, RunFinalizer, StoredBuildResult } from "./result-storage/types.js";
 
 import type {
@@ -142,7 +142,7 @@ export function createLocalRunFinalizer(
 
   const syncPublications = async (
     execution: BuildExecutionSnapshot,
-    records: readonly import("@hypit/hypit/protocol").TypedRecord[],
+    records: readonly import("@hypit/protocol").TypedRecord[],
   ): Promise<void> => {
     const result = await openFinalizer(execution);
     try {

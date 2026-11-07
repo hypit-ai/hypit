@@ -1,4 +1,4 @@
-import type { RuntimeActionExecutor } from "@hypit/hypit/runtime";
+import type { RuntimeActionExecutor } from "@hypit/runtime";
 import type { BuildExecutionStore } from "./execution.js";
 
 /** All short Endpoint actions use the Runtime's existing shared resource authority. */

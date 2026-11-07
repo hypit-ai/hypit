@@ -1,6 +1,6 @@
 import { setImmediate, setTimeout as pause } from "node:timers/promises";
-import { createNodeModuleImporter } from "@hypit/hypit/loader/node/module-importer";
-import type { NodeModuleImporter } from "@hypit/hypit/loader/node/module-importer";
+import { createNodeModuleImporter } from "@hypit/loader/node/module-importer";
+import type { NodeModuleImporter } from "@hypit/loader/node/module-importer";
 import { SqliteRuntimeState } from "./sqlite-state.js";
 import { createRuntimeForBuild, statePath } from "./config.js";
 import type { LocalRuntime } from "./types.js";

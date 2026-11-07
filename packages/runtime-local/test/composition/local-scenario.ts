@@ -5,7 +5,7 @@ import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineBuild } from "@hypit/kernel";
 import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
-import { FileProductHistory } from "@hypit/hypit/product/node";
+import { FileProductHistory } from "@hypit/product/node";
 import { buildExecutionActivity, createLocalRuntime } from "@hypit/runtime-local";
 import type { BuildCompletion } from "@hypit/runtime-local";
 import { rm } from "node:fs/promises";

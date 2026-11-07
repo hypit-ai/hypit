@@ -1,15 +1,15 @@
-import { assertOrderedBuildId } from "@hypit/hypit/protocol";
+import { assertOrderedBuildId } from "@hypit/protocol";
 import type {
   BlobRef,
   PublicationIntent,
   TypeRef,
   TypedRecord,
-} from "@hypit/hypit/protocol";
-import { assertPublicationIntent } from "@hypit/hypit/protocol";
+} from "@hypit/protocol";
+import { assertPublicationIntent } from "@hypit/protocol";
 import type {
   Product,
-} from "@hypit/hypit/product";
-import type { BuildResultOperation } from "@hypit/hypit/result";
+} from "@hypit/product";
+import type { BuildResultOperation } from "@hypit/result";
 
 export type BuildResultFileRef = {
   readonly kind: "build-file";

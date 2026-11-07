@@ -2,7 +2,7 @@ import type {
   CapacityAcquire,
   CapacityAcquireRequest,
   CapacityReservation,
-} from "@hypit/hypit/runtime";
+} from "@hypit/runtime";
 
 export type BuildOutcome = "complete" | "failed" | "cancelled";
 
@@ -19,7 +19,7 @@ export type PublicationStoreLocation = {
 export type BuildExecutionRequest = {
   readonly build: string;
   /** Host-owned execution choices. Opaque to the graph and Core. */
-  readonly context?: import("@hypit/hypit/protocol").CanonicalValue;
+  readonly context?: import("@hypit/protocol").CanonicalValue;
   /** Installed execution packages loaded when this execution context starts. */
   readonly executionPackages: readonly string[];
   /** Exact project publication stores selected at submission. */

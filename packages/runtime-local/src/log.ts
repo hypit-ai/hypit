@@ -1,8 +1,8 @@
 import { createReadStream } from "node:fs";
 import { appendFile, mkdir, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { readExecutionLog } from "@hypit/hypit/runtime";
-import type { ExecutionLogEvent, ExecutionLogRecord, ExecutionLogView } from "@hypit/hypit/runtime";
+import { readExecutionLog } from "@hypit/runtime";
+import type { ExecutionLogEvent, ExecutionLogRecord, ExecutionLogView } from "@hypit/runtime";
 
 export type LocalExecutionLogs = {
   record(build: string, request: ExecutionLogRecord["request"], event: ExecutionLogEvent): Promise<void>;

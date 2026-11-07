@@ -1,4 +1,4 @@
-import type { BuildDefinition } from "@hypit/hypit/protocol";
+import type { BuildDefinition } from "@hypit/protocol";
 import type { BuildExecutionRequest, BuildExecutionSnapshot } from "./execution.js";
 
 export type PendingBuildSubmission = BuildExecutionRequest & {

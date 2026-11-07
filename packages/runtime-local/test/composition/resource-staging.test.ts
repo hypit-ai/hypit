@@ -17,7 +17,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { FileResourceStore } from "@hypit/resource-store/node";
-import { FileProductHistory } from "@hypit/hypit/product/node";
+import { FileProductHistory } from "@hypit/product/node";
 import { isBlobRef } from "@hypit/protocol";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";

@@ -1,7 +1,7 @@
-import type { BlobAttachment } from "@hypit/hypit/workspace";
-import type { ExecutorOptions, ProducerRegistry } from "@hypit/hypit/executor";
-import type { BuildDefinition, CapabilityRef, Need, Value } from "@hypit/hypit/protocol";
-import type { BuildView as CoreBuildView } from "@hypit/hypit/kernel";
+import type { BlobAttachment } from "@hypit/workspace";
+import type { ExecutorOptions, ProducerRegistry } from "@hypit/executor";
+import type { BuildDefinition, CapabilityRef, Need, Value } from "@hypit/protocol";
+import type { BuildView as CoreBuildView } from "@hypit/kernel";
 import type {
   CapacityReservation,
   CredentialAcquisition,
@@ -11,9 +11,9 @@ import type {
   RuntimeEndpointPricingObservation,
   RuntimeEndpointQuery,
   ScheduledBuildResult,
-} from "@hypit/hypit/runtime";
+} from "@hypit/runtime";
 import type { ResourceStore } from "@hypit/resource-store";
-import type { PublicationIntent } from "@hypit/hypit/protocol";
+import type { PublicationIntent } from "@hypit/protocol";
 import type { BuildCompletion, BuildExecutionStop, PublicationStoreLocation } from "./execution.js";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-local/extension";
 
@@ -34,7 +34,7 @@ export type RuntimeHostBuildSubmission = RuntimeHostActiveBuildSubmission | Runt
 export type BuildActivity = "submitting" | "ready" | "running" | "waiting" | "finalizing";
 
 type BuildOperationViewEvidence = {
-  readonly receipt?: import("@hypit/hypit/runtime").OperationReceipt;
+  readonly receipt?: import("@hypit/runtime").OperationReceipt;
   readonly endpoint: string;
   readonly progress?: OperationSnapshot["progress"];
 };
@@ -79,7 +79,7 @@ export type RuntimeHostCredentialStatus = RuntimeHostCredentialDescription & {
 
 export type RuntimeHostControl = {
   /** Build evidence while active. Finished evidence is read through project Run history. */
-  logs?(build: string, lines: number): Promise<import("@hypit/hypit/runtime").ExecutionLogView | undefined>;
+  logs?(build: string, lines: number): Promise<import("@hypit/runtime").ExecutionLogView | undefined>;
   inspect(build: string): Promise<BuildView | undefined>;
   activity(): Promise<{
     readonly builds: readonly BuildView[];
@@ -251,6 +251,6 @@ export type LocalRuntimeHost = {
 
 /** Progress stays with the selected Provider; immediate calls need no synthetic Build. */
 export type RuntimeInvocationObservation = {
-  readonly reportProgress?: (progress: import("@hypit/hypit/runtime").OperationProgress) => Promise<void>;
-  readonly reportDiagnostic?: (diagnostic: import("@hypit/hypit/runtime").ExecutionDiagnostic) => Promise<void>;
+  readonly reportProgress?: (progress: import("@hypit/runtime").OperationProgress) => Promise<void>;
+  readonly reportDiagnostic?: (diagnostic: import("@hypit/runtime").ExecutionDiagnostic) => Promise<void>;
 };

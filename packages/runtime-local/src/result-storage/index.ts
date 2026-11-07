@@ -29,4 +29,4 @@ export {
   FileRunFinalization,
   FileRunFinalizationStore,
 } from "./store.js";
-export { buildResultDirectory } from "@hypit/hypit/result/node";
+export { buildResultDirectory } from "@hypit/result/node";

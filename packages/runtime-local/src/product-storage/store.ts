@@ -6,14 +6,14 @@ import {
   decodeStoredProductPublication,
   materializeProducts,
   productFromStored,
-} from "@hypit/hypit/product";
+} from "@hypit/product";
 import type {
   ProductResourceSource,
   ProductHistory,
   StoredProductPublication,
-} from "@hypit/hypit/product";
-import { FileProductHistory, productPublicationDirectory } from "@hypit/hypit/product/node";
-import type { PublicationIntent, TypedRecord } from "@hypit/hypit/protocol";
+} from "@hypit/product";
+import { FileProductHistory, productPublicationDirectory } from "@hypit/product/node";
+import type { PublicationIntent, TypedRecord } from "@hypit/protocol";
 
 import { writeJsonAtomic, writeStreamAtomic } from "../file-storage.js";
 import { decodeBuildResultJson } from "../result-storage/decode.js";

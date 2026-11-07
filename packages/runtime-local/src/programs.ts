@@ -3,7 +3,7 @@ import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/prom
 import { basename, join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import type { CapabilityRef } from "@hypit/hypit/protocol";
+import type { CapabilityRef } from "@hypit/protocol";
 import type { ManagedProgram, ManagedProgramCommand, ManagedProgramState } from "@hypit/runtime-local/extension";
 
 import { declaredManagedPrograms } from "./config.js";

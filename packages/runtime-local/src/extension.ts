@@ -1,17 +1,17 @@
-import { endpointActions } from "@hypit/hypit/endpoint";
-import type { EndpointInstance } from "@hypit/hypit/endpoint";
-import type { Facet } from "@hypit/hypit/facet";
-import type { CanonicalValue } from "@hypit/hypit/protocol";
-import { credentialRef } from "@hypit/hypit/runtime";
-import type { CredentialRef, CredentialStore, CredentialValue } from "@hypit/hypit/runtime";
+import { endpointActions } from "@hypit/endpoint";
+import type { EndpointInstance } from "@hypit/endpoint";
+import type { Facet } from "@hypit/facet";
+import type { CanonicalValue } from "@hypit/protocol";
+import { credentialRef } from "@hypit/runtime";
+import type { CredentialRef, CredentialStore, CredentialValue } from "@hypit/runtime";
 
-export { credentialRef, verifyCredentialRef } from "@hypit/hypit/runtime";
+export { credentialRef, verifyCredentialRef } from "@hypit/runtime";
 export type {
   CredentialRef,
   CredentialStore,
   CredentialValue,
   WritableCredentialStore,
-} from "@hypit/hypit/runtime";
+} from "@hypit/runtime";
 
 export const runtimeEndpointAdapterFacetAbi = "hypit.runtime-local-endpoint-adapter@1";
 export const runtimeCredentialStoreAdapterFacetAbi = "hypit.runtime-local-credential-store-adapter@1";
@@ -78,7 +78,7 @@ export type RuntimeEndpointActivation = {
   readonly program?: ManagedProgram;
   readonly diagnose?: (context: {
     readonly credentials: Readonly<Record<string, CredentialValue>>;
-    readonly capabilities?: readonly import("@hypit/hypit/protocol").CapabilityRef[];
+    readonly capabilities?: readonly import("@hypit/protocol").CapabilityRef[];
   }) => readonly RuntimeDoctorDiagnostic[] | Promise<readonly RuntimeDoctorDiagnostic[]>;
 };
 
@@ -295,7 +295,7 @@ export function runtimeConfigCredentialRef(
 }
 
 /** Common Profile representation for short action occupancy and rate budgets. */
-export function runtimeConfigActionLimits(value: CanonicalValue | undefined): import("@hypit/hypit/endpoint").EndpointActionLimits | undefined {
+export function runtimeConfigActionLimits(value: CanonicalValue | undefined): import("@hypit/endpoint").EndpointActionLimits | undefined {
   if (value === undefined) return undefined;
   const actions = runtimeConfigObject(value, "actionLimits");
   runtimeConfigExact(actions, endpointActions, "actionLimits");

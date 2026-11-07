@@ -4,17 +4,17 @@ import { isAbsolute, relative, resolve, sep } from "node:path";
 import {
   producerPackagesFromFacets,
   registerProducerFacets,
-} from "@hypit/hypit/producer";
+} from "@hypit/producer";
 import {
   ProducerRegistry,
   Executor,
   EndpointRegistry,
-} from "@hypit/hypit/executor";
+} from "@hypit/executor";
 import { isStreamingResourceStore } from "@hypit/resource-store";
-import { installEndpoint } from "@hypit/hypit/endpoint";
-import { assertOrderedBuildId, parseCapabilityKey, valueBlobRefs } from "@hypit/hypit/protocol";
-import { refinementPackagesFromFacets, registerTypeRefinements, RefinementRegistry } from "@hypit/hypit/refinement";
-import { materializeBuild } from "@hypit/hypit/kernel";
+import { installEndpoint } from "@hypit/endpoint";
+import { assertOrderedBuildId, parseCapabilityKey, valueBlobRefs } from "@hypit/protocol";
+import { refinementPackagesFromFacets, registerTypeRefinements, RefinementRegistry } from "@hypit/refinement";
+import { materializeBuild } from "@hypit/kernel";
 
 import { createLocalRuntimeControl } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";

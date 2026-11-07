@@ -1,6 +1,6 @@
 import {
   writableCredentialStore,
-} from "@hypit/hypit/runtime";
+} from "@hypit/runtime";
 
 import type {
   CreateLocalCredentialControlOptions,

@@ -19,24 +19,25 @@
     "README.md"
   ],
   "dependencies": {
+    "@hypit/atomic-file": "workspace:^0.0.0-dev",
+    "@hypit/cli": "workspace:^0.0.0-dev",
+    "@hypit/endpoint": "workspace:^0.0.0-dev",
+    "@hypit/executor": "workspace:^0.0.0-dev",
+    "@hypit/facet": "workspace:^0.0.0-dev",
+    "@hypit/kernel": "workspace:^0.0.0-dev",
+    "@hypit/loader": "workspace:^0.0.0-dev",
+    "@hypit/producer": "workspace:^0.0.0-dev",
+    "@hypit/product": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/refinement": "workspace:^0.0.0-dev",
     "@hypit/resource-store": "workspace:^0.1.0",
+    "@hypit/result": "workspace:^0.0.0-dev",
+    "@hypit/runtime": "workspace:^0.0.0-dev",
+    "@hypit/workspace": "workspace:^0.0.0-dev",
     "koffi": "3.2.1"
   },
-  "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
-  },
   "devDependencies": {
-    "@hypit/refinement": "workspace:*",
     "@hypit/credential-store-env": "workspace:*",
-    "@hypit/endpoint": "workspace:*",
-    "@hypit/executor": "workspace:*",
-    "@hypit/hypit": "workspace:*",
-    "@hypit/kernel": "workspace:*",
-    "@hypit/loader": "workspace:*",
-    "@hypit/producer": "workspace:*",
-    "@hypit/project": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/runtime": "workspace:*",
-    "@hypit/workspace": "workspace:*"
+    "@hypit/project": "workspace:*"
   }
 }

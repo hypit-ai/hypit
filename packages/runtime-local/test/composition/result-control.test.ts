@@ -11,7 +11,7 @@ import {
 } from "@hypit/runtime-local/extension";
 import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
-import { FileProductHistory } from "@hypit/hypit/product/node";
+import { FileProductHistory } from "@hypit/product/node";
 import { ProducerRegistry } from "@hypit/executor";
 import { MemoryResourceStore } from "@hypit/resource-store";
 import { defineEndpoint } from "@hypit/endpoint";

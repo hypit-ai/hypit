@@ -1,15 +1,15 @@
-import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { Awaitable, ProducerPackage } from "@hypit/hypit/producer";
-import type { EndpointInstance } from "@hypit/hypit/endpoint";
-import type { LoadedPackage } from "@hypit/hypit/loader";
+import type { RefinementPackage } from "@hypit/refinement";
+import type { Awaitable, ProducerPackage } from "@hypit/producer";
+import type { EndpointInstance } from "@hypit/endpoint";
+import type { LoadedPackage } from "@hypit/loader";
 import type { RunFinalizationStore } from "./result-storage/types.js";
-import type { ProductHistory } from "@hypit/hypit/product";
-import type { BuildResultHistory } from "@hypit/hypit/result";
+import type { ProductHistory } from "@hypit/product";
+import type { BuildResultHistory } from "@hypit/result";
 import type {
   BuildStore,
   CredentialStore,
   OperationStore,
-} from "@hypit/hypit/runtime";
+} from "@hypit/runtime";
 import type { ResourceStore } from "@hypit/resource-store";
 import type { BuildCompletion, BuildExecutionStore, BuildExecutionSnapshot, PublicationStoreLocation } from "./execution.js";
 import type {
@@ -29,13 +29,13 @@ type PublicationStoresOpened = {
 export type CreateLocalRuntimeOptions = {
   /** Already assigned by the local coordinator. Embeddings omit this and start fresh work. */
   readonly executionBuild?: string;
-  readonly executionContext?: import("@hypit/hypit/protocol").CanonicalValue;
-  readonly producerExecutionLimits?: import("@hypit/hypit/producer").ProducerExecutionLimits;
+  readonly executionContext?: import("@hypit/protocol").CanonicalValue;
+  readonly producerExecutionLimits?: import("@hypit/producer").ProducerExecutionLimits;
   readonly executionLogs?: import("./log.js").LocalExecutionLogs;
   readonly buildStore: BuildStore;
   readonly operationStore: OperationStore;
   /** Durable receipt boundary: one immediate Command is never invoked twice for one Build. */
-  readonly commandExecutionStore: import("@hypit/hypit/runtime").CommandExecutionStore;
+  readonly commandExecutionStore: import("@hypit/runtime").CommandExecutionStore;
   readonly executionStore: BuildExecutionStore;
   readonly removeActiveBuild: (build: string) => Awaitable<BuildCompletion>;
   /** Atomic submission boundary: external preparation is never a claimable partial Build. */
@@ -62,7 +62,7 @@ export type CreateLocalRuntimeOptions = {
 export type CreateLocalRuntimeControlOptions = {
   readonly executionLogs?: import("./log.js").LocalExecutionLogs;
   readonly buildStore: BuildStore;
-  readonly commandExecutionStore: import("@hypit/hypit/runtime").CommandExecutionStore;
+  readonly commandExecutionStore: import("@hypit/runtime").CommandExecutionStore;
   readonly openPublicationStores: (location: PublicationStoreLocation) => Awaitable<PublicationStoresOpened>;
   readonly operationStore: OperationStore;
   readonly executionStore: BuildExecutionStore;
@@ -75,7 +75,7 @@ export type CreateLocalRunFinalizerOptions = {
   readonly executionLogs?: import("./log.js").LocalExecutionLogs;
   readonly buildStore: BuildStore;
   readonly operationStore: OperationStore;
-  readonly commandExecutionStore: import("@hypit/hypit/runtime").CommandExecutionStore;
+  readonly commandExecutionStore: import("@hypit/runtime").CommandExecutionStore;
   readonly executionStore: BuildExecutionStore;
   readonly removeActiveBuild: (build: string) => Awaitable<BuildCompletion>;
   readonly submissionStore: import("./submission.js").PendingBuildStore;
@@ -108,7 +108,7 @@ export type LocalRunFinalizer = {
   /** Incrementally materialize publications whose Records have completed. */
   sync(
     execution: BuildExecutionSnapshot,
-    records: readonly import("@hypit/hypit/protocol").TypedRecord[],
+    records: readonly import("@hypit/protocol").TypedRecord[],
   ): Promise<void>;
   /** Persist the outcome just frozen by the execution Worker, then remove active Runtime state. */
   finalize(execution: BuildExecutionSnapshot): Promise<BuildExecutionSnapshot | BuildCompletion>;

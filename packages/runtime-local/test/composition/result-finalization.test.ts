@@ -21,7 +21,7 @@ import { FileResourceStore } from "@hypit/resource-store/node";
 import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
 import type { RunFinalizationStore } from "../../src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
-import { FileProductHistory } from "@hypit/hypit/product/node";
+import { FileProductHistory } from "@hypit/product/node";
 import { isBlobRef } from "@hypit/protocol";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";

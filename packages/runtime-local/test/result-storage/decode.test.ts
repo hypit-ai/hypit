@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { decodeStoredBuildResult } from "../../src/result-storage/index.js";
-import { decodeProductValueDocument } from "@hypit/hypit/product";
+import { decodeProductValueDocument } from "@hypit/product";
 
 test("Result decoding rejects contradictory terminal and Operation states", () => {
   const build = "bld_20260902T100000000Z_0000000001";

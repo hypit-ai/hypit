@@ -6,12 +6,12 @@ import { buildExecutionActivity } from "./execution.js";
 import type {
   BuildSnapshot,
   OperationSnapshot,
-} from "@hypit/hypit/runtime";
+} from "@hypit/runtime";
 import type { PendingBuildSubmission } from "./submission.js";
 import type { StoredBuildResult } from "./result-storage/types.js";
 import type { BuildExecutionSnapshot } from "./execution.js";
 import type { BuildView } from "./host-api.js";
-import { compareCodeUnits } from "@hypit/hypit/protocol";
+import { compareCodeUnits } from "@hypit/protocol";
 
 function buildView(input: {
   readonly build: string;
@@ -20,7 +20,7 @@ function buildView(input: {
   readonly submission?: PendingBuildSubmission;
   readonly execution?: BuildExecutionSnapshot;
   readonly operations: readonly OperationSnapshot[];
-  readonly commands: readonly import("@hypit/hypit/runtime").CommandExecutionReceipt[];
+  readonly commands: readonly import("@hypit/runtime").CommandExecutionReceipt[];
 }): BuildView | undefined {
   if (input.submission === undefined && input.execution === undefined) return undefined;
   const runtimeActivity = input.execution === undefined ? undefined : buildExecutionActivity(input.execution);
