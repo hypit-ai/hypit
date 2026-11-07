@@ -3,11 +3,11 @@ title: 添加作者包
 description: 制作项目组件、将其用于视频，并在有需要时分享。
 ---
 
-创建组件是制作视频的一部分。从场景需要的行为出发：哪些内容共同出现，哪些内容会变化，由什么事件驱动。普通素材呈现可以使用 Visual Track；一个播放中的视频移到侧面、同时让出空间展示流程图，可以属于同一个项目组件，独立字幕继续分开。
+创建组件是制作视频的一部分。从场景需要的行为出发：哪些内容共同出现，哪些内容会变化，由哪些参数或局部事件驱动。普通媒体保持为直接 NLE Item；共享视觉行为可以属于一个项目组件。
 
 ## 从完整的包开始
 
-安装的 `@hypit/hypit` Distribution 包含 [`examples/minimal-author-package/packages/example-component`](https://github.com/hypit-ai/hypit/tree/main/examples/minimal-author-package/packages/example-component)。将该目录复制到视频项目的 `packages/`，把包名与 Module 改为自己的 scope 和名称，将示例中的 `workspace:*` Hypit 开发依赖改成项目所用的 Distribution 版本。
+安装的 `@hypit/hypit` Distribution 包含 [`examples/semantic-composition/packages/audiovisual-title-card`](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/audiovisual-title-card)。将该目录复制到视频项目的 `packages/`，把包名与 Module 改为自己的 scope 和名称，将示例中的 `workspace:*` Hypit 开发依赖改成项目所用的 Distribution 版本。
 
 在复制后的包目录执行：
 
@@ -16,18 +16,13 @@ npm install --save-dev @hypit/hypit@<selected-release>
 npm run build
 ```
 
-示例提供 TypeScript 构建配置、Source 接口、绘制代码和小型 preview Source。[包的 README](https://github.com/hypit-ai/hypit/blob/main/examples/minimal-author-package/packages/example-component/README.md) 介绍准确文件与设置。项目可以用普通包管理器的 workspace 或本地包依赖安装组件。
+示例提供 TypeScript 配置、`ProgramSource`、独立 HTML 实现、扁平 NLE resolver 与可选的包自有参数编辑。[包的 README](https://github.com/hypit-ai/hypit/blob/main/examples/semantic-composition/packages/audiovisual-title-card/README.md) 介绍准确边界。项目可以用普通包管理器的 workspace 或本地包依赖安装组件。
 
 ## 给组件有用的接口
 
-公开另一个视频作者真正会改的决定：内容、素材、位置、外观和有意义的事件。组件使用绝对
-Window 和 Instant 输入来表达场景何时存在、何时变化。Source 可以从 Narrative Projection
-或直接 Timeline 声明取得这些具名值；组件在两种情况下使用同一接口。
+公开另一个视频作者真正会改的决定：内容、素材与外观。父 NLE 拥有直接精确的 placement、trim、绘制顺序与 undo；包参数拥有组件内部共享行为。包需要动画时，可以在自己的参数中使用精确局部时间。只有预览或导出时，resolver 才把已安装的包实例变成普通 AVIR `ProgramSource`、Picture Operator 或 Audio Operator。
 
-呈现已有说话表演时，把 PreparedMedia、它的绝对 occurrence Window 和呈现所需的源时间关系作为
-彼此独立的输入。其他视频输入使用相同媒体路径；Timeline 不保存 Clip 或素材位置。
-[响应式讲解场景](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/responsive-explainer) 展示持续播放的视频如何在 HTML 场景里从全屏移到侧边竖屏。
-[聊天示例](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/chat-scene) 展示同一个事件接口如何消费由直接声明或语义声明产生的 Instant。
+已有表演素材通常保持为普通 Media Item；只有真正共同变化的行为才进入组件。字幕或语义时间可以保持 source-local data，再由显式 materializer 一次性 bake；组件不需要全局 Timeline 对象。
 
 Style 一类声明在裸作者 id 下公开其值，例如 `style={board-style}`；独立输出可以使用 `.visual`、`.audio`、`.track` 等有意义的后缀。在组件自己的 vocabulary 和 README 中说明名称与可用值。
 
@@ -51,6 +46,6 @@ preview Source 为作者提供可打开或渲染的小例子。查看能说明�
 
 ## 阅读一个完整作品
 
-[复杂口播示例](https://github.com/hypit-ai/hypit/tree/main/examples/complex-explainer) 将主持人变场、独立字幕、网页演示和多个协同动效场景组合成完整作品。项目说明把每种修改指向负责它的 Source、Recipe 或组件包。它区分了三件事：划分组件职责、开放有用参数、为真实需求设计复用。已接受素材作为项目资源并由 Author Source 显式选择，显式 Target 可以直接打开并渲染这份编排，无需重新请求生成。
+历史的[复杂口播示例](https://github.com/hypit-ai/hypit/tree/main/examples/complex-explainer) 将主持人变场、独立字幕、网页演示和多个协同动效场景组合成完整作品。项目说明把每种修改指向负责它的 Source、Recipe 或组件包。它区分了三件事：划分组件职责、开放有用参数、为真实需求设计复用。
 
-可以直接[观看最终成片](https://storage.googleapis.com/hypit-public-assets/assets/examples/complex-explainer/v1/20260914/final.mp4)，也可以按照示例中的下载说明取得素材包，检查并复用其中已接受的素材。
+可以直接[观看最终成片](https://storage.googleapis.com/hypit-public-assets/assets/examples/complex-explainer/v1/20260914/final.mp4)。它是作品参考，不是当前包 API 的起步模板。

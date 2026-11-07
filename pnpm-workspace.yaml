@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - services/*
-  # Shipped examples are repository fixtures. Real authored projects always live outside this
-  # tool checkout and resolve their own project-local packages through the Host's project root.
-  - examples/*/packages/*
+  # Only examples that use the current public package surface participate in this workspace.
+  # Historical productions remain readable fixtures but do not claim installable compatibility.
+  - examples/provider-package/packages/*
+  - examples/semantic-composition/packages/audiovisual-title-card

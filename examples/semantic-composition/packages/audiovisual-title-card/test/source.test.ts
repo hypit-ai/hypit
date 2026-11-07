@@ -122,7 +122,7 @@ test("a project component Producer publishes an ordinary finite ProgramSource", 
 test("the installed project package resolves a materialized NLE Component", () => {
   const empty = createNleProject({
     id: "component-editorial", name: "Component editorial",
-    frameRate: { numerator: 1, denominator: 1 },
+    editRate: { numerator: 1, denominator: 1 },
     canvas: { width: 1280, height: 720, clearColor: "#000000" },
   });
   const withTrack = applyNleTransaction(empty, { revision: 0, commands: [{
@@ -136,10 +136,11 @@ test("the installed project package resolves a materialized NLE Component", () =
       title: "A materialized Component", subtitle: "resolved by its project package",
       background: "#172033", foreground: "#f4f7ff",
     },
-    atFrame: 0, durationFrames: 2,
+    at: at(0), duration: at(2),
   }));
   const html = lowerNleProjectToHtmlProgram(project,
-    createNleTerminalLinkHostFromFacets(titleCardHypitPackage.facets));
+    createNleTerminalLinkHostFromFacets(titleCardHypitPackage.facets),
+    { numerator: 1, denominator: 1 });
   assert.match(html.html, /A materialized Component/u);
   assert.match(html.html, /resolved by its project package/u);
 
@@ -157,7 +158,8 @@ test("the installed project package resolves a materialized NLE Component", () =
   let session = createNleEditSession(project);
   session = commitNleEdit(session, { label: "Edit title", transaction });
   const editedHtml = lowerNleProjectToHtmlProgram(session.current,
-    createNleTerminalLinkHostFromFacets(titleCardHypitPackage.facets));
+    createNleTerminalLinkHostFromFacets(titleCardHypitPackage.facets),
+    { numerator: 1, denominator: 1 });
   assert.match(editedHtml.html, /Edited by its package/u);
   const editedItem = findNleItem(session.current, "opening").item;
   if (editedItem.kind !== "component") throw new Error("Title Card Item changed kind.");

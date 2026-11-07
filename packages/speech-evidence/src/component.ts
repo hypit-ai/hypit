@@ -30,7 +30,9 @@ export const speechEvidenceComponent = {
     handler: ({ inputs }) => {
       const media = valueOf<PreparedMedia>(inputs.media!.value, "PreparedMedia");
       verifyPreparedMedia(media);
-      if (media.audio === undefined) throw new Error("Speech evidence requires prepared audio");
+      if (media.audio === undefined || media.domain === undefined) {
+        throw new Error("Speech evidence requires time-bearing prepared audio");
+      }
       speechEvidenceSampleFrames(media.domain);
       const need: ProjectSpeechEvidenceAudioNeed = {
         source: preparedAudioSource(media),

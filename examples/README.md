@@ -39,6 +39,9 @@ The other `swap-*` and nested projects preserve separate variations and reuse st
 all been rebuilt to the same generation standard as these three reference entries. A linked showcase
 video demonstrates the original production; a fresh generation is a new result and will differ.
 
-For focused package work, `minimal-author-package/` demonstrates independent component packaging;
+For focused package work,
+[`semantic-composition/packages/audiovisual-title-card`](semantic-composition/packages/audiovisual-title-card/README.md)
+demonstrates a project-owned Component across AVIR, HTML and the flat NLE;
 [provider-package](provider-package/README.md) demonstrates connecting a chosen service through a
-project Provider. Each package's public inputs and behavior belong with its implementation.
+project Provider. Each package's public inputs and behavior belong with its implementation. Older
+component directories remain historical design fixtures and are not current workspace packages.

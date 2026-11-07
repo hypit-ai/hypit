@@ -23,7 +23,7 @@ test("audio DOM is owned by shared playback and preserves the exact AudioProgram
     { frameRate: { numerator: 48_000, denominator: 1 } }) };
   const voiceDomain = { id: "voice", duration: exactTemporalValueFromFrames(48_000,
     { frameRate: { numerator: 48_000, denominator: 1 } }) };
-  const voiceMedia = { source: artifact, domain: voiceDomain,
+  const voiceMedia = { id: "voice-media", source: artifact, domain: voiceDomain,
     audio: { streamIndex: 0, presentationStart: exactTemporalZero(),
       sourceDomain: voiceDomain, map: identityTemporalMap(voiceDomain) } };
   const child = sealAudioProgram({

@@ -23,8 +23,10 @@
   },
   "include": [
     "packages/**/*.ts",
-    "examples/*/packages/*/src/**/*.ts",
-    "examples/*/packages/*/test/**/*.ts"
+    "examples/provider-package/packages/*/src/**/*.ts",
+    "examples/provider-package/packages/*/test/**/*.ts",
+    "examples/semantic-composition/packages/audiovisual-title-card/src/**/*.ts",
+    "examples/semantic-composition/packages/audiovisual-title-card/test/**/*.ts"
   ],
   "exclude": [
     "dist",

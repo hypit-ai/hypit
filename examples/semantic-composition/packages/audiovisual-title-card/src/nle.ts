@@ -7,7 +7,7 @@ import type {
 } from "@hypit/nle";
 import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
 import { canonicalize } from "@hypit/protocol";
-import { exactTemporalValueFromFrames } from "@hypit/temporal/sampling";
+import { addExactTemporalValues } from "@hypit/temporal/algebra";
 
 import { titleCardModuleRef } from "./manifest.js";
 import { titleCardHtmlSource } from "./picture.js";
@@ -96,9 +96,7 @@ function resolveTitleCard(item: NleComponentItem, { project }: NleLoweringContex
   assertTitleCardNleParameters(parameters);
   const spec: TitleCardSpec = {
     id: `${item.id}:source`,
-    duration: exactTemporalValueFromFrames(item.localStartFrame + item.durationFrames, {
-      frameRate: project.frameRate,
-    }),
+    duration: addExactTemporalValues(item.localStart, item.duration),
     width: project.canvas.width,
     height: project.canvas.height,
     title: parameters.title,

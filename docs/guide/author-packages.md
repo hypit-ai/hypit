@@ -4,14 +4,13 @@ description: Build a project component, use it in a video, and share it when use
 ---
 
 Creating a component is part of making a video. Start with the behavior the scene needs: what stays
-together, what changes, and which events drive it. An ordinary media presentation may use Media
-Track. A video viewport that moves aside while a diagram appears can belong to one project component,
-with independent captions remaining separate.
+together, what changes, and which parameters or local events drive it. Ordinary media remains a
+direct NLE item; shared visual behavior can belong to one project Component.
 
 ## Start from a complete package
 
 The installed `@hypit/hypit` Distribution includes
-[`examples/minimal-author-package/packages/example-component`](https://github.com/hypit-ai/hypit/tree/main/examples/minimal-author-package/packages/example-component).
+[`examples/semantic-composition/packages/audiovisual-title-card`](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/audiovisual-title-card).
 Copy that directory into your video's `packages/` directory. Give its package and Module your own
 scope and name, and replace the fixture's `workspace:*` Hypit development dependency with the
 Distribution release used by the project.
@@ -23,25 +22,23 @@ npm install --save-dev @hypit/hypit@<selected-release>
 npm run build
 ```
 
-The example includes TypeScript build configuration, a Source interface, rendering code and a small
-preview Source. Its [README](https://github.com/hypit-ai/hypit/blob/main/examples/minimal-author-package/packages/example-component/README.md)
-explains the exact files and package setup. The project can use its package manager's workspace or
-local package dependency to install the component.
+The example includes TypeScript configuration, a `ProgramSource`, its independent HTML
+implementation, flat-NLE resolvers and optional package-owned parameter editing. Its
+[README](https://github.com/hypit-ai/hypit/blob/main/examples/semantic-composition/packages/audiovisual-title-card/README.md)
+explains the boundaries. The project can use its package manager's workspace or local package
+dependency to install the component.
 
 ## Give the component a useful interface
 
-Expose the decisions another video author would want to change: content, materials, placement,
-appearance and meaningful events. Give the component absolute Window and Instant inputs for when the
-scene exists or changes. Source may obtain those named values from a Narrative Projection or direct
-Timeline declarations; the component uses the same interface in either case.
+Expose the decisions another video author would want to change: content, materials and appearance.
+The parent NLE owns direct exact placement, trim, draw order and undo. Package parameters own the
+component's shared internal behavior; exact local times may appear inside those parameters when the
+package needs animation. A resolver turns the installed package instance into an ordinary AVIR
+`ProgramSource`, Picture Operator or Audio Operator only when preview or export asks for it.
 
-For an existing spoken performance, consume `PreparedMedia`, its absolute occurrence Window and
-any temporal sampling relation the presentation needs as separate inputs. Other video inputs use the same
-media path; Timeline contains neither clips nor source positions.
-The [responsive explainer example](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/responsive-explainer)
-shows a continuously playing video moving from full screen to a side portrait inside an HTML scene.
-The [chat example](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/chat-scene)
-shows the same event interface consuming Instants produced from either direct or semantic declarations.
+For an existing performance, keep the media as an ordinary Media item unless the component genuinely
+owns shared behavior around it. Caption or semantic timing can remain source-local data and be baked
+through an explicit materializer; the component does not need a global Timeline object.
 
 A Style-like declaration publishes its value under the bare authored id, such as `style={board-style}`.
 Separate outputs can use descriptive suffixes such as `.visual`, `.audio` or `.track`. Document the
@@ -78,12 +75,11 @@ A Hypit repository checkout or upstream pull request is not needed to use the co
 
 ## See a complete production
 
-The [complex spoken explainer](https://github.com/hypit-ai/hypit/tree/main/examples/complex-explainer)
+The historical [complex spoken explainer](https://github.com/hypit-ai/hypit/tree/main/examples/complex-explainer)
 combines presenter framing, independent captions, website demonstrations and coordinated animated
 scenes in one finished work. Its project guide follows each decision to the Source, Recipe or package
-that owns it. The example distinguishes a useful component boundary from the separate choices to
-expose parameters or design for reuse. Accepted material is supplied separately, so its default Target selection
-can open and render the composition without another generation request.
+that owned it. The example distinguishes a useful component boundary from the separate choices to
+expose parameters or design for reuse. It is a production reference, not a current package API starter.
 
 [Watch the finished film](https://storage.googleapis.com/hypit-public-assets/assets/examples/complex-explainer/v1/20260914/final.mp4)
 or follow the example's download instructions to inspect and reuse its accepted material.
