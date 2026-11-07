@@ -1,7 +1,8 @@
 # `@hypit/runtime-local`
 
 The default local Runtime for Hypit. It owns the Worker, scheduler and active SQLite execution
-worklist. Project-owned Build Results hold finished published Outputs.
+worklist. Project-owned Product publications hold durable values; Run history records outcomes,
+evidence and Product addresses.
 
 Byte storage is a separate infrastructure port. `@hypit/hypit/resource-store` owns the neutral
 interface and memory adapter, while `@hypit/hypit/resource-store/node` owns `FileResourceStore`.
@@ -135,24 +136,25 @@ The `@1` representation is the complete persisted lifecycle model.
 HypiHub can be the explicitly selected gateway for users without their own service keys. A bound
 Provider's authentication, quota or transport error never changes that selection. Separate accounts use separate pools even when they implement the same model.
 
-The official Toolchain Distribution writes Results to the project's `.hypit/results` directory, with no
-cloud account or service. The filesystem implementation belongs to this single-host Runtime rather
-than a public adapter registry.
+The official Toolchain Distribution writes Run history to `.hypit/results` and Product publications to
+`.hypit/products`, with no cloud account or service. The filesystem implementation belongs to this
+single-host Runtime rather than a public adapter registry.
 Open Result drafts, incremental publication materialization, writer recovery and terminal publication are private
 Runtime Local implementation. `@hypit/result` owns only immutable history types and readers; no writable
 Result repository entry point is published for CLI or author packages.
 Runtime working Resources remain internal and Build-local; there is no ResourceStore selector. After
 a Result has an outcome, history is read from the project Result repository, not Runtime SQLite.
-The submission passes known Resource references to the Result writer, separately from the execution
-graph. Staging bytes for a running Build does not make them new Result files: external and reused
+The submission passes known Resource references to the publication finalizer, separately from the execution
+graph. Staging bytes for a running Build does not make them durable Product files: external and reused
 resources keep their addresses even when a Producer embeds them inside a new array or object value.
 
-While execution advances, Result synchronization delegates newly completed publications to the
-Product materializer. Runtime Local supplies only the current Records, resource opener and physical
-write target; it no longer interprets Blob or structured Product representation. The
-repository leaves its files or objects untouched when no new publication is available; internal
-execution progress remains in SQLite. Once execution has a final decision, all completed publications
-and the outcome are saved before active state and working Resources are removed. This order applies
+While execution advances, Product synchronization materializes newly completed publications in the
+Product store. Runtime Local supplies only the current Records, resource opener and physical write
+target; it does not interpret Blob or structured Product representation. The publication store leaves
+its files untouched when no new publication is available; internal
+execution progress remains in SQLite. Once execution has a final decision, the Product manifest closes
+before Run history publishes its outcome and Product addresses; active state and working Resources are
+removed last. This order applies
 to completed, failed and cancelled Builds alike.
 
 Finalization is a separate, idempotent action after the execution decision. One per-Build lease owns

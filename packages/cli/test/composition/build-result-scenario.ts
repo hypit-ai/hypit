@@ -33,7 +33,10 @@ export function completedRecords(): readonly TypedRecord[] {
 }
 
 export async function fixture(root: string, id = "bld_20260902T110000000Z_0000000001", source = "main.svml"): Promise<void> {
-  const result = await FileBuildResult.create(join(root, ".hypit", "results"), {
+  const result = await FileBuildResult.create(
+    join(root, ".hypit", "results"),
+    join(root, ".hypit", "products"),
+    {
     id,
     sourcePath: source,
     targets: ["stage.value"],
@@ -54,7 +57,10 @@ export function resultDistribution(): CliDistribution {
           root: projectRoot,
           selection: { use: "test.results", config: {} },
         },
-        repository: new FileBuildResultStore(join(projectRoot, ".hypit", "results")),
+        repository: new FileBuildResultStore(
+          join(projectRoot, ".hypit", "results"),
+          join(projectRoot, ".hypit", "products"),
+        ),
         close() {},
       };
     },

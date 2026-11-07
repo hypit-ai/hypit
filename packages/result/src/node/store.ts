@@ -1,29 +1,14 @@
-import { Buffer } from "node:buffer";
 import { createReadStream } from "node:fs";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { assertOrderedBuildId, buildIdCreatedAt, compareCodeUnits } from "@hypit/protocol";
-import type { BlobRef, CanonicalValue, Value, ValuePath } from "@hypit/protocol";
-import type { ProductAddress, ProductFileRef, ProductHistory } from "@hypit/product";
-import { productAddress } from "@hypit/product";
 import {
   decodeBuildResultJson,
-  decodeBuildResultValueDocument,
   decodeFinishedBuildResult,
 } from "../decode.js";
-import type {
-  StoredBuildResultFile,
-  StoredBuildResultOutput,
-  StoredFinishedBuildResult,
-} from "../decode.js";
-import type {
-  BuildResult,
-  BuildResultFileRange,
-  BuildResultHistory,
-  BuildResultOutput,
-  ResolvedBuildResultOutput,
-} from "../types.js";
+import type { StoredBuildResultFile, StoredFinishedBuildResult } from "../decode.js";
+import type { BuildResult, BuildResultFileRange, BuildResultHistory } from "../types.js";
 
 const manifestName = "result.json";
 
@@ -61,31 +46,13 @@ async function readFinishedBuildResult(directory: string): Promise<StoredFinishe
   return decodeFinishedBuildResult(decodeBuildResultJson(bytes, path), basename(resolve(directory)), path);
 }
 
-function historyOutput(publicationId: string, name: string, output: StoredBuildResultOutput): BuildResultOutput {
-  const publication = {
-    address: productAddress(publicationId, name),
-    publisher: output.publisher,
-    ...(output.publicationParameters === undefined
-      ? {}
-      : { publicationParameters: output.publicationParameters }),
-  };
-  if (output.value.kind === "product-file") {
-    return { type: output.type, ...publication,
-      representation: "file", mediaType: output.value.mediaType, size: output.value.size };
-  }
-  return output.value.kind === "inline"
-    ? { type: output.type, ...publication, representation: "inline", value: output.value.value }
-    : { type: output.type, ...publication, representation: "structured" };
-}
-
 function historyResult(manifest: StoredFinishedBuildResult): BuildResult {
   const common = {
     format: manifest.format,
     id: manifest.id,
     sourcePath: manifest.sourcePath,
     targets: manifest.targets,
-    outputs: Object.fromEntries(Object.entries(manifest.outputs)
-      .map(([name, output]) => [name, historyOutput(manifest.id, name, output)])),
+    outputs: manifest.outputs,
     ...(manifest.executionLog === undefined ? {} : { executionLog: true as const }),
     ...(manifest.operations === undefined ? {} : { operations: manifest.operations }),
   };
@@ -151,7 +118,7 @@ export async function browseBuildResults(
 
 async function openContainedResultFile(
   directory: string,
-  file: StoredBuildResultFile | ProductFileRef,
+  file: StoredBuildResultFile,
   range?: BuildResultFileRange,
 ): Promise<AsyncIterable<Uint8Array> | undefined> {
   const path = containedResultPath(directory, file.path);
@@ -164,72 +131,8 @@ async function openContainedResultFile(
   return createReadStream(path, { start: range.start, end: range.endExclusive - 1 });
 }
 
-export async function resolveProduct(
-  root: string,
-  address: ProductAddress,
-): Promise<ResolvedBuildResultOutput | undefined> {
-  const build = address.publication;
-  const output = address.name;
-  const directory = buildResultDirectory(root, build);
-  const manifest = await readFinishedBuildResult(directory);
-  const entry = manifest === undefined || !Object.hasOwn(manifest.outputs, output)
-    ? undefined
-    : manifest.outputs[output];
-  if (entry === undefined) return undefined;
-  const resources = new Map<string, { readonly blob: BlobRef; readonly file: ProductFileRef }>();
-  const boundFiles = new Map<string, BlobRef>();
-  const bind = (file: ProductFileRef, index: number): BlobRef => {
-    const identity = JSON.stringify([file.path, file.size, file.mediaType]);
-    const existing = boundFiles.get(identity);
-    if (existing !== undefined) return existing;
-    const blob: BlobRef = {
-      kind: "blob",
-      resource: `res_result_${build}_${Buffer.from(output, "utf8").toString("base64url")}_${index}`,
-      size: file.size,
-      mediaType: file.mediaType,
-    };
-    boundFiles.set(identity, blob);
-    resources.set(blob.resource, { blob, file });
-    return blob;
-  };
-  let value: Value;
-  if (entry.value.kind === "value") {
-    const path = containedResultPath(directory, entry.value.path);
-    const document = decodeBuildResultValueDocument(
-      decodeBuildResultJson(await readFile(path), path),
-      `Build ${build} Output ${output}`,
-    );
-    const bindings = new Map(document.resources.map((binding, index) => [JSON.stringify(binding.at), bind(binding.file, index)]));
-    const inflate = (item: CanonicalValue, at: ValuePath): Value => {
-      const blob = bindings.get(JSON.stringify(at));
-      if (blob !== undefined) return blob;
-      if (Array.isArray(item)) return item.map((child, index) => inflate(child, [...at, index]));
-      if (item !== null && typeof item === "object") {
-        return Object.fromEntries(Object.entries(item).map(([name, child]) => [name, inflate(child, [...at, name])]));
-      }
-      return item;
-    };
-    value = inflate(document.value, []);
-  } else if (entry.value.kind === "product-file") value = bind(entry.value, 0);
-  else value = entry.value.value;
-  return {
-    address: productAddress(build, output),
-    type: entry.type,
-    publisher: entry.publisher,
-    ...(entry.publicationParameters === undefined
-      ? {}
-      : { publicationParameters: entry.publicationParameters }),
-    value,
-    async openResource(blob, range) {
-      const owned = resources.get(blob.resource);
-      if (owned === undefined || owned.blob.size !== blob.size || owned.blob.mediaType !== blob.mediaType) return undefined;
-      return await openContainedResultFile(directory, owned.file, range);
-    },
-  };
-}
-
 /** Finished project history backed by one ordinary directory tree. */
-export class FileBuildResultHistory implements BuildResultHistory, ProductHistory {
+export class FileBuildResultHistory implements BuildResultHistory {
   readonly root: string;
 
   constructor(root: string) {
@@ -244,17 +147,6 @@ export class FileBuildResultHistory implements BuildResultHistory, ProductHistor
 
   async browse(request: { readonly before?: string; readonly limit: number }) {
     return await browseBuildResults(this.root, request);
-  }
-
-  async readProduct(address: ProductAddress): Promise<BuildResultOutput | undefined> {
-    const result = await this.read(address.publication);
-    return result === undefined || !Object.hasOwn(result.outputs, address.name)
-      ? undefined
-      : result.outputs[address.name];
-  }
-
-  async resolveProduct(address: ProductAddress): Promise<ResolvedBuildResultOutput | undefined> {
-    return await resolveProduct(this.root, address);
   }
 
   async openExecutionLog(build: string): Promise<AsyncIterable<Uint8Array> | undefined> {

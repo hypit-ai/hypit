@@ -102,7 +102,10 @@ function distribution(
         root: projectRoot,
         selection: { use: "test.results", config: {} },
       },
-      repository: new FileBuildResultStore(join(projectRoot, ".hypit", "results")),
+      repository: new FileBuildResultStore(
+        join(projectRoot, ".hypit", "results"),
+        join(projectRoot, ".hypit", "products"),
+      ),
       close() {},
     }),
     diagnoseProjectResults: async () => ({ diagnostics: [] }),

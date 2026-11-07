@@ -185,7 +185,7 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
     const clientStatus = await firstRuntime.inspect("bld_20260902T120000001Z_0000000001");
     assert.equal(clientStatus, undefined);
     assert.deepEqual((await firstRuntime.activity()).builds, []);
-    const buildResult = await new FileBuildResultStore(join(directory, "results"))
+    const buildResult = await new FileBuildResultStore(join(directory, "results"), join(directory, "products"))
       .read("bld_20260902T120000001Z_0000000001");
     assert.deepEqual(Object.keys(buildResult?.outputs ?? {}).sort(), [
       "final.document",
@@ -250,7 +250,7 @@ test("an immediate Command left in started state fails its Build without invokin
     const terminal = await finishClaimedBuild(runtime);
     assert.equal(terminal.outcome, "failed");
     assert.equal(calls, 0);
-    const failed = await new FileBuildResultStore(join(directory, "results"))
+    const failed = await new FileBuildResultStore(join(directory, "results"), join(directory, "products"))
       .read("bld_20260902T120000008Z_0000000001");
     assert.equal(failed?.outcome, "failed");
     assert.match(failed?.failure ?? "", /stopped before its result was stored/u);

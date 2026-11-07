@@ -60,7 +60,7 @@ import {
   runFixture,
 } from "./local-scenario.js";
 
-test("a completed retained file moves into its Build Result and leaves no Runtime working copy", async () => {
+test("a completed file closes in Product storage and leaves no Runtime working copy", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-result-file-"));
   const id = "bld_20260902T120000004Z_0000000001";
   const workStore = new FileResourceStore(join(directory, ".hypit", "work", id));
@@ -92,7 +92,7 @@ test("a completed retained file moves into its Build Result and leaves no Runtim
       result: resultDestination(directory),
     });
     assert.equal((await finishClaimedBuild(runtime)).outcome, "complete");
-    const results = new FileBuildResultStore(join(directory, "results"));
+    const results = new FileBuildResultStore(join(directory, "results"), join(directory, ".hypit", "products"));
     const result = await results.read(id);
     assert.equal(result?.outputs["clip.video"]?.representation, "file");
     const resolved = await results.resolveProduct({ publication: id, name: "clip.video" });
@@ -159,7 +159,7 @@ test("a failed Build keeps published Outputs completed before removing active Ru
       result: resultDestination(directory),
     });
     assert.equal((await finishClaimedBuild(runtime)).outcome, "failed");
-    const result = await new FileBuildResultStore(join(directory, "results"))
+    const result = await new FileBuildResultStore(join(directory, "results"), join(directory, "products"))
       .read("bld_20260902T120000005Z_0000000001");
     assert.equal(result?.outcome, "failed");
     assert.equal(result?.failure, "generation failed");
@@ -210,7 +210,7 @@ for (const phase of ["submit", "poll"] as const) {
       const id = "bld_20260906T110000000Z_0000000001";
       await runtime.build(durableBuildRequest(directory, id, buildFixture));
       assert.equal((await finishClaimedBuild(runtime)).outcome, "failed");
-      const result = await new FileBuildResultStore(join(directory, "results")).read(id);
+      const result = await new FileBuildResultStore(join(directory, "results"), join(directory, "products")).read(id);
       assert.equal(result?.failure, "first request failed");
       assert.equal(result?.outputs["target.2"]?.representation, "inline");
       assert.equal(result?.outputs["target.2"]?.value, "retained sibling output");
@@ -251,7 +251,10 @@ test("an interrupted Result write can be retried internally without rerunning th
   const openRepository = async (
     location: import("@hypit/runtime-local").BuildResultRepositoryLocation,
   ) => {
-    const base = new FileBuildResultStore(join(location.root, location.path));
+    const base = new FileBuildResultStore(
+      join(location.root, location.path),
+      join(location.root, ".hypit/products"),
+    );
     const repository: BuildResultStore = {
       create: async (seed) => await base.create(seed),
       async openWriter(build) {

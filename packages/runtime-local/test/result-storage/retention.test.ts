@@ -7,6 +7,7 @@ import test from "node:test";
 
 import { buildResultDirectory, FileBuildResult, FileBuildResultStore } from "../../src/result-storage/index.js";
 import type { BlobRef } from "@hypit/protocol";
+import { productPublicationDirectory } from "@hypit/hypit/product/node";
 
 import {
   structuredType,
@@ -17,13 +18,21 @@ import {
 test("internal progress and already stored Outputs leave Result files untouched", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-progress-"));
   try {
-    const result = await FileBuildResult.create(root, {
+    const result = await FileBuildResult.create(root, join(root, "products"), {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "/project/main.svml",
       targets: ["answer"],
       publication: publicationIntent([{ name: "answer" }]),
     });
-    const paths = ["result.json", ".writer.json"].map((name) => join(result.directory, name));
+    const productDirectory = productPublicationDirectory(
+      join(root, "products"),
+      "bld_20260902T100000000Z_0000000001",
+    );
+    const paths = [
+      join(result.directory, "result.json"),
+      join(productDirectory, "product.json"),
+      join(productDirectory, ".writer.json"),
+    ];
     const resources = { async open() { throw new Error("scalar Outputs have no Resource bytes"); } };
     const snapshot = (ready: boolean) => ready
       ? [{ id: "record:answer", type: videoType, value: (42) }]
@@ -39,12 +48,16 @@ test("internal progress and already stored Outputs leave Result files untouched"
     await unchanged(false);
     assert.deepEqual((await result.read()).outputs, {});
     await result.sync({ records: snapshot(true), resources });
-    assert.deepEqual((await result.read()).outputs.answer?.value, { kind: "inline", value: 42 });
+    const storedAnswer = (await result.read()).outputs.answer;
+    assert.equal(storedAnswer?.representation, "inline");
+    assert.equal(storedAnswer?.representation === "inline" ? storedAnswer.value : undefined, 42);
     await unchanged(true);
     const finished = await result.finish({ outcome: "failed", failure: "a later Need failed" });
     assert.equal(finished.outcome, "failed");
-    assert.deepEqual(finished.outputs.answer?.value, { kind: "inline", value: 42 });
-    assert.equal((await readdir(result.directory)).includes(".writer.json"), false);
+    const finishedAnswer = finished.outputs.answer;
+    assert.equal(finishedAnswer?.representation, "inline");
+    assert.equal(finishedAnswer?.representation === "inline" ? finishedAnswer.value : undefined, 42);
+    assert.equal((await readdir(productDirectory)).includes(".writer.json"), false);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -54,25 +67,31 @@ test("storing and finishing preserve open readers of the previous Result files",
   const root = await mkdtemp(join(tmpdir(), "hypit-result-读者-"));
   const readers: Awaited<ReturnType<typeof open>>[] = [];
   try {
-    const result = await FileBuildResult.create(root, {
+    const result = await FileBuildResult.create(root, join(root, "products"), {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "/project/main.svml",
       targets: ["answer"],
       publication: publicationIntent([{ name: "answer" }]),
     });
     const manifestPath = join(result.directory, "result.json");
+    const productDirectory = productPublicationDirectory(
+      join(root, "products"),
+      "bld_20260902T100000000Z_0000000001",
+    );
     const oldManifest = await open(manifestPath, "r");
     readers.push(oldManifest);
-    const oldWriter = await open(join(result.directory, ".writer.json"), "r");
+    const oldWriter = await open(join(productDirectory, ".writer.json"), "r");
     readers.push(oldWriter);
-    const writerBytes = await readFile(join(result.directory, ".writer.json"), "utf8");
+    const writerBytes = await readFile(join(productDirectory, ".writer.json"), "utf8");
     await result.sync({
       records: [{ id: "record:answer", type: videoType, value: (42) }],
       resources: { async open() { throw new Error("unexpected Resource read"); } },
     });
     assert.deepEqual(JSON.parse(await oldManifest.readFile("utf8")).outputs, {});
     assert.equal(await oldWriter.readFile("utf8"), writerBytes);
-    assert.deepEqual((await result.read()).outputs.answer?.value, { kind: "inline", value: 42 });
+    const answer = (await result.read()).outputs.answer;
+    assert.equal(answer?.representation, "inline");
+    assert.equal(answer?.representation === "inline" ? answer.value : undefined, 42);
     const storedReader = await open(manifestPath, "r");
     readers.push(storedReader);
     await result.finish({ outcome: "complete" });
@@ -87,7 +106,7 @@ test("storing and finishing preserve open readers of the previous Result files",
 test("Publication intent facts are rejected before a Result directory is created", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-invalid-intent-"));
   try {
-    await assert.rejects(FileBuildResult.create(root, {
+    await assert.rejects(FileBuildResult.create(root, join(root, "products"), {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "main.svml",
       targets: ["answer"],
@@ -97,7 +116,7 @@ test("Publication intent facts are rejected before a Result directory is created
         record: "record:answer",
         publisher: "example.test-product@1",
       }] },
-    } as unknown as Parameters<typeof FileBuildResult.create>[1]), /unexpected type field/u);
+    } as unknown as Parameters<typeof FileBuildResult.create>[2]), /unexpected type field/u);
     assert.deepEqual(await readdir(root), []);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -107,7 +126,7 @@ test("Publication intent facts are rejected before a Result directory is created
 test("a published Output records its publisher answer and accepted Record type", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-intent-type-"));
   try {
-    const result = await FileBuildResult.create(root, {
+    const result = await FileBuildResult.create(root, join(root, "products"), {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "main.svml",
       targets: ["answer"],
@@ -130,7 +149,7 @@ test("published Output names are exact data keys, including JavaScript object na
   const root = await mkdtemp(join(tmpdir(), "hypit-result-output-names-"));
   const names = ["constructor", "toString", "__proto__"];
   try {
-    const result = await FileBuildResult.create(root, {
+    const result = await FileBuildResult.create(root, join(root, "products"), {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "main.svml",
       targets: names,
@@ -146,10 +165,12 @@ test("published Output names are exact data keys, including JavaScript object na
     const manifest = await result.finish({ outcome: "complete" });
     assert.deepEqual(Object.keys(manifest.outputs).sort(), [...names].sort());
     for (const [index, name] of names.entries()) {
-      assert.deepEqual(manifest.outputs[name]?.value, { kind: "inline", value: index });
+      const output = manifest.outputs[name];
+      assert.equal(output?.representation, "inline");
+      assert.equal(output?.representation === "inline" ? output.value : undefined, index);
     }
 
-    const repository = new FileBuildResultStore(root);
+    const repository = new FileBuildResultStore(root, join(root, "products"));
     assert.equal((await repository.resolveProduct({ publication: manifest.id, name: "constructor" }))?.value, 0);
     assert.equal(await repository.resolveProduct({ publication: manifest.id, name: "valueOf" }), undefined);
   } finally {
@@ -160,13 +181,13 @@ test("published Output names are exact data keys, including JavaScript object na
 test("a complete Result requires every published Output", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-completion-"));
   try {
-    const result = await FileBuildResult.create(root, {
+    const result = await FileBuildResult.create(root, join(root, "products"), {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "main.svml",
       targets: ["answer"],
       publication: publicationIntent([{ name: "answer" }]),
     });
-    await assert.rejects(result.finish({ outcome: "complete" }), /published Outputs are stored: answer/u);
+    await assert.rejects(result.finish({ outcome: "complete" }), /Products are stored: answer/u);
     assert.equal((await result.read()).outcome, undefined);
     assert.equal((await result.finish({ outcome: "failed", failure: "producer stopped" })).outcome, "failed");
   } finally {

@@ -80,7 +80,8 @@ test("a project directory alias accepts its Source and stores a project-relative
         ...request.authoring,
         sourcePath: session.sourceLocation?.(session.entry.unit) ?? session.entry.unit.id,
       } });
-      const result = await new FileBuildResultStore(join(directory, "results")).readStored(request.id);
+      const result = await new FileBuildResultStore(join(directory, "results"), join(directory, "products"))
+        .readStored(request.id);
       assert.equal(result?.sourcePath, "main.svml");
     } finally { await runtime.close(); }
   } finally { await rm(parent, { recursive: true, force: true }); }

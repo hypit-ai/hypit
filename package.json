@@ -90,6 +90,11 @@
       "types": "./dist/public/product.d.ts",
       "import": "./packages/product/src/index.ts"
     },
+    "./product/node": {
+      "hypit-source": "./packages/product/src/node/index.ts",
+      "types": "./dist/public/product-node.d.ts",
+      "import": "./packages/product/src/node/index.ts"
+    },
     "./author": {
       "hypit-source": "./packages/author/src/index.ts",
       "types": "./dist/public/author.d.ts",

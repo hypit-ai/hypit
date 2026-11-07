@@ -14,9 +14,9 @@ import {
   videoType,
 } from "./repository-scenario.js";
 
-test("filesystem Results have one retained name per Output and browse newest first", async () => {
+test("filesystem Run history records one Product address per Output and browses newest first", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-build-result-browse-"));
-  const repository = new FileBuildResultStore(root);
+  const repository = new FileBuildResultStore(root, join(root, "products"));
   const ids = [
     "bld_20260901T100000001Z_0000000001",
     "bld_20260902T100000002Z_0000000001",
@@ -42,7 +42,7 @@ test("filesystem Results have one retained name per Output and browse newest fir
       });
       await writer.finish({ outcome: "failed", failure: "ordering fixture" });
     }
-    assert.deepEqual(await readdir(root), ["2026-09-01", "2026-09-02", "2026-09-03"]);
+    assert.deepEqual(await readdir(root), ["2026-09-01", "2026-09-02", "2026-09-03", "products"]);
 
     const first = await repository.browse({ limit: 2 });
     assert.deepEqual(first.results.map((item) => item.id), [ids[2], ids[1]]);

@@ -120,7 +120,7 @@ test("project local runtime accepts components loaded from an installed package"
     assert.equal(result.view.activity, "ready");
     const completed = await finishClaimedBuild(runtime);
     assert.equal(completed.outcome, "complete");
-    assert.equal((await new FileBuildResultStore(join(runtimeRoot, "results"))
+    assert.equal((await new FileBuildResultStore(join(runtimeRoot, "results"), join(runtimeRoot, "products"))
       .read("bld_20260902T120000012Z_0000000001"))?.outcome, "complete");
     await runtime.close();
   } finally {

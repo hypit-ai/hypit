@@ -18,7 +18,7 @@ test("an executor that fails before ready records a failed Build and leaves supe
   const root = await mkdtemp(join(tmpdir(), "hypit-executor-startup-"));
   const dataRoot = join(root, "runtime");
   const profile = join(root, "profile.json");
-  const result = new FileBuildResultStore(join(root, "results"));
+  const result = new FileBuildResultStore(join(root, "results"), join(root, "products"));
   const state = new SqliteRuntimeState(statePath(dataRoot));
   const abort = new AbortController();
   let supervision: Promise<void> | undefined;

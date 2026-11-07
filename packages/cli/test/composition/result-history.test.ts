@@ -101,7 +101,10 @@ test("history scans older pages for matches and compares project-relative source
   try {
     await writeFile(join(root, "main.svml"), "source", "utf8");
     await fixture(root);
-    const repository = new FileBuildResultStore(join(root, ".hypit", "results"));
+    const repository = new FileBuildResultStore(
+      join(root, ".hypit", "results"),
+      join(root, ".hypit", "products"),
+    );
     for (const id of [
       "bld_20260902T110000001Z_0000000001",
       "bld_20260902T110000002Z_0000000001",
@@ -141,7 +144,10 @@ test("result export writes Blob bytes and uses the Type owner's structured autho
     mediaType: "video/mp4",
   } as const;
   try {
-    const result = await FileBuildResult.create(join(root, ".hypit", "results"), {
+    const result = await FileBuildResult.create(
+      join(root, ".hypit", "results"),
+      join(root, ".hypit", "products"),
+      {
       id: build,
       sourcePath: join(root, "main.svml"),
       targets: ["final.video"],

@@ -27,7 +27,7 @@ test("a draining carrier finishes its existing Build while a new carrier shares 
   const root=await mkdtemp(join(tmpdir(),"hypit-carrier-rotation-"));
   const dataRoot=join(root,"runtime"), profile=join(root,"profile.json");
   const state=new SqliteRuntimeState(statePath(dataRoot));
-  const repository=new FileBuildResultStore(join(root,"results"));
+  const repository=new FileBuildResultStore(join(root,"results"),join(root,"products"));
   const local=new Map<string,number>(), starts=new Map<string,number>(), finished=new Set<string>();
   let child: ChildProcess | undefined, exited: Promise<void> | undefined, log="", release=false;
   const server=createServer(async(req,res)=>{

@@ -9,10 +9,11 @@ import {
   buildResultDirectory,
   FileBuildResult,
   FileBuildResultStore,
-  syncBuildResultOutputs,
 } from "../../src/result-storage/index.js";
-import type { BuildResultWriteTarget } from "../../src/result-storage/index.js";
 import type { BlobRef } from "@hypit/protocol";
+import { productPublicationDirectory } from "@hypit/hypit/product/node";
+import { materializeProducts } from "@hypit/hypit/product";
+import type { ProductMaterializationTarget } from "@hypit/hypit/product";
 
 import {
   structuredType,
@@ -23,7 +24,7 @@ import {
 test("a failed filesystem sync cannot make a later resource inherit stale bytes", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-retry-path-"));
   try {
-    const result = await FileBuildResult.create(root, {
+    const result = await FileBuildResult.create(root, join(root, "products"), {
       id: "bld_20260924T100000000Z_0000000001",
       sourcePath: "/project/main.svml",
       targets: ["a", "b", "z"],
@@ -44,40 +45,40 @@ test("a failed filesystem sync cannot make a later resource inherit stale bytes"
     fail = false;
     await result.sync({ records: snapshot(["a", "b", "z"]), resources });
     const outputs = (await result.read()).outputs;
+    const productDirectory = productPublicationDirectory(
+      join(root, "products"),
+      "bld_20260924T100000000Z_0000000001",
+    );
+    const publication = JSON.parse(await readFile(join(productDirectory, "product.json"), "utf8")) as {
+      readonly products: Readonly<Record<string, { readonly value: { readonly kind: string; readonly path: string } }>>;
+    };
     for (const name of ["a", "b", "z"]) {
-      const value = outputs[name]?.value;
+      assert.equal(outputs[name]?.representation, "file");
+      const value = publication.products[name]?.value;
       assert.equal(value?.kind, "product-file");
-      if (value?.kind !== "product-file") throw new Error("expected file Output");
-      assert.equal(await readFile(join(result.directory, value.path), "utf8"), name.toUpperCase());
+      if (value?.kind !== "product-file") throw new Error("expected file Product");
+      assert.equal(await readFile(join(productDirectory, value.path), "utf8"), name.toUpperCase());
     }
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
 
-test("Result writer recovers one numeric cursor across file extensions and the 9999 boundary", async () => {
+test("Product materialization recovers one numeric cursor across file extensions and the 9999 boundary", async () => {
   const artifact: BlobRef = {
     kind: "blob", resource: "res_new-image", size: 1, mediaType: "image/png",
   };
   const resourcePaths: string[] = [];
   const valuePaths: string[] = [];
-  const updated = await syncBuildResultOutputs({
-    manifest: {
-      format: "hypit.build-result@1",
-      id: "bld_20260924T110000000Z_0000000001",
-      sourcePath: "main.svml",
-      targets: ["image"],
-      outputs: {},
-    },
-    writer: {
+  const updated = await materializeProducts({
+    publication: publicationIntent([{ name: "image" }]),
+    products: {},
+    state: {
       resources: { old: "files/file-9999.mp4" },
       values: { old: "values/value-9999.json" },
-      publication: publicationIntent([{ name: "image" }]),
     },
-    sync: {
-      records: [{ id: "record:image", type: videoType, value: ({ artifact }) }],
-      resources: { async open() { throw new Error("target owns this test write"); } },
-    },
+    records: [{ id: "record:image", type: videoType, value: ({ artifact }) }],
+    resources: { async open() { throw new Error("target owns this test write"); } },
     target: {
       async writeResource(path) { resourcePaths.push(path); },
       async writeValue(path) { valuePaths.push(path); },
@@ -85,30 +86,20 @@ test("Result writer recovers one numeric cursor across file extensions and the 9
   });
   assert.deepEqual(resourcePaths, ["files/file-10000.png"]);
   assert.deepEqual(valuePaths, ["values/value-10000.json"]);
-  assert.equal(updated.manifest.outputs.image?.value.kind, "value");
+  assert.equal(updated.products.image?.value.kind, "value");
 });
 
-test("Result writer bounds resource writes and drains started work before a failure escapes", async () => {
+test("Product materialization bounds resource writes and drains started work before a failure escapes", async () => {
   const artifacts = Array.from({ length: 12 }, (_, index): BlobRef => ({
     kind: "blob", resource: `res_${String(index).padStart(2, "0")}`,
     size: 1, mediaType: "image/png",
   }));
-  const input = (target: BuildResultWriteTarget) => syncBuildResultOutputs({
-    manifest: {
-      format: "hypit.build-result@1" as const,
-      id: "bld_20260924T110000001Z_0000000001",
-      sourcePath: "main.svml",
-      targets: ["images"],
-      outputs: {},
-    },
-    writer: {
-      resources: {}, values: {},
-      publication: publicationIntent([{ name: "images" }]),
-    },
-    sync: {
-      records: [{ id: "record:images", type: videoType, value: (artifacts) }],
-      resources: { async open() { throw new Error("target owns this test write"); } },
-    },
+  const input = (target: ProductMaterializationTarget) => materializeProducts({
+    publication: publicationIntent([{ name: "images" }]),
+    products: {},
+    state: { resources: {}, values: {} },
+    records: [{ id: "record:images", type: videoType, value: (artifacts) }],
+    resources: { async open() { throw new Error("target owns this test write"); } },
     target,
   });
 

@@ -338,7 +338,12 @@ async function installRuntimeAdapters(
 async function openBuildResultLocation(
   location: BuildResultRepositoryLocation,
 ): Promise<{ readonly repository: BuildResultStore }> {
-  return { repository: new FileBuildResultStore(resolve(location.root, location.path)) };
+  return {
+    repository: new FileBuildResultStore(
+      resolve(location.root, location.path),
+      resolve(location.root, ".hypit/products"),
+    ),
+  };
 }
 
 export async function openBuildResultRepositoryLocation(

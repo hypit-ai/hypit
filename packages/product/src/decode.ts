@@ -1,6 +1,9 @@
 import { createModuleRef, createTypeRef } from "@hypit/protocol";
 import type { CanonicalValue, TypeRef } from "@hypit/protocol";
 import type { ProductFileRef, ProductValueDocument, ProductValuePath, StoredProduct } from "./materialize.js";
+import type { StoredProductPublication } from "./publication.js";
+import type { Product } from "./history.js";
+import { productAddress } from "./address.js";
 import { assertProductFileRef, assertProductPath } from "./materialize.js";
 
 function object(value: unknown, subject: string): Readonly<Record<string, unknown>> {
@@ -108,5 +111,69 @@ export function decodeStoredProduct(value: unknown, subject: string): StoredProd
       ? {}
       : { publicationParameters: canonicalValue(item.publicationParameters, `${subject}.publicationParameters`) }),
     value: decoded,
+  };
+}
+
+export function decodeProduct(value: unknown, subject = "Product"): Product {
+  const item = object(value, subject);
+  const rawAddress = object(item.address, `${subject}.address`);
+  const address = productAddress(
+    text(rawAddress.publication, `${subject}.address.publication`),
+    text(rawAddress.name, `${subject}.address.name`),
+  );
+  const common = {
+    address,
+    type: typeRef(item.type, `${subject}.type`),
+    publisher: text(item.publisher, `${subject}.publisher`),
+    ...(item.publicationParameters === undefined
+      ? {}
+      : { publicationParameters: canonicalValue(item.publicationParameters, `${subject}.publicationParameters`) }),
+  };
+  if (item.representation === "inline") {
+    const scalar = item.value;
+    if (scalar !== null && typeof scalar !== "boolean" && typeof scalar !== "string"
+      && !(typeof scalar === "number" && Number.isFinite(scalar))) {
+      throw new Error(`${subject}.value must be a scalar`);
+    }
+    return { ...common, representation: "inline", value: scalar };
+  }
+  if (item.representation === "structured") return { ...common, representation: "structured" };
+  if (item.representation === "file") {
+    if (typeof item.mediaType !== "string" || item.mediaType.length === 0
+      || typeof item.size !== "number" || !Number.isSafeInteger(item.size) || item.size < 0) {
+      throw new Error(`${subject} has invalid file metadata`);
+    }
+    return { ...common, representation: "file", mediaType: item.mediaType, size: item.size };
+  }
+  throw new Error(`${subject}.representation is invalid`);
+}
+
+export function decodeStoredProductPublication(
+  value: unknown,
+  publication: string,
+  subject = `Product publication ${publication}`,
+): StoredProductPublication {
+  if (publication.trim().length === 0) throw new Error("Product publication address must not be empty");
+  const item = object(value, subject);
+  if (item.format !== "hypit.product-publication@1") {
+    throw new Error(`${subject} is not a Product publication`);
+  }
+  const rawProducts = object(item.products, `${subject}.products`);
+  const products = Object.fromEntries(Object.entries(rawProducts).map(([name, product]) => {
+    text(name, `${subject} Product name`);
+    return [name, decodeStoredProduct(product, `${subject}.products[${JSON.stringify(name)}]`)] as const;
+  }));
+  let closedAt: number | undefined;
+  if (item.closedAt !== undefined) {
+    if (typeof item.closedAt !== "number" || !Number.isSafeInteger(item.closedAt) || item.closedAt < 0) {
+      throw new Error(`${subject}.closedAt must be a non-negative integer timestamp`);
+    }
+    closedAt = item.closedAt;
+  }
+  return {
+    format: "hypit.product-publication@1",
+    publication,
+    products,
+    ...(closedAt === undefined ? {} : { closedAt }),
   };
 }

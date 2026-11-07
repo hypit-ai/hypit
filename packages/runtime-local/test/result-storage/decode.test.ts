@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { decodeBuildResultValueDocument, decodeStoredBuildResult } from "../../src/result-storage/index.js";
+import { decodeStoredBuildResult } from "../../src/result-storage/index.js";
+import { decodeProductValueDocument } from "@hypit/hypit/product";
 
 test("Result decoding rejects contradictory terminal and Operation states", () => {
   const build = "bld_20260902T100000000Z_0000000001";
@@ -72,7 +73,7 @@ test("Result decoders reconstruct owned values from untrusted documents", () => 
     },
   });
 
-  const value = decodeBuildResultValueDocument({
+  const value = decodeProductValueDocument({
     format: "hypit.product-value@1",
     value: { title: "hello" },
     resources: [],

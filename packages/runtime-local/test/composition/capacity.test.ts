@@ -162,7 +162,7 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
     work = runFixture(runtime, fixture.executionStore, { idlePollMs: 5, signal: controller.signal });
     await firstStarted;
     await runtime.build(durableBuildRequest(directory, "bld_20260902T120000011Z_0000000001", createGreetingBuildFixture()));
-    const results = new FileBuildResultStore(join(directory, "results"));
+    const results = new FileBuildResultStore(join(directory, "results"), join(directory, "products"));
     // Waiting without a deadline for an outcome that never arrives is indistinguishable from a
     // suite that has stopped: no assertion fails and nothing further is printed. Carry the last
     // outcomes into the failure so a Build that stalled is named rather than guessed at.

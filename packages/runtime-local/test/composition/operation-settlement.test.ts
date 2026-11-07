@@ -107,7 +107,7 @@ for (const cancellation of ["accepted", "unsupported", "failed-build", "host-fai
       assert.equal(completion.outcome, isFailure ? "failed" : "cancelled");
       assert.equal((await fixture.executionStore.listCapacity()).length, 0);
       assert.equal(await runtime.inspect(first), undefined);
-      const result = await new FileBuildResultStore(join(directory, "results")).read(first);
+      const result = await new FileBuildResultStore(join(directory, "results"), join(directory, "products")).read(first);
       assert.equal(result?.outcome, completion.outcome);
       assert.equal(result?.operations?.[0]?.receipt?.id, "job-1");
       assert.equal(result?.operations?.[0]?.outcome, isFailure ? "unsettled" : "cancelled");

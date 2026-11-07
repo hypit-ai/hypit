@@ -113,11 +113,11 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
     return id;
   }
   const completed = (directory: string, id: string) => eventually(async () => {
-    const value = await new FileBuildResultStore(join(directory, "results")).read(id);
+    const value = await new FileBuildResultStore(join(directory, "results"), join(directory, "products")).read(id);
     return value?.outcome === undefined ? undefined : value;
   });
   const value = async (directory: string, id: string) => {
-    const output = await new FileBuildResultStore(join(directory, "results"))
+    const output = await new FileBuildResultStore(join(directory, "results"), join(directory, "products"))
       .resolveProduct({ publication: id, name: "document" });
     return output?.value;
   };
@@ -162,7 +162,7 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
     const e = await submit("e", project, "remote-job", true);
     const remote = await eventually(async () => {
       const [operation] = await state.operations.list({ build: e });
-      const ended = await new FileBuildResultStore(join(project, "results")).read(e);
+      const ended = await new FileBuildResultStore(join(project, "results"), join(project, "products")).read(e);
       if (ended?.outcome !== undefined) throw new Error(JSON.stringify(ended));
       return operation?.receipt === undefined ? undefined : operation;
     });

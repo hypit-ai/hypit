@@ -13,12 +13,15 @@ export const productPublication = Object.freeze({
 
 export { productAddress } from "./address.js";
 export type { ProductAddress } from "./address.js";
+export { productFromStored } from "./history.js";
 export type {
   Product,
   ProductFileRange,
   ProductHistory,
   ResolvedProduct,
 } from "./history.js";
+
+export type { StoredProductPublication } from "./publication.js";
 
 export { assertProductFileRef, assertProductPath, materializeProducts } from "./materialize.js";
 export type {
@@ -36,7 +39,8 @@ export {
   productExportersFromFacets,
   productExporterFacetAbi,
 } from "./exporter.js";
-export { decodeProductValueDocument, decodeStoredProduct } from "./decode.js";
+export { decodeProduct, decodeProductValueDocument, decodeStoredProduct } from "./decode.js";
+export { decodeStoredProductPublication } from "./decode.js";
 export type {
   ProductExport,
   ProductExportBytes,

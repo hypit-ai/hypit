@@ -55,7 +55,7 @@ import {
   runFixture,
 } from "./local-scenario.js";
 
-test("a selected file is staged once and remains referenced in the produced structured Result value", async () => {
+test("a selected file is staged once and remains referenced in the structured Product", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-bld_20260902T120000009Z_0000000001-"));
   const initial = createGreetingBuild();
   const bytes = new Uint8Array([4, 3, 2, 1]);
@@ -138,7 +138,7 @@ test("a selected file is staged once and remains referenced in the produced stru
     assert.equal(endpointCalls, 1);
     assert.equal(attachmentOpens, 1);
     assert.equal(await work.has(authoredAsset.resource), false);
-    const results = new FileBuildResultStore(join(directory, "results"));
+    const results = new FileBuildResultStore(join(directory, "results"), join(directory, ".hypit", "products"));
     const resolved = (await results.resolveProduct({
       publication: "bld_20260902T120000009Z_0000000001",
       name: "final.document",
@@ -147,17 +147,24 @@ test("a selected file is staged once and remains referenced in the produced stru
       readonly layers: readonly [{ readonly content: { readonly image: unknown } }];
     }).layers[0].content.image;
     assert.ok(isBlobRef(content));
-    if (!isBlobRef(content)) throw new Error("expected retained nested Blob");
+    if (!isBlobRef(content)) throw new Error("expected published nested Blob");
     assert.equal(content.size, bytes.length);
     assert.equal(content.mediaType, authoredAsset.mediaType);
     const opened = await resolved.openResource(content);
     assert.notEqual(opened, undefined);
-    const retained: number[] = [];
-    for await (const chunk of opened!) retained.push(...chunk);
-    assert.deepEqual(Uint8Array.from(retained), bytes);
+    const published: number[] = [];
+    for await (const chunk of opened!) published.push(...chunk);
+    assert.deepEqual(Uint8Array.from(published), bytes);
     const resultDirectory = join(directory, "results", "2026-09-02", "bld_20260902T120000009Z_0000000001");
-    assert.deepEqual((await readdir(resultDirectory)).sort(), ["execution.jsonl", "files", "result.json", "values"]);
-    assert.deepEqual(await readFile(join(resultDirectory, "files", "file-0001.png")), Buffer.from(bytes));
+    assert.deepEqual((await readdir(resultDirectory)).sort(), ["execution.jsonl", "result.json"]);
+    const productDirectory = join(
+      directory,
+      ".hypit",
+      "products",
+      "2026-09-02",
+      "bld_20260902T120000009Z_0000000001",
+    );
+    assert.deepEqual(await readFile(join(productDirectory, "files", "file-0001.png")), Buffer.from(bytes));
     await runtime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

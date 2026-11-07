@@ -7,6 +7,7 @@ import test from "node:test";
 
 import { buildResultDirectory, FileBuildResult, FileBuildResultStore } from "../../src/result-storage/index.js";
 import type { BlobRef } from "@hypit/protocol";
+import { productPublicationDirectory } from "@hypit/hypit/product/node";
 
 import {
   structuredType,
@@ -14,7 +15,7 @@ import {
   videoType,
 } from "./repository-scenario.js";
 
-test("one same-Build resource backs a retained video and a structured value", async () => {
+test("one same-Run resource backs a published video and a structured Product", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-build-result-"));
   const bytes = new Uint8Array([1, 2, 3, 4]);
   const video: BlobRef = {
@@ -24,7 +25,7 @@ test("one same-Build resource backs a retained video and a structured value", as
     mediaType: "video/mp4",
   };
   try {
-    const result = await FileBuildResult.create(root, {
+    const result = await FileBuildResult.create(root, join(root, "products"), {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "/project/main.svml",
       targets: ["shot.video"],
@@ -59,21 +60,24 @@ test("one same-Build resource backs a retained video and a structured value", as
       },
     });
     assert.deepEqual(Object.keys(manifest.outputs).sort(), ["shot.take", "shot.take-copy", "shot.video"]);
-    assert.equal(manifest.outputs["shot.video"]?.value.kind, "product-file");
-    assert.equal(manifest.outputs["shot.take"]?.value.kind, "value");
-    const videoPath = manifest.outputs["shot.video"]?.value.kind === "product-file"
-      ? manifest.outputs["shot.video"].value.path
-      : undefined;
-    const takePath = manifest.outputs["shot.take"]?.value.kind === "value"
-      ? manifest.outputs["shot.take"].value.path
-      : undefined;
+    const productDirectory = productPublicationDirectory(join(root, "products"), manifest.id);
+    assert.equal(manifest.outputs["shot.video"]?.representation, "file");
+    assert.equal(manifest.outputs["shot.take"]?.representation, "structured");
+    const publication = JSON.parse(await readFile(join(productDirectory, "product.json"), "utf8")) as {
+      readonly products: Readonly<Record<string, { readonly value:
+        | { readonly kind: "product-file"; readonly path: string }
+        | { readonly kind: "value"; readonly path: string } }>>;
+    };
+    const storedVideo = publication.products["shot.video"]?.value;
+    const takeValue = publication.products["shot.take"]?.value;
+    const takeCopy = publication.products["shot.take-copy"]?.value;
+    const videoPath = storedVideo?.kind === "product-file" ? storedVideo.path : undefined;
+    const takePath = takeValue?.kind === "value" ? takeValue.path : undefined;
     assert.ok(videoPath);
     assert.ok(takePath);
-    assert.equal(manifest.outputs["shot.take-copy"]?.value.kind === "value"
-      ? manifest.outputs["shot.take-copy"].value.path
-      : undefined, takePath);
+    assert.equal(takeCopy?.kind === "value" ? takeCopy.path : undefined, takePath);
     assert.equal(videoPath, "files/file-0001.mp4");
-    const take = JSON.parse(await readFile(join(result.directory, takePath), "utf8")) as {
+    const take = JSON.parse(await readFile(join(productDirectory, takePath), "utf8")) as {
       readonly format: string;
       readonly value: { readonly media: { readonly visual: { readonly artifact: null } } };
       readonly resources: readonly [{ readonly at: readonly string[]; readonly file: { readonly path: string } }];
@@ -82,14 +86,14 @@ test("one same-Build resource backs a retained video and a structured value", as
     assert.equal(take.value.media.visual.artifact, null);
     assert.deepEqual(take.resources[0].at, ["media", "visual", "artifact"]);
     assert.equal(take.resources[0].file.path, videoPath);
-    assert.deepEqual(await readdir(join(result.directory, "files")), [videoPath.split("/").at(-1)]);
+    assert.deepEqual(await readdir(join(productDirectory, "files")), [videoPath.split("/").at(-1)]);
 
     const failed = await result.finish({ outcome: "failed", failure: "final render failed" });
     assert.equal(failed.outcome, "failed");
     assert.equal(failed.failure, "final render failed");
     assert.deepEqual(Object.keys(failed.outputs).sort(), ["shot.take", "shot.take-copy", "shot.video"]);
     await result.finish({ outcome: "failed", failure: "final render failed" });
-    assert.equal((await readdir(result.directory)).includes(".writer.json"), false);
+    assert.equal((await readdir(productDirectory)).includes(".writer.json"), false);
     await assert.rejects(
       result.finish({ outcome: "complete" }),
       /already finished with a different outcome/u,

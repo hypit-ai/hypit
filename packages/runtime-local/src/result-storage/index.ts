@@ -6,13 +6,10 @@ export {
   assertBuildResultFileRef,
   assertBuildResultPath,
   assertBuildResultSeed,
-  defineStoredBuildResultOutput,
-  storedBuildResultOutput,
 } from "./types.js";
 export type {
   BuildResultFileRef,
   StoredBuildResultOutput,
-  BuildResultValueDocument,
   BuildResultDraft,
   StoredFinishedBuildResult,
   StoredBuildResult,
@@ -24,13 +21,9 @@ export type {
   BuildResultStore,
 } from "./types.js";
 export {
-  decodeBuildResultValueDocument,
   decodeStoredBuildResult,
-  decodeBuildResultWriterState,
   encodeStoredBuildResult,
 } from "./decode.js";
-export { syncBuildResultOutputs } from "./writer.js";
-export type { BuildResultWriterState, BuildResultWriteTarget } from "./writer.js";
 export { preserveExecutionLog } from "./execution-log.js";
 export {
   FileBuildResult,

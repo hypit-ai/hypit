@@ -38,7 +38,10 @@ export function projectRuntimeFixture(directory: string) {
       await rm(join(work, build), { recursive: true, force: true });
     },
     openBuildResultRepository: async (location: import("@hypit/runtime-local").BuildResultRepositoryLocation) =>
-      ({ repository: new FileBuildResultStore(join(location.root, location.path)) }),
+      ({ repository: new FileBuildResultStore(
+        join(location.root, location.path),
+        join(location.root, ".hypit/products"),
+      ) }),
     credentialStore: new EnvironmentCredentialStore(),
     close: () => state.close(),
   } as const;

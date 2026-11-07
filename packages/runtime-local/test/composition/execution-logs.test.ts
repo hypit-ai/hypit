@@ -87,7 +87,7 @@ test("local call logs survive cleanup and remain attributed across concurrent su
     while (calls < 2) await new Promise((resolve) => setTimeout(resolve, 1));
     assert.ok((await runtime.logs!(ids[0]!, 30))!.records.length > 0);
     while ((await runtime.activity()).builds.length) await new Promise((resolve) => setTimeout(resolve, 2));
-    const repository = new FileBuildResultStore(join(directory, "results"));
+    const repository = new FileBuildResultStore(join(directory, "results"), join(directory, "products"));
     const seen = new Set<string>();
     for (const id of ids) {
       assert.equal(await runtime.inspect(id), undefined);

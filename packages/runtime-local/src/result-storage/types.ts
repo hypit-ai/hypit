@@ -7,9 +7,8 @@ import type {
 } from "@hypit/hypit/protocol";
 import { assertPublicationIntent } from "@hypit/hypit/protocol";
 import type {
+  Product,
   ProductHistory,
-  ProductValueDocument,
-  StoredProduct,
 } from "@hypit/hypit/product";
 import type { BuildResultHistory, BuildResultOperation } from "@hypit/hypit/result";
 
@@ -26,8 +25,6 @@ export type BuildResultFileRef = {
  * Resource references live beside it, so reserved-looking domain objects cannot be
  * mistaken for persistence metadata.
  */
-export type BuildResultValueDocument = ProductValueDocument;
-
 /** One portable address inside a Build Result; repositories map it to their own physical storage. */
 export function assertBuildResultPath(value: unknown, subject: string): asserts value is string {
   if (typeof value !== "string" || value.length === 0 || value.startsWith("/")
@@ -50,7 +47,7 @@ export function assertBuildResultFileRef(value: unknown, subject: string): asser
   assertBuildResultPath(item.path, `${subject}.path`);
 }
 
-export type StoredBuildResultOutput = StoredProduct;
+export type StoredBuildResultOutput = Product;
 
 type StoredBuildResultBase = {
   readonly format: "hypit.build-result@1";
@@ -85,28 +82,6 @@ export type StoredFinishedBuildResult = StoredBuildResultBase & StoredBuildResul
 
 /** Storage state used only by Runtime publication and recovery. */
 export type StoredBuildResult = BuildResultDraft | StoredFinishedBuildResult;
-
-/** Read one author-named published Output without invoking inherited object properties. */
-export function storedBuildResultOutput(
-  manifest: Pick<StoredBuildResult, "outputs">,
-  name: string,
-): StoredBuildResultOutput | undefined {
-  return Object.hasOwn(manifest.outputs, name) ? manifest.outputs[name] : undefined;
-}
-
-/** Define one stored Output without invoking special object setters such as `__proto__`. */
-export function defineStoredBuildResultOutput(
-  outputs: Record<string, StoredBuildResultOutput>,
-  name: string,
-  output: StoredBuildResultOutput,
-): void {
-  Object.defineProperty(outputs, name, {
-    value: output,
-    enumerable: true,
-    configurable: true,
-    writable: true,
-  });
-}
 
 export type BuildResultSeed = {
   readonly id: string;

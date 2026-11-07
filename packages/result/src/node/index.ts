@@ -3,5 +3,4 @@ export {
   FileBuildResultHistory,
   browseBuildResults,
   buildResultDirectory,
-  resolveProduct,
 } from "./store.js";

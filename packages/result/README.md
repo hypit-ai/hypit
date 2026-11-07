@@ -6,33 +6,25 @@ Runtime. A target is execution evidence, not an instruction to publish or store 
 
 Publication is no longer a boolean `retain` decision. A producing domain names an exact publisher in
 `PublicationIntent`; Runtime transports that answer but must not infer product status from value shape.
-The current filesystem history still materializes published values beside Build evidence as a migration
-boundary. Separating typed products from Run history is subsequent work, not a second meaning
-hidden in this package.
+The filesystem history stores Product summaries and stable addresses beside Build evidence. Product
+values, resources and publication writer state belong to the separate Product store.
 
 ## Values and file ownership
 
-| Value source | Persisted representation |
-| --- | --- |
-| Published `BlobRef` produced by this Build | One Product file, temporarily colocated with this Result |
-| Array or object value | A Product Value Document whose `BlobRef` bindings point to colocated Product files |
-
-Every `product-file` path is currently relative to the containing transitional Result. Product's
-materializer recognizes `BlobRef` leaves independently of their domain Type or field name and writes
-each Resource identity once, so a direct
-published media Output and a nested use in a structured value share one file inside that Result.
+Result manifests contain no Product-relative paths. Each published entry records its Product address,
+Type, publisher and representation summary. Product's own manifest contains scalar values or private
+file/value-document references and owns all corresponding resource bytes.
 
 Workspace attachments and Runtime working resources are execution inputs, not durable Result
-addresses. When their bytes appear in a published Record, Result storage copies those bytes into
-the current Result. A Result therefore neither points at another Build nor keeps a live project-file
-dependency.
+addresses. When their bytes appear in a published Record, Product publication copies them into its
+own store. A Result therefore neither owns those bytes nor keeps a live project-file dependency.
 
 ## Finished history
 
 `PublicationIntent.outputs` supplies the published name, accepted Record and exact publisher.
 Runtime records that publisher with the accepted Type rather than inventing a lifetime policy.
-History exposes each Product's stable `{ publication, name }` address; the current adapter derives the
-publication identity from the containing Build while Product files are still colocated.
+History exposes each Product's stable `{ publication, name }` address; the current publication identity
+is the Run that closed it.
 Reusing an earlier Output is an authoring
 operation: export the accepted material into the project and reference it from the Author Source.
 Result storage never substitutes a historical Build for an authored value.
@@ -45,24 +37,21 @@ Records and Resource identities; it has no knowledge of file paths or Result rep
 
 Drafts are not project history. The package root exposes `BuildResultHistory`; its `read()` and
 `browse()` methods return finished `BuildResult` values only. Exact Product lookup belongs to
-`ProductHistory`, even while the current filesystem object implements both ports. CLI and history browsers therefore
+`ProductHistory`. Runtime Local's assembly may return one object implementing both ports, but their
+physical roots and readers remain separate. CLI and history browsers therefore
 cannot observe, finish, discard or recover an open draft. `@hypit/result/node` exposes only
 `FileBuildResultHistory` and the finished-history filesystem reader.
 
-Repositories own address access. `BuildResultHistory.resolve(build, output)` turns the private
-persistence representation into an ordinary domain `Value`. Its returned `openResource()` capability
-can stream only Blob resources bound into that exact Output, including a normalized byte range.
-Callers never receive a general Result-relative path opener. A custom repository can provide another
-physical implementation without changing Result identity or publication semantics.
-
-The manifest reports domain `type` separately from storage representation. An Output is stored inline,
-as a Product file, or as a `hypit.product-value@1` document; those forms do not claim a domain value category.
+`ProductHistory.resolveProduct(address)` turns Product-private persistence into an ordinary domain
+`Value`. Its returned `openResource()` capability can stream only Blob resources bound into that exact
+Product, including a normalized byte range. Result history has no general Product or Result-relative
+path opener.
 
 A `complete` outcome is published only after every Output named by the Publication Intent has been stored.
 Failed and cancelled Results may intentionally contain the subset that completed. This is a local per-Build
 closure check, not a central Result index or an attempt to infer missing work.
 
-Storage file references remain scoped to one containing Build. Separate Results remain separate even
+Product file references remain scoped to one publication. Separate publications remain separate even
 when their bytes happen to match; publication performs no content hashing or historical lookup.
 
 An explicit `hypit result export` materializes one published Output at an author-selected destination.

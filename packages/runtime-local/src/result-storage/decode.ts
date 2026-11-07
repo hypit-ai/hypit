@@ -1,9 +1,8 @@
 import {
   assertOrderedBuildId,
-  assertPublicationIntent,
 } from "@hypit/hypit/protocol";
 import type { BuildResultOperation } from "@hypit/hypit/result";
-import { decodeProductValueDocument, decodeStoredProduct } from "@hypit/hypit/product";
+import { decodeProduct } from "@hypit/hypit/product";
 
 import {
   assertBuildResultFileRef,
@@ -13,9 +12,7 @@ import type {
   BuildResultFileRef,
   StoredBuildResult,
   StoredBuildResultOutput,
-  BuildResultValueDocument,
 } from "./types.js";
-import type { BuildResultWriterState } from "./writer.js";
 
 function object(value: unknown, subject: string): Readonly<Record<string, unknown>> {
   if (value === null || Array.isArray(value) || typeof value !== "object") {
@@ -69,11 +66,15 @@ function fileRef(value: unknown, subject: string): BuildResultFileRef {
   };
 }
 
-function outputs(value: unknown, subject: string): Readonly<Record<string, StoredBuildResultOutput>> {
+function outputs(value: unknown, subject: string, publication: string): Readonly<Record<string, StoredBuildResultOutput>> {
   const raw = object(value, subject);
   return Object.fromEntries(Object.entries(raw).map(([name, value]) => {
     text(name, `${subject} Output name`);
-    return [name, decodeStoredProduct(value, `${subject}[${JSON.stringify(name)}]`)] as const;
+    const product = decodeProduct(value, `${subject}[${JSON.stringify(name)}]`);
+    if (product.address.publication !== publication || product.address.name !== name) {
+      throw new Error(`${subject}[${JSON.stringify(name)}].address does not match its Run publication`);
+    }
+    return [name, product] as const;
   }));
 }
 
@@ -165,7 +166,7 @@ export function decodeStoredBuildResult(
     id,
     sourcePath,
     targets: texts(item.targets, `${subject}.targets`),
-    outputs: outputs(item.outputs, `${subject}.outputs`),
+    outputs: outputs(item.outputs, `${subject}.outputs`, id),
   };
   if (outcome === undefined) {
     if (failure !== undefined) throw new Error(`${subject} unfinished Result cannot have a failure`);
@@ -191,59 +192,4 @@ export function decodeStoredBuildResult(
 export function encodeStoredBuildResult(manifest: StoredBuildResult): Omit<StoredBuildResult, "id"> {
   const { id: _id, ...document } = manifest;
   return document;
-}
-
-function pathMap(value: unknown, subject: string): Readonly<Record<string, string>> {
-  const item = object(value, subject);
-  return Object.fromEntries(Object.entries(item).map(([identity, path]) => [
-    text(identity, `${subject} identity`),
-    resultPath(path, `${subject}[${JSON.stringify(identity)}]`),
-  ]));
-}
-
-/** Decode the private, unfinished-Result writer state used by both physical repositories. */
-export function decodeBuildResultWriterState(
-  value: unknown,
-  subject = "Build Result writer state",
-): BuildResultWriterState {
-  const item = object(value, subject);
-  const rawIntent = object(item.publication, `${subject}.publication`);
-  if (!Array.isArray(rawIntent.outputs)) throw new Error(`${subject}.publication.outputs must be an array`);
-  if (Object.keys(rawIntent).some((name) => name !== "outputs")) {
-    throw new Error(`${subject}.publication must contain only outputs`);
-  }
-  const names = new Set<string>();
-  const outputs = rawIntent.outputs.map((value, index) => {
-    const output = object(value, `${subject}.publication.outputs[${index}]`);
-    for (const key of Object.keys(output)) {
-      if (key !== "name" && key !== "record" && key !== "publisher" && key !== "parameters") {
-        throw new Error(`${subject}.publication.outputs[${index}] has an unexpected ${key} field`);
-      }
-    }
-    const name = text(output.name, `${subject}.publication.outputs[${index}].name`);
-    if (names.has(name)) throw new Error(`${subject} repeats published Output name ${name}`);
-    names.add(name);
-    const record = text(output.record, `${subject}.publication.outputs[${index}].record`);
-    const publisher = text(output.publisher, `${subject}.publication.outputs[${index}].publisher`);
-    return {
-      name,
-      record,
-      publisher,
-      ...(output.parameters === undefined ? {} : { parameters: output.parameters as import("@hypit/hypit/protocol").CanonicalValue }),
-    };
-  });
-  const publication = { outputs };
-  assertPublicationIntent(publication);
-  return {
-    resources: pathMap(item.resources, `${subject}.resources`),
-    values: pathMap(item.values, `${subject}.values`),
-    publication,
-  };
-}
-
-export function decodeBuildResultValueDocument(
-  value: unknown,
-  subject = "Product value",
-): BuildResultValueDocument {
-  return decodeProductValueDocument(value, subject);
 }

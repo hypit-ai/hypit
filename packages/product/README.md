@@ -16,8 +16,8 @@ comes from the Run that closed it, while the name is the exact declared publicat
 address contains no filesystem path or content hash and is resolved through the Product boundary,
 not through a Result-specific `(build, output)` lookup.
 `ProductHistory` exposes exact `readProduct(address)` and `resolveProduct(address)` operations. The
-transitional filesystem adapter still serves them from colocated files, but callers no longer address
-Products through a Result-specific `(build, output)` resolver.
+filesystem adapter reads a Product-owned `hypit.product-publication@1` manifest and Product-owned
+resources. It does not open Run history or address Products through a Result-specific resolver.
 
 Product also owns the neutral materialization of typed values. Scalars remain inline, Blob resources
 become `product-file` references, and arrays or objects use `hypit.product-value@1` documents whose

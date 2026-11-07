@@ -1,8 +1,8 @@
 import {
   assertOrderedBuildId,
 } from "@hypit/protocol";
-import { decodeProductValueDocument, decodeStoredProduct } from "@hypit/product";
-import type { ProductValueDocument, StoredProduct } from "@hypit/product";
+import { decodeProduct } from "@hypit/product";
+import type { Product } from "@hypit/product";
 import type { BuildResultOperation } from "./types.js";
 
 export type StoredBuildResultFile = {
@@ -12,9 +12,8 @@ export type StoredBuildResultFile = {
   readonly mediaType: string;
 };
 
-export type StoredBuildResultOutput = StoredProduct;
+export type StoredBuildResultOutput = Product;
 
-export type StoredBuildResultValueDocument = ProductValueDocument;
 
 export type StoredFinishedBuildResult = {
   readonly format: "hypit.build-result@1";
@@ -64,10 +63,14 @@ function fileRef(value: unknown, subject: string): StoredBuildResultFile {
   };
 }
 
-function outputs(value: unknown, subject: string): Readonly<Record<string, StoredBuildResultOutput>> {
+function outputs(value: unknown, subject: string, publication: string): Readonly<Record<string, StoredBuildResultOutput>> {
   return Object.fromEntries(Object.entries(object(value, subject)).map(([name, raw]) => {
     text(name, `${subject} Output name`);
-    return [name, decodeStoredProduct(raw, `${subject}[${JSON.stringify(name)}]`)];
+    const product = decodeProduct(raw, `${subject}[${JSON.stringify(name)}]`);
+    if (product.address.publication !== publication || product.address.name !== name) {
+      throw new Error(`${subject}[${JSON.stringify(name)}].address does not match its Run publication`);
+    }
+    return [name, product];
   }));
 }
 
@@ -141,7 +144,7 @@ export function decodeFinishedBuildResult(
     targets: Array.isArray(item.targets)
       ? item.targets.map((target, index) => text(target, `${subject}.targets[${index}]`))
       : (() => { throw new Error(`${subject}.targets must be an array`); })(),
-    outputs: outputs(item.outputs, `${subject}.outputs`),
+    outputs: outputs(item.outputs, `${subject}.outputs`, build),
   };
   if (item.outcome === undefined) {
     if (item.finishedAt !== undefined || item.failure !== undefined || item.operations !== undefined
@@ -165,11 +168,4 @@ export function decodeFinishedBuildResult(
   }
   const failure = text(item.failure, `${subject}.failure`);
   return { ...evidence, outcome: item.outcome, finishedAt: item.finishedAt, failure };
-}
-
-export function decodeBuildResultValueDocument(
-  value: unknown,
-  subject = "Product value",
-): StoredBuildResultValueDocument {
-  return decodeProductValueDocument(value, subject);
 }
