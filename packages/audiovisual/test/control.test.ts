@@ -3,7 +3,9 @@ import test from "node:test";
 
 import {
   exactTemporalValue,
+  composeTemporalMaps,
   evaluateTemporalMap,
+  identityTemporalMap,
   sealLocalTemporalDomain,
   sealTemporalMap,
   type ExactTemporalValue,
@@ -22,10 +24,10 @@ import {
   evaluateTemporalControl,
   pictureType,
   pointwiseOperatorTemporalSupport,
+  occurrenceParentRange,
   sealAudiovisualProgram,
   sealOccurrence,
   sealSpatialMapControl,
-  temporalControlBindingMap,
 } from "../src/index.js";
 import type {
   AudiovisualProgram,
@@ -33,7 +35,6 @@ import type {
   ProgramSource,
   SpatialMapControl,
   TemporalControl,
-  TemporalControlBinding,
 } from "../src/index.js";
 
 const seconds = (numerator: number, denominator = 1): ExactTemporalValue => exactTemporalValue({
@@ -101,7 +102,7 @@ function control(domain: LocalTemporalDomain): SpatialMapControl {
 
 function program(
   motion: SpatialMapControl,
-  binding: TemporalControlBinding,
+  controlMapping: TemporalMap,
   use = occurrence(),
 ): AudiovisualProgram {
   return sealAudiovisualProgram({
@@ -111,9 +112,27 @@ function program(
     occurrences: { "title-use": use },
     picture: { root: "motion", nodes: {
       source: { kind: "use", occurrence: "title-use", output: "picture" },
-      motion: { kind: "remap-control", input: "source", control: motion, binding },
+      motion: { kind: "remap-control", input: "source", control: motion, controlMapping },
     } },
   });
+}
+
+function occurrenceMapping(use = occurrence()): TemporalMap {
+  return sealTemporalMap({ stages: [{
+    target: mainTime,
+    source: occurrenceTime,
+    pieces: [{
+      target: occurrenceParentRange(use),
+      sourceAtStart: use.placement.active.start,
+      rate: { numerator: 1, denominator: 1 },
+    }],
+  }] });
+}
+
+function sourceMapping(use = occurrence()): TemporalMap {
+  const selection = use.selections.picture;
+  if (selection?.kind !== "signal") throw new Error("Picture selection has no Mapping.");
+  return composeTemporalMaps(occurrenceMapping(use), selection.mapping);
 }
 
 function evaluatedTx(value: AudiovisualProgram, at: ExactTemporalValue): number | undefined {
@@ -142,81 +161,32 @@ test("Temporal Control leaves value interpolation to its consumer", () => {
   assert.deepEqual(seen, { numerator: 1n, denominator: 4n, operation: "multiply" });
 });
 
-test("occurrence-local motion follows Move and ignores source Slip", () => {
-  const original = program(control(occurrenceTime), { kind: "occurrence", occurrence: "title-use" });
+test("an occurrence-local Control consumes one closed Programme Mapping", () => {
+  const original = program(control(occurrenceTime), occurrenceMapping());
   assert.equal(evaluatedTx(original, seconds(5)), -300);
-
-  const moved = program(control(occurrenceTime),
-    { kind: "occurrence", occurrence: "title-use" }, occurrence(seconds(5), seconds(4)));
-  assert.equal(evaluatedTx(moved, seconds(7)), -300);
-  assert.equal(evaluatedTx(moved, seconds(3)), undefined);
-
-  const slipped = program(control(occurrenceTime),
-    { kind: "occurrence", occurrence: "title-use" }, occurrence(seconds(7)));
-  assert.equal(evaluatedTx(slipped, seconds(5)), -300);
+  assert.equal(evaluatedTx(original, seconds(1)), undefined);
 });
 
-test("source-local motion follows Slip while Move only relocates its occurrence", () => {
-  const original = program(control(sourceTime), {
-    kind: "source", occurrence: "title-use", output: "picture",
-  });
+test("a source-local Control receives the already composed Source Mapping", () => {
+  const original = program(control(sourceTime), sourceMapping());
   assert.equal(evaluatedTx(original, seconds(5)), -240);
-
-  const slipped = program(control(sourceTime),
-    { kind: "source", occurrence: "title-use", output: "picture" }, occurrence(seconds(7)));
-  assert.equal(evaluatedTx(slipped, seconds(5)), -300);
-
-  const moved = program(control(sourceTime),
-    { kind: "source", occurrence: "title-use", output: "picture" }, occurrence(seconds(5), seconds(4)));
-  assert.equal(evaluatedTx(moved, seconds(7)), -240);
 });
 
-test("program-local motion stays at its absolute parent position", () => {
-  const original = program(control(mainTime), { kind: "program" });
+test("a program-local Control receives the identity Mapping explicitly", () => {
+  const original = program(control(mainTime), identityTemporalMap(mainTime));
   assert.equal(evaluatedTx(original, seconds(5)), -300);
-
-  const moved = program(control(mainTime), { kind: "program" }, occurrence(seconds(5), seconds(4)));
-  assert.equal(evaluatedTx(moved, seconds(5)), -300);
-  assert.equal(evaluatedTx(moved, seconds(7)), -420);
-
-  const slipped = program(control(mainTime), { kind: "program" }, occurrence(seconds(7)));
-  assert.equal(evaluatedTx(slipped, seconds(5)), -300);
+  assert.equal(evaluatedTx(original, seconds(7)), -420);
 });
 
-test("every Control binding closes as one Programme-to-Control Temporal Map", () => {
-  const occurrenceBound = program(control(occurrenceTime), {
-    kind: "occurrence", occurrence: "title-use",
-  });
-  const occurrenceMap = temporalControlBindingMap(occurrenceTime, {
-    kind: "occurrence", occurrence: "title-use",
-  }, occurrenceBound);
+test("Control Mappings are ordinary exact AVIR facts", () => {
+  const occurrenceMap = occurrenceMapping();
   assert.equal(evaluateTemporalMap(occurrenceMap, seconds(1), "after"), undefined);
   assert.deepEqual(evaluateTemporalMap(occurrenceMap, seconds(5), "after")?.position, seconds(3));
 
-  const sourceBound = program(control(sourceTime), {
-    kind: "source", occurrence: "title-use", output: "picture",
-  });
-  const sourceMap = temporalControlBindingMap(sourceTime, {
-    kind: "source", occurrence: "title-use", output: "picture",
-  }, sourceBound);
+  const sourceMap = sourceMapping();
   assert.deepEqual(evaluateTemporalMap(sourceMap, seconds(5), "after")?.position, seconds(8));
-
-  const moved = program(control(sourceTime), {
-    kind: "source", occurrence: "title-use", output: "picture",
-  }, occurrence(seconds(5), seconds(4)));
-  const movedMap = temporalControlBindingMap(sourceTime, {
-    kind: "source", occurrence: "title-use", output: "picture",
-  }, moved);
-  assert.deepEqual(evaluateTemporalMap(movedMap, seconds(7), "after")?.position, seconds(8));
-
-  const programMap = temporalControlBindingMap(mainTime, { kind: "program" },
-    program(control(mainTime), { kind: "program" }));
+  const programMap = identityTemporalMap(mainTime);
   assert.deepEqual(evaluateTemporalMap(programMap, seconds(5), "after")?.position, seconds(5));
-
-  const explicit = temporalMap(mainTime, sourceTime, seconds(5));
-  const mapped = temporalControlBindingMap(sourceTime, { kind: "mapping", mapping: explicit },
-    program(control(sourceTime), { kind: "mapping", mapping: explicit }));
-  assert.deepEqual(mapped, explicit);
 });
 
 test("an apply with an unavailable required Control evaluates to the signal bottom", () => {
@@ -238,7 +208,7 @@ test("an apply with an unavailable required Control evaluates to the signal bott
           program: { format: "project.controlled-picture@1", payload: {}, artifacts: [] },
         },
         inputs: { picture: "placed" },
-        controlBindings: { motion: { kind: "occurrence", occurrence: "title-use" } },
+        controlMappings: { motion: occurrenceMapping() },
       },
     } },
   });
@@ -249,9 +219,9 @@ test("an apply with an unavailable required Control evaluates to the signal bott
   if (active?.kind === "apply") assert.deepEqual(active.controlPositions.motion, seconds(3));
 });
 
-test("Control bindings reject an implicit or mismatched Domain", () => {
-  assert.throws(() => program(control(occurrenceTime), { kind: "program" }),
-    /resolves main:time, not Control domain title-use:time/u);
+test("Control Mappings reject a mismatched Domain", () => {
+  assert.throws(() => program(control(occurrenceTime), identityTemporalMap(mainTime)),
+    /must end in Control domain title-use:time/u);
   assert.throws(() => sealSpatialMapControl({
     domain: occurrenceTime,
     segments: [{

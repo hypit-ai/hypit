@@ -83,18 +83,18 @@ function fixture(): AudiovisualProgram {
       interview: { kind: "use", occurrence: "interview-use", output: "picture" },
       interviewPlaced: { kind: "remap", input: "interview", mapping: spatialMapping(
         mainSpace, interview.source.outputs.picture!.spatialDomain!) },
-      graded: { kind: "apply", operator: pictureOperator("project:grade", ["picture"]), inputs: { picture: "interviewPlaced" }, controlBindings: {} },
+      graded: { kind: "apply", operator: pictureOperator("project:grade", ["picture"]), inputs: { picture: "interviewPlaced" }, controlMappings: {} },
       broll: { kind: "use", occurrence: "b-roll", output: "picture" },
       brollPlaced: { kind: "remap", input: "broll", mapping: spatialMapping(
         mainSpace, broll.source.outputs.picture!.spatialDomain!) },
       transition: { kind: "apply", operator: pictureOperator("project:transition", ["outgoing", "incoming"]),
-        inputs: { outgoing: "graded", incoming: "brollPlaced" }, controlBindings: {} },
+        inputs: { outgoing: "graded", incoming: "brollPlaced" }, controlMappings: {} },
       root: { kind: "over", inputs: ["transition"] },
     } },
     audio: { root: "mix", nodes: {
       dialogue: { kind: "use", occurrence: "interview-use", output: "audio" },
       compressed: { kind: "apply", operator: audioOperator("project:compressor", ["signal"]),
-        inputs: { signal: "dialogue" }, controlBindings: {} },
+        inputs: { signal: "dialogue" }, controlMappings: {} },
       music: { kind: "use", occurrence: "music-use", output: "audio" },
       mix: { kind: "mix", inputs: ["compressed", "music"] },
     } },
@@ -112,7 +112,7 @@ test("processed Picture and Audio nodes remain closed inputs to later operators"
   const program = fixture();
   assert.deepEqual(program.picture?.nodes.transition, {
     kind: "apply", operator: pictureOperator("project:transition", ["outgoing", "incoming"]),
-    inputs: { outgoing: "graded", incoming: "brollPlaced" }, controlBindings: {},
+    inputs: { outgoing: "graded", incoming: "brollPlaced" }, controlMappings: {},
   });
   assert.deepEqual(program.audio?.nodes.mix, { kind: "mix", inputs: ["compressed", "music"] });
 });
@@ -127,13 +127,13 @@ test("Audio DAG closes dry, wet, shared return and sidechain routing", () => {
       duckedMusic: {
         kind: "apply",
         operator: audioOperator("project:sidechain-compressor", ["signal", "sidechain"]),
-        inputs: { signal: "music", sidechain: "dialogue" }, controlBindings: {},
+        inputs: { signal: "music", sidechain: "dialogue" }, controlMappings: {},
       },
       sharedSend: { kind: "mix", inputs: ["dialogue", "duckedMusic"] },
       return: {
         kind: "apply",
         operator: audioOperator("project:reverb", ["signal"]),
-        inputs: { signal: "sharedSend" }, controlBindings: {},
+        inputs: { signal: "sharedSend" }, controlMappings: {},
       },
       master: { kind: "mix", inputs: ["dialogue", "duckedMusic", "return"] },
     } },
@@ -141,7 +141,7 @@ test("Audio DAG closes dry, wet, shared return and sidechain routing", () => {
   assert.deepEqual(program.audio?.nodes.duckedMusic, {
     kind: "apply",
     operator: audioOperator("project:sidechain-compressor", ["signal", "sidechain"]),
-    inputs: { signal: "music", sidechain: "dialogue" }, controlBindings: {},
+    inputs: { signal: "music", sidechain: "dialogue" }, controlMappings: {},
   });
   assert.deepEqual(program.audio?.nodes.master, {
     kind: "mix", inputs: ["dialogue", "duckedMusic", "return"],

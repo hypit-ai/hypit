@@ -266,13 +266,13 @@ test("A-roll, material B-roll and a component compile into one resolved Programm
       incoming: "picture:binding:product",
       outgoing: "picture:binding:presenter",
     },
-    controlBindings: { progress: { kind: "program" } },
+    controlMappings: { progress: identityMap("main:time", 12) },
   });
   assert.deepEqual(program.audio?.nodes["audio:output"], {
     kind: "apply",
     operator: audioGainOperator(1),
     inputs: { signal: "audio:binding:voice" },
-    controlBindings: {},
+    controlMappings: {},
   });
 });
 
@@ -357,10 +357,9 @@ test("an author Control relation closes against the Operator-owned Control domai
     node.kind === "apply" && node.operator.id === "hypit.picture-transition:cross-dissolve");
   assert.equal(applied?.kind, "apply");
   if (applied?.kind !== "apply") throw new Error("compiled transition is missing");
-  const progress = applied.controlBindings.progress;
-  assert.equal(progress?.kind, "mapping");
-  if (progress?.kind !== "mapping") throw new Error("relation did not close into a Mapping");
-  assert.deepEqual(evaluateTemporalMap(progress.mapping, at(3), "after")?.position, at(3));
+  const progress = applied.controlMappings.progress;
+  if (progress === undefined) throw new Error("relation did not close into a Mapping");
+  assert.deepEqual(evaluateTemporalMap(progress, at(3), "after")?.position, at(3));
 });
 
 test("author-local Occurrence and Source Control bindings close without Core identities in the Spec", () => {
@@ -390,8 +389,10 @@ test("author-local Occurrence and Source Control bindings close without Core ide
   const occurrenceApply = Object.values(occurrenceBound.picture!.nodes).find((node) =>
     node.kind === "apply");
   assert.equal(occurrenceApply?.kind, "apply");
-  if (occurrenceApply?.kind === "apply") assert.deepEqual(occurrenceApply.controlBindings,
-    { progress: { kind: "occurrence", occurrence: "product" } });
+  if (occurrenceApply?.kind === "apply") {
+    const progress = occurrenceApply.controlMappings.progress!;
+    assert.deepEqual(evaluateTemporalMap(progress, at(6), "after")?.position, at(2));
+  }
 
   const productPicture = bindings.sources["product-material"]!.outputs.picture!;
   assert.equal(productPicture.kind, "signal");
@@ -404,8 +405,10 @@ test("author-local Occurrence and Source Control bindings close without Core ide
   });
   const sourceApply = Object.values(sourceBound.picture!.nodes).find((node) => node.kind === "apply");
   assert.equal(sourceApply?.kind, "apply");
-  if (sourceApply?.kind === "apply") assert.deepEqual(sourceApply.controlBindings,
-    { progress: { kind: "source", occurrence: "product", output: "picture" } });
+  if (sourceApply?.kind === "apply") {
+    const progress = sourceApply.controlMappings.progress!;
+    assert.deepEqual(evaluateTemporalMap(progress, at(6), "after")?.position, at(4));
+  }
 });
 
 test("author Control bindings validate local Occurrence and selected Source output names", () => {

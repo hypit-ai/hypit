@@ -3,7 +3,7 @@ import type { LocalTemporalDomain, TemporalRange } from "@hypit/temporal/algebra
 import { sameType, typeKey } from "@hypit/protocol";
 
 import { audioType } from "./identity.js";
-import { assertTemporalControlBinding } from "./control.js";
+import { assertTemporalControlMapping } from "./control.js";
 import { assertAudioOperator } from "./operator.js";
 import type { AudioGraph, AudioNode, AudioNodeId, AudioOperator, AudiovisualProgram } from "./types.js";
 
@@ -71,16 +71,16 @@ function assertNode(id: AudioNodeId, node: AudioNode, program: AudiovisualProgra
         assert(Object.hasOwn(node.inputs, name), `Audio apply ${id} is missing input ${name}.`);
       }
       const expectedControls = new Set(Object.keys(node.operator.temporalControls));
-      for (const name of Object.keys(node.controlBindings)) {
+      for (const name of Object.keys(node.controlMappings)) {
         assert(expectedControls.has(name), `Audio apply ${id} supplies unknown temporal Control ${name}.`);
       }
       for (const name of expectedControls) {
-        assert(Object.hasOwn(node.controlBindings, name),
-          `Audio apply ${id} is missing temporal Control binding ${name}.`);
-        assertTemporalControlBinding(
+        assert(Object.hasOwn(node.controlMappings, name),
+          `Audio apply ${id} is missing temporal Control Mapping ${name}.`);
+        assertTemporalControlMapping(
           node.operator.temporalControls[name]!,
-          node.controlBindings[name]!,
-          program,
+          node.controlMappings[name]!,
+          program.domain,
         );
       }
     }

@@ -3,12 +3,9 @@ import {
   assertLocalTemporalDomain,
   assertTemporalMap,
   compareExactTemporalValues,
-  composeTemporalMaps,
   evaluateTemporalMap,
   exactTemporalRational,
   exactTemporalZero,
-  identityTemporalMap,
-  sealTemporalMap,
   subtractExactTemporalValues,
   type ExactTemporalValue,
   type LocalTemporalDomain,
@@ -23,13 +20,10 @@ import {
   type SpatialMap,
 } from "@hypit/spatial/algebra";
 
-import { occurrenceParentRange } from "./occurrence.js";
 import type {
-  AudiovisualProgram,
   SpatialMapControl,
   SpatialMapInterpolation,
   TemporalControl,
-  TemporalControlBinding,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -116,110 +110,28 @@ export function evaluateTemporalControl<Value, Interpolation>(
   return interpolate(segment.from, segment.to, progress, segment.interpolation);
 }
 
-function controlBindingDomain(
-  binding: TemporalControlBinding,
-  program: AudiovisualProgram,
-): LocalTemporalDomain {
-  switch (binding.kind) {
-    case "program": return program.domain;
-    case "occurrence": {
-      const occurrence = program.occurrences[binding.occurrence];
-      assert(occurrence !== undefined,
-        `Control binding references missing Occurrence ${binding.occurrence}.`);
-      return occurrence.domain;
-    }
-    case "source": {
-      const occurrence = program.occurrences[binding.occurrence];
-      assert(occurrence !== undefined,
-        `Control binding references missing Occurrence ${binding.occurrence}.`);
-      const output = occurrence.source.outputs[binding.output];
-      assert(output !== undefined,
-        `Control binding references missing Source output ${binding.output}.`);
-      const selection = occurrence.selections[binding.output];
-      assert(selection !== undefined,
-        `Control binding has no Selection for Source output ${binding.output}.`);
-      assert(selection.kind === "signal" && output.kind === "signal",
-        `Control binding Source output ${binding.output} is constant and has no temporal Domain.`);
-      return output.domain;
-    }
-    case "mapping": {
-      assertTemporalMap(binding.mapping);
-      const first = binding.mapping.stages[0];
-      const last = binding.mapping.stages.at(-1);
-      assert(first !== undefined && sameTemporalDomain(first.target, program.domain),
-        `Control binding Mapping must begin in Programme domain ${program.domain.id}.`);
-      assert(last !== undefined, "Control binding Mapping has no source domain.");
-      return last.source;
-    }
-  }
-}
-
-export function assertTemporalControlBinding(
+export function assertTemporalControlMapping(
   controlDomain: LocalTemporalDomain,
-  binding: TemporalControlBinding,
-  program: AudiovisualProgram,
+  mapping: TemporalMap,
+  programDomain: LocalTemporalDomain,
 ): void {
-  const domain = controlBindingDomain(binding, program);
-  assert(sameTemporalDomain(domain, controlDomain),
-    `Control binding resolves ${domain.id}, not Control domain ${controlDomain.id}.`);
-}
-
-function occurrenceControlMap(
-  program: AudiovisualProgram,
-  occurrenceId: string,
-): TemporalMap {
-  const occurrence = program.occurrences[occurrenceId];
-  assert(occurrence !== undefined, `Control binding references missing Occurrence ${occurrenceId}.`);
-  const parentRange = occurrenceParentRange(occurrence);
-  return sealTemporalMap({ stages: [{
-    target: structuredClone(program.domain),
-    source: structuredClone(occurrence.domain),
-    pieces: [{
-      target: parentRange,
-      sourceAtStart: structuredClone(occurrence.placement.active.start),
-      rate: { numerator: 1, denominator: 1 },
-    }],
-  }] });
-}
-
-/**
- * Close a Control binding as one exact Programme-to-Control relation.
- * Continuous terminals consume this Map; point evaluation is only one projection of it.
- */
-export function temporalControlBindingMap(
-  controlDomain: LocalTemporalDomain,
-  binding: TemporalControlBinding,
-  program: AudiovisualProgram,
-): TemporalMap {
-  assertTemporalControlBinding(controlDomain, binding, program);
-  switch (binding.kind) {
-    case "program": return identityTemporalMap(program.domain);
-    case "occurrence": return occurrenceControlMap(program, binding.occurrence);
-    case "source": {
-      const occurrence = program.occurrences[binding.occurrence]!;
-      const selection = occurrence.selections[binding.output]!;
-      assert(selection.kind === "signal",
-        `Control binding Source output ${binding.output} is constant and has no temporal Mapping.`);
-      return composeTemporalMaps(
-        occurrenceControlMap(program, binding.occurrence),
-        selection.mapping,
-      );
-    }
-    case "mapping": return structuredClone(binding.mapping);
-  }
+  assertTemporalMap(mapping);
+  const first = mapping.stages[0];
+  const last = mapping.stages.at(-1);
+  assert(first !== undefined && sameTemporalDomain(first.target, programDomain),
+    `Control Mapping must begin in Programme domain ${programDomain.id}.`);
+  assert(last !== undefined && sameTemporalDomain(last.source, controlDomain),
+    `Control Mapping must end in Control domain ${controlDomain.id}.`);
 }
 
 export function resolveTemporalControlPosition(
   controlDomain: LocalTemporalDomain,
-  binding: TemporalControlBinding,
-  program: AudiovisualProgram,
+  mapping: TemporalMap,
+  programDomain: LocalTemporalDomain,
   at: ExactTemporalValue,
 ): ExactTemporalValue | undefined {
-  const resolved = evaluateTemporalMap(
-    temporalControlBindingMap(controlDomain, binding, program),
-    at,
-    "after",
-  );
+  assertTemporalControlMapping(controlDomain, mapping, programDomain);
+  const resolved = evaluateTemporalMap(mapping, at, "after");
   return resolved?.position;
 }
 
@@ -268,14 +180,14 @@ export function evaluateSpatialMapControl(
   });
 }
 
-export function evaluateBoundSpatialMapControl(
+export function evaluateMappedSpatialMapControl(
   value: SpatialMapControl,
-  binding: TemporalControlBinding,
-  program: AudiovisualProgram,
+  mapping: TemporalMap,
+  programDomain: LocalTemporalDomain,
   at: ExactTemporalValue,
 ): SpatialMap | undefined {
   assertSpatialMapControl(value);
-  const position = resolveTemporalControlPosition(value.domain, binding, program, at);
+  const position = resolveTemporalControlPosition(value.domain, mapping, programDomain, at);
   return position === undefined ? undefined : evaluateSpatialMapControl(value, position);
 }
 

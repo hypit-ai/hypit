@@ -4,8 +4,9 @@ Persistent NLE workspace projection over an audiovisual Programme. The View owns
 membership and presentation order. Rectangle placement and extent are derived from the Programme's
 Occurrence, Placement and output Mapping; they are never copied into this package.
 
-The pure edit planners change only View membership. Semantic Move, Trim, Slip, Split, Roll and Ripple
-remain owned by `@hypit/audiovisual-edit` / `@hypit/audiovisual-author` and write the Programme endpoints.
+The pure edit planners change only this legacy Author View membership. It is not the persistent flat NLE
+Project: current Move, Trim, Slip, Split, Roll and Ripple operations are revisioned `@hypit/nle` transactions,
+and AVIR Programme values are disposable compiled results rather than editable endpoints.
 The declaration facet validates the Programme reference and lane structure while contributing zero Records
 and zero graph Components, so deleting a View cannot alter the compiled Programme.
 

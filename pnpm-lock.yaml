@@ -600,19 +600,6 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
-  packages/audiovisual-edit:
-    dependencies:
-      '@hypit/audiovisual':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual
-      '@hypit/temporal':
-        specifier: workspace:^0.1.1
-        version: link:../temporal
-    devDependencies:
-      '@hypit/spatial':
-        specifier: workspace:^0.1.1
-        version: link:../spatial
-
   packages/audiovisual-audio:
     dependencies:
       '@hypit/audio-program':
@@ -3000,9 +2987,6 @@ importers:
       '@hypit/audiovisual-author':
         specifier: workspace:^0.1.0
         version: link:../audiovisual-author
-      '@hypit/audiovisual-edit':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual-edit
       '@hypit/audiovisual-html':
         specifier: workspace:^0.1.0
         version: link:../audiovisual-html

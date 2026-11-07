@@ -86,7 +86,7 @@ const programme = sealAudiovisualProgram({
       temporalControls: {},
       temporalSupport: pointwiseOperatorTemporalSupport(["programme", "detector"]),
       program: { format: "project:sidechain@1", payload: {}, artifacts: [] },
-    }, inputs: { programme: "middle", detector: "voice" }, controlBindings: {} },
+    }, inputs: { programme: "middle", detector: "voice" }, controlMappings: {} },
   } },
 });
 
@@ -130,7 +130,7 @@ test("PreparedMedia and Audio Gain close through the real local terminal capabil
     audio: { root: "gain", nodes: {
       voice: { kind: "use", occurrence: occurrence.id, output: "audio" },
       gain: { kind: "apply", operator: audioGainOperator(0.5),
-        inputs: { signal: "voice" }, controlBindings: {} },
+        inputs: { signal: "voice" }, controlMappings: {} },
     } },
   });
   const program = lowerAudiovisualAudioProgram({
@@ -163,7 +163,12 @@ test("an occurrence-local Audio Control lowers as one Programme-to-Control Mappi
         kind: "apply",
         operator: audioGainControlOperator(control),
         inputs: { signal: "voice" },
-        controlBindings: { gain: { kind: "occurrence", occurrence: occurrence.id } },
+        controlMappings: { gain: sealTemporalMap({ stages: [{
+          target: programDomain,
+          source: occurrenceDomain,
+          pieces: [{ target: { start: at(0), end: at(1) }, sourceAtStart: at(0),
+            rate: { numerator: 1, denominator: 1 } }],
+        }] }) },
       },
     } },
   });

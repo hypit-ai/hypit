@@ -1,6 +1,7 @@
 import {
   assertOccurrence,
   assertProgramSource,
+  occurrenceParentRange,
   sealAudiovisualProgram,
   sealOccurrence,
 } from "@hypit/audiovisual";
@@ -12,7 +13,6 @@ import type {
   PictureGraph,
   PictureNode,
   ProgramSource,
-  TemporalControlBinding,
 } from "@hypit/audiovisual";
 import { assertLocalSpatialDomain, assertSpatialMap } from "@hypit/spatial/algebra";
 import {
@@ -22,17 +22,20 @@ import {
   assertTemporalMap,
   assertTemporalMapRegionSet,
   compareExactTemporalValues,
+  composeTemporalMaps,
   exactTemporalZero,
   identityTemporalMap,
   preimageTemporalMapRegions,
   resolveExactTemporalRelation,
   sealLocalTemporalDomain,
+  sealTemporalMap,
   subtractExactTemporalValues,
   uniqueTemporalMapRegionSetPoint,
 } from "@hypit/temporal/algebra";
 import type {
   ExactTemporalValue,
   LocalTemporalDomain,
+  TemporalMap,
 } from "@hypit/temporal/algebra";
 
 import type {
@@ -335,13 +338,29 @@ export function closeAudiovisualAuthorOccurrence(
   });
 }
 
-function compileControlBindings(
+function occurrenceControlMapping(
+  programDomain: LocalTemporalDomain,
+  occurrence: Occurrence,
+): TemporalMap {
+  return sealTemporalMap({ stages: [{
+    target: structuredClone(programDomain),
+    source: structuredClone(occurrence.domain),
+    pieces: [{
+      target: occurrenceParentRange(occurrence),
+      sourceAtStart: structuredClone(occurrence.placement.active.start),
+      rate: { numerator: 1, denominator: 1 },
+    }],
+  }] });
+}
+
+function compileControlMappings(
   authored: Readonly<Record<string, AudiovisualAuthorControlBinding>>,
   controls: Readonly<Record<string, LocalTemporalDomain>>,
   programDomain: LocalTemporalDomain,
+  occurrences: AudiovisualAuthorOccurrenceSet,
   bindings: AudiovisualAuthorBindings,
   label: string,
-): Readonly<Record<string, TemporalControlBinding>> {
+): Readonly<Record<string, TemporalMap>> {
   for (const name of Object.keys(controls)) {
     assert(Object.hasOwn(authored, name), `${label} is missing Control binding ${name}.`);
   }
@@ -350,29 +369,32 @@ function compileControlBindings(
     const controlDomain = Object.hasOwn(controls, name) ? controls[name] : undefined;
     assert(controlDomain !== undefined, `${label} binds undeclared Control ${name}.`);
     switch (binding.kind) {
-      case "program": return [name, { kind: "program" as const }];
-      case "occurrence": return [name, {
-        kind: "occurrence" as const,
-        occurrence: binding.occurrence,
-      }];
-      case "source": return [name, {
-        kind: "source" as const,
-        occurrence: binding.occurrence,
-        output: binding.output,
-      }];
-      case "relation": return [name, {
-        kind: "mapping" as const,
-        mapping: resolveExactTemporalRelation({
-          target: programDomain,
-          source: controlDomain,
-          spec: binding.relation,
-        }),
-      }];
-      case "mapping": return [name, {
-        kind: "mapping" as const,
-        mapping: resolveAudiovisualAuthorValue(binding.mapping, bindings,
-          (value) => assertTemporalMap(value), `${label} Control ${name} Mapping`),
-      }];
+      case "program": return [name, identityTemporalMap(programDomain)];
+      case "occurrence": {
+        const occurrence = occurrences[binding.occurrence];
+        assert(occurrence !== undefined,
+          `${label} Control ${name} references missing Occurrence ${binding.occurrence}.`);
+        return [name, occurrenceControlMapping(programDomain, occurrence)];
+      }
+      case "source": {
+        const occurrence = occurrences[binding.occurrence];
+        assert(occurrence !== undefined,
+          `${label} Control ${name} references missing Occurrence ${binding.occurrence}.`);
+        const selection = occurrence.selections[binding.output];
+        assert(selection?.kind === "signal",
+          `${label} Control ${name} Source output ${binding.output} has no temporal Mapping.`);
+        return [name, composeTemporalMaps(
+          occurrenceControlMapping(programDomain, occurrence),
+          selection.mapping,
+        )];
+      }
+      case "relation": return [name, resolveExactTemporalRelation({
+        target: programDomain,
+        source: controlDomain,
+        spec: binding.relation,
+      })];
+      case "mapping": return [name, resolveAudiovisualAuthorValue(binding.mapping, bindings,
+        (value) => assertTemporalMap(value), `${label} Control ${name} Mapping`)];
     }
   }));
 }
@@ -383,6 +405,7 @@ function compilePicture(
   authored: AudiovisualAuthorPictureProgram,
   bindings: AudiovisualAuthorBindings,
   programDomain: LocalTemporalDomain,
+  occurrences: AudiovisualAuthorOccurrenceSet,
 ): PictureGraph {
   const declarations = authored.bindings ?? {};
   const nodes: Record<string, PictureNode> = {};
@@ -452,8 +475,8 @@ function compilePicture(
           operator: structuredClone(operator),
           inputs: Object.fromEntries(sortedEntries(expression.inputs)
             .map(([name, input]) => [name, compileExpression(input)])),
-          controlBindings: compileControlBindings(expression.controlBindings,
-            operator.temporalControls, programDomain, bindings,
+          controlMappings: compileControlMappings(expression.controlBindings,
+            operator.temporalControls, programDomain, occurrences, bindings,
             `Author Picture Operator ${expression.operator}`),
         }, preferred);
       }
@@ -472,6 +495,7 @@ function compileAudio(
   authored: AudiovisualAuthorAudioProgram,
   bindings: AudiovisualAuthorBindings,
   programDomain: LocalTemporalDomain,
+  occurrences: AudiovisualAuthorOccurrenceSet,
 ): AudioGraph {
   const declarations = authored.bindings ?? {};
   const nodes: Record<string, AudioNode> = {};
@@ -530,8 +554,8 @@ function compileAudio(
           operator: structuredClone(operator),
           inputs: Object.fromEntries(sortedEntries(expression.inputs)
             .map(([name, input]) => [name, compileExpression(input)])),
-          controlBindings: compileControlBindings(expression.controlBindings,
-            operator.temporalControls, programDomain, bindings,
+          controlMappings: compileControlMappings(expression.controlBindings,
+            operator.temporalControls, programDomain, occurrences, bindings,
             `Author Audio Operator ${expression.operator}`),
         }, preferred);
       }
@@ -585,8 +609,8 @@ export function closeResolvedAudiovisualAuthorProgram(
       `Audiovisual Author Spec ${spec.id} Picture domain`,
     ) }),
     occurrences,
-    ...(spec.picture === undefined ? {} : { picture: compilePicture(spec.picture, bindings, domain) }),
-    ...(spec.audio === undefined ? {} : { audio: compileAudio(spec.audio, bindings, domain) }),
+    ...(spec.picture === undefined ? {} : { picture: compilePicture(spec.picture, bindings, domain, occurrences) }),
+    ...(spec.audio === undefined ? {} : { audio: compileAudio(spec.audio, bindings, domain, occurrences) }),
   });
 }
 

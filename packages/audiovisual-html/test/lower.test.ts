@@ -24,6 +24,7 @@ import {
 import { prepareMedia } from "@hypit/media";
 import {
   exactTemporalValue,
+  identityTemporalMap,
   sealLocalTemporalDomain,
   sealTemporalMap,
   type ExactTemporalValue,
@@ -134,12 +135,13 @@ function pictureProgram(operator = gradeOperator()) {
       redPlaced: { kind: "remap", input: "red",
         mapping: map(pictureSpace, red.source.outputs.picture!.spatialDomain!) },
       blue: { kind: "use", occurrence: "blue-use", output: "picture" },
-      blueMotion: { kind: "remap-control", input: "blue", control: motion, binding: { kind: "program" } },
+      blueMotion: { kind: "remap-control", input: "blue", control: motion,
+        controlMapping: identityTemporalMap(programTime) },
       blueCrop: { kind: "crop", input: "blueMotion", region: { x: 0, y: 0, width: 75, height: 100 } },
       graded: { kind: "apply", operator,
         inputs: { picture: "blueCrop" },
-        controlBindings: Object.fromEntries(Object.keys(operator.temporalControls)
-          .map((name) => [name, { kind: "program" as const }])) },
+        controlMappings: Object.fromEntries(Object.keys(operator.temporalControls)
+          .map((name) => [name, identityTemporalMap(programTime)])) },
       root: { kind: "over", inputs: ["redPlaced", "graded"] },
     } },
   });
@@ -249,7 +251,7 @@ test("PreparedMedia and an official Transition close through the real HTML termi
       transition: { kind: "apply", operator: {
         ...crossDissolveOperator(programTime),
       }, inputs: { outgoing: "redPlaced", incoming: "bluePlaced" },
-      controlBindings: { progress: { kind: "program" } } },
+      controlMappings: { progress: identityTemporalMap(programTime) } },
     } },
   });
   const document = lowerAudiovisualPictureProgramToHtmlProgram({

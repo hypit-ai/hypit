@@ -118,8 +118,9 @@ are explicit typed ports in the new path; they are not hidden in one mutable bin
 The package-owned Block declaration now exposes the same algebra rather than a reduced NLE dialect:
 Picture bindings cover use, transparent, over, apply, restrict, crop and typed Spatial Map remap; Audio
 bindings cover use, silence, mix, apply and restrict. Occurrence outputs own exact temporal relations and
-optional package-owned reconstruction. Control bindings may consume a future typed Temporal Map. These are
-declaration mappings to existing values, not new root transforms or parser concepts.
+optional package-owned reconstruction. Author Control bindings may consume a future typed Temporal Map or name
+an author-local coordinate source, but compilation always closes them to factual AVIR `controlMappings` before
+the Programme exists. These are declaration mappings to existing values, not new Core transforms or parser concepts.
 
 The integration deliberately adds no temporal-only `ExtentReference`, nullable Domain or partially filled
 Source. Its graph fixture proves that changing a generation request's duration preference leaves the

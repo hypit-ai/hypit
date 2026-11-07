@@ -225,12 +225,12 @@ test("an animated NLE Effect round-trips and lowers its moved Item to a factual 
   const initialNode = initial.program.picture?.nodes["clip:effect:animated"];
   assert.equal(initialNode?.kind, "apply");
   if (initialNode?.kind !== "apply") throw new Error("Animated Effect did not lower to apply.");
-  const initialBinding = initialNode.controlBindings.filter;
-  if (initialBinding?.kind !== "mapping") throw new Error("Animated Effect did not lower to a factual Mapping.");
+  const initialMapping = initialNode.controlMappings.filter;
+  if (initialMapping === undefined) throw new Error("Animated Effect did not lower to a factual Mapping.");
   assert.deepEqual(resolveTemporalControlPosition(
     initialNode.operator.temporalControls.filter!,
-    initialBinding,
-    initial.program,
+    initialMapping,
+    initial.program.domain,
     at(1, 2),
   ), at(1, 2));
 
@@ -240,12 +240,12 @@ test("an animated NLE Effect round-trips and lowers its moved Item to a factual 
   const movedProgram = lowerNleProjectToAudiovisual(moved, host).program;
   const movedNode = movedProgram.picture?.nodes["clip:effect:animated"];
   if (movedNode?.kind !== "apply") throw new Error("Moved animated Effect did not lower to apply.");
-  const movedBinding = movedNode.controlBindings.filter;
-  if (movedBinding?.kind !== "mapping") throw new Error("Moved Effect did not lower to a factual Mapping.");
+  const movedMapping = movedNode.controlMappings.filter;
+  if (movedMapping === undefined) throw new Error("Moved Effect did not lower to a factual Mapping.");
   assert.deepEqual(resolveTemporalControlPosition(
     movedNode.operator.temporalControls.filter!,
-    movedBinding,
-    movedProgram,
+    movedMapping,
+    movedProgram.domain,
     at(3, 2),
   ), at(1, 2));
 });

@@ -26,14 +26,13 @@ export {
 export {
   assertSpatialMapControl,
   assertTemporalControl,
-  assertTemporalControlBinding,
-  evaluateBoundSpatialMapControl,
+  assertTemporalControlMapping,
+  evaluateMappedSpatialMapControl,
   evaluateSpatialMapControl,
   evaluateTemporalControl,
   resolveTemporalControlPosition,
   sealSpatialMapControl,
   spatialMapControlDomains,
-  temporalControlBindingMap,
 } from "./control.js";
 export { evaluateAudiovisualProgramAt } from "./evaluation.js";
 export {

@@ -4,7 +4,7 @@ import type {
   AudioProgram,
   AudioProgramNode,
 } from "@hypit/audio-program";
-import { assertAudiovisualProgram, temporalControlBindingMap } from "@hypit/audiovisual";
+import { assertAudiovisualProgram } from "@hypit/audiovisual";
 import type { AudiovisualProgram } from "@hypit/audiovisual";
 import { compareExactTemporalValues } from "@hypit/temporal/algebra";
 
@@ -84,10 +84,7 @@ export function lowerAudiovisualAudioProgram(input: AudiovisualAudioLowering): A
           .map(([port, child]) => [port, { node: nodeId(child) }])),
         program: structuredClone(node.operator.program),
         temporalSupport: structuredClone(node.operator.temporalSupport),
-        controlMappings: Object.fromEntries(Object.entries(node.controlBindings).map(([name, binding]) => [
-          name,
-          temporalControlBindingMap(node.operator.temporalControls[name]!, binding, input.program),
-        ])),
+        controlMappings: structuredClone(node.controlMappings),
       };
     }
   });

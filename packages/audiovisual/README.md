@@ -3,9 +3,8 @@
 Low-level authored audiovisual relationships before Track, Film, Composition or renderer lowering.
 
 All exact-time imports come from the clock-free `@hypit/temporal/algebra` entry. This package cannot observe
-Timeline, Instant, Window, frame-projection or Studio APIs. Output sampling belongs to terminal adapters,
-author relations belong to `@hypit/audiovisual-author`, and transient edit policy belongs to
-`@hypit/audiovisual-edit`; no replacement global Timeline owner is required.
+Timeline, Instant, Window, frame-projection or Studio APIs. Output sampling belongs to terminal adapters and
+author relations belong to `@hypit/audiovisual-author`; no replacement global Timeline owner is required.
 All spatial relationships similarly come from `@hypit/spatial/algebra`; AVIR does not import Canvas, Frame,
 author declarations or the legacy source-to-picture placement type.
 
@@ -20,9 +19,9 @@ The first implemented slice owns one resolved use of a typed Source:
 - a selected signal may carry one package-owned `SignalReconstruction`. It says how this particular mapped read
   becomes a signal, while the Mapping remains the only target-to-source coordinate fact.
 
-The algebra exposes validation, evaluation and factual projections only. Move, trim, slip, roll, ripple and
-split are pure transformations owned by `@hypit/audiovisual-edit`; none requires a global Timeline, but their
-editing policy is not part of the factual Core.
+The algebra exposes validation, evaluation and factual projections only. An editable NLE Project owns move,
+trim, slip, roll, ripple and split policy and recompiles AVIR after each accepted transaction. AVIR is a closed,
+disposable result rather than a second editable document.
 
 This package accepts only resolved, positive finite domains wherever time exists. `constant` is a tagged absence
 of a time dimension, not an unknown or nullable Domain. Future graph values remain ordinary typed
@@ -55,9 +54,9 @@ Picture and Audio Operator values carry their package-owned id, ordered named po
 domains, a general temporal-support contract and one opaque execution programme (`format / payload / artifacts`).
 Support is declared per input as exact before/after distances, plus independent or sequential state, finite
 pre-roll, execution latency and tail. These fields describe signal dependency rather than motion-blur, denoise,
-reverb or another effect name. Every `apply` binds each declared
-Control exactly once. AVIR validates ports, bindings and the envelope but never switches on a format or effect
-name. A terminal either supports that programme format or rejects it at its capability boundary. Keeping the
+reverb or another effect name. Every `apply` binds each declared Control exactly once with a closed
+Programme-to-Control `TemporalMap`. AVIR validates ports, Maps and the envelope but never switches on a format
+or effect name. A terminal either supports that programme format or rejects it at its capability boundary. Keeping the
 programme on the typed Operator removes the old hidden resolver lookup and lets parameters such as transition
 easing or audio gain travel with the exact operation that owns them.
 
@@ -75,19 +74,12 @@ total sequence of exact, contiguous segments over one `LocalTemporalDomain`. The
 computes exact rational segment progress but does not interpret values, easing names or interpolation
 payloads. Its caller owns that policy.
 
-One Control use has an explicit temporal binding:
+Every Control use stores one already closed Programme-to-Control `TemporalMap`. Author conveniences such as
+program-, occurrence- or source-local coordinates must be compiled to that Map before AVIR exists; Core never
+looks up an Occurrence name to recover a Control clock. NLE lowering similarly derives a factual Map from the
+Item's direct frames.
 
-- `program` reads the current Programme-local position;
-- `occurrence` derives occurrence-local position from current Placement;
-- `source` additionally follows one output's Temporal Map; and
-- `mapping` uses an explicitly supplied Programme-to-Control Temporal Map.
-
-Consequently occurrence-local motion follows Move and ignores Slip, source-local motion follows Slip,
-and program-local motion remains at its absolute parent position. These are graph consequences rather
-than Studio preferences.
-
-`temporalControlBindingMap()` closes every binding as one exact Programme-to-Control `TemporalMap`.
-Point evaluation and continuous terminal execution are two consumers of that same relation: the former
+Point evaluation and continuous terminal execution are two consumers of the same stored relation: the former
 asks for one mapped position, while Audio lowering preserves the whole Map for sample-by-sample evaluation.
 There is no separate keyframe clock, fade coordinate system or Audio-only binding rule in Core.
 

@@ -16,7 +16,6 @@
     "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/audiovisual-audio": "workspace:^0.1.0",
     "@hypit/audiovisual-author": "workspace:^0.1.0",
-    "@hypit/audiovisual-edit": "workspace:^0.1.0",
     "@hypit/audiovisual-html": "workspace:^0.1.0",
     "@hypit/audiovisual-media": "workspace:^0.1.0",
     "@hypit/audio-gain": "workspace:^0.1.0",

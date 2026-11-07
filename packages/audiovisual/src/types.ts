@@ -78,13 +78,6 @@ export type TemporalControl<Value, Interpolation> = {
   readonly segments: readonly TemporalControlSegment<Value, Interpolation>[];
 };
 
-/** How one Control use obtains its position from the currently evaluated Programme position. */
-export type TemporalControlBinding =
-  | { readonly kind: "program" }
-  | { readonly kind: "occurrence"; readonly occurrence: string }
-  | { readonly kind: "source"; readonly occurrence: string; readonly output: string }
-  | { readonly kind: "mapping"; readonly mapping: TemporalMap };
-
 /** First value-owned interpolation policy; it linearly interpolates affine coefficients. */
 export type SpatialMapInterpolation = { readonly kind: "affine-linear" };
 export type SpatialMapControl = TemporalControl<SpatialMap, SpatialMapInterpolation>;
@@ -146,14 +139,15 @@ export type PictureNode =
       readonly kind: "remap-control";
       readonly input: PictureNodeId;
       readonly control: SpatialMapControl;
-      readonly binding: TemporalControlBinding;
+      /** Closed Programme-to-Control coordinate relation. */
+      readonly controlMapping: TemporalMap;
     }
   | { readonly kind: "over"; readonly inputs: readonly PictureNodeId[] }
   | {
       readonly kind: "apply";
       readonly operator: PictureOperator;
       readonly inputs: Readonly<Record<string, PictureNodeId>>;
-      readonly controlBindings: Readonly<Record<string, TemporalControlBinding>>;
+      readonly controlMappings: Readonly<Record<string, TemporalMap>>;
     };
 
 export type PictureGraph = {
@@ -182,7 +176,7 @@ export type AudioNode =
       readonly kind: "apply";
       readonly operator: AudioOperator;
       readonly inputs: Readonly<Record<string, AudioNodeId>>;
-      readonly controlBindings: Readonly<Record<string, TemporalControlBinding>>;
+      readonly controlMappings: Readonly<Record<string, TemporalMap>>;
     };
 
 export type AudioGraph = {

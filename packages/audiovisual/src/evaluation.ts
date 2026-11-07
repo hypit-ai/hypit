@@ -5,10 +5,10 @@ import {
   evaluateTemporalMap,
   subtractExactTemporalValues,
 } from "@hypit/temporal/algebra";
-import type { TemporalRange } from "@hypit/temporal/algebra";
+import type { TemporalMap, TemporalRange } from "@hypit/temporal/algebra";
 
 import { occurrenceParentRange } from "./occurrence.js";
-import { evaluateBoundSpatialMapControl, resolveTemporalControlPosition } from "./control.js";
+import { evaluateMappedSpatialMapControl, resolveTemporalControlPosition } from "./control.js";
 import { assertAudiovisualProgram } from "./program.js";
 import type {
   AudioGraph,
@@ -21,7 +21,6 @@ import type {
   EvaluatedSourceSample,
   Occurrence,
   PictureGraph,
-  TemporalControlBinding,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -35,13 +34,13 @@ function contains(range: TemporalRange, at: AudiovisualEvaluation["at"]): boolea
 
 function evaluateControlPositions(
   controls: Readonly<Record<string, import("@hypit/temporal/algebra").LocalTemporalDomain>>,
-  bindings: Readonly<Record<string, TemporalControlBinding>>,
+  mappings: Readonly<Record<string, TemporalMap>>,
   program: AudiovisualProgram,
   at: AudiovisualEvaluation["at"],
 ): Readonly<Record<string, AudiovisualEvaluation["at"]>> | undefined {
   const positions: Record<string, AudiovisualEvaluation["at"]> = {};
-  for (const [name, binding] of Object.entries(bindings)) {
-    const position = resolveTemporalControlPosition(controls[name]!, binding, program, at);
+  for (const [name, mapping] of Object.entries(mappings)) {
+    const position = resolveTemporalControlPosition(controls[name]!, mapping, program.domain, at);
     if (position === undefined) return undefined;
     positions[name] = position;
   }
@@ -120,7 +119,9 @@ function evaluatePicture(
         mapping: structuredClone(node.mapping),
       }; break;
       case "remap-control": {
-        const mapping = evaluateBoundSpatialMapControl(node.control, node.binding, program, at);
+        const mapping = evaluateMappedSpatialMapControl(
+          node.control, node.controlMapping, program.domain, at,
+        );
         nodes[id] = mapping === undefined ? { kind: "transparent" } : {
           kind: "remap",
           input: node.input,
@@ -131,7 +132,7 @@ function evaluatePicture(
       case "over": nodes[id] = { kind: "over", inputs: [...node.inputs] }; break;
       case "apply": {
         const positions = evaluateControlPositions(
-          node.operator.temporalControls, node.controlBindings, program, at,
+          node.operator.temporalControls, node.controlMappings, program, at,
         );
         nodes[id] = positions === undefined ? { kind: "transparent" } : {
           kind: "apply",
@@ -168,7 +169,7 @@ function evaluateAudio(
       case "mix": nodes[id] = { kind: "mix", inputs: [...node.inputs] }; break;
       case "apply": {
         const positions = evaluateControlPositions(
-          node.operator.temporalControls, node.controlBindings, program, at,
+          node.operator.temporalControls, node.controlMappings, program, at,
         );
         nodes[id] = positions === undefined ? { kind: "silence" } : {
           kind: "apply",

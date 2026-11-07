@@ -12,7 +12,7 @@ import {
 import { pictureType } from "./identity.js";
 import {
   assertSpatialMapControl,
-  assertTemporalControlBinding,
+  assertTemporalControlMapping,
   spatialMapControlDomains,
 } from "./control.js";
 import { assertPictureOperator } from "./operator.js";
@@ -78,7 +78,7 @@ function assertNode(id: PictureNodeId, node: PictureNode, program: AudiovisualPr
     case "remap": assertSpatialMap(node.mapping); return;
     case "remap-control":
       assertSpatialMapControl(node.control);
-      assertTemporalControlBinding(node.control.domain, node.binding, program);
+      assertTemporalControlMapping(node.control.domain, node.controlMapping, program.domain);
       return;
     case "over":
       assert(node.inputs.length > 0, `Picture over ${id} must have at least one ordered input.`);
@@ -93,16 +93,16 @@ function assertNode(id: PictureNodeId, node: PictureNode, program: AudiovisualPr
         assert(Object.hasOwn(node.inputs, name), `Picture apply ${id} is missing input ${name}.`);
       }
       const expectedControls = new Set(Object.keys(node.operator.temporalControls));
-      for (const name of Object.keys(node.controlBindings)) {
+      for (const name of Object.keys(node.controlMappings)) {
         assert(expectedControls.has(name), `Picture apply ${id} supplies unknown temporal Control ${name}.`);
       }
       for (const name of expectedControls) {
-        assert(Object.hasOwn(node.controlBindings, name),
-          `Picture apply ${id} is missing temporal Control binding ${name}.`);
-        assertTemporalControlBinding(
+        assert(Object.hasOwn(node.controlMappings, name),
+          `Picture apply ${id} is missing temporal Control Mapping ${name}.`);
+        assertTemporalControlMapping(
           node.operator.temporalControls[name]!,
-          node.controlBindings[name]!,
-          program,
+          node.controlMappings[name]!,
+          program.domain,
         );
       }
     }
