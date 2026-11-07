@@ -17,6 +17,7 @@ import {
   type ProgramSource,
 } from "@hypit/audiovisual";
 import { programSourceFromPreparedMedia } from "@hypit/audiovisual-media";
+import { verifyPreparedMedia } from "@hypit/media";
 import { sameType } from "@hypit/protocol";
 import { compareExactTemporalValues, sealLocalTemporalDomain, sealTemporalMap } from "@hypit/temporal/algebra";
 import { exactTemporalValueFromFrames } from "@hypit/temporal/sampling";
@@ -150,7 +151,9 @@ function sourceForItem(
       ...(child.audio === undefined ? {} : { audioOutput: "audio" }),
     };
   }
-  const media = findNleMedia(project, item.media).prepared;
+  const declaration = findNleMedia(project, item.media);
+  const media = host.resolveMedia(declaration, { project, track, item });
+  verifyPreparedMedia(media);
   const source = programSourceFromPreparedMedia(media);
   const pictureOutput = source.outputs.picture === undefined ? undefined : "picture";
   return {

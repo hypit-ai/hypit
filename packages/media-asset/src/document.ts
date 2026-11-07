@@ -9,10 +9,12 @@ import type {
   MediaAssetDocument,
   MediaAssetFile,
   MediaAssetFileResolver,
+  MediaAssetReference,
+  MediaInterpretation,
   MediaRepresentationBinding,
   MediaRepresentationDeclaration,
-  PreparedMediaAsset,
-  PreparedMediaFileValue,
+  ResolvedMedia,
+  ResolvedMediaAsset,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -51,6 +53,12 @@ function portablePath(value: unknown, subject: string): asserts value is string 
     `${subject} must not contain empty, current or parent segments.`);
 }
 
+export function verifyMediaAssetReference(value: unknown): asserts value is MediaAssetReference {
+  const reference = object(value, "MediaAssetReference");
+  exactFields(reference, ["path"], "MediaAssetReference");
+  portablePath(reference.path, "MediaAssetReference.path");
+}
+
 function verifyFile(value: unknown, subject: string): asserts value is MediaAssetFile {
   const item = object(value, subject);
   exactFields(item, ["path", "mediaType"], subject);
@@ -65,7 +73,7 @@ function verifyType(value: unknown, subject: string): void {
   exactFields(object(item.module, `${subject}.module`), ["name", "version"], `${subject}.module`);
 }
 
-function preparedWithValidationSource(value: PreparedMediaFileValue) {
+function interpretationWithValidationSource(value: MediaInterpretation) {
   return {
     ...value,
     source: {
@@ -79,7 +87,7 @@ function preparedWithValidationSource(value: PreparedMediaFileValue) {
 
 function verifyBinding(
   value: unknown,
-  prepared: PreparedMediaFileValue,
+  interpretation: MediaInterpretation,
   subject: string,
 ): asserts value is MediaRepresentationBinding {
   const item = object(value, subject);
@@ -91,32 +99,32 @@ function verifyBinding(
     const temporal = object(item.temporal, `${subject}.temporal`);
     exactFields(temporal, ["mapToMedia"], `${subject}.temporal`);
     assertTemporalMap(temporal.mapToMedia as never);
-    assert(prepared.domain !== undefined, `${subject}.temporal requires temporal PreparedMedia.`);
+    assert(interpretation.domain !== undefined, `${subject}.temporal requires temporal media.`);
     const source = (temporal.mapToMedia as import("@hypit/temporal/algebra").TemporalMap).stages.at(-1)!.source;
-    assert(source.id === prepared.domain.id
-      && compareExactTemporalValues(source.duration, prepared.domain.duration) === 0,
-    `${subject}.temporal must end in PreparedMedia domain ${prepared.domain.id}.`);
+    assert(source.id === interpretation.domain.id
+      && compareExactTemporalValues(source.duration, interpretation.domain.duration) === 0,
+    `${subject}.temporal must end in media domain ${interpretation.domain.id}.`);
   }
 
   if (item.picture !== undefined) {
     const picture = object(item.picture, `${subject}.picture`);
     exactFields(picture, ["member", "space"], `${subject}.picture`);
-    assert(picture.member === "picture" && picture.space === "prepared-display-normalized",
+    assert(picture.member === "picture" && picture.space === "media-display-normalized",
       `${subject}.picture is invalid.`);
-    assert(prepared.picture !== undefined, `${subject}.picture requires a PreparedMedia picture member.`);
+    assert(interpretation.picture !== undefined, `${subject}.picture requires a media picture member.`);
   }
 
   if (item.audio !== undefined) {
     const audio = object(item.audio, `${subject}.audio`);
     exactFields(audio, ["member"], `${subject}.audio`);
     assert(audio.member === "audio", `${subject}.audio is invalid.`);
-    assert(prepared.audio !== undefined, `${subject}.audio requires a PreparedMedia audio member.`);
+    assert(interpretation.audio !== undefined, `${subject}.audio requires a media audio member.`);
   }
 }
 
 function verifyRepresentation(
   value: unknown,
-  prepared: PreparedMediaFileValue,
+  interpretation: MediaInterpretation,
   subject: string,
 ): asserts value is MediaRepresentationDeclaration {
   const item = object(value, subject);
@@ -129,7 +137,7 @@ function verifyRepresentation(
     identity(name, `${subject}.resources name`);
     verifyFile(file, `${subject}.resources.${name}`);
   }
-  verifyBinding(item.binding, prepared, `${subject}.binding`);
+  verifyBinding(item.binding, interpretation, `${subject}.binding`);
 }
 
 export function verifyMediaAssetDocument(value: unknown): asserts value is MediaAssetDocument {
@@ -139,16 +147,18 @@ export function verifyMediaAssetDocument(value: unknown): asserts value is Media
   identity(document.id, "MediaAssetDocument.id");
 
   const media = object(document.media, "MediaAssetDocument.media");
-  exactFields(media, ["file", "prepared"], "MediaAssetDocument.media");
+  exactFields(media, ["file", "interpretation"], "MediaAssetDocument.media");
   verifyFile(media.file, "MediaAssetDocument.media.file");
-  const prepared = object(media.prepared, "MediaAssetDocument.media.prepared") as PreparedMediaFileValue;
-  assert(!("source" in prepared), "MediaAssetDocument.media.prepared must not contain an execution BlobRef.");
-  verifyPreparedMedia(preparedWithValidationSource(prepared));
+  const interpretation = object(media.interpretation,
+    "MediaAssetDocument.media.interpretation") as MediaInterpretation;
+  assert(!("source" in interpretation),
+    "MediaAssetDocument.media.interpretation must not contain an execution BlobRef.");
+  verifyPreparedMedia(interpretationWithValidationSource(interpretation));
 
   assert(Array.isArray(document.representations), "MediaAssetDocument.representations must be an array.");
   const representationIds = new Set<string>();
   document.representations.forEach((representation, index) => {
-    verifyRepresentation(representation, prepared, `MediaAssetDocument.representations[${index}]`);
+    verifyRepresentation(representation, interpretation, `MediaAssetDocument.representations[${index}]`);
     assert(!representationIds.has(representation.id),
       `MediaAssetDocument repeats representation ${representation.id}.`);
     representationIds.add(representation.id);
@@ -185,7 +195,7 @@ async function resolveFile(
 export async function resolveMediaAssetDocument(
   value: MediaAssetDocument,
   resolver: MediaAssetFileResolver,
-): Promise<PreparedMediaAsset> {
+): Promise<ResolvedMediaAsset> {
   const document = sealMediaAssetDocument(value);
   const [source, representations] = await Promise.all([
     resolveFile(document.media.file, resolver, { kind: "media" }),
@@ -215,11 +225,23 @@ export async function resolveMediaAssetDocument(
       };
     })),
   ]);
-  const media = { ...document.media.prepared, source };
+  const media = { ...document.media.interpretation, source } as ResolvedMedia;
   verifyPreparedMedia(media);
   return {
     id: document.id,
     media: structuredClone(media),
     representations: structuredClone(representations),
   };
+}
+
+/** Resolve only the primary media file. Optional representations remain unopened. */
+export async function resolveMediaAssetMedia(
+  value: MediaAssetDocument,
+  resolver: MediaAssetFileResolver,
+): Promise<ResolvedMedia> {
+  const document = sealMediaAssetDocument(value);
+  const source = await resolveFile(document.media.file, resolver, { kind: "media" });
+  const media = { ...document.media.interpretation, source } as ResolvedMedia;
+  verifyPreparedMedia(media);
+  return structuredClone(media);
 }

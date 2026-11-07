@@ -9,7 +9,7 @@ import {
   applyNleTransaction,
   createComponentMaterialization,
   createNleProject,
-  createPreparedMediaMaterialization,
+  createMediaAssetMaterialization,
   findNleItem,
   parseNleProject,
   serializeNleProject,
@@ -22,6 +22,8 @@ const fullPicture: NlePictureAppearance = {
   layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" },
   effects: [],
 };
+
+const interviewAsset = { path: "./media/interview.media.json" } as const;
 
 function prepared() {
   const timestamp = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } });
@@ -96,7 +98,7 @@ test("one revision stores Media and Component Items directly", () => {
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const edited = applyNleTransaction(project, { revision: 0, commands: [
-    { kind: "media.add", media: { id: "interview", name: "Interview", prepared: prepared() } },
+    { kind: "media.add", media: { id: "interview", name: "Interview", asset: interviewAsset } },
     { kind: "track.add", track: { id: "picture-main", name: "Picture", kind: "picture",
       locked: false, muted: false, items: [] } },
     { kind: "item.add", track: "picture-main", item: mediaItem },
@@ -108,7 +110,10 @@ test("one revision stores Media and Component Items directly", () => {
   assert.equal(project.tracks.length, 0);
   assert.equal(edited.revision, 1);
   assert.deepEqual(edited.tracks[0]?.items.map((item) => item.kind), ["media", "component", "component"]);
-  assert.deepEqual(parseNleProject(serializeNleProject(edited)), edited);
+  const text = serializeNleProject(edited);
+  assert.match(text, /media\/interview\.media\.json/u);
+  assert.doesNotMatch(text, /res_nle:interview|interpretation|BlobRef/u);
+  assert.deepEqual(parseNleProject(text), edited);
 });
 
 test("move, trim and split are atomic direct NLE edits", () => {
@@ -116,7 +121,7 @@ test("move, trim and split are atomic direct NLE edits", () => {
     id: "edit-proof", name: "Edit proof", frameRate: { numerator: 2, denominator: 1 },
     canvas: { width: 100, height: 100, clearColor: "black" },
   }), { revision: 0, commands: [
-    { kind: "media.add", media: { id: "interview", name: "Interview", prepared: prepared() } },
+    { kind: "media.add", media: { id: "interview", name: "Interview", asset: interviewAsset } },
     { kind: "track.add", track: { id: "picture-main", name: "Picture", kind: "picture",
       locked: false, muted: false, items: [mediaItem, componentItem] } },
   ] });
@@ -141,7 +146,7 @@ test("move, trim and split are atomic direct NLE edits", () => {
   assert.throws(() => applyNleTransaction(edited, { revision: 1, commands: [] }), NleRevisionConflict);
 });
 
-test("prepared Media and package Components materialize as inspectable NLE transactions", () => {
+test("Media Asset files and package Components materialize as inspectable NLE transactions", () => {
   const empty = createNleProject({
     id: "materialization", name: "Materialization", frameRate: { numerator: 2, denominator: 1 },
     canvas: { width: 100, height: 100, clearColor: "#000000" },
@@ -150,8 +155,9 @@ test("prepared Media and package Components materialize as inspectable NLE trans
     kind: "track.add",
     track: { id: "main", name: "Main", kind: "picture", locked: false, muted: false, items: [] },
   }] });
-  const mediaTransaction = createPreparedMediaMaterialization(withTrack, {
-    mediaId: "interview", itemId: "interview-use", name: "Interview", prepared: prepared(),
+  const mediaTransaction = createMediaAssetMaterialization(withTrack, {
+    mediaId: "interview", itemId: "interview-use", name: "Interview",
+    asset: interviewAsset, resolved: prepared(),
     track: "main", atFrame: 2, picture: fullPicture,
   });
   assert.deepEqual(mediaTransaction.commands.map((command) => command.kind), ["media.add", "item.add"]);

@@ -10,12 +10,20 @@ import type {
   NleLoweringHost,
   NleMatte,
   NleMatteLoweringContext,
+  NleMedia,
+  NleMediaLoweringContext,
+  NleResolvedMedia,
   NlePackageSymbol,
   NleResolvedEffect,
   NleResolvedItemSource,
   NleTransition,
   NleTransitionLoweringContext,
 } from "./types.js";
+
+export type NleMediaResolver = (
+  media: NleMedia,
+  context: NleMediaLoweringContext,
+) => NleResolvedMedia;
 
 export const nlePackageFacetAbi = "hypit.nle-package@1";
 
@@ -114,7 +122,10 @@ export function nlePackagesFromFacets(facets: readonly Facet[]): readonly NlePac
 }
 
 /** Assemble only explicitly selected installed package contributions. Missing and duplicate symbols fail. */
-export function createNleLoweringHost(packages: readonly NlePackage[]): NleLoweringHost {
+export function createNleLoweringHost(
+  packages: readonly NlePackage[],
+  resolveMedia?: NleMediaResolver,
+): NleLoweringHost {
   const components = new Map<string, NleComponentResolver>();
   const effects = new Map<string, NleEffectResolver>();
   const audioEffects = new Map<string, NleAudioEffectResolver>();
@@ -135,6 +146,9 @@ export function createNleLoweringHost(packages: readonly NlePackage[]): NleLower
     for (const resolver of value.mattes ?? []) add(mattes, nlePackageSymbolKey(resolver.matte), resolver);
   }
   return {
+    resolveMedia: resolveMedia ?? ((media) => {
+      throw new Error(`NLE Media ${media.id} has not been resolved by the Host.`);
+    }),
     resolveComponent: (item, context) => {
       const key = nlePackageSymbolKey(item.component);
       const resolver = components.get(key);
@@ -168,6 +182,9 @@ export function createNleLoweringHost(packages: readonly NlePackage[]): NleLower
   };
 }
 
-export function createNleLoweringHostFromFacets(facets: readonly Facet[]): NleLoweringHost {
-  return createNleLoweringHost(nlePackagesFromFacets(facets));
+export function createNleLoweringHostFromFacets(
+  facets: readonly Facet[],
+  resolveMedia?: NleMediaResolver,
+): NleLoweringHost {
+  return createNleLoweringHost(nlePackagesFromFacets(facets), resolveMedia);
 }

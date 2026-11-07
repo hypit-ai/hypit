@@ -1,11 +1,11 @@
 # `@hypit/media-asset`
 
-Portable, file-first import boundary for one prepared media file and zero or more package-owned media
+Portable, file-first import boundary for one interpreted media file and zero or more package-owned media
 representations.
 
 `hypit.media-asset@1` is a strict JSON manifest. It stores a relative media file, the already resolved
-`PreparedMedia` facts that must not be guessed again, and explicit representation document references. The
-manifest is the persistent authority; `PreparedMediaAsset` is only its validated in-memory projection after a
+`MediaInterpretation` facts that must not be guessed again, and explicit representation document references. The
+manifest is the persistent authority; `ResolvedMediaAsset` is only its validated in-memory projection after a
 Host resolves files to transient `BlobRef`s.
 
 A representation is not synonymous with analysis. Speech transcripts, object tracks, masks, depth, camera
@@ -14,10 +14,10 @@ Analyzer. Media Asset loading never starts an Analyzer, Provider, Build or Runti
 
 Core owns only three optional bindings:
 
-- `temporal.mapToMedia` maps representation-local target time to the PreparedMedia local source domain;
-- `picture` states that a package interprets coordinates in normalized PreparedMedia display space, after
+- `temporal.mapToMedia` maps representation-local target time to the media-local source domain;
+- `picture` states that a package interprets coordinates in normalized media display space, after
   sample-aspect-ratio and rotation interpretation;
-- `audio` states that a representation describes the selected PreparedMedia audio member.
+- `audio` states that a representation describes the selected media audio member.
 
 The exact representation document and any dense companion files remain owned by the referenced `TypeRef`'s
 package. Every dense or auxiliary file is still declared explicitly in the Representation's `resources` map;
@@ -29,15 +29,20 @@ registry, content hash or hidden database participates in the relation. A packag
 ordinary dense files such as mask video or model weights.
 
 `resolveMediaAssetDocument()` receives file resolution as a callback. It checks MIME agreement and returns a
-`PreparedMediaAsset`, but deliberately does not open or interpret representation documents. Editor overlays,
+`ResolvedMediaAsset`, but deliberately does not open or interpret representation documents. Editor overlays,
 inspectors, Analyzers and NLE materializers can therefore be contributed independently without extending Media
 Asset Core.
+
+`resolveMediaAssetMedia()` is the narrow playback path: it resolves only the primary media file and leaves every
+optional Representation document and dense resource cold. Resolution is an explicit Host action, not a persistent
+`prepared/unprepared` state.
 
 Packages contribute readers through the `hypit.media-representation@1` facet. The process-local Host dispatches
 by exact `TypeRef`, rejects duplicate owners and supplies only the selected asset, Representation and a byte-read
 capability. This is the backend assembly seam for format packages; it is not a Studio UI contract and it does not
 run analysis.
 
-`@hypit/media-asset/node` adds `readMediaAssetDocumentFile()` and `resolveMediaAssetDocumentFile()`. The latter
+`@hypit/media-asset/node` adds `readMediaAssetDocumentFile()`, `resolveMediaAssetMediaFile()` and
+`resolveMediaAssetDocumentFile()`. The latter
 anchors every declaration to the manifest directory and hands each absolute file to a Host callback. It does not
 select a ResourceStore or retain another copy of the asset.

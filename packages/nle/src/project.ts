@@ -1,4 +1,3 @@
-import { verifyPreparedMedia } from "@hypit/media";
 import { canonicalize, isModuleRef } from "@hypit/protocol";
 
 import type {
@@ -19,6 +18,17 @@ function assert(condition: unknown, message: string): asserts condition {
 
 function identity(value: string, label: string): void {
   assert(/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(value), `${label} is invalid.`);
+}
+
+function assertMediaAssetReference(value: NleMedia["asset"], label: string): void {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value), `${label} must be an object.`);
+  assert(Object.keys(value).length === 1 && typeof value.path === "string" && value.path.length > 0,
+    `${label} must contain only a non-empty path.`);
+  assert(!value.path.includes("\\") && !value.path.startsWith("/") && !/^[A-Za-z]:/u.test(value.path),
+    `${label} must use a portable relative path.`);
+  const relative = value.path.startsWith("./") ? value.path.slice(2) : value.path;
+  assert(relative.length > 0 && relative.split("/").every((part) => part.length > 0 && part !== "." && part !== ".."),
+    `${label} must not contain empty, current or parent segments.`);
 }
 
 function nonNegativeFrame(value: number, label: string): void {
@@ -151,14 +161,10 @@ function assertNleProjectValue(value: NleProject, ancestors: Set<object>): void 
     assert(!identities.has(id), `${label} ${id} is duplicated in the NLE Project.`);
     identities.add(id);
   };
-  const preparedIds = new Set<string>();
   for (const media of value.media) {
     addIdentity(media.id, "NLE Media id");
     assert(media.name.trim().length > 0, `NLE Media ${media.id} name is empty.`);
-    verifyPreparedMedia(media.prepared);
-    assert(!preparedIds.has(media.prepared.id),
-      `Prepared Media ${media.prepared.id} is registered more than once in the NLE Project.`);
-    preparedIds.add(media.prepared.id);
+    assertMediaAssetReference(media.asset, `NLE Media ${media.id} asset`);
   }
   const mediaIds = new Set(value.media.map((entry) => entry.id));
   const items = new Map<string, { readonly track: NleTrack; readonly item: NleItem; readonly index: number }>();

@@ -5,17 +5,17 @@ import {
   createMediaRepresentationFacet,
   createMediaRepresentationHostFromFacets,
 } from "../src/index.js";
-import type { PreparedMediaAsset } from "../src/index.js";
+import type { ResolvedMediaAsset } from "../src/index.js";
 
 const speechType = { module: { name: "@example/speech", version: "1" }, name: "Transcript" } as const;
 const objectsType = { module: { name: "@example/object-tracks", version: "1" }, name: "TrackedObjects" } as const;
 
-function asset(): PreparedMediaAsset {
+function asset(): ResolvedMediaAsset {
   const source = { kind: "blob" as const, resource: "res_media" as const, size: 1, mediaType: "video/mp4" };
   return {
     id: "interview",
     media: {
-      id: "interview-prepared",
+      id: "interview-media",
       source,
       picture: {
         kind: "constant",
@@ -35,7 +35,7 @@ function asset(): PreparedMediaAsset {
       type: speechType,
       document: { kind: "blob", resource: "res_speech" as const, size: 6, mediaType: "application/json" },
       resources: {},
-      binding: { picture: { member: "picture", space: "prepared-display-normalized" } },
+      binding: { picture: { member: "picture", space: "media-display-normalized" } },
     }, {
       id: "objects",
       type: objectsType,
@@ -43,7 +43,7 @@ function asset(): PreparedMediaAsset {
       resources: {
         masks: { kind: "blob", resource: "res_masks" as const, size: 5, mediaType: "video/x-matroska" },
       },
-      binding: { picture: { member: "picture", space: "prepared-display-normalized" } },
+      binding: { picture: { member: "picture", space: "media-display-normalized" } },
     }],
   };
 }

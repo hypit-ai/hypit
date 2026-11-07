@@ -8,20 +8,28 @@ export type MediaAssetFile = {
   readonly mediaType: string;
 };
 
-/** PreparedMedia facts whose byte source remains a file until a Host loads the document. */
-export type PreparedMediaFileValue = Omit<PreparedMedia, "source">;
+/** Stable interpretation facts whose byte source remains a file until a Host opens the asset. */
+export type MediaInterpretation = Omit<PreparedMedia, "source">;
+
+/** Runtime projection of one file-backed media interpretation. Never serialized. */
+export type ResolvedMedia = PreparedMedia;
+
+/** Portable reference to a Media Asset document, relative to the file containing the reference. */
+export type MediaAssetReference = {
+  readonly path: string;
+};
 
 export type MediaRepresentationBinding = {
-  /** Representation-local target time to PreparedMedia-local source time. */
+  /** Representation-local target time to the media-local source time. */
   readonly temporal?: {
     readonly mapToMedia: TemporalMap;
   };
-  /** Coordinates are normalized after PreparedMedia display interpretation. */
+  /** Coordinates are normalized after the media display interpretation. */
   readonly picture?: {
     readonly member: "picture";
-    readonly space: "prepared-display-normalized";
+    readonly space: "media-display-normalized";
   };
-  /** The representation describes the selected PreparedMedia audio member. */
+  /** The representation describes the selected media audio member. */
   readonly audio?: {
     readonly member: "audio";
   };
@@ -37,27 +45,27 @@ export type MediaRepresentationDeclaration = {
   readonly binding: MediaRepresentationBinding;
 };
 
-/** Portable authority for one prepared file plus independently owned representations. */
+/** Portable authority for one media file plus independently owned representations. */
 export type MediaAssetDocument = {
   readonly format: "hypit.media-asset@1";
   readonly id: string;
   readonly media: {
     readonly file: MediaAssetFile;
-    readonly prepared: PreparedMediaFileValue;
+    readonly interpretation: MediaInterpretation;
   };
   readonly representations: readonly MediaRepresentationDeclaration[];
 };
 
-export type PreparedMediaRepresentation = Omit<MediaRepresentationDeclaration, "document" | "resources"> & {
+export type ResolvedMediaRepresentation = Omit<MediaRepresentationDeclaration, "document" | "resources"> & {
   readonly document: BlobRef;
   readonly resources: Readonly<Record<string, BlobRef>>;
 };
 
 /** Ephemeral, validated projection of a MediaAssetDocument into Host byte resources. */
-export type PreparedMediaAsset = {
+export type ResolvedMediaAsset = {
   readonly id: string;
-  readonly media: PreparedMedia;
-  readonly representations: readonly PreparedMediaRepresentation[];
+  readonly media: ResolvedMedia;
+  readonly representations: readonly ResolvedMediaRepresentation[];
 };
 
 export type MediaAssetFileResolution =

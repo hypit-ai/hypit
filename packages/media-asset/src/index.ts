@@ -1,9 +1,11 @@
 export {
   parseMediaAssetDocument,
+  resolveMediaAssetMedia,
   resolveMediaAssetDocument,
   sealMediaAssetDocument,
   serializeMediaAssetDocument,
   verifyMediaAssetDocument,
+  verifyMediaAssetReference,
 } from "./document.js";
 export {
   createMediaRepresentationFacet,

@@ -1,6 +1,5 @@
 import { programSourceFromPreparedMedia } from "@hypit/audiovisual-media";
 import { verifyPreparedMedia } from "@hypit/media";
-import type { PreparedMedia } from "@hypit/media";
 import type { CanonicalValue } from "@hypit/protocol";
 import { resolveTemporalBoundary } from "@hypit/temporal/sampling";
 
@@ -14,6 +13,8 @@ import type {
   NlePictureAppearance,
   NlePictureLayout,
   NleProject,
+  NleMediaAssetReference,
+  NleResolvedMedia,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -25,39 +26,42 @@ function fullCanvas(project: NleProject): NlePictureLayout {
 }
 
 /** NLE-owned import transaction; applying it does not retain a live dependency on the producer. */
-export function createPreparedMediaMaterialization(project: NleProject, input: {
+export function createMediaAssetMaterialization(project: NleProject, input: {
   readonly mediaId: string;
   readonly itemId: string;
   readonly name: string;
-  readonly prepared: PreparedMedia;
+  /** Persistent project reference. The NLE never embeds runtime BlobRefs. */
+  readonly asset: NleMediaAssetReference;
+  /** Ephemeral import-time value used only to derive and validate the direct edit. */
+  readonly resolved: NleResolvedMedia;
   readonly track: string;
   readonly atFrame: number;
   readonly durationFrames?: number;
-  /** Defaults to an empty Audio effect chain when the prepared media has Audio; false excludes it. */
+  /** Defaults to an empty Audio effect chain when the resolved media has Audio; false excludes it. */
   readonly audio?: Partial<NleAudioAppearance> | false;
   readonly picture?: Partial<NlePictureAppearance> & { readonly layout?: NlePictureLayout };
 }): NleTransaction {
   assertNleProject(project);
-  verifyPreparedMedia(input.prepared);
+  verifyPreparedMedia(input.resolved);
   const track = findNleTrack(project, input.track);
-  const source = programSourceFromPreparedMedia(input.prepared);
-  const durationFrames = input.durationFrames ?? (input.prepared.domain === undefined
+  const source = programSourceFromPreparedMedia(input.resolved);
+  const durationFrames = input.durationFrames ?? (input.resolved.domain === undefined
     ? undefined
-    : resolveTemporalBoundary(input.prepared.domain.duration, { frameRate: project.frameRate }, "cover"));
+    : resolveTemporalBoundary(input.resolved.domain.duration, { frameRate: project.frameRate }, "cover"));
   assert(durationFrames !== undefined,
     `Constant NLE Media ${input.mediaId} requires an explicit occurrence duration.`);
   const includeAudio = input.audio !== false && source.outputs.audio !== undefined;
   assert(input.audio === undefined || input.audio === false || source.outputs.audio !== undefined,
-    `Prepared Media ${input.prepared.id} cannot include missing Audio.`);
+    `Resolved Media ${input.resolved.id} cannot include missing Audio.`);
   assert(track.kind !== "picture" || source.outputs.picture !== undefined,
-    `Prepared Media ${input.prepared.id} has no Picture for Track ${track.id}.`);
+    `Resolved Media ${input.resolved.id} has no Picture for Track ${track.id}.`);
   assert(track.kind !== "audio" || source.outputs.audio !== undefined,
-    `Prepared Media ${input.prepared.id} has no Audio for Track ${track.id}.`);
+    `Resolved Media ${input.resolved.id} has no Audio for Track ${track.id}.`);
   return {
     revision: project.revision,
     commands: [{
       kind: "media.add",
-      media: { id: input.mediaId, name: input.name, prepared: structuredClone(input.prepared) },
+      media: { id: input.mediaId, name: input.name, asset: structuredClone(input.asset) },
     }, {
       kind: "item.add",
       track: track.id,

@@ -19,10 +19,18 @@ export type NlePackageSymbol = {
   readonly name: string;
 };
 
+export type NleMediaAssetReference = {
+  readonly path: string;
+};
+
+/** Ephemeral media value supplied by the Host; it is never serialized in an NLE Project. */
+export type NleResolvedMedia = PreparedMedia;
+
 export type NleMedia = {
   readonly id: string;
   readonly name: string;
-  readonly prepared: PreparedMedia;
+  /** Portable Media Asset document path, relative to the NLE Project file. */
+  readonly asset: NleMediaAssetReference;
 };
 
 export type NlePictureLayout = {
@@ -154,6 +162,10 @@ export type NleLoweringContext = {
   readonly track: NleTrack;
 };
 
+export type NleMediaLoweringContext = NleLoweringContext & {
+  readonly item: NleMediaItem;
+};
+
 export type NleTransitionLoweringContext = NleLoweringContext & {
   readonly outgoing: NleItem;
   readonly incoming: NleItem;
@@ -167,6 +179,8 @@ export type NleMatteLoweringContext = NleLoweringContext & {
 
 /** Package behavior is selected by the Host; it is not serialized into the NLE project. */
 export type NleLoweringHost = {
+  /** Resolve a file-backed asset previously opened by the Host. This seam performs no persistence. */
+  readonly resolveMedia: (media: NleMedia, context: NleMediaLoweringContext) => NleResolvedMedia;
   readonly resolveComponent: (item: NleComponentItem, context: NleLoweringContext) => NleResolvedItemSource;
   readonly resolveEffect: (
     effect: NleEffect,

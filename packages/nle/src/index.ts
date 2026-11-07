@@ -54,6 +54,7 @@ export type {
   NleComponentResolver,
   NleEffectResolver,
   NleMatteResolver,
+  NleMediaResolver,
   NlePackage,
   NlePackageFacet,
   NleTransitionResolver,
@@ -76,6 +77,6 @@ export type {
 } from "./authoring.js";
 export {
   createComponentMaterialization,
-  createPreparedMediaMaterialization,
+  createMediaAssetMaterialization,
 } from "./materialize.js";
 export type * from "./types.js";

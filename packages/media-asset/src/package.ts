@@ -2,15 +2,15 @@ import type { Facet } from "@hypit/facet";
 import { isTypeRef, typeIdentity } from "@hypit/protocol";
 
 import type {
-  PreparedMediaAsset,
-  PreparedMediaRepresentation,
+  ResolvedMediaAsset,
+  ResolvedMediaRepresentation,
 } from "./types.js";
 
 export const mediaRepresentationFacetAbi = "hypit.media-representation@1";
 
 export type MediaRepresentationOpenContext = {
-  readonly asset: PreparedMediaAsset;
-  readonly representation: PreparedMediaRepresentation;
+  readonly asset: ResolvedMediaAsset;
+  readonly representation: ResolvedMediaRepresentation;
   /** The Host exposes bytes without revealing ResourceStore or filesystem policy. */
   readonly read: (resource: import("@hypit/protocol").BlobRef) => Promise<Uint8Array>;
 };
@@ -31,7 +31,7 @@ export type MediaRepresentationFacet = Facet & {
 
 export type MediaRepresentationHost = {
   readonly open: (
-    asset: PreparedMediaAsset,
+    asset: ResolvedMediaAsset,
     representation: string,
     read: MediaRepresentationOpenContext["read"],
   ) => Promise<unknown>;

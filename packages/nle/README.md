@@ -2,7 +2,7 @@
 
 Persistent, flat editing authority for Hypit's HTML-capable non-linear editor.
 
-An `NleProject` stores direct frame positions, media, picture/audio tracks, package-owned Component and
+An `NleProject` stores direct frame positions, file-backed media references, picture/audio tracks, package-owned Component and
 Picture/Audio Effect instances, Transition and matte relations, editing Groups and nested
 Compound projects. Opening or editing the project does
 not compile an AuthorGraph, run a Provider, close an audiovisual Programme or recover declarations through
@@ -50,7 +50,10 @@ NleProject
        ` terminal bindings -> @hypit/audiovisual-audio -> AudioProgram
 ```
 
-Prepared media is adapted structurally. Component items retain only their package reference, parameters and
+Each media-bin entry stores only a portable relative Media Asset document path. Opening, editing and saving the
+NLE project therefore performs no media inspection, staging or analysis and does not require the media files to be
+online. Before preview/export, the Host explicitly resolves those paths to ephemeral media values and supplies an
+`NleMediaResolver`; AVIR lowering never writes them back into the project. Component items retain only their package reference, parameters and
 NLE-owned placement; the selected NLE Host resolves only their package-owned `ProgramSource` contract and selected
 Picture/Audio output names. A Component may be Picture-only, Audio-only or expose both. Effects resolve to ordinary
 Picture or Audio Operators whose opaque execution programme travels with the Operator.
@@ -84,11 +87,17 @@ Canvas handles.
 
 The first one-way materializers are deliberately small:
 
-- `createPreparedMediaMaterialization` adds already prepared media plus one direct Media item;
+- `createMediaAssetMaterialization` adds one Media Asset file reference plus one direct Media item; its ephemeral
+  resolved value is used only to validate and size that import transaction;
 - `createComponentMaterialization` adds one direct package Component instance;
 - `@hypit/caption` owns Caption timing/presentation expansion into ordinary caption Component commands.
 
 Applying these transactions retains no live relation to a generator, transcript, SVML source or Build run.
+
+`@hypit/nle/node` exposes `createNodeNleMediaResolver()`: it resolves project-relative asset paths once, caches
+duplicate file references, and returns the synchronous resolver used during lowering. A file Host can compose its
+`open` callback with `@hypit/media-asset/node.resolveMediaAssetMediaFile()`, so optional transcript, mask and other
+Representation files are not loaded merely to preview the base media.
 
 A Transition connects one canonical outgoing/incoming overlap and lowers to a package-owned two-input Picture
 Operator. Chained transitions are assembled as disjoint visible and overlap ranges. A matte connects one content

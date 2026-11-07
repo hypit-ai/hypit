@@ -5,12 +5,14 @@ import type { BlobRef } from "@hypit/protocol";
 
 import {
   parseMediaAssetDocument,
+  resolveMediaAssetMedia,
   resolveMediaAssetDocument,
 } from "../index.js";
 import type {
   MediaAssetDocument,
   MediaAssetFileResolution,
-  PreparedMediaAsset,
+  ResolvedMedia,
+  ResolvedMediaAsset,
 } from "../index.js";
 
 export type NodeMediaAssetFileResolver = (
@@ -31,11 +33,29 @@ export async function readMediaAssetDocumentFile(path: string): Promise<MediaAss
 export async function resolveMediaAssetDocumentFile(
   path: string,
   resolver: NodeMediaAssetFileResolver,
-): Promise<PreparedMediaAsset> {
+): Promise<ResolvedMediaAsset> {
   const manifest = resolve(path);
   const base = dirname(manifest);
   const document = await readMediaAssetDocumentFile(manifest);
   return await resolveMediaAssetDocument(document, async (file, resolution) => {
+    const target = resolve(base, file.path);
+    const local = relative(base, target);
+    if (local === "" || local === ".." || local.startsWith(`..${sep}`)
+      || isAbsolute(local) || resolve(base, local) !== target) {
+      throw new Error(`Media Asset file ${file.path} leaves its manifest directory.`);
+    }
+    return await resolver(target, file.mediaType, resolution);
+  });
+}
+/** Open only the primary media file; Representation files stay cold until explicitly requested. */
+export async function resolveMediaAssetMediaFile(
+  path: string,
+  resolver: NodeMediaAssetFileResolver,
+): Promise<ResolvedMedia> {
+  const manifest = resolve(path);
+  const base = dirname(manifest);
+  const document = await readMediaAssetDocumentFile(manifest);
+  return await resolveMediaAssetMedia(document, async (file, resolution) => {
     const target = resolve(base, file.path);
     const local = relative(base, target);
     if (local === "" || local === ".." || local.startsWith(`..${sep}`)

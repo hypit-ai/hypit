@@ -10,6 +10,7 @@ import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
   parseMediaAssetDocument,
+  resolveMediaAssetMedia,
   resolveMediaAssetDocument,
   serializeMediaAssetDocument,
   verifyMediaAssetDocument,
@@ -20,7 +21,7 @@ import { resolveMediaAssetDocumentFile } from "../src/node/index.js";
 function document(): MediaAssetDocument {
   const timestamp = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } });
   const prepared = prepareMedia({
-    id: "interview-prepared",
+    id: "interview-media",
     source: { kind: "blob", resource: fixtureResource("asset-source"), size: 100, mediaType: "video/mp4" },
     inspection: { streams: [{
       kind: "video", index: 0, codecName: "h264",
@@ -40,7 +41,7 @@ function document(): MediaAssetDocument {
       colorRange: "limited", bitDepth: 8, alphaMode: "opaque",
     } },
   });
-  const { source: _source, ...filePrepared } = prepared;
+  const { source: _source, ...interpretation } = prepared;
   const speechDomain = sealLocalTemporalDomain({
     id: "speech-samples",
     duration: { ticks: "10", timeBase: { numerator: 1, denominator: 1 } },
@@ -50,7 +51,7 @@ function document(): MediaAssetDocument {
     id: "interview",
     media: {
       file: { path: "./interview.mp4", mediaType: "video/mp4" },
-      prepared: filePrepared,
+      interpretation,
     },
     representations: [{
       id: "speech.zh",
@@ -75,7 +76,7 @@ function document(): MediaAssetDocument {
       },
       binding: {
         temporal: { mapToMedia: identityTemporalMap(prepared.domain!) },
-        picture: { member: "picture", space: "prepared-display-normalized" },
+        picture: { member: "picture", space: "media-display-normalized" },
       },
     }],
   };
@@ -88,6 +89,7 @@ test("one file manifest carries independently typed time and object representati
   assert.deepEqual(parseMediaAssetDocument(text), value);
   assert.equal(text.includes("WhisperX"), false);
   assert.equal(text.includes("SAM"), false);
+  assert.equal(text.toLowerCase().includes("prepared"), false);
 });
 
 test("file resolution creates ephemeral BlobRefs without opening package documents", async () => {
@@ -112,7 +114,22 @@ test("file resolution creates ephemeral BlobRefs without opening package documen
     ["Transcript", "TrackedObjects"]);
 });
 
-test("manifest rejects guessed paths, duplicate ids and bindings outside the prepared media", () => {
+test("media-only resolution does not stage optional representation files", async () => {
+  const requests: string[] = [];
+  const media = await resolveMediaAssetMedia(document(), (file, resolution) => {
+    requests.push(`${resolution.kind}:${file.path}`);
+    return {
+      kind: "blob",
+      resource: fixtureResource(`media-only:${file.path}`),
+      size: 10,
+      mediaType: file.mediaType,
+    };
+  });
+  assert.deepEqual(requests, ["media:./interview.mp4"]);
+  assert.equal(media.source.mediaType, "video/mp4");
+});
+
+test("manifest rejects guessed paths, duplicate ids and bindings outside the media interpretation", () => {
   const base = document();
   assert.throws(() => verifyMediaAssetDocument({
     ...base,
@@ -132,7 +149,7 @@ test("manifest rejects guessed paths, duplicate ids and bindings outside the pre
       ...base.representations[0]!,
       binding: { temporal: { mapToMedia: identityTemporalMap(foreign) } },
     }],
-  }), /must end in PreparedMedia domain/u);
+  }), /must end in media domain/u);
 });
 
 test("resolved MIME type must agree with the file declaration", async () => {

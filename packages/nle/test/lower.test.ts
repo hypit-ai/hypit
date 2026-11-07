@@ -168,7 +168,7 @@ const host = createNleTerminalLinkHost([{
 }, {
   component: audioComponentRenderer,
   resolve: (item) => ({ audio: audioComponentSource(`${item.id}:source`).audio }),
-}] }]);
+}] }], () => prepared());
 
 function project(): NleProject {
   const document = createNleProject({
@@ -191,7 +191,8 @@ function project(): NleProject {
     parameters: { title: "HTML component" }, picture: full,
   };
   return applyNleTransaction(document, { revision: 0, commands: [
-    { kind: "media.add", media: { id: "camera", name: "Camera", prepared: prepared() } },
+    { kind: "media.add", media: { id: "camera", name: "Camera",
+      asset: { path: "./media/camera.media.json" } } },
     { kind: "track.add", track: { id: "main", name: "Main picture", kind: "picture",
       locked: false, muted: false, items: [] } },
     { kind: "item.add", track: "main", item: {
@@ -315,7 +316,8 @@ test("a Compound Item closes one child NLE Project as an ordinary nested Source"
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const child = applyNleTransaction(childBase, { revision: 0, commands: [
-    { kind: "media.add", media: { id: "camera", name: "Camera", prepared: prepared() } },
+    { kind: "media.add", media: { id: "camera", name: "Camera",
+      asset: { path: "./media/camera.media.json" } } },
     { kind: "track.add", track: { id: "child-main", name: "Child main", kind: "picture",
       locked: false, muted: false, items: [{
         id: "child-camera", kind: "media", media: "camera", startFrame: 0, durationFrames: 4,

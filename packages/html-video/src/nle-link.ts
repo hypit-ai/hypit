@@ -28,9 +28,11 @@ import {
   type NleComponentItem,
   type NleLoweringContext,
   type NleLoweringHost,
+  type NleMediaResolver,
   type NlePackage,
   type NlePackageSymbol,
   type NleProject,
+  type NleResolvedMedia,
   type NleResolvedItemSource,
 } from "@hypit/nle";
 import { nlePackageSymbolKey } from "@hypit/nle";
@@ -106,8 +108,9 @@ export function nleHtmlVideoPackagesFromFacets(facets: readonly Facet[]): readon
 export function createNleTerminalLinkHost(
   packages: readonly NlePackage[],
   terminalPackages: readonly NleHtmlVideoPackage[],
+  resolveMedia?: NleMediaResolver,
 ): NleTerminalLinkHost {
-  const core = createNleLoweringHost(packages);
+  const core = createNleLoweringHost(packages, resolveMedia);
   const components = new Map<string, NleHtmlVideoComponentResolver>();
   for (const pack of terminalPackages) {
     for (const resolver of pack.components ?? []) {
@@ -130,10 +133,12 @@ export function createNleTerminalLinkHost(
 
 export function createNleTerminalLinkHostFromFacets(
   facets: readonly Facet[],
+  resolveMedia?: NleMediaResolver,
 ): NleTerminalLinkHost {
   return createNleTerminalLinkHost(
     nlePackagesFromFacets(facets),
     nleHtmlVideoPackagesFromFacets(facets),
+    resolveMedia,
   );
 }
 
@@ -158,8 +163,21 @@ export function linkNleProjectTerminals(
 ): NleTerminalLink {
   const programs = new Map<NleProject, AudiovisualProgram>();
   const components = new Map<NleProject, Map<string, NleResolvedItemSource & NleTerminalComponentResolution>>();
+  const media = new Map<NleProject, Map<string, NleResolvedMedia>>();
   const structuralHost: NleLoweringHost = {
     ...host,
+    resolveMedia(declaration, context) {
+      let byMedia = media.get(context.project);
+      if (byMedia === undefined) {
+        byMedia = new Map();
+        media.set(context.project, byMedia);
+      }
+      const cached = byMedia.get(declaration.id);
+      if (cached !== undefined) return cached;
+      const resolved = host.resolveMedia(declaration, context);
+      byMedia.set(declaration.id, resolved);
+      return resolved;
+    },
     resolveComponent(item, context) {
       const resolved = host.resolveComponent(item, context);
       const terminal = host.resolveTerminalComponent(item, context, resolved);
@@ -190,16 +208,19 @@ export function linkNleProjectTerminals(
         assert(resolved !== undefined, `NLE Component ${item.id} has no terminal resolution.`);
         terminal = resolved;
       } else if (item.kind === "media") {
-        const media = findNleMedia(current, item.media).prepared;
+        const declaration = findNleMedia(current, item.media);
+        const resolvedMedia = media.get(current)?.get(declaration.id);
+        assert(resolvedMedia !== undefined,
+          `NLE Media ${declaration.id} has no terminal resolution.`);
         terminal = {
           source: occurrence.source,
           ...(occurrence.source.outputs.picture === undefined ? {} : {
             pictureOutput: "picture",
-            html: preparedMediaHtmlSource(media),
+            html: preparedMediaHtmlSource(resolvedMedia),
           }),
           ...(occurrence.source.outputs.audio === undefined ? {} : {
             audioOutput: "audio",
-            audio: (sampling) => preparedMediaAudioSource(media, sampling),
+            audio: (sampling) => preparedMediaAudioSource(resolvedMedia, sampling),
           }),
         };
       } else {
