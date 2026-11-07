@@ -5,12 +5,11 @@ import { AuthorDeclarationRegistry, installAuthorDeclarationFacets, type Resolve
 import { MarkupDeclarationRegistry, decodeMarkupDeclarations, installMarkupDeclarationFacets } from "@hypit/markup";
 import { narrativeTypes } from "@hypit/narrative";
 import { temporalTypes } from "@hypit/temporal";
-import { timelineTypes } from "@hypit/timeline";
 
 import { hypitPackage } from "../src/activation.js";
 import { narrativeTemporalModuleRef, narrativeTemporalTypes } from "../src/index.js";
 
-test("Narrative temporal declarations project semantic references without source-order coupling", async () => {
+test("Narrative Timing aggregates exact local Alignments without a global Timeline", async () => {
   const compilers = new AuthorDeclarationRegistry();
   const syntax = new MarkupDeclarationRegistry();
   installAuthorDeclarationFacets(hypitPackage.facets, compilers);
@@ -21,12 +20,8 @@ test("Narrative temporal declarations project semantic references without source
     records: [],
     exports: [
       { name: "narrative", ref: { kind: "record", id: "narrative" }, type: narrativeTypes.narrative },
-      { name: "timeline", ref: { kind: "record", id: "timeline" }, type: timelineTypes.timeline },
       { name: "alignment", ref: { kind: "record", id: "alignment" }, type: narrativeTemporalTypes.narrativeAlignment },
       { name: "domain", ref: { kind: "record", id: "domain" }, type: temporalTypes.localDomain },
-      { name: "window", ref: { kind: "record", id: "window" }, type: timelineTypes.window },
-      { name: "selection", ref: { kind: "record", id: "selection" }, type: narrativeTypes.selection },
-      { name: "moment", ref: { kind: "record", id: "moment" }, type: narrativeTypes.moment },
     ],
   };
   const decoded = await decodeMarkupDeclarations({
@@ -34,11 +29,9 @@ test("Narrative temporal declarations project semantic references without source
     text: `<svml>
       <import from="@hypit/narrative-temporal@1" as="semantic"/>
       <import source="facts.svml" as="facts"/>
-      <semantic:Window id="proof" projection={story-time} during={facts.selection}/>
-      <semantic:Instant id="beat" projection={story-time} at={facts.moment}/>
-      <semantic:Projection id="story-time" narrative={facts.narrative} timeline={facts.timeline}>
-        <semantic:Map alignment={facts.alignment} domain={facts.domain} window={facts.window}/>
-      </semantic:Projection>
+      <semantic:Timing id="story-time" narrative={facts.narrative} domain={facts.domain}>
+        <semantic:Alignment value={facts.alignment}/>
+      </semantic:Timing>
     </svml>`,
   }, {
     resolveModule: () => narrativeTemporalModuleRef,
@@ -47,7 +40,7 @@ test("Narrative temporal declarations project semantic references without source
     sourceImports: [facts],
   });
 
-  assert.deepEqual(decoded.exports.map((value) => value.name), ["beat", "proof", "proof.end", "proof.start", "story-time"]);
-  assert.deepEqual(decoded.components.map((component) => component.id), ["story-time", "proof.__projection", "beat.__projection"]);
-  assert.equal(decoded.records.filter((record) => record.type.name === narrativeTemporalTypes.narrativeInstantSpec.name).length, 3);
+  assert.deepEqual(decoded.exports.map((value) => value.name), ["story-time"]);
+  assert.deepEqual(decoded.components.map((component) => component.id), ["story-time"]);
+  assert.equal(decoded.records.filter((record) => record.type.name === narrativeTemporalTypes.narrativeTimingHeader.name).length, 1);
 });

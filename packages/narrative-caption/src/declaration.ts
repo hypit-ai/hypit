@@ -18,12 +18,12 @@ export const narrativeCaptionTimingFragment = sealGraphFragment({
   inputs: [
     { name: "document", type: captionTypes.document },
     { name: "binding", type: narrativeCaptionTypes.binding },
-    { name: "projection", type: narrativeTemporalTypes.narrativeProjection },
+    { name: "timing", type: narrativeTemporalTypes.narrativeLocalTiming },
   ],
   operations: [{
     id: "project",
     producer: narrativeCaptionProducers.projectTiming,
-    inputs: { document: input("document"), binding: input("binding"), projection: input("projection") },
+    inputs: { document: input("document"), binding: input("binding"), timing: input("timing") },
     result: { kind: "output" as const, name: "timing" },
   }],
   exports: [{ name: "timing", type: captionTypes.timing, root: operation("project") }],
@@ -47,19 +47,19 @@ async function reference(
   return resolved;
 }
 
-/** Syntax-neutral projection of Narrative timing into one CaptionTiming output. */
+/** Syntax-neutral projection of Narrative timing into one LocalCaptionTiming output. */
 export const narrativeCaptionTimingAuthorDeclaration: AuthorDeclarationCompiler = {
   module: narrativeCaptionModuleRef,
   declaration: "timing",
   outputs: [captionTypes.timing],
   shape: {
-    summary: "Projects an explicit Narrative-to-Caption binding onto absolute CaptionTiming.",
+    summary: "Projects an explicit Narrative-to-Caption binding into source-local Caption timing.",
     fields: [
       {
         name: "id",
         kind: "identifier",
         required: true,
-        summary: "Names the resolved CaptionTiming.",
+        summary: "Names the resolved LocalCaptionTiming.",
       },
       {
         name: "document",
@@ -76,11 +76,11 @@ export const narrativeCaptionTimingAuthorDeclaration: AuthorDeclarationCompiler 
         summary: "Relates Caption units to Narrative Tokens.",
       },
       {
-        name: "projection",
+        name: "timing",
         kind: "reference",
         required: true,
-        accepts: [narrativeTemporalTypes.narrativeProjection],
-        summary: "Locates those Tokens on one Timeline.",
+        accepts: [narrativeTemporalTypes.narrativeLocalTiming],
+        summary: "Locates those Tokens in one exact source-local domain.",
       },
     ],
   },
@@ -94,17 +94,17 @@ export const narrativeCaptionTimingAuthorDeclaration: AuthorDeclarationCompiler 
   },
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");
-    const [document, binding, projection] = await Promise.all([
+    const [document, binding, timing] = await Promise.all([
       reference(declaration, "document", resolveReference),
       reference(declaration, "binding", resolveReference),
-      reference(declaration, "projection", resolveReference),
+      reference(declaration, "timing", resolveReference),
     ]);
     return {
       records: [],
       components: [{
         id,
         fragment: narrativeCaptionTimingFragment,
-        inputs: { document: document.ref, binding: binding.ref, projection: projection.ref },
+        inputs: { document: document.ref, binding: binding.ref, timing: timing.ref },
         outputs: { timing: id },
         range: declaration.range,
       }],

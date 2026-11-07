@@ -5,3 +5,8 @@ export type NarrativeCaptionBinding = {
   readonly documentId: string;
   readonly units: readonly { readonly unitId: string; readonly sourceTokenIds: readonly string[] }[];
 };
+
+export type NarrativeCaptionUnitSubset = {
+  readonly documentId: string;
+  readonly unitIds: readonly string[];
+};

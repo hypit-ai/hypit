@@ -1,9 +1,9 @@
 import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { CaptionDocument, CaptionTiming } from "@hypit/caption";
+import type { CaptionDocument, LocalCaptionTiming } from "@hypit/caption";
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { Value } from "@hypit/hypit/protocol";
 import { canonicalize } from "@hypit/hypit/protocol";
-import type { NarrativeProjection } from "@hypit/narrative-temporal";
+import type { NarrativeLocalTiming } from "@hypit/narrative-temporal";
 
 import { assertNarrativeCaptionBindingIdentity } from "./identity.js";
 import { narrativeCaptionProducers, narrativeCaptionTypes } from "./manifest.js";
@@ -21,8 +21,8 @@ export const narrativeCaptionComponent = {
     handler: ({ inputs }) => ({ kind: "output", value: (canonicalize(projectNarrativeCaptionTiming(
         valueOf<CaptionDocument>(inputs.document?.value, "CaptionDocument"),
         valueOf<NarrativeCaptionBinding>(inputs.binding?.value, "NarrativeCaptionBinding"),
-        valueOf<NarrativeProjection>(inputs.projection?.value, "NarrativeProjection"),
-      ) as CaptionTiming)) }),
+        valueOf<NarrativeLocalTiming>(inputs.timing?.value, "NarrativeLocalTiming"),
+      ) as LocalCaptionTiming)) }),
   }],
   refinements: [{
     type: narrativeCaptionTypes.binding,

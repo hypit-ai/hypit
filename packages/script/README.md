@@ -4,7 +4,7 @@ Package-owned Script author declaration. It parses prose-first named Segment blo
 newline-independent Role Cues, Dual Text, Selection and Moment syntax, and lowers them to a
 canonical authored Narrative value with exactly `2M + 2N` semantic anchor identities: both
 ends of every Token and Segment. Script adds no synthetic Narrative or program boundary anchors;
-absolute work boundaries belong to Timeline.
+physical placement belongs to a later consumer.
 
 Markup contributes only the opaque `<script>` spelling and preserves its body byte-for-byte in the
 lossless Author Document. The Script package alone owns body parsing, shape validation, bindings,
@@ -223,9 +223,9 @@ The root `story` Record contains only the complete Narrative: speech structure a
 references. `story.caption`, `story.caption-binding`, `story.selection.<id>`, Segment excerpts and
 dialogue/speech Text are peer exports derived from the same parse. The binding relates Caption units
 to Narrative Tokens without embedding either value in the other. Caption rendering reads the
-document and already resolved CaptionTiming. Word attributes remain in the document for families
+document and already resolved `LocalCaptionTiming`. Word attributes remain in the document for families
 that give those words structural visual roles.
 
 For content lookup, use the Narrative package's `narrativeTokensForSelection` or
-`narrativeSelectionTokenRange`. These query authored order; Timeline separately locates the same
-anchors in the assembled video. No timestamps or display Styles enter the Script value.
+`narrativeSelectionTokenRange`. These query authored order; `NarrativeLocalTiming` can separately
+locate the same anchors in a source-local domain. No timestamps or display Styles enter the Script value.

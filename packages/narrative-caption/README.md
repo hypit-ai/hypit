@@ -1,18 +1,20 @@
 # Narrative Caption
 
 `@hypit/narrative-caption` is the explicit adapter between source-neutral Caption content and
-Narrative time. It owns `NarrativeCaptionBinding` and projects that relation through one explicit
-`NarrativeProjection` to complete, flat, absolute `CaptionTiming`. Binding joins by Unit and Token
-identities rather than array position. Missing Units, Tokens or Boundaries fail with their complete
-identity path; the adapter never drops content, pads a zero interval, shortens overlaps or forms Cues.
+source-local Narrative timing.
 
-Script may emit a CaptionDocument and its binding from the same parse; the author does not repeat
-display text or unit-to-Token correspondence. Caption renderers consume only CaptionDocument and
-CaptionTiming and therefore do not depend on Narrative or speech.
+`NarrativeCaptionBinding` relates each Caption Unit to one or more Narrative Token identities.
+Combining that binding with a `CaptionDocument` and `NarrativeLocalTiming` produces ordinary
+`LocalCaptionTiming` in the same exact `LocalTemporalDomain`:
 
 ```svml
 <narrative-caption:Timing id="story-captions"
   document={story.caption}
   binding={story.caption-binding}
-  projection={speech}/>
+  timing={story-time}/>
 ```
+
+The adapter does not know about a Timeline, NLE Track, frame rate, style, renderer or speech matcher.
+It preserves rational source-local boundaries as sided regions. A Caption component may consume the
+result directly, while an NLE materializer may map it through a chosen clip and bake direct editable
+items. Neither path creates a live named dependency inside the NLE project.

@@ -1,41 +1,31 @@
 # Narrative Temporal
 
-`@hypit/narrative-temporal` owns the public relation between Narrative boundary identities, finite
-source-local domains and one absolute Timeline. It contains no speech, media, Caption or rendering
-policy.
+`@hypit/narrative-temporal` owns exact source-local timing for Narrative identities. It contains no
+media, Caption presentation, NLE placement, global Timeline, frame grid or rendering policy.
 
-Its `Projection`, `Instant` and `Window` author declarations are package-owned and syntax-neutral.
-They receive only typed references, construct the projection graph, and publish ordinary Temporal
-values. SVML supplies tag spelling through Markup; the package compiler—not the Markup parser—owns
-Selection/Segment/Moment dispatch and the meaning of each `Map` child.
+`NarrativeAlignment` locates one Segment and its Tokens on a named `LocalTemporalDomain`. Alignment
+may come from speech evidence, a subtitle-file adapter or another package; this package does not know
+which matcher or provider produced it.
 
-`NarrativeAlignment` locates Narrative boundaries as exact values on one `LocalTemporalDomain`; it
-does not quantize them onto a Timeline frame grid.
-`NarrativeProjection` maps one or more explicit `NarrativeAlignment + LocalTemporalDomain + Window`
-relations onto one
-Timeline. Narrative Selections, Moments and Segments can then project to ordinary absolute
-`TemporalInstant` and `TemporalWindow` values before a general component consumes them.
+`NarrativeLocalTiming` combines one or more Alignments that already share the same Narrative and local
+domain. It keeps exact rational boundary values. Selection, Moment, Segment and Token queries therefore
+return source-local values and ranges without quantizing them to frames.
 
 ```svml
 <import as="semantic" from="@hypit/narrative-temporal@1"/>
-<semantic:Projection id="story-time" narrative={story} timeline={program.timeline}>
-  <semantic:Map alignment={opening.alignment} domain={opening.domain} window={program.opening}/>
-</semantic:Projection>
-<semantic:Window id="proof" projection={story-time} during={story.selection.proof}/>
-<semantic:Instant id="claim" projection={story-time} at={story.moment.claim}/>
+
+<semantic:Timing id="story-time" narrative={story} domain={speech.domain}>
+  <semantic:Alignment value={opening.alignment}/>
+  <semantic:Alignment value={closing.alignment}/>
+</semantic:Timing>
 ```
 
-The Projection owns only its Maps and publishes one reusable interpretation context. Independent
-declarations explicitly choose that Projection when revealing a semantic object. `proof` is an
-ordinary `TemporalWindow`; `claim` is an ordinary `TemporalInstant`. General visual, audio, caption and typography components consume those
-values without receiving the Projection or learning Narrative source kinds. Selection/Segment/Moment
-dispatch remain owned here. The completed Projection stores the once-resolved absolute boundaries and no reusable
-local-to-absolute mapping identity.
+The declaration only aggregates already measured local facts. It does not place them in a programme.
+A concrete consumer chooses the next operation:
 
-Projection reveals the exact semantic boundary. Author offsets remain ordinary absolute-time
-composition: reveal the boundary first, then use a standalone `time:Instant` with
-`at={claim} offset="+5f"` when that separate relationship is needed.
+- `@hypit/narrative-caption` turns bound Tokens into `LocalCaptionTiming` in the same domain;
+- an NLE materializer maps that local timing through a chosen clip and stores direct project times;
+- a programme adapter may map the same facts through an explicit `TemporalMap` for one occurrence.
 
-Speech Alignment is one producer of `NarrativeAlignment`; reviewed, manually authored or imported
-relations use the same Type without pretending to be speech. Timeline and common Temporal packages
-do not enumerate Narrative event kinds.
+Those adapters may yield zero, one or many occurrence-local regions. This package deliberately does
+not recreate a global Narrative Timeline or serialize a named dependency into an NLE project.

@@ -23,7 +23,7 @@ export const narrativeCaptionManifest: ModuleManifest = {
     inputs: [
       { name: "document", type: captionTypes.document },
       { name: "binding", type: narrativeCaptionTypes.binding },
-      { name: "projection", type: narrativeTemporalTypes.narrativeProjection },
+      { name: "timing", type: narrativeTemporalTypes.narrativeLocalTiming },
     ],
     result: { kind: "output" as const, name: "timing", type: captionTypes.timing },
   }],

@@ -4,8 +4,6 @@ import { captionDocument, narrativeCaptionBinding, formatScript, narrativeDialog
 import { assertNarrativeIdentity, narrativeAnchorTokenBoundary, narrativeSelectionTokenRange,
   narrativeTokensForSelection, narrativeTypes } from "@hypit/narrative";
 import type { Narrative, NarrativeSelectionRef } from "@hypit/narrative";
-import { captionTypes, sealCaptionStyle } from "@hypit/caption";
-import type { CaptionDocument, CaptionProgram } from "@hypit/caption";
 import { captionUnitsForNarrativeSelection } from "@hypit/narrative-caption";
 import { countSpeechEstimateUnits } from "@hypit/speech-estimate";
 import type { Text } from "@hypit/text";

@@ -12,8 +12,7 @@
   },
   "dependencies": {
     "@hypit/narrative": "workspace:^0.1.1",
-    "@hypit/temporal": "workspace:^0.1.1",
-    "@hypit/timeline": "workspace:^0.1.1"
+    "@hypit/temporal": "workspace:^0.1.1"
   },
   "files": [
     "dist",

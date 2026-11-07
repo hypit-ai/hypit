@@ -1,9 +1,9 @@
 import { assertCaptionDocument } from "@hypit/caption";
-import type { CaptionDocument, CaptionUnitSubset } from "@hypit/caption";
+import type { CaptionDocument } from "@hypit/caption";
 import { narrativeSelectionTokenRange } from "@hypit/narrative";
 import type { Narrative, NarrativeSelection } from "@hypit/narrative";
 
-import type { NarrativeCaptionBinding } from "./types.js";
+import type { NarrativeCaptionBinding, NarrativeCaptionUnitSubset } from "./types.js";
 
 /** Project one Narrative Selection to complete authored N:M Caption units. */
 export function captionUnitsForNarrativeSelection(
@@ -11,7 +11,7 @@ export function captionUnitsForNarrativeSelection(
   binding: NarrativeCaptionBinding,
   narrative: Narrative,
   selection: NarrativeSelection,
-): CaptionUnitSubset {
+): NarrativeCaptionUnitSubset {
   assertCaptionDocument(document);
   if (binding.documentId !== document.id || binding.narrativeId !== narrative.id) {
     throw new Error("NarrativeCaptionBinding disagrees with its document or Narrative.");

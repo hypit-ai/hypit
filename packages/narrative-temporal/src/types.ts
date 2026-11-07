@@ -1,4 +1,4 @@
-import type { ExactTemporalValue } from "@hypit/temporal";
+import type { ExactTemporalValue, LocalTemporalDomain } from "@hypit/temporal";
 
 export type NarrativeAlignmentToken = {
   readonly tokenId: string;
@@ -21,35 +21,19 @@ export type NarrativeAlignment = {
   readonly boundaries: readonly { readonly id: string; readonly at: ExactTemporalValue }[];
 };
 
-/** One alignment after its domain-owned exact projection has erased its proof inputs. */
-export type ProjectedNarrativeAlignment = {
+/** Named source-local timing assembled from Alignments in one exact domain. */
+export type NarrativeLocalTiming = {
+  readonly id: string;
   readonly narrativeId: string;
-  readonly timelineId: string;
-  readonly segment: NarrativeAlignment["segment"];
+  readonly domain: LocalTemporalDomain;
+  readonly segments: readonly NarrativeAlignment["segment"][];
   readonly tokens: readonly NarrativeAlignmentToken[];
-  readonly boundaries: readonly { readonly id: string; readonly frame: number }[];
+  readonly boundaries: readonly { readonly id: string; readonly at: ExactTemporalValue }[];
 };
 
 /** Internal balanced aggregation value used by the author declaration. */
-export type NarrativeProjectionParts = {
-  readonly parts: readonly ProjectedNarrativeAlignment[];
+export type NarrativeTimingParts = {
+  readonly alignments: readonly NarrativeAlignment[];
 };
 
-export type NarrativeProjectionHeader = { readonly id: string };
-
-/** Explicitly projects one Narrative's boundary facts onto one Timeline. */
-export type NarrativeProjection = {
-  readonly id: string;
-  readonly narrativeId: string;
-  readonly timelineId: string;
-  readonly segments: readonly NarrativeAlignment["segment"][];
-  readonly tokens: readonly NarrativeAlignmentToken[];
-  readonly boundaries: readonly { readonly id: string; readonly frame: number }[];
-};
-
-/** Domain-owned request for one Narrative boundary projected into Timeline. */
-export type NarrativeInstantSpec = {
-  readonly id: string;
-  readonly subjectId: string;
-  readonly boundary: "start" | "end" | "cue";
-};
+export type NarrativeTimingHeader = { readonly id: string };

@@ -19,8 +19,7 @@ and speech-activity bounds are fallbacks. Missing token runs receive continuous 
 between their measured neighbors instead of invented point timestamps. The result preserves
 sample-derived boundaries as exact local time and contains one timing for every Script token plus the
 Segment and token boundaries. Segment boundaries are exactly local zero and the domain's exact
-duration. Quantization to frames happens later in Narrative Projection, after a Timeline Clock has
-been selected.
+duration. The public result is never quantized to a frame grid.
 
 The public Producer accepts Narrative, one Segment excerpt, its `LocalTemporalDomain` and
 `SpeechTranscriptEvidence` through explicit graph edges. It does not reopen `PreparedMedia` to
@@ -42,8 +41,7 @@ Caption display is outside this package. `@hypit/narrative-caption` combines an 
 Caption document/binding with the resulting Narrative timing; it never asks this locator to infer
 display text or display-unit timing.
 
-The result is the `@hypit/narrative-temporal` `NarrativeAlignment`, not media and not a Timeline.
-An explicit Narrative Projection from that package later combines one or more
-`NarrativeAlignment + LocalTemporalDomain + placed Window` relations for a chosen Timeline. Visual,
-audio and caption consumers then request absolute Instants or Windows through that declared relation;
-Timeline and Core do not enumerate semantic event kinds.
+The result is the `@hypit/narrative-temporal` `NarrativeAlignment`, not media and not an NLE placement.
+That package can combine Alignments already measured in the same `LocalTemporalDomain` into one
+`NarrativeLocalTiming`. Caption and other components consume the local value directly; an NLE or
+Programme adapter chooses any later occurrence mapping explicitly.

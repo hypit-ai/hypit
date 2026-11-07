@@ -1,9 +1,10 @@
 import type { SourceRange } from "@hypit/hypit/source";
-import type { CaptionWordAttribute } from "@hypit/caption";
+import type { CaptionDisplayWord } from "@hypit/caption";
 import type { Narrative, NarrativeMoment, NarrativeSegment, NarrativeSelection, NarrativeToken, NarrativeTurn } from "@hypit/narrative";
 
-export type { CaptionWordAttribute } from "@hypit/caption";
 export type { Narrative, SemanticAnchor } from "@hypit/narrative";
+
+export type CaptionWordAttribute = CaptionDisplayWord["attributes"][number];
 
 export type Affinity = "left" | "right";
 
