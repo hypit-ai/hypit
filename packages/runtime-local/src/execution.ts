@@ -23,7 +23,7 @@ export type BuildExecutionRequest = {
   /** Installed execution packages loaded when this execution context starts. */
   readonly executionPackages: readonly string[];
   /** Exact project publication stores selected at submission. */
-  readonly result: PublicationStoreLocation;
+  readonly publicationStores: PublicationStoreLocation;
 };
 
 export type BuildExecutionDecision =

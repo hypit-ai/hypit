@@ -74,7 +74,7 @@ test("a draining carrier finishes its existing Build while a new carrier shares 
       const initial=createGreetingBuild({targetOutputs:[target]});
       const base=defineBuild({program:initial.program,plan:initial.plan});
       const record=target==='prompt'?'prompt:root':'generated:root';
-      const request={build:id,executionPackages:['fixture-rotation'],result:{
+      const request={build:id,executionPackages:['fixture-rotation'],publicationStores:{
         root,historyPath:'results',productsPath:'products',
       },
         context:{format:'hypit.local-execution@1',packageRoot:root,hostStateRoot:join(root,'host'),distributionPackageRoot:distribution,profile:profileValue}};

@@ -281,9 +281,7 @@ export async function runCli(
         }),
         authoring,
         attachments: result.compilation.author.attachments,
-        result: {
-          repository: buildResults.location,
-        },
+        publicationStores: buildResults.location,
       } as const;
       const host = await runtimeHost(runtimeProfile, sourcePackageRoot);
       const planningPolicy = await host.planningPolicy?.();

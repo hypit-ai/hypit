@@ -53,7 +53,7 @@ import {
   finishClaimedBuild,
   projectRuntimeFixture,
   publicationIntent,
-  resultDestination,
+  publicationStoreLocation,
   runFixture,
 } from "./local-scenario.js";
 
@@ -158,7 +158,7 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
       id: "bld_20260902T120000001Z_0000000001",
       definition: definition(initial),
       authoring,
-      result: resultDestination(directory),
+      publicationStores: publicationStoreLocation(directory),
     });
     assert("view" in first);
     assert.equal(first.view.activity, "ready");

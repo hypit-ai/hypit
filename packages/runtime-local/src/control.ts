@@ -74,7 +74,7 @@ export function createLocalRuntimeControl(
       options.executionStore.read(build),
       options.commandExecutionStore.list(build),
     ]);
-    const location = execution?.result ?? submission?.result;
+    const location = execution?.publicationStores ?? submission?.publicationStores;
     let result: StoredBuildResult | undefined;
     if (location !== undefined) {
       const opened = await options.openPublicationStores(location);

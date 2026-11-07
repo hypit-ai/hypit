@@ -108,11 +108,11 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
       authoring: { sourcePath: join(directory, "main.svml"), targets: ["document"], publication: { outputs: [{
         name: "document", record: "document:root", publisher: "example.test-product@1",
       }] } },
-      result: { repository: {
+      publicationStores: {
         root: directory,
         historyPath: "results",
         productsPath: "products",
-      } },
+      },
     });
     return id;
   }

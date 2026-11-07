@@ -107,9 +107,7 @@ export type CliRuntime = CliRuntimeControl & CliCredentialControl & {
     readonly executionPackages?: readonly string[];
     readonly authoring: CliBuildAuthoring;
     readonly attachments?: readonly BlobAttachment[];
-    readonly result: {
-      readonly repository: CliPublicationStoreLocation;
-    };
+    readonly publicationStores: CliPublicationStoreLocation;
   }, options?: {
     readonly follow?: boolean;
     readonly pollIntervalMs?: number;

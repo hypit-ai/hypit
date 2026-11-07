@@ -370,22 +370,25 @@ class SqliteBuildStore implements BuildStore {
 function parseExecutionRequest(row: Row, subject: string): BuildExecutionRequest {
   assert(typeof row.build_id === "string", `SQLite ${subject} row has no Build id`);
   assert(typeof row.execution_packages_json === "string", `SQLite ${subject} row has no execution packages`);
-  assert(typeof row.result_location_json === "string", `SQLite ${subject} row has no Result location`);
+  assert(typeof row.publication_stores_json === "string", `SQLite ${subject} row has no publication stores`);
   const executionPackages = JSON.parse(row.execution_packages_json) as unknown;
   assert(Array.isArray(executionPackages) && executionPackages.every((item) => typeof item === "string"),
     `SQLite ${subject} execution packages are invalid`);
-  const result = object(JSON.parse(row.result_location_json) as unknown, `SQLite ${subject} Result location`);
-  exactKeys(result, ["root", "historyPath", "productsPath"], `SQLite ${subject} publication stores`);
+  const publicationStores = object(
+    JSON.parse(row.publication_stores_json) as unknown,
+    `SQLite ${subject} publication stores`,
+  );
+  exactKeys(publicationStores, ["root", "historyPath", "productsPath"], `SQLite ${subject} publication stores`);
   return {
     build: row.build_id,
     ...(typeof row.context_json === "string"
       ? { context: normalizeValue(JSON.parse(row.context_json) as unknown, `SQLite ${subject} execution context`) }
       : {}),
     executionPackages,
-    result: {
-      root: nonEmptyString(result.root, `SQLite ${subject} Result root`),
-      historyPath: nonEmptyString(result.historyPath, `SQLite ${subject} history path`),
-      productsPath: nonEmptyString(result.productsPath, `SQLite ${subject} Products path`),
+    publicationStores: {
+      root: nonEmptyString(publicationStores.root, `SQLite ${subject} publication root`),
+      historyPath: nonEmptyString(publicationStores.historyPath, `SQLite ${subject} history path`),
+      productsPath: nonEmptyString(publicationStores.productsPath, `SQLite ${subject} Products path`),
     },
   };
 }
@@ -423,12 +426,12 @@ class SqlitePendingBuildStore implements PendingBuildStore {
       assert(occupied === undefined, `Build ${request.build} already has Runtime state`);
       this.#database.prepare(`
         INSERT INTO hypit_submissions (
-          build_id, execution_packages_json, result_location_json, context_json, created_at
+          build_id, execution_packages_json, publication_stores_json, context_json, created_at
         ) VALUES (?, ?, ?, ?, ?)
       `).run(
         request.build,
         JSON.stringify(request.executionPackages),
-        JSON.stringify(request.result),
+        JSON.stringify(request.publicationStores),
         request.context === undefined ? null : JSON.stringify(request.context),
         now,
       );
@@ -456,7 +459,7 @@ class SqlitePendingBuildStore implements PendingBuildStore {
       if (row === undefined) throw new Error(`Build submission ${request.build} was not prepared`);
       const submission = parsePendingBuildSubmission(row);
       assert(isDeepStrictEqual(submission.executionPackages, request.executionPackages)
-        && isDeepStrictEqual(submission.result, request.result)
+        && isDeepStrictEqual(submission.publicationStores, request.publicationStores)
         && isDeepStrictEqual(submission.context, request.context),
       `Build submission ${request.build} does not match its prepared state`);
       this.#database.prepare(`
@@ -464,7 +467,7 @@ class SqlitePendingBuildStore implements PendingBuildStore {
       `).run(request.build, JSON.stringify(request.definition));
       this.#database.prepare(`
         INSERT INTO hypit_executions (
-          build_id, execution_packages_json, result_location_json, context_json, created_at, wake_at,
+          build_id, execution_packages_json, publication_stores_json, context_json, created_at, wake_at,
           turn_owner, turn_acquired_at, finalization_owner, finalization_acquired_at,
           stop_cause, stop_reason,
           decision_outcome, decision_reason, attention_step, attention_error
@@ -472,7 +475,7 @@ class SqlitePendingBuildStore implements PendingBuildStore {
       `).run(
         request.build,
         JSON.stringify(request.executionPackages),
-        JSON.stringify(request.result),
+        JSON.stringify(request.publicationStores),
         request.context === undefined ? null : JSON.stringify(request.context),
         submission.createdAt,
         Date.now(),
@@ -709,12 +712,12 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
     nonNegativeInteger(now, "Execution creation time");
     this.#database.prepare(`
       INSERT INTO hypit_executions (
-        build_id, execution_packages_json, result_location_json, context_json, created_at, wake_at,
+        build_id, execution_packages_json, publication_stores_json, context_json, created_at, wake_at,
         turn_owner, turn_acquired_at, finalization_owner, finalization_acquired_at,
         stop_cause, stop_reason,
         decision_outcome, decision_reason, attention_step, attention_error
       ) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
-    `).run(request.build, JSON.stringify(request.executionPackages), JSON.stringify(request.result), request.context === undefined ? null : JSON.stringify(request.context), now, now);
+    `).run(request.build, JSON.stringify(request.executionPackages), JSON.stringify(request.publicationStores), request.context === undefined ? null : JSON.stringify(request.context), now, now);
     return {
       ...copy(request),
       createdAt: now,
@@ -1167,14 +1170,14 @@ export class SqliteRuntimeState {
       CREATE TABLE IF NOT EXISTS hypit_submissions (
         build_id TEXT PRIMARY KEY,
         execution_packages_json TEXT NOT NULL,
-        result_location_json TEXT NOT NULL,
+        publication_stores_json TEXT NOT NULL,
         context_json TEXT,
         created_at INTEGER NOT NULL
       ) STRICT;
       CREATE TABLE IF NOT EXISTS hypit_executions (
         build_id TEXT PRIMARY KEY,
         execution_packages_json TEXT NOT NULL,
-        result_location_json TEXT NOT NULL,
+        publication_stores_json TEXT NOT NULL,
         context_json TEXT,
         created_at INTEGER NOT NULL,
         started_at INTEGER,

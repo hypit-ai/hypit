@@ -196,7 +196,7 @@ export async function createLocalRuntime(
   };
   const presentation = async (
     build: string,
-    resultLocation: LocalBuildRequest["result"]["repository"],
+    publicationStores: LocalBuildRequest["publicationStores"],
     previousState?: LocalBuildSubmission["state"],
   ): Promise<LocalBuildSubmission> => {
     const [snapshot, execution] = await Promise.all([
@@ -212,7 +212,7 @@ export async function createLocalRuntime(
       assert(view !== undefined, `Build ${build} has no active Runtime view`);
       return { id: build, state, view };
     }
-    const opened = await openPublicationStores(resultLocation);
+    const opened = await openPublicationStores(publicationStores);
     try {
       const result = await opened.history.read(build);
       assert(result?.outcome !== undefined, `Build ${build} has neither active execution nor a finished Result`);
@@ -230,23 +230,22 @@ export async function createLocalRuntime(
 
   const submit = async (request: LocalBuildRequest): Promise<LocalBuildSubmission> => {
     assertOrderedBuildId(request.id);
-    const resultRequest = request.result;
     const executionRequest = {
       build: request.id,
       ...(options.executionContext === undefined ? {} : { context: options.executionContext }),
       executionPackages: [...new Set(request.executionPackages ?? [])].sort(),
-      result: resultRequest.repository,
+      publicationStores: request.publicationStores,
     } as const;
     let prepared = false;
     try {
       await options.submissionStore.prepare(executionRequest);
       prepared = true;
       await stageAttachments(request);
-      const opened = await openPublicationStores(resultRequest.repository);
+      const opened = await openPublicationStores(request.publicationStores);
       try {
         await opened.finalization.create({
           id: request.id,
-          sourcePath: projectPath(resultRequest.repository.root, request.authoring.sourcePath),
+          sourcePath: projectPath(request.publicationStores.root, request.authoring.sourcePath),
           targets: request.authoring.targets,
           publication: request.authoring.publication,
         });
@@ -257,7 +256,7 @@ export async function createLocalRuntime(
         ...executionRequest,
         definition: request.definition,
       });
-      return await presentation(request.id, resultRequest.repository);
+      return await presentation(request.id, request.publicationStores);
     } catch (error) {
       if (prepared) await runFinalizer.discardSubmission(request.id).catch(() => undefined);
       throw error;
@@ -277,7 +276,7 @@ export async function createLocalRuntime(
     while (follow.follow === true && "view" in result && result.view.issue === undefined) {
       if (maxWaitMs !== undefined && Date.now() - startedAt + pollIntervalMs > maxWaitMs) return result;
       await wait(pollIntervalMs, follow.signal);
-      result = await presentation(request.id, request.result.repository, result.state);
+      result = await presentation(request.id, request.publicationStores, result.state);
     }
     return result;
   };

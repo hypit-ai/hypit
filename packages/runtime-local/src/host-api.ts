@@ -113,9 +113,7 @@ export type RuntimeHostExecution = RuntimeHostControl & RuntimeHostCredentialCon
     };
     readonly attachments?: readonly BlobAttachment[];
     /** Project-owned Run-history and Product roots, fixed before this Build becomes active. */
-    readonly result: {
-      readonly repository: PublicationStoreLocation;
-    };
+    readonly publicationStores: PublicationStoreLocation;
   }, options?: {
     readonly follow?: boolean;
     readonly pollIntervalMs?: number;

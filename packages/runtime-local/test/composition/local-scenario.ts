@@ -49,13 +49,11 @@ export function projectRuntimeFixture(directory: string) {
   } as const;
 }
 
-export function resultDestination(directory: string) {
+export function publicationStoreLocation(directory: string) {
   return {
-    repository: {
-      root: directory,
-      historyPath: "results",
-      productsPath: ".hypit/products",
-    },
+    root: directory,
+    historyPath: "results",
+    productsPath: ".hypit/products",
   } as const;
 }
 
@@ -92,7 +90,7 @@ export function durableBuildRequest(
       targets: publishedOutputs.map((output) => output.name),
       publication: publicationIntent(publishedOutputs, fixture),
     },
-    result: resultDestination(directory),
+    publicationStores: publicationStoreLocation(directory),
   } as const;
 }
 

@@ -10,7 +10,7 @@ import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 
 import { capabilities, createGreetingBuild, types } from "../execution-scenario.js";
 
-const resultLocation = {
+const publicationStores = {
   root: "/project",
   historyPath: ".hypit/results",
   productsPath: ".hypit/products",
@@ -266,7 +266,7 @@ test("Submission is separate from execution and only commit or exact discard rem
     await state.builds.create("existing-build", definition(initial));
 
     await assert.rejects(
-      state.submissions.prepare({ build: "existing-build", executionPackages: [], result: resultLocation }),
+      state.submissions.prepare({ build: "existing-build", executionPackages: [], publicationStores }),
       /already has Runtime state/u,
     );
     await state.submissions.discard("existing-build");
@@ -275,7 +275,7 @@ test("Submission is separate from execution and only commit or exact discard rem
     const submission = await state.submissions.prepare({
       build: "new-build",
       executionPackages: ["example.component@1"],
-      result: resultLocation,
+      publicationStores,
     }, { now: 100 });
     assert.equal(submission.createdAt, 100);
     assert.equal(await state.execution.read("new-build"), undefined);
@@ -288,10 +288,10 @@ test("Submission is separate from execution and only commit or exact discard rem
 });
 
 test("Execution stores scheduling facts, one decision and independent operator attention", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "hypit-sqlite-result-location-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-sqlite-publication-stores-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
-    const result = {
+    const selectedStores = {
       root: "/projects/episode-12",
       historyPath: ".hypit/results",
       productsPath: ".hypit/products",
@@ -301,7 +301,7 @@ test("Execution stores scheduling facts, one decision and independent operator a
     const request = {
       build: "queued-build",
       executionPackages: ["example.component@1"],
-      result,
+      publicationStores: selectedStores,
       context: { z: 2, a: 1 },
     } as const;
     await state.submissions.prepare(request, { now: 100 });
@@ -310,7 +310,7 @@ test("Execution stores scheduling facts, one decision and independent operator a
       definition: buildDefinition,
     });
     assert.equal(await state.submissions.read("queued-build"), undefined);
-    assert.deepEqual((await state.execution.read("queued-build"))?.result, result);
+    assert.deepEqual((await state.execution.read("queued-build"))?.publicationStores, selectedStores);
 
     const cancelling = await state.execution.requestStop("queued-build", { cause: "user-cancelled", reason: "no longer needed" });
     assert.equal(cancelling.stop?.reason, "no longer needed");
@@ -344,8 +344,8 @@ test("each execution retains its own context and can be claimed without touching
   const directory = await mkdtemp(join(tmpdir(), "hypit-sqlite-context-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
-    await state.execution.create({ build: "a", executionPackages: [], result: resultLocation, context: { provider: "old" } }, { now: 100 });
-    await state.execution.create({ build: "b", executionPackages: [], result: resultLocation, context: { provider: "new" } }, { now: 100 });
+    await state.execution.create({ build: "a", executionPackages: [], publicationStores, context: { provider: "old" } }, { now: 100 });
+    await state.execution.create({ build: "b", executionPackages: [], publicationStores, context: { provider: "new" } }, { now: 100 });
     await state.execution.start("a", 101);
     await assert.rejects(state.execution.start("a", 102), /already started/u);
     assert.equal((await state.execution.claim("b-owner", 102, "b"))?.build, "b");
@@ -362,7 +362,7 @@ test("a lost executor ends its attempt while finalization leases can be reclaime
   const directory = await mkdtemp(join(tmpdir(), "hypit-sqlite-turn-reclaim-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
-    await state.execution.create({ build: "interrupted", executionPackages: [], result: resultLocation }, { now: 100 });
+    await state.execution.create({ build: "interrupted", executionPackages: [], publicationStores }, { now: 100 });
     assert.equal((await state.execution.claim("old-worker", 100))?.turn?.owner, "old-worker");
     await state.execution.interrupt("interrupted", "executor lost");
     assert.equal((await state.execution.read("interrupted"))?.turn, undefined);
@@ -473,8 +473,8 @@ test("an execution already holding capacity is claimed before fresh work", async
   const directory = await mkdtemp(join(tmpdir(), "hypit-capacity-claim-order-"));
   const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
   try {
-    await state.execution.create({ build: "fresh", executionPackages: [], result: resultLocation }, { now: 100 });
-    await state.execution.create({ build: "in-flight", executionPackages: [], result: resultLocation }, { now: 101 });
+    await state.execution.create({ build: "fresh", executionPackages: [], publicationStores }, { now: 100 });
+    await state.execution.create({ build: "in-flight", executionPackages: [], publicationStores }, { now: 101 });
     assert.equal((await state.execution.acquireCapacity({
       build: "in-flight",
       command: "remote",
@@ -493,7 +493,7 @@ test("stop requests preserve their first cause and promptly wake the final execu
   const directory = await mkdtemp(join(tmpdir(), "hypit-stop-request-"));
   const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
   try {
-    await state.execution.create({ build: "stopping", executionPackages: [], result: resultLocation });
+    await state.execution.create({ build: "stopping", executionPackages: [], publicationStores });
     await state.execution.claim("worker");
     const stop = { cause: "execution-failed" as const, reason: "original failure" };
     await state.execution.requestStop("stopping", stop);
@@ -561,7 +561,7 @@ test("a resource release before parking is observed and later releases wake a fi
   const destination = { root: directory, historyPath: "results", productsPath: "products" };
   try {
     for (const [now, build] of ["holder", "waiter", "later"].entries()) {
-      await state.execution.create({ build, executionPackages: [], result: destination }, { now });
+      await state.execution.create({ build, executionPackages: [], publicationStores: destination }, { now });
     }
     await state.execution.acquireCapacity({ build: "holder", command: "render", resources: [{ ...resource, units: 2 }], now: Date.now() });
     assert.equal((await state.execution.claim("owner"))?.build, "holder");

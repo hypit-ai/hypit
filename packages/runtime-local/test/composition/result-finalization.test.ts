@@ -56,7 +56,7 @@ import {
   finishClaimedBuild,
   projectRuntimeFixture,
   publicationIntent,
-  resultDestination,
+  publicationStoreLocation,
   runFixture,
 } from "./local-scenario.js";
 
@@ -89,7 +89,7 @@ test("a completed file closes in Product storage and leaves no Runtime working c
         publication: { outputs: [{ name: "clip.video",
           record: "generated:placeholder", publisher: "example.test-product@1" }] },
       },
-      result: resultDestination(directory),
+      publicationStores: publicationStoreLocation(directory),
     });
     assert.equal((await finishClaimedBuild(runtime)).outcome, "complete");
     const results = new FileRunFinalizationStore(join(directory, "results"), join(directory, ".hypit", "products"));
@@ -156,7 +156,7 @@ test("a failed Build keeps published Outputs completed before removing active Ru
           name: "final.document", ref: { id: "document" },
         }], buildFixture),
       },
-      result: resultDestination(directory),
+      publicationStores: publicationStoreLocation(directory),
     });
     assert.equal((await finishClaimedBuild(runtime)).outcome, "failed");
     const result = await new FileRunFinalizationStore(join(directory, "results"), join(directory, "products"))
@@ -289,7 +289,7 @@ test("an interrupted Result write can be retried internally without rerunning th
         publication: { outputs: [{ name: "final.document",
           record: "document:root", publisher: "example.test-product@1" }] },
       },
-      result: resultDestination(directory),
+      publicationStores: publicationStoreLocation(directory),
     });
     const blocked = await runtime.workOnce();
     assert(blocked !== undefined && "decision" in blocked);
@@ -314,7 +314,7 @@ test("a failed Result creation leaves no active Build", async () => {
   const initial = createGreetingBuild({ generationStep: "placeholder" });
   const fixture = projectRuntimeFixture(directory);
   const unavailable: RunFinalizationStore = {
-    async create() { throw new Error("result repository refused creation"); },
+    async create() { throw new Error("publication finalization refused creation"); },
     async openFinalizer() { return undefined; },
     async removeIncomplete() {},
     async readStored() { return undefined; },
@@ -346,8 +346,8 @@ test("a failed Result creation leaves no active Build", async () => {
         publication: { outputs: [{ name: "final.document",
           record: "document:root", publisher: "example.test-product@1" }] },
       },
-      result: resultDestination(directory),
-    }), /result repository refused creation/u);
+      publicationStores: publicationStoreLocation(directory),
+    }), /publication finalization refused creation/u);
     const status = await runtime.inspect("bld_20260902T120000007Z_0000000001");
     assert.equal(status, undefined);
     assert.equal(await runtime.workOnce(), undefined);

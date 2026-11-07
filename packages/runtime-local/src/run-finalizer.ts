@@ -87,7 +87,7 @@ export function createLocalRunFinalizer(
     readonly manifest: StoredBuildResult;
     close(): Promise<void>;
   }> => {
-    const opened = await options.openPublicationStores(execution.result);
+    const opened = await options.openPublicationStores(execution.publicationStores);
     try {
       const [finalizer, manifest] = await Promise.all([
         opened.finalization.openFinalizer(execution.build),
@@ -236,7 +236,7 @@ export function createLocalRunFinalizer(
   const discardSubmission = async (build: string): Promise<boolean> => {
     const submission = await options.submissionStore.read(build);
     if (submission === undefined) return false;
-    const opened = await options.openPublicationStores(submission.result);
+    const opened = await options.openPublicationStores(submission.publicationStores);
     try {
       await opened.finalization.removeIncomplete(build);
     } finally {

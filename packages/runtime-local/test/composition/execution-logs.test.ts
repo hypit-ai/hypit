@@ -52,7 +52,7 @@ import {
   durableBuildRequest,
   finishClaimedBuild,
   projectRuntimeFixture,
-  resultDestination,
+  publicationStoreLocation,
   runFixture,
 } from "./local-scenario.js";
 

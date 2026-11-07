@@ -30,7 +30,7 @@ test("an executor that fails before ready records a failed Build and leaves supe
       const request = {
         build,
         executionPackages: [],
-        result: { root, historyPath: "results", productsPath: "products" },
+        publicationStores: { root, historyPath: "results", productsPath: "products" },
         context: { format: "hypit.local-execution@1", packageRoot: root, hostStateRoot: join(root, "host"),
           distributionPackageRoot: distribution, profile: profileValue },
       };

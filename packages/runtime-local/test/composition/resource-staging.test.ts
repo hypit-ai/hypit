@@ -51,7 +51,7 @@ import {
   durableBuildRequest,
   finishClaimedBuild,
   projectRuntimeFixture,
-  resultDestination,
+  publicationStoreLocation,
   runFixture,
 } from "./local-scenario.js";
 
@@ -126,7 +126,7 @@ test("a selected file is staged once and remains referenced in the structured Pr
           return (async function* () { yield bytes; })();
         },
       }],
-      result: resultDestination(directory),
+      publicationStores: publicationStoreLocation(directory),
     });
     assert.equal(attachmentOpens, 1);
     const work = new FileResourceStore(join(directory, ".hypit", "work", "bld_20260902T120000009Z_0000000001"));
