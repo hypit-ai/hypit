@@ -29,7 +29,6 @@
       "use": "@hypit/provider-html-local",
       "config": {
         "workers": 2,
-        "quality": "standard",
         "defaultConcurrency": 1
       }
     }
