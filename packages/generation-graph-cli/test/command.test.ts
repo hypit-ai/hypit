@@ -53,7 +53,7 @@ const loaded: LoadedPackage = {
     format: "hypit.package@1",
     modules: [{ manifest }],
     facets: [
-      createGenerationNodePackageFacet({ nodes: [{ using, fragment }] }),
+      createGenerationNodePackageFacet({ nodes: [{ kind: "operation", using, fragment }] }),
       {
         abi: "hypit.producer-package@1",
         implementation: [{ producer, handler: () => ({ kind: "output", value: "finished image" }) }],

@@ -9,6 +9,12 @@ export {
 } from "./document.js";
 export { createMediaAssetDocumentFromInspection } from "./import.js";
 export {
+  mediaAssetGenerationNode,
+  mediaAssetGenerationNodes,
+  mediaAssetManifest,
+  mediaAssetModuleRef,
+} from "./generation.js";
+export {
   createMediaRepresentationFacet,
   createMediaRepresentationHost,
   createMediaRepresentationHostFromFacets,

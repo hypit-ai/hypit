@@ -77,7 +77,7 @@ export async function prepareGenerationGraphTargets(
     };
   });
   assert(sliced.plan.steps.length > 0,
-    "Generation Graph Target has no executable work; use a Media node for an existing value.");
+    "Generation Graph Target has no executable work; target an operation that consumes the existing value.");
 
   const demanded = new Set(sliced.plan.steps.map((step) => step.id));
   const generated = project.nodes.flatMap((node): PreparedGenerationGraphNode[] => {

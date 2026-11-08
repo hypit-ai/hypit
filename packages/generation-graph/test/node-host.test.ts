@@ -48,7 +48,7 @@ const loaded: LoadedPackage = {
   contribution: {
     format: "hypit.package@1",
     modules: [{ manifest }],
-    facets: [createGenerationNodePackageFacet({ nodes: [{ using, fragment }] })],
+    facets: [createGenerationNodePackageFacet({ nodes: [{ kind: "operation", using, fragment }] })],
   },
 };
 

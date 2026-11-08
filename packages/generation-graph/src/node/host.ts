@@ -16,6 +16,7 @@ import {
 import type {
   GenerationGraphLoweringHost,
   GenerationGraphProject,
+  GenerationNodeAssetHost,
 } from "../types.js";
 import {
   readGenerationGraphProjectFile,
@@ -33,6 +34,7 @@ export type NodeGenerationGraphProjectHost = {
 /** Build one project Host from the exact package set already selected by the embedding application. */
 export function createNodeGenerationGraphProjectHost(input: {
   readonly packages: readonly LoadedPackage[];
+  readonly assets?: GenerationNodeAssetHost;
 }): NodeGenerationGraphProjectHost {
   verifyPackageContributions(input.packages.map((item) => item.contribution));
   const manifests = input.packages.flatMap((item) =>
@@ -43,7 +45,7 @@ export function createNodeGenerationGraphProjectHost(input: {
       specifier: item.specifier,
       implementation,
     })));
-  const lowering = createGenerationGraphLoweringHost(installed);
+  const lowering = createGenerationGraphLoweringHost(installed, input.assets);
   return {
     program,
     lowering,

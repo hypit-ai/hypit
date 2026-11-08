@@ -27,6 +27,7 @@ import type {
   NodePackageSelectionRequest,
 } from "@hypit/loader/node";
 import { moduleKey, modulePackageAbi } from "@hypit/protocol";
+import { NodeFilesystemWorkspace } from "@hypit/workspace/node";
 
 export type GenerationGraphCliServices = Pick<BuildCliServices,
   "packageRoot" | "resolveProjectRuntime" | "openRuntimeHost" | "openProjectResults"> & {
@@ -144,11 +145,28 @@ export async function runGenerationGraphCli(
   let session: LongBuildSession | undefined;
   try {
     const project = await readGenerationGraphProjectFile(graphPath);
+    const workspace = await new NodeFilesystemWorkspace({
+      root: projectRoot,
+      sourceAdapter: (unit) => ({ unit, frontend: "generation-graph" }),
+    }).open(graphPath);
     const packages = await services.loadPackages(packageRequest(project), packageRoot, {
       ...(services.packageRoot === undefined ? {} : { fallbackRoots: [services.packageRoot] }),
     });
     const host = createNodeGenerationGraphProjectHost({
       packages,
+      assets: {
+        resolveAsset: (request) => workspace.resolveAsset(workspace.entry.unit, request),
+        readAsset: async (request) => {
+          if (workspace.readAsset === undefined) {
+            throw new Error("Generation Graph Workspace cannot read author assets.");
+          }
+          return await workspace.readAsset(workspace.entry.unit, request);
+        },
+        attachments: async () => (await workspace.attachments()).map((item) => ({
+          blob: item.blob,
+          open: async () => await item.open(),
+        })),
+      },
     });
     const prepared = await host.prepare(project, parsed.targets);
 

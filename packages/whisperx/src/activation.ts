@@ -14,6 +14,7 @@ export const hypitPackage = {
     createProducerPackageFacet(whisperXComponent.producers),
     createGenerationNodePackageFacet({
       nodes: [{
+        kind: "operation",
         using: whisperXGenerationNodes.transcribe,
         fragment: whisperXTranscriptionFragment,
       }],

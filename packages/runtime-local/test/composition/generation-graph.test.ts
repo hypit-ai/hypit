@@ -99,8 +99,8 @@ const loadedPackage: LoadedPackage = {
     modules: [{ manifest }],
     facets: [
       createGenerationNodePackageFacet({ nodes: [
-        { using: components.local, fragment: localFragment },
-        { using: components.remote, fragment: remoteFragment },
+        { kind: "operation", using: components.local, fragment: localFragment },
+        { kind: "operation", using: components.remote, fragment: remoteFragment },
       ] }),
       createProducerPackageFacet([{
         producer: producers.prepare,

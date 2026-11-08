@@ -16,8 +16,11 @@ export {
 } from "./package.js";
 export type {
   GenerationNodeDeclaration,
+  GenerationOperationNodeDeclaration,
   GenerationNodePackage,
   GenerationNodePackageFacet,
+  GenerationValueNodeDeclaration,
+  GenerationValueNodeLoadContext,
   InstalledGenerationNodePackage,
 } from "./package.js";
 export { prepareGenerationGraphTargets } from "./prepare.js";
@@ -42,6 +45,9 @@ export type {
   GenerationGraphNodeLayout,
   GenerationGraphProject,
   GenerationGraphResourceAttachment,
+  GenerationNodeAssetHost,
   GenerationNodeImplementation,
+  GenerationOperationNodeImplementation,
+  GenerationValueNodeImplementation,
   LoweredGenerationGraph,
 } from "./types.js";

@@ -33,25 +33,38 @@ There is no node-local Product history, `selected` Product or `generate` state. 
 creates two independent Builds and two Product publications without changing the project revision. A Build is
 an instantiation of the recipe, never an edit to it.
 
-Generation behavior is contributed through `hypit.generation-node-package@1`. The same installed package may
-contribute the authoring Facet, deterministic Producer Facets and execution Facets it owns. The project names a
-logical Module component; the embedding application selects exact installed packages and passes their
-`LoadedPackage` values to `createNodeGenerationGraphProjectHost`. Missing and duplicate owners fail exactly.
-The library does not scan projects, install packages or maintain a second Generation registry.
+Node behavior is contributed through `hypit.generation-node-package@1`. The same installed package may contribute
+the authoring Facet, deterministic Producer Facets and execution Facets it owns. The project names a logical
+Module component; the embedding application selects exact installed packages and passes their `LoadedPackage`
+values to `createNodeGenerationGraphProjectHost`. Missing and duplicate owners fail exactly. The library does not
+scan projects, install packages or maintain a second Generation registry.
+
+There are two implementation forms with different lifetimes:
+
+- an `operation` node supplies a one-result `GraphFragment`; its reachable Operations become Build work and their
+  outputs may be published as Products;
+- a `value` node loads an already-authored fact through the Host Workspace; it becomes a typed Record and transient
+  attachments before submission, never Build work, a Product or Result history.
+
+Value-node parameters must be authored literal values. Package code interprets them and may use only the Host's
+explicit `readAsset` and `resolveAsset` capabilities. It receives no filesystem path, Runtime, Endpoint or Result
+repository. `@hypit/media-asset@1#media` is the first concrete value node: a portable `.media.json` reference
+becomes `PreparedMedia`, while Runtime receives only its closed Record and media bytes.
 
 An operation component describes what happens and its typed ports; it does not select who executes a Need.
 Model-family packages such as `@hypit/whisperx` can contribute operation nodes, while independent Provider
 packages satisfy their Capabilities through the Runtime profile. Adding another model, analyzer or Provider must
 not add a node kind, result kind or vendor branch to Generation Graph Core.
 
-`lowerGenerationGraph` is filesystem-free. Package code supplies each node's one-result `GraphFragment`.
-Literal inputs become ordinary Records and node inputs become component-output references. Target preparation
-visits only the reachable recipe branch and lowers it to the existing AuthorGraph and Kernel planner.
+`lowerGenerationGraph` is filesystem-free. Operation literals become ordinary Records, operation dependencies
+become component-output references, and value dependencies become Record references. Target preparation visits
+only the reachable recipe branch and lowers it to the existing AuthorGraph and Kernel planner. A surrounding Host
+may resolve value nodes first and then hand lowering the resulting values and attachments.
 
-`prepareGenerationGraphTargets` produces one finite Build and a `PublicationIntent`. Every demanded node is
-published under its node id, including intermediate nodes, so a completed upstream Product remains available
-when a later operation fails. Product identity is the normal `{ publication: buildId, name: nodeId }`; it is
-not copied into the recipe file.
+`prepareGenerationGraphTargets` produces one finite Build and a `PublicationIntent`. Every demanded operation node
+is published under its node id, including intermediate operations, so a completed upstream Product remains
+available when a later operation fails. Existing value nodes are inputs rather than new publications. Product
+identity is the normal `{ publication: buildId, name: nodeId }`; it is not copied into the recipe file.
 
 `executeNodeGenerationGraphTargets` reads one project revision, prepares it and submits it without writing the
 project. Concurrent submissions therefore do not race to attach a current Product. The caller supplies the

@@ -17,6 +17,7 @@ export const hypitPackage = {
     ]),
     createGenerationNodePackageFacet({
       nodes: [{
+        kind: "operation",
         using: speechEvidenceGenerationNodes.projectAudio,
         fragment: speechEvidenceAudioFragment,
       }],

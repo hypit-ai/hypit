@@ -66,6 +66,7 @@ function project(): GenerationGraphProject {
 
 const host = {
   resolveImplementation: () => ({
+    kind: "operation" as const,
     using: { module: moduleRef, name: "transform" },
     fragment,
     executionPackage: "@example/generator",
@@ -116,4 +117,54 @@ test("preparing a target ignores unrelated recipe branches", async () => {
     ["base"],
   );
   assert.deepEqual(prepared.generated.map((item) => item.node), ["base"]);
+});
+
+test("an authored value node closes over a Record without becoming Build work", async () => {
+  const existing = { module: moduleRef, name: "existing" } as const;
+  const valueProject: GenerationGraphProject = {
+    format: "hypit.generation-graph@1",
+    id: "existing-image",
+    name: "Existing image",
+    revision: 0,
+    nodes: [{
+      id: "source",
+      using: existing,
+      inputs: { asset: { value: "./still.png" } },
+    }, {
+      id: "final",
+      using: { module: moduleRef, name: "transform" },
+      inputs: { source: { node: "source" } },
+    }],
+    layout: [],
+  };
+  const attachment = {
+    blob: { kind: "blob" as const, resource: "res_existing" as const, size: 1, mediaType: "image/png" },
+    open: async () => (async function* () { yield new Uint8Array([1]); })(),
+  };
+  const valueHost = {
+    resolveImplementation: (node: GenerationGraphProject["nodes"][number]) => node.id === "source"
+      ? {
+          kind: "value" as const,
+          using: existing,
+          type: artifactType,
+          value: "existing image",
+        }
+      : {
+          kind: "operation" as const,
+          using: { module: moduleRef, name: "transform" } as const,
+          fragment,
+          executionPackage: "@example/generator",
+        },
+    attachments: () => [attachment],
+  };
+  const prepared = await prepareGenerationGraphTargets(
+    valueProject,
+    link(createResolvedClosure([manifest]), []),
+    valueHost,
+    ["final"],
+  );
+  assert.equal(prepared.definition.plan.steps.length, 1);
+  assert.deepEqual(prepared.generated.map((item) => item.node), ["final"]);
+  assert.deepEqual(prepared.executionPackages, ["@example/generator"]);
+  assert.deepEqual(prepared.attachments, [attachment]);
 });

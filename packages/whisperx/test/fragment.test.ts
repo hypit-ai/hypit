@@ -17,6 +17,7 @@ test("WhisperX contributes a Provider-neutral transcript operation node", () => 
   const contributed = generationNodePackagesFromFacets(hypitPackage.facets);
   assert.equal(contributed.length, 1);
   assert.deepEqual(contributed[0]!.nodes, [{
+    kind: "operation",
     using: whisperXGenerationNodes.transcribe,
     fragment: whisperXTranscriptionFragment,
   }]);

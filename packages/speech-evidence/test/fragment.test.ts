@@ -16,6 +16,7 @@ test("speech evidence contributes its media projection as an operation node", ()
   const contributed = generationNodePackagesFromFacets(hypitPackage.facets);
   assert.equal(contributed.length, 1);
   assert.deepEqual(contributed[0]!.nodes, [{
+    kind: "operation",
     using: speechEvidenceGenerationNodes.projectAudio,
     fragment: speechEvidenceAudioFragment,
   }]);

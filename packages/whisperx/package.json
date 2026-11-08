@@ -29,13 +29,16 @@
     "@hypit/timed-transcript": "workspace:^0.1.0"
   },
   "devDependencies": {
+    "@hypit/blob": "workspace:*",
     "@hypit/hypit": "workspace:*",
+    "@hypit/media-asset": "workspace:*",
     "@hypit/producer": "workspace:*",
     "@hypit/media": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/speech-evidence": "workspace:*",
     "@hypit/timed-transcript": "workspace:*",
     "@hypit/temporal": "workspace:*",
+    "@hypit/temporal-graph": "workspace:*",
     "typescript": "5.9.3"
   }
 }

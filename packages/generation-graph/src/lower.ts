@@ -12,6 +12,7 @@ import {
 import {
   canonicalize,
   sameModule,
+  type LogicalOutput,
   type TypedRecord,
 } from "@hypit/protocol";
 
@@ -35,6 +36,7 @@ function implementationFor(
   assert(sameModule(implementation.using.module, node.using.module)
     && implementation.using.name === node.using.name,
   `Generation Graph Node ${node.id} resolved the wrong component implementation.`);
+  if (implementation.kind === "value") return implementation;
   assert(implementation.fragment.exports.length === 1,
     `Generation Graph Node ${node.id} component must expose exactly one result.`);
   assert(implementation.executionPackage === undefined || implementation.executionPackage.trim().length > 0,
@@ -74,7 +76,7 @@ export async function lowerGenerationGraph(
   ] as const));
   const implementations = new Map<string, GenerationNodeImplementation>(resolvedImplementations);
   for (const implementation of implementations.values()) {
-    verifyGraphFragment(program, implementation.fragment);
+    if (implementation.kind === "operation") verifyGraphFragment(program, implementation.fragment);
   }
 
   const records = new Map(program.records.map((record) => [record.id, record]));
@@ -89,8 +91,25 @@ export async function lowerGenerationGraph(
   };
 
   const components: AuthorComponent[] = [];
+  const valueOutputs: LogicalOutput[] = [];
   for (const node of selectedNodes) {
     const implementation = implementations.get(node.id)!;
+    if (implementation.kind !== "value") continue;
+    const record: TypedRecord = {
+      id: `generation-graph:${project.id}:${node.id}:value`,
+      type: implementation.type,
+      value: implementation.value,
+    };
+    addRecord(record);
+    valueOutputs.push({
+      id: node.id,
+      type: implementation.type,
+      result: { kind: "record", id: record.id },
+    });
+  }
+  for (const node of selectedNodes) {
+    const implementation = implementations.get(node.id)!;
+    if (implementation.kind === "value") continue;
     const inputs: Record<string, AuthorValueRef> = {};
     for (const declaration of implementation.fragment.inputs) {
       const input = node.inputs[declaration.name]!;
@@ -105,11 +124,13 @@ export async function lowerGenerationGraph(
         continue;
       }
       const dependency = implementations.get(input.node)!;
-      inputs[declaration.name] = {
-        kind: "component-output",
-        component: `generation-graph:${input.node}`,
-        output: dependency.fragment.exports[0]!.name,
-      };
+      inputs[declaration.name] = dependency.kind === "value"
+        ? { kind: "record", id: `generation-graph:${project.id}:${input.node}:value` }
+        : {
+            kind: "component-output",
+            component: `generation-graph:${input.node}`,
+            output: dependency.fragment.exports[0]!.name,
+          };
     }
     components.push({
       id: `generation-graph:${node.id}`,
@@ -122,15 +143,17 @@ export async function lowerGenerationGraph(
   const linked = link(program.closure, [...records.values()]);
   const generated = elaborateAuthorGraph(linked, components);
   const graph = sealAuthorGraph({
-    outputs: generated.outputs,
+    outputs: [...generated.outputs, ...valueOutputs],
     operations: generated.operations,
   });
   verifyAuthorGraph(linked, graph);
   return {
     program: linked,
     graph,
-    attachments: [],
+    attachments: host.attachments === undefined ? [] : [...await host.attachments()],
     executionPackages: [...new Set([...implementations.values()].flatMap((implementation) =>
-      implementation.executionPackage === undefined ? [] : [implementation.executionPackage]))].sort(),
+      implementation.kind === "operation" && implementation.executionPackage !== undefined
+        ? [implementation.executionPackage]
+        : []))].sort(),
   };
 }

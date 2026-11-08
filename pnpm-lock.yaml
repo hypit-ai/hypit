@@ -758,6 +758,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:^0.0.0-dev
         version: link:../protocol
+      '@hypit/source':
+        specifier: workspace:^0.0.0-dev
+        version: link:../source
 
   packages/generation-graph-cli:
     dependencies:
@@ -776,6 +779,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:^0.0.0-dev
         version: link:../protocol
+      '@hypit/workspace':
+        specifier: workspace:^0.0.0-dev
+        version: link:../workspace
     devDependencies:
       '@hypit/author':
         specifier: workspace:*
@@ -1137,6 +1143,9 @@ importers:
       '@hypit/facet':
         specifier: workspace:^0.0.0-dev
         version: link:../facet
+      '@hypit/generation-graph':
+        specifier: workspace:^0.0.0-dev
+        version: link:../generation-graph
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
@@ -2580,9 +2589,15 @@ importers:
         specifier: workspace:^0.1.0
         version: link:../timed-transcript
     devDependencies:
+      '@hypit/blob':
+        specifier: workspace:*
+        version: link:../blob
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../..
+      '@hypit/media-asset':
+        specifier: workspace:*
+        version: link:../media-asset
       '@hypit/producer':
         specifier: workspace:*
         version: link:../producer
@@ -2592,6 +2607,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:*
         version: link:../temporal
+      '@hypit/temporal-graph':
+        specifier: workspace:*
+        version: link:../temporal-graph
       typescript:
         specifier: 5.9.3
         version: 5.9.3
