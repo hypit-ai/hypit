@@ -68,7 +68,7 @@ function outputs(value: unknown, subject: string, publication: string): Readonly
     text(name, `${subject} Output name`);
     const product = decodeProduct(raw, `${subject}[${JSON.stringify(name)}]`);
     if (product.address.publication !== publication || product.address.name !== name) {
-      throw new Error(`${subject}[${JSON.stringify(name)}].address does not match its Run publication`);
+      throw new Error(`${subject}[${JSON.stringify(name)}].address does not match its Build publication`);
     }
     return [name, product];
   }));

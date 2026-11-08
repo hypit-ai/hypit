@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { FileRunFinalization, FileRunFinalizationStore } from "../../../runtime-local/src/result-storage/index.js";
+import { FileBuildFinalization, FileBuildFinalizationStore } from "../../../runtime-local/src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
 import { FileProductHistory } from "@hypit/product/node";
 import type { ProductExporter } from "@hypit/product";
@@ -35,7 +35,7 @@ export function completedRecords(): readonly TypedRecord[] {
 }
 
 export async function fixture(root: string, id = "bld_20260902T110000000Z_0000000001", source = "main.svml"): Promise<void> {
-  const result = await FileRunFinalization.create(
+  const result = await FileBuildFinalization.create(
     join(root, ".hypit", "results"),
     join(root, ".hypit", "products"),
     {
@@ -54,7 +54,7 @@ export async function fixture(root: string, id = "bld_20260902T110000000Z_000000
 export function resultDistribution(): BuildOperationsCliServices {
   return buildCliServices({
     async openProjectResults(projectRoot: string) {
-      const finalization = new FileRunFinalizationStore(
+      const finalization = new FileBuildFinalizationStore(
         join(projectRoot, ".hypit", "results"),
         join(projectRoot, ".hypit", "products"),
       );

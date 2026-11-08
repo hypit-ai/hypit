@@ -18,7 +18,7 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import { FileResourceStore } from "@hypit/resource-store/node";
-import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildFinalizationStore } from "../../src/result-storage/index.js";
 import { EnvironmentCredentialStore } from "./environment-credential-store.js";
 import { defineEndpoint } from "@hypit/endpoint";
 import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
@@ -80,7 +80,7 @@ test("a project directory alias accepts its Source and stores a project-relative
         ...request.authoring,
         sourcePath: session.sourceLocation?.(session.entry.unit) ?? session.entry.unit.id,
       } });
-      const result = await new FileRunFinalizationStore(join(directory, "results"), join(directory, "products"))
+      const result = await new FileBuildFinalizationStore(join(directory, "results"), join(directory, "products"))
         .readStored(request.id);
       assert.equal(result?.sourcePath, "main.svml");
     } finally { await runtime.close(); }

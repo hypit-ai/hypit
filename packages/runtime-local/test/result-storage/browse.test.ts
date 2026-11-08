@@ -4,16 +4,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildFinalizationStore } from "../../src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
 
 import {
   publicationIntent,
 } from "./repository-scenario.js";
 
-test("filesystem Run history records one Product address per Output and browses newest first", async () => {
+test("filesystem Build history records one Product address per Output and browses newest first", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-build-result-browse-"));
-  const finalization = new FileRunFinalizationStore(root, join(root, "products"));
+  const finalization = new FileBuildFinalizationStore(root, join(root, "products"));
   const history = new FileBuildResultHistory(root);
   const ids = [
     "bld_20260901T100000001Z_0000000001",

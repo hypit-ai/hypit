@@ -2,7 +2,7 @@ import type { RefinementPackage } from "@hypit/refinement";
 import type { Awaitable, ProducerPackage } from "@hypit/producer";
 import type { EndpointInstance } from "@hypit/endpoint";
 import type { LoadedPackage } from "@hypit/loader";
-import type { RunFinalizationStore } from "./result-storage/types.js";
+import type { BuildFinalizationStore } from "./result-storage/types.js";
 import type { ProductHistory } from "@hypit/product";
 import type { BuildResultHistory } from "@hypit/result";
 import type {
@@ -22,7 +22,7 @@ import type {
 type PublicationStoresOpened = {
   readonly history: BuildResultHistory;
   readonly products: ProductHistory;
-  readonly finalization: RunFinalizationStore;
+  readonly finalization: BuildFinalizationStore;
   readonly close?: () => void | Promise<void>;
 };
 
@@ -71,7 +71,7 @@ export type CreateLocalRuntimeControlOptions = {
   readonly close?: () => Awaitable<void>;
 };
 
-export type CreateLocalRunFinalizerOptions = {
+export type CreateLocalBuildFinalizerOptions = {
   readonly executionLogs?: import("./log.js").LocalExecutionLogs;
   readonly buildStore: BuildStore;
   readonly operationStore: OperationStore;
@@ -104,7 +104,7 @@ export type LocalRuntime = RuntimeHostExecution & {
 /** Active execution control that never opens the selected ResourceStore. */
 export type LocalRuntimeControl = RuntimeHostControl;
 
-export type LocalRunFinalizer = {
+export type LocalBuildFinalizer = {
   /** Incrementally materialize publications whose Records have completed. */
   sync(
     execution: BuildExecutionSnapshot,

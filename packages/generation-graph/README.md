@@ -52,7 +52,8 @@ Graph topology remains the execution topology.
 Value-node parameters must be authored literal values. Package code interprets them and may use only the Host's
 explicit `readAsset` and `resolveAsset` capabilities. It receives no filesystem path, Runtime, Endpoint or Result
 repository. Media Asset contributes two concrete projections of one portable `.media.json` reference:
-`@hypit/media-asset@1#media` becomes `PreparedMedia`, while `@hypit/media-asset@1#resource` becomes the primary
+`@hypit/media-asset-generation@1#media` becomes `PreparedMedia`, while
+`@hypit/media-asset-generation@1#resource` becomes the primary
 file `Blob` for model inputs. Runtime receives only the selected closed Record and media bytes.
 
 An operation component describes what happens and its typed ports; it does not select who executes a Need.

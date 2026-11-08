@@ -8,7 +8,7 @@ import test from "node:test";
 import type { CliIo } from "@hypit/cli";
 import { authorDeclarationFacetAbi } from "@hypit/author";
 
-import { listDeclarations, listPackages, runVocabularyCli } from "../src/vocabulary.js";
+import { listDeclarations, listPackages, runSvmlVocabularyCli } from "../src/vocabulary.js";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
@@ -78,16 +78,16 @@ test("vocabulary discovers bundled packages from a separate project without node
     await writeFile(join(distribution, "packages", "inactive", "package.json"), JSON.stringify({ name: "@hypit/inactive" }));
 
     const human = io();
-    await runVocabularyCli(["vocabulary"], human.io, project, distribution);
+  await runSvmlVocabularyCli(["vocabulary"], human.io, project, distribution);
     assert.match(human.text(), /@hypit\/bundled\n\s+declarations: card/u);
     const json = io();
-    await runVocabularyCli(["vocabulary", "--json"], json.io, project, distribution);
+    await runSvmlVocabularyCli(["vocabulary", "--json"], json.io, project, distribution);
     assert.deepEqual(JSON.parse(json.text()).packages, [{
       name: "@hypit/bundled", description: "@hypit/bundled", declarations: ["card"],
     }]);
 
     const named = io();
-    await runVocabularyCli(["vocabulary", "@hypit/bundled", "--declaration", "card", "--json"], named.io, project, distribution);
+    await runSvmlVocabularyCli(["vocabulary", "@hypit/bundled", "--declaration", "card", "--json"], named.io, project, distribution);
     const declarations = JSON.parse(named.text()).declarations;
     assert.equal(declarations.length, 1);
     assert.equal(declarations[0].package, "@hypit/bundled");
@@ -153,21 +153,21 @@ test("a named package answers with its own Declarations only", async () => {
 
 test("the command prints human and JSON views", async () => {
   const human = io();
-  await runVocabularyCli(["vocabulary", "@hypit/gpt-image", "--declaration", "image"], human.io, repositoryRoot);
+  await runSvmlVocabularyCli(["vocabulary", "@hypit/gpt-image", "--declaration", "image"], human.io, repositoryRoot);
   assert.match(human.text(), /owner\.image/);
   assert.match(human.text(), /prompt/);
 
   const json = io();
-  await runVocabularyCli(["vocabulary", "--json"], json.io, repositoryRoot);
+  await runSvmlVocabularyCli(["vocabulary", "--json"], json.io, repositoryRoot);
   const parsed = JSON.parse(json.text()) as { packages: readonly { name: string }[] };
   assert.ok(parsed.packages.some((item) => item.name === "@hypit/gpt-image"));
 
-  await assert.rejects(runVocabularyCli(["vocabulary", "--declaration", "x"], io().io, repositoryRoot), /name the package first/);
+  await assert.rejects(runSvmlVocabularyCli(["vocabulary", "--declaration", "x"], io().io, repositoryRoot), /name the package first/);
 });
 
 test("the human view distinguishes logical Modules contributed by one physical package", async () => {
   const human = io();
-  await runVocabularyCli(["vocabulary", "@hypit/gpt-image", "--declaration", "image"], human.io, repositoryRoot);
+  await runSvmlVocabularyCli(["vocabulary", "@hypit/gpt-image", "--declaration", "image"], human.io, repositoryRoot);
   assert.match(human.text(), /package  @hypit\/gpt-image/u);
   assert.match(human.text(), /module   @hypit\/gpt-image@1/u);
   assert.match(human.text(), /import   module owner from "@hypit\/gpt-image@1"/u);

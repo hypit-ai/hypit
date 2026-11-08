@@ -11,36 +11,22 @@
     "dist",
     "README.md"
   ],
-  "hypit": {
-    "activation": "./src/activation.ts"
-  },
   "dependencies": {
     "@hypit/audio-program": "workspace:^0.1.0",
-    "@hypit/author": "workspace:^0.0.0-dev",
     "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/audiovisual-audio": "workspace:^0.1.0",
     "@hypit/audiovisual-html": "workspace:^0.1.0",
-    "@hypit/blob": "workspace:^0.0.0-dev",
     "@hypit/facet": "workspace:^0.0.0-dev",
     "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-delivery": "workspace:^0.1.0",
     "@hypit/nle": "workspace:^0.1.0",
-    "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/spatial": "workspace:^0.1.1",
-    "@hypit/temporal": "workspace:^0.1.1",
-    "@hypit/temporal-graph": "workspace:^0.1.0"
+    "@hypit/temporal": "workspace:^0.1.1"
   },
   "devDependencies": {
-    "@hypit/compiler": "workspace:*",
-    "@hypit/source": "workspace:*",
     "@hypit/html-program": "workspace:*",
     "@hypit/media": "workspace:*",
-    "@hypit/producer": "workspace:*",
-    "@hypit/temporal": "workspace:*",
-    "@hypit/temporal-graph": "workspace:*",
-    "@hypit/kernel": "workspace:*",
-    "@hypit/executor": "workspace:*",
-    "@hypit/refinement": "workspace:*"
+    "@hypit/temporal": "workspace:*"
   }
 }

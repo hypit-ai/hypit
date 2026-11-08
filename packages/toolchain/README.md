@@ -1,74 +1,27 @@
 # `@hypit/toolchain`
 
-Assembly for the official Hypit toolchain. This package chooses the canonical SVML Block Frontend,
-the filesystem Workspace, Source-package discovery and the starter Runtime Profile. It also owns the
-`hypit vocabulary` view because that view describes the author packages selected by this Distribution.
+Distribution assembly shared by Hypit's long-running Generation system and direct media tools. It
+selects the starter Runtime Profile and exposes three explicit service ports:
 
-Its ordinary npm dependencies select the default author capabilities, Models, Providers and Kits.
-Each dependency owns its implementation and version; Toolchain does not bundle or re-export their SDKs.
-The root Distribution names Toolchain in `hypit.packageSources` so Source and Profile selections can resolve
-these installed defaults from their owner without relying on node_modules hoisting. Project installs
-remain higher priority. The root explicitly declares the command packages it invokes.
+- `buildOperations` for accepted Build history, logs, cancellation and Product export;
+- `generation` for Generation Graph submission and media Product materialization;
+- `localRuntime` for Local Runtime lifecycle commands.
 
-Toolchain is an assembly package, not the owner of the capabilities it selects. Browser capture, local
-media inspection, speech measurement, WhisperX transcription and NLE export remain owned by their
-respective packages and contribute their own CLI roots:
+The package is not a domain owner. Models, Providers, Endpoints, Product exporters, NLE terminals and
+media tools remain independently owned packages selected by ordinary npm dependencies. The root
+executable is the composition root and explicitly binds their CLI modules.
 
-| Command | Owner |
-| --- | --- |
-| `capture` | `@hypit/browser-capture/cli` |
-| `media` | `@hypit/media-local-cli` |
-| `estimate` | `@hypit/speech-estimate/cli` |
-| `transcribe` | `@hypit/whisperx/cli` |
-| `generation run` | `@hypit/generation-graph-cli` |
-| `nle export` | `@hypit/nle-local-cli` |
-| `vocabulary` | `@hypit/toolchain/cli` |
+SVML parsing, Author compilation, Source discovery, the old Source Build CLI and `vocabulary` are not
+part of this assembly. The optional `@hypit/svml-toolchain` application adds them over these shared
+services. A Generation Graph file or an NLE project therefore does not acquire a Source language just
+because it uses the official Distribution.
 
-The root executable is the composition root. It binds service-aware command modules explicitly;
-pure installed command exports may additionally be selected through `hypit.cli.use`.
-`@hypit/toolchain/cli` does not forward or rediscover either kind.
-Installing or importing an arbitrary Source package never grants it CLI or process authority.
-
-## Application assembly
-
-`createToolchainApplicationServices()` returns four explicit ports: `sourceBuild` for Source compilation,
-`buildOperations` for accepted-Build and Result work, `generation` for explicit Generation Graph
-submission, and `localRuntime` for Local Runtime lifecycle commands. The generic CLI Host receives no
-service object; the executable captures each one in its owning command module.
-
-The application services select the official toolchain choices:
-
-- `createToolchainCompiler()` installs the SVML Frontend and assembles selected package declaration compilers,
-  Modules and refinements for one Author compilation;
-- `createToolchainWorkspace()` resolves Source and asset imports from the project and selected
-  Distribution without treating arbitrary package directories as projects;
-- `discoverToolchainSourcePackages()` discovers the closure named by explicit Author imports;
-- Generation Graph submission loads only the logical component packages named by graph nodes and
-  reuses the same Runtime/Profile and publication stores as other long-running work;
-- the starter Runtime Profile selects ordinary independently distributed Providers and Credential
-  Stores by package name;
-- Local Runtime and project publication-store adapters remain Host concerns and do not enter Author values.
-
-These are replaceable product-assembly decisions, not new Core concepts. A different application may
-reuse the generic compiler and CLI contracts with another Frontend or Workspace.
-
-## Vocabulary
-
-```bash
-hypit vocabulary
-hypit vocabulary --visual text
-```
-
-The command reports installed Author-package manifests, their fully qualified Capabilities and their
-syntax-neutral declaration names. Capability identity and result Type come directly from the named package's Module
-Manifest after ordinary package loading; dependency capabilities are not attributed to the package
-being listed. It does not keep a registry, scan the network, install packages or make creative
-choices. Package managers and the project lockfile own physical package versions; Source imports own
-which logical Modules participate in a compilation.
+The starter Runtime Profile selects ordinary independently distributed Providers and Credential
+Stores by package name. Local Runtime and project publication-store adapters remain Host concerns and
+do not enter Generation Graph, NLE or Product values.
 
 ## Boundary
 
-The package may depend on compiler, loader, workspace and product assembly APIs. It must not become a
-place to put functionality merely because that functionality ships in the official toolchain. A
-capability belongs with the behavior and authority it implements; its optional CLI is only another
-port of that owner.
+Toolchain may depend on Runtime, loader, Product and official capability packages needed by the
+Distribution. It must not own Source syntax, visual components, models, Providers, renderers or
+filesystem formats merely because the executable ships them.

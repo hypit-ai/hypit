@@ -1,6 +1,6 @@
 # `@hypit/product`
 
-The common publication identity for typed products that outlive one long-running Run.
+The common publication identity for typed products that outlive one long-running Build.
 
 Producing packages independently decide which outputs are products by attaching
 `productPublication` to their Author binding. Model generation, transcription and future analysis
@@ -12,12 +12,12 @@ export format.
 permission to execute package code.
 
 One durable Product is addressed by `{ publication, name }`. The publication identity currently
-comes from the Run that closed it, while the name is the exact declared publication name. This
+comes from the Build that closed it, while the name is the exact declared publication name. This
 address contains no filesystem path or content hash and is resolved through the Product boundary,
 not through a Result-specific `(build, output)` lookup.
 `ProductHistory` exposes exact `readProduct(address)` and `resolveProduct(address)` operations. The
 filesystem adapter reads a Product-owned `hypit.product-publication@1` manifest and Product-owned
-resources. It does not open Run history or address Products through a Result-specific resolver.
+resources. It does not open Build history or address Products through a Result-specific resolver.
 
 Product also owns the neutral materialization of typed values. Scalars remain inline, Blob resources
 become `product-file` references, and arrays or objects use `hypit.product-value@1` documents whose

@@ -7,8 +7,8 @@ import { commandHint } from "@hypit/cli";
 import test from "node:test";
 
 import {
-  FileRunFinalization,
-  FileRunFinalizationStore,
+  FileBuildFinalization,
+  FileBuildFinalizationStore,
 } from "../../../runtime-local/src/result-storage/index.js";
 import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
 
@@ -100,7 +100,7 @@ test("history scans older pages for matches and compares project-relative source
   try {
     await writeFile(join(root, "main.svml"), "source", "utf8");
     await fixture(root);
-    const finalization = new FileRunFinalizationStore(
+    const finalization = new FileBuildFinalizationStore(
       join(root, ".hypit", "results"),
       join(root, ".hypit", "products"),
     );
@@ -143,7 +143,7 @@ test("result export writes Blob bytes and uses the Type owner's structured autho
     mediaType: "video/mp4",
   } as const;
   try {
-    const result = await FileRunFinalization.create(
+    const result = await FileBuildFinalization.create(
       join(root, ".hypit", "results"),
       join(root, ".hypit", "products"),
       {

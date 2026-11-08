@@ -2,8 +2,8 @@ import type {
   AuthorDocument,
   AuthorDocumentOperation,
   AuthorFrontend,
-} from "@hypit/hypit/author";
-import { decodeSourceText } from "@hypit/hypit/source";
+} from "@hypit/author";
+import { decodeSourceText } from "@hypit/source";
 
 import { parseDocument, serializeDocumentBlock } from "./markdown.js";
 
@@ -74,7 +74,7 @@ function insertionText(source: string, offset: number, markdown: string, before:
   return `${separationBefore(source, offset)}${markdown}${terminalNewline}`;
 }
 
-function project(source: import("@hypit/hypit/source").SourceUnit): AuthorDocument {
+function project(source: import("@hypit/source").SourceUnit): AuthorDocument {
   const parsed = parseDocument(decodeSourceText(source));
   return {
     source,

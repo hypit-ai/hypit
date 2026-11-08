@@ -1,4 +1,4 @@
-import type { AuthorDocumentBlock, AuthorDocumentInline, AuthorDocumentTextMark } from "@hypit/hypit/author";
+import type { AuthorDocumentBlock, AuthorDocumentInline, AuthorDocumentTextMark } from "@hypit/author";
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/gu, (character) => ({

@@ -11,14 +11,13 @@ import { blobTypes } from "@hypit/blob";
 import { prepareMedia } from "@hypit/media";
 import {
   mediaAssetGenerationNodes,
-  serializeMediaAssetDocument,
-  type MediaAssetDocument,
-} from "@hypit/media-asset";
+} from "@hypit/media-asset-generation";
+import { serializeMediaAssetDocument, type MediaAssetDocument } from "@hypit/media-asset";
 
 import blobPackage from "../../blob/src/activation.js";
 import generationPackage from "../../generation/src/activation.js";
 import mediaPackage from "../../media/src/activation.js";
-import mediaAssetPackage from "../../media-asset/src/activation.js";
+import mediaAssetPackage from "../../media-asset-generation/src/activation.js";
 import promptPackage from "../../prompt/src/activation.js";
 import temporalPackage from "../../temporal-graph/src/activation.js";
 import textPackage from "../../text/src/activation.js";
@@ -39,7 +38,7 @@ function installedPackages() {
     { specifier: "@hypit/blob", contribution: blobPackage },
     { specifier: "@hypit/temporal-graph", contribution: temporalPackage },
     { specifier: "@hypit/media", contribution: mediaPackage },
-    { specifier: "@hypit/media-asset", contribution: mediaAssetPackage },
+    { specifier: "@hypit/media-asset-generation", contribution: mediaAssetPackage },
     { specifier: "@hypit/generation", contribution: generationPackage },
     { specifier: "@hypit/text", contribution: textPackage },
     { specifier: "@hypit/prompt", contribution: promptPackage },

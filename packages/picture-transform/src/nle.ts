@@ -15,6 +15,7 @@ import {
   pictureTransformOperator,
   sealPictureTransformControl,
   type PictureTransformControl,
+  type PictureTransformInterpolation,
   type PictureTransformState,
 } from "./program.js";
 
@@ -28,7 +29,7 @@ export type PictureTransformNleParameters =
   | {
       readonly kind: "keyframes";
       readonly keyframes: readonly PictureTransformNleKeyframe[];
-      readonly interpolation: { readonly kind: "linear" };
+      readonly interpolation: PictureTransformInterpolation;
     };
 
 export type PictureTransformNleEdit =
@@ -67,7 +68,9 @@ export function assertPictureTransformNleParameters(
   exactFields(value, ["interpolation", "keyframes", "kind"], label);
   record(value.interpolation, `${label}.interpolation`);
   exactFields(value.interpolation, ["kind"], `${label}.interpolation`);
-  if (value.interpolation.kind !== "linear") throw new Error(`${label}.interpolation.kind is invalid.`);
+  if (!["linear", "ease-in", "ease-out", "ease-in-out"].includes(value.interpolation.kind as string)) {
+    throw new Error(`${label}.interpolation.kind is invalid.`);
+  }
   if (!Array.isArray(value.keyframes) || value.keyframes.length === 0) {
     throw new Error(`${label}.keyframes must contain at least one keyframe.`);
   }
@@ -110,7 +113,7 @@ export function pictureTransformControlFromNleParameters(
         range: { start: structuredClone(keyframe.at), end: structuredClone(next?.at ?? input.duration) },
         from: structuredClone(keyframe.state),
         to: structuredClone(next?.state ?? keyframe.state),
-        interpolation: { kind: "linear" as const },
+        interpolation: structuredClone(parameters.interpolation),
       };
     }),
   });

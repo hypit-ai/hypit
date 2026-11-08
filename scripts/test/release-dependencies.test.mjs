@@ -67,7 +67,12 @@ test("independent packages bridge embedded Core through the Distribution peer", 
   const dependencies = await releasedPackageDependencyMap("packages/toolchain", "dependencies");
   assert.equal(dependencies["@hypit/compiler"], undefined);
   assert.equal(dependencies["@hypit/protocol"], undefined);
-  assert.equal(dependencies["@hypit/svml"], "^0.1.0");
+  assert.equal(dependencies["@hypit/svml"], undefined);
   const peers = await releasedPackageDependencyMap("packages/toolchain", "peerDependencies");
   assert.deepEqual(peers, { "@hypit/hypit": "^0.4.0" });
+
+  const sourceApplication = await releasedPackageDependencyMap("packages/svml-toolchain", "dependencies");
+  assert.equal(sourceApplication["@hypit/svml"], "^0.1.0");
+  assert.equal(sourceApplication["@hypit/recipe"], "^0.1.0");
+  assert.equal(sourceApplication["@hypit/toolchain"], "^0.3.0");
 });

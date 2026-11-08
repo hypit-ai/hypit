@@ -6,7 +6,7 @@
   <import as="fonts" from="@hypit/fontsource@1"/>
   <import as="chat" from="@example/chat-scene@1"/>
   <import as="film" from="@hypit/film@1"/>
-  <import as="html" from="@hypit/html-video@1"/>
+  <import as="html" from="@hypit/html-video-author@1"/>
   <import as="style" source="./chat.svs"/>
 
   <time:Clock id="animation-clock" frame-rate="30"/>

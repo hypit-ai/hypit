@@ -10,6 +10,7 @@ import { mediaDeliveryProducers } from "@hypit/media-delivery";
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
+/** Source/Author terminal fragment; direct NLE export does not use this graph. */
 export function createHtmlVideoFragment(selectedRange = false) {
   return sealGraphFragment({
     inputs: [

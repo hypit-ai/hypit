@@ -2,16 +2,16 @@ import {
   assertProgramSource,
   audioType,
   pictureType,
+  type ProgramSource,
 } from "@hypit/audiovisual";
-import type { ProgramSource } from "@hypit/audiovisual";
 import {
   preparedPictureExtent,
   verifyPreparedMedia,
+  type PreparedMedia,
 } from "@hypit/media";
-import type { PreparedMedia } from "@hypit/media";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
 
-/** Project selected Media members into one renderer-independent audiovisual Source. */
+/** Project selected Media members into one renderer-independent AVIR Source. */
 export function programSourceFromPreparedMedia(media: PreparedMedia): ProgramSource {
   verifyPreparedMedia(media);
   const outputs: Record<string, ProgramSource["outputs"][string]> = {};

@@ -32,6 +32,7 @@
     "@hypit/blob": "workspace:*",
     "@hypit/hypit": "workspace:*",
     "@hypit/media-asset": "workspace:*",
+    "@hypit/media-asset-generation": "workspace:*",
     "@hypit/producer": "workspace:*",
     "@hypit/media": "workspace:*",
     "@hypit/protocol": "workspace:*",

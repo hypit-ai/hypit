@@ -18,8 +18,8 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import { FileResourceStore } from "@hypit/resource-store/node";
-import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
-import type { RunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildFinalizationStore } from "../../src/result-storage/index.js";
+import type { BuildFinalizationStore } from "../../src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
 import { FileProductHistory } from "@hypit/product/node";
 import { isBlobRef } from "@hypit/protocol";
@@ -30,7 +30,7 @@ import { createProducerPackageFacet } from "@hypit/producer";
 import type { ProducerPackage } from "@hypit/producer";
 import { createRefinementPackageFacet } from "@hypit/refinement";
 import type { RefinementPackage } from "@hypit/refinement";
-import { createLocalRunFinalizer, createLocalRuntime } from "@hypit/runtime-local";
+import { createLocalBuildFinalizer, createLocalRuntime } from "@hypit/runtime-local";
 import { resolveProjectRoot } from "@hypit/project";
 import { NodeFilesystemWorkspace } from "@hypit/workspace/node";
 import { defineBuild, link } from "@hypit/kernel";
@@ -253,11 +253,11 @@ test("an interrupted Result write can be retried internally without rerunning th
   const openRepository = async (
     location: import("@hypit/runtime-local").PublicationStoreLocation,
   ) => {
-    const base = new FileRunFinalizationStore(
+    const base = new FileBuildFinalizationStore(
       join(location.root, location.historyPath),
       join(location.root, location.productsPath),
     );
-    const finalization: RunFinalizationStore = {
+    const finalization: BuildFinalizationStore = {
       create: async (seed) => await base.create(seed),
       async openFinalizer(build) {
         const writer = await base.openFinalizer(build);
@@ -304,8 +304,8 @@ test("an interrupted Result write can be retried internally without rerunning th
     assert.equal(await runtime.workOnce(), undefined);
 
     rejectSync = false;
-    const runFinalizer = createLocalRunFinalizer({ ...fixture, openPublicationStores: openRepository });
-    const completed = await runFinalizer.finalize(blocked);
+    const buildFinalizer = createLocalBuildFinalizer({ ...fixture, openPublicationStores: openRepository });
+    const completed = await buildFinalizer.finalize(blocked);
     assert(completed !== undefined && "outcome" in completed);
     assert.equal(completed.outcome, "complete");
     assert.equal(generationCalls, 1);
@@ -319,7 +319,7 @@ test("a failed Result creation leaves no active Build", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-submit-rollback-"));
   const initial = createGreetingBuild({ generationStep: "placeholder" });
   const fixture = projectRuntimeFixture(directory);
-  const unavailable: RunFinalizationStore = {
+  const unavailable: BuildFinalizationStore = {
     async create() { throw new Error("publication finalization refused creation"); },
     async openFinalizer() { return undefined; },
     async removeIncomplete() {},

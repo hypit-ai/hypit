@@ -1,10 +1,10 @@
 import type { PreparedMedia } from "@hypit/media";
+import { programSourceFromPreparedMedia } from "@hypit/media-avir";
 import { canonicalize } from "@hypit/protocol";
 import type { Value } from "@hypit/protocol";
 import type { ProducerPackage } from "@hypit/producer";
 
 import { audiovisualMediaProducers } from "./manifest.js";
-import { programSourceFromPreparedMedia } from "./source.js";
 
 function valueOf<T>(value: Value | undefined, label: string): T {
   if (value === undefined) throw new Error(`${label} is missing.`);

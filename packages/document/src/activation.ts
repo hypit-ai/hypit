@@ -1,4 +1,4 @@
-import { createAuthorFrontendFacet } from "@hypit/hypit/author";
+import { createAuthorFrontendFacet } from "@hypit/author";
 
 import { documentFrontend } from "./frontend.js";
 

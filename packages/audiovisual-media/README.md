@@ -1,6 +1,6 @@
 # `@hypit/audiovisual-media`
 
-One-way adaptation of an already resolved `PreparedMedia` value into AVIR `ProgramSource` facts.
+Optional Author Graph bridge around the pure `@hypit/media-avir` projection.
 
 ```text
 PreparedMedia -> ProgramSource
@@ -12,7 +12,8 @@ The adapter publishes only members that exist. A signal Picture and Audio retain
 local temporal domain; a constant Picture has no temporal domain. Picture always publishes its
 display-pixel spatial domain.
 
-Image, video and audio preparation all belong to `@hypit/media`. There is no separate
+Image, video and audio preparation all belong to `@hypit/media`. The projection implementation belongs to
+`@hypit/media-avir`; this package owns only its Producer, Fragment and Source declaration. There is no separate
 `StillPictureSource`, image identity recovery, Resource inspection or stream-selection path here.
 This adapter also owns no trim, retime, occurrence placement or renderer lowering. Those relationships
 remain respectively in the audiovisual Programme and terminal packages.

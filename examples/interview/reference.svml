@@ -22,7 +22,7 @@
   <import as="space" from="@hypit/spatial@1"/>
   <import as="flash" from="@interview/flash@1"/>
   <import as="film" from="@hypit/film@1"/>
-  <import as="html" from="@hypit/html-video@1"/>
+  <import as="html" from="@hypit/html-video-author@1"/>
   <import as="emoji" from="@hypit/interview-emoji-reveal@1"/>
   <import as="recipes" source="./reference.svs"/>
   <import as="image-kit" source="@hypit/gpt-image-kits/phone-ugc-v1"/>

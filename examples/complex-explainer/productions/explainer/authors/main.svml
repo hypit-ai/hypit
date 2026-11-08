@@ -20,7 +20,7 @@
   <import as="linecaption" from="@explainer/single-line-captions@1"/>
   <import as="caption-fine" from="@hypit/caption-fine@1"/>
   <import as="film" from="@hypit/film@1"/>
-  <import as="html" from="@hypit/html-video@1"/>
+  <import as="html" from="@hypit/html-video-author@1"/>
   <import as="look" source="../recipes/composition.svs"/>
   <import as="gfx" from="@explainer/opening-system@1"/>
   <import as="spatial" from="@hypit/spatial@1"/>

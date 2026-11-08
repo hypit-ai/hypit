@@ -242,7 +242,7 @@ test("finished status defaults to the Result outcome without repeating internal 
   assert.doesNotMatch(output, /\bWork\b|\bDecision\b|\bResult\s+complete/u);
 });
 
-test("status separates execution from publication while the Run is being finalized", async () => {
+test("status separates execution from publication while the Build is being finalized", async () => {
   const view = {
     id: "build-saving",
     activity: "finalizing" as const,

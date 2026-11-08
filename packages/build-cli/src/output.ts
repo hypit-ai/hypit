@@ -717,7 +717,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
     ],
     doctor: [
       colors.accent(colors.strong("hypit doctor")),
-      colors.dim("Diagnose project Results and, when selected or supplied, one Runtime Profile."),
+      colors.dim("Diagnose project Results and, when selected or supplied, one Buildtime Profile."),
       "",
       "  hypit doctor [--runtime <profile>] [--project <project>] [--endpoint <instance>]",
       "  A positional Profile is also accepted in place of --runtime.",
@@ -761,7 +761,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "  hypit build <source> --target <output> [--target <output>]...",
       "    [--runtime <profile>] [--project <workspace>] [--asset-root <directory>] [--follow]",
       "",
-      "  --follow                   observe the Build; the Runtime still owns execution",
+      "  --follow                   observe the Build; the Buildtime still owns execution",
       "  --max-wait-ms <ms>         bound startup or follow waiting",
     ],
     activity: [
@@ -779,7 +779,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
     ],
     logs: [
       colors.accent(colors.strong("hypit logs")),
-      colors.dim("Read Build execution evidence; finished logs need only the project Run history."),
+      colors.dim("Read Build execution evidence; finished logs need only the project Build history."),
       "",
       "  hypit logs <build-id> [--project <project>] [--runtime <profile>] [--lines <count>]",
       "  --lines <count>           show the last N records (default 50)",

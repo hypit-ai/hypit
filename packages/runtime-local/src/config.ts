@@ -27,8 +27,8 @@ import { FileProductHistory } from "@hypit/product/node";
 import type { BuildResultHistory } from "@hypit/result";
 import { FileBuildResultHistory } from "@hypit/result/node";
 import type { PublicationStoreLocation } from "./execution.js";
-import { FileRunFinalizationStore } from "./result-storage/store.js";
-import type { RunFinalizationStore } from "./result-storage/types.js";
+import { FileBuildFinalizationStore } from "./result-storage/store.js";
+import type { BuildFinalizationStore } from "./result-storage/types.js";
 import {
   isRuntimeAdapterFacet,
   runtimeCredentialStoreAdapterFacetAbi,
@@ -57,10 +57,10 @@ import {
   createLocalRuntimeControl,
 } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";
-import { createLocalRunFinalizer } from "./run-finalizer.js";
+import { createLocalBuildFinalizer } from "./build-finalizer.js";
 import type {
   LocalCredentialControl,
-  LocalRunFinalizer,
+  LocalBuildFinalizer,
   LocalRuntime,
   LocalRuntimeControl,
 } from "./types.js";
@@ -344,9 +344,9 @@ async function openPublicationStoresInternal(
 ): Promise<{
   readonly history: BuildResultHistory;
   readonly products: ProductHistory;
-  readonly finalization: RunFinalizationStore;
+  readonly finalization: BuildFinalizationStore;
 }> {
-  const finalization = new FileRunFinalizationStore(
+  const finalization = new FileBuildFinalizationStore(
     resolve(location.root, location.historyPath),
     resolve(location.root, location.productsPath),
   );
@@ -360,7 +360,7 @@ export async function openPublicationStoresAtLocation(
 ): Promise<{
   readonly history: BuildResultHistory;
   readonly products: ProductHistory;
-  readonly finalization: RunFinalizationStore;
+  readonly finalization: BuildFinalizationStore;
 }> {
   return await openPublicationStoresInternal(location);
 }
@@ -370,7 +370,7 @@ export async function openProjectPublicationStores(
 ): Promise<{
   readonly history: BuildResultHistory;
   readonly products: ProductHistory;
-  readonly finalization: RunFinalizationStore;
+  readonly finalization: BuildFinalizationStore;
   readonly location: PublicationStoreLocation;
 }> {
   const location = projectPublicationStoreLocation(projectRoot);
@@ -416,7 +416,7 @@ async function diagnosePublicationDirectory(
   }
 }
 
-/** Diagnose the project-owned Run-history and Product roots without reading or mutating them. */
+/** Diagnose the project-owned Build-history and Product roots without reading or mutating them. */
 export async function doctorProjectPublicationStores(
   projectRoot: string,
 ): Promise<ProjectPublicationStoresDoctorResult> {
@@ -1130,7 +1130,7 @@ async function inspectOpenedRuntimeConfig(
     if (!covered.has(capabilityKey(capability))) diagnostics.push({
       severity: "error",
       code: "RUNTIME_CAPABILITY_UNBOUND",
-      message: `No usable Endpoint in this Runtime Profile fulfills ${capabilityKey(capability)}`,
+      message: `No usable Endpoint in this Buildtime Profile fulfills ${capabilityKey(capability)}`,
       subject: capabilityKey(capability),
     });
   }
@@ -1406,9 +1406,9 @@ export async function createRuntimeControlFromConfig(
   });
 }
 
-export function createRuntimeFinalizer(root: string): LocalRunFinalizer {
+export function createRuntimeFinalizer(root: string): LocalBuildFinalizer {
   const state = new SqliteRuntimeState(statePath(root));
-  return createLocalRunFinalizer({
+  return createLocalBuildFinalizer({
     buildStore: state.builds,
     operationStore: state.operations,
     commandExecutionStore: state.commandExecutions,

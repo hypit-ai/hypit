@@ -19,6 +19,7 @@ import {
   pictureFilterOperator,
   sealPictureFilterControl,
   type PictureFilterControl,
+  type PictureFilterInterpolation,
   type PictureFilterState,
 } from "./program.js";
 
@@ -33,7 +34,7 @@ export type PictureFilterNleParameters =
   | {
       readonly kind: "keyframes";
       readonly keyframes: readonly PictureFilterNleKeyframe[];
-      readonly interpolation: { readonly kind: "linear" };
+      readonly interpolation: PictureFilterInterpolation;
     };
 
 export type PictureFilterNleEdit =
@@ -72,7 +73,7 @@ export function assertPictureFilterNleParameters(
   exactFields(value, ["interpolation", "keyframes", "kind"], label);
   record(value.interpolation, `${label}.interpolation`);
   exactFields(value.interpolation, ["kind"], `${label}.interpolation`);
-  if (value.interpolation.kind !== "linear") {
+  if (!["linear", "ease-in", "ease-out", "ease-in-out"].includes(value.interpolation.kind as string)) {
     throw new Error(`${label}.interpolation.kind is invalid.`);
   }
   if (!Array.isArray(value.keyframes) || value.keyframes.length === 0) {
@@ -123,7 +124,7 @@ export function pictureFilterControlFromNleParameters(
         },
         from: structuredClone(keyframe.state),
         to: structuredClone(next?.state ?? keyframe.state),
-        interpolation: { kind: "linear" as const },
+        interpolation: structuredClone(parameters.interpolation),
       };
     }),
   });

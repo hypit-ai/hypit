@@ -127,11 +127,14 @@ Programme-to-Control Maps declared by its corresponding `apply`; a terminal can 
 package-owned automation continuously without turning it into Clip fields or video-frame samples.
 This package does not import that adapter, PreparedMedia, AudioProgram or a Renderer.
 
-`@hypit/audiovisual-media` is the one-way upstream adapter for real media. It publishes the selected Picture
+`@hypit/media-avir` is the one-way upstream adapter for real media. It publishes the selected Picture
 and Audio members of one `PreparedMedia` as coordinated `ProgramSource` outputs with their actual temporal
 and spatial domains. It does not prepare media or apply occurrence edits. A Programme must explicitly remap
 a media Picture domain into its own Picture domain; matching pixel dimensions do not make two named spaces
 identical.
+
+The optional `@hypit/audiovisual-media` package wraps that projection in an Author declaration and Producer;
+NLE lowering depends only on `@hypit/media-avir`.
 
 An image is ordinary PreparedMedia whose selected Picture is `constant`; its AVIR projection therefore has no
 temporal Domain. There is no direct `StillPictureSource` branch. The finite use duration belongs only to an

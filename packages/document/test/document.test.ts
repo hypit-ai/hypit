@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { resolveSelfDescribedTextSource } from "@hypit/hypit/source/text";
+import { resolveSelfDescribedTextSource } from "@hypit/source/text";
 
 import {
   documentFrontend,

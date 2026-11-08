@@ -200,7 +200,7 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
       const [profile, rest] = optionalPositional(tail);
       const options = commandOptions(command, rest, cwd, "--project", "--runtime", "--limit", "--endpoint");
       if (profile !== undefined && options.runtimeProfile !== undefined) {
-        throw new Error("doctor accepts the Runtime Profile either positionally or with --runtime, not both");
+        throw new Error("doctor accepts the Buildtime Profile either positionally or with --runtime, not both");
       }
       return {
         command,

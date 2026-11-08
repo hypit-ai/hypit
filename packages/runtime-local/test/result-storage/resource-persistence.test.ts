@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 
-import { buildResultDirectory, FileRunFinalization } from "../../src/result-storage/index.js";
+import { buildResultDirectory, FileBuildFinalization } from "../../src/result-storage/index.js";
 import type { BlobRef } from "@hypit/protocol";
 import { productPublicationDirectory } from "@hypit/product/node";
 
@@ -15,7 +15,7 @@ import {
   videoType,
 } from "./repository-scenario.js";
 
-test("one same-Run resource backs a published video and a structured Product", async () => {
+test("one same-Build resource backs a published video and a structured Product", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-build-result-"));
   const bytes = new Uint8Array([1, 2, 3, 4]);
   const video: BlobRef = {
@@ -25,7 +25,7 @@ test("one same-Run resource backs a published video and a structured Product", a
     mediaType: "video/mp4",
   };
   try {
-    const result = await FileRunFinalization.create(root, join(root, "products"), {
+    const result = await FileBuildFinalization.create(root, join(root, "products"), {
       id: "bld_20260902T100000000Z_0000000001",
       sourcePath: "/project/main.svml",
       targets: ["shot.video"],

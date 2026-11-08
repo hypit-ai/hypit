@@ -3,7 +3,7 @@ import { FileResourceStore } from "@hypit/resource-store/node";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { EnvironmentCredentialStore } from "./environment-credential-store.js";
 import { defineBuild } from "@hypit/kernel";
-import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildFinalizationStore } from "../../src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
 import { FileProductHistory } from "@hypit/product/node";
 import { buildExecutionActivity, createLocalRuntime } from "@hypit/runtime-local";
@@ -40,7 +40,7 @@ export function projectRuntimeFixture(directory: string) {
       await rm(join(work, build), { recursive: true, force: true });
     },
     openPublicationStores: async (location: import("@hypit/runtime-local").PublicationStoreLocation) => {
-      const finalization = new FileRunFinalizationStore(
+      const finalization = new FileBuildFinalizationStore(
         join(location.root, location.historyPath),
         join(location.root, location.productsPath),
       );

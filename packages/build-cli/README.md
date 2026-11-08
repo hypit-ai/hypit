@@ -177,7 +177,7 @@ projects them into its human and machine views.
 
 `hypit logs <build-id> [--project <project>] [--runtime <profile>] [--lines <count>]` reads Build
 execution phases and Provider diagnostics. It reads a finished Result directly, without opening the
-Runtime; an active Build is read through Runtime control. Project Run history and Product storage handle finished-file access.
+Runtime; an active Build is read through Runtime control. Project Build history and Product storage handle finished-file access.
 `--lines` limits the tail and the report states the omitted count; JSON carries records plus that count.
 An unavailable log reports `source: "unavailable"` and exits unsuccessfully; a readable log with zero
 records is a successful empty result. The human report distinguishes a finished Result with no log

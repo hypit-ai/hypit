@@ -1,0 +1,19 @@
+{
+  "name": "@hypit/media-avir",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@hypit/audiovisual": "workspace:^0.1.0",
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/spatial": "workspace:^0.1.1"
+  }
+}

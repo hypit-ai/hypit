@@ -9,7 +9,7 @@ import {
   createRuntimeEndpointAdapterFacet,
   RuntimeAdapterRegistry,
 } from "@hypit/runtime-local/extension";
-import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildFinalizationStore } from "../../src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
 import { FileProductHistory } from "@hypit/product/node";
 import { ProducerRegistry } from "@hypit/executor";
@@ -55,7 +55,7 @@ test("Build Results belong to the project filesystem without a second selection 
   await mkdir(project, { recursive: true });
   try {
     const local = await openProjectPublicationStores(project);
-    assert.ok(local.finalization instanceof FileRunFinalizationStore);
+    assert.ok(local.finalization instanceof FileBuildFinalizationStore);
     assert.ok(local.history instanceof FileBuildResultHistory);
     assert.notEqual(local.history, local.finalization);
     assert.ok(local.products instanceof FileProductHistory);
@@ -73,7 +73,7 @@ test("Build Results belong to the project filesystem without a second selection 
   }
 });
 
-test("publication diagnosis checks Product storage independently from Run history", async () => {
+test("publication diagnosis checks Product storage independently from Build history", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-publications-"));
   const project = join(root, "project");
   await mkdir(join(project, ".hypit"), { recursive: true });

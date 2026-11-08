@@ -6,7 +6,7 @@ export {
   audiovisualMediaModuleRef,
   audiovisualMediaProducers,
 } from "./manifest.js";
-export { programSourceFromPreparedMedia } from "./source.js";
+export { programSourceFromPreparedMedia } from "@hypit/media-avir";
 export {
   audiovisualMediaAuthorFacets,
   audiovisualMediaSourceAuthorDeclaration,

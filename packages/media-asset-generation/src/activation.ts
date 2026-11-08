@@ -1,14 +1,14 @@
 import { createGenerationNodePackageFacet } from "@hypit/generation-graph";
 
 import {
+  mediaAssetGenerationManifest,
   mediaAssetGenerationNode,
   mediaAssetResourceGenerationNode,
-  mediaAssetManifest,
-} from "./generation.js";
+} from "./index.js";
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
-  modules: [{ manifest: mediaAssetManifest }],
+  modules: [{ manifest: mediaAssetGenerationManifest }],
   facets: [createGenerationNodePackageFacet({
     nodes: [mediaAssetGenerationNode, mediaAssetResourceGenerationNode],
   })],

@@ -88,6 +88,19 @@ test("Picture Filter uses the generic TemporalControl instead of private normali
   });
 });
 
+test("Picture Filter evaluates its package-owned easing in AVIR and HTML", () => {
+  const eased = {
+    ...control,
+    segments: [{ ...control.segments[0]!, interpolation: { kind: "ease-out" as const } }],
+  };
+  assert.deepEqual(evaluatePictureFilterControl(eased, at(1, 2)), {
+    ...IDENTITY_PICTURE_FILTER,
+    opacity: 0.125,
+    blurRadius: 10.5,
+  });
+  assert.match(readHtmlVisual(pictureFilterControlOperator(eased).program).setup ?? "", /ease-out/u);
+});
+
 test("Picture Filter owns only photometric state; placement remains SpatialMap", () => {
   assert.deepEqual(Object.keys(IDENTITY_PICTURE_FILTER).sort(), [
     "blurRadius", "brightness", "contrast", "grayscale", "hue",

@@ -1,4 +1,4 @@
-/** Exact publication surface for typed products that outlive one Run. */
+/** Exact publication surface for typed products that outlive one Build. */
 export const productPublisher = "hypit.product@1";
 
 /**

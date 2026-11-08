@@ -32,7 +32,7 @@ export type ResolvedProduct = {
   ): Promise<AsyncIterable<Uint8Array> | undefined>;
 };
 
-/** Exact Product lookup, independent of Run-history browsing and physical storage paths. */
+/** Exact Product lookup, independent of Build-history browsing and physical storage paths. */
 export type ProductHistory = {
   readProduct(address: ProductAddress): Promise<Product | undefined>;
   resolveProduct(address: ProductAddress): Promise<ResolvedProduct | undefined>;

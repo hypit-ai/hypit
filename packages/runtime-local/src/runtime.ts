@@ -18,7 +18,7 @@ import { materializeBuild } from "@hypit/kernel";
 
 import { createLocalRuntimeControl } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";
-import { createLocalRunFinalizer } from "./run-finalizer.js";
+import { createLocalBuildFinalizer } from "./build-finalizer.js";
 import { createDurableLocalWorker } from "./worker.js";
 import type {
   CreateLocalRuntimeOptions,
@@ -125,7 +125,7 @@ export async function createLocalRuntime(
     refinements,
     ...(options.producerExecutionLimits === undefined ? {} : { producerExecutionLimits: options.producerExecutionLimits }),
   });
-  const runFinalizer = createLocalRunFinalizer({
+  const buildFinalizer = createLocalBuildFinalizer({
     ...(options.executionLogs === undefined ? {} : { executionLogs: options.executionLogs }),
     buildStore: options.buildStore,
     operationStore: options.operationStore,
@@ -151,7 +151,7 @@ export async function createLocalRuntime(
     ...(options.resourceStoreForBuild === undefined ? {} : { resourceStoreForBuild: options.resourceStoreForBuild }),
     openPublicationStores,
     installProducerPackages,
-    runFinalizer,
+    buildFinalizer,
   });
   const credentialControl = createLocalCredentialControl({
     credentialStore: options.credentialStore,
@@ -258,7 +258,7 @@ export async function createLocalRuntime(
       });
       return await presentation(request.id, request.publicationStores);
     } catch (error) {
-      if (prepared) await runFinalizer.discardSubmission(request.id).catch(() => undefined);
+      if (prepared) await buildFinalizer.discardSubmission(request.id).catch(() => undefined);
       throw error;
     }
   };
@@ -283,7 +283,7 @@ export async function createLocalRuntime(
   return {
     ...control,
     ...credentialControl,
-    ...runFinalizer,
+    ...buildFinalizer,
     build: runBuild,
     async workOnce(workOptions) {
       return await worker.runOnce(workOptions);

@@ -1,22 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { resolve } from "node:path";
-
 import {
   installDistributionPackageResolution,
   resolveDistributionPackageImport,
 } from "../src/node/distribution-resolution.js";
 
-test("one Distribution resolves its internal and public package spellings", () => {
-  assert.equal(
-    resolveDistributionPackageImport(process.cwd(), "@hypit/recipe"),
-    resolve(process.cwd(), "packages/recipe/src/index.ts"),
-  );
-  assert.equal(
-    resolveDistributionPackageImport(process.cwd(), "@hypit/hypit/recipe"),
-    resolve(process.cwd(), "packages/recipe/src/index.ts"),
-  );
+test("one Distribution resolves public Core without impersonating independent frontends", () => {
+  assert.equal(resolveDistributionPackageImport(process.cwd(), "@hypit/recipe"), undefined);
+  assert.equal(resolveDistributionPackageImport(process.cwd(), "@hypit/hypit/recipe"), undefined);
   assert.equal(resolveDistributionPackageImport(process.cwd(), "example-package"), undefined);
   assert.equal(resolveDistributionPackageImport(process.cwd(), "@hypit/script"), undefined);
   assert.equal(resolveDistributionPackageImport(process.cwd(), "@hypit/temporal"), undefined);

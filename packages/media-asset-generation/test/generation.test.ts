@@ -9,9 +9,11 @@ import {
   mediaAssetGenerationNode,
   mediaAssetGenerationNodes,
   mediaAssetResourceGenerationNode,
+} from "../src/index.js";
+import {
   serializeMediaAssetDocument,
   type MediaAssetDocument,
-} from "../src/index.js";
+} from "@hypit/media-asset";
 
 function document(): MediaAssetDocument {
   const timestamp = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } });

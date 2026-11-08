@@ -14,7 +14,7 @@ import {
 } from "@hypit/audiovisual";
 import {
   programSourceFromPreparedMedia,
-} from "@hypit/audiovisual-media";
+} from "@hypit/media-avir";
 import {
   assertHtmlProgram,
   htmlNearestPictureReconstruction,

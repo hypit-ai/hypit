@@ -11,7 +11,7 @@
   "dependencies": {
     "@hypit/atomic-file": "workspace:^0.0.0-dev",
     "@hypit/audiovisual": "workspace:^0.1.0",
-    "@hypit/audiovisual-media": "workspace:^0.1.0",
+    "@hypit/media-avir": "workspace:^0.1.0",
     "@hypit/facet": "workspace:^0.0.0-dev",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/protocol": "workspace:^0.0.0-dev",

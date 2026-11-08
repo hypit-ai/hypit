@@ -1,6 +1,5 @@
 import type {
   BuildOperationsCliServices,
-  SourceBuildCliServices,
 } from "@hypit/build-cli";
 import type { GenerationGraphCliServices } from "@hypit/generation-graph-cli";
 import { materializeLocalMediaProduct } from "@hypit/media-product-local";
@@ -16,10 +15,6 @@ import {
 import type { LocalRuntimeCliServices } from "@hypit/runtime-local-cli";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
-import {
-  createToolchainCompiler,
-  createToolchainWorkspace,
-} from "./compiler.js";
 
 // The Distribution root is the replaceable Hypit tool checkout, not this
 // package's source directory and never the author's project.
@@ -31,7 +26,6 @@ export type ToolchainApplicationOptions = {
 };
 
 export type ToolchainApplicationServices = {
-  readonly sourceBuild: SourceBuildCliServices;
   readonly buildOperations: BuildOperationsCliServices;
   readonly generation: GenerationGraphCliServices;
   readonly localRuntime: LocalRuntimeCliServices;
@@ -102,19 +96,6 @@ export function createToolchainApplicationServices(
       close() {},
     };
   };
-  const sourceBuild: SourceBuildCliServices = {
-    packageRoot,
-    bootstrapPackages: [],
-    createWorkspace: createToolchainWorkspace,
-    resolveProjectRuntime: resolveToolchainProjectRuntime,
-    createCompiler: createToolchainCompiler,
-    discoverSourcePackages: async (path, options) => {
-      const { discoverToolchainSourcePackages } = await import("./package-selection.js");
-      return await discoverToolchainSourcePackages(path, options);
-    },
-    openRuntimeHost: openToolchainLocalRuntime,
-    openProjectResults: openToolchainProjectResults,
-  };
   const buildOperations: BuildOperationsCliServices = {
     packageRoot,
     resolveProjectRuntime: resolveToolchainProjectRuntime,
@@ -148,5 +129,5 @@ export function createToolchainApplicationServices(
     loadPackages: async (request, root, loadOptions) =>
       await loadNodePackageSelection(request, root, loadOptions),
   };
-  return { sourceBuild, buildOperations, generation, localRuntime };
+  return { buildOperations, generation, localRuntime };
 }

@@ -4,17 +4,12 @@
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
-  "hypit": {
-    "activation": "./src/activation.ts"
-  },
   "exports": {
     ".": "./src/index.ts",
     "./node": "./src/node/index.ts"
   },
   "dependencies": {
     "@hypit/facet": "workspace:^0.0.0-dev",
-    "@hypit/generation-graph": "workspace:^0.0.0-dev",
-    "@hypit/blob": "workspace:^0.0.0-dev",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/temporal": "workspace:^0.1.1"

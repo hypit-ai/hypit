@@ -2,7 +2,7 @@ export {
   createLocalRuntimeControl,
 } from "./control.js";
 export { createLocalCredentialControl } from "./credentials.js";
-export { createLocalRunFinalizer } from "./run-finalizer.js";
+export { createLocalBuildFinalizer } from "./build-finalizer.js";
 export {
   createLocalRuntime,
 } from "./runtime.js";

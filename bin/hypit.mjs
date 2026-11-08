@@ -29,7 +29,8 @@ installDistributionPackageResolution([distributionRoot]);
 const args = process.argv.slice(2);
 const { runInstalledCliApplication, runNodeCli } = await import(new URL("packages/cli/src/index.ts", distributionUrl).href);
 const { createToolchainApplicationServices } = await import("@hypit/toolchain");
-const { createToolchainCliCommandModules } = await import("@hypit/toolchain/cli");
+const { createSvmlToolchainApplicationServices } = await import("@hypit/svml-toolchain");
+const { createSvmlToolchainCliCommandModules } = await import("@hypit/svml-toolchain/cli");
 const {
   createBuildOperationsCliCommandModules,
   createSourceBuildCliCommandModules,
@@ -45,6 +46,10 @@ const toolchainServices = createToolchainApplicationServices({
   packageRoot: distributionRoot,
   launcher: fileURLToPath(import.meta.url),
 });
+const svmlServices = createSvmlToolchainApplicationServices({
+  packageRoot: distributionRoot,
+  launcher: fileURLToPath(import.meta.url),
+});
 await runNodeCli(args, async (argv, io) => await runInstalledCliApplication(argv, io, {
   distributionRoot,
   commandModules: [
@@ -52,12 +57,12 @@ await runNodeCli(args, async (argv, io) => await runInstalledCliApplication(argv
     ...createGenerationGraphCliCommandModules(toolchainServices.generation),
     ...createLocalMediaCliCommandModules(),
     ...createLocalNleCliCommandModules({ distributionPackageRoot: distributionRoot }),
-    ...createSourceBuildCliCommandModules(toolchainServices.sourceBuild),
+    ...createSourceBuildCliCommandModules(svmlServices),
     ...createBuildOperationsCliCommandModules(toolchainServices.buildOperations),
     ...createLocalRuntimeCliCommandModules(toolchainServices.localRuntime),
-    ...createToolchainCliCommandModules({ distributionPackageRoot: distributionRoot }),
+    ...createSvmlToolchainCliCommandModules({ distributionPackageRoot: distributionRoot }),
     ...createSpeechEstimateCliCommandModules(),
-    ...createWhisperXCliCommandModules(toolchainServices.sourceBuild),
+    ...createWhisperXCliCommandModules(toolchainServices.buildOperations),
   ],
   launcher: fileURLToPath(import.meta.url),
 }));

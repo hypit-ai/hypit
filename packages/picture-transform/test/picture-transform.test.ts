@@ -64,6 +64,20 @@ test("Picture Transform evaluates exact-time Controls", () => {
   });
 });
 
+test("Picture Transform owns easing instead of asking NLE Core to interpret it", () => {
+  const control = pictureTransformControlFromNleParameters({
+    kind: "keyframes",
+    keyframes: [
+      { at: at(0), state: IDENTITY_PICTURE_TRANSFORM },
+      { at: at(1), state: moved },
+    ],
+    interpolation: { kind: "ease-in" },
+  }, { itemId: "eased-clip", duration: at(2) });
+  assert.equal(evaluatePictureTransformControl(control, at(1, 2)).translateX, 15);
+  assert.deepEqual(control.segments[0]?.interpolation, { kind: "ease-in" });
+  assert.match(readHtmlVisual(pictureTransformControlOperator(control).program).setup ?? "", /ease-in/u);
+});
+
 test("Picture Transform resolves and edits materialized NLE parameters through package facets", () => {
   const parameters = {
     kind: "constant" as const,

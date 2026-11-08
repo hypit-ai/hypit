@@ -20,7 +20,9 @@ export type PictureFilterState = {
   readonly invert: number;
 };
 
-export type PictureFilterInterpolation = { readonly kind: "linear" };
+export type PictureFilterInterpolation = {
+  readonly kind: "linear" | "ease-in" | "ease-out" | "ease-in-out";
+};
 export type PictureFilterControl = TemporalControl<PictureFilterState, PictureFilterInterpolation>;
 
 export const IDENTITY_PICTURE_FILTER: PictureFilterState = {
@@ -70,7 +72,9 @@ export function assertPictureFilterState(value: PictureFilterState, label = "Pic
 
 export function assertPictureFilterControl(value: PictureFilterControl): void {
   assertTemporalControl(value, assertPictureFilterState, (interpolation, label) => {
-    if (interpolation.kind !== "linear") throw new Error(`${label}.kind is invalid.`);
+    if (!["linear", "ease-in", "ease-out", "ease-in-out"].includes(interpolation.kind)) {
+      throw new Error(`${label}.kind is invalid.`);
+    }
   });
 }
 
@@ -88,8 +92,13 @@ function interpolateState(
   from: PictureFilterState,
   to: PictureFilterState,
   progress: Rational,
+  interpolation: PictureFilterInterpolation,
 ): PictureFilterState {
-  const ratio = rationalNumber(progress);
+  const raw = rationalNumber(progress);
+  const ratio = interpolation.kind === "linear" ? raw
+    : interpolation.kind === "ease-in" ? raw ** 3
+    : interpolation.kind === "ease-out" ? 1 - (1 - raw) ** 3
+    : raw < 0.5 ? 4 * raw ** 3 : 1 - ((-2 * raw + 2) ** 3) / 2;
   const between = (name: keyof PictureFilterState): number =>
     from[name] + (to[name] - from[name]) * ratio;
   return {
@@ -110,8 +119,8 @@ export function evaluatePictureFilterControl(
   at: ExactTemporalValue,
 ): PictureFilterState {
   assertPictureFilterControl(value);
-  return evaluateTemporalControl(value, at, (from, to, progress) =>
-    interpolateState(from, to, progress));
+  return evaluateTemporalControl(value, at, (from, to, progress, interpolation) =>
+    interpolateState(from, to, progress, interpolation));
 }
 
 function pictureFilterProgram(
@@ -128,6 +137,10 @@ function pictureFilterProgram(
 if (layer === null) throw new Error('Picture Filter requires its Picture layer.');
 const seconds = value => Number(value.ticks) * value.timeBase.numerator / value.timeBase.denominator;
 const mix = (from, to, progress) => from + (to - from) * progress;
+const ease = (progress, kind) => kind === 'linear' ? progress
+  : kind === 'ease-in' ? progress ** 3
+  : kind === 'ease-out' ? 1 - (1 - progress) ** 3
+  : progress < 0.5 ? 4 * progress ** 3 : 1 - ((-2 * progress + 2) ** 3) / 2;
 const interpolate = (from, to, progress) => ({
   opacity: mix(from.opacity, to.opacity, progress),
   blurRadius: mix(from.blurRadius, to.blurRadius, progress),
@@ -147,7 +160,8 @@ const controlledState = position => {
     && at < seconds(candidate.range.end)) ?? segments[segments.length - 1];
   const start = seconds(segment.range.start);
   const duration = seconds(segment.range.end) - start;
-  const progress = Math.max(0, Math.min(1, (at - start) / duration));
+  const rawProgress = duration === 0 ? 1 : Math.max(0, Math.min(1, (at - start) / duration));
+  const progress = ease(rawProgress, segment.interpolation.kind);
   return interpolate(segment.from, segment.to, progress);
 };
 const apply = state => {

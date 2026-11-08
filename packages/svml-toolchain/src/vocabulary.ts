@@ -256,7 +256,7 @@ export function writeVocabularyHelp(io: CliIo): void {
   ].join("\n"));
 }
 
-export async function runVocabularyCli(
+export async function runSvmlVocabularyCli(
   argv: readonly string[],
   io: CliIo,
   cwd = process.cwd(),

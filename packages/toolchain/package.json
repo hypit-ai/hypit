@@ -5,28 +5,22 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./cli": "./src/commands.ts"
+    ".": "./src/index.ts"
   },
   "files": [
     "dist",
     "README.md"
   ],
   "dependencies": {
-    "@hypit/author": "workspace:^0.0.0-dev",
     "@hypit/build-cli": "workspace:^0.1.0",
     "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/audiovisual-audio": "workspace:^0.1.0",
     "@hypit/audiovisual-html": "workspace:^0.1.0",
-    "@hypit/audiovisual-media": "workspace:^0.1.0",
     "@hypit/audio-gain": "workspace:^0.1.0",
     "@hypit/audio-preserve-pitch": "workspace:^0.1.0",
-    "@hypit/canvas-view": "workspace:^0.1.0",
     "@hypit/cli": "workspace:^0.0.0-dev",
-    "@hypit/compiler": "workspace:^0.0.0-dev",
     "@hypit/credential-store-env": "workspace:^0.1.2",
     "@hypit/credential-store-local": "workspace:^0.1.2",
-    "@hypit/document": "workspace:^0.1.0",
     "@hypit/elevenlabs-speech": "workspace:^0.3.0",
     "@hypit/fishaudio-speech": "workspace:^0.3.0",
     "@hypit/fontsource": "workspace:^0.2.1",
@@ -43,6 +37,7 @@
     "@hypit/raster-composition": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-asset": "workspace:^0.1.0",
+    "@hypit/media-asset-generation": "workspace:^0.1.0",
     "@hypit/media-product-local": "workspace:^0.0.0-dev",
     "@hypit/mimo-speech": "workspace:^0.3.0",
     "@hypit/minimax-h3": "workspace:^0.3.0",
@@ -63,13 +58,11 @@
     "@hypit/seedance": "workspace:^0.3.0",
     "@hypit/seedance-kits": "workspace:^0.1.2",
     "@hypit/seedream": "workspace:^0.3.0",
-    "@hypit/svml": "workspace:^0.1.0",
     "@hypit/temporal-graph": "workspace:^0.1.0",
     "@hypit/picture-matte": "workspace:^0.1.0",
     "@hypit/picture-filter": "workspace:^0.1.0",
     "@hypit/picture-transition": "workspace:^0.1.0",
     "@hypit/volcengine-matting": "workspace:^0.3.0",
-    "@hypit/wan": "workspace:^0.3.0",
-    "@hypit/workspace": "workspace:^0.0.0-dev"
+    "@hypit/wan": "workspace:^0.3.0"
   }
 }

@@ -14,10 +14,9 @@
   "hypit": {
     "activation": "./src/activation.ts"
   },
-  "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
-  },
   "dependencies": {
+    "@hypit/author": "workspace:^0.0.0-dev",
+    "@hypit/source": "workspace:^0.0.0-dev",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-gfm": "^3.1.0",
     "mdast-util-math": "^3.0.0",
@@ -25,7 +24,6 @@
     "micromark-extension-math": "^3.1.0"
   },
   "devDependencies": {
-    "@hypit/hypit": "workspace:*",
     "@types/mdast": "4.0.4"
   }
 }

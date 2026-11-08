@@ -7,7 +7,7 @@ import { mediaTypes } from "@hypit/media";
 
 import { createHtmlVideoFragment } from "../src/fragment.js";
 
-test("video assembly consumes picture and audio terminal programmes", () => {
+test("Author video assembly consumes picture and audio terminal programmes", () => {
   const fragment = createHtmlVideoFragment();
   assert.deepEqual(fragment.inputs, [
     { name: "audio", type: audioProgramTypes.program },

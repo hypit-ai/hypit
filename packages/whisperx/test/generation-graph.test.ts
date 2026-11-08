@@ -14,10 +14,9 @@ import {
 import {
   mediaAssetGenerationNode,
   mediaAssetGenerationNodes,
-  mediaAssetManifest,
-  serializeMediaAssetDocument,
-  type MediaAssetDocument,
-} from "@hypit/media-asset";
+  mediaAssetGenerationManifest,
+} from "@hypit/media-asset-generation";
+import { serializeMediaAssetDocument, type MediaAssetDocument } from "@hypit/media-asset";
 import {
   speechEvidenceAudioFragment,
   speechEvidenceGenerationNodes,
@@ -70,9 +69,9 @@ test("Media Asset, speech evidence and WhisperX form one typed graph without cen
     { specifier: "@hypit/media", contribution: {
       format: "hypit.package@1" as const, modules: [{ manifest: mediaManifest }],
     } },
-    { specifier: "@hypit/media-asset", contribution: {
+    { specifier: "@hypit/media-asset-generation", contribution: {
       format: "hypit.package@1" as const,
-      modules: [{ manifest: mediaAssetManifest }],
+      modules: [{ manifest: mediaAssetGenerationManifest }],
       facets: [createGenerationNodePackageFacet({ nodes: [mediaAssetGenerationNode] })],
     } },
     { specifier: "@hypit/speech-evidence", contribution: {

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 
-import { FileRunFinalizationStore } from "../../../runtime-local/src/result-storage/index.js";
+import { FileBuildFinalizationStore } from "../../../runtime-local/src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
 import { FileProductHistory } from "@hypit/product/node";
 import { createProducerPackageFacet } from "@hypit/producer";
@@ -100,7 +100,7 @@ function distribution(
       },
     }),
     openProjectResults: async (projectRoot: string) => {
-      const finalization = new FileRunFinalizationStore(
+      const finalization = new FileBuildFinalizationStore(
         join(projectRoot, ".hypit", "results"),
         join(projectRoot, ".hypit", "products"),
       );

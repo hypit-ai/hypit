@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as pause } from "node:timers/promises";
 import test from "node:test";
 import { defineBuild } from "@hypit/kernel";
-import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildFinalizationStore } from "../../src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { createGreetingBuild, manifest, capabilities, producers, types } from "../execution-scenario.js";
@@ -28,7 +28,7 @@ test("a draining carrier finishes its existing Build while a new carrier shares 
   const root=await mkdtemp(join(tmpdir(),"hypit-carrier-rotation-"));
   const dataRoot=join(root,"runtime"), profile=join(root,"profile.json");
   const state=new SqliteRuntimeState(statePath(dataRoot));
-  const finalization=new FileRunFinalizationStore(join(root,"results"),join(root,"products"));
+  const finalization=new FileBuildFinalizationStore(join(root,"results"),join(root,"products"));
   const history=new FileBuildResultHistory(join(root,"results"));
   const local=new Map<string,number>(), starts=new Map<string,number>(), finished=new Set<string>();
   let child: ChildProcess | undefined, exited: Promise<void> | undefined, log="", release=false;

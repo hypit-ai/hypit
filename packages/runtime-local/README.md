@@ -1,7 +1,7 @@
 # `@hypit/runtime-local`
 
 The default local Runtime for Hypit. It owns the Worker, scheduler and active SQLite execution
-worklist. Project-owned Product publications hold durable values; Run history records outcomes,
+worklist. Project-owned Product publications hold durable values; Build history records outcomes,
 evidence and Product addresses.
 
 Byte storage is a separate infrastructure port. `@hypit/hypit/resource-store` owns the neutral
@@ -58,7 +58,7 @@ A Runtime Profile selects only the environmental parts that genuinely vary:
 }
 ```
 
-The official Toolchain Distribution selects this Runtime implementation before it opens the file. The
+The official Toolchain Distribution selects this Buildtime implementation before it opens the file. The
 Profile therefore describes only local execution and does not repeat a fake Runtime Host selector.
 
 Providers declare everything they can do and never hide a capability. When two selected Endpoints
@@ -106,7 +106,7 @@ no second queue.
 Claims may carry `units` (default 1): one render Need can occupy one request slot and four browser
 slots at once. The same admission rule applies to total Endpoint capacity, exact models, and local
 compute resources. SQLite retains the weighted reservation across execution turns; an ended attempt releases its reservations. This
-coordinates Builds sharing this Runtime's Execution Store; it does not enforce a service's quotas
+coordinates Builds sharing this Buildtime's Execution Store; it does not enforce a service's quotas
 across other machines. Short-action limits are described below.
 
 A failed request ends that Build's execution attempt. Runtime saves completed published Outputs and
@@ -136,15 +136,15 @@ The `@1` representation is the complete persisted lifecycle model.
 HypiHub can be the explicitly selected gateway for users without their own service keys. A bound
 Provider's authentication, quota or transport error never changes that selection. Separate accounts use separate pools even when they implement the same model.
 
-The official Toolchain Distribution writes Run history to `.hypit/results` and Product publications to
+The official Toolchain Distribution writes Build history to `.hypit/results` and Product publications to
 `.hypit/products`, with no cloud account or service. The filesystem implementation belongs to this
 single-host Runtime rather than a public adapter registry.
-Open finalization state, incremental Product materialization, finalizer recovery and terminal Run history
+Open finalization state, incremental Product materialization, finalizer recovery and terminal Build history
 publication are private Runtime Local implementation. The assembly exposes separate `history`,
 `products` and `finalization` ports; no caller receives a universal repository. `@hypit/result` owns
 only immutable history types and readers; no writable Result entry point is published for CLI or author packages.
 
-Generation Graph preparation occurs before this Runtime boundary. The adapter supplies an ordinary
+Generation Graph preparation occurs before this Buildtime boundary. The adapter supplies an ordinary
 BuildDefinition and PublicationIntent containing every demanded generated node. Runtime Local does not open or
 modify the graph project, choose a current Product or write node sidecars. The stable Build id itself determines
 the Product address for every published node output.
@@ -159,7 +159,7 @@ an author explicitly materializes and reconnects that earlier Product.
 The filesystem finalization store does not inherit the history reader; sharing a directory root is assembly,
 not an API relationship.
 Runtime working Resources remain internal and Build-local; there is no ResourceStore selector. After
-the Run has an outcome, history is read from the project history store, not Runtime SQLite.
+the Build has an outcome, history is read from the project history store, not Runtime SQLite.
 The submission passes known Resource references to the publication finalizer, separately from the execution
 graph. Staging bytes for a running Build does not make them durable Product files: external and reused
 resources keep their addresses even when a Producer embeds them inside a new array or object value.
@@ -169,11 +169,11 @@ Product store. Runtime Local supplies only the current Records, resource opener 
 target; it does not interpret Blob or structured Product representation. The publication store leaves
 its files untouched when no new publication is available; internal
 execution progress remains in SQLite. Once execution has a final decision, the Product manifest closes
-before Run history publishes its outcome and Product addresses; active state and working Resources are
+before Build history publishes its outcome and Product addresses; active state and working Resources are
 removed last. This order applies
 to completed, failed and cancelled Builds alike.
 
-Active `BuildView.outputs` exposes the Product summaries already materialized in the Runtime-owned draft.
+Active `BuildView.outputs` exposes the Product summaries already materialized in the Buildtime-owned draft.
 This lets a generation Canvas mark an upstream node ready while downstream work is still running, without
 making drafts visible through finished `ProductHistory` or copying progress into the graph project.
 
@@ -203,7 +203,7 @@ The lifecycle commands have deliberately narrow meanings:
   actual resolved Endpoint IDs and checks only their credentials and Programs. `hypit runtime down` stops the Worker; `hypit programs down` stops the Programs.
   Remote services have no lifecycle for Hypit to start or stop.
 - `hypit runtime logs` reads the Worker's output, including separately redirected standard errors
-  on Windows. The files are `worker.log` and `worker.err.log` under the Runtime data directory's
+  on Windows. The files are `worker.log` and `worker.err.log` under the Buildtime data directory's
   `worker/`. Separate error output is labeled `[stderr]`; the files do not establish an interleaved
   event order. A failure before readiness also includes the recorded error in its startup message.
 - `hypit doctor` is the active, read-only check. Endpoint-owned diagnostics may authenticate and read a
@@ -218,7 +218,7 @@ Profile's `dataRoot`. Each record carries time, Command and Endpoint identity. P
 and repeated progress counters do not become log entries. The latest counters remain active Runtime
 state; Provider-authored diagnostics and phase changes are durable evidence.
 
-Run finalization streams this log into the project history store before publishing the terminal
+Build finalization streams this log into the project history store before publishing the terminal
 manifest or clearing the Build working directory. Complete, failed and cancelled Builds use the same
 finalization path. A failed archive leaves publication attention and preserves the working directory;
 retrying finalization performs no external execution. Log write failures also surface at the publication boundary,
@@ -304,7 +304,7 @@ in that Build's scope. No source snapshot, filesystem scan, content hash or Buil
 Its `workOnce` advances fresh work or work already owned by that instance; an explicit request to
 take over another context's started Build fails before any Provider call. The coordinator supplies
 the assignment when opening each production Build context. Client code calls `worker.up()` on the
-controller returned by `await host.controller()`, and calls `build(...)` on the Runtime returned by
+controller returned by `await host.controller()`, and calls `build(...)` on the Buildtime returned by
 `await host.createRuntime()`. There is one production process-lifecycle path.
 
 Managed Programs have independent lifetimes. A healthy WhisperX service keeps its model loaded;

@@ -16,7 +16,7 @@ import {
   type PictureNode,
   type ProgramSource,
 } from "@hypit/audiovisual";
-import { programSourceFromPreparedMedia } from "@hypit/audiovisual-media";
+import { programSourceFromPreparedMedia } from "@hypit/media-avir";
 import { verifyPreparedMedia } from "@hypit/media";
 import { sameType } from "@hypit/protocol";
 import {

@@ -5,7 +5,7 @@ browser-sRGB filter parameters without changing temporal placement or spatial ma
 
 The low-level value is one complete `PictureFilterState`. A static state produces a Picture Operator
 with no Control. Time-varying filtering uses the shared
-`TemporalControl<PictureFilterState, { kind: "linear" }>` algebra and publishes its exact Domain as the
+`TemporalControl<PictureFilterState, PictureFilterInterpolation>` algebra and publishes its exact Domain as the
 named `filter` Control. An AVIR `apply` node decides whether that Control follows the Programme, an
 Occurrence, a Source or an explicit Mapping.
 
@@ -15,6 +15,9 @@ complete state rather than inventing another keyframe or normalized-progress mod
 
 For a persistent NLE project the package contributes an `hypit.nle-package@1` Effect resolver. The NLE stores
 the package symbol and one package-owned parameter value:
+
+Keyframed parameters select `linear`, `ease-in`, `ease-out` or `ease-in-out`. The package applies that
+selection in both AVIR evaluation and its HTML implementation; NLE Core does not own a motion-policy catalog.
 
 - `{ kind: "constant", state }` resolves to the static Picture Operator;
 - `{ kind: "keyframes", keyframes, interpolation: { kind: "linear" } }` stores strictly increasing Item-local

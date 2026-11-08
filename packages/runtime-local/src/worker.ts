@@ -25,7 +25,7 @@ type LocalWorkerOptions = {
   readonly resourceStoreForBuild?: (build: string) => ResourceStore;
   readonly openPublicationStores: NonNullable<import("./types.js").CreateLocalRuntimeOptions["openPublicationStores"]>;
   readonly installProducerPackages: (specifiers: readonly string[]) => Promise<void>;
-  readonly runFinalizer: import("./types.js").LocalRunFinalizer;
+  readonly buildFinalizer: import("./types.js").LocalBuildFinalizer;
 };
 
 type WorkerTurnResult = BuildExecutionSnapshot | BuildCompletion;
@@ -221,7 +221,7 @@ class DurableLocalWorker {
       ? { outcome: "complete" }
       : { outcome, reason: reason ?? (outcome === "failed" ? "Build failed" : "Build cancelled") };
     const decided = await this.#options.stores.execution.decide(execution.build, this.#owner, decision);
-    return await this.#options.runFinalizer.finalize(decided);
+    return await this.#options.buildFinalizer.finalize(decided);
   }
 
   async #finishStopped(execution: BuildExecutionSnapshot): Promise<WorkerTurnResult> {
@@ -384,7 +384,7 @@ class DurableLocalWorker {
       onStateChange: async (build, state) => {
         const item = runnable.find((candidate) => candidate.execution.build === build);
         assert(item !== undefined, `Result update refers to unknown Build ${build}`);
-        await this.#options.runFinalizer.sync(item.execution, state.records).catch(() => undefined);
+        await this.#options.buildFinalizer.sync(item.execution, state.records).catch(() => undefined);
       },
     });
     try {

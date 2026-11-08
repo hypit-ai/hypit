@@ -56,8 +56,9 @@ The Node port also exposes `importMediaAssetFile()`. It accepts package-owned in
 reports cancellable task progress, optionally copies bytes, and atomically publishes a new manifest without
 overwriting an existing file. It deliberately owns no queue, FFmpeg policy or Studio pending state.
 
-For long-running operation graphs, this package contributes two value nodes. `@hypit/media-asset@1#media` projects
-the interpreted media as `PreparedMedia`; `@hypit/media-asset@1#resource` projects the primary file as an ordinary
+For long-running operation graphs, `@hypit/media-asset-generation` contributes two value nodes.
+`@hypit/media-asset-generation@1#media` projects the interpreted media as `PreparedMedia`;
+`@hypit/media-asset-generation@1#resource` projects the primary file as an ordinary
 `Blob` for image, video or audio model ports. The saved graph keeps only a portable Media Asset reference:
 
 ```json

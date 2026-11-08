@@ -7,7 +7,7 @@ import type { LoadedPackage } from "@hypit/loader";
 const svmlFrontend = createSvmlAuthorFrontend({ compilers: new AuthorDeclarationRegistry() });
 
 /** Toolchain bootstrap: the Host selects canonical SVML before package discovery. */
-export async function discoverToolchainSourcePackages(
+export async function discoverSvmlSourcePackages(
   sourcePath: string,
   options: {
     readonly workspaceRoot?: string;

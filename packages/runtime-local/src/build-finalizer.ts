@@ -8,11 +8,11 @@ import type {
 import type { BuildExecutionSnapshot } from "./execution.js";
 import { compareCodeUnits, type CommandResult } from "@hypit/protocol";
 import type { BuildResultOperation } from "@hypit/result";
-import type { RunFinalizationFinish, RunFinalizer, StoredBuildResult } from "./result-storage/types.js";
+import type { BuildFinalizationFinish, BuildFinalizer, StoredBuildResult } from "./result-storage/types.js";
 
 import type {
-  CreateLocalRunFinalizerOptions,
-  LocalRunFinalizer,
+  CreateLocalBuildFinalizerOptions,
+  LocalBuildFinalizer,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -64,8 +64,8 @@ function resultOperation(operation: OperationSnapshot): BuildResultOperation | u
 
 function resultFinish(
   decision: NonNullable<BuildExecutionSnapshot["decision"]>,
-  evidence: Omit<RunFinalizationFinish, "outcome" | "failure">,
-): RunFinalizationFinish {
+  evidence: Omit<BuildFinalizationFinish, "outcome" | "failure">,
+): BuildFinalizationFinish {
   if (decision.outcome === "complete") return { ...evidence, outcome: "complete" };
   return {
     ...evidence,
@@ -75,15 +75,15 @@ function resultFinish(
 }
 
 /**
- * Run finalization only consumes already accepted execution facts and transient bytes. It cannot load
+ * Build finalization only consumes already accepted execution facts and transient bytes. It cannot load
  * Producers or Endpoints and it never changes the frozen execution decision.
  */
-export function createLocalRunFinalizer(
-  options: CreateLocalRunFinalizerOptions,
-): LocalRunFinalizer {
+export function createLocalBuildFinalizer(
+  options: CreateLocalBuildFinalizerOptions,
+): LocalBuildFinalizer {
   const owner = randomUUID();
   const openFinalizer = async (execution: BuildExecutionSnapshot): Promise<{
-    readonly finalizer: RunFinalizer;
+    readonly finalizer: BuildFinalizer;
     readonly manifest: StoredBuildResult;
     close(): Promise<void>;
   }> => {

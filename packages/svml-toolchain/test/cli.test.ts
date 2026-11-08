@@ -5,14 +5,15 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { createToolchainApplicationServices } from "@hypit/toolchain";
-import { createToolchainCliCommandModules } from "@hypit/toolchain/cli";
+import { createSvmlToolchainApplicationServices } from "@hypit/svml-toolchain";
+import { createSvmlToolchainCliCommandModules } from "@hypit/svml-toolchain/cli";
 import { createSourceBuildCliCommandModules } from "@hypit/build-cli";
 import { runCliApplication } from "@hypit/cli";
 import { loadDiscoveredSourcePackages, runSourceBuildCli as runCommand } from "@hypit/build-cli";
 import { installDistributionPackageResolution } from "@hypit/loader/node";
 
 const toolchainServices = createToolchainApplicationServices();
-const buildServices = toolchainServices.sourceBuild;
+const buildServices = createSvmlToolchainApplicationServices();
 
 const runCli = (
   argv: readonly string[],
@@ -23,7 +24,7 @@ const runCli = (
   return runCliApplication([...argv, "--json"], io, {
     commandModules: [
       ...createSourceBuildCliCommandModules(buildServices),
-      ...createToolchainCliCommandModules(buildServices.packageRoot === undefined
+      ...createSvmlToolchainCliCommandModules(buildServices.packageRoot === undefined
         ? {}
         : { distributionPackageRoot: buildServices.packageRoot }),
     ],

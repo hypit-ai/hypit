@@ -24,7 +24,7 @@ own store. A Result therefore neither owns those bytes nor keeps a live project-
 `PublicationIntent.outputs` supplies the published name, accepted Record and exact publisher.
 Runtime records that publisher with the accepted Type rather than inventing a lifetime policy.
 History exposes each Product's stable `{ publication, name }` address; the current publication identity
-is the Run that closed it.
+is the Build that closed it.
 Reusing an earlier Output is an explicit authoring operation. Ordinary Author Sources export the accepted
 material into the project and reference that authored value. Generation Graphs follow the same rule: the recipe
 never owns Product history or a current Product selection. A completed media Product may be explicitly
@@ -39,7 +39,7 @@ Records and Resource identities; it has no knowledge of file paths or Result rep
 
 Drafts are not project history. The package root exposes `BuildResultHistory`; its `read()` and
 `browse()` methods return finished `BuildResult` values only. Exact Product lookup belongs to
-`ProductHistory`. Runtime Local assembles Run history, Product history and writable finalization as
+`ProductHistory`. Runtime Local assembles Build history, Product history and writable finalization as
 three distinct ports and concrete objects. CLI and history browsers therefore
 cannot observe, finish, discard or recover an open draft. `@hypit/result/node` exposes only
 `FileBuildResultHistory` and the finished-history filesystem reader.
@@ -74,7 +74,7 @@ name there.
 ## Execution evidence
 
 A finished manifest may contain `executionLog`, an ordinary Result file reference separate from
-`outputs`. `RunFinalizer.finish({ executionLog, outcome, ... })` accepts a byte stream. Repositories
+`outputs`. `BuildFinalizer.finish({ executionLog, outcome, ... })` accepts a byte stream. Repositories
 preserve it as `execution.jsonl` before the terminal manifest is committed. Repeating an already
 completed finish does not rewrite it.
 

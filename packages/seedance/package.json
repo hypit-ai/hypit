@@ -21,6 +21,7 @@
   "devDependencies": {
     "@hypit/generation-graph": "workspace:*",
     "@hypit/hypit": "workspace:*",
+    "@hypit/media-asset-generation": "workspace:*",
     "@hypit/prompt": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/svml": "workspace:*",

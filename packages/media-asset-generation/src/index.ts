@@ -1,27 +1,23 @@
+import { blobDependency, blobTypes } from "@hypit/blob";
 import type { GenerationValueNodeDeclaration } from "@hypit/generation-graph";
-import {
-  blobDependency,
-  blobTypes,
-} from "@hypit/blob";
-import {
-  mediaDependency,
-  mediaTypes,
-} from "@hypit/media";
-import type { CanonicalValue, ModuleManifest } from "@hypit/protocol";
-
+import { mediaDependency, mediaTypes } from "@hypit/media";
 import {
   parseMediaAssetDocument,
   resolveMediaAssetMedia,
   verifyMediaAssetReference,
-} from "./document.js";
-import type { MediaAssetReference } from "./types.js";
+  type MediaAssetReference,
+} from "@hypit/media-asset";
+import type { CanonicalValue, ModuleManifest } from "@hypit/protocol";
 
-export const mediaAssetModuleRef = { name: "@hypit/media-asset", version: "1" } as const;
+export const mediaAssetGenerationModuleRef = {
+  name: "@hypit/media-asset-generation",
+  version: "1",
+} as const;
 
-export const mediaAssetManifest: ModuleManifest = {
+export const mediaAssetGenerationManifest: ModuleManifest = {
   format: "hypit.module@1",
-  name: mediaAssetModuleRef.name,
-  version: mediaAssetModuleRef.version,
+  name: mediaAssetGenerationModuleRef.name,
+  version: mediaAssetGenerationModuleRef.version,
   dependencies: [blobDependency, mediaDependency],
   types: [],
   capabilities: [],
@@ -29,8 +25,8 @@ export const mediaAssetManifest: ModuleManifest = {
 };
 
 export const mediaAssetGenerationNodes = {
-  media: { module: mediaAssetModuleRef, name: "media" },
-  resource: { module: mediaAssetModuleRef, name: "resource" },
+  media: { module: mediaAssetGenerationModuleRef, name: "media" },
+  resource: { module: mediaAssetGenerationModuleRef, name: "resource" },
 } as const;
 
 function fileLocator(reference: MediaAssetReference, file: string): string {
@@ -44,7 +40,6 @@ function referenceLocator(reference: MediaAssetReference): string {
   return reference.path.startsWith("./") ? reference.path : `./${reference.path}`;
 }
 
-/** A persistent Media Asset becomes one authored PreparedMedia value before Build execution. */
 export const mediaAssetGenerationNode: GenerationValueNodeDeclaration = {
   kind: "value",
   using: mediaAssetGenerationNodes.media,
@@ -62,7 +57,6 @@ export const mediaAssetGenerationNode: GenerationValueNodeDeclaration = {
   },
 };
 
-/** Load the primary file itself for model inputs that consume an image/audio/video Blob. */
 export const mediaAssetResourceGenerationNode: GenerationValueNodeDeclaration = {
   kind: "value",
   using: mediaAssetGenerationNodes.resource,

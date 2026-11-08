@@ -6,11 +6,11 @@ import type { ModuleManifest } from "@hypit/protocol";
 import { audioProgramModuleRef } from "@hypit/audio-program";
 import { mediaDeliveryModuleRef } from "@hypit/media-delivery";
 
-export const htmlVideoModuleRef = { name: "@hypit/html-video", version: "1" } as const;
-export const htmlVideoManifest: ModuleManifest = {
+export const htmlVideoAuthorModuleRef = { name: "@hypit/html-video-author", version: "1" } as const;
+export const htmlVideoAuthorManifest: ModuleManifest = {
   format: "hypit.module@1",
-  name: htmlVideoModuleRef.name,
-  version: htmlVideoModuleRef.version,
+  name: htmlVideoAuthorModuleRef.name,
+  version: htmlVideoAuthorModuleRef.version,
   dependencies: [
     blobDependency,
     mediaDependency,

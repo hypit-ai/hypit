@@ -10,7 +10,7 @@ export type BuildOutcome = "complete" | "failed" | "cancelled";
 export type PublicationStoreLocation = {
   /** Project ownership boundary used to record a portable Author Source path. */
   readonly root: string;
-  /** Run-history path below the project root. */
+  /** Build-history path below the project root. */
   readonly historyPath: string;
   /** Product-publication path below the project root. */
   readonly productsPath: string;

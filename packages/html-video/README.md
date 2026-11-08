@@ -1,9 +1,7 @@
 # @hypit/html-video
 
-`@hypit/html-video` assembles an already compiled `HtmlProgram`, an `AudioProgram` and one explicit
-`MediaDeliverySpec` into a final video request.
-
-Its Fragment:
+`@hypit/html-video` assembles an already lowered `HtmlProgram`, an `AudioProgram` and one explicit
+`MediaDeliverySpec` into a final video request. Its direct delivery plan:
 
 1. projects the delivery requirement into a visual requirement;
 2. requests rasterization of the supplied `HtmlProgram`;
@@ -11,13 +9,16 @@ Its Fragment:
 4. muxes the two typed products under the same delivery requirement; and
 5. exports the resulting video Blob.
 
-The same assembly is also available without an Author/Build Graph. `createHtmlVideoDeliveryPlan` validates one
+`createHtmlVideoDeliveryPlan` validates one
 `HtmlProgram`, one `AudioProgram` and one explicit delivery policy, producing the exact visual and audio requests.
 `executeHtmlVideoDeliveryPlan` runs those two independent requests in parallel through an injected executor, creates
 the validated mux request only after both products exist, and verifies the returned `MuxedMedia`. The caller owns
 the execution implementations and resource storage; the plan contains no Chromium, FFmpeg, file-path, Endpoint or
 Runtime state. A Build host may bind the same requests through Providers, while a local NLE host may call direct
 rendering engines.
+
+The optional Source/Author Graph fragment lives in `@hypit/html-video-author`; importing this NLE terminal does
+not install Author Graph or Temporal Graph.
 
 `lowerNleProjectToHtmlVideoDeliveryPlan` is the downstream NLE adapter. It structurally lowers one `NleProject`
 once, derives both terminal programmes from that same AVIR value, and supplies an exact silent `AudioProgram` when a

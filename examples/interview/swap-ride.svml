@@ -22,7 +22,7 @@
   <import as="sequence" from="@hypit/spatial-sequence@1"/>
   <import as="flash" from="@interview/flash@1"/>
   <import as="film" from="@hypit/film@1"/>
-  <import as="html" from="@hypit/html-video@1"/>
+  <import as="html" from="@hypit/html-video-author@1"/>
   <import as="emoji" from="@hypit/interview-emoji-reveal@1"/>
   <import as="recipes" source="./recipes.svs"/>
   <import as="tracking" source="./ada-tracking.regions.svml"/>

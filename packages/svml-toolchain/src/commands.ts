@@ -1,9 +1,9 @@
 import type { CliCommandModule } from "@hypit/cli";
 
-import { runVocabularyCli, writeVocabularyHelp } from "./vocabulary.js";
+import { runSvmlVocabularyCli, writeVocabularyHelp } from "./vocabulary.js";
 
 /** Author vocabulary view selected by the Toolchain Distribution. */
-export function createToolchainCliCommandModules(options: {
+export function createSvmlToolchainCliCommandModules(options: {
   readonly distributionPackageRoot?: string;
 } = {}): readonly CliCommandModule[] {
   return [{
@@ -17,7 +17,7 @@ export function createToolchainCliCommandModules(options: {
       writeVocabularyHelp(io);
     },
     async run(argv, io, context) {
-      await runVocabularyCli(argv, io, context.cwd, options.distributionPackageRoot);
+      await runSvmlVocabularyCli(argv, io, context.cwd, options.distributionPackageRoot);
     },
   }];
 }

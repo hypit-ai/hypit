@@ -7,7 +7,7 @@ import test from "node:test";
 
 import {
   buildResultDirectory,
-  FileRunFinalization,
+  FileBuildFinalization,
 } from "../../src/result-storage/index.js";
 import type { BlobRef } from "@hypit/protocol";
 import { productPublicationDirectory } from "@hypit/product/node";
@@ -23,7 +23,7 @@ import {
 test("a failed filesystem sync cannot make a later resource inherit stale bytes", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-retry-path-"));
   try {
-    const result = await FileRunFinalization.create(root, join(root, "products"), {
+    const result = await FileBuildFinalization.create(root, join(root, "products"), {
       id: "bld_20260924T100000000Z_0000000001",
       sourcePath: "/project/main.svml",
       targets: ["a", "b", "z"],

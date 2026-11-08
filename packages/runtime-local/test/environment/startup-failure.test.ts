@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as pause } from "node:timers/promises";
 import test from "node:test";
 import { defineBuild } from "@hypit/kernel";
-import { FileRunFinalizationStore } from "../../src/result-storage/index.js";
+import { FileBuildFinalizationStore } from "../../src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { createGreetingBuild, types } from "../execution-scenario.js";
@@ -19,7 +19,7 @@ test("an executor that fails before ready records a failed Build and leaves supe
   const root = await mkdtemp(join(tmpdir(), "hypit-executor-startup-"));
   const dataRoot = join(root, "runtime");
   const profile = join(root, "profile.json");
-  const finalization = new FileRunFinalizationStore(join(root, "results"), join(root, "products"));
+  const finalization = new FileBuildFinalizationStore(join(root, "results"), join(root, "products"));
   const history = new FileBuildResultHistory(join(root, "results"));
   const state = new SqliteRuntimeState(statePath(dataRoot));
   const abort = new AbortController();

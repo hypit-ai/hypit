@@ -77,7 +77,7 @@ export type StoredFinishedBuildResult = StoredBuildResultBase & StoredBuildResul
 /** Storage state used only by Runtime publication and recovery. */
 export type StoredBuildResult = BuildResultDraft | StoredFinishedBuildResult;
 
-export type RunFinalizationSeed = {
+export type BuildFinalizationSeed = {
   readonly id: string;
   readonly sourcePath: string;
   /** Author-facing names requested by this Build; targets are execution evidence, not publications. */
@@ -86,49 +86,49 @@ export type RunFinalizationSeed = {
 };
 
 /** Validate the publication request before storage is touched. */
-export function assertRunFinalizationSeed(seed: RunFinalizationSeed): void {
-  if (seed.sourcePath.trim().length === 0) throw new Error("Run Source path must not be empty");
+export function assertBuildFinalizationSeed(seed: BuildFinalizationSeed): void {
+  if (seed.sourcePath.trim().length === 0) throw new Error("Build Source path must not be empty");
   const targets = new Set<string>();
   for (const target of seed.targets) {
-    if (target.trim().length === 0) throw new Error("Run target must not be empty");
-    if (targets.has(target)) throw new Error(`Run target ${target} is repeated`);
+    if (target.trim().length === 0) throw new Error("Build target must not be empty");
+    if (targets.has(target)) throw new Error(`Build target ${target} is repeated`);
     targets.add(target);
   }
   assertPublicationIntent(seed.publication);
 }
 
-export type RunFinalizationResourceSource = {
+export type BuildFinalizationResourceSource = {
   open(blob: BlobRef): Promise<AsyncIterable<Uint8Array> | undefined>;
 };
 
-export type RunFinalizationSync = {
+export type BuildFinalizationSync = {
   /** Already accepted Records; Result does not observe Runtime lifecycle or scheduling state. */
   readonly records: readonly TypedRecord[];
-  readonly resources: RunFinalizationResourceSource;
+  readonly resources: BuildFinalizationResourceSource;
 };
 
-type RunFinalizationFinishEvidence = {
+type BuildFinalizationFinishEvidence = {
   /** Closed execution evidence; Repository stores it before publishing the terminal manifest. */
   readonly executionLog?: AsyncIterable<Uint8Array>;
   readonly operations?: readonly BuildResultOperation[];
 };
 
-export type RunFinalizationFinish = RunFinalizationFinishEvidence & (
+export type BuildFinalizationFinish = BuildFinalizationFinishEvidence & (
   | { readonly outcome: "complete"; readonly failure?: never }
   | { readonly outcome: "failed" | "cancelled"; readonly failure: string }
 );
 
-export type RunFinalizer = {
+export type BuildFinalizer = {
   read(): Promise<StoredBuildResult>;
   /** Store newly completed publications; no storage writes when none are new. */
-  sync(input: RunFinalizationSync): Promise<StoredBuildResult>;
-  finish(input: RunFinalizationFinish): Promise<StoredFinishedBuildResult>;
+  sync(input: BuildFinalizationSync): Promise<StoredBuildResult>;
+  finish(input: BuildFinalizationFinish): Promise<StoredFinishedBuildResult>;
 };
 
 /** Runtime-owned publication and recovery port; it exposes neither history nor Product lookup. */
-export type RunFinalizationStore = {
-  create(seed: RunFinalizationSeed): Promise<RunFinalizer>;
-  openFinalizer(build: string): Promise<RunFinalizer | undefined>;
+export type BuildFinalizationStore = {
+  create(seed: BuildFinalizationSeed): Promise<BuildFinalizer>;
+  openFinalizer(build: string): Promise<BuildFinalizer | undefined>;
   /** Remove one exact unfinished Result created by a submission that never became claimable. */
   removeIncomplete(build: string): Promise<void>;
   /** Read private publication state for active-build observation and crash recovery. */

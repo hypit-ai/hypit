@@ -81,7 +81,7 @@ export type RuntimeHostCredentialStatus = RuntimeHostCredentialDescription & {
 };
 
 export type RuntimeHostControl = {
-  /** Build evidence while active. Finished evidence is read through project Run history. */
+  /** Build evidence while active. Finished evidence is read through project Build history. */
   logs?(build: string, lines: number): Promise<import("@hypit/runtime").ExecutionLogView | undefined>;
   inspect(build: string): Promise<BuildView | undefined>;
   activity(): Promise<{
@@ -115,7 +115,7 @@ export type RuntimeHostExecution = RuntimeHostControl & RuntimeHostCredentialCon
       readonly publication: PublicationIntent;
     };
     readonly attachments?: readonly BlobAttachment[];
-    /** Project-owned Run-history and Product roots, fixed before this Build becomes active. */
+    /** Project-owned Build-history and Product roots, fixed before this Build becomes active. */
     readonly publicationStores: PublicationStoreLocation;
   }, options?: {
     readonly follow?: boolean;
