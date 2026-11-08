@@ -1534,6 +1534,18 @@ importers:
         specifier: workspace:^0.1.0
         version: link:../nle-local
 
+  packages/object-track:
+    dependencies:
+      '@hypit/media-asset':
+        specifier: workspace:^0.1.0
+        version: link:../media-asset
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
+
   packages/picture-filter:
     dependencies:
       '@hypit/audiovisual':

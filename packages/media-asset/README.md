@@ -42,6 +42,11 @@ by exact `TypeRef`, rejects duplicate owners and supplies only the selected asse
 capability. This is the backend assembly seam for format packages; it is not a Studio UI contract and it does not
 run analysis.
 
+`@hypit/timed-transcript` and `@hypit/object-track` are the first two concrete readers. Object Track demonstrates
+the spatial side without adding a central analysis schema: its editable JSON owns named normalized rectangles and
+exact local sample times, while the Media Asset binding alone relates that file to media display space and time.
+Dense masks, depth and camera motion can follow the same facet as separately typed packages.
+
 `@hypit/media-asset/node` adds `readMediaAssetDocumentFile()`, `resolveMediaAssetMediaFile()` and
 `resolveMediaAssetDocumentFile()`. The latter
 anchors every declaration to the manifest directory and hands each absolute file to a Host callback. It does not
