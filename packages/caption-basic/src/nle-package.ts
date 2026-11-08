@@ -3,7 +3,9 @@ import { visualProgramHtmlSource } from "@hypit/audiovisual-html";
 import { htmlVisual } from "@hypit/html-program";
 import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
 import type { NleComponentItem, NleComponentResolver, NlePackageSymbol } from "@hypit/nle";
+import type { ModuleManifest } from "@hypit/protocol";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
+import { sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 
 import { assertCaptionCuePayload, type CaptionCuePayload } from "@hypit/caption";
 import type { CaptionBasicKaraokeParameters } from "./types.js";
@@ -11,6 +13,17 @@ import type { CaptionBasicKaraokeParameters } from "./types.js";
 export const captionBasicNleComponentSymbol: NlePackageSymbol = {
   module: { name: "@hypit/caption-basic", version: "1" },
   name: "basic",
+};
+
+/** Package identity used by ordinary NLE package selection; behavior remains in the NLE facets. */
+export const captionBasicNleManifest: ModuleManifest = {
+  format: "hypit.module@1",
+  name: captionBasicNleComponentSymbol.module.name,
+  version: captionBasicNleComponentSymbol.module.version,
+  dependencies: [],
+  types: [],
+  capabilities: [],
+  producers: [],
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -98,7 +111,12 @@ function resolveCaptionBasic(item: NleComponentItem) {
   });
   const source: ProgramSource = {
     id: sourceId,
-    outputs: { picture: { kind: "constant", type: pictureType, spatialDomain } },
+    outputs: { picture: {
+      kind: "signal",
+      type: pictureType,
+      domain: sealLocalTemporalDomain({ id: `${sourceId}:time`, duration: structuredClone(item.duration) }),
+      spatialDomain,
+    } },
   };
   return {
     source,

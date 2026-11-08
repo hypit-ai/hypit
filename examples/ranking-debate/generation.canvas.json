@@ -1,0 +1,19 @@
+{
+  "format": "hypit.generation-canvas@1",
+  "id": "ranking-debate-generation-canvas",
+  "name": "Ranking debate generation",
+  "revision": 0,
+  "graph": { "path": "generation.graph.json" },
+  "items": [
+    { "id": "alice-portrait-view", "subject": { "kind": "graph-node", "node": "alice-portrait" }, "x": 80, "y": 80 },
+    { "id": "alice-voice-1-view", "subject": { "kind": "graph-node", "node": "alice-voice-1" }, "x": 80, "y": 340 },
+    { "id": "alice-video-1-view", "subject": { "kind": "graph-node", "node": "alice-video-1" }, "x": 520, "y": 180 },
+    { "id": "alice-voice-2-view", "subject": { "kind": "graph-node", "node": "alice-voice-2" }, "x": 520, "y": 440 },
+    { "id": "alice-video-2-view", "subject": { "kind": "graph-node", "node": "alice-video-2" }, "x": 960, "y": 300 },
+    { "id": "bob-portrait-view", "subject": { "kind": "graph-node", "node": "bob-portrait" }, "x": 80, "y": 780 },
+    { "id": "bob-voice-1-view", "subject": { "kind": "graph-node", "node": "bob-voice-1" }, "x": 80, "y": 1040 },
+    { "id": "bob-video-1-view", "subject": { "kind": "graph-node", "node": "bob-video-1" }, "x": 520, "y": 880 },
+    { "id": "bob-voice-2-view", "subject": { "kind": "graph-node", "node": "bob-voice-2" }, "x": 520, "y": 1140 },
+    { "id": "bob-video-2-view", "subject": { "kind": "graph-node", "node": "bob-video-2" }, "x": 960, "y": 1000 }
+  ]
+}

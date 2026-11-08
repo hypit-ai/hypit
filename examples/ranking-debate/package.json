@@ -1,0 +1,21 @@
+{
+  "name": "hypit-ranking-debate",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "hypit": {
+    "project": true
+  },
+  "dependencies": {
+    "@hypit/hypit": "workspace:*",
+    "@hypit/caption-fine": "workspace:*",
+    "@hypit-example/ranking-debate-components": "workspace:*"
+  },
+  "scripts": {
+    "compose": "node --import tsx scripts/compose.ts",
+    "render": "hypit nle export film.nle.json --to exports/ranking-debate.mp4"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
+  }
+}

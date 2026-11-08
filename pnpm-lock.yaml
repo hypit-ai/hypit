@@ -186,6 +186,46 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  examples/ranking-debate:
+    dependencies:
+      '@hypit-example/ranking-debate-components':
+        specifier: workspace:*
+        version: link:packages/ranking-debate-components
+      '@hypit/caption-fine':
+        specifier: workspace:*
+        version: link:../../packages/caption-fine
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
+    devDependencies:
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
+
+  examples/ranking-debate/packages/ranking-debate-components:
+    dependencies:
+      '@hypit/audiovisual':
+        specifier: workspace:*
+        version: link:../../../../packages/audiovisual
+      '@hypit/audiovisual-html':
+        specifier: workspace:*
+        version: link:../../../../packages/audiovisual-html
+      '@hypit/html-program':
+        specifier: workspace:*
+        version: link:../../../../packages/html-program
+      '@hypit/html-video':
+        specifier: workspace:*
+        version: link:../../../../packages/html-video
+      '@hypit/nle':
+        specifier: workspace:*
+        version: link:../../../../packages/nle
+      '@hypit/spatial':
+        specifier: workspace:*
+        version: link:../../../../packages/spatial
+      '@hypit/temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/temporal
+
   examples/semantic-composition/packages/audiovisual-title-card:
     dependencies:
       '@hypit/audiovisual':
@@ -543,6 +583,9 @@ importers:
       '@hypit/caption':
         specifier: workspace:^0.1.1
         version: link:../caption
+      '@hypit/caption-nle':
+        specifier: workspace:^0.1.0
+        version: link:../caption-nle
       '@hypit/html-program':
         specifier: workspace:^0.1.0
         version: link:../html-program
@@ -558,6 +601,54 @@ importers:
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
+
+  packages/caption-fine:
+    dependencies:
+      '@hypit/audiovisual':
+        specifier: workspace:^0.1.0
+        version: link:../audiovisual
+      '@hypit/audiovisual-html':
+        specifier: workspace:^0.1.0
+        version: link:../audiovisual-html
+      '@hypit/caption':
+        specifier: workspace:^0.1.1
+        version: link:../caption
+      '@hypit/caption-nle':
+        specifier: workspace:^0.1.0
+        version: link:../caption-nle
+      '@hypit/html-program':
+        specifier: workspace:^0.1.0
+        version: link:../html-program
+      '@hypit/html-video':
+        specifier: workspace:^0.2.1
+        version: link:../html-video
+      '@hypit/nle':
+        specifier: workspace:^0.1.0
+        version: link:../nle
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/spatial':
+        specifier: workspace:^0.1.1
+        version: link:../spatial
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
+
+  packages/caption-nle:
+    dependencies:
+      '@hypit/caption':
+        specifier: workspace:^0.1.1
+        version: link:../caption
+      '@hypit/nle':
+        specifier: workspace:^0.1.0
+        version: link:../nle
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal

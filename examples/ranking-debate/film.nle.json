@@ -1,0 +1,4159 @@
+{
+  "format": "hypit.nle@1",
+  "id": "ranking-debate",
+  "name": "Ranking debate",
+  "revision": 7,
+  "editRate": {
+    "numerator": 24,
+    "denominator": 1
+  },
+  "canvas": {
+    "width": 720,
+    "height": 1280,
+    "clearColor": "#111827"
+  },
+  "media": [
+    {
+      "id": "alice-video-1",
+      "name": "alice-video-1",
+      "asset": {
+        "path": "media/alice-video-1/alice-video-1.media.json"
+      }
+    },
+    {
+      "id": "bob-video-1",
+      "name": "bob-video-1",
+      "asset": {
+        "path": "media/bob-video-1/bob-video-1.media.json"
+      }
+    },
+    {
+      "id": "alice-video-2",
+      "name": "alice-video-2",
+      "asset": {
+        "path": "media/alice-video-2/alice-video-2.media.json"
+      }
+    },
+    {
+      "id": "bob-video-2",
+      "name": "bob-video-2",
+      "asset": {
+        "path": "media/bob-video-2/bob-video-2.media.json"
+      }
+    }
+  ],
+  "tracks": [
+    {
+      "id": "picture-main",
+      "name": "Picture + production audio",
+      "kind": "picture",
+      "locked": false,
+      "muted": false,
+      "items": [
+        {
+          "id": "alice-video-1-use",
+          "kind": "media",
+          "media": "alice-video-1",
+          "start": {
+            "ticks": "0",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "duration": {
+            "ticks": "145",
+            "timeBase": {
+              "denominator": 24,
+              "numerator": 1
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "145",
+                    "timeBase": {
+                      "denominator": 24,
+                      "numerator": 1
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "picture": {
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 720,
+              "height": 1280,
+              "fit": "cover"
+            },
+            "effects": []
+          },
+          "audio": {
+            "effects": []
+          }
+        },
+        {
+          "id": "bob-video-1-use",
+          "kind": "media",
+          "media": "bob-video-1",
+          "start": {
+            "ticks": "145",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 24
+            }
+          },
+          "duration": {
+            "ticks": "241",
+            "timeBase": {
+              "denominator": 24,
+              "numerator": 1
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "241",
+                    "timeBase": {
+                      "denominator": 24,
+                      "numerator": 1
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "picture": {
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 720,
+              "height": 1280,
+              "fit": "cover"
+            },
+            "effects": []
+          },
+          "audio": {
+            "effects": []
+          }
+        },
+        {
+          "id": "alice-video-2-use",
+          "kind": "media",
+          "media": "alice-video-2",
+          "start": {
+            "ticks": "193",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 12
+            }
+          },
+          "duration": {
+            "ticks": "193",
+            "timeBase": {
+              "denominator": 24,
+              "numerator": 1
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "193",
+                    "timeBase": {
+                      "denominator": 24,
+                      "numerator": 1
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "picture": {
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 720,
+              "height": 1280,
+              "fit": "cover"
+            },
+            "effects": []
+          },
+          "audio": {
+            "effects": []
+          }
+        },
+        {
+          "id": "bob-video-2-use",
+          "kind": "media",
+          "media": "bob-video-2",
+          "start": {
+            "ticks": "193",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 8
+            }
+          },
+          "duration": {
+            "ticks": "193",
+            "timeBase": {
+              "denominator": 24,
+              "numerator": 1
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "193",
+                    "timeBase": {
+                      "denominator": 24,
+                      "numerator": 1
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "picture": {
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 720,
+              "height": 1280,
+              "fit": "cover"
+            },
+            "effects": []
+          },
+          "audio": {
+            "effects": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "ranking",
+      "name": "Ranking board",
+      "kind": "picture",
+      "locked": false,
+      "muted": false,
+      "items": [
+        {
+          "id": "ranking-board",
+          "kind": "component",
+          "start": {
+            "ticks": "0",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "duration": {
+            "ticks": "193",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 6
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "193",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 6
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit-example/ranking-debate-components",
+              "version": "1"
+            },
+            "name": "ranking-board"
+          },
+          "parameters": {
+            "title": "AI 视频能力榜",
+            "rows": [
+              {
+                "id": "S",
+                "label": "S",
+                "color": "#22c55e"
+              },
+              {
+                "id": "A",
+                "label": "A",
+                "color": "#60a5fa"
+              },
+              {
+                "id": "B",
+                "label": "B",
+                "color": "#fb923c"
+              }
+            ],
+            "entries": [
+              {
+                "id": "pretty",
+                "label": "漂亮画面",
+                "tier": "B",
+                "icon": "✨",
+                "revealAt": {
+                  "ticks": "11911",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1500
+                  }
+                }
+              },
+              {
+                "id": "stable",
+                "label": "稳定修改",
+                "tier": "A",
+                "icon": "🛠",
+                "revealAt": {
+                  "ticks": "41231",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 3000
+                  }
+                }
+              },
+              {
+                "id": "timed",
+                "label": "按词编排",
+                "tier": "S",
+                "icon": "⏱",
+                "revealAt": {
+                  "ticks": "12137",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 600
+                  }
+                }
+              },
+              {
+                "id": "editable",
+                "label": "普通工程",
+                "tier": "S",
+                "icon": "✂️",
+                "revealAt": {
+                  "ticks": "12829",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 500
+                  }
+                }
+              }
+            ],
+            "revealFrames": 8
+          },
+          "picture": {
+            "layout": {
+              "x": 350,
+              "y": 24,
+              "width": 340,
+              "height": 370,
+              "fit": "fill"
+            },
+            "effects": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "captions",
+      "name": "Captions",
+      "kind": "picture",
+      "locked": false,
+      "muted": false,
+      "items": [
+        {
+          "id": "alice-opening-captions:ranking-debate.caption:cue:1",
+          "kind": "component",
+          "start": {
+            "ticks": "131",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1000
+            }
+          },
+          "duration": {
+            "ticks": "2629",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 500
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "2629",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 500
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine",
+              "version": "1"
+            },
+            "name": "fine"
+          },
+          "parameters": {
+            "caption": {
+              "cueId": "ranking-debate.caption:cue:1",
+              "documentId": "ranking-debate.caption",
+              "role": "ALICE",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "181",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:1",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:1:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "261",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:2",
+                  "start": {
+                    "ticks": "181",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:2:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "743",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:3",
+                  "start": {
+                    "ticks": "261",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:3:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "133",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:4",
+                  "start": {
+                    "ticks": "743",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:4:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "269",
+                    "timeBase": {
+                      "denominator": 200,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:5",
+                  "start": {
+                    "ticks": "133",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:5:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "773",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:6",
+                  "start": {
+                    "ticks": "269",
+                    "timeBase": {
+                      "denominator": 200,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:6:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "833",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:7",
+                  "start": {
+                    "ticks": "773",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:7:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1867",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:8",
+                  "start": {
+                    "ticks": "833",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:8:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2469",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:9",
+                  "start": {
+                    "ticks": "1867",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:9:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2669",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:10",
+                  "start": {
+                    "ticks": "2469",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:10:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "287",
+                    "timeBase": {
+                      "denominator": 100,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:11",
+                  "start": {
+                    "ticks": "2669",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:11:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "3271",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:12",
+                  "start": {
+                    "ticks": "287",
+                    "timeBase": {
+                      "denominator": 100,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:12:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "3813",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:13",
+                  "start": {
+                    "ticks": "3271",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:13:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2007",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:14",
+                  "start": {
+                    "ticks": "3813",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:14:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2097",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:15",
+                  "start": {
+                    "ticks": "2007",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:15:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "35",
+                    "timeBase": {
+                      "denominator": 8,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:16",
+                  "start": {
+                    "ticks": "2097",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:16:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "4817",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:17",
+                  "start": {
+                    "ticks": "35",
+                    "timeBase": {
+                      "denominator": 8,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:17:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "5077",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:18",
+                  "start": {
+                    "ticks": "4817",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:18:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2619",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:19",
+                  "start": {
+                    "ticks": "5077",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:19:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2629",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:20",
+                  "start": {
+                    "ticks": "2619",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:20:word:1"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:1:word:1",
+                  "separatorBefore": "",
+                  "text": "今",
+                  "unitId": "ranking-debate.caption:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:2:word:1",
+                  "separatorBefore": "",
+                  "text": "天",
+                  "unitId": "ranking-debate.caption:unit:2"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:3:word:1",
+                  "separatorBefore": "",
+                  "text": "别",
+                  "unitId": "ranking-debate.caption:unit:3"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:4:word:1",
+                  "separatorBefore": "",
+                  "text": "聊",
+                  "unitId": "ranking-debate.caption:unit:4"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:5:word:1",
+                  "separatorBefore": "",
+                  "text": "谁",
+                  "unitId": "ranking-debate.caption:unit:5"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:6:word:1",
+                  "separatorBefore": "",
+                  "text": "最",
+                  "unitId": "ranking-debate.caption:unit:6"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:7:word:1",
+                  "separatorBefore": "",
+                  "text": "会",
+                  "unitId": "ranking-debate.caption:unit:7"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:8:word:1",
+                  "separatorBefore": "",
+                  "text": "营",
+                  "unitId": "ranking-debate.caption:unit:8"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:9:word:1",
+                  "separatorBefore": "",
+                  "text": "销，",
+                  "unitId": "ranking-debate.caption:unit:9"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:10:word:1",
+                  "separatorBefore": "",
+                  "text": "直",
+                  "unitId": "ranking-debate.caption:unit:10"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:11:word:1",
+                  "separatorBefore": "",
+                  "text": "接",
+                  "unitId": "ranking-debate.caption:unit:11"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:12:word:1",
+                  "separatorBefore": "",
+                  "text": "把",
+                  "unitId": "ranking-debate.caption:unit:12"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:13:word:1",
+                  "separatorBefore": " ",
+                  "text": "AI",
+                  "unitId": "ranking-debate.caption:unit:13"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:14:word:1",
+                  "separatorBefore": " ",
+                  "text": "视",
+                  "unitId": "ranking-debate.caption:unit:14"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:15:word:1",
+                  "separatorBefore": "",
+                  "text": "频",
+                  "unitId": "ranking-debate.caption:unit:15"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:16:word:1",
+                  "separatorBefore": "",
+                  "text": "能",
+                  "unitId": "ranking-debate.caption:unit:16"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:17:word:1",
+                  "separatorBefore": "",
+                  "text": "力",
+                  "unitId": "ranking-debate.caption:unit:17"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:18:word:1",
+                  "separatorBefore": "",
+                  "text": "排",
+                  "unitId": "ranking-debate.caption:unit:18"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:19:word:1",
+                  "separatorBefore": "",
+                  "text": "个",
+                  "unitId": "ranking-debate.caption:unit:19"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:20:word:1",
+                  "separatorBefore": "",
+                  "text": "级。",
+                  "unitId": "ranking-debate.caption:unit:20"
+                }
+              ]
+            },
+            "family": "fine",
+            "style": {
+              "activeBox": {
+                "background": "#2563eb88",
+                "borderRadius": 8,
+                "mode": "trail",
+                "paddingX": 5,
+                "paddingY": 2
+              },
+              "attributeFaces": [
+                {
+                  "attribute": "face",
+                  "fontFamily": "Georgia, serif",
+                  "fontStyle": "italic",
+                  "fontWeight": 700,
+                  "value": "serif"
+                }
+              ],
+              "color": "#ffffff",
+              "cueBox": {
+                "background": "#172554cc",
+                "borderColor": "#60a5fa",
+                "borderRadius": 18,
+                "borderWidth": 3,
+                "paddingX": 20,
+                "paddingY": 14
+              },
+              "entry": {
+                "frames": 6,
+                "kind": "pop"
+              },
+              "fontFamily": "Arial, sans-serif",
+              "fontSize": 62,
+              "fontWeight": 900,
+              "karaoke": {
+                "activeColor": "#fef08a",
+                "mode": "trail",
+                "transition": "wipe"
+              },
+              "lineHeight": 1.08,
+              "outlineColor": "#111827",
+              "outlineWidth": 5,
+              "shadowBlur": 8,
+              "shadowColor": "#11182788",
+              "shadowOffsetY": 7,
+              "textAlign": "center"
+            },
+            "styleId": "alice"
+          },
+          "picture": {
+            "layout": {
+              "x": 38,
+              "y": 910,
+              "width": 644,
+              "height": 300,
+              "fit": "fill"
+            },
+            "effects": []
+          }
+        },
+        {
+          "id": "bob-generation-captions:ranking-debate.caption:cue:2",
+          "kind": "component",
+          "start": {
+            "ticks": "18641",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "duration": {
+            "ticks": "1019",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 250
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "1019",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 250
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine",
+              "version": "1"
+            },
+            "name": "fine"
+          },
+          "parameters": {
+            "caption": {
+              "cueId": "ranking-debate.caption:cue:2",
+              "documentId": "ranking-debate.caption",
+              "role": "BOB",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "3",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:21",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:21:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 5,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:22",
+                  "start": {
+                    "ticks": "3",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:22:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "381",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:23",
+                  "start": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 5,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:23:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "143",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:24",
+                  "start": {
+                    "ticks": "381",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:24:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "261",
+                    "timeBase": {
+                      "denominator": 200,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:25",
+                  "start": {
+                    "ticks": "143",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:25:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "753",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:26",
+                  "start": {
+                    "ticks": "261",
+                    "timeBase": {
+                      "denominator": 200,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:26:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1727",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:27",
+                  "start": {
+                    "ticks": "753",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:27:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1887",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:28",
+                  "start": {
+                    "ticks": "1727",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:28:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "517",
+                    "timeBase": {
+                      "denominator": 250,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:29",
+                  "start": {
+                    "ticks": "1887",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:29:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2229",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:30",
+                  "start": {
+                    "ticks": "517",
+                    "timeBase": {
+                      "denominator": 250,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:30:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "251",
+                    "timeBase": {
+                      "denominator": 100,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:31",
+                  "start": {
+                    "ticks": "2229",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:31:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "263",
+                    "timeBase": {
+                      "denominator": 100,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:32",
+                  "start": {
+                    "ticks": "251",
+                    "timeBase": {
+                      "denominator": 100,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:32:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2791",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:33",
+                  "start": {
+                    "ticks": "263",
+                    "timeBase": {
+                      "denominator": 100,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:33:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "743",
+                    "timeBase": {
+                      "denominator": 250,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:34",
+                  "start": {
+                    "ticks": "2791",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:34:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "394",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:35",
+                  "start": {
+                    "ticks": "743",
+                    "timeBase": {
+                      "denominator": 250,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:35:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1019",
+                    "timeBase": {
+                      "denominator": 250,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:36",
+                  "start": {
+                    "ticks": "394",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:36:word:1"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:21:word:1",
+                  "separatorBefore": "",
+                  "text": "那",
+                  "unitId": "ranking-debate.caption:unit:21"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:22:word:1",
+                  "separatorBefore": "",
+                  "text": "我",
+                  "unitId": "ranking-debate.caption:unit:22"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:23:word:1",
+                  "separatorBefore": "",
+                  "text": "先",
+                  "unitId": "ranking-debate.caption:unit:23"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:24:word:1",
+                  "separatorBefore": "",
+                  "text": "说，",
+                  "unitId": "ranking-debate.caption:unit:24"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:25:word:1",
+                  "separatorBefore": "",
+                  "text": "能",
+                  "unitId": "ranking-debate.caption:unit:25"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:26:word:1",
+                  "separatorBefore": "",
+                  "text": "生",
+                  "unitId": "ranking-debate.caption:unit:26"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:27:word:1",
+                  "separatorBefore": "",
+                  "text": "成",
+                  "unitId": "ranking-debate.caption:unit:27"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:28:word:1",
+                  "separatorBefore": "",
+                  "text": "漂",
+                  "unitId": "ranking-debate.caption:unit:28"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:29:word:1",
+                  "separatorBefore": "",
+                  "text": "亮",
+                  "unitId": "ranking-debate.caption:unit:29"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:30:word:1",
+                  "separatorBefore": "",
+                  "text": "画",
+                  "unitId": "ranking-debate.caption:unit:30"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:31:word:1",
+                  "separatorBefore": "",
+                  "text": "面",
+                  "unitId": "ranking-debate.caption:unit:31"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:32:word:1",
+                  "separatorBefore": "",
+                  "text": "只",
+                  "unitId": "ranking-debate.caption:unit:32"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:33:word:1",
+                  "separatorBefore": "",
+                  "text": "能",
+                  "unitId": "ranking-debate.caption:unit:33"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:34:word:1",
+                  "separatorBefore": "",
+                  "text": "算",
+                  "unitId": "ranking-debate.caption:unit:34"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:35:word:1",
+                  "separatorBefore": " ",
+                  "text": "B",
+                  "unitId": "ranking-debate.caption:unit:35"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:36:word:1",
+                  "separatorBefore": " ",
+                  "text": "级。",
+                  "unitId": "ranking-debate.caption:unit:36"
+                }
+              ]
+            },
+            "family": "fine",
+            "style": {
+              "activeBox": {
+                "background": "#fb923c88",
+                "borderRadius": 8,
+                "mode": "current",
+                "paddingX": 5,
+                "paddingY": 2
+              },
+              "color": "#fff7ed",
+              "cueBox": {
+                "background": "#7c2d12dd",
+                "borderColor": "#fdba74",
+                "borderRadius": 18,
+                "borderWidth": 3,
+                "paddingX": 20,
+                "paddingY": 14
+              },
+              "entry": {
+                "frames": 7,
+                "kind": "slide-up"
+              },
+              "fontFamily": "Arial, sans-serif",
+              "fontSize": 58,
+              "fontWeight": 900,
+              "karaoke": {
+                "activeColor": "#fef3c7",
+                "mode": "current",
+                "transition": "step"
+              },
+              "lineHeight": 1.08,
+              "outlineColor": "#431407",
+              "outlineWidth": 5,
+              "textAlign": "center"
+            },
+            "styleId": "bob"
+          },
+          "picture": {
+            "layout": {
+              "x": 38,
+              "y": 910,
+              "width": 644,
+              "height": 300,
+              "fit": "fill"
+            },
+            "effects": []
+          }
+        },
+        {
+          "id": "bob-generation-captions:ranking-debate.caption:cue:3",
+          "kind": "component",
+          "start": {
+            "ticks": "30869",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "duration": {
+            "ticks": "1647",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 500
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "1647",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 500
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": false,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine",
+              "version": "1"
+            },
+            "name": "fine"
+          },
+          "parameters": {
+            "caption": {
+              "cueId": "ranking-debate.caption:cue:3",
+              "documentId": "ranking-debate.caption",
+              "role": "BOB",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "121",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:37",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:37:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "221",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:38",
+                  "start": {
+                    "ticks": "121",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:38:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "191",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:39",
+                  "start": {
+                    "ticks": "221",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:39:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "261",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:40",
+                  "start": {
+                    "ticks": "191",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:40:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "643",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:41",
+                  "start": {
+                    "ticks": "261",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:41:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "783",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:42",
+                  "start": {
+                    "ticks": "643",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:42:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "118",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:43",
+                  "start": {
+                    "ticks": "783",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:43:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "9",
+                    "timeBase": {
+                      "denominator": 8,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:44",
+                  "start": {
+                    "ticks": "118",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:44:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1667",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:45",
+                  "start": {
+                    "ticks": "9",
+                    "timeBase": {
+                      "denominator": 8,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:45:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "457",
+                    "timeBase": {
+                      "denominator": 250,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:46",
+                  "start": {
+                    "ticks": "1667",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:46:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "246",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:47",
+                  "start": {
+                    "ticks": "457",
+                    "timeBase": {
+                      "denominator": 250,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:47:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2109",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:48",
+                  "start": {
+                    "ticks": "246",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:48:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2209",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:49",
+                  "start": {
+                    "ticks": "2109",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:49:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "241",
+                    "timeBase": {
+                      "denominator": 100,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:50",
+                  "start": {
+                    "ticks": "2209",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:50:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1647",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:51",
+                  "start": {
+                    "ticks": "241",
+                    "timeBase": {
+                      "denominator": 100,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:51:word:1"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:37:word:1",
+                  "separatorBefore": "",
+                  "text": "这",
+                  "unitId": "ranking-debate.caption:unit:37"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:38:word:1",
+                  "separatorBefore": "",
+                  "text": "一",
+                  "unitId": "ranking-debate.caption:unit:38"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:39:word:1",
+                  "separatorBefore": "",
+                  "text": "句",
+                  "unitId": "ranking-debate.caption:unit:39"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:40:word:1",
+                  "separatorBefore": "",
+                  "text": "保",
+                  "unitId": "ranking-debate.caption:unit:40"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:41:word:1",
+                  "separatorBefore": "",
+                  "text": "留",
+                  "unitId": "ranking-debate.caption:unit:41"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:42:word:1",
+                  "separatorBefore": "",
+                  "text": "在",
+                  "unitId": "ranking-debate.caption:unit:42"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:43:word:1",
+                  "separatorBefore": "",
+                  "text": "工",
+                  "unitId": "ranking-debate.caption:unit:43"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:44:word:1",
+                  "separatorBefore": "",
+                  "text": "程",
+                  "unitId": "ranking-debate.caption:unit:44"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:45:word:1",
+                  "separatorBefore": "",
+                  "text": "里，",
+                  "unitId": "ranking-debate.caption:unit:45"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:46:word:1",
+                  "separatorBefore": "",
+                  "text": "但",
+                  "unitId": "ranking-debate.caption:unit:46"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:47:word:1",
+                  "separatorBefore": "",
+                  "text": "默",
+                  "unitId": "ranking-debate.caption:unit:47"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:48:word:1",
+                  "separatorBefore": "",
+                  "text": "认",
+                  "unitId": "ranking-debate.caption:unit:48"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:49:word:1",
+                  "separatorBefore": "",
+                  "text": "不",
+                  "unitId": "ranking-debate.caption:unit:49"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:50:word:1",
+                  "separatorBefore": "",
+                  "text": "显",
+                  "unitId": "ranking-debate.caption:unit:50"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:51:word:1",
+                  "separatorBefore": "",
+                  "text": "示。",
+                  "unitId": "ranking-debate.caption:unit:51"
+                }
+              ]
+            },
+            "family": "fine",
+            "style": {
+              "activeBox": {
+                "background": "#fb923c88",
+                "borderRadius": 8,
+                "mode": "current",
+                "paddingX": 5,
+                "paddingY": 2
+              },
+              "color": "#fff7ed",
+              "cueBox": {
+                "background": "#7c2d12dd",
+                "borderColor": "#fdba74",
+                "borderRadius": 18,
+                "borderWidth": 3,
+                "paddingX": 20,
+                "paddingY": 14
+              },
+              "entry": {
+                "frames": 7,
+                "kind": "slide-up"
+              },
+              "fontFamily": "Arial, sans-serif",
+              "fontSize": 58,
+              "fontWeight": 900,
+              "karaoke": {
+                "activeColor": "#fef3c7",
+                "mode": "current",
+                "transition": "step"
+              },
+              "lineHeight": 1.08,
+              "outlineColor": "#431407",
+              "outlineWidth": 5,
+              "textAlign": "center"
+            },
+            "styleId": "bob"
+          },
+          "picture": {
+            "layout": {
+              "x": 38,
+              "y": 910,
+              "width": 644,
+              "height": 300,
+              "fit": "fill"
+            },
+            "effects": []
+          }
+        },
+        {
+          "id": "bob-generation-captions:ranking-debate.caption:cue:4",
+          "kind": "component",
+          "start": {
+            "ticks": "40751",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "duration": {
+            "ticks": "266",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 125
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "266",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 125
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine",
+              "version": "1"
+            },
+            "name": "fine"
+          },
+          "parameters": {
+            "caption": {
+              "cueId": "ranking-debate.caption:cue:4",
+              "documentId": "ranking-debate.caption",
+              "role": "BOB",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "4",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:52",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:52:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "321",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:53",
+                  "start": {
+                    "ticks": "4",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:53:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "241",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:54",
+                  "start": {
+                    "ticks": "321",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:54:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "331",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:55",
+                  "start": {
+                    "ticks": "241",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:55:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "743",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:56",
+                  "start": {
+                    "ticks": "331",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:56:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "813",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:57",
+                  "start": {
+                    "ticks": "743",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:57:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1787",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:58",
+                  "start": {
+                    "ticks": "813",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:58:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "241",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:59",
+                  "start": {
+                    "ticks": "1787",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:59:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "527",
+                    "timeBase": {
+                      "denominator": 250,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:60",
+                  "start": {
+                    "ticks": "241",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:60:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "266",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:61",
+                  "start": {
+                    "ticks": "527",
+                    "timeBase": {
+                      "denominator": 250,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:61:word:1"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:52:word:1",
+                  "separatorBefore": "",
+                  "text": "能",
+                  "unitId": "ranking-debate.caption:unit:52"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:53:word:1",
+                  "separatorBefore": "",
+                  "text": "稳",
+                  "unitId": "ranking-debate.caption:unit:53"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:54:word:1",
+                  "separatorBefore": "",
+                  "text": "定",
+                  "unitId": "ranking-debate.caption:unit:54"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:55:word:1",
+                  "separatorBefore": "",
+                  "text": "修",
+                  "unitId": "ranking-debate.caption:unit:55"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:56:word:1",
+                  "separatorBefore": "",
+                  "text": "改，",
+                  "unitId": "ranking-debate.caption:unit:56"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:57:word:1",
+                  "separatorBefore": "",
+                  "text": "才",
+                  "unitId": "ranking-debate.caption:unit:57"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:58:word:1",
+                  "separatorBefore": "",
+                  "text": "算",
+                  "unitId": "ranking-debate.caption:unit:58"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:59:word:1",
+                  "separatorBefore": "",
+                  "text": "真",
+                  "unitId": "ranking-debate.caption:unit:59"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:60:word:1",
+                  "separatorBefore": "",
+                  "text": "本",
+                  "unitId": "ranking-debate.caption:unit:60"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:61:word:1",
+                  "separatorBefore": "",
+                  "text": "事。",
+                  "unitId": "ranking-debate.caption:unit:61"
+                }
+              ]
+            },
+            "family": "fine",
+            "style": {
+              "color": "#ffffff",
+              "cueBox": {
+                "background": "#b91c1cee",
+                "borderColor": "#fef2f2",
+                "borderRadius": 12,
+                "borderWidth": 4,
+                "paddingX": 22,
+                "paddingY": 16
+              },
+              "entry": {
+                "frames": 4,
+                "kind": "pop"
+              },
+              "fontFamily": "Arial, sans-serif",
+              "fontSize": 64,
+              "fontWeight": 900,
+              "karaoke": {
+                "activeColor": "#fde047",
+                "mode": "trail",
+                "transition": "wipe"
+              },
+              "lineHeight": 1.04,
+              "outlineColor": "#450a0a",
+              "outlineWidth": 6,
+              "textAlign": "center"
+            },
+            "styleId": "warning"
+          },
+          "picture": {
+            "layout": {
+              "x": 38,
+              "y": 910,
+              "width": 644,
+              "height": 300,
+              "fit": "fill"
+            },
+            "effects": []
+          }
+        },
+        {
+          "id": "alice-timeline-captions:ranking-debate.caption:cue:5",
+          "kind": "component",
+          "start": {
+            "ticks": "48703",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "duration": {
+            "ticks": "3261",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 500
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "3261",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 500
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine",
+              "version": "1"
+            },
+            "name": "fine"
+          },
+          "parameters": {
+            "caption": {
+              "cueId": "ranking-debate.caption:cue:5",
+              "documentId": "ranking-debate.caption",
+              "role": "ALICE",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "181",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:62",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:62:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "241",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:63",
+                  "start": {
+                    "ticks": "181",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:63:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "863",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:64",
+                  "start": {
+                    "ticks": "241",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:64:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "249",
+                    "timeBase": {
+                      "denominator": 200,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:65",
+                  "start": {
+                    "ticks": "863",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:65:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "297",
+                    "timeBase": {
+                      "denominator": 200,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:66",
+                  "start": {
+                    "ticks": "249",
+                    "timeBase": {
+                      "denominator": 200,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:66:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "873",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:67",
+                  "start": {
+                    "ticks": "297",
+                    "timeBase": {
+                      "denominator": 200,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:67:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "577",
+                    "timeBase": {
+                      "denominator": 250,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:68",
+                  "start": {
+                    "ticks": "873",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:68:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2489",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:69",
+                  "start": {
+                    "ticks": "577",
+                    "timeBase": {
+                      "denominator": 250,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:69:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2629",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:70",
+                  "start": {
+                    "ticks": "2489",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:70:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "5559",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:71",
+                  "start": {
+                    "ticks": "2629",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:71:word:1",
+                    "ranking-debate.caption:unit:71:word:2",
+                    "ranking-debate.caption:unit:71:word:3",
+                    "ranking-debate.caption:unit:71:word:4",
+                    "ranking-debate.caption:unit:71:word:5",
+                    "ranking-debate.caption:unit:71:word:6",
+                    "ranking-debate.caption:unit:71:word:7",
+                    "ranking-debate.caption:unit:71:word:8"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "144",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:72",
+                  "start": {
+                    "ticks": "5559",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:72:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "148",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:73",
+                  "start": {
+                    "ticks": "144",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:73:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "6041",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:74",
+                  "start": {
+                    "ticks": "148",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:74:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "6201",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:75",
+                  "start": {
+                    "ticks": "6041",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:75:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "3251",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:76",
+                  "start": {
+                    "ticks": "6201",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:76:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "3261",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:77",
+                  "start": {
+                    "ticks": "3251",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:77:word:1"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:62:word:1",
+                  "separatorBefore": "",
+                  "text": "字",
+                  "unitId": "ranking-debate.caption:unit:62"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:63:word:1",
+                  "separatorBefore": "",
+                  "text": "幕、",
+                  "unitId": "ranking-debate.caption:unit:63"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:64:word:1",
+                  "separatorBefore": "",
+                  "text": "排",
+                  "unitId": "ranking-debate.caption:unit:64"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:65:word:1",
+                  "separatorBefore": "",
+                  "text": "名",
+                  "unitId": "ranking-debate.caption:unit:65"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:66:word:1",
+                  "separatorBefore": "",
+                  "text": "和",
+                  "unitId": "ranking-debate.caption:unit:66"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:67:word:1",
+                  "separatorBefore": "",
+                  "text": "特",
+                  "unitId": "ranking-debate.caption:unit:67"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:68:word:1",
+                  "separatorBefore": "",
+                  "text": "效",
+                  "unitId": "ranking-debate.caption:unit:68"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:69:word:1",
+                  "separatorBefore": "",
+                  "text": "都",
+                  "unitId": "ranking-debate.caption:unit:69"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:70:word:1",
+                  "separatorBefore": "",
+                  "text": "能",
+                  "unitId": "ranking-debate.caption:unit:70"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:71:word:1",
+                  "separatorBefore": "",
+                  "text": "按",
+                  "unitId": "ranking-debate.caption:unit:71"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:71:word:2",
+                  "separatorBefore": "",
+                  "text": "词",
+                  "unitId": "ranking-debate.caption:unit:71"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:71:word:3",
+                  "separatorBefore": "",
+                  "text": "落",
+                  "unitId": "ranking-debate.caption:unit:71"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:71:word:4",
+                  "separatorBefore": "",
+                  "text": "在",
+                  "unitId": "ranking-debate.caption:unit:71"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:71:word:5",
+                  "separatorBefore": "",
+                  "text": "时",
+                  "unitId": "ranking-debate.caption:unit:71"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:71:word:6",
+                  "separatorBefore": "",
+                  "text": "间",
+                  "unitId": "ranking-debate.caption:unit:71"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:71:word:7",
+                  "separatorBefore": "",
+                  "text": "线",
+                  "unitId": "ranking-debate.caption:unit:71"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:71:word:8",
+                  "separatorBefore": "",
+                  "text": "上，",
+                  "unitId": "ranking-debate.caption:unit:71"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:72:word:1",
+                  "separatorBefore": "",
+                  "text": "这",
+                  "unitId": "ranking-debate.caption:unit:72"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:73:word:1",
+                  "separatorBefore": "",
+                  "text": "才",
+                  "unitId": "ranking-debate.caption:unit:73"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:74:word:1",
+                  "separatorBefore": "",
+                  "text": "配",
+                  "unitId": "ranking-debate.caption:unit:74"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:75:word:1",
+                  "separatorBefore": "",
+                  "text": "进",
+                  "unitId": "ranking-debate.caption:unit:75"
+                },
+                {
+                  "attributes": [
+                    {
+                      "name": "face",
+                      "value": "serif"
+                    }
+                  ],
+                  "id": "ranking-debate.caption:unit:76:word:1",
+                  "separatorBefore": " ",
+                  "text": "S",
+                  "unitId": "ranking-debate.caption:unit:76"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:77:word:1",
+                  "separatorBefore": " ",
+                  "text": "级。",
+                  "unitId": "ranking-debate.caption:unit:77"
+                }
+              ]
+            },
+            "family": "fine",
+            "style": {
+              "activeBox": {
+                "background": "#2563eb88",
+                "borderRadius": 8,
+                "mode": "trail",
+                "paddingX": 5,
+                "paddingY": 2
+              },
+              "attributeFaces": [
+                {
+                  "attribute": "face",
+                  "fontFamily": "Georgia, serif",
+                  "fontStyle": "italic",
+                  "fontWeight": 700,
+                  "value": "serif"
+                }
+              ],
+              "color": "#ffffff",
+              "cueBox": {
+                "background": "#172554cc",
+                "borderColor": "#60a5fa",
+                "borderRadius": 18,
+                "borderWidth": 3,
+                "paddingX": 20,
+                "paddingY": 14
+              },
+              "entry": {
+                "frames": 6,
+                "kind": "pop"
+              },
+              "fontFamily": "Arial, sans-serif",
+              "fontSize": 62,
+              "fontWeight": 900,
+              "karaoke": {
+                "activeColor": "#fef08a",
+                "mode": "trail",
+                "transition": "wipe"
+              },
+              "lineHeight": 1.08,
+              "outlineColor": "#111827",
+              "outlineWidth": 5,
+              "shadowBlur": 8,
+              "shadowColor": "#11182788",
+              "shadowOffsetY": 7,
+              "textAlign": "center"
+            },
+            "styleId": "alice"
+          },
+          "picture": {
+            "layout": {
+              "x": 38,
+              "y": 910,
+              "width": 644,
+              "height": 300,
+              "fit": "fill"
+            },
+            "effects": []
+          }
+        },
+        {
+          "id": "bob-verdict-captions:ranking-debate.caption:cue:6",
+          "kind": "component",
+          "start": {
+            "ticks": "6109",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 250
+            }
+          },
+          "duration": {
+            "ticks": "6887",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1000
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "6887",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1000
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine",
+              "version": "1"
+            },
+            "name": "fine"
+          },
+          "parameters": {
+            "caption": {
+              "cueId": "ranking-debate.caption:cue:6",
+              "documentId": "ranking-debate.caption",
+              "role": "BOB",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "4",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:78",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:78:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "341",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:79",
+                  "start": {
+                    "ticks": "4",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:79:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "541",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:80",
+                  "start": {
+                    "ticks": "341",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:80:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "681",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:81",
+                  "start": {
+                    "ticks": "541",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:81:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "961",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:82",
+                  "start": {
+                    "ticks": "681",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:82:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1081",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:83",
+                  "start": {
+                    "ticks": "961",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:83:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "611",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:84",
+                  "start": {
+                    "ticks": "1081",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:84:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "681",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:85",
+                  "start": {
+                    "ticks": "611",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:85:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "771",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:86",
+                  "start": {
+                    "ticks": "681",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:86:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "861",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:87",
+                  "start": {
+                    "ticks": "771",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:87:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2403",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:88",
+                  "start": {
+                    "ticks": "861",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:88:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2623",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:89",
+                  "start": {
+                    "ticks": "2403",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:89:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2843",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:90",
+                  "start": {
+                    "ticks": "2623",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:90:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "3103",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:91",
+                  "start": {
+                    "ticks": "2843",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:91:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "438",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:92",
+                  "start": {
+                    "ticks": "3103",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:92:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "468",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:93",
+                  "start": {
+                    "ticks": "438",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:93:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "981",
+                    "timeBase": {
+                      "denominator": 250,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:94",
+                  "start": {
+                    "ticks": "468",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:94:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "513",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:95",
+                  "start": {
+                    "ticks": "981",
+                    "timeBase": {
+                      "denominator": 250,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:95:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "6887",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:96",
+                  "start": {
+                    "ticks": "513",
+                    "timeBase": {
+                      "denominator": 125,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:96:word:1"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:78:word:1",
+                  "separatorBefore": "",
+                  "text": "而",
+                  "unitId": "ranking-debate.caption:unit:78"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:79:word:1",
+                  "separatorBefore": "",
+                  "text": "且",
+                  "unitId": "ranking-debate.caption:unit:79"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:80:word:1",
+                  "separatorBefore": "",
+                  "text": "生",
+                  "unitId": "ranking-debate.caption:unit:80"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:81:word:1",
+                  "separatorBefore": "",
+                  "text": "成",
+                  "unitId": "ranking-debate.caption:unit:81"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:82:word:1",
+                  "separatorBefore": "",
+                  "text": "完",
+                  "unitId": "ranking-debate.caption:unit:82"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:83:word:1",
+                  "separatorBefore": "",
+                  "text": "就",
+                  "unitId": "ranking-debate.caption:unit:83"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:84:word:1",
+                  "separatorBefore": "",
+                  "text": "是",
+                  "unitId": "ranking-debate.caption:unit:84"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:85:word:1",
+                  "separatorBefore": "",
+                  "text": "普",
+                  "unitId": "ranking-debate.caption:unit:85"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:86:word:1",
+                  "separatorBefore": "",
+                  "text": "通",
+                  "unitId": "ranking-debate.caption:unit:86"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:87:word:1",
+                  "separatorBefore": "",
+                  "text": "工",
+                  "unitId": "ranking-debate.caption:unit:87"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:88:word:1",
+                  "separatorBefore": "",
+                  "text": "程，",
+                  "unitId": "ranking-debate.caption:unit:88"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:89:word:1",
+                  "separatorBefore": "",
+                  "text": "关",
+                  "unitId": "ranking-debate.caption:unit:89"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:90:word:1",
+                  "separatorBefore": "",
+                  "text": "掉",
+                  "unitId": "ranking-debate.caption:unit:90"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:91:word:1",
+                  "separatorBefore": "",
+                  "text": "脚",
+                  "unitId": "ranking-debate.caption:unit:91"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:92:word:1",
+                  "separatorBefore": "",
+                  "text": "本",
+                  "unitId": "ranking-debate.caption:unit:92"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:93:word:1",
+                  "separatorBefore": "",
+                  "text": "照",
+                  "unitId": "ranking-debate.caption:unit:93"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:94:word:1",
+                  "separatorBefore": "",
+                  "text": "样",
+                  "unitId": "ranking-debate.caption:unit:94"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:95:word:1",
+                  "separatorBefore": "",
+                  "text": "能",
+                  "unitId": "ranking-debate.caption:unit:95"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:96:word:1",
+                  "separatorBefore": "",
+                  "text": "剪。",
+                  "unitId": "ranking-debate.caption:unit:96"
+                }
+              ]
+            },
+            "family": "fine",
+            "style": {
+              "activeBox": {
+                "background": "#fb923c88",
+                "borderRadius": 8,
+                "mode": "current",
+                "paddingX": 5,
+                "paddingY": 2
+              },
+              "color": "#fff7ed",
+              "cueBox": {
+                "background": "#7c2d12dd",
+                "borderColor": "#fdba74",
+                "borderRadius": 18,
+                "borderWidth": 3,
+                "paddingX": 20,
+                "paddingY": 14
+              },
+              "entry": {
+                "frames": 7,
+                "kind": "slide-up"
+              },
+              "fontFamily": "Arial, sans-serif",
+              "fontSize": 58,
+              "fontWeight": 900,
+              "karaoke": {
+                "activeColor": "#fef3c7",
+                "mode": "current",
+                "transition": "step"
+              },
+              "lineHeight": 1.08,
+              "outlineColor": "#431407",
+              "outlineWidth": 5,
+              "textAlign": "center"
+            },
+            "styleId": "bob"
+          },
+          "picture": {
+            "layout": {
+              "x": 38,
+              "y": 910,
+              "width": 644,
+              "height": 300,
+              "fit": "fill"
+            },
+            "effects": []
+          }
+        },
+        {
+          "id": "bob-verdict-captions:ranking-debate.caption:cue:7",
+          "kind": "component",
+          "start": {
+            "ticks": "31323",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1000
+            }
+          },
+          "duration": {
+            "ticks": "481",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1000
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "481",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1000
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine",
+              "version": "1"
+            },
+            "name": "fine"
+          },
+          "parameters": {
+            "caption": {
+              "cueId": "ranking-debate.caption:cue:7",
+              "documentId": "ranking-debate.caption",
+              "role": "BOB",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "7",
+                    "timeBase": {
+                      "denominator": 50,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:97",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:97:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "7",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:98",
+                  "start": {
+                    "ticks": "7",
+                    "timeBase": {
+                      "denominator": 50,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:98:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "461",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:99",
+                  "start": {
+                    "ticks": "7",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:99:word:1"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "481",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ranking-debate.caption:unit:100",
+                  "start": {
+                    "ticks": "461",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ranking-debate.caption:unit:100:word:1"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:97:word:1",
+                  "separatorBefore": "",
+                  "text": "这",
+                  "unitId": "ranking-debate.caption:unit:97"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:98:word:1",
+                  "separatorBefore": "",
+                  "text": "局",
+                  "unitId": "ranking-debate.caption:unit:98"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:99:word:1",
+                  "separatorBefore": "",
+                  "text": "我",
+                  "unitId": "ranking-debate.caption:unit:99"
+                },
+                {
+                  "attributes": [],
+                  "id": "ranking-debate.caption:unit:100:word:1",
+                  "separatorBefore": "",
+                  "text": "服。",
+                  "unitId": "ranking-debate.caption:unit:100"
+                }
+              ]
+            },
+            "family": "fine",
+            "style": {
+              "activeBox": {
+                "background": "#fb923c88",
+                "borderRadius": 8,
+                "mode": "current",
+                "paddingX": 5,
+                "paddingY": 2
+              },
+              "color": "#fff7ed",
+              "cueBox": {
+                "background": "#7c2d12dd",
+                "borderColor": "#fdba74",
+                "borderRadius": 18,
+                "borderWidth": 3,
+                "paddingX": 20,
+                "paddingY": 14
+              },
+              "entry": {
+                "frames": 7,
+                "kind": "slide-up"
+              },
+              "fontFamily": "Arial, sans-serif",
+              "fontSize": 58,
+              "fontWeight": 900,
+              "karaoke": {
+                "activeColor": "#fef3c7",
+                "mode": "current",
+                "transition": "step"
+              },
+              "lineHeight": 1.08,
+              "outlineColor": "#431407",
+              "outlineWidth": 5,
+              "textAlign": "center"
+            },
+            "styleId": "bob"
+          },
+          "picture": {
+            "layout": {
+              "x": 38,
+              "y": 910,
+              "width": 644,
+              "height": 300,
+              "fit": "fill"
+            },
+            "effects": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "verdict",
+      "name": "Verdict",
+      "kind": "picture",
+      "locked": false,
+      "muted": false,
+      "items": [
+        {
+          "id": "verdict-burst",
+          "kind": "component",
+          "start": {
+            "ticks": "31323",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1000
+            }
+          },
+          "duration": {
+            "ticks": "2531",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "2531",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 3000
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit-example/ranking-debate-components",
+              "version": "1"
+            },
+            "name": "verdict-burst"
+          },
+          "parameters": {
+            "kicker": "最终结论",
+            "title": "S 级：生成后还能剪",
+            "accent": "#2563eb",
+            "enterFrames": 7
+          },
+          "picture": {
+            "layout": {
+              "x": 80,
+              "y": 500,
+              "width": 560,
+              "height": 270,
+              "fit": "fill"
+            },
+            "effects": []
+          }
+        }
+      ]
+    }
+  ],
+  "transitions": [],
+  "mattes": [],
+  "groups": []
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@hypit-example/ranking-debate-components",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@hypit/audiovisual": "workspace:*",
+    "@hypit/audiovisual-html": "workspace:*",
+    "@hypit/html-program": "workspace:*",
+    "@hypit/html-video": "workspace:*",
+    "@hypit/nle": "workspace:*",
+    "@hypit/spatial": "workspace:*",
+    "@hypit/temporal": "workspace:*"
+  }
+}

@@ -1,0 +1,276 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "bob-video-1",
+  "media": {
+    "file": {
+      "path": "bob-video-1.mp4",
+      "mediaType": "video/mp4"
+    },
+    "interpretation": {
+      "audio": {
+        "map": {
+          "stages": [
+            {
+              "pieces": [
+                {
+                  "rate": {
+                    "denominator": 1,
+                    "numerator": 1
+                  },
+                  "sourceAtStart": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "target": {
+                    "end": {
+                      "ticks": "241",
+                      "timeBase": {
+                        "denominator": 24,
+                        "numerator": 1
+                      }
+                    },
+                    "start": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "denominator": 1,
+                        "numerator": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "source": {
+                "duration": {
+                  "ticks": "252",
+                  "timeBase": {
+                    "denominator": 25,
+                    "numerator": 1
+                  }
+                },
+                "id": "bob-video-1:media:audio-source"
+              },
+              "target": {
+                "duration": {
+                  "ticks": "241",
+                  "timeBase": {
+                    "denominator": 24,
+                    "numerator": 1
+                  }
+                },
+                "id": "bob-video-1:media"
+              }
+            }
+          ]
+        },
+        "presentationStart": {
+          "ticks": "0",
+          "timeBase": {
+            "denominator": 32000,
+            "numerator": 1
+          }
+        },
+        "sourceDomain": {
+          "duration": {
+            "ticks": "252",
+            "timeBase": {
+              "denominator": 25,
+              "numerator": 1
+            }
+          },
+          "id": "bob-video-1:media:audio-source"
+        },
+        "streamIndex": 1
+      },
+      "domain": {
+        "duration": {
+          "ticks": "241",
+          "timeBase": {
+            "denominator": 24,
+            "numerator": 1
+          }
+        },
+        "id": "bob-video-1:media"
+      },
+      "id": "bob-video-1:media",
+      "picture": {
+        "interpretation": {
+          "codedHeight": 1280,
+          "codedWidth": 720,
+          "picture": {
+            "alphaMode": "opaque",
+            "bitDepth": 8,
+            "colorMatrix": "bt709",
+            "colorPrimaries": "bt709",
+            "colorRange": "limited",
+            "colorTransfer": "bt709"
+          },
+          "rotationDegrees": 0,
+          "sampleAspectRatio": {
+            "denominator": 1,
+            "numerator": 1
+          }
+        },
+        "kind": "signal",
+        "map": {
+          "stages": [
+            {
+              "pieces": [
+                {
+                  "rate": {
+                    "denominator": 1,
+                    "numerator": 1
+                  },
+                  "sourceAtStart": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "target": {
+                    "end": {
+                      "ticks": "241",
+                      "timeBase": {
+                        "denominator": 24,
+                        "numerator": 1
+                      }
+                    },
+                    "start": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "denominator": 1,
+                        "numerator": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "source": {
+                "duration": {
+                  "ticks": "241",
+                  "timeBase": {
+                    "denominator": 24,
+                    "numerator": 1
+                  }
+                },
+                "id": "bob-video-1:media:picture-source"
+              },
+              "target": {
+                "duration": {
+                  "ticks": "241",
+                  "timeBase": {
+                    "denominator": 24,
+                    "numerator": 1
+                  }
+                },
+                "id": "bob-video-1:media"
+              }
+            }
+          ]
+        },
+        "presentationStart": {
+          "ticks": "0",
+          "timeBase": {
+            "denominator": 12288,
+            "numerator": 1
+          }
+        },
+        "sourceDomain": {
+          "duration": {
+            "ticks": "241",
+            "timeBase": {
+              "denominator": 24,
+              "numerator": 1
+            }
+          },
+          "id": "bob-video-1:media:picture-source"
+        },
+        "streamIndex": 0
+      }
+    }
+  },
+  "representations": [
+    {
+      "id": "speech.zh",
+      "type": {
+        "module": {
+          "name": "@hypit/timed-transcript",
+          "version": "1"
+        },
+        "name": "TimedTranscript"
+      },
+      "document": {
+        "path": "bob-video-1.transcript.json",
+        "mediaType": "application/json"
+      },
+      "resources": {},
+      "binding": {
+        "temporal": {
+          "mapToMedia": {
+            "stages": [
+              {
+                "target": {
+                  "duration": {
+                    "ticks": "241",
+                    "timeBase": {
+                      "denominator": 24,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "bob-video-1:media"
+                },
+                "source": {
+                  "duration": {
+                    "ticks": "241",
+                    "timeBase": {
+                      "denominator": 24,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "bob-video-1:media"
+                },
+                "pieces": [
+                  {
+                    "target": {
+                      "start": {
+                        "ticks": "0",
+                        "timeBase": {
+                          "numerator": 1,
+                          "denominator": 1
+                        }
+                      },
+                      "end": {
+                        "ticks": "241",
+                        "timeBase": {
+                          "denominator": 24,
+                          "numerator": 1
+                        }
+                      }
+                    },
+                    "sourceAtStart": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "numerator": 1,
+                        "denominator": 1
+                      }
+                    },
+                    "rate": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "audio": {
+          "member": "audio"
+        }
+      }
+    }
+  ]
+}

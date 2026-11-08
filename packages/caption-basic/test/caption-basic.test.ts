@@ -19,6 +19,7 @@ import { hypitPackage } from "../src/activation.js";
 import {
   appendCaptionHiddenOverride,
   appendCaptionStyleOverride,
+  captionBasicNleResolver,
   createCaptionNleMaterialization,
   createCaptionPresentation,
   scheduleCaptionPresentation,
@@ -94,11 +95,15 @@ test("Basic Caption materializes complete editable Karaoke Items and registers o
     id: "story", track: "captions", document, timing, presentation: base, at: at(0),
     picture: { layout: { x: 0, y: 800, width: 1920, height: 280, fit: "fill" }, effects: [] },
   }));
-  assert.equal(hypitPackage.modules.length, 0);
+  assert.equal(hypitPackage.modules.length, 1);
   assert.equal(materialized.tracks[0]?.items.length, 3);
   const first = materialized.tracks[0]!.items[0]!;
   assert.equal(first.kind, "component");
   if (first.kind !== "component") throw new Error("Caption did not materialize as a Component Item.");
+  assert.equal(captionBasicNleResolver.resolve(first, {
+    project: materialized,
+    track: materialized.tracks[0]!,
+  }).source.outputs.picture?.kind, "signal");
   const parameters = first.parameters as Record<string, unknown>;
   assertCaptionCuePayload(parameters.caption, first.duration);
   const renamed = replaceCaptionWord(parameters.caption, "word-one", "Changed");

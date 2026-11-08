@@ -1,0 +1,20 @@
+{
+  "name": "@hypit/caption-nle",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@hypit/caption": "workspace:^0.1.1",
+    "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/temporal": "workspace:^0.1.1"
+  }
+}

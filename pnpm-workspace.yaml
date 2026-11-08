@@ -5,3 +5,5 @@ packages:
   # Historical productions remain readable fixtures but do not claim installable compatibility.
   - examples/provider-package/packages/*
   - examples/semantic-composition/packages/audiovisual-title-card
+  - examples/ranking-debate
+  - examples/ranking-debate/packages/*
