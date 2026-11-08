@@ -43,6 +43,11 @@ facet or rebuild the request Capability separately.
 `@hypit/generation/model-fields/author` contains the corresponding optional declaration-compiler
 assembly helper. It is nested under `model-fields` because it composes that optional field vocabulary.
 
+`@hypit/generation/model-fields/graph` is the Generation Graph counterpart. A Model package supplies one
+validated draft plus named text and media sources; the helper creates the exact binding/finalization Fragment and
+normalized Graph inputs. Repeated references remain separate typed edges and are folded in declared order. The
+helper does not choose field names, invocation modes, defaults or media metadata—those stay in the Model package.
+
 A field whose wire kind is `text` may declare an exact `inputType`. The binding Producer accepts that
 nominal graph Type and extracts its string payload only at request assembly. Generation therefore does
 not equate ordinary Text, Prompt or another package's textual value. Current image/video generation

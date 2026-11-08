@@ -59,6 +59,26 @@ classification, final request, exact Capability Need and primary-video selection
 know any Seedance field. Prompt may be an inline string or a connected `Prompt` node; frames are ordinary `Blob`
 edges and can come from a Media Asset resource node or an upstream image generator in the same Build.
 
+Reference-video nodes expose repeatable fields as contiguous one-based ports. Each visual reference has a paired,
+explicit `personReference`; audio has none:
+
+```json
+{
+  "referenceImage.1": { "node": "portrait" },
+  "referenceImage.1.personReference": { "value": true },
+  "referenceImage.2": { "node": "room" },
+  "referenceImage.2.personReference": { "value": false },
+  "referenceVideo.1": { "node": "camera-motion" },
+  "referenceVideo.1.personReference": { "value": false },
+  "referenceAudio.1": { "node": "voice" }
+}
+```
+
+Indices are contiguous within each Model field because they preserve that field's request order. Image, video and
+audio use separate sequences because the canonical request stores them in separate fields; a fictional global
+interleaving order would be discarded by every Provider mapping anyway. Cardinality, media role, audio restrictions
+and cross-field rules still come from the exact Seedance model definition.
+
 ## Video reference relationships
 
 All four variants expose video references through `ReferenceVideo`. A video reference can transfer a

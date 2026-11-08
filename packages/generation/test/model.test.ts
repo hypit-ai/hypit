@@ -15,6 +15,10 @@ import {
   defineModelModule,
   standardGenerationResultTypes,
 } from "@hypit/generation/model";
+import {
+  collectIndexedFieldModelArtifacts,
+  fieldModelGraphOperation,
+} from "@hypit/generation/model-fields/graph";
 import { sealText } from "@hypit/text";
 
 test("a Model can own a structured request without the field helper", async () => {
@@ -172,6 +176,42 @@ test("the dynamic Fragment exposes every typed text field and media edge as an e
     "request-graph-native-image",
     "select-primary-image",
   ]);
+});
+
+test("the graph helper closes a draft and repeated media edges without a model-specific request envelope", () => {
+  const endpoint = definition.endpoints.image!;
+  const collected = collectIndexedFieldModelArtifacts({
+    endpoint,
+    inputs: {
+      "images.1": { node: "first" },
+      "images.2": { node: "second" },
+      prompt: { value: "not part of the media collection" },
+    },
+    fields: [{ field: "images", role: "image" }],
+    subject: "Graph image node",
+  });
+  assert.deepEqual([...collected.consumed], ["images.1", "images.2"]);
+  const compiled = fieldModelGraphOperation({
+    endpoint,
+    draft: sealModelFieldBuilder(fields, {}),
+    textFields: [{
+      name: "prompt",
+      field: "prompt",
+      source: { value: sealText("draw it") as never },
+    }],
+    artifacts: collected.artifacts,
+  });
+  assert.deepEqual(Object.keys(compiled.inputs).sort(), [
+    "draft",
+    "images.1:artifact",
+    "images.1:binding",
+    "images.2:artifact",
+    "images.2:binding",
+    "prompt:value",
+  ]);
+  assert.deepEqual(compiled.inputs["images.1:artifact"], { node: "first" });
+  assert.deepEqual(compiled.inputs["images.2:binding"], { value: { role: "image" } });
+  assert.equal(compiled.fragment.exports[0]?.name, "image");
 });
 
 test("a Model Fragment may publish the complete result and an explicit primary independently", () => {

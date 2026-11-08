@@ -4,19 +4,19 @@ import type {
   GenerationOperationNodeDeclaration,
 } from "@hypit/hypit/generation-graph";
 import {
-  isArtifactField,
-  modelArtifactInputNames,
-  modelField,
-  modelTextFieldInputName,
-  sealModelArtifactBinding,
   sealModelFieldBuilder,
   type FieldModelOperation,
+  type ModelFieldBuilder,
   type ModelFieldValue,
 } from "@hypit/generation/model-fields";
+import {
+  collectIndexedFieldModelArtifacts,
+  fieldModelGraphOperation,
+  type FieldModelGraphArtifactInput,
+} from "@hypit/generation/model-fields/graph";
 import { canonicalize, type CanonicalValue } from "@hypit/hypit/protocol";
 import { sealPrompt } from "@hypit/hypit/prompt";
 
-import { createSeedanceAssembledGenerationFragment } from "./fragment.js";
 import {
   seedanceEndpointsByModel,
   seedanceModuleRef,
@@ -24,7 +24,7 @@ import {
   type SeedanceModel,
 } from "./index.js";
 
-type SeedanceGenerationMode = "text-video" | "frame-video";
+type SeedanceGenerationMode = "text-video" | "frame-video" | "reference-video";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -37,9 +37,11 @@ function component(model: SeedanceModel, mode: SeedanceGenerationMode) {
 export const seedanceGenerationNodes = Object.fromEntries(seedanceModels.map((model) => [model, {
   textVideo: component(model, "text-video"),
   frameVideo: component(model, "frame-video"),
+  referenceVideo: component(model, "reference-video"),
 }])) as Readonly<Record<SeedanceModel, {
   readonly textVideo: ReturnType<typeof component>;
   readonly frameVideo: ReturnType<typeof component>;
+  readonly referenceVideo: ReturnType<typeof component>;
 }>>;
 
 function exactInputs(node: GenerationGraphNode, required: readonly string[], optional: readonly string[]): void {
@@ -80,24 +82,11 @@ function promptInput(node: GenerationGraphNode): GenerationGraphInput {
     : input;
 }
 
-function mediaBinding(
-  endpoint: FieldModelOperation,
-  fieldName: "firstFrame" | "lastFrame",
-  personReference: boolean,
-): CanonicalValue {
-  const field = modelField(endpoint.fields, fieldName);
-  assert(isArtifactField(field), `Seedance ${fieldName} is not a media field.`);
-  return canonicalize(sealModelArtifactBinding(field, {
-    role: "image",
-    fields: { personReference },
-  }));
-}
-
 function draft(
   endpoint: FieldModelOperation,
   node: GenerationGraphNode,
   webSearch: boolean,
-): CanonicalValue {
+): ModelFieldBuilder {
   const fields: Readonly<Record<string, readonly ModelFieldValue[]>> = {
     duration: [authoredValue(node, "duration") as ModelFieldValue],
     resolution: [optionalAuthoredValue(node, "resolution", "720p") as ModelFieldValue],
@@ -105,7 +94,7 @@ function draft(
     generateAudio: [optionalAuthoredValue(node, "generateAudio", false) as ModelFieldValue],
     webSearch: [webSearch],
   };
-  return canonicalize(sealModelFieldBuilder(endpoint.fields, fields));
+  return sealModelFieldBuilder(endpoint.fields, fields);
 }
 
 function textVideoDeclaration(model: SeedanceModel): GenerationOperationNodeDeclaration {
@@ -115,16 +104,13 @@ function textVideoDeclaration(model: SeedanceModel): GenerationOperationNodeDecl
     using: seedanceGenerationNodes[model].textVideo,
     compile({ node }) {
       exactInputs(node, ["prompt", "duration"], ["resolution", "aspectRatio", "generateAudio", "webSearch"]);
-      const fragment = createSeedanceAssembledGenerationFragment(endpoint, [], [{ name: "prompt", field: "prompt" }]);
-      return {
-        fragment,
-        inputs: {
-          draft: { value: draft(endpoint, node, node.inputs.webSearch === undefined
-            ? false
-            : booleanValue(node, "webSearch")) },
-          [modelTextFieldInputName("prompt")]: promptInput(node),
-        },
-      };
+      return fieldModelGraphOperation({
+        endpoint,
+        draft: draft(endpoint, node, node.inputs.webSearch === undefined
+          ? false
+          : booleanValue(node, "webSearch")),
+        textFields: [{ name: "prompt", field: "prompt", source: promptInput(node) }],
+      });
     },
   };
 }
@@ -141,34 +127,72 @@ function frameVideoDeclaration(model: SeedanceModel): GenerationOperationNodeDec
       const hasLastFrame = node.inputs.lastFrame !== undefined;
       assert(hasLastFrame === (node.inputs.lastFramePersonReference !== undefined),
         `Seedance Node ${node.id} lastFrame and lastFramePersonReference must be supplied together.`);
-      const media = [
-        { name: "first-frame", field: "firstFrame" },
-        ...(hasLastFrame ? [{ name: "last-frame", field: "lastFrame" }] : []),
-      ];
-      const fragment = createSeedanceAssembledGenerationFragment(
-        endpoint,
-        media,
-        [{ name: "prompt", field: "prompt" }],
-      );
-      const first = modelArtifactInputNames("first-frame");
-      const inputs: Record<string, GenerationGraphInput> = {
-        draft: { value: draft(endpoint, node, false) },
-        [modelTextFieldInputName("prompt")]: promptInput(node),
-        [first.binding]: { value: mediaBinding(endpoint, "firstFrame", booleanValue(node, "firstFramePersonReference")) },
-        [first.artifact]: node.inputs.firstFrame!,
-      };
+      const artifacts: FieldModelGraphArtifactInput[] = [{
+        name: "first-frame",
+        field: "firstFrame",
+        role: "image",
+        fields: { personReference: booleanValue(node, "firstFramePersonReference") },
+        source: node.inputs.firstFrame!,
+      }];
       if (hasLastFrame) {
-        const last = modelArtifactInputNames("last-frame");
-        inputs[last.binding] = {
-          value: mediaBinding(endpoint, "lastFrame", booleanValue(node, "lastFramePersonReference")),
-        };
-        inputs[last.artifact] = node.inputs.lastFrame!;
+        artifacts.push({
+          name: "last-frame",
+          field: "lastFrame",
+          role: "image",
+          fields: { personReference: booleanValue(node, "lastFramePersonReference") },
+          source: node.inputs.lastFrame!,
+        });
       }
-      return { fragment, inputs };
+      return fieldModelGraphOperation({
+        endpoint,
+        draft: draft(endpoint, node, false),
+        artifacts,
+        textFields: [{ name: "prompt", field: "prompt", source: promptInput(node) }],
+      });
+    },
+  };
+}
+
+function referenceVideoDeclaration(model: SeedanceModel): GenerationOperationNodeDeclaration {
+  const endpoint = seedanceEndpointsByModel[model];
+  return {
+    kind: "operation",
+    using: seedanceGenerationNodes[model].referenceVideo,
+    compile({ node }) {
+      const fixed = new Set(["prompt", "duration", "resolution", "aspectRatio", "generateAudio"]);
+      const collected = collectIndexedFieldModelArtifacts({
+        endpoint,
+        inputs: node.inputs,
+        fields: [
+          { field: "referenceImage", role: "image" },
+          { field: "referenceVideo", role: "video" },
+          { field: "referenceAudio", role: "audio" },
+        ],
+        subject: `Seedance Node ${node.id}`,
+      });
+      for (const name of Object.keys(node.inputs)) {
+        assert(fixed.has(name) || collected.consumed.has(name),
+          `Seedance Node ${node.id} has unknown input ${name}.`);
+      }
+      assert(collected.artifacts.length > 0, `Seedance Node ${node.id} requires at least one reference.`);
+      exactInputs(node, ["prompt", "duration"], [
+        "resolution", "aspectRatio", "generateAudio",
+        ...collected.consumed,
+      ]);
+      return fieldModelGraphOperation({
+        endpoint,
+        draft: draft(endpoint, node, false),
+        artifacts: collected.artifacts,
+        textFields: [{ name: "prompt", field: "prompt", source: promptInput(node) }],
+      });
     },
   };
 }
 
 /** Exact model identity lives in `using`; package code owns field assembly. */
 export const seedanceGenerationNodeDeclarations: readonly GenerationOperationNodeDeclaration[] =
-  seedanceModels.flatMap((model) => [textVideoDeclaration(model), frameVideoDeclaration(model)]);
+  seedanceModels.flatMap((model) => [
+    textVideoDeclaration(model),
+    frameVideoDeclaration(model),
+    referenceVideoDeclaration(model),
+  ]);

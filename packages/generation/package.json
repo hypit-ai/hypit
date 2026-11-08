@@ -9,6 +9,7 @@
     "./model": "./src/model-contract.ts",
     "./model-fields": "./src/model-fields.ts",
     "./model-fields/author": "./src/model-fields-author.ts",
+    "./model-fields/graph": "./src/model-fields-graph.ts",
     "./provider": "./src/provider.ts"
   },
   "hypit": {
