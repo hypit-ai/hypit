@@ -17,7 +17,6 @@ import {
   writeGenerationGraphProjectFile,
 } from "@hypit/generation-graph/node";
 import type { LoadedPackage } from "@hypit/loader";
-import type { ProductHistory } from "@hypit/product";
 import type { ModuleManifest } from "@hypit/protocol";
 
 import {
@@ -115,7 +114,7 @@ function runtimeHost(profile: string, calls: string[]): CliRuntimeHost {
   };
 }
 
-test("generation run submits a fresh selection once and then reuses its selected Product", async () => {
+test("generation run submits a fresh Build every time without rewriting the recipe", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-generation-command-"));
   try {
     const graphPath = join(directory, "images.graph.json");
@@ -123,23 +122,14 @@ test("generation run submits a fresh selection once and then reuses its selected
       createGenerationGraphProject({ id: "images", name: "Images" }),
       { revision: 0, commands: [{
         kind: "node.add",
-        node: { id: "hero", using, inputs: {}, products: [], selected: "generate" },
+        node: { id: "hero", using, inputs: {} },
       }] },
     );
     await writeGenerationGraphProjectFile(graphPath, project);
 
-    let ready = false;
-    const products: ProductHistory = {
+    const products = {
       async readProduct() { return undefined; },
-      async resolveProduct(address) {
-        return ready ? {
-          address,
-          type: imageType,
-          publisher: "hypit.product@1",
-          value: "finished image",
-          async openResource() { return undefined; },
-        } : undefined;
-      },
+      async resolveProduct() { return undefined; },
     };
     const calls: string[] = [];
     let runtimeOpens = 0;
@@ -175,6 +165,10 @@ test("generation run submits a fresh selection once and then reuses its selected
       readonly mode: string;
       readonly build?: string;
       readonly revision: number;
+      readonly outputs?: readonly [{
+        readonly node: string;
+        readonly product: { readonly publication: string; readonly name: string };
+      }];
     }> => {
       let output = "";
       await runCliApplication(
@@ -190,24 +184,36 @@ test("generation run submits a fresh selection once and then reuses its selected
         readonly mode: string;
         readonly build?: string;
         readonly revision: number;
+        readonly outputs?: readonly [{
+          readonly node: string;
+          readonly product: { readonly publication: string; readonly name: string };
+        }];
       };
     };
 
     const first = await run();
     assert.equal(first.mode, "build");
     assert.equal(typeof first.build, "string");
-    assert.equal(first.revision, 2);
+    assert.equal(first.revision, 1);
+    assert.deepEqual(first.outputs, [{
+      node: "hero",
+      product: { publication: first.build, name: "hero" },
+    }]);
     assert.equal(runtimeOpens, 1);
     assert.equal(calls.filter((call) => call === "build").length, 1);
-    const attached = await readGenerationGraphProjectFile(graphPath);
-    assert.equal(attached.nodes[0]?.selected, `./products/hero/${first.build}.json`);
+    assert.deepEqual(await readGenerationGraphProjectFile(graphPath), project);
 
-    ready = true;
     const second = await run();
-    assert.equal(second.mode, "reuse");
-    assert.equal(second.revision, 2);
-    assert.equal(runtimeOpens, 1);
-    assert.equal(calls.filter((call) => call === "build").length, 1);
+    assert.equal(second.mode, "build");
+    assert.equal(second.revision, 1);
+    assert.deepEqual(second.outputs, [{
+      node: "hero",
+      product: { publication: second.build, name: "hero" },
+    }]);
+    assert.notEqual(second.build, first.build);
+    assert.equal(runtimeOpens, 2);
+    assert.equal(calls.filter((call) => call === "build").length, 2);
+    assert.deepEqual(await readGenerationGraphProjectFile(graphPath), project);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

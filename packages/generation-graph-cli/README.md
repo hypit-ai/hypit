@@ -12,6 +12,6 @@ Runtime/Profile selection and publication stores are supplied as explicit applic
 Generation lowering remains in `@hypit/generation-graph`; Producer evaluation, Endpoint preflight,
 Worker startup and durable submission remain in `@hypit/build-cli`'s `submitLongBuild()` seam.
 
-An exact reused Product selection returns without opening a Runtime or creating another Build. Fresh
-work attaches its pending Product sidecars only after Runtime acceptance. Existing `status`, `inspect`,
+Every invocation creates a fresh Build from the saved recipe and returns its exact Product addresses.
+Submission never rewrites the graph or attaches pending Product sidecars. Existing `status`, `inspect`,
 `result` and `cancel` commands observe the resulting Build; this package does not duplicate them.

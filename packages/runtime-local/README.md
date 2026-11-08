@@ -144,18 +144,17 @@ publication are private Runtime Local implementation. The assembly exposes separ
 `products` and `finalization` ports; no caller receives a universal repository. `@hypit/result` owns
 only immutable history types and readers; no writable Result entry point is published for CLI or author packages.
 
-Generation Graph preparation occurs before this Runtime boundary. A zero-Step selection is returned directly
-as reused Products and is never submitted. For real work, the adapter supplies an ordinary BuildDefinition and
-PublicationIntent containing every demanded generated node. Runtime Local does not open the graph project,
-choose Products or write node sidecars; after submission acceptance, the authoring Host records the stable
-Build id in its own graph transaction.
+Generation Graph preparation occurs before this Runtime boundary. The adapter supplies an ordinary
+BuildDefinition and PublicationIntent containing every demanded generated node. Runtime Local does not open or
+modify the graph project, choose a current Product or write node sidecars. The stable Build id itself determines
+the Product address for every published node output.
 
 Generation packages are loaded twice for two distinct reasons: the authoring Host reads their Generation Node
 Facet while lowering the saved recipe, and Runtime Local loads the same explicitly requested physical package
 specifier for its Producer and refinement Facets when execution starts. Runtime still knows nothing about
 Canvas nodes or component names. An end-to-end composition test verifies that an asynchronous downstream
-failure closes an already completed upstream node Product and that a later target selection reuses it without
-another Build.
+failure closes an already completed upstream node Product while a later submission remains fresh work unless
+an author explicitly materializes and reconnects that earlier Product.
 
 The filesystem finalization store does not inherit the history reader; sharing a directory root is assembly,
 not an API relationship.

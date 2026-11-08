@@ -147,8 +147,6 @@ test("a Generation Graph preserves completed upstream Products across asynchrono
           id: "base",
           using: components.local,
           inputs: { prompt: { value: "make a source" } },
-          products: [],
-          selected: "generate",
         },
       }, {
         kind: "node.add",
@@ -156,8 +154,6 @@ test("a Generation Graph preserves completed upstream Products across asynchrono
           id: "final",
           using: components.remote,
           inputs: { source: { node: "base" } },
-          products: [],
-          selected: "generate",
         },
       }] },
     );
@@ -165,9 +161,7 @@ test("a Generation Graph preserves completed upstream Products across asynchrono
 
     const products = new FileProductHistory(join(directory, ".hypit", "products"));
     const host = createNodeGenerationGraphProjectHost({
-      projectPath,
       packages: [loadedPackage],
-      products,
     });
     const loadedSelections: string[][] = [];
     runtime = await createLocalRuntime({
@@ -198,7 +192,7 @@ test("a Generation Graph preserves completed upstream Products across asynchrono
     assert.equal(base?.representation, "inline");
     assert.equal(base?.representation === "inline" ? base.value : undefined, "prepared source");
 
-    const reused = await executeNodeGenerationGraphTargets({
+    const repeated = await executeNodeGenerationGraphTargets({
       projectPath,
       host,
       targets: ["base"],
@@ -206,7 +200,7 @@ test("a Generation Graph preserves completed upstream Products across asynchrono
       publicationStores: publicationStoreLocation(directory),
       build: "bld_20261108T120000001Z_0000000001",
     });
-    assert.equal(reused.kind, "reuse");
+    assert.equal(repeated.kind, "build");
   } finally {
     if (runtime === undefined) runtimeFixture.close();
     else await runtime.close();

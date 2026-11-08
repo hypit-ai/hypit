@@ -10,9 +10,6 @@ export type GenerationGraphCommand =
   | { readonly kind: "node.add"; readonly node: GenerationGraphNode }
   | { readonly kind: "node.replace"; readonly node: GenerationGraphNode }
   | { readonly kind: "node.remove"; readonly id: string }
-  | { readonly kind: "node.product.add"; readonly id: string; readonly path: string }
-  | { readonly kind: "node.product.remove"; readonly id: string; readonly path: string }
-  | { readonly kind: "node.select"; readonly id: string; readonly selected: "generate" | string }
   | { readonly kind: "node.position"; readonly position: GenerationGraphNodeLayout }
   | { readonly kind: "node.position.remove"; readonly id: string };
 
@@ -73,25 +70,6 @@ export function applyGenerationGraphTransaction(
         }
         next.nodes = next.nodes.filter((candidate) => candidate.id !== command.id);
         next.layout = next.layout.filter((entry) => entry.node !== command.id);
-        break;
-      case "node.product.add": {
-        const current = node(next, command.id);
-        (current as { products: readonly string[] }).products = [...current.products, command.path];
-        break;
-      }
-      case "node.product.remove": {
-        const current = node(next, command.id);
-        if (!current.products.includes(command.path)) {
-          throw new Error(`Generation Graph Node ${command.id} has no Product ${command.path}.`);
-        }
-        if (current.selected === command.path) {
-          throw new Error(`Select generate or another Product before removing ${command.path}.`);
-        }
-        (current as { products: readonly string[] }).products = current.products.filter((path) => path !== command.path);
-        break;
-      }
-      case "node.select":
-        (node(next, command.id) as { selected: "generate" | string }).selected = command.selected;
         break;
       case "node.position": {
         node(next, command.position.node);

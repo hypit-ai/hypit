@@ -6,7 +6,6 @@ import test from "node:test";
 
 import { sealGraphFragment } from "@hypit/author";
 import type { LoadedPackage } from "@hypit/loader";
-import type { ProductHistory } from "@hypit/product";
 import type { ModuleManifest } from "@hypit/protocol";
 
 import {
@@ -53,36 +52,20 @@ const loaded: LoadedPackage = {
   },
 };
 
-test("the Node Host submits real work once, attaches its Product, then reuses it", async () => {
+test("the Node Host submits every invocation without rewriting the recipe", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-generation-host-"));
   try {
     const projectPath = join(directory, "images.graph.json");
     const project = applyGenerationGraphTransaction(
       createGenerationGraphProject({ id: "images", name: "Images" }),
       { revision: 0, commands: [{ kind: "node.add", node: {
-        id: "hero", using, inputs: {}, products: [], selected: "generate",
+        id: "hero", using, inputs: {},
       } }] },
     );
     await writeGenerationGraphProjectFile(projectPath, project);
 
-    let ready = false;
-    const products: ProductHistory = {
-      async readProduct() { return undefined; },
-      async resolveProduct(address) {
-        if (!ready) return undefined;
-        return {
-          address,
-          type: imageType,
-          publisher: "hypit.product@1",
-          value: "finished image",
-          async openResource() { return undefined; },
-        };
-      },
-    };
     const host = createNodeGenerationGraphProjectHost({
-      projectPath,
       packages: [loaded],
-      products,
     });
     const requests: GenerationGraphRuntimeRequest[] = [];
     const runtime = {
@@ -104,11 +87,8 @@ test("the Node Host submits real work once, attaches its Product, then reuses it
     assert.equal(requests.length, 1);
     assert.deepEqual(requests[0]?.executionPackages, ["@example/image"]);
     assert.deepEqual(requests[0]?.authoring.publication.outputs.map((output) => output.name), ["hero"]);
-    const attached = await readGenerationGraphProjectFile(projectPath);
-    assert.equal(attached.nodes[0]?.selected,
-      `./products/hero/${build}.json`);
+    assert.deepEqual(await readGenerationGraphProjectFile(projectPath), project);
 
-    ready = true;
     const second = await executeNodeGenerationGraphTargets({
       projectPath,
       host,
@@ -117,8 +97,9 @@ test("the Node Host submits real work once, attaches its Product, then reuses it
       publicationStores: { root: directory, historyPath: "results", productsPath: "products" },
       build: "bld_20261108T110000001Z_0000000001",
     });
-    assert.equal(second.kind, "reuse");
-    assert.equal(requests.length, 1);
+    assert.equal(second.kind, "build");
+    assert.equal(requests.length, 2);
+    assert.deepEqual(await readGenerationGraphProjectFile(projectPath), project);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

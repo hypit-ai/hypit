@@ -26,10 +26,10 @@ Runtime records that publisher with the accepted Type rather than inventing a li
 History exposes each Product's stable `{ publication, name }` address; the current publication identity
 is the Run that closed it.
 Reusing an earlier Output is an explicit authoring operation. Ordinary Author Sources export the accepted
-material into the project and reference that authored value. A Generation Graph instead owns a tiny node
-Product file containing the exact Build and Output address; its Host resolves that explicit selection into a
-Record during target preparation. Result storage never searches history or substitutes a historical Build for
-an authored choice.
+material into the project and reference that authored value. Generation Graphs follow the same rule: the recipe
+never owns Product history or a current Product selection. A completed media Product may be explicitly
+materialized as an ordinary Media Asset and then connected as authored input. Result storage never searches
+history, follows a mutable latest value or substitutes a historical Build for an authored choice.
 
 Draft creation, incremental materialization, crash recovery and terminal publication belong to Runtime
 Local. They are not Result package APIs. Runtime owns its writable filesystem implementation and
@@ -54,8 +54,8 @@ Failed and cancelled Results may intentionally contain the subset that completed
 closure check, not a central Result index or an attempt to infer missing work.
 
 Generation Graph preparation names every demanded node that will actually generate as a publication Output.
-This lets an upstream node remain a usable Product when a later node fails. A selected existing Product is an
-input Record, not a new publication; targeting only existing Products creates no Build Result at all.
+This lets an upstream node remain a usable Product when a later node fails. Repeating the same recipe creates a
+new publication; reusing a previous Product requires a separate explicit authoring/materialization action.
 
 Product file references remain scoped to one publication. Separate publications remain separate even
 when their bytes happen to match; publication performs no content hashing or historical lookup.

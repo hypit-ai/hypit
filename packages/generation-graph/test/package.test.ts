@@ -32,14 +32,11 @@ test("Generation Node behavior is contributed by an exact package Facet", async 
   const packages = generationNodePackagesFromFacets([facet]);
   const host = createGenerationGraphLoweringHost(
     [{ specifier: "@example/image", implementation: packages[0]! }],
-    async () => { throw new Error("unused"); },
   );
   const implementation = await host.resolveImplementation({
     id: "hero",
     using,
     inputs: {},
-    products: [],
-    selected: "generate",
   }, {
     format: "hypit.generation-graph@1",
     id: "images",
@@ -57,11 +54,11 @@ test("the Host refuses missing and duplicate component owners", async () => {
   assert.throws(() => createGenerationGraphLoweringHost([
     { specifier: "left", implementation },
     { specifier: "right", implementation },
-  ], async () => { throw new Error("unused"); }), /multiple implementations/u);
+  ]), /multiple implementations/u);
 
-  const host = createGenerationGraphLoweringHost([], async () => { throw new Error("unused"); });
+  const host = createGenerationGraphLoweringHost([]);
   await assert.rejects(async () => await host.resolveImplementation({
-    id: "missing", using, inputs: {}, products: [], selected: "generate",
+    id: "missing", using, inputs: {},
   }, {
     format: "hypit.generation-graph@1", id: "images", name: "Images", revision: 0, nodes: [], layout: [],
   }), /is not installed/u);

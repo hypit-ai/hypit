@@ -31,10 +31,11 @@ availability and durable submission. It returns the exact Runtime/inspection ses
 observation. `createPublicBuildId()` assigns the execution identity at this boundary rather than inside
 an author file format.
 
-An authoring domain may supply an `accepted` callback for its own post-acceptance transaction. For
-example, a Generation Graph attaches Product sidecars to its selected nodes only after Runtime accepts
-the Build. Failure of that callback never rolls back or disguises the accepted long-running work.
-Source compilation, Graph lowering and author-document mutation remain outside this shared seam.
+An authoring domain may supply an `accepted` callback only when acceptance genuinely closes a separate
+domain-owned action. Generation Graph deliberately does not: submission instantiates one recipe revision
+without rewriting it, and the returned Build id already determines every Product address. Failure of an
+optional callback never rolls back or disguises accepted long-running work. Source compilation, Graph
+lowering and author-document mutation remain outside this shared seam.
 The existing `build` command uses this API; another command must reuse it rather than reproduce its
 preflight and Worker-start sequence.
 

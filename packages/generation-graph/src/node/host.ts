@@ -3,7 +3,6 @@ import {
   verifyPackageContributions,
   type LoadedPackage,
 } from "@hypit/loader";
-import type { ProductHistory } from "@hypit/product";
 
 import {
   createGenerationGraphLoweringHost,
@@ -11,18 +10,14 @@ import {
   type InstalledGenerationNodePackage,
 } from "../package.js";
 import {
-  acceptGenerationGraphBuild,
   prepareGenerationGraphTargets,
   type PreparedGenerationGraphBuild,
-  type PreparedGenerationGraphSelection,
 } from "../prepare.js";
 import type {
   GenerationGraphLoweringHost,
   GenerationGraphProject,
 } from "../types.js";
 import {
-  commitAcceptedGenerationGraphBuild,
-  createNodeGenerationGraphProductResolver,
   readGenerationGraphProjectFile,
 } from "./store.js";
 
@@ -32,14 +27,12 @@ export type NodeGenerationGraphProjectHost = {
   prepare(
     project: GenerationGraphProject,
     targets: readonly string[],
-  ): Promise<PreparedGenerationGraphSelection>;
+  ): Promise<PreparedGenerationGraphBuild>;
 };
 
 /** Build one project Host from the exact package set already selected by the embedding application. */
 export function createNodeGenerationGraphProjectHost(input: {
-  readonly projectPath: string;
   readonly packages: readonly LoadedPackage[];
-  readonly products: ProductHistory;
 }): NodeGenerationGraphProjectHost {
   verifyPackageContributions(input.packages.map((item) => item.contribution));
   const manifests = input.packages.flatMap((item) =>
@@ -50,10 +43,7 @@ export function createNodeGenerationGraphProjectHost(input: {
       specifier: item.specifier,
       implementation,
     })));
-  const lowering = createGenerationGraphLoweringHost(
-    installed,
-    createNodeGenerationGraphProductResolver(input.projectPath, input.products),
-  );
+  const lowering = createGenerationGraphLoweringHost(installed);
   return {
     program,
     lowering,
@@ -106,46 +96,16 @@ export function createGenerationGraphRuntimeRequest(input: {
   };
 }
 
-export type ExecutedGenerationGraphSelection<Submission extends { readonly id: string }> =
-  | {
-      readonly kind: "reuse";
-      readonly prepared: Extract<PreparedGenerationGraphSelection, { readonly kind: "reuse" }>;
-    }
-  | {
-      readonly kind: "build";
-      readonly prepared: Extract<PreparedGenerationGraphSelection, { readonly kind: "build" }>;
-      readonly submission: Submission;
-      readonly project: GenerationGraphProject;
-    };
-
-export class AcceptedGenerationGraphBuildNotAttached extends Error {
-  constructor(
-    readonly build: string,
-    cause: unknown,
-  ) {
-    super(`Runtime accepted Generation Build ${build}, but the project revision could not attach it.`, { cause });
-    this.name = "AcceptedGenerationGraphBuildNotAttached";
-  }
-}
-
-export async function attachAcceptedGenerationGraphBuild(input: {
-  readonly projectPath: string;
+export type ExecutedGenerationGraphBuild<Submission extends { readonly id: string }> = {
+  readonly kind: "build";
   readonly prepared: PreparedGenerationGraphBuild;
-  readonly build: string;
-}): Promise<GenerationGraphProject> {
-  try {
-    return await commitAcceptedGenerationGraphBuild(
-      input.projectPath,
-      acceptGenerationGraphBuild(input.prepared, input.build),
-    );
-  } catch (error) {
-    throw new AcceptedGenerationGraphBuildNotAttached(input.build, error);
-  }
-}
+  readonly submission: Submission;
+  /** The exact recipe revision instantiated by this Build. It is never rewritten by submission. */
+  readonly project: GenerationGraphProject;
+};
 
 /**
- * Complete local orchestration. Runtime acceptance precedes the author transaction; accepted work is never
- * rolled back or silently attached to another revision when concurrent editing wins.
+ * Complete local orchestration. A Build instantiates one saved revision without modifying author state.
  */
 export async function executeNodeGenerationGraphTargets<Submission extends { readonly id: string }>(input: {
   readonly projectPath: string;
@@ -155,10 +115,9 @@ export async function executeNodeGenerationGraphTargets<Submission extends { rea
   readonly publicationStores: GenerationGraphPublicationStoreLocation;
   /** Assigned by the common long-running submission boundary; unused when this selection is reused. */
   readonly build: string;
-}): Promise<ExecutedGenerationGraphSelection<Submission>> {
+}): Promise<ExecutedGenerationGraphBuild<Submission>> {
   const project = await readGenerationGraphProjectFile(input.projectPath);
   const prepared = await input.host.prepare(project, input.targets);
-  if (prepared.kind === "reuse") return { kind: "reuse", prepared };
   const build = input.build;
   const submission = await input.runtime.build(createGenerationGraphRuntimeRequest({
     projectPath: input.projectPath,
@@ -169,10 +128,5 @@ export async function executeNodeGenerationGraphTargets<Submission extends { rea
   if (submission.id !== build) {
     throw new Error(`Runtime accepted Generation Build as ${submission.id}, not ${build}.`);
   }
-  const updated = await attachAcceptedGenerationGraphBuild({
-    projectPath: input.projectPath,
-    prepared,
-    build,
-  });
-  return { kind: "build", prepared, submission, project: updated };
+  return { kind: "build", prepared, submission, project };
 }

@@ -4,7 +4,6 @@ import { isModuleRef } from "@hypit/protocol";
 import type {
   GenerationComponentRef,
   GenerationGraphLoweringHost,
-  GenerationGraphResolvedProduct,
   GenerationNodeImplementation,
 } from "./types.js";
 
@@ -25,8 +24,6 @@ export type InstalledGenerationNodePackage = {
   readonly specifier: string;
   readonly implementation: GenerationNodePackage;
 };
-
-export type GenerationGraphProductResolver = GenerationGraphLoweringHost["resolveProduct"];
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -70,7 +67,6 @@ export function generationNodePackagesFromFacets(
 /** Assemble only installed package implementations. Missing and duplicate components fail exactly. */
 export function createGenerationGraphLoweringHost(
   packages: readonly InstalledGenerationNodePackage[],
-  resolveProduct: GenerationGraphProductResolver,
 ): GenerationGraphLoweringHost {
   const implementations = new Map<string, GenerationNodeImplementation>();
   for (const installed of packages) {
@@ -92,7 +88,5 @@ export function createGenerationGraphLoweringHost(
       if (implementation === undefined) throw new Error(`Generation Node ${key} is not installed.`);
       return implementation;
     },
-    resolveProduct: async (path, node, project): Promise<GenerationGraphResolvedProduct> =>
-      await resolveProduct(path, node, project),
   };
 }

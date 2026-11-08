@@ -17,7 +17,6 @@ import {
   type CliIo,
 } from "@hypit/cli";
 import {
-  attachAcceptedGenerationGraphBuild,
   createGenerationGraphRuntimeRequest,
   createNodeGenerationGraphProjectHost,
   readGenerationGraphProjectFile,
@@ -114,7 +113,7 @@ function packageRequest(project: Awaited<ReturnType<typeof readGenerationGraphPr
 export function writeGenerationGraphHelp(io: Pick<CliIo, "write">): void {
   io.write("Usage: hypit generation run <project.graph.json> --target <node> [options]\n\n"
     + "Run one or more Generation Graph nodes through the selected long-running Runtime.\n"
-    + "An already selected Product is reused without creating another Build.\n\n"
+    + "Each invocation creates a new Build and never rewrites the saved recipe.\n\n"
     + "Options:\n"
     + "  --target <node>         Node to resolve; repeat for multiple targets\n"
     + "  --project <directory>   Explicit Hypit project (default: nearest marked project)\n"
@@ -149,32 +148,9 @@ export async function runGenerationGraphCli(
       ...(services.packageRoot === undefined ? {} : { fallbackRoots: [services.packageRoot] }),
     });
     const host = createNodeGenerationGraphProjectHost({
-      projectPath: graphPath,
       packages,
-      products: opened.products,
     });
     const prepared = await host.prepare(project, parsed.targets);
-    if (prepared.kind === "reuse") {
-      writeCliOutput(io, parsed.presentation, {
-        kind: "operational",
-        machine: {
-          format: "hypit.generation-run@1",
-          ok: true,
-          mode: "reuse",
-          graph: graphPath,
-          revision: project.revision,
-          targets: prepared.targets.map((item) => item.node),
-        },
-        title: "Generation Products reused",
-        status: "success",
-        facts: [
-          ["Graph", relative(projectRoot, graphPath)],
-          [prepared.targets.length === 1 ? "Target" : "Targets", prepared.targets.map((item) => item.node).join(", ")],
-          ["Runtime", "not opened"],
-        ],
-      });
-      return;
-    }
 
     const selectedRuntime = parsed.runtime === undefined
       ? await services.resolveProjectRuntime?.(projectRoot)
@@ -187,8 +163,7 @@ export async function runGenerationGraphCli(
       ...(services.packageRoot === undefined ? {} : { distributionPackageRoot: services.packageRoot }),
     });
     const build = createPublicBuildId();
-    let revision: number | undefined;
-    session = await submitLongBuild({
+    const submitted = await submitLongBuild({
       host: runtimeHost,
       request: createGenerationGraphRuntimeRequest({
         projectPath: graphPath,
@@ -198,16 +173,12 @@ export async function runGenerationGraphCli(
       }),
       packageContributions: packages.map((item) => item.contribution),
       ...(parsed.maxWaitMs === undefined ? {} : { maxWaitMs: parsed.maxWaitMs }),
-      accepted: async (submission) => {
-        const updated = await attachAcceptedGenerationGraphBuild({
-          projectPath: graphPath,
-          prepared,
-          build: submission.id,
-        });
-        revision = updated.revision;
-      },
     });
-    assert(revision !== undefined, `Generation Build ${session.submission.id} was accepted without attaching its Product selection`);
+    session = submitted;
+    const outputs = prepared.generated.map((item) => ({
+      node: item.node,
+      product: { publication: submitted.submission.id, name: item.node },
+    }));
     writeCliOutput(io, parsed.presentation, {
       kind: "operational",
       machine: {
@@ -215,19 +186,20 @@ export async function runGenerationGraphCli(
         ok: true,
         mode: "build",
         graph: graphPath,
-        revision,
-        build: session.submission.id,
+        revision: project.revision,
+        build: submitted.submission.id,
         targets: prepared.targets.map((item) => item.node),
+        outputs,
       },
       title: "Generation run submitted",
       status: "success",
       facts: [
-        ["Build", session.submission.id],
+        ["Build", submitted.submission.id],
         [prepared.targets.length === 1 ? "Target" : "Targets", prepared.targets.map((item) => item.node).join(", ")],
       ],
       lines: [
-        `Watch    ${commandHint(["status", session.submission.id, "--watch"], { projectRoot, runtimeProfile: profile })}`,
-        `Inspect  ${commandHint(["inspect", session.submission.id], { projectRoot })}`,
+        `Watch    ${commandHint(["status", submitted.submission.id, "--watch"], { projectRoot, runtimeProfile: profile })}`,
+        `Inspect  ${commandHint(["inspect", submitted.submission.id], { projectRoot })}`,
       ],
     });
   } finally {

@@ -9,7 +9,7 @@ import type {
   PublicationIntent,
   TypeRef,
 } from "@hypit/protocol";
-import { assertOrderedBuildId, compareCodeUnits } from "@hypit/protocol";
+import { compareCodeUnits } from "@hypit/protocol";
 
 import { lowerGenerationGraph } from "./lower.js";
 import { assertGenerationGraphProject } from "./project.js";
@@ -17,7 +17,6 @@ import type {
   GenerationGraphLoweringHost,
   GenerationGraphProject,
   GenerationGraphResourceAttachment,
-  GenerationNodeProduct,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -28,7 +27,6 @@ export type PreparedGenerationGraphTarget = {
   readonly node: string;
   readonly type: TypeRef;
   readonly record: string;
-  readonly selected: "generate" | { readonly product: string };
 };
 
 export type PreparedGenerationGraphNode = {
@@ -36,30 +34,17 @@ export type PreparedGenerationGraphNode = {
   readonly record: string;
 };
 
-type PreparedGenerationGraphBase = {
+export type PreparedGenerationGraphBuild = {
+  readonly kind: "build";
   readonly project: string;
   readonly revision: number;
   readonly targets: readonly PreparedGenerationGraphTarget[];
   readonly attachments: readonly GenerationGraphResourceAttachment[];
-};
-
-/** Every requested value already exists. No Runtime submission or new Result is necessary. */
-export type ReusedGenerationGraphTargets = PreparedGenerationGraphBase & {
-  readonly kind: "reuse";
-};
-
-/** At least one node must execute and every demanded generated node receives a Product attempt. */
-export type PreparedGenerationGraphBuild = PreparedGenerationGraphBase & {
-  readonly kind: "build";
   readonly definition: BuildDefinition;
   readonly publication: PublicationIntent;
   readonly generated: readonly PreparedGenerationGraphNode[];
   readonly executionPackages: readonly string[];
 };
-
-export type PreparedGenerationGraphSelection =
-  | ReusedGenerationGraphTargets
-  | PreparedGenerationGraphBuild;
 
 /** Prepare one finite target selection without touching Runtime, Result storage or the project file. */
 export async function prepareGenerationGraphTargets(
@@ -67,7 +52,7 @@ export async function prepareGenerationGraphTargets(
   program: import("@hypit/protocol").LinkedProgram,
   host: GenerationGraphLoweringHost,
   targets: readonly string[],
-): Promise<PreparedGenerationGraphSelection> {
+): Promise<PreparedGenerationGraphBuild> {
   assertGenerationGraphProject(project);
   assert(targets.length > 0, "Generation Graph selection has no Targets.");
   const unique = new Set(targets);
@@ -89,20 +74,13 @@ export async function prepareGenerationGraphTargets(
       node: id,
       type: output.type,
       record,
-      selected: node.selected === "generate" ? "generate" : { product: node.selected },
     };
   });
-  const base = {
-    project: project.id,
-    revision: project.revision,
-    targets: preparedTargets,
-    attachments: lowered.attachments,
-  } as const;
-  if (sliced.plan.steps.length === 0) return { kind: "reuse", ...base };
+  assert(sliced.plan.steps.length > 0,
+    "Generation Graph Target has no executable work; use a Media node for an existing value.");
 
   const demanded = new Set(sliced.plan.steps.map((step) => step.id));
   const generated = project.nodes.flatMap((node): PreparedGenerationGraphNode[] => {
-    if (node.selected !== "generate") return [];
     const output = graphOutputs.get(node.id);
     if (output?.result.kind !== "operation-result" || !demanded.has(output.result.operation)) return [];
     const operationId = output.result.operation;
@@ -120,55 +98,13 @@ export async function prepareGenerationGraphTargets(
   };
   return {
     kind: "build",
-    ...base,
+    project: project.id,
+    revision: project.revision,
+    targets: preparedTargets,
+    attachments: lowered.attachments,
     definition: defineBuild({ program: sliced.program, plan: sliced.plan }),
     publication,
     generated,
     executionPackages: lowered.executionPackages,
-  };
-}
-
-export type AcceptedGenerationGraphProduct = {
-  readonly node: string;
-  readonly path: string;
-  readonly document: GenerationNodeProduct;
-};
-
-export type AcceptedGenerationGraphBuild = {
-  readonly build: string;
-  readonly products: readonly AcceptedGenerationGraphProduct[];
-  readonly transaction: import("./transaction.js").GenerationGraphTransaction;
-};
-
-/** Plan the author-state transition performed only after Runtime has accepted the Build id. */
-export function acceptGenerationGraphBuild(
-  prepared: PreparedGenerationGraphBuild,
-  build: string,
-): AcceptedGenerationGraphBuild {
-  assertOrderedBuildId(build);
-  const products = prepared.generated.map((generated): AcceptedGenerationGraphProduct => ({
-    node: generated.node,
-    path: `./products/${encodeURIComponent(generated.node)}/${encodeURIComponent(build)}.json`,
-    document: {
-      format: "hypit.node-product@1",
-      build,
-      output: generated.node,
-    },
-  }));
-  return {
-    build,
-    products,
-    transaction: {
-      revision: prepared.revision,
-      commands: products.flatMap((product) => [{
-        kind: "node.product.add" as const,
-        id: product.node,
-        path: product.path,
-      }, {
-        kind: "node.select" as const,
-        id: product.node,
-        selected: product.path,
-      }]),
-    },
   };
 }
