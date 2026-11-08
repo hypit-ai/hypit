@@ -15,7 +15,7 @@ importers:
         specifier: workspace:^0.1.0
         version: link:packages/build-cli
       '@hypit/generation-graph-cli':
-        specifier: workspace:^0.0.0-dev
+        specifier: workspace:^0.1.0
         version: link:packages/generation-graph-cli
       '@hypit/media-local-cli':
         specifier: workspace:^0.1.0
@@ -2638,7 +2638,7 @@ importers:
         specifier: workspace:^0.2.0
         version: link:../generation
       '@hypit/generation-graph-cli':
-        specifier: workspace:^0.0.0-dev
+        specifier: workspace:^0.1.0
         version: link:../generation-graph-cli
       '@hypit/gpt-image':
         specifier: workspace:^0.3.0

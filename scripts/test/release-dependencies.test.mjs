@@ -3,6 +3,7 @@ import test from "node:test";
 import { releaseDependencyVersion } from "../release-dependencies.mjs";
 import { selectReleasePackages, releaseCandidatePackages } from "../release-candidate.mjs";
 import { distributionEmbeddedPackageDirectories } from "../distribution-ownership.mjs";
+import { releasedPackageDependencyMap } from "../pack-independent-package.mjs";
 import { fileURLToPath } from "node:url";
 import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -33,7 +34,7 @@ test("publication selection loads without the build toolchain", async (t) => {
   `], { cwd: root, stdio: "pipe" });
 });
 
-test("Toolchain dependencies remain independently packaged", async () => {
+test("Toolchain keeps versioned capabilities independent and Core embedded", async () => {
   const root = fileURLToPath(new URL("../../", import.meta.url));
   const embedded = await distributionEmbeddedPackageDirectories(root);
   assert.equal(embedded.has("temporal"), false);
@@ -41,8 +42,10 @@ test("Toolchain dependencies remain independently packaged", async () => {
   assert.equal(embedded.has("compiler"), true);
   const toolchain = JSON.parse(await readFile(join(root, "packages/toolchain/package.json"), "utf8"));
   for (const name of Object.keys(toolchain.dependencies).filter((item) => item.startsWith("@hypit/"))) {
-    assert.equal(embedded.has(name.slice("@hypit/".length)), false,
-      `${name} must remain an independently packaged Toolchain dependency`);
+    const directory = name.slice("@hypit/".length);
+    const dependency = JSON.parse(await readFile(join(root, "packages", directory, "package.json"), "utf8"));
+    assert.equal(embedded.has(directory), dependency.version === "0.0.0-dev",
+      `${name} ownership must follow its package version`);
   }
   const plan = await releaseCandidatePackages();
   const index = name => plan.independent.findIndex(item => item.name === `@hypit/${name}`);
@@ -58,4 +61,13 @@ test("internal Core remains embedded instead of becoming an unversioned release 
   }
   const plan = await releaseCandidatePackages();
   assert.equal(plan.independent.some((item) => item.version === "0.0.0-dev"), false);
+});
+
+test("independent packages bridge embedded Core through the Distribution peer", async () => {
+  const dependencies = await releasedPackageDependencyMap("packages/toolchain", "dependencies");
+  assert.equal(dependencies["@hypit/compiler"], undefined);
+  assert.equal(dependencies["@hypit/protocol"], undefined);
+  assert.equal(dependencies["@hypit/svml"], "^0.1.0");
+  const peers = await releasedPackageDependencyMap("packages/toolchain", "peerDependencies");
+  assert.deepEqual(peers, { "@hypit/hypit": "^0.4.0" });
 });

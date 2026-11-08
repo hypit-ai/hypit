@@ -25,6 +25,11 @@
       "types": "./dist/public/executor.d.ts",
       "import": "./packages/executor/src/index.ts"
     },
+    "./build-submission": {
+      "hypit-source": "./packages/build-submission/src/index.ts",
+      "types": "./dist/public/build-submission.d.ts",
+      "import": "./packages/build-submission/src/index.ts"
+    },
     "./kernel": {
       "hypit-source": "./packages/kernel/src/index.ts",
       "types": "./dist/public/kernel.d.ts",
@@ -114,6 +119,11 @@
       "hypit-source": "./packages/product/src/node/index.ts",
       "types": "./dist/public/product-node.d.ts",
       "import": "./packages/product/src/node/index.ts"
+    },
+    "./media-product-local": {
+      "hypit-source": "./packages/media-product-local/src/index.ts",
+      "types": "./dist/public/media-product-local.d.ts",
+      "import": "./packages/media-product-local/src/index.ts"
     },
     "./author": {
       "hypit-source": "./packages/author/src/index.ts",
@@ -286,7 +296,7 @@
   },
   "dependencies": {
     "@hypit/build-cli": "workspace:^0.1.0",
-    "@hypit/generation-graph-cli": "workspace:^0.0.0-dev",
+    "@hypit/generation-graph-cli": "workspace:^0.1.0",
     "@hypit/browser-capture": "workspace:^0.2.1",
     "@hypit/speech-estimate": "workspace:^0.1.2",
     "@hypit/media-local-cli": "workspace:^0.1.0",

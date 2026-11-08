@@ -42,6 +42,10 @@ export async function distributionEmbeddedPackageDirectories(repositoryRoot) {
     if (name === rootManifest.name || independentNames.has(name)) return;
     const item = byName.get(name);
     if (item === undefined) throw new Error(`Unknown independent workspace package ${name}`);
+    // Unversioned packages are implementation modules owned by the Distribution. An
+    // independently published package may use them while developing in this workspace,
+    // but its npm artifact imports the matching public Distribution subpath instead.
+    if (item.manifest.version === "0.0.0-dev") return;
     independentNames.add(name);
     for (const dependency of workspaceDependencies(item.manifest)) independent(dependency);
   };

@@ -34,6 +34,12 @@ function workspaceEdges(packageManifest) {
     .map(([name]) => name);
 }
 
+function exportTargets(value) {
+  if (typeof value === "string") return [value];
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return [];
+  return Object.values(value).flatMap(exportTargets);
+}
+
 /**
  * Resolve the independently versioned packages selected by the product Distribution.
  * package.json remains the only product-default list; this function only plans its npm release order.
@@ -44,12 +50,17 @@ export async function releaseCandidatePackages() {
     cwd: repositoryRoot,
   }).sort().map(async (path) => ({ path, manifest: await manifest(path) })));
   const byName = new Map(workspaceManifests.map((item) => [item.manifest.name, item]));
+  const embedded = new Set(exportTargets(rootManifest.exports ?? {}).flatMap((target) => {
+    const match = /^\.\/packages\/([^/]+)\//u.exec(target);
+    return match === null ? [] : [`@hypit/${match[1]}`];
+  }));
   const selected = new Map();
   const select = (name, owner) => {
     if (name === rootManifest.name || selected.has(name)) return;
     const item = byName.get(name);
     if (item === undefined) throw new Error(`${owner} dependency ${name} is not a workspace package`);
     if (item.manifest.version === "0.0.0-dev") {
+      if (embedded.has(name)) return;
       throw new Error(`${owner} makes unversioned internal package ${name} an independent release dependency`);
     }
     selected.set(name, item);

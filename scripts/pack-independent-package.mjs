@@ -81,7 +81,7 @@ async function compileSources(packageRoot, stage, manifest) {
     "--outDir", resolve(stage, "dist"),
     ...sources.map((source) => resolve(packageRoot, source)),
   ], { cwd: repositoryRoot, stdio: "inherit" });
-  await rewritePublishedDeclarationSpecifiers(stage, manifest);
+  await rewritePublishedModuleSpecifiers(stage);
   return true;
 }
 
@@ -107,6 +107,7 @@ async function embeddedPublicSpecifiers() {
   const specifiers = new Map();
   for (const [directory, values] of candidates) {
     const manifest = JSON.parse(await readFile(resolve(repositoryRoot, "packages", directory, "package.json"), "utf8"));
+    if (manifest.version !== "0.0.0-dev") continue;
     const publicSpecifier = [...new Set(values)].sort((left, right) => {
       const depth = left.split("/").length - right.split("/").length;
       return depth === 0 ? compareCodeUnits(left, right) : depth;
@@ -203,31 +204,23 @@ async function assertPublishedSourceDependencies(packageRoot, manifest) {
 }
 
 /**
- * Independent packages compile against the Distribution's source condition while the repository is
- * under development. Declaration inference can consequently expose an embedded workspace identity
- * such as `@hypit/protocol`. Rewrite it to the root's public export only when this package does not
- * declare that workspace package as its own release dependency. A declared dependency remains its
- * own npm owner, including private subpaths that the root Distribution intentionally does not export.
- * Derive the remaining ownership map from the root's real exports rather than maintaining another list.
+ * Independent packages compile against exact workspace packages during development. Published
+ * JavaScript and declarations instead import unversioned Distribution modules through the root's
+ * public exports. This keeps one physical Core in the Host process without publishing every internal
+ * package as a second npm identity.
  */
-async function rewritePublishedDeclarationSpecifiers(stage, manifest) {
+async function rewritePublishedModuleSpecifiers(stage) {
   const publicSpecifiers = await embeddedPublicSpecifiers();
-  const declared = new Set(Object.keys({
-    ...(manifest.dependencies ?? {}),
-    ...(manifest.optionalDependencies ?? {}),
-    ...(manifest.peerDependencies ?? {}),
-  }));
   const rewrite = (value) => {
     for (const [embedded, published] of publicSpecifiers) {
-      if (declared.has(embedded)) continue;
       if (value === embedded || value.startsWith(`${embedded}/`)) {
         return `${published}${value.slice(embedded.length)}`;
       }
     }
     return value;
   };
-  for (const declaration of globSync("dist/**/*.d.ts", { cwd: stage }).sort()) {
-    const path = resolve(stage, declaration);
+  for (const module of globSync("dist/**/*.{js,d.ts}", { cwd: stage }).sort()) {
+    const path = resolve(stage, module);
     let text = await readFile(path, "utf8");
     const sourceFile = typescript.createSourceFile(path, text, typescript.ScriptTarget.Latest, true,
       typescript.ScriptKind.TS);
@@ -244,7 +237,7 @@ async function rewritePublishedDeclarationSpecifiers(stage, manifest) {
       .map((literal) => literal.text)
       .filter((value) => rewrite(value) !== value);
     if (leaked.length > 0) {
-      throw new Error(`${declaration} exposes embedded package specifiers: ${[...new Set(leaked)].join(", ")}`);
+      throw new Error(`${module} exposes embedded package specifiers: ${[...new Set(leaked)].join(", ")}`);
     }
   }
 }
@@ -256,6 +249,26 @@ async function releasedDependencyMap(manifest, values) {
   })));
 }
 
+async function releasedPackageDependencyMaps(manifest) {
+  const rootManifest = JSON.parse(await readFile(resolve(repositoryRoot, "package.json"), "utf8"));
+  const publicSpecifiers = await embeddedPublicSpecifiers();
+  const dependencies = Object.fromEntries(Object.entries(manifest.dependencies ?? {})
+    .filter(([name]) => !publicSpecifiers.has(name)));
+  const peers = { ...(manifest.peerDependencies ?? {}) };
+  const usesDistribution = Object.keys({
+    ...(manifest.dependencies ?? {}),
+    ...(manifest.optionalDependencies ?? {}),
+    ...(manifest.peerDependencies ?? {}),
+  }).some((name) => publicSpecifiers.has(name));
+  if (usesDistribution && peers[rootManifest.name] === undefined) {
+    peers[rootManifest.name] = `workspace:^${rootManifest.version}`;
+  }
+  return {
+    dependencies: await releasedDependencyMap(manifest, dependencies),
+    peerDependencies: await releasedDependencyMap(manifest, peers),
+  };
+}
+
 /** The dependency map npm consumers receive after workspace ownership is translated to release ranges. */
 export async function releasedPackageDependencyMap(packageDirectory, field) {
   if (field !== "dependencies" && field !== "peerDependencies") {
@@ -263,7 +276,7 @@ export async function releasedPackageDependencyMap(packageDirectory, field) {
   }
   const packageRoot = resolve(repositoryRoot, packageDirectory);
   const manifest = JSON.parse(await readFile(resolve(packageRoot, "package.json"), "utf8"));
-  return releasedDependencyMap(manifest, manifest[field]);
+  return (await releasedPackageDependencyMaps(manifest))[field];
 }
 
 export async function packIndependentPackage(packageDirectory, outputDirectory, options = {}) {
@@ -291,8 +304,7 @@ export async function packIndependentPackage(packageDirectory, outputDirectory, 
     const license = await stat(localLicense).then(() => localLicense).catch(() => resolve(repositoryRoot, "LICENSE"));
     await cp(license, resolve(stage, "LICENSE"));
 
-    const dependencies = await releasedDependencyMap(manifest, manifest.dependencies);
-    const peerDependencies = await releasedDependencyMap(manifest, manifest.peerDependencies);
+    const { dependencies, peerDependencies } = await releasedPackageDependencyMaps(manifest);
     const published = {
       ...manifest,
       repository: manifest.repository ?? rootManifest.repository,
