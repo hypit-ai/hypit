@@ -9,9 +9,11 @@ import type {
   NleComponentItem,
   NleEffect,
   NleItem,
+  NleMatte,
   NlePackageSymbol,
   NlePictureAppearance,
   NleProject,
+  NleTransition,
 } from "./types.js";
 
 export const nleAuthoringFacetAbi = "hypit.nle-authoring@1";
@@ -26,6 +28,16 @@ export type NleEffectParameterAuthoringContext = {
 export type NleComponentParameterAuthoringContext = {
   readonly project: NleProject;
   readonly item: NleComponentItem;
+};
+
+export type NleTransitionParameterAuthoringContext = {
+  readonly project: NleProject;
+  readonly transition: NleTransition;
+};
+
+export type NleMatteParameterAuthoringContext = {
+  readonly project: NleProject;
+  readonly matte: NleMatte;
 };
 
 /** Package-owned parameter projection and edit semantics for one exact Effect symbol. */
@@ -48,9 +60,31 @@ export type NleComponentParameterAuthoring = {
   ) => CanonicalValue;
 };
 
+/** Package-owned parameter projection and edit semantics for one exact Transition symbol. */
+export type NleTransitionParameterAuthoring = {
+  readonly transition: NlePackageSymbol;
+  readonly inspect: (context: NleTransitionParameterAuthoringContext) => CanonicalValue;
+  readonly edit: (
+    operation: CanonicalValue,
+    context: NleTransitionParameterAuthoringContext,
+  ) => CanonicalValue;
+};
+
+/** Package-owned parameter projection and edit semantics for one exact Matte symbol. */
+export type NleMatteParameterAuthoring = {
+  readonly matte: NlePackageSymbol;
+  readonly inspect: (context: NleMatteParameterAuthoringContext) => CanonicalValue;
+  readonly edit: (
+    operation: CanonicalValue,
+    context: NleMatteParameterAuthoringContext,
+  ) => CanonicalValue;
+};
+
 export type NleAuthoringPackage = {
   readonly componentParameters?: readonly NleComponentParameterAuthoring[];
   readonly effectParameters?: readonly NleEffectParameterAuthoring[];
+  readonly transitionParameters?: readonly NleTransitionParameterAuthoring[];
+  readonly matteParameters?: readonly NleMatteParameterAuthoring[];
 };
 
 export type NleAuthoringFacet = Facet & {
@@ -79,6 +113,24 @@ export type NleAuthoringHost = {
     effectId: string,
     operation: CanonicalValue,
   ) => NleTransaction;
+  readonly inspectTransitionParameters: (
+    project: NleProject,
+    transitionId: string,
+  ) => CanonicalValue;
+  readonly planTransitionParameterEdit: (
+    project: NleProject,
+    transitionId: string,
+    operation: CanonicalValue,
+  ) => NleTransaction;
+  readonly inspectMatteParameters: (
+    project: NleProject,
+    matteId: string,
+  ) => CanonicalValue;
+  readonly planMatteParameterEdit: (
+    project: NleProject,
+    matteId: string,
+    operation: CanonicalValue,
+  ) => NleTransaction;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -103,6 +155,20 @@ function assertPackage(value: NleAuthoringPackage): void {
     assert(typeof authoring.inspect === "function", `NLE Effect authoring ${key} inspect is not callable.`);
     assert(typeof authoring.edit === "function", `NLE Effect authoring ${key} edit is not callable.`);
   }
+  for (const authoring of value.transitionParameters ?? []) {
+    const key = nlePackageSymbolKey(authoring.transition);
+    assert(!keys.has(`transition:${key}`), `NLE authoring package repeats Transition parameters ${key}.`);
+    keys.add(`transition:${key}`);
+    assert(typeof authoring.inspect === "function", `NLE Transition authoring ${key} inspect is not callable.`);
+    assert(typeof authoring.edit === "function", `NLE Transition authoring ${key} edit is not callable.`);
+  }
+  for (const authoring of value.matteParameters ?? []) {
+    const key = nlePackageSymbolKey(authoring.matte);
+    assert(!keys.has(`matte:${key}`), `NLE authoring package repeats Matte parameters ${key}.`);
+    keys.add(`matte:${key}`);
+    assert(typeof authoring.inspect === "function", `NLE Matte authoring ${key} inspect is not callable.`);
+    assert(typeof authoring.edit === "function", `NLE Matte authoring ${key} edit is not callable.`);
+  }
 }
 
 function locateComponent(project: NleProject, itemId: string): NleComponentParameterAuthoringContext {
@@ -122,6 +188,18 @@ function locateEffect(
   if (pictureEffect !== undefined) return { project, item, effect: pictureEffect, medium: "picture" };
   if (audioEffect !== undefined) return { project, item, effect: audioEffect, medium: "audio" };
   throw new Error(`Unknown NLE Effect ${itemId}.${effectId}.`);
+}
+
+function locateTransition(project: NleProject, transitionId: string): NleTransitionParameterAuthoringContext {
+  const transition = project.transitions.find((candidate) => candidate.id === transitionId);
+  if (transition === undefined) throw new Error(`Unknown NLE Transition ${transitionId}.`);
+  return { project, transition };
+}
+
+function locateMatte(project: NleProject, matteId: string): NleMatteParameterAuthoringContext {
+  const matte = project.mattes.find((candidate) => candidate.id === matteId);
+  if (matte === undefined) throw new Error(`Unknown NLE Matte ${matteId}.`);
+  return { project, matte };
 }
 
 function replaceEffectParameters(
@@ -154,6 +232,8 @@ export function nleAuthoringPackagesFromFacets(facets: readonly Facet[]): readon
 export function createNleAuthoringHost(packages: readonly NleAuthoringPackage[]): NleAuthoringHost {
   const components = new Map<string, NleComponentParameterAuthoring>();
   const effects = new Map<string, NleEffectParameterAuthoring>();
+  const transitions = new Map<string, NleTransitionParameterAuthoring>();
+  const mattes = new Map<string, NleMatteParameterAuthoring>();
   for (const value of packages) {
     assertPackage(value);
     for (const authoring of value.componentParameters ?? []) {
@@ -166,6 +246,16 @@ export function createNleAuthoringHost(packages: readonly NleAuthoringPackage[])
       assert(!effects.has(key), `NLE authoring Host has multiple Effect parameter owners for ${key}.`);
       effects.set(key, authoring);
     }
+    for (const authoring of value.transitionParameters ?? []) {
+      const key = nlePackageSymbolKey(authoring.transition);
+      assert(!transitions.has(key), `NLE authoring Host has multiple Transition parameter owners for ${key}.`);
+      transitions.set(key, authoring);
+    }
+    for (const authoring of value.matteParameters ?? []) {
+      const key = nlePackageSymbolKey(authoring.matte);
+      assert(!mattes.has(key), `NLE authoring Host has multiple Matte parameter owners for ${key}.`);
+      mattes.set(key, authoring);
+    }
   }
   const resolveComponent = (context: NleComponentParameterAuthoringContext): NleComponentParameterAuthoring => {
     const key = nlePackageSymbolKey(context.item.component);
@@ -177,6 +267,20 @@ export function createNleAuthoringHost(packages: readonly NleAuthoringPackage[])
     const key = nlePackageSymbolKey(context.effect.effect);
     const authoring = effects.get(key);
     if (authoring === undefined) throw new Error(`NLE Effect parameter authoring ${key} is not installed.`);
+    return authoring;
+  };
+  const resolveTransition = (
+    context: NleTransitionParameterAuthoringContext,
+  ): NleTransitionParameterAuthoring => {
+    const key = nlePackageSymbolKey(context.transition.operator);
+    const authoring = transitions.get(key);
+    if (authoring === undefined) throw new Error(`NLE Transition parameter authoring ${key} is not installed.`);
+    return authoring;
+  };
+  const resolveMatte = (context: NleMatteParameterAuthoringContext): NleMatteParameterAuthoring => {
+    const key = nlePackageSymbolKey(context.matte.operator);
+    const authoring = mattes.get(key);
+    if (authoring === undefined) throw new Error(`NLE Matte parameter authoring ${key} is not installed.`);
     return authoring;
   };
   return {
@@ -207,6 +311,36 @@ export function createNleAuthoringHost(packages: readonly NleAuthoringPackage[])
         commands: [{
           kind: "item.replace",
           item: replaceEffectParameters(context.item, effectId, parameters),
+        }],
+      };
+    },
+    inspectTransitionParameters: (project, transitionId) => {
+      const context = locateTransition(project, transitionId);
+      return canonicalize(resolveTransition(context).inspect(context));
+    },
+    planTransitionParameterEdit: (project, transitionId, operation) => {
+      const context = locateTransition(project, transitionId);
+      const parameters = canonicalize(resolveTransition(context).edit(canonicalize(operation), context));
+      return {
+        revision: project.revision,
+        commands: [{
+          kind: "transition.replace",
+          transition: { ...structuredClone(context.transition), parameters },
+        }],
+      };
+    },
+    inspectMatteParameters: (project, matteId) => {
+      const context = locateMatte(project, matteId);
+      return canonicalize(resolveMatte(context).inspect(context));
+    },
+    planMatteParameterEdit: (project, matteId, operation) => {
+      const context = locateMatte(project, matteId);
+      const parameters = canonicalize(resolveMatte(context).edit(canonicalize(operation), context));
+      return {
+        revision: project.revision,
+        commands: [{
+          kind: "matte.replace",
+          matte: { ...structuredClone(context.matte), parameters },
         }],
       };
     },

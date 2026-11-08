@@ -83,6 +83,10 @@ export type {
   NleComponentParameterAuthoringContext,
   NleEffectParameterAuthoring,
   NleEffectParameterAuthoringContext,
+  NleMatteParameterAuthoring,
+  NleMatteParameterAuthoringContext,
+  NleTransitionParameterAuthoring,
+  NleTransitionParameterAuthoringContext,
 } from "./authoring.js";
 export {
   createComponentMaterialization,

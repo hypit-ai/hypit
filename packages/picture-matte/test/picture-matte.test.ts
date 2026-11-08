@@ -11,6 +11,7 @@ import {
   pictureMatteOperator,
   pictureMatteProducers,
   pictureMatteNleSymbol,
+  pictureMatteNleAuthoring,
 } from "../src/index.js";
 import { hypitPackage as pictureMatteHypitPackage } from "../src/activation.js";
 
@@ -52,4 +53,11 @@ test("the package resolves a direct NLE Matte relation", () => {
     operator: pictureMatteNleSymbol, parameters: canonicalize(spec),
   }, {} as never);
   assert.deepEqual(resolved, { operator: pictureMatteOperator("luminance", true) });
+  assert.deepEqual(pictureMatteNleAuthoring.inspect({ matte: {
+    id: "key", content: "content", matte: "mask",
+    operator: pictureMatteNleSymbol, parameters: canonicalize(spec),
+  } } as never), canonicalize(spec));
+  assert.deepEqual(pictureMatteNleAuthoring.edit({
+    kind: "set-spec", spec: { channel: "alpha", invert: false },
+  }, {} as never), canonicalize({ channel: "alpha", invert: false }));
 });

@@ -30,4 +30,9 @@ export {
   zoomDissolveOperator,
 } from "./program.js";
 export type { IrisShape, TransitionDirection, TransitionEasing, TransitionOperatorSpec, PictureTransitionProgram } from "./program.js";
-export { pictureTransitionNleResolver, pictureTransitionNleSymbol } from "./nle.js";
+export {
+  pictureTransitionNleAuthoring,
+  pictureTransitionNleResolver,
+  pictureTransitionNleSymbol,
+} from "./nle.js";
+export type { PictureTransitionNleEdit } from "./nle.js";

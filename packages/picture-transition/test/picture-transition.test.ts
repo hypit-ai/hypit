@@ -26,6 +26,7 @@ import {
   slideOperator,
   transitionOperator,
   pictureTransitionComponent,
+  pictureTransitionNleAuthoring,
   pictureTransitionProducers,
   pictureTransitionNleSymbol,
   zoomDissolveEffect,
@@ -209,4 +210,11 @@ test("the package resolves a direct NLE Transition against its overlap domain", 
       operator: pictureTransitionNleSymbol, parameters: canonicalize(spec),
     }, { domain } as never);
   assert.deepEqual(resolved, { operator: transitionOperator(spec, domain) });
+  assert.deepEqual(pictureTransitionNleAuthoring.inspect({ transition: {
+    id: "join", outgoing: "left", incoming: "right",
+    operator: pictureTransitionNleSymbol, parameters: canonicalize(spec),
+  } } as never), canonicalize(spec));
+  const changed = { kind: "push", direction: "left", easing: "ease-out" } as const;
+  assert.deepEqual(pictureTransitionNleAuthoring.edit({ kind: "set-spec", spec: changed }, {} as never),
+    canonicalize(changed));
 });

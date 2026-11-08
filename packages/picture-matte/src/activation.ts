@@ -1,10 +1,10 @@
 import { createProducerPackageFacet } from "@hypit/producer";
 import { createRefinementPackageFacet } from "@hypit/refinement";
-import { createNlePackageFacet } from "@hypit/nle";
+import { createNleAuthoringFacet, createNlePackageFacet } from "@hypit/nle";
 
 import { pictureMatteComponent } from "./component.js";
 import { pictureMatteManifest } from "./manifest.js";
-import { pictureMatteNleResolver } from "./nle.js";
+import { pictureMatteNleAuthoring, pictureMatteNleResolver } from "./nle.js";
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
@@ -13,6 +13,7 @@ export const hypitPackage = {
     createProducerPackageFacet(pictureMatteComponent.producers),
     createRefinementPackageFacet(pictureMatteComponent.refinements),
     createNlePackageFacet({ mattes: [pictureMatteNleResolver] }),
+    createNleAuthoringFacet({ matteParameters: [pictureMatteNleAuthoring] }),
   ],
 };
 
