@@ -18,5 +18,6 @@ The package does not know whether timing came from speech alignment, SRT/WebVTT,
 another adapter. It also does not activate a Hypit module or depend on Audiovisual, HTML, NLE,
 Runtime, Provider or SVML.
 
-`@hypit/caption-basic` is one concrete NLE Caption family. It owns presentation rules, materialized
-Cue payloads, Karaoke behavior and HTML rendering without changing this neutral document model.
+Concrete NLE Caption components own presentation rules, materialized Cue payloads, Karaoke behavior
+and HTML rendering without changing this neutral document model. The official HTML implementation is
+currently `@hypit/caption-fine`; a simpler visual treatment is a Style value, not another Caption core.

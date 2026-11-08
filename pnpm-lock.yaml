@@ -75,9 +75,9 @@ importers:
       '@hypit/author':
         specifier: workspace:*
         version: link:packages/author
-      '@hypit/caption-basic':
+      '@hypit/caption-fine':
         specifier: workspace:*
-        version: link:packages/caption-basic
+        version: link:packages/caption-fine
       '@hypit/markup':
         specifier: workspace:*
         version: link:packages/markup
@@ -568,42 +568,6 @@ importers:
 
   packages/caption:
     dependencies:
-      '@hypit/temporal':
-        specifier: workspace:^0.1.1
-        version: link:../temporal
-
-  packages/caption-basic:
-    dependencies:
-      '@hypit/audiovisual':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual
-      '@hypit/audiovisual-html':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual-html
-      '@hypit/caption':
-        specifier: workspace:^0.1.1
-        version: link:../caption
-      '@hypit/caption-nle':
-        specifier: workspace:^0.1.0
-        version: link:../caption-nle
-      '@hypit/html-program':
-        specifier: workspace:^0.2.0
-        version: link:../html-program
-      '@hypit/html-video':
-        specifier: workspace:^0.2.1
-        version: link:../html-video
-      '@hypit/media':
-        specifier: workspace:^0.2.0
-        version: link:../media
-      '@hypit/nle':
-        specifier: workspace:^0.1.0
-        version: link:../nle
-      '@hypit/protocol':
-        specifier: workspace:^0.0.0-dev
-        version: link:../protocol
-      '@hypit/spatial':
-        specifier: workspace:^0.1.1
-        version: link:../spatial
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal

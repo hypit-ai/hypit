@@ -4,11 +4,11 @@ import { pathToFileURL } from "node:url";
 import {
   appendCaptionHiddenOverride,
   appendCaptionStyleOverride,
-  createCaptionNleMaterializationForMediaItem,
+  createCaptionFineNleMaterializationForMediaItem,
   createCaptionPresentation,
   type CaptionPresentation,
   type CaptionStyle,
-} from "@hypit/caption-basic";
+} from "@hypit/caption-fine";
 import {
   assertCaptionCuePayload,
   captionCueText,
@@ -42,20 +42,28 @@ const at = (seconds: number): ExactTemporalValue => exactTemporalValue({
   numerator: BigInt(seconds), denominator: 1n,
 });
 
-const baseStyle: CaptionStyle = { id: "base", family: "basic", parameters: {
-  color: "#ffffff", background: "#000000cc", fontSize: 44,
+const baseStyle: CaptionStyle = { id: "base", family: "fine", parameters: {
+  color: "#ffffff", fontSize: 44, fontWeight: 600, outlineWidth: 0, shadowColor: "#00000000",
+  cueBox: { background: "#000000cc", paddingX: 12, paddingY: 12, borderRadius: 8 },
+  entry: { kind: "none" },
   karaoke: { mode: "trail", transition: "wipe", activeColor: "#ffd54a" },
 } };
-const aliceStyle: CaptionStyle = { id: "alice", family: "basic", parameters: {
-  color: "#7dd3fc", background: "#082f49dd", fontSize: 46,
+const aliceStyle: CaptionStyle = { id: "alice", family: "fine", parameters: {
+  color: "#7dd3fc", fontSize: 46, fontWeight: 600, outlineWidth: 0, shadowColor: "#00000000",
+  cueBox: { background: "#082f49dd", paddingX: 12, paddingY: 12, borderRadius: 8 },
+  entry: { kind: "none" },
   karaoke: { mode: "trail", transition: "wipe", activeColor: "#fef08a" },
 } };
-const bobStyle: CaptionStyle = { id: "bob", family: "basic", parameters: {
-  color: "#f0abfc", background: "#4a044edd", fontSize: 46,
+const bobStyle: CaptionStyle = { id: "bob", family: "fine", parameters: {
+  color: "#f0abfc", fontSize: 46, fontWeight: 600, outlineWidth: 0, shadowColor: "#00000000",
+  cueBox: { background: "#4a044edd", paddingX: 12, paddingY: 12, borderRadius: 8 },
+  entry: { kind: "none" },
   karaoke: { mode: "current", transition: "step", activeColor: "#86efac" },
 } };
-const warningStyle: CaptionStyle = { id: "warning", family: "basic", parameters: {
-  color: "#ffffff", background: "#b91c1c", fontSize: 54, fontWeight: 800,
+const warningStyle: CaptionStyle = { id: "warning", family: "fine", parameters: {
+  color: "#ffffff", fontSize: 54, fontWeight: 800, outlineWidth: 0, shadowColor: "#00000000",
+  cueBox: { background: "#b91c1c", paddingX: 12, paddingY: 12, borderRadius: 8 },
+  entry: { kind: "none" },
   karaoke: { mode: "trail", transition: "wipe", activeColor: "#fde047" },
 } };
 
@@ -172,7 +180,7 @@ export async function buildCaptionMaterializationExample(): Promise<{
       documentId: document.id,
       unitIds,
     });
-    const captionTransaction = createCaptionNleMaterializationForMediaItem(project, {
+    const captionTransaction = createCaptionFineNleMaterializationForMediaItem(project, {
       id: `captions:${parsedSegment.id}`,
       mediaItem: itemId,
       track: "captions",

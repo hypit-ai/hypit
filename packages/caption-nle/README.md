@@ -8,6 +8,6 @@ Media Item and construction of complete `CaptionCuePayload` values. A Caption fa
 logical component symbol and the parameters it wants persisted for one Cue. The materialized NLE keeps
 no Script, Narrative, transcript, media-origin or named timing dependency.
 
-This is an authoring adapter rather than a runtime Caption registry. Packages such as
-`@hypit/caption-basic`, `@hypit/caption-fine`, or a project's own Caption family independently own
-their NLE and terminal resolvers.
+This is an authoring adapter rather than a runtime Caption registry. `@hypit/caption-fine` and a
+project's own Caption components independently own their NLE and terminal resolvers. A simpler look is
+an ordinary Style passed to the same component, not a second rendering family.

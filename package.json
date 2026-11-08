@@ -258,7 +258,7 @@
   },
   "devDependencies": {
     "@hypit/author": "workspace:*",
-    "@hypit/caption-basic": "workspace:*",
+    "@hypit/caption-fine": "workspace:*",
     "@hypit/markup": "workspace:*",
     "@hypit/media": "workspace:*",
     "@hypit/narrative": "workspace:*",
