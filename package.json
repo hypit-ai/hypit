@@ -264,6 +264,7 @@
   },
   "dependencies": {
     "@hypit/build-cli": "workspace:^0.1.0",
+    "@hypit/generation-graph-cli": "workspace:^0.0.0-dev",
     "@hypit/browser-capture": "workspace:^0.2.1",
     "@hypit/speech-estimate": "workspace:^0.1.2",
     "@hypit/media-local-cli": "workspace:^0.1.0",

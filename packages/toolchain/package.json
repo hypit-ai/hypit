@@ -32,6 +32,7 @@
     "@hypit/fishaudio-speech": "workspace:^0.3.0",
     "@hypit/fontsource": "workspace:^0.2.1",
     "@hypit/generation": "workspace:^0.2.0",
+    "@hypit/generation-graph-cli": "workspace:^0.0.0-dev",
     "@hypit/gpt-image": "workspace:^0.3.0",
     "@hypit/gpt-image-kits": "workspace:^0.1.2",
     "@hypit/grok-imagine": "workspace:^0.3.0",

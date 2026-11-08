@@ -31,6 +31,7 @@ const { runInstalledCliApplication, runNodeCli } = await import(new URL("package
 const { createToolchainApplicationServices } = await import("@hypit/toolchain");
 const { createToolchainCliCommandModules } = await import("@hypit/toolchain/cli");
 const { createBuildCliCommandModules } = await import("@hypit/build-cli");
+const { createGenerationGraphCliCommandModules } = await import("@hypit/generation-graph-cli");
 const { createLocalRuntimeCliCommandModules } = await import("@hypit/runtime-local-cli");
 const { createLocalMediaCliCommandModules } = await import("@hypit/media-local-cli");
 const { createLocalNleCliCommandModules } = await import("@hypit/nle-local-cli");
@@ -44,6 +45,7 @@ await runNodeCli(args, async (argv, io) => await runInstalledCliApplication(argv
   distributionRoot,
   commandModules: [
     ...createBuildCliCommandModules(toolchainServices.build),
+    ...createGenerationGraphCliCommandModules(toolchainServices.generation),
     ...createLocalRuntimeCliCommandModules(toolchainServices.localRuntime),
     ...createLocalMediaCliCommandModules(),
     ...createLocalNleCliCommandModules({ distributionPackageRoot: distributionRoot }),

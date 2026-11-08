@@ -20,6 +20,7 @@ respective packages and contribute their own CLI roots:
 | `media` | `@hypit/media-local-cli` |
 | `estimate` | `@hypit/speech-estimate/cli` |
 | `transcribe` | `@hypit/whisperx/cli` |
+| `generation run` | `@hypit/generation-graph-cli` |
 | `nle export` | `@hypit/nle-local-cli` |
 | `vocabulary` | `@hypit/toolchain/cli` |
 
@@ -30,8 +31,8 @@ Installing or importing an arbitrary Source package never grants it CLI or proce
 
 ## Application assembly
 
-`createToolchainApplicationServices()` returns two explicit ports: `build` for long compilation and
-Result work, and `localRuntime` for Local Runtime lifecycle commands. The generic CLI Host receives
+`createToolchainApplicationServices()` returns three explicit ports: `build` for Source compilation and
+Result work, `generation` for explicit Generation Graph submission, and `localRuntime` for Local Runtime lifecycle commands. The generic CLI Host receives
 neither service object; the executable captures each one in its owning command module.
 
 The application services select the official toolchain choices:
@@ -41,6 +42,8 @@ The application services select the official toolchain choices:
 - `createToolchainWorkspace()` resolves Source and asset imports from the project and selected
   Distribution without treating arbitrary package directories as projects;
 - `discoverToolchainSourcePackages()` discovers the closure named by explicit Author imports;
+- Generation Graph submission loads only the logical component packages named by graph nodes and
+  reuses the same Runtime/Profile and publication stores as other long-running work;
 - the starter Runtime Profile selects ordinary independently distributed Providers and Credential
   Stores by package name;
 - Local Runtime and project publication-store adapters remain Host concerns and do not enter Author values.

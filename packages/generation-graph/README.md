@@ -86,6 +86,18 @@ preflight: an application uses the common long-running submission seam and may p
 as its domain-owned post-acceptance action. The lower-level structural Runtime port remains available to
 embeddings, but it is not a second execution stack.
 
+The official application exposes that thin composition as:
+
+```bash
+hypit generation run images.graph.json --target hero
+```
+
+`@hypit/generation-graph-cli` parses only the project, Target selection and Host options. It asks Loader for
+the logical Modules named by the nodes, opens the project Product store, and prepares the finite selection.
+An exact Product selection returns before opening Runtime. New work uses the shared `submitLongBuild()` path;
+the existing `status`, `inspect`, `result` and `cancel` commands then observe the Build. The command does not
+introduce a Graph-specific queue, Result repository or execution service.
+
 The revisioned transaction API edits the project atomically. Removing the currently selected Product first
 requires a `node.select` command in the same transaction. Physical deletion of the tiny file is a Host action
 after publication of the new project revision; Product bytes and immutable Result history are not deleted.

@@ -14,6 +14,9 @@ importers:
       '@hypit/build-cli':
         specifier: workspace:^0.1.0
         version: link:packages/build-cli
+      '@hypit/generation-graph-cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:packages/generation-graph-cli
       '@hypit/media-local-cli':
         specifier: workspace:^0.1.0
         version: link:packages/media-local-cli
@@ -820,6 +823,31 @@ importers:
       '@hypit/protocol':
         specifier: workspace:^0.0.0-dev
         version: link:../protocol
+
+  packages/generation-graph-cli:
+    dependencies:
+      '@hypit/build-cli':
+        specifier: workspace:^0.1.0
+        version: link:../build-cli
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
+      '@hypit/generation-graph':
+        specifier: workspace:^0.0.0-dev
+        version: link:../generation-graph
+      '@hypit/loader':
+        specifier: workspace:^0.0.0-dev
+        version: link:../loader
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+    devDependencies:
+      '@hypit/author':
+        specifier: workspace:*
+        version: link:../author
+      '@hypit/product':
+        specifier: workspace:^0.0.0-dev
+        version: link:../product
 
   packages/gpt-image:
     dependencies:
@@ -2500,6 +2528,9 @@ importers:
       '@hypit/generation':
         specifier: workspace:^0.2.0
         version: link:../generation
+      '@hypit/generation-graph-cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../generation-graph-cli
       '@hypit/gpt-image':
         specifier: workspace:^0.3.0
         version: link:../gpt-image

@@ -1,0 +1,25 @@
+{
+  "name": "@hypit/generation-graph-cli",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@hypit/build-cli": "workspace:^0.1.0",
+    "@hypit/cli": "workspace:^0.0.0-dev",
+    "@hypit/generation-graph": "workspace:^0.0.0-dev",
+    "@hypit/loader": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev"
+  },
+  "devDependencies": {
+    "@hypit/author": "workspace:*",
+    "@hypit/product": "workspace:^0.0.0-dev"
+  }
+}

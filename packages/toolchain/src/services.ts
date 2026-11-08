@@ -1,4 +1,5 @@
 import type { BuildCliServices } from "@hypit/build-cli";
+import type { GenerationGraphCliServices } from "@hypit/generation-graph-cli";
 import { productExporterForType, productExportersFromFacets } from "@hypit/product";
 import { loadNodePackageSelection } from "@hypit/loader/node";
 import { moduleKey, modulePackageAbi } from "@hypit/protocol";
@@ -27,6 +28,7 @@ export type ToolchainApplicationOptions = {
 
 export type ToolchainApplicationServices = {
   readonly build: BuildCliServices;
+  readonly generation: GenerationGraphCliServices;
   readonly localRuntime: LocalRuntimeCliServices;
 };
 
@@ -121,5 +123,13 @@ export function createToolchainApplicationServices(
     },
     diagnoseProjectResults: async (projectRoot) => await doctorProjectPublicationStores(projectRoot),
   };
-  return { build, localRuntime };
+  const generation: GenerationGraphCliServices = {
+    packageRoot,
+    resolveProjectRuntime: async (projectRoot) => await build.resolveProjectRuntime?.(projectRoot),
+    openRuntimeHost: openToolchainLocalRuntime,
+    openProjectResults: build.openProjectResults,
+    loadPackages: async (request, root, loadOptions) =>
+      await loadNodePackageSelection(request, root, loadOptions),
+  };
+  return { build, generation, localRuntime };
 }

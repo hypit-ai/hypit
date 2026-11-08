@@ -13,6 +13,7 @@ import {
 import {
   acceptGenerationGraphBuild,
   prepareGenerationGraphTargets,
+  type PreparedGenerationGraphBuild,
   type PreparedGenerationGraphSelection,
 } from "../prepare.js";
 import type {
@@ -85,6 +86,26 @@ export type GenerationGraphRuntimePort<Submission extends { readonly id: string 
   build(request: GenerationGraphRuntimeRequest): Promise<Submission>;
 };
 
+export function createGenerationGraphRuntimeRequest(input: {
+  readonly projectPath: string;
+  readonly prepared: PreparedGenerationGraphBuild;
+  readonly publicationStores: GenerationGraphPublicationStoreLocation;
+  readonly build: string;
+}): GenerationGraphRuntimeRequest {
+  return {
+    id: input.build,
+    definition: input.prepared.definition,
+    executionPackages: input.prepared.executionPackages,
+    authoring: {
+      sourcePath: input.projectPath,
+      targets: input.prepared.targets.map((target) => target.node),
+      publication: input.prepared.publication,
+    },
+    attachments: input.prepared.attachments,
+    publicationStores: input.publicationStores,
+  };
+}
+
 export type ExecutedGenerationGraphSelection<Submission extends { readonly id: string }> =
   | {
       readonly kind: "reuse";
@@ -107,6 +128,21 @@ export class AcceptedGenerationGraphBuildNotAttached extends Error {
   }
 }
 
+export async function attachAcceptedGenerationGraphBuild(input: {
+  readonly projectPath: string;
+  readonly prepared: PreparedGenerationGraphBuild;
+  readonly build: string;
+}): Promise<GenerationGraphProject> {
+  try {
+    return await commitAcceptedGenerationGraphBuild(
+      input.projectPath,
+      acceptGenerationGraphBuild(input.prepared, input.build),
+    );
+  } catch (error) {
+    throw new AcceptedGenerationGraphBuildNotAttached(input.build, error);
+  }
+}
+
 /**
  * Complete local orchestration. Runtime acceptance precedes the author transaction; accepted work is never
  * rolled back or silently attached to another revision when concurrent editing wins.
@@ -124,28 +160,19 @@ export async function executeNodeGenerationGraphTargets<Submission extends { rea
   const prepared = await input.host.prepare(project, input.targets);
   if (prepared.kind === "reuse") return { kind: "reuse", prepared };
   const build = input.build;
-  const submission = await input.runtime.build({
-    id: build,
-    definition: prepared.definition,
-    executionPackages: prepared.executionPackages,
-    authoring: {
-      sourcePath: input.projectPath,
-      targets: prepared.targets.map((target) => target.node),
-      publication: prepared.publication,
-    },
-    attachments: prepared.attachments,
+  const submission = await input.runtime.build(createGenerationGraphRuntimeRequest({
+    projectPath: input.projectPath,
+    prepared,
     publicationStores: input.publicationStores,
-  });
+    build,
+  }));
   if (submission.id !== build) {
     throw new Error(`Runtime accepted Generation Build as ${submission.id}, not ${build}.`);
   }
-  try {
-    const updated = await commitAcceptedGenerationGraphBuild(
-      input.projectPath,
-      acceptGenerationGraphBuild(prepared, build),
-    );
-    return { kind: "build", prepared, submission, project: updated };
-  } catch (error) {
-    throw new AcceptedGenerationGraphBuildNotAttached(build, error);
-  }
+  const updated = await attachAcceptedGenerationGraphBuild({
+    projectPath: input.projectPath,
+    prepared,
+    build,
+  });
+  return { kind: "build", prepared, submission, project: updated };
 }

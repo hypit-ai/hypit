@@ -1,6 +1,8 @@
 export * from "../index.js";
 export {
   AcceptedGenerationGraphBuildNotAttached,
+  attachAcceptedGenerationGraphBuild,
+  createGenerationGraphRuntimeRequest,
   createNodeGenerationGraphProjectHost,
   executeNodeGenerationGraphTargets,
 } from "./host.js";
