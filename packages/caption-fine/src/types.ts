@@ -48,10 +48,21 @@ export type CaptionFineBoxParameters = {
   readonly borderRadius?: number;
   readonly paddingX?: number;
   readonly paddingY?: number;
+  readonly shadow?: {
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly blur?: number;
+    readonly offsetX?: number;
+    readonly offsetY?: number;
+    readonly spread?: number;
+  };
 };
 
 export type CaptionFineActiveBoxParameters = CaptionFineBoxParameters & {
   readonly mode?: "off" | "current" | "trail";
+  readonly enter?: CaptionFineOneShotMotion;
+  readonly exit?: CaptionFineOneShotMotion;
+  readonly transitionFrames?: number;
 };
 
 export type CaptionFineUnderlineParameters = {
@@ -172,6 +183,7 @@ export type CaptionFineStyleParameters = {
   readonly entry?: {
     readonly kind?: CaptionFineOneShotMotion;
     readonly frames?: number;
+    readonly startScale?: number;
   };
   readonly exit?: {
     readonly kind?: CaptionFineOneShotMotion;

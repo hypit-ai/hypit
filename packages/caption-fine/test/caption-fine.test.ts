@@ -113,11 +113,13 @@ const base: CaptionStyle = { id: "base", family: "fine", parameters: {
     glow: { color: "#facc15", opacity: 0.8, blur: 14, spread: 2 },
     longShadow: { color: "#7c2d12", opacity: 0.7, distance: 10, angleDeg: 35, steps: 10 },
   },
-  cueBox: { continuity: "joined", background: "#111827cc", paddingX: 14, paddingY: 8 },
-  activeBox: { mode: "current", continuity: "joined", background: "#2563eb88", borderRadius: 8 },
+  cueBox: { continuity: "joined", background: "#111827cc", paddingX: 14, paddingY: 8,
+    shadow: { color: "#000000", opacity: 0.65, blur: 12, offsetY: 5, spread: 2 } },
+  activeBox: { mode: "current", continuity: "joined", background: "#2563eb88", borderRadius: 8,
+    enter: "pop", exit: "fade", transitionFrames: 3 },
   underline: { mode: "always", color: "#ffffff", thickness: 2, offset: 4 },
   activeUnderline: { mode: "current", color: "#ffd54a", thickness: 3, offset: 5, style: "wavy" },
-  entry: { kind: "elastic", frames: 8 },
+  entry: { kind: "elastic", frames: 8, startScale: 0.4 },
   exit: { kind: "wipe-right", frames: 6 },
   atom: { enter: "spring", enterFrames: 5, exit: "fade", exitFrames: 4, reveal: "typewriter" },
   activeResponse: { kind: "bounce", frames: 4, scale: 1.08 },
@@ -204,7 +206,19 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
   assert.match(setup, /data\.layout\.overflow !== 'shrink'/u);
   assert.match(setup, /data\.activePaint\.outline\.width/u);
   assert.match(setup, /data\.activePaint\.longShadow\.steps/u);
-  assert.equal((visual.data as { activePaint: { outline: { width: number } } }).activePaint.outline.width, 5);
+  assert.match(setup, /const activeBoxAt/u);
+  assert.match(setup, /data\.entry\.startScale/u);
+  const visualData = visual.data as {
+    activePaint: { outline: { width: number } };
+    cueBox: { shadow: { opacity: number } };
+    activeBox: { enter: string; exit: string; transitionFrames: number };
+    entry: { startScale: number };
+  };
+  assert.equal(visualData.activePaint.outline.width, 5);
+  assert.equal(visualData.cueBox.shadow.opacity, 0.65);
+  assert.deepEqual([visualData.activeBox.enter, visualData.activeBox.exit,
+    visualData.activeBox.transitionFrames], ["pop", "fade", 3]);
+  assert.equal(visualData.entry.startScale, 0.4);
 
   const authoring = createNleAuthoringHostFromFacets(hypitPackage.facets);
   const restyled = applyNleTransaction(project, authoring.planComponentParameterEdit(project, alice.id, {
@@ -237,4 +251,37 @@ test("Fine Caption rejects family parameters the package does not own", () => {
   assert.throws(() => lowerNleProjectToHtmlProgram(materialized,
     createNleTerminalLinkHostFromFacets(hypitPackage.facets),
     { numerator: 30, denominator: 1 }), /field semanticFollow is unknown/u);
+});
+
+test("Caption visibility policy bakes lead, tail and same-role handoff into direct Item times", () => {
+  const style: CaptionStyle = {
+    id: "visible",
+    family: "fine",
+    parameters: { color: "#ffffff" },
+    visibility: { lead: at(1), tail: at(2), handoff: "cut" },
+  };
+  const presentation = appendCaptionHiddenOverride(createCaptionPresentation(style), {
+    id: "hide-last",
+    selector: { cues: ["cue-hidden"] },
+  });
+  let project = createNleProject({
+    id: "caption-envelope", name: "Caption envelope", editRate: { numerator: 30, denominator: 1 },
+    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
+  });
+  project = applyNleTransaction(project, { revision: project.revision, commands: [{
+    kind: "track.add",
+    track: { id: "captions", name: "Captions", kind: "picture", locked: false, muted: false, items: [] },
+  }] });
+  project = applyNleTransaction(project, createCaptionFineNleMaterialization(project, {
+    id: "dialogue", track: "captions", document, timing, presentation, at: at(0),
+    picture: { layout: { x: 0, y: 0, width: 1080, height: 320, fit: "fill" }, effects: [] },
+  }));
+
+  const [alice, bobItem, hidden] = project.tracks[0]!.items;
+  assert.deepEqual([alice?.start, alice?.duration], [at(0), at(4)]);
+  assert.deepEqual([bobItem?.start, bobItem?.duration], [at(2), at(3)]);
+  assert.deepEqual([hidden?.start, hidden?.duration, hidden?.enabled], [at(5), at(3), false]);
+  if (bobItem?.kind !== "component") throw new Error("Bob Caption is not a Component.");
+  const bobCaption = (bobItem.parameters as { caption: { units: readonly { start: unknown }[] } }).caption;
+  assert.deepEqual(bobCaption.units[0]?.start, at(1));
 });

@@ -10,9 +10,12 @@ import {
 } from "@hypit/caption";
 import { canonicalStringify } from "@hypit/protocol";
 import {
+  assertExactTemporalValue,
   assertTemporalMap,
   assertTemporalMapRegionSet,
+  compareExactTemporalValues,
   compareTemporalMapPoints,
+  exactTemporalZero,
   preimageTemporalMapRegions,
   type TemporalMap,
   type TemporalMapRegion,
@@ -58,6 +61,19 @@ export function assertCaptionStyle<Family extends string>(value: CaptionStyle<Fa
   assert(typeof value.family === "string" && value.family.trim().length > 0,
     "CaptionStyle family is invalid.");
   assert(value.parameters !== undefined, "CaptionStyle parameters are missing.");
+  if (value.visibility !== undefined) {
+    assert(value.visibility !== null && typeof value.visibility === "object" && !Array.isArray(value.visibility),
+      "CaptionStyle visibility is invalid.");
+    for (const [name, duration] of [["lead", value.visibility.lead], ["tail", value.visibility.tail]] as const) {
+      if (duration === undefined) continue;
+      assertExactTemporalValue(duration, `CaptionStyle visibility ${name}`);
+      assert(compareExactTemporalValues(duration, exactTemporalZero()) >= 0,
+        `CaptionStyle visibility ${name} must be non-negative.`);
+    }
+    assert(value.visibility.handoff === undefined
+      || value.visibility.handoff === "cut" || value.visibility.handoff === "overlap",
+    "CaptionStyle visibility handoff is invalid.");
+  }
 }
 
 export function assertCaptionPresentationOverrideSpec(value: CaptionPresentationOverrideSpec): void {

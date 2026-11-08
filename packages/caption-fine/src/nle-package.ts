@@ -102,6 +102,13 @@ function alphaHex(value: string, opacity: number): string {
   return `${value.slice(0, 7)}${alpha}`;
 }
 
+function boxShadowCss(value: NormalizedBox): string {
+  if (value.shadow.opacity <= 0) return "none";
+  return `${value.shadow.offsetX}px ${value.shadow.offsetY}px ${value.shadow.blur}px ${value.shadow.spread}px ${alphaHex(
+    value.shadow.color, value.shadow.opacity,
+  )}`;
+}
+
 function optionalFont(value: unknown, fallback = "system-ui, sans-serif"): string {
   if (value === undefined) return fallback;
   assert(typeof value === "string" && /^[A-Za-z0-9 ,'"-]{1,160}$/u.test(value),
@@ -120,8 +127,18 @@ function optionalChoice<const T extends readonly string[]>(
   return value as T[number];
 }
 
-type NormalizedBox = Required<CaptionFineBoxParameters>;
-type NormalizedActiveBox = Required<CaptionFineActiveBoxParameters>;
+type NormalizedBox = Required<Omit<CaptionFineBoxParameters, "shadow">> & {
+  readonly shadow: {
+    readonly color: string;
+    readonly opacity: number;
+    readonly blur: number;
+    readonly offsetX: number;
+    readonly offsetY: number;
+    readonly spread: number;
+  };
+};
+type NormalizedActiveBox = NormalizedBox & Required<Pick<CaptionFineActiveBoxParameters,
+  "mode" | "enter" | "exit" | "transitionFrames">>;
 type NormalizedUnderline = Required<CaptionFineUnderlineParameters>;
 type NormalizedActiveUnderline = Required<CaptionFineActiveUnderlineParameters>;
 
@@ -130,12 +147,21 @@ function box(value: unknown, active: true): NormalizedActiveBox;
 function box(value: unknown, active: boolean): NormalizedBox | NormalizedActiveBox {
   const input = value === undefined ? {} : record(value, active ? "Fine Caption activeBox" : "Fine Caption cueBox");
   exactKeys(input, active
-    ? ["mode", "continuity", "background", "borderColor", "borderWidth", "borderRadius", "paddingX", "paddingY"]
-    : ["continuity", "background", "borderColor", "borderWidth", "borderRadius", "paddingX", "paddingY"],
+    ? ["mode", "continuity", "background", "borderColor", "borderWidth", "borderRadius", "paddingX", "paddingY",
+      "shadow", "enter", "exit", "transitionFrames"]
+    : ["continuity", "background", "borderColor", "borderWidth", "borderRadius", "paddingX", "paddingY", "shadow"],
   active ? "Fine Caption activeBox" : "Fine Caption cueBox");
+  const shadowInput = input.shadow === undefined ? {} : record(input.shadow,
+    active ? "Fine Caption activeBox shadow" : "Fine Caption cueBox shadow");
+  exactKeys(shadowInput, ["blur", "color", "offsetX", "offsetY", "opacity", "spread"],
+    active ? "Fine Caption activeBox shadow" : "Fine Caption cueBox shadow");
   return {
     ...(active ? { mode: optionalChoice(input.mode, "off", ["off", "current", "trail"] as const,
-      "Fine Caption activeBox mode") } : {}),
+      "Fine Caption activeBox mode"),
+    enter: optionalChoice(input.enter, "none", oneShotMotions, "Fine Caption activeBox enter"),
+    exit: optionalChoice(input.exit, "none", oneShotMotions, "Fine Caption activeBox exit"),
+    transitionFrames: optionalInteger(input.transitionFrames, 4,
+      "Fine Caption activeBox transitionFrames", 0, 120) } : {}),
     continuity: optionalChoice(input.continuity, "isolated", ["isolated", "joined"] as const,
       "Fine Caption box continuity"),
     background: optionalColor(input.background, active ? "#ffd54a44" : "#00000000",
@@ -146,6 +172,14 @@ function box(value: unknown, active: boolean): NormalizedBox | NormalizedActiveB
     borderRadius: optionalNumber(input.borderRadius, active ? 8 : 12, "Fine Caption box borderRadius", 0, 200),
     paddingX: optionalNumber(input.paddingX, active ? 5 : 14, "Fine Caption box paddingX", 0, 200),
     paddingY: optionalNumber(input.paddingY, active ? 2 : 10, "Fine Caption box paddingY", 0, 200),
+    shadow: {
+      color: optionalColor(shadowInput.color, "#000000", "Fine Caption box shadow color"),
+      opacity: optionalNumber(shadowInput.opacity, 0, "Fine Caption box shadow opacity", 0, 1),
+      blur: optionalNumber(shadowInput.blur, 0, "Fine Caption box shadow blur", 0, 200),
+      offsetX: optionalNumber(shadowInput.offsetX, 0, "Fine Caption box shadow offsetX", -200, 200),
+      offsetY: optionalNumber(shadowInput.offsetY, 0, "Fine Caption box shadow offsetY", -200, 200),
+      spread: optionalNumber(shadowInput.spread, 0, "Fine Caption box shadow spread", 0, 100),
+    },
   } as NormalizedBox | NormalizedActiveBox;
 }
 
@@ -442,11 +476,13 @@ function resolveCaptionFine(item: NleComponentItem) {
       "Fine Caption activePaint.longShadow.steps", 1, 128),
   };
   const entryInput = style.entry === undefined ? {} : record(style.entry, "Fine Caption entry");
-  exactKeys(entryInput, ["kind", "frames"], "Fine Caption entry");
+  exactKeys(entryInput, ["kind", "frames", "startScale"], "Fine Caption entry");
   const entry = {
     kind: optionalChoice(entryInput.kind, "pop", oneShotMotions,
       "Fine Caption entry kind"),
     frames: optionalInteger(entryInput.frames, 5, "Fine Caption entry frames", 0, 120),
+    ...(entryInput.startScale === undefined ? {} : { startScale: optionalNumber(entryInput.startScale, 1,
+      "Fine Caption entry startScale", 0.01, 10) }),
   };
   const exitInput = style.exit === undefined ? {} : record(style.exit, "Fine Caption exit");
   exactKeys(exitInput, ["kind", "frames"], "Fine Caption exit");
@@ -598,7 +634,7 @@ function resolveCaptionFine(item: NleComponentItem) {
         layout: { overflow, minimumScale: minimumScale ?? 1 },
         underline: baseUnderline, activeUnderline },
       html: `<div data-hypit-caption-fine><span data-caption-layout><span data-caption-cue><svg data-caption-cue-union aria-hidden="true"><path></path></svg><svg data-caption-active-union aria-hidden="true"><path></path></svg><span data-caption-text-layer>${text.html}</span></span></span></div>`,
-      css: `:scope>[data-hypit-caption-fine]{position:absolute;inset:0;display:flex;align-items:${blockAlign === "start" ? "flex-start" : blockAlign === "center" ? "center" : "flex-end"};justify-content:${textAlign === "left" ? "flex-start" : textAlign === "center" ? "center" : "flex-end"};text-align:${textAlign};${overflow === "visible" ? "" : "overflow:hidden;"}}:scope [data-caption-layout]{display:inline-block;${inlineSize === "fixed" ? "width:100%;" : "width:max-content;max-width:100%;"}}:scope [data-caption-cue]{position:relative;display:inline-block;${inlineSize === "fixed" ? "width:100%;" : "max-width:100%;"}box-sizing:border-box;${cueBox.continuity === "isolated" ? `padding:${cueBox.paddingY}px ${cueBox.paddingX}px;background:${cueBox.background};border:${cueBox.borderWidth}px solid ${cueBox.borderColor};border-radius:${cueBox.borderRadius}px;` : ""}white-space:${wrap === "none" ? "nowrap" : "pre-wrap"};overflow-wrap:${wrap === "word" ? "anywhere" : "normal"};word-break:${wrap === "grapheme" ? "break-all" : "normal"};${overflow === "visible" ? "" : "overflow:hidden;"}}:scope [data-caption-cue-union],:scope [data-caption-active-union]{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}:scope [data-caption-cue-union]{z-index:0}:scope [data-caption-active-union]{z-index:1}:scope [data-caption-text-layer]{position:relative;z-index:2;${overflow === "ellipsis" ? `display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:${maxLines};overflow:hidden;` : ""}}`,
+      css: `:scope>[data-hypit-caption-fine]{position:absolute;inset:0;display:flex;align-items:${blockAlign === "start" ? "flex-start" : blockAlign === "center" ? "center" : "flex-end"};justify-content:${textAlign === "left" ? "flex-start" : textAlign === "center" ? "center" : "flex-end"};text-align:${textAlign};${overflow === "visible" ? "" : "overflow:hidden;"}}:scope [data-caption-layout]{display:inline-block;${inlineSize === "fixed" ? "width:100%;" : "width:max-content;max-width:100%;"}}:scope [data-caption-cue]{position:relative;display:inline-block;${inlineSize === "fixed" ? "width:100%;" : "max-width:100%;"}box-sizing:border-box;${cueBox.continuity === "isolated" ? `padding:${cueBox.paddingY}px ${cueBox.paddingX}px;background:${cueBox.background};border:${cueBox.borderWidth}px solid ${cueBox.borderColor};border-radius:${cueBox.borderRadius}px;box-shadow:${boxShadowCss(cueBox)};` : ""}white-space:${wrap === "none" ? "nowrap" : "pre-wrap"};overflow-wrap:${wrap === "word" ? "anywhere" : "normal"};word-break:${wrap === "grapheme" ? "break-all" : "normal"};${overflow === "visible" ? "" : "overflow:hidden;"}}:scope [data-caption-cue-union],:scope [data-caption-active-union]{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}:scope [data-caption-cue-union]{z-index:0}:scope [data-caption-active-union]{z-index:1}:scope [data-caption-text-layer]{position:relative;z-index:2;${overflow === "ellipsis" ? `display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:${maxLines};overflow:hidden;` : ""}}`,
       setup: `
         ${htmlLineUnionRuntime}
         const layout = root.querySelector('[data-caption-layout]');
@@ -610,6 +646,18 @@ function resolveCaptionFine(item: NleComponentItem) {
         }
         const units = new Map([...root.querySelectorAll('[data-hypit-text-kind="group"]')]
           .map(element => [element.getAttribute('data-hypit-text-node'), element]));
+        const isolatedBoxes = new Map([...units].map(([id, element]) => {
+          const layer = document.createElement('span');
+          layer.setAttribute('data-caption-active-box', 'isolated');
+          layer.style.position = 'absolute';
+          layer.style.pointerEvents = 'none';
+          layer.style.transformOrigin = 'center';
+          layer.style.zIndex = '-1';
+          element.style.position = 'relative';
+          element.style.isolation = 'isolate';
+          element.prepend(layer);
+          return [id, layer];
+        }));
         const allWords = [...root.querySelectorAll('[data-hypit-text-kind="text"]')];
         const seconds = value => Number(value.ticks) * value.timeBase.numerator / value.timeBase.denominator;
         const fps = context.frameRate.numerator / context.frameRate.denominator;
@@ -644,6 +692,27 @@ function resolveCaptionFine(item: NleComponentItem) {
           return positions.map(position => position[0] + 'px ' + position[1] + 'px '
             + blur + 'px ' + color).join(',');
         };
+        const translucent = (color, opacity) => {
+          const red = Number.parseInt(color.slice(1, 3), 16);
+          const green = Number.parseInt(color.slice(3, 5), 16);
+          const blue = Number.parseInt(color.slice(5, 7), 16);
+          const authored = color.length === 9 ? Number.parseInt(color.slice(7, 9), 16) / 255 : 1;
+          return 'rgba(' + red + ',' + green + ',' + blue + ',' + (authored * opacity) + ')';
+        };
+        const boxFilter = shadow => {
+          if (shadow.opacity <= 0) return '';
+          const positions = shadow.spread <= 0 ? [[shadow.offsetX, shadow.offsetY]]
+            : Array.from({ length: 12 }, (_, index) => {
+              const angle = index * Math.PI / 6;
+              return [shadow.offsetX + Math.cos(angle) * shadow.spread,
+                shadow.offsetY + Math.sin(angle) * shadow.spread];
+            });
+          const color = translucent(shadow.color, shadow.opacity);
+          return positions.map(position => 'drop-shadow(' + position[0] + 'px ' + position[1]
+            + 'px ' + shadow.blur + 'px ' + color + ')').join(' ');
+        };
+        cueUnion.style.filter = boxFilter(data.cueBox.shadow);
+        activeUnion.style.filter = boxFilter(data.activeBox.shadow);
         const paintText = (element, progress, active) => {
           restorePaint(element);
           if (data.karaoke.mode === 'off' || !active) return;
@@ -710,18 +779,23 @@ function resolveCaptionFine(item: NleComponentItem) {
             fill.style.webkitTextFillColor = 'transparent';
           }
         };
-        const paintBox = (element, active) => {
+        const paintBox = (unitId, active, motion) => {
+          const layer = isolatedBoxes.get(unitId);
+          if (layer === undefined) return;
           if (data.activeBox.continuity === 'joined' || !active || data.activeBox.mode === 'off') {
-            element.style.background = '';
-            element.style.border = '';
-            element.style.borderRadius = '';
-            element.style.padding = '';
+            layer.style.display = 'none';
             return;
           }
-          element.style.background = data.activeBox.background;
-          element.style.border = data.activeBox.borderWidth + 'px solid ' + data.activeBox.borderColor;
-          element.style.borderRadius = data.activeBox.borderRadius + 'px';
-          element.style.padding = data.activeBox.paddingY + 'px ' + data.activeBox.paddingX + 'px';
+          layer.style.display = 'block';
+          layer.style.inset = (-data.activeBox.paddingY) + 'px '
+            + (-data.activeBox.paddingX) + 'px';
+          layer.style.background = data.activeBox.background;
+          layer.style.border = data.activeBox.borderWidth + 'px solid ' + data.activeBox.borderColor;
+          layer.style.borderRadius = data.activeBox.borderRadius + 'px';
+          layer.style.boxShadow = spreadShadows(data.activeBox.shadow.offsetX,
+            data.activeBox.shadow.offsetY, data.activeBox.shadow.blur, data.activeBox.shadow.spread,
+            translucent(data.activeBox.shadow.color, data.activeBox.shadow.opacity));
+          applyMotion(layer, [motion]);
         };
         const paintUnderline = (element, selected) => {
           for (const word of element.querySelectorAll('[data-hypit-text-kind="text"]')) {
@@ -756,7 +830,7 @@ function resolveCaptionFine(item: NleComponentItem) {
         const easeOutElastic = value => value === 0 || value === 1 ? value
           : Math.pow(2, -10 * value) * Math.sin((value * 10 - 0.75) * (2 * Math.PI / 3)) + 1;
         const neutral = { opacity: 1, transform: '', filter: '', clipPath: '' };
-        const oneShot = (kind, progress) => {
+        const oneShot = (kind, progress, startScale) => {
           const value = clamp(progress), eased = easeOut(value), distance = data.slideDistance;
           const state = (opacity, transform, filter, clipPath) => ({
             opacity,
@@ -764,9 +838,13 @@ function resolveCaptionFine(item: NleComponentItem) {
             filter: filter || '',
             clipPath: clipPath || '',
           });
-          const scale = (from, position) => 'scale(' + (from + (1 - from) * position) + ')';
+          const scale = (fallback, position) => {
+            const from = startScale === undefined ? fallback : startScale;
+            return 'scale(' + (from + (1 - from) * position) + ')';
+          };
+          const optionalScale = position => startScale === undefined ? '' : ' ' + scale(1, position);
           if (kind === 'none') return neutral;
-          if (kind === 'fade') return state(eased);
+          if (kind === 'fade') return state(eased, optionalScale(eased));
           if (kind === 'blur-in') return state(eased, scale(0.96, eased), 'blur(' + ((1 - eased) * 16) + 'px)');
           if (kind === 'pop') return state(eased, scale(0.6, easeOutBack(value)));
           if (kind === 'scale') return state(eased, scale(0.2, eased));
@@ -787,20 +865,20 @@ function resolveCaptionFine(item: NleComponentItem) {
             'rotate(' + ((1 - eased) * -180) + 'deg) ' + scale(0.55, eased));
           if (kind === 'squash') return state(eased,
             'scaleX(' + (1.28 - 0.28 * easeOutBack(value)) + ') scaleY('
-              + (0.48 + 0.52 * easeOutBack(value)) + ')');
+              + (0.48 + 0.52 * easeOutBack(value)) + ')' + optionalScale(eased));
           if (kind === 'stretch') return state(eased,
             'scaleX(' + (0.5 + 0.5 * easeOutBack(value)) + ') scaleY('
-              + (1.35 - 0.35 * easeOutBack(value)) + ')');
+              + (1.35 - 0.35 * easeOutBack(value)) + ')' + optionalScale(eased));
           const hidden = (1 - eased) * 100;
-          if (kind === 'wipe-left') return state(1, '', '', 'inset(0 0 0 ' + hidden + '%)');
-          if (kind === 'wipe-right') return state(1, '', '', 'inset(0 ' + hidden + '% 0 0)');
-          if (kind === 'wipe-up') return state(1, '', '', 'inset(0 0 ' + hidden + '% 0)');
-          if (kind === 'wipe-down') return state(1, '', '', 'inset(' + hidden + '% 0 0 0)');
+          if (kind === 'wipe-left') return state(1, optionalScale(eased), '', 'inset(0 0 0 ' + hidden + '%)');
+          if (kind === 'wipe-right') return state(1, optionalScale(eased), '', 'inset(0 ' + hidden + '% 0 0)');
+          if (kind === 'wipe-up') return state(1, optionalScale(eased), '', 'inset(0 0 ' + hidden + '% 0)');
+          if (kind === 'wipe-down') return state(1, optionalScale(eased), '', 'inset(' + hidden + '% 0 0 0)');
           const remaining = (1 - eased) * distance;
-          if (kind === 'slide-left') return state(eased, 'translateX(' + -remaining + 'px)');
-          if (kind === 'slide-right') return state(eased, 'translateX(' + remaining + 'px)');
-          if (kind === 'slide-up') return state(eased, 'translateY(' + -remaining + 'px)');
-          return state(eased, 'translateY(' + remaining + 'px)');
+          if (kind === 'slide-left') return state(eased, 'translateX(' + -remaining + 'px)' + optionalScale(eased));
+          if (kind === 'slide-right') return state(eased, 'translateX(' + remaining + 'px)' + optionalScale(eased));
+          if (kind === 'slide-up') return state(eased, 'translateY(' + -remaining + 'px)' + optionalScale(eased));
+          return state(eased, 'translateY(' + remaining + 'px)' + optionalScale(eased));
         };
         const loopAt = localFrame => {
           if (data.loop.kind === 'none') return neutral;
@@ -822,6 +900,22 @@ function resolveCaptionFine(item: NleComponentItem) {
           element.style.clipPath = clipped?.clipPath || '';
           element.style.transformOrigin = 'center';
         };
+        const activeBoxAt = (localFrame, startFrame, endFrame) => {
+          const logicalEnd = data.activeBox.mode === 'trail' ? context.durationFrames : endFrame;
+          if (data.activeBox.mode === 'off' || localFrame < startFrame || localFrame >= logicalEnd) {
+            return { active: false, motion: neutral };
+          }
+          const frames = data.activeBox.transitionFrames;
+          const sinceStart = localFrame - startFrame;
+          const untilEnd = logicalEnd - localFrame;
+          if (data.activeBox.enter !== 'none' && frames > 0 && sinceStart < frames) {
+            return { active: true, motion: oneShot(data.activeBox.enter, sinceStart / frames) };
+          }
+          if (data.activeBox.exit !== 'none' && frames > 0 && untilEnd <= frames) {
+            return { active: true, motion: oneShot(data.activeBox.exit, untilEnd / frames) };
+          }
+          return { active: true, motion: neutral };
+        };
         const fitLayout = () => {
           if (data.layout.overflow !== 'shrink') return;
           layout.style.transform = '';
@@ -839,10 +933,11 @@ function resolveCaptionFine(item: NleComponentItem) {
           const entryProgress = data.entry.frames <= 0 ? 1 : clamp(localFrame / data.entry.frames);
           const remainingFrames = Math.max(0, context.durationFrames - 1 - localFrame);
           const exitProgress = data.exit.frames <= 0 ? 1 : clamp(remainingFrames / data.exit.frames);
-          const cueLifecycle = entryProgress < 1 ? oneShot(data.entry.kind, entryProgress)
+          const cueLifecycle = entryProgress < 1 ? oneShot(data.entry.kind, entryProgress, data.entry.startScale)
             : exitProgress < 1 ? oneShot(data.exit.kind, exitProgress) : neutral;
           applyMotion(cue, [cueLifecycle, data.loop.target === 'cue' ? loopAt(localFrame) : neutral]);
           const activeBoxWords = [];
+          let joinedBoxMotion = neutral;
           for (const unit of data.caption.units) {
             const element = units.get(unit.id);
             const start = seconds(unit.start);
@@ -850,17 +945,18 @@ function resolveCaptionFine(item: NleComponentItem) {
             const current = time >= start && time < end;
             const passed = time >= end;
             const textActive = data.karaoke.mode === 'trail' ? time >= start : current;
-            const boxActive = data.activeBox.mode === 'trail' ? time >= start : current;
             const underlineActive = data.activeUnderline.mode === 'trail' ? time >= start : current;
             const progress = passed ? 1 : current ? (time - start) / Math.max(end - start, 1 / fps) : 0;
             paintText(element, progress, textActive);
-            paintBox(element, boxActive);
+            const startFrame = start * fps, endFrame = end * fps;
+            const box = activeBoxAt(localFrame, startFrame, endFrame);
+            paintBox(unit.id, box.active, box.motion);
             paintUnderline(element, data.activeUnderline.mode !== 'off' && underlineActive
               ? data.activeUnderline : data.underline);
-            if (data.activeBox.continuity === 'joined' && boxActive) {
+            if (data.activeBox.continuity === 'joined' && box.active) {
               activeBoxWords.push(...element.querySelectorAll('[data-hypit-text-kind="text"]'));
+              joinedBoxMotion = box.motion;
             }
-            const startFrame = start * fps, endFrame = end * fps;
             const sinceStart = localFrame - startFrame, untilEnd = endFrame - localFrame;
             let lifecycle = neutral;
             const waits = data.atom.reveal !== 'all' || data.atom.enter !== 'none';
@@ -891,6 +987,7 @@ function resolveCaptionFine(item: NleComponentItem) {
           } else cueUnion.setAttribute('d', '');
           if (data.activeBox.continuity === 'joined' && data.activeBox.mode !== 'off') {
             hypitPaintLineUnion(activeUnion, cue, activeBoxWords, data.activeBox);
+            applyMotion(activeUnion, [joinedBoxMotion]);
           } else activeUnion.setAttribute('d', '');
         };
       `,

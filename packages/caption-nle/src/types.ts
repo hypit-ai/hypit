@@ -1,12 +1,21 @@
 import type { CaptionCuePayload, CaptionSelection } from "@hypit/caption";
 import type { NlePackageSymbol } from "@hypit/nle";
 import type { CanonicalValue } from "@hypit/protocol";
-import type { LocalTemporalDomain, TemporalMapRegion } from "@hypit/temporal/algebra";
+import type { ExactTemporalValue, LocalTemporalDomain, TemporalMapRegion } from "@hypit/temporal/algebra";
+
+export type CaptionVisibilityEnvelope = {
+  readonly lead?: ExactTemporalValue;
+  readonly tail?: ExactTemporalValue;
+  /** Cut adjacent Cues of the same Role at their spoken handoff, or retain the authored overlap. */
+  readonly handoff?: "cut" | "overlap";
+};
 
 export type CaptionStyle<Family extends string = string> = {
   readonly id: string;
   readonly family: Family;
   readonly parameters: CanonicalValue;
+  /** Transient authoring policy resolved into direct NLE Item times during materialization. */
+  readonly visibility?: CaptionVisibilityEnvelope;
 };
 
 export type CaptionPresentationSelector = {
