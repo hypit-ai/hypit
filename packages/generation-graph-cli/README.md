@@ -11,7 +11,7 @@ hypit generation materialize <build-id> --output <node> --to <asset.media.json>
 The adapter owns argument parsing and presentation only. Project context, installed package loading,
 Runtime/Profile selection and publication stores are supplied as explicit application services.
 Generation lowering remains in `@hypit/generation-graph`; Producer evaluation, Endpoint preflight,
-Worker startup and durable submission remain in `@hypit/build-cli`'s `submitLongBuild()` seam.
+Worker startup and durable submission pass through the independent `@hypit/build-submission` seam.
 
 Every invocation creates a fresh Build from the saved recipe and returns its exact Product addresses.
 Submission never rewrites the graph or attaches pending Product sidecars. Existing `status`, `inspect`,

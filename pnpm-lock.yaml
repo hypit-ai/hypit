@@ -446,6 +446,9 @@ importers:
       '@hypit/author':
         specifier: workspace:^0.0.0-dev
         version: link:../author
+      '@hypit/build-submission':
+        specifier: workspace:^0.0.0-dev
+        version: link:../build-submission
       '@hypit/cli':
         specifier: workspace:^0.0.0-dev
         version: link:../cli
@@ -461,9 +464,6 @@ importers:
       '@hypit/loader':
         specifier: workspace:^0.0.0-dev
         version: link:../loader
-      '@hypit/producer':
-        specifier: workspace:^0.0.0-dev
-        version: link:../producer
       '@hypit/product':
         specifier: workspace:^0.0.0-dev
         version: link:../product
@@ -473,9 +473,6 @@ importers:
       '@hypit/protocol':
         specifier: workspace:^0.0.0-dev
         version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:^0.0.0-dev
-        version: link:../refinement
       '@hypit/resource-store':
         specifier: workspace:^0.1.0
         version: link:../resource-store
@@ -492,9 +489,36 @@ importers:
         specifier: workspace:^0.0.0-dev
         version: link:../workspace
     devDependencies:
+      '@hypit/producer':
+        specifier: workspace:*
+        version: link:../producer
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../runtime-local
+
+  packages/build-submission:
+    dependencies:
+      '@hypit/executor':
+        specifier: workspace:^0.0.0-dev
+        version: link:../executor
+      '@hypit/kernel':
+        specifier: workspace:^0.0.0-dev
+        version: link:../kernel
+      '@hypit/loader':
+        specifier: workspace:^0.0.0-dev
+        version: link:../loader
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:^0.0.0-dev
+        version: link:../refinement
+      '@hypit/runtime':
+        specifier: workspace:^0.0.0-dev
+        version: link:../runtime
 
   packages/canvas-view:
     dependencies:
@@ -782,9 +806,9 @@ importers:
 
   packages/generation-graph-cli:
     dependencies:
-      '@hypit/build-cli':
-        specifier: workspace:^0.1.0
-        version: link:../build-cli
+      '@hypit/build-submission':
+        specifier: workspace:^0.0.0-dev
+        version: link:../build-submission
       '@hypit/cli':
         specifier: workspace:^0.0.0-dev
         version: link:../cli
@@ -800,6 +824,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:^0.0.0-dev
         version: link:../protocol
+      '@hypit/result':
+        specifier: workspace:^0.0.0-dev
+        version: link:../result
       '@hypit/workspace':
         specifier: workspace:^0.0.0-dev
         version: link:../workspace

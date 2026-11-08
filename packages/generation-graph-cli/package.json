@@ -12,12 +12,13 @@
     "README.md"
   ],
   "dependencies": {
-    "@hypit/build-cli": "workspace:^0.1.0",
+    "@hypit/build-submission": "workspace:^0.0.0-dev",
     "@hypit/cli": "workspace:^0.0.0-dev",
     "@hypit/generation-graph": "workspace:^0.0.0-dev",
     "@hypit/loader": "workspace:^0.0.0-dev",
     "@hypit/product": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/result": "workspace:^0.0.0-dev",
     "@hypit/workspace": "workspace:^0.0.0-dev"
   },
   "devDependencies": {

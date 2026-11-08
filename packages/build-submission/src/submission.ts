@@ -2,6 +2,9 @@ import { randomBytes } from "node:crypto";
 
 import type { PackageContribution } from "@hypit/loader";
 import { orderedBuildId } from "@hypit/protocol";
+import type { BuildDefinition } from "@hypit/protocol";
+import type { ProducerExecutionLimits } from "@hypit/producer";
+import type { RuntimeEndpointObservation, RuntimeEndpointQuery } from "@hypit/runtime";
 
 import {
   assertPlannedRequests,
@@ -10,43 +13,54 @@ import {
   evaluatePlanNeeds,
   plannedEndpointQueries,
   preflightPlan,
-} from "./build-planning.js";
-import type {
-  CliRuntime,
-  CliRuntimeHost,
-  CliRuntimeInspection,
-} from "./runtime-port.js";
+  type SubmissionDiagnostic,
+} from "./planning.js";
 
 type Awaitable<T> = T | Promise<T>;
 
-export type LongBuildRequest = Parameters<CliRuntime["build"]>[0];
-export type LongBuildSubmission = Awaited<ReturnType<CliRuntime["build"]>>;
+export type BuildSubmissionRuntime<Request, Submission extends { readonly id: string }> = {
+  build(request: Request): Promise<Submission>;
+  close(): Awaitable<void>;
+};
 
-/** One accepted long-running Build and the command-scoped resources used to submit and observe it. */
-export type LongBuildSession = {
-  readonly submission: LongBuildSubmission;
-  readonly runtime: CliRuntime;
-  readonly inspection: CliRuntimeInspection;
+export type BuildSubmissionInspection<Runtime> = {
+  endpoints(): Promise<readonly RuntimeEndpointObservation[]>;
+  preflight(): Promise<{ readonly diagnostics: readonly SubmissionDiagnostic[] }>;
+  ensureExecution(options?: { readonly maxWaitMs?: number }): Promise<{ readonly state: "running" | "stopped" }>;
+  createRuntime(): Promise<Runtime>;
+  close(): Awaitable<void>;
+};
+
+export type BuildSubmissionHost<Inspection> = {
+  planningPolicy?(): Promise<{ readonly producerExecutionLimits?: ProducerExecutionLimits }>;
+  openInspection(queries: readonly RuntimeEndpointQuery[]): Promise<Inspection>;
+};
+
+export type LongBuildSession<Submission, Runtime, Inspection> = {
+  readonly submission: Submission;
+  readonly runtime: Runtime;
+  readonly inspection: Inspection;
   close(): Promise<void>;
 };
 
-/** Public Build identity is assigned by the long-running submission boundary, never by an author format. */
+/** Public Build identity belongs to one submission, never to an author format. */
 export function createPublicBuildId(now = Date.now()): string {
   return orderedBuildId(now, randomBytes(5).toString("hex").toUpperCase());
 }
 
-/**
- * Submit one already prepared finite Build through the common long-running Host path.
- * Compilation and author-document mutation remain outside this boundary.
- */
-export async function submitLongBuild(input: {
-  readonly host: CliRuntimeHost;
-  readonly request: LongBuildRequest;
+/** Submit one already prepared finite Build through a command-scoped Runtime inspection. */
+export async function submitLongBuild<
+  Request extends { readonly id: string; readonly definition: BuildDefinition },
+  Submission extends { readonly id: string },
+  Runtime extends BuildSubmissionRuntime<Request, Submission>,
+  Inspection extends BuildSubmissionInspection<Runtime>,
+>(input: {
+  readonly host: BuildSubmissionHost<Inspection>;
+  readonly request: Request;
   readonly packageContributions: readonly PackageContribution[];
   readonly maxWaitMs?: number;
-  /** Domain-owned acknowledgement after Runtime has durably accepted the Build. */
-  readonly accepted?: (submission: LongBuildSubmission) => Awaitable<void>;
-}): Promise<LongBuildSession> {
+  readonly accepted?: (submission: Submission) => Awaitable<void>;
+}): Promise<LongBuildSession<Submission, Runtime, Inspection>> {
   const planningPolicy = await input.host.planningPolicy?.();
   const evaluation = await evaluatePlanNeeds(
     input.request.definition,
@@ -56,15 +70,12 @@ export async function submitLongBuild(input: {
   const inspection = await input.host.openInspection(
     plannedEndpointQueries(evaluation.state, evaluation),
   );
-  let runtime: CliRuntime | undefined;
+  let runtime: Runtime | undefined;
   let closed = false;
   const close = async (): Promise<void> => {
     if (closed) return;
     closed = true;
-    const results = await Promise.allSettled([
-      runtime?.close(),
-      inspection.close(),
-    ]);
+    const results = await Promise.allSettled([runtime?.close(), inspection.close()]);
     const failure = results.find((result) => result.status === "rejected");
     if (failure?.status === "rejected") throw failure.reason;
   };

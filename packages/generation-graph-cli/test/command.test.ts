@@ -5,7 +5,6 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { sealGraphFragment } from "@hypit/author";
-import type { CliRuntimeHost } from "@hypit/build-cli";
 import { runCliApplication } from "@hypit/cli";
 import {
   applyGenerationGraphTransaction,
@@ -62,28 +61,15 @@ const loaded: LoadedPackage = {
   },
 };
 
-function runtimeHost(profile: string, calls: string[]): CliRuntimeHost {
+function runtimeHost(
+  calls: string[],
+): Awaited<ReturnType<GenerationGraphCliServices["openRuntimeHost"]>> {
   return {
-    profile,
-    executionStatus: async () => ({ state: "running" }),
-    ensureExecution: async () => ({ state: "running" }),
-    createRuntime: async () => { throw new Error("command submission must use one inspection"); },
-    openControl: async () => { throw new Error("unused"); },
-    openCredentials: async () => { throw new Error("unused"); },
-    preflight: async () => ({ dataRoot: "/runtime", diagnostics: [] }),
-    doctor: async () => ({ dataRoot: "/runtime", diagnostics: [] }),
-    endpoints: async () => [],
-    pricing: async () => [],
-    invoke: async () => { throw new Error("unused"); },
-    openTransientExecution: async () => { throw new Error("unused"); },
     async openInspection() {
       calls.push("inspection.open");
       return {
-        dataRoot: "/runtime",
         endpoints: async () => [],
-        pricing: async () => [],
-        preflight: async () => ({ dataRoot: "/runtime", diagnostics: [] }),
-        executionStatus: async () => ({ state: "running" }),
+        preflight: async () => ({ diagnostics: [] }),
         ensureExecution: async () => ({ state: "running" }),
         createRuntime: async () => ({
           async build(input) {
@@ -99,13 +85,6 @@ function runtimeHost(profile: string, calls: string[]): CliRuntimeHost {
               },
             };
           },
-          inspect: async () => undefined,
-          activity: async () => ({ builds: [], capacity: [] }),
-          cancel: async () => undefined,
-          describeCredentials: async () => [],
-          credentials: async () => [],
-          putCredential: async () => { throw new Error("unused"); },
-          deleteCredential: async () => { throw new Error("unused"); },
           async close() { calls.push("runtime.close"); },
         }),
         async close() { calls.push("inspection.close"); },
@@ -140,9 +119,9 @@ test("generation run submits a fresh Build every time without rewriting the reci
         assert.deepEqual(request.logical, [{ abi: "hypit.module@1", name: "@example/image@1" }]);
         return [loaded];
       },
-      async openRuntimeHost(profile) {
+      async openRuntimeHost() {
         runtimeOpens += 1;
-        return runtimeHost(profile, calls);
+        return runtimeHost(calls);
       },
       async openProjectResults() {
         return {

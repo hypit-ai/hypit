@@ -1,24 +1,27 @@
 import { resolve } from "node:path";
 
 import {
-  producerPackagesFromFacets,
-  registerProducerFacets,
-} from "@hypit/producer";
-import type { ProducerExecutionLimits } from "@hypit/producer";
-import { evaluateProducerPlan, ProducerRegistry } from "@hypit/executor";
-import type { EvaluatedProducerStep } from "@hypit/executor";
-import type { PackageContribution } from "@hypit/loader";
-import { capabilityIdentity, capabilityKey, compareCodeUnits, typeKey } from "@hypit/protocol";
-import type { BuildDefinition, CanonicalValue, CapabilityRef, PublicationIntent } from "@hypit/protocol";
+  evaluatePlanNeeds,
+  plannedEndpointQueries,
+  type EvaluatedPlan,
+  type PlanEndpointView,
+} from "@hypit/build-submission";
+import { capabilityKey, typeKey } from "@hypit/protocol";
+import type { CanonicalValue, PublicationIntent } from "@hypit/protocol";
 import type { BuildView } from "@hypit/kernel";
-import type { CliBuildAuthoring, CliEndpointQuery, CliRuntimeInspection } from "./runtime-port.js";
+import type { CliBuildAuthoring, CliRuntimeInspection } from "./runtime-port.js";
 import type { PlanRequest, PlanRequestOutput, PricingRequest } from "./output.js";
 import { plannedNeeds } from "@hypit/kernel";
-import {
-  refinementPackagesFromFacets,
-  registerTypeRefinements,
-  RefinementRegistry,
-} from "@hypit/refinement";
+
+export {
+  assertPlannedRequests,
+  assertPreflight,
+  describePlanEndpoints,
+  evaluatePlanNeeds,
+  plannedEndpointQueries,
+  preflightPlan,
+} from "@hypit/build-submission";
+export type { EvaluatedPlan, PlanEndpointView } from "@hypit/build-submission";
 
 export function createBuildAuthoring(options: {
   readonly source: string;
@@ -32,24 +35,6 @@ export function createBuildAuthoring(options: {
   };
 }
 
-function demandedCapabilities(state: BuildView): readonly CapabilityRef[] {
-  const found = new Map(plannedNeeds(state).map((need) => [capabilityIdentity(need.capability), need.capability]));
-  return [...found.values()].sort((left, right) => compareCodeUnits(capabilityKey(left), capabilityKey(right)));
-}
-
-export type PlanEndpointView = {
-  readonly need: string;
-  readonly capability: string;
-  readonly status: "resolved" | "unresolved" | "ambiguous";
-  readonly support: "supported" | "unsupported" | "not-evaluated";
-  readonly endpoint?: string;
-  readonly use?: string;
-  readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
-  readonly endpoints?: readonly string[];
-  readonly rejections?: readonly { readonly endpoint: string; readonly message: string }[];
-  readonly binding?: string;
-};
-
 export type PlanPricingView = PlanEndpointView & {
   readonly pricingDocuments?: readonly {
     readonly source: string;
@@ -58,127 +43,6 @@ export type PlanPricingView = PlanEndpointView & {
   }[];
   readonly pricingError?: string;
 };
-
-export type EvaluatedPlanNeed = {
-  readonly status: "concrete" | "blocked" | "failed" | "unavailable";
-  readonly constraints?: CanonicalValue;
-  readonly pending: readonly string[];
-  readonly issue?: string;
-};
-
-export type EvaluatedPlan = {
-  readonly state: BuildView;
-  readonly needs: ReadonlyMap<string, EvaluatedPlanNeed>;
-  /** Every deterministic Producer failure, independent of whether that Step declares a Need. */
-  readonly producerFailures: readonly {
-    readonly step: string;
-    readonly message: string;
-  }[];
-};
-
-function pendingPlanInputs(step: EvaluatedProducerStep | undefined): readonly string[] {
-  if (step?.status !== "blocked") return [];
-  return step.dependencies.map((dependency) => dependency.input);
-}
-
-/**
- * Evaluate deterministic Producers only. A missing upstream value is kept as its direct graph edge,
- * not described as missing author intent and never found by searching for a request-looking object.
- */
-export async function evaluatePlanNeeds(
-  definition: BuildDefinition,
-  contributions: readonly PackageContribution[],
-  producerExecutionLimits?: ProducerExecutionLimits,
-): Promise<EvaluatedPlan> {
-  const producers = new ProducerRegistry();
-  const refinements = new RefinementRegistry();
-  for (const contribution of contributions) {
-    const facets = contribution.facets ?? [];
-    for (const item of producerPackagesFromFacets(facets)) {
-      registerProducerFacets(producers, item);
-    }
-    for (const item of refinementPackagesFromFacets(facets)) {
-      registerTypeRefinements(refinements, item);
-    }
-  }
-  const evaluation = await evaluateProducerPlan(
-    definition,
-    producers,
-    refinements,
-    producerExecutionLimits,
-  );
-  const state = evaluation.state;
-  const known = new Map(state.needs.map((need) => [need.id, need]));
-  const evaluatedSteps = new Map(evaluation.steps.map((step) => [step.step, step]));
-  const result = new Map<string, EvaluatedPlanNeed>();
-
-  for (const planned of plannedNeeds(state)) {
-    const evaluatedStep = evaluatedSteps.get(planned.step);
-    const need = known.get(planned.need);
-    if (need !== undefined) {
-      result.set(planned.need, {
-        status: "concrete",
-        constraints: need.constraints,
-        pending: [],
-      });
-      continue;
-    }
-    if (evaluatedStep === undefined || evaluatedStep.status === "complete") {
-      throw new Error(`planned request ${planned.need} has no concrete Need or pending Producer Step`);
-    }
-    result.set(planned.need, {
-      status: evaluatedStep.status,
-      pending: pendingPlanInputs(evaluatedStep),
-      ...(evaluatedStep.status === "unavailable" ? { issue: evaluatedStep.message } : {}),
-    });
-  }
-  return {
-    state,
-    needs: result,
-    producerFailures: evaluation.steps.flatMap((step) =>
-      step.status === "failed" ? [{ step: step.step, message: step.message }] : []),
-  };
-}
-
-/** The complete pre-Build requests shared by Endpoint selection and Provider pricing reads. */
-export function plannedEndpointQueries(
-  state: BuildView,
-  evaluated: EvaluatedPlan,
-): readonly CliEndpointQuery[] {
-  const planned = plannedNeeds(state);
-  return planned.map((item): CliEndpointQuery => {
-    const plannedRequest = evaluated.needs.get(item.need);
-    if (plannedRequest === undefined) throw new Error(`planned request ${item.need} has no evaluation result`);
-    const base = {
-      need: item.need,
-      capability: item.capability,
-      returns: item.returns,
-    };
-    if (plannedRequest.status !== "concrete") return { ...base, kind: "demand" };
-    if (plannedRequest.constraints === undefined) {
-      throw new Error(`concrete planned request ${item.need} has no constraints`);
-    }
-    return { ...base, kind: "concrete", constraints: plannedRequest.constraints };
-  });
-}
-
-/** Resolve every planned request independently; concrete constraints exercise Endpoint `supports`. */
-export async function describePlanEndpoints(
-  inspection: Pick<CliRuntimeInspection, "endpoints">,
-): Promise<readonly PlanEndpointView[]> {
-  return (await inspection.endpoints()).map((item) => ({
-    need: item.need,
-    capability: capabilityKey(item.capability),
-    status: item.status,
-    support: item.support,
-    ...(item.endpoint === undefined ? {} : { endpoint: item.endpoint }),
-    ...(item.use === undefined ? {} : { use: item.use }),
-    ...(item.pricing === undefined ? {} : { pricing: item.pricing }),
-    ...(item.endpoints === undefined ? {} : { endpoints: item.endpoints }),
-    ...(item.rejections === undefined ? {} : { rejections: item.rejections }),
-    ...(item.binding === undefined ? {} : { binding: item.binding }),
-  }));
-}
 
 /** Read Provider-owned pricing material relevant to each planned request. */
 export async function describePlanPricing(
@@ -199,73 +63,6 @@ export async function describePlanPricing(
     ...(item.pricingDocuments === undefined ? {} : { pricingDocuments: item.pricingDocuments }),
     ...(item.pricingError === undefined ? {} : { pricingError: item.pricingError }),
   }));
-}
-
-/** Reject known failures and concrete requests that cannot be submitted; blocked requests remain future work. */
-export function assertPlannedRequests(
-  state: BuildView,
-  evaluated: EvaluatedPlan,
-  endpoints: readonly PlanEndpointView[],
-): void {
-  const byNeed = new Map(endpoints.map((item) => [item.need, item]));
-  const problems = [
-    ...evaluated.producerFailures.map((failure) => `${failure.step}: ${failure.message}`),
-    ...plannedNeeds(state).flatMap((planned) => {
-      const subject = planned.step;
-      const request = evaluated.needs.get(planned.need);
-      if (request === undefined) return [`${subject}: request evaluation is missing`];
-      const issue = request?.issue;
-      if (issue !== undefined) return [`${subject}: ${issue}`];
-      const endpoint = byNeed.get(planned.need);
-      if (endpoint?.status === "ambiguous") {
-        return [`${subject}: several Endpoints offer ${capabilityKey(planned.capability)}; bind one in the Runtime Profile`];
-      }
-      if (endpoint?.status !== "resolved") {
-        return [`${subject}: no selected Endpoint offers ${capabilityKey(planned.capability)}`];
-      }
-      if (request.status === "blocked" || request.status === "failed") return [];
-      if (endpoint.support === "unsupported") {
-        const detail = (endpoint.rejections ?? [])
-          .map((rejection) => `${rejection.endpoint}: ${rejection.message}`)
-          .join("; ");
-        return [`${subject}: ${detail || `no configured Endpoint accepts the complete ${capabilityKey(planned.capability)} request`}`];
-      }
-      if (request.status === "concrete" && endpoint.support !== "supported") {
-        return [`${subject}: selected Endpoint did not evaluate the complete ${capabilityKey(planned.capability)} request`];
-      }
-      return [];
-    }),
-  ];
-  if (problems.length > 0) {
-    throw new Error([
-      `Build has ${problems.length} planning problem${problems.length === 1 ? "" : "s"} that prevent submission:`,
-      ...problems.map((problem) => `  ${problem}`),
-      "No Build was queued and no external request was made.",
-    ].join("\n"));
-  }
-}
-
-export async function preflightPlan(
-  inspection: Pick<CliRuntimeInspection, "preflight">,
-  state: BuildView,
-) {
-  const capabilities = demandedCapabilities(state);
-  const result = await inspection.preflight();
-  return {
-    ok: !result.diagnostics.some((item) => item.severity === "error"),
-    capabilities: capabilities.map(capabilityKey),
-    diagnostics: result.diagnostics,
-  } as const;
-}
-
-export function assertPreflight(preflight: Awaited<ReturnType<typeof preflightPlan>>): void {
-  if (preflight === undefined || preflight.ok) return;
-  const errors = preflight.diagnostics.filter((item) => item.severity === "error");
-  throw new Error([
-    `Runtime preflight failed for ${errors.length} demanded deployment requirement${errors.length === 1 ? "" : "s"}:`,
-    ...errors.map((item) => `  ${item.code}${item.subject === undefined ? "" : ` (${item.subject})`}: ${item.message}`),
-    "No Build was submitted and no external capability request was made.",
-  ].join("\n"));
 }
 
 /** Every request in step order, joined to its own Endpoint resolution. */

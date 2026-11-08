@@ -1,11 +1,17 @@
 import { resolve } from "node:path";
 
+import { createPublicBuildId, submitLongBuild } from "@hypit/build-submission";
 import { isBlobRef, moduleKey } from "@hypit/protocol";
 import { BuildCompiler } from "@hypit/compiler";
 
 import type { BuildCliServices } from "./services.js";
 import type { CliApplicationContext } from "@hypit/cli";
-import type { CliRuntimeHost, CliRuntimeInspection } from "./runtime-port.js";
+import type {
+  CliBuildSubmission,
+  CliRuntime,
+  CliRuntimeHost,
+  CliRuntimeInspection,
+} from "./runtime-port.js";
 import { CliUsageError, commandHint } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
 import { createPlanOutput, createPricingOutput, writeCliHelp, writeCliOutput } from "./output.js";
@@ -13,7 +19,6 @@ import type { OperationalMachineView } from "./machine-view.js";
 import { parseCommand } from "./arguments.js";
 import type { CliCommand, RuntimeOption } from "./command.js";
 import { createBuildAuthoring, describePlanEndpoints, describePlanRequest, describePlanRequests, describePlanPricing, describePricingRequests, evaluatePlanNeeds, plannedEndpointQueries, preflightPlan } from "./build-planning.js";
-import { createPublicBuildId, submitLongBuild, type LongBuildSession } from "./long-build.js";
 import { buildProgressLines, observeBuild } from "./observation.js";
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
 import { isEnvironmentCommand, runEnvironmentCommand } from "./commands/environment.js";
@@ -255,7 +260,7 @@ export async function runCli(
         throw error;
       }
     })();
-    let session: LongBuildSession | undefined;
+    let acceptedSession: { close(): Promise<void> } | undefined;
     try {
       const authoring = createBuildAuthoring({
         source: loadedInvocation.authorSource,
@@ -278,12 +283,18 @@ export async function runCli(
         publicationStores: buildResults.location,
       } as const;
       const host = await runtimeHost(runtimeProfile, sourcePackageRoot);
-      session = await submitLongBuild({
+      const session = await submitLongBuild<
+        typeof request,
+        CliBuildSubmission,
+        CliRuntime,
+        CliRuntimeInspection
+      >({
         host,
         request,
         packageContributions,
         ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
       });
+      acceptedSession = session;
       const runtime = session.runtime;
       const buildInspection = session.inspection;
       let built = session.submission;
@@ -404,7 +415,7 @@ export async function runCli(
         ]);
       if (buildOutcome === "failed" || issue !== undefined) io.setExitCode?.(1);
     } finally {
-      await session?.close();
+      await acceptedSession?.close();
       await buildResults.close();
     }
     return;

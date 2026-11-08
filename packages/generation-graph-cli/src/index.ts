@@ -4,9 +4,10 @@ import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path
 import {
   createPublicBuildId,
   submitLongBuild,
-  type BuildCliServices,
-  type LongBuildSession,
-} from "@hypit/build-cli";
+  type BuildSubmissionHost,
+  type BuildSubmissionInspection,
+  type BuildSubmissionRuntime,
+} from "@hypit/build-submission";
 import {
   commandHint,
   parseCliDecimalInteger,
@@ -20,6 +21,7 @@ import {
   createGenerationGraphRuntimeRequest,
   createNodeGenerationGraphProjectHost,
   readGenerationGraphProjectFile,
+  type GenerationGraphRuntimeRequest,
 } from "@hypit/generation-graph/node";
 import type { LoadedPackage, LogicalPackageAddress } from "@hypit/loader";
 import type {
@@ -28,6 +30,7 @@ import type {
 } from "@hypit/loader/node";
 import { moduleKey, modulePackageAbi } from "@hypit/protocol";
 import type { ProductAddress, ProductHistory } from "@hypit/product";
+import type { BuildResultHistory } from "@hypit/result";
 import { NodeFilesystemWorkspace } from "@hypit/workspace/node";
 
 export type GenerationMediaProductMaterializationRequest = {
@@ -42,8 +45,29 @@ export type GenerationMediaProductMaterializationResult = {
   readonly mediaPath: string;
 };
 
-export type GenerationGraphCliServices = Pick<BuildCliServices,
-  "packageRoot" | "resolveProjectRuntime" | "openRuntimeHost" | "openProjectResults"> & {
+type GenerationRuntime = BuildSubmissionRuntime<GenerationGraphRuntimeRequest, { readonly id: string }>;
+type GenerationInspection = BuildSubmissionInspection<GenerationRuntime>;
+
+export type GenerationGraphCliServices = {
+  readonly packageRoot?: string;
+  resolveProjectRuntime?(projectRoot: string): Promise<{ readonly profile: string } | undefined>;
+  openRuntimeHost(path: string, options: {
+    readonly packageRoot: string;
+    readonly distributionPackageRoot?: string;
+  }): Promise<BuildSubmissionHost<GenerationInspection>>;
+  openProjectResults(projectRoot: string, options: {
+    readonly packageRoot: string;
+    readonly distributionPackageRoot?: string;
+  }): Promise<{
+    readonly location: {
+      readonly root: string;
+      readonly historyPath: string;
+      readonly productsPath: string;
+    };
+    readonly history: BuildResultHistory;
+    readonly products: ProductHistory;
+    close(): void | Promise<void>;
+  }>;
   loadPackages(
     request: NodePackageSelectionRequest,
     packageRoot: string,
@@ -288,7 +312,7 @@ export async function runGenerationGraphCli(
     packageRoot,
     ...(services.packageRoot === undefined ? {} : { distributionPackageRoot: services.packageRoot }),
   });
-  let session: LongBuildSession | undefined;
+  let acceptedSession: { close(): Promise<void> } | undefined;
   try {
     const project = await readGenerationGraphProjectFile(graphPath);
     const workspace = await new NodeFilesystemWorkspace({
@@ -338,7 +362,7 @@ export async function runGenerationGraphCli(
       packageContributions: packages.map((item) => item.contribution),
       ...(parsed.maxWaitMs === undefined ? {} : { maxWaitMs: parsed.maxWaitMs }),
     });
-    session = submitted;
+    acceptedSession = submitted;
     const outputs = prepared.generated.map((item) => ({
       node: item.node,
       product: { publication: submitted.submission.id, name: item.node },
@@ -367,7 +391,7 @@ export async function runGenerationGraphCli(
       ],
     });
   } finally {
-    await session?.close();
+    await acceptedSession?.close();
     await opened.close();
   }
 }

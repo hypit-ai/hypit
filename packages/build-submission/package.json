@@ -1,0 +1,23 @@
+{
+  "name": "@hypit/build-submission",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@hypit/executor": "workspace:^0.0.0-dev",
+    "@hypit/kernel": "workspace:^0.0.0-dev",
+    "@hypit/loader": "workspace:^0.0.0-dev",
+    "@hypit/producer": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/refinement": "workspace:^0.0.0-dev",
+    "@hypit/runtime": "workspace:^0.0.0-dev"
+  }
+}
