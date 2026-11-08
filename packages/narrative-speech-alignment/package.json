@@ -7,21 +7,12 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "hypit": {
-    "activation": "./src/activation.ts"
-  },
   "files": [
     "dist",
     "README.md"
   ],
-  "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
-  },
   "devDependencies": {
-    "@hypit/hypit": "workspace:*",
-    "@hypit/script": "workspace:*",
-    "@hypit/narrative": "workspace:*",
-    "@hypit/timed-transcript": "workspace:*"
+    "@hypit/script": "workspace:*"
   },
   "dependencies": {
     "@hypit/narrative": "workspace:^0.1.1",

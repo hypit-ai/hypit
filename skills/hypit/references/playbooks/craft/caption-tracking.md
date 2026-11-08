@@ -101,22 +101,16 @@ For example, this is a three-frame data-shape illustration, not a ready timeline
 
 ## Connect the placement to Caption
 
-```svml
-<import as="sequence" from="@hypit/spatial-sequence@1"/>
-<import as="tracking" source="./tracking.regions.svml"/>
-<sequence:TimelineRegions id="heads" document={tracking.heads}
-  timeline={speech.timeline} canvas={vertical.canvas}/>
-<caption-fine:Caption id="captions" document={story.caption} timing={story-captions}
-  timeline={speech.timeline} within={vertical.bounds} regions={heads}>
-  <caption-fine:Use style={caption-style}/>
-  <caption-fine:Follow role="GUEST" series="guest-head" missing="hide"/>
-</caption-fine:Caption>
-```
+Tracking data and Caption timing are separate measured inputs. A project Caption family that supports
+tracking explicitly selects the subject series, maps its normalized regions into the NLE canvas and
+writes the resolved placement behavior into its ordinary Component Items. The accepted project keeps
+direct component parameters and exact rational time; it does not retain a semantic lookup or ask the
+NLE core to recognize speakers.
 
-`TimelineRegions` requires exact Clock and frame-count equality and resolves the normalized sequence
-against the final Canvas. Fine places a bound Cue at the region's top center; `anchor-x: center` and
-`anchor-y: bottom` put it above the region. The Style still owns width, font and motion. The
-`@hypit/spatial-sequence` and `@hypit/caption-fine` READMEs own the exact data behavior.
+The family owns its anchor convention, clearance, smoothing and missing-region policy. For example,
+one family may place the Cue above the region's top center and hide when no region exists; another may
+hold the last reliable position. Basic Caption has no tracking input. Create or use a project Caption
+family when this relationship is genuinely part of the treatment.
 
 ## Inspect the actual placement
 

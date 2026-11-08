@@ -9,8 +9,6 @@ import type { LocalTemporalDomain } from "@hypit/temporal";
 import type {
   NarrativeAlignment,
   NarrativeLocalTiming,
-  NarrativeTimingHeader,
-  NarrativeTimingParts,
 } from "./types.js";
 
 function nonEmpty(value: unknown, label: string): asserts value is string {
@@ -20,21 +18,6 @@ function nonEmpty(value: unknown, label: string): asserts value is string {
 function sameDomain(left: LocalTemporalDomain, right: LocalTemporalDomain): boolean {
   return left.id === right.id
     && compareExactTemporalValues(left.duration, right.duration) === 0;
-}
-
-export function assertNarrativeTimingPartsIdentity(value: NarrativeTimingParts): void {
-  if (value === null || typeof value !== "object" || Array.isArray(value)
-    || !Array.isArray(value.alignments)) {
-    throw new Error("NarrativeTimingParts is invalid.");
-  }
-  value.alignments.forEach((alignment) => assertNarrativeAlignmentIdentity(alignment));
-}
-
-export function assertNarrativeTimingHeaderIdentity(value: NarrativeTimingHeader): void {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("NarrativeTimingHeader is invalid.");
-  }
-  nonEmpty(value.id, "NarrativeTimingHeader.id");
 }
 
 export function assertNarrativeLocalTimingIdentity(value: NarrativeLocalTiming): void {

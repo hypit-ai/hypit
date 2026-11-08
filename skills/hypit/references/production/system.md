@@ -62,8 +62,11 @@ publish ordinary VisualTrack and/or AudioTrack outputs for Film. [Tracks](tracks
 Clips, Transitions and richer components.
 
 Caption is another peer relation: a document owns displayed Words, correspondence Units and authored
-Cues; CaptionTiming owns complete absolute Unit boundaries; and a Caption family owns visible
-scheduling, layout, motion and drawing without redefining Cue membership.
+Cues; source-local Caption timing owns exact Unit regions; and a Caption family owns visible
+scheduling, layout, motion and drawing without redefining Cue membership. A project command combines
+those facts with the selected media occurrence once, then writes ordinary Cue component Items with
+direct NLE positions and complete local Word timing. Script identities and alignment relations do not
+remain in the editable NLE project.
 
 ## Give each part the direction it can realize
 

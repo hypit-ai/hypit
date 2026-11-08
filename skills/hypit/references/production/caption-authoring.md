@@ -1,149 +1,74 @@
 # Writing a Caption family
 
-Read this when a work needs a new relationship among its spoken words, layout and motion.
+Read this when the work needs a new visual relationship among displayed speech, layout and motion.
 [Caption craft](../playbooks/craft/captions.md) owns readability and directing judgment;
-[Caption styling and coverage](caption-presentation.md) owns applying visible and hidden Styles;
-[Track authoring](track-authoring.md) owns project package wiring.
-[Fonts and text](fonts-and-text.md) explains exact font resources and fallbacks;
-[component visuals](component-visuals.md) explains the final drawing representation.
-[Component design](component-design.md) connects a new family's visual idea to useful author controls
-and its fit beside the rest of the video.
+[Caption presentation](caption-presentation.md) owns applying treatments and materializing them.
 
 ## Decide what is actually new
 
-Fine Caption already covers uniform flowing text with exact fonts, Paint, boxes, karaoke states,
-placement and motion. A uniform treatment, or a treatment selected for a Role or Window, may only
-require Source and Recipe changes. A persistent visual role attached to selected display words does
-not: mark those words with Script attributes and let a project Caption family interpret the role.
-Never put keyword search, matching or content selection in a Recipe. A keyword occupying a separate
-oversized line, words playing different visual roles, or a recurring spatial relationship among
-speakers can justify a new family directly.
-Creating that family is normal video production. Name the family for the visual relationship it
-makes reusable, and name each Style for a particular treatment within it. A project can also own a
-single-use caption composition when that is what the video needs.
+The official `@hypit/caption-basic` family covers a centered Caption box, Cue-level Style changes,
+visibility and optional current/trailing Karaoke. Changing color, font size, box shape or Karaoke
+mode is a Basic Style change. A persistent visual role on selected display words can be authored as
+a Script attribute such as `word{face=serif}`; Basic may ignore it, while a family designed for that
+role can interpret it.
 
-The result is still Caption when the displayed words correspond to speech and remain close to its
-delivery. Independent slogans, summaries and titles usually belong to Typography even if they react
-to a Script Moment.
+A keyword occupying an independent oversized line, phrases attached to different speakers, or words
+coordinated with diagrams can justify a project Caption family. Creating that component is normal
+video production. The result is still Caption when displayed words correspond to speech and remain
+close to its delivery; independent titles and summaries normally belong to Typography or MG.
 
-## Own the visual relationship
+## Consume the stable Caption facts
 
-Visual Clip presents placed footage; Visual Clips supply independent pictures. A scene component can
-coordinate either with diagrams or other graphics. Fine and custom Caption families have the same relationship. Their shared input is the
-authored speech and its semantic timing; the implementation owns the spatial structure and motion.
-
-Start from what the viewer should understand or feel. A supporting phrase might establish the
-thought while its key word takes the emphasis. Design how they enter, share space, respond to speech
-and hand off to the next thought. That relationship suggests useful controls: the word's authored
-role, fonts, relative sizes, placement and motion. Put the choices the production actually needs to direct in its Style/Recipe and the arrangement
-in the renderer. A qualitative mode and a numeric field need the same justification; fixed decorative
-details can remain local. [Component design](component-design.md#expose-the-choices-the-work-needs)
-owns that interface decision.
-
-The output remains an ordinary VisualTrack. Its Presents can own trees of text, boxes, images and
-other visual elements. When words and graphics share layout or motion, they can live in the same
-component. [Component visuals](component-visuals.md#compose-video-and-graphics-in-one-html-visual)
-also describes HTML/CSS HTML visuals with typed media and text children. That drawing freedom
-applies to captions too: give the program the resolved caption schedule and explicit resources,
-and evaluate its state at the requested frame. Keep separately useful overlays as peers.
-
-## Keep the existing text and timing chain
+The reusable input chain is:
 
 ```text
-Script → CaptionDocument (displayed Words, correspondence Units, authored Cues and word attributes)
-NarrativeCaptionBinding + NarrativeProjection → CaptionTiming
-Track Uses → resolved time windows, Styles and optional speaker filters
-CaptionDocument + complete unit Timing + Uses + family parameters
-  → family-owned schedule for the authored Cues → VisualTrack
+standalone Script
+  -> CaptionDocument (Words, Units, Cues, Roles, word attributes)
+TimedTranscript + Narrative alignment + Binding
+  -> LocalCaptionTiming
+project materializer
+  -> ordinary NLE Component Items containing CaptionCuePayload
 ```
 
-Consume each display word's `separatorBefore` with its `text`; never rebuild wording by joining
-speech Tokens with spaces or guessing from a writing system. Suppress a separator at the start of
-a displayed Cue/line. Use the same authored boundaries in base glyphs, active layers and backgrounds.
-Separators are display content, not timed Tokens.
+`CaptionCuePayload` contains one Cue's complete display Words and exact Unit-local boundaries. It
+contains no Script, transcript, media, matching strategy or named semantic dependency. A custom NLE
+component resolver reads that payload and its own family parameters, then returns its ordinary AVIR
+picture source and HTML terminal implementation.
 
-Use `@hypit/caption` for content timing and Use coverage, and `@hypit/narrative` for
-Script document types. A family Track accepts `document`, resolved `timing`, `timeline` and ordered
-`Use` children:
+Consume each Word's `separatorBefore` together with `text`; never reconstruct display spelling by
+joining speech Tokens. Preserve `attributes` for family-owned local roles. Unit time drives Karaoke,
+reveal and speech-following motion; Cue membership drives handoff and block layout.
 
-```svml
-<keyword:Track id="captions" document={story.caption} timing={story-captions} timeline={program.timeline}>
-  <keyword:Use style={base-style}/>
-  <keyword:Use role="GUEST" style={guest-style}/>
-  <keyword:Use during={punchline} style={punchline-style}/>
-</keyword:Track>
-```
+## Own rendering, not upstream evidence
 
-These names assume the project family and its Styles have been declared. `during` references a named
-absolute Window declared upstream. A Use has the same meaning regardless of the family. `role`
-filters whose content it presents within that window.
+A Caption family owns:
 
-For a keyword layout, Script can mark `useful{emphasis}`. The family reads that attribute from the
-CaptionDocument and gives it a visual role within the complete Cue. The word role and the time
-window answer different questions; the Use's upstream Window supplies its time.
+- the parameters that describe its visual treatment;
+- layout of the complete Cue and any family-defined word roles;
+- Cue entrance, exit and handoff behavior;
+- how exact Unit time affects reveal, highlight or motion;
+- its NLE component symbol, resolver and terminal implementation.
 
-## Design a family-specific schedule
+It does not own WhisperX, M:N correction, Narrative alignment, media trim, Script parsing or project
+placement. The one-shot materializer maps source-local timing through the selected media occurrence
+before writing the Item. After that point the family sees only direct Item-local values.
 
-Separate measured speech time from visible time. Preserve each alignment unit's measured boundaries
-and identity; resolve lead, tail, stagger, hold and handoff into an explicit schedule before rendering.
-The renderer draws that schedule. Preserve a Cue's original animation origin and apply the
-winning Use window as a separate visibility mask. A window starting midway through a Cue still
-receives the complete Cue and original word times. It can change appearance without restarting
-karaoke or text reveal.
+For another family, create a project package under `packages/`, register its NLE and HTML-video
+component facets, and have the project program emit Items using that component symbol. Reuse the
+shared `CaptionCuePayload`; do not copy Basic's renderer or add a new Caption document model merely
+to obtain a different layout.
 
-For a “large keyword plus supporting phrase” family, the schedule might identify each Cue's display
-words, its emphasized word ids, their measured units and the visible interval of the two groups.
-Its layout then computes the two groups together. Decide what happens with no keyword, several
-keywords, long text and an N:M pronunciation span. Make author correction possible through word
-attributes, `||` and Style configuration instead of inventing missing text or dropping words.
+## Design and test the family
 
-The projection publishes every complete Unit's absolute boundaries and does not form Cues. The
-CaptionDocument already partitions complete Units into authored Cues. A family schedule joins those
-Cues to Unit timing and may derive lines, pages, cards or local states, but it does not split or merge
-Cues. Visual line wrapping is a separate operation. A narrow width must not silently rewrite the
-Script into new Cues. Preserve the original Cue, Unit and Word associations in the schedule.
+Start with a short Script containing a Role change, a Dual Text Unit, a Cue with several Units and a
+word attribute. Test uneven Unit durations and a real pause. Confirm:
 
-Display Words reflect Script's lexical units: a Han character is normally one Word, while an
-English word is normally one Word. Keep that timing granularity separate from visual grouping.
-Use each word's authored `separatorBefore` and `text`, including attached punctuation; derive no gaps
-from the writing system. Measure with the selected fonts' actual widths. Exercise Chinese with an
-intentional space, Korean word spaces, and mixed numeric/Latin spellings when the family carries them.
+- every displayed Word appears exactly once with authored separators;
+- Unit time remains rational and seekable at arbitrary frames;
+- a long Cue wraps or overflows according to the family's explicit policy;
+- attributes affect only the vocabulary the family owns;
+- static presentation and Karaoke consume the same payload;
+- disabled, moved, trimmed and directly edited Items require no upstream semantic lookup.
 
-For speech-following emphasis, activate each complete unit from its projected start and end.
-A Cue-wide left-to-right progress bar follows elapsed time and text width, which is a different
-effect from following spoken characters. Keep within-glyph wiping an explicit visual choice.
-Use uneven unit durations and a pause in a short example to check that the chosen effect follows
-the intended clock.
-
-`caption:Hidden` supplies a Style with `rendering: null`. It takes part in later-Use precedence,
-clearing this Track's presentation in its window; a later visible Use can restore a smaller window.
-Use `captionUseVisibility` to resolve that coverage for each Cue's speaker. The content projection
-retains all Cues regardless of Style. Empty or uncovered time naturally produces no drawing.
-
-## Give Style, layout and rendering clear responsibilities
-
-The Style owns the named appearance choices and exact fonts. The family consumes the Caption document,
-Timeline, ordered Uses and complete Unit timing, then produces its own schedule and picture. Keep
-typography, structural relationships, stacking and motion in that family. Use explicit font resources
-so the selected faces reach the rendering machine. Start from the installed Caption example and its
-README, replacing the actual layout behavior rather than only changing names.
-
-The chosen family interprets its own Styles. Fine handles its uniform-flow Styles; a structural
-family handles its own layouts. Each Track is independent, so multiple Tracks can intentionally
-show captions together or use complementary coverage. Mixed-family rendering, if useful, belongs
-to the component that implements it.
-
-If this family supports spatial tracking, take an explicit Region Evidence and map it into the actual
-composition. Define subject matching and absent-region behavior. Detection belongs to the measurement
-step described in [Caption tracking](../playbooks/craft/caption-tracking.md), not to this renderer.
-
-## Check the relationships that matter
-
-Use a short Script with a normal phrase, the new structural treatment, a Role change and a Dual Text
-unit. Verify displayed words and their association with measured speech, then inspect the new layout
-at the intended frame size and around its handoffs. Check long words, overflow and direct seeking
-where relevant. A still can show typography; only the configured timeline establishes timing.
-
-Expose the family with useful vocabulary and a designed preview. Keep wording, font choices, palette
-and authored word roles editable in the project. The package adds its rendering language while
-consuming the existing Script, Caption and semantic-time owners.
+Preview the component in the actual canvas and moving picture. A still can establish typography and
+layout; focused playback establishes reading rhythm, handoff and speech-following motion.

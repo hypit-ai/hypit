@@ -1,60 +1,13 @@
-export { captionComponent } from "./component.js";
 export {
-  captionAuthorFacets,
-  captionComponentDeclaration,
-  captionUnitEventDeclaration,
-} from "./declaration.js";
-export { captionComponentEditPlanner } from "./edit.js";
-export {
-  captionSourceFragment,
-  captionUnitEventFragment,
-  createCaptionSourceFragment,
-} from "./fragment.js";
-export {
-  captionDependency,
-  captionHtmlManifest,
-  captionHtmlModuleRef,
-  captionManifest,
-  captionModuleRef,
-  captionProducers,
-  captionTypes,
-} from "./manifest.js";
-export { captionHtmlSource } from "./picture.js";
-export {
-  appendCaptionHiddenOverride,
-  appendCaptionStyleOverride,
-  assertCaptionComponentSpec,
   assertCaptionDocument,
-  assertCaptionInputs,
-  assertCaptionPresentation,
-  assertCaptionPresentationOverrideSpec,
-  assertCaptionPresentationSchedule,
   assertCaptionSelection,
-  assertCaptionStyle,
-  assertCaptionUnitEventSpec,
   assertLocalCaptionTiming,
-  captionProgramSource,
   captionSelectedUnitIds,
-  captionUnitEvent,
-  createCaptionPresentation,
-  projectCaptionCues,
-  projectCaptionScheduleCues,
-  scheduleCaptionPresentation,
-} from "./source.js";
+} from "./document.js";
+export {
+  assertCaptionCuePayload,
+  replaceCaptionWord,
+  retimeCaptionUnit,
+  sealCaptionCuePayload,
+} from "./payload.js";
 export type * from "./types.js";
-export {
-  assertCaptionNlePayload,
-  replaceCaptionNleWord,
-  retimeCaptionNleUnit,
-  sealCaptionNlePayload,
-} from "./nle-payload.js";
-export {
-  captionBasicNleComponentSymbol,
-  captionBasicNleHtmlVideoResolver,
-  captionBasicNleResolver,
-} from "./nle-package.js";
-export {
-  createCaptionNleMaterialization,
-  createCaptionNleMaterializationForMediaItem,
-} from "./materialize.js";
-export type { CaptionNleComponentSelection } from "./materialize.js";

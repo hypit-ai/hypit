@@ -25,7 +25,6 @@ import {
 } from "@hypit/gpt-image";
 import { createFieldModelPrimaryFragment, modelArtifactInputNames, modelTextFieldInputName } from "@hypit/generation/model-fields";
 import { mediaManifest } from "@hypit/media";
-import { narrativeManifest } from "@hypit/narrative";
 import { temporalManifest } from "@hypit/temporal";
 import type { CanonicalValue, ResourceId, ModuleManifest, Value, TypeRef } from "@hypit/protocol";
 import {
@@ -63,7 +62,6 @@ function fixture() {
     promptManifest,
     generationManifest,
     gptImageManifest,
-    narrativeManifest,
     mediaManifest,
     temporalManifest,
     spatialManifest,

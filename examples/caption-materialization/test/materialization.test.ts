@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { assertCaptionNlePayload } from "@hypit/caption";
+import { assertCaptionCuePayload } from "@hypit/caption";
 
 import { buildCaptionMaterializationExample } from "../compose.js";
 
@@ -18,7 +18,7 @@ test("one Script materializes complete editable Karaoke Caption Items over three
     assert.equal(item.kind, "component");
     if (item.kind !== "component") continue;
     const parameters = item.parameters as Record<string, unknown>;
-    assertCaptionNlePayload(parameters.caption, item.duration);
+    assertCaptionCuePayload(parameters.caption, item.duration);
     assert(parameters.caption.words.length > 0);
     assert(parameters.caption.units.length > 0);
     assert.equal((parameters.style as Record<string, unknown>).karaoke === undefined, false);

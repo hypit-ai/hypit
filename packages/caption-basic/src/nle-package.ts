@@ -5,12 +5,11 @@ import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
 import type { NleComponentItem, NleComponentResolver, NlePackageSymbol } from "@hypit/nle";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
 
-import { captionModuleRef } from "./manifest.js";
-import { assertCaptionNlePayload } from "./nle-payload.js";
-import type { CaptionBasicKaraokeParameters, CaptionNlePayload } from "./types.js";
+import { assertCaptionCuePayload, type CaptionCuePayload } from "@hypit/caption";
+import type { CaptionBasicKaraokeParameters } from "./types.js";
 
 export const captionBasicNleComponentSymbol: NlePackageSymbol = {
-  module: captionModuleRef,
+  module: { name: "@hypit/caption-basic", version: "1" },
   name: "basic",
 };
 
@@ -44,9 +43,7 @@ function optionalFont(value: unknown): string {
 }
 
 function karaokeParameters(value: unknown): Required<CaptionBasicKaraokeParameters> {
-  if (value === undefined) return {
-    mode: "off", transition: "step", activeColor: "#ffd54a",
-  };
+  if (value === undefined) return { mode: "off", transition: "step", activeColor: "#ffd54a" };
   assert(value !== null && typeof value === "object" && !Array.isArray(value),
     "Basic NLE Caption karaoke must be a record.");
   const input = value as Readonly<Record<string, unknown>>;
@@ -65,7 +62,7 @@ function karaokeParameters(value: unknown): Required<CaptionBasicKaraokeParamete
   };
 }
 
-function captionUnitText(payload: CaptionNlePayload, unitId: string): string {
+function captionUnitText(payload: CaptionCuePayload, unitId: string): string {
   const unit = payload.units.find((candidate) => candidate.id === unitId)!;
   const words = new Map(payload.words.map((word) => [word.id, word] as const));
   return unit.wordIds.map((wordId) => {
@@ -79,7 +76,7 @@ function resolveCaptionBasic(item: NleComponentItem) {
   assert(item.parameters !== null && typeof item.parameters === "object" && !Array.isArray(item.parameters),
     `NLE Caption ${item.id} parameters must be a record.`);
   const parameters = item.parameters as Readonly<Record<string, unknown>>;
-  assertCaptionNlePayload(parameters.caption, item.duration);
+  assertCaptionCuePayload(parameters.caption, item.duration);
   const caption = parameters.caption;
   assert(parameters.family === "basic", `NLE Caption ${item.id} requires the basic style family.`);
   assert(parameters.style !== null && typeof parameters.style === "object" && !Array.isArray(parameters.style),
@@ -156,7 +153,6 @@ function resolveCaptionBasic(item: NleComponentItem) {
   };
 }
 
-/** Minimal official Component for materialized editorial Caption blocks. */
 export const captionBasicNleResolver: NleComponentResolver = {
   component: captionBasicNleComponentSymbol,
   resolve: (item) => {

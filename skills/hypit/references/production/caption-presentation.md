@@ -1,71 +1,49 @@
 # Caption presentation
 
-Read this to apply subtitle treatments, change them during a passage, or hide them temporarily.
-[Caption craft](../playbooks/craft/captions.md) owns visual direction;
-[Caption authoring](caption-authoring.md) explains creating a new family.
+Read this to apply subtitle treatments, change them by speaker or Cue, hide selected Cues, or enable
+Karaoke. [Caption craft](../playbooks/craft/captions.md) owns visual direction;
+[Caption authoring](caption-authoring.md) explains creating another family.
 
-**Script authors Words, Units and Cues; the family presents those Cues; Use organizes presentation
-in time.** `||` ends the current authored Cue. An upstream adapter resolves every document Unit's timing once; the
-Track consumes that flat `CaptionTiming` without knowing whether it came from Narrative, SRT/VTT or
-authored absolute time. Each Use selects a complete Style inside an already resolved time window.
+Script authors Words, display-to-speech Units, Cues and optional word attributes. Alignment produces
+source-local Unit timing. A project program combines those facts with presentation choices and writes
+ordinary NLE Component Items. The accepted NLE project contains direct rational time and complete
+Cue-local payloads; it does not retain Script, Binding, transcript, media-following or named semantic
+dependencies.
 
-```svml
-<caption:Hidden id="hidden"/>
-<narrative-caption:Timing id="story-captions" document={story.caption}
-  binding={story.caption-binding} projection={story-time}/>
-<time:Window id="impact-window" timeline={program.timeline} from="12s" for="2s"/>
-<caption-fine:Caption id="captions" document={story.caption} timing={story-captions} timeline={program.timeline} within={canvas.bounds}>
-  <caption-fine:Use style={base-style}/>
-  <caption-fine:Use role="GUEST" style={guest-style}/>
-  <caption-fine:Use during={answer-window} style={answer-style}/>
-  <caption-fine:Use during={demonstration-window} style={hidden}/>
-  <caption-fine:Use during={impact-window} style={impact-style}/>
-</caption-fine:Caption>
+```ts
+const presentation = appendCaptionStyleOverride(
+  appendCaptionHiddenOverride(
+    createCaptionPresentation(baseStyle),
+    { id: "hide-pause", selector: { cues: ["cue-4"] } },
+  ),
+  { id: "guest-role", selector: { roles: ["GUEST"] } },
+  guestStyle,
+);
+
+const transaction = createCaptionNleMaterializationForMediaItem(project, {
+  id: "story-captions",
+  mediaItem: "interview-use",
+  track: "captions",
+  document: story.caption.document,
+  timing: captionTiming,
+  presentation,
+  picture: captionPicture,
+});
 ```
 
-Styles are declared by the chosen family. Fine Styles take a Recipe and exact fonts. A new structural
-caption can use a project family with its own layout and behavior.
+Overrides are evaluated in order and the last match wins. Role rules can cover non-contiguous turns;
+Cue rules can hide or restyle one passage. They do not change Word spelling, Unit timing or Cue
+membership. A hidden Cue becomes a complete disabled Item, so the editor can restore it without
+reopening semantic evidence.
 
-## One time language
+The official `@hypit/caption-basic` family stores every Word and every Unit boundary inside each
+materialized Cue Item. Static, current-unit and trailing Karaoke are therefore Style choices over
+facts already present in the NLE. Enabling Karaoke does not rerun WhisperX or alignment.
 
-| Intent | Use |
-| --- | --- |
-| A treatment across the whole Timeline | `style={base}` with no time attributes |
-| Follow a semantic passage | Project it once, then `during={answer-window}` |
-| Follow a placed Segment | Project it once, then `during={answer-window}` |
-| Start at a meaningful word, for a fixed duration | Project it once, then use the resolved Window |
-| End at a meaningful event | Declare a named Window from that event, then consume it |
-| Explicit window | Declare it once with `time:Window`, then `during={named-window}` |
-| A particular speaker | Add `role="GUEST"` to any of these |
+Word attributes such as `word{face=serif}` are different from Cue presentation overrides. They are
+local authored roles inside one Cue, preserved in `CaptionDisplayWord.attributes`; the selected
+Caption family decides their visual meaning. Basic Caption may ignore an attribute it does not own.
 
-[Timing](timing.md) owns the shared expressions and semantic references.
-Use semantic boundaries when the treatment follows what is being said. Absolute times remain useful
-for an explicitly timed presentation. A Role filters whose content is presented, independently of the
-window: it can cover several turns and does not change the authored Window.
-
-The last matching Use in Source order wins locally. Each match replaces the whole Style; properties
-are not merged. A hidden Use clears this Track's subtitle presentation throughout that window,
-including neighboring Cue lead/tail. Later Uses can restore a smaller interval. Audio and content
-stay unchanged. With no matching Use, nothing is drawn. With no subtitle content, a Use has nothing
-to draw. Independent Caption components can intentionally show multiple presentations at the same time.
-
-## A style change can happen inside a Cue
-
-```text
-test1 || test2 @{select} test3 || test4 @{/select}
-```
-
-This contains three Cues: `test1`, `test2 test3`, and `test4`. The Selection starts before `test3`;
-it does not split `test2 test3`. With a broad ordinary Use and a later emphasized Use during `select`,
-the complete second Cue changes Style at that boundary, then the third Cue uses the same emphasis.
-
-Word times remain the original times. Karaoke or text reveal therefore continues at the appropriate
-word when the Style changes or returns after a hidden interval. The Window limits visibility; it does
-not restart the Cue's animation clock. Changing only one word's visual role is a different design
-choice: Fine provides current/trail unit emphasis, while a custom family can interpret authored word
-attributes for structural layouts. Display/pronunciation units remain complete.
-
-Presentation Uses select Style and scope; they are not additional Timeline ranges. Their Scope and
-Role explain which Cues they affect. Changing `||` changes Cue structure; changing a Use does not.
-Inspect the resulting placement, handoffs and emphasis alongside the other visuals while reusing the
-existing media.
+After materialization, moving, trimming, disabling, deleting, restyling, correcting a displayed word
+or adjusting one Unit boundary are ordinary NLE edits. They do not write back to Script or the media's
+transcript. Rerunning the authoring program is an explicit regeneration operation, not a hidden live link.

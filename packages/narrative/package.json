@@ -7,20 +7,8 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "hypit": {
-    "activation": "./src/activation.ts"
-  },
   "files": [
     "dist",
     "README.md"
-  ],
-  "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
-  },
-  "devDependencies": {
-    "@hypit/producer": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/refinement": "workspace:*",
-    "@hypit/hypit": "workspace:*"
-  }
+  ]
 }

@@ -4,13 +4,12 @@ import { pathToFileURL } from "node:url";
 import {
   appendCaptionHiddenOverride,
   appendCaptionStyleOverride,
-  assertCaptionNlePayload,
   createCaptionNleMaterializationForMediaItem,
   createCaptionPresentation,
-  type CaptionDocument,
   type CaptionPresentation,
   type CaptionStyle,
-} from "@hypit/caption";
+} from "@hypit/caption-basic";
+import { assertCaptionCuePayload, type CaptionDocument } from "@hypit/caption";
 import type { Narrative, NarrativeSegmentRef } from "@hypit/narrative";
 import { projectNarrativeCaptionTiming, type NarrativeCaptionBinding } from "@hypit/narrative-caption";
 import { alignNarrative } from "@hypit/narrative-speech-alignment";
@@ -188,7 +187,7 @@ export async function buildCaptionMaterializationExample(): Promise<{
   for (const item of project.tracks.find((track) => track.id === "captions")!.items) {
     if (item.kind !== "component") throw new Error(`Caption Track contains non-Component Item ${item.id}.`);
     const parameters = item.parameters as Record<string, unknown>;
-    assertCaptionNlePayload(parameters.caption, item.duration);
+      assertCaptionCuePayload(parameters.caption, item.duration);
   }
   return { project, document, presentation: resolvedPresentation };
 }

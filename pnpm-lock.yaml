@@ -72,6 +72,9 @@ importers:
       '@hypit/author':
         specifier: workspace:*
         version: link:packages/author
+      '@hypit/caption-basic':
+        specifier: workspace:*
+        version: link:packages/caption-basic
       '@hypit/markup':
         specifier: workspace:*
         version: link:packages/markup
@@ -559,14 +562,23 @@ importers:
 
   packages/caption:
     dependencies:
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
+
+  packages/caption-basic:
+    dependencies:
       '@hypit/audiovisual':
-        specifier: workspace:*
+        specifier: workspace:^0.1.0
         version: link:../audiovisual
       '@hypit/audiovisual-html':
-        specifier: workspace:*
+        specifier: workspace:^0.1.0
         version: link:../audiovisual-html
+      '@hypit/caption':
+        specifier: workspace:^0.1.1
+        version: link:../caption
       '@hypit/html-program':
-        specifier: workspace:*
+        specifier: workspace:^0.1.0
         version: link:../html-program
       '@hypit/html-video':
         specifier: workspace:^0.2.1
@@ -574,31 +586,15 @@ importers:
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../nle
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
       '@hypit/spatial':
-        specifier: workspace:*
+        specifier: workspace:^0.1.1
         version: link:../spatial
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
-    devDependencies:
-      '@hypit/author':
-        specifier: workspace:*
-        version: link:../author
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/producer':
-        specifier: workspace:*
-        version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:*
-        version: link:../refinement
 
   packages/cli:
     dependencies:
@@ -1333,20 +1329,7 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
-  packages/narrative:
-    devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/producer':
-        specifier: workspace:*
-        version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:*
-        version: link:../refinement
+  packages/narrative: {}
 
   packages/narrative-caption:
     dependencies:
@@ -1359,25 +1342,6 @@ importers:
       '@hypit/narrative-temporal':
         specifier: workspace:^0.1.1
         version: link:../narrative-temporal
-    devDependencies:
-      '@hypit/author':
-        specifier: workspace:*
-        version: link:../author
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/producer':
-        specifier: workspace:*
-        version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:*
-        version: link:../refinement
 
   packages/narrative-speech-alignment:
     dependencies:
@@ -1394,9 +1358,6 @@ importers:
         specifier: workspace:^0.1.0
         version: link:../timed-transcript
     devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
       '@hypit/script':
         specifier: workspace:*
         version: link:../script
@@ -1409,25 +1370,6 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
-    devDependencies:
-      '@hypit/author':
-        specifier: workspace:*
-        version: link:../author
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/producer':
-        specifier: workspace:*
-        version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:*
-        version: link:../refinement
 
   packages/nle:
     dependencies:

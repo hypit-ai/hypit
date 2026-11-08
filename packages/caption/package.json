@@ -7,31 +7,11 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "hypit": {
-    "activation": "./src/activation.ts"
-  },
   "dependencies": {
-    "@hypit/audiovisual": "workspace:*",
-    "@hypit/audiovisual-html": "workspace:*",
-    "@hypit/html-program": "workspace:*",
-    "@hypit/html-video": "workspace:^0.2.1",
-    "@hypit/nle": "workspace:^0.1.0",
-    "@hypit/spatial": "workspace:*",
     "@hypit/temporal": "workspace:^0.1.1"
-  },
-  "devDependencies": {
-    "@hypit/producer": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/markup": "workspace:*",
-    "@hypit/author": "workspace:*",
-    "@hypit/refinement": "workspace:*",
-    "@hypit/hypit": "workspace:*"
   },
   "files": [
     "dist",
     "README.md"
-  ],
-  "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
-  }
+  ]
 }

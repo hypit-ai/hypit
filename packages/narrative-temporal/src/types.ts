@@ -30,10 +30,3 @@ export type NarrativeLocalTiming = {
   readonly tokens: readonly NarrativeAlignmentToken[];
   readonly boundaries: readonly { readonly id: string; readonly at: ExactTemporalValue }[];
 };
-
-/** Internal balanced aggregation value used by the author declaration. */
-export type NarrativeTimingParts = {
-  readonly alignments: readonly NarrativeAlignment[];
-};
-
-export type NarrativeTimingHeader = { readonly id: string };

@@ -1,361 +1,66 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { pictureType, type ProgramSource } from "@hypit/audiovisual";
 import {
-  compileAudiovisualAuthorSpec,
-} from "../../audiovisual-author/src/index.js";
-import {
-  compileAudiovisualHtmlProgram,
-  visualProgramHtmlSource,
-} from "@hypit/audiovisual-html";
-import {
-  createNleTerminalLinkHostFromFacets,
-  lowerNleProjectToHtmlProgram,
-} from "../../html-video/src/index.js";
-import { htmlVisual } from "@hypit/html-program";
-import {
-  applyNleTransaction,
-  createNleProject,
-  nleLinearSourceTime,
-} from "@hypit/nle";
-import { sealLocalSpatialDomain, sealSpatialMap } from "@hypit/spatial/algebra";
-import { exactTemporalValue, sealLocalTemporalDomain } from "@hypit/temporal/algebra";
-
-import {
-  appendCaptionHiddenOverride,
-  appendCaptionStyleOverride,
-  assertCaptionNlePayload,
   assertCaptionDocument,
-  captionHtmlSource,
-  captionProgramSource,
-  captionUnitEvent,
-  createCaptionPresentation,
-  createCaptionNleMaterialization,
-  createCaptionNleMaterializationForMediaItem,
-  projectCaptionCues,
-  replaceCaptionNleWord,
-  retimeCaptionNleUnit,
-  scheduleCaptionPresentation,
-  type CaptionComponentSpec,
+  assertLocalCaptionTiming,
+  captionSelectedUnitIds,
   type CaptionDocument,
-  type CaptionStyle,
   type LocalCaptionTiming,
 } from "../src/index.js";
-import { hypitPackage as captionHypitPackage } from "../src/activation.js";
+import { exactTemporalValue, sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 
 const at = (value: number) => exactTemporalValue({ numerator: BigInt(value), denominator: 1n });
-const domain = sealLocalTemporalDomain({ id: "interview:source-time", duration: at(6) });
-const pictureDomain = sealLocalSpatialDomain({ id: "main:picture", region: {
-  x: 0, y: 0, width: 1920, height: 1080,
-} });
 
 const document: CaptionDocument = {
-  id: "transcript",
+  id: "story.caption",
   words: [
     { id: "word-one", unitId: "unit-one", text: "First", separatorBefore: "", attributes: [] },
-    { id: "word-two", unitId: "unit-two", text: "Second", separatorBefore: "", attributes: [] },
-    { id: "word-three", unitId: "unit-three", text: "Third", separatorBefore: "", attributes: [] },
+    { id: "word-two", unitId: "unit-two", text: "Second", separatorBefore: " ",
+      attributes: [{ name: "face", value: "serif" }] },
   ],
   units: [
     { id: "unit-one", wordIds: ["word-one"] },
     { id: "unit-two", wordIds: ["word-two"] },
-    { id: "unit-three", wordIds: ["word-three"] },
   ],
   cues: [
     { id: "cue-one", unitIds: ["unit-one"], role: "HOST" },
-    { id: "cue-two", unitIds: ["unit-two"], role: "GUEST" },
-    { id: "cue-three", unitIds: ["unit-three"], role: "HOST" },
+    { id: "cue-two", unitIds: ["unit-two"] },
   ],
 };
 
-const timing: LocalCaptionTiming = {
-  documentId: document.id,
-  domain,
-  units: [
-    { unitId: "unit-one", regions: [{ start: { position: at(0), side: "after" },
-      end: { position: at(1), side: "before" } }] },
-    { unitId: "unit-two", regions: [{ start: { position: at(2), side: "after" },
-      end: { position: at(3), side: "before" } }] },
-    { unitId: "unit-three", regions: [{ start: { position: at(4), side: "after" },
-      end: { position: at(5), side: "before" } }] },
-  ],
-};
-
-const style: CaptionStyle = { id: "main", family: "basic", parameters: {} };
-const hostStyle: CaptionStyle = { id: "host", family: "basic", parameters: { color: "#7dd3fc" } };
-const guestStyle: CaptionStyle = { id: "guest", family: "basic", parameters: { color: "#f0abfc" } };
-const impactStyle: CaptionStyle = { id: "impact", family: "basic", parameters: { fontSizePx: 72 } };
-const spec: CaptionComponentSpec = { id: "captions", pictureDomain, selection: { kind: "all" } };
-
-const rolePresentation = appendCaptionStyleOverride(appendCaptionStyleOverride(
-  createCaptionPresentation(style),
-  { id: "host-role", selector: { roles: ["HOST"] } }, hostStyle,
-), { id: "guest-role", selector: { roles: ["GUEST"] } }, guestStyle);
-const finalPresentation = appendCaptionStyleOverride(appendCaptionHiddenOverride(
-  rolePresentation,
-  { id: "pause-middle", selector: { cues: ["cue-two"] } },
-), { id: "impact-ending", selector: { cues: ["cue-three"] } }, impactStyle);
-
-test("three cues remain one data-driven ProgramSource and publish typed events", () => {
+test("CaptionDocument owns display, Cue grouping and family-defined word attributes only", () => {
   assert.doesNotThrow(() => assertCaptionDocument(document));
-  const source = captionProgramSource(spec, document, timing, style);
-  assert.deepEqual(Object.keys(source.outputs), ["picture"]);
-  const picture = source.outputs.picture;
-  assert.equal(picture?.kind, "signal");
-  if (picture?.kind !== "signal") throw new Error("Caption Picture output is not a signal.");
-  assert.deepEqual(picture.domain, domain);
-  assert.deepEqual(captionUnitEvent(timing, { unitId: "unit-two", edge: "start" }), {
-    domain,
-    regions: [{ start: { position: at(2), side: "after" },
-      end: { position: at(2), side: "after" } }],
-  });
+  assert.deepEqual(captionSelectedUnitIds(document, { kind: "cues", ids: ["cue-two"] }), ["unit-two"]);
+  assert.deepEqual(document.words[1]?.attributes, [{ name: "face", value: "serif" }]);
 });
 
-test("ordered source-local rules cover roles, temporary silence and one-off restyling", () => {
-  const roles = scheduleCaptionPresentation(spec, document, timing, rolePresentation);
-  assert.deepEqual(roles.cues.map((cue) => cue.presentation), [
-    { kind: "style", styleId: "host" },
-    { kind: "style", styleId: "guest" },
-    { kind: "style", styleId: "host" },
-  ]);
-  const final = scheduleCaptionPresentation(spec, document, timing, finalPresentation);
-  assert.deepEqual(final.cues.map((cue) => [cue.cueId, cue.presentation, cue.overrideId]), [
-    ["cue-one", { kind: "style", styleId: "host" }, "host-role"],
-    ["cue-two", { kind: "hidden" }, "pause-middle"],
-    ["cue-three", { kind: "style", styleId: "impact" }, "impact-ending"],
-  ]);
-});
-
-test("Caption timing and presentation bake once into ordinary editable NLE blocks", () => {
-  const base: CaptionStyle = { id: "editorial", family: "basic", parameters: {
-    color: "#ffffff", background: "#000000cc", fontSize: 40,
-  } };
-  const impact: CaptionStyle = { id: "editorial-impact", family: "basic", parameters: {
-    color: "#ff0000", background: "#000000cc", fontSize: 56,
-  } };
-  const presentation = appendCaptionStyleOverride(appendCaptionHiddenOverride(
-    createCaptionPresentation(base),
-    { id: "hide-middle", selector: { cues: ["cue-two"] } },
-  ), { id: "style-ending", selector: { cues: ["cue-three"] } }, impact);
-  const empty = createNleProject({
-    id: "caption-materialization", name: "Caption materialization",
-    editRate: { numerator: 2, denominator: 1 },
-    canvas: { width: 1920, height: 1080, clearColor: "#000000" },
-  });
-  const project = applyNleTransaction(empty, { revision: 0, commands: [{
-    kind: "track.add", track: {
-      id: "captions", name: "Captions", kind: "picture", locked: false, muted: false, items: [],
-    },
-  }] });
-  const transaction = createCaptionNleMaterialization(project, {
-    id: "transcript-use", track: "captions", document, timing, presentation, at: at(3),
-    picture: {
-      layout: { x: 0, y: 800, width: 1920, height: 280, fit: "fill" }, effects: [],
-    },
-  });
-  assert.deepEqual(transaction.commands.map((command) => command.kind), ["item.add", "item.add", "item.add"]);
-  const materialized = applyNleTransaction(project, transaction);
-  assert.deepEqual(materialized.tracks[0]?.items.map((item) => [
-    item.id, item.kind, item.start, item.duration, item.enabled,
-  ]), [
-    ["transcript-use:cue-one", "component", at(3), at(1), true],
-    ["transcript-use:cue-two", "component", at(5), at(1), false],
-    ["transcript-use:cue-three", "component", at(7), at(1), true],
-  ]);
-  for (const item of materialized.tracks[0]!.items) {
-    assert.equal(item.kind, "component");
-    if (item.kind !== "component") continue;
-    const parameters = item.parameters as Record<string, unknown>;
-    assertCaptionNlePayload(parameters.caption, item.duration);
-    assert.equal(parameters.caption.words.length, 1);
-    assert.deepEqual(parameters.caption.units[0]?.start, at(0));
-    assert.deepEqual(parameters.caption.units[0]?.end, at(1));
-  }
-
-  const html = lowerNleProjectToHtmlProgram(materialized,
-    createNleTerminalLinkHostFromFacets(captionHypitPackage.facets),
-    { numerator: 2, denominator: 1 });
-  assert.match(html.html, />First</u);
-  assert.doesNotMatch(html.html, />Second</u);
-  assert.match(html.html, />Third</u);
-  assert.match(html.html, /#ff0000/u);
-});
-
-test("complete Caption Items switch Karaoke without returning to media", () => {
-  const combinedDocument: CaptionDocument = {
+test("Caption Cues partition every Unit exactly", () => {
+  assert.throws(() => assertCaptionDocument({
     ...document,
-    id: "combined-transcript",
-    cues: [{ id: "cue-all", unitIds: ["unit-one", "unit-two", "unit-three"] }],
+    cues: [{ id: "cue-one", unitIds: ["unit-one"] }],
+  }), /partition all Units/u);
+  assert.throws(() => assertCaptionDocument({
+    ...document,
+    cues: [
+      { id: "cue-one", unitIds: ["unit-one", "unit-two"] },
+      { id: "cue-two", unitIds: ["unit-two"] },
+    ],
+  }), /more than one Cue/u);
+});
+
+test("LocalCaptionTiming stays source-local and contains no NLE placement", () => {
+  const domain = sealLocalTemporalDomain({ id: "speech", duration: at(2) });
+  const timing: LocalCaptionTiming = {
+    documentId: document.id,
+    domain,
+    units: [
+      { unitId: "unit-one", regions: [{ start: { position: at(0), side: "after" },
+        end: { position: at(1), side: "before" } }] },
+      { unitId: "unit-two", regions: [{ start: { position: at(1), side: "after" },
+        end: { position: at(2), side: "before" } }] },
+    ],
   };
-  const combinedTiming: LocalCaptionTiming = { ...timing, documentId: combinedDocument.id };
-  const karaokeStyle: CaptionStyle = { id: "karaoke", family: "basic", parameters: {
-    color: "#ffffff",
-    karaoke: { mode: "trail", transition: "wipe", activeColor: "#ffd54a" },
-  } };
-  const empty = createNleProject({
-    id: "caption-karaoke", name: "Caption Karaoke",
-    editRate: { numerator: 30, denominator: 1 },
-    canvas: { width: 1920, height: 1080, clearColor: "#000000" },
-  });
-  const project = applyNleTransaction(empty, { revision: 0, commands: [{
-    kind: "track.add", track: {
-      id: "captions", name: "Captions", kind: "picture", locked: false, muted: false, items: [],
-    },
-  }] });
-  const materialized = applyNleTransaction(project, createCaptionNleMaterialization(project, {
-    id: "karaoke-use", track: "captions", document: combinedDocument,
-    timing: combinedTiming, presentation: karaokeStyle, at: at(0),
-    picture: { layout: { x: 0, y: 800, width: 1920, height: 280, fit: "fill" }, effects: [] },
-  }));
-  const item = materialized.tracks[0]!.items[0]!;
-  assert.equal(item.kind, "component");
-  if (item.kind !== "component") throw new Error("Karaoke Caption is not a Component Item.");
-  const parameters = item.parameters as Record<string, unknown>;
-  assertCaptionNlePayload(parameters.caption, item.duration);
-  assert.deepEqual(parameters.caption.units.map((unit) => [unit.id, unit.start, unit.end]), [
-    ["unit-one", at(0), at(1)],
-    ["unit-two", at(2), at(3)],
-    ["unit-three", at(4), at(5)],
-  ]);
-  const renamed = replaceCaptionNleWord(parameters.caption, "word-two", "Changed");
-  assert.equal(renamed.words[1]?.text, "Changed");
-  assert.deepEqual(renamed.units[1]?.start, at(2));
-  const retimed = retimeCaptionNleUnit(renamed, "unit-two", at(1), at(3), item.duration);
-  assert.deepEqual(retimed.units[1]?.start, at(1));
-  assert.deepEqual(retimed.units[1]?.end, at(3));
-
-  const html = lowerNleProjectToHtmlProgram(materialized,
-    createNleTerminalLinkHostFromFacets(captionHypitPackage.facets),
-    { numerator: 30, denominator: 1 });
-  assert.match(html.html, /data-caption-unit="unit-one"/u);
-  assert.match(html.html, /data-caption-unit="unit-two"/u);
-  assert.match(html.html, /linear-gradient\(90deg/u);
-  assert.match(html.html, /#ffd54a/u);
-});
-
-test("complete Caption payloads reject display Words omitted from Unit membership", () => {
-  assert.throws(() => assertCaptionNlePayload({
-    documentId: "document",
-    cueId: "cue",
-    words: [{
-      id: "word-one", unitId: "unit-one", text: "Complete", separatorBefore: "", attributes: [],
-    }, {
-      id: "word-two", unitId: "unit-one", text: "payload", separatorBefore: " ", attributes: [],
-    }],
-    units: [{ id: "unit-one", wordIds: ["word-one"], start: at(0), end: at(1) }],
-  }, at(1)), /Word word-two is not listed by Unit unit-one/u);
-});
-
-test("Caption cues follow one selected trimmed Media Item only while materializing", () => {
-  const empty = createNleProject({
-    id: "caption-follow", name: "Caption follow", editRate: { numerator: 2, denominator: 1 },
-    canvas: { width: 1920, height: 1080, clearColor: "#000000" },
-  });
-  const project = applyNleTransaction(empty, { revision: 0, commands: [{
-    kind: "media.add", media: {
-      id: "interview", name: "Interview", asset: { path: "media/interview.media.json" },
-    },
-  }, {
-    kind: "track.add", track: {
-      id: "picture", name: "Picture", kind: "picture", locked: false, muted: false, items: [],
-    },
-  }, {
-    kind: "track.add", track: {
-      id: "captions", name: "Captions", kind: "picture", locked: false, muted: false, items: [],
-    },
-  }, {
-    kind: "item.add", track: "picture", item: {
-      id: "interview-use", kind: "media", media: "interview", start: at(10), duration: at(3),
-      sourceTime: nleLinearSourceTime(at(3), at(2)), enabled: true,
-      picture: {
-        layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "cover" }, effects: [],
-      },
-    },
-  }] });
-  const transaction = createCaptionNleMaterializationForMediaItem(project, {
-    id: "followed-captions", mediaItem: "interview-use", track: "captions",
-    document, timing, presentation: rolePresentation,
-    picture: {
-      layout: { x: 0, y: 800, width: 1920, height: 280, fit: "fill" }, effects: [],
-    },
-  });
-  assert.deepEqual(transaction.commands.map((command) => command.kind), ["item.add", "item.add"]);
-  const materialized = applyNleTransaction(project, transaction);
-  assert.deepEqual(materialized.tracks[1]?.items.map((item) => [
-    item.id, item.start, item.duration,
-  ]), [
-    ["followed-captions:cue-two", at(10), at(1)],
-    ["followed-captions:cue-three", at(12), at(1)],
-  ]);
-  assert.equal(materialized.tracks[1]?.items[0]?.sourceTime.pieces[0]?.sourceAtStart.ticks, "0");
-});
-
-test("one source-bound Caption occurrence renders all three internal cues", () => {
-  const video: ProgramSource = { id: "video", outputs: { picture: {
-    kind: "signal", type: pictureType, domain, spatialDomain: pictureDomain,
-  } } };
-  const captions = captionProgramSource(spec, document, timing, finalPresentation);
-  const program = compileAudiovisualAuthorSpec({
-    id: "main", duration: at(6), pictureDomain,
-    sources: { video: { binding: "video" }, captions: { binding: "captions" } },
-    occurrences: {
-      video: { source: "video", at: at(0), outputs: { picture: {} } },
-      captions: { source: "captions", time: { kind: "source", occurrence: "video", output: "picture" },
-        outputs: { picture: {} } },
-    },
-    picture: { output: { kind: "over", inputs: [
-      { kind: "use", occurrence: "video", output: "picture" },
-      { kind: "use", occurrence: "captions", output: "picture" },
-    ] } },
-  }, { sources: { video, captions } });
-  assert.deepEqual(Object.keys(program.occurrences).sort(), ["captions", "video"]);
-  const mapping = program.occurrences.captions?.selections.picture;
-  assert(mapping?.kind === "signal");
-  const projection = projectCaptionCues(spec, document, timing, finalPresentation, mapping.mapping);
-  assert.equal(projection.cues.length, 3);
-  assert.deepEqual(projection.cues.map((cue) => [cue.cueId, cue.text, cue.occurrenceRegions?.length]), [
-    ["cue-one", "First", 1], ["cue-two", "Second", 1], ["cue-three", "Third", 1],
-  ]);
-  assert.deepEqual(Object.keys(program.occurrences).sort(), ["captions", "video"]);
-  const html = compileAudiovisualHtmlProgram(program, { sources: [
-    visualProgramHtmlSource("video", "picture", htmlVisual({ html: "<div></div>" })),
-    captionHtmlSource(spec, document, timing, finalPresentation),
-  ] }, {
-    id: "captions-test", sampling: { frameRate: { numerator: 2, denominator: 1 } },
-    canvas: { width: 1920, height: 1080, clearColor: "#000000" },
-    pictureMapping: sealSpatialMap({ target: pictureDomain, source: pictureDomain,
-      transform: { kind: "affine", xx: 1, xy: 0, yx: 0, yy: 1, tx: 0, ty: 0 } }),
-  });
-  assert.equal((html.html.match(/<div data-caption-cue=/gu) ?? []).length, 3);
-  assert.match(html.html, /data-caption-presentation="hidden"/u);
-  assert.match(html.html, /data-caption-presentation="impact"/u);
-  assert.match(html.html, /frameRate/u);
-});
-
-test("a caption event can place another component through the video occurrence mapping", () => {
-  const video: ProgramSource = { id: "video", outputs: { picture: {
-    kind: "signal", type: pictureType, domain, spatialDomain: pictureDomain,
-  } } };
-  const calloutDomain = sealLocalTemporalDomain({ id: "callout:source-time", duration: at(1) });
-  const callout: ProgramSource = { id: "callout", outputs: { picture: {
-    kind: "signal", type: pictureType, domain: calloutDomain, spatialDomain: pictureDomain,
-  } } };
-  const program = compileAudiovisualAuthorSpec({
-    id: "event-follow", duration: at(6), pictureDomain,
-    sources: { video: { binding: "video" }, callout: { binding: "callout" } },
-    occurrences: {
-      video: { source: "video", at: at(0), outputs: { picture: {} } },
-      callout: { source: "callout", time: {
-        kind: "event", occurrence: "video", output: "picture",
-        event: captionUnitEvent(timing, { unitId: "unit-two", edge: "start" }),
-        require: "unique",
-      }, outputs: { picture: {} } },
-    },
-    picture: { output: { kind: "over", inputs: [
-      { kind: "use", occurrence: "video", output: "picture" },
-      { kind: "use", occurrence: "callout", output: "picture" },
-    ] } },
-  }, { sources: { video, callout } });
-  assert.deepEqual(program.occurrences.callout?.placement.start, at(2));
+  assert.doesNotThrow(() => assertLocalCaptionTiming(timing));
+  assert.deepEqual(timing.domain, domain);
 });
