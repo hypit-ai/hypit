@@ -380,7 +380,7 @@ export function createGenerationGraphCliCommandModules(
     id: "@hypit/generation-graph-cli",
     commands: ["generation"],
     writeRootHelp(io) {
-      io.write("\nLong-running generation\n  generation run\n  hypit generation --help for exact options\n");
+      io.write("\nLong-running generation\n  generation run | materialize\n  hypit generation --help for exact options\n");
     },
     writeHelp(_argv, io) { writeGenerationGraphHelp(io); },
     async run(argv, io, context) { await runGenerationGraphCli(argv, io, context, services); },

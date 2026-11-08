@@ -35,6 +35,7 @@ const { createGenerationGraphCliCommandModules } = await import("@hypit/generati
 const { createLocalRuntimeCliCommandModules } = await import("@hypit/runtime-local-cli");
 const { createLocalMediaCliCommandModules } = await import("@hypit/media-local-cli");
 const { createLocalNleCliCommandModules } = await import("@hypit/nle-local-cli");
+const { createProjectCliCommandModules } = await import("@hypit/project-cli");
 const { createSpeechEstimateCliCommandModules } = await import("@hypit/speech-estimate/cli");
 const { createWhisperXCliCommandModules } = await import("@hypit/whisperx/cli");
 const toolchainServices = createToolchainApplicationServices({
@@ -44,11 +45,12 @@ const toolchainServices = createToolchainApplicationServices({
 await runNodeCli(args, async (argv, io) => await runInstalledCliApplication(argv, io, {
   distributionRoot,
   commandModules: [
-    ...createBuildCliCommandModules(toolchainServices.build),
+    ...createProjectCliCommandModules(),
     ...createGenerationGraphCliCommandModules(toolchainServices.generation),
-    ...createLocalRuntimeCliCommandModules(toolchainServices.localRuntime),
     ...createLocalMediaCliCommandModules(),
     ...createLocalNleCliCommandModules({ distributionPackageRoot: distributionRoot }),
+    ...createBuildCliCommandModules(toolchainServices.build),
+    ...createLocalRuntimeCliCommandModules(toolchainServices.localRuntime),
     ...createToolchainCliCommandModules({ distributionPackageRoot: distributionRoot }),
     ...createSpeechEstimateCliCommandModules(),
     ...createWhisperXCliCommandModules(toolchainServices.build),

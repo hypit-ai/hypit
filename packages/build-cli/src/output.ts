@@ -873,7 +873,7 @@ export function writeBuildCliRootHelp(io: CliIo): void {
     `  ${command}${" ".repeat(Math.max(2, width - command.length))}${description}`;
   io.write([
     "",
-    colors.strong("Authoring"),
+    colors.strong("Source compilation"),
     row("check <source>", "verify one Author source"),
     row("plan <source>", "show one explicit target selection without executing"),
     row("pricing <source>", "read selected Providers' current pricing material"),

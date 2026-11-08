@@ -23,6 +23,9 @@ importers:
       '@hypit/nle-local-cli':
         specifier: workspace:^0.1.0
         version: link:packages/nle-local-cli
+      '@hypit/project-cli':
+        specifier: workspace:^0.1.0
+        version: link:packages/project-cli
       '@hypit/runtime-local-cli':
         specifier: workspace:^0.1.0
         version: link:packages/runtime-local-cli
@@ -1559,6 +1562,15 @@ importers:
         version: link:../protocol
 
   packages/project: {}
+
+  packages/project-cli:
+    dependencies:
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
+      '@hypit/project':
+        specifier: workspace:^0.0.0-dev
+        version: link:../project
 
   packages/prompt:
     devDependencies:

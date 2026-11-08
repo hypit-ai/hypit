@@ -23,6 +23,10 @@ dependencies:
 }
 ```
 
+For a new or existing directory, `hypit project init [directory]` creates or adds this marker and
+creates a conservative `.gitignore` only when one is absent. It deliberately does not create a Graph,
+Canvas, NLE, Runtime Profile, package lockfile, or central project manifest.
+
 The CLI searches upward for a `package.json` whose `hypit.project` field is `true`. It does not turn a
 component package, Runtime file, Graph, NLE file, or arbitrary working directory into a project.
 Use `--project <directory>` when invoking a command from elsewhere. Relative references inside an
