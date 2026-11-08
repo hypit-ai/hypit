@@ -30,7 +30,7 @@ Media already chosen for the work is an ordinary project asset. Declare it with 
 owns its meaning, then make the consuming declaration reference it directly:
 
 ```svml
-<import as="asset" from="@hypit/media@1"/>
+<import as="asset" from="@hypit/media-author@1"/>
 <import as="mediaop" from="@hypit/media-operations@1"/>
 
 <asset:Video id="accepted-opening" src="./assets/opening.mp4"/>

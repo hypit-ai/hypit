@@ -6,7 +6,7 @@ import sharp from "sharp";
 
 import { decodeMediaFrames } from "./file-frames.js";
 import { writeFrameGrid } from "./frame-grid.js";
-import { runProcess, runProcessOutput, runProcessWithInput } from "./process.js";
+import { runProcess, runProcessOutput, runProcessWithInput } from "@hypit/media-local/process";
 import {
   decodeTimedTranscript,
   phraseRanges,
@@ -15,12 +15,12 @@ import {
 } from "@hypit/timed-transcript";
 import type { FrameWords, TranscriptWord } from "@hypit/timed-transcript";
 import { audioViewDimensions, inspectAudio, selectAudioStream } from "./audio-view.js";
-import { ffprobeDisplayExtent } from "./ffprobe-display.js";
+import { ffprobeDisplayExtent } from "@hypit/media-local/display";
 import { renderSpectrogramView, writeSpectrogram } from "./spectrogram.js";
 import type { FrequencyScale, SpectrogramScale } from "./spectrogram.js";
 import { renderWaveformView, writeWaveform } from "./waveform.js";
 import type { WaveformFilter, WaveformScale } from "./waveform.js";
-import { importLocalMediaAsset } from "./asset-import.js";
+import { importLocalMediaAsset } from "@hypit/media-local";
 
 /**
  * Local views of media at chosen times and scales. Transcript annotations use the same seconds as

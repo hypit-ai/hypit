@@ -3,7 +3,7 @@
 <svml>
   <import from="@hypit/script@1"/>
   <import as="audio" from="@hypit/audio-track@1"/>
-  <import as="asset" from="@hypit/media@1"/>
+  <import as="asset" from="@hypit/media-author@1"/>
   <import as="text" from="@hypit/text@1"/>
   <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>

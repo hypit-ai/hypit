@@ -4,7 +4,7 @@ import {
   mediaCommands,
   runMediaCli,
   writeMediaHelp,
-} from "@hypit/media-local";
+} from "@hypit/media-file-local";
 
 /** Direct local media-file tools; no Runtime or Build is opened. */
 export function createLocalMediaCliCommandModules(): readonly CliCommandModule[] {

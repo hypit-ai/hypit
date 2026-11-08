@@ -10,10 +10,10 @@ import { fixtureResource } from "../../../test/fixture-resource.js";
 import {
   mediaManifest,
   mediaProducers,
-  mediaSourceFragment,
   mediaTypes,
   sealMediaSelectionRequest,
-} from "../src/index.js";
+} from "@hypit/media";
+import { mediaSourceFragment } from "../src/index.js";
 
 const program = link(createResolvedClosure([blobManifest, temporalManifest, mediaManifest]), [{
   id: "shot.resource-input",

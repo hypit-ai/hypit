@@ -12,16 +12,20 @@
   "dependencies": {
     "@hypit/author": "workspace:^0.0.0-dev",
     "@hypit/audiovisual-media": "workspace:^0.1.0",
+    "@hypit/build-operations-cli": "workspace:^0.1.0",
     "@hypit/build-cli": "workspace:^0.1.0",
     "@hypit/cli": "workspace:^0.0.0-dev",
     "@hypit/compiler": "workspace:^0.0.0-dev",
     "@hypit/document": "workspace:^0.1.0",
     "@hypit/html-video-author": "workspace:^0.1.0",
     "@hypit/loader": "workspace:^0.0.0-dev",
+    "@hypit/media-author": "workspace:^0.1.0",
     "@hypit/recipe": "workspace:^0.1.0",
     "@hypit/refinement": "workspace:^0.0.0-dev",
     "@hypit/svml": "workspace:^0.1.0",
-    "@hypit/toolchain": "workspace:^0.3.0",
     "@hypit/workspace": "workspace:^0.0.0-dev"
+  },
+  "devDependencies": {
+    "@hypit/toolchain": "workspace:*"
   }
 }

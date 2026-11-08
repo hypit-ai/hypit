@@ -12,18 +12,19 @@ export {
   probeMedia,
   visualBoundaries,
 } from "./files.js";
-export type { MediaProbe, VisualBoundary } from "./files.js";
+export { isMediaCommand, mediaCommands, runMediaCli, writeMediaHelp } from "./files.js";
+export type { MediaCommand, MediaCommandOutput, MediaProbe, VisualBoundary } from "./files.js";
 export {
   importLocalMediaAsset,
   localMediaImportSelection,
   mediaAssetIdFromFile,
   mediaFileExtension,
   mediaTypeFromFile,
-} from "./asset-import.js";
+} from "@hypit/media-local";
 export type {
   LocalMediaAssetImportRequest,
   LocalMediaImportSelection,
-} from "./asset-import.js";
+} from "@hypit/media-local";
 export { renderWaveform, renderWaveformView, writeWaveform } from "./waveform.js";
 export type {
   AudioInspection,

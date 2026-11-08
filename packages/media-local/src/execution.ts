@@ -5,7 +5,6 @@ export {
   executeExtractFrame,
   executeInspectMedia,
   executeMuxProgramMedia,
-  executeProjectSpeechEvidenceAudio,
   executeRenderAudioProgram,
 } from "./execute.js";
 export type {

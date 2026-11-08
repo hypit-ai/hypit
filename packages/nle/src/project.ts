@@ -108,6 +108,12 @@ function assertPicture(value: NlePictureAppearance, project: NleProject, label: 
 
 function assertAudio(value: NleAudioAppearance, label: string): void {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), `${label} is invalid.`);
+  if (value.reconstruction !== undefined) {
+    assert(value.reconstruction !== null && typeof value.reconstruction === "object"
+      && !Array.isArray(value.reconstruction), `${label} reconstruction is invalid.`);
+    assertSymbol(value.reconstruction.using, `${label} reconstruction`);
+    canonicalize(value.reconstruction.parameters);
+  }
   assertEffects(value.effects, label);
 }
 

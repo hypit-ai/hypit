@@ -1,8 +1,8 @@
 import { realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 
-import type { BuildOperationsCliServices } from "../../src/services.js";
-import { runBuildOperationsCli as runBuildCli } from "../../src/main.js";
+import type { BuildOperationsCliServices } from "@hypit/build-operations-cli";
+import { runBuildOperationsCli as runBuildCli } from "@hypit/build-operations-cli";
 import type { CliIo } from "@hypit/cli";
 
 export const applicationCwd = tmpdir();

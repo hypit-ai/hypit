@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { createProducerPackageFacet } from "@hypit/producer";
 import type { ProducerHandlerContext } from "@hypit/producer";
-import type { CliRuntimeInspection } from "../../src/runtime-port.js";
+import type { CliRuntimeInspection } from "@hypit/build-operations-cli";
 
 import { createGreetingBuild, producers } from "../planning-scenario.js";
 import {

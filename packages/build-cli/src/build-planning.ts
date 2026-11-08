@@ -9,8 +9,13 @@ import {
 import { capabilityKey, typeKey } from "@hypit/protocol";
 import type { CanonicalValue, PublicationIntent } from "@hypit/protocol";
 import type { BuildView } from "@hypit/kernel";
-import type { CliBuildAuthoring, CliRuntimeInspection } from "./runtime-port.js";
-import type { PlanRequest, PlanRequestOutput, PricingRequest } from "./output.js";
+import type {
+  CliBuildAuthoring,
+  CliRuntimeInspection,
+  PlanRequest,
+  PlanRequestOutput,
+  PricingRequest,
+} from "@hypit/build-operations-cli";
 import { plannedNeeds } from "@hypit/kernel";
 
 export {

@@ -14,6 +14,9 @@ importers:
       '@hypit/build-cli':
         specifier: workspace:^0.1.0
         version: link:packages/build-cli
+      '@hypit/build-operations-cli':
+        specifier: workspace:^0.1.0
+        version: link:packages/build-operations-cli
       '@hypit/generation-graph-cli':
         specifier: workspace:^0.1.0
         version: link:packages/generation-graph-cli
@@ -301,6 +304,9 @@ importers:
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
         version: link:../audiovisual
+      '@hypit/nle':
+        specifier: workspace:^0.1.0
+        version: link:../nle
       '@hypit/producer':
         specifier: workspace:^0.0.0-dev
         version: link:../producer
@@ -363,11 +369,8 @@ importers:
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
         version: link:../audiovisual
-      '@hypit/author':
-        specifier: workspace:^0.0.0-dev
-        version: link:../author
       '@hypit/media':
-        specifier: workspace:^0.1.0
+        specifier: workspace:^0.2.0
         version: link:../media
       '@hypit/producer':
         specifier: workspace:^0.0.0-dev
@@ -397,14 +400,11 @@ importers:
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
         version: link:../audiovisual
-      '@hypit/author':
-        specifier: workspace:^0.0.0-dev
-        version: link:../author
       '@hypit/html-program':
         specifier: workspace:^0.2.0
         version: link:../html-program
       '@hypit/media':
-        specifier: workspace:^0.1.0
+        specifier: workspace:^0.2.0
         version: link:../media
       '@hypit/producer':
         specifier: workspace:^0.0.0-dev
@@ -479,9 +479,9 @@ importers:
 
   packages/browser-capture:
     dependencies:
-      '@hypit/media-local':
-        specifier: workspace:^0.3.0
-        version: link:../media-local
+      '@hypit/media-file-local':
+        specifier: workspace:^0.1.0
+        version: link:../media-file-local
       '@puppeteer/browsers':
         specifier: 3.2.2
         version: 3.2.2
@@ -501,6 +501,9 @@ importers:
       '@hypit/author':
         specifier: workspace:^0.0.0-dev
         version: link:../author
+      '@hypit/build-operations-cli':
+        specifier: workspace:^0.1.0
+        version: link:../build-operations-cli
       '@hypit/build-submission':
         specifier: workspace:^0.0.0-dev
         version: link:../build-submission
@@ -510,15 +513,46 @@ importers:
       '@hypit/compiler':
         specifier: workspace:^0.0.0-dev
         version: link:../compiler
-      '@hypit/executor':
-        specifier: workspace:^0.0.0-dev
-        version: link:../executor
       '@hypit/kernel':
         specifier: workspace:^0.0.0-dev
         version: link:../kernel
       '@hypit/loader':
         specifier: workspace:^0.0.0-dev
         version: link:../loader
+      '@hypit/project':
+        specifier: workspace:^0.0.0-dev
+        version: link:../project
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/source':
+        specifier: workspace:^0.0.0-dev
+        version: link:../source
+      '@hypit/workspace':
+        specifier: workspace:^0.0.0-dev
+        version: link:../workspace
+    devDependencies:
+      '@hypit/producer':
+        specifier: workspace:*
+        version: link:../producer
+      '@hypit/product':
+        specifier: workspace:*
+        version: link:../product
+      '@hypit/runtime-local':
+        specifier: workspace:*
+        version: link:../runtime-local
+
+  packages/build-operations-cli:
+    dependencies:
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
+      '@hypit/executor':
+        specifier: workspace:^0.0.0-dev
+        version: link:../executor
+      '@hypit/kernel':
+        specifier: workspace:^0.0.0-dev
+        version: link:../kernel
       '@hypit/product':
         specifier: workspace:^0.0.0-dev
         version: link:../product
@@ -537,19 +571,9 @@ importers:
       '@hypit/runtime':
         specifier: workspace:^0.0.0-dev
         version: link:../runtime
-      '@hypit/source':
-        specifier: workspace:^0.0.0-dev
-        version: link:../source
       '@hypit/workspace':
         specifier: workspace:^0.0.0-dev
         version: link:../workspace
-    devDependencies:
-      '@hypit/producer':
-        specifier: workspace:*
-        version: link:../producer
-      '@hypit/runtime-local':
-        specifier: workspace:*
-        version: link:../runtime-local
 
   packages/build-submission:
     dependencies:
@@ -1223,9 +1247,6 @@ importers:
 
   packages/media:
     dependencies:
-      '@hypit/author':
-        specifier: workspace:^0.0.0-dev
-        version: link:../author
       '@hypit/blob':
         specifier: workspace:^0.0.0-dev
         version: link:../blob
@@ -1244,13 +1265,6 @@ importers:
       '@hypit/temporal-graph':
         specifier: workspace:^0.1.0
         version: link:../temporal-graph
-    devDependencies:
-      '@hypit/kernel':
-        specifier: workspace:*
-        version: link:../kernel
-      '@hypit/svml':
-        specifier: workspace:*
-        version: link:../svml
 
   packages/media-asset:
     dependencies:
@@ -1285,6 +1299,31 @@ importers:
         specifier: workspace:^0.0.0-dev
         version: link:../protocol
 
+  packages/media-author:
+    dependencies:
+      '@hypit/author':
+        specifier: workspace:^0.0.0-dev
+        version: link:../author
+      '@hypit/blob':
+        specifier: workspace:^0.0.0-dev
+        version: link:../blob
+      '@hypit/media':
+        specifier: workspace:^0.2.0
+        version: link:../media
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/temporal-graph':
+        specifier: workspace:^0.1.0
+        version: link:../temporal-graph
+    devDependencies:
+      '@hypit/kernel':
+        specifier: workspace:*
+        version: link:../kernel
+      '@hypit/svml':
+        specifier: workspace:*
+        version: link:../svml
+
   packages/media-avir:
     dependencies:
       '@hypit/audiovisual':
@@ -1315,6 +1354,22 @@ importers:
         specifier: workspace:^0.1.1
         version: link:../temporal
 
+  packages/media-file-local:
+    dependencies:
+      '@hypit/media-local':
+        specifier: workspace:^0.3.0
+        version: link:../media-local
+      '@hypit/timed-transcript':
+        specifier: workspace:^0.1.0
+        version: link:../timed-transcript
+      sharp:
+        specifier: 0.35.4
+        version: 0.35.4(@types/node@24.10.1)
+    devDependencies:
+      '@hypit/cli':
+        specifier: workspace:*
+        version: link:../cli
+
   packages/media-local:
     dependencies:
       '@hypit/audio-gain':
@@ -1341,18 +1396,9 @@ importers:
       '@hypit/resource-store':
         specifier: workspace:^0.1.0
         version: link:../resource-store
-      '@hypit/speech-evidence':
-        specifier: workspace:^0.2.0
-        version: link:../speech-evidence
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
-      '@hypit/timed-transcript':
-        specifier: workspace:^0.1.0
-        version: link:../timed-transcript
-      sharp:
-        specifier: 0.35.4
-        version: 0.35.4(@types/node@24.10.1)
     devDependencies:
       '@hypit/blob':
         specifier: workspace:*
@@ -1363,9 +1409,9 @@ importers:
       '@hypit/cli':
         specifier: workspace:^0.0.0-dev
         version: link:../cli
-      '@hypit/media-local':
-        specifier: workspace:^0.3.0
-        version: link:../media-local
+      '@hypit/media-file-local':
+        specifier: workspace:^0.1.0
+        version: link:../media-file-local
 
   packages/media-product-local:
     dependencies:
@@ -2090,6 +2136,9 @@ importers:
       '@hypit/speech-evidence':
         specifier: workspace:^0.2.0
         version: link:../speech-evidence
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
     devDependencies:
       '@hypit/audio-gain':
         specifier: workspace:*
@@ -2121,9 +2170,6 @@ importers:
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../runtime-local
-      '@hypit/temporal':
-        specifier: workspace:*
-        version: link:../temporal
 
   packages/provider-monid:
     dependencies:
@@ -2408,6 +2454,9 @@ importers:
       '@hypit/build-cli':
         specifier: workspace:*
         version: link:../build-cli
+      '@hypit/build-operations-cli':
+        specifier: workspace:*
+        version: link:../build-operations-cli
       '@hypit/project':
         specifier: workspace:*
         version: link:../project
@@ -2555,6 +2604,9 @@ importers:
       '@hypit/build-cli':
         specifier: workspace:^0.1.0
         version: link:../build-cli
+      '@hypit/build-operations-cli':
+        specifier: workspace:^0.1.0
+        version: link:../build-operations-cli
       '@hypit/cli':
         specifier: workspace:^0.0.0-dev
         version: link:../cli
@@ -2570,6 +2622,9 @@ importers:
       '@hypit/loader':
         specifier: workspace:^0.0.0-dev
         version: link:../loader
+      '@hypit/media-author':
+        specifier: workspace:^0.1.0
+        version: link:../media-author
       '@hypit/recipe':
         specifier: workspace:^0.1.0
         version: link:../recipe
@@ -2579,12 +2634,13 @@ importers:
       '@hypit/svml':
         specifier: workspace:^0.1.0
         version: link:../svml
-      '@hypit/toolchain':
-        specifier: workspace:^0.3.0
-        version: link:../toolchain
       '@hypit/workspace':
         specifier: workspace:^0.0.0-dev
         version: link:../workspace
+    devDependencies:
+      '@hypit/toolchain':
+        specifier: workspace:*
+        version: link:../toolchain
 
   packages/temporal: {}
 
@@ -2669,9 +2725,12 @@ importers:
       '@hypit/audiovisual-html':
         specifier: workspace:^0.1.0
         version: link:../audiovisual-html
-      '@hypit/build-cli':
+      '@hypit/build-operations-cli':
         specifier: workspace:^0.1.0
-        version: link:../build-cli
+        version: link:../build-operations-cli
+      '@hypit/caption-fine':
+        specifier: workspace:^0.1.0
+        version: link:../caption-fine
       '@hypit/cli':
         specifier: workspace:^0.0.0-dev
         version: link:../cli
@@ -2744,9 +2803,15 @@ importers:
       '@hypit/picture-filter':
         specifier: workspace:^0.1.0
         version: link:../picture-filter
+      '@hypit/picture-frame':
+        specifier: workspace:^0.1.0
+        version: link:../picture-frame
       '@hypit/picture-matte':
         specifier: workspace:^0.1.0
         version: link:../picture-matte
+      '@hypit/picture-transform':
+        specifier: workspace:^0.1.0
+        version: link:../picture-transform
       '@hypit/picture-transition':
         specifier: workspace:^0.1.0
         version: link:../picture-transition
@@ -2804,6 +2869,9 @@ importers:
       '@hypit/temporal-graph':
         specifier: workspace:^0.1.0
         version: link:../temporal-graph
+      '@hypit/text-fine':
+        specifier: workspace:^0.1.0
+        version: link:../text-fine
       '@hypit/volcengine-matting':
         specifier: workspace:^0.3.0
         version: link:../volcengine-matting
@@ -2863,6 +2931,9 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/media-file-local':
+        specifier: workspace:^0.1.0
+        version: link:../media-file-local
       '@hypit/media-local':
         specifier: workspace:^0.3.0
         version: link:../media-local
@@ -2924,9 +2995,9 @@ importers:
       '@hypit/host-paths':
         specifier: workspace:^0.1.0
         version: link:../host-paths
-      '@hypit/media-local':
-        specifier: workspace:^0.3.0
-        version: link:../media-local
+      '@hypit/media-file-local':
+        specifier: workspace:^0.1.0
+        version: link:../media-file-local
 
 packages:
 

@@ -42,9 +42,9 @@ reconstruction format currently executes exact nearest-frame selection and remai
 source plan; unknown formats fail accurately instead of being ignored. Blend, optical flow and model-based
 reconstruction can add their own terminal formats without changing AVIR or `TemporalMap`.
 
-`createAudiovisualHtmlFragment()` and `createAudiovisualProgramHtmlSourceFragment()` make Source-set folds and
-terminal compilation ordinary AuthorGraph operations. Frame rate and Canvas are typed Output inputs; they do
-not enter AVIR. If no HTML target is demanded, Kernel pruning omits these terminal branches.
+The package's pure lowering API and Producer facet expose the same finite Source fold. Frame rate and Canvas are
+typed Output inputs and do not enter AVIR. Source/Author Graph fragments belong to the optional Source application
+rather than this NLE terminal package.
 
 The lowerer passes one stable terminal tree directly to `compileHtmlPictureProgram()`. It does not
 build a temporary Timeline, VisualTrack, Present or Composition, and `@hypit/html-program` no longer

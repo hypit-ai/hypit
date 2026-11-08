@@ -4,7 +4,8 @@ Runtime and Endpoint adapter for the direct FFmpeg/FFprobe implementation in
 `@hypit/media-local`.
 
 This package owns Provider identity, capability support responses, Runtime Profile activation,
-capacity and external-tool diagnostics. It does not own media algorithms or file authoring tools.
+capacity, external-tool diagnostics and the speech-evidence projection adapter. Neutral media execution
+algorithms remain in `@hypit/media-local`; direct file authoring tools remain separate.
 Direct NLE export and media import use `@hypit/media-local` without loading this package.
 
 ```ts

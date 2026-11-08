@@ -1,19 +1,18 @@
 # `@hypit/build-cli`
 
-Source compilation plus accepted-Build operations for Hypit projects.
+Source compilation and submission commands for Hypit projects.
 
-The package exposes two independent `hypit.cli-command@1` modules. The Source module owns `check`,
-`plan`, `pricing` and `build`; the operations module owns accepted-Build observation, Result browsing,
-credentials and diagnosis. They reuse presentation and observation code without granting compiler
-services to operational commands or Product-export services to Source compilation.
+This package owns `check`, `plan`, `pricing` and `build`. Accepted-Build observation, Result browsing,
+credentials and diagnosis live in the physically separate `@hypit/build-operations-cli` package, so a
+long-running Generation application does not acquire Author, Compiler or Source dependencies merely to
+inspect work it already accepted.
 
-`createSourceBuildCliCommandModules(sourceBuild)` and
-`createBuildOperationsCliCommandModules(buildOperations)` capture only their respective service ports.
+`createSourceBuildCliCommandModules(sourceBuild)` captures only the Source service port.
 The domain-neutral [`@hypit/cli`](../cli/README.md) Host owns process I/O, help routing, command
 conflict checks and final dispatch. Local Runtime lifecycle, media and NLE remain sibling modules.
 
-`BuildCliServices` is only the intersection used by an application that chooses both modules. Each
-factory accepts its narrower `SourceBuildCliServices` or `BuildOperationsCliServices`; neither module
+`BuildCliServices` is only the intersection used by tests or an application that chooses both modules. Each
+factory accepts its narrower service; neither module
 discovers application commands, scans arbitrary packages or infers product capabilities from installed
 dependencies.
 

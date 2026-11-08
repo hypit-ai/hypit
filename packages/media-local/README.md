@@ -1,11 +1,10 @@
 # `@hypit/media-local`
 
-Trusted direct ffprobe/ffmpeg engine. It exposes three direct ports:
+Trusted direct ffprobe/ffmpeg engine. It exposes two direct ports:
 
 - the main and `@hypit/media-local/execution` entries execute byte operations against an explicitly
   supplied `ResourceStore`;
-- `@hypit/media-local/files` inspects or creates files explicitly named by an authoring tool;
-- `@hypit/media-local-cli` presents those explicit file operations as `hypit media`.
+- neutral bounded process/display helpers reused by adjacent local adapters.
 
 None of these ports creates a Graph, Build, Result, Endpoint or Runtime state. The optional Runtime
 adapter is the separate `@hypit/provider-media-local` package.
@@ -28,94 +27,13 @@ execution. They are implementation details of this direct machine executor, not 
 or a root `@hypit/hypit` facade. A Provider may adapt these operations to public Needs without moving
 Endpoint policy back into this package.
 
-The local process runner is shared by execution and file ports, so bounds, shell avoidance and
-failure reporting do not fork into two executors. Inspection and extraction contracts remain in
+`@hypit/media-file-local` owns direct named-file observations and transcript-aware grids;
+`@hypit/media-local-cli` presents them as `hypit media`. `@hypit/provider-media-local` owns the
+speech-evidence projection adapter. Keeping these packages separate means direct NLE export does not
+install timed transcripts or speech semantics while all three still share this bounded process runner.
+Inspection and extraction contracts remain in
 `@hypit/media`, audio Programme execution in `@hypit/audio-program`, and terminal assembly
 in `@hypit/media-delivery`; paths, subprocesses and ffprobe output remain here.
-
-## File authoring and inspection
-
-```bash
-hypit media import reference.mp4 --to assets/reference.media.json
-hypit media probe reference.mp4
-hypit media cut reference.mp4 --start 12 --end 19.5 --to assets/hook.mp4
-hypit media frames reference.mp4 --at 12.4,13.1 --to notes/hook-frames
-hypit media grid reference.mp4 --start 12 --end 19.5 --no-time --to notes/pictures.jpg
-hypit media grid reference.mp4 --start 12 --end 19.5 --header --to notes/evidence.jpg
-hypit media grid reference.mp4 --start 12 --end 19.5 --waveform --to notes/hook-grid.jpg
-hypit media grid reference.mp4 --start 12 --end 19.5 --spectrogram --to notes/frequency-grid.png
-hypit media grid reference.mp4 --start 12 --end 19.5 --transcript notes/transcript.json \
-  --waveform --spectrogram --frame-marker-color '#59d8ff' --to notes/word-grid.png
-hypit media grid reference.mp4 --pages --ranges notes/ranges.json --format png --to notes/grids
-hypit media waveform reference.mp4 --start 12 --end 19.5 --to notes/hook-waveform.png
-hypit media spectrogram reference.mp4 --around 'glass breaks' --transcript notes/transcript.json \
-  --pixels-per-second 240 --to notes/glass-break-frequency.png
-hypit media boundaries reference.mp4
-```
-
-`media import` is the shared headless import path used by the CLI and available to a desktop Host through
-`importLocalMediaAsset()`. It performs one exact inspection, applies an explicit local stream-selection policy,
-optionally copies the source below the manifest, and atomically creates `hypit.media-asset@1`. Copy is the portable
-default. `--link` is accepted only when the source already lies below the manifest directory. Existing files are
-never overwritten.
-
-The import call accepts an `AbortSignal` and progress callback with `inspect | interpret | copy | publish | complete`
-stages. These are invocation facts, not Media Asset or NLE fields. A CLI invocation waits in the foreground; a
-Studio Host may display the same task in the background and apply `media.add + item.add` only after it completes.
-Neither path requires a persistent queue. Long-running Analyzers may later use Runtime scheduling while continuing
-to publish ordinary Representation files.
-
-A drag-and-drop Host closes the import into NLE with ordinary public APIs:
-
-```ts
-const imported = await importLocalMediaAsset(request, { signal, progress });
-const transaction = createMediaAssetMaterialization(project, {
-  mediaId: "interview",
-  itemId: "interview-use",
-  name: "Interview",
-  asset: { path: "./media/interview.media.json" },
-  interpretation: imported.document.media.interpretation,
-  track: "picture-main",
-  at: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
-});
-```
-
-The Host applies that transaction only after import succeeds. Subsequent trim, split, layout, Effect and Audio edits
-are ordinary NLE transactions; they neither rerun inspection nor modify the asset manifest.
-
-Network acquisition is not a media-execution operation. `@hypit/yt-dlp/cli` owns
-`hypit download`; the resulting file becomes an ordinary input to these commands.
-
-Frame extraction, native-PTS sequences and labelled grids are evidence about a source media clock.
-They therefore live beside the decoder that establishes that clock. `HtmlProgram` frames remain an
-`html-program` concern, and capturing Studio's current `HtmlProgram` remains a Studio concern; the word
-“frame” does not create a central package.
-
-`grid` observes frames first, then independently composes optional cell annotations, a page header,
-an amplitude waveform and a frequency spectrogram. Any of those presentation parts may be omitted.
-Time annotations are shown by default; `--no-time` removes cell times and attached audio time axes,
-producing picture-only cells when neither a transcript nor an audio view is supplied. `--transcript`
-adds width-adaptive word context using the actual decoded frame time even when that time is not printed;
-`--word-context` chooses an explicit radius. `--header` adds only the source name, page source-time range
-and frame count. Attached audio views number their frame markers and matching cells. Exact requested and decoded
-times remain in `--json`, independently of what is drawn. Single grids use their destination extension;
-paged grids choose JPEG or lossless PNG with `--format`.
-
-`waveform` and `spectrogram` are equal, independent source-clock observations. A waveform exposes
-amplitude and is useful for transients, envelopes and pauses. A spectrogram exposes frequency over time
-and is useful for tonal content, noise, speech texture and effects. Either or both may occupy their own
-track beneath a grid, and each is also a standalone command. `--pixels-per-second` keeps time density
-stable across intervals; `--around` selects a transcript phrase. Waveform filter and amplitude scale do
-not configure the spectrogram; frequency scale, frequency range and dynamic range do not configure the
-waveform. Both can split channels, choose a stream, hide their time axis and share the grid's independently
-selected frame-marker color.
-
-Audio-only media can produce either audio observation but not a frame grid, while a silent video cannot
-produce an audio observation. Multiple audio streams require an explicit container stream index. Reusing
-these local presentation functions does not transfer frame acquisition or Runtime authority. Transcript-aware ranges
-consume a `TimedTranscript` JSON file; exact decoding and phrase matching are owned by
-`@hypit/timed-transcript`, while
-this package only joins those ranges to file decoding.
 
 ## Direct media execution
 

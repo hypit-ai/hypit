@@ -9,7 +9,7 @@ import { join } from "node:path";
 
 import { decodeOAuth2Credential } from "@hypit/runtime";
 
-import { acquireOAuthCredential, authorizeBrowserLaunch } from "../../src/oauth.js";
+import { acquireOAuthCredential, authorizeBrowserLaunch } from "@hypit/build-operations-cli";
 
 const acquisition = {
   kind: "oauth2-pkce" as const,
@@ -151,7 +151,7 @@ test("a missing browser opener leaves the printed authorization URL usable", asy
   try {
     const entry = join(directory, "authorize.mjs");
     await writeFile(entry, `
-import { acquireOAuthCredential } from ${JSON.stringify(new URL("../../src/oauth.ts", import.meta.url).href)};
+import { acquireOAuthCredential } from "@hypit/build-operations-cli";
 const value = await acquireOAuthCredential(${JSON.stringify(acquisition)}, {
   onProgress(message) {
     if (!message.startsWith("Opening sign-in: ")) return;

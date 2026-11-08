@@ -1,30 +1,18 @@
 # `@hypit/media`
 
-Author-facing media declarations for the neutral `@hypit/media` contract module.
+Neutral media values, verification, Producers and representation contracts.
 
-`media.image`, `media.audio`, `media.video` and `media.font` declarations may request bytes through the Host-owned source-asset
-capability. Image, Audio and Video can instead bind `source` to a Blob produced by generation or another Source.
-Font wraps the same immutable bytes with exact weight/style metadata as a one-source
-`FontArtifactRef`. A logical font face may also contain several exact Unicode-range sources when another package, such as
-`@hypit/fontsource`, adapts a sharded installed font. `FontStackRef` is the generic ordered value for one primary face followed
-by exact glyph fallbacks.
+This package owns `PreparedMedia`, picture/audio selection, exact source-domain mappings, media inspection
+Needs and terminal delivery values. It does not own a Source language, Author declarations, file tools,
+Provider selection or NLE placement. `@hypit/media-author` is the optional Source adapter that spells
+`media.image`, `media.audio`, `media.video`, `media.font` and delivery declarations; it lowers them to
+the ordinary values and Producers defined here.
 
-Image, Audio and Video are the same kind of complete Media author object. Their default binding and `.resource` facet project
-the original Blob; `.source` derives PreparedMedia through `inspect -> select -> prepare`. Signal media additionally publishes
-`.domain` and `.extent`. Kernel target closure makes
-the two branches genuinely lazy: a generation request that consumes only the Resource never issues the inspection Need,
-while Film, Evidence or temporal construction can demand the prepared branch after the actual Resource exists. Neither the
-author declaration nor Host guesses an AIGC duration.
-
-The default Video policy selects primary moving picture, optional default audio and visual span authority. The default Audio
-policy selects default audio and audio authority. Authors can override stream selection, picture interpretation and authority
-on the same Media object. Selecting audio still does not promote it to speech; downstream relationships decide whether a
-Resource or prepared signal is a voice reference, soundtrack, evidence source or occurrence.
-
-Media's syntax-neutral Author declarations own these fields, conditional Font shape, asset requests,
-reference Types, graph branches and output Records. Standard SVML reads those declarations directly; Media publishes no second
-tag spelling table. Asset resolution remains an explicit compiler capability, and FontStack may
-reference authored Font Records regardless of their textual order.
+Image, Audio and Video remain the same complete media concept after that declaration boundary. A resource
+branch can expose immutable bytes while the prepared branch derives selected picture/audio through
+`inspect -> select -> prepare`. Target closure keeps those branches lazy, but the branching is a Build fact,
+not a property of an NLE media-bin entry. Selecting audio does not promote it to speech; downstream relations
+decide whether the signal is a voice reference, soundtrack, evidence source or occurrence.
 
 The same module owns `PreparedMedia`: one identity, one immutable source Blob, an optional exact finite local domain and
 selected Picture/Audio members. A constant Picture has no temporal domain or Map. Signal members keep exact maps back to
@@ -107,7 +95,7 @@ The current delivery contract is deliberately one complete family: opaque BT.709
 H.264/yuv420p visual, 48 kHz stereo AAC audio and MP4. The author selects quality and opaque matte:
 
 ```svml
-module media from "@hypit/media@1"
+module media from "@hypit/media-author@1"
 
 media.delivery { id: delivery profile: bt709-h264 quality: high matte: "#000000" }
 ```

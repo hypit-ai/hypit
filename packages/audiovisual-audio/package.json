@@ -12,9 +12,8 @@
   },
   "dependencies": {
     "@hypit/audio-program": "workspace:^0.1.0",
-    "@hypit/author": "workspace:^0.0.0-dev",
     "@hypit/audiovisual": "workspace:^0.1.0",
-    "@hypit/media": "workspace:^0.1.0",
+    "@hypit/media": "workspace:^0.2.0",
     "@hypit/producer": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/refinement": "workspace:^0.0.0-dev",

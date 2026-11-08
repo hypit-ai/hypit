@@ -32,9 +32,9 @@ const { createToolchainApplicationServices } = await import("@hypit/toolchain");
 const { createSvmlToolchainApplicationServices } = await import("@hypit/svml-toolchain");
 const { createSvmlToolchainCliCommandModules } = await import("@hypit/svml-toolchain/cli");
 const {
-  createBuildOperationsCliCommandModules,
   createSourceBuildCliCommandModules,
 } = await import("@hypit/build-cli");
+const { createBuildOperationsCliCommandModules } = await import("@hypit/build-operations-cli");
 const { createGenerationGraphCliCommandModules } = await import("@hypit/generation-graph-cli");
 const { createLocalRuntimeCliCommandModules } = await import("@hypit/runtime-local-cli");
 const { createLocalMediaCliCommandModules } = await import("@hypit/media-local-cli");
@@ -46,10 +46,7 @@ const toolchainServices = createToolchainApplicationServices({
   packageRoot: distributionRoot,
   launcher: fileURLToPath(import.meta.url),
 });
-const svmlServices = createSvmlToolchainApplicationServices({
-  packageRoot: distributionRoot,
-  launcher: fileURLToPath(import.meta.url),
-});
+const svmlServices = createSvmlToolchainApplicationServices(toolchainServices.buildOperations);
 await runNodeCli(args, async (argv, io) => await runInstalledCliApplication(argv, io, {
   distributionRoot,
   commandModules: [

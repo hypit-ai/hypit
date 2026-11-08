@@ -5,7 +5,6 @@ export {
   executeExtractFrame,
   executeInspectMedia,
   executeMuxProgramMedia,
-  executeProjectSpeechEvidenceAudio,
   executeRenderAudioProgram,
 } from "./execute.js";
 export { inspectMediaFile } from "./execute.js";
@@ -25,11 +24,6 @@ export type {
   MediaExecutionEnvironment,
   MediaOperationResult,
 } from "./execute.js";
-export {
-  assertLocalAudioProgramSupported,
-  assertLocalSpeechEvidenceAudioSupported,
-} from "./support.js";
+export { assertLocalAudioProgramSupported } from "./support.js";
 export { probeMediaToolchain } from "./toolchain.js";
 export type { MediaToolchainState } from "./toolchain.js";
-export { isMediaCommand, mediaCommands, runMediaCli, writeMediaHelp } from "./files.js";
-export type { MediaCommand, MediaCommandOutput, MediaProbe } from "./files.js";

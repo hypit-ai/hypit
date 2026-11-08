@@ -1,7 +1,7 @@
 <?svml using="@hypit/markup@1"?>
 <svml>
 
-  <import as="media" from="@hypit/media@1"/>
+  <import as="media" from="@hypit/media-author@1"/>
   <import as="copy" source="./script.svml"/>
   <import as="assets" source="./assets.svml"/>
   <import as="direction" source="./direction.svml"/>

@@ -5,7 +5,13 @@ import { fixtureResource } from "../../../test/fixture-resource.js";
 import { compileSvmlDeclaration } from "../../../test/compile-svml-declaration.js";
 import { blobTypes } from "@hypit/blob";
 
-import { mediaAuthorDeclarations, mediaImageAuthorDeclaration, mediaModuleRef, mediaProducers, mediaTypes, mediaVideoAuthorDeclaration, type FontArtifactRef } from "../src/index.js";
+import { mediaProducers, mediaTypes, type FontArtifactRef } from "@hypit/media";
+import {
+  mediaAuthorDeclarations,
+  mediaAuthorModuleRef,
+  mediaImageAuthorDeclaration,
+  mediaVideoAuthorDeclaration,
+} from "../src/index.js";
 
 test("Media declarations resolve assets and authored font references independently of source order", async () => {
   const requests: Array<{ readonly from: string; readonly mediaType: string }> = [];
@@ -18,7 +24,7 @@ media.font {
   Source { src: "./han.woff2" unicode-range: "U+4E00-9FFF, U+3400-4DBF" }
 }
 media.font { id: latin src: "./latin.woff2" weight: 600 style: normal }`,
-    module: mediaModuleRef,
+    module: mediaAuthorModuleRef,
     alias: "media",
     compilers: mediaAuthorDeclarations,
     resolveAsset(from, mediaType) {
@@ -68,7 +74,7 @@ media.font { id: latin src: "./latin.woff2" weight: 600 style: normal }`,
 test("Video can own the lazy prepared branch of an upstream generated Resource", async () => {
   const result = await compileSvmlDeclaration({
     source: `media.video { id: generated source: @generation.video }`,
-    module: mediaModuleRef,
+    module: mediaAuthorModuleRef,
     alias: "media",
     compilers: [mediaVideoAuthorDeclaration],
     references: new Map([["generation.video", {
@@ -89,7 +95,7 @@ test("Video can own the lazy prepared branch of an upstream generated Resource",
 test("Image uses the same lazy Media branch and publishes no fabricated temporal facets", async () => {
   const result = await compileSvmlDeclaration({
     source: `media.image { id: poster src: "./poster.png" }`,
-    module: mediaModuleRef,
+    module: mediaAuthorModuleRef,
     alias: "media",
     compilers: [mediaImageAuthorDeclaration],
     resolveAsset: (from, mediaType) => ({

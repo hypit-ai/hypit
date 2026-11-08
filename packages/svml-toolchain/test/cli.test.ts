@@ -13,7 +13,7 @@ import { loadDiscoveredSourcePackages, runSourceBuildCli as runCommand } from "@
 import { installDistributionPackageResolution } from "@hypit/loader/node";
 
 const toolchainServices = createToolchainApplicationServices();
-const buildServices = createSvmlToolchainApplicationServices();
+const buildServices = createSvmlToolchainApplicationServices(toolchainServices.buildOperations);
 
 const runCli = (
   argv: readonly string[],

@@ -13,3 +13,8 @@ Omitting reconstruction keeps ordinary point sampling. A terminal may support on
 relations. The local audio Provider currently supports a direct media child Programme used through a complete
 positive-affine, non-looping Mapping; it rejects other programme shapes or reconstruction formats instead of
 silently resampling them.
+
+For a persistent NLE project the package contributes the `preserve-pitch` Signal Reconstruction resolver.
+The project stores that package symbol with empty package-owned parameters on an Audio appearance; lowering
+attaches the result to the same exact occurrence Mapping. NLE Core contains no pitch flag or reconstruction
+catalogue.

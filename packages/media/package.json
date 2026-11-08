@@ -11,7 +11,6 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/author": "workspace:^0.0.0-dev",
     "@hypit/blob": "workspace:^0.0.0-dev",
     "@hypit/producer": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",
@@ -23,8 +22,5 @@
     "dist",
     "README.md"
   ],
-  "devDependencies": {
-    "@hypit/kernel": "workspace:*",
-    "@hypit/svml": "workspace:*"
-  }
+  "devDependencies": {}
 }

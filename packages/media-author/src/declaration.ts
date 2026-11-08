@@ -9,25 +9,22 @@ import {
 import { blobTypes } from "@hypit/blob";
 import { sameType, type CanonicalValue, type TypeRef } from "@hypit/protocol";
 import { temporalTypes } from "@hypit/temporal-graph";
-import type { MediaDeliverySpec } from "./types.js";
-import { mediaDeliveryProfile } from "./delivery.js";
-
-import { mediaModuleRef, mediaTypes } from "./manifest.js";
-import { mediaSourceFragment } from "./fragment.js";
-import {
-  namedPictureInterpretation,
-  sealMediaSelectionRequest,
-} from "./selection.js";
-import type {
-  MediaAudioSelector,
-  MediaSelectionRequest,
-  MediaVideoSelector,
-} from "./types.js";
 import {
   assertFontArtifactRef,
   assertFontStackRef,
+  mediaDeliveryProfile,
+  mediaTypes,
+  namedPictureInterpretation,
+  sealMediaSelectionRequest,
   type FontArtifactRef,
-} from "./render.js";
+  type MediaAudioSelector,
+  type MediaDeliverySpec,
+  type MediaSelectionRequest,
+  type MediaVideoSelector,
+} from "@hypit/media";
+
+import { mediaAuthorModuleRef } from "./manifest.js";
+import { mediaSourceFragment } from "./fragment.js";
 
 type DeclarationLike = AuthorDeclaration | AuthorDeclarationChild;
 
@@ -127,7 +124,7 @@ function mediaDeclaration(
     ...(kind === "image" ? [] : [temporalTypes.localDomain, temporalTypes.extent]),
   ];
   return {
-    module: mediaModuleRef,
+    module: mediaAuthorModuleRef,
     declaration,
     outputs: outputTypes,
     shape: {
@@ -244,7 +241,7 @@ export const mediaAudioAuthorDeclaration = mediaDeclaration("audio", "audio", au
 export const mediaVideoAuthorDeclaration = mediaDeclaration("video", "video", videoMediaTypes);
 
 export const mediaDeliveryAuthorDeclaration: AuthorDeclarationCompiler = {
-  module: mediaModuleRef,
+  module: mediaAuthorModuleRef,
   declaration: "delivery",
   outputs: [mediaTypes.delivery],
   shape: {
@@ -292,7 +289,7 @@ const fontSourceShape = {
 };
 
 export const mediaFontAuthorDeclaration: AuthorDeclarationCompiler = {
-  module: mediaModuleRef,
+  module: mediaAuthorModuleRef,
   declaration: "font",
   outputs: [mediaTypes.fontArtifact],
   shape: {
@@ -382,7 +379,7 @@ async function authoredFont(
 }
 
 export const mediaFontStackAuthorDeclaration: AuthorDeclarationCompiler = {
-  module: mediaModuleRef,
+  module: mediaAuthorModuleRef,
   declaration: "font-stack",
   outputs: [mediaTypes.fontStack],
   shape: {

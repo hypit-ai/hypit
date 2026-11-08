@@ -7,10 +7,8 @@ import test from "node:test";
 import { runCliApplication } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
 import type { BuildCliServices } from "@hypit/build-cli";
-import {
-  createBuildOperationsCliCommandModules,
-  createSourceBuildCliCommandModules,
-} from "@hypit/build-cli";
+import { createSourceBuildCliCommandModules } from "@hypit/build-cli";
+import { createBuildOperationsCliCommandModules } from "@hypit/build-operations-cli";
 import { resolveProjectRoot } from "@hypit/project";
 import { findRuntimeProfile, selectRuntimeProfile } from "@hypit/runtime-local";
 import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";

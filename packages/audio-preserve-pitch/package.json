@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@hypit/audiovisual": "workspace:^0.1.0",
+    "@hypit/nle": "workspace:^0.1.0",
     "@hypit/producer": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev"
   }

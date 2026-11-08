@@ -25,11 +25,6 @@ export {
 export type * from "./source.js";
 export { audiovisualHtmlComponent } from "./component.js";
 export {
-  createAudiovisualHtmlFragment,
-  createAudiovisualProgramHtmlSourceFragment,
-  preparedMediaHtmlSourceFragment,
-} from "./fragment.js";
-export {
   audiovisualHtmlDependency,
   audiovisualHtmlManifest,
   audiovisualHtmlModuleRef,

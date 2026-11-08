@@ -14,7 +14,7 @@ import type { LinkedProgram, TypedRecord } from "@hypit/protocol";
 import { runSourceBuildCli as runCliEngine } from "../../src/main.js";
 import { commandHint } from "@hypit/cli";
 import type { SourceBuildCliServices } from "../../src/services.js";
-import type { CliDiagnostic as RuntimeDoctorDiagnostic } from "../../src/runtime-port.js";
+import type { CliDiagnostic as RuntimeDoctorDiagnostic } from "@hypit/build-operations-cli";
 import { buildCliServices } from "../services-scenario.js";
 
 const io = { write: () => {} };

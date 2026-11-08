@@ -5,7 +5,6 @@ import { isBlobRef, moduleKey } from "@hypit/protocol";
 import { BuildCompiler } from "@hypit/compiler";
 
 import type {
-  BuildOperationsCliServices,
   SourceBuildCliServices,
 } from "./services.js";
 import type { CliApplicationContext } from "@hypit/cli";
@@ -14,26 +13,22 @@ import type {
   CliRuntime,
   CliRuntimeHost,
   CliRuntimeInspection,
-} from "./runtime-port.js";
+} from "@hypit/build-operations-cli";
 import { CliUsageError, commandHint } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
-import { createPlanOutput, createPricingOutput, writeCliHelp, writeCliOutput } from "./output.js";
-import type { OperationalMachineView } from "./machine-view.js";
-import { parseCommand } from "./arguments.js";
-import type { AuthorCommand, CliCommand, RuntimeOption } from "./command.js";
+import { createPlanOutput, createPricingOutput, writeCliHelp, writeCliOutput } from "@hypit/build-operations-cli";
+import type { OperationalMachineView } from "@hypit/build-operations-cli";
+import { parseCommand } from "@hypit/build-operations-cli";
+import type { AuthorCommand, CliCommand, RuntimeOption } from "@hypit/build-operations-cli";
 import { createBuildAuthoring, describePlanEndpoints, describePlanRequest, describePlanRequests, describePlanPricing, describePricingRequests, evaluatePlanNeeds, plannedEndpointQueries, preflightPlan } from "./build-planning.js";
-import { buildProgressLines, observeBuild } from "./observation.js";
-import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
-import { isEnvironmentCommand, runEnvironmentCommand } from "./commands/environment.js";
-import { isExecutionCommand, runExecutionCommand } from "./commands/execution.js";
-import { inlineValuePreview } from "./runtime-view.js";
+import { buildProgressLines, inlineValuePreview, observeBuild } from "@hypit/build-operations-cli";
 import { resolveProjectRoot } from "@hypit/project";
 import { loadDiscoveredSourcePackages } from "./source-packages.js";
 import {
   buildStatusView,
   cliTypeName,
   projectPath,
-} from "./view.js";
+} from "@hypit/build-operations-cli";
 
 function commandProjectRootOption(command: CliCommand): string | undefined {
   return "projectRoot" in command ? command.projectRoot : undefined;
@@ -60,23 +55,13 @@ export async function runSourceBuildCli(
   services: SourceBuildCliServices,
   context?: Pick<CliApplicationContext, "cwd" | "resolveProjectRoot">,
 ): Promise<void> {
-  await runOwnedCli(argv, io, services, "source", context);
-}
-
-export async function runBuildOperationsCli(
-  argv: readonly string[],
-  io: CliIo,
-  services: BuildOperationsCliServices,
-  context?: Pick<CliApplicationContext, "cwd" | "resolveProjectRoot">,
-): Promise<void> {
-  await runOwnedCli(argv, io, services, "operations", context);
+  await runOwnedCli(argv, io, services, context);
 }
 
 async function runOwnedCli(
   argv: readonly string[],
   io: CliIo,
-  services: SourceBuildCliServices | BuildOperationsCliServices,
-  ownership: "source" | "operations",
+  services: SourceBuildCliServices,
   context?: Pick<CliApplicationContext, "cwd" | "resolveProjectRoot">,
 ): Promise<void> {
   if (argv.length === 0 || argv[0] === "help" || argv.includes("--help")) {
@@ -87,9 +72,7 @@ async function runOwnedCli(
   }
   const cwd = context?.cwd ?? process.cwd();
   const args = parseCommand(argv, cwd);
-  if (isAuthorCommand(args) !== (ownership === "source")) {
-    throw new Error(`${args.command} is not owned by the ${ownership} command module`);
-  }
+  if (!isAuthorCommand(args)) throw new Error(`${args.command} is not owned by the source command module`);
   let resolvedProject: Promise<string> | undefined;
   const commandProjectRoot = async (): Promise<string> => {
     const projectRoot = commandProjectRootOption(args);
@@ -135,73 +118,11 @@ async function runOwnedCli(
     });
   };
   let runtimeProfile = acceptsRuntimeContext(args) ? args.runtimeProfile : undefined;
-  let runtimeFromProject = false;
-  if (acceptsRuntimeContext(args) && runtimeProfile === undefined && args.command !== "logs") {
+  if (acceptsRuntimeContext(args) && runtimeProfile === undefined) {
     const selected = await services.resolveProjectRuntime?.(await commandProjectRoot());
     if (selected !== undefined) {
       runtimeProfile = selected.profile;
-      runtimeFromProject = true;
     }
-  }
-  if (isEnvironmentCommand(args)) {
-    const operationServices = services as BuildOperationsCliServices;
-    await runEnvironmentCommand({
-      args,
-      runtimeProfile,
-      runtimeFromProject,
-      io,
-      projectRoot: await commandProjectRoot(),
-      diagnoseProjectResults: async () => {
-        const projectRoot = await commandProjectRoot();
-        return await operationServices.diagnoseProjectResults(projectRoot, {
-          packageRoot: await packageRootForProject(projectRoot),
-          ...(services.packageRoot === undefined
-            ? {}
-            : { distributionPackageRoot: services.packageRoot }),
-        });
-      },
-      runtimeHost,
-      write: writeOperational,
-    });
-    return;
-  }
-  if (isProjectResultCommand(args)) {
-    const operationServices = services as BuildOperationsCliServices;
-    const results = await projectResults();
-    try {
-      await runProjectResultCommand({
-        args,
-        projectRoot: await commandProjectRoot(),
-        history: results.history,
-        products: results.products,
-        ...(operationServices.resolveProductExporter === undefined ? {} : {
-          resolveProductExporter: async (type: Parameters<NonNullable<typeof operationServices.resolveProductExporter>>[0]) =>
-            await operationServices.resolveProductExporter!(type, {
-              packageRoot: await packageRootForProject(await commandProjectRoot()),
-              ...(services.packageRoot === undefined
-                ? {}
-                : { distributionPackageRoot: services.packageRoot }),
-            }),
-        }),
-        write: writeOperational,
-      });
-    } finally {
-      await results.close();
-    }
-    return;
-  }
-  if (isExecutionCommand(args)) {
-    await runExecutionCommand({
-      args,
-      projectRoot: await commandProjectRoot(),
-      runtimeProfile,
-      io,
-      runtimeHost,
-      openProjectResults: projectResults,
-      resolveProjectRuntime: async () => (await services.resolveProjectRuntime?.(await commandProjectRoot()))?.profile,
-      write: writeOperational,
-    });
-    return;
   }
   const sourceServices = services as SourceBuildCliServices;
   const effectiveWorkspaceRoot = await commandProjectRoot();

@@ -66,6 +66,7 @@ export type {
   NleMediaResolver,
   NlePackage,
   NlePackageFacet,
+  NleSignalReconstructionResolver,
   NleTransitionResolver,
 } from "./package.js";
 export {

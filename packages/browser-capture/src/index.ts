@@ -7,7 +7,7 @@ import { existsSync } from "node:fs";
 import puppeteer from "puppeteer-core";
 import type { Browser, LaunchOptions, Page, RecordOptions, ScreenshotOptions } from "puppeteer-core";
 import sharp from "sharp";
-import { probeMedia } from "@hypit/media-local/files";
+import { probeMedia } from "@hypit/media-file-local";
 import { captureBrowserExecutablePath } from "./browser.js";
 export { captureBrowserExecutablePath, installCaptureBrowser } from "./browser.js";
 

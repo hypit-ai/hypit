@@ -1,0 +1,23 @@
+{
+  "name": "@hypit/build-operations-cli",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": ["dist", "README.md"],
+  "dependencies": {
+    "@hypit/cli": "workspace:^0.0.0-dev",
+    "@hypit/executor": "workspace:^0.0.0-dev",
+    "@hypit/kernel": "workspace:^0.0.0-dev",
+    "@hypit/product": "workspace:^0.0.0-dev",
+    "@hypit/project": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/resource-store": "workspace:^0.1.0",
+    "@hypit/result": "workspace:^0.0.0-dev",
+    "@hypit/runtime": "workspace:^0.0.0-dev",
+    "@hypit/workspace": "workspace:^0.0.0-dev"
+  }
+}

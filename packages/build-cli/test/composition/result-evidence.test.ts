@@ -11,7 +11,7 @@ import {
 } from "../../../runtime-local/src/result-storage/index.js";
 
 import { buildCliServices } from "../services-scenario.js";
-import { runBuildOperationsCli as runCli } from "../../src/main.js";
+import { runBuildOperationsCli as runCli } from "@hypit/build-operations-cli";
 import {
   completedRecords,
   fixture,

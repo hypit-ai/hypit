@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { join, resolve } from "node:path";
 import test from "node:test";
 
-import { parseCommand } from "../../src/arguments.js";
+import { parseCommand } from "@hypit/build-operations-cli";
 
 test("check has no Runtime context", () => {
   assert.throws(

@@ -3,7 +3,7 @@
 Browser material capture for websites and authored HTML. The package owns browser lifecycle and file
 capture; the task owns navigation, page state and the material worth showing. It imports Puppeteer Core,
 the upstream browser installer and Sharp directly. Its library does not create a Source Graph, Build,
-Result or Runtime; completed recordings reuse `@hypit/media-local`'s explicit file probe instead of
+Result or Runtime; completed recordings reuse `@hypit/media-file-local`'s explicit file probe instead of
 forking a second ffprobe parser. The package's CLI contribution uses the installed Hypit CLI host.
 
 This package also owns the `@hypit/browser-capture/cli` contribution used by the Distribution for
@@ -61,7 +61,7 @@ capture rate, and `maxWidth` / `maxHeight` constrain output dimensions. These op
 to Puppeteer. The helper defaults those upper bounds to the viewport's device-pixel dimensions.
 Chrome determines the recorded dimensions; device scale can enlarge a screenshot without enlarging
 the recording. Use the returned `width` and `height` for placement. No FFmpeg encoder is involved;
-the `media-local` file probe invokes the selected `ffprobe` to read the completed file's actual
+the `media-file-local` probe invokes the selected `ffprobe` to read the completed file's actual
 dimensions, duration, frame rate and audio presence. Browser Capture does not keep a second media
 probe parser. `stop()` is idempotent and waits for the file to finish.
 

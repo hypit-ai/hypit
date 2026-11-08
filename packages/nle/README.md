@@ -143,6 +143,10 @@ other Item. Child and parent may use different editing grids because source-time
 are exact times rather than grid indices.
 
 The spatial policy stores an explicit rectangle and `fill | contain | cover` fit on each picture item.
+Lowering first fits the Source into an Item-local picture domain, then applies package Effects, and only
+then places that result into Programme canvas coordinates. Consequently an Effect sees the item's own
+width, height and local clock; changing `layout.x` or `layout.y` does not silently change the Effect's
+geometry. The final placement remains an ordinary AVIR spatial map rather than a package convention.
 Tracks and item arrays are ordered back-to-front. This package deliberately contains no SVML parser, Build,
 Runtime, Result, Provider, Narrative matcher, NLE View projection or reverse author writeback.
 
@@ -152,6 +156,9 @@ removes its Items from the mix; active Item roots join through the AVIR `mix` no
 `program`, `process` and `mix` nodes. NLE Core contains no gain, fade, EQ, pan or compressor enum. The first real
 owner, `@hypit/audio-gain`, accepts constant or Item-local exact-time parameters and compiles them into its exact
 `TemporalControl`; a crossfade is two ordinary gain envelopes over overlapping Items, not another timeline primitive.
+An audio appearance may also name one package-owned signal reconstruction. NLE Core merely resolves its
+symbol and canonical parameters to AVIR's generic reconstruction value; `@hypit/audio-preserve-pitch` is
+the first implementation. It is neither an NLE enum nor a hidden FFmpeg flag.
 
 Final video delivery remains downstream. `@hypit/html-video` consumes one structural NLE lowering through
 `lowerNleProjectToHtmlVideoDeliveryPlan`, links the matching terminal Source implementations, derives `HtmlProgram`

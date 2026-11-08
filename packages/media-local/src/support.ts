@@ -2,13 +2,9 @@ import { isPointwiseOperatorTemporalSupport, verifyAudioProgram } from "@hypit/a
 import type { AudioProgram } from "@hypit/audio-program";
 import { readAudioGainProgram } from "@hypit/audio-gain";
 import { readPreservePitch } from "@hypit/audio-preserve-pitch";
-import { verifyPreparedAudioSource } from "@hypit/media";
 import {
-  assertTemporalMap,
   compareExactTemporalValues,
-  isAffineTemporalMapPiece,
 } from "@hypit/temporal";
-import type { TemporalMap } from "@hypit/temporal";
 import { planDirectProgrammeReconstruction } from "./audio-render.js";
 
 function assertSupportedAudioProgram(program: AudioProgram): void {
@@ -48,7 +44,6 @@ function assertSupportedAudioProgram(program: AudioProgram): void {
     }
   }
 }
-
 /** Validate the exact AudioProgram subset implemented by this local signal renderer. */
 export function assertLocalAudioProgramSupported(program: unknown): asserts program is AudioProgram {
   try {
@@ -60,27 +55,5 @@ export function assertLocalAudioProgramSupported(program: unknown): asserts prog
     assertSupportedAudioProgram(program);
   } catch (error) {
     throw new Error(`AudioProgram capability is unsupported: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-/** Validate the narrower signal boundary implemented by local speech projection. */
-export function assertLocalSpeechEvidenceAudioSupported(
-  source: unknown,
-  preparation: unknown,
-): void {
-  const map = preparation as TemporalMap;
-  try {
-    verifyPreparedAudioSource(source);
-    assertTemporalMap(map);
-  } catch (error) {
-    throw new Error(`Invalid speech-evidence audio request: ${error instanceof Error ? error.message : String(error)}`);
-  }
-  if (map.stages.at(-1)!.source.id !== source.sourceDomain.id) {
-    throw new Error("Speech-evidence preparation does not end at its selected audio source.");
-  }
-  if (map.stages.some((stage) =>
-    stage.pieces.some((piece) => !isAffineTemporalMapPiece(piece)
-      || piece.wrap !== undefined || piece.rate.numerator <= 0))) {
-    throw new Error("Speech-evidence audio requires positive affine, non-looping Prepared Media relations.");
   }
 }

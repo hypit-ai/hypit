@@ -286,6 +286,7 @@
     "vitepress": "^1.6.4"
   },
   "dependencies": {
+    "@hypit/build-operations-cli": "workspace:^0.1.0",
     "@hypit/build-cli": "workspace:^0.1.0",
     "@hypit/generation-graph-cli": "workspace:^0.1.0",
     "@hypit/browser-capture": "workspace:^0.2.1",

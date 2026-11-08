@@ -4,7 +4,7 @@
      normal Build of the same Invocation can regenerate the catalogue frame. -->
 <svml>
 
-  <import as="media" from="@hypit/media@1"/>
+  <import as="media" from="@hypit/media-author@1"/>
   <import as="visual" from="@hypit/visual-track@1"/>
   <import as="audio" from="@hypit/audio-track@1"/>
   <import from="@hypit/script@1"/>

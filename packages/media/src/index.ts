@@ -1,14 +1,4 @@
 export { mediaComponent } from "./component.js";
-export { mediaSourceFragment } from "./fragment.js";
-export {
-  mediaAudioAuthorDeclaration,
-  mediaAuthorDeclarations,
-  mediaFontAuthorDeclaration,
-  mediaFontStackAuthorDeclaration,
-  mediaDeliveryAuthorDeclaration,
-  mediaImageAuthorDeclaration,
-  mediaVideoAuthorDeclaration,
-} from "./declaration.js";
 export { projectVisualDeliverySpec, sameVisualDeliverySpec, sameOutputPictureSpec, sealMediaDeliverySpec, sealMediaInspection, sealMediaStreamSelection, sealMuxedMedia, sealPreparedMedia, sealRenderedVisual, sealRenderedAudio, sealVisualDeliverySpec, sealOutputPictureSpec, verifyMediaDeliverySpec, verifyMediaDomainSpec, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyPictureSignal, verifyPictureInterpretation, verifyPictureObservation, verifyPreparedAudioSource, verifyPreparedMedia, verifyPreparedPictureSource, verifyPreparedSignalPictureSource, verifyRenderedVisual, verifyRenderedAudio, verifyVisualDeliverySpec, verifyOutputPictureSpec } from "./identity.js";
 export { prepareMedia, preparedAudioSource, preparedMediaExtent, preparedPictureExtent, preparedPictureSource, preparedSignalPictureSource } from "./prepared.js";
 export { mediaCapabilities, mediaDependency, mediaManifest, mediaModuleRef, mediaProducers, mediaTypes } from "./manifest.js";

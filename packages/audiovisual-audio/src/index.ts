@@ -12,11 +12,6 @@ export {
 export type * from "./source.js";
 export { audiovisualAudioComponent } from "./component.js";
 export {
-  createAudiovisualAudioFragment,
-  createAudiovisualProgramAudioSourceFragment,
-  preparedMediaAudioSourceFragment,
-} from "./fragment.js";
-export {
   audiovisualAudioDependency,
   audiovisualAudioManifest,
   audiovisualAudioModuleRef,

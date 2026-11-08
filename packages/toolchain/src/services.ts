@@ -1,6 +1,6 @@
 import type {
   BuildOperationsCliServices,
-} from "@hypit/build-cli";
+} from "@hypit/build-operations-cli";
 import type { GenerationGraphCliServices } from "@hypit/generation-graph-cli";
 import { materializeLocalMediaProduct } from "@hypit/media-product-local";
 import { productExporterForType, productExportersFromFacets } from "@hypit/product";

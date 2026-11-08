@@ -35,7 +35,7 @@ the local domain with an equal-length Timeline Window. Neither operation changes
 File declarations publish a **Blob**, a reference to the file's bytes, under their own id:
 
 ```svml
-<import as="asset" from="@hypit/media@1"/>
+<import as="asset" from="@hypit/media-author@1"/>
 
 <asset:Image id="product" src="./assets/product.png"/>
 <asset:Video id="performance" src="./assets/performance.mp4"/>
@@ -85,7 +85,7 @@ leaves the Film clock to the consumer.
 The following excerpt prepares a performance and an independent soundtrack:
 
 ```svml
-<import as="media" from="@hypit/media@1"/>
+<import as="media" from="@hypit/media-author@1"/>
 
 <media:Video id="performance-media" source={performance}
    picture="source" audio="default" />

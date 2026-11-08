@@ -2,6 +2,7 @@ import {
   assertAudioOperator,
   assertPictureOperator,
   assertProgramSource,
+  assertSignalReconstruction,
   audiovisualProgramSource,
   audioType,
   pictureType,
@@ -89,6 +90,13 @@ function programmeSpace(project: NleProject): LocalSpatialDomain {
   });
 }
 
+function itemSpace(item: NleItem, appearance: NlePictureAppearance): LocalSpatialDomain {
+  return sealLocalSpatialDomain({
+    id: `${item.id}:picture`,
+    region: { x: 0, y: 0, width: appearance.layout.width, height: appearance.layout.height },
+  });
+}
+
 function fitMap(
   target: LocalSpatialDomain,
   source: LocalSpatialDomain,
@@ -106,14 +114,34 @@ function fitMap(
     width = sourceWidth * scale;
     height = sourceHeight * scale;
   }
-  const x = layout.x + (layout.width - width) / 2;
-  const y = layout.y + (layout.height - height) / 2;
+  const x = (layout.width - width) / 2;
+  const y = (layout.height - height) / 2;
   const xx = sourceWidth / width;
   const yy = sourceHeight / height;
   return sealSpatialMap({
     target,
     source,
     transform: { kind: "affine", xx, xy: 0, yx: 0, yy, tx: -x * xx, ty: -y * yy },
+  });
+}
+
+function placementMap(
+  target: LocalSpatialDomain,
+  source: LocalSpatialDomain,
+  appearance: NlePictureAppearance,
+): SpatialMap {
+  return sealSpatialMap({
+    target,
+    source,
+    transform: {
+      kind: "affine",
+      xx: 1,
+      xy: 0,
+      yx: 0,
+      yy: 1,
+      tx: -appearance.layout.x,
+      ty: -appearance.layout.y,
+    },
   });
 }
 
@@ -193,7 +221,12 @@ function audioEffectNode(
   return id;
 }
 
-function selection(item: NleItem, source: ProgramSource, outputName: string) {
+function selection(
+  item: NleItem,
+  source: ProgramSource,
+  outputName: string,
+  reconstruction?: import("@hypit/audiovisual").SignalReconstruction,
+) {
   const output = source.outputs[outputName];
   assert(output !== undefined, `NLE Item ${item.id} selected missing Source output ${outputName}.`);
   if (output.kind === "constant") return { kind: "constant" as const };
@@ -202,7 +235,7 @@ function selection(item: NleItem, source: ProgramSource, outputName: string) {
     target: local,
     source: output.domain,
     pieces: structuredClone(item.sourceTime.pieces),
-  }] }) };
+  }] }), ...(reconstruction === undefined ? {} : { reconstruction: structuredClone(reconstruction) }) };
 }
 
 function occurrence(
@@ -210,6 +243,7 @@ function occurrence(
   parent: AudiovisualProgram["domain"],
   source: ProgramSource,
   outputs: readonly string[],
+  reconstructions: Readonly<Record<string, import("@hypit/audiovisual").SignalReconstruction>>,
 ): Occurrence {
   const domain = sealLocalTemporalDomain({ id: `${item.id}:time`, duration: structuredClone(item.duration) });
   return sealOccurrence({
@@ -221,7 +255,10 @@ function occurrence(
       start: structuredClone(item.start),
       active: { start: exactTemporalZero(), end: domain.duration },
     },
-    selections: Object.fromEntries(outputs.map((output) => [output, selection(item, source, output)])),
+    selections: Object.fromEntries(outputs.map((output) => [
+      output,
+      selection(item, source, output, reconstructions[output]),
+    ])),
   });
 }
 
@@ -317,35 +354,42 @@ export function lowerNleProjectToAudiovisual(
         `NLE ${item.kind} Item ${item.id} requests Audio but resolved no Audio output.`);
       outputs.push(resolved.audioOutput);
     }
-    occurrences[item.id] = occurrence(item, domain, resolved.source, [...new Set(outputs)]);
+    const reconstructions: Record<string, import("@hypit/audiovisual").SignalReconstruction> = {};
+    if (needsAudio && item.audio?.reconstruction !== undefined) {
+      const audioOutput = resolved.audioOutput!;
+      const resolvedReconstruction = host.resolveSignalReconstruction(item.audio.reconstruction, item, context);
+      assertSignalReconstruction(resolvedReconstruction.reconstruction,
+        `NLE Item ${item.id} Audio reconstruction`);
+      assert(sameType(resolvedReconstruction.reconstruction.signal,
+        resolved.source.outputs[audioOutput]!.type),
+      `NLE Item ${item.id} Audio reconstruction targets another signal Type.`);
+      reconstructions[audioOutput] = resolvedReconstruction.reconstruction;
+    }
+    occurrences[item.id] = occurrence(item, domain, resolved.source, [...new Set(outputs)], reconstructions);
 
     if (needsPicture) {
       const pictureOutput = resolved.pictureOutput!;
       const appearance = item.picture!;
       const use = `${item.id}:picture`;
+      const fitted = `${item.id}:fitted`;
       const placed = `${item.id}:placed`;
-      const clipped = `${item.id}:clipped`;
+      const localPicture = itemSpace(item, appearance);
       pictureNodes[use] = { kind: "use", occurrence: item.id, output: pictureOutput };
-      pictureNodes[placed] = {
+      pictureNodes[fitted] = {
         kind: "remap",
         input: use,
-        mapping: fitMap(pictureDomain, resolved.source.outputs[pictureOutput]!.spatialDomain!, appearance),
+        mapping: fitMap(localPicture, resolved.source.outputs[pictureOutput]!.spatialDomain!, appearance),
       };
-      pictureNodes[clipped] = {
-        kind: "crop",
-        input: placed,
-        region: {
-          x: appearance.layout.x,
-          y: appearance.layout.y,
-          width: appearance.layout.width,
-          height: appearance.layout.height,
-        },
-      };
-      let root = clipped;
+      let root = fitted;
       for (const effect of appearance.effects) {
         root = effectNode(pictureNodes, root, effect, item, context, host, domain);
       }
-      itemRoots.set(id, root);
+      pictureNodes[placed] = {
+        kind: "remap",
+        input: root,
+        mapping: placementMap(pictureDomain, localPicture, appearance),
+      };
+      itemRoots.set(id, placed);
     }
     if (needsAudio) {
       const audioOutput = resolved.audioOutput!;

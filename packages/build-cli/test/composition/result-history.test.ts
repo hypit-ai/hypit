@@ -13,7 +13,7 @@ import {
 import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
 
 import { buildCliServices } from "../services-scenario.js";
-import { runBuildOperationsCli as runCli } from "../../src/main.js";
+import { runBuildOperationsCli as runCli } from "@hypit/build-operations-cli";
 import {
   completedRecords,
   fixture,

@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { runProcessOutput } from "./process.js";
+import { runProcessOutput } from "@hypit/media-local/process";
 
 export type DecodedFrame = { readonly at: number; readonly path: string };
 

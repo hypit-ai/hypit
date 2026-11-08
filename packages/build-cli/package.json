@@ -13,22 +13,19 @@
   ],
   "dependencies": {
     "@hypit/author": "workspace:^0.0.0-dev",
+    "@hypit/build-operations-cli": "workspace:^0.1.0",
     "@hypit/build-submission": "workspace:^0.0.0-dev",
     "@hypit/cli": "workspace:^0.0.0-dev",
     "@hypit/compiler": "workspace:^0.0.0-dev",
-    "@hypit/executor": "workspace:^0.0.0-dev",
     "@hypit/kernel": "workspace:^0.0.0-dev",
     "@hypit/loader": "workspace:^0.0.0-dev",
-    "@hypit/product": "workspace:^0.0.0-dev",
     "@hypit/project": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",
-    "@hypit/resource-store": "workspace:^0.1.0",
-    "@hypit/result": "workspace:^0.0.0-dev",
-    "@hypit/runtime": "workspace:^0.0.0-dev",
     "@hypit/source": "workspace:^0.0.0-dev",
     "@hypit/workspace": "workspace:^0.0.0-dev"
   },
   "devDependencies": {
+    "@hypit/product": "workspace:*",
     "@hypit/producer": "workspace:*",
     "@hypit/runtime-local": "workspace:*"
   }

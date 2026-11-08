@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  createBuildOperationsCliCommandModules,
   createSourceBuildCliCommandModules,
 } from "../src/index.js";
+import { createBuildOperationsCliCommandModules } from "@hypit/build-operations-cli";
 import type { BuildCliServices } from "../src/index.js";
 
 const unused = new Proxy({}, {

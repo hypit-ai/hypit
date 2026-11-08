@@ -2,7 +2,7 @@ import { sealGraphFragment } from "@hypit/author";
 import { blobTypes } from "@hypit/blob";
 import { temporalTypes } from "@hypit/temporal-graph";
 
-import { mediaProducers, mediaTypes } from "./manifest.js";
+import { mediaProducers, mediaTypes } from "@hypit/media";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });

@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { runProcess } from "./process.js";
+import { runProcess } from "@hypit/media-local/process";
 
 const EVIDENCE_SAMPLE_RATE = 16_000;
 

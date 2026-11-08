@@ -9,7 +9,7 @@ import {
   selectAudioStream,
 } from "./audio-view.js";
 import type { AudioInspection, AudioOverlay, ObservationMarker } from "./audio-view.js";
-import { runBoundedMediaProcess } from "./process.js";
+import { runBoundedMediaProcess } from "@hypit/media-local/process";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

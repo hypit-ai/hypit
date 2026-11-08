@@ -96,7 +96,7 @@ hypit get ACTUAL_BUILD_ID --output manifest-rule-take.video \
 ```
 
 ```svml
-<import as="media" from="@hypit/media@1"/>
+<import as="media" from="@hypit/media-author@1"/>
 <import as="mediaop" from="@hypit/media-operations@1"/>
 
 <media:Video id="accepted-manifest-rule" src="./assets/accepted/manifest-rule.mp4"/>

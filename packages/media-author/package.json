@@ -1,0 +1,21 @@
+{
+  "name": "@hypit/media-author",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "hypit": { "activation": "./src/activation.ts" },
+  "files": ["dist", "README.md"],
+  "dependencies": {
+    "@hypit/author": "workspace:^0.0.0-dev",
+    "@hypit/blob": "workspace:^0.0.0-dev",
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/temporal-graph": "workspace:^0.1.0"
+  },
+  "devDependencies": {
+    "@hypit/kernel": "workspace:*",
+    "@hypit/svml": "workspace:*"
+  }
+}

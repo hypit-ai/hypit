@@ -5,7 +5,6 @@ import {
   executeExtractFrame,
   executeInspectMedia,
   executeMuxProgramMedia,
-  executeProjectSpeechEvidenceAudio,
   executeRenderAudioProgram,
 } from "@hypit/media-local/execution";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@hypit/media-local/execution";
@@ -17,6 +16,7 @@ import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
 import type { Value } from "@hypit/hypit/protocol";
 import { supportsLocalAudioProgram, supportsLocalSpeechEvidenceAudio } from "./support.js";
 import { createMediaExecutionEnvironment } from "@hypit/media-local/execution";
+import { executeProjectSpeechEvidenceAudio } from "./speech.js";
 
 export const localMediaProviderModuleRef = { name: "@hypit/provider-media-local", version: "1" } as const;
 

@@ -2,7 +2,7 @@ import { mkdir, stat, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 import type { CliApplicationContext, CliCommandModule, CliIo } from "@hypit/cli";
-import { speechEvidenceFile } from "@hypit/media-local/files";
+import { speechEvidenceFile } from "@hypit/media-file-local";
 import { capabilityKey } from "@hypit/hypit/protocol";
 import type { Need, Value } from "@hypit/hypit/protocol";
 import { MemoryResourceStore } from "@hypit/resource-store";

@@ -2,7 +2,7 @@
 source brief from "./brief.svml"
 
 module seedance from "@hypit/seedance@1"
-module media from "@hypit/media@1"
+module media from "@hypit/media-author@1"
 module avmedia from "@hypit/audiovisual-media@1"
 module title from "@example/audiovisual-title-card@1"
 module video from "@hypit/audiovisual-author@1"

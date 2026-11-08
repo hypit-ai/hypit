@@ -1,4 +1,4 @@
-import type { CliRuntimeControl } from "@hypit/build-cli";
+import type { CliRuntimeControl } from "@hypit/build-operations-cli";
 
 function unopened(name: string): never {
   throw new Error(`${name} must not open in this CLI control scenario`);

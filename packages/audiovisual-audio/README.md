@@ -40,9 +40,9 @@ The Preserve Pitch proof follows the other orthogonal path: `@hypit/audio-preser
 programme on the mapped nested Programme use. The local terminal currently executes the direct-media,
 positive-affine subset and rejects other shapes at its capability boundary.
 
-`createAudiovisualAudioFragment()` and `createAudiovisualProgramAudioSourceFragment()` make the finite folds
-ordinary AuthorGraph operations. Output sample rate is a separate typed terminal input. If no Audio target
-demands these outputs, Kernel pruning omits the Media and nested Programme terminal branches.
+The package's pure lowering API and Producer facet expose the same finite Source fold. Output sample rate is a
+separate typed terminal input. Source/Author Graph fragments belong to the optional Source application rather
+than this NLE terminal package.
 
 The package is downstream. `@hypit/audiovisual` does not import AudioProgram, PreparedMedia, Renderer or
 Provider types.

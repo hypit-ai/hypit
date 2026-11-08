@@ -111,6 +111,10 @@ const componentRenderer = { module: { name: "@example/title", version: "1" }, na
 const audioComponentRenderer = { module: { name: "@example/synth", version: "1" }, name: "tone" };
 const effectRenderer = { module: { name: "@example/effects", version: "1" }, name: "monochrome" };
 const audioEffectRenderer = { module: { name: "@example/audio", version: "1" }, name: "gain" };
+const audioReconstructionRenderer = {
+  module: { name: "@example/audio", version: "1" },
+  name: "preserve-pitch",
+};
 const transitionRenderer = { module: { name: "@example/transition", version: "1" }, name: "dissolve" };
 const matteRenderer = { module: { name: "@example/matte", version: "1" }, name: "alpha" };
 const coreVisualSource = (id: string, marker: string) => {
@@ -141,6 +145,12 @@ const host = createNleTerminalLinkHost([{
       temporalControls: {},
       temporalSupport: pointwiseOperatorTemporalSupport(["signal"]),
       program: { format: "hypit.test-audio@1", payload: { gain: 0.5 }, artifacts: [] },
+    },
+  }) }],
+  signalReconstructions: [{ reconstruction: audioReconstructionRenderer, resolve: () => ({
+    reconstruction: {
+      signal: audioType,
+      program: { format: "hypit.test-preserve-pitch@1", payload: {}, artifacts: [] },
     },
   }) }],
   transitions: [{ transition: transitionRenderer, resolve: (_transition, context) => ({
@@ -188,7 +198,9 @@ function project(): NleProject {
     enabled: true,
     component: captionRenderer,
     parameters: { text: "A direct caption block", color: "white" },
-    picture: { layout: { x: 10, y: 70, width: 80, height: 20, fit: "contain" }, effects: [] },
+    picture: { layout: { x: 10, y: 70, width: 80, height: 20, fit: "contain" }, effects: [{
+      id: "caption-treatment", effect: effectRenderer, parameters: { amount: 1 },
+    }] },
   };
   const component: NleComponentItem = {
     id: "title", kind: "component", start: frame(0), duration: frame(4),
@@ -204,9 +216,12 @@ function project(): NleProject {
       locked: false, muted: false, items: [] } },
     { kind: "item.add", track: "main", item: {
       id: "camera-use", kind: "media", media: "camera", start: frame(0), duration: frame(4),
-      sourceTime: nleLinearSourceTime(frame(4)), enabled: true, audio: { effects: [{
+      sourceTime: nleLinearSourceTime(frame(4)), enabled: true, audio: {
+        reconstruction: { using: audioReconstructionRenderer, parameters: {} },
+        effects: [{
         id: "quiet", effect: audioEffectRenderer, parameters: { gain: 0.5 },
-      }] },
+        }],
+      },
       picture: { ...full, effects: [{ id: "mono", effect: {
         ...effectRenderer,
       }, parameters: { amount: 1 } }] },
@@ -222,9 +237,31 @@ test("Media, caption Component and Effect lower into one audiovisual Programme",
 
   assert.deepEqual(Object.keys(program.occurrences), ["camera-use", "subtitle-one", "title"]);
   assert.equal(program.picture?.nodes["camera-use:effect:mono"]?.kind, "apply");
+  const captionFitted = program.picture?.nodes["subtitle-one:fitted"];
+  assert.equal(captionFitted?.kind, "remap");
+  if (captionFitted?.kind !== "remap") throw new Error("Caption did not lower through Item-local fitting.");
+  assert.deepEqual(captionFitted.mapping.target.region, { x: 0, y: 0, width: 80, height: 20 });
+  const captionEffect = program.picture?.nodes["subtitle-one:effect:caption-treatment"];
+  assert.deepEqual(captionEffect, {
+    kind: "apply",
+    operator: captionEffect?.kind === "apply" ? captionEffect.operator : undefined,
+    inputs: { picture: "subtitle-one:fitted" },
+    controlMappings: {},
+  });
+  const captionPlaced = program.picture?.nodes["subtitle-one:placed"];
+  assert.equal(captionPlaced?.kind, "remap");
+  if (captionPlaced?.kind !== "remap") throw new Error("Caption did not lower through Canvas placement.");
+  assert.deepEqual(captionPlaced.mapping.source.region, { x: 0, y: 0, width: 80, height: 20 });
+  assert.deepEqual(captionPlaced.mapping.transform, {
+    kind: "affine", xx: 1, xy: 0, yx: 0, yy: 1, tx: -10, ty: -70,
+  });
   assert.equal(program.picture?.nodes["html-editorial:picture-root"]?.kind, "over");
   assert.equal(program.audio?.nodes["camera-use:audio"]?.kind, "use");
   assert.equal(program.audio?.nodes["camera-use:audio-effect:quiet"]?.kind, "apply");
+  const audioSelection = program.occurrences["camera-use"]?.selections.audio;
+  assert.equal(audioSelection?.kind, "signal");
+  if (audioSelection?.kind !== "signal") throw new Error("Camera Audio did not lower as a signal.");
+  assert.equal(audioSelection.reconstruction?.program.format, "hypit.test-preserve-pitch@1");
   assert.deepEqual(linkNleProjectTerminals(document, host).htmlSources.sources.map((source) => source.source),
     ["camera-prepared", "subtitle-one:source", "title:source"]);
 });

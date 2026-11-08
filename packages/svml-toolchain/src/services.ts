@@ -1,8 +1,5 @@
 import type { SourceBuildCliServices } from "@hypit/build-cli";
-import {
-  createToolchainApplicationServices,
-  type ToolchainApplicationOptions,
-} from "@hypit/toolchain";
+import type { BuildCliContextServices } from "@hypit/build-operations-cli";
 
 import {
   createSvmlToolchainCompiler,
@@ -12,9 +9,8 @@ import { discoverSvmlSourcePackages } from "./package-selection.js";
 
 /** Optional SVML/Source application assembled over the distribution's shared Build services. */
 export function createSvmlToolchainApplicationServices(
-  options: ToolchainApplicationOptions = {},
+  common: BuildCliContextServices,
 ): SourceBuildCliServices {
-  const common = createToolchainApplicationServices(options).buildOperations;
   return {
     ...(common.packageRoot === undefined ? {} : { packageRoot: common.packageRoot }),
     bootstrapPackages: [],

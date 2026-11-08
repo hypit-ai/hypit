@@ -1,6 +1,6 @@
 import sharp from "sharp";
 
-import { runProcess } from "./process.js";
+import { runProcess } from "@hypit/media-local/process";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

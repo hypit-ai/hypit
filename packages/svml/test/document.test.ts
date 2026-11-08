@@ -17,7 +17,7 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 const sourceText = `// Packages stay independent of the SVML grammar.
-module media from "@hypit/media@1"
+module media from "@hypit/media-author@1"
 module image from "@example/image@1"
 
 media.Asset "product" {

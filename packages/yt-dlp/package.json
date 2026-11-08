@@ -16,6 +16,6 @@
   "dependencies": {
     "@hypit/cli": "workspace:^0.0.0-dev",
     "@hypit/host-paths": "workspace:^0.1.0",
-    "@hypit/media-local": "workspace:^0.3.0"
+    "@hypit/media-file-local": "workspace:^0.1.0"
   }
 }

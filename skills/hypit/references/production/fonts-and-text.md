@@ -12,7 +12,7 @@ the wording, placement and lifetime. Changing one of these can preserve the othe
 
 ```svml
 <import as="fonts" from="@hypit/fontsource@1"/>
-<import as="media" from="@hypit/media@1"/>
+<import as="media" from="@hypit/media-author@1"/>
 
 <fonts:Face id="headline-font" package="@fontsource/archivo-black" weight="400" style="normal"/>
 <fonts:Face id="body-latin" package="@fontsource-variable/inter" weight="700" style="normal"/>
@@ -45,7 +45,7 @@ so the chosen face travels with the build instead of depending on a family name 
 machine. For example, a project can use a local brand face alongside an explicit Chinese fallback:
 
 ```svml
-<import as="asset" from="@hypit/media@1"/>
+<import as="asset" from="@hypit/media-author@1"/>
 <asset:Font id="brand-font" src="./assets/fonts/brand-semibold.woff2" weight="600" style="normal"/>
 <fonts:Face id="chinese-font" package="@fontsource-variable/noto-sans-sc" weight="600" style="normal"/>
 

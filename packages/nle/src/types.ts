@@ -1,4 +1,9 @@
-import type { AudioOperator, PictureOperator, ProgramSource } from "@hypit/audiovisual";
+import type {
+  AudioOperator,
+  PictureOperator,
+  ProgramSource,
+  SignalReconstruction,
+} from "@hypit/audiovisual";
 import type { PreparedMedia } from "@hypit/media";
 import type { CanonicalValue, ModuleRef } from "@hypit/protocol";
 import type {
@@ -60,6 +65,11 @@ export type NlePictureAppearance = {
 };
 
 export type NleAudioAppearance = {
+  /** Package-owned reconstruction of this Item's mapped Audio read. */
+  readonly reconstruction?: {
+    readonly using: NlePackageSymbol;
+    readonly parameters: CanonicalValue;
+  };
   /** Ordered source-to-output. Package code owns every effect's behavior and parameter spelling. */
   readonly effects: readonly NleEffect[];
 };
@@ -171,6 +181,10 @@ export type NleResolvedAudioEffect = {
   readonly operator: AudioOperator;
 };
 
+export type NleResolvedSignalReconstruction = {
+  readonly reconstruction: SignalReconstruction;
+};
+
 export type NleLoweringContext = {
   readonly project: NleProject;
   readonly track: NleTrack;
@@ -206,6 +220,11 @@ export type NleLoweringHost = {
     item: NleItem,
     context: NleLoweringContext,
   ) => NleResolvedAudioEffect;
+  readonly resolveSignalReconstruction: (
+    reconstruction: NonNullable<NleAudioAppearance["reconstruction"]>,
+    item: NleItem,
+    context: NleLoweringContext,
+  ) => NleResolvedSignalReconstruction;
   readonly resolveTransition: (
     transition: NleTransition,
     context: NleTransitionLoweringContext,

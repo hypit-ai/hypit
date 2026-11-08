@@ -7,8 +7,8 @@ import type { ProductExporter } from "@hypit/product";
 import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
 import { sameType } from "@hypit/protocol";
 
-import type { BuildOperationsCliServices } from "../../src/services.js";
-import { runBuildOperationsCli as runCli } from "../../src/main.js";
+import type { BuildOperationsCliServices } from "@hypit/build-operations-cli";
+import { runBuildOperationsCli as runCli } from "@hypit/build-operations-cli";
 import { buildCliServices } from "../services-scenario.js";
 
 export const valueType: TypeRef = {

@@ -1,0 +1,23 @@
+{
+  "name": "@hypit/media-file-local",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@hypit/media-local": "workspace:^0.3.0",
+    "@hypit/timed-transcript": "workspace:^0.1.0",
+    "sharp": "0.35.4"
+  },
+  "devDependencies": {
+    "@hypit/cli": "workspace:*",
+    "@hypit/timed-transcript": "workspace:*"
+  }
+}

@@ -12,12 +12,13 @@
     "README.md"
   ],
   "dependencies": {
-    "@hypit/build-cli": "workspace:^0.1.0",
+    "@hypit/build-operations-cli": "workspace:^0.1.0",
     "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/audiovisual-audio": "workspace:^0.1.0",
     "@hypit/audiovisual-html": "workspace:^0.1.0",
     "@hypit/audio-gain": "workspace:^0.1.0",
     "@hypit/audio-preserve-pitch": "workspace:^0.1.0",
+    "@hypit/caption-fine": "workspace:^0.1.0",
     "@hypit/cli": "workspace:^0.0.0-dev",
     "@hypit/credential-store-env": "workspace:^0.1.2",
     "@hypit/credential-store-local": "workspace:^0.1.2",
@@ -60,8 +61,11 @@
     "@hypit/seedream": "workspace:^0.3.0",
     "@hypit/temporal-graph": "workspace:^0.1.0",
     "@hypit/picture-matte": "workspace:^0.1.0",
+    "@hypit/picture-frame": "workspace:^0.1.0",
     "@hypit/picture-filter": "workspace:^0.1.0",
+    "@hypit/picture-transform": "workspace:^0.1.0",
     "@hypit/picture-transition": "workspace:^0.1.0",
+    "@hypit/text-fine": "workspace:^0.1.0",
     "@hypit/volcengine-matting": "workspace:^0.3.0",
     "@hypit/wan": "workspace:^0.3.0"
   }

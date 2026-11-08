@@ -7,9 +7,9 @@ import {
   buildProgressLines,
   buildProgressView,
   observeBuildView,
-} from "../../src/observation.js";
-import type { BuildProgressView } from "../../src/observation.js";
-import type { CliBuildView, CliRuntimeControl } from "../../src/runtime-port.js";
+} from "@hypit/build-operations-cli";
+import type { BuildProgressView } from "@hypit/build-operations-cli";
+import type { CliBuildView, CliRuntimeControl } from "@hypit/build-operations-cli";
 
 function view(
   activity: CliBuildView["activity"],

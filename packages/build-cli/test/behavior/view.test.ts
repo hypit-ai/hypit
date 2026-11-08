@@ -3,8 +3,8 @@ import test from "node:test";
 
 import type { BuildResult } from "@hypit/result";
 import type { TypeRef } from "@hypit/protocol";
-import type { CliBuildView as BuildView } from "../../src/runtime-port.js";
-import { buildResultView, buildStatusView } from "../../src/view.js";
+import type { CliBuildView as BuildView } from "@hypit/build-operations-cli";
+import { buildResultView, buildStatusView } from "@hypit/build-operations-cli";
 
 const valueType: TypeRef = {
   module: { name: "example", version: "1" },
