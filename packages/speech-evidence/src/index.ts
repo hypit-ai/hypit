@@ -12,6 +12,10 @@ export {
   speechEvidenceProducers,
   speechEvidenceTypes,
 } from "./contract.js";
+export {
+  speechEvidenceAudioFragment,
+  speechEvidenceGenerationNodes,
+} from "./fragment.js";
 import {
   speechEvidenceCapabilities,
   speechEvidenceModuleRef,

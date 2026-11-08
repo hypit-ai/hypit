@@ -10,3 +10,8 @@ not the editable transcript attached to media.
 The package deliberately owns no transcript document, recognizer score, Provider identity, semantic
 Segment or Media Representation. Final aligned speech files belong to `@hypit/timed-transcript`.
 WhisperX and other analyzers may share this audio input without sharing a result implementation.
+
+The package contributes `@hypit/speech-evidence@1#project-audio` as a Generation Graph operation.
+It accepts `PreparedMedia` and publishes invocation-local `SpeechEvidenceAudio`; analyzers such as
+WhisperX consume that typed output in the next node. Generation Graph Core does not know that this is
+audio preparation, and Provider packages remain responsible only for satisfying the Capability.

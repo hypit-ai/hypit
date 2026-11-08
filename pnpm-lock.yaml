@@ -2264,6 +2264,9 @@ importers:
 
   packages/speech-evidence:
     dependencies:
+      '@hypit/generation-graph':
+        specifier: workspace:^0.0.0-dev
+        version: link:../generation-graph
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
@@ -2555,6 +2558,9 @@ importers:
       '@hypit/cli':
         specifier: workspace:^0.0.0-dev
         version: link:../cli
+      '@hypit/generation-graph':
+        specifier: workspace:^0.0.0-dev
+        version: link:../generation-graph
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media

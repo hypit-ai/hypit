@@ -16,6 +16,13 @@ boundaries, while removing scores, model identity and other recognizer details. 
 used whether detected wording is accepted directly or later corrected through deterministic M:N
 alignment. No Author Graph, Build, Result or SVML declaration is created.
 
+For long-running composition, this package also contributes the logical Generation Graph operation
+`@hypit/whisperx@1#transcribe`. It accepts `SpeechEvidenceAudio` plus a language and publishes one
+typed `TimedTranscript`. The node names no Endpoint or Provider: the active Runtime profile binds the
+existing `whisperx-transcription` Capability. The preceding media-to-evidence operation belongs to
+`@hypit/speech-evidence`, and transcript export or media attachment belongs to
+`@hypit/timed-transcript`.
+
 For Chinese speech use `zh`. Language spelling is explicit; the selected Endpoint owns actual model
 support. `@hypit/timed-transcript` owns the document codec and Media Representation. WhisperX owns only
 how that document is measured with this model family.

@@ -39,6 +39,11 @@ logical Module component; the embedding application selects exact installed pack
 `LoadedPackage` values to `createNodeGenerationGraphProjectHost`. Missing and duplicate owners fail exactly.
 The library does not scan projects, install packages or maintain a second Generation registry.
 
+An operation component describes what happens and its typed ports; it does not select who executes a Need.
+Model-family packages such as `@hypit/whisperx` can contribute operation nodes, while independent Provider
+packages satisfy their Capabilities through the Runtime profile. Adding another model, analyzer or Provider must
+not add a node kind, result kind or vendor branch to Generation Graph Core.
+
 `lowerGenerationGraph` is filesystem-free. Package code supplies each node's one-result `GraphFragment`.
 Literal inputs become ordinary Records and node inputs become component-output references. Target preparation
 visits only the reachable recipe branch and lowers it to the existing AuthorGraph and Kernel planner.
