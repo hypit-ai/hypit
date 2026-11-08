@@ -1,7 +1,6 @@
 import { assertGenerationGraphProject } from "./project.js";
 import type {
   GenerationGraphNode,
-  GenerationGraphNodeLayout,
   GenerationGraphProject,
 } from "./types.js";
 
@@ -9,9 +8,7 @@ export type GenerationGraphCommand =
   | { readonly kind: "project.rename"; readonly name: string }
   | { readonly kind: "node.add"; readonly node: GenerationGraphNode }
   | { readonly kind: "node.replace"; readonly node: GenerationGraphNode }
-  | { readonly kind: "node.remove"; readonly id: string }
-  | { readonly kind: "node.position"; readonly position: GenerationGraphNodeLayout }
-  | { readonly kind: "node.position.remove"; readonly id: string };
+  | { readonly kind: "node.remove"; readonly id: string };
 
 export type GenerationGraphTransaction = {
   readonly revision: number;
@@ -25,11 +22,10 @@ export class GenerationGraphRevisionConflict extends Error {
   }
 }
 
-type MutableProject = Omit<GenerationGraphProject, "revision" | "name" | "nodes" | "layout"> & {
+type MutableProject = Omit<GenerationGraphProject, "revision" | "name" | "nodes"> & {
   revision: number;
   name: string;
   nodes: GenerationGraphNode[];
-  layout: GenerationGraphNodeLayout[];
 };
 
 function node(project: MutableProject, id: string): GenerationGraphNode {
@@ -69,18 +65,6 @@ export function applyGenerationGraphTransaction(
           throw new Error(`Generation Graph Node ${command.id} is still referenced.`);
         }
         next.nodes = next.nodes.filter((candidate) => candidate.id !== command.id);
-        next.layout = next.layout.filter((entry) => entry.node !== command.id);
-        break;
-      case "node.position": {
-        node(next, command.position.node);
-        const index = next.layout.findIndex((entry) => entry.node === command.position.node);
-        if (index < 0) next.layout.push(structuredClone(command.position));
-        else next.layout.splice(index, 1, structuredClone(command.position));
-        break;
-      }
-      case "node.position.remove":
-        node(next, command.id);
-        next.layout = next.layout.filter((entry) => entry.node !== command.id);
         break;
     }
   }

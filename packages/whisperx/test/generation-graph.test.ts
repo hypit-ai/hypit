@@ -122,7 +122,6 @@ test("Media Asset, speech evidence and WhisperX form one typed graph without cen
         language: { value: "zh" },
       },
     }],
-    layout: [],
   };
   const host = createNodeGenerationGraphProjectHost({
     packages,

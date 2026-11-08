@@ -113,7 +113,6 @@ test("a file-backed image and concise Seedance node lower into one typed image-t
         firstFramePersonReference: { value: false },
       },
     }],
-    layout: [],
   };
   const host = createNodeGenerationGraphProjectHost({
     packages: installedPackages(),
@@ -179,7 +178,6 @@ test("four existing media values close into one heterogeneous reference-video Bu
         },
       },
     ],
-    layout: [],
   };
   const host = createNodeGenerationGraphProjectHost({
     packages: installedPackages(),
@@ -235,7 +233,6 @@ test("Seedance graph nodes preserve exact model modes and explicit visual classi
       name: "Invalid",
       revision: 0,
       nodes: [],
-      layout: [],
     },
   }), /firstFramePersonReference/u);
 });
@@ -250,7 +247,6 @@ test("reference-video compiles indexed heterogeneous references through the comm
     name: "References",
     revision: 0,
     nodes: [],
-    layout: [],
   };
   const compiled = reference.compile({
     node: {

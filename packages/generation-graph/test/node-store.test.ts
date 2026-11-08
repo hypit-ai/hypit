@@ -13,7 +13,7 @@ import {
   writeGenerationGraphProjectFile,
 } from "../src/node/index.js";
 
-test("the Node store persists only author recipes and layout", async () => {
+test("the Node store persists only author recipes", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-generation-graph-"));
   try {
     const path = join(directory, "images.graph.json");

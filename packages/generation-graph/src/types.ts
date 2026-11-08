@@ -26,20 +26,12 @@ export type GenerationGraphNode = {
   readonly inputs: Readonly<Record<string, GenerationGraphInput>>;
 };
 
-export type GenerationGraphNodeLayout = {
-  readonly node: string;
-  readonly x: number;
-  readonly y: number;
-};
-
 export type GenerationGraphProject = {
   readonly format: "hypit.generation-graph@1";
   readonly id: string;
   readonly name: string;
   readonly revision: number;
   readonly nodes: readonly GenerationGraphNode[];
-  /** Canvas presentation only. It never changes production dependencies. */
-  readonly layout: readonly GenerationGraphNodeLayout[];
 };
 
 export type GenerationOperationNodeImplementation = {

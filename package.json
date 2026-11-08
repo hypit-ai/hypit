@@ -60,6 +60,16 @@
       "types": "./dist/public/generation-graph-node.d.ts",
       "import": "./packages/generation-graph/src/node/index.ts"
     },
+    "./generation-canvas": {
+      "hypit-source": "./packages/generation-canvas/src/index.ts",
+      "types": "./dist/public/generation-canvas.d.ts",
+      "import": "./packages/generation-canvas/src/index.ts"
+    },
+    "./generation-canvas/node": {
+      "hypit-source": "./packages/generation-canvas/src/node/index.ts",
+      "types": "./dist/public/generation-canvas-node.d.ts",
+      "import": "./packages/generation-canvas/src/node/index.ts"
+    },
     "./workspace": {
       "hypit-source": "./packages/workspace/src/index.ts",
       "types": "./dist/public/workspace.d.ts",

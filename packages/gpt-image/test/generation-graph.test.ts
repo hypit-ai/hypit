@@ -75,7 +75,6 @@ test("two GPT Image nodes feed one Seedance reference-video without duplicating 
         "referenceImage.2.personReference": { value: true },
       },
     }],
-    layout: [],
   };
   const host = createNodeGenerationGraphProjectHost({ packages: installedPackages() });
   const prepared = await host.prepare(project, ["motion"]);

@@ -43,7 +43,6 @@ test("Generation Node behavior is contributed by an exact package Facet", async 
     name: "Images",
     revision: 0,
     nodes: [],
-    layout: [],
   });
   assert.equal(implementation.kind, "operation");
   if (implementation.kind !== "operation") return;
@@ -76,7 +75,6 @@ test("an operation package compiles concise authored inputs without teaching Cor
     name: "Images",
     revision: 0,
     nodes: [],
-    layout: [],
   });
   assert.deepEqual(implementation, {
     kind: "operation",
@@ -98,7 +96,7 @@ test("the Host refuses missing and duplicate component owners", async () => {
   await assert.rejects(async () => await host.resolveImplementation({
     id: "missing", using, inputs: {},
   }, {
-    format: "hypit.generation-graph@1", id: "images", name: "Images", revision: 0, nodes: [], layout: [],
+    format: "hypit.generation-graph@1", id: "images", name: "Images", revision: 0, nodes: [],
   }), /is not installed/u);
 });
 
@@ -132,7 +130,6 @@ test("a package-owned value node loads authored inputs through Host capabilities
     name: "Images",
     revision: 0,
     nodes: [],
-    layout: [],
   });
   assert.deepEqual(implementation, {
     kind: "value",

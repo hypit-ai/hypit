@@ -60,7 +60,6 @@ function project(): GenerationGraphProject {
       using: { module: moduleRef, name: "transform" },
       inputs: { source: { node: "final" } },
     }],
-    layout: [],
   };
 }
 
@@ -135,7 +134,6 @@ test("an authored value node closes over a Record without becoming Build work", 
       using: { module: moduleRef, name: "transform" },
       inputs: { source: { node: "source" } },
     }],
-    layout: [],
   };
   const attachment = {
     blob: { kind: "blob" as const, resource: "res_existing" as const, size: 1, mediaType: "image/png" },

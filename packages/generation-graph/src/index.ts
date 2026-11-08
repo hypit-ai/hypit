@@ -44,7 +44,6 @@ export type {
   GenerationGraphInput,
   GenerationGraphLoweringHost,
   GenerationGraphNode,
-  GenerationGraphNodeLayout,
   GenerationGraphProject,
   GenerationGraphResourceAttachment,
   GenerationNodeAssetHost,

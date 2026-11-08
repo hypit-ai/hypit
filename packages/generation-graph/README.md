@@ -1,6 +1,6 @@
 # `@hypit/generation-graph`
 
-Persistent AIGC recipe DAG with optional Canvas positions.
+Persistent AIGC recipe DAG.
 
 The project owns reusable generation recipes, not attempts or generated media:
 
@@ -22,9 +22,6 @@ The project owns reusable generation recipes, not attempts or generated media:
         "reference": { "node": "moodboard" }
       }
     }
-  ],
-  "layout": [
-    { "node": "hero", "x": 640, "y": 120 }
   ]
 }
 ```
@@ -50,7 +47,7 @@ There are two implementation lifetimes:
 An operation compiler remains package-owned authoring behavior. It may validate values, choose one package-owned
 Fragment shape and rename bindings, but it must preserve the node's authored dependency set exactly. It cannot add
 hidden dependencies or silently discard visible edges. Core therefore stays unaware of model fields while the saved
-Canvas topology remains the execution topology.
+Graph topology remains the execution topology.
 
 Value-node parameters must be authored literal values. Package code interprets them and may use only the Host's
 explicit `readAsset` and `resolveAsset` capabilities. It receives no filesystem path, Runtime, Endpoint or Result
@@ -101,15 +98,16 @@ Media Asset import. The resulting manifest and copied media contain no Build or 
 may call the same function and then apply a separate author transaction; it must not introduce a Product-backed
 Media node.
 
-Canvas result cards are a projection of Build and Product observations. They may be displayed inside a
-generation node, stacked, hidden or restored without becoming recipe fields. A finished result becomes an
-author Graph node only through an explicit authoring transaction. External media and generated media then use
-the same Media Asset representation; neither NLE nor downstream components consume Product sidecars.
+`@hypit/generation-canvas` persists the separate spatial projection. Its Items may point to recipe Nodes or one
+exact `{ build, output }` observation without copying status or Product data into this project. A finished result
+becomes an author Graph node only through an explicit authoring transaction. External media and generated media
+then use the same Media Asset representation; neither NLE nor downstream components consume Product sidecars.
 
 Media is only one authored result kind. A WhisperX-style node may publish a `TimedTranscript`; its Type owner
 exports an editable transcript file and may attach that file to a Media Asset as an explicit Representation.
 Other analyzers may own masks, depth or tracking documents in the same way. Core and Canvas must not maintain a
 switch over those result kinds: installed Type packages own codecs, optional inspectors and materializers.
 
-The revisioned transaction API edits only author facts: project name, recipe nodes and Canvas positions.
-Running, finishing, failing, cancelling or deleting a result card never increments the recipe revision.
+The revisioned transaction API edits only project name and recipe nodes. Canvas placement and result-card
+membership have an independent View revision. Running, finishing, failing or cancelling never increments either
+document merely because observed state changed.

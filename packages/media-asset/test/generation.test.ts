@@ -64,7 +64,6 @@ test("Media Asset owns a file-backed PreparedMedia value node", async () => {
       name: "Podcast",
       revision: 0,
       nodes: [],
-      layout: [],
     },
     inputs: { asset: { path: "assets/interview.media.json" } },
     readAsset(request) {
@@ -95,7 +94,6 @@ test("Media Asset also exposes its primary file as an ordinary model input Blob"
       name: "Podcast",
       revision: 0,
       nodes: [],
-      layout: [],
     },
     inputs: { asset: { path: "assets/interview.media.json" } },
     readAsset: () => new TextEncoder().encode(serializeMediaAssetDocument(document())),

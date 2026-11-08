@@ -56,8 +56,10 @@ export function assertGenerationGraphProject(value: GenerationGraphProject): voi
     "Generation Graph Project name is empty.");
   assert(Number.isSafeInteger(value.revision) && value.revision >= 0,
     "Generation Graph Project revision must be a non-negative safe integer.");
-  assert(Array.isArray(value.nodes) && Array.isArray(value.layout),
-    "Generation Graph Project collections are invalid.");
+  assert(JSON.stringify(Object.keys(value).sort())
+    === JSON.stringify(["format", "id", "name", "nodes", "revision"]),
+  "Generation Graph Project must contain only format, id, name, revision and nodes.");
+  assert(Array.isArray(value.nodes), "Generation Graph Project Nodes are invalid.");
   const nodes = new Map<string, GenerationGraphNode>();
   for (const node of value.nodes as readonly GenerationGraphNode[]) {
     assertNode(node);
@@ -89,16 +91,6 @@ export function assertGenerationGraphProject(value: GenerationGraphProject): voi
   };
   (value.nodes as readonly GenerationGraphNode[]).forEach((node) => visit(node.id));
 
-  const positioned = new Set<string>();
-  for (const entry of value.layout) {
-    object(entry, "Generation Graph layout entry");
-    identity(entry.node, "Generation Graph layout Node");
-    assert(nodes.has(entry.node), `Generation Graph layout references missing Node ${entry.node}.`);
-    assert(!positioned.has(entry.node), `Generation Graph layout repeats Node ${entry.node}.`);
-    assert(Number.isFinite(entry.x) && Number.isFinite(entry.y),
-      `Generation Graph Node ${entry.node} position must be finite.`);
-    positioned.add(entry.node);
-  }
 }
 
 export function sealGenerationGraphProject(value: GenerationGraphProject): GenerationGraphProject {
@@ -116,7 +108,6 @@ export function createGenerationGraphProject(input: {
     name: input.name,
     revision: 0,
     nodes: [],
-    layout: [],
   });
 }
 

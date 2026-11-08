@@ -22,19 +22,15 @@ function node(id: string): GenerationGraphNode {
   };
 }
 
-test("the project keeps reusable recipes and Canvas layout as separate facts", () => {
+test("the project keeps only reusable recipes", () => {
   const empty = createGenerationGraphProject({ id: "storyboard", name: "Storyboard" });
   const edited = applyGenerationGraphTransaction(empty, {
     revision: 0,
-    commands: [
-      { kind: "node.add", node: node("hero") },
-      { kind: "node.position", position: { node: "hero", x: 120, y: 48 } },
-    ],
+    commands: [{ kind: "node.add", node: node("hero") }],
   });
 
   assert.equal(edited.revision, 1);
   assert.deepEqual(edited.nodes, [node("hero")]);
-  assert.deepEqual(edited.layout, [{ node: "hero", x: 120, y: 48 }]);
   assert.deepEqual(parseGenerationGraphProject(serializeGenerationGraphProject(edited)), edited);
 });
 
@@ -49,7 +45,6 @@ test("runtime products and selections are not valid author-node fields", () => {
       products: ["./products/hero/take.json"],
       selected: "./products/hero/take.json",
     }],
-    layout: [],
   })), /must contain only id, using and inputs/u);
 });
 

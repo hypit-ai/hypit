@@ -735,6 +735,12 @@ importers:
         specifier: workspace:*
         version: link:../text
 
+  packages/generation-canvas:
+    dependencies:
+      '@hypit/atomic-file':
+        specifier: workspace:^0.0.0-dev
+        version: link:../atomic-file
+
   packages/generation-graph:
     dependencies:
       '@hypit/atomic-file':
