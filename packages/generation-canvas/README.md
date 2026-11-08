@@ -40,6 +40,12 @@ Removing a Build-output Item removes only its Canvas projection; History can pla
 Turning a completed output into reusable authored input remains an explicit Type-owned materialization followed by
 an ordinary Generation Graph transaction.
 
+`planGenerationCanvasBuildOutputAdoption()` coordinates that authoring gesture without interpreting the Product:
+the installed Product Type owner first materializes its ordinary author file and returns a dependency-free value
+node; the plan then adds that node, applies any explicit downstream rewiring, and replaces the Build-output Item
+with the Graph-node subject at the same Canvas position. The Product remains in Result history, so adoption copies
+no execution state and does not make the authored node depend on a past Build.
+
 `planAcceptedGenerationCanvasBuild()` turns a durably accepted Build receipt plus Host-owned placements into one
 Canvas transaction. It requires a placement for every published operation output and copies no execution state.
 `observeGenerationCanvasBuildOutputs()` inspects each referenced active Build once, then falls back to finished
@@ -50,3 +56,10 @@ The Node Host closes the first headless workflow. `placeAcceptedBuildInGeneratio
 View revision and atomically saves all cards for one accepted receipt. `openNodeGenerationCanvas()` follows the
 View's portable Graph path, observes every referenced Build and returns the complete projected Scene. A receipt
 write failure does not cancel or relabel the already accepted Build; its Result remains recoverable from History.
+
+`adoptBuildOutputInGenerationCanvas()` supplies the Node filesystem coordination around the pure adoption plan.
+Its materializer is injected by the caller and remains Type-owned. The Host validates both current revisions and
+both next documents before saving the Graph first and the Canvas second. Ordinary files cannot provide one atomic
+transaction across those two paths: if the second save fails, the new author node deliberately remains in the
+Graph and the error identifies the Canvas Item that was not replaced. Retrying or removing that visible node is
+therefore possible without a hidden recovery table.

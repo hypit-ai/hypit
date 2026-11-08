@@ -1,3 +1,5 @@
+export { planGenerationCanvasBuildOutputAdoption } from "./adoption.js";
+export type { GenerationCanvasBuildOutputAdoptionPlan } from "./adoption.js";
 export { planAcceptedGenerationCanvasBuild } from "./accepted-build.js";
 export type {
   AcceptedGenerationCanvasBuild,

@@ -1,6 +1,16 @@
 import { dirname, resolve } from "node:path";
 
-import { readGenerationGraphProjectFile } from "@hypit/generation-graph/node";
+import {
+  applyGenerationGraphTransaction,
+  GenerationGraphRevisionConflict,
+  type GenerationGraphCommand,
+  type GenerationGraphNode,
+} from "@hypit/generation-graph";
+import {
+  readGenerationGraphProjectFile,
+  writeGenerationGraphProjectFile,
+} from "@hypit/generation-graph/node";
+import type { ProductAddress } from "@hypit/product";
 
 import {
   observeGenerationCanvasBuildOutputs,
@@ -12,6 +22,7 @@ import {
   type AcceptedGenerationCanvasBuild,
   type GenerationCanvasBuildOutputPlacement,
 } from "../accepted-build.js";
+import { planGenerationCanvasBuildOutputAdoption } from "../adoption.js";
 import {
   projectGenerationCanvas,
   type GenerationCanvasScene,
@@ -33,6 +44,19 @@ export type OpenedNodeGenerationCanvas = {
   readonly view: GenerationCanvasView;
   readonly observations: readonly GenerationCanvasBuildOutputObservation[];
   readonly scene: GenerationCanvasScene;
+};
+
+export type GenerationCanvasProductMaterializationContext = {
+  readonly product: ProductAddress;
+  readonly node: string;
+  readonly graphPath: string;
+  readonly canvasPath: string;
+};
+
+export type AdoptedNodeGenerationCanvasBuildOutput = {
+  readonly graph: import("@hypit/generation-graph").GenerationGraphProject;
+  readonly view: GenerationCanvasView;
+  readonly node: GenerationGraphNode;
 };
 
 /** Open one complete headless Canvas projection from ordinary files and replaceable observation ports. */
@@ -74,4 +98,66 @@ export async function placeAcceptedBuildInGenerationCanvas(input: {
   );
   await writeGenerationCanvasViewFile(input.canvasPath, next);
   return next;
+}
+
+/**
+ * Materialize one exact Product through its owner, commit its value node, then replace the Result card in place.
+ * Graph is saved first; if the View save fails, the authored node remains recoverable instead of becoming hidden.
+ */
+export async function adoptBuildOutputInGenerationCanvas(input: {
+  readonly canvasPath: string;
+  readonly canvasRevision: number;
+  readonly graphRevision: number;
+  readonly item: string;
+  readonly node: string;
+  readonly graphCommands?: readonly GenerationGraphCommand[];
+  readonly materialize: (
+    context: GenerationCanvasProductMaterializationContext,
+  ) => Promise<GenerationGraphNode>;
+}): Promise<AdoptedNodeGenerationCanvasBuildOutput> {
+  const canvasPath = resolve(input.canvasPath);
+  const view = await readGenerationCanvasViewFile(canvasPath);
+  if (view.revision !== input.canvasRevision) {
+    throw new GenerationCanvasRevisionConflict(input.canvasRevision, view.revision);
+  }
+  const item = view.items.find((candidate) => candidate.id === input.item);
+  if (item === undefined) throw new Error(`Unknown Generation Canvas Item: ${input.item}`);
+  if (item.subject.kind !== "build-output") {
+    throw new Error(`Generation Canvas Item ${input.item} is not a Build output.`);
+  }
+  const graphPath = resolve(dirname(canvasPath), view.graph.path);
+  const graph = await readGenerationGraphProjectFile(graphPath);
+  if (graph.revision !== input.graphRevision) {
+    throw new GenerationGraphRevisionConflict(input.graphRevision, graph.revision);
+  }
+  if (graph.nodes.some((candidate) => candidate.id === input.node)) {
+    throw new Error(`Generation Graph Node ${input.node} already exists.`);
+  }
+  const node = await input.materialize({
+    product: { publication: item.subject.build, name: item.subject.output },
+    node: input.node,
+    graphPath,
+    canvasPath,
+  });
+  if (node.id !== input.node) {
+    throw new Error(`Product materializer returned Graph Node ${node.id}, expected ${input.node}.`);
+  }
+  const plan = planGenerationCanvasBuildOutputAdoption({
+    graph,
+    canvas: view,
+    item: input.item,
+    node,
+    ...(input.graphCommands === undefined ? {} : { graphCommands: input.graphCommands }),
+  });
+  const nextGraph = applyGenerationGraphTransaction(graph, plan.graph);
+  const nextView = applyGenerationCanvasTransaction(view, plan.canvas);
+  await writeGenerationGraphProjectFile(graphPath, nextGraph);
+  try {
+    await writeGenerationCanvasViewFile(canvasPath, nextView);
+  } catch (cause) {
+    throw new Error(`Generation Graph Node ${node.id} was saved, but Canvas Item ${input.item} was not replaced.`, {
+      cause,
+    });
+  }
+  return { graph: nextGraph, view: nextView, node: structuredClone(node) };
 }

@@ -1246,6 +1246,9 @@ importers:
 
   packages/media-product-local:
     dependencies:
+      '@hypit/generation-graph':
+        specifier: workspace:^0.0.0-dev
+        version: link:../generation-graph
       '@hypit/media-asset':
         specifier: workspace:^0.1.0
         version: link:../media-asset

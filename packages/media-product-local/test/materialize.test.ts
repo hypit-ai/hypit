@@ -6,7 +6,10 @@ import { blobTypes } from "@hypit/hypit/blob";
 import type { LocalMediaAssetImportRequest } from "@hypit/media-local";
 import type { ProductHistory } from "@hypit/product";
 
-import { materializeLocalMediaProduct } from "../src/index.js";
+import {
+  materializeLocalMediaProduct,
+  materializeLocalMediaProductAsGenerationNode,
+} from "../src/index.js";
 
 const address = { publication: "bld_exact", name: "hero:take" } as const;
 const blob = { kind: "blob" as const, resource: "res_hero" as const, size: 4, mediaType: "video/mp4" };
@@ -102,4 +105,29 @@ test("structured and non-media Products do not enter Media Asset import", async 
     },
   }), /not one media file/u);
   assert.equal(imported, false);
+});
+
+test("media adoption returns the selected file-backed Generation Graph projection", async () => {
+  const result = await materializeLocalMediaProductAsGenerationNode({
+    product: address,
+    assetPath: "/project/assets/hero.media.json",
+    asset: { path: "assets/hero.media.json" },
+    node: "hero-adopted",
+    projection: "resource",
+  }, {
+    products: products(),
+    async importMediaAsset(request) {
+      return {
+        assetPath: request.assetPath,
+        mediaPath: "/project/assets/hero.mp4",
+        document: {} as never,
+      };
+    },
+  });
+
+  assert.deepEqual(result.node, {
+    id: "hero-adopted",
+    using: { module: { name: "@hypit/media-asset", version: "1" }, name: "resource" },
+    inputs: { asset: { value: { path: "assets/hero.media.json" } } },
+  });
 });

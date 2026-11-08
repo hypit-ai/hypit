@@ -17,6 +17,7 @@ import {
   type GenerationCanvasView,
 } from "../src/index.js";
 import {
+  adoptBuildOutputInGenerationCanvas,
   openNodeGenerationCanvas,
   placeAcceptedBuildInGenerationCanvas,
   readGenerationCanvasViewFile,
@@ -190,6 +191,60 @@ test("the Node Host places an accepted receipt and reopens the complete scene", 
       accepted: { build: "Build-B", outputs: ["image"] },
       placements: [{ id: "result-b-image", output: "image", x: 100, y: 520 }],
     }), /expected revision 1, found 2/u);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("adopting a completed card authors one value node and replaces it in place", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-generation-canvas-adopt-"));
+  try {
+    const graphPath = join(directory, "storyboard.graph.json");
+    const canvasPath = join(directory, "storyboard.canvas.json");
+    const { readGenerationGraphProjectFile, writeGenerationGraphProjectFile } =
+      await import("@hypit/generation-graph/node");
+    await writeGenerationGraphProjectFile(graphPath, graph);
+    const initial = viewWithGraphNodes();
+    const placed = applyGenerationCanvasTransaction(initial, planAcceptedGenerationCanvasBuild(initial, {
+      build: "Build-A",
+      outputs: ["image"],
+    }, [{ id: "result-a-image", output: "image", x: 100, y: 320 }]));
+    await writeGenerationCanvasViewFile(canvasPath, placed);
+
+    const adopted = await adoptBuildOutputInGenerationCanvas({
+      canvasPath,
+      canvasRevision: placed.revision,
+      graphRevision: graph.revision,
+      item: "result-a-image",
+      node: "adopted-image",
+      graphCommands: [{ kind: "node.replace", node: {
+        ...graph.nodes[1]!,
+        inputs: { image: { node: "adopted-image" } },
+      } }],
+      async materialize(context) {
+        assert.deepEqual(context.product, { publication: "Build-A", name: "image" });
+        return {
+          id: context.node,
+          using: { module: { name: "@hypit/media-asset", version: "1" }, name: "resource" },
+          inputs: { asset: { value: { path: "assets/adopted.media.json" } } },
+        };
+      },
+    });
+    const savedGraph = await readGenerationGraphProjectFile(graphPath);
+    const savedView = await readGenerationCanvasViewFile(canvasPath);
+    const replacement = savedView.items.find((item) => item.id === "result-a-image");
+
+    assert.equal(adopted.graph.revision, graph.revision + 1);
+    assert.deepEqual(savedGraph, adopted.graph);
+    assert.deepEqual(savedView, adopted.view);
+    assert.deepEqual(replacement, {
+      id: "result-a-image",
+      subject: { kind: "graph-node", node: "adopted-image" },
+      x: 100,
+      y: 320,
+    });
+    assert.deepEqual(savedGraph.nodes.find((node) => node.id === "video")?.inputs,
+      { image: { node: "adopted-image" } });
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
