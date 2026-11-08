@@ -2,6 +2,7 @@ import { pictureType, type ProgramSource } from "@hypit/audiovisual";
 import { visualProgramHtmlSource } from "@hypit/audiovisual-html";
 import {
   htmlTextFragment,
+  htmlLineUnionRuntime,
   htmlVisual,
   type HtmlTextNode,
   type HtmlTextPaintLayer,
@@ -31,9 +32,11 @@ import {
 } from "@hypit/caption-nle";
 import type {
   CaptionFineActiveBoxParameters,
+  CaptionFineActiveUnderlineParameters,
   CaptionFineAttributeFace,
   CaptionFineBoxParameters,
   CaptionFineStyleParameters,
+  CaptionFineUnderlineParameters,
 } from "./types.js";
 
 export const captionFineNleComponentSymbol: NlePackageSymbol = {
@@ -105,18 +108,22 @@ function optionalChoice<const T extends readonly string[]>(
 
 type NormalizedBox = Required<CaptionFineBoxParameters>;
 type NormalizedActiveBox = Required<CaptionFineActiveBoxParameters>;
+type NormalizedUnderline = Required<CaptionFineUnderlineParameters>;
+type NormalizedActiveUnderline = Required<CaptionFineActiveUnderlineParameters>;
 
 function box(value: unknown, active: false): NormalizedBox;
 function box(value: unknown, active: true): NormalizedActiveBox;
 function box(value: unknown, active: boolean): NormalizedBox | NormalizedActiveBox {
   const input = value === undefined ? {} : record(value, active ? "Fine Caption activeBox" : "Fine Caption cueBox");
   exactKeys(input, active
-    ? ["mode", "background", "borderColor", "borderWidth", "borderRadius", "paddingX", "paddingY"]
-    : ["background", "borderColor", "borderWidth", "borderRadius", "paddingX", "paddingY"],
+    ? ["mode", "continuity", "background", "borderColor", "borderWidth", "borderRadius", "paddingX", "paddingY"]
+    : ["continuity", "background", "borderColor", "borderWidth", "borderRadius", "paddingX", "paddingY"],
   active ? "Fine Caption activeBox" : "Fine Caption cueBox");
   return {
     ...(active ? { mode: optionalChoice(input.mode, "off", ["off", "current", "trail"] as const,
       "Fine Caption activeBox mode") } : {}),
+    continuity: optionalChoice(input.continuity, "isolated", ["isolated", "joined"] as const,
+      "Fine Caption box continuity"),
     background: optionalColor(input.background, active ? "#ffd54a44" : "#00000000",
       active ? "Fine Caption activeBox background" : "Fine Caption cueBox background"),
     borderColor: optionalColor(input.borderColor, "#00000000",
@@ -126,6 +133,28 @@ function box(value: unknown, active: boolean): NormalizedBox | NormalizedActiveB
     paddingX: optionalNumber(input.paddingX, active ? 5 : 14, "Fine Caption box paddingX", 0, 200),
     paddingY: optionalNumber(input.paddingY, active ? 2 : 10, "Fine Caption box paddingY", 0, 200),
   } as NormalizedBox | NormalizedActiveBox;
+}
+
+function underline(value: unknown, active: false, fallbackColor: string): NormalizedUnderline;
+function underline(value: unknown, active: true, fallbackColor: string): NormalizedActiveUnderline;
+function underline(
+  value: unknown,
+  active: boolean,
+  fallbackColor: string,
+): NormalizedUnderline | NormalizedActiveUnderline {
+  const label = active ? "Fine Caption activeUnderline" : "Fine Caption underline";
+  const input = value === undefined ? {} : record(value, label);
+  exactKeys(input, ["color", "mode", "offset", "style", "thickness"], label);
+  return {
+    mode: active
+      ? optionalChoice(input.mode, "off", ["off", "current", "trail"] as const, `${label} mode`)
+      : optionalChoice(input.mode, "off", ["off", "always"] as const, `${label} mode`),
+    color: optionalColor(input.color, fallbackColor, `${label} color`),
+    thickness: optionalNumber(input.thickness, 3, `${label} thickness`, 0, 40),
+    offset: optionalNumber(input.offset, 4, `${label} offset`, -100, 100),
+    style: optionalChoice(input.style, "solid", ["solid", "double", "dotted", "dashed", "wavy"] as const,
+      `${label} style`),
+  } as NormalizedUnderline | NormalizedActiveUnderline;
 }
 
 function attributes(value: unknown): readonly CaptionFineAttributeFace[] {
@@ -199,6 +228,7 @@ function resolveCaptionFine(item: NleComponentItem) {
     "fonts", "color", "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "wordGap",
     "textAlign", "outlineColor", "outlineWidth", "shadowColor", "shadowBlur", "shadowOffsetX",
     "shadowOffsetY", "cueBox", "activeBox", "karaoke", "entry", "attributeFaces",
+    "underline", "activeUnderline",
   ], `NLE Fine Caption ${item.id} style`);
   const fonts = style.fonts;
   if (fonts !== undefined) assertFontStackRef(fonts, "Fine Caption fonts");
@@ -236,6 +266,8 @@ function resolveCaptionFine(item: NleComponentItem) {
     frames: optionalInteger(entryInput.frames, 5, "Fine Caption entry frames", 0, 120),
   };
   const attributeFaces = attributes(style.attributeFaces);
+  const baseUnderline = underline(style.underline, false, color);
+  const activeUnderline = underline(style.activeUnderline, true, karaoke.activeColor);
   const paints: HtmlTextPaintLayer[] = [];
   if (shadowColor !== "#00000000" && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
     paints.push({
@@ -289,13 +321,17 @@ function resolveCaptionFine(item: NleComponentItem) {
     pictureOutput: "picture",
     html: visualProgramHtmlSource(sourceId, "picture", htmlVisual({
       dependencies: text.dependencies,
-      data: { caption, color, karaoke, activeBox, entry },
-      html: `<div data-hypit-caption-fine><span data-caption-cue>${text.html}</span></div>`,
-      css: `:scope>[data-hypit-caption-fine]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:${textAlign}}:scope [data-caption-cue]{display:inline-block;max-width:100%;box-sizing:border-box;padding:${cueBox.paddingY}px ${cueBox.paddingX}px;background:${cueBox.background};border:${cueBox.borderWidth}px solid ${cueBox.borderColor};border-radius:${cueBox.borderRadius}px;white-space:pre-wrap;overflow-wrap:anywhere}`,
+      data: { caption, color, karaoke, cueBox, activeBox, entry, underline: baseUnderline, activeUnderline },
+      html: `<div data-hypit-caption-fine><span data-caption-cue><svg data-caption-cue-union aria-hidden="true"><path></path></svg><svg data-caption-active-union aria-hidden="true"><path></path></svg><span data-caption-text-layer>${text.html}</span></span></div>`,
+      css: `:scope>[data-hypit-caption-fine]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:${textAlign}}:scope [data-caption-cue]{position:relative;display:inline-block;max-width:100%;box-sizing:border-box;${cueBox.continuity === "isolated" ? `padding:${cueBox.paddingY}px ${cueBox.paddingX}px;background:${cueBox.background};border:${cueBox.borderWidth}px solid ${cueBox.borderColor};border-radius:${cueBox.borderRadius}px;` : ""}white-space:pre-wrap;overflow-wrap:anywhere}:scope [data-caption-cue-union],:scope [data-caption-active-union]{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}:scope [data-caption-cue-union]{z-index:0}:scope [data-caption-active-union]{z-index:1}:scope [data-caption-text-layer]{position:relative;z-index:2}`,
       setup: `
+        ${htmlLineUnionRuntime}
         const cue = root.querySelector('[data-caption-cue]');
+        const cueUnion = root.querySelector('[data-caption-cue-union] path');
+        const activeUnion = root.querySelector('[data-caption-active-union] path');
         const units = new Map([...root.querySelectorAll('[data-hypit-text-kind="group"]')]
           .map(element => [element.getAttribute('data-hypit-text-node'), element]));
+        const allWords = [...root.querySelectorAll('[data-hypit-text-kind="text"]')];
         const seconds = value => Number(value.ticks) * value.timeBase.numerator / value.timeBase.denominator;
         const fps = context.frameRate.numerator / context.frameRate.denominator;
         const paintText = (element, progress, active) => {
@@ -327,7 +363,7 @@ function resolveCaptionFine(item: NleComponentItem) {
           }
         };
         const paintBox = (element, active) => {
-          if (!active || data.activeBox.mode === 'off') {
+          if (data.activeBox.continuity === 'joined' || !active || data.activeBox.mode === 'off') {
             element.style.background = '';
             element.style.border = '';
             element.style.borderRadius = '';
@@ -338,6 +374,23 @@ function resolveCaptionFine(item: NleComponentItem) {
           element.style.border = data.activeBox.borderWidth + 'px solid ' + data.activeBox.borderColor;
           element.style.borderRadius = data.activeBox.borderRadius + 'px';
           element.style.padding = data.activeBox.paddingY + 'px ' + data.activeBox.paddingX + 'px';
+        };
+        const paintUnderline = (element, selected) => {
+          for (const word of element.querySelectorAll('[data-hypit-text-kind="text"]')) {
+            if (selected.mode === 'off') {
+              word.style.textDecorationLine = 'none';
+              word.style.textDecorationColor = '';
+              word.style.textDecorationThickness = '';
+              word.style.textUnderlineOffset = '';
+              word.style.textDecorationStyle = '';
+            } else {
+              word.style.textDecorationLine = 'underline';
+              word.style.textDecorationColor = selected.color;
+              word.style.textDecorationThickness = selected.thickness + 'px';
+              word.style.textUnderlineOffset = selected.offset + 'px';
+              word.style.textDecorationStyle = selected.style;
+            }
+          }
         };
         return localFrame => {
           const time = localFrame / fps;
@@ -355,6 +408,7 @@ function resolveCaptionFine(item: NleComponentItem) {
             cue.style.opacity = '1';
             cue.style.transform = '';
           }
+          const activeBoxWords = [];
           for (const unit of data.caption.units) {
             const element = units.get(unit.id);
             const start = seconds(unit.start);
@@ -363,11 +417,23 @@ function resolveCaptionFine(item: NleComponentItem) {
             const passed = time >= end;
             const textActive = data.karaoke.mode === 'trail' ? time >= start : current;
             const boxActive = data.activeBox.mode === 'trail' ? time >= start : current;
+            const underlineActive = data.activeUnderline.mode === 'trail' ? time >= start : current;
             const progress = passed ? 1 : current ? (time - start) / Math.max(end - start, 1 / fps) : 0;
             paintText(element, progress, textActive);
             paintBox(element, boxActive);
+            paintUnderline(element, data.activeUnderline.mode !== 'off' && underlineActive
+              ? data.activeUnderline : data.underline);
+            if (data.activeBox.continuity === 'joined' && boxActive) {
+              activeBoxWords.push(...element.querySelectorAll('[data-hypit-text-kind="text"]'));
+            }
             element.style.transform = '';
           }
+          if (data.cueBox.continuity === 'joined') {
+            hypitPaintLineUnion(cueUnion, cue, allWords, data.cueBox);
+          } else cueUnion.setAttribute('d', '');
+          if (data.activeBox.continuity === 'joined' && data.activeBox.mode !== 'off') {
+            hypitPaintLineUnion(activeUnion, cue, activeBoxWords, data.activeBox);
+          } else activeUnion.setAttribute('d', '');
         };
       `,
     })),

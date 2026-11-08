@@ -11,6 +11,7 @@ export type CaptionFineKaraokeParameters = {
 };
 
 export type CaptionFineBoxParameters = {
+  readonly continuity?: "isolated" | "joined";
   readonly background?: string;
   readonly borderColor?: string;
   readonly borderWidth?: number;
@@ -20,6 +21,18 @@ export type CaptionFineBoxParameters = {
 };
 
 export type CaptionFineActiveBoxParameters = CaptionFineBoxParameters & {
+  readonly mode?: "off" | "current" | "trail";
+};
+
+export type CaptionFineUnderlineParameters = {
+  readonly mode?: "off" | "always";
+  readonly color?: string;
+  readonly thickness?: number;
+  readonly offset?: number;
+  readonly style?: "solid" | "double" | "dotted" | "dashed" | "wavy";
+};
+
+export type CaptionFineActiveUnderlineParameters = Omit<CaptionFineUnderlineParameters, "mode"> & {
   readonly mode?: "off" | "current" | "trail";
 };
 
@@ -50,6 +63,8 @@ export type CaptionFineStyleParameters = {
   readonly shadowOffsetY?: number;
   readonly cueBox?: CaptionFineBoxParameters;
   readonly activeBox?: CaptionFineActiveBoxParameters;
+  readonly underline?: CaptionFineUnderlineParameters;
+  readonly activeUnderline?: CaptionFineActiveUnderlineParameters;
   readonly karaoke?: CaptionFineKaraokeParameters;
   readonly entry?: {
     readonly kind?: "none" | "fade" | "pop" | "slide-up";

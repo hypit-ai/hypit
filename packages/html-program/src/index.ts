@@ -25,9 +25,11 @@ export type {
   HtmlPictureReconstructionProgram,
 } from "./picture-reconstruction.js";
 export { htmlTextFragment } from "./text.js";
+export { htmlLineUnionRuntime } from "./line-union.js";
 export type {
   HtmlTextBoxDecoration,
   HtmlTextColorPaint,
+  HtmlTextDecoration,
   HtmlTextFragment,
   HtmlTextFragmentSpec,
   HtmlTextNode,

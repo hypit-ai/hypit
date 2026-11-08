@@ -86,9 +86,19 @@ export type HtmlTextTypography = {
   readonly kerning?: "auto" | "normal" | "none";
 };
 
+export type HtmlTextDecoration = {
+  readonly line: "underline" | "overline" | "line-through";
+  readonly color: string;
+  readonly thicknessPx: number;
+  /** Only underlines consume this value; it remains explicit for stable authoring. */
+  readonly offsetPx?: number;
+  readonly style?: "solid" | "double" | "dotted" | "dashed" | "wavy";
+};
+
 export type HtmlTextStyle = {
   readonly typography?: HtmlTextTypography;
   readonly paints?: readonly HtmlTextPaintLayer[];
+  readonly decoration?: HtmlTextDecoration;
 };
 
 export type HtmlTextNode =
@@ -110,6 +120,7 @@ export type HtmlTextFragmentSpec = {
   readonly id: string;
   readonly typography: HtmlTextTypography;
   readonly paints: readonly HtmlTextPaintLayer[];
+  readonly decoration?: HtmlTextDecoration;
   readonly children: readonly HtmlTextNode[];
 };
 
@@ -350,10 +361,29 @@ function mergeTypography(parent: HtmlTextTypography, child: HtmlTextTypography |
   return { ...parent, ...child };
 }
 
+function decorationCss(value: HtmlTextDecoration | undefined, label: string): string[] {
+  if (value === undefined) return [];
+  assert(value.thicknessPx >= 0 && Number.isFinite(value.thicknessPx), `${label} thickness is invalid.`);
+  if (value.offsetPx !== undefined) {
+    assert(value.line === "underline" && Number.isFinite(value.offsetPx),
+      `${label} offset belongs only to an underline.`);
+  }
+  return [
+    `text-decoration-line:${value.line}`,
+    `text-decoration-color:${color(value.color, `${label} color`)}`,
+    `text-decoration-thickness:${number(value.thicknessPx, `${label} thickness`)}px`,
+    `text-decoration-style:${value.style ?? "solid"}`,
+    ...(value.offsetPx === undefined ? [] : [
+      `text-underline-offset:${number(value.offsetPx, `${label} offset`)}px`,
+    ]),
+  ];
+}
+
 function renderNode(
   node: HtmlTextNode,
   typography: HtmlTextTypography,
   paints: readonly HtmlTextPaintLayer[],
+  decoration: HtmlTextDecoration | undefined,
   fonts: FontClosure,
   identities: Set<string>,
 ): string {
@@ -363,15 +393,17 @@ function renderNode(
   if (node.kind === "break") return `<br data-hypit-text-node="${escapeHtml(node.id)}"/>`;
   const selectedTypography = mergeTypography(typography, node.style?.typography);
   const selectedPaints = node.style?.paints ?? paints;
+  const selectedDecoration = node.style?.decoration ?? decoration;
   const style = [
     "position:relative",
     ...typographyCss(selectedTypography, fonts, `HTML Text node ${node.id}`),
     ...boxCss(selectedPaints, `HTML Text node ${node.id}`),
+    ...decorationCss(selectedDecoration, `HTML Text node ${node.id} decoration`),
   ].join(";");
   if (node.kind === "group") {
     assert(node.children.length > 0, `HTML Text group ${node.id} is empty.`);
     return `<span data-hypit-text-node="${escapeHtml(node.id)}" data-hypit-text-kind="group"${languageAttributes(selectedTypography, `HTML Text node ${node.id}`)} style="${escapeHtml(style)}">${node.children.map((child) =>
-      renderNode(child, selectedTypography, selectedPaints, fonts, identities)).join("")}</span>`;
+      renderNode(child, selectedTypography, selectedPaints, selectedDecoration, fonts, identities)).join("")}</span>`;
   }
   assert(node.text.length > 0, `HTML Text node ${node.id} is empty.`);
   const glyphPaints = selectedPaints.filter((paint): paint is Exclude<HtmlTextPaintLayer, { kind: "box" }> =>
@@ -396,10 +428,11 @@ export function htmlTextFragment(spec: HtmlTextFragmentSpec): HtmlTextFragment {
     "position:relative",
     ...typographyCss(spec.typography, fonts, `HTML Text fragment ${spec.id}`),
     ...boxCss(spec.paints, `HTML Text fragment ${spec.id}`),
+    ...decorationCss(spec.decoration, `HTML Text fragment ${spec.id} decoration`),
   ].join(";");
   const identities = new Set<string>();
   const content = spec.children.map((node) =>
-    renderNode(node, spec.typography, spec.paints, fonts, identities)).join("");
+    renderNode(node, spec.typography, spec.paints, spec.decoration, fonts, identities)).join("");
   return {
     html: `${fonts.css === "" ? "" : `<style>${fonts.css}</style>`}<span data-hypit-text-fragment="${escapeHtml(spec.id)}"${languageAttributes(spec.typography, `HTML Text fragment ${spec.id}`)} style="${escapeHtml(rootStyle)}">${content}</span>`,
     dependencies: fonts.dependencies,

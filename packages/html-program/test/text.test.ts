@@ -30,6 +30,13 @@ test("HTML Text closes exact fonts, authored spacing and ordered glyph Paint int
       { kind: "stroke", paint: { kind: "solid", color: "#000000" }, widthPx: 2, placement: "outside" },
       { kind: "fill", paint: { kind: "solid", color: "#ffffff" } },
     ],
+    decoration: {
+      line: "underline",
+      color: "#67e8f9",
+      thicknessPx: 3,
+      offsetPx: 5,
+      style: "solid",
+    },
     children: [{ kind: "group", id: "unit-one", children: [
       { kind: "text", id: "word-one", text: "你好" },
       { kind: "text", id: "word-two", text: " world", style: {
@@ -50,6 +57,8 @@ test("HTML Text closes exact fonts, authored spacing and ordered glyph Paint int
   assert.ok(fragment.html.indexOf('data-hypit-text-paint="stroke"')
     < fragment.html.indexOf('data-hypit-text-paint="fill"'));
   assert.match(fragment.html, /-webkit-text-stroke:4px #000000/u);
+  assert.match(fragment.html, /text-decoration-line:underline/u);
+  assert.match(fragment.html, /text-underline-offset:5px/u);
   assert.doesNotThrow(() => htmlVisual({ html: fragment.html, dependencies: fragment.dependencies }));
 });
 
@@ -69,4 +78,11 @@ test("HTML Text rejects CSS injection and repeated node identities", () => {
       { kind: "text", id: "same", text: "Two" },
     ],
   }), /repeats node same/u);
+  assert.throws(() => htmlTextFragment({
+    id: "bad-decoration",
+    typography: {},
+    paints: [],
+    decoration: { line: "line-through", color: "#ffffff", thicknessPx: 1, offsetPx: 2 },
+    children: [{ kind: "text", id: "word", text: "Hello" }],
+  }), /offset belongs only to an underline/u);
 });
