@@ -5,6 +5,7 @@ import {
   assertCaptionCuePayload,
   replaceCaptionWord,
   retimeCaptionUnit,
+  type CaptionCuePayload,
   type CaptionDocument,
   type LocalCaptionTiming,
 } from "@hypit/caption";
@@ -12,7 +13,12 @@ import {
   createNleTerminalLinkHostFromFacets,
   lowerNleProjectToHtmlProgram,
 } from "../../html-video/src/index.js";
-import { applyNleTransaction, createNleProject } from "@hypit/nle";
+import {
+  applyNleTransaction,
+  createNleAuthoringHostFromFacets,
+  createNleProject,
+  findNleItem,
+} from "@hypit/nle";
 import { exactTemporalValue, sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 
 import { hypitPackage } from "../src/activation.js";
@@ -113,8 +119,28 @@ test("Basic Caption materializes complete editable Karaoke Items and registers o
   const html = lowerNleProjectToHtmlProgram(materialized,
     createNleTerminalLinkHostFromFacets(hypitPackage.facets),
     { numerator: 30, denominator: 1 });
-  assert.match(html.html, /data-caption-unit="unit-one"/u);
+  assert.match(html.html, /data-hypit-text-node="unit-one"/u);
   assert.match(html.html, /linear-gradient\(90deg/u);
+
+  const authoring = createNleAuthoringHostFromFacets(hypitPackage.facets);
+  const renamedProject = applyNleTransaction(materialized,
+    authoring.planComponentParameterEdit(materialized, first.id, {
+      kind: "replace-word", wordId: "word-one", text: "Authored",
+    }));
+  const renamedItem = findNleItem(renamedProject, first.id).item;
+  if (renamedItem.kind !== "component") throw new Error("Edited Caption changed Item kind.");
+  assert.equal((renamedItem.parameters as unknown as { caption: CaptionCuePayload }).caption.words[0]?.text,
+    "Authored");
+
+  const half = exactTemporalValue({ numerator: 1n, denominator: 2n });
+  const retimedProject = applyNleTransaction(renamedProject,
+    authoring.planComponentParameterEdit(renamedProject, first.id, {
+      kind: "retime-unit", unitId: "unit-one", start: at(0), end: half,
+    }));
+  const retimedItem = findNleItem(retimedProject, first.id).item;
+  if (retimedItem.kind !== "component") throw new Error("Retimed Caption changed Item kind.");
+  assert.deepEqual((retimedItem.parameters as unknown as { caption: CaptionCuePayload }).caption.units[0]?.end,
+    half);
 });
 
 test("Caption Cue payload rejects invalid family-defined Word attributes", () => {

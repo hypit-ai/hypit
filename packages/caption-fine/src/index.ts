@@ -11,6 +11,7 @@ export {
 export {
   captionFineNleComponentSymbol,
   captionFineNleHtmlVideoResolver,
+  captionFineNleAuthoring,
   captionFineNleManifest,
   captionFineNleResolver,
 } from "./nle-package.js";

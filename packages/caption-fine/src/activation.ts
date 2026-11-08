@@ -1,8 +1,9 @@
 import { createNleHtmlVideoPackageFacet } from "@hypit/html-video";
-import { createNlePackageFacet } from "@hypit/nle";
+import { createNleAuthoringFacet, createNlePackageFacet } from "@hypit/nle";
 
 import {
   captionFineNleHtmlVideoResolver,
+  captionFineNleAuthoring,
   captionFineNleManifest,
   captionFineNleResolver,
 } from "./nle-package.js";
@@ -13,6 +14,7 @@ export const hypitPackage = {
   facets: [
     createNlePackageFacet({ components: [captionFineNleResolver] }),
     createNleHtmlVideoPackageFacet({ components: [captionFineNleHtmlVideoResolver] }),
+    createNleAuthoringFacet({ componentParameters: [captionFineNleAuthoring] }),
   ],
 };
 export default hypitPackage;

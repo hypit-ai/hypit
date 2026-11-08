@@ -1,14 +1,31 @@
 import { pictureType, type ProgramSource } from "@hypit/audiovisual";
 import { visualProgramHtmlSource } from "@hypit/audiovisual-html";
-import { htmlVisual } from "@hypit/html-program";
+import {
+  htmlTextFragment,
+  htmlVisual,
+  type HtmlTextNode,
+} from "@hypit/html-program";
 import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
-import type { NleComponentItem, NleComponentResolver, NlePackageSymbol } from "@hypit/nle";
+import { assertFontStackRef } from "@hypit/media";
+import type {
+  NleComponentItem,
+  NleComponentParameterAuthoring,
+  NleComponentResolver,
+  NlePackageSymbol,
+} from "@hypit/nle";
+import { canonicalize } from "@hypit/protocol";
 import type { ModuleManifest } from "@hypit/protocol";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
 import { sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 
-import { assertCaptionCuePayload, type CaptionCuePayload } from "@hypit/caption";
-import type { CaptionBasicKaraokeParameters } from "./types.js";
+import { type CaptionCuePayload } from "@hypit/caption";
+import {
+  assertCaptionNleComponentParameters,
+  editCaptionNleComponentParameters,
+  type CaptionNleComponentEdit,
+  type CaptionNleComponentParameters,
+} from "@hypit/caption-nle";
+import type { CaptionBasicKaraokeParameters, CaptionBasicStyleParameters } from "./types.js";
 
 export const captionBasicNleComponentSymbol: NlePackageSymbol = {
   module: { name: "@hypit/caption-basic", version: "1" },
@@ -28,11 +45,6 @@ export const captionBasicNleManifest: ModuleManifest = {
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
-}
-
-function escapeHtml(value: string): string {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;").replaceAll("\"", "&quot;");
 }
 
 function optionalNumber(value: unknown, fallback: number, label: string, minimum: number, maximum: number): number {
@@ -75,28 +87,29 @@ function karaokeParameters(value: unknown): Required<CaptionBasicKaraokeParamete
   };
 }
 
-function captionUnitText(payload: CaptionCuePayload, unitId: string): string {
-  const unit = payload.units.find((candidate) => candidate.id === unitId)!;
+function captionTextNodes(payload: CaptionCuePayload): readonly HtmlTextNode[] {
   const words = new Map(payload.words.map((word) => [word.id, word] as const));
-  return unit.wordIds.map((wordId) => {
-    const word = words.get(wordId)!;
-    return `${word.separatorBefore}${word.text}`;
-  }).join("");
+  return payload.units.map((unit) => ({
+    kind: "group",
+    id: unit.id,
+    children: unit.wordIds.map((wordId) => {
+      const word = words.get(wordId)!;
+      return { kind: "text", id: word.id, text: `${word.separatorBefore}${word.text}` };
+    }),
+  }));
 }
 
 function resolveCaptionBasic(item: NleComponentItem) {
   assert(item.picture !== undefined, `NLE Caption ${item.id} has no Picture appearance.`);
-  assert(item.parameters !== null && typeof item.parameters === "object" && !Array.isArray(item.parameters),
-    `NLE Caption ${item.id} parameters must be a record.`);
-  const parameters = item.parameters as Readonly<Record<string, unknown>>;
-  assertCaptionCuePayload(parameters.caption, item.duration);
+  assertCaptionNleComponentParameters(item.parameters, "basic", item.duration);
+  const parameters = item.parameters;
   const caption = parameters.caption;
-  assert(parameters.family === "basic", `NLE Caption ${item.id} requires the basic style family.`);
   assert(parameters.style !== null && typeof parameters.style === "object" && !Array.isArray(parameters.style),
     `NLE Caption ${item.id} basic style must be a record.`);
-  const style = parameters.style as Readonly<Record<string, unknown>>;
-  const allowed = new Set(["background", "borderRadius", "color", "fontFamily", "fontSize", "fontWeight", "karaoke", "padding"]);
+  const style = parameters.style as Readonly<Record<string, unknown>> & CaptionBasicStyleParameters;
+  const allowed = new Set(["background", "borderRadius", "color", "fontFamily", "fontSize", "fontWeight", "fonts", "karaoke", "padding"]);
   for (const name of Object.keys(style)) assert(allowed.has(name), `Basic NLE Caption style field ${name} is unknown.`);
+  if (style.fonts !== undefined) assertFontStackRef(style.fonts, "Basic NLE Caption fonts");
   const color = optionalColor(style.color, "#ffffff", "Basic NLE Caption color");
   const background = optionalColor(style.background, "#000000cc", "Basic NLE Caption background");
   const fontSize = optionalNumber(style.fontSize, 42, "Basic NLE Caption fontSize", 1, 500);
@@ -104,6 +117,19 @@ function resolveCaptionBasic(item: NleComponentItem) {
   const padding = optionalNumber(style.padding, 12, "Basic NLE Caption padding", 0, 200);
   const borderRadius = optionalNumber(style.borderRadius, 8, "Basic NLE Caption borderRadius", 0, 200);
   const karaoke = karaokeParameters(style.karaoke);
+  const text = htmlTextFragment({
+    id: `${item.id}-text`,
+    typography: {
+      ...(style.fonts === undefined ? {} : { fonts: style.fonts }),
+      fontFamily: optionalFont(style.fontFamily),
+      fontSizePx: fontSize,
+      fontWeight,
+      fontStyle: "normal",
+      lineHeight: 1.15,
+    },
+    paints: [{ kind: "fill", paint: { kind: "solid", color } }],
+    children: captionTextNodes(caption),
+  });
   const sourceId = `${item.id}:caption-source`;
   const spatialDomain = sealLocalSpatialDomain({
     id: `${sourceId}:picture`,
@@ -122,37 +148,42 @@ function resolveCaptionBasic(item: NleComponentItem) {
     source,
     pictureOutput: "picture",
     html: visualProgramHtmlSource(sourceId, "picture", htmlVisual({
+      dependencies: text.dependencies,
       data: { caption, color, karaoke },
-      html: `<div data-hypit-nle-caption><span data-hypit-nle-caption-box>${caption.units.map((unit) =>
-        `<span data-caption-unit="${escapeHtml(unit.id)}">${escapeHtml(captionUnitText(caption, unit.id))}</span>`).join("")}</span></div>`,
-      css: `:scope>[data-hypit-nle-caption]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;font-family:${optionalFont(style.fontFamily)};font-size:${fontSize}px;font-weight:${fontWeight};color:${color}}:scope [data-hypit-nle-caption-box]{padding:${padding}px;background:${background};border-radius:${borderRadius}px;white-space:pre-wrap}:scope [data-caption-unit]{color:${color}}`,
+      html: `<div data-hypit-nle-caption><span data-hypit-nle-caption-box>${text.html}</span></div>`,
+      css: `:scope>[data-hypit-nle-caption]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center}:scope [data-hypit-nle-caption-box]{padding:${padding}px;background:${background};border-radius:${borderRadius}px;white-space:pre-wrap}`,
       setup: `
-        const units = new Map([...root.querySelectorAll('[data-caption-unit]')]
-          .map(element => [element.getAttribute('data-caption-unit'), element]));
+        const units = new Map([...root.querySelectorAll('[data-hypit-text-kind="group"]')]
+          .map(element => [element.getAttribute('data-hypit-text-node'), element]));
         const seconds = value => Number(value.ticks) * value.timeBase.numerator / value.timeBase.denominator;
         const fps = context.frameRate.numerator / context.frameRate.denominator;
         const paint = (element, progress, active) => {
+          const fills = element.querySelectorAll('[data-hypit-text-paint="fill"]');
+          const solid = selected => {
+            for (const fill of fills) {
+              fill.style.color = selected;
+              fill.style.backgroundImage = '';
+              fill.style.webkitBackgroundClip = '';
+              fill.style.webkitTextFillColor = selected;
+            }
+          };
           if (data.karaoke.mode === 'off' || !active) {
-            element.style.color = data.color;
-            element.style.backgroundImage = '';
-            element.style.webkitBackgroundClip = '';
-            element.style.webkitTextFillColor = '';
+            solid(data.color);
             return;
           }
           if (data.karaoke.transition === 'step' || progress >= 1) {
-            element.style.color = data.karaoke.activeColor;
-            element.style.backgroundImage = '';
-            element.style.webkitBackgroundClip = '';
-            element.style.webkitTextFillColor = '';
+            solid(data.karaoke.activeColor);
             return;
           }
           const percentage = Math.max(0, Math.min(100, progress * 100));
-          element.style.color = 'transparent';
-          element.style.backgroundImage = 'linear-gradient(90deg,' + data.karaoke.activeColor + ' 0%,'
-            + data.karaoke.activeColor + ' ' + percentage + '%,' + data.color + ' ' + percentage + '%,'
-            + data.color + ' 100%)';
-          element.style.webkitBackgroundClip = 'text';
-          element.style.webkitTextFillColor = 'transparent';
+          for (const fill of fills) {
+            fill.style.color = 'transparent';
+            fill.style.backgroundImage = 'linear-gradient(90deg,' + data.karaoke.activeColor + ' 0%,'
+              + data.karaoke.activeColor + ' ' + percentage + '%,' + data.color + ' ' + percentage + '%,'
+              + data.color + ' 100%)';
+            fill.style.webkitBackgroundClip = 'text';
+            fill.style.webkitTextFillColor = 'transparent';
+          }
         };
         return localFrame => {
           const time = localFrame / fps;
@@ -176,6 +207,24 @@ export const captionBasicNleResolver: NleComponentResolver = {
   resolve: (item) => {
     const { source, pictureOutput } = resolveCaptionBasic(item);
     return { source, pictureOutput };
+  },
+};
+
+export const captionBasicNleAuthoring: NleComponentParameterAuthoring = {
+  component: captionBasicNleComponentSymbol,
+  inspect: ({ item }) => {
+    resolveCaptionBasic(item);
+    return canonicalize(item.parameters);
+  },
+  edit: (operation, { item }) => {
+    assertCaptionNleComponentParameters(item.parameters, "basic", item.duration);
+    const parameters = editCaptionNleComponentParameters(
+      item.parameters as CaptionNleComponentParameters<"basic">,
+      operation as unknown as CaptionNleComponentEdit,
+      item.duration,
+    );
+    resolveCaptionBasic({ ...structuredClone(item), parameters: canonicalize(parameters) });
+    return canonicalize(parameters);
   },
 };
 

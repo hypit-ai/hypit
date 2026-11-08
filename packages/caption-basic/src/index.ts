@@ -11,6 +11,7 @@ export {
 export {
   captionBasicNleComponentSymbol,
   captionBasicNleHtmlVideoResolver,
+  captionBasicNleAuthoring,
   captionBasicNleManifest,
   captionBasicNleResolver,
 } from "./nle-package.js";

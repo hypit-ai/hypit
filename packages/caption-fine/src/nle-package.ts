@@ -9,16 +9,26 @@ import {
 } from "@hypit/html-program";
 import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
 import { assertFontStackRef } from "@hypit/media";
-import type { NleComponentItem, NleComponentResolver, NlePackageSymbol } from "@hypit/nle";
-import type { ModuleManifest } from "@hypit/protocol";
+import type {
+  NleComponentItem,
+  NleComponentParameterAuthoring,
+  NleComponentResolver,
+  NlePackageSymbol,
+} from "@hypit/nle";
+import { canonicalize, type ModuleManifest } from "@hypit/protocol";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
 import { sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 
 import {
-  assertCaptionCuePayload,
   type CaptionCuePayload,
   type CaptionDisplayWord,
 } from "@hypit/caption";
+import {
+  assertCaptionNleComponentParameters,
+  editCaptionNleComponentParameters,
+  type CaptionNleComponentEdit,
+  type CaptionNleComponentParameters,
+} from "@hypit/caption-nle";
 import type {
   CaptionFineActiveBoxParameters,
   CaptionFineAttributeFace,
@@ -181,11 +191,9 @@ function captionTextNodes(
 
 function resolveCaptionFine(item: NleComponentItem) {
   assert(item.picture !== undefined, `NLE Fine Caption ${item.id} has no Picture appearance.`);
-  const parameters = record(item.parameters, `NLE Fine Caption ${item.id} parameters`);
-  exactKeys(parameters, ["caption", "styleId", "family", "style"], `NLE Fine Caption ${item.id} parameters`);
-  assertCaptionCuePayload(parameters.caption, item.duration);
+  assertCaptionNleComponentParameters(item.parameters, "fine", item.duration);
+  const parameters = item.parameters;
   const caption = parameters.caption;
-  assert(parameters.family === "fine", `NLE Fine Caption ${item.id} requires the fine style family.`);
   const style = record(parameters.style, `NLE Fine Caption ${item.id} style`) as CaptionFineStyleParameters;
   exactKeys(style as Readonly<Record<string, unknown>>, [
     "fonts", "color", "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "wordGap",
@@ -371,6 +379,24 @@ export const captionFineNleResolver: NleComponentResolver = {
   resolve: (item) => {
     const { source, pictureOutput } = resolveCaptionFine(item);
     return { source, pictureOutput };
+  },
+};
+
+export const captionFineNleAuthoring: NleComponentParameterAuthoring = {
+  component: captionFineNleComponentSymbol,
+  inspect: ({ item }) => {
+    resolveCaptionFine(item);
+    return canonicalize(item.parameters);
+  },
+  edit: (operation, { item }) => {
+    assertCaptionNleComponentParameters(item.parameters, "fine", item.duration);
+    const parameters = editCaptionNleComponentParameters(
+      item.parameters as CaptionNleComponentParameters<"fine">,
+      operation as unknown as CaptionNleComponentEdit,
+      item.duration,
+    );
+    resolveCaptionFine({ ...structuredClone(item), parameters: canonicalize(parameters) });
+    return canonicalize(parameters);
   },
 };
 

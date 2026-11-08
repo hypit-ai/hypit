@@ -6,7 +6,12 @@ import {
   createNleTerminalLinkHostFromFacets,
   lowerNleProjectToHtmlProgram,
 } from "../../html-video/src/index.js";
-import { applyNleTransaction, createNleProject } from "@hypit/nle";
+import {
+  applyNleTransaction,
+  createNleAuthoringHostFromFacets,
+  createNleProject,
+  findNleItem,
+} from "@hypit/nle";
 import { exactTemporalValue, sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 
 import { hypitPackage } from "../src/activation.js";
@@ -137,6 +142,21 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
   assert.match(html.html, /-webkit-text-stroke:8px #000000/u);
   assert.match(html.html, /linear-gradient\(90deg/u);
   assert.match(html.html, /data\.activeBox\.mode/u);
+
+  if (alice?.kind !== "component") throw new Error("Fine Caption fixture is not a Component.");
+  const authoring = createNleAuthoringHostFromFacets(hypitPackage.facets);
+  const restyled = applyNleTransaction(project, authoring.planComponentParameterEdit(project, alice.id, {
+    kind: "set-style",
+    styleId: "manual",
+    style: { color: "#22d3ee", outlineWidth: 0 },
+  }));
+  const restyledItem = findNleItem(restyled, alice.id).item;
+  if (restyledItem.kind !== "component") throw new Error("Restyled Caption changed Item kind.");
+  assert.deepEqual(restyledItem.parameters, {
+    ...(alice.parameters as Record<string, unknown>),
+    styleId: "manual",
+    style: { color: "#22d3ee", outlineWidth: 0 },
+  });
 });
 
 test("Fine Caption rejects family parameters the package does not own", () => {
