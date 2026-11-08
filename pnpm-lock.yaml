@@ -1589,6 +1589,31 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  packages/picture-frame:
+    dependencies:
+      '@hypit/audiovisual':
+        specifier: workspace:^0.1.0
+        version: link:../audiovisual
+      '@hypit/html-program':
+        specifier: workspace:^0.2.0
+        version: link:../html-program
+      '@hypit/nle':
+        specifier: workspace:^0.1.0
+        version: link:../nle
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:^0.0.0-dev
+        version: link:../refinement
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   packages/picture-matte:
     dependencies:
       '@hypit/audiovisual':
@@ -1609,6 +1634,34 @@ importers:
       '@hypit/refinement':
         specifier: workspace:^0.0.0-dev
         version: link:../refinement
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/picture-transform:
+    dependencies:
+      '@hypit/audiovisual':
+        specifier: workspace:^0.1.0
+        version: link:../audiovisual
+      '@hypit/html-program':
+        specifier: workspace:^0.2.0
+        version: link:../html-program
+      '@hypit/nle':
+        specifier: workspace:^0.1.0
+        version: link:../nle
+      '@hypit/producer':
+        specifier: workspace:^0.0.0-dev
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:^0.0.0-dev
+        version: link:../refinement
+      '@hypit/temporal':
+        specifier: workspace:^0.1.0
+        version: link:../temporal
     devDependencies:
       typescript:
         specifier: 5.9.3
