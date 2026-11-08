@@ -36,13 +36,14 @@ Cue rules can hide or restyle one passage. They do not change Word spelling, Uni
 membership. A hidden Cue becomes a complete disabled Item, so the editor can restore it without
 reopening semantic evidence.
 
-The official `@hypit/caption-basic` family stores every Word and every Unit boundary inside each
+The official `@hypit/caption-fine` component stores every Word and every Unit boundary inside each
 materialized Cue Item. Static, current-unit and trailing Karaoke are therefore Style choices over
 facts already present in the NLE. Enabling Karaoke does not rerun WhisperX or alignment.
 
 Word attributes such as `word{face=serif}` are different from Cue presentation overrides. They are
 local authored roles inside one Cue, preserved in `CaptionDisplayWord.attributes`; the selected
-Caption family decides their visual meaning. Basic Caption may ignore an attribute it does not own.
+Caption component decides their visual meaning. Fine maps the attributes it owns through
+`attributeFaces`; an unmapped attribute keeps the base face.
 
 After materialization, moving, trimming, disabling, deleting, restyling, correcting a displayed word
 or adjusting one Unit boundary are ordinary NLE edits. They do not write back to Script or the media's

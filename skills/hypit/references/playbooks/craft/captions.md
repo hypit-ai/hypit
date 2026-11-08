@@ -73,7 +73,7 @@ for every word. `<API|A P I>` remains one Unit because the correspondence is N:M
 
 A word attribute such as `useful{emphasis}` assigns a family-owned local role inside the Cue. It does
 not change Unit time or split the Cue. A structural family might place emphasized words on another
-line or use a serif face; Basic Caption may ignore attributes it does not implement.
+line. Fine can map an owned attribute to another face; an unmapped attribute keeps the base face.
 
 Text appearing and text changing color are separate choices. A family can keep the complete Cue
 visible while Karaoke changes emphasis, or reveal Units as they begin. If it supports typewriter
@@ -91,13 +91,14 @@ clear, and reserve enough space for the complete Cue. Ordinary placement belongs
 family. When the reference visibly uses head-following Caption, or the user requests it, use the
 explicit [Caption tracking](caption-tracking.md) relationship; a visible face alone does not choose it.
 
-## Reuse Basic or author another family
+## Reuse Fine or author another component
 
-`@hypit/caption-basic` supplies a deliberately small official NLE family: a centered box, Cue-level
-role/style/visibility rules and optional current/trailing Karaoke. It proves the direct materialized
-path and remains easy to edit.
+`@hypit/caption-fine` supplies the official flowing Caption implementation. A simple centered box,
+role/style/visibility rules, rich text paint, layout and optional current/trailing Karaoke are all
+Style choices on that one component. Do not introduce another family merely to remove options from
+the Style surface.
 
-Another visual relationship can become a project component directly: a keyword plus supporting
+Another structural visual relationship can become a project component directly: a keyword plus supporting
 phrase, speaker-attached shapes, words arranged with a diagram, or another treatment whose shared
 behavior deserves one owner. The family consumes `CaptionCuePayload`, owns its parameters and
 registers its own NLE/HTML resolver. It does not create another transcript, Caption document or

@@ -6,11 +6,11 @@ Read this when the work needs a new visual relationship among displayed speech, 
 
 ## Decide what is actually new
 
-The official `@hypit/caption-basic` family covers a centered Caption box, Cue-level Style changes,
-visibility and optional current/trailing Karaoke. Changing color, font size, box shape or Karaoke
-mode is a Basic Style change. A persistent visual role on selected display words can be authored as
-a Script attribute such as `word{face=serif}`; Basic may ignore it, while a family designed for that
-role can interpret it.
+The official `@hypit/caption-fine` component covers ordinary flowing Caption: explicit typography,
+paint, boxes, layout and overflow policy, Cue and Unit motion, Cue-level Style changes, visibility
+and current/trailing Karaoke. A plain centered Caption is the same component with a small Style, not
+a second Basic family. A persistent visual role on selected display words can be authored as a
+Script attribute such as `word{face=serif}` and mapped through Fine's `attributeFaces`.
 
 A keyword occupying an independent oversized line, phrases attached to different speakers, or words
 coordinated with diagrams can justify a project Caption family. Creating that component is normal
@@ -55,8 +55,8 @@ before writing the Item. After that point the family sees only direct Item-local
 
 For another family, create a project package under `packages/`, register its NLE and HTML-video
 component facets, and have the project program emit Items using that component symbol. Reuse the
-shared `CaptionCuePayload`; do not copy Basic's renderer or add a new Caption document model merely
-to obtain a different layout.
+shared `CaptionCuePayload`; do not copy Fine's renderer or add a new Caption document model merely
+to obtain an ordinary appearance change.
 
 ## Design and test the family
 

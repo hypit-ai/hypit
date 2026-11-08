@@ -109,7 +109,7 @@ NLE core to recognize speakers.
 
 The family owns its anchor convention, clearance, smoothing and missing-region policy. For example,
 one family may place the Cue above the region's top center and hide when no region exists; another may
-hold the last reliable position. Basic Caption has no tracking input. Create or use a project Caption
+hold the last reliable position. Fine Caption has no tracking input. Create or use a project Caption
 family when this relationship is genuinely part of the treatment.
 
 ## Inspect the actual placement
