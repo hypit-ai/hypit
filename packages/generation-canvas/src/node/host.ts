@@ -116,21 +116,21 @@ export async function adoptBuildOutputInGenerationCanvas(input: {
   ) => Promise<GenerationGraphNode>;
 }): Promise<AdoptedNodeGenerationCanvasBuildOutput> {
   const canvasPath = resolve(input.canvasPath);
-  const view = await readGenerationCanvasViewFile(canvasPath);
-  if (view.revision !== input.canvasRevision) {
-    throw new GenerationCanvasRevisionConflict(input.canvasRevision, view.revision);
+  const initialView = await readGenerationCanvasViewFile(canvasPath);
+  if (initialView.revision !== input.canvasRevision) {
+    throw new GenerationCanvasRevisionConflict(input.canvasRevision, initialView.revision);
   }
-  const item = view.items.find((candidate) => candidate.id === input.item);
+  const item = initialView.items.find((candidate) => candidate.id === input.item);
   if (item === undefined) throw new Error(`Unknown Generation Canvas Item: ${input.item}`);
   if (item.subject.kind !== "build-output") {
     throw new Error(`Generation Canvas Item ${input.item} is not a Build output.`);
   }
-  const graphPath = resolve(dirname(canvasPath), view.graph.path);
-  const graph = await readGenerationGraphProjectFile(graphPath);
-  if (graph.revision !== input.graphRevision) {
-    throw new GenerationGraphRevisionConflict(input.graphRevision, graph.revision);
+  const graphPath = resolve(dirname(canvasPath), initialView.graph.path);
+  const initialGraph = await readGenerationGraphProjectFile(graphPath);
+  if (initialGraph.revision !== input.graphRevision) {
+    throw new GenerationGraphRevisionConflict(input.graphRevision, initialGraph.revision);
   }
-  if (graph.nodes.some((candidate) => candidate.id === input.node)) {
+  if (initialGraph.nodes.some((candidate) => candidate.id === input.node)) {
     throw new Error(`Generation Graph Node ${input.node} already exists.`);
   }
   const node = await input.materialize({
@@ -141,6 +141,21 @@ export async function adoptBuildOutputInGenerationCanvas(input: {
   });
   if (node.id !== input.node) {
     throw new Error(`Product materializer returned Graph Node ${node.id}, expected ${input.node}.`);
+  }
+
+  // Materialization is ordinary file I/O and may yield to another author edit. Re-read rather than
+  // holding a process lock or writing the snapshots observed before the file task began.
+  const view = await readGenerationCanvasViewFile(canvasPath);
+  if (view.revision !== input.canvasRevision) {
+    throw new GenerationCanvasRevisionConflict(input.canvasRevision, view.revision);
+  }
+  const currentGraphPath = resolve(dirname(canvasPath), view.graph.path);
+  if (currentGraphPath !== graphPath) {
+    throw new Error("Generation Canvas Graph path changed while the Product was materialized.");
+  }
+  const graph = await readGenerationGraphProjectFile(graphPath);
+  if (graph.revision !== input.graphRevision) {
+    throw new GenerationGraphRevisionConflict(input.graphRevision, graph.revision);
   }
   const plan = planGenerationCanvasBuildOutputAdoption({
     graph,

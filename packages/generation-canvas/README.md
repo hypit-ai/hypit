@@ -59,7 +59,9 @@ write failure does not cancel or relabel the already accepted Build; its Result 
 
 `adoptBuildOutputInGenerationCanvas()` supplies the Node filesystem coordination around the pure adoption plan.
 Its materializer is injected by the caller and remains Type-owned. The Host validates both current revisions and
-both next documents before saving the Graph first and the Canvas second. Ordinary files cannot provide one atomic
-transaction across those two paths: if the second save fails, the new author node deliberately remains in the
-Graph and the error identifies the Canvas Item that was not replaced. Retrying or removing that visible node is
-therefore possible without a hidden recovery table.
+re-reads both author documents after materialization, so an edit made while ordinary file I/O is running becomes
+an explicit revision conflict rather than being overwritten. It needs no queue, persistent task or process lock.
+The Host validates both next documents before saving the Graph first and the Canvas second. Ordinary files cannot
+provide one atomic transaction across those two paths: if the second save fails, the new author node deliberately
+remains in the Graph and the error identifies the Canvas Item that was not replaced. Retrying or removing that
+visible node is therefore possible without a hidden recovery table.

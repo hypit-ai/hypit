@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import type { GenerationGraphProject } from "@hypit/generation-graph";
+import {
+  applyGenerationGraphTransaction,
+  type GenerationGraphProject,
+} from "@hypit/generation-graph";
 import type { Product } from "@hypit/product";
 import type { BuildResult } from "@hypit/result";
 
@@ -245,6 +248,89 @@ test("adopting a completed card authors one value node and replaces it in place"
     });
     assert.deepEqual(savedGraph.nodes.find((node) => node.id === "video")?.inputs,
       { image: { node: "adopted-image" } });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("adoption does not overwrite a Graph edit made while the Product is materialized", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-generation-canvas-graph-conflict-"));
+  try {
+    const graphPath = join(directory, "storyboard.graph.json");
+    const canvasPath = join(directory, "storyboard.canvas.json");
+    const { readGenerationGraphProjectFile, writeGenerationGraphProjectFile } =
+      await import("@hypit/generation-graph/node");
+    await writeGenerationGraphProjectFile(graphPath, graph);
+    const initial = viewWithGraphNodes();
+    const placed = applyGenerationCanvasTransaction(initial, planAcceptedGenerationCanvasBuild(initial, {
+      build: "Build-A", outputs: ["image"],
+    }, [{ id: "result-a-image", output: "image", x: 100, y: 320 }]));
+    await writeGenerationCanvasViewFile(canvasPath, placed);
+
+    await assert.rejects(adoptBuildOutputInGenerationCanvas({
+      canvasPath,
+      canvasRevision: placed.revision,
+      graphRevision: graph.revision,
+      item: "result-a-image",
+      node: "adopted-image",
+      async materialize(context) {
+        await writeGenerationGraphProjectFile(graphPath, applyGenerationGraphTransaction(graph, {
+          revision: graph.revision,
+          commands: [{ kind: "project.rename", name: "Edited while importing" }],
+        }));
+        return {
+          id: context.node,
+          using: { module: { name: "@hypit/media-asset", version: "1" }, name: "resource" },
+          inputs: { asset: { value: { path: "assets/adopted.media.json" } } },
+        };
+      },
+    }), /expected revision 2, found 3/u);
+
+    const savedGraph = await readGenerationGraphProjectFile(graphPath);
+    assert.equal(savedGraph.name, "Edited while importing");
+    assert.equal(savedGraph.nodes.some((node) => node.id === "adopted-image"), false);
+    assert.deepEqual(await readGenerationCanvasViewFile(canvasPath), placed);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("adoption does not overwrite a Canvas edit made while the Product is materialized", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-generation-canvas-view-conflict-"));
+  try {
+    const graphPath = join(directory, "storyboard.graph.json");
+    const canvasPath = join(directory, "storyboard.canvas.json");
+    const { readGenerationGraphProjectFile, writeGenerationGraphProjectFile } =
+      await import("@hypit/generation-graph/node");
+    await writeGenerationGraphProjectFile(graphPath, graph);
+    const initial = viewWithGraphNodes();
+    const placed = applyGenerationCanvasTransaction(initial, planAcceptedGenerationCanvasBuild(initial, {
+      build: "Build-A", outputs: ["image"],
+    }, [{ id: "result-a-image", output: "image", x: 100, y: 320 }]));
+    await writeGenerationCanvasViewFile(canvasPath, placed);
+    const moved = applyGenerationCanvasTransaction(placed, {
+      revision: placed.revision,
+      commands: [{ kind: "item.move", id: "result-a-image", x: 240, y: 440 }],
+    });
+
+    await assert.rejects(adoptBuildOutputInGenerationCanvas({
+      canvasPath,
+      canvasRevision: placed.revision,
+      graphRevision: graph.revision,
+      item: "result-a-image",
+      node: "adopted-image",
+      async materialize(context) {
+        await writeGenerationCanvasViewFile(canvasPath, moved);
+        return {
+          id: context.node,
+          using: { module: { name: "@hypit/media-asset", version: "1" }, name: "resource" },
+          inputs: { asset: { value: { path: "assets/adopted.media.json" } } },
+        };
+      },
+    }), new RegExp(`expected revision ${placed.revision}, found ${moved.revision}`, "u"));
+
+    assert.deepEqual(await readGenerationCanvasViewFile(canvasPath), moved);
+    assert.deepEqual(await readGenerationGraphProjectFile(graphPath), graph);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
