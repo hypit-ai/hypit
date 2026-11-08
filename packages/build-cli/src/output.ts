@@ -866,11 +866,16 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
   ].join("\n"));
 }
 
-/** Root help owned by the long-compilation command adapter, not the CLI Host. */
-export function writeBuildCliRootHelp(io: CliIo): void {
+function rootHelpRows(io: CliIo) {
   const colors = palette(io.terminal?.isTTY === true && io.terminal.color);
   const row = (command: string, description: string, width = 30): string =>
     `  ${command}${" ".repeat(Math.max(2, width - command.length))}${description}`;
+  return { colors, row };
+}
+
+/** Root help for Source compilation and submission only. */
+export function writeSourceBuildCliRootHelp(io: CliIo): void {
+  const { colors, row } = rootHelpRows(io);
   io.write([
     "",
     colors.strong("Source compilation"),
@@ -878,6 +883,14 @@ export function writeBuildCliRootHelp(io: CliIo): void {
     row("plan <source>", "show one explicit target selection without executing"),
     row("pricing <source>", "read selected Providers' current pricing material"),
     row("build <source>", "submit one explicit target selection; --follow observes it"),
+    "",
+  ].join("\n"));
+}
+
+/** Root help for accepted Build, Result and Runtime operations. */
+export function writeBuildOperationsCliRootHelp(io: CliIo): void {
+  const { colors, row } = rootHelpRows(io);
+  io.write([
     "",
     colors.strong("Results"),
     row("builds", "list Results newest first"),

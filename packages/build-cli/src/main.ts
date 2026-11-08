@@ -4,7 +4,10 @@ import { createPublicBuildId, submitLongBuild } from "@hypit/build-submission";
 import { isBlobRef, moduleKey } from "@hypit/protocol";
 import { BuildCompiler } from "@hypit/compiler";
 
-import type { BuildCliServices } from "./services.js";
+import type {
+  BuildOperationsCliServices,
+  SourceBuildCliServices,
+} from "./services.js";
 import type { CliApplicationContext } from "@hypit/cli";
 import type {
   CliBuildSubmission,
@@ -17,7 +20,7 @@ import type { CliIo } from "@hypit/cli";
 import { createPlanOutput, createPricingOutput, writeCliHelp, writeCliOutput } from "./output.js";
 import type { OperationalMachineView } from "./machine-view.js";
 import { parseCommand } from "./arguments.js";
-import type { CliCommand, RuntimeOption } from "./command.js";
+import type { AuthorCommand, CliCommand, RuntimeOption } from "./command.js";
 import { createBuildAuthoring, describePlanEndpoints, describePlanRequest, describePlanRequests, describePlanPricing, describePricingRequests, evaluatePlanNeeds, plannedEndpointQueries, preflightPlan } from "./build-planning.js";
 import { buildProgressLines, observeBuild } from "./observation.js";
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
@@ -44,10 +47,36 @@ function acceptsRuntimeContext(command: CliCommand): command is CliCommand & Run
   return "runtimeProfile" in command;
 }
 
-export async function runCli(
+function isAuthorCommand(command: CliCommand): command is AuthorCommand {
+  return command.command === "check"
+    || command.command === "plan"
+    || command.command === "pricing"
+    || command.command === "build";
+}
+
+export async function runSourceBuildCli(
   argv: readonly string[],
   io: CliIo,
-  services: BuildCliServices,
+  services: SourceBuildCliServices,
+  context?: Pick<CliApplicationContext, "cwd" | "resolveProjectRoot">,
+): Promise<void> {
+  await runOwnedCli(argv, io, services, "source", context);
+}
+
+export async function runBuildOperationsCli(
+  argv: readonly string[],
+  io: CliIo,
+  services: BuildOperationsCliServices,
+  context?: Pick<CliApplicationContext, "cwd" | "resolveProjectRoot">,
+): Promise<void> {
+  await runOwnedCli(argv, io, services, "operations", context);
+}
+
+async function runOwnedCli(
+  argv: readonly string[],
+  io: CliIo,
+  services: SourceBuildCliServices | BuildOperationsCliServices,
+  ownership: "source" | "operations",
   context?: Pick<CliApplicationContext, "cwd" | "resolveProjectRoot">,
 ): Promise<void> {
   if (argv.length === 0 || argv[0] === "help" || argv.includes("--help")) {
@@ -58,6 +87,9 @@ export async function runCli(
   }
   const cwd = context?.cwd ?? process.cwd();
   const args = parseCommand(argv, cwd);
+  if (isAuthorCommand(args) !== (ownership === "source")) {
+    throw new Error(`${args.command} is not owned by the ${ownership} command module`);
+  }
   let resolvedProject: Promise<string> | undefined;
   const commandProjectRoot = async (): Promise<string> => {
     const projectRoot = commandProjectRootOption(args);
@@ -112,6 +144,7 @@ export async function runCli(
     }
   }
   if (isEnvironmentCommand(args)) {
+    const operationServices = services as BuildOperationsCliServices;
     await runEnvironmentCommand({
       args,
       runtimeProfile,
@@ -120,7 +153,7 @@ export async function runCli(
       projectRoot: await commandProjectRoot(),
       diagnoseProjectResults: async () => {
         const projectRoot = await commandProjectRoot();
-        return await services.diagnoseProjectResults(projectRoot, {
+        return await operationServices.diagnoseProjectResults(projectRoot, {
           packageRoot: await packageRootForProject(projectRoot),
           ...(services.packageRoot === undefined
             ? {}
@@ -133,6 +166,7 @@ export async function runCli(
     return;
   }
   if (isProjectResultCommand(args)) {
+    const operationServices = services as BuildOperationsCliServices;
     const results = await projectResults();
     try {
       await runProjectResultCommand({
@@ -140,9 +174,9 @@ export async function runCli(
         projectRoot: await commandProjectRoot(),
         history: results.history,
         products: results.products,
-        ...(services.resolveProductExporter === undefined ? {} : {
-          resolveProductExporter: async (type: Parameters<NonNullable<typeof services.resolveProductExporter>>[0]) =>
-            await services.resolveProductExporter!(type, {
+        ...(operationServices.resolveProductExporter === undefined ? {} : {
+          resolveProductExporter: async (type: Parameters<NonNullable<typeof operationServices.resolveProductExporter>>[0]) =>
+            await operationServices.resolveProductExporter!(type, {
               packageRoot: await packageRootForProject(await commandProjectRoot()),
               ...(services.packageRoot === undefined
                 ? {}
@@ -169,12 +203,13 @@ export async function runCli(
     });
     return;
   }
+  const sourceServices = services as SourceBuildCliServices;
   const effectiveWorkspaceRoot = await commandProjectRoot();
   const projectResultsRoot = effectiveWorkspaceRoot;
   const sourcePackageRoot = args.packageRoot ?? effectiveWorkspaceRoot;
-  const loadedPackageSet = services.discoverSourcePackages === undefined
+  const loadedPackageSet = sourceServices.discoverSourcePackages === undefined
     ? undefined
-    : await loadDiscoveredSourcePackages(services, {
+    : await loadDiscoveredSourcePackages(sourceServices, {
           source: args.source,
           ...(effectiveWorkspaceRoot === undefined ? {} : { workspaceRoot: effectiveWorkspaceRoot }),
           packageRoot: sourcePackageRoot,
@@ -182,9 +217,9 @@ export async function runCli(
             ? {}
             : { distributionPackageRoot: services.packageRoot }),
         });
-  const packageContributions = (loadedPackageSet ?? services.bootstrapPackages)
+  const packageContributions = (loadedPackageSet ?? sourceServices.bootstrapPackages)
     .map((item) => item.contribution);
-  const compiler = services.createCompiler({
+  const compiler = sourceServices.createCompiler({
     ...(effectiveWorkspaceRoot === undefined ? {} : { workspaceRoot: effectiveWorkspaceRoot }),
     ...(args.assetRoots.length === 0 ? {} : { assetRoots: args.assetRoots }),
     packageRoot: sourcePackageRoot,

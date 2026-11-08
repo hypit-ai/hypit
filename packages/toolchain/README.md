@@ -31,9 +31,10 @@ Installing or importing an arbitrary Source package never grants it CLI or proce
 
 ## Application assembly
 
-`createToolchainApplicationServices()` returns three explicit ports: `build` for Source compilation and
-Result work, `generation` for explicit Generation Graph submission, and `localRuntime` for Local Runtime lifecycle commands. The generic CLI Host receives
-neither service object; the executable captures each one in its owning command module.
+`createToolchainApplicationServices()` returns four explicit ports: `sourceBuild` for Source compilation,
+`buildOperations` for accepted-Build and Result work, `generation` for explicit Generation Graph
+submission, and `localRuntime` for Local Runtime lifecycle commands. The generic CLI Host receives no
+service object; the executable captures each one in its owning command module.
 
 The application services select the official toolchain choices:
 

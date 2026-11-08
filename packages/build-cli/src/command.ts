@@ -1,31 +1,5 @@
 import type { CliOutputOptions } from "@hypit/cli";
 
-/**
- * Root command names owned by the domain-neutral long-compilation CLI.
- *
- * Application command modules may add other roots, but cannot shadow these.
- * Keeping the names beside the command union makes command ownership explicit
- * without teaching Core or the package loader about CLI presentation.
- */
-export const genericCliCommandNames = [
-  "version",
-  "cli",
-  "check",
-  "plan",
-  "pricing",
-  "build",
-  "builds",
-  "history",
-  "inspect",
-  "logs",
-  "status",
-  "activity",
-  "cancel",
-  "result",
-  "auth",
-  "doctor",
-] as const;
-
 type CommandBase = {
   readonly presentation: CliOutputOptions;
 };

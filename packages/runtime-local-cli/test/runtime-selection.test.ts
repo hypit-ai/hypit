@@ -7,7 +7,10 @@ import test from "node:test";
 import { runCliApplication } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
 import type { BuildCliServices } from "@hypit/build-cli";
-import { createBuildCliCommandModules } from "@hypit/build-cli";
+import {
+  createBuildOperationsCliCommandModules,
+  createSourceBuildCliCommandModules,
+} from "@hypit/build-cli";
 import { resolveProjectRoot } from "@hypit/project";
 import { findRuntimeProfile, selectRuntimeProfile } from "@hypit/runtime-local";
 import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";
@@ -24,7 +27,14 @@ const runCli = async (
 ): Promise<void> =>
   await runCliApplication(argv, io, {
     commandModules: [
-      ...createBuildCliCommandModules({
+      ...createSourceBuildCliCommandModules({
+        ...distribution,
+        resolveProjectRuntime: async (projectRoot) => {
+          const selected = await findRuntimeProfile(projectRoot);
+          return selected === undefined ? undefined : { profile: selected.profile };
+        },
+      }),
+      ...createBuildOperationsCliCommandModules({
         ...distribution,
         resolveProjectRuntime: async (projectRoot) => {
           const selected = await findRuntimeProfile(projectRoot);

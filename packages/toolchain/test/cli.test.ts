@@ -6,13 +6,13 @@ import test from "node:test";
 
 import { createToolchainApplicationServices } from "@hypit/toolchain";
 import { createToolchainCliCommandModules } from "@hypit/toolchain/cli";
-import { createBuildCliCommandModules } from "@hypit/build-cli";
+import { createSourceBuildCliCommandModules } from "@hypit/build-cli";
 import { runCliApplication } from "@hypit/cli";
-import { loadDiscoveredSourcePackages, runCli as runCommand } from "@hypit/build-cli";
+import { loadDiscoveredSourcePackages, runSourceBuildCli as runCommand } from "@hypit/build-cli";
 import { installDistributionPackageResolution } from "@hypit/loader/node";
 
 const toolchainServices = createToolchainApplicationServices();
-const buildServices = toolchainServices.build;
+const buildServices = toolchainServices.sourceBuild;
 
 const runCli = (
   argv: readonly string[],
@@ -22,7 +22,7 @@ const runCli = (
     ? [] : [buildServices.packageRoot]);
   return runCliApplication([...argv, "--json"], io, {
     commandModules: [
-      ...createBuildCliCommandModules(buildServices),
+      ...createSourceBuildCliCommandModules(buildServices),
       ...createToolchainCliCommandModules(buildServices.packageRoot === undefined
         ? {}
         : { distributionPackageRoot: buildServices.packageRoot }),

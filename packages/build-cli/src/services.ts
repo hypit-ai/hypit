@@ -18,40 +18,12 @@ export type BuildCliCompilerOptions = {
   readonly packageContributions: readonly PackageContribution[];
 };
 
-/**
- * Explicit service assembly for the long-compilation command module.
- *
- * Application composition selects author vocabulary/compiler semantics and trusted Runtime adapters.
- * These services never become Core state or Source-import authority.
- */
-export type BuildCliServices = {
+/** Project and Runtime access genuinely shared by authoring and accepted-Build operations. */
+export type BuildCliContextServices = {
   /** Packages shipped with this CLI distribution. */
   readonly packageRoot?: string;
-  /** Explicit Host bootstrap packages; never inferred from Source contents. */
-  readonly bootstrapPackages: readonly LoadedPackage[];
   /** Resolve the execution environment explicitly selected for this project, when supported. */
   resolveProjectRuntime?(projectRoot: string): Promise<{ readonly profile: string } | undefined>;
-  /** Open the definition environment selected by this application. */
-  createWorkspace(options: Pick<BuildCliCompilerOptions,
-    "workspaceRoot" | "assetRoots" | "packageRoot" | "distributionPackageRoot">): Workspace;
-  createCompiler(options: BuildCliCompilerOptions): Compiler;
-  /**
-   * Read the selected Source and its explicit closure, then return only the installed
-   * package roots those sources select.
-   *
-   * This is application-selected syntax work. The build CLI never scans a directory,
-   * guesses an entry filename or teaches Core about package names.
-   */
-  discoverSourcePackages?(path: string, options?: {
-    readonly workspaceRoot?: string;
-    readonly packageRoot?: string;
-    readonly distributionPackageRoot?: string;
-    /** Exact packages already trusted for the current fixed-point discovery pass. */
-    readonly packages?: readonly LoadedPackage[];
-  }): Promise<{
-    readonly selected: readonly string[];
-    readonly logical?: readonly LogicalPackageAddress[];
-  }>;
   /** Open the Runtime Profile with this application's Runtime implementation. */
   openRuntimeHost(path: string, options: {
     readonly packageRoot: string;
@@ -67,6 +39,30 @@ export type BuildCliServices = {
     readonly products: ProductHistory;
     close(): void | Promise<void>;
   }>;
+};
+
+/** Services used only to compile and submit one Author Source. */
+export type SourceBuildCliServices = BuildCliContextServices & {
+  /** Explicit Host bootstrap packages; never inferred from Source contents. */
+  readonly bootstrapPackages: readonly LoadedPackage[];
+  /** Open the definition environment selected by this application. */
+  createWorkspace(options: Pick<BuildCliCompilerOptions,
+    "workspaceRoot" | "assetRoots" | "packageRoot" | "distributionPackageRoot">): Workspace;
+  createCompiler(options: BuildCliCompilerOptions): Compiler;
+  /** Read the selected Source closure and return only its explicitly selected packages. */
+  discoverSourcePackages?(path: string, options?: {
+    readonly workspaceRoot?: string;
+    readonly packageRoot?: string;
+    readonly distributionPackageRoot?: string;
+    readonly packages?: readonly LoadedPackage[];
+  }): Promise<{
+    readonly selected: readonly string[];
+    readonly logical?: readonly LogicalPackageAddress[];
+  }>;
+};
+
+/** Services used to inspect accepted Builds, Results and Runtime environment state. */
+export type BuildOperationsCliServices = BuildCliContextServices & {
   /** Resolve the package-owned author export for one published structured Type. */
   resolveProductExporter?(type: TypeRef, options: {
     readonly packageRoot: string;
@@ -81,3 +77,6 @@ export type BuildCliServices = {
     readonly diagnostics: readonly CliDiagnostic[];
   }>;
 };
+
+/** Full official application assembly; command modules consume only their own slice. */
+export type BuildCliServices = SourceBuildCliServices & BuildOperationsCliServices;

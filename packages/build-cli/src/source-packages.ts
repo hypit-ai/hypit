@@ -6,10 +6,10 @@ import type {
 } from "@hypit/loader";
 import { packageSelectionSatisfied } from "@hypit/loader";
 
-import type { BuildCliServices } from "./services.js";
+import type { SourceBuildCliServices } from "./services.js";
 
 type BuildSourcePackageServices = Pick<
-  BuildCliServices,
+  SourceBuildCliServices,
   "bootstrapPackages" | "discoverSourcePackages"
 >;
 

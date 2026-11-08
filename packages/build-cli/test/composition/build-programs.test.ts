@@ -11,9 +11,9 @@ import { createProducerPackageFacet } from "@hypit/producer";
 import { verifyRecordStructure } from "@hypit/kernel";
 import type { LinkedProgram, TypedRecord } from "@hypit/protocol";
 
-import { runCli as runCliEngine } from "../../src/main.js";
+import { runSourceBuildCli as runCliEngine } from "../../src/main.js";
 import { commandHint } from "@hypit/cli";
-import type { BuildCliServices } from "../../src/services.js";
+import type { SourceBuildCliServices } from "../../src/services.js";
 import type { CliDiagnostic as RuntimeDoctorDiagnostic } from "../../src/runtime-port.js";
 import { buildCliServices } from "../services-scenario.js";
 
@@ -34,7 +34,7 @@ function distribution(
   producerError?: string,
   producerOutput?: string,
   producerInlineValueBytes?: number,
-): BuildCliServices {
+): SourceBuildCliServices {
   return buildCliServices({
     bootstrapPackages: producerError === undefined && producerOutput === undefined ? [] : [{
       specifier: "@example/run-frontend",

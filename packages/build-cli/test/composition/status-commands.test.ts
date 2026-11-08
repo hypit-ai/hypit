@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 
-import type { BuildCliServices } from "../../src/services.js";
 import { createLocalCredentialControl } from "@hypit/runtime-local";
 import { commandHint } from "@hypit/cli";
 import { buildCliServices } from "../services-scenario.js";

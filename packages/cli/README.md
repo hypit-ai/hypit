@@ -9,12 +9,16 @@ capabilities by assembling command modules explicitly.
 
 ```ts
 import { runNodeCliApplication } from "@hypit/cli";
-import { createBuildCliCommandModules } from "@hypit/build-cli";
+import {
+  createBuildOperationsCliCommandModules,
+  createSourceBuildCliCommandModules,
+} from "@hypit/build-cli";
 import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";
 
 await runNodeCliApplication(process.argv.slice(2), {
   commandModules: [
-    ...createBuildCliCommandModules(buildServices),
+    ...createSourceBuildCliCommandModules(sourceBuildServices),
+    ...createBuildOperationsCliCommandModules(buildOperationsServices),
     ...createLocalRuntimeCliCommandModules(localRuntime),
   ],
 });
