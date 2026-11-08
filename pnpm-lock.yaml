@@ -805,9 +805,15 @@ importers:
       '@hypit/author':
         specifier: workspace:*
         version: link:../author
+      '@hypit/facet':
+        specifier: workspace:^0.0.0-dev
+        version: link:../facet
       '@hypit/kernel':
         specifier: workspace:^0.0.0-dev
         version: link:../kernel
+      '@hypit/loader':
+        specifier: workspace:^0.0.0-dev
+        version: link:../loader
       '@hypit/product':
         specifier: workspace:^0.0.0-dev
         version: link:../product
@@ -2217,6 +2223,9 @@ importers:
         specifier: 3.2.1
         version: 3.2.1
     devDependencies:
+      '@hypit/generation-graph':
+        specifier: workspace:*
+        version: link:../generation-graph
       '@hypit/project':
         specifier: workspace:*
         version: link:../project

@@ -150,6 +150,13 @@ PublicationIntent containing every demanded generated node. Runtime Local does n
 choose Products or write node sidecars; after submission acceptance, the authoring Host records the stable
 Build id in its own graph transaction.
 
+Generation packages are loaded twice for two distinct reasons: the authoring Host reads their Generation Node
+Facet while lowering the saved recipe, and Runtime Local loads the same explicitly requested physical package
+specifier for its Producer and refinement Facets when execution starts. Runtime still knows nothing about
+Canvas nodes or component names. An end-to-end composition test verifies that an asynchronous downstream
+failure closes an already completed upstream node Product and that a later target selection reuses it without
+another Build.
+
 The filesystem finalization store does not inherit the history reader; sharing a directory root is assembly,
 not an API relationship.
 Runtime working Resources remain internal and Build-local; there is no ResourceStore selector. After

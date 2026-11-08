@@ -11,6 +11,20 @@ export {
   serializeGenerationNodeProduct,
 } from "./project.js";
 export { lowerGenerationGraph } from "./lower.js";
+export {
+  createGenerationGraphLoweringHost,
+  createGenerationNodePackageFacet,
+  generationComponentKey,
+  generationNodePackagesFromFacets,
+  generationNodePackageFacetAbi,
+} from "./package.js";
+export type {
+  GenerationGraphProductResolver,
+  GenerationNodeDeclaration,
+  GenerationNodePackage,
+  GenerationNodePackageFacet,
+  InstalledGenerationNodePackage,
+} from "./package.js";
 export { resolveGenerationNodeProduct } from "./product.js";
 export {
   acceptGenerationGraphBuild,

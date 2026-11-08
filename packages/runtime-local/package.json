@@ -36,6 +36,7 @@
     "koffi": "3.2.1"
   },
   "devDependencies": {
+    "@hypit/generation-graph": "workspace:*",
     "@hypit/project": "workspace:*"
   }
 }

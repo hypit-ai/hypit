@@ -11,7 +11,9 @@
   "dependencies": {
     "@hypit/atomic-file": "workspace:^0.0.0-dev",
     "@hypit/author": "workspace:*",
+    "@hypit/facet": "workspace:^0.0.0-dev",
     "@hypit/kernel": "workspace:^0.0.0-dev",
+    "@hypit/loader": "workspace:^0.0.0-dev",
     "@hypit/product": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev"
   },
