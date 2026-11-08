@@ -3,6 +3,7 @@ import {
   assertCaptionSelection,
   assertLocalCaptionTiming,
   captionSelectedUnitIds,
+  captionUnitText,
   type CaptionDocument,
   type CaptionSelection,
   type LocalCaptionTiming,
@@ -228,12 +229,6 @@ export function scheduleCaptionPresentation<Family extends string>(
   return result;
 }
 
-function cueText(document: CaptionDocument, unitIds: readonly string[]): string {
-  const selected = new Set(unitIds);
-  return document.words.filter((word) => selected.has(word.unitId))
-    .map((word) => `${word.separatorBefore}${word.text}`).join("");
-}
-
 export function projectCaptionScheduleCues<Family extends string>(
   componentId: string,
   document: CaptionDocument,
@@ -252,7 +247,7 @@ export function projectCaptionScheduleCues<Family extends string>(
       : preimageTemporalMapRegions(occurrenceMapping, { domain: schedule.domain, regions: cue.regions });
     return {
       ...structuredClone(cue),
-      text: cueText(document, cue.unitIds),
+      text: captionUnitText(document, cue.unitIds),
       ...(occurrence === undefined ? {} : { occurrenceRegions: occurrence.regions }),
     };
   });

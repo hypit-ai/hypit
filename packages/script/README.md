@@ -128,6 +128,9 @@ Affinity assigns an inter-word pause to the intended side:
 
 These identities are consumed only while a project program maps source-local timing into direct NLE values.
 They do not survive as named dependencies in the NLE project.
+Project programs should author a Moment for an intended trigger instead of searching normalized prose for
+a phrase. Phrase search remains useful for interactive inspection of an unannotated transcript, but it is
+not a substitute for an already-authored relationship.
 
 ## Source preservation
 

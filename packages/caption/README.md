@@ -8,6 +8,9 @@ Rendering-neutral Caption content and source-local timing.
   package validates their flat shape but assigns no rendering meaning.
 - `LocalCaptionTiming` relates Unit identities to exact regions in one local temporal domain.
 - `CaptionSelection` chooses all content, named Cues or named Units for an explicit consumer.
+- `captionUnitText`, `captionCueText`, `captionSelectionForRole` and
+  `captionWordIdsForAttribute` query those authored facts without reconstructing language spacing or
+  component semantics in project scripts.
 - `CaptionCuePayload` is the complete, directly editable Words and Unit-local time owned by one
   materialized Cue block. Its small edit helpers change display spelling or one Unit boundary.
 

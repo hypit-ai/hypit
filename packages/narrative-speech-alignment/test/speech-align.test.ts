@@ -4,7 +4,11 @@ import type { TimedTranscript } from "@hypit/timed-transcript";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { narrativeValue, parseScript as parseScriptSource } from "@hypit/script";
+import {
+  narrativeValue,
+  parseScript as parseScriptSource,
+  scriptSegmentSpeech,
+} from "@hypit/script";
 import {
   SpeechAlignmentError,
   alignWordGroups,
@@ -186,6 +190,29 @@ test("M:N correction returns the same TimedTranscript shape with authored words"
   assert.deepEqual(corrected.word_segments.map((word) => word.word), ["can", "not", "wait"]);
   assert.deepEqual(corrected.word_segments, corrected.segments.flatMap((item) => item.words));
   assert.equal("score" in corrected.word_segments[0]!, false);
+});
+
+test("transcript correction can preserve the accepted Script punctuation and language spacing", () => {
+  const parsed = parseScriptSource("correct-zh.script", "<line>你好，世界！</line>");
+  const narrative = narrativeValue(parsed, "test-narrative");
+  const segment = narrative.segments[0]!;
+  const detected = evidence({ durationSec: 1, words: [
+    { text: "你", startSec: 0.1, endSec: 0.2 },
+    { text: "好", startSec: 0.2, endSec: 0.3 },
+    { text: "世", startSec: 0.4, endSec: 0.5 },
+    { text: "界", startSec: 0.5, endSec: 0.6 },
+  ] });
+  const corrected = correctTimedTranscript(narrative, {
+    narrativeId: narrative.id,
+    kind: "segment",
+    id: segment.id,
+    tokenStart: segment.tokenStart,
+    tokenEndExclusive: segment.tokenEndExclusive,
+  }, { id: "speech", duration: exactTemporalValue({ numerator: 1n, denominator: 1n }) }, detected, {
+    segmentText: scriptSegmentSpeech(parsed, "line"),
+  });
+  assert.equal(corrected.segments[0]!.text, "你好，世界！");
+  assert.deepEqual(corrected.word_segments.map((word) => word.word), ["你", "好", "世", "界"]);
 });
 
 test("1:N wraps all evidence words in one Script token", () => {

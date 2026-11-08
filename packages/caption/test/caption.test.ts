@@ -4,7 +4,11 @@ import test from "node:test";
 import {
   assertCaptionDocument,
   assertLocalCaptionTiming,
+  captionCueText,
+  captionSelectionForRole,
   captionSelectedUnitIds,
+  captionUnitText,
+  captionWordIdsForAttribute,
   type CaptionDocument,
   type LocalCaptionTiming,
 } from "../src/index.js";
@@ -32,6 +36,10 @@ const document: CaptionDocument = {
 test("CaptionDocument owns display, Cue grouping and family-defined word attributes only", () => {
   assert.doesNotThrow(() => assertCaptionDocument(document));
   assert.deepEqual(captionSelectedUnitIds(document, { kind: "cues", ids: ["cue-two"] }), ["unit-two"]);
+  assert.equal(captionCueText(document, "cue-two"), " Second");
+  assert.equal(captionUnitText(document, ["unit-one", "unit-two"]), "First Second");
+  assert.deepEqual(captionSelectionForRole(document, "HOST"), { kind: "units", ids: ["unit-one"] });
+  assert.deepEqual(captionWordIdsForAttribute(document, "face"), ["word-two"]);
   assert.deepEqual(document.words[1]?.attributes, [{ name: "face", value: "serif" }]);
 });
 

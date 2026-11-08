@@ -23,6 +23,11 @@ export type TimedSpeechSegment = {
   readonly endUnitExclusive: number;
 };
 
+/** Optional accepted prose surface for the corrected transcript's human-readable segment text. */
+export type TimedTranscriptCorrectionOptions = {
+  readonly segmentText?: string;
+};
+
 /** Private provider measurement resolved before publishing NarrativeAlignment. */
 export type NarrativeAlignmentTiming = {
   readonly timeBase: { readonly numerator: number; readonly denominator: number };

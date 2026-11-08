@@ -8,6 +8,8 @@ import type { LocalTemporalDomain } from "@hypit/temporal";
 import { locateAlignedSegmentTiming } from "./locate.js";
 import { materializeNarrativeAlignment } from "./materialize.js";
 import type { AlignmentBasis } from "./locate.js";
+import { normalizeForAlignment } from "./normalize.js";
+import type { TimedTranscriptCorrectionOptions } from "./types.js";
 
 function segmentNarrative(narrative: Narrative, excerpt: NarrativeSegmentRef): Narrative {
   if (excerpt.kind !== "segment") throw new Error("Narrative alignment requires a Segment excerpt.");
@@ -66,6 +68,7 @@ export function correctTimedTranscript(
   excerpt: NarrativeSegmentRef,
   domain: LocalTemporalDomain,
   transcript: TimedTranscript,
+  options: TimedTranscriptCorrectionOptions = {},
 ): TimedTranscript {
   const located = locateNarrative(narrative, excerpt, domain, transcript);
   const byToken = new Map(located.timing.tokens.map((token) => [token.tokenId, token]));
@@ -76,10 +79,15 @@ export function correctTimedTranscript(
     return { word: token.text, start: seconds(timing.startUnit), end: seconds(timing.endUnitExclusive) };
   });
   if (words.length === 0) return timedTranscript(transcript.language, []);
+  const fallbackText = words.map((word) => word.word).join(" ");
+  const text = options.segmentText ?? fallbackText;
+  if (normalizeForAlignment(text) !== normalizeForAlignment(fallbackText)) {
+    throw new Error("Corrected transcript segment text disagrees with the authored Narrative tokens.");
+  }
   return timedTranscript(transcript.language, [{
     start: words[0]!.start,
     end: words.at(-1)!.end,
-    text: words.map((word) => word.word).join(" "),
+    text,
     words,
   }]);
 }

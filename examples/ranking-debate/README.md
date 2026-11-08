@@ -43,8 +43,8 @@ pnpm render
 ```
 
 `pnpm compose` writes seven complete Fine Caption Cue Items, including local Word timing, role-based
-styles, the disabled Cue and the one-off warning style. It also resolves four named phrases once and
-writes their direct rational times into the project-owned Ranking Board and Verdict parameters.
+styles, the disabled Cue and the one-off warning style. It also resolves the Script's five authored
+Moments once and writes their direct rational times into the project-owned Ranking Board and Verdict parameters.
 `pnpm render` resolves installed package facets and exports the ordinary NLE.
 
 The accepted reference output is `exports/ranking-debate-refined-v2.mp4`: 720×1280, 24 fps, 772 frames and about

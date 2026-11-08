@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { CaptionDocument, CaptionSelection } from "@hypit/caption";
+import { captionCueText, type CaptionDocument, type CaptionSelection } from "@hypit/caption";
 import {
   appendCaptionHiddenOverride,
   appendCaptionStyleOverride,
@@ -16,9 +16,12 @@ import {
   serializeMediaAssetDocument,
   type MediaAssetDocument,
 } from "@hypit/media-asset";
-import { projectNarrativeCaptionTiming } from "@hypit/narrative-caption";
+import {
+  captionUnitsForNarrativeSelection,
+  projectNarrativeCaptionTiming,
+} from "@hypit/narrative-caption";
 import { alignNarrative, correctTimedTranscript } from "@hypit/narrative-speech-alignment";
-import { createNarrativeLocalTiming, narrativeBoundaryTime } from "@hypit/narrative-temporal";
+import { createNarrativeLocalTiming, momentTemporalValue } from "@hypit/narrative-temporal";
 import {
   applyNleTransaction,
   createNleProject,
@@ -26,7 +29,7 @@ import {
   serializeNleProject,
   type NleProject,
 } from "@hypit/nle";
-import { parseScript, projectScript } from "@hypit/script";
+import { parseScript, projectScript, scriptSegmentSpeech } from "@hypit/script";
 import {
   addExactTemporalValues,
   exactTemporalZero,
@@ -76,16 +79,8 @@ function portableMediaAssetPath(id: string): string {
   return `media/${id}/${id}.media.json`;
 }
 
-function cueText(document: CaptionDocument, cue: CaptionDocument["cues"][number]): string {
-  const selected = new Set(cue.unitIds);
-  return document.words
-    .filter((word) => selected.has(word.unitId))
-    .map((word) => `${word.separatorBefore}${word.text}`)
-    .join("");
-}
-
 function cueContaining(document: CaptionDocument, text: string): string {
-  const cue = document.cues.find((candidate) => cueText(document, candidate).includes(text));
+  const cue = document.cues.find((candidate) => captionCueText(document, candidate).includes(text));
   assert(cue !== undefined, `Caption document has no Cue containing ${JSON.stringify(text)}.`);
   return cue.id;
 }
@@ -94,37 +89,19 @@ function segmentCaptionSelection(
   projection: ReturnType<typeof projectScript>,
   segmentId: string,
 ): CaptionSelection {
-  const tokenIds = new Set(projection.narrative.tokens
-    .filter((token) => token.segmentId === segmentId)
-    .map((token) => token.id));
-  const ids = projection.caption.binding.units
-    .filter((unit) => unit.sourceTokenIds.every((token) => tokenIds.has(token)))
-    .map((unit) => unit.unitId);
-  assert(ids.length > 0, `Script Segment ${segmentId} has no Caption units.`);
-  return { kind: "units", ids };
-}
-
-function searchable(value: string): string {
-  return value.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{M}\p{N}]+/gu, "");
-}
-
-function phraseStart(
-  projection: ReturnType<typeof projectScript>,
-  timing: ReturnType<typeof createNarrativeLocalTiming>,
-  segmentId: string,
-  phrase: string,
-): ExactTemporalValue {
-  const query = searchable(phrase);
-  const tokens = projection.narrative.tokens.filter((token) => token.segmentId === segmentId);
-  for (let first = 0; first < tokens.length; first += 1) {
-    let joined = "";
-    for (let last = first; last < tokens.length && joined.length <= query.length; last += 1) {
-      joined += searchable(tokens[last]!.text);
-      if (joined !== query) continue;
-      return narrativeBoundaryTime(timing, tokens[first]!.startAnchorId);
-    }
-  }
-  throw new Error(`Script Segment ${segmentId} has no phrase ${JSON.stringify(phrase)}.`);
+  const segment = projection.narrative.segments.find((candidate) => candidate.id === segmentId);
+  assert(segment !== undefined, `Script has no Segment ${segmentId}.`);
+  const subset = captionUnitsForNarrativeSelection(
+    projection.caption.document,
+    projection.caption.binding,
+    projection.narrative,
+    {
+      id: `${segmentId}.all`,
+      startAnchorId: segment.startAnchorId,
+      endAnchorId: segment.endAnchorId,
+    },
+  );
+  return { kind: "units", ids: subset.unitIds };
 }
 
 function attachTranscript(
@@ -220,7 +197,8 @@ const warningStyle: CaptionStyle = {
 
 async function main(): Promise<void> {
   const source = await readFile(resolve(projectRoot, "story.script"), "utf8");
-  const projection = projectScript(parseScript("story.script", source), "ranking-debate");
+  const parsed = parseScript("story.script", source);
+  const projection = projectScript(parsed, "ranking-debate");
   const hiddenCue = cueContaining(projection.caption.document, "默认不显示");
   const warningCue = cueContaining(projection.caption.document, "稳定修改");
 
@@ -249,7 +227,9 @@ async function main(): Promise<void> {
     const transcriptFile = transcriptPath(turn.media);
     const raw = decodeTimedTranscript(await readFile(transcriptFile, "utf8"), transcriptFile);
     const alignment = alignNarrative(projection.narrative, segment, domain, raw);
-    const corrected = correctTimedTranscript(projection.narrative, segment, domain, raw);
+    const corrected = correctTimedTranscript(projection.narrative, segment, domain, raw, {
+      segmentText: scriptSegmentSpeech(parsed, turn.segment),
+    });
     await writeFile(transcriptFile, encodeTimedTranscript(corrected), "utf8");
     const attached = attachTranscript(asset, turn.media, domain);
     await writeFile(assetFile, serializeMediaAssetDocument(attached), "utf8");
@@ -317,11 +297,15 @@ async function main(): Promise<void> {
     }));
   }
 
-  const at = (segment: string, media: string, phrase: string) => addExactTemporalValues(
-    starts.get(media)!,
-    phraseStart(projection, timings.get(segment)!, segment, phrase),
-  );
-  const verdictAt = at("bob-verdict", "bob-video-2", "这局我服");
+  const at = (segment: string, media: string, momentId: string) => {
+    const moment = projection.moments.find((candidate) => candidate.id === momentId);
+    assert(moment !== undefined, `Script has no Moment ${momentId}.`);
+    return addExactTemporalValues(
+      starts.get(media)!,
+      momentTemporalValue(timings.get(segment)!, moment),
+    );
+  };
+  const verdictAt = at("bob-verdict", "bob-video-2", "verdict");
   const graphicsCommands: Parameters<typeof applyNleTransaction>[1]["commands"][number][] = [{
     kind: "item.add",
     track: "ranking",
@@ -341,10 +325,10 @@ async function main(): Promise<void> {
           { id: "B", label: "B", color: "#34d399" },
         ],
         entries: [
-          { id: "pretty", label: "漂亮画面", tier: "B", icon: "画", revealAt: at("bob-generation", "bob-video-1", "漂亮画面") },
-          { id: "stable", label: "稳定修改", tier: "A", icon: "改", revealAt: at("bob-generation", "bob-video-1", "稳定修改") },
-          { id: "timed", label: "按词编排", tier: "S", icon: "词", revealAt: at("alice-timeline", "alice-video-2", "时间线上") },
-          { id: "editable", label: "普通工程", tier: "S", icon: "剪", revealAt: at("bob-verdict", "bob-video-2", "普通工程") },
+          { id: "pretty", label: "漂亮画面", tier: "B", icon: "画", revealAt: at("bob-generation", "bob-video-1", "pretty") },
+          { id: "stable", label: "稳定修改", tier: "A", icon: "改", revealAt: at("bob-generation", "bob-video-1", "stable") },
+          { id: "timed", label: "按词编排", tier: "S", icon: "词", revealAt: at("alice-timeline", "alice-video-2", "timed") },
+          { id: "editable", label: "普通工程", tier: "S", icon: "剪", revealAt: at("bob-verdict", "bob-video-2", "editable") },
         ],
         revealFrames: 18,
       },

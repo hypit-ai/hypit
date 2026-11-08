@@ -9,9 +9,17 @@ import {
   type CaptionPresentation,
   type CaptionStyle,
 } from "@hypit/caption-basic";
-import { assertCaptionCuePayload, type CaptionDocument } from "@hypit/caption";
+import {
+  assertCaptionCuePayload,
+  captionCueText,
+  type CaptionDocument,
+} from "@hypit/caption";
 import type { Narrative, NarrativeSegmentRef } from "@hypit/narrative";
-import { projectNarrativeCaptionTiming, type NarrativeCaptionBinding } from "@hypit/narrative-caption";
+import {
+  captionUnitsForNarrativeSelection,
+  projectNarrativeCaptionTiming,
+  type NarrativeCaptionBinding,
+} from "@hypit/narrative-caption";
 import { alignNarrative } from "@hypit/narrative-speech-alignment";
 import { createNarrativeLocalTiming } from "@hypit/narrative-temporal";
 import {
@@ -51,15 +59,8 @@ const warningStyle: CaptionStyle = { id: "warning", family: "basic", parameters:
   karaoke: { mode: "trail", transition: "wipe", activeColor: "#fde047" },
 } };
 
-function cueText(document: CaptionDocument, cueId: string): string {
-  const cue = document.cues.find((candidate) => candidate.id === cueId)!;
-  const selected = new Set(cue.unitIds);
-  return document.words.filter((word) => selected.has(word.unitId))
-    .map((word) => `${word.separatorBefore}${word.text}`).join("");
-}
-
 function cueContaining(document: CaptionDocument, text: string): string {
-  const cue = document.cues.find((candidate) => cueText(document, candidate.id).includes(text));
+  const cue = document.cues.find((candidate) => captionCueText(document, candidate).includes(text));
   if (cue === undefined) throw new Error(`Example Script has no Cue containing ${text}.`);
   return cue.id;
 }
@@ -161,10 +162,12 @@ export async function buildCaptionMaterializationExample(): Promise<{
     const localTiming = createNarrativeLocalTiming(
       `${parsedSegment.id}:narrative-time`, narrativeId, domain, [alignment],
     );
-    const segmentTokens = new Set(narrative.tokens
-      .slice(excerpt.tokenStart, excerpt.tokenEndExclusive).map((token) => token.id));
-    const unitIds = binding.units.filter((unit) =>
-      unit.sourceTokenIds.every((tokenId) => segmentTokens.has(tokenId))).map((unit) => unit.unitId);
+    const narrativeSegment = narrative.segments.find((segment) => segment.id === excerpt.id)!;
+    const unitIds = captionUnitsForNarrativeSelection(document, binding, narrative, {
+      id: `${excerpt.id}.all`,
+      startAnchorId: narrativeSegment.startAnchorId,
+      endAnchorId: narrativeSegment.endAnchorId,
+    }).unitIds;
     const captionTiming = projectNarrativeCaptionTiming(document, binding, localTiming, {
       documentId: document.id,
       unitIds,
