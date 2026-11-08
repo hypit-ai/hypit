@@ -23,6 +23,7 @@ import {
   adoptBuildOutputInGenerationCanvas,
   openNodeGenerationCanvas,
   placeAcceptedBuildInGenerationCanvas,
+  placeBuildOutputInGenerationCanvas,
   readGenerationCanvasViewFile,
   writeGenerationCanvasViewFile,
 } from "../src/node/index.js";
@@ -156,6 +157,53 @@ test("the accepted receipt and placement must describe the same outputs", () => 
     build: "Build-A",
     outputs: ["image", "video"],
   }, [{ id: "result-a-image", output: "image", x: 0, y: 0 }]), /exactly once/u);
+});
+
+test("one exact output selected from History can be placed without copying Result state", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-generation-canvas-history-"));
+  try {
+    const canvasPath = join(directory, "storyboard.canvas.json");
+    const initial = viewWithGraphNodes();
+    await writeGenerationCanvasViewFile(canvasPath, initial);
+    const placed = await placeBuildOutputInGenerationCanvas({
+      canvasPath,
+      revision: initial.revision,
+      address: { build: "Build-History", output: "image" },
+      placement: { id: "history-image", x: 220, y: 420 },
+    });
+    const historyProduct = product("Build-History", "image", "image/png");
+    const observations = await observeGenerationCanvasBuildOutputs(placed, {
+      async readResult(build) {
+        assert.equal(build, "Build-History");
+        return {
+          format: "hypit.build-result@1",
+          id: build,
+          sourcePath: "storyboard.graph.json",
+          targets: ["image"],
+          outputs: { image: historyProduct },
+          outcome: "complete",
+          finishedAt: 1,
+        };
+      },
+    });
+    const saved = await readGenerationCanvasViewFile(canvasPath);
+
+    assert.deepEqual(saved, placed);
+    assert.deepEqual(saved.items.at(-1), {
+      id: "history-image",
+      subject: { kind: "build-output", build: "Build-History", output: "image" },
+      x: 220,
+      y: 420,
+    });
+    assert.deepEqual(observations, [{
+      build: "Build-History",
+      output: "image",
+      state: "ready",
+      product: historyProduct,
+    }]);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("the Node Host places an accepted receipt and reopens the complete scene", async () => {

@@ -5,6 +5,11 @@ export type {
   AcceptedGenerationCanvasBuild,
   GenerationCanvasBuildOutputPlacement,
 } from "./accepted-build.js";
+export { planGenerationCanvasBuildOutputPlacement } from "./build-output.js";
+export type {
+  GenerationCanvasBuildOutputAddress,
+  GenerationCanvasBuildOutputItemPlacement,
+} from "./build-output.js";
 export {
   generationCanvasBuildOutputKey,
   observeGenerationCanvasBuildOutputs,

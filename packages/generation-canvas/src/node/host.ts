@@ -22,6 +22,11 @@ import {
   type AcceptedGenerationCanvasBuild,
   type GenerationCanvasBuildOutputPlacement,
 } from "../accepted-build.js";
+import {
+  planGenerationCanvasBuildOutputPlacement,
+  type GenerationCanvasBuildOutputAddress,
+  type GenerationCanvasBuildOutputItemPlacement,
+} from "../build-output.js";
 import { planGenerationCanvasBuildOutputAdoption } from "../adoption.js";
 import {
   projectGenerationCanvas,
@@ -95,6 +100,25 @@ export async function placeAcceptedBuildInGenerationCanvas(input: {
   const next = applyGenerationCanvasTransaction(
     view,
     planAcceptedGenerationCanvasBuild(view, input.accepted, input.placements),
+  );
+  await writeGenerationCanvasViewFile(input.canvasPath, next);
+  return next;
+}
+
+/** Place one exact address selected by History without resolving or copying its Product. */
+export async function placeBuildOutputInGenerationCanvas(input: {
+  readonly canvasPath: string;
+  readonly revision: number;
+  readonly address: GenerationCanvasBuildOutputAddress;
+  readonly placement: GenerationCanvasBuildOutputItemPlacement;
+}): Promise<GenerationCanvasView> {
+  const view = await readGenerationCanvasViewFile(input.canvasPath);
+  if (view.revision !== input.revision) {
+    throw new GenerationCanvasRevisionConflict(input.revision, view.revision);
+  }
+  const next = applyGenerationCanvasTransaction(
+    view,
+    planGenerationCanvasBuildOutputPlacement(view, input.address, input.placement),
   );
   await writeGenerationCanvasViewFile(input.canvasPath, next);
   return next;

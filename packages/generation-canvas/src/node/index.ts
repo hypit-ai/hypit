@@ -3,6 +3,7 @@ export {
   adoptBuildOutputInGenerationCanvas,
   openNodeGenerationCanvas,
   placeAcceptedBuildInGenerationCanvas,
+  placeBuildOutputInGenerationCanvas,
 } from "./host.js";
 export type {
   AdoptedNodeGenerationCanvasBuildOutput,

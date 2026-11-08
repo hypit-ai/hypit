@@ -40,6 +40,11 @@ Removing a Build-output Item removes only its Canvas projection; History can pla
 Turning a completed output into reusable authored input remains an explicit Type-owned materialization followed by
 an ordinary Generation Graph transaction.
 
+`planGenerationCanvasBuildOutputPlacement()` and the Node Host's
+`placeBuildOutputInGenerationCanvas()` place one exact `{ build, output }` selected by History. They do not read
+History themselves, resolve a Product or search for a latest result. Observation resolves the card after it is
+placed, using the same active-Runtime-then-finished-History path as every other Build-output Item.
+
 `planGenerationCanvasBuildOutputAdoption()` coordinates that authoring gesture without interpreting the Product:
 the installed Product Type owner first materializes its ordinary author file and returns a dependency-free value
 node; the plan then adds that node, applies any explicit downstream rewiring, and replaces the Build-output Item
