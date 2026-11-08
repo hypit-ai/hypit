@@ -6,6 +6,7 @@ import type { MediaInspection } from "@hypit/media";
 import {
   localMediaImportSelection,
   mediaAssetIdFromFile,
+  mediaFileExtension,
   mediaTypeFromFile,
 } from "../src/asset-import.js";
 
@@ -60,6 +61,8 @@ test("still and audio-only imports establish their own natural authority", () =>
 
 test("file names provide explicit, inspectable defaults without hashes", () => {
   assert.equal(mediaTypeFromFile("camera.MOV"), "video/quicktime");
+  assert.equal(mediaFileExtension("video/quicktime"), ".mov");
   assert.equal(mediaAssetIdFromFile("/incoming/采访 01.mp4"), "media-01");
   assert.throws(() => mediaTypeFromFile("unknown.bin"), /provide mediaType/u);
+  assert.throws(() => mediaFileExtension("application/octet-stream"), /choose a local media filename/u);
 });

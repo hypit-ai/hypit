@@ -776,6 +776,9 @@ importers:
       '@hypit/loader':
         specifier: workspace:^0.0.0-dev
         version: link:../loader
+      '@hypit/product':
+        specifier: workspace:^0.0.0-dev
+        version: link:../product
       '@hypit/protocol':
         specifier: workspace:^0.0.0-dev
         version: link:../protocol
@@ -786,9 +789,6 @@ importers:
       '@hypit/author':
         specifier: workspace:*
         version: link:../author
-      '@hypit/product':
-        specifier: workspace:^0.0.0-dev
-        version: link:../product
 
   packages/gpt-image:
     dependencies:
@@ -1225,6 +1225,21 @@ importers:
       '@hypit/media-local':
         specifier: workspace:^0.3.0
         version: link:../media-local
+
+  packages/media-product-local:
+    dependencies:
+      '@hypit/media-asset':
+        specifier: workspace:^0.1.0
+        version: link:../media-asset
+      '@hypit/media-local':
+        specifier: workspace:^0.3.0
+        version: link:../media-local
+      '@hypit/product':
+        specifier: workspace:^0.0.0-dev
+        version: link:../product
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
 
   packages/mimo-speech:
     dependencies:
@@ -2436,6 +2451,9 @@ importers:
       '@hypit/media-asset':
         specifier: workspace:^0.1.0
         version: link:../media-asset
+      '@hypit/media-product-local':
+        specifier: workspace:^0.0.0-dev
+        version: link:../media-product-local
       '@hypit/mimo-speech':
         specifier: workspace:^0.3.0
         version: link:../mimo-speech

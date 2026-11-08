@@ -43,6 +43,7 @@
     "@hypit/raster-composition": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-asset": "workspace:^0.1.0",
+    "@hypit/media-product-local": "workspace:^0.0.0-dev",
     "@hypit/mimo-speech": "workspace:^0.3.0",
     "@hypit/minimax-h3": "workspace:^0.3.0",
     "@hypit/nano-banana": "workspace:^0.3.0",

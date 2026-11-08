@@ -17,6 +17,7 @@ export {
   importLocalMediaAsset,
   localMediaImportSelection,
   mediaAssetIdFromFile,
+  mediaFileExtension,
   mediaTypeFromFile,
 } from "./asset-import.js";
 export type {

@@ -83,9 +83,16 @@ as turning a completed media Product into an ordinary Media Asset and connecting
 The Generation Graph never searches Result history or follows a mutable "latest" value.
 
 Current generated-media Fragments expose their selected primary image, video or audio as an ordinary Blob
-output. The existing `hypit result export` plus `hypit media import` paths can therefore perform this handoff
-without teaching Media Asset about Builds. A future desktop action may compose those two public seams and one
-author transaction; it must not introduce a Product-backed Media node.
+output. The explicit local handoff is:
+
+```bash
+hypit generation materialize <build> --output <node> --to assets/take.media.json
+```
+
+`@hypit/media-product-local` opens exactly that Product, stages its bytes only for inspection, and reuses ordinary
+Media Asset import. The resulting manifest and copied media contain no Build or Product identity. A desktop Host
+may call the same function and then apply a separate author transaction; it must not introduce a Product-backed
+Media node.
 
 Canvas result cards are a projection of Build and Product observations. They may be displayed inside a
 generation node, stacked, hidden or restored without becoming recipe fields. A finished result becomes an

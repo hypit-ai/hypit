@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -214,6 +214,68 @@ test("generation run submits a fresh Build every time without rewriting the reci
     assert.equal(runtimeOpens, 2);
     assert.equal(calls.filter((call) => call === "build").length, 2);
     assert.deepEqual(await readGenerationGraphProjectFile(graphPath), project);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("generation materialize hands one exact Product to the application media seam", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-generation-materialize-"));
+  try {
+    const canonicalDirectory = await realpath(directory);
+    const calls: string[] = [];
+    const products = {
+      async readProduct() { return undefined; },
+      async resolveProduct() { return undefined; },
+    };
+    const services: GenerationGraphCliServices = {
+      packageRoot: directory,
+      async loadPackages() { throw new Error("materialization does not load graph packages"); },
+      async openRuntimeHost() { throw new Error("materialization does not open Runtime"); },
+      async openProjectResults() {
+        calls.push("results.open");
+        return {
+          location: { root: directory, historyPath: ".hypit/results", productsPath: ".hypit/products" },
+          history: {
+            read: async () => undefined,
+            browse: async () => ({ results: [] }),
+            openExecutionLog: async () => undefined,
+          },
+          products,
+          close() { calls.push("results.close"); },
+        };
+      },
+      async materializeMediaProduct(request, openedProducts) {
+        calls.push("materialize");
+        assert.equal(openedProducts, products);
+        assert.deepEqual(request, {
+          product: { publication: "bld_exact", name: "hero" },
+          assetPath: join(canonicalDirectory, "assets/hero.media.json"),
+        });
+        return {
+          assetPath: request.assetPath,
+          mediaPath: join(canonicalDirectory, "assets/hero.mp4"),
+        };
+      },
+    };
+    let output = "";
+    await runCliApplication(
+      ["generation", "materialize", "bld_exact", "--output", "hero", "--to", "assets/hero.media.json", "--json"],
+      { write(text) { output += text; } },
+      {
+        cwd: directory,
+        resolveProjectRoot: async () => directory,
+        commandModules: createGenerationGraphCliCommandModules(services),
+      },
+    );
+    assert.deepEqual(JSON.parse(output), {
+      format: "hypit.generation-media-materialization@1",
+      ok: true,
+      product: { publication: "bld_exact", name: "hero" },
+      asset: join(canonicalDirectory, "assets/hero.media.json"),
+      media: join(canonicalDirectory, "assets/hero.mp4"),
+    });
+    assert.deepEqual(calls, ["results.open", "materialize", "results.close"]);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

@@ -16,6 +16,7 @@
     "@hypit/cli": "workspace:^0.0.0-dev",
     "@hypit/generation-graph": "workspace:^0.0.0-dev",
     "@hypit/loader": "workspace:^0.0.0-dev",
+    "@hypit/product": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/workspace": "workspace:^0.0.0-dev"
   },

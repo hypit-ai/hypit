@@ -1,5 +1,6 @@
 import type { BuildCliServices } from "@hypit/build-cli";
 import type { GenerationGraphCliServices } from "@hypit/generation-graph-cli";
+import { materializeLocalMediaProduct } from "@hypit/media-product-local";
 import { productExporterForType, productExportersFromFacets } from "@hypit/product";
 import { loadNodePackageSelection } from "@hypit/loader/node";
 import { moduleKey, modulePackageAbi } from "@hypit/protocol";
@@ -128,6 +129,10 @@ export function createToolchainApplicationServices(
     resolveProjectRuntime: async (projectRoot) => await build.resolveProjectRuntime?.(projectRoot),
     openRuntimeHost: openToolchainLocalRuntime,
     openProjectResults: build.openProjectResults,
+    materializeMediaProduct: async (request, products) => await materializeLocalMediaProduct(
+      request,
+      { products },
+    ),
     loadPackages: async (request, root, loadOptions) =>
       await loadNodePackageSelection(request, root, loadOptions),
   };

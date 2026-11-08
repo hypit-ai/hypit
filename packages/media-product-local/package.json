@@ -1,0 +1,20 @@
+{
+  "name": "@hypit/media-product-local",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@hypit/media-asset": "workspace:^0.1.0",
+    "@hypit/media-local": "workspace:^0.3.0",
+    "@hypit/product": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev"
+  }
+}

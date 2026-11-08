@@ -18,6 +18,14 @@ import {
 
 import { inspectMediaFile } from "./execute.js";
 
+const mediaTypesByExtension: Readonly<Record<string, string>> = {
+  ".mp4": "video/mp4", ".m4v": "video/mp4", ".mov": "video/quicktime",
+  ".webm": "video/webm", ".mkv": "video/x-matroska",
+  ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
+  ".wav": "audio/wav", ".mp3": "audio/mpeg", ".m4a": "audio/mp4",
+  ".aac": "audio/aac", ".flac": "audio/flac", ".ogg": "audio/ogg",
+};
+
 export type LocalMediaImportSelection = {
   readonly videoStream?: number | false;
   readonly audioStream?: number | false;
@@ -42,16 +50,16 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 export function mediaTypeFromFile(path: string): string {
-  const types: Readonly<Record<string, string>> = {
-    ".mp4": "video/mp4", ".m4v": "video/mp4", ".mov": "video/quicktime",
-    ".webm": "video/webm", ".mkv": "video/x-matroska",
-    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
-    ".wav": "audio/wav", ".mp3": "audio/mpeg", ".m4a": "audio/mp4",
-    ".aac": "audio/aac", ".flac": "audio/flac", ".ogg": "audio/ogg",
-  };
-  const mediaType = types[extname(path).toLowerCase()];
+  const mediaType = mediaTypesByExtension[extname(path).toLowerCase()];
   assert(mediaType !== undefined, `Cannot infer a media type for ${path}; provide mediaType explicitly.`);
   return mediaType;
+}
+
+/** Canonical local filename extension for one media type supported by direct import. */
+export function mediaFileExtension(mediaType: string): string {
+  const entry = Object.entries(mediaTypesByExtension).find((item) => item[1] === mediaType);
+  assert(entry !== undefined, `Cannot choose a local media filename for ${mediaType}.`);
+  return entry[0];
 }
 
 export function mediaAssetIdFromFile(path: string): string {
