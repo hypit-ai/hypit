@@ -2291,25 +2291,6 @@ importers:
       '@hypit/narrative-caption':
         specifier: workspace:^0.1.1
         version: link:../narrative-caption
-    devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/kernel':
-        specifier: workspace:*
-        version: link:../kernel
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/speech-estimate':
-        specifier: workspace:*
-        version: link:../speech-estimate
-      '@hypit/text':
-        specifier: workspace:*
-        version: link:../text
 
   packages/seedance:
     dependencies:
@@ -2381,19 +2362,16 @@ importers:
 
   packages/speech-estimate:
     dependencies:
-      '@hypit/build-cli':
-        specifier: workspace:^0.1.0
-        version: link:../build-cli
       '@hypit/cli':
         specifier: workspace:^0.0.0-dev
         version: link:../cli
+      '@hypit/script':
+        specifier: workspace:^0.2.1
+        version: link:../script
       cmu-pronouncing-dictionary:
         specifier: 3.0.0
         version: 3.0.0
     devDependencies:
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
       '@hypit/text':
         specifier: workspace:*
         version: link:../text

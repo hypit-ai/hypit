@@ -9,15 +9,11 @@
     "./cli": "./src/cli.ts"
   },
   "dependencies": {
-    "@hypit/build-cli": "workspace:^0.1.0",
     "@hypit/cli": "workspace:^0.0.0-dev",
+    "@hypit/script": "workspace:^0.2.1",
     "cmu-pronouncing-dictionary": "3.0.0"
   },
-  "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
-  },
   "devDependencies": {
-    "@hypit/hypit": "workspace:*",
     "@hypit/text": "workspace:*"
   }
 }

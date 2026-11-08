@@ -1,8 +1,20 @@
-import type { SourceRange } from "@hypit/hypit/source";
-import type { CaptionDisplayWord } from "@hypit/caption";
-import type { Narrative, NarrativeMoment, NarrativeSegment, NarrativeSelection, NarrativeToken, NarrativeTurn } from "@hypit/narrative";
+import type { CaptionDisplayWord, CaptionDocument } from "@hypit/caption";
+import type { NarrativeCaptionBinding } from "@hypit/narrative-caption";
+import type {
+  Narrative,
+  NarrativeMoment,
+  NarrativeMomentRef,
+  NarrativeSegment,
+  NarrativeSegmentRef,
+  NarrativeSelection,
+  NarrativeSelectionRef,
+  NarrativeToken,
+  NarrativeTurn,
+} from "@hypit/narrative";
 
 export type { Narrative, SemanticAnchor } from "@hypit/narrative";
+
+export type SourceRange = { readonly start: number; readonly end: number };
 
 export type CaptionWordAttribute = CaptionDisplayWord["attributes"][number];
 
@@ -90,14 +102,25 @@ export type ParsedNarrative = Omit<
   readonly turns: readonly ParsedTurn[];
   readonly selections: readonly ParsedSelection[];
   readonly moments: readonly ParsedMoment[];
-  /** Script-private renderings used to emit independent public Text values. */
+  /** Script-private whole-file speech rendering used by explicit authoring queries. */
   readonly serializations: {
-    readonly dialogue: string;
     readonly speech: string;
   };
   readonly captionProjection: {
     readonly text: string;
     readonly regions: readonly ParsedCaptionRegion[];
     readonly breaks: readonly { readonly tokenIndex: number; readonly range: SourceRange }[];
+  };
+};
+
+/** Strongly typed, syntax-neutral facts projected from one Script file. */
+export type ScriptProjection = {
+  readonly narrative: Narrative;
+  readonly segments: readonly NarrativeSegmentRef[];
+  readonly selections: readonly NarrativeSelectionRef[];
+  readonly moments: readonly NarrativeMomentRef[];
+  readonly caption: {
+    readonly document: CaptionDocument;
+    readonly binding: NarrativeCaptionBinding;
   };
 };

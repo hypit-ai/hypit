@@ -25,10 +25,13 @@ Text slots, defaults and Recipe choices. A package's declaration vocabulary serv
 `hypit vocabulary @hypit/text --tag Render` describes assembly, and the selected model's vocabulary
 describes generation. Read the chosen template when its fixed text or a choice's exact wording matters.
 
-For an ordinary speaking passage, connect the Segment's `.dialogue` and this passage's action;
-the selected Recipe supplies recurring performance choices. For an image, bring Person, Shot and
-Setting direction from Craft. Keep reference responsibilities consistent with the actual media
-connected to the model. The owning package documents that order.
+For an ordinary speaking passage, the project program explicitly reads the selected Segment's
+pronunciation text with `scriptSegmentSpeech()`. If the model needs role-labelled dialogue, its
+adapter formats the Script projection's structured Turns; Script does not publish a generic
+`.dialogue` value. Connect that wording with this passage's action, while the selected Recipe
+supplies recurring performance choices. For an image, bring Person, Shot and Setting direction
+from Craft. Keep reference responsibilities consistent with the actual media connected to the
+model. The owning package documents that order.
 
 Fit includes assumptions as well as available knobs. A two-view conversation and a combined
 split-screen opening may need different prompt structures. Keep the useful Kit for passages it

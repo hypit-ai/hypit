@@ -72,11 +72,12 @@ one dominant reference. These are different sources of creative evidence.
 
 ## Keep one formal Script
 
-The spoken wording becomes authoritative only in the Author Source's `<script>`. During drafting, copy
-may live in `drafts/`; once adopted, move it into Source and stop maintaining a second full transcript
-in Brief or Treatment. Brief can preserve mandatory claims or exact user-supplied phrases. Treatment
-can describe what each passage must accomplish. Source owns the actual words, roles, Cues,
-Selections, and Moments.
+The spoken wording becomes authoritative only in the project's standalone `.script` file. During
+drafting, copy may live in `drafts/`; once adopted, move it into that file and stop maintaining a
+second full transcript in Brief or Treatment. Brief can preserve mandatory claims or exact
+user-supplied phrases. Treatment can describe what each passage must accomplish. Script owns the
+actual words, Roles, Cues, Selections, and Moments; prompts and NLE projects consume projections
+without embedding the Script file.
 
 ## Update the file that states the changed decision
 

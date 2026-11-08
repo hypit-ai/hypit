@@ -1,12 +1,8 @@
 import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { loadDiscoveredSourcePackages } from "@hypit/build-cli";
-import type { BuildCliServices } from "@hypit/build-cli";
 import type { CliApplicationContext, CliCommandModule, CliIo } from "@hypit/cli";
-import { sameType } from "@hypit/hypit/protocol";
-import type { TypedRecord } from "@hypit/hypit/protocol";
-import { sealText, textTypes } from "@hypit/hypit/text";
+import { parseScript, scriptSegmentSpeech } from "@hypit/script";
 
 import {
   countSpeechEstimateUnits,
@@ -15,11 +11,6 @@ import {
   resolveSpeechEstimateRate,
 } from "./program.js";
 import { speechEstimatePolicyFromAttributes } from "./policy.js";
-
-export type SpeechEstimateCliServices = Pick<
-  BuildCliServices,
-  "packageRoot" | "bootstrapPackages" | "createCompiler" | "discoverSourcePackages"
->;
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -32,7 +23,7 @@ type Parsed = {
 };
 
 function parse(argv: readonly string[]): Parsed {
-  const allowed = new Set(["--text", "--segment", "--language", "--pace", "--rate", "--rounding", "--padding", "--project"]);
+  const allowed = new Set(["--text", "--segment", "--language", "--pace", "--rate", "--rounding", "--padding"]);
   const positionals: string[] = [];
   const options = new Map<string, string>();
   let json = false;
@@ -62,36 +53,15 @@ async function textOrFile(value: string, cwd: string): Promise<string> {
 async function segmentSpeech(
   source: string,
   segment: string,
-  projectRoot: string,
-  services: SpeechEstimateCliServices,
 ): Promise<string> {
-  const loaded = await loadDiscoveredSourcePackages({ ...services, bootstrapPackages: [] }, {
-    source,
-    workspaceRoot: projectRoot,
-    packageRoot: projectRoot,
-    ...(services.packageRoot === undefined ? {} : { distributionPackageRoot: services.packageRoot }),
-  });
-  const compiler = services.createCompiler({
-    workspaceRoot: projectRoot,
-    packageRoot: projectRoot,
-    ...(services.packageRoot === undefined ? {} : { distributionPackageRoot: services.packageRoot }),
-    packageContributions: loaded.map((item) => item.contribution),
-  });
-  const workspace = await compiler.openEntry(source);
-  const compiled = await compiler.compileResolvedSource(workspace.entry, workspace);
-  const suffix = `.segment.${segment}.speech`;
-  const record = compiled.program.records.find((item: TypedRecord) =>
-    sameType(item.type, textTypes.text) && item.id.endsWith(suffix));
-  assert(record !== undefined, `${source} declares no Segment ${segment} with speech; Segments are named by the Script's <segment id>`);
-  const text = (record.value as { readonly value?: unknown } | null)?.value;
-  assert(typeof text === "string", `Segment ${segment} speech is not Text`);
-  return text;
+  const body = await readFile(source, "utf8");
+  return scriptSegmentSpeech(parseScript(source, body), segment);
 }
 
 export function writeEstimateHelp(io: CliIo): void {
   io.write("hypit estimate\nEstimate authored speech before choosing a literal duration. Pure local work.\n\n"
-    + "  hypit estimate <source.svml> --segment <id> [--language auto|en|zh|ja|es] [--pace slow|normal|fast | --rate <units/s>]\n"
-    + "                [--rounding none|round|ceil] [--padding <s>] [--project <directory>]\n"
+    + "  hypit estimate <story.script> --segment <id> [--language auto|en|zh|ja|es] [--pace slow|normal|fast | --rate <units/s>]\n"
+    + "                [--rounding none|round|ceil] [--padding <s>]\n"
     + "  hypit estimate --text <text|file> [same speech options]\n");
 }
 
@@ -99,7 +69,6 @@ export async function runEstimateCli(
   argv: readonly string[],
   io: CliIo,
   application: CliApplicationContext,
-  services: SpeechEstimateCliServices,
 ): Promise<void> {
   if (argv.includes("--help")) { writeEstimateHelp(io); return; }
   const parsed = parse(argv);
@@ -113,13 +82,9 @@ export async function runEstimateCli(
     where = { text: true };
   } else {
     assert(parsed.positionals.length === 1 && segment !== undefined,
-      "estimate takes either --text <text|file>, or a source .svml with --segment <id>");
+      "estimate takes either --text <text|file>, or a .script file with --segment <id>");
     const source = resolve(application.cwd, parsed.positionals[0]!);
-    const project = parsed.options.get("--project");
-    const projectRoot = await application.resolveProjectRoot(
-      project === undefined ? undefined : resolve(application.cwd, project),
-    );
-    text = await segmentSpeech(source, segment, projectRoot, services);
+    text = await segmentSpeech(source, segment);
     where = { source, segment };
   }
   const pace = parsed.options.get("--pace");
@@ -133,7 +98,7 @@ export async function runEstimateCli(
   }, "hypit estimate");
   const language = resolveSpeechEstimateLanguage(text, policy.language);
   const units = countSpeechEstimateUnits(text, language);
-  const seconds = estimateSpeechDuration(sealText(text), policy);
+  const seconds = estimateSpeechDuration({ value: text }, policy);
   const resolvedRate = resolveSpeechEstimateRate(policy, language);
   const view = { format: "hypit.speech-estimate@1", ...where, characters: text.length,
     units, language, policy, rate: resolvedRate, seconds };
@@ -144,15 +109,13 @@ export async function runEstimateCli(
     + "  Choose the request duration from this estimate, the intended performance, and the selected model's supported values.\n");
 }
 
-export function createSpeechEstimateCliCommandModules(
-  services: SpeechEstimateCliServices,
-): readonly CliCommandModule[] {
+export function createSpeechEstimateCliCommandModules(): readonly CliCommandModule[] {
   return [{
     format: "hypit.cli-command@1",
     id: "@hypit/speech-estimate",
     commands: ["estimate"],
     writeRootHelp(io) { io.write("\nSpeech estimation\n  estimate\n  hypit estimate --help for inputs and delivery options\n"); },
     writeHelp(_argv, io) { writeEstimateHelp(io); },
-    async run(argv, io, context) { await runEstimateCli(argv, io, context, services); },
+    async run(argv, io, context) { await runEstimateCli(argv, io, context); },
   }];
 }

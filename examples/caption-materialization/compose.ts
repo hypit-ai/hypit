@@ -22,13 +22,7 @@ import {
   serializeNleProject,
   type NleProject,
 } from "@hypit/nle";
-import {
-  captionDocument,
-  narrativeCaptionBinding,
-  narrativeSegmentExcerptValue,
-  narrativeValue,
-  parseScript,
-} from "@hypit/script";
+import { parseScript, projectScript } from "@hypit/script";
 import { timedTranscript } from "@hypit/timed-transcript";
 import {
   addExactTemporalValues,
@@ -124,9 +118,10 @@ export async function buildCaptionMaterializationExample(): Promise<{
   const scriptUrl = new URL("./story.script", import.meta.url);
   const parsed = parseScript(scriptUrl.pathname, await readFile(scriptUrl, "utf8"));
   const narrativeId = "story";
-  const narrative = narrativeValue(parsed, narrativeId) as unknown as Narrative;
-  const document = captionDocument(parsed, "story.caption", narrativeId);
-  const binding = narrativeCaptionBinding(parsed, document.id, narrativeId) as NarrativeCaptionBinding;
+  const script = projectScript(parsed, narrativeId);
+  const narrative: Narrative = script.narrative;
+  const document = script.caption.document;
+  const binding: NarrativeCaptionBinding = script.caption.binding;
   const resolvedPresentation = presentation(document);
 
   let project = addTracks(createNleProject({
@@ -138,7 +133,7 @@ export async function buildCaptionMaterializationExample(): Promise<{
   let programmeAt = at(0);
 
   for (const parsedSegment of parsed.segments) {
-    const excerpt = narrativeSegmentExcerptValue(parsedSegment, narrativeId) as unknown as NarrativeSegmentRef;
+    const excerpt: NarrativeSegmentRef = script.segments.find((segment) => segment.id === parsedSegment.id)!;
     const { duration, transcript } = transcriptForSegment(narrative, excerpt);
     const domain = sealLocalTemporalDomain({ id: `${parsedSegment.id}:media-time`, duration });
     const mediaId = `media:${parsedSegment.id}`;

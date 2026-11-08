@@ -11,7 +11,7 @@ deterministic spelling fallback), then applies optional padding and the selected
 authoritative: the estimator never invents how numbers, names or acronyms are pronounced.
 
 ```bash
-hypit estimate main.svml --segment opening --language en --pace normal
+hypit estimate story.script --segment opening --language en --pace normal
 hypit estimate --text "Video editing begins with meaning." --language en --pace normal --rounding ceil
 ```
 
@@ -52,8 +52,8 @@ Japanese and Spanish presets are inherited authoring heuristics rather than valu
 cited studies. Use an explicit numeric `--rate` when the production has better delivery evidence.
 
 ```bash
-hypit estimate main.svml --segment opening --language zh --pace fast --rounding round
-hypit estimate main.svml --segment opening --language zh --rate 6 --rounding none
+hypit estimate story.script --segment opening --language zh --pace fast --rounding round
+hypit estimate story.script --segment opening --language zh --rate 6 --rounding none
 ```
 
 `seconds = pronunciation units / rate + padding`, followed by rounding. Add `--padding` for extra
@@ -75,6 +75,10 @@ local estimation API. CLI strings may be decoded with `speechEstimatePolicyFromA
 The policy and estimate never become AuthorGraph Records, Producers or dependencies: the author
 uses the answer before writing the literal request duration. Actual word positions come from the
 performed media when downstream relationships need those positions.
+
+With `--segment`, the command reads the standalone `.script` file directly and uses that Segment's
+pronunciation projection, including the speech side of Dual Text. It does not compile an SVML Source,
+resolve a project, or open a Runtime.
 
 ```ts
 import { estimateSpeechDuration, sealSpeechEstimatePolicy } from "@hypit/speech-estimate";

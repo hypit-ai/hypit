@@ -5,8 +5,7 @@ that picture and sound should follow. It also covers estimated delivery duration
 [Script syntax](../production/script-syntax.md) owns the authoring forms;
 [Timing](../production/timing.md) owns their projection into the work.
 
-[Source syntax](../production/source-syntax.md) covers the surrounding imports, references, Recipes
-and Builds; [Tracks](../production/tracks.md) covers the consumers of Script meaning.
+[Tracks](../production/tracks.md) covers consumers after Script meaning has been located and materialized.
 [Timeline authoring](../production/timeline.md) places local temporal domains, allows gaps and overlaps, and declares
 the complete work, including pure MG with no Script.
 [Media preparation](../production/media.md) explains connecting actual footage to a Segment, and
@@ -14,16 +13,17 @@ the complete work, including pure MG with no Script.
 
 ## Script is the target's sole verbal authority
 
-`<script>` contains the words the target video will say. It contains no reference timecodes, media,
+The standalone `.script` file contains the words the target video will say. It contains no reference timecodes, media,
 visual Style parameters, prompts, or provider decisions. Semantic word attributes such as
 `useful{emphasis}` can identify a word's role for a Caption family. Brief may preserve required claims and Treatment may describe
-the purpose of a passage, but the adopted wording appears in Source only once.
+the purpose of a passage, but the adopted wording appears in Script only once.
 
 Choose Script structure from the thought being expressed and the performance carrying it:
 
 - a **Segment** groups a performable passage around its thought, delivery and action; alignment can
   connect accepted media to that passage when downstream timing needs it;
-- a **Role Cue** assigns a spoken turn to a performer and carries that label into the model's dialogue;
+- a **Role Cue** assigns a spoken turn to a performer; a model adapter may format structured Turns
+  when that model needs role-labelled dialogue;
 - **Dual Text** gives one authored unit separate display and pronunciation text;
 - `||` says that one on-screen **Caption Cue** hands off to the next after a complete Alignment Unit;
 - a **word attribute** gives a Caption family an authored role on one displayed word;
@@ -32,22 +32,21 @@ Choose Script structure from the thought being expressed and the performance car
 - a **Moment** names an event such as an answer or verdict, where graphics, sound or effects can
   respond together. The component decides how the resulting state continues.
 
-```svml
-<script id="story">
-  <hook>
-    <HOST> @{claim!} I made the @{proof}<API | A P I> || work overnight.@{/proof}
-  </hook>
-</script>
+```script
+<hook>
+  <HOST> @{claim!} I made the @{proof}<API | A P I> || work overnight.@{/proof}
+</hook>
 ```
 
 Here the viewer reads `API` while the performance receives `A P I`. The pair is one indivisible
 Alignment Unit. `||` ends one on-screen Caption Cue after that unit and lets the next Cue begin with
 `work`; `proof` remains one semantic range, and `claim` is a semantic point that other layers can use.
 
-A Cue is a timed block of displayed speech, not a line of text. Its Caption family and Recipe may
-wrap that block over one or more lines, reveal or highlight its words, and give the block an entrance,
-exit or handoff. Segment boundaries and Role turns already separate Cues. Caption Use windows can change a
-Style midway through a Cue while preserving its content and original word times.
+A Cue is a timed block of displayed speech, not a line of text. Its Caption family may wrap that
+block over one or more lines, interpret word attributes as Cue-local visual roles, reveal or
+highlight its words, and give the block an entrance, exit or handoff. Segment boundaries and Role
+turns already separate Cues. Presentation rules may choose another treatment for a complete Cue
+without changing its content or original word times.
 Use `||` when the same Segment, turn and Style still needs another deliberate reading handoff. The
 [Caption craft](../playbooks/craft/captions.md#design-cue-rhythm-with-the-caption-system) owns how the
 picture, language, family and Recipe shape that decision.
@@ -69,7 +68,7 @@ retaining the user's chosen display spelling.
 ### Choose the sound the spelling should carry
 
 These examples illustrate authored pronunciation choices, not generation results verified for every
-model. The spoken column is the literal text supplied through `.speech` or inside `.dialogue`:
+model. The spoken column is the literal pronunciation returned by an explicit Segment speech query:
 
 | Intended reading | Script fragment | Caption displays | Spoken text |
 | --- | --- | --- | --- |
@@ -94,21 +93,20 @@ belong in performance direction when needed, not among the words the Script asks
 
 ### Carry the chosen reading through the work
 
-```svml
-<script id="story">
-  <opening>
-    <HOST> This app connects through an <API | A P I>.
-  </opening>
-  <closing>
-    <HOST> The same <API | A P I> works here too.
-  </closing>
-</script>
+```script
+<opening>
+  <HOST> This app connects through an <API | A P I>.
+</opening>
+<closing>
+  <HOST> The same <API | A P I> works here too.
+</closing>
 ```
 
 Each pair applies to that occurrence. Carry the chosen spoken form into every occurrence of the
 name, including other Segments, so separately generated performances receive the same direction.
-The right-hand wording reaches the model through the Segment's `.dialogue`; Caption keeps the
-display spelling. Settle these readings before estimating the Script's duration and requesting its performance.
+Caption keeps the display spelling. When a concrete prompt deliberately reuses Script wording, the project
+program explicitly queries that Segment's speech and the model adapter formats any Role turns it needs.
+Settle these readings before estimating the Script's duration and requesting its performance.
 
 The same distinction helps Chinese copy express numbers and names clearly. For example,
 `今年<2026|二零二六>年` displays the year compactly while specifying how it is said;
@@ -120,19 +118,14 @@ the displayed Script.
 
 ## Choose performable passages
 
-Supply the Segment's `.dialogue` to the speaking prompt; it includes Role labels and the chosen
-pronunciation. `.speech` supplies pronunciation without Role labels for duration estimation or speech-only
-requests. The Caption view preserves the display wording. These are projections of one Script,
-so revising the words does not require maintaining another copy in a prompt or subtitle file.
-[Script projections](../production/script-syntax.md#use-the-scripts-deliberate-projections) shows the
-references and a two-speaker example.
+The AIGC node owns the prompt actually sent to its model. When that prompt should use the Script's adopted
+wording, query the chosen Segment explicitly; do not publish every Segment as an implicit graph Text value.
+The Caption projection separately preserves display wording, Cue grouping and local attributes.
 
 Script also represents passages without speech:
 
-```svml
-<script id="story">
-  <empty></empty>
-</script>
+```script
+<empty></empty>
 ```
 
 `empty` is an ordinary Segment name; a name such as `product-detail` can express the passage's role.
@@ -189,9 +182,9 @@ speaker or delivery.
 estimates how many seconds they need at the chosen language and pace, using local computation:
 
 ```bash
-hypit estimate path/to/source.svml --segment opening --language en --pace normal
+hypit estimate path/to/story.script --segment opening --language en --pace normal
 hypit estimate --text "You expect me to type every coffee?" --language en --pace normal --rounding ceil
-hypit estimate path/to/source.svml --segment opening --language zh --pace fast --rounding round
+hypit estimate path/to/story.script --segment opening --language zh --pace fast --rounding round
 ```
 
 Choose `--pace slow|normal|fast` from the intended delivery: conversational explanation may suit
@@ -234,20 +227,19 @@ Speech-rate estimation has no role there; the resulting media still determines i
 ## Bind meaning to Script identities
 
 For a picture, Caption treatment, MG state, sound, or effect that belongs to spoken meaning, author a
-Selection or Moment, reveal it through an explicit Narrative Projection declaration, and pass the
-resulting named Window or Instant to the consumer. Use a direct named time declaration for genuinely
-clock-based or speechless design.
+Selection or Moment. A project program locates it through the accepted media's Narrative timing and writes
+direct NLE values in one transaction. Use direct NLE time for genuinely clock-based or speechless design.
 
 Choose an anchor by the event it names, including which side owns a pause. For adjacent B-roll,
 one Selection can end where the next begins; for a held reaction, a range can include the silence
-before the next word. [Marker affinities](../production/script-syntax.md#bind-meaning-to-script-identities)
+before the next word. [Marker affinities](../production/script-syntax.md#semantic-locations-and-pause-ownership)
 express these choices through word and structural boundaries. [Timing](../production/timing.md)
 explains projecting those identities into named Instants or Windows, adding deliberate offsets,
 and what a later author edit changes.
 
 Reference archives keep original seconds and explain which original words or content events an item
-serves. The target Source names the intended relation against the target Script. After the target's
-actual audio is aligned, the Timeline supplies its frames. Do not copy a reference timestamp into
+serves. The target Script names the intended relation. After the target's actual audio is aligned, the
+materializer supplies exact Programme time. Do not copy a reference timestamp into
 the target or preserve an incidental lead/lag unless that offset itself is part of the design.
 
 ## Connect reference understanding to audiovisual composition

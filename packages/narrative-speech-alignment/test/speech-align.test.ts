@@ -22,7 +22,7 @@ type WordFixture = {
 };
 
 function parseScript(sourceName: string, source: string): Narrative {
-  return narrativeValue(parseScriptSource(sourceName, source), "test-narrative") as unknown as Narrative;
+  return narrativeValue(parseScriptSource(sourceName, source), "test-narrative");
 }
 
 function alignmentWord(word: WordFixture): { readonly text: string } {

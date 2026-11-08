@@ -1,19 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { captionDocument, narrativeCaptionBinding, formatScript, narrativeDialogueTextValue, narrativeSpeechTextValue, narrativeValue, parseScript } from "@hypit/script";
-import { assertNarrativeIdentity, narrativeAnchorTokenBoundary, narrativeSelectionTokenRange,
-  narrativeTokensForSelection, narrativeTypes } from "@hypit/narrative";
-import type { Narrative, NarrativeSelectionRef } from "@hypit/narrative";
+import { captionDocument, narrativeCaptionBinding, formatScript, narrativeValue, parseScript, scriptSegmentSpeech } from "@hypit/script";
+import { narrativeAnchorTokenBoundary, narrativeSelectionTokenRange, narrativeTokensForSelection } from "@hypit/narrative";
+import type { NarrativeSelectionRef } from "@hypit/narrative";
 import { captionUnitsForNarrativeSelection } from "@hypit/narrative-caption";
-import { countSpeechEstimateUnits } from "@hypit/speech-estimate";
-import type { Text } from "@hypit/text";
 
 const body = `<intro><HOST>Try @{brand} <hypit|Hai-Pit> @{/brand} today. ||</intro>
 <gap/>
 <closing><HOST>现在 @{name} <声工坊|voice workshop> @{/name} 好用。<|indeed></closing>`;
 
 function authored() {
-  return narrativeValue(parseScript("views.svml", body), "story") as unknown as Narrative;
+  return narrativeValue(parseScript("views.svml", body), "story");
 }
 
 test("formatting takes Role Cue boundaries from parsed source, including Unicode roles", () => {
@@ -32,7 +29,7 @@ test("formatting takes Role Cue boundaries from parsed source, including Unicode
 
 test("shared text permits semantic markers without changing display; empty groups still fail", () => {
   const parsed = parseScript("shared", '<intro><HOST><组@{part}件@{/part}化|></intro>');
-  assert.equal(parsed.serializations.speech, "组件化");
+  assert.equal(scriptSegmentSpeech(parsed, "intro"), "组件化");
   assert.equal(parsed.captionProjection.text, "组件化");
   assert.equal(parsed.selections[0]!.startAnchorId, parsed.tokens[1]!.startAnchorId);
   assert.equal(narrativeCaptionBinding(parsed, "caption", "story").units[0]!.sourceTokenIds.length, 3);

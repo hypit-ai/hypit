@@ -1,8 +1,14 @@
-import { canonicalStringify, compareCodeUnits } from "@hypit/hypit/protocol";
-import type { SourceRange } from "@hypit/hypit/source";
 import { captionDocument, narrativeValue } from "./narrative.js";
 import { parseScript } from "./parser.js";
-import type { Affinity, ParsedNarrative, SemanticAnchor } from "./types.js";
+import type { Affinity, ParsedNarrative, SemanticAnchor, SourceRange } from "./types.js";
+
+function compareCodeUnits(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function semanticString(value: unknown): string {
+  return JSON.stringify(value);
+}
 
 export type ScriptAnchorEditSite = {
   readonly anchorId: string;
@@ -128,18 +134,17 @@ function rewrite(input: AdjustmentInput, markers: readonly NamedAnchor[]): strin
   const next = applyEdits(base, insertions);
   const reparsed = parseScript(input.sourceName, next, origin);
   const actual = namedAnchors(reparsed);
-  if (canonicalStringify(actual) !== canonicalStringify(markers)) {
+  if (semanticString(actual) !== semanticString(markers)) {
     throw new Error("Script marker adjustment did not preserve the requested semantic bindings.");
   }
   // Compare public content, not source offsets or marker-induced parser atom boundaries.
   const content = (value: ParsedNarrative) => ({
-    ...narrativeValue(value, "comparison") as Record<string, unknown>, selections: [], moments: [],
+    ...narrativeValue(value, "comparison"), selections: [], moments: [],
     caption: captionDocument(value, "caption", "comparison"),
     speech: value.serializations.speech,
-    dialogue: value.serializations.dialogue,
     display: value.captionProjection.text,
   });
-  if (canonicalStringify(content(input.parsed)) !== canonicalStringify(content(reparsed))) {
+  if (semanticString(content(input.parsed)) !== semanticString(content(reparsed))) {
     throw new Error("Script marker adjustment changed authored content.");
   }
   return next;

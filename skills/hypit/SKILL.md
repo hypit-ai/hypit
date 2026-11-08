@@ -273,7 +273,7 @@ practical, revisit that choice and carry the improvement into the work and its n
 | defining the target: what the user asked for, and what the new piece will be | `references/creation/brief.md` |
 | reshaping a reference while changing a person, object, world, performance, Script or sound; combining references | `references/creation/transformations.md` |
 | choosing wording, pronunciation, performable passages, semantic relationships or measured delivery | `references/creation/script-and-time.md` |
-| writing `<script>`: current syntax, display/speech, spaces, grouping, Roles, authored Cues, attributes or marker affinities | `references/production/script-syntax.md` |
+| writing a standalone `.script` file: display/speech, spaces, grouping, Roles, authored Cues, attributes or marker affinities | `references/production/script-syntax.md` |
 | placing a component in time: semantic bindings, authored clock positions, offsets, durations or what a timeline edit changes | `references/production/timing.md` |
 | project layout, picking work back up, or handing an editable production to someone else | `references/creation/project-files.md` |
 | directing a generated person, setting, product, B-roll image, camera view, visual reference or image prompt | `references/playbooks/craft/image-direction.md` |

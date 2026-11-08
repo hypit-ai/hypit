@@ -11,23 +11,6 @@
     "dist",
     "README.md"
   ],
-  "hypit": {
-    "activation": "./src/activation.ts"
-  },
-  "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
-  },
-  "devDependencies": {
-    "@hypit/hypit": "workspace:*",
-    "@hypit/caption": "workspace:*",
-    "@hypit/kernel": "workspace:*",
-    "@hypit/speech-estimate": "workspace:*",
-    "@hypit/markup": "workspace:*",
-    "@hypit/narrative": "workspace:*",
-    "@hypit/narrative-caption": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/text": "workspace:*"
-  },
   "dependencies": {
     "@hypit/caption": "workspace:^0.1.1",
     "@hypit/narrative": "workspace:^0.1.1",

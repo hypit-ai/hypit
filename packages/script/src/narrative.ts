@@ -1,10 +1,13 @@
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { CanonicalValue } from "@hypit/hypit/protocol";
 import type { CaptionCue, CaptionDocument, CaptionDisplayWord, CaptionUnit } from "@hypit/caption";
 import type { NarrativeCaptionBinding } from "@hypit/narrative-caption";
-import { sealText } from "@hypit/hypit/text";
+import type {
+  Narrative,
+  NarrativeMomentRef,
+  NarrativeSegmentRef,
+  NarrativeSelectionRef,
+} from "@hypit/narrative";
 
-import type { ParsedCaptionRegion, ParsedNarrative } from "./types.js";
+import type { ParsedCaptionRegion, ParsedNarrative, ScriptProjection } from "./types.js";
 import { cleanProjection, displaySurfaces, joinProjection, lexicalCount } from "./lexical.js";
 
 function turnForRegion(parsed: ParsedNarrative, region: ParsedCaptionRegion): ParsedNarrative["turns"][number] {
@@ -142,74 +145,64 @@ export function narrativeCaptionBinding(
   return projectCaption(parsed, documentId, narrativeId, bindingId).binding;
 }
 
-export function captionDocumentValue(parsed: ParsedNarrative, id: string, narrativeId: string): CanonicalValue {
-  return canonicalize(captionDocument(parsed, id, narrativeId));
-}
-
-function segmentSerializations(segment: ParsedNarrative["segments"][number]): {
-  readonly dialogue: string;
-  readonly speech: string;
-} {
+function segmentSpeech(segment: ParsedNarrative["segments"][number]): string {
   const speechTurns: string[] = [];
-  const dialogue: string[] = [];
-  let role: string | undefined;
   let turn: string[] = [];
   const flush = (): void => {
     const body = joinProjection(turn);
-    if (body) {
-      dialogue.push(role === undefined ? body : `${role}: ${body}`);
-      speechTurns.push(body);
-    }
+    if (body) speechTurns.push(body);
     turn = [];
   };
   for (const atom of segment.atoms) {
     if (atom.kind === "role") {
       flush();
-      role = atom.label;
       continue;
     }
     turn.push(atom.speech);
   }
   flush();
-  return { dialogue: dialogue.join("\n"), speech: cleanProjection(speechTurns.join(" ")) };
+  return cleanProjection(speechTurns.join(" "));
 }
 
-export function narrativeSegmentExcerptValue(
+export function narrativeSegmentRef(
   segment: ParsedNarrative["segments"][number],
   narrativeId: string,
-): CanonicalValue {
-  return canonicalize({
+): NarrativeSegmentRef {
+  return {
     kind: "segment",
     narrativeId,
     id: segment.id,
     tokenStart: segment.tokenStart,
     tokenEndExclusive: segment.tokenEndExclusive,
-  });
+  };
 }
 
-export function narrativeDialogueTextValue(segment: ParsedNarrative["segments"][number]): CanonicalValue {
-  return sealText(segmentSerializations(segment).dialogue) as unknown as CanonicalValue;
+export function scriptSegmentSpeech(parsed: ParsedNarrative, segmentId: string): string {
+  const segment = parsed.segments.find((candidate) => candidate.id === segmentId);
+  if (segment === undefined) throw new Error(`Script has no Segment ${segmentId}.`);
+  const speech = segmentSpeech(segment);
+  if (speech.length === 0) throw new Error(`Script Segment ${segmentId} has no speech.`);
+  return speech;
 }
 
-export function narrativeSpeechTextValue(segment: ParsedNarrative["segments"][number]): CanonicalValue {
-  return sealText(segmentSerializations(segment).speech) as unknown as CanonicalValue;
-}
-
-export function narrativeSelectionValue(selection: ParsedNarrative["selections"][number], narrativeId: string): CanonicalValue {
-  return canonicalize({
+export function narrativeSelectionRef(
+  selection: ParsedNarrative["selections"][number],
+  narrativeId: string,
+): NarrativeSelectionRef {
+  return {
     narrativeId,
     id: selection.id,
     startAnchorId: selection.open.boundary.anchorId,
     endAnchorId: selection.close.boundary.anchorId,
-  });
+  };
 }
 
-export function narrativeMomentValue(moment: ParsedNarrative["moments"][number], narrativeId: string): CanonicalValue {
-  return canonicalize({ narrativeId, id: moment.id, anchorId: moment.boundary.anchorId });
+export function narrativeMomentRef(moment: ParsedNarrative["moments"][number], narrativeId: string): NarrativeMomentRef {
+  return { narrativeId, id: moment.id, anchorId: moment.boundary.anchorId };
 }
 
-export function narrativeValue(parsed: ParsedNarrative, id: string): CanonicalValue {
-  return canonicalize({
+export function narrativeValue(parsed: ParsedNarrative, id: string): Narrative {
+  return {
     id,
     segments: parsed.segments.map((segment) => ({
       id: segment.id,
@@ -239,21 +232,30 @@ export function narrativeValue(parsed: ParsedNarrative, id: string): CanonicalVa
       endAnchorId: selection.close.boundary.anchorId,
     })),
     moments: parsed.moments.map((moment) => ({ id: moment.id, anchorId: moment.boundary.anchorId })),
-    anchors: parsed.anchors.map((anchor) => ({
-      id: anchor.id,
-      kind: anchor.kind,
-      ...("segmentId" in anchor ? { segmentId: anchor.segmentId } : {}),
-      ...("tokenId" in anchor && anchor.tokenId !== undefined ? { tokenId: anchor.tokenId } : {}),
-    })),
-  });
+    anchors: parsed.anchors.map((anchor) => structuredClone(anchor)),
+  };
+}
+
+/**
+ * Project one standalone Script into the typed facts used by alignment, Caption and project materializers.
+ * No graph Records or model-oriented dialogue strings are published implicitly.
+ */
+export function projectScript(parsed: ParsedNarrative, id: string): ScriptProjection {
+  if (!/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(id)) throw new Error(`Script id ${id} is invalid.`);
+  const documentId = `${id}.caption`;
+  const narrative = narrativeValue(parsed, id);
+  const projectedCaption = projectCaption(parsed, documentId, id, `${id}.caption-binding`);
+  return {
+    narrative,
+    segments: parsed.segments.map((segment) => narrativeSegmentRef(segment, id)),
+    selections: parsed.selections.map((selection) => narrativeSelectionRef(selection, id)),
+    moments: parsed.moments.map((moment) => narrativeMomentRef(moment, id)),
+    caption: projectedCaption,
+  };
 }
 
 export function serializeSpeech(parsed: ParsedNarrative): string {
   return parsed.serializations.speech;
-}
-
-export function serializeDialogue(parsed: ParsedNarrative): string {
-  return parsed.serializations.dialogue;
 }
 
 export function serializeCaption(parsed: ParsedNarrative): string {

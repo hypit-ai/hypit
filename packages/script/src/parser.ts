@@ -1,6 +1,4 @@
 
-import { compareCodeUnits } from "@hypit/hypit/protocol";
-
 import { ScriptSyntaxError } from "./error.js";
 import {
   cleanProjection,
@@ -46,6 +44,10 @@ const ROLE_LABEL = /^[\p{L}\p{M}\p{N}_](?:[\p{L}\p{M}\p{N}_. -]{0,30}[\p{L}\p{M}
 const RESERVED_SEGMENT_IDS = new Set(["script"]);
 const ATTRIBUTE_NAME = /^[a-z][a-z0-9_-]{0,63}$/u;
 const ATTRIBUTE_VALUE = /^[A-Za-z0-9_.:-]+$/u;
+
+function compareCodeUnits(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
 
 /** A marker's structural position before its affinity picks one anchor. */
 type RawMarkerBoundary = { -readonly [K in keyof Omit<MarkerBoundary, "anchorId">]: Omit<MarkerBoundary, "anchorId">[K] };
@@ -693,7 +695,6 @@ export function parseScript(
 
   const speechSegments: string[] = [];
   const captionSegments: string[] = [];
-  const dialogueTurns: string[] = [];
   const turns: ParsedTurn[] = [];
   for (const segment of segments) {
     const speechTurnBodies: string[] = [];
@@ -711,10 +712,7 @@ export function parseScript(
       if (activeRole && !body) {
         fail("SCRIPT_ROLE_EMPTY", `Role Cue <${activeRole.label}> is not followed by spoken content.`, activeRole.start - sourceOffset);
       }
-      if (body) {
-        dialogueTurns.push(activeRole ? `${activeRole.label}: ${body}` : body);
-        speechTurnBodies.push(body);
-      }
+      if (body) speechTurnBodies.push(body);
       const captionBody = joinProjection(captionTurnParts);
       if (captionBody) captionTurnBodies.push(captionBody);
       if (turnTokenStart !== undefined && turnTokenEndExclusive !== undefined) {
@@ -846,7 +844,6 @@ export function parseScript(
     },
     anchors,
     serializations: {
-      dialogue: dialogueTurns.join("\n"),
       speech: speechSegments.join("\n"),
     },
   };

@@ -50,7 +50,7 @@ await runNodeCli(args, async (argv, io) => await runInstalledCliApplication(argv
     ...createLocalMediaCliCommandModules(),
     ...createLocalNleCliCommandModules({ distributionPackageRoot: distributionRoot }),
     ...createToolchainCliCommandModules({ distributionPackageRoot: distributionRoot }),
-    ...createSpeechEstimateCliCommandModules(toolchainServices.build),
+    ...createSpeechEstimateCliCommandModules(),
     ...createWhisperXCliCommandModules(toolchainServices.build),
   ],
   launcher: fileURLToPath(import.meta.url),

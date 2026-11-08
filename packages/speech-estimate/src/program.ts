@@ -1,4 +1,3 @@
-import type { Text } from "@hypit/hypit/text";
 import { dictionary as cmuPronouncingDictionary } from "cmu-pronouncing-dictionary";
 
 import type {
@@ -7,6 +6,8 @@ import type {
   SpeechEstimatePace,
   SpeechEstimatePolicy,
 } from "./types.js";
+
+export type SpeechText = { readonly value: string };
 
 const PACE_RATE: Readonly<Record<
   ResolvedSpeechEstimateLanguage,
@@ -154,7 +155,7 @@ export function resolveSpeechEstimateRate(
   return policy.rate ?? PACE_RATE[language][policy.pace];
 }
 
-function assertSpeechText(value: Text): void {
+function assertSpeechText(value: SpeechText): void {
   if (
     value.value.trim().length === 0
   ) {
@@ -169,7 +170,7 @@ function rounded(value: number, mode: SpeechEstimatePolicy["rounding"]): number 
 }
 
 export function estimateSpeechDuration(
-  text: Text,
+  text: SpeechText,
   policy: SpeechEstimatePolicy,
 ): number {
   assertSpeechText(text);

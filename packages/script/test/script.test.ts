@@ -9,9 +9,10 @@ import {
   narrativeCaptionBinding,
   narrativeValue,
   parseScript,
+  projectScript,
   serializeCaption,
-  serializeDialogue,
   serializeSpeech,
+  scriptSegmentSpeech,
 } from "@hypit/script";
 
 test("Selection source edits relocate markers by 2M + 2N Anchor identity", () => {
@@ -70,19 +71,21 @@ test("Moment source edits relocate one marker to an exact semantic Anchor", () =
   assert.deepEqual(parsed.tokens.map((token) => token.text), ["alpha", "beta", "gamma"]);
 });
 
-test("Script keeps speech, dialogue and CaptionDocument as separate projections", () => {
+test("Script projects typed Narrative and Caption facts without publishing model dialogue", () => {
   const parsed = parseScript("rich.svml", "<answer><BOB>I <laughed | laughed my ass off> there.</answer>");
   assert.equal(serializeSpeech(parsed), "I laughed my ass off there.");
-  assert.equal(serializeDialogue(parsed), "BOB: I laughed my ass off there.");
+  assert.equal(scriptSegmentSpeech(parsed, "answer"), "I laughed my ass off there.");
   assert.equal(serializeCaption(parsed), "I laughed there.");
-  const document = captionDocument(parsed, "story.caption", "story");
+  const projected = projectScript(parsed, "story");
+  const document = projected.caption.document;
   assert.equal(document.units.length, 3);
   assert.equal(document.units[1]!.wordIds.length, 1);
-  assert.equal(narrativeCaptionBinding(parsed, "story.caption", "story").units[1]!.sourceTokenIds.length, 4);
+  assert.equal(projected.caption.binding.units[1]!.sourceTokenIds.length, 4);
   assert.equal(document.cues.length, 1);
   assert.deepEqual(document.cues[0]!.unitIds, document.units.map((unit) => unit.id));
-  assert.equal((narrativeValue(parsed, "story") as { anchors: unknown[] }).anchors.length,
+  assert.equal(projected.narrative.anchors.length,
     2 * parsed.tokens.length + 2 * parsed.segments.length);
+  assert.deepEqual(projected.segments.map((segment) => segment.id), ["answer"]);
 });
 
 test("Dual Text binds several display Words through one Unit to several Narrative Tokens", () => {

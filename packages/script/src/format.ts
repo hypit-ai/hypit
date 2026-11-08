@@ -1,5 +1,3 @@
-import { canonicalStringify } from "@hypit/hypit/protocol";
-
 import { ScriptSyntaxError } from "./error.js";
 import { narrativeValue } from "./narrative.js";
 import { parseScript } from "./parser.js";
@@ -36,7 +34,7 @@ function formatOutside(raw: string): string[] {
     .filter(Boolean);
 }
 
-/** Formats a Script body, not the outer `<script>` element. */
+/** Formats the body stored in a standalone Script file. */
 export function formatScript(sourceName: string, source: string): string {
   const parsed = parseScript(sourceName, source);
   const output: string[] = [];
@@ -59,7 +57,7 @@ export function formatScript(sourceName: string, source: string): string {
   while (output.at(-1) === "") output.pop();
   const formatted = `${output.join("\n")}\n`;
   const reparsed = parseScript(sourceName, formatted);
-  if (canonicalStringify(narrativeValue(parsed, "comparison")) !== canonicalStringify(narrativeValue(reparsed, "comparison"))) {
+  if (JSON.stringify(narrativeValue(parsed, "comparison")) !== JSON.stringify(narrativeValue(reparsed, "comparison"))) {
     throw new ScriptSyntaxError(
       "SCRIPT_FORMAT_SEMANTICS",
       "Formatter refused to change Script semantics.",

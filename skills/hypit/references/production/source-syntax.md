@@ -1,8 +1,8 @@
 # Reading and writing Source syntax
 
-Read this for the language around a production: imports, references, literal values, Recipes and
-execution Targets. [Script syntax](script-syntax.md) owns prose, Roles, Dual Text, authored Cues, display
-attributes and markers. [Timing](timing.md) explains how components consume those identities.
+Read this for legacy Author Source imports, references, literal values, Recipes and execution Targets.
+[Script syntax](script-syntax.md) owns the separate `.script` file used for prose, Roles, Dual Text,
+authored Cues, display attributes and markers.
 [System relationships](system.md) explains authored values and computed Outputs.
 
 ## Two documents, two decisions
@@ -11,21 +11,17 @@ A `.svml` normally describes the work and a `.svs` holds reusable authored value
 document's Header selects its parser; the filename extension
 is the convention used to recognize its role.
 
-This small Author Source produces Text and Script values; it makes no media request:
+Script is no longer declared or imported through this language. A small Author Source can still produce
+ordinary Text values without making a media request:
 
 ```svml
 <?svml using="@hypit/markup@1"?>
 <svml>
-  <import from="@hypit/script@1"/>
   <import as="copy" from="@hypit/text@1"/>
   <import as="kit" source="./direction.svs"/>
 
-  <script id="story">
-    <opening><HOST>Here is @{proof}the useful part.@{/proof}</opening>
-  </script>
   <copy:Value id="direction">She leans in slightly, amused by her own observation.</copy:Value>
   <copy:Render id="prompt" template={kit.performance}>
-    <copy:Set name="dialogue" text={story.segment.opening.dialogue}/>
     <copy:Set name="direction" text={direction}/>
   </copy:Render>
 </svml>
@@ -38,9 +34,8 @@ and assets stay inside that package. Put imports in the leading prologue, before
 Use a package's Source address, such as `@hypit/text@1`, in `from`; installed package versions belong
 to ordinary package management. A Source data import reads the package's declared Source content.
 
-A Source alias qualifies public bindings; it does not rename a Narrative's authored identity.
-Two imported Sources declaring different Scripts both named `story` therefore conflict. Share the
-one Script that owns the work, or give genuinely separate Narratives distinct ids.
+A project program reads standalone Script and supplies its identity when calling `projectScript()`;
+Source aliases no longer participate in Narrative identity.
 
 ## Braces connect values
 
@@ -65,8 +60,8 @@ Output paths are package vocabulary, not inferred from the element's tag:
 Visual and Audio Tracks separately publish the picture and sound contributions selected in Film.
 
 Inspect `hypit vocabulary` for the actual declaration's exports and use the published path it reports.
-Public bindings can be authored Records or realizable Logical Outputs. Script,
-Recipes and literal Text already exist as authored data; they are not Build Targets. The computed
+Public bindings can be authored Records or realizable Logical Outputs. Recipes and literal Text already
+exist as authored data; they are not Build Targets. The computed
 `prompt` from `copy:Render` is a Logical Output that a Build can target or another declaration
 can consume.
 Declaration order does not establish dependencies. References state which values each declaration
