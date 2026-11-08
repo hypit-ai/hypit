@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./docs/public/hypit-logo-light.svg">
-    <img alt="Hypit" src="./docs/public/hypit-logo-dark.svg" width="400" height="122">
+    <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/hypit-logo-light.svg">
+    <img alt="Hypit" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/hypit-logo-dark.svg" width="400" height="122">
   </picture>
 </p>
 
@@ -204,7 +204,7 @@ Agent 会检查环境，索要这条视频需要的凭据，生成素材并构�
 
 扫码加入 Hypit 微信群：
 
-<img alt="扫码加入 Hypit 微信群" src="./docs/public/wechat-group.jpg" width="320">
+<img alt="扫码加入 Hypit 微信群" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/wechat-group.webp" width="320">
 
 ## Launch 伙伴
 
@@ -213,8 +213,8 @@ Agent 会检查环境，索要这条视频需要的凭据，生成素材并构�
     <td width="220" align="center">
       <a href="https://watcha.cn">
         <picture>
-          <source media="(prefers-color-scheme: dark)" srcset="./docs/public/watcha-dark.png">
-          <img alt="观猹" src="./docs/public/watcha-light.png" width="170">
+          <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/watcha-dark.webp">
+          <img alt="观猹" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/watcha-light.webp" width="170">
         </picture>
       </a>
     </td>
@@ -224,8 +224,8 @@ Agent 会检查环境，索要这条视频需要的凭据，生成素材并构�
     <td width="220" align="center">
       <a href="https://tokendance.space/?utm_source=hypit">
         <picture>
-          <source media="(prefers-color-scheme: dark)" srcset="./docs/public/tokendance-dark.png">
-          <img alt="TokenDance" src="./docs/public/tokendance-light.png" width="165">
+          <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/tokendance-dark.webp">
+          <img alt="TokenDance" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/tokendance-light.png" width="165">
         </picture>
       </a>
     </td>
@@ -233,13 +233,13 @@ Agent 会检查环境，索要这条视频需要的凭据，生成素材并构�
   </tr>
   <tr>
     <td width="220" align="center">
-      <a href="https://autoclaw.zhipuai.cn/"><img alt="AutoClaw" src="./docs/public/autoclaw.png" width="180"></a>
+      <a href="https://autoclaw.zhipuai.cn/"><img alt="AutoClaw" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/autoclaw.webp" width="180"></a>
     </td>
     <td><a href="https://autoclaw.zhipuai.cn/">AutoClaw</a> 是智谱推出的桌面端 AI 工作助手，深度适配 GLM 模型，融合法律、金融、设计等领域的专属知识库与工作流。</td>
   </tr>
   <tr>
     <td width="220" align="center">
-      <a href="https://openagents.org/blog/posts/2026-09-08-pilot-user-program-zh-hypit"><img alt="OpenAgents" src="./docs/public/openagents.png" width="180"></a>
+      <a href="https://openagents.org/blog/posts/2026-09-08-pilot-user-program-zh-hypit"><img alt="OpenAgents" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/openagents.png" width="180"></a>
     </td>
     <td><a href="https://openagents.org">OpenAgents Workspace</a> 是一个让你管理智能体的产品，它能让你随时随地调用在任何设备上运行的 Agent（手机 + 电脑端均可）。Agents 可以在其中协同合作，帮你完成任务、提升效率。现支持 Claude、Codex、Openclaw、Hermes 等 20 余种 agent 接入。</td>
   </tr>
@@ -247,8 +247,8 @@ Agent 会检查环境，索要这条视频需要的凭据，生成素材并构�
     <td width="220" align="center">
       <a href="https://monid.ai?fpr=alvin-45480b">
         <picture>
-          <source media="(prefers-color-scheme: dark)" srcset="./docs/public/monid-logo-white.svg">
-          <img alt="Monid" src="./docs/public/monid-logo-blue.svg" width="150">
+          <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/monid-logo-white.svg">
+          <img alt="Monid" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/monid-logo-blue.svg" width="150">
         </picture>
       </a>
     </td>
@@ -256,13 +256,13 @@ Agent 会检查环境，索要这条视频需要的凭据，生成素材并构�
   </tr>
   <tr>
     <td width="220" align="center">
-      <a href="https://www.hiapi.ai/invite/hypit"><img alt="HiAPI" src="./docs/public/hiapi.png" width="165"></a>
+      <a href="https://www.hiapi.ai/invite/hypit"><img alt="HiAPI" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/hiapi.png" width="165"></a>
     </td>
     <td><a href="https://www.hiapi.ai/invite/hypit">HiAPI</a> 是一个统一的 AI 图片、视频、音频和语言模型 API 平台，支持 GPT Image 2.5、Seedance 2.0、Veo 3.1、可灵、万相等主流模型。HiAPI 提供在线 Playground、Remote MCP 和 Agent Skills，可接入 Claude Code、Cursor 等 AI 编程工具。平台按量付费，无月费，新用户注册可获得免费体验积分。</td>
   </tr>
   <tr>
     <td width="220" align="center">
-      <a href="https://api.pollo.ai/?utm_source=hypit"><img alt="Pollo API" src="./docs/public/pollo.jpg" width="120"></a>
+      <a href="https://api.pollo.ai/?utm_source=hypit"><img alt="Pollo API" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/pollo.jpg" width="120"></a>
     </td>
     <td><a href="https://api.pollo.ai/?utm_source=hypit">Pollo API</a> 通过单个 API 为开发者提供 300 多个 AI 图片与视频模型，价格具备竞争力。一个 API key 即可接入多家模型服务商，请求规模从 10 次到 10000 次以上均可承载。</td>
   </tr>

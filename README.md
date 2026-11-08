@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./docs/public/hypit-logo-light.svg">
-    <img alt="Hypit" src="./docs/public/hypit-logo-dark.svg" width="400" height="122">
+    <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/hypit-logo-light.svg">
+    <img alt="Hypit" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/hypit-logo-dark.svg" width="400" height="122">
   </picture>
 </p>
 
@@ -217,8 +217,8 @@ commands and the repository layout.
     <td width="220" align="center">
       <a href="https://watcha.cn">
         <picture>
-          <source media="(prefers-color-scheme: dark)" srcset="./docs/public/watcha-dark.png">
-          <img alt="Watcha" src="./docs/public/watcha-light.png" width="170">
+          <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/watcha-dark.webp">
+          <img alt="Watcha" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/watcha-light.webp" width="170">
         </picture>
       </a>
     </td>
@@ -228,8 +228,8 @@ commands and the repository layout.
     <td width="220" align="center">
       <a href="https://tokendance.space/?utm_source=hypit">
         <picture>
-          <source media="(prefers-color-scheme: dark)" srcset="./docs/public/tokendance-dark.png">
-          <img alt="TokenDance" src="./docs/public/tokendance-light.png" width="165">
+          <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/tokendance-dark.webp">
+          <img alt="TokenDance" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/tokendance-light.png" width="165">
         </picture>
       </a>
     </td>
@@ -237,13 +237,13 @@ commands and the repository layout.
   </tr>
   <tr>
     <td width="220" align="center">
-      <a href="https://autoclaw.z.ai"><img alt="AutoClaw" src="./docs/public/autoclaw.png" width="180"></a>
+      <a href="https://autoclaw.z.ai"><img alt="AutoClaw" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/autoclaw.webp" width="180"></a>
     </td>
     <td><a href="https://autoclaw.z.ai">AutoClaw</a> is Z.ai’s desktop AI assistant for work, deeply optimized for GLM models and integrated with specialized knowledge bases and workflows for legal, finance, design, and more.</td>
   </tr>
   <tr>
     <td width="220" align="center">
-      <a href="https://openagents.org/blog/posts/2026-09-08-pilot-user-program-zh-hypit"><img alt="OpenAgents" src="./docs/public/openagents.png" width="180"></a>
+      <a href="https://openagents.org/blog/posts/2026-09-08-pilot-user-program-zh-hypit"><img alt="OpenAgents" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/openagents.png" width="180"></a>
     </td>
     <td><a href="https://openagents.org">OpenAgents Workspace</a> is a product that helps you manage AI agents, allowing you to invoke agents running on any device (whether on a mobile phone or computer) anytime, anywhere. Agents can collaborate within the platform to help you complete tasks and boost efficiency. It currently supports integration with over 20 types of agents, including Claude, Codex, OpenClaw, and Hermes.</td>
   </tr>
@@ -251,8 +251,8 @@ commands and the repository layout.
     <td width="220" align="center">
       <a href="https://monid.ai?fpr=alvin-45480b">
         <picture>
-          <source media="(prefers-color-scheme: dark)" srcset="./docs/public/monid-logo-white.svg">
-          <img alt="Monid" src="./docs/public/monid-logo-blue.svg" width="150">
+          <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/monid-logo-white.svg">
+          <img alt="Monid" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/monid-logo-blue.svg" width="150">
         </picture>
       </a>
     </td>
@@ -260,13 +260,13 @@ commands and the repository layout.
   </tr>
   <tr>
     <td width="220" align="center">
-      <a href="https://www.hiapi.ai/invite/hypit"><img alt="HiAPI" src="./docs/public/hiapi.png" width="165"></a>
+      <a href="https://www.hiapi.ai/invite/hypit"><img alt="HiAPI" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/hiapi.png" width="165"></a>
     </td>
     <td><a href="https://www.hiapi.ai/invite/hypit">HiAPI</a> is a unified API platform for AI image, video, audio, and language models. Connect GPT Image 2.5, Seedance 2.0, Veo 3.1, Kling, Wan, and other popular models through one platform. Pay as you go with no monthly fee, with free trial credits available for new users.</td>
   </tr>
   <tr>
     <td width="220" align="center">
-      <a href="https://api.pollo.ai/?utm_source=hypit"><img alt="Pollo API" src="./docs/public/pollo.jpg" width="120"></a>
+      <a href="https://api.pollo.ai/?utm_source=hypit"><img alt="Pollo API" src="https://cdn.jsdelivr.net/gh/webkubor/free-imgbed@main/hypit/pollo.jpg" width="120"></a>
     </td>
     <td><a href="https://api.pollo.ai/?utm_source=hypit">Pollo API</a> gives developers access to 300+ AI image and video models through a single API, with competitive rates. One API key connects you to multiple model providers and scales from 10 to 10,000+ requests.</td>
   </tr>
