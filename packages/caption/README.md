@@ -82,10 +82,11 @@ supplied separately by the selected audiovisual renderer.
 
 The same `CaptionDocument + LocalCaptionTiming + CaptionPresentation` can instead be baked once into an NLE
 transaction. `createCaptionNleMaterialization` resolves the chosen cues, visibility and styles, preserves their
-source-local regions as exact rational NLE times, and emits one direct Component item for each visible
-cue. A hidden cue emits no item. Each resulting block owns its start, duration, caption Component symbol, text, style
-parameters and rectangle, so later move, trim, restyle or delete operations are ordinary NLE edits and do not
-write back to the transcript or Caption component.
+source-local regions as exact rational NLE times, and emits one direct Component item for every chosen
+cue. A hidden cue is a complete disabled item rather than missing data. Each resulting block owns its start,
+duration, caption Component symbol, rectangle, resolved style, display Words and complete Cue-local Unit
+boundaries. Later move, trim, restyle, edit-word, retime-unit or delete operations are ordinary NLE edits and
+do not write back to the transcript, media or Caption component.
 
 `createCaptionNleMaterializationForMediaItem` is the concrete media-following seam. The caller explicitly selects
 one existing NLE Media Item; the adapter takes the transient preimage of every source-local Cue through that Item's
@@ -93,6 +94,12 @@ current trim／retime pieces, adds the Item's Programme start and emits ordinary
 visible source range disappear, while looped or repeated source ranges may emit multiple independent blocks. The
 accepted Project stores only those direct blocks: `cueId` may remain an inert package parameter, but no source anchor
 dependency, Media Item binding or future reverse lookup survives.
+
+Unit timing is not optional Karaoke metadata. It is part of every accepted materialized Caption payload,
+including a static or disabled Cue. The built-in `basic` family can therefore change between static,
+current-unit and trailing Karaoke presentation using only its Style; enabling Karaoke never needs to reopen
+the media, transcript or semantic alignment. `replaceCaptionNleWord` and `retimeCaptionNleUnit` are the
+deliberately small payload edits for correcting spelling and local boundaries without rebuilding the Cue.
 
 The built-in `basic` Component is only a minimal package-owned HTML implementation. Other style families must
 select their own Component explicitly; the NLE does not interpret family parameters or grant Caption a special
@@ -146,5 +153,5 @@ solutions are not guessed; this convenience relation explicitly requires one sid
 
 The current HTML companion is intentionally a minimal vertical implementation. It proves that all selected
 cues render from one Source, ordered presentation rules apply, and timing remains source-local. Rich layout,
-karaoke, word animation, within-cue styling, and concrete file/alignment adapters remain family- or
-producer-owned work; none requires changing the parent Programme representation.
+word animation, within-cue styling, and concrete file/alignment adapters remain family- or producer-owned
+work; none requires changing the parent Programme representation.

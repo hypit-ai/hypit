@@ -43,6 +43,12 @@ export {
 } from "./source.js";
 export type * from "./types.js";
 export {
+  assertCaptionNlePayload,
+  replaceCaptionNleWord,
+  retimeCaptionNleUnit,
+  sealCaptionNlePayload,
+} from "./nle-payload.js";
+export {
   captionBasicNleComponentSymbol,
   captionBasicNleHtmlVideoResolver,
   captionBasicNleResolver,

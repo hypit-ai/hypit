@@ -3,7 +3,7 @@ import type { CaptionDocument, LocalCaptionTiming } from "@hypit/caption";
 import type { NarrativeLocalTiming } from "@hypit/narrative-temporal";
 import { compareExactTemporalValues } from "@hypit/temporal";
 
-import type { NarrativeCaptionBinding } from "./types.js";
+import type { NarrativeCaptionBinding, NarrativeCaptionUnitSubset } from "./types.js";
 import { NarrativeCaptionTimingError } from "./error.js";
 import { assertNarrativeCaptionBindingIdentity } from "./identity.js";
 
@@ -11,11 +11,16 @@ export function projectNarrativeCaptionTiming(
   document: CaptionDocument,
   binding: NarrativeCaptionBinding,
   timing: NarrativeLocalTiming,
+  subset?: NarrativeCaptionUnitSubset,
 ): LocalCaptionTiming {
   assertCaptionDocument(document);
   assertNarrativeCaptionBindingIdentity(binding);
   if (binding.documentId !== document.id || binding.narrativeId !== timing.narrativeId) {
     throw new NarrativeCaptionTimingError("CAPTION_BINDING", "Caption binding disagrees with its document or NarrativeLocalTiming.");
+  }
+  if (subset !== undefined && subset.documentId !== document.id) {
+    throw new NarrativeCaptionTimingError("CAPTION_BINDING",
+      `Caption subset belongs to ${subset.documentId}, not ${document.id}.`);
   }
   const bindings = new Map(binding.units.map((unit) => [unit.unitId, unit.sourceTokenIds] as const));
   const documentIds = new Set(document.units.map((unit) => unit.id));
@@ -28,8 +33,16 @@ export function projectNarrativeCaptionTiming(
   }
   const tokens = new Map(timing.tokens.map((token) => [token.tokenId, token] as const));
   const boundaries = new Map(timing.boundaries.map((boundary) => [boundary.id, boundary.at] as const));
+  const selected = subset === undefined ? documentIds : new Set(subset.unitIds);
+  for (const unitId of selected) {
+    if (!documentIds.has(unitId)) {
+      throw new NarrativeCaptionTimingError("CAPTION_BINDING",
+        `Caption subset references missing Unit ${unitId}.`);
+    }
+  }
   const timed: LocalCaptionTiming["units"][number][] = [];
   for (const unit of document.units) {
+    if (!selected.has(unit.id)) continue;
     const sourceTokenIds = bindings.get(unit.id)!;
     const sourceTokens = sourceTokenIds.map((tokenId) => {
       const token = tokens.get(tokenId);

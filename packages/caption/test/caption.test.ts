@@ -25,6 +25,7 @@ import { exactTemporalValue, sealLocalTemporalDomain } from "@hypit/temporal/alg
 import {
   appendCaptionHiddenOverride,
   appendCaptionStyleOverride,
+  assertCaptionNlePayload,
   assertCaptionDocument,
   captionHtmlSource,
   captionProgramSource,
@@ -33,6 +34,8 @@ import {
   createCaptionNleMaterialization,
   createCaptionNleMaterializationForMediaItem,
   projectCaptionCues,
+  replaceCaptionNleWord,
+  retimeCaptionNleUnit,
   scheduleCaptionPresentation,
   type CaptionComponentSpec,
   type CaptionDocument,
@@ -151,14 +154,24 @@ test("Caption timing and presentation bake once into ordinary editable NLE block
       layout: { x: 0, y: 800, width: 1920, height: 280, fit: "fill" }, effects: [],
     },
   });
-  assert.deepEqual(transaction.commands.map((command) => command.kind), ["item.add", "item.add"]);
+  assert.deepEqual(transaction.commands.map((command) => command.kind), ["item.add", "item.add", "item.add"]);
   const materialized = applyNleTransaction(project, transaction);
   assert.deepEqual(materialized.tracks[0]?.items.map((item) => [
-    item.id, item.kind, item.start, item.duration,
+    item.id, item.kind, item.start, item.duration, item.enabled,
   ]), [
-    ["transcript-use:cue-one", "component", at(3), at(1)],
-    ["transcript-use:cue-three", "component", at(7), at(1)],
+    ["transcript-use:cue-one", "component", at(3), at(1), true],
+    ["transcript-use:cue-two", "component", at(5), at(1), false],
+    ["transcript-use:cue-three", "component", at(7), at(1), true],
   ]);
+  for (const item of materialized.tracks[0]!.items) {
+    assert.equal(item.kind, "component");
+    if (item.kind !== "component") continue;
+    const parameters = item.parameters as Record<string, unknown>;
+    assertCaptionNlePayload(parameters.caption, item.duration);
+    assert.equal(parameters.caption.words.length, 1);
+    assert.deepEqual(parameters.caption.units[0]?.start, at(0));
+    assert.deepEqual(parameters.caption.units[0]?.end, at(1));
+  }
 
   const html = lowerNleProjectToHtmlProgram(materialized,
     createNleTerminalLinkHostFromFacets(captionHypitPackage.facets),
@@ -167,6 +180,71 @@ test("Caption timing and presentation bake once into ordinary editable NLE block
   assert.doesNotMatch(html.html, />Second</u);
   assert.match(html.html, />Third</u);
   assert.match(html.html, /#ff0000/u);
+});
+
+test("complete Caption Items switch Karaoke without returning to media", () => {
+  const combinedDocument: CaptionDocument = {
+    ...document,
+    id: "combined-transcript",
+    cues: [{ id: "cue-all", unitIds: ["unit-one", "unit-two", "unit-three"] }],
+  };
+  const combinedTiming: LocalCaptionTiming = { ...timing, documentId: combinedDocument.id };
+  const karaokeStyle: CaptionStyle = { id: "karaoke", family: "basic", parameters: {
+    color: "#ffffff",
+    karaoke: { mode: "trail", transition: "wipe", activeColor: "#ffd54a" },
+  } };
+  const empty = createNleProject({
+    id: "caption-karaoke", name: "Caption Karaoke",
+    editRate: { numerator: 30, denominator: 1 },
+    canvas: { width: 1920, height: 1080, clearColor: "#000000" },
+  });
+  const project = applyNleTransaction(empty, { revision: 0, commands: [{
+    kind: "track.add", track: {
+      id: "captions", name: "Captions", kind: "picture", locked: false, muted: false, items: [],
+    },
+  }] });
+  const materialized = applyNleTransaction(project, createCaptionNleMaterialization(project, {
+    id: "karaoke-use", track: "captions", document: combinedDocument,
+    timing: combinedTiming, presentation: karaokeStyle, at: at(0),
+    picture: { layout: { x: 0, y: 800, width: 1920, height: 280, fit: "fill" }, effects: [] },
+  }));
+  const item = materialized.tracks[0]!.items[0]!;
+  assert.equal(item.kind, "component");
+  if (item.kind !== "component") throw new Error("Karaoke Caption is not a Component Item.");
+  const parameters = item.parameters as Record<string, unknown>;
+  assertCaptionNlePayload(parameters.caption, item.duration);
+  assert.deepEqual(parameters.caption.units.map((unit) => [unit.id, unit.start, unit.end]), [
+    ["unit-one", at(0), at(1)],
+    ["unit-two", at(2), at(3)],
+    ["unit-three", at(4), at(5)],
+  ]);
+  const renamed = replaceCaptionNleWord(parameters.caption, "word-two", "Changed");
+  assert.equal(renamed.words[1]?.text, "Changed");
+  assert.deepEqual(renamed.units[1]?.start, at(2));
+  const retimed = retimeCaptionNleUnit(renamed, "unit-two", at(1), at(3), item.duration);
+  assert.deepEqual(retimed.units[1]?.start, at(1));
+  assert.deepEqual(retimed.units[1]?.end, at(3));
+
+  const html = lowerNleProjectToHtmlProgram(materialized,
+    createNleTerminalLinkHostFromFacets(captionHypitPackage.facets),
+    { numerator: 30, denominator: 1 });
+  assert.match(html.html, /data-caption-unit="unit-one"/u);
+  assert.match(html.html, /data-caption-unit="unit-two"/u);
+  assert.match(html.html, /linear-gradient\(90deg/u);
+  assert.match(html.html, /#ffd54a/u);
+});
+
+test("complete Caption payloads reject display Words omitted from Unit membership", () => {
+  assert.throws(() => assertCaptionNlePayload({
+    documentId: "document",
+    cueId: "cue",
+    words: [{
+      id: "word-one", unitId: "unit-one", text: "Complete", separatorBefore: "", attributes: [],
+    }, {
+      id: "word-two", unitId: "unit-one", text: "payload", separatorBefore: " ", attributes: [],
+    }],
+    units: [{ id: "unit-one", wordIds: ["word-one"], start: at(0), end: at(1) }],
+  }, at(1)), /Word word-two is not listed by Unit unit-one/u);
 });
 
 test("Caption cues follow one selected trimmed Media Item only while materializing", () => {

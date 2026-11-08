@@ -10,14 +10,18 @@ import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
 import {
   addExactTemporalValues,
   compareExactTemporalValues,
+  compareTemporalMapPoints,
+  preimageTemporalMapRegions,
   sealLocalTemporalDomain,
   sealTemporalMap,
   subtractExactTemporalValues,
   type ExactTemporalValue,
   type TemporalMap,
+  type TemporalMapRegion,
 } from "@hypit/temporal/algebra";
 
 import { captionBasicNleComponentSymbol } from "./nle-package.js";
+import { sealCaptionNlePayload } from "./nle-payload.js";
 import {
   createCaptionPresentation,
   projectCaptionScheduleCues,
@@ -25,6 +29,7 @@ import {
 } from "./source.js";
 import type {
   CaptionDocument,
+  CaptionNlePayload,
   CaptionPresentation,
   CaptionSelection,
   CaptionStyle,
@@ -33,6 +38,55 @@ import type {
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
+}
+
+function containsRegion(owner: TemporalMapRegion, candidate: TemporalMapRegion): boolean {
+  return compareTemporalMapPoints(candidate.start, owner.start) >= 0
+    && compareTemporalMapPoints(candidate.end, owner.end) <= 0;
+}
+
+function projectedUnitRegions(
+  timing: LocalCaptionTiming,
+  occurrenceMapping?: TemporalMap,
+): ReadonlyMap<string, readonly TemporalMapRegion[]> {
+  return new Map(timing.units.map((unit) => [unit.unitId, occurrenceMapping === undefined
+    ? structuredClone(unit.regions)
+    : preimageTemporalMapRegions(occurrenceMapping, {
+      domain: timing.domain,
+      regions: unit.regions,
+    }).regions] as const));
+}
+
+function cuePayload(
+  document: CaptionDocument,
+  cue: { readonly cueId: string; readonly unitIds: readonly string[]; readonly role?: string },
+  cueRegion: TemporalMapRegion,
+  unitRegions: ReadonlyMap<string, readonly TemporalMapRegion[]>,
+  duration: ExactTemporalValue,
+): CaptionNlePayload {
+  const documentUnits = new Map(document.units.map((unit) => [unit.id, unit] as const));
+  const selected = new Set(cue.unitIds);
+  const words = document.words.filter((word) => selected.has(word.unitId)).map((word) => structuredClone(word));
+  const units = cue.unitIds.map((unitId) => {
+    const unit = documentUnits.get(unitId);
+    assert(unit !== undefined, `Caption Cue ${cue.cueId} references missing Unit ${unitId}.`);
+    const regions = (unitRegions.get(unitId) ?? []).filter((region) => containsRegion(cueRegion, region));
+    assert(regions.length === 1, regions.length === 0
+      ? `Caption Unit ${unitId} has no complete occurrence inside Cue ${cue.cueId}.`
+      : `Caption Unit ${unitId} has multiple occurrences inside one materialized Cue ${cue.cueId}.`);
+    return {
+      ...structuredClone(unit),
+      start: subtractExactTemporalValues(regions[0]!.start.position, cueRegion.start.position),
+      end: subtractExactTemporalValues(regions[0]!.end.position, cueRegion.start.position),
+    };
+  });
+  return sealCaptionNlePayload({
+    documentId: document.id,
+    cueId: cue.cueId,
+    ...(cue.role === undefined ? {} : { role: cue.role }),
+    words,
+    units,
+  }, duration);
 }
 
 export type CaptionNleComponentSelection = (
@@ -86,11 +140,11 @@ function materializeCaptionProjection(
   );
   const componentForStyle = input.componentForStyle ?? defaultComponent;
   const styles = new Map(schedule.styles.map((style) => [style.id, style] as const));
+  const unitRegions = projectedUnitRegions(input.timing, occurrenceMapping);
   const commands: NleTransaction["commands"][number][] = [];
   for (const cue of projected.cues) {
-    if (cue.presentation.kind === "hidden") continue;
-    const style = styles.get(cue.presentation.styleId);
-    assert(style !== undefined, `Caption Cue ${cue.cueId} references missing Style ${cue.presentation.styleId}.`);
+    const style = styles.get(cue.styleId);
+    assert(style !== undefined, `Caption Cue ${cue.cueId} references missing Style ${cue.styleId}.`);
     const regions = occurrenceMapping === undefined ? cue.regions : cue.occurrenceRegions ?? [];
     const selected = componentForStyle(style);
     for (const [index, region] of regions.entries()) {
@@ -98,6 +152,7 @@ function materializeCaptionProjection(
       const end = addExactTemporalValues(origin, region.end.position);
       if (compareExactTemporalValues(end, start) <= 0) continue;
       const duration = subtractExactTemporalValues(end, start);
+      const caption = cuePayload(input.document, cue, region, unitRegions, duration);
       commands.push({
         kind: "item.add",
         track: track.id,
@@ -108,15 +163,13 @@ function materializeCaptionProjection(
           start,
           duration,
           sourceTime: nleLinearSourceTime(duration),
-          enabled: true,
+          enabled: cue.presentation.kind !== "hidden",
           component: structuredClone(selected.component),
           parameters: canonicalize({
-            text: cue.text,
-            cueId: cue.cueId,
+            caption,
             styleId: style.id,
             family: style.family,
             style: style.parameters,
-            ...(cue.role === undefined ? {} : { role: cue.role }),
             ...(selected.parameters ?? {}),
           }),
           picture: structuredClone(input.picture),

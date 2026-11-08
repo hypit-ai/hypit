@@ -1,6 +1,7 @@
 import type { CanonicalValue } from "@hypit/hypit/protocol";
 import type { LocalSpatialDomain } from "@hypit/spatial/algebra";
 import type {
+  ExactTemporalValue,
   LocalTemporalDomain,
   TemporalMapRegion,
 } from "@hypit/temporal/algebra";
@@ -79,6 +80,8 @@ export type CaptionScheduledCue = {
   readonly unitIds: readonly string[];
   readonly role?: string;
   readonly regions: readonly TemporalMapRegion[];
+  /** Last resolved Style even when a later ordered override hides the Cue. */
+  readonly styleId: string;
   readonly presentation: CaptionPresentationValue;
   /** The last matching override, omitted when base presentation wins. */
   readonly overrideId?: string;
@@ -116,4 +119,33 @@ export type CaptionComponentSpec = {
 export type CaptionUnitEventSpec = {
   readonly unitId: string;
   readonly edge: "start" | "end";
+};
+
+/** Display word persisted inside one independently editable materialized Caption Cue. */
+export type CaptionNleWord = CaptionDisplayWord;
+
+/** One indivisible display-to-speech unit on the materialized Cue Item's local clock. */
+export type CaptionNleUnit = CaptionUnit & {
+  readonly start: ExactTemporalValue;
+  readonly end: ExactTemporalValue;
+};
+
+/**
+ * Complete Caption content persisted in an ordinary NLE Component Item.
+ *
+ * It deliberately contains no Script, Narrative, Transcript, Media Item or lookup authority.
+ * Static presentation may ignore Unit time; Karaoke consumes the same always-present facts.
+ */
+export type CaptionNlePayload = {
+  readonly documentId: string;
+  readonly cueId: string;
+  readonly role?: string;
+  readonly words: readonly CaptionNleWord[];
+  readonly units: readonly CaptionNleUnit[];
+};
+
+export type CaptionBasicKaraokeParameters = {
+  readonly mode: "off" | "current" | "trail";
+  readonly transition: "step" | "wipe";
+  readonly activeColor?: string;
 };

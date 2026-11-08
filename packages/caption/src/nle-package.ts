@@ -6,6 +6,8 @@ import type { NleComponentItem, NleComponentResolver, NlePackageSymbol } from "@
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
 
 import { captionModuleRef } from "./manifest.js";
+import { assertCaptionNlePayload } from "./nle-payload.js";
+import type { CaptionBasicKaraokeParameters, CaptionNlePayload } from "./types.js";
 
 export const captionBasicNleComponentSymbol: NlePackageSymbol = {
   module: captionModuleRef,
@@ -41,18 +43,49 @@ function optionalFont(value: unknown): string {
   return value;
 }
 
+function karaokeParameters(value: unknown): Required<CaptionBasicKaraokeParameters> {
+  if (value === undefined) return {
+    mode: "off", transition: "step", activeColor: "#ffd54a",
+  };
+  assert(value !== null && typeof value === "object" && !Array.isArray(value),
+    "Basic NLE Caption karaoke must be a record.");
+  const input = value as Readonly<Record<string, unknown>>;
+  const allowed = new Set(["activeColor", "mode", "transition"]);
+  for (const name of Object.keys(input)) assert(allowed.has(name), `Basic NLE Caption karaoke field ${name} is unknown.`);
+  const mode = input.mode ?? "off";
+  const transition = input.transition ?? "step";
+  assert(mode === "off" || mode === "current" || mode === "trail",
+    "Basic NLE Caption karaoke mode is invalid.");
+  assert(transition === "step" || transition === "wipe",
+    "Basic NLE Caption karaoke transition is invalid.");
+  return {
+    mode,
+    transition,
+    activeColor: optionalColor(input.activeColor, "#ffd54a", "Basic NLE Caption karaoke activeColor"),
+  };
+}
+
+function captionUnitText(payload: CaptionNlePayload, unitId: string): string {
+  const unit = payload.units.find((candidate) => candidate.id === unitId)!;
+  const words = new Map(payload.words.map((word) => [word.id, word] as const));
+  return unit.wordIds.map((wordId) => {
+    const word = words.get(wordId)!;
+    return `${word.separatorBefore}${word.text}`;
+  }).join("");
+}
+
 function resolveCaptionBasic(item: NleComponentItem) {
   assert(item.picture !== undefined, `NLE Caption ${item.id} has no Picture appearance.`);
   assert(item.parameters !== null && typeof item.parameters === "object" && !Array.isArray(item.parameters),
     `NLE Caption ${item.id} parameters must be a record.`);
   const parameters = item.parameters as Readonly<Record<string, unknown>>;
-  assert(typeof parameters.text === "string" && parameters.text.length > 0,
-    `NLE Caption ${item.id} text is empty.`);
+  assertCaptionNlePayload(parameters.caption, item.duration);
+  const caption = parameters.caption;
   assert(parameters.family === "basic", `NLE Caption ${item.id} requires the basic style family.`);
   assert(parameters.style !== null && typeof parameters.style === "object" && !Array.isArray(parameters.style),
     `NLE Caption ${item.id} basic style must be a record.`);
   const style = parameters.style as Readonly<Record<string, unknown>>;
-  const allowed = new Set(["background", "borderRadius", "color", "fontFamily", "fontSize", "fontWeight", "padding"]);
+  const allowed = new Set(["background", "borderRadius", "color", "fontFamily", "fontSize", "fontWeight", "karaoke", "padding"]);
   for (const name of Object.keys(style)) assert(allowed.has(name), `Basic NLE Caption style field ${name} is unknown.`);
   const color = optionalColor(style.color, "#ffffff", "Basic NLE Caption color");
   const background = optionalColor(style.background, "#000000cc", "Basic NLE Caption background");
@@ -60,6 +93,7 @@ function resolveCaptionBasic(item: NleComponentItem) {
   const fontWeight = optionalNumber(style.fontWeight, 600, "Basic NLE Caption fontWeight", 100, 900);
   const padding = optionalNumber(style.padding, 12, "Basic NLE Caption padding", 0, 200);
   const borderRadius = optionalNumber(style.borderRadius, 8, "Basic NLE Caption borderRadius", 0, 200);
+  const karaoke = karaokeParameters(style.karaoke);
   const sourceId = `${item.id}:caption-source`;
   const spatialDomain = sealLocalSpatialDomain({
     id: `${sourceId}:picture`,
@@ -73,8 +107,51 @@ function resolveCaptionBasic(item: NleComponentItem) {
     source,
     pictureOutput: "picture",
     html: visualProgramHtmlSource(sourceId, "picture", htmlVisual({
-      html: `<div data-hypit-nle-caption><span>${escapeHtml(parameters.text)}</span></div>`,
-      css: `:scope>[data-hypit-nle-caption]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;font-family:${optionalFont(style.fontFamily)};font-size:${fontSize}px;font-weight:${fontWeight};color:${color}}:scope>[data-hypit-nle-caption]>span{padding:${padding}px;background:${background};border-radius:${borderRadius}px}`,
+      data: { caption, color, karaoke },
+      html: `<div data-hypit-nle-caption><span data-hypit-nle-caption-box>${caption.units.map((unit) =>
+        `<span data-caption-unit="${escapeHtml(unit.id)}">${escapeHtml(captionUnitText(caption, unit.id))}</span>`).join("")}</span></div>`,
+      css: `:scope>[data-hypit-nle-caption]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;font-family:${optionalFont(style.fontFamily)};font-size:${fontSize}px;font-weight:${fontWeight};color:${color}}:scope [data-hypit-nle-caption-box]{padding:${padding}px;background:${background};border-radius:${borderRadius}px;white-space:pre-wrap}:scope [data-caption-unit]{color:${color}}`,
+      setup: `
+        const units = new Map([...root.querySelectorAll('[data-caption-unit]')]
+          .map(element => [element.getAttribute('data-caption-unit'), element]));
+        const seconds = value => Number(value.ticks) * value.timeBase.numerator / value.timeBase.denominator;
+        const fps = context.frameRate.numerator / context.frameRate.denominator;
+        const paint = (element, progress, active) => {
+          if (data.karaoke.mode === 'off' || !active) {
+            element.style.color = data.color;
+            element.style.backgroundImage = '';
+            element.style.webkitBackgroundClip = '';
+            element.style.webkitTextFillColor = '';
+            return;
+          }
+          if (data.karaoke.transition === 'step' || progress >= 1) {
+            element.style.color = data.karaoke.activeColor;
+            element.style.backgroundImage = '';
+            element.style.webkitBackgroundClip = '';
+            element.style.webkitTextFillColor = '';
+            return;
+          }
+          const percentage = Math.max(0, Math.min(100, progress * 100));
+          element.style.color = 'transparent';
+          element.style.backgroundImage = 'linear-gradient(90deg,' + data.karaoke.activeColor + ' 0%,'
+            + data.karaoke.activeColor + ' ' + percentage + '%,' + data.color + ' ' + percentage + '%,'
+            + data.color + ' 100%)';
+          element.style.webkitBackgroundClip = 'text';
+          element.style.webkitTextFillColor = 'transparent';
+        };
+        return localFrame => {
+          const time = localFrame / fps;
+          for (const unit of data.caption.units) {
+            const start = seconds(unit.start);
+            const end = seconds(unit.end);
+            const current = time >= start && time < end;
+            const passed = time >= end;
+            const active = data.karaoke.mode === 'trail' ? time >= start : current;
+            const progress = passed ? 1 : current ? (time - start) / Math.max(end - start, 1 / fps) : 0;
+            paint(units.get(unit.id), progress, active);
+          }
+        };
+      `,
     })),
   };
 }

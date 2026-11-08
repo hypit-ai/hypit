@@ -7,6 +7,7 @@ Adapt those relationships to a new work; its scene list and styling are choices 
 | Example | What to learn | Starting material |
 | --- | --- | --- |
 | [Football ranking](ranking-football/README.md) | Independent speaking clips, a persistent tier board and timed reveals | Generate from `reference.svml`, targeting `final.video` |
+| [Complete Caption materialization](caption-materialization/README.md) | Three A-rolls, base/role/Cue style rules, hidden Cue and always-timed Karaoke payloads | Run the ordinary TypeScript materializer and inspect the resulting flat NLE JSON |
 | [Podcast](podcast/README.md) | Related host views, product references, motivated cuts and a lifestyle montage | Generate from `reference.svml`, targeting `final.video` |
 | [Street interview](interview/README.md) | A shared encounter, derived close views, coordinated Moments and Caption tracking | Generate from `reference.svml`, targeting `final.video` |
 | [Complex spoken explainer](complex-explainer/README.md) | Coordinated project scenes, moving presenter framing, independent Caption, semantic graphic events and graphics-only intervals | Download its accepted media/Result bundle; render locally |

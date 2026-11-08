@@ -25,6 +25,7 @@
     "packages/**/*.ts",
     "examples/provider-package/packages/*/src/**/*.ts",
     "examples/provider-package/packages/*/test/**/*.ts",
+    "examples/caption-materialization/**/*.ts",
     "examples/semantic-composition/packages/audiovisual-title-card/src/**/*.ts",
     "examples/semantic-composition/packages/audiovisual-title-card/test/**/*.ts"
   ],

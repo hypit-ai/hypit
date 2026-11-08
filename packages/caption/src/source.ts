@@ -172,9 +172,11 @@ export function assertCaptionPresentationSchedule(value: CaptionPresentationSche
     assert(cue.unitIds.length > 0, `Caption presentation Schedule Cue ${cue.cueId} has no units.`);
     unique(cue.unitIds, `Caption presentation Schedule Cue ${cue.cueId} unit`);
     assertTemporalMapRegionSet({ domain: value.domain, regions: cue.regions });
+    assert(styles.has(cue.styleId),
+      `Caption presentation Schedule Cue ${cue.cueId} references missing Style ${cue.styleId}.`);
     if (cue.presentation.kind === "style") {
-      assert(styles.has(cue.presentation.styleId),
-        `Caption presentation Schedule Cue ${cue.cueId} references missing Style ${cue.presentation.styleId}.`);
+      assert(cue.presentation.styleId === cue.styleId,
+        `Caption presentation Schedule Cue ${cue.cueId} disagrees with resolved Style ${cue.styleId}.`);
     } else {
       assert(cue.presentation.kind === "hidden",
         `Caption presentation Schedule Cue ${cue.cueId} presentation is invalid.`);
@@ -331,13 +333,13 @@ export function scheduleCaptionPresentation(
     const unitIds = cue.unitIds.filter((unit) => selected.has(unit));
     if (unitIds.length === 0) return [];
     const regions = cueEnvelope(unitIds.flatMap((unit) => timed.get(unit) ?? []));
-    let presentationValue: CaptionPresentationValue = {
-      kind: "style", styleId: presentation.baseStyleId,
-    };
+    let styleId = presentation.baseStyleId;
+    let presentationValue: CaptionPresentationValue = { kind: "style", styleId };
     let overrideId: string | undefined;
     for (const override of presentation.overrides) {
       if (!overrideMatches(override, cue)) continue;
       presentationValue = structuredClone(override.use);
+      if (override.use.kind === "style") styleId = override.use.styleId;
       overrideId = override.id;
     }
     return [{
@@ -345,6 +347,7 @@ export function scheduleCaptionPresentation(
       unitIds,
       ...(cue.role === undefined ? {} : { role: cue.role }),
       regions,
+      styleId,
       presentation: presentationValue,
       ...(overrideId === undefined ? {} : { overrideId }),
     }];
