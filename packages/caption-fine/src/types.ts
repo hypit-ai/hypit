@@ -96,7 +96,22 @@ export type CaptionFineStyleParameters = {
   readonly lineHeight?: number;
   readonly letterSpacing?: number;
   readonly wordGap?: number;
+  readonly language?: string;
+  readonly direction?: "auto" | "ltr" | "rtl";
+  readonly writingMode?: "horizontal-tb" | "vertical-rl" | "vertical-lr";
+  readonly textTransform?: "none" | "uppercase" | "lowercase" | "capitalize";
+  readonly variantCaps?: "normal" | "small-caps" | "all-small-caps";
+  readonly kerning?: "auto" | "normal" | "none";
   readonly textAlign?: "left" | "center" | "right";
+  readonly blockAlign?: "start" | "center" | "end";
+  readonly inlineSize?: "hug" | "fixed";
+  readonly wrap?: "none" | "word" | "grapheme";
+  /** Inserts authored line breaks only between indivisible Caption Units. */
+  readonly maxWordsPerLine?: number;
+  readonly maxLines?: number;
+  readonly overflow?: "visible" | "clip" | "ellipsis" | "shrink";
+  /** Required only by shrink overflow. */
+  readonly minimumScale?: number;
   readonly outlineColor?: string;
   readonly outlineWidth?: number;
   readonly shadowColor?: string;

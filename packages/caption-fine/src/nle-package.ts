@@ -214,22 +214,50 @@ function wordTypography(
 function captionTextNodes(
   payload: CaptionCuePayload,
   faces: readonly CaptionFineAttributeFace[],
+  maxWordsPerLine: number | undefined,
 ): readonly HtmlTextNode[] {
   const words = new Map(payload.words.map((word) => [word.id, word] as const));
-  return payload.units.map((unit) => ({
-    kind: "group",
-    id: unit.id,
-    children: unit.wordIds.map((wordId) => {
-      const word = words.get(wordId)!;
-      const typography = wordTypography(word, faces);
-      return {
-        kind: "text",
-        id: word.id,
-        text: `${word.separatorBefore}${word.text}`,
-        ...(typography === undefined ? {} : { style: { typography } }),
-      };
-    }),
-  }));
+  const nodes: HtmlTextNode[] = [];
+  let wordsOnLine = 0;
+  for (const [unitIndex, unit] of payload.units.entries()) {
+    const startsLine = maxWordsPerLine !== undefined && wordsOnLine > 0
+      && wordsOnLine + unit.wordIds.length > maxWordsPerLine;
+    if (startsLine) {
+      nodes.push({ kind: "break", id: `caption-row-${unitIndex}` });
+      wordsOnLine = 0;
+    }
+    nodes.push({
+      kind: "group",
+      id: unit.id,
+      children: unit.wordIds.map((wordId, wordIndex) => {
+        const word = words.get(wordId)!;
+        const typography = wordTypography(word, faces);
+        return {
+          kind: "text",
+          id: word.id,
+          text: `${startsLine && wordIndex === 0 ? "" : word.separatorBefore}${word.text}`,
+          ...(typography === undefined ? {} : { style: { typography } }),
+        };
+      }),
+    });
+    wordsOnLine += unit.wordIds.length;
+  }
+  return nodes;
+}
+
+function structuralLineCount(payload: CaptionCuePayload, maxWordsPerLine: number | undefined): number {
+  if (payload.units.length === 0) return 0;
+  if (maxWordsPerLine === undefined) return 1;
+  let lines = 1;
+  let wordsOnLine = 0;
+  for (const unit of payload.units) {
+    if (wordsOnLine > 0 && wordsOnLine + unit.wordIds.length > maxWordsPerLine) {
+      lines += 1;
+      wordsOnLine = 0;
+    }
+    wordsOnLine += unit.wordIds.length;
+  }
+  return lines;
 }
 
 function resolveCaptionFine(item: NleComponentItem) {
@@ -240,7 +268,9 @@ function resolveCaptionFine(item: NleComponentItem) {
   const style = record(parameters.style, `NLE Fine Caption ${item.id} style`) as CaptionFineStyleParameters;
   exactKeys(style as Readonly<Record<string, unknown>>, [
     "fonts", "color", "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "wordGap",
-    "textAlign", "outlineColor", "outlineWidth", "shadowColor", "shadowBlur", "shadowOffsetX",
+    "language", "direction", "writingMode", "textTransform", "variantCaps", "kerning",
+    "textAlign", "blockAlign", "inlineSize", "wrap", "maxWordsPerLine", "maxLines", "overflow",
+    "minimumScale", "outlineColor", "outlineWidth", "shadowColor", "shadowBlur", "shadowOffsetX",
     "shadowOffsetY", "shadowSpread", "glow", "longShadow", "gradient", "opacity",
     "cueBox", "activeBox", "karaoke", "entry", "exit", "atom", "activeResponse", "loop",
     "slideDistance", "attributeFaces",
@@ -256,8 +286,46 @@ function resolveCaptionFine(item: NleComponentItem) {
   const lineHeight = optionalNumber(style.lineHeight, 1.05, "Fine Caption lineHeight", 0.5, 4);
   const letterSpacing = optionalNumber(style.letterSpacing, 0, "Fine Caption letterSpacing", -20, 100);
   const wordGap = optionalNumber(style.wordGap, 0, "Fine Caption wordGap", 0, 100);
+  const language = style.language;
+  if (language !== undefined) {
+    assert(typeof language === "string" && /^[A-Za-z0-9]{1,8}(?:-[A-Za-z0-9]{1,8})*$/u.test(language),
+      "Fine Caption language is invalid.");
+  }
+  const direction = optionalChoice(style.direction, "auto", ["auto", "ltr", "rtl"] as const,
+    "Fine Caption direction");
+  const writingMode = optionalChoice(style.writingMode, "horizontal-tb",
+    ["horizontal-tb", "vertical-rl", "vertical-lr"] as const, "Fine Caption writingMode");
+  const textTransform = optionalChoice(style.textTransform, "none",
+    ["none", "uppercase", "lowercase", "capitalize"] as const, "Fine Caption textTransform");
+  const variantCaps = optionalChoice(style.variantCaps, "normal",
+    ["normal", "small-caps", "all-small-caps"] as const, "Fine Caption variantCaps");
+  const kerning = optionalChoice(style.kerning, "auto", ["auto", "normal", "none"] as const,
+    "Fine Caption kerning");
   const textAlign = optionalChoice(style.textAlign, "center", ["left", "center", "right"] as const,
     "Fine Caption textAlign");
+  const blockAlign = optionalChoice(style.blockAlign, "center", ["start", "center", "end"] as const,
+    "Fine Caption blockAlign");
+  const inlineSize = optionalChoice(style.inlineSize, "hug", ["hug", "fixed"] as const,
+    "Fine Caption inlineSize");
+  const wrap = optionalChoice(style.wrap, "word", ["none", "word", "grapheme"] as const,
+    "Fine Caption wrap");
+  const maxWordsPerLine = style.maxWordsPerLine === undefined ? undefined
+    : optionalInteger(style.maxWordsPerLine, 1, "Fine Caption maxWordsPerLine", 1, 10_000);
+  const maxLines = style.maxLines === undefined ? undefined
+    : optionalInteger(style.maxLines, 1, "Fine Caption maxLines", 1, 1_000);
+  const overflow = optionalChoice(style.overflow, "visible",
+    ["visible", "clip", "ellipsis", "shrink"] as const, "Fine Caption overflow");
+  const minimumScale = style.minimumScale === undefined ? undefined
+    : optionalNumber(style.minimumScale, 0.5, "Fine Caption minimumScale", 0.01, 1);
+  assert(overflow === "shrink" || minimumScale === undefined,
+    "Fine Caption minimumScale belongs only to shrink overflow.");
+  assert(overflow !== "shrink" || minimumScale !== undefined,
+    "Fine Caption shrink overflow requires minimumScale.");
+  assert(overflow !== "ellipsis" || maxLines !== undefined,
+    "Fine Caption ellipsis overflow requires maxLines.");
+  const structuralLines = structuralLineCount(caption, maxWordsPerLine);
+  assert(maxLines === undefined || structuralLines <= maxLines,
+    `Fine Caption constructs ${structuralLines} structural lines but maxLines is ${maxLines}.`);
   const outlineColor = optionalColor(style.outlineColor, "#000000", "Fine Caption outlineColor");
   const outlineWidth = optionalNumber(style.outlineWidth, 3, "Fine Caption outlineWidth", 0, 40);
   const shadowColor = optionalColor(style.shadowColor, "#00000099", "Fine Caption shadowColor");
@@ -402,9 +470,15 @@ function resolveCaptionFine(item: NleComponentItem) {
       lineHeight,
       letterSpacingPx: letterSpacing,
       wordSpacingPx: wordGap,
+      ...(language === undefined ? {} : { language }),
+      direction,
+      writingMode,
+      textTransform,
+      variantCaps,
+      kerning,
     },
     paints,
-    children: captionTextNodes(caption, attributeFaces),
+    children: captionTextNodes(caption, attributeFaces, maxWordsPerLine),
   });
   const sourceId = `${item.id}:caption-source`;
   const spatialDomain = sealLocalSpatialDomain({
@@ -427,14 +501,19 @@ function resolveCaptionFine(item: NleComponentItem) {
       dependencies: text.dependencies,
       data: { caption, color: alphaHex(color, opacity), karaoke, cueBox, activeBox, entry, exit, atom,
         activeResponse, loop, slideDistance,
+        layout: { overflow, minimumScale: minimumScale ?? 1 },
         underline: baseUnderline, activeUnderline },
-      html: `<div data-hypit-caption-fine><span data-caption-cue><svg data-caption-cue-union aria-hidden="true"><path></path></svg><svg data-caption-active-union aria-hidden="true"><path></path></svg><span data-caption-text-layer>${text.html}</span></span></div>`,
-      css: `:scope>[data-hypit-caption-fine]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:${textAlign}}:scope [data-caption-cue]{position:relative;display:inline-block;max-width:100%;box-sizing:border-box;${cueBox.continuity === "isolated" ? `padding:${cueBox.paddingY}px ${cueBox.paddingX}px;background:${cueBox.background};border:${cueBox.borderWidth}px solid ${cueBox.borderColor};border-radius:${cueBox.borderRadius}px;` : ""}white-space:pre-wrap;overflow-wrap:anywhere}:scope [data-caption-cue-union],:scope [data-caption-active-union]{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}:scope [data-caption-cue-union]{z-index:0}:scope [data-caption-active-union]{z-index:1}:scope [data-caption-text-layer]{position:relative;z-index:2}`,
+      html: `<div data-hypit-caption-fine><span data-caption-layout><span data-caption-cue><svg data-caption-cue-union aria-hidden="true"><path></path></svg><svg data-caption-active-union aria-hidden="true"><path></path></svg><span data-caption-text-layer>${text.html}</span></span></span></div>`,
+      css: `:scope>[data-hypit-caption-fine]{position:absolute;inset:0;display:flex;align-items:${blockAlign === "start" ? "flex-start" : blockAlign === "center" ? "center" : "flex-end"};justify-content:${textAlign === "left" ? "flex-start" : textAlign === "center" ? "center" : "flex-end"};text-align:${textAlign};${overflow === "visible" ? "" : "overflow:hidden;"}}:scope [data-caption-layout]{display:inline-block;${inlineSize === "fixed" ? "width:100%;" : "width:max-content;max-width:100%;"}}:scope [data-caption-cue]{position:relative;display:inline-block;${inlineSize === "fixed" ? "width:100%;" : "max-width:100%;"}box-sizing:border-box;${cueBox.continuity === "isolated" ? `padding:${cueBox.paddingY}px ${cueBox.paddingX}px;background:${cueBox.background};border:${cueBox.borderWidth}px solid ${cueBox.borderColor};border-radius:${cueBox.borderRadius}px;` : ""}white-space:${wrap === "none" ? "nowrap" : "pre-wrap"};overflow-wrap:${wrap === "word" ? "anywhere" : "normal"};word-break:${wrap === "grapheme" ? "break-all" : "normal"};${overflow === "visible" ? "" : "overflow:hidden;"}}:scope [data-caption-cue-union],:scope [data-caption-active-union]{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}:scope [data-caption-cue-union]{z-index:0}:scope [data-caption-active-union]{z-index:1}:scope [data-caption-text-layer]{position:relative;z-index:2;${overflow === "ellipsis" ? `display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:${maxLines};overflow:hidden;` : ""}}`,
       setup: `
         ${htmlLineUnionRuntime}
+        const layout = root.querySelector('[data-caption-layout]');
         const cue = root.querySelector('[data-caption-cue]');
         const cueUnion = root.querySelector('[data-caption-cue-union] path');
         const activeUnion = root.querySelector('[data-caption-active-union] path');
+        if (layout === null || cue === null || cueUnion === null || activeUnion === null) {
+          throw new Error('Fine Caption HTML structure is incomplete.');
+        }
         const units = new Map([...root.querySelectorAll('[data-hypit-text-kind="group"]')]
           .map(element => [element.getAttribute('data-hypit-text-node'), element]));
         const allWords = [...root.querySelectorAll('[data-hypit-text-kind="text"]')];
@@ -593,7 +672,19 @@ function resolveCaptionFine(item: NleComponentItem) {
           element.style.clipPath = clipped?.clipPath || '';
           element.style.transformOrigin = 'center';
         };
+        const fitLayout = () => {
+          if (data.layout.overflow !== 'shrink') return;
+          layout.style.transform = '';
+          layout.style.transformOrigin = 'center';
+          const frame = root.querySelector('[data-hypit-caption-fine]');
+          if (frame === null) throw new Error('Fine Caption layout frame is missing.');
+          const scale = Math.max(data.layout.minimumScale,
+            Math.min(1, frame.clientWidth / Math.max(1, layout.scrollWidth),
+              frame.clientHeight / Math.max(1, layout.scrollHeight)));
+          layout.style.transform = 'scale(' + scale + ')';
+        };
         return localFrame => {
+          fitLayout();
           const time = localFrame / fps;
           const entryProgress = data.entry.frames <= 0 ? 1 : clamp(localFrame / data.entry.frames);
           const remainingFrames = Math.max(0, context.durationFrames - 1 - localFrame);

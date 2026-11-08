@@ -84,6 +84,18 @@ const base: CaptionStyle = { id: "base", family: "fine", parameters: {
   fonts: exactFont,
   color: "#ffffff",
   fontFamily: "Arial, sans-serif",
+  language: "en",
+  direction: "ltr",
+  textTransform: "uppercase",
+  variantCaps: "small-caps",
+  kerning: "normal",
+  blockAlign: "end",
+  inlineSize: "fixed",
+  wrap: "word",
+  maxWordsPerLine: 1,
+  maxLines: 2,
+  overflow: "shrink",
+  minimumScale: 0.65,
   outlineColor: "#000000",
   outlineWidth: 4,
   gradient: { from: "#ffffff", to: "#67e8f9", angleDeg: 90 },
@@ -161,6 +173,9 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
   assert.match(html.html, /textDecorationThickness/u);
   assert.match(html.html, /data-hypit-text-paint="long-shadow"/u);
   assert.match(html.html, /data-hypit-text-paint="glow"/u);
+  assert.match(html.html, /data-caption-layout/u);
+  assert.match(html.html, /font-variant-caps:small-caps/u);
+  assert.match(html.html, /<br data-hypit-text-node="caption-row-/u);
   if (alice?.kind !== "component") throw new Error("Fine Caption fixture is not a Component.");
   const terminal = captionFineNleHtmlVideoResolver.resolve(alice, {
     project,
@@ -172,6 +187,7 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
   assert.match(setup, /easeOutElastic/u);
   assert.match(setup, /data\.atom\.reveal === 'typewriter'/u);
   assert.match(setup, /data\.loop\.target === 'active-atom'/u);
+  assert.match(setup, /data\.layout\.overflow !== 'shrink'/u);
 
   const authoring = createNleAuthoringHostFromFacets(hypitPackage.facets);
   const restyled = applyNleTransaction(project, authoring.planComponentParameterEdit(project, alice.id, {
