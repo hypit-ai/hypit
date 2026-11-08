@@ -25,7 +25,46 @@ export type TextFinePointPlacement = {
   readonly anchorBlock: "start" | "center" | "end";
 };
 
-export type TextFinePlacement = TextFineFlowPlacement | TextFinePointPlacement;
+export type TextFinePathCommand =
+  | { readonly kind: "move" | "line"; readonly x: number; readonly y: number }
+  | {
+      readonly kind: "quadratic";
+      readonly controlX: number;
+      readonly controlY: number;
+      readonly x: number;
+      readonly y: number;
+    }
+  | {
+      readonly kind: "cubic";
+      readonly control1X: number;
+      readonly control1Y: number;
+      readonly control2X: number;
+      readonly control2Y: number;
+      readonly x: number;
+      readonly y: number;
+    }
+  | { readonly kind: "close" };
+
+export type TextFinePathPlacement = {
+  readonly kind: "path";
+  readonly commands: readonly TextFinePathCommand[];
+  readonly side: "left" | "right";
+  readonly orientation: "follow" | "upright";
+  readonly startMarginPx: number;
+  readonly endMarginPx: number;
+  readonly align: "start" | "center" | "end";
+  readonly reverse: boolean;
+  readonly overflow: "visible" | "clip";
+  readonly marginAnimation?: {
+    readonly keyframes: readonly {
+      readonly atFrame: number;
+      readonly startMarginPx: number;
+      readonly easing?: "linear" | "ease-in" | "ease-out" | "ease-in-out";
+    }[];
+  };
+};
+
+export type TextFinePlacement = TextFineFlowPlacement | TextFinePointPlacement | TextFinePathPlacement;
 
 export type TextFineNleParameters = {
   readonly typography: HtmlTextTypography;

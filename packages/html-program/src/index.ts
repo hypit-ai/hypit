@@ -26,6 +26,7 @@ export type {
 } from "./picture-reconstruction.js";
 export { htmlTextFragment } from "./text.js";
 export { htmlLineUnionRuntime } from "./line-union.js";
+export { htmlPathTextRuntime } from "./path-text.js";
 export type {
   HtmlTextBoxDecoration,
   HtmlTextColorPaint,

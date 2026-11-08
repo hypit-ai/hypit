@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { pictureType } from "@hypit/audiovisual";
+import { readHtmlVisual } from "@hypit/html-program";
 import { canonicalize } from "@hypit/protocol";
 import {
   applyNleTransaction,
@@ -15,6 +16,7 @@ import { exactTemporalValue } from "@hypit/temporal/algebra";
 import { hypitPackage } from "../src/activation.js";
 import {
   textFineNleComponentSymbol,
+  textFineNleHtmlVideoResolver,
   textFineNleResolver,
   type TextFineNleParameters,
 } from "../src/index.js";
@@ -91,6 +93,40 @@ test("Fine Text package authors document, style and local placement through item
   if (item.kind !== "component") throw new Error("Fine Text edit changed Item kind.");
   assert.deepEqual((item.parameters as unknown as TextFineNleParameters).children,
     [{ kind: "text", id: "replacement", text: "Changed title" }]);
+});
+
+test("Fine Text lays rich runs on an authored path without a Composition intermediary", () => {
+  const selectedProject = project();
+  const item = findNleItem(selectedProject, "headline").item;
+  if (item.kind !== "component") throw new Error("Fine Text fixture changed Item kind.");
+  const pathItem = { ...item, parameters: canonicalize({ ...parameters, placement: {
+    kind: "path",
+    commands: [
+      { kind: "move", x: 80, y: 220 },
+      { kind: "quadratic", controlX: 800, controlY: 20, x: 1520, y: 220 },
+    ],
+    side: "left",
+    orientation: "follow",
+    startMarginPx: 20,
+    endMarginPx: 20,
+    align: "center",
+    reverse: false,
+    overflow: "clip",
+    marginAnimation: { keyframes: [
+      { atFrame: 0, startMarginPx: 20 },
+      { atFrame: 45, startMarginPx: 120, easing: "ease-in-out" },
+    ] },
+  } }) };
+  const terminal = textFineNleHtmlVideoResolver.resolve(pathItem, {
+    project: selectedProject,
+    track: selectedProject.tracks[0]!,
+  }, textFineNleResolver.resolve(pathItem, { project: selectedProject, track: selectedProject.tracks[0]! }));
+  if (terminal.html?.implementation.kind !== "program") throw new Error("Fine Text terminal is not a Program.");
+  const visual = readHtmlVisual(terminal.html.implementation.program);
+  assert.match(visual.html, /data-hypit-text-fine-path-guide/u);
+  assert.match(visual.html, /Q800 20 1520 220/u);
+  assert.match(visual.setup ?? "", /hypitLayoutTextOnPath/u);
+  assert.doesNotThrow(() => new Function("root", "data", "context", visual.setup ?? ""));
 });
 
 test("Fine Text rejects impossible Flow ownership instead of hiding layout fallback", () => {
