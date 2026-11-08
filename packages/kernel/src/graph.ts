@@ -49,7 +49,9 @@ function normalizeOutput(output: LogicalOutput): LogicalOutput {
   return {
     id: output.id,
     type: output.type,
-    result: { kind: "operation-result", operation: output.result.operation },
+    result: output.result.kind === "record"
+      ? { kind: "record", id: output.result.id }
+      : { kind: "operation-result", operation: output.result.operation },
   };
 }
 
@@ -179,7 +181,7 @@ export function verifyLogicalOutput(
   graph: AuthorGraph,
   output: LogicalOutput,
 ): void {
-  const supplied = operationResultType(program, resolveOperation(graph, output.result.operation));
+  const supplied = graphValueType(program, graph, output.result);
   invariant(
     sameType(supplied, output.type),
     "OUTPUT_RESULT_TYPE_MISMATCH",

@@ -3,7 +3,7 @@
 The domain neutral graph compiler and build state machine.
 
 Core plans one complete Author Graph for an explicit finite target set. Starting at the Targets, it
-follows each target through the Author Graph's fixed production relations,
+follows each target through the Author Graph's fixed value relations,
 and derives one finite execution closure without rewriting the Author Graph.
 
 Execution is one immutable `BuildDefinition` followed by accepted `BuildFact` values. `BuildMachine`

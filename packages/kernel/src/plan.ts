@@ -160,7 +160,14 @@ function compilePlanning(
     }
     if (resolvedOutputs.has(ref.id)) continue;
     const output = resolveLogicalOutput(graph, ref.id);
-    const resolved = operationSource(output.result.operation);
+    let resolved: ResolvedSource;
+    if (output.result.kind === "record") {
+      const record = authored.get(output.result.id);
+      invariant(record !== undefined, "UNKNOWN_RECORD", `unknown authored record ${output.result.id}`, output.result.id);
+      resolved = { record: record.id, type: record.type };
+    } else {
+      resolved = operationSource(output.result.operation);
+    }
     pending.push(output.result);
     invariant(
       sameType(resolved.type, output.type),

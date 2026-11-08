@@ -10,6 +10,9 @@ parses a module manifest from JSON without loading executable package code. The 
 Protocol contains no source parser, package loader, runtime, filesystem access or video vocabulary.
 Source units and source ranges belong to `@hypit/source`; Protocol records only graph and execution
 meaning after source-local structure has been decoded.
+One `LogicalOutput` has one fixed value root. An `OperationResultRef` asks a Build to produce it; a
+`RecordRef` exposes a value that already exists in the linked program and therefore truncates planning.
+This distinction adds no filesystem, Result repository or reuse policy to Protocol.
 `BlobRef` is the reserved byte-resource leaf inside a recursive `Value`. `valueBlobRefs` reports
 each occurrence as `{ at, blob }`, while `mapValueBlobs` returns `BlobMappedValue<T>` after replacing
 those leaves; neither API assigns media-domain meaning to the bytes.

@@ -44,11 +44,14 @@ export type OperationResultRef = {
 
 export type GraphValueRef = RecordRef | LogicalOutputRef | OperationResultRef;
 
+/** A public graph value may be generated now or close over an already-established Record. */
+export type GraphValueRoot = RecordRef | OperationResultRef;
+
 export type LogicalOutput = {
   readonly id: LogicalOutputId;
   readonly type: TypeRef;
-  /** The one authored Operation result that produces this public value. */
-  readonly result: OperationResultRef;
+  /** The fixed value root for this graph revision. A Record root naturally truncates execution. */
+  readonly result: GraphValueRoot;
 };
 
 export type OperationResult =

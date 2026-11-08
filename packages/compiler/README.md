@@ -56,8 +56,9 @@ Result values, and they do not form a central complexity score.
 
 `BuildCompiler` compiles an Author Source together with one explicit transient Target selection
 from CLI or Studio arguments. Durable Records, operations and consumer references remain in the
-Author Source. The compiler follows each demanded output through its one fixed AuthorGraph
-producer, then asks Core for the finite BuildPlan. `CompiledBuild` owns that Author compilation; it
+Author Source. The compiler follows each demanded output through its one fixed AuthorGraph value
+root, then asks Core for the finite BuildPlan. Operation roots remain executable; already-authored
+Record roots naturally stop traversal. `CompiledBuild` owns that Author compilation; it
 does not repeat its Programme or attachment bundle as sibling fields.
 
 Normal compilation does not return source-range provenance. An authoring consumer that actually

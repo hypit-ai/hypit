@@ -1,0 +1,21 @@
+{
+  "name": "@hypit/generation-graph",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node/index.ts"
+  },
+  "dependencies": {
+    "@hypit/atomic-file": "workspace:^0.0.0-dev",
+    "@hypit/author": "workspace:*",
+    "@hypit/kernel": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}
