@@ -30,7 +30,6 @@
     "@hypit/narrative": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/seedance": "workspace:*",
-    "@hypit/spatial": "workspace:*",
     "@hypit/prompt": "workspace:*",
     "@hypit/svml": "workspace:*",
     "@hypit/temporal": "workspace:*",

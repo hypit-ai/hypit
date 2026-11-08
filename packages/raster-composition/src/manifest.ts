@@ -1,5 +1,4 @@
 import { blobDependency, blobTypes } from "@hypit/hypit/blob";
-import { spatialDependency } from "@hypit/spatial";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
 
 export const rasterCompositionModuleRef = { name: "@hypit/raster-composition", version: "1" } as const;
@@ -21,7 +20,7 @@ export const rasterCompositionManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: rasterCompositionModuleRef.name,
   version: rasterCompositionModuleRef.version,
-  dependencies: [blobDependency, spatialDependency],
+  dependencies: [blobDependency],
   types: Object.values(rasterCompositionTypes).map((type) => type.name),
   capabilities: [{ name: rasterCompositionCapabilities.render.name, returns: blobTypes.blob }],
   producers: [{

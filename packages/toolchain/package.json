@@ -62,7 +62,6 @@
     "@hypit/seedance": "workspace:^0.3.0",
     "@hypit/seedance-kits": "workspace:^0.1.2",
     "@hypit/seedream": "workspace:^0.3.0",
-    "@hypit/spatial": "workspace:^0.1.1",
     "@hypit/svml": "workspace:^0.1.0",
     "@hypit/temporal-graph": "workspace:^0.1.0",
     "@hypit/picture-matte": "workspace:^0.1.0",

@@ -1,5 +1,4 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import { temporalDependency } from "@hypit/temporal-graph";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
 export const pictureFilterModuleRef = { name: "@hypit/picture-filter", version: "1" } as const;
@@ -31,7 +30,7 @@ export const pictureFilterManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: pictureFilterModuleRef.name,
   version: pictureFilterModuleRef.version,
-  dependencies: [audiovisualDependency, temporalDependency],
+  dependencies: [audiovisualDependency],
   types: Object.values(pictureFilterTypes).map((type) => type.name),
   capabilities: [],
   producers: [

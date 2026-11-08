@@ -13,7 +13,6 @@
     "@hypit/blob": "workspace:*",
     "@hypit/producer": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/spatial": "workspace:*",
     "@hypit/hypit": "workspace:*"
   }
 }

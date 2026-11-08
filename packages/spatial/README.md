@@ -2,8 +2,10 @@
 
 Clock-, Canvas- and renderer-free spatial relationship algebra.
 
-The package has one public model. Its root and `@hypit/spatial/algebra` entry expose the same
-`LocalSpatialDomain`, finite `SpatialRegion` and invertible affine/projective `SpatialMap` facts.
+The package is a zero-dependency value algebra. Its root and `@hypit/spatial/algebra` entry expose
+the same `LocalSpatialDomain`, finite `SpatialRegion` and invertible affine/projective `SpatialMap`
+facts. It does not publish a logical Graph Module or activation entry: packages embed these values
+inside their own Types and validate them at their own boundaries.
 The former Canvas, SpatialFrame, SpatialMap2D, content-fit declarations, Producers and author
 fragments were a second geometry system and have been removed rather than retained as compatibility.
 

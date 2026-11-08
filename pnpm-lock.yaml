@@ -243,9 +243,6 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.0
         version: link:../temporal
-      '@hypit/temporal-graph':
-        specifier: workspace:^0.1.0
-        version: link:../temporal-graph
 
   packages/audio-preserve-pitch:
     dependencies:
@@ -301,9 +298,6 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
-      '@hypit/temporal-graph':
-        specifier: workspace:^0.1.0
-        version: link:../temporal-graph
     devDependencies:
       '@hypit/protocol':
         specifier: workspace:*
@@ -823,9 +817,6 @@ importers:
       '@hypit/seedance':
         specifier: workspace:*
         version: link:../seedance
-      '@hypit/spatial':
-        specifier: workspace:*
-        version: link:../spatial
       '@hypit/svml':
         specifier: workspace:*
         version: link:../svml
@@ -1427,9 +1418,6 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.0
         version: link:../temporal
-      '@hypit/temporal-graph':
-        specifier: workspace:^0.1.0
-        version: link:../temporal-graph
     devDependencies:
       typescript:
         specifier: 5.9.3
@@ -2256,14 +2244,7 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
-  packages/spatial:
-    dependencies:
-      '@hypit/protocol':
-        specifier: workspace:^0.0.0-dev
-        version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:^0.0.0-dev
-        version: link:../refinement
+  packages/spatial: {}
 
   packages/speech-estimate:
     dependencies:
@@ -2512,9 +2493,6 @@ importers:
       '@hypit/seedream':
         specifier: workspace:^0.3.0
         version: link:../seedream
-      '@hypit/spatial':
-        specifier: workspace:^0.1.1
-        version: link:../spatial
       '@hypit/svml':
         specifier: workspace:^0.1.0
         version: link:../svml

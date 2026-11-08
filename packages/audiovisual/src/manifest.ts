@@ -1,5 +1,3 @@
-import { spatialDependency } from "@hypit/spatial";
-import { temporalDependency } from "@hypit/temporal-graph";
 import { blobRefSchema } from "@hypit/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
@@ -33,7 +31,7 @@ export const audiovisualManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: audiovisualModuleRef.name,
   version: audiovisualModuleRef.version,
-  dependencies: [temporalDependency, spatialDependency],
+  dependencies: [],
   types: Object.values(audiovisualTypes).map((type) => type.name),
   capabilities: [],
   producers: [{

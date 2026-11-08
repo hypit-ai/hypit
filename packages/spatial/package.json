@@ -8,15 +8,8 @@
     ".": "./src/index.ts",
     "./algebra": "./src/algebra.ts"
   },
-  "hypit": {
-    "activation": "./src/activation.ts"
-  },
   "files": [
     "dist",
     "README.md"
-  ],
-  "dependencies": {
-    "@hypit/protocol": "workspace:^0.0.0-dev",
-    "@hypit/refinement": "workspace:^0.0.0-dev"
-  }
+  ]
 }

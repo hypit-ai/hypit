@@ -33,7 +33,6 @@ import {
   seedanceManifest,
   seedanceFields,
 } from "@hypit/seedance";
-import { spatialManifest } from "@hypit/spatial";
 import { promptManifest, promptTypes, sealPrompt } from "@hypit/prompt";
 import { textManifest } from "@hypit/text";
 
@@ -64,7 +63,6 @@ function fixture() {
     gptImageManifest,
     mediaManifest,
     temporalManifest,
-    spatialManifest,
     seedanceManifest,
   ];
   const closure = createResolvedClosure(manifests);

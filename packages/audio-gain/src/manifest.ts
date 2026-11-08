@@ -1,5 +1,4 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import { temporalDependency } from "@hypit/temporal-graph";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
 export const audioGainModuleRef = { name: "@hypit/audio-gain", version: "1" } as const;
@@ -16,7 +15,7 @@ export const audioGainOperatorSpecSchema = object({ gain: { schema: { kind: "num
 
 export const audioGainManifest: ModuleManifest = {
   format: "hypit.module@1", name: audioGainModuleRef.name, version: audioGainModuleRef.version,
-  dependencies: [audiovisualDependency, temporalDependency],
+  dependencies: [audiovisualDependency],
   types: Object.values(audioGainTypes).map((type) => type.name),
   capabilities: [],
   producers: [

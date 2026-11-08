@@ -14,8 +14,7 @@
     "@hypit/producer": "workspace:^0.0.0-dev",
     "@hypit/refinement": "workspace:^0.0.0-dev",
     "@hypit/spatial": "workspace:^0.1.1",
-    "@hypit/temporal": "workspace:^0.1.1",
-    "@hypit/temporal-graph": "workspace:^0.1.0"
+    "@hypit/temporal": "workspace:^0.1.1"
   },
   "devDependencies": {
     "@hypit/protocol": "workspace:*"
