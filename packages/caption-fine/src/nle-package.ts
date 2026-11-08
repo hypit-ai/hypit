@@ -228,7 +228,7 @@ function resolveCaptionFine(item: NleComponentItem) {
       data: { caption, color, karaoke, activeBox, entry },
       html: `<div data-hypit-caption-fine><span data-caption-cue>${caption.units.map((unit) =>
         `<span data-caption-unit="${escapeHtml(unit.id)}">${unitHtml(caption, unit.id, attributeFaces)}</span>`).join("")}</span></div>`,
-      css: `:scope>[data-hypit-caption-fine]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:${textAlign};font-family:${fontFamily};font-size:${fontSize}px;font-weight:${fontWeight};line-height:${lineHeight};letter-spacing:${letterSpacing}px;color:${color}}:scope [data-caption-cue]{display:inline;max-width:100%;padding:${cueBox.paddingY}px ${cueBox.paddingX}px;background:${cueBox.background};border:${cueBox.borderWidth}px solid ${cueBox.borderColor};border-radius:${cueBox.borderRadius}px;box-shadow:${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px ${shadowColor};white-space:pre-wrap;overflow-wrap:anywhere;-webkit-box-decoration-break:clone;box-decoration-break:clone}:scope [data-caption-unit]{display:inline;position:relative;margin-right:${wordGap}px;color:${color};-webkit-text-stroke:${outlineWidth}px ${outlineColor};paint-order:stroke fill;transition:transform 80ms linear}:scope [data-caption-word]{color:inherit}`,
+      css: `:scope>[data-hypit-caption-fine]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:${textAlign};font-family:${fontFamily};font-size:${fontSize}px;font-weight:${fontWeight};line-height:${lineHeight};letter-spacing:${letterSpacing}px;color:${color}}:scope [data-caption-cue]{display:inline-block;max-width:100%;box-sizing:border-box;padding:${cueBox.paddingY}px ${cueBox.paddingX}px;background:${cueBox.background};border:${cueBox.borderWidth}px solid ${cueBox.borderColor};border-radius:${cueBox.borderRadius}px;box-shadow:${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px ${shadowColor};white-space:pre-wrap;overflow-wrap:anywhere}:scope [data-caption-unit]{display:inline;position:relative;margin-right:${wordGap}px;color:${color};-webkit-text-stroke:${outlineWidth}px ${outlineColor};paint-order:stroke fill}:scope [data-caption-word]{color:inherit}`,
       setup: `
         const cue = root.querySelector('[data-caption-cue]');
         const units = new Map([...root.querySelectorAll('[data-caption-unit]')]
@@ -298,7 +298,7 @@ function resolveCaptionFine(item: NleComponentItem) {
             const progress = passed ? 1 : current ? (time - start) / Math.max(end - start, 1 / fps) : 0;
             paintText(element, progress, textActive);
             paintBox(element, boxActive);
-            element.style.transform = current ? 'scale(1.035)' : '';
+            element.style.transform = '';
           }
         };
       `,

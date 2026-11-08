@@ -324,6 +324,13 @@ export async function createFramePreparer(page: FramePreparationPage) {
       const sourceMs = performance.now() - sourceStarted;
       const readinessStarted = performance.now();
       await w.__hypitPrepareImages();
+      // `applyFrame` may change many text paints and transforms synchronously. Layout reads prove
+      // geometry, but Chromium can still hand `Page.captureScreenshot` the previous compositor
+      // surface when capture begins in the same task. Wait for the next presentation opportunity
+      // so every worker screenshots one fully painted state rather than intermittent missing glyph
+      // layers. This is frame readiness, not an authored animation delay.
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      void document.documentElement.getBoundingClientRect();
       if (w.__hypitHtmlVisualError !== undefined) throw new Error(w.__hypitHtmlVisualError);
       return { programMs, sourceMs, readinessMs: performance.now() - readinessStarted };
     }, { frame, sources });

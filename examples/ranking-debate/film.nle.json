@@ -387,17 +387,17 @@
               {
                 "id": "S",
                 "label": "S",
-                "color": "#22c55e"
+                "color": "#fb5260"
               },
               {
                 "id": "A",
                 "label": "A",
-                "color": "#60a5fa"
+                "color": "#fbbf24"
               },
               {
                 "id": "B",
                 "label": "B",
-                "color": "#fb923c"
+                "color": "#34d399"
               }
             ],
             "entries": [
@@ -405,7 +405,7 @@
                 "id": "pretty",
                 "label": "漂亮画面",
                 "tier": "B",
-                "icon": "✨",
+                "icon": "画",
                 "revealAt": {
                   "ticks": "11911",
                   "timeBase": {
@@ -418,7 +418,7 @@
                 "id": "stable",
                 "label": "稳定修改",
                 "tier": "A",
-                "icon": "🛠",
+                "icon": "改",
                 "revealAt": {
                   "ticks": "41231",
                   "timeBase": {
@@ -431,7 +431,7 @@
                 "id": "timed",
                 "label": "按词编排",
                 "tier": "S",
-                "icon": "⏱",
+                "icon": "词",
                 "revealAt": {
                   "ticks": "12137",
                   "timeBase": {
@@ -444,7 +444,7 @@
                 "id": "editable",
                 "label": "普通工程",
                 "tier": "S",
-                "icon": "✂️",
+                "icon": "剪",
                 "revealAt": {
                   "ticks": "12829",
                   "timeBase": {
@@ -454,14 +454,14 @@
                 }
               }
             ],
-            "revealFrames": 8
+            "revealFrames": 18
           },
           "picture": {
             "layout": {
-              "x": 350,
-              "y": 24,
-              "width": 340,
-              "height": 370,
+              "x": 392,
+              "y": 26,
+              "width": 300,
+              "height": 260,
               "fit": "fill"
             },
             "effects": []
@@ -1087,11 +1087,7 @@
             "family": "fine",
             "style": {
               "activeBox": {
-                "background": "#2563eb88",
-                "borderRadius": 8,
-                "mode": "trail",
-                "paddingX": 5,
-                "paddingY": 2
+                "mode": "off"
               },
               "attributeFaces": [
                 {
@@ -1102,43 +1098,43 @@
                   "value": "serif"
                 }
               ],
-              "color": "#ffffff",
+              "color": "#f8fafc",
               "cueBox": {
-                "background": "#172554cc",
-                "borderColor": "#60a5fa",
+                "background": "#0b1020e8",
+                "borderColor": "#ffffff24",
                 "borderRadius": 18,
-                "borderWidth": 3,
-                "paddingX": 20,
+                "borderWidth": 1,
+                "paddingX": 22,
                 "paddingY": 14
               },
               "entry": {
-                "frames": 6,
-                "kind": "pop"
+                "frames": 4,
+                "kind": "fade"
               },
-              "fontFamily": "Arial, sans-serif",
-              "fontSize": 62,
-              "fontWeight": 900,
+              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
+              "fontSize": 48,
+              "fontWeight": 800,
               "karaoke": {
-                "activeColor": "#fef08a",
-                "mode": "trail",
-                "transition": "wipe"
+                "activeColor": "#67e8f9",
+                "mode": "current",
+                "transition": "step"
               },
-              "lineHeight": 1.08,
-              "outlineColor": "#111827",
-              "outlineWidth": 5,
-              "shadowBlur": 8,
-              "shadowColor": "#11182788",
-              "shadowOffsetY": 7,
+              "lineHeight": 1.16,
+              "outlineColor": "#020617cc",
+              "outlineWidth": 2,
+              "shadowBlur": 12,
+              "shadowColor": "#02061799",
+              "shadowOffsetY": 5,
               "textAlign": "center"
             },
             "styleId": "alice"
           },
           "picture": {
             "layout": {
-              "x": 38,
-              "y": 910,
-              "width": 644,
-              "height": 300,
+              "x": 42,
+              "y": 930,
+              "width": 636,
+              "height": 240,
               "fit": "fill"
             },
             "effects": []
@@ -1647,46 +1643,45 @@
             "family": "fine",
             "style": {
               "activeBox": {
-                "background": "#fb923c88",
-                "borderRadius": 8,
-                "mode": "current",
-                "paddingX": 5,
-                "paddingY": 2
+                "mode": "off"
               },
-              "color": "#fff7ed",
+              "color": "#f8fafc",
               "cueBox": {
-                "background": "#7c2d12dd",
-                "borderColor": "#fdba74",
+                "background": "#0b1020e8",
+                "borderColor": "#ffffff24",
                 "borderRadius": 18,
-                "borderWidth": 3,
-                "paddingX": 20,
+                "borderWidth": 1,
+                "paddingX": 22,
                 "paddingY": 14
               },
               "entry": {
-                "frames": 7,
-                "kind": "slide-up"
+                "frames": 4,
+                "kind": "fade"
               },
-              "fontFamily": "Arial, sans-serif",
-              "fontSize": 58,
-              "fontWeight": 900,
+              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
+              "fontSize": 48,
+              "fontWeight": 800,
               "karaoke": {
-                "activeColor": "#fef3c7",
+                "activeColor": "#fdba74",
                 "mode": "current",
                 "transition": "step"
               },
-              "lineHeight": 1.08,
-              "outlineColor": "#431407",
-              "outlineWidth": 5,
+              "lineHeight": 1.16,
+              "outlineColor": "#020617cc",
+              "outlineWidth": 2,
+              "shadowBlur": 12,
+              "shadowColor": "#02061799",
+              "shadowOffsetY": 5,
               "textAlign": "center"
             },
             "styleId": "bob"
           },
           "picture": {
             "layout": {
-              "x": 38,
-              "y": 910,
-              "width": 644,
-              "height": 300,
+              "x": 42,
+              "y": 930,
+              "width": 636,
+              "height": 240,
               "fit": "fill"
             },
             "effects": []
@@ -2168,46 +2163,45 @@
             "family": "fine",
             "style": {
               "activeBox": {
-                "background": "#fb923c88",
-                "borderRadius": 8,
-                "mode": "current",
-                "paddingX": 5,
-                "paddingY": 2
+                "mode": "off"
               },
-              "color": "#fff7ed",
+              "color": "#f8fafc",
               "cueBox": {
-                "background": "#7c2d12dd",
-                "borderColor": "#fdba74",
+                "background": "#0b1020e8",
+                "borderColor": "#ffffff24",
                 "borderRadius": 18,
-                "borderWidth": 3,
-                "paddingX": 20,
+                "borderWidth": 1,
+                "paddingX": 22,
                 "paddingY": 14
               },
               "entry": {
-                "frames": 7,
-                "kind": "slide-up"
+                "frames": 4,
+                "kind": "fade"
               },
-              "fontFamily": "Arial, sans-serif",
-              "fontSize": 58,
-              "fontWeight": 900,
+              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
+              "fontSize": 48,
+              "fontWeight": 800,
               "karaoke": {
-                "activeColor": "#fef3c7",
+                "activeColor": "#fdba74",
                 "mode": "current",
                 "transition": "step"
               },
-              "lineHeight": 1.08,
-              "outlineColor": "#431407",
-              "outlineWidth": 5,
+              "lineHeight": 1.16,
+              "outlineColor": "#020617cc",
+              "outlineWidth": 2,
+              "shadowBlur": 12,
+              "shadowColor": "#02061799",
+              "shadowOffsetY": 5,
               "textAlign": "center"
             },
             "styleId": "bob"
           },
           "picture": {
             "layout": {
-              "x": 38,
-              "y": 910,
-              "width": 644,
-              "height": 300,
+              "x": 42,
+              "y": 930,
+              "width": 636,
+              "height": 240,
               "fit": "fill"
             },
             "effects": []
@@ -2553,40 +2547,46 @@
             },
             "family": "fine",
             "style": {
-              "color": "#ffffff",
+              "activeBox": {
+                "mode": "off"
+              },
+              "color": "#f8fafc",
               "cueBox": {
-                "background": "#b91c1cee",
-                "borderColor": "#fef2f2",
-                "borderRadius": 12,
-                "borderWidth": 4,
+                "background": "#2a0e16ed",
+                "borderColor": "#fb718566",
+                "borderRadius": 18,
+                "borderWidth": 1,
                 "paddingX": 22,
-                "paddingY": 16
+                "paddingY": 14
               },
               "entry": {
                 "frames": 4,
-                "kind": "pop"
+                "kind": "fade"
               },
-              "fontFamily": "Arial, sans-serif",
-              "fontSize": 64,
-              "fontWeight": 900,
+              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
+              "fontSize": 50,
+              "fontWeight": 850,
               "karaoke": {
-                "activeColor": "#fde047",
-                "mode": "trail",
-                "transition": "wipe"
+                "activeColor": "#fde68a",
+                "mode": "current",
+                "transition": "step"
               },
-              "lineHeight": 1.04,
-              "outlineColor": "#450a0a",
-              "outlineWidth": 6,
+              "lineHeight": 1.12,
+              "outlineColor": "#020617cc",
+              "outlineWidth": 2,
+              "shadowBlur": 12,
+              "shadowColor": "#02061799",
+              "shadowOffsetY": 5,
               "textAlign": "center"
             },
             "styleId": "warning"
           },
           "picture": {
             "layout": {
-              "x": 38,
-              "y": 910,
-              "width": 644,
-              "height": 300,
+              "x": 42,
+              "y": 930,
+              "width": 636,
+              "height": 240,
               "fit": "fill"
             },
             "effects": []
@@ -3156,11 +3156,7 @@
             "family": "fine",
             "style": {
               "activeBox": {
-                "background": "#2563eb88",
-                "borderRadius": 8,
-                "mode": "trail",
-                "paddingX": 5,
-                "paddingY": 2
+                "mode": "off"
               },
               "attributeFaces": [
                 {
@@ -3171,43 +3167,43 @@
                   "value": "serif"
                 }
               ],
-              "color": "#ffffff",
+              "color": "#f8fafc",
               "cueBox": {
-                "background": "#172554cc",
-                "borderColor": "#60a5fa",
+                "background": "#0b1020e8",
+                "borderColor": "#ffffff24",
                 "borderRadius": 18,
-                "borderWidth": 3,
-                "paddingX": 20,
+                "borderWidth": 1,
+                "paddingX": 22,
                 "paddingY": 14
               },
               "entry": {
-                "frames": 6,
-                "kind": "pop"
+                "frames": 4,
+                "kind": "fade"
               },
-              "fontFamily": "Arial, sans-serif",
-              "fontSize": 62,
-              "fontWeight": 900,
+              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
+              "fontSize": 48,
+              "fontWeight": 800,
               "karaoke": {
-                "activeColor": "#fef08a",
-                "mode": "trail",
-                "transition": "wipe"
+                "activeColor": "#67e8f9",
+                "mode": "current",
+                "transition": "step"
               },
-              "lineHeight": 1.08,
-              "outlineColor": "#111827",
-              "outlineWidth": 5,
-              "shadowBlur": 8,
-              "shadowColor": "#11182788",
-              "shadowOffsetY": 7,
+              "lineHeight": 1.16,
+              "outlineColor": "#020617cc",
+              "outlineWidth": 2,
+              "shadowBlur": 12,
+              "shadowColor": "#02061799",
+              "shadowOffsetY": 5,
               "textAlign": "center"
             },
             "styleId": "alice"
           },
           "picture": {
             "layout": {
-              "x": 38,
-              "y": 910,
-              "width": 644,
-              "height": 300,
+              "x": 42,
+              "y": 930,
+              "width": 636,
+              "height": 240,
               "fit": "fill"
             },
             "effects": []
@@ -3797,46 +3793,45 @@
             "family": "fine",
             "style": {
               "activeBox": {
-                "background": "#fb923c88",
-                "borderRadius": 8,
-                "mode": "current",
-                "paddingX": 5,
-                "paddingY": 2
+                "mode": "off"
               },
-              "color": "#fff7ed",
+              "color": "#f8fafc",
               "cueBox": {
-                "background": "#7c2d12dd",
-                "borderColor": "#fdba74",
+                "background": "#0b1020e8",
+                "borderColor": "#ffffff24",
                 "borderRadius": 18,
-                "borderWidth": 3,
-                "paddingX": 20,
+                "borderWidth": 1,
+                "paddingX": 22,
                 "paddingY": 14
               },
               "entry": {
-                "frames": 7,
-                "kind": "slide-up"
+                "frames": 4,
+                "kind": "fade"
               },
-              "fontFamily": "Arial, sans-serif",
-              "fontSize": 58,
-              "fontWeight": 900,
+              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
+              "fontSize": 48,
+              "fontWeight": 800,
               "karaoke": {
-                "activeColor": "#fef3c7",
+                "activeColor": "#fdba74",
                 "mode": "current",
                 "transition": "step"
               },
-              "lineHeight": 1.08,
-              "outlineColor": "#431407",
-              "outlineWidth": 5,
+              "lineHeight": 1.16,
+              "outlineColor": "#020617cc",
+              "outlineWidth": 2,
+              "shadowBlur": 12,
+              "shadowColor": "#02061799",
+              "shadowOffsetY": 5,
               "textAlign": "center"
             },
             "styleId": "bob"
           },
           "picture": {
             "layout": {
-              "x": 38,
-              "y": 910,
-              "width": 644,
-              "height": 300,
+              "x": 42,
+              "y": 930,
+              "width": 636,
+              "height": 240,
               "fit": "fill"
             },
             "effects": []
@@ -4021,46 +4016,45 @@
             "family": "fine",
             "style": {
               "activeBox": {
-                "background": "#fb923c88",
-                "borderRadius": 8,
-                "mode": "current",
-                "paddingX": 5,
-                "paddingY": 2
+                "mode": "off"
               },
-              "color": "#fff7ed",
+              "color": "#f8fafc",
               "cueBox": {
-                "background": "#7c2d12dd",
-                "borderColor": "#fdba74",
+                "background": "#0b1020e8",
+                "borderColor": "#ffffff24",
                 "borderRadius": 18,
-                "borderWidth": 3,
-                "paddingX": 20,
+                "borderWidth": 1,
+                "paddingX": 22,
                 "paddingY": 14
               },
               "entry": {
-                "frames": 7,
-                "kind": "slide-up"
+                "frames": 4,
+                "kind": "fade"
               },
-              "fontFamily": "Arial, sans-serif",
-              "fontSize": 58,
-              "fontWeight": 900,
+              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
+              "fontSize": 48,
+              "fontWeight": 800,
               "karaoke": {
-                "activeColor": "#fef3c7",
+                "activeColor": "#fdba74",
                 "mode": "current",
                 "transition": "step"
               },
-              "lineHeight": 1.08,
-              "outlineColor": "#431407",
-              "outlineWidth": 5,
+              "lineHeight": 1.16,
+              "outlineColor": "#020617cc",
+              "outlineWidth": 2,
+              "shadowBlur": 12,
+              "shadowColor": "#02061799",
+              "shadowOffsetY": 5,
               "textAlign": "center"
             },
             "styleId": "bob"
           },
           "picture": {
             "layout": {
-              "x": 38,
-              "y": 910,
-              "width": 644,
-              "height": 300,
+              "x": 42,
+              "y": 930,
+              "width": 636,
+              "height": 240,
               "fit": "fill"
             },
             "effects": []
@@ -4136,15 +4130,15 @@
           "parameters": {
             "kicker": "最终结论",
             "title": "S 级：生成后还能剪",
-            "accent": "#2563eb",
+            "accent": "#38bdf8",
             "enterFrames": 7
           },
           "picture": {
             "layout": {
-              "x": 80,
-              "y": 500,
-              "width": 560,
-              "height": 270,
+              "x": 90,
+              "y": 735,
+              "width": 540,
+              "height": 145,
               "fit": "fill"
             },
             "effects": []

@@ -141,23 +141,38 @@ function resolveRankingBoard(item: NleComponentItem) {
     ...resolved,
     html: visualProgramHtmlSource(resolved.source.id, resolved.output, htmlVisual({
       data: { entries, revealFrames },
-      html: `<div data-ranking-board><div data-ranking-title>${escapeHtml(title)}</div><div data-ranking-rows>${rows.map((row) =>
+      html: `<div data-ranking-board><div data-ranking-title><span></span>${escapeHtml(title)}</div><div data-ranking-rows>${rows.map((row) =>
         `<div data-ranking-row style="--tier:${escapeHtml(row.color)}"><div data-ranking-label>${escapeHtml(row.label)}</div><div data-ranking-cells>${entries.filter((entry) => entry.tier === row.id).map((entry) =>
           `<div data-ranking-entry="${escapeHtml(entry.id)}"><span>${escapeHtml(entry.icon)}</span><b>${escapeHtml(entry.label)}</b></div>`).join("")}</div></div>`).join("")}</div></div>`,
-      css: `:scope>[data-ranking-board]{position:absolute;inset:0;padding:17px;box-sizing:border-box;border:3px solid #111827;border-radius:20px;background:#fff7edee;box-shadow:8px 9px 0 #111827;color:#111827;font-family:Arial,sans-serif}:scope [data-ranking-title]{font-size:27px;font-weight:900;letter-spacing:-1px;margin-bottom:11px}:scope [data-ranking-row]{display:grid;grid-template-columns:60px 1fr;min-height:76px;border:2px solid #111827;border-bottom:0;background:#ffffff}:scope [data-ranking-row]:last-child{border-bottom:2px solid #111827}:scope [data-ranking-label]{display:flex;align-items:center;justify-content:center;background:var(--tier);border-right:2px solid #111827;font-size:34px;font-weight:1000}:scope [data-ranking-cells]{display:flex;flex-wrap:wrap;gap:6px;align-content:center;align-items:center;padding:6px;overflow:hidden}:scope [data-ranking-entry]{display:flex;align-items:center;gap:4px;padding:5px 7px;border:2px solid #111827;border-radius:9px;background:#ffffff;box-shadow:3px 3px 0 #111827;font-size:15px;white-space:nowrap;transform-origin:center}:scope [data-ranking-entry]>span{font-size:20px}:scope [data-ranking-entry]>b{font-weight:850}`,
+      css: `:scope>[data-ranking-board]{position:absolute;inset:0;padding:12px;box-sizing:border-box;border:1px solid #ffffff2e;border-radius:18px;background:#0f172aeb;box-shadow:0 14px 38px #02061773;color:#f8fafc;font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;backdrop-filter:blur(12px)}:scope [data-ranking-title]{height:30px;display:flex;align-items:center;gap:8px;padding:0 4px 8px;font-size:17px;font-weight:800;letter-spacing:.5px;color:#e2e8f0}:scope [data-ranking-title]>span{width:8px;height:8px;border-radius:50%;background:#38bdf8;box-shadow:0 0 14px #38bdf8}:scope [data-ranking-rows]{display:flex;flex-direction:column;gap:5px}:scope [data-ranking-row]{display:grid;grid-template-columns:42px 1fr;min-height:56px;border:1px solid #ffffff18;border-radius:11px;background:#ffffff0a}:scope [data-ranking-label]{display:flex;align-items:center;justify-content:center;background:var(--tier);border-radius:10px 0 0 10px;color:#0f172a;font-size:26px;font-weight:950}:scope [data-ranking-cells]{display:flex;gap:6px;align-content:center;align-items:center;padding:6px;overflow:visible}:scope [data-ranking-entry]{display:flex;align-items:center;gap:5px;padding:5px 7px 5px 5px;border:1px solid #ffffff24;border-radius:9px;background:#f8fafcf2;color:#0f172a;box-shadow:0 5px 12px #02061742;font-size:12px;white-space:nowrap;transform-origin:center;will-change:transform,opacity}:scope [data-ranking-entry]>span{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:var(--tier);font-size:12px;font-weight:900}:scope [data-ranking-entry]>b{font-weight:800;letter-spacing:-.2px}`,
       setup: `
+        const board = root.querySelector('[data-ranking-board]');
         const entries = new Map([...root.querySelectorAll('[data-ranking-entry]')]
           .map(element => [element.getAttribute('data-ranking-entry'), element]));
+        const boardRect = board.getBoundingClientRect();
+        const stageOffsets = new Map([...entries].map(([id, element]) => {
+          const itemRect = element.getBoundingClientRect();
+          return [id, {
+            x: boardRect.left + boardRect.width * 0.56 - (itemRect.left + itemRect.width / 2),
+            y: boardRect.top + boardRect.height * 0.43 - (itemRect.top + itemRect.height / 2),
+          }];
+        }));
         const seconds = value => Number(value.ticks) * value.timeBase.numerator / value.timeBase.denominator;
         const fps = context.frameRate.numerator / context.frameRate.denominator;
         return localFrame => {
-          const time = localFrame / fps;
           for (const entry of data.entries) {
             const element = entries.get(entry.id);
+            const stage = stageOffsets.get(entry.id);
             const start = seconds(entry.revealAt);
-            const progress = Math.max(0, Math.min(1, (localFrame - start * fps) / data.revealFrames));
-            element.style.opacity = String(progress);
-            element.style.transform = 'translateY(' + ((1 - progress) * -24) + 'px) scale(' + (0.7 + progress * 0.3) + ') rotate(' + ((1 - progress) * -5) + 'deg)';
+            const elapsed = localFrame - start * fps;
+            const progress = Math.max(0, Math.min(1, elapsed / data.revealFrames));
+            const arrive = Math.max(0, Math.min(1, progress / 0.38));
+            const settle = Math.max(0, Math.min(1, (progress - 0.5) / 0.5));
+            const eased = 1 - Math.pow(1 - settle, 3);
+            element.style.opacity = String(arrive);
+            element.style.transform = progress < 0.5
+              ? 'translate(' + stage.x + 'px,' + stage.y + 'px) scale(' + (0.72 + arrive * 0.78) + ')'
+              : 'translate(' + (stage.x * (1 - eased)) + 'px,' + (stage.y * (1 - eased)) + 'px) scale(' + (1 + (1 - eased) * 0.5) + ')';
           }
         };
       `,
@@ -178,15 +193,15 @@ function resolveVerdictBurst(item: NleComponentItem) {
     ...resolved,
     html: visualProgramHtmlSource(resolved.source.id, resolved.output, htmlVisual({
       data: { enterFrames },
-      html: `<div data-verdict><small>${escapeHtml(kicker)}</small><strong>${escapeHtml(title)}</strong></div>`,
-      css: `:scope>[data-verdict]{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-family:Arial,sans-serif;text-transform:uppercase}:scope [data-verdict]>small{padding:8px 18px;border:3px solid #111827;border-radius:999px;background:#ffffff;color:#111827;font-size:24px;font-weight:900;letter-spacing:3px;box-shadow:5px 5px 0 #111827}:scope [data-verdict]>strong{display:block;margin-top:16px;padding:16px 26px;border:5px solid #111827;border-radius:18px;background:${accent};color:#ffffff;font-size:66px;font-weight:1000;line-height:.95;letter-spacing:-3px;text-shadow:4px 4px 0 #111827;box-shadow:10px 12px 0 #111827}`,
+      html: `<div data-verdict><i></i><small>${escapeHtml(kicker)}</small><strong>${escapeHtml(title)}</strong></div>`,
+      css: `:scope>[data-verdict]{position:absolute;inset:0;display:grid;grid-template-columns:5px 1fr;grid-template-rows:auto auto;column-gap:15px;align-content:center;padding:19px 22px;box-sizing:border-box;border:1px solid #ffffff30;border-radius:18px;background:#0f172aee;box-shadow:0 16px 42px #02061773;color:#f8fafc;font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}:scope [data-verdict]>i{grid-row:1/3;width:5px;height:100%;border-radius:99px;background:${accent};box-shadow:0 0 16px ${accent}}:scope [data-verdict]>small{font-size:18px;font-style:normal;font-weight:750;letter-spacing:2px;color:#94a3b8}:scope [data-verdict]>strong{display:block;margin-top:6px;font-size:40px;font-weight:900;line-height:1.08;letter-spacing:-1px}`,
       setup: `
         const target = root.querySelector('[data-verdict]');
         return localFrame => {
           const progress = Math.max(0, Math.min(1, localFrame / data.enterFrames));
           const eased = 1 - Math.pow(1 - progress, 3);
           target.style.opacity = String(progress);
-          target.style.transform = 'scale(' + (1.35 - eased * 0.35) + ') rotate(' + ((1 - eased) * -6) + 'deg)';
+          target.style.transform = 'translateY(' + ((1 - eased) * 24) + 'px) scale(' + (0.96 + eased * 0.04) + ')';
         };
       `,
     })),

@@ -15,7 +15,7 @@ subsystem files instead of preserving one live cross-domain program.
    writes `film.nle.json` in one transaction-oriented pass.
 5. `film.nle.json` is the editable truth. Caption Cues are normal Fine Caption Component Items; the
    ranking board and verdict are project Component Items with direct local time parameters.
-6. `hypit nle export film.nle.json --to exports/ranking-debate.mp4` performs the final local render.
+6. `hypit nle export film.nle.json --to exports/ranking-debate-refined-v2.mp4` performs the final local render.
 
 There is no `.svml` or `.svs` production source. Prompt Kit wording is carried into the exact Graph
 node prompts as authored text; it does not justify retaining a second general-purpose language.
@@ -47,7 +47,7 @@ styles, the disabled Cue and the one-off warning style. It also resolves four na
 writes their direct rational times into the project-owned Ranking Board and Verdict parameters.
 `pnpm render` resolves installed package facets and exports the ordinary NLE.
 
-The accepted reference output is `exports/ranking-debate.mp4`: 720×1280, 24 fps, 772 frames and about
+The accepted reference output is `exports/ranking-debate-refined-v2.mp4`: 720×1280, 24 fps, 772 frames and about
 32.17 seconds. The production passed the decisive deletion test: `film.nle.json` has no live Build,
 Product, Provider, Script, Transcript, semantic-anchor or reverse-lookup dependency. The compose program
 is useful for reproducing the materialization, but it is not required to open, edit or export the NLE.
