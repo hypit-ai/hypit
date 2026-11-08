@@ -1,6 +1,12 @@
 import { pictureType, type ProgramSource } from "@hypit/audiovisual";
 import { visualProgramHtmlSource } from "@hypit/audiovisual-html";
-import { htmlPathTextRuntime, htmlTextFragment, htmlVisual } from "@hypit/html-program";
+import {
+  htmlPathTextRuntime,
+  htmlTextFragment,
+  htmlTextSequenceRuntime,
+  htmlVisual,
+  type HtmlTextNode,
+} from "@hypit/html-program";
 import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
 import type {
   NleComponentItem,
@@ -19,6 +25,8 @@ import type {
   TextFinePathCommand,
   TextFinePathPlacement,
   TextFinePlacement,
+  TextFineSequence,
+  TextFineSequenceState,
 } from "./types.js";
 
 export const textFineNleComponentSymbol: NlePackageSymbol = {
@@ -55,6 +63,116 @@ function finite(value: unknown, label: string): asserts value is number {
 function nonNegative(value: unknown, label: string): asserts value is number {
   finite(value, label);
   if (value < 0) throw new Error(`${label} must not be negative.`);
+}
+
+function identity(value: unknown, label: string): asserts value is string {
+  if (typeof value !== "string" || !/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(value)) {
+    throw new Error(`${label} is invalid.`);
+  }
+}
+
+function assertSequenceState(value: unknown, label: string): asserts value is TextFineSequenceState {
+  record(value, label);
+  exactFields(value, [
+    ...(value.blurPx === undefined ? [] : ["blurPx"]),
+    ...(value.clipInsetPercent === undefined ? [] : ["clipInsetPercent"]),
+    ...(value.opacity === undefined ? [] : ["opacity"]),
+    ...(value.rotateDeg === undefined ? [] : ["rotateDeg"]),
+    ...(value.scale === undefined ? [] : ["scale"]),
+    ...(value.skewXDeg === undefined ? [] : ["skewXDeg"]),
+    ...(value.skewYDeg === undefined ? [] : ["skewYDeg"]),
+    ...(value.translateXPx === undefined ? [] : ["translateXPx"]),
+    ...(value.translateYPx === undefined ? [] : ["translateYPx"]),
+  ], label);
+  for (const name of ["opacity", "translateXPx", "translateYPx", "scale", "rotateDeg",
+    "skewXDeg", "skewYDeg", "blurPx"] as const) {
+    if (value[name] !== undefined) finite(value[name], `${label}.${name}`);
+  }
+  const opacity = value.opacity;
+  if (opacity !== undefined) {
+    finite(opacity, `${label}.opacity`);
+    if (opacity < 0 || opacity > 1) throw new Error(`${label}.opacity is invalid.`);
+  }
+  const scale = value.scale;
+  if (scale !== undefined) {
+    finite(scale, `${label}.scale`);
+    if (scale < 0) throw new Error(`${label}.scale is invalid.`);
+  }
+  const blurPx = value.blurPx;
+  if (blurPx !== undefined) {
+    finite(blurPx, `${label}.blurPx`);
+    if (blurPx < 0) throw new Error(`${label}.blurPx is invalid.`);
+  }
+  if (value.clipInsetPercent !== undefined) {
+    record(value.clipInsetPercent, `${label}.clipInsetPercent`);
+    exactFields(value.clipInsetPercent, ["bottom", "left", "right", "top"], `${label}.clipInsetPercent`);
+    for (const [name, amount] of Object.entries(value.clipInsetPercent)) {
+      finite(amount, `${label}.clipInsetPercent.${name}`);
+      if ((amount as number) < 0 || (amount as number) > 100) {
+        throw new Error(`${label}.clipInsetPercent.${name} is invalid.`);
+      }
+    }
+  }
+}
+
+function assertSequences(value: unknown): asserts value is readonly TextFineSequence[] {
+  if (!Array.isArray(value)) throw new Error("NLE Fine Text sequences must be an array.");
+  const identities = new Set<string>();
+  for (const [index, candidate] of value.entries()) {
+    const label = `NLE Fine Text sequences[${index}]`;
+    record(candidate, label);
+    exactFields(candidate, [
+      "cycles", "durationFrames", "id", "keyframes",
+      ...(candidate.nodes === undefined ? [] : ["nodes"]),
+      "order", "staggerFrames", "startFrame", "unit",
+    ], label);
+    identity(candidate.id, `${label}.id`);
+    if (identities.has(candidate.id)) throw new Error(`NLE Fine Text repeats Sequence ${candidate.id}.`);
+    identities.add(candidate.id);
+    if (!(candidate.unit === "node" || candidate.unit === "word" || candidate.unit === "grapheme")
+      || !(candidate.order === "forward" || candidate.order === "reverse")) {
+      throw new Error(`${label} unit or order is invalid.`);
+    }
+    if (candidate.nodes !== undefined) {
+      if (!Array.isArray(candidate.nodes) || candidate.nodes.length === 0) throw new Error(`${label}.nodes is empty.`);
+      const nodes = new Set<string>();
+      for (const [nodeIndex, node] of candidate.nodes.entries()) {
+        identity(node, `${label}.nodes[${nodeIndex}]`);
+        if (nodes.has(node)) throw new Error(`${label}.nodes repeats ${node}.`);
+        nodes.add(node);
+      }
+    }
+    for (const [name, minimum] of [["startFrame", 0], ["durationFrames", 1],
+      ["staggerFrames", 0], ["cycles", 1]] as const) {
+      const amount = candidate[name];
+      if (typeof amount !== "number" || !Number.isSafeInteger(amount) || amount < minimum) {
+        throw new Error(`${label}.${name} is invalid.`);
+      }
+    }
+    if (!Array.isArray(candidate.keyframes) || candidate.keyframes.length < 2) {
+      throw new Error(`${label}.keyframes requires at least two values.`);
+    }
+    let previous = -1;
+    candidate.keyframes.forEach((keyframe, keyframeIndex) => {
+      const keyframeLabel = `${label}.keyframes[${keyframeIndex}]`;
+      record(keyframe, keyframeLabel);
+      exactFields(keyframe, ["atProgress", ...(keyframe.easing === undefined ? [] : ["easing"]), "state"],
+        keyframeLabel);
+      finite(keyframe.atProgress, `${keyframeLabel}.atProgress`);
+      if (keyframe.atProgress < 0 || keyframe.atProgress > 1 || keyframe.atProgress <= previous) {
+        throw new Error(`${label} keyframe progress must increase from zero to one.`);
+      }
+      previous = keyframe.atProgress;
+      if (keyframe.easing !== undefined && !(keyframe.easing === "linear" || keyframe.easing === "ease-in"
+        || keyframe.easing === "ease-out" || keyframe.easing === "ease-in-out")) {
+        throw new Error(`${keyframeLabel}.easing is invalid.`);
+      }
+      assertSequenceState(keyframe.state, `${keyframeLabel}.state`);
+    });
+    if (candidate.keyframes[0]!.atProgress !== 0 || candidate.keyframes.at(-1)!.atProgress !== 1) {
+      throw new Error(`${label} keyframes must begin at zero and end at one.`);
+    }
+  }
 }
 
 function assertPathCommand(value: unknown, label: string): asserts value is TextFinePathCommand {
@@ -192,10 +310,12 @@ function assertPlacement(value: unknown): asserts value is TextFinePlacement {
 export function assertTextFineNleParameters(value: unknown): asserts value is TextFineNleParameters {
   const label = "NLE Fine Text parameters";
   record(value, label);
-  exactFields(value, ["children", "paints", "placement", "typography"], label);
+  exactFields(value, ["children", "paints", "placement", "typography",
+    ...(value.sequences === undefined ? [] : ["sequences"])], label);
   if (!Array.isArray(value.children) || value.children.length === 0) throw new Error(`${label}.children is empty.`);
   if (!Array.isArray(value.paints)) throw new Error(`${label}.paints must be an array.`);
   assertPlacement(value.placement);
+  if (value.sequences !== undefined) assertSequences(value.sequences);
   htmlTextFragment({
     id: "text-fine-validation",
     typography: value.typography as TextFineNleParameters["typography"],
@@ -243,7 +363,7 @@ function pathCss(placement: TextFinePathPlacement): string {
   return `:scope>[data-hypit-text-fine-path]{position:absolute;inset:0;overflow:${placement.overflow === "clip" ? "hidden" : "visible"}}:scope [data-hypit-text-fine-path-guide],:scope [data-hypit-text-fine-path-content]{position:absolute;inset:0;width:100%;height:100%;overflow:visible}:scope [data-hypit-text-fine-path-guide]{pointer-events:none}:scope [data-hypit-text-fine-path-content] [data-hypit-text-kind="group"]{position:static!important;display:contents}:scope [data-hypit-text-fine-path-content] [data-hypit-text-kind="text"]{position:absolute!important;left:0;top:0;white-space:pre}`;
 }
 
-function pathSetup(): string {
+function pathSetupBody(): string {
   return `
 ${htmlPathTextRuntime}
 const path = root.querySelector('[data-hypit-text-fine-path-guide] path');
@@ -268,19 +388,151 @@ const startMarginAt = frame => {
   }
   return last.startMarginPx;
 };
-return localFrame => hypitLayoutTextOnPath(path, elements,
+const renderPath = localFrame => hypitLayoutTextOnPath(path, elements,
   { ...data.placement, startMarginPx: startMarginAt(localFrame) });`;
+}
+
+type TextSequenceUnitIndex = {
+  readonly order: readonly string[];
+  readonly nodes: ReadonlyMap<string, readonly (readonly string[])[]>;
+  readonly words: ReadonlyMap<string, readonly (readonly string[])[]>;
+  readonly graphemes: ReadonlyMap<string, readonly (readonly string[])[]>;
+};
+
+function wordSegments(value: string): readonly string[] {
+  const segments = [...new Intl.Segmenter("und", { granularity: "word" }).segment(value)];
+  const result: string[] = [];
+  let pending = "";
+  for (const segment of segments) {
+    if (/^\s+$/u.test(segment.segment)) {
+      pending += segment.segment;
+    } else if (segment.isWordLike || result.length === 0) {
+      result.push(`${pending}${segment.segment}`);
+      pending = "";
+    } else {
+      result[result.length - 1] += `${pending}${segment.segment}`;
+      pending = "";
+    }
+  }
+  if (pending.length > 0) {
+    if (result.length === 0) result.push(pending);
+    else result[result.length - 1] += pending;
+  }
+  return result;
+}
+
+function graphemeSegments(value: string): readonly string[] {
+  return [...new Intl.Segmenter("und", { granularity: "grapheme" }).segment(value)]
+    .map((segment) => segment.segment);
+}
+
+function sequenceTextNodes(
+  children: readonly HtmlTextNode[],
+  sequences: readonly TextFineSequence[],
+): { readonly children: readonly HtmlTextNode[]; readonly index: TextSequenceUnitIndex } {
+  const split = sequences.some((sequence) => sequence.unit !== "node");
+  const order: string[] = [];
+  const nodes = new Map<string, readonly (readonly string[])[]>();
+  const words = new Map<string, readonly (readonly string[])[]>();
+  const graphemes = new Map<string, readonly (readonly string[])[]>();
+  const visit = (node: HtmlTextNode): HtmlTextNode => {
+    if (node.kind === "break") return structuredClone(node);
+    if (node.kind === "group") return { ...structuredClone(node), children: node.children.map(visit) };
+    order.push(node.id);
+    if (!split) {
+      const units = [[node.id]] as const;
+      nodes.set(node.id, units);
+      words.set(node.id, units);
+      graphemes.set(node.id, units);
+      return structuredClone(node);
+    }
+    const wordUnits = wordSegments(node.text);
+    const wordTargets: string[][] = [];
+    const graphemeTargets: string[][] = [];
+    const wordNodes: HtmlTextNode[] = wordUnits.map((word, wordIndex) => {
+      const parts = graphemeSegments(word);
+      const leaves = parts.map((part, graphemeIndex) => {
+        const id = `${node.id}:grapheme:${wordIndex}:${graphemeIndex}`;
+        graphemeTargets.push([id]);
+        return { kind: "text" as const, id, text: part };
+      });
+      wordTargets.push(leaves.map((leaf) => leaf.id));
+      return { kind: "group" as const, id: `${node.id}:word:${wordIndex}`, children: leaves };
+    });
+    const allTargets = wordTargets.flat();
+    nodes.set(node.id, [allTargets]);
+    words.set(node.id, wordTargets);
+    graphemes.set(node.id, graphemeTargets);
+    return { kind: "group", id: node.id, children: wordNodes, ...(node.style === undefined ? {} : { style: node.style }) };
+  };
+  return { children: children.map(visit), index: { order, nodes, words, graphemes } };
+}
+
+function normalizedSequenceState(value: TextFineSequenceState) {
+  const clip = value.clipInsetPercent ?? { top: 0, right: 0, bottom: 0, left: 0 };
+  return {
+    opacity: value.opacity ?? 1,
+    translateX: value.translateXPx ?? 0,
+    translateY: value.translateYPx ?? 0,
+    scale: value.scale ?? 1,
+    rotate: value.rotateDeg ?? 0,
+    skewX: value.skewXDeg ?? 0,
+    skewY: value.skewYDeg ?? 0,
+    blur: value.blurPx ?? 0,
+    clipTop: clip.top,
+    clipRight: clip.right,
+    clipBottom: clip.bottom,
+    clipLeft: clip.left,
+  };
+}
+
+function compileTextSequences(
+  sequences: readonly TextFineSequence[],
+  index: TextSequenceUnitIndex,
+) {
+  const claimed = new Set<string>();
+  return sequences.map((sequence) => {
+    const selected = sequence.nodes ?? index.order;
+    const source = sequence.unit === "node" ? index.nodes
+      : sequence.unit === "word" ? index.words : index.graphemes;
+    const targets = selected.flatMap((id) => {
+      const units = source.get(id);
+      if (units === undefined) throw new Error(`NLE Fine Text Sequence ${sequence.id} references missing Text node ${id}.`);
+      return units;
+    });
+    for (const target of targets) for (const id of target) {
+      if (claimed.has(id)) throw new Error(`NLE Fine Text sequences overlap rendered unit ${id}.`);
+      claimed.add(id);
+    }
+    return {
+      id: sequence.id,
+      targets,
+      order: sequence.order,
+      startFrame: sequence.startFrame,
+      durationFrames: sequence.durationFrames,
+      staggerFrames: sequence.staggerFrames,
+      cycles: sequence.cycles,
+      keyframes: sequence.keyframes.map((keyframe) => ({
+        atProgress: keyframe.atProgress,
+        ...(keyframe.easing === undefined ? {} : { easing: keyframe.easing }),
+        state: normalizedSequenceState(keyframe.state),
+      })),
+    };
+  });
 }
 
 function resolveTextFine(item: NleComponentItem) {
   if (item.picture === undefined) throw new Error(`NLE Fine Text ${item.id} has no Picture appearance.`);
   assertTextFineNleParameters(item.parameters);
   const parameters = item.parameters;
+  const sequences = parameters.sequences ?? [];
+  const sequenced = sequenceTextNodes(parameters.children, sequences);
+  const compiledSequences = compileTextSequences(sequences, sequenced.index);
   const text = htmlTextFragment({
     id: `${item.id}-text`,
     typography: parameters.typography,
     paints: parameters.paints,
-    children: parameters.children,
+    children: sequenced.children,
   });
   const sourceId = `${item.id}:text-source`;
   const source: ProgramSource = {
@@ -303,11 +555,11 @@ function resolveTextFine(item: NleComponentItem) {
       : `<div data-hypit-text-fine-path><svg data-hypit-text-fine-path-guide aria-hidden="true"><path d="${pathData(placement.commands)}" fill="none" stroke="none"></path></svg><div data-hypit-text-fine-path-content>${text.html}</div></div>`;
   const css = placement.kind === "flow" ? flowCss(placement)
     : placement.kind === "point" ? pointCss(placement) : pathCss(placement);
-  const setup = placement.kind === "flow" && placement.overflow === "shrink" ? `
+  const shrinkSetup = placement.kind === "flow" && placement.overflow === "shrink" ? `
 const content = root.querySelector('[data-hypit-text-fine-content]');
 const frame = root.querySelector('[data-hypit-text-fine-flow]');
 if (content === null || frame === null) throw new Error('Fine Text shrink structure is incomplete.');
-const fit = () => {
+const renderFit = () => {
   content.style.transform = '';
   content.style.transformOrigin = 'center';
   const availableWidth = frame.clientWidth;
@@ -315,14 +567,25 @@ const fit = () => {
   const scale = Math.max(data.placement.minimumScale,
     Math.min(1, availableWidth / Math.max(1, content.scrollWidth), availableHeight / Math.max(1, content.scrollHeight)));
   content.style.transform = 'scale(' + scale + ')';
-};
-return () => fit();` : placement.kind === "path" ? pathSetup() : "return () => {};";
+};` : "";
+  const pathSetup = placement.kind === "path" ? pathSetupBody() : "";
+  const sequenceSetup = compiledSequences.length === 0 ? "" : `
+${htmlTextSequenceRuntime}
+const sequenceElements = new Map([...root.querySelectorAll('[data-hypit-text-kind="text"]')]
+  .map(element => [element.getAttribute('data-hypit-text-node'), element]));
+const renderSequences = localFrame => hypitApplyTextSequences(localFrame, data.sequences, sequenceElements);`;
+  const setup = `${shrinkSetup}\n${pathSetup}\n${sequenceSetup}
+return localFrame => {
+  ${shrinkSetup === "" ? "" : "renderFit();"}
+  ${pathSetup === "" ? "" : "renderPath(localFrame);"}
+  ${sequenceSetup === "" ? "" : "renderSequences(localFrame);"}
+};`;
   return {
     source,
     pictureOutput: "picture",
     html: visualProgramHtmlSource(sourceId, "picture", htmlVisual({
       dependencies: text.dependencies,
-      data: { placement },
+      data: { placement, sequences: compiledSequences },
       html,
       css,
       setup,
@@ -350,6 +613,9 @@ export function editTextFineNleParameters(
   } else if (operation.kind === "set-placement") {
     exactFields(operation, ["kind", "placement"], "NLE Fine Text edit");
     next = { ...structuredClone(parameters), placement: structuredClone(operation.placement) };
+  } else if (operation.kind === "set-sequences") {
+    exactFields(operation, ["kind", "sequences"], "NLE Fine Text edit");
+    next = { ...structuredClone(parameters), sequences: structuredClone(operation.sequences) };
   } else {
     throw new Error("NLE Fine Text edit.kind is invalid.");
   }

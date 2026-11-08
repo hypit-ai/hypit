@@ -66,11 +66,46 @@ export type TextFinePathPlacement = {
 
 export type TextFinePlacement = TextFineFlowPlacement | TextFinePointPlacement | TextFinePathPlacement;
 
+export type TextFineSequenceState = {
+  readonly opacity?: number;
+  readonly translateXPx?: number;
+  readonly translateYPx?: number;
+  readonly scale?: number;
+  readonly rotateDeg?: number;
+  readonly skewXDeg?: number;
+  readonly skewYDeg?: number;
+  readonly blurPx?: number;
+  readonly clipInsetPercent?: {
+    readonly top: number;
+    readonly right: number;
+    readonly bottom: number;
+    readonly left: number;
+  };
+};
+
+export type TextFineSequence = {
+  readonly id: string;
+  /** Original Text node identities. Omit to animate every Text node. */
+  readonly nodes?: readonly string[];
+  readonly unit: "node" | "word" | "grapheme";
+  readonly order: "forward" | "reverse";
+  readonly startFrame: number;
+  readonly durationFrames: number;
+  readonly staggerFrames: number;
+  readonly cycles: number;
+  readonly keyframes: readonly {
+    readonly atProgress: number;
+    readonly easing?: "linear" | "ease-in" | "ease-out" | "ease-in-out";
+    readonly state: TextFineSequenceState;
+  }[];
+};
+
 export type TextFineNleParameters = {
   readonly typography: HtmlTextTypography;
   readonly paints: readonly HtmlTextPaintLayer[];
   readonly children: readonly HtmlTextNode[];
   readonly placement: TextFinePlacement;
+  readonly sequences?: readonly TextFineSequence[];
 };
 
 export type TextFineNleEdit =
@@ -80,4 +115,5 @@ export type TextFineNleEdit =
       readonly typography: HtmlTextTypography;
       readonly paints: readonly HtmlTextPaintLayer[];
     }
-  | { readonly kind: "set-placement"; readonly placement: TextFinePlacement };
+  | { readonly kind: "set-placement"; readonly placement: TextFinePlacement }
+  | { readonly kind: "set-sequences"; readonly sequences: readonly TextFineSequence[] };

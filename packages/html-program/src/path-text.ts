@@ -40,6 +40,8 @@ const hypitLayoutTextOnPath = (path, elements, options) => {
     const y = point.y - metric.height / 2 + normalY * offset;
     const rotation = options.orientation === 'follow' ? angle * 180 / Math.PI : 0;
     metric.element.style.transformOrigin = 'center';
-    metric.element.style.transform = 'translate(' + x + 'px,' + y + 'px) rotate(' + rotation + 'deg)';
+    metric.element.style.setProperty('--hypit-text-path-transform',
+      'translate(' + x + 'px,' + y + 'px) rotate(' + rotation + 'deg)');
+    metric.element.style.transform = 'var(--hypit-text-path-transform,) var(--hypit-text-sequence-transform,)';
   }
 };`;

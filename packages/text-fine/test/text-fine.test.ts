@@ -38,6 +38,21 @@ const parameters: TextFineNleParameters = {
       typography: { fontStyle: "italic" },
     } },
   ] }],
+  sequences: [{
+    id: "lead-graphemes",
+    nodes: ["lead"],
+    unit: "grapheme",
+    order: "forward",
+    startFrame: 0,
+    durationFrames: 8,
+    staggerFrames: 2,
+    cycles: 1,
+    keyframes: [
+      { atProgress: 0, state: { opacity: 0, translateYPx: 18, scale: 0.86, blurPx: 4,
+        clipInsetPercent: { top: 0, right: 0, bottom: 100, left: 0 } } },
+      { atProgress: 1, easing: "ease-out", state: { opacity: 1, translateYPx: 0, scale: 1, blurPx: 0 } },
+    ],
+  }],
   placement: {
     kind: "flow",
     paddingPx: { top: 20, right: 20, bottom: 20, left: 20 },
@@ -126,7 +141,35 @@ test("Fine Text lays rich runs on an authored path without a Composition interme
   assert.match(visual.html, /data-hypit-text-fine-path-guide/u);
   assert.match(visual.html, /Q800 20 1520 220/u);
   assert.match(visual.setup ?? "", /hypitLayoutTextOnPath/u);
+  assert.match(visual.setup ?? "", /hypitApplyTextSequences/u);
+  assert.match(visual.html, /lead:grapheme:/u);
+  assert.match(visual.setup ?? "", /--hypit-text-path-transform/u);
   assert.doesNotThrow(() => new Function("root", "data", "context", visual.setup ?? ""));
+});
+
+test("Fine Text authors internal sequence motion as direct Component parameters", () => {
+  const original = project();
+  const host = createNleAuthoringHostFromFacets(hypitPackage.facets);
+  const transaction = host.planComponentParameterEdit(original, "headline", {
+    kind: "set-sequences",
+    sequences: [{
+      id: "nodes",
+      unit: "node",
+      order: "reverse",
+      startFrame: 3,
+      durationFrames: 6,
+      staggerFrames: 1,
+      cycles: 2,
+      keyframes: [
+        { atProgress: 0, state: { opacity: 0 } },
+        { atProgress: 1, state: { opacity: 1 } },
+      ],
+    }],
+  });
+  const edited = applyNleTransaction(original, transaction);
+  const item = findNleItem(edited, "headline").item;
+  if (item.kind !== "component") throw new Error("Fine Text edit changed Item kind.");
+  assert.equal((item.parameters as unknown as TextFineNleParameters).sequences?.[0]?.cycles, 2);
 });
 
 test("Fine Text rejects impossible Flow ownership instead of hiding layout fallback", () => {

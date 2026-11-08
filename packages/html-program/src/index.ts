@@ -27,6 +27,7 @@ export type {
 export { htmlTextFragment } from "./text.js";
 export { htmlLineUnionRuntime } from "./line-union.js";
 export { htmlPathTextRuntime } from "./path-text.js";
+export { htmlTextSequenceRuntime } from "./text-sequence.js";
 export type {
   HtmlTextBoxDecoration,
   HtmlTextColorPaint,
