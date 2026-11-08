@@ -1,6 +1,6 @@
 import { sealGraphFragment } from "@hypit/author";
 import { blobTypes } from "@hypit/blob";
-import { temporalProducers, temporalTypes } from "@hypit/temporal";
+import { temporalTypes } from "@hypit/temporal-graph";
 
 import { mediaProducers, mediaTypes } from "./manifest.js";
 
@@ -55,7 +55,7 @@ export const mediaSourceFragment = sealGraphFragment({
     },
     {
       id: "extent",
-      producer: temporalProducers.extentFromDomain,
+      producer: mediaProducers.extent,
       inputs: { domain: operation("domain") },
       result: { kind: "output" as const, name: "extent" },
     },

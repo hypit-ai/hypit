@@ -114,6 +114,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:*
         version: link:packages/temporal
+      '@hypit/temporal-graph':
+        specifier: workspace:*
+        version: link:packages/temporal-graph
       '@hypit/timed-transcript':
         specifier: workspace:*
         version: link:packages/timed-transcript
@@ -194,12 +197,12 @@ importers:
       '@hypit/html-video':
         specifier: workspace:^0.2.1
         version: link:../../../../packages/html-video
-      '@hypit/hypit':
-        specifier: workspace:^0.4.0
-        version: link:../../../..
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../../../../packages/nle
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../../../../packages/protocol
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../../../../packages/spatial
@@ -207,18 +210,6 @@ importers:
         specifier: workspace:^0.1.1
         version: link:../../../../packages/temporal
     devDependencies:
-      '@hypit/audiovisual-author':
-        specifier: workspace:^0.1.0
-        version: link:../../../../packages/audiovisual-author
-      '@hypit/author':
-        specifier: workspace:^0.1.0
-        version: link:../../../../packages/author
-      '@hypit/kernel':
-        specifier: workspace:^0.1.0
-        version: link:../../../../packages/kernel
-      '@hypit/protocol':
-        specifier: workspace:^0.1.0
-        version: link:../../../../packages/protocol
       '@types/node':
         specifier: 24.10.1
         version: 24.10.1
@@ -252,6 +243,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.0
         version: link:../temporal
+      '@hypit/temporal-graph':
+        specifier: workspace:^0.1.0
+        version: link:../temporal-graph
 
   packages/audio-preserve-pitch:
     dependencies:
@@ -289,6 +283,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
+      '@hypit/temporal-graph':
+        specifier: workspace:^0.1.0
+        version: link:../temporal-graph
 
   packages/audiovisual:
     dependencies:
@@ -304,6 +301,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
+      '@hypit/temporal-graph':
+        specifier: workspace:^0.1.0
+        version: link:../temporal-graph
     devDependencies:
       '@hypit/protocol':
         specifier: workspace:*
@@ -345,61 +345,6 @@ importers:
       '@hypit/provider-media-local':
         specifier: workspace:^0.1.0
         version: link:../provider-media-local
-
-  packages/audiovisual-author:
-    dependencies:
-      '@hypit/audiovisual':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual
-      '@hypit/author':
-        specifier: workspace:^0.0.0-dev
-        version: link:../author
-      '@hypit/producer':
-        specifier: workspace:^0.0.0-dev
-        version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:^0.0.0-dev
-        version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:^0.0.0-dev
-        version: link:../refinement
-      '@hypit/spatial':
-        specifier: workspace:^0.1.1
-        version: link:../spatial
-      '@hypit/temporal':
-        specifier: workspace:^0.1.1
-        version: link:../temporal
-    devDependencies:
-      '@hypit/audio-gain':
-        specifier: workspace:^0.1.0
-        version: link:../audio-gain
-      '@hypit/audio-preserve-pitch':
-        specifier: workspace:^0.1.0
-        version: link:../audio-preserve-pitch
-      '@hypit/audio-program':
-        specifier: workspace:^0.1.0
-        version: link:../audio-program
-      '@hypit/audiovisual-audio':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual-audio
-      '@hypit/audiovisual-html':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual-html
-      '@hypit/audiovisual-media':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual-media
-      '@hypit/html-program':
-        specifier: workspace:^0.1.0
-        version: link:../html-program
-      '@hypit/kernel':
-        specifier: workspace:^0.1.0
-        version: link:../kernel
-      '@hypit/media':
-        specifier: workspace:^0.1.0
-        version: link:../media
-      '@hypit/picture-transition':
-        specifier: workspace:^0.1.0
-        version: link:../picture-transition
 
   packages/audiovisual-html:
     dependencies:
@@ -887,6 +832,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:*
         version: link:../temporal
+      '@hypit/temporal-graph':
+        specifier: workspace:*
+        version: link:../temporal-graph
 
   packages/gpt-image-kits:
     devDependencies:
@@ -1011,6 +959,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
+      '@hypit/temporal-graph':
+        specifier: workspace:^0.1.0
+        version: link:../temporal-graph
     devDependencies:
       linkedom:
         specifier: 0.18.13
@@ -1092,6 +1043,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
+      '@hypit/temporal-graph':
+        specifier: workspace:^0.1.0
+        version: link:../temporal-graph
     devDependencies:
       '@hypit/compiler':
         specifier: workspace:*
@@ -1176,6 +1130,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
+      '@hypit/temporal-graph':
+        specifier: workspace:^0.1.0
+        version: link:../temporal-graph
     devDependencies:
       '@hypit/kernel':
         specifier: workspace:*
@@ -1470,6 +1427,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.0
         version: link:../temporal
+      '@hypit/temporal-graph':
+        specifier: workspace:^0.1.0
+        version: link:../temporal-graph
     devDependencies:
       typescript:
         specifier: 5.9.3
@@ -1523,6 +1483,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.0
         version: link:../temporal
+      '@hypit/temporal-graph':
+        specifier: workspace:^0.1.0
+        version: link:../temporal-graph
     devDependencies:
       typescript:
         specifier: 5.9.3
@@ -2352,17 +2315,19 @@ importers:
         specifier: workspace:^0.1.0
         version: link:../source
 
-  packages/temporal:
+  packages/temporal: {}
+
+  packages/temporal-graph:
     dependencies:
-      '@hypit/producer':
-        specifier: workspace:^0.0.0-dev
-        version: link:../producer
       '@hypit/protocol':
         specifier: workspace:^0.0.0-dev
         version: link:../protocol
       '@hypit/refinement':
         specifier: workspace:^0.0.0-dev
         version: link:../refinement
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
 
   packages/text:
     dependencies:
@@ -2403,9 +2368,6 @@ importers:
       '@hypit/audiovisual-audio':
         specifier: workspace:^0.1.0
         version: link:../audiovisual-audio
-      '@hypit/audiovisual-author':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual-author
       '@hypit/audiovisual-html':
         specifier: workspace:^0.1.0
         version: link:../audiovisual-html
@@ -2556,9 +2518,9 @@ importers:
       '@hypit/svml':
         specifier: workspace:^0.1.0
         version: link:../svml
-      '@hypit/temporal':
-        specifier: workspace:^0.1.1
-        version: link:../temporal
+      '@hypit/temporal-graph':
+        specifier: workspace:^0.1.0
+        version: link:../temporal-graph
       '@hypit/volcengine-matting':
         specifier: workspace:^0.3.0
         version: link:../volcengine-matting

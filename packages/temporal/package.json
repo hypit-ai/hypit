@@ -9,16 +9,8 @@
     "./algebra": "./src/algebra.ts",
     "./sampling": "./src/sampling.ts"
   },
-  "hypit": {
-    "activation": "./src/activation.ts"
-  },
   "files": [
     "dist",
     "README.md"
-  ],
-  "dependencies": {
-    "@hypit/producer": "workspace:^0.0.0-dev",
-    "@hypit/protocol": "workspace:^0.0.0-dev",
-    "@hypit/refinement": "workspace:^0.0.0-dev"
-  }
+  ]
 }

@@ -16,7 +16,8 @@
     "@hypit/producer": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/refinement": "workspace:^0.0.0-dev",
-    "@hypit/temporal": "workspace:^0.1.1"
+    "@hypit/temporal": "workspace:^0.1.1",
+    "@hypit/temporal-graph": "workspace:^0.1.0"
   },
   "files": [
     "dist",

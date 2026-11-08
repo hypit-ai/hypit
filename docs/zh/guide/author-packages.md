@@ -1,13 +1,13 @@
 ---
-title: 添加作者包
-description: 制作项目组件、将其用于视频，并在有需要时分享。
+title: 添加项目组件
+description: 制作 NLE 组件、将其用于视频，并在有需要时分享。
 ---
 
 创建组件是制作视频的一部分。从场景需要的行为出发：哪些内容共同出现，哪些内容会变化，由哪些参数或局部事件驱动。普通媒体保持为直接 NLE Item；共享视觉行为可以属于一个项目组件。
 
 ## 从完整的包开始
 
-安装的 `@hypit/hypit` Distribution 包含 [`examples/semantic-composition/packages/audiovisual-title-card`](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/audiovisual-title-card)。将该目录复制到视频项目的 `packages/`，把包名与 Module 改为自己的 scope 和名称，将示例中的 `workspace:*` Hypit 开发依赖改成项目所用的 Distribution 版本。
+安装的 `@hypit/hypit` Distribution 包含 [`examples/semantic-composition/packages/audiovisual-title-card`](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/audiovisual-title-card)。将该目录复制到视频项目的 `packages/`，把包名与逻辑组件 Module 改为自己的 scope 和名称，并将示例中的 `workspace:*` 依赖改成项目选择的 Hypit 发行版本。
 
 在复制后的包目录执行：
 
@@ -34,13 +34,20 @@ preview Source 为作者提供可打开或渲染的小例子。查看能说明�
 
 ## 使用与分享
 
-在 Source 中导入已安装组件的逻辑 Module：
+先在视频项目中安装这个包，再创建一个普通 NLE Component Item，用包的逻辑 Module 和组件名指向它：
 
-```svml
-<import as="mine" from="@your-scope/my-component@1"/>
+```json
+{
+  "kind": "component",
+  "component": {
+    "module": { "name": "@your-scope/my-component", "version": "1" },
+    "name": "title-card"
+  },
+  "parameters": { "title": "Opening" }
+}
 ```
 
-将它声明的元素与输出用于编排。`hypit vocabulary` 展示作者接口，`hypit check` 检查 Author Source。组件 README 应包含可复制示例、输出、实用的创作选择和行为示意图。
+Agent、CLI 命令或编辑器都可以创建这个 Item，但持久工程只保存直接 placement 和参数。组件 README 应说明组件 symbol、参数、实用创作选择和行为示意图。
 
 组件服务于当前作品时，就与项目一起保存。需要分享时，选择发布版本，编译并用 `npm pack` 打包代码和素材，或通过所有者自己的 scope 发布到 npm 或私有 Registry。发布到 Registry 时去掉 `private: true`，补充普通包元信息。使用者安装选定版本并提交包管理器 lockfile。使用组件不需要 Hypit 仓库 checkout，也不需要向主仓库提 PR。
 

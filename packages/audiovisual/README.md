@@ -4,7 +4,7 @@ Low-level authored audiovisual relationships before Track, Film, Composition or 
 
 All exact-time imports come from the clock-free `@hypit/temporal/algebra` entry. This package cannot observe
 Timeline, Instant, Window, frame-projection or Studio APIs. Output sampling belongs to terminal adapters and
-author relations belong to `@hypit/audiovisual-author`; no replacement global Timeline owner is required.
+editable placement belongs to the NLE project; no replacement global Timeline owner is required.
 All spatial relationships similarly come from `@hypit/spatial/algebra`; AVIR does not import Canvas, Frame,
 author declarations or the legacy source-to-picture placement type.
 
@@ -27,8 +27,7 @@ the concrete Source domain is resolved. AVIR is a closed, disposable result rath
 This package accepts only resolved, positive finite domains wherever time exists. `constant` is a tagged absence
 of a time dimension, not an unknown or nullable Domain. Future graph values remain ordinary typed
 Operation results until their real Source closes; AVIR does not add nullable or symbolic domains.
-`@hypit/audiovisual-author` owns the syntax-neutral finite author linker, while terminal Programme lowering
-belongs to downstream adapters. This package deliberately has no Markup, Studio, Runtime, renderer or
+Terminal Programme lowering belongs to downstream adapters. This package deliberately has no Markup, Studio, Runtime, renderer or
 NLE-view entry point.
 
 The Programme owns Occurrences once and its Picture and Audio DAGs refer to `occurrence + output port`.

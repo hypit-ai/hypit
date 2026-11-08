@@ -1,5 +1,5 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { temporalDependency, temporalTypes } from "@hypit/temporal-graph";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
 export const pictureTransitionModuleRef = { name: "@hypit/picture-transition", version: "1" } as const;

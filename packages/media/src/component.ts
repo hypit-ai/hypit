@@ -1,5 +1,6 @@
 import type { RefinementPackage } from "@hypit/refinement";
 import type { ProducerPackage } from "@hypit/producer";
+import { temporalExtentFromDomain, type LocalTemporalDomain } from "@hypit/temporal";
 import { projectVisualDeliverySpec, verifyMediaDeliverySpec, verifyMediaDomainSpec, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyPictureInterpretation, verifyPreparedMedia, verifyRenderedVisual, verifyRenderedAudio, verifyVisualDeliverySpec } from "./identity.js";
 import type { AudioExtractionRequest, ExtractAudioNeed, ExtractFrameNeed, FrameExtractionRequest, InspectMediaNeed, MediaDomainSpec, MediaInspection, MediaSelectionRequest, PreparedMedia } from "./types.js";
 import { canonicalize } from "@hypit/protocol";
@@ -100,6 +101,12 @@ export const mediaComponent = {
       if (media.domain === undefined) throw new Error("PreparedMedia has no temporal domain");
       return { kind: "output", value: canonicalize(media.domain) };
     } },
+    { producer: mediaProducers.extent, handler: ({ inputs }) => ({
+      kind: "output",
+      value: canonicalize(temporalExtentFromDomain(
+        valueOf(inputs.domain?.value, "LocalTemporalDomain") as LocalTemporalDomain,
+      )),
+    }) },
     { producer: mediaProducers.visualDelivery, handler: ({ inputs }) => {
       const delivery = valueOf(inputs.delivery!.value, "MediaDeliverySpec");
       verifyMediaDeliverySpec(delivery);

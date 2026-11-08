@@ -2,28 +2,17 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type {
-  AuthorDeclarationCompiler,
-  AuthorDeclarationRegistry,
   AuthorStructureDeclarationNode,
   AuthorStructureFieldNode,
 } from "@hypit/author";
-import { AuthorDeclarationRegistry as DeclarationRegistry } from "@hypit/author";
-import { audiovisualTypes } from "@hypit/audiovisual";
-import { spatialTypes } from "@hypit/spatial";
-import { temporalTypes } from "@hypit/temporal";
-import { exactTemporalValue } from "@hypit/temporal/algebra";
 
 import {
   declarationsFromSvmlDocument,
-  decodeSvmlDeclarations,
   parseSvmlDocument,
   printSvmlDocument,
   svmlStructureFrontend,
 } from "../src/index.js";
-import { planMoveAudiovisualOccurrence } from "../../audiovisual-author/src/index.js";
-import { audiovisualProgramAuthorDeclaration } from "../../audiovisual-author/src/index.js";
 import {
-  canvasViewAuthorDeclaration,
   planAddCanvasViewItem,
   projectCanvasView,
 } from "../../canvas-view/src/index.js";
@@ -34,7 +23,6 @@ const decoder = new TextDecoder();
 const sourceText = `// Packages stay independent of the SVML grammar.
 module media from "@hypit/media@1"
 module image from "@example/image@1"
-module video from "@hypit/audiovisual-author@1"
 module canvas from "@hypit/canvas-view@1"
 
 media.Asset "product" {
@@ -44,20 +32,6 @@ media.Asset "product" {
 image.Generate "hero" {
   prompt: "A presenter holding the product"
   reference: @product
-}
-
-video.Program "main" {
-  duration: 12s
-
-  source "hero" {
-    value: @hero
-  }
-
-  occurrence "presenter" {
-    source: @source.hero
-    at: 0s
-    outputs: { picture: {}, audio: {} }
-  }
 }
 
 canvas.View "creation" {
@@ -85,17 +59,15 @@ function declaration(
 test("SVML Block parses without package grammar and prints untouched bytes exactly", () => {
   const parsed = parseSvmlDocument(source());
   assert.equal(printSvmlDocument(parsed), sourceText);
-  assert.equal(parsed.declarations.length, 4);
-  assert.deepEqual(parsed.declarations.map((item) => item.label), ["product", "hero", "main", "creation"]);
+  assert.equal(parsed.declarations.length, 3);
+  assert.deepEqual(parsed.declarations.map((item) => item.label), ["product", "hero", "creation"]);
 
   const authored = declarationsFromSvmlDocument(parsed);
-  assert.equal(authored[2]?.module.name, "@hypit/audiovisual-author");
-  assert.equal(authored[2]?.label, "main");
-  assert.deepEqual(authored[2]?.children.map((child) => [child.name, child.label]), [
-    ["source", "hero"],
-    ["occurrence", "presenter"],
-  ]);
+  assert.equal(authored[1]?.module.name, "@example/image");
+  assert.equal(authored[1]?.label, "hero");
+  assert.deepEqual(authored[2]?.children.map((child) => [child.name, child.label]), [["item", "hero"]]);
 });
+
 test("raw literal replacement remains parseable and locally indented", async () => {
   const text = `module note from "@example/note@1"
 
@@ -119,19 +91,6 @@ second line
   const candidate = decoder.decode(edited.bytes);
   assert.match(candidate, /value: <<SVML\nupdated\nbody\n  SVML/u);
   assert.equal(printSvmlDocument(parseSvmlDocument(edited)), candidate);
-});
-
-test("one occurrence move replaces only its authored time value", async () => {
-  const document = await svmlStructureFrontend.openStructure(source());
-  const occurrence = declaration(document, "presenter");
-  const edited = await svmlStructureFrontend.applyStructureOperations(
-    document,
-    planMoveAudiovisualOccurrence(document, occurrence.node, "5s"),
-  );
-  const text = decoder.decode(edited.bytes);
-  assert.match(text, /occurrence "presenter" \{[\s\S]*?at: 5s/u);
-  assert.match(text, /prompt: "A presenter holding the product"/u);
-  assert.match(text, /layout: \{ x: 80, y: 120 \}/u);
 });
 
 test("Canvas Add Image writes an independent root subject and an owned View item atomically", async () => {
@@ -171,201 +130,3 @@ test("Canvas Add Image writes an independent root subject and an owned View item
     ["detail", "detail", 360, 120],
   ]);
 });
-
-test("SVML Program declarations compile through package-owned semantics into AuthorGraph inputs", async () => {
-  const fixtureModule = { name: "@example/source", version: "1" } as const;
-  const sourceCompiler: AuthorDeclarationCompiler = {
-    module: fixtureModule,
-    declaration: "Source",
-    outputs: [audiovisualTypes.programSource],
-    shape: { summary: "Provides one fixture Source.", label: "required", fields: [] },
-    bindings(declaration) {
-      return [{ name: declaration.label!, ref: { kind: "record", id: declaration.label! },
-        type: audiovisualTypes.programSource }];
-    },
-    compile({ declaration }) {
-      return { records: [{ id: declaration.label!, type: audiovisualTypes.programSource,
-        value: {}, range: declaration.range }], components: [] };
-    },
-  };
-  const pictureOperatorCompiler: AuthorDeclarationCompiler = {
-    module: fixtureModule,
-    declaration: "PictureOperator",
-    outputs: [audiovisualTypes.pictureOperator],
-    shape: { summary: "Provides one fixture Picture Operator.", label: "required", fields: [] },
-    bindings(declaration) {
-      return [{ name: declaration.label!, ref: { kind: "record", id: declaration.label! },
-        type: audiovisualTypes.pictureOperator }];
-    },
-    compile({ declaration }) {
-      return { records: [{ id: declaration.label!, type: audiovisualTypes.pictureOperator,
-        value: {}, range: declaration.range }], components: [] };
-    },
-  };
-  const exactCompiler: AuthorDeclarationCompiler = {
-    module: fixtureModule,
-    declaration: "Exact",
-    outputs: [temporalTypes.exactValue],
-    shape: {
-      summary: "Provides one exact future value fixture.",
-      label: "required",
-      fields: [{ name: "seconds", kind: "literal", required: true, summary: "Sets fixture seconds." }],
-    },
-    bindings(declaration) {
-      return [{ name: declaration.label!, ref: { kind: "record", id: declaration.label! },
-        type: temporalTypes.exactValue }];
-    },
-    compile({ declaration }) {
-      const seconds = declaration.fields[0]?.value;
-      assert(seconds?.kind === "literal");
-      return { records: [{ id: declaration.label!, type: temporalTypes.exactValue,
-        value: exactTemporalValue({ numerator: BigInt(seconds.value), denominator: 1n }),
-        range: declaration.range }], components: [] };
-    },
-  };
-  const typedFixture = (declarationName: string, type: import("@hypit/protocol").TypeRef): AuthorDeclarationCompiler => ({
-    module: fixtureModule,
-    declaration: declarationName,
-    outputs: [type],
-    shape: { summary: `Provides one ${declarationName} fixture.`, label: "required", fields: [] },
-    bindings(declaration) {
-      return [{ name: declaration.label!, ref: { kind: "record", id: declaration.label! }, type }];
-    },
-    compile({ declaration }) {
-      return { records: [{ id: declaration.label!, type, value: {}, range: declaration.range }], components: [] };
-    },
-  });
-  const temporalMapCompiler = typedFixture("TemporalMap", temporalTypes.map);
-  const spatialMapCompiler = typedFixture("SpatialMap", spatialTypes.map);
-  const reconstructionCompiler = typedFixture("Reconstruction", audiovisualTypes.signalReconstruction);
-  const compilers: AuthorDeclarationRegistry = new DeclarationRegistry();
-  compilers.register(sourceCompiler);
-  compilers.register(pictureOperatorCompiler);
-  compilers.register(exactCompiler);
-  compilers.register(temporalMapCompiler);
-  compilers.register(spatialMapCompiler);
-  compilers.register(reconstructionCompiler);
-  compilers.register(audiovisualProgramAuthorDeclaration);
-  compilers.register(canvasViewAuthorDeclaration);
-  const text = `module fixture from "@example/source@1"
-module video from "@hypit/audiovisual-author@1"
-module canvas from "@hypit/canvas-view@1"
-
-fixture.Source "generated" {}
-fixture.PictureOperator "transition" {}
-fixture.Exact "program-duration" { seconds: 12 }
-fixture.Exact "presenter-at" { seconds: 0 }
-fixture.TemporalMap "control-map" {}
-fixture.SpatialMap "picture-map" {}
-fixture.Reconstruction "natural" {}
-
-video.Program "main" {
-  duration: @program-duration
-  picture-domain: { width: 1920px, height: 1080px }
-
-  source "a-roll" {
-    value: @generated
-  }
-
-  occurrence "presenter" {
-    source: @source.a-roll
-    at: @presenter-at
-    duration: 10s
-    outputs: {
-      picture: { relation: { kind: fit } },
-      audio: { reconstruction: @natural }
-    }
-  }
-
-  picture "presenter" {
-    use: @occurrence.presenter.picture
-  }
-
-  picture "trimmed" {
-    input: @picture.presenter
-    restrict: { from: 0s, until: 10s }
-  }
-
-  picture "cropped" {
-    input: @picture.trimmed
-    crop: { x: 0px, y: 0px, width: 1920px, height: 1080px }
-  }
-
-  picture "mapped" {
-    input: @picture.cropped
-    remap: @picture-map
-  }
-
-  picture "final" {
-    apply: @transition
-    inputs: { picture: @picture.mapped }
-    controls: { progress: @control-map }
-  }
-
-  audio "voice" {
-    use: @occurrence.presenter.audio
-  }
-
-  output {
-    picture: @picture.final
-    audio: @audio.voice
-  }
-}
-
-canvas.View "creation" {
-  scope: [@generated, @main]
-  item "generated" {
-    subject: @generated
-    layout: { x: 80, y: 120 }
-  }
-}
-`;
-  const decoded = await decodeSvmlDeclarations(source(text), {
-    compilers,
-    resolveAsset: () => { throw new Error("unused"); },
-  });
-  assert.deepEqual(decoded.exports.map((item) => item.name), [
-    "control-map", "generated", "main", "natural", "picture-map",
-    "presenter-at", "program-duration", "transition",
-  ]);
-  const component = decoded.components.find((item) => item.id === "main:program");
-  assert(component !== undefined);
-  assert.equal(component.outputs.program, "main");
-  assert.equal(component.fragment.exports[0]?.type.name, "AudiovisualProgram");
-  assert.deepEqual(Object.keys(component.inputs).sort(), [
-    "domain",
-    "occurrence-0001",
-    "picture-operator-0001",
-    "picture-operator-binding-0001",
-    "spatial-map-0001",
-    "spatial-map-binding-0001",
-    "spec",
-    "temporal-map-0001",
-    "temporal-map-binding-0001",
-  ]);
-  const spec = decoded.records.find((item) => item.id === "main:spec");
-  assert.equal((spec?.value as { id?: string }).id, "main");
-  assert.deepEqual((spec?.value as { duration?: unknown }).duration,
-    { kind: "binding", name: "main:duration" });
-  assert.deepEqual((spec?.value as { occurrences?: Record<string, { at?: unknown }> }).occurrences?.presenter?.at,
-    { kind: "binding", name: "main:occurrence:presenter:at" });
-  const specValue = spec?.value as {
-    occurrences?: Record<string, { outputs?: Record<string, {
-      relation?: { relations?: Array<{ kind?: string }> };
-      reconstruction?: string;
-    }> }>;
-    picture?: { bindings?: Record<string, { kind?: string; mapping?: unknown; controlBindings?: unknown }> };
-  };
-  assert.equal(specValue.occurrences?.presenter?.outputs?.picture?.relation?.relations?.[0]?.kind, "fit");
-  assert.equal(specValue.occurrences?.presenter?.outputs?.audio?.reconstruction,
-    "main:occurrence:presenter:audio:reconstruction");
-  assert.equal(specValue.picture?.bindings?.trimmed?.kind, "restrict");
-  assert.equal(specValue.picture?.bindings?.cropped?.kind, "crop");
-  assert.deepEqual(specValue.picture?.bindings?.mapped?.mapping,
-    { kind: "binding", name: "main:picture:mapped:mapping" });
-  assert.deepEqual(specValue.picture?.bindings?.final?.controlBindings,
-    { progress: { kind: "mapping", mapping: {
-      kind: "binding", name: "main:picture:final:control:progress:mapping",
-    } } });
-});
-

@@ -1,6 +1,6 @@
 ---
-title: Adding an Author Package
-description: Build a project component, use it in a video, and share it when useful.
+title: Adding a Project Component
+description: Build an NLE component, use it in a video, and share it when useful.
 ---
 
 Creating a component is part of making a video. Start with the behavior the scene needs: what stays
@@ -11,9 +11,8 @@ direct NLE item; shared visual behavior can belong to one project Component.
 
 The installed `@hypit/hypit` Distribution includes
 [`examples/semantic-composition/packages/audiovisual-title-card`](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/audiovisual-title-card).
-Copy that directory into your video's `packages/` directory. Give its package and Module your own
-scope and name, and replace the fixture's `workspace:*` Hypit development dependency with the
-Distribution release used by the project.
+Copy that directory into your video's `packages/` directory. Give its package and logical component Module
+your own scope and name, and replace the fixture's `workspace:*` dependencies with the selected Hypit release.
 
 From the copied package directory:
 
@@ -57,15 +56,23 @@ actual composition too, where its content, space and timing have a purpose.
 
 ## Use and share it
 
-Import the installed component's logical Module in Source:
+Install the package in the video project, then create an ordinary NLE Component Item whose symbol names
+the package's logical Module and component:
 
-```svml
-<import as="mine" from="@your-scope/my-component@1"/>
+```json
+{
+  "kind": "component",
+  "component": {
+    "module": { "name": "@your-scope/my-component", "version": "1" },
+    "name": "title-card"
+  },
+  "parameters": { "title": "Opening" }
+}
 ```
 
-Use its declared elements and outputs in the composition. `hypit vocabulary` exposes their authored
-interface; `hypit check` checks an Author Source. The component's README should include a copyable
-example, its outputs, useful creative choices and a picture of the behavior.
+An Agent, CLI command or editor may author that Item, but the persisted project contains only direct
+placement and parameters. The component's README should document its symbol, parameters, useful creative
+choices and a picture of the behavior.
 
 Keep the package with its video project while it serves that work. To share it, choose a release
 version, compile and pack its code and assets with `npm pack`, or publish under the owner's scope

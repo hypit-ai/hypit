@@ -8,7 +8,7 @@ import {
 } from "@hypit/author";
 import { blobTypes } from "@hypit/blob";
 import { sameType, type CanonicalValue, type TypeRef } from "@hypit/protocol";
-import { temporalTypes } from "@hypit/temporal";
+import { temporalTypes } from "@hypit/temporal-graph";
 import type { MediaDeliverySpec } from "./types.js";
 import { mediaDeliveryProfile } from "./delivery.js";
 

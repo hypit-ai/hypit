@@ -1,6 +1,6 @@
 import { blobRefSchema } from "@hypit/protocol";
 import type { ValueSchema } from "@hypit/protocol";
-import { exactTemporalValueSchema, localTemporalDomainSchema, temporalMapSchema } from "@hypit/temporal";
+import { exactTemporalValueSchema, localTemporalDomainSchema, temporalMapSchema } from "@hypit/temporal-graph";
 const string = { kind: "string", minLength: 1 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });

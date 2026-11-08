@@ -4,7 +4,7 @@ import test from "node:test";
 import { bindAuthorFragment, elaborateGraphFragment } from "@hypit/author";
 import { blobManifest, blobTypes } from "@hypit/blob";
 import { createResolvedClosure, link, planBuild, sealAuthorGraph } from "@hypit/kernel";
-import { temporalManifest } from "@hypit/temporal";
+import { temporalManifest } from "@hypit/temporal-graph";
 
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import {
@@ -67,6 +67,16 @@ test("a Media Resource target naturally prunes the prepared branch", () => {
 test("a prepared Media target demands inspect, select and prepare without the direct Resource projection", () => {
   assert.deepEqual(producerNames("shot.source"), [
     mediaProducers.inspect.name,
+    mediaProducers.prepare.name,
+    mediaProducers.select.name,
+  ].sort());
+});
+
+test("Media owns its Extent projection instead of depending on a generic Temporal Producer", () => {
+  assert.deepEqual(producerNames("shot.extent"), [
+    mediaProducers.extent.name,
+    mediaProducers.inspect.name,
+    mediaProducers.localDomain.name,
     mediaProducers.prepare.name,
     mediaProducers.select.name,
   ].sort());

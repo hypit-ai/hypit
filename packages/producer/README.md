@@ -33,8 +33,8 @@ Author Kit; import only the owner of each responsibility:
 | `@hypit/hypit/refinement` | package-owned Type refinements and Refinement package facets |
 | `@hypit/hypit/author` | syntax-neutral Author Declarations, compilers and sealed Graph Fragments |
 | `@hypit/temporal` | exact duration, rate and relation values and literal parsing |
+| `@hypit/temporal-graph` | optional nominal graph Types and refinements for temporal values |
 | `@hypit/audiovisual` | resolved Source, Occurrence, Picture, Audio, Operator and Programme values |
-| `@hypit/audiovisual-author` | syntax-neutral audiovisual Author Spec compilation |
 
 The Author Package keeps `@hypit/hypit` as its framework development dependency. It compiles its activation
 to JavaScript and publishes only its own files. The active Distribution

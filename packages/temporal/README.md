@@ -14,10 +14,15 @@ The `algebra` source and type graph does not import frame projection, NLE views,
 declarations. `@hypit/audiovisual`, the resolved parts of `@hypit/media`, and continuous Audio Programme paths
 use this entry.
 
-The package root contains syntax-neutral duration/relation literals, Extent construction, sampling facts and the
-module manifest. It has no global Timeline identity. Placement belongs to audiovisual occurrences and is supplied
-as finite domains and mappings. Discrete conversion has its own `@hypit/temporal/sampling` entry and is also
-exported from the package root for terminal consumers. Sampling is not reachable from `algebra`.
+The package root contains syntax-neutral duration/relation literals, Extent construction and sampling facts.
+It has no activation, Module manifest, Producer, Refinement or graph-protocol dependency. Placement belongs to
+audiovisual occurrences and is supplied as finite domains and mappings. Discrete conversion has its own
+`@hypit/temporal/sampling` entry and is also exported from the package root for terminal consumers. Sampling is
+not reachable from `algebra`.
+
+`@hypit/temporal-graph` is the optional typed-graph adapter. It owns nominal graph Type identities, Value schemas
+and refinements, but no arithmetic or generic temporal operation. Direct NLE, Caption and Script code never need
+that adapter.
 
 `sampling` accepts only a structural `{ frameRate }` grid, validates it locally and has no project identity or
 extent. It owns `FrameSpan`, exact/grid conversion, explicit boundary policies and frame-to-audio-sample boundary
@@ -71,7 +76,7 @@ composed stages are traversed in reverse. Affine pieces are exact. A query inter
 cubic piece fails explicitly because a cubic root is not generally rational and this algebra does not
 silently introduce an epsilon or sampling grid.
 
-Graph values use `TemporalMapRegionSet`, which pairs those regions with the local domain that owns their
+`TemporalMapRegionSet` pairs those regions with the local domain that owns their
 coordinates. `preimageTemporalMapRegions` verifies that identity against the Map source before returning a
 set in the Map target domain. `uniqueTemporalMapRegionSetPoint` is an intentionally strict consumer policy:
 it accepts exactly one zero-width sided region and rejects absence, loops, holds and other ambiguity.

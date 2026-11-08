@@ -1,4 +1,4 @@
-import { temporalTypes } from "@hypit/temporal";
+import { temporalTypes } from "@hypit/temporal-graph";
 import { blobTypes } from "@hypit/blob";
 
 import { mediaProducers, mediaTypes } from "@hypit/media";

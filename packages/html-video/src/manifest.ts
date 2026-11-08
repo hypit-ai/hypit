@@ -1,6 +1,6 @@
 import { blobDependency } from "@hypit/blob";
 import { mediaDependency } from "@hypit/media";
-import { temporalDependency } from "@hypit/temporal";
+import { temporalDependency } from "@hypit/temporal-graph";
 import { htmlProgramModuleRef } from "@hypit/html-program";
 import type { ModuleManifest } from "@hypit/protocol";
 import { audioProgramModuleRef } from "@hypit/audio-program";

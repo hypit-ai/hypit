@@ -25,7 +25,7 @@ import {
 } from "@hypit/gpt-image";
 import { createFieldModelPrimaryFragment, modelArtifactInputNames, modelTextFieldInputName } from "@hypit/generation/model-fields";
 import { mediaManifest } from "@hypit/media";
-import { temporalManifest } from "@hypit/temporal";
+import { temporalManifest } from "@hypit/temporal-graph";
 import type { CanonicalValue, ResourceId, ModuleManifest, Value, TypeRef } from "@hypit/protocol";
 import {
   createSeedanceAssembledGenerationFragment,

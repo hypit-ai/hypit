@@ -1,6 +1,6 @@
 import { blobDependency, blobTypes } from "@hypit/blob";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
-import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { temporalDependency, temporalTypes } from "@hypit/temporal-graph";
 export const mediaModuleRef = { name: "@hypit/media", version: "1" } as const;
 export const mediaTypes = {
   inspection: { module: mediaModuleRef, name: "MediaInspection" },
@@ -34,6 +34,7 @@ export const mediaProducers = {
   select: { module: mediaModuleRef, name: "select-media-streams" },
   prepare: { module: mediaModuleRef, name: "prepare-media" },
   localDomain: { module: mediaModuleRef, name: "local-domain" },
+  extent: { module: mediaModuleRef, name: "extent" },
   visualDelivery: { module: mediaModuleRef, name: "project-visual-delivery" },
 } satisfies Record<string, ProducerRef>;
 
@@ -96,6 +97,9 @@ export const mediaManifest: ModuleManifest = {
     { name: mediaProducers.localDomain.name,
       inputs: [{ name: "media", type: mediaTypes.prepared }],
       result: { kind: "output" as const, name: "domain", type: temporalTypes.localDomain } },
+    { name: mediaProducers.extent.name,
+      inputs: [{ name: "domain", type: temporalTypes.localDomain }],
+      result: { kind: "output" as const, name: "extent", type: temporalTypes.extent } },
     { name: mediaProducers.visualDelivery.name,
       inputs: [{ name: "delivery", type: mediaTypes.delivery }],
       result: { kind: "output" as const, name: "visual", type: mediaTypes.visualDelivery } },

@@ -10,7 +10,7 @@ import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
 import { canonicalize } from "@hypit/protocol";
 import { compareExactTemporalValues } from "@hypit/temporal/algebra";
 
-import { titleCardModuleRef } from "./manifest.js";
+import { titleCardModuleRef } from "./identity.js";
 import { titleCardHtmlSource } from "./picture.js";
 import { titleCardProgramSource, type TitleCardSpec } from "./source.js";
 

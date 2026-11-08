@@ -33,6 +33,7 @@
     "@hypit/spatial": "workspace:*",
     "@hypit/prompt": "workspace:*",
     "@hypit/svml": "workspace:*",
-    "@hypit/temporal": "workspace:*"
+    "@hypit/temporal": "workspace:*",
+    "@hypit/temporal-graph": "workspace:*"
   }
 }
