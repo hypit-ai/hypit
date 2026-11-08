@@ -115,6 +115,7 @@ test("the Node Host submits real work once, attaches its Product, then reuses it
       targets: ["hero"],
       runtime,
       publicationStores: { root: directory, historyPath: "results", productsPath: "products" },
+      build: "bld_20261108T110000001Z_0000000001",
     });
     assert.equal(second.kind, "reuse");
     assert.equal(requests.length, 1);

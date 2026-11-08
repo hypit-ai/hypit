@@ -81,6 +81,11 @@ the sidecar-first transaction above. If Runtime accepted the Build but the autho
 race, `AcceptedGenerationGraphBuildNotAttached` reports that exact split: the work remains valid and is never
 silently attached to a different revision.
 
+The caller supplies the Build id. Generation Graph does not create execution identities or reproduce Runtime
+preflight: an application uses the common long-running submission seam and may perform the graph attachment
+as its domain-owned post-acceptance action. The lower-level structural Runtime port remains available to
+embeddings, but it is not a second execution stack.
+
 The revisioned transaction API edits the project atomically. Removing the currently selected Product first
 requires a `node.select` command in the same transaction. Physical deletion of the tiny file is a Host action
 after publication of the new project revision; Product bytes and immutable Result history are not deleted.

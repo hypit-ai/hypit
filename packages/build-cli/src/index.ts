@@ -43,6 +43,15 @@ export function createBuildCliCommandModules(
 export { runCli } from "./main.js";
 export { discoverSourcePackages } from "./source-discovery.js";
 export { loadDiscoveredSourcePackages } from "./source-packages.js";
+export {
+  createPublicBuildId,
+  submitLongBuild,
+} from "./long-build.js";
+export type {
+  LongBuildRequest,
+  LongBuildSession,
+  LongBuildSubmission,
+} from "./long-build.js";
 export type { BuildCliCompilerOptions, BuildCliServices } from "./services.js";
 export type * from "./runtime-port.js";
 export type {

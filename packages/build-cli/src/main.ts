@@ -1,19 +1,19 @@
-import { randomBytes } from "node:crypto";
 import { resolve } from "node:path";
 
-import { isBlobRef, moduleKey, orderedBuildId } from "@hypit/protocol";
+import { isBlobRef, moduleKey } from "@hypit/protocol";
 import { BuildCompiler } from "@hypit/compiler";
 
 import type { BuildCliServices } from "./services.js";
 import type { CliApplicationContext } from "@hypit/cli";
-import type { CliRuntime, CliRuntimeHost, CliRuntimeInspection } from "./runtime-port.js";
+import type { CliRuntimeHost, CliRuntimeInspection } from "./runtime-port.js";
 import { CliUsageError, commandHint } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
 import { createPlanOutput, createPricingOutput, writeCliHelp, writeCliOutput } from "./output.js";
 import type { OperationalMachineView } from "./machine-view.js";
 import { parseCommand } from "./arguments.js";
 import type { CliCommand, RuntimeOption } from "./command.js";
-import { assertPlannedRequests, assertPreflight, createBuildAuthoring, describePlanEndpoints, describePlanRequest, describePlanRequests, describePlanPricing, describePricingRequests, evaluatePlanNeeds, plannedEndpointQueries, preflightPlan } from "./build-planning.js";
+import { createBuildAuthoring, describePlanEndpoints, describePlanRequest, describePlanRequests, describePlanPricing, describePricingRequests, evaluatePlanNeeds, plannedEndpointQueries, preflightPlan } from "./build-planning.js";
+import { createPublicBuildId, submitLongBuild, type LongBuildSession } from "./long-build.js";
 import { buildProgressLines, observeBuild } from "./observation.js";
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
 import { isEnvironmentCommand, runEnvironmentCommand } from "./commands/environment.js";
@@ -26,10 +26,6 @@ import {
   cliTypeName,
   projectPath,
 } from "./view.js";
-
-function createPublicBuildId(now = Date.now()): string {
-  return orderedBuildId(now, randomBytes(5).toString("hex").toUpperCase());
-}
 
 function commandProjectRootOption(command: CliCommand): string | undefined {
   return "projectRoot" in command ? command.projectRoot : undefined;
@@ -259,8 +255,7 @@ export async function runCli(
         throw error;
       }
     })();
-    let runtime: CliRuntime | undefined;
-    let inspection: CliRuntimeInspection | undefined;
+    let session: LongBuildSession | undefined;
     try {
       const authoring = createBuildAuthoring({
         source: loadedInvocation.authorSource,
@@ -283,31 +278,15 @@ export async function runCli(
         publicationStores: buildResults.location,
       } as const;
       const host = await runtimeHost(runtimeProfile, sourcePackageRoot);
-      const planningPolicy = await host.planningPolicy?.();
-      const evaluated = await evaluatePlanNeeds(
-        result.definition,
+      session = await submitLongBuild({
+        host,
+        request,
         packageContributions,
-        planningPolicy?.producerExecutionLimits,
-      );
-      inspection = await host.openInspection(plannedEndpointQueries(evaluated.state, evaluated));
-      const buildInspection = inspection;
-      const endpoints = await describePlanEndpoints(buildInspection);
-      assertPlannedRequests(evaluated.state, evaluated, endpoints);
-      const preflight = await preflightPlan(buildInspection, evaluated.state);
-      // Build is an execution boundary, not a provisioning command. The cheap
-      // preflight must already be clean; `runtime up` is the explicit place for
-      // installing or starting declared programs.
-      assertPreflight(preflight);
-      try {
-        await buildInspection.ensureExecution({
-          ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
-        });
-      } catch (error) {
-        const detail = error instanceof Error ? error.message : String(error);
-        throw new Error(`Runtime Worker could not start; no Build was queued: ${detail}`);
-      }
-      runtime = await buildInspection.createRuntime();
-      let built = await runtime.build(request);
+        ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
+      });
+      const runtime = session.runtime;
+      const buildInspection = session.inspection;
+      let built = session.submission;
       const requestCount = result.definition.plan.steps.reduce(
         (total, step) => total + (step.result.kind === "need" ? 1 : 0),
         0,
@@ -326,7 +305,7 @@ export async function runCli(
           ["Work", workSummary],
         ], ["Following accepted work. Ctrl-C stops watching; the Build continues."]);
       }
-      if (args.follow && runtime !== undefined) {
+      if (args.follow) {
         built = await observeBuild(runtime, built, {
           ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
           executionStatus: async () => await buildInspection.executionStatus(),
@@ -425,8 +404,7 @@ export async function runCli(
         ]);
       if (buildOutcome === "failed" || issue !== undefined) io.setExitCode?.(1);
     } finally {
-      await runtime?.close();
-      await inspection?.close();
+      await session?.close();
       await buildResults.close();
     }
     return;

@@ -1,12 +1,9 @@
-import { randomBytes } from "node:crypto";
-
 import { createResolvedClosure, link } from "@hypit/kernel";
 import {
   verifyPackageContributions,
   type LoadedPackage,
 } from "@hypit/loader";
 import type { ProductHistory } from "@hypit/product";
-import { orderedBuildId } from "@hypit/protocol";
 
 import {
   createGenerationGraphLoweringHost,
@@ -110,10 +107,6 @@ export class AcceptedGenerationGraphBuildNotAttached extends Error {
   }
 }
 
-export function createGenerationGraphBuildId(now = Date.now()): string {
-  return orderedBuildId(now, randomBytes(5).toString("hex").toUpperCase());
-}
-
 /**
  * Complete local orchestration. Runtime acceptance precedes the author transaction; accepted work is never
  * rolled back or silently attached to another revision when concurrent editing wins.
@@ -124,12 +117,13 @@ export async function executeNodeGenerationGraphTargets<Submission extends { rea
   readonly targets: readonly string[];
   readonly runtime: GenerationGraphRuntimePort<Submission>;
   readonly publicationStores: GenerationGraphPublicationStoreLocation;
-  readonly build?: string;
+  /** Assigned by the common long-running submission boundary; unused when this selection is reused. */
+  readonly build: string;
 }): Promise<ExecutedGenerationGraphSelection<Submission>> {
   const project = await readGenerationGraphProjectFile(input.projectPath);
   const prepared = await input.host.prepare(project, input.targets);
   if (prepared.kind === "reuse") return { kind: "reuse", prepared };
-  const build = input.build ?? createGenerationGraphBuildId();
+  const build = input.build;
   const submission = await input.runtime.build({
     id: build,
     definition: prepared.definition,

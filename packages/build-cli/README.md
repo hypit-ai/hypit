@@ -23,6 +23,21 @@ Source imports decide which language and component packages give the source mean
 Profile separately selects Credential Stores and Endpoints allowed to execute work. The CLI does not
 invent targets, output producers or Provider choices.
 
+## Long-running submission seam
+
+`submitLongBuild()` owns the common path after any authoring domain has prepared a finite
+`BuildDefinition`: deterministic Producer evaluation, Endpoint resolution, Runtime preflight, Worker
+availability and durable submission. It returns the exact Runtime/inspection session used for optional
+observation. `createPublicBuildId()` assigns the execution identity at this boundary rather than inside
+an author file format.
+
+An authoring domain may supply an `accepted` callback for its own post-acceptance transaction. For
+example, a Generation Graph attaches Product sidecars to its selected nodes only after Runtime accepts
+the Build. Failure of that callback never rolls back or disguises the accepted long-running work.
+Source compilation, Graph lowering and author-document mutation remain outside this shared seam.
+The existing `build` command uses this API; another command must reuse it rather than reproduce its
+preflight and Worker-start sequence.
+
 Human and JSON output answer the same command-specific question. `--json` changes encoding;
 `--verbose` expands scope. Compiler, Runtime and Repository objects are not default reports.
 

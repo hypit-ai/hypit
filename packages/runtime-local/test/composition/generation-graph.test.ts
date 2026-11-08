@@ -204,6 +204,7 @@ test("a Generation Graph preserves completed upstream Products across asynchrono
       targets: ["base"],
       runtime,
       publicationStores: publicationStoreLocation(directory),
+      build: "bld_20261108T120000001Z_0000000001",
     });
     assert.equal(reused.kind, "reuse");
   } finally {
