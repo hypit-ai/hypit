@@ -212,6 +212,14 @@ test("the graph helper closes a draft and repeated media edges without a model-s
   assert.deepEqual(compiled.inputs["images.1:artifact"], { node: "first" });
   assert.deepEqual(compiled.inputs["images.2:binding"], { value: { role: "image" } });
   assert.equal(compiled.fragment.exports[0]?.name, "image");
+  assert.throws(() => fieldModelGraphOperation({
+    endpoint,
+    draft: sealModelFieldBuilder(fields, {}),
+    textFields: [{ name: "prompt", field: "prompt", source: { value: sealText("draw it") as never } }],
+    artifacts: ["one", "two", "three", "four"].map((name) => ({
+      name, field: "images", role: "image" as const, source: { node: name },
+    })),
+  }), /at most 3/u);
 });
 
 test("a Model Fragment may publish the complete result and an explicit primary independently", () => {

@@ -139,6 +139,19 @@ export function fieldModelGraphOperation(options: {
     throw new Error(`${options.endpoint.fields.model} graph inputs must have unique local names.`);
   }
   options.endpoint.validateDraft(options.draft);
+  for (const field of options.endpoint.fields.fields) {
+    const draftCount = options.draft.fields[field.name]?.length ?? 0;
+    const edgeCount = artifacts.filter((input) => input.field === field.name).length
+      + textFields.filter((input) => input.field === field.name).length;
+    const total = draftCount + edgeCount;
+    if (field.maxItems !== undefined && total > field.maxItems) {
+      throw new Error(`${options.endpoint.fields.model} field ${field.name} accepts at most ${field.maxItems} value(s).`);
+    }
+    const hasDefault = "defaultItems" in field && field.defaultItems !== undefined;
+    if (total < field.minItems && !hasDefault) {
+      throw new Error(`${options.endpoint.fields.model} field ${field.name} needs at least ${field.minItems} value(s).`);
+    }
+  }
   const inputs: Record<string, GenerationGraphInput> = {
     draft: { value: canonicalize(options.draft) },
   };
