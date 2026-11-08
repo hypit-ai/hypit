@@ -12,7 +12,6 @@
     "README.md"
   ],
   "dependencies": {
-    "@hypit/generation-graph": "workspace:^0.0.0-dev",
     "@hypit/media-asset": "workspace:^0.1.0",
     "@hypit/media-local": "workspace:^0.3.0",
     "@hypit/product": "workspace:^0.0.0-dev",

@@ -5,12 +5,6 @@ import { join } from "node:path";
 import type {
   MediaAssetImportTaskContext,
 } from "@hypit/media-asset";
-import {
-  mediaAssetGenerationNodes,
-  verifyMediaAssetReference,
-  type MediaAssetReference,
-} from "@hypit/media-asset";
-import type { GenerationGraphNode } from "@hypit/generation-graph";
 import type { NodeMediaAssetImportResult } from "@hypit/media-asset/node";
 import {
   importLocalMediaAsset,
@@ -40,18 +34,6 @@ export type LocalMediaProductMaterializationHost = {
     request: LocalMediaAssetImportRequest,
     context?: MediaAssetImportTaskContext,
   ) => Promise<NodeMediaAssetImportResult>;
-};
-
-export type LocalMediaProductGenerationNodeRequest = LocalMediaProductMaterializationRequest & {
-  readonly node: string;
-  /** Portable Media Asset reference as it will appear in the Generation Graph. */
-  readonly asset: MediaAssetReference;
-  /** Selects the typed projection required by the intended downstream port. */
-  readonly projection: keyof typeof mediaAssetGenerationNodes;
-};
-
-export type LocalMediaProductGenerationNodeResult = NodeMediaAssetImportResult & {
-  readonly node: GenerationGraphNode;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -127,28 +109,4 @@ export async function materializeLocalMediaProduct(
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
-}
-
-/** Materialize one media Product and author the exact file-backed value node selected by its downstream port. */
-export async function materializeLocalMediaProductAsGenerationNode(
-  request: LocalMediaProductGenerationNodeRequest,
-  host: LocalMediaProductMaterializationHost,
-  context: MediaAssetImportTaskContext = {},
-): Promise<LocalMediaProductGenerationNodeResult> {
-  verifyMediaAssetReference(request.asset);
-  const {
-    node,
-    asset,
-    projection,
-    ...materialization
-  } = request;
-  const result = await materializeLocalMediaProduct(materialization, host, context);
-  return {
-    ...result,
-    node: {
-      id: node,
-      using: mediaAssetGenerationNodes[projection],
-      inputs: { asset: { value: asset } },
-    },
-  };
 }
