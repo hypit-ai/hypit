@@ -84,12 +84,16 @@ const base: CaptionStyle = { id: "base", family: "fine", parameters: {
   fontFamily: "Arial, sans-serif",
   outlineColor: "#000000",
   outlineWidth: 4,
+  gradient: { from: "#ffffff", to: "#67e8f9", angleDeg: 90 },
   karaoke: { mode: "trail", transition: "wipe", activeColor: "#ffd54a" },
   cueBox: { continuity: "joined", background: "#111827cc", paddingX: 14, paddingY: 8 },
   activeBox: { mode: "current", continuity: "joined", background: "#2563eb88", borderRadius: 8 },
   underline: { mode: "always", color: "#ffffff", thickness: 2, offset: 4 },
   activeUnderline: { mode: "current", color: "#ffd54a", thickness: 3, offset: 5, style: "wavy" },
   entry: { kind: "pop", frames: 5 },
+  shadowSpread: 1,
+  glow: { color: "#22d3ee", opacity: 0.5, blur: 10, spread: 2 },
+  longShadow: { color: "#082f49", opacity: 0.7, distance: 8, angleDeg: 45, steps: 8 },
   attributeFaces: [{ attribute: "face", value: "serif", fontFamily: "Georgia, serif", fontWeight: 700 }],
 } };
 
@@ -148,6 +152,8 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
   assert.match(html.html, /data-caption-cue-union/u);
   assert.match(html.html, /hypitPaintLineUnion/u);
   assert.match(html.html, /textDecorationThickness/u);
+  assert.match(html.html, /data-hypit-text-paint="long-shadow"/u);
+  assert.match(html.html, /data-hypit-text-paint="glow"/u);
 
   if (alice?.kind !== "component") throw new Error("Fine Caption fixture is not a Component.");
   const authoring = createNleAuthoringHostFromFacets(hypitPackage.facets);

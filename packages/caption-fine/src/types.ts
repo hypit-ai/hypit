@@ -48,6 +48,12 @@ export type CaptionFineStyleParameters = {
   /** Exact project-owned font bytes. fontFamily is only an explicit environment fallback. */
   readonly fonts?: FontStackRef;
   readonly color?: string;
+  readonly opacity?: number;
+  readonly gradient?: {
+    readonly from: string;
+    readonly to: string;
+    readonly angleDeg?: number;
+  };
   readonly fontFamily?: string;
   readonly fontSize?: number;
   readonly fontWeight?: number;
@@ -61,6 +67,20 @@ export type CaptionFineStyleParameters = {
   readonly shadowBlur?: number;
   readonly shadowOffsetX?: number;
   readonly shadowOffsetY?: number;
+  readonly shadowSpread?: number;
+  readonly glow?: {
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly blur?: number;
+    readonly spread?: number;
+  };
+  readonly longShadow?: {
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly distance?: number;
+    readonly angleDeg?: number;
+    readonly steps?: number;
+  };
   readonly cueBox?: CaptionFineBoxParameters;
   readonly activeBox?: CaptionFineActiveBoxParameters;
   readonly underline?: CaptionFineUnderlineParameters;

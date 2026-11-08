@@ -64,8 +64,16 @@ export type HtmlTextPaintLayer =
       readonly offsetX: number;
       readonly offsetY: number;
       readonly blurPx: number;
+      readonly spreadPx?: number;
     }
-  | { readonly kind: "glow"; readonly color: string; readonly blurPx: number }
+  | { readonly kind: "glow"; readonly color: string; readonly blurPx: number; readonly spreadPx?: number }
+  | {
+      readonly kind: "long-shadow";
+      readonly color: string;
+      readonly distancePx: number;
+      readonly angleDeg: number;
+      readonly steps?: number;
+    }
   | { readonly kind: "box"; readonly decoration: HtmlTextBoxDecoration };
 
 export type HtmlTextTypography = {
@@ -340,16 +348,47 @@ function paintCss(paint: Exclude<HtmlTextPaintLayer, { kind: "box" }>, label: st
       `-webkit-text-stroke:${number(width, `${label} stroke width`)}px ${selected}`,
       "paint-order:stroke fill"];
   }
+  const spreadShadows = (
+    offsetX: number,
+    offsetY: number,
+    blurPx: number,
+    spreadPx: number,
+    selected: string,
+  ): string => {
+    assert(Number.isFinite(spreadPx) && spreadPx >= 0, `${label} spread is invalid.`);
+    const offsets = spreadPx === 0 ? [[offsetX, offsetY]] : [
+      [offsetX, offsetY],
+      ...Array.from({ length: 16 }, (_, index) => {
+        const angle = index * Math.PI / 8;
+        return [offsetX + Math.cos(angle) * spreadPx, offsetY + Math.sin(angle) * spreadPx];
+      }),
+    ];
+    return offsets.map(([x, y]) =>
+      `${number(x!, `${label} shadow x`)}px ${number(y!, `${label} shadow y`)}px ${number(blurPx, `${label} shadow blur`)}px ${selected}`).join(",");
+  };
   if (paint.kind === "shadow") {
     assert(paint.blurPx >= 0, `${label} shadow blur is invalid.`);
     const selected = color(paint.color, `${label} shadow`);
     return [...common, `color:${selected}`, `-webkit-text-fill-color:${selected}`,
-      `text-shadow:${number(paint.offsetX, `${label} shadow x`)}px ${number(paint.offsetY, `${label} shadow y`)}px ${number(paint.blurPx, `${label} shadow blur`)}px ${selected}`];
+      `text-shadow:${spreadShadows(paint.offsetX, paint.offsetY, paint.blurPx, paint.spreadPx ?? 0, selected)}`];
   }
-  assert(paint.blurPx >= 0, `${label} glow blur is invalid.`);
-  const selected = color(paint.color, `${label} glow`);
-  return [...common, `color:${selected}`, `-webkit-text-fill-color:${selected}`,
-    `text-shadow:0 0 ${number(paint.blurPx, `${label} glow blur`)}px ${selected}`];
+  if (paint.kind === "glow") {
+    assert(paint.blurPx >= 0, `${label} glow blur is invalid.`);
+    const selected = color(paint.color, `${label} glow`);
+    return [...common, `color:${selected}`, `-webkit-text-fill-color:${selected}`,
+      `text-shadow:${spreadShadows(0, 0, paint.blurPx, paint.spreadPx ?? 0, selected)}`];
+  }
+  assert(paint.distancePx >= 0 && Number.isFinite(paint.distancePx), `${label} distance is invalid.`);
+  assert(Number.isFinite(paint.angleDeg), `${label} angle is invalid.`);
+  const steps = paint.steps ?? Math.min(32, Math.max(1, Math.ceil(paint.distancePx)));
+  assert(Number.isSafeInteger(steps) && steps >= 1 && steps <= 128, `${label} steps are invalid.`);
+  const selected = color(paint.color, `${label} long shadow`);
+  const radians = paint.angleDeg * Math.PI / 180;
+  const shadows = Array.from({ length: steps }, (_, index) => {
+    const distance = paint.distancePx * (index + 1) / steps;
+    return `${number(Math.cos(radians) * distance, `${label} long shadow x`)}px ${number(Math.sin(radians) * distance, `${label} long shadow y`)}px 0 ${selected}`;
+  }).join(",");
+  return [...common, `color:${selected}`, `-webkit-text-fill-color:${selected}`, `text-shadow:${shadows}`];
 }
 
 function mergeTypography(parent: HtmlTextTypography, child: HtmlTextTypography | undefined): HtmlTextTypography {

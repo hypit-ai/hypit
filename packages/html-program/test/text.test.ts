@@ -26,7 +26,9 @@ test("HTML Text closes exact fonts, authored spacing and ordered glyph Paint int
       language: "zh",
     },
     paints: [
-      { kind: "shadow", color: "#00000099", offsetX: 3, offsetY: 4, blurPx: 8 },
+      { kind: "long-shadow", color: "#082f49aa", distancePx: 6, angleDeg: 45, steps: 6 },
+      { kind: "glow", color: "#22d3ee88", blurPx: 10, spreadPx: 2 },
+      { kind: "shadow", color: "#00000099", offsetX: 3, offsetY: 4, blurPx: 8, spreadPx: 1 },
       { kind: "stroke", paint: { kind: "solid", color: "#000000" }, widthPx: 2, placement: "outside" },
       { kind: "fill", paint: { kind: "solid", color: "#ffffff" } },
     ],
@@ -52,6 +54,10 @@ test("HTML Text closes exact fonts, authored spacing and ordered glyph Paint int
   assert.match(fragment.html, /lang="zh"/u);
   assert.match(fragment.html, /你好/u);
   assert.match(fragment.html, / world/u);
+  assert.ok(fragment.html.indexOf('data-hypit-text-paint="long-shadow"')
+    < fragment.html.indexOf('data-hypit-text-paint="glow"'));
+  assert.ok(fragment.html.indexOf('data-hypit-text-paint="glow"')
+    < fragment.html.indexOf('data-hypit-text-paint="shadow"'));
   assert.ok(fragment.html.indexOf('data-hypit-text-paint="shadow"')
     < fragment.html.indexOf('data-hypit-text-paint="stroke"'));
   assert.ok(fragment.html.indexOf('data-hypit-text-paint="stroke"')
@@ -59,6 +65,7 @@ test("HTML Text closes exact fonts, authored spacing and ordered glyph Paint int
   assert.match(fragment.html, /-webkit-text-stroke:4px #000000/u);
   assert.match(fragment.html, /text-decoration-line:underline/u);
   assert.match(fragment.html, /text-underline-offset:5px/u);
+  assert.match(fragment.html, /text-shadow:/u);
   assert.doesNotThrow(() => htmlVisual({ html: fragment.html, dependencies: fragment.dependencies }));
 });
 
