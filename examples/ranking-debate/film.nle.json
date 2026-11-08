@@ -405,63 +405,115 @@
                 "id": "pretty",
                 "label": "漂亮画面",
                 "tier": "B",
-                "icon": "画",
+                "visual": {
+                  "kind": "text",
+                  "text": "画"
+                },
                 "revealAt": {
                   "ticks": "11911",
                   "timeBase": {
                     "numerator": 1,
                     "denominator": 1500
                   }
-                }
+                },
+                "entry": "drop",
+                "preset": false
               },
               {
                 "id": "stable",
                 "label": "稳定修改",
                 "tier": "A",
-                "icon": "改",
+                "visual": {
+                  "kind": "text",
+                  "text": "改"
+                },
                 "revealAt": {
                   "ticks": "41231",
                   "timeBase": {
                     "numerator": 1,
                     "denominator": 3000
                   }
-                }
+                },
+                "entry": "drop",
+                "preset": false
               },
               {
                 "id": "timed",
                 "label": "按词编排",
                 "tier": "S",
-                "icon": "词",
+                "visual": {
+                  "kind": "text",
+                  "text": "词"
+                },
                 "revealAt": {
                   "ticks": "12137",
                   "timeBase": {
                     "numerator": 1,
                     "denominator": 600
                   }
-                }
+                },
+                "entry": "drop",
+                "preset": false
               },
               {
                 "id": "editable",
                 "label": "普通工程",
                 "tier": "S",
-                "icon": "剪",
+                "visual": {
+                  "kind": "text",
+                  "text": "剪"
+                },
                 "revealAt": {
                   "ticks": "12829",
                   "timeBase": {
                     "numerator": 1,
                     "denominator": 500
                   }
-                }
+                },
+                "entry": "drop",
+                "preset": false
               }
             ],
-            "revealFrames": 18
+            "layout": {
+              "board": {
+                "x": 350,
+                "y": 26,
+                "width": 346,
+                "height": 286
+              },
+              "titleHeight": 43,
+              "labelWidthRatio": 0.16,
+              "gap": 7,
+              "itemWidth": 120,
+              "stagePoint": {
+                "x": 0.22,
+                "y": 0.34
+              },
+              "stageSize": 122
+            },
+            "motion": {
+              "appearFrames": 8,
+              "holdFrames": 10,
+              "moveFrames": 16
+            },
+            "appearance": {
+              "background": "#0f172af2",
+              "rowBackground": "#ffffff0c",
+              "borderColor": "#ffffff2e",
+              "shadowColor": "#02061780",
+              "itemBackground": "#f8fafcf5",
+              "itemTextColor": "#111827",
+              "labelTextColor": "#111827",
+              "accent": "#38bdf8",
+              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif"
+            }
           },
           "picture": {
             "layout": {
-              "x": 392,
-              "y": 26,
-              "width": 300,
-              "height": 260,
+              "x": 0,
+              "y": 0,
+              "width": 720,
+              "height": 1280,
               "fit": "fill"
             },
             "effects": []

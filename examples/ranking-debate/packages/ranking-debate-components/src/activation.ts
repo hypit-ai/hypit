@@ -1,8 +1,9 @@
 import { createNleHtmlVideoPackageFacet } from "@hypit/html-video";
-import { createNlePackageFacet } from "@hypit/nle";
+import { createNleAuthoringFacet, createNlePackageFacet } from "@hypit/nle";
 
 import {
   rankingBoardHtmlResolver,
+  rankingBoardNleAuthoring,
   rankingBoardNleResolver,
   rankingDebateComponentsManifest,
   verdictBurstHtmlResolver,
@@ -15,6 +16,7 @@ export const hypitPackage = {
   facets: [
     createNlePackageFacet({ components: [rankingBoardNleResolver, verdictBurstNleResolver] }),
     createNleHtmlVideoPackageFacet({ components: [rankingBoardHtmlResolver, verdictBurstHtmlResolver] }),
+    createNleAuthoringFacet({ componentParameters: [rankingBoardNleAuthoring] }),
   ],
 };
 export default hypitPackage;

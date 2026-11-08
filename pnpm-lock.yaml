@@ -216,9 +216,15 @@ importers:
       '@hypit/html-video':
         specifier: workspace:*
         version: link:../../../../packages/html-video
+      '@hypit/media':
+        specifier: workspace:*
+        version: link:../../../../packages/media
       '@hypit/nle':
         specifier: workspace:*
         version: link:../../../../packages/nle
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../../../../packages/protocol
       '@hypit/spatial':
         specifier: workspace:*
         version: link:../../../../packages/spatial

@@ -1,6 +1,7 @@
 export {
   rankingBoardComponentSymbol,
   rankingBoardHtmlResolver,
+  rankingBoardNleAuthoring,
   rankingBoardNleResolver,
   rankingDebateComponentsManifest,
   verdictBurstComponentSymbol,
