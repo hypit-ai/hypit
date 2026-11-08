@@ -74,5 +74,10 @@ generation node, stacked, hidden or restored without becoming recipe fields. A f
 author Graph node only through an explicit authoring transaction. External media and generated media then use
 the same Media Asset representation; neither NLE nor downstream components consume Product sidecars.
 
+Media is only one authored result kind. A WhisperX-style node may publish a `TimedTranscript`; its Type owner
+exports an editable transcript file and may attach that file to a Media Asset as an explicit Representation.
+Other analyzers may own masks, depth or tracking documents in the same way. Core and Canvas must not maintain a
+switch over those result kinds: installed Type packages own codecs, optional inspectors and materializers.
+
 The revisioned transaction API edits only author facts: project name, recipe nodes and Canvas positions.
 Running, finishing, failing, cancelling or deleting a result card never increments the recipe revision.
