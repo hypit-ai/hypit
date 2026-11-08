@@ -22,6 +22,13 @@ export type GenerationCanvasItem = {
   readonly y: number;
 };
 
+/** Stable identity inside one View; independent of JSON object key order. */
+export function generationCanvasSubjectKey(subject: GenerationCanvasSubject): string {
+  return subject.kind === "graph-node"
+    ? JSON.stringify([subject.kind, subject.node])
+    : JSON.stringify([subject.kind, subject.build, subject.output]);
+}
+
 /** Persistent presentation of one Generation Graph. It never changes recipe or execution semantics. */
 export type GenerationCanvasView = {
   readonly format: "hypit.generation-canvas@1";

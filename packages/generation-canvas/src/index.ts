@@ -1,3 +1,23 @@
+export { planAcceptedGenerationCanvasBuild } from "./accepted-build.js";
+export type {
+  AcceptedGenerationCanvasBuild,
+  GenerationCanvasBuildOutputPlacement,
+} from "./accepted-build.js";
+export {
+  generationCanvasBuildOutputKey,
+  observeGenerationCanvasBuildOutputs,
+} from "./observation.js";
+export type {
+  GenerationCanvasActiveBuild,
+  GenerationCanvasBuildOutputObservation,
+  GenerationCanvasObservationHost,
+} from "./observation.js";
+export { projectGenerationCanvas } from "./projection.js";
+export type {
+  GenerationCanvasScene,
+  GenerationCanvasSceneEdge,
+  GenerationCanvasSceneItem,
+} from "./projection.js";
 export {
   assertGenerationCanvasView,
   createGenerationCanvasView,
@@ -19,3 +39,4 @@ export type {
   GenerationCanvasSubject,
   GenerationCanvasView,
 } from "./types.js";
+export { generationCanvasSubjectKey } from "./types.js";

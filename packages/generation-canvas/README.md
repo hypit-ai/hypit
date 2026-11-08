@@ -39,3 +39,14 @@ Selection, hover, viewport, zoom and an in-progress drag remain Session state. P
 Removing a Build-output Item removes only its Canvas projection; History can place the same exact output again.
 Turning a completed output into reusable authored input remains an explicit Type-owned materialization followed by
 an ordinary Generation Graph transaction.
+
+`planAcceptedGenerationCanvasBuild()` turns a durably accepted Build receipt plus Host-owned placements into one
+Canvas transaction. It requires a placement for every published operation output and copies no execution state.
+`observeGenerationCanvasBuildOutputs()` inspects each referenced active Build once, then falls back to finished
+Result history when Runtime no longer owns it. `projectGenerationCanvas()` joins those observations with the Graph
+and View, deriving recipe and `produced-by` edges without persisting either edge in the View.
+
+The Node Host closes the first headless workflow. `placeAcceptedBuildInGenerationCanvas()` checks the caller's
+View revision and atomically saves all cards for one accepted receipt. `openNodeGenerationCanvas()` follows the
+View's portable Graph path, observes every referenced Build and returns the complete projected Scene. A receipt
+write failure does not cancel or relabel the already accepted Build; its Result remains recoverable from History.

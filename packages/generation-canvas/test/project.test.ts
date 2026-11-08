@@ -72,3 +72,25 @@ test("Canvas edits have an independent revision", () => {
     commands: [],
   }), /expected revision 1, found 2/u);
 });
+
+test("one View projects one Item for each exact subject", () => {
+  const empty = createGenerationCanvasView({
+    id: "storyboard-main",
+    name: "Storyboard",
+    graph: { path: "storyboard.graph.json" },
+  });
+  assert.throws(() => applyGenerationCanvasTransaction(empty, {
+    revision: 0,
+    commands: [{ kind: "item.add", item: {
+      id: "first",
+      subject: { kind: "build-output", build: "Build-A", output: "hero" },
+      x: 0,
+      y: 0,
+    } }, { kind: "item.add", item: {
+      id: "second",
+      subject: { output: "hero", build: "Build-A", kind: "build-output" },
+      x: 200,
+      y: 0,
+    } }],
+  }), /repeats subject/u);
+});

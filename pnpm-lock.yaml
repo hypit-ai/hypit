@@ -740,6 +740,15 @@ importers:
       '@hypit/atomic-file':
         specifier: workspace:^0.0.0-dev
         version: link:../atomic-file
+      '@hypit/generation-graph':
+        specifier: workspace:^0.0.0-dev
+        version: link:../generation-graph
+      '@hypit/product':
+        specifier: workspace:^0.0.0-dev
+        version: link:../product
+      '@hypit/result':
+        specifier: workspace:^0.0.0-dev
+        version: link:../result
 
   packages/generation-graph:
     dependencies:
@@ -2224,6 +2233,9 @@ importers:
         specifier: workspace:^0.2.0
         version: link:../generation
     devDependencies:
+      '@hypit/generation-graph':
+        specifier: workspace:*
+        version: link:../generation-graph
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../..

@@ -4,6 +4,7 @@ import type {
   GenerationCanvasSubject,
   GenerationCanvasView,
 } from "./types.js";
+import { generationCanvasSubjectKey } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -72,10 +73,14 @@ export function assertGenerationCanvasView(value: GenerationCanvasView): void {
   assertGraph(value.graph);
   assert(Array.isArray(value.items), "Generation Canvas View Items are invalid.");
   const ids = new Set<string>();
+  const subjects = new Set<string>();
   for (const item of value.items) {
     assertItem(item);
     assert(!ids.has(item.id), `Generation Canvas View repeats Item ${item.id}.`);
     ids.add(item.id);
+    const subject = generationCanvasSubjectKey(item.subject);
+    assert(!subjects.has(subject), `Generation Canvas View repeats subject ${subject}.`);
+    subjects.add(subject);
   }
 }
 

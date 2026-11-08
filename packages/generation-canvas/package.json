@@ -9,7 +9,10 @@
     "./node": "./src/node/index.ts"
   },
   "dependencies": {
-    "@hypit/atomic-file": "workspace:^0.0.0-dev"
+    "@hypit/atomic-file": "workspace:^0.0.0-dev",
+    "@hypit/generation-graph": "workspace:^0.0.0-dev",
+    "@hypit/product": "workspace:^0.0.0-dev",
+    "@hypit/result": "workspace:^0.0.0-dev"
   },
   "files": [
     "dist",
