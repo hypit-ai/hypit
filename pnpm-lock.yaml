@@ -797,6 +797,24 @@ importers:
         specifier: workspace:*
         version: link:../text
 
+  packages/generation-graph:
+    dependencies:
+      '@hypit/atomic-file':
+        specifier: workspace:^0.0.0-dev
+        version: link:../atomic-file
+      '@hypit/author':
+        specifier: workspace:*
+        version: link:../author
+      '@hypit/kernel':
+        specifier: workspace:^0.0.0-dev
+        version: link:../kernel
+      '@hypit/product':
+        specifier: workspace:^0.0.0-dev
+        version: link:../product
+      '@hypit/protocol':
+        specifier: workspace:^0.0.0-dev
+        version: link:../protocol
+
   packages/gpt-image:
     dependencies:
       '@hypit/generation':

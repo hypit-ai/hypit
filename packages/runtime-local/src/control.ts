@@ -45,6 +45,9 @@ function buildView(input: {
     ...(input.execution?.stop === undefined ? {} : { stop: input.execution.stop }),
     ...(input.result?.sourcePath === undefined ? {} : { sourcePath: input.result.sourcePath }),
     targets,
+    ...(input.result === undefined || Object.keys(input.result.outputs).length === 0
+      ? {}
+      : { outputs: input.result.outputs }),
     ...(requests === undefined ? {} : { requests }),
     commands: input.commands.flatMap((command) => command.status === "started" && command.activity !== undefined
       ? [command.activity] : []),

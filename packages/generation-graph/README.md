@@ -52,9 +52,20 @@ file through Result/Product storage. Missing, active and failed products remain 
 silently replaced with generation.
 
 `lowerGenerationGraph` is filesystem-free. Package code supplies each node's one-result `GraphFragment`,
-and the Host supplies the already-resolved Product `TypedRecord`. Generated selections lower to ordinary
+and the Host supplies the already-resolved Product `TypedRecord` and owned Resource openers. Generated selections lower to ordinary
 AuthorGraph Operations. Product selections lower to ordinary Record roots, so Core planning naturally stops
 at that value without Candidate, Satisfaction, Pin or a second execution graph.
+
+`prepareGenerationGraphTargets` resolves only the target-reachable branch. An unrelated pending or failed
+Product therefore cannot block another branch. A selection with no Steps returns `kind: "reuse"`; callers
+must not submit it to Runtime or create another Result. A real Build returns its `BuildDefinition`, attachments
+installed execution-package selection and `PublicationIntent`. Every demanded generated node is published under its node id, including intermediate
+nodes, while reused Product inputs are not republished.
+
+After Runtime accepts the stable Build id, `acceptGenerationGraphBuild` assigns one sidecar to every generated
+node and produces a single project transaction that adds and selects those pending Products. The Node adapter
+publishes sidecars first and the graph revision last. Completion, failure and cancellation change only the
+Runtime/Result observation of the referenced Build; they do not rewrite the graph again.
 
 The revisioned transaction API edits the project atomically. Removing the currently selected Product first
 requires a `node.select` command in the same transaction. Physical deletion of the tiny file is a Host action

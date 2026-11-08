@@ -19,6 +19,7 @@ import type {
   ScheduledBuildResult,
 } from "@hypit/runtime";
 import type { ResourceStore } from "@hypit/resource-store";
+import type { Product } from "@hypit/product";
 
 export type CliPublicationStoreLocation = {
   readonly root: string;
@@ -36,6 +37,7 @@ export type CliDiagnostic = {
 export type CliBuildAuthoring = {
   readonly sourcePath: string;
   readonly targets: readonly string[];
+  readonly outputs?: Readonly<Record<string, Product>>;
   readonly publication: PublicationIntent;
 };
 

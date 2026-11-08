@@ -1,10 +1,13 @@
 import type { GraphFragment } from "@hypit/author";
 import type {
+  BlobRef,
   CanonicalValue,
   LinkedProgram,
   ModuleRef,
   TypedRecord,
 } from "@hypit/protocol";
+
+export type Awaitable<T> = T | Promise<T>;
 
 export type GenerationComponentRef = {
   readonly module: ModuleRef;
@@ -53,6 +56,18 @@ export type GenerationNodeImplementation = {
   readonly using: GenerationComponentRef;
   /** First generation-graph revision deliberately requires one public result per node. */
   readonly fragment: GraphFragment;
+  /** Installed package specifier whose Producer/Refinement facets execute this node, when needed. */
+  readonly executionPackage?: string;
+};
+
+export type GenerationGraphResourceAttachment = {
+  readonly blob: BlobRef;
+  open(): Promise<AsyncIterable<Uint8Array>>;
+};
+
+export type GenerationGraphResolvedProduct = {
+  readonly record: TypedRecord;
+  readonly attachments: readonly GenerationGraphResourceAttachment[];
 };
 
 /** All package behavior and Product access stay outside the project document. */
@@ -60,15 +75,17 @@ export type GenerationGraphLoweringHost = {
   readonly resolveImplementation: (
     node: GenerationGraphNode,
     project: GenerationGraphProject,
-  ) => GenerationNodeImplementation;
+  ) => Awaitable<GenerationNodeImplementation>;
   readonly resolveProduct: (
     path: string,
     node: GenerationGraphNode,
     project: GenerationGraphProject,
-  ) => TypedRecord;
+  ) => Awaitable<GenerationGraphResolvedProduct>;
 };
 
 export type LoweredGenerationGraph = {
   readonly program: LinkedProgram;
   readonly graph: import("@hypit/protocol").AuthorGraph;
+  readonly attachments: readonly GenerationGraphResourceAttachment[];
+  readonly executionPackages: readonly string[];
 };

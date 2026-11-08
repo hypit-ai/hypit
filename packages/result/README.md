@@ -25,9 +25,11 @@ own store. A Result therefore neither owns those bytes nor keeps a live project-
 Runtime records that publisher with the accepted Type rather than inventing a lifetime policy.
 History exposes each Product's stable `{ publication, name }` address; the current publication identity
 is the Run that closed it.
-Reusing an earlier Output is an authoring
-operation: export the accepted material into the project and reference it from the Author Source.
-Result storage never substitutes a historical Build for an authored value.
+Reusing an earlier Output is an explicit authoring operation. Ordinary Author Sources export the accepted
+material into the project and reference that authored value. A Generation Graph instead owns a tiny node
+Product file containing the exact Build and Output address; its Host resolves that explicit selection into a
+Record during target preparation. Result storage never searches history or substitutes a historical Build for
+an authored choice.
 
 Draft creation, incremental materialization, crash recovery and terminal publication belong to Runtime
 Local. They are not Result package APIs. Runtime owns its writable filesystem implementation and
@@ -50,6 +52,10 @@ path opener.
 A `complete` outcome is published only after every Output named by the Publication Intent has been stored.
 Failed and cancelled Results may intentionally contain the subset that completed. This is a local per-Build
 closure check, not a central Result index or an attempt to infer missing work.
+
+Generation Graph preparation names every demanded node that will actually generate as a publication Output.
+This lets an upstream node remain a usable Product when a later node fails. A selected existing Product is an
+input Record, not a new publication; targeting only existing Products creates no Build Result at all.
 
 Product file references remain scoped to one publication. Separate publications remain separate even
 when their bytes happen to match; publication performs no content hashing or historical lookup.

@@ -143,6 +143,13 @@ Open finalization state, incremental Product materialization, finalizer recovery
 publication are private Runtime Local implementation. The assembly exposes separate `history`,
 `products` and `finalization` ports; no caller receives a universal repository. `@hypit/result` owns
 only immutable history types and readers; no writable Result entry point is published for CLI or author packages.
+
+Generation Graph preparation occurs before this Runtime boundary. A zero-Step selection is returned directly
+as reused Products and is never submitted. For real work, the adapter supplies an ordinary BuildDefinition and
+PublicationIntent containing every demanded generated node. Runtime Local does not open the graph project,
+choose Products or write node sidecars; after submission acceptance, the authoring Host records the stable
+Build id in its own graph transaction.
+
 The filesystem finalization store does not inherit the history reader; sharing a directory root is assembly,
 not an API relationship.
 Runtime working Resources remain internal and Build-local; there is no ResourceStore selector. After
@@ -159,6 +166,10 @@ execution progress remains in SQLite. Once execution has a final decision, the P
 before Run history publishes its outcome and Product addresses; active state and working Resources are
 removed last. This order applies
 to completed, failed and cancelled Builds alike.
+
+Active `BuildView.outputs` exposes the Product summaries already materialized in the Runtime-owned draft.
+This lets a generation Canvas mark an upstream node ready while downstream work is still running, without
+making drafts visible through finished `ProductHistory` or copying progress into the graph project.
 
 Finalization is a separate, idempotent action after the execution decision. One per-Build lease owns
 publication and cleanup; it is not a global Runtime lock. If publication is interrupted, the Build keeps

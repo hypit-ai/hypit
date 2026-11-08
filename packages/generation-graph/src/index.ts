@@ -11,6 +11,20 @@ export {
   serializeGenerationNodeProduct,
 } from "./project.js";
 export { lowerGenerationGraph } from "./lower.js";
+export { resolveGenerationNodeProduct } from "./product.js";
+export {
+  acceptGenerationGraphBuild,
+  prepareGenerationGraphTargets,
+} from "./prepare.js";
+export type {
+  AcceptedGenerationGraphBuild,
+  AcceptedGenerationGraphProduct,
+  PreparedGenerationGraphBuild,
+  PreparedGenerationGraphNode,
+  PreparedGenerationGraphSelection,
+  PreparedGenerationGraphTarget,
+  ReusedGenerationGraphTargets,
+} from "./prepare.js";
 export {
   applyGenerationGraphTransaction,
   GenerationGraphRevisionConflict,
@@ -26,6 +40,8 @@ export type {
   GenerationGraphNode,
   GenerationGraphNodeLayout,
   GenerationGraphProject,
+  GenerationGraphResolvedProduct,
+  GenerationGraphResourceAttachment,
   GenerationNodeImplementation,
   GenerationNodeProduct,
   LoweredGenerationGraph,

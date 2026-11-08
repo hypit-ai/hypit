@@ -14,6 +14,7 @@ import type {
 } from "@hypit/runtime";
 import type { ResourceStore } from "@hypit/resource-store";
 import type { PublicationIntent } from "@hypit/protocol";
+import type { Product } from "@hypit/product";
 import type { BuildCompletion, BuildExecutionStop, PublicationStoreLocation } from "./execution.js";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-local/extension";
 
@@ -53,6 +54,8 @@ export type BuildView = {
   readonly stop?: BuildExecutionStop;
   readonly sourcePath?: string;
   readonly targets: readonly string[];
+  /** Publications already materialized in this active Build; absence means none are ready yet. */
+  readonly outputs?: Readonly<Record<string, Product>>;
   /** External Needs in the frozen Build Plan and the subset already accepted by Core. */
   readonly requests?: { readonly total: number; readonly completed: number };
   readonly operations: readonly BuildOperationView[];

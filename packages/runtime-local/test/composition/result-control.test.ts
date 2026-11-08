@@ -28,6 +28,7 @@ import {
 } from "../execution-scenario.js";
 import {
   createRuntimeControlFromConfig,
+  createLocalRuntimeControl,
   createRuntimeFromConfig,
   describeRuntimeConfigEndpoints,
   doctorProjectPublicationStores,
@@ -104,4 +105,47 @@ test("active Build inspection requires no selected ResourceStore", async () => {
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("active Build inspection exposes only Product summaries already materialized in its draft", async () => {
+  const build = "bld_20261108T100000000Z_0000000001";
+  const location = { root: "/project", historyPath: "results", productsPath: "products" };
+  const output = {
+    address: { publication: build, name: "base" },
+    type: { module: { name: "@example/image", version: "1" }, name: "Image" },
+    publisher: "hypit.product@1",
+    representation: "inline" as const,
+    value: "ready",
+  };
+  const control = createLocalRuntimeControl({
+    buildStore: { read: async () => undefined } as never,
+    commandExecutionStore: { list: async () => [] } as never,
+    operationStore: { list: async () => [] } as never,
+    submissionStore: { read: async () => undefined, list: async () => [] } as never,
+    executionStore: {
+      read: async () => ({
+        build,
+        executionPackages: [],
+        publicationStores: location,
+        createdAt: 0,
+      }),
+      list: async () => [],
+      listCapacity: async () => [],
+    } as never,
+    openPublicationStores: async () => ({
+      history: {} as never,
+      products: {} as never,
+      finalization: {
+        readStored: async () => ({
+          format: "hypit.build-result@1",
+          id: build,
+          sourcePath: "images.graph.json",
+          targets: ["final"],
+          outputs: { base: output },
+        }),
+      } as never,
+    }),
+  });
+  const view = await control.inspect(build);
+  assert.deepEqual(view?.outputs, { base: output });
 });

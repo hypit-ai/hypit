@@ -1,5 +1,6 @@
 import {
   elaborateAuthorGraph,
+  verifyGraphFragment,
   type AuthorComponent,
   type AuthorValueRef,
 } from "@hypit/author";
@@ -21,6 +22,7 @@ import type {
   GenerationGraphLoweringHost,
   GenerationGraphNode,
   GenerationGraphProject,
+  GenerationGraphResourceAttachment,
   GenerationNodeImplementation,
   LoweredGenerationGraph,
 } from "./types.js";
@@ -30,16 +32,16 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 function implementationFor(
-  project: GenerationGraphProject,
   node: GenerationGraphNode,
-  host: GenerationGraphLoweringHost,
+  implementation: GenerationNodeImplementation,
 ): GenerationNodeImplementation {
-  const implementation = host.resolveImplementation(node, project);
   assert(sameModule(implementation.using.module, node.using.module)
     && implementation.using.name === node.using.name,
   `Generation Graph Node ${node.id} resolved the wrong component implementation.`);
   assert(implementation.fragment.exports.length === 1,
     `Generation Graph Node ${node.id} component must expose exactly one result.`);
+  assert(implementation.executionPackage === undefined || implementation.executionPackage.trim().length > 0,
+    `Generation Graph Node ${node.id} execution package is empty.`);
   const expected = [...implementation.fragment.inputs.map((input) => input.name)].sort();
   const actual = Object.keys(node.inputs).sort();
   assert(JSON.stringify(actual) === JSON.stringify(expected),
@@ -51,14 +53,33 @@ function implementationFor(
  * Lower one saved generation graph into the existing AuthorGraph execution core.
  * Selection is resolved here: generated nodes remain Operations; selected Products become Record roots.
  */
-export function lowerGenerationGraph(
+export async function lowerGenerationGraph(
   project: GenerationGraphProject,
   program: import("@hypit/protocol").LinkedProgram,
   host: GenerationGraphLoweringHost,
-): LoweredGenerationGraph {
+  options: { readonly targets?: readonly string[] } = {},
+): Promise<LoweredGenerationGraph> {
   assertGenerationGraphProject(project);
-  const implementations = new Map<string, GenerationNodeImplementation>();
-  for (const node of project.nodes) implementations.set(node.id, implementationFor(project, node, host));
+  const nodes = new Map(project.nodes.map((node) => [node.id, node]));
+  const active = new Set<string>();
+  const visit = (id: string): void => {
+    if (active.has(id)) return;
+    const node = nodes.get(id);
+    assert(node !== undefined, `Unknown Generation Graph target: ${id}`);
+    active.add(id);
+    if (node.selected !== "generate") return;
+    for (const input of Object.values(node.inputs)) if ("node" in input) visit(input.node);
+  };
+  (options.targets ?? project.nodes.map((node) => node.id)).forEach(visit);
+  const selectedNodes = project.nodes.filter((node) => active.has(node.id));
+  const resolvedImplementations = await Promise.all(selectedNodes.map(async (node) => [
+    node.id,
+    implementationFor(node, await host.resolveImplementation(node, project)),
+  ] as const));
+  const implementations = new Map<string, GenerationNodeImplementation>(resolvedImplementations);
+  for (const implementation of implementations.values()) {
+    verifyGraphFragment(program, implementation.fragment);
+  }
 
   const records = new Map(program.records.map((record) => [record.id, record]));
   const addRecord = (record: TypedRecord): void => {
@@ -72,18 +93,27 @@ export function lowerGenerationGraph(
   };
 
   const selectedRecords = new Map<string, TypedRecord>();
-  for (const node of project.nodes) {
+  const attachments = new Map<string, GenerationGraphResourceAttachment>();
+  for (const node of selectedNodes) {
     if (node.selected === "generate") continue;
-    const record = host.resolveProduct(node.selected, node, project);
+    const resolved = await host.resolveProduct(node.selected, node, project);
+    const record = resolved.record;
     const result = implementations.get(node.id)!.fragment.exports[0]!;
     assert(sameType(record.type, result.type),
       `Generation Graph Node ${node.id} selected Product has the wrong Type.`);
     addRecord(record);
     selectedRecords.set(node.id, record);
+    for (const attachment of resolved.attachments) {
+      const existing = attachments.get(attachment.blob.resource);
+      assert(existing === undefined
+        || (existing.blob.size === attachment.blob.size && existing.blob.mediaType === attachment.blob.mediaType),
+      `Generation Graph Resource ${attachment.blob.resource} has conflicting descriptions.`);
+      if (existing === undefined) attachments.set(attachment.blob.resource, attachment);
+    }
   }
 
   const components: AuthorComponent[] = [];
-  for (const node of project.nodes) {
+  for (const node of selectedNodes) {
     if (node.selected !== "generate") continue;
     const implementation = implementations.get(node.id)!;
     const inputs: Record<string, AuthorValueRef> = {};
@@ -121,7 +151,7 @@ export function lowerGenerationGraph(
 
   const linked = link(program.closure, [...records.values()]);
   const generated = elaborateAuthorGraph(linked, components);
-  const reused: LogicalOutput[] = project.nodes.flatMap((node) => {
+  const reused: LogicalOutput[] = selectedNodes.flatMap((node) => {
     const record = selectedRecords.get(node.id);
     if (record === undefined) return [];
     return [{ id: node.id, type: record.type, result: { kind: "record", id: record.id } }];
@@ -131,5 +161,11 @@ export function lowerGenerationGraph(
     operations: generated.operations,
   });
   verifyAuthorGraph(linked, graph);
-  return { program: linked, graph };
+  return {
+    program: linked,
+    graph,
+    attachments: [...attachments.values()],
+    executionPackages: [...new Set([...implementations.values()].flatMap((implementation) =>
+      implementation.executionPackage === undefined ? [] : [implementation.executionPackage]))].sort(),
+  };
 }
