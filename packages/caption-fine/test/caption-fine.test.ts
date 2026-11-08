@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { CaptionDocument, LocalCaptionTiming } from "@hypit/caption";
+import { readHtmlVisual } from "@hypit/html-program";
 import {
   createNleTerminalLinkHostFromFacets,
   lowerNleProjectToHtmlProgram,
@@ -19,6 +20,7 @@ import {
   appendCaptionHiddenOverride,
   appendCaptionStyleOverride,
   captionFineNleComponentSymbol,
+  captionFineNleHtmlVideoResolver,
   captionFineNleResolver,
   createCaptionFineNleMaterialization,
   createCaptionPresentation,
@@ -90,7 +92,12 @@ const base: CaptionStyle = { id: "base", family: "fine", parameters: {
   activeBox: { mode: "current", continuity: "joined", background: "#2563eb88", borderRadius: 8 },
   underline: { mode: "always", color: "#ffffff", thickness: 2, offset: 4 },
   activeUnderline: { mode: "current", color: "#ffd54a", thickness: 3, offset: 5, style: "wavy" },
-  entry: { kind: "pop", frames: 5 },
+  entry: { kind: "elastic", frames: 8 },
+  exit: { kind: "wipe-right", frames: 6 },
+  atom: { enter: "spring", enterFrames: 5, exit: "fade", exitFrames: 4, reveal: "typewriter" },
+  activeResponse: { kind: "bounce", frames: 4, scale: 1.08 },
+  loop: { kind: "float", target: "active-atom", periodFrames: 24, intensity: 2 },
+  slideDistance: 36,
   shadowSpread: 1,
   glow: { color: "#22d3ee", opacity: 0.5, blur: 10, spread: 2 },
   longShadow: { color: "#082f49", opacity: 0.7, distance: 8, angleDeg: 45, steps: 8 },
@@ -154,8 +161,18 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
   assert.match(html.html, /textDecorationThickness/u);
   assert.match(html.html, /data-hypit-text-paint="long-shadow"/u);
   assert.match(html.html, /data-hypit-text-paint="glow"/u);
-
   if (alice?.kind !== "component") throw new Error("Fine Caption fixture is not a Component.");
+  const terminal = captionFineNleHtmlVideoResolver.resolve(alice, {
+    project,
+    track: project.tracks[0]!,
+  }, captionFineNleResolver.resolve(alice, { project, track: project.tracks[0]! }));
+  if (terminal.html?.implementation.kind !== "program") throw new Error("Fine Caption terminal is not a Program.");
+  const setup = readHtmlVisual(terminal.html.implementation.program).setup ?? "";
+  assert.doesNotThrow(() => new Function("root", "data", "context", setup));
+  assert.match(setup, /easeOutElastic/u);
+  assert.match(setup, /data\.atom\.reveal === 'typewriter'/u);
+  assert.match(setup, /data\.loop\.target === 'active-atom'/u);
+
   const authoring = createNleAuthoringHostFromFacets(hypitPackage.facets);
   const restyled = applyNleTransaction(project, authoring.planComponentParameterEdit(project, alice.id, {
     kind: "set-style",

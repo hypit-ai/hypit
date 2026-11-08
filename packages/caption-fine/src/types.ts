@@ -44,6 +44,42 @@ export type CaptionFineAttributeFace = {
   readonly fontStyle?: "normal" | "italic";
 };
 
+export type CaptionFineOneShotMotion =
+  | "none"
+  | "fade"
+  | "pop"
+  | "scale"
+  | "spring"
+  | "bounce"
+  | "elastic"
+  | "stamp"
+  | "tilt"
+  | "zoom-blur"
+  | "flip-x"
+  | "flip-y"
+  | "spin"
+  | "squash"
+  | "stretch"
+  | "slide-left"
+  | "slide-right"
+  | "slide-up"
+  | "slide-down"
+  | "blur-in"
+  | "wipe-left"
+  | "wipe-right"
+  | "wipe-up"
+  | "wipe-down";
+
+export type CaptionFineLoopMotion =
+  | "none"
+  | "shake"
+  | "wobble"
+  | "glow-pulse"
+  | "breathe"
+  | "float"
+  | "pulse"
+  | "flicker";
+
 export type CaptionFineStyleParameters = {
   /** Exact project-owned font bytes. fontFamily is only an explicit environment fallback. */
   readonly fonts?: FontStackRef;
@@ -87,9 +123,32 @@ export type CaptionFineStyleParameters = {
   readonly activeUnderline?: CaptionFineActiveUnderlineParameters;
   readonly karaoke?: CaptionFineKaraokeParameters;
   readonly entry?: {
-    readonly kind?: "none" | "fade" | "pop" | "slide-up";
+    readonly kind?: CaptionFineOneShotMotion;
     readonly frames?: number;
   };
+  readonly exit?: {
+    readonly kind?: CaptionFineOneShotMotion;
+    readonly frames?: number;
+  };
+  readonly atom?: {
+    readonly enter?: CaptionFineOneShotMotion;
+    readonly enterFrames?: number;
+    readonly exit?: CaptionFineOneShotMotion;
+    readonly exitFrames?: number;
+    readonly reveal?: "all" | "on-start" | "typewriter";
+  };
+  readonly activeResponse?: {
+    readonly kind?: CaptionFineOneShotMotion;
+    readonly frames?: number;
+    readonly scale?: number;
+  };
+  readonly loop?: {
+    readonly kind?: CaptionFineLoopMotion;
+    readonly target?: "cue" | "active-atom";
+    readonly periodFrames?: number;
+    readonly intensity?: number;
+  };
+  readonly slideDistance?: number;
   readonly attributeFaces?: readonly CaptionFineAttributeFace[];
 };
 

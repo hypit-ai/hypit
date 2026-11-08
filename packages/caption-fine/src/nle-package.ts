@@ -35,9 +35,16 @@ import type {
   CaptionFineActiveUnderlineParameters,
   CaptionFineAttributeFace,
   CaptionFineBoxParameters,
+  CaptionFineOneShotMotion,
   CaptionFineStyleParameters,
   CaptionFineUnderlineParameters,
 } from "./types.js";
+
+const oneShotMotions = [
+  "none", "fade", "pop", "scale", "spring", "bounce", "elastic", "stamp", "tilt", "zoom-blur",
+  "flip-x", "flip-y", "spin", "squash", "stretch", "slide-left", "slide-right", "slide-up",
+  "slide-down", "blur-in", "wipe-left", "wipe-right", "wipe-up", "wipe-down",
+] as const satisfies readonly CaptionFineOneShotMotion[];
 
 export const captionFineNleComponentSymbol: NlePackageSymbol = {
   module: { name: "@hypit/caption-fine", version: "1" },
@@ -235,7 +242,8 @@ function resolveCaptionFine(item: NleComponentItem) {
     "fonts", "color", "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "wordGap",
     "textAlign", "outlineColor", "outlineWidth", "shadowColor", "shadowBlur", "shadowOffsetX",
     "shadowOffsetY", "shadowSpread", "glow", "longShadow", "gradient", "opacity",
-    "cueBox", "activeBox", "karaoke", "entry", "attributeFaces",
+    "cueBox", "activeBox", "karaoke", "entry", "exit", "atom", "activeResponse", "loop",
+    "slideDistance", "attributeFaces",
     "underline", "activeUnderline",
   ], `NLE Fine Caption ${item.id} style`);
   const fonts = style.fonts;
@@ -297,10 +305,46 @@ function resolveCaptionFine(item: NleComponentItem) {
   const entryInput = style.entry === undefined ? {} : record(style.entry, "Fine Caption entry");
   exactKeys(entryInput, ["kind", "frames"], "Fine Caption entry");
   const entry = {
-    kind: optionalChoice(entryInput.kind, "pop", ["none", "fade", "pop", "slide-up"] as const,
+    kind: optionalChoice(entryInput.kind, "pop", oneShotMotions,
       "Fine Caption entry kind"),
     frames: optionalInteger(entryInput.frames, 5, "Fine Caption entry frames", 0, 120),
   };
+  const exitInput = style.exit === undefined ? {} : record(style.exit, "Fine Caption exit");
+  exactKeys(exitInput, ["kind", "frames"], "Fine Caption exit");
+  const exit = {
+    kind: optionalChoice(exitInput.kind, "none", oneShotMotions, "Fine Caption exit kind"),
+    frames: optionalInteger(exitInput.frames, 5, "Fine Caption exit frames", 0, 120),
+  };
+  const atomInput = style.atom === undefined ? {} : record(style.atom, "Fine Caption atom");
+  exactKeys(atomInput, ["enter", "enterFrames", "exit", "exitFrames", "reveal"], "Fine Caption atom");
+  const atom = {
+    enter: optionalChoice(atomInput.enter, "none", oneShotMotions, "Fine Caption atom.enter"),
+    enterFrames: optionalInteger(atomInput.enterFrames, 4, "Fine Caption atom.enterFrames", 0, 120),
+    exit: optionalChoice(atomInput.exit, "none", oneShotMotions, "Fine Caption atom.exit"),
+    exitFrames: optionalInteger(atomInput.exitFrames, 4, "Fine Caption atom.exitFrames", 0, 120),
+    reveal: optionalChoice(atomInput.reveal, "all", ["all", "on-start", "typewriter"] as const,
+      "Fine Caption atom.reveal"),
+  };
+  const responseInput = style.activeResponse === undefined
+    ? {} : record(style.activeResponse, "Fine Caption activeResponse");
+  exactKeys(responseInput, ["frames", "kind", "scale"], "Fine Caption activeResponse");
+  const activeResponse = {
+    kind: optionalChoice(responseInput.kind, "none", oneShotMotions, "Fine Caption activeResponse.kind"),
+    frames: optionalInteger(responseInput.frames, 4, "Fine Caption activeResponse.frames", 0, 120),
+    scale: optionalNumber(responseInput.scale, 1, "Fine Caption activeResponse.scale", 0.01, 10),
+  };
+  const loopInput = style.loop === undefined ? {} : record(style.loop, "Fine Caption loop");
+  exactKeys(loopInput, ["intensity", "kind", "periodFrames", "target"], "Fine Caption loop");
+  const loop = {
+    kind: optionalChoice(loopInput.kind, "none",
+      ["none", "shake", "wobble", "glow-pulse", "breathe", "float", "pulse", "flicker"] as const,
+      "Fine Caption loop.kind"),
+    target: optionalChoice(loopInput.target, "cue", ["cue", "active-atom"] as const,
+      "Fine Caption loop.target"),
+    periodFrames: optionalInteger(loopInput.periodFrames, 24, "Fine Caption loop.periodFrames", 1, 600),
+    intensity: optionalNumber(loopInput.intensity, 1, "Fine Caption loop.intensity", 0, 100),
+  };
+  const slideDistance = optionalNumber(style.slideDistance, 32, "Fine Caption slideDistance", 0, 1000);
   const attributeFaces = attributes(style.attributeFaces);
   const baseUnderline = underline(style.underline, false, color);
   const activeUnderline = underline(style.activeUnderline, true, karaoke.activeColor);
@@ -381,7 +425,8 @@ function resolveCaptionFine(item: NleComponentItem) {
     pictureOutput: "picture",
     html: visualProgramHtmlSource(sourceId, "picture", htmlVisual({
       dependencies: text.dependencies,
-      data: { caption, color: alphaHex(color, opacity), karaoke, cueBox, activeBox, entry,
+      data: { caption, color: alphaHex(color, opacity), karaoke, cueBox, activeBox, entry, exit, atom,
+        activeResponse, loop, slideDistance,
         underline: baseUnderline, activeUnderline },
       html: `<div data-hypit-caption-fine><span data-caption-cue><svg data-caption-cue-union aria-hidden="true"><path></path></svg><svg data-caption-active-union aria-hidden="true"><path></path></svg><span data-caption-text-layer>${text.html}</span></span></div>`,
       css: `:scope>[data-hypit-caption-fine]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:${textAlign}}:scope [data-caption-cue]{position:relative;display:inline-block;max-width:100%;box-sizing:border-box;${cueBox.continuity === "isolated" ? `padding:${cueBox.paddingY}px ${cueBox.paddingX}px;background:${cueBox.background};border:${cueBox.borderWidth}px solid ${cueBox.borderColor};border-radius:${cueBox.borderRadius}px;` : ""}white-space:pre-wrap;overflow-wrap:anywhere}:scope [data-caption-cue-union],:scope [data-caption-active-union]{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}:scope [data-caption-cue-union]{z-index:0}:scope [data-caption-active-union]{z-index:1}:scope [data-caption-text-layer]{position:relative;z-index:2}`,
@@ -395,6 +440,13 @@ function resolveCaptionFine(item: NleComponentItem) {
         const allWords = [...root.querySelectorAll('[data-hypit-text-kind="text"]')];
         const seconds = value => Number(value.ticks) * value.timeBase.numerator / value.timeBase.denominator;
         const fps = context.frameRate.numerator / context.frameRate.denominator;
+        const baseFillStyles = new Map([...root.querySelectorAll('[data-hypit-text-paint="fill"]')]
+          .map(fill => [fill, {
+            color: fill.style.color,
+            backgroundImage: fill.style.backgroundImage,
+            webkitBackgroundClip: fill.style.webkitBackgroundClip,
+            webkitTextFillColor: fill.style.webkitTextFillColor,
+          }]));
         const paintText = (element, progress, active) => {
           const fills = element.querySelectorAll('[data-hypit-text-paint="fill"]');
           const paintSolid = selected => {
@@ -406,7 +458,13 @@ function resolveCaptionFine(item: NleComponentItem) {
             }
           };
           if (data.karaoke.mode === 'off' || !active) {
-            paintSolid(data.color);
+            for (const fill of fills) {
+              const base = baseFillStyles.get(fill);
+              fill.style.color = base.color;
+              fill.style.backgroundImage = base.backgroundImage;
+              fill.style.webkitBackgroundClip = base.webkitBackgroundClip;
+              fill.style.webkitTextFillColor = base.webkitTextFillColor;
+            }
             return;
           }
           if (data.karaoke.transition === 'step' || progress >= 1) {
@@ -453,22 +511,96 @@ function resolveCaptionFine(item: NleComponentItem) {
             }
           }
         };
+        const clamp = value => Math.max(0, Math.min(1, value));
+        const easeOut = value => 1 - Math.pow(1 - value, 3);
+        const easeOutBack = value => {
+          const c1 = 1.3, c3 = c1 + 1;
+          return 1 + c3 * Math.pow(value - 1, 3) + c1 * Math.pow(value - 1, 2);
+        };
+        const easeOutBounce = value => {
+          let x = value; const n1 = 7.5625, d1 = 2.75;
+          if (x < 1 / d1) return n1 * x * x;
+          if (x < 2 / d1) return n1 * (x -= 1.5 / d1) * x + 0.75;
+          if (x < 2.5 / d1) return n1 * (x -= 2.25 / d1) * x + 0.9375;
+          return n1 * (x -= 2.625 / d1) * x + 0.984375;
+        };
+        const easeOutElastic = value => value === 0 || value === 1 ? value
+          : Math.pow(2, -10 * value) * Math.sin((value * 10 - 0.75) * (2 * Math.PI / 3)) + 1;
+        const neutral = { opacity: 1, transform: '', filter: '', clipPath: '' };
+        const oneShot = (kind, progress) => {
+          const value = clamp(progress), eased = easeOut(value), distance = data.slideDistance;
+          const state = (opacity, transform, filter, clipPath) => ({
+            opacity,
+            transform: transform || '',
+            filter: filter || '',
+            clipPath: clipPath || '',
+          });
+          const scale = (from, position) => 'scale(' + (from + (1 - from) * position) + ')';
+          if (kind === 'none') return neutral;
+          if (kind === 'fade') return state(eased);
+          if (kind === 'blur-in') return state(eased, scale(0.96, eased), 'blur(' + ((1 - eased) * 16) + 'px)');
+          if (kind === 'pop') return state(eased, scale(0.6, easeOutBack(value)));
+          if (kind === 'scale') return state(eased, scale(0.2, eased));
+          if (kind === 'spring') return state(eased, scale(0.72,
+            value >= 1 ? 1 : 1 - Math.exp(-5 * value) * Math.cos(10 * value)));
+          if (kind === 'bounce') return state(eased, scale(0, easeOutBounce(value)));
+          if (kind === 'elastic') return state(eased, scale(0, easeOutElastic(value)));
+          if (kind === 'stamp') return state(eased, scale(1.35, easeOutBack(value)));
+          if (kind === 'tilt') return state(eased,
+            'rotate(' + ((1 - eased) * -8) + 'deg) ' + scale(0.94, eased));
+          if (kind === 'zoom-blur') return state(eased, scale(1.18, eased),
+            'blur(' + ((1 - eased) * 18) + 'px)');
+          if (kind === 'flip-x') return state(eased,
+            'perspective(600px) rotateX(' + ((1 - eased) * 88) + 'deg) ' + scale(0.92, eased));
+          if (kind === 'flip-y') return state(eased,
+            'perspective(600px) rotateY(' + ((1 - eased) * -88) + 'deg) ' + scale(0.92, eased));
+          if (kind === 'spin') return state(eased,
+            'rotate(' + ((1 - eased) * -180) + 'deg) ' + scale(0.55, eased));
+          if (kind === 'squash') return state(eased,
+            'scaleX(' + (1.28 - 0.28 * easeOutBack(value)) + ') scaleY('
+              + (0.48 + 0.52 * easeOutBack(value)) + ')');
+          if (kind === 'stretch') return state(eased,
+            'scaleX(' + (0.5 + 0.5 * easeOutBack(value)) + ') scaleY('
+              + (1.35 - 0.35 * easeOutBack(value)) + ')');
+          const hidden = (1 - eased) * 100;
+          if (kind === 'wipe-left') return state(1, '', '', 'inset(0 0 0 ' + hidden + '%)');
+          if (kind === 'wipe-right') return state(1, '', '', 'inset(0 ' + hidden + '% 0 0)');
+          if (kind === 'wipe-up') return state(1, '', '', 'inset(0 0 ' + hidden + '% 0)');
+          if (kind === 'wipe-down') return state(1, '', '', 'inset(' + hidden + '% 0 0 0)');
+          const remaining = (1 - eased) * distance;
+          if (kind === 'slide-left') return state(eased, 'translateX(' + -remaining + 'px)');
+          if (kind === 'slide-right') return state(eased, 'translateX(' + remaining + 'px)');
+          if (kind === 'slide-up') return state(eased, 'translateY(' + -remaining + 'px)');
+          return state(eased, 'translateY(' + remaining + 'px)');
+        };
+        const loopAt = localFrame => {
+          if (data.loop.kind === 'none') return neutral;
+          const phase = localFrame / data.loop.periodFrames * Math.PI * 2;
+          const wave = Math.sin(phase), intensity = data.loop.intensity;
+          if (data.loop.kind === 'shake') return { ...neutral, transform: 'translateX(' + (wave * intensity) + 'px)' };
+          if (data.loop.kind === 'wobble') return { ...neutral, transform: 'rotate(' + (wave * intensity) + 'deg)' };
+          if (data.loop.kind === 'breathe') return { ...neutral, transform: 'scale(' + (1 + wave * 0.02 * intensity) + ')' };
+          if (data.loop.kind === 'float') return { ...neutral, transform: 'translateY(' + (wave * intensity) + 'px)' };
+          if (data.loop.kind === 'pulse') return { ...neutral, transform: 'scale(' + (1 + Math.abs(wave) * 0.04 * intensity) + ')' };
+          if (data.loop.kind === 'flicker') return { ...neutral, opacity: 1 - Math.max(0, wave) * 0.15 * intensity };
+          return { ...neutral, filter: 'drop-shadow(0 0 ' + ((0.5 + 0.5 * wave) * intensity * 4) + 'px currentColor)' };
+        };
+        const applyMotion = (element, states) => {
+          element.style.opacity = String(states.reduce((amount, state) => amount * state.opacity, 1));
+          element.style.transform = states.map(state => state.transform).filter(Boolean).join(' ');
+          element.style.filter = states.map(state => state.filter).filter(Boolean).join(' ');
+          const clipped = [...states].reverse().find(state => state.clipPath);
+          element.style.clipPath = clipped?.clipPath || '';
+          element.style.transformOrigin = 'center';
+        };
         return localFrame => {
           const time = localFrame / fps;
-          const entryProgress = data.entry.frames <= 0 ? 1 : Math.max(0, Math.min(1, localFrame / data.entry.frames));
-          if (data.entry.kind === 'fade') {
-            cue.style.opacity = String(entryProgress);
-            cue.style.transform = '';
-          } else if (data.entry.kind === 'pop') {
-            cue.style.opacity = String(entryProgress);
-            cue.style.transform = 'scale(' + (0.72 + 0.28 * (1 - Math.pow(1 - entryProgress, 3))) + ')';
-          } else if (data.entry.kind === 'slide-up') {
-            cue.style.opacity = String(entryProgress);
-            cue.style.transform = 'translateY(' + ((1 - entryProgress) * 28) + 'px)';
-          } else {
-            cue.style.opacity = '1';
-            cue.style.transform = '';
-          }
+          const entryProgress = data.entry.frames <= 0 ? 1 : clamp(localFrame / data.entry.frames);
+          const remainingFrames = Math.max(0, context.durationFrames - 1 - localFrame);
+          const exitProgress = data.exit.frames <= 0 ? 1 : clamp(remainingFrames / data.exit.frames);
+          const cueLifecycle = entryProgress < 1 ? oneShot(data.entry.kind, entryProgress)
+            : exitProgress < 1 ? oneShot(data.exit.kind, exitProgress) : neutral;
+          applyMotion(cue, [cueLifecycle, data.loop.target === 'cue' ? loopAt(localFrame) : neutral]);
           const activeBoxWords = [];
           for (const unit of data.caption.units) {
             const element = units.get(unit.id);
@@ -487,7 +619,31 @@ function resolveCaptionFine(item: NleComponentItem) {
             if (data.activeBox.continuity === 'joined' && boxActive) {
               activeBoxWords.push(...element.querySelectorAll('[data-hypit-text-kind="text"]'));
             }
-            element.style.transform = '';
+            const startFrame = start * fps, endFrame = end * fps;
+            const sinceStart = localFrame - startFrame, untilEnd = endFrame - localFrame;
+            let lifecycle = neutral;
+            const waits = data.atom.reveal !== 'all' || data.atom.enter !== 'none';
+            if (sinceStart < 0 && waits) lifecycle = { ...neutral, opacity: 0 };
+            else if (sinceStart >= 0 && sinceStart < data.atom.enterFrames && data.atom.enter !== 'none') {
+              lifecycle = oneShot(data.atom.enter, data.atom.enterFrames <= 0 ? 1 : sinceStart / data.atom.enterFrames);
+            } else if (untilEnd <= 0 && data.atom.exit !== 'none') lifecycle = oneShot(data.atom.exit, 0);
+            else if (untilEnd > 0 && untilEnd < data.atom.exitFrames && data.atom.exit !== 'none') {
+              lifecycle = oneShot(data.atom.exit, data.atom.exitFrames <= 0 ? 1 : untilEnd / data.atom.exitFrames);
+            }
+            if (data.atom.reveal === 'typewriter' && sinceStart >= 0 && untilEnd > 0) {
+              lifecycle = { ...lifecycle, opacity: 1,
+                clipPath: 'inset(0 ' + ((1 - clamp((time - start) / Math.max(end - start, 1 / fps))) * 100) + '% 0 0)' };
+            }
+            let response = neutral;
+            if (current && data.activeResponse.kind !== 'none') {
+              response = oneShot(data.activeResponse.kind,
+                data.activeResponse.frames <= 0 ? 1 : clamp(sinceStart / data.activeResponse.frames));
+            }
+            if (current && data.activeResponse.scale !== 1) {
+              response = { ...response, transform: response.transform + ' scale(' + data.activeResponse.scale + ')' };
+            }
+            applyMotion(element, [lifecycle, response,
+              data.loop.target === 'active-atom' && current ? loopAt(localFrame) : neutral]);
           }
           if (data.cueBox.continuity === 'joined') {
             hypitPaintLineUnion(cueUnion, cue, allWords, data.cueBox);
