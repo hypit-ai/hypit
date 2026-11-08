@@ -1,42 +1,17 @@
 # Project files
 
-Read this when starting, resuming, or reorganizing a video project. The layout below is a working
-convention, not syntax: Hypit resolves ordinary paths and does not assign meaning to these directory
-names.
+Read this when starting, resuming, reorganizing, or handing over a video project. The layout below is
+a working convention, not another Hypit format. Ordinary files remain owned by their subsystem, and
+ordinary relative paths express the few relationships between them.
 
-## Establish the project boundary
+## Establish one production boundary
 
-Understand the current request and keep its intended result in [Brief](brief.md). Supplied paths,
-the selected production's notes and their explicit references establish which work belongs here.
-A request to continue or revise a named production carries that work forward. A new adaptation
-starts from the supplied reference and requested changes, with its own target and working files.
-When the target is clear, choose a suitable project location and tell the user where the work lives.
-Clarify the intended target when the request leaves genuinely different productions possible.
+Treat one independently editable work as one Hypit project. The boundary may contain several cuts,
+Generation Graphs, NLE files, exports, and production packages, but it should not be a portfolio of
+unrelated productions. Related works can be sibling project roots in an ordinary Git repository.
 
-The current shell directory may be the Skill or executable installation rather than a video project.
-Keep discovery tied to the question being answered:
-
-| What is needed | Where the useful evidence lives |
-| --- | --- |
-| An executable or prepared local service | `hypit paths`, package-manager records, the selected Profile and Provider-documented tool locations |
-| Declaration syntax or reusable behavior | Installed vocabulary, the owning package's documentation and a relevant component example |
-| This production's inputs and completed work | Supplied files, its notes, Sources and project Result history, including explicitly linked shared assets |
-
-Follow a path beyond the project when a supplied location, recorded dependency or documented tool
-location explains its purpose. A nearby project with a similar name or subject does not establish
-that connection. If the expected input is missing, report the missing item and resolve its location
-or prepare the new material the commission needs. This keeps discovery useful without turning
-the machine's other productions into an implicit asset library.
-
-Judge connected earlier work by its contribution: a reference, reusable behavior, or material that
-fits the intended person, product, words and presentation. Learning a component from an example
-carries its mechanics into the new work; casting, prompts, assets and accounts remain this
-production's choices. Explain useful reuse alongside what the requested changes require. Finding
-a similar finished video answers an availability question, not whether this commission is complete.
-A proposal to substitute a different existing video belongs in the conversation with the user.
-
-Run commands from the video project's root. A small `package.json` makes that root explicit and
-can later hold the project's component dependencies:
+Run commands from the production root. A small `package.json` marks that root and owns normal package
+dependencies:
 
 ```json
 {
@@ -48,183 +23,137 @@ can later hold the project's component dependencies:
 }
 ```
 
-The CLI searches upward for a `package.json` whose `hypit.project` field is `true`. It does not turn
-the nearest component package or an arbitrary working directory into a project. Passing a Source or
-Runtime path does not select a different project.
-Sources can live below the root, with file and Source imports relative to the declaring file.
+The CLI searches upward for a `package.json` whose `hypit.project` field is `true`. It does not turn a
+component package, Runtime file, Graph, NLE file, or arbitrary working directory into a project.
+Use `--project <directory>` when invoking a command from elsewhere. Relative references inside an
+authored file remain relative to that file; choosing a project does not secretly rebase them.
 
-| Boundary | When to set it explicitly |
-| --- | --- |
-| `--project <directory>` | Choose the project root for Sources, Runtime selection, project packages and Results when running from another directory |
-| `--asset-root <directory>` | Admit assets stored elsewhere while keeping Source imports in their workspace |
-| `--package-root <directory>` | Resolve project packages from another installation location |
+Install project packages through the ordinary package manager and commit its lockfile. Components
+created for this production normally live in `packages/` and are selected through `file:` dependencies.
+Move one to its owner's npm scope only when it genuinely needs reuse across projects. The selected
+Hypit Distribution supplies its official packages, but every independently distributed package used
+by the production belongs in the project dependencies.
 
-Relative command-line paths start at the shell's current directory. `--project` selects the project
-without rebasing the Source or `--runtime` argument. For example, from outside a project:
+## Keep subsystem files separate
 
-```bash
-hypit paths --project /path/to/video-project
-hypit studio --source /path/to/video-project/main.svml --target final.video --project /path/to/video-project
-```
-
-`paths` shows the resolved project and where its Runtime selection came from. Source imports and asset
-references inside files remain relative to their declaring file.
-
-For example, `hypit check authors/main.svml --asset-root /path/to/shared-media` makes intentionally
-referenced shared media available. Keep the same relevant boundaries for subsequent commands. An
-ordinary project uses its own package installation. The selected Distribution supplies its default packages;
-independently distributed project packages, including `@hypit/*` packages, belong to the project's
-dependencies.
-[Distribution](../environment/distribution.md) explains locating that executable,
-and [component vocabulary](../production/vocabulary.md#let-ordinary-package-management-own-distribution)
-explains installing project packages.
-
-## Keep reference truth and target truth separate
-
-A reference archive says what an existing piece does. A production says what the new piece should do
-and contains the files that make it. One reference can inform several productions, and one production
-can draw from several references; ordinary relative links express those relationships without a
-central project index.
+A practical project can look like this:
 
 ```text
-project/
-├── references/
-│   └── <reference>/
-│       ├── source.*
-│       ├── ANALYSIS.md
-│       ├── TIMELINE.md
-│       ├── transcript.svml
-│       ├── evidence/
-│       ├── PROGRESS.md          # only while understanding is in progress
-│       └── drafts/              # optional observation experiments
-├── productions/
-│   └── <target>/
-│       ├── BRIEF.md
-│       ├── TREATMENT.md
-│       ├── PROGRESS.md
-│       ├── authors/
-│       ├── recipes/
-│       ├── assets/
-│       └── drafts/
-├── assets/                      # inputs shared by several targets
-├── packages/                    # project Author Packages shared by targets
-├── hypit.runtime.json
-└── package.json
+production/
+├── package.json
+├── package-lock.json
+├── README.md
+├── BRIEF.md
+├── TREATMENT.md
+├── PROGRESS.md                 # optional while work is active
+├── generation.graph.json       # long-running operation dependencies
+├── generation.canvas.json      # optional spatial view of that Graph
+├── film.nle.json               # directly editable media/effects timeline
+├── media/
+│   └── <asset>/
+│       ├── <asset>.media.json  # Media Asset owner
+│       ├── <media-file>
+│       └── <representations>   # timed transcript, masks, analysis, and their resources
+├── references/                 # supplied work worth reopening
+├── documents/                  # scripts, copy, and other human-authored material
+├── scripts/                    # explicit one-way authoring helpers
+├── packages/                   # production-owned components
+├── drafts/                     # unaccepted working material
+├── exports/                    # viewing deliverables
+├── hypit.runtime.json          # optional deployment selection
+└── .hypit/                     # local execution and Result history; normally ignored
 ```
 
-A target may have several Author and Recipe Sources. Repeating a Build command creates another
-Build, not another target. Keep files for one target together so their relationship is readable from
-the filesystem rather than inferred from matching names elsewhere in the project.
+The names are conventional. There is intentionally no central project manifest listing every Graph,
+Canvas, NLE, asset, package, and export. Each relationship belongs to its consumer:
 
-For example, one understood reference can support two distinct target works without being copied:
+- a Canvas names the Graph it displays;
+- a Graph node names its inputs and may load a Media Asset;
+- an NLE project names the Media Assets and component modules it uses;
+- a Media Asset names its primary file and optional representations;
+- normal package metadata selects component implementations;
+- a Runtime Profile selects deployable Providers and local execution storage.
 
-```text
-references/viral-ad/
-productions/product-version/
-productions/short-version/
-```
+This separation is what keeps a project extensible. Generation is not embedded in the edit, Canvas
+coordinates are not embedded in the Graph, NLE timing is not reconstructed from generation history,
+and Runtime state is not an authored dependency.
 
-Each production links to `../../references/viral-ad/` from its own Brief or Treatment and keeps its own
-Sources.
+[`examples/production-project`](../../../../examples/production-project/README.md) is the executable
+minimum: the same Media Asset is consumed by a Generation Graph and a flat NLE, while the Canvas and
+Runtime remain replaceable adjacent files.
 
-The CLI finds the project from the command's working directory as described above; Source files may live in any
-subdirectory inside it. Shared assets and packages can stay at project root. Target-specific assets
-stay with that target. A reference file that is also intentionally used in the new film can be
-referenced in place; its documentary role does not require a duplicate.
+## Accept generated media explicitly
 
-## Give each document one job
+A Generation Canvas may display an exact Build output while it is running or while its Result remains
+available. That observation is not yet an input to the edit. When an output is accepted, materialize it
+through its owning package into a stable `media/<asset>/` bundle, then edit the consuming Graph or NLE
+to reference that Media Asset.
 
-- `ANALYSIS.md` is the current whole-piece understanding of a reference: form, story, recurring
-  systems, relationships, function, and why the work holds together.
-- `TIMELINE.md` connects what happens when with what it does for the viewer. Preserve the content,
-  placement, entry, changes, persistence and exit of the reference's visual systems, their word or
-  action relationships, source times and useful evidence paths. Concurrent picture, speech, Caption,
-  Typography, MG, Effect and Audio behavior belong to the same connected account. These are reference
-  timeline notes; the target's actual placements belong to the `time:Timeline` declaration in Source.
-- `transcript.svml` is editable word-level speech evidence. It is evidence, not the director's interpretation.
-- `evidence/` contains only media worth reopening, with ordinary human-readable names.
-- `BRIEF.md` preserves the user's goal, facts, constraints, requested changes and
+This is a one-way authoring seam, not a permanent reactive dependency. A later Build does not silently
+replace accepted media, deleting Result history does not break the authored cut, and opening the NLE
+does not need the generation Runtime. A small script may perform the copy and file edits, but its durable
+result is the ordinary files it creates rather than hidden script state.
+
+The same rule applies to semantic timing. A timed transcript or other analysis can remain a Media Asset
+representation. An explicit authoring operation may inspect it and materialize captions or effects as
+direct NLE items and values. The NLE does not retain a named semantic dependency or reverse lookup.
+
+## Give each working document one job
+
+- `BRIEF.md` preserves the user's goal, facts, constraints, requested changes, and
   [agreed paid scope](brief.md#brief-preserves-user-authority).
-- `TREATMENT.md` is the director's current answer to the Brief: the intended new piece in complete
-  creative terms, before implementation details.
-- `authors/` and `recipes/` contain the exact production implementation.
-- `PROGRESS.md` is a short photograph of the work now: the live question, what remains to examine or
-  make, next useful action, real blockers, active Build ids and useful Results. Keep cost information
-  relevant to the remaining work here when it affects the agreed budget. When handing work
-  over, retain the relevant Source and explicit Targets, Runtime Profile, exact Build id and retained Output names needed
-  to continue. The Author Source owns durable project resources and consumer references; the note
-  points to them. Established conclusions belong in their owning
-  document instead.
+- `TREATMENT.md` is the director's current answer to the Brief: the intended piece in complete creative
+  terms, before implementation mechanics.
+- `README.md` explains how this particular project is organized when the files are not self-explanatory.
+- `PROGRESS.md` is a short photograph of active work: the live question, next useful action, real blockers,
+  active Build identities, and relevant cost. It is not a log and can disappear when nothing needs a handoff.
+- `ANALYSIS.md` and `TIMELINE.md`, when kept with a reference, explain what that reference does and why.
+  Exact reusable evidence belongs in a Media Asset representation or another clearly owned file.
 
-Rewrite these files when the current truth changes. They are not logs. `PROGRESS.md` may exist beside
-a reference or a production because either kind of work can span conversations; it does not mark a
-stage and can disappear when there is nothing useful to hand over.
+Rewrite these documents when the current truth changes. Do not use notes as a second project database.
+An exact Build/output address belongs on the Canvas or in Result history; accepted media belongs in
+`media/`; direct edit decisions belong in the NLE; reusable behavior belongs in its package.
 
-Use these files as the working memory across conversations. Write discoveries and decisions into
-their owning documents as the work develops, preserving both the explanation and its concrete
-details. Let provisional accounts grow with the understanding, keeping detailed evidence once and
-linking to its owner. Share the meaning of discoveries in conversation while the files retain the
-full account. Resume by reading the current project files and relevant Skill pages; use Progress to find
-the next question and the saved evidence, Sources or Results to continue it. A new discovery
-updates the account it changes so the next session inherits the improved understanding.
+## Keep drafts, Results, media, and exports distinct
 
-## Drafts and Results are different things
+`drafts/` holds trial copy, designs, or media deliberately kept for further authoring. A Build output
+can remain only in Result history until it is accepted; it does not need to be copied into `drafts/`.
 
-`drafts/` holds unpublished authoring material that is not part of the current Source: trial copy,
-temporary designs, or media deliberately exported for further work. A Build output remains in that
-Build's Result even when it is not accepted into the Author Source; it does not need to be copied into
-`drafts/`.
+`media/` contains accepted project inputs with stable file-relative identity. It is authored project
+state and travels with the project.
 
-When an output is deliberately exported into the project, place it according to its new role. It may
-become an `asset`, a `draft`, or direct input to another production.
+`.hypit/` contains local execution data, Product storage, and Result history. It is useful evidence but
+is not an authored dependency. Another machine can open the production without copying it.
+
+`exports/` contains viewing deliverables. An MP4 export is not the editable production and should not
+become the source of truth for the NLE that produced it.
+
+## Keep reference truth and production truth separate
+
+A reference says what an existing piece does. The production says what this new piece should do. Keep
+supplied reference media and its analysis under `references/`, then explicitly accept any bytes that
+become production inputs into `media/`. Finding a similar finished video answers an availability
+question; it does not establish that the requested production is complete.
+
+When several productions share code, publish or link an ordinary package. When they share a creative
+reference, each Brief or Treatment can identify it. Do not introduce a central asset catalogue or allow
+parent-directory references to make one project silently depend on another project checkout.
 
 ## Hand over an editable production
 
-A finished MP4 is a viewing deliverable. To continue making the piece, the recipient also needs the
-authored work and the project resources its Author Source references:
+A handoff includes:
 
-- Sources, Recipes, project notes and referenced input assets, keeping their relative layout;
-- project component source or installed-release dependencies, `package.json`, its lockfile and any
+- the Graph, Canvas, NLE, notes, scripts, and other authored files that define the work;
+- every referenced Media Asset bundle and document, preserving relative paths;
+- production package source or installed-release dependencies, `package.json`, its lockfile, and any
   tarballs referenced by `file:` dependencies;
-- every project asset, evidence document and other authored Record referenced by the production;
-- the intended Runtime configuration, with account access configured on the receiving machine through
-  its own Credential Store.
+- the intended Runtime Profile, with credentials configured separately on the receiving machine.
 
-Results are execution history rather than dependencies of the authored production. Include
-`.hypit/results/` when the recipient needs prior Build evidence, diagnostics or Outputs that have not
-yet been accepted into the project. A self-contained editable production must not require a Result
-directory merely to resolve its authored references.
+Include `.hypit/` only when the recipient needs previous Build evidence, diagnostics, or unaccepted
+outputs. Never require it merely to resolve an authored Graph or edit. External input files remain live
+dependencies until accepted into the project and referenced by portable paths.
 
-External input files remain live dependencies. When moving to another machine, provide those inputs
-and preserve or update their project-relative references. Copying Result directories does not collect
-project inputs; `hypit result export` only exports a selected historical Output to an explicit destination.
-
-The recipient installs the selected Distribution and project dependencies, configures their Runtime,
-and checks the received Author Source. Planning its explicit Targets shows what new work remains. Active
-execution stays with the originating Runtime until that attempt ends; an editable handoff carries
-authored work and project resources rather than the originating Runtime's execution state.
-
-`hypit result export` is useful when accepting or handing over a particular historical Output. Place an exported
-image, video or audio file at a project path, declare it through its owning package, and author the
-consumer reference explicitly. A structured value is exported in the author format supplied by its
-owning package; it enters Source only through that package's ordinary declaration. [Builds and Results](../production/builds.md) explains
-Result inspection and export.
-
-## Resume from present facts
-
-After interruption or context compaction, read the current Brief, Treatment, reference archive,
-Source, Recipe and the short `PROGRESS.md` that applies. Then inspect the project's actual Build
-Results and Runtime status. Continue from usable outputs already present; loss of conversation context
-is not a reason to submit the same paid work again.
-
-A command interruption or missing reply can leave the Worker running. [Builds](../production/builds.md)
-explains how to identify active work and continue through a new Build after a failed attempt.
-Completed Outputs remain in Results without becoming production inputs. Export accepted material to
-the project and update the Author Source; neither notes nor an unchanged output name selects it automatically.
-
-## Keep review decisions with the work
-
-Carry settled creative choices into Treatment and execution progress into Progress. When feedback
-refers to a time or passage, record that location together with the requested result and the Source,
-material or component that owns the revision; do not make a tool-specific comment file the authority
-for the production.
+Resume by reading the Brief, Treatment, applicable Progress note, and the actual Graph, Canvas, NLE,
+Media Assets, and Results involved in the next decision. Continue from usable Products already present;
+loss of conversation context is not a reason to submit paid work again. If a running operation was
+interrupted, inspect its Runtime state before starting another Build.

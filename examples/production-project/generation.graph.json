@@ -1,0 +1,49 @@
+{
+  "format": "hypit.generation-graph@1",
+  "id": "launch-variation",
+  "name": "Launch variation",
+  "revision": 0,
+  "nodes": [
+    {
+      "id": "poster-reference",
+      "using": {
+        "module": {
+          "name": "@hypit/media-asset",
+          "version": "1"
+        },
+        "name": "resource"
+      },
+      "inputs": {
+        "asset": {
+          "value": {
+            "path": "media/poster/poster.media.json"
+          }
+        }
+      }
+    },
+    {
+      "id": "campaign-variation",
+      "using": {
+        "module": {
+          "name": "@hypit/gpt-image",
+          "version": "1"
+        },
+        "name": "gpt-image-2.image"
+      },
+      "inputs": {
+        "prompt": {
+          "value": "Reinterpret the supplied geometric launch card as a tactile studio still while preserving its composition."
+        },
+        "aspectRatio": {
+          "value": "16:9"
+        },
+        "resolution": {
+          "value": "2K"
+        },
+        "images.1": {
+          "node": "poster-reference"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "poster",
+  "media": {
+    "file": {
+      "path": "poster.svg",
+      "mediaType": "image/svg+xml"
+    },
+    "interpretation": {
+      "id": "poster-media",
+      "picture": {
+        "kind": "constant",
+        "streamIndex": 0,
+        "interpretation": {
+          "codedWidth": 1280,
+          "codedHeight": 720,
+          "sampleAspectRatio": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "rotationDegrees": 0,
+          "picture": {
+            "colorPrimaries": "bt709",
+            "colorTransfer": "srgb",
+            "colorMatrix": "rgb",
+            "colorRange": "full",
+            "bitDepth": 8,
+            "alphaMode": "straight"
+          }
+        }
+      }
+    }
+  },
+  "representations": []
+}

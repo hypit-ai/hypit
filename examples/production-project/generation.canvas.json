@@ -1,0 +1,29 @@
+{
+  "format": "hypit.generation-canvas@1",
+  "id": "launch-variation-canvas",
+  "name": "Launch variation",
+  "revision": 0,
+  "graph": {
+    "path": "generation.graph.json"
+  },
+  "items": [
+    {
+      "id": "poster-reference-node",
+      "subject": {
+        "kind": "graph-node",
+        "node": "poster-reference"
+      },
+      "x": 80,
+      "y": 120
+    },
+    {
+      "id": "campaign-variation-node",
+      "subject": {
+        "kind": "graph-node",
+        "node": "campaign-variation"
+      },
+      "x": 520,
+      "y": 120
+    }
+  ]
+}

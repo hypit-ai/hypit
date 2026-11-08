@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#111827"/>
+  <circle cx="930" cy="220" r="180" fill="#fb7185"/>
+  <rect x="130" y="130" width="520" height="460" rx="56" fill="#f8fafc"/>
+  <path d="M210 470 360 250l150 220Z" fill="#2563eb"/>
+  <text x="210" y="550" font-family="system-ui, sans-serif" font-size="72" font-weight="700" fill="#111827">LAUNCH</text>
+</svg>
