@@ -1,5 +1,9 @@
 import type { GenerationValueNodeDeclaration } from "@hypit/generation-graph";
 import {
+  blobDependency,
+  blobTypes,
+} from "@hypit/blob";
+import {
   mediaDependency,
   mediaTypes,
 } from "@hypit/media";
@@ -18,7 +22,7 @@ export const mediaAssetManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: mediaAssetModuleRef.name,
   version: mediaAssetModuleRef.version,
-  dependencies: [mediaDependency],
+  dependencies: [blobDependency, mediaDependency],
   types: [],
   capabilities: [],
   producers: [],
@@ -26,6 +30,7 @@ export const mediaAssetManifest: ModuleManifest = {
 
 export const mediaAssetGenerationNodes = {
   media: { module: mediaAssetModuleRef, name: "media" },
+  resource: { module: mediaAssetModuleRef, name: "resource" },
 } as const;
 
 function fileLocator(reference: MediaAssetReference, file: string): string {
@@ -54,5 +59,23 @@ export const mediaAssetGenerationNode: GenerationValueNodeDeclaration = {
       from: fileLocator(reference, file.path),
       mediaType: file.mediaType,
     })) as unknown as CanonicalValue;
+  },
+};
+
+/** Load the primary file itself for model inputs that consume an image/audio/video Blob. */
+export const mediaAssetResourceGenerationNode: GenerationValueNodeDeclaration = {
+  kind: "value",
+  using: mediaAssetGenerationNodes.resource,
+  inputs: ["asset"],
+  type: blobTypes.blob,
+  async load({ inputs, readAsset, resolveAsset }) {
+    const reference = inputs.asset as unknown as MediaAssetReference;
+    verifyMediaAssetReference(reference);
+    const bytes = await readAsset({ from: referenceLocator(reference), mediaType: "application/json" });
+    const document = parseMediaAssetDocument(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    return await resolveAsset({
+      from: fileLocator(reference, document.media.file.path),
+      mediaType: document.media.file.mediaType,
+    }) as unknown as CanonicalValue;
   },
 };

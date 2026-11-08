@@ -1,6 +1,7 @@
 # `@hypit/seedance`
 
-Exact Seedance author model module. It owns the request schema and exactly three invocation declarations;
+Exact Seedance author model module. It owns the request schema, three legacy author declarations and package-owned
+Generation Graph nodes;
 it does not contain service credentials, HTTP code, queues, runtime routing or usage-specific Prompt assembly.
 
 Its implementation uses the public Hypit author APIs and the `@hypit/generation` model APIs. The repository keeps
@@ -30,6 +31,33 @@ Duration is the author's literal inside the model's declared range: `standard`, 
 accept 4–15 whole seconds, while `2.5` accepts 4–30 whole seconds or `-1` for its automatic source-edit
 contract. Measure a spoken line first with `hypit estimate` when the request is sized by delivery and
 write the number here. Nothing in the graph computes it, so a Build plan is complete before it starts.
+
+## Generation Graph nodes
+
+The package contributes exact `model.mode` components such as `seedance-2.5.frame-video` and
+`seedance-2-mini.text-video`. Exact model identity is part of `using`; it is not a mutable model field or a Provider
+choice. A frame-video recipe can stay concise:
+
+```json
+{
+  "id": "motion",
+  "using": {
+    "module": { "name": "@hypit/seedance", "version": "1" },
+    "name": "seedance-2.5.frame-video"
+  },
+  "inputs": {
+    "prompt": { "value": "A slow camera move reveals the full room." },
+    "duration": { "value": 5 },
+    "firstFrame": { "node": "opening-frame" },
+    "firstFramePersonReference": { "value": false }
+  }
+}
+```
+
+Seedance compiles these fields into its existing typed Field Model assembly: Prompt binding, explicit per-media
+classification, final request, exact Capability Need and primary-video selection. Generation Graph Core does not
+know any Seedance field. Prompt may be an inline string or a connected `Prompt` node; frames are ordinary `Blob`
+edges and can come from a Media Asset resource node or an upstream image generator in the same Build.
 
 ## Video reference relationships
 

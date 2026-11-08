@@ -10,6 +10,7 @@ export {
 export { createMediaAssetDocumentFromInspection } from "./import.js";
 export {
   mediaAssetGenerationNode,
+  mediaAssetResourceGenerationNode,
   mediaAssetGenerationNodes,
   mediaAssetManifest,
   mediaAssetModuleRef,

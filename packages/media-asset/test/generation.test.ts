@@ -8,6 +8,7 @@ import hypitPackage from "../src/activation.js";
 import {
   mediaAssetGenerationNode,
   mediaAssetGenerationNodes,
+  mediaAssetResourceGenerationNode,
   serializeMediaAssetDocument,
   type MediaAssetDocument,
 } from "../src/index.js";
@@ -44,7 +45,7 @@ function document(): MediaAssetDocument {
 
 test("Media Asset owns a file-backed PreparedMedia value node", async () => {
   const packages = generationNodePackagesFromFacets(hypitPackage.facets);
-  assert.deepEqual(packages, [{ nodes: [mediaAssetGenerationNode] }]);
+  assert.deepEqual(packages, [{ nodes: [mediaAssetGenerationNode, mediaAssetResourceGenerationNode] }]);
   assert.equal(mediaAssetGenerationNode.kind, "value");
   assert.deepEqual(mediaAssetGenerationNode.using, mediaAssetGenerationNodes.media);
   assert.deepEqual(mediaAssetGenerationNode.type, mediaTypes.prepared);
@@ -78,4 +79,33 @@ test("Media Asset owns a file-backed PreparedMedia value node", async () => {
   assert.deepEqual(reads, ["./assets/interview.media.json"]);
   assert.deepEqual(resolved, ["./assets/interview.mp4"]);
   assert.equal((value as { readonly source: { readonly resource: string } }).source.resource, "res_interview");
+});
+
+test("Media Asset also exposes its primary file as an ordinary model input Blob", async () => {
+  const resolved: string[] = [];
+  const value = await mediaAssetResourceGenerationNode.load({
+    node: {
+      id: "interview-file",
+      using: mediaAssetGenerationNodes.resource,
+      inputs: { asset: { value: { path: "assets/interview.media.json" } } },
+    },
+    project: {
+      format: "hypit.generation-graph@1",
+      id: "podcast",
+      name: "Podcast",
+      revision: 0,
+      nodes: [],
+      layout: [],
+    },
+    inputs: { asset: { path: "assets/interview.media.json" } },
+    readAsset: () => new TextEncoder().encode(serializeMediaAssetDocument(document())),
+    resolveAsset(request) {
+      resolved.push(request.from);
+      return { kind: "blob", resource: "res_interview", size: 100, mediaType: request.mediaType };
+    },
+  });
+  assert.deepEqual(resolved, ["./assets/interview.mp4"]);
+  assert.deepEqual(value, {
+    kind: "blob", resource: "res_interview", size: 100, mediaType: "video/mp4",
+  });
 });

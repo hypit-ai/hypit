@@ -41,10 +41,19 @@ function implementationFor(
     `Generation Graph Node ${node.id} component must expose exactly one result.`);
   assert(implementation.executionPackage === undefined || implementation.executionPackage.trim().length > 0,
     `Generation Graph Node ${node.id} execution package is empty.`);
+  const bindings = implementation.inputs ?? node.inputs;
   const expected = [...implementation.fragment.inputs.map((input) => input.name)].sort();
-  const actual = Object.keys(node.inputs).sort();
+  const actual = Object.keys(bindings).sort();
   assert(JSON.stringify(actual) === JSON.stringify(expected),
     `Generation Graph Node ${node.id} binds [${actual.join(", ")}] but component declares [${expected.join(", ")}].`);
+  const authoredDependencies = new Set(Object.values(node.inputs).flatMap((input) =>
+    "node" in input ? [input.node] : []));
+  const compiledDependencies = new Set<string>();
+  for (const input of Object.values(bindings)) {
+    if ("node" in input) compiledDependencies.add(input.node);
+  }
+  assert(JSON.stringify([...compiledDependencies].sort()) === JSON.stringify([...authoredDependencies].sort()),
+    `Generation Graph Node ${node.id} compiler must preserve its authored dependencies exactly.`);
   return implementation;
 }
 
@@ -110,9 +119,10 @@ export async function lowerGenerationGraph(
   for (const node of selectedNodes) {
     const implementation = implementations.get(node.id)!;
     if (implementation.kind === "value") continue;
+    const bindings = implementation.inputs ?? node.inputs;
     const inputs: Record<string, AuthorValueRef> = {};
     for (const declaration of implementation.fragment.inputs) {
-      const input = node.inputs[declaration.name]!;
+      const input = bindings[declaration.name]!;
       if ("value" in input) {
         const record: TypedRecord = {
           id: `generation-graph:${project.id}:${node.id}:input:${declaration.name}`,

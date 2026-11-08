@@ -5,6 +5,7 @@ import type { CanonicalValue } from "@hypit/protocol";
 import type {
   GenerationComponentRef,
   GenerationGraphLoweringHost,
+  GenerationGraphInput,
   GenerationGraphNode,
   GenerationGraphProject,
   GenerationNodeAssetHost,
@@ -13,7 +14,28 @@ import type {
 
 export const generationNodePackageFacetAbi = "hypit.generation-node-package@1";
 
-export type GenerationOperationNodeDeclaration = Omit<GenerationOperationNodeImplementation, "executionPackage">;
+export type GenerationOperationNodeCompileContext = {
+  readonly node: GenerationGraphNode;
+  readonly project: GenerationGraphProject;
+};
+
+export type GenerationCompiledOperationNode = {
+  readonly fragment: import("@hypit/author").GraphFragment;
+  readonly inputs: Readonly<Record<string, GenerationGraphInput>>;
+};
+
+/**
+ * A package may expose a fixed Fragment, or compile its own concise authored
+ * inputs into one exact Fragment and binding map. Core never learns model fields.
+ */
+export type GenerationOperationNodeDeclaration =
+  | Omit<GenerationOperationNodeImplementation, "executionPackage" | "inputs">
+  | {
+      readonly kind: "operation";
+      readonly using: GenerationComponentRef;
+      readonly compile: (context: GenerationOperationNodeCompileContext) =>
+        import("./types.js").Awaitable<GenerationCompiledOperationNode>;
+    };
 
 export type GenerationValueNodeLoadContext = {
   readonly node: GenerationGraphNode;
@@ -70,7 +92,15 @@ function assertPackage(value: GenerationNodePackage): void {
     const key = generationComponentKey(node.using);
     assert(!keys.has(key), `Generation Node package repeats ${key}.`);
     if (node.kind === "operation") {
-      assert(node.fragment?.format === "hypit.fragment@1", `Generation Node ${key} has no Graph Fragment.`);
+      const hasFragment = "fragment" in node;
+      const hasCompiler = "compile" in node;
+      assert(hasFragment !== hasCompiler,
+        `Generation Operation Node ${key} must declare exactly one of fragment or compile.`);
+      if (hasFragment) {
+        assert(node.fragment?.format === "hypit.fragment@1", `Generation Node ${key} has no Graph Fragment.`);
+      } else {
+        assert(typeof node.compile === "function", `Generation Node ${key} compiler is not callable.`);
+      }
     } else {
       assert(node.kind === "value", `Generation Node ${key} kind is invalid.`);
       assert(isTypeRef(node.type), `Generation Value Node ${key} Type is invalid.`);
@@ -128,6 +158,21 @@ export function createGenerationGraphLoweringHost(
       if (installed === undefined) throw new Error(`Generation Node ${key} is not installed.`);
       const declaration = installed.declaration;
       if (declaration.kind === "operation") {
+        if ("compile" in declaration) {
+          const compiled = await declaration.compile({ node, project });
+          assert(compiled.fragment?.format === "hypit.fragment@1",
+            `Generation Operation Node ${node.id} compiled no Graph Fragment.`);
+          return {
+            kind: "operation",
+            using: declaration.using,
+            fragment: compiled.fragment,
+            inputs: Object.fromEntries(Object.entries(compiled.inputs).map(([name, input]) => [
+              name,
+              "value" in input ? { value: canonicalize(input.value) } : { node: input.node },
+            ])),
+            executionPackage: installed.specifier,
+          };
+        }
         return {
           ...declaration,
           executionPackage: installed.specifier,

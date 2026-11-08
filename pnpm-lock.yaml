@@ -1140,6 +1140,9 @@ importers:
 
   packages/media-asset:
     dependencies:
+      '@hypit/blob':
+        specifier: workspace:^0.0.0-dev
+        version: link:../blob
       '@hypit/facet':
         specifier: workspace:^0.0.0-dev
         version: link:../facet

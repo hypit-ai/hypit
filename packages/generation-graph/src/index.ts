@@ -15,7 +15,9 @@ export {
   generationNodePackageFacetAbi,
 } from "./package.js";
 export type {
+  GenerationCompiledOperationNode,
   GenerationNodeDeclaration,
+  GenerationOperationNodeCompileContext,
   GenerationOperationNodeDeclaration,
   GenerationNodePackage,
   GenerationNodePackageFacet,

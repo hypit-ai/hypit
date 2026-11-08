@@ -51,8 +51,9 @@ The Node port also exposes `importMediaAssetFile()`. It accepts package-owned in
 reports cancellable task progress, optionally copies bytes, and atomically publishes a new manifest without
 overwriting an existing file. It deliberately owns no queue, FFmpeg policy or Studio pending state.
 
-For long-running operation graphs, this package contributes the value node
-`@hypit/media-asset@1#media`. The saved graph keeps only a portable Media Asset reference:
+For long-running operation graphs, this package contributes two value nodes. `@hypit/media-asset@1#media` projects
+the interpreted media as `PreparedMedia`; `@hypit/media-asset@1#resource` projects the primary file as an ordinary
+`Blob` for image, video or audio model ports. The saved graph keeps only a portable Media Asset reference:
 
 ```json
 {
@@ -68,6 +69,7 @@ For long-running operation graphs, this package contributes the value node
 ```
 
 During Build preparation, the package reads the manifest through the Host Workspace and resolves only its primary
-media file into a `PreparedMedia` Record plus a transient attachment. The node itself is not executable work, has
-no Product and never enters Result history. Downstream operation nodes consume the Record normally; Runtime sees
-closed values and bytes, never a project path. Representations remain cold and independently owned.
+media file into the requested typed Record plus a transient attachment. These are projections of one asset authority,
+not two copies or a persistent mode. The node itself is not executable work, has no Product and never enters Result
+history. Downstream operation nodes consume the Record normally; Runtime sees closed values and bytes, never a
+project path. Representations remain cold and independently owned.

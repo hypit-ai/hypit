@@ -39,17 +39,24 @@ Module component; the embedding application selects exact installed packages and
 values to `createNodeGenerationGraphProjectHost`. Missing and duplicate owners fail exactly. The library does not
 scan projects, install packages or maintain a second Generation registry.
 
-There are two implementation forms with different lifetimes:
+There are two implementation lifetimes:
 
-- an `operation` node supplies a one-result `GraphFragment`; its reachable Operations become Build work and their
-  outputs may be published as Products;
+- an `operation` node becomes a one-result `GraphFragment`; its reachable Operations become Build work and their
+  outputs may be published as Products. A package may contribute that fixed Fragment directly, or compile concise
+  authored node inputs into an exact Fragment and binding map;
 - a `value` node loads an already-authored fact through the Host Workspace; it becomes a typed Record and transient
   attachments before submission, never Build work, a Product or Result history.
 
+An operation compiler remains package-owned authoring behavior. It may validate values, choose one package-owned
+Fragment shape and rename bindings, but it must preserve the node's authored dependency set exactly. It cannot add
+hidden dependencies or silently discard visible edges. Core therefore stays unaware of model fields while the saved
+Canvas topology remains the execution topology.
+
 Value-node parameters must be authored literal values. Package code interprets them and may use only the Host's
 explicit `readAsset` and `resolveAsset` capabilities. It receives no filesystem path, Runtime, Endpoint or Result
-repository. `@hypit/media-asset@1#media` is the first concrete value node: a portable `.media.json` reference
-becomes `PreparedMedia`, while Runtime receives only its closed Record and media bytes.
+repository. Media Asset contributes two concrete projections of one portable `.media.json` reference:
+`@hypit/media-asset@1#media` becomes `PreparedMedia`, while `@hypit/media-asset@1#resource` becomes the primary
+file `Blob` for model inputs. Runtime receives only the selected closed Record and media bytes.
 
 An operation component describes what happens and its typed ports; it does not select who executes a Need.
 Model-family packages such as `@hypit/whisperx` can contribute operation nodes, while independent Provider

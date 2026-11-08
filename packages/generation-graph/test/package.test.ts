@@ -51,6 +51,42 @@ test("Generation Node behavior is contributed by an exact package Facet", async 
   assert.equal(implementation.executionPackage, "@example/image");
 });
 
+test("an operation package compiles concise authored inputs without teaching Core its fields", async () => {
+  const authoredUsing = { module: moduleRef, name: "authored-generate" } as const;
+  const host = createGenerationGraphLoweringHost([{
+    specifier: "@example/image",
+    implementation: { nodes: [{
+      kind: "operation",
+      using: authoredUsing,
+      compile({ node }) {
+        return {
+          fragment,
+          inputs: { source: node.inputs.prompt! },
+        };
+      },
+    }] },
+  }]);
+  const implementation = await host.resolveImplementation({
+    id: "hero",
+    using: authoredUsing,
+    inputs: { prompt: { value: "a lighthouse" } },
+  }, {
+    format: "hypit.generation-graph@1",
+    id: "images",
+    name: "Images",
+    revision: 0,
+    nodes: [],
+    layout: [],
+  });
+  assert.deepEqual(implementation, {
+    kind: "operation",
+    using: authoredUsing,
+    fragment,
+    inputs: { source: { value: "a lighthouse" } },
+    executionPackage: "@example/image",
+  });
+});
+
 test("the Host refuses missing and duplicate component owners", async () => {
   const implementation = { nodes: [{ kind: "operation" as const, using, fragment }] };
   assert.throws(() => createGenerationGraphLoweringHost([

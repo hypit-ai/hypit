@@ -47,6 +47,8 @@ export type GenerationOperationNodeImplementation = {
   readonly using: GenerationComponentRef;
   /** First generation-graph revision deliberately requires one public result per node. */
   readonly fragment: GraphFragment;
+  /** Package-normalized bindings. Fixed nodes use the saved node inputs unchanged. */
+  readonly inputs?: Readonly<Record<string, GenerationGraphInput>>;
   /** Installed package specifier whose Producer/Refinement facets execute this node, when needed. */
   readonly executionPackage?: string;
 };
