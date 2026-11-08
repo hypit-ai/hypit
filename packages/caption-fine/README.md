@@ -12,7 +12,9 @@ This package carries the old Fine Caption's core visible relationship into the d
 one stable Cue layout with Unit-timed glyph activation. It now lowers through the shared renderer-local
 HTML Text terminal, so exact project font bytes, environment fallbacks, ordered shadow/outside-stroke/
 fill Paint, word-attribute faces and authored separators use the same closure as other text components.
-Karaoke changes only the fill layers and does not erase the outline or shadow.
+Karaoke may use a complete Active Paint—fill or gradient, outline, shadow, glow and long shadow. A
+plain `activeColor` remains the concise Style for fill-only Karaoke; inactive words restore their
+authored Base Paint exactly.
 
 The current implementation restores the former family's underline, joined multi-line box measurement,
 structural row limits, explicit shrink/ellipsis policy and motion vocabulary. Path text remains a

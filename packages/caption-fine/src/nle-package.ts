@@ -272,7 +272,7 @@ function resolveCaptionFine(item: NleComponentItem) {
     "textAlign", "blockAlign", "inlineSize", "wrap", "maxWordsPerLine", "maxLines", "overflow",
     "minimumScale", "outlineColor", "outlineWidth", "shadowColor", "shadowBlur", "shadowOffsetX",
     "shadowOffsetY", "shadowSpread", "glow", "longShadow", "gradient", "opacity",
-    "cueBox", "activeBox", "karaoke", "entry", "exit", "atom", "activeResponse", "loop",
+    "cueBox", "activeBox", "karaoke", "activePaint", "entry", "exit", "atom", "activeResponse", "loop",
     "slideDistance", "attributeFaces",
     "underline", "activeUnderline",
   ], `NLE Fine Caption ${item.id} style`);
@@ -370,6 +370,77 @@ function resolveCaptionFine(item: NleComponentItem) {
       "Fine Caption karaoke transition"),
     activeColor: optionalColor(karaokeInput.activeColor, "#ffd54a", "Fine Caption activeColor"),
   };
+  const activePaintDeclared = style.activePaint !== undefined;
+  const activePaintInput = style.activePaint === undefined
+    ? {} : record(style.activePaint, "Fine Caption activePaint");
+  exactKeys(activePaintInput, [
+    "color", "gradient", "glow", "longShadow", "opacity", "outlineColor", "outlineWidth",
+    "shadowBlur", "shadowColor", "shadowOffsetX", "shadowOffsetY", "shadowSpread",
+  ], "Fine Caption activePaint");
+  const activeColor = optionalColor(activePaintInput.color,
+    activePaintDeclared ? color : karaoke.activeColor, "Fine Caption activePaint.color");
+  const activeOpacity = optionalNumber(activePaintInput.opacity, opacity,
+    "Fine Caption activePaint.opacity", 0, 1);
+  const activeGradientInput = activePaintInput.gradient === undefined
+    ? (activePaintDeclared ? gradient : undefined)
+    : activePaintInput.gradient === null ? undefined
+      : record(activePaintInput.gradient, "Fine Caption activePaint.gradient");
+  if (activeGradientInput !== undefined) {
+    exactKeys(activeGradientInput, ["angleDeg", "from", "to"], "Fine Caption activePaint.gradient");
+  }
+  const activeGradient = activeGradientInput === undefined ? undefined : {
+    from: optionalColor(activeGradientInput.from, activeColor, "Fine Caption activePaint.gradient.from"),
+    to: optionalColor(activeGradientInput.to, activeColor, "Fine Caption activePaint.gradient.to"),
+    angleDeg: optionalNumber(activeGradientInput.angleDeg, 90,
+      "Fine Caption activePaint.gradient.angleDeg", -3600, 3600),
+  };
+  const activeOutlineColor = optionalColor(activePaintInput.outlineColor, outlineColor,
+    "Fine Caption activePaint.outlineColor");
+  const activeOutlineWidth = optionalNumber(activePaintInput.outlineWidth, outlineWidth,
+    "Fine Caption activePaint.outlineWidth", 0, 40);
+  const activeShadowColor = optionalColor(activePaintInput.shadowColor, shadowColor,
+    "Fine Caption activePaint.shadowColor");
+  const activeShadowBlur = optionalNumber(activePaintInput.shadowBlur, shadowBlur,
+    "Fine Caption activePaint.shadowBlur", 0, 100);
+  const activeShadowOffsetX = optionalNumber(activePaintInput.shadowOffsetX, shadowOffsetX,
+    "Fine Caption activePaint.shadowOffsetX", -100, 100);
+  const activeShadowOffsetY = optionalNumber(activePaintInput.shadowOffsetY, shadowOffsetY,
+    "Fine Caption activePaint.shadowOffsetY", -100, 100);
+  const activeShadowSpread = optionalNumber(activePaintInput.shadowSpread, shadowSpread,
+    "Fine Caption activePaint.shadowSpread", 0, 100);
+  const activeGlowInput = activePaintInput.glow === undefined
+    ? undefined : record(activePaintInput.glow, "Fine Caption activePaint.glow");
+  if (activeGlowInput !== undefined) {
+    exactKeys(activeGlowInput, ["blur", "color", "opacity", "spread"], "Fine Caption activePaint.glow");
+  }
+  const activeGlow = {
+    color: optionalColor(activeGlowInput?.color, glow.color, "Fine Caption activePaint.glow.color"),
+    opacity: optionalNumber(activeGlowInput?.opacity, glow.opacity,
+      "Fine Caption activePaint.glow.opacity", 0, 1),
+    blur: optionalNumber(activeGlowInput?.blur, glow.blur, "Fine Caption activePaint.glow.blur", 0, 200),
+    spread: optionalNumber(activeGlowInput?.spread, glow.spread,
+      "Fine Caption activePaint.glow.spread", 0, 100),
+  };
+  const activeLongShadowInput = activePaintInput.longShadow === undefined
+    ? undefined : record(activePaintInput.longShadow, "Fine Caption activePaint.longShadow");
+  if (activeLongShadowInput !== undefined) {
+    exactKeys(activeLongShadowInput, ["angleDeg", "color", "distance", "opacity", "steps"],
+      "Fine Caption activePaint.longShadow");
+  }
+  const activeLongShadowDistance = optionalNumber(activeLongShadowInput?.distance, longShadow.distance,
+    "Fine Caption activePaint.longShadow.distance", 0, 500);
+  const activeLongShadow = {
+    color: optionalColor(activeLongShadowInput?.color, longShadow.color,
+      "Fine Caption activePaint.longShadow.color"),
+    opacity: optionalNumber(activeLongShadowInput?.opacity, longShadow.opacity,
+      "Fine Caption activePaint.longShadow.opacity", 0, 1),
+    distance: activeLongShadowDistance,
+    angleDeg: optionalNumber(activeLongShadowInput?.angleDeg, longShadow.angleDeg,
+      "Fine Caption activePaint.longShadow.angleDeg", -3600, 3600),
+    steps: optionalInteger(activeLongShadowInput?.steps,
+      Math.min(32, Math.max(1, Math.ceil(activeLongShadowDistance))),
+      "Fine Caption activePaint.longShadow.steps", 1, 128),
+  };
   const entryInput = style.entry === undefined ? {} : record(style.entry, "Fine Caption entry");
   exactKeys(entryInput, ["kind", "frames"], "Fine Caption entry");
   const entry = {
@@ -417,7 +488,8 @@ function resolveCaptionFine(item: NleComponentItem) {
   const baseUnderline = underline(style.underline, false, color);
   const activeUnderline = underline(style.activeUnderline, true, karaoke.activeColor);
   const paints: HtmlTextPaintLayer[] = [];
-  if (longShadow.opacity > 0 && longShadow.distance > 0) {
+  if ((longShadow.opacity > 0 && longShadow.distance > 0)
+    || (activeLongShadow.opacity > 0 && activeLongShadow.distance > 0)) {
     paints.push({
       kind: "long-shadow",
       color: alphaHex(longShadow.color, longShadow.opacity),
@@ -426,7 +498,8 @@ function resolveCaptionFine(item: NleComponentItem) {
       steps: longShadow.steps,
     });
   }
-  if (glow.opacity > 0 && (glow.blur > 0 || glow.spread > 0)) {
+  if ((glow.opacity > 0 && (glow.blur > 0 || glow.spread > 0))
+    || (activeGlow.opacity > 0 && (activeGlow.blur > 0 || activeGlow.spread > 0))) {
     paints.push({
       kind: "glow",
       color: alphaHex(glow.color, glow.opacity),
@@ -434,8 +507,11 @@ function resolveCaptionFine(item: NleComponentItem) {
       spreadPx: glow.spread,
     });
   }
-  if (shadowColor !== "#00000000"
-    && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0 || shadowSpread > 0)) {
+  if ((shadowColor !== "#00000000"
+      && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0 || shadowSpread > 0))
+    || (activeShadowColor !== "#00000000"
+      && (activeShadowBlur > 0 || activeShadowOffsetX !== 0
+        || activeShadowOffsetY !== 0 || activeShadowSpread > 0))) {
     paints.push({
       kind: "shadow",
       color: shadowColor,
@@ -445,7 +521,7 @@ function resolveCaptionFine(item: NleComponentItem) {
       spreadPx: shadowSpread,
     });
   }
-  if (outlineWidth > 0) {
+  if (outlineWidth > 0 || activeOutlineWidth > 0) {
     paints.push({
       kind: "stroke",
       paint: { kind: "solid", color: outlineColor },
@@ -501,6 +577,24 @@ function resolveCaptionFine(item: NleComponentItem) {
       dependencies: text.dependencies,
       data: { caption, color: alphaHex(color, opacity), karaoke, cueBox, activeBox, entry, exit, atom,
         activeResponse, loop, slideDistance,
+        activePaint: {
+          color: alphaHex(activeColor, activeOpacity),
+          ...(activeGradient === undefined ? {} : { gradient: {
+            from: alphaHex(activeGradient.from, activeOpacity),
+            to: alphaHex(activeGradient.to, activeOpacity),
+            angleDeg: activeGradient.angleDeg,
+          } }),
+          outline: { color: activeOutlineColor, width: activeOutlineWidth },
+          shadow: {
+            color: activeShadowColor, blur: activeShadowBlur,
+            offsetX: activeShadowOffsetX, offsetY: activeShadowOffsetY, spread: activeShadowSpread,
+          },
+          glow: { color: alphaHex(activeGlow.color, activeGlow.opacity),
+            blur: activeGlow.blur, spread: activeGlow.spread },
+          longShadow: { color: alphaHex(activeLongShadow.color, activeLongShadow.opacity),
+            distance: activeLongShadow.distance, angleDeg: activeLongShadow.angleDeg,
+            steps: activeLongShadow.steps },
+        },
         layout: { overflow, minimumScale: minimumScale ?? 1 },
         underline: baseUnderline, activeUnderline },
       html: `<div data-hypit-caption-fine><span data-caption-layout><span data-caption-cue><svg data-caption-cue-union aria-hidden="true"><path></path></svg><svg data-caption-active-union aria-hidden="true"><path></path></svg><span data-caption-text-layer>${text.html}</span></span></span></div>`,
@@ -519,14 +613,40 @@ function resolveCaptionFine(item: NleComponentItem) {
         const allWords = [...root.querySelectorAll('[data-hypit-text-kind="text"]')];
         const seconds = value => Number(value.ticks) * value.timeBase.numerator / value.timeBase.denominator;
         const fps = context.frameRate.numerator / context.frameRate.denominator;
-        const baseFillStyles = new Map([...root.querySelectorAll('[data-hypit-text-paint="fill"]')]
-          .map(fill => [fill, {
-            color: fill.style.color,
-            backgroundImage: fill.style.backgroundImage,
-            webkitBackgroundClip: fill.style.webkitBackgroundClip,
-            webkitTextFillColor: fill.style.webkitTextFillColor,
+        const basePaintStyles = new Map([...root.querySelectorAll('[data-hypit-text-paint]')]
+          .map(layer => [layer, {
+            color: layer.style.color,
+            backgroundImage: layer.style.backgroundImage,
+            backgroundClip: layer.style.backgroundClip,
+            webkitBackgroundClip: layer.style.webkitBackgroundClip,
+            webkitTextFillColor: layer.style.webkitTextFillColor,
+            webkitTextStroke: layer.style.webkitTextStroke,
+            textShadow: layer.style.textShadow,
           }]));
+        const restorePaint = element => {
+          for (const layer of element.querySelectorAll('[data-hypit-text-paint]')) {
+            const base = basePaintStyles.get(layer);
+            layer.style.color = base.color;
+            layer.style.backgroundImage = base.backgroundImage;
+            layer.style.backgroundClip = base.backgroundClip;
+            layer.style.webkitBackgroundClip = base.webkitBackgroundClip;
+            layer.style.webkitTextFillColor = base.webkitTextFillColor;
+            layer.style.webkitTextStroke = base.webkitTextStroke;
+            layer.style.textShadow = base.textShadow;
+          }
+        };
+        const spreadShadows = (offsetX, offsetY, blur, spread, color) => {
+          const positions = spread <= 0 ? [[offsetX, offsetY]] : [[offsetX, offsetY],
+            ...Array.from({ length: 16 }, (_, index) => {
+              const angle = index * Math.PI / 8;
+              return [offsetX + Math.cos(angle) * spread, offsetY + Math.sin(angle) * spread];
+            })];
+          return positions.map(position => position[0] + 'px ' + position[1] + 'px '
+            + blur + 'px ' + color).join(',');
+        };
         const paintText = (element, progress, active) => {
+          restorePaint(element);
+          if (data.karaoke.mode === 'off' || !active) return;
           const fills = element.querySelectorAll('[data-hypit-text-paint="fill"]');
           const paintSolid = selected => {
             for (const fill of fills) {
@@ -536,26 +656,56 @@ function resolveCaptionFine(item: NleComponentItem) {
               fill.style.webkitTextFillColor = selected;
             }
           };
-          if (data.karaoke.mode === 'off' || !active) {
-            for (const fill of fills) {
-              const base = baseFillStyles.get(fill);
-              fill.style.color = base.color;
-              fill.style.backgroundImage = base.backgroundImage;
-              fill.style.webkitBackgroundClip = base.webkitBackgroundClip;
-              fill.style.webkitTextFillColor = base.webkitTextFillColor;
+          for (const layer of element.querySelectorAll('[data-hypit-text-paint]')) {
+            const kind = layer.getAttribute('data-hypit-text-paint');
+            if (kind === 'fill') continue;
+            if (kind === 'stroke') {
+              layer.style.color = data.activePaint.outline.color;
+              layer.style.webkitTextFillColor = data.activePaint.outline.color;
+              layer.style.webkitTextStroke = (data.activePaint.outline.width * 2) + 'px '
+                + data.activePaint.outline.color;
+            } else if (kind === 'shadow') {
+              layer.style.color = data.activePaint.shadow.color;
+              layer.style.webkitTextFillColor = data.activePaint.shadow.color;
+              layer.style.textShadow = spreadShadows(data.activePaint.shadow.offsetX,
+                data.activePaint.shadow.offsetY, data.activePaint.shadow.blur,
+                data.activePaint.shadow.spread, data.activePaint.shadow.color);
+            } else if (kind === 'glow') {
+              layer.style.color = data.activePaint.glow.color;
+              layer.style.webkitTextFillColor = data.activePaint.glow.color;
+              layer.style.textShadow = spreadShadows(0, 0, data.activePaint.glow.blur,
+                data.activePaint.glow.spread, data.activePaint.glow.color);
+            } else if (kind === 'long-shadow') {
+              layer.style.color = data.activePaint.longShadow.color;
+              layer.style.webkitTextFillColor = data.activePaint.longShadow.color;
+              const radians = data.activePaint.longShadow.angleDeg * Math.PI / 180;
+              layer.style.textShadow = Array.from({ length: data.activePaint.longShadow.steps }, (_, index) => {
+                const distance = data.activePaint.longShadow.distance * (index + 1)
+                  / data.activePaint.longShadow.steps;
+                return (Math.cos(radians) * distance) + 'px ' + (Math.sin(radians) * distance)
+                  + 'px 0 ' + data.activePaint.longShadow.color;
+              }).join(',');
             }
-            return;
           }
           if (data.karaoke.transition === 'step' || progress >= 1) {
-            paintSolid(data.karaoke.activeColor);
+            if (data.activePaint.gradient === undefined) paintSolid(data.activePaint.color);
+            else for (const fill of fills) {
+              fill.style.color = 'transparent';
+              fill.style.backgroundImage = 'linear-gradient(' + data.activePaint.gradient.angleDeg + 'deg,'
+                + data.activePaint.gradient.from + ' 0%,' + data.activePaint.gradient.to + ' 100%)';
+              fill.style.backgroundClip = 'text';
+              fill.style.webkitBackgroundClip = 'text';
+              fill.style.webkitTextFillColor = 'transparent';
+            }
             return;
           }
           const percentage = Math.max(0, Math.min(100, progress * 100));
           for (const fill of fills) {
             fill.style.color = 'transparent';
-            fill.style.backgroundImage = 'linear-gradient(90deg,' + data.karaoke.activeColor + ' 0%,'
-              + data.karaoke.activeColor + ' ' + percentage + '%,' + data.color + ' ' + percentage + '%,'
+            fill.style.backgroundImage = 'linear-gradient(90deg,' + data.activePaint.color + ' 0%,'
+              + data.activePaint.color + ' ' + percentage + '%,' + data.color + ' ' + percentage + '%,'
               + data.color + ' 100%)';
+            fill.style.backgroundClip = 'text';
             fill.style.webkitBackgroundClip = 'text';
             fill.style.webkitTextFillColor = 'transparent';
           }

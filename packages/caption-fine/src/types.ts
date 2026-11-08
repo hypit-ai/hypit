@@ -10,6 +10,36 @@ export type CaptionFineKaraokeParameters = {
   readonly activeColor?: string;
 };
 
+export type CaptionFineGlyphPaintParameters = {
+  readonly color?: string;
+  readonly opacity?: number;
+  readonly gradient?: {
+    readonly from: string;
+    readonly to: string;
+    readonly angleDeg?: number;
+  } | null;
+  readonly outlineColor?: string;
+  readonly outlineWidth?: number;
+  readonly shadowColor?: string;
+  readonly shadowBlur?: number;
+  readonly shadowOffsetX?: number;
+  readonly shadowOffsetY?: number;
+  readonly shadowSpread?: number;
+  readonly glow?: {
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly blur?: number;
+    readonly spread?: number;
+  };
+  readonly longShadow?: {
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly distance?: number;
+    readonly angleDeg?: number;
+    readonly steps?: number;
+  };
+};
+
 export type CaptionFineBoxParameters = {
   readonly continuity?: "isolated" | "joined";
   readonly background?: string;
@@ -137,6 +167,8 @@ export type CaptionFineStyleParameters = {
   readonly underline?: CaptionFineUnderlineParameters;
   readonly activeUnderline?: CaptionFineActiveUnderlineParameters;
   readonly karaoke?: CaptionFineKaraokeParameters;
+  /** Complete current/trailing glyph treatment; omitted fields inherit the base Paint. */
+  readonly activePaint?: CaptionFineGlyphPaintParameters;
   readonly entry?: {
     readonly kind?: CaptionFineOneShotMotion;
     readonly frames?: number;

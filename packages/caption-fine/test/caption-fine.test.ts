@@ -100,6 +100,19 @@ const base: CaptionStyle = { id: "base", family: "fine", parameters: {
   outlineWidth: 4,
   gradient: { from: "#ffffff", to: "#67e8f9", angleDeg: 90 },
   karaoke: { mode: "trail", transition: "wipe", activeColor: "#ffd54a" },
+  activePaint: {
+    color: "#fef08a",
+    gradient: { from: "#fef08a", to: "#fb7185", angleDeg: 30 },
+    outlineColor: "#7f1d1d",
+    outlineWidth: 5,
+    shadowColor: "#450a0aaa",
+    shadowBlur: 8,
+    shadowOffsetX: 2,
+    shadowOffsetY: 4,
+    shadowSpread: 2,
+    glow: { color: "#facc15", opacity: 0.8, blur: 14, spread: 2 },
+    longShadow: { color: "#7c2d12", opacity: 0.7, distance: 10, angleDeg: 35, steps: 10 },
+  },
   cueBox: { continuity: "joined", background: "#111827cc", paddingX: 14, paddingY: 8 },
   activeBox: { mode: "current", continuity: "joined", background: "#2563eb88", borderRadius: 8 },
   underline: { mode: "always", color: "#ffffff", thickness: 2, offset: 4 },
@@ -182,12 +195,16 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
     track: project.tracks[0]!,
   }, captionFineNleResolver.resolve(alice, { project, track: project.tracks[0]! }));
   if (terminal.html?.implementation.kind !== "program") throw new Error("Fine Caption terminal is not a Program.");
-  const setup = readHtmlVisual(terminal.html.implementation.program).setup ?? "";
+  const visual = readHtmlVisual(terminal.html.implementation.program);
+  const setup = visual.setup ?? "";
   assert.doesNotThrow(() => new Function("root", "data", "context", setup));
   assert.match(setup, /easeOutElastic/u);
   assert.match(setup, /data\.atom\.reveal === 'typewriter'/u);
   assert.match(setup, /data\.loop\.target === 'active-atom'/u);
   assert.match(setup, /data\.layout\.overflow !== 'shrink'/u);
+  assert.match(setup, /data\.activePaint\.outline\.width/u);
+  assert.match(setup, /data\.activePaint\.longShadow\.steps/u);
+  assert.equal((visual.data as { activePaint: { outline: { width: number } } }).activePaint.outline.width, 5);
 
   const authoring = createNleAuthoringHostFromFacets(hypitPackage.facets);
   const restyled = applyNleTransaction(project, authoring.planComponentParameterEdit(project, alice.id, {
