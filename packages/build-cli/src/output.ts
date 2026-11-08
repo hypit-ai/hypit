@@ -756,12 +756,12 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
     ],
     build: [
       colors.accent(colors.strong("hypit build")),
-      colors.dim("Submit one durable Build and ensure its selected Runtime Worker is available."),
+      colors.dim("Submit one durable Build and ensure its selected Runtime execution is available."),
       "",
       "  hypit build <source> --target <output> [--target <output>]...",
       "    [--runtime <profile>] [--project <workspace>] [--asset-root <directory>] [--follow]",
       "",
-      "  --follow                   observe the Build; the Worker still owns execution",
+      "  --follow                   observe the Build; the Runtime still owns execution",
       "  --max-wait-ms <ms>         bound startup or follow waiting",
     ],
     activity: [

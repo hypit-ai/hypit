@@ -230,7 +230,7 @@ export function writeGenerationGraphHelp(io: Pick<CliIo, "write">): void {
     + "  --project <directory>   Explicit Hypit project (default: nearest marked project)\n"
     + "  --runtime <profile>     Runtime Profile (default: project selection)\n"
     + "  --package-root <path>   Installed component root (default: project root)\n"
-    + "  --max-wait-ms <ms>      Maximum Runtime Worker startup wait\n"
+    + "  --max-wait-ms <ms>      Maximum Runtime execution startup wait\n"
     + "  --output <node>         Exact published Output to materialize\n"
     + "  --to <path>             New Media Asset document\n"
     + "  --id <id>               Optional Media Asset id\n"

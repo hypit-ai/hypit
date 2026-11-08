@@ -49,7 +49,7 @@ it does not choose which one the Agent must execute next.
 
 `build --follow` and `status --watch` report coalesced progress through `CliIo.writeProgress` when
 provided, including in JSON mode. The executable writes that channel to stderr; stdout remains the
-final machine result. A stopped Worker ends observation with evidence-reading commands, without
+final machine result. Stopped Runtime execution ends observation with evidence-reading commands, without
 promising to restart failed execution or describing the interruption as a Result storage failure.
 
 | Command | Default scope | Explicit detail |
@@ -169,7 +169,7 @@ the build CLI opens the resolved project's Result history and cannot silently ch
 Provider-specific login flow.
 
 Runtime-aware planning opens one command-scoped inspection through that Host port. `endpoints`,
-request-sensitive `pricing`, selected-deployment `preflight`, Worker startup/status and Build Runtime
+request-sensitive `pricing`, selected-deployment `preflight`, execution startup/status and Build Runtime
 creation consume the same frozen Profile and Endpoint declarations. This prevents one command from
 selecting with one Profile revision and submitting through another, without creating cross-command
 state. The query and observation shapes themselves are owned by `@hypit/runtime`; the CLI only

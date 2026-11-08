@@ -89,7 +89,7 @@ export async function submitLongBuild<
       });
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      throw new Error(`Runtime Worker could not start; no Build was queued: ${detail}`);
+      throw new Error(`Runtime execution could not start; no Build was queued: ${detail}`);
     }
     runtime = await inspection.createRuntime();
     const submission = await runtime.build(input.request);
