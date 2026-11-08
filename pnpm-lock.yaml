@@ -620,11 +620,14 @@ importers:
         specifier: workspace:^0.1.0
         version: link:../caption-nle
       '@hypit/html-program':
-        specifier: workspace:^0.1.0
+        specifier: workspace:^0.2.0
         version: link:../html-program
       '@hypit/html-video':
         specifier: workspace:^0.2.1
         version: link:../html-video
+      '@hypit/media':
+        specifier: workspace:^0.2.0
+        version: link:../media
       '@hypit/nle':
         specifier: workspace:^0.1.0
         version: link:../nle

@@ -60,7 +60,21 @@ const timing: LocalCaptionTiming = {
   ],
 };
 
+const exactFont = {
+  faces: [{
+    sources: [{ artifact: {
+      kind: "blob" as const,
+      resource: "res_caption_font" as const,
+      size: 32,
+      mediaType: "font/woff2",
+    } }],
+    weight: 800,
+    style: "normal" as const,
+  }],
+};
+
 const base: CaptionStyle = { id: "base", family: "fine", parameters: {
+  fonts: exactFont,
   color: "#ffffff",
   fontFamily: "Arial, sans-serif",
   outlineColor: "#000000",
@@ -117,9 +131,10 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
   const html = lowerNleProjectToHtmlProgram(project,
     createNleTerminalLinkHostFromFacets(hypitPackage.facets),
     { numerator: 30, denominator: 1 });
-  assert.match(html.html, /data-caption-unit="unit-a"/u);
+  assert.match(html.html, /data-hypit-text-node="unit-a"/u);
+  assert.ok(html.artifacts.some((entry) => entry.artifact.resource === "res_caption_font"));
   assert.match(html.html, /font-family:Georgia, serif/u);
-  assert.match(html.html, /-webkit-text-stroke:4px #000000/u);
+  assert.match(html.html, /-webkit-text-stroke:8px #000000/u);
   assert.match(html.html, /linear-gradient\(90deg/u);
   assert.match(html.html, /data\.activeBox\.mode/u);
 });

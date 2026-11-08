@@ -72,6 +72,21 @@ wider renderer capability instead of changing this terminal contract implicitly.
 Effect-specific programme formats belong to their owning packages. This terminal only validates and
 executes the generic `hypit.html-visual@1` envelope.
 
+### Renderer-local text fragments
+
+`htmlTextFragment(...)` closes reusable text rendering facts inside an `HtmlVisual` without making
+text, Caption or typography part of NLE Core. Its input preserves the author's exact text and
+separators, recursive text/group identities, inherited typography and an ordered back-to-front Paint
+stack. Exact `FontStackRef` bytes become typed `data` dependencies and `@font-face` rules; environment
+family names are only explicit fallbacks. The page waits for declared fonts before the first frame.
+
+The helper owns glyph fill, gradient fill, centered/outside stroke, shadow, glow and box decoration.
+It deliberately owns no Cue timing, Karaoke state, semantic lookup, NLE placement or component
+parameters. A Caption package can address its group identities and change the fill Paint over time;
+another component can use the same terminal without becoming a Caption. Line breaking remains normal
+HTML flow in the current slice. Joined multi-line geometry, shrink/ellipsis policy, path layout and
+grapheme motion require explicit terminal-local additions rather than Caption-specific CSS copies.
+
 ## Execution requests
 
 The module publishes two capability contracts:
@@ -90,6 +105,8 @@ execution implementations may realize them differently while consuming the same 
 - Component and effect packages own their opaque execution programmes.
 - Output policy owns frame rate and canvas closure.
 - `@hypit/html-program` owns the terminal document, resource plan and frame-page ABI.
+- `@hypit/html-program` also owns reusable renderer-local text closure; components still own text
+  organization, layout policy and time behavior.
 - Execution implementations own staging, decoding, browser lifecycle, capture and encoding.
 - `@hypit/html-video` owns final visual/audio delivery assembly.
 

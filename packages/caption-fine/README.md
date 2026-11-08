@@ -7,11 +7,15 @@ Item-local Unit time. Fine owns typography, outline and shadow paint, Cue and ac
 word-attribute faces, Cue entrance and current/trailing step or wipe Karaoke. Placement and lifetime
 remain direct NLE Item facts.
 
-This package currently carries the old Fine Caption's core visible relationship into the direct NLE
-boundary: one stable Cue layout with Unit-timed glyph activation. It is not yet a complete port of the
-former family's exact-font stack, full glyph Paint, underline, joined-box measurement, structural row
-limits or motion vocabulary. Do not describe the reduced implementation as visual parity merely because
-it keeps the package name.
+This package carries the old Fine Caption's core visible relationship into the direct NLE boundary:
+one stable Cue layout with Unit-timed glyph activation. It now lowers through the shared renderer-local
+HTML Text terminal, so exact project font bytes, environment fallbacks, ordered shadow/outside-stroke/
+fill Paint, word-attribute faces and authored separators use the same closure as other text components.
+Karaoke changes only the fill layers and does not erase the outline or shadow.
+
+It is not yet a complete port of the former family's underline, joined multi-line box measurement,
+structural row limits, explicit shrink/ellipsis policy, path text or motion vocabulary. Do not describe
+the current implementation as visual parity merely because it keeps the package name.
 
 It deliberately does not restore the former authoring architecture. It owns no Script declarations,
 semantic Timeline, tracking lookup, Recipe language, Studio companion or upstream alignment.

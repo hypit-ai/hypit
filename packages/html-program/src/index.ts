@@ -24,3 +24,14 @@ export type {
   HtmlPictureReconstruction,
   HtmlPictureReconstructionProgram,
 } from "./picture-reconstruction.js";
+export { htmlTextFragment } from "./text.js";
+export type {
+  HtmlTextBoxDecoration,
+  HtmlTextColorPaint,
+  HtmlTextFragment,
+  HtmlTextFragmentSpec,
+  HtmlTextNode,
+  HtmlTextPaintLayer,
+  HtmlTextStyle,
+  HtmlTextTypography,
+} from "./text.js";

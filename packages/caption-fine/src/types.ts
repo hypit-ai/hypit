@@ -2,6 +2,7 @@ import type {
   CaptionPresentation as SharedCaptionPresentation,
   CaptionStyle as SharedCaptionStyle,
 } from "@hypit/caption-nle";
+import type { FontStackRef } from "@hypit/media";
 
 export type CaptionFineKaraokeParameters = {
   readonly mode?: "off" | "current" | "trail";
@@ -31,6 +32,8 @@ export type CaptionFineAttributeFace = {
 };
 
 export type CaptionFineStyleParameters = {
+  /** Exact project-owned font bytes. fontFamily is only an explicit environment fallback. */
+  readonly fonts?: FontStackRef;
   readonly color?: string;
   readonly fontFamily?: string;
   readonly fontSize?: number;

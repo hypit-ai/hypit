@@ -1,7 +1,14 @@
 import { pictureType, type ProgramSource } from "@hypit/audiovisual";
 import { visualProgramHtmlSource } from "@hypit/audiovisual-html";
-import { htmlVisual } from "@hypit/html-program";
+import {
+  htmlTextFragment,
+  htmlVisual,
+  type HtmlTextNode,
+  type HtmlTextPaintLayer,
+  type HtmlTextTypography,
+} from "@hypit/html-program";
 import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
+import { assertFontStackRef } from "@hypit/media";
 import type { NleComponentItem, NleComponentResolver, NlePackageSymbol } from "@hypit/nle";
 import type { ModuleManifest } from "@hypit/protocol";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
@@ -37,11 +44,6 @@ export const captionFineNleManifest: ModuleManifest = {
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
-}
-
-function escapeHtml(value: string): string {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;").replaceAll("\"", "&quot;");
 }
 
 function record(value: unknown, label: string): Readonly<Record<string, unknown>> {
@@ -139,25 +141,42 @@ function attributes(value: unknown): readonly CaptionFineAttributeFace[] {
   });
 }
 
-function wordStyle(word: CaptionDisplayWord, faces: readonly CaptionFineAttributeFace[]): string {
-  const declarations: string[] = [];
+function wordTypography(
+  word: CaptionDisplayWord,
+  faces: readonly CaptionFineAttributeFace[],
+): HtmlTextTypography | undefined {
+  let typography: HtmlTextTypography = {};
   for (const face of faces) {
     if (!word.attributes.some((attribute) => attribute.name === face.attribute && attribute.value === face.value)) continue;
-    if (face.fontFamily !== undefined) declarations.push(`font-family:${face.fontFamily}`);
-    if (face.fontWeight !== undefined) declarations.push(`font-weight:${face.fontWeight}`);
-    if (face.fontStyle !== undefined) declarations.push(`font-style:${face.fontStyle}`);
+    typography = {
+      ...typography,
+      ...(face.fontFamily === undefined ? {} : { fontFamily: face.fontFamily }),
+      ...(face.fontWeight === undefined ? {} : { fontWeight: face.fontWeight }),
+      ...(face.fontStyle === undefined ? {} : { fontStyle: face.fontStyle }),
+    };
   }
-  return declarations.join(";");
+  return Object.keys(typography).length === 0 ? undefined : typography;
 }
 
-function unitHtml(payload: CaptionCuePayload, unitId: string, faces: readonly CaptionFineAttributeFace[]): string {
-  const unit = payload.units.find((candidate) => candidate.id === unitId)!;
+function captionTextNodes(
+  payload: CaptionCuePayload,
+  faces: readonly CaptionFineAttributeFace[],
+): readonly HtmlTextNode[] {
   const words = new Map(payload.words.map((word) => [word.id, word] as const));
-  return unit.wordIds.map((wordId) => {
-    const word = words.get(wordId)!;
-    const style = wordStyle(word, faces);
-    return `<span data-caption-word="${escapeHtml(word.id)}"${style ? ` style="${escapeHtml(style)}"` : ""}>${escapeHtml(`${word.separatorBefore}${word.text}`)}</span>`;
-  }).join("");
+  return payload.units.map((unit) => ({
+    kind: "group",
+    id: unit.id,
+    children: unit.wordIds.map((wordId) => {
+      const word = words.get(wordId)!;
+      const typography = wordTypography(word, faces);
+      return {
+        kind: "text",
+        id: word.id,
+        text: `${word.separatorBefore}${word.text}`,
+        ...(typography === undefined ? {} : { style: { typography } }),
+      };
+    }),
+  }));
 }
 
 function resolveCaptionFine(item: NleComponentItem) {
@@ -169,10 +188,12 @@ function resolveCaptionFine(item: NleComponentItem) {
   assert(parameters.family === "fine", `NLE Fine Caption ${item.id} requires the fine style family.`);
   const style = record(parameters.style, `NLE Fine Caption ${item.id} style`) as CaptionFineStyleParameters;
   exactKeys(style as Readonly<Record<string, unknown>>, [
-    "color", "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "wordGap",
+    "fonts", "color", "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "wordGap",
     "textAlign", "outlineColor", "outlineWidth", "shadowColor", "shadowBlur", "shadowOffsetX",
     "shadowOffsetY", "cueBox", "activeBox", "karaoke", "entry", "attributeFaces",
   ], `NLE Fine Caption ${item.id} style`);
+  const fonts = style.fonts;
+  if (fonts !== undefined) assertFontStackRef(fonts, "Fine Caption fonts");
   const color = optionalColor(style.color, "#ffffff", "Fine Caption color");
   const fontFamily = optionalFont(style.fontFamily);
   const fontSize = optionalNumber(style.fontSize, 58, "Fine Caption fontSize", 1, 500);
@@ -207,6 +228,40 @@ function resolveCaptionFine(item: NleComponentItem) {
     frames: optionalInteger(entryInput.frames, 5, "Fine Caption entry frames", 0, 120),
   };
   const attributeFaces = attributes(style.attributeFaces);
+  const paints: HtmlTextPaintLayer[] = [];
+  if (shadowColor !== "#00000000" && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
+    paints.push({
+      kind: "shadow",
+      color: shadowColor,
+      offsetX: shadowOffsetX,
+      offsetY: shadowOffsetY,
+      blurPx: shadowBlur,
+    });
+  }
+  if (outlineWidth > 0) {
+    paints.push({
+      kind: "stroke",
+      paint: { kind: "solid", color: outlineColor },
+      widthPx: outlineWidth,
+      placement: "outside",
+    });
+  }
+  paints.push({ kind: "fill", paint: { kind: "solid", color } });
+  const text = htmlTextFragment({
+    id: `${item.id}-text`,
+    typography: {
+      ...(fonts === undefined ? {} : { fonts }),
+      fontFamily,
+      fontSizePx: fontSize,
+      fontWeight,
+      fontStyle: "normal",
+      lineHeight,
+      letterSpacingPx: letterSpacing,
+      wordSpacingPx: wordGap,
+    },
+    paints,
+    children: captionTextNodes(caption, attributeFaces),
+  });
   const sourceId = `${item.id}:caption-source`;
   const spatialDomain = sealLocalSpatialDomain({
     id: `${sourceId}:picture`,
@@ -225,38 +280,43 @@ function resolveCaptionFine(item: NleComponentItem) {
     source,
     pictureOutput: "picture",
     html: visualProgramHtmlSource(sourceId, "picture", htmlVisual({
+      dependencies: text.dependencies,
       data: { caption, color, karaoke, activeBox, entry },
-      html: `<div data-hypit-caption-fine><span data-caption-cue>${caption.units.map((unit) =>
-        `<span data-caption-unit="${escapeHtml(unit.id)}">${unitHtml(caption, unit.id, attributeFaces)}</span>`).join("")}</span></div>`,
-      css: `:scope>[data-hypit-caption-fine]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:${textAlign};font-family:${fontFamily};font-size:${fontSize}px;font-weight:${fontWeight};line-height:${lineHeight};letter-spacing:${letterSpacing}px;color:${color}}:scope [data-caption-cue]{display:inline-block;max-width:100%;box-sizing:border-box;padding:${cueBox.paddingY}px ${cueBox.paddingX}px;background:${cueBox.background};border:${cueBox.borderWidth}px solid ${cueBox.borderColor};border-radius:${cueBox.borderRadius}px;box-shadow:${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px ${shadowColor};white-space:pre-wrap;overflow-wrap:anywhere}:scope [data-caption-unit]{display:inline;position:relative;margin-right:${wordGap}px;color:${color};-webkit-text-stroke:${outlineWidth}px ${outlineColor};paint-order:stroke fill}:scope [data-caption-word]{color:inherit}`,
+      html: `<div data-hypit-caption-fine><span data-caption-cue>${text.html}</span></div>`,
+      css: `:scope>[data-hypit-caption-fine]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:${textAlign}}:scope [data-caption-cue]{display:inline-block;max-width:100%;box-sizing:border-box;padding:${cueBox.paddingY}px ${cueBox.paddingX}px;background:${cueBox.background};border:${cueBox.borderWidth}px solid ${cueBox.borderColor};border-radius:${cueBox.borderRadius}px;white-space:pre-wrap;overflow-wrap:anywhere}`,
       setup: `
         const cue = root.querySelector('[data-caption-cue]');
-        const units = new Map([...root.querySelectorAll('[data-caption-unit]')]
-          .map(element => [element.getAttribute('data-caption-unit'), element]));
+        const units = new Map([...root.querySelectorAll('[data-hypit-text-kind="group"]')]
+          .map(element => [element.getAttribute('data-hypit-text-node'), element]));
         const seconds = value => Number(value.ticks) * value.timeBase.numerator / value.timeBase.denominator;
         const fps = context.frameRate.numerator / context.frameRate.denominator;
         const paintText = (element, progress, active) => {
+          const fills = element.querySelectorAll('[data-hypit-text-paint="fill"]');
+          const paintSolid = selected => {
+            for (const fill of fills) {
+              fill.style.color = selected;
+              fill.style.backgroundImage = '';
+              fill.style.webkitBackgroundClip = '';
+              fill.style.webkitTextFillColor = selected;
+            }
+          };
           if (data.karaoke.mode === 'off' || !active) {
-            element.style.color = data.color;
-            element.style.backgroundImage = '';
-            element.style.webkitBackgroundClip = '';
-            element.style.webkitTextFillColor = '';
+            paintSolid(data.color);
             return;
           }
           if (data.karaoke.transition === 'step' || progress >= 1) {
-            element.style.color = data.karaoke.activeColor;
-            element.style.backgroundImage = '';
-            element.style.webkitBackgroundClip = '';
-            element.style.webkitTextFillColor = '';
+            paintSolid(data.karaoke.activeColor);
             return;
           }
           const percentage = Math.max(0, Math.min(100, progress * 100));
-          element.style.color = 'transparent';
-          element.style.backgroundImage = 'linear-gradient(90deg,' + data.karaoke.activeColor + ' 0%,'
-            + data.karaoke.activeColor + ' ' + percentage + '%,' + data.color + ' ' + percentage + '%,'
-            + data.color + ' 100%)';
-          element.style.webkitBackgroundClip = 'text';
-          element.style.webkitTextFillColor = 'transparent';
+          for (const fill of fills) {
+            fill.style.color = 'transparent';
+            fill.style.backgroundImage = 'linear-gradient(90deg,' + data.karaoke.activeColor + ' 0%,'
+              + data.karaoke.activeColor + ' ' + percentage + '%,' + data.color + ' ' + percentage + '%,'
+              + data.color + ' 100%)';
+            fill.style.webkitBackgroundClip = 'text';
+            fill.style.webkitTextFillColor = 'transparent';
+          }
         };
         const paintBox = (element, active) => {
           if (!active || data.activeBox.mode === 'off') {
