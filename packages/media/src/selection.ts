@@ -99,7 +99,7 @@ export function selectVideoStream(
   verifyMediaInspection(inspection);
   const moving = inspection.streams.filter((stream): stream is MediaVideoStream =>
     stream.kind === "video"
-      && stream.decodedUnitCount >= 2
+      && stream.decodedUnitCount !== 1
       && stream.disposition.attachedPicture === false
       && stream.startPts !== undefined
       && stream.endPts !== undefined);
@@ -112,7 +112,9 @@ export function selectVideoStream(
   const selected = inspection.streams.find((stream): stream is MediaVideoStream =>
     stream.kind === "video" && stream.index === request.streamIndex);
   assert(selected !== undefined, `Video stream ${request.streamIndex} does not exist`);
-  assert(selected.decodedUnitCount >= 1 && selected.disposition.attachedPicture === false,
+  assert((selected.decodedUnitCount >= 1
+      || selected.startPts !== undefined && selected.endPts !== undefined)
+    && selected.disposition.attachedPicture === false,
     `Video stream ${request.streamIndex} is not a usable picture stream`);
   if (selected.decodedUnitCount >= 2) assert(selected.startPts !== undefined && selected.endPts !== undefined,
     `Moving video stream ${request.streamIndex} has no presentation interval`);

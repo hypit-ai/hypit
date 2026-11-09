@@ -15,7 +15,11 @@ import { assertExactTemporalValue, compareExactTemporalValues, exactTemporalZero
 import type { ExactTemporalValue } from "@hypit/temporal";
 
 import { runBoundedMediaProcess, runMediaProcessLines } from "./process.js";
-import { createMediaInspectionCollector, parseMediaInspection } from "./probe.js";
+import {
+  createMediaInspectionCollector,
+  parseMediaContainerIndex,
+  parseMediaInspection,
+} from "./probe.js";
 import { parseAnimatedWebp } from "./webp.js";
 import type { AnimatedWebp } from "./webp.js";
 import {
@@ -226,12 +230,14 @@ async function inspectFile(args: {
   readonly ffprobePath: string;
   readonly timeoutMs: number;
   readonly maxProbeOutputBytes: number;
+  readonly timingSource: "container-index" | "decoded-frames";
+  readonly constantPicture?: boolean;
   readonly sharedLibraryPath?: string;
   readonly signal?: AbortSignal;
 }): Promise<MediaInspection> {
   const raw = await runProcess({
     executable: args.ffprobePath,
-    argv: ["-v", "error", "-print_format", "json", "-show_streams", args.input],
+    argv: ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", args.input],
     timeoutMs: args.timeoutMs,
     maxStdoutBytes: args.maxProbeOutputBytes,
     ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }),
@@ -245,7 +251,13 @@ async function inspectFile(args: {
   }
   const formats = await ffprobePixelFormats(args);
   const metadata = object(value, "ffprobe metadata");
-  const collector = createMediaInspectionCollector({ ...metadata, pixel_formats: formats });
+  const completeMetadata = { ...metadata, pixel_formats: formats };
+  if (args.timingSource === "container-index") {
+    return parseMediaContainerIndex(completeMetadata, {
+      ...(args.constantPicture === undefined ? {} : { constantPicture: args.constantPicture }),
+    });
+  }
+  const collector = createMediaInspectionCollector(completeMetadata, { timingSource: "decoded-frames" });
   await runMediaProcessLines({
     executable: args.ffprobePath,
     argv: [
@@ -272,22 +284,42 @@ async function inspectFile(args: {
   return collector.finish();
 }
 
-/** Direct file inspection for Importers and editor Hosts; it creates no Build or Runtime state. */
-export async function inspectMediaFile(
+type DirectMediaFileInspectionOptions = {
+  readonly ffprobePath?: string;
+  readonly timeoutMs?: number;
+  readonly maxProbeOutputBytes?: number;
+  readonly sharedLibraryPath?: string;
+  readonly signal?: AbortSignal;
+};
+
+/** Fast file inspection that trusts only exact integer timing declared by the container index. */
+export async function inspectMediaFileFromContainerIndex(
   path: string,
-  options: {
-    readonly ffprobePath?: string;
-    readonly timeoutMs?: number;
-    readonly maxProbeOutputBytes?: number;
-    readonly sharedLibraryPath?: string;
-    readonly signal?: AbortSignal;
-  } = {},
+  options: DirectMediaFileInspectionOptions & { readonly constantPicture?: boolean } = {},
 ): Promise<MediaInspection> {
   return await inspectFile({
     input: path,
     ffprobePath: options.ffprobePath ?? "ffprobe",
     timeoutMs: options.timeoutMs ?? 300_000,
     maxProbeOutputBytes: options.maxProbeOutputBytes ?? 16 * 1024 * 1024,
+    timingSource: "container-index",
+    ...(options.constantPicture === undefined ? {} : { constantPicture: options.constantPicture }),
+    ...(options.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: options.sharedLibraryPath }),
+    ...(options.signal === undefined ? {} : { signal: options.signal }),
+  });
+}
+
+/** Full decoded-frame inspection. Callers choose this cost explicitly; it is never an import fallback. */
+export async function inspectMediaFileByDecodedFrames(
+  path: string,
+  options: DirectMediaFileInspectionOptions = {},
+): Promise<MediaInspection> {
+  return await inspectFile({
+    input: path,
+    ffprobePath: options.ffprobePath ?? "ffprobe",
+    timeoutMs: options.timeoutMs ?? 300_000,
+    maxProbeOutputBytes: options.maxProbeOutputBytes ?? 16 * 1024 * 1024,
+    timingSource: "decoded-frames",
     ...(options.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: options.sharedLibraryPath }),
     ...(options.signal === undefined ? {} : { signal: options.signal }),
   });
@@ -296,7 +328,6 @@ export async function inspectMediaFile(
 const pixelFormatsByToolchain = new Map<string, Promise<readonly unknown[]>>();
 
 async function ffprobePixelFormats(args: {
-  readonly input: string;
   readonly ffprobePath: string;
   readonly timeoutMs: number;
   readonly maxProbeOutputBytes: number;
@@ -308,8 +339,9 @@ async function ffprobePixelFormats(args: {
     pending = (async () => {
       const bytes = await runProcess({
         executable: args.ffprobePath,
-        argv: ["-v", "error", "-print_format", "json", "-show_pixel_formats", "-show_entries",
-          "pixel_format=name:pixel_format_flags=alpha:component=bit_depth", args.input],
+        argv: ["-v", "error", "-f", "lavfi", "-i", "color=s=1x1:d=0.001",
+          "-print_format", "json", "-show_pixel_formats", "-show_entries",
+          "pixel_format=name:pixel_format_flags=alpha:component=bit_depth"],
         timeoutMs: args.timeoutMs,
         maxStdoutBytes: args.maxProbeOutputBytes,
         ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }),
@@ -366,6 +398,7 @@ async function outputInspection(args: {
 }): Promise<MediaInspection> {
   return await inspectFile({ input: args.path, ffprobePath: args.ffprobePath,
     timeoutMs: args.timeoutMs, maxProbeOutputBytes: args.maxProbeOutputBytes,
+    timingSource: "decoded-frames",
     ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }),
     ...(args.signal === undefined ? {} : { signal: args.signal }) });
 }
@@ -480,6 +513,7 @@ async function assertCanonicalWav(args: {
     ffprobePath: args.ffprobePath,
     timeoutMs: args.timeoutMs,
     maxProbeOutputBytes: args.maxProbeOutputBytes,
+    timingSource: "decoded-frames",
     ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }),
     ...(args.signal === undefined ? {} : { signal: args.signal }),
   });
@@ -510,6 +544,7 @@ export async function executeInspectMedia(
         ffprobePath: env.ffprobePath,
         timeoutMs: env.processTimeoutMs,
         maxProbeOutputBytes: env.maxProbeOutputBytes,
+        timingSource: "decoded-frames",
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
         ...(env.signal === undefined ? {} : { signal: env.signal }),
       })
@@ -908,6 +943,7 @@ export async function executeMuxProgramMedia(
         ffprobePath: env.ffprobePath,
         timeoutMs: env.processTimeoutMs,
         maxProbeOutputBytes: env.maxProbeOutputBytes,
+        timingSource: "decoded-frames",
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
         ...(env.signal === undefined ? {} : { signal: env.signal }),
       }),

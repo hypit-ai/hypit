@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { verifyPreparedAudioSource } from "@hypit/media";
 import type { MediaAudioStream } from "@hypit/media";
-import { inspectMediaFile } from "@hypit/media-local";
+import { inspectMediaFileByDecodedFrames } from "@hypit/media-local";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@hypit/media-local/execution";
 import { runBoundedMediaProcess } from "@hypit/media-local/process";
 import {
@@ -178,7 +178,7 @@ export async function executeProjectSpeechEvidenceAudio(
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
       ...(env.signal === undefined ? {} : { signal: env.signal }),
     });
-    const inspected = await inspectMediaFile(output, {
+    const inspected = await inspectMediaFileByDecodedFrames(output, {
       ffprobePath: env.ffprobePath,
       timeoutMs: env.processTimeoutMs,
       maxProbeOutputBytes: env.maxProbeOutputBytes,

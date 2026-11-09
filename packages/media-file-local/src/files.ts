@@ -716,7 +716,7 @@ async function importAsset(argv: readonly string[], io: MediaCommandOutput, cwd:
   const parsed = parseArguments(argv, [
     "--to", "--id", "--media-type", "--media-file", "--video-stream", "--audio-stream",
     "--picture", "--span-authority", "--ffprobe-path",
-  ], ["--link", "--no-video", "--no-audio"]);
+  ], ["--link", "--no-video", "--no-audio", "--inspect-decoded-frames"]);
   const source = await sourceFile(parsed, cwd);
   assert(!(parsed.flags.has("--no-video") && parsed.options.has("--video-stream")),
     "choose --no-video or --video-stream");
@@ -735,6 +735,8 @@ async function importAsset(argv: readonly string[], io: MediaCommandOutput, cwd:
     ...(parsed.options.get("--media-type") === undefined ? {} : { mediaType: parsed.options.get("--media-type")! }),
     ...(parsed.options.get("--media-file") === undefined ? {} : { mediaFile: parsed.options.get("--media-file")! }),
     filePolicy: parsed.flags.has("--link") ? "link" : "copy",
+    inspectionMode: parsed.flags.has("--inspect-decoded-frames")
+      ? "decoded-frames" : "container-index",
     ...(parsed.flags.has("--no-video") ? { videoStream: false as const }
       : parsed.options.has("--video-stream") ? {
         videoStream: optionalIntegerOption(parsed, "--video-stream", 0)!,
@@ -1292,8 +1294,9 @@ async function spectrogram(argv: readonly string[], io: MediaCommandOutput, cwd:
 
 export function writeMediaHelp(io: MediaCommandOutput, topic?: MediaCommand): void {
   const sections: Record<MediaCommand, readonly string[]> = {
-    import: ["  hypit media import <file> --to <asset.media.json> [--link] [--id <id>] [--video-stream <n> | --no-video] [--audio-stream <n> | --no-audio] [--picture source|srgb|sdr-bt709]",
-      "    Inspect once and publish a file-backed Media Asset. Copy is the default; --link requires the source below the manifest directory."],
+    import: ["  hypit media import <file> --to <asset.media.json> [--link] [--inspect-decoded-frames] [--id <id>] [--video-stream <n> | --no-video] [--audio-stream <n> | --no-audio] [--picture source|srgb|sdr-bt709]",
+      "    Read exact container-index timing and publish a file-backed Media Asset. Copy is the default; --link requires the source below the manifest directory.",
+      "    --inspect-decoded-frames explicitly reads every decoded frame when the container index lacks required timing; it is never an automatic fallback."],
     probe: ["  hypit media probe <file>", "    Duration and available streams; video adds size and frame rate, and audio reports actual stream indexes."],
     cut: ["  hypit media cut <file> [--start <s> --end <s> | --keep <start:end> ...] [--label-time] --to <clip.mp4|clip.wav>",
       "    Keep one stretch or join ordered stretches from one source. Audio-only outputs WAV; MP4 is a useful video target.",

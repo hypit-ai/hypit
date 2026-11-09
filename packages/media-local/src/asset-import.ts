@@ -2,6 +2,7 @@ import { extname, parse } from "node:path";
 
 import {
   pictureInterpretationProfile,
+  selectMediaStreams,
   selectVideoStream,
   verifyPictureInterpretation,
 } from "@hypit/media";
@@ -16,7 +17,10 @@ import {
   type NodeMediaAssetImportResult,
 } from "@hypit/media-asset/node";
 
-import { inspectMediaFile } from "./execute.js";
+import {
+  inspectMediaFileByDecodedFrames,
+  inspectMediaFileFromContainerIndex,
+} from "./execute.js";
 
 const mediaTypesByExtension: Readonly<Record<string, string>> = {
   ".mp4": "video/mp4", ".m4v": "video/mp4", ".mov": "video/quicktime",
@@ -43,6 +47,8 @@ export type LocalMediaAssetImportRequest = LocalMediaImportSelection & {
   readonly ffprobePath?: string;
   readonly timeoutMs?: number;
   readonly maxProbeOutputBytes?: number;
+  /** Container index is bounded and default; decoded frames are read only when explicitly selected. */
+  readonly inspectionMode?: "container-index" | "decoded-frames";
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -77,7 +83,7 @@ function videoSelector(
   if (requested === false) return { mode: "none" };
   if (requested !== undefined) return { mode: "stream-index", streamIndex: requested };
   const moving = inspection.streams.some((stream) => stream.kind === "video"
-    && !stream.disposition.attachedPicture && stream.decodedUnitCount >= 2
+    && !stream.disposition.attachedPicture && stream.decodedUnitCount !== 1
     && stream.startPts !== undefined && stream.endPts !== undefined);
   if (moving) return { mode: "primary-moving" };
   const picture = inspection.streams.some((stream) => stream.kind === "video"
@@ -123,7 +129,8 @@ export function localMediaImportSelection(
     }
   }
   const authority = options.spanAuthority
-    ?? (selected.decodedUnitCount >= 2 ? "video" : hasAudio ? "audio" : undefined);
+    ?? (selected.startPts !== undefined && selected.endPts !== undefined
+      ? "video" : hasAudio ? "audio" : undefined);
   return { video, audio, picture, ...(authority === undefined ? {} : { spanAuthority: authority }) };
 }
 
@@ -132,6 +139,10 @@ export async function importLocalMediaAsset(
   context: MediaAssetImportTaskContext = {},
 ): Promise<NodeMediaAssetImportResult> {
   const mediaType = request.mediaType ?? mediaTypeFromFile(request.sourcePath);
+  const inspectionMode = request.inspectionMode ?? "container-index";
+  const inspect = inspectionMode === "decoded-frames"
+    ? inspectMediaFileByDecodedFrames
+    : inspectMediaFileFromContainerIndex;
   return await importMediaAssetFile({
     sourcePath: request.sourcePath,
     assetPath: request.assetPath,
@@ -140,19 +151,35 @@ export async function importLocalMediaAsset(
     filePolicy: request.filePolicy ?? "copy",
     ...(request.mediaFile === undefined ? {} : { mediaFile: request.mediaFile }),
   }, {
-    inspect: async (path, task) => await inspectMediaFile(path, {
+    inspect: async (path, task) => await inspect(path, {
       ...(request.ffprobePath === undefined ? {} : { ffprobePath: request.ffprobePath }),
       ...(request.timeoutMs === undefined ? {} : { timeoutMs: request.timeoutMs }),
       ...(request.maxProbeOutputBytes === undefined ? {} : {
         maxProbeOutputBytes: request.maxProbeOutputBytes,
       }),
       ...(task.signal === undefined ? {} : { signal: task.signal }),
+      ...(inspectionMode === "container-index"
+        && (mediaType === "image/png" || mediaType === "image/jpeg")
+        ? { constantPicture: true } : {}),
     }),
-    select: (inspection) => localMediaImportSelection(inspection, mediaType, {
-      ...(request.videoStream === undefined ? {} : { videoStream: request.videoStream }),
-      ...(request.audioStream === undefined ? {} : { audioStream: request.audioStream }),
-      ...(request.picture === undefined ? {} : { picture: request.picture }),
-      ...(request.spanAuthority === undefined ? {} : { spanAuthority: request.spanAuthority }),
-    }),
+    select: (inspection) => {
+      try {
+        const selection = localMediaImportSelection(inspection, mediaType, {
+          ...(request.videoStream === undefined ? {} : { videoStream: request.videoStream }),
+          ...(request.audioStream === undefined ? {} : { audioStream: request.audioStream }),
+          ...(request.picture === undefined ? {} : { picture: request.picture }),
+          ...(request.spanAuthority === undefined ? {} : { spanAuthority: request.spanAuthority }),
+        });
+        selectMediaStreams(inspection, selection);
+        return selection;
+      } catch (error) {
+        if (inspectionMode !== "container-index") throw error;
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new Error(`Container-index media import could not establish the requested streams: ${detail}. `
+          + "No decoded-frame fallback was run; choose decoded-frame inspection explicitly if needed "
+          + "(CLI: --inspect-decoded-frames; API: inspectionMode \"decoded-frames\").",
+        { cause: error });
+      }
+    },
   }, context);
 }

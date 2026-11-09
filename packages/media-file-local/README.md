@@ -10,6 +10,7 @@ The package creates no Runtime, Build or retained graph state. Callers name inpu
 
 ```bash
 hypit media import reference.mp4 --to assets/reference.media.json
+hypit media import unusual.mkv --inspect-decoded-frames --to assets/unusual.media.json
 hypit media probe reference.mp4
 hypit media cut reference.mp4 --start 12 --end 19.5 --to assets/hook.mp4
 hypit media frames reference.mp4 --at 12.4,13.1 --to notes/hook-frames
@@ -27,10 +28,19 @@ hypit media boundaries reference.mp4
 ```
 
 `media import` is the shared headless import path used by the CLI and available to a desktop Host through
-`importLocalMediaAsset()`. It performs one exact inspection, applies an explicit local stream-selection policy,
+`importLocalMediaAsset()`. Its normal path reads exact integer timing already declared by the container index,
+applies an explicit local stream-selection policy,
 optionally copies the source below the manifest, and atomically creates `hypit.media-asset@1`. Copy is the portable
 default. `--link` is accepted only when the source already lies below the manifest directory. Existing files are
 never overwritten.
+
+Container-index import never enumerates decoded frames and never silently falls back to doing so. If an unusual
+or incomplete container does not declare the timing required by the requested stream selection, import fails with
+that cause. The caller may then deliberately choose `--inspect-decoded-frames` (or
+`inspectionMode: "decoded-frames"`) and pay the full-file inspection cost. Generated/rendered byte verification
+uses the separately named decoded-frame inspection directly; optimizing author import does not weaken terminal
+output checks. PNG and JPEG are declared constant Pictures from their media type. WebP is not silently treated as
+constant because the same file type may be animated; choose decoded-frame inspection for WebP import.
 
 The import call accepts an `AbortSignal` and progress callback with `inspect | interpret | copy | publish | complete`
 stages. These are invocation facts, not Media Asset or NLE fields. A CLI invocation waits in the foreground; a

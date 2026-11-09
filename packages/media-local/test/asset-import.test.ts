@@ -42,6 +42,26 @@ test("local import policy resolves ordinary video without moving guesses into Me
   assert.deepEqual(explicit.audio, { mode: "none" });
 });
 
+test("local import policy accepts exact container-index spans without pretending frames were decoded", () => {
+  const observed = movingInspection();
+  const video = observed.streams[0]!;
+  const audio = observed.streams[1]!;
+  assert.equal(video.kind, "video");
+  assert.equal(audio.kind, "audio");
+  if (video.kind !== "video" || audio.kind !== "audio") return;
+  const indexed: MediaInspection = { streams: [{
+    ...video,
+    decodedUnitCount: 0,
+  }, {
+    ...audio,
+    decodedSampleFrames: 0,
+  }] };
+  const selection = localMediaImportSelection(indexed, "video/mp4");
+  assert.deepEqual(selection.video, { mode: "primary-moving" });
+  assert.deepEqual(selection.audio, { mode: "default-if-present" });
+  assert.equal(selection.spanAuthority, "video");
+});
+
 test("still and audio-only imports establish their own natural authority", () => {
   const still = localMediaImportSelection({ streams: [{
     kind: "video", index: 0, codecName: "png",

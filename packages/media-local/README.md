@@ -35,6 +35,11 @@ Inspection and extraction contracts remain in
 `@hypit/media`, audio Programme execution in `@hypit/audio-program`, and terminal assembly
 in `@hypit/media-delivery`; paths, subprocesses and ffprobe output remain here.
 
+Direct file inspection has two deliberately separate entry points. `inspectMediaFileFromContainerIndex()` reads
+only exact integer stream timing already declared by the container and never falls back. `inspectMediaFileByDecodedFrames()`
+enumerates decoded frames and is reserved for callers that explicitly need that evidence, including terminal
+output verification. Local author import selects the first by default and exposes the second as an explicit policy.
+
 ## Direct media execution
 
 The engine:

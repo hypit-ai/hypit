@@ -12,6 +12,8 @@ type FfprobeStream = {
   readonly height?: unknown;
   readonly sample_aspect_ratio?: unknown;
   readonly time_base?: unknown;
+  readonly start_pts?: unknown;
+  readonly duration_ts?: unknown;
   readonly avg_frame_rate?: unknown;
   readonly r_frame_rate?: unknown;
   readonly pix_fmt?: unknown;
@@ -26,6 +28,15 @@ type FfprobeStream = {
   readonly disposition?: { readonly default?: unknown; readonly attached_pic?: unknown };
   readonly tags?: { readonly rotate?: unknown };
   readonly side_data_list?: readonly unknown[];
+};
+
+export type MediaInspectionTimingSource = "container-index" | "decoded-frames";
+
+export type MediaInspectionCollectorOptions = {
+  /** Selects one explicit timing authority. No mode falls back to the other. */
+  readonly timingSource: MediaInspectionTimingSource;
+  /** The caller's file type declares one constant Picture rather than a timed signal. */
+  readonly constantPicture?: boolean;
 };
 
 type FfprobePixelFormat = {
@@ -165,6 +176,26 @@ function timingState(
   };
 }
 
+function indexedTimingState(
+  stream: FfprobeStream,
+  kind: "video" | "audio" | "other",
+  index: number,
+  timeBase: MediaRational | undefined,
+  constantPicture: boolean,
+): TimingState {
+  const state = timingState(stream, kind, index, timeBase);
+  state.decodedUnitCount = kind === "video" && constantPicture ? 1 : 0;
+  const start = bigintValue(stream.start_pts);
+  const duration = bigintValue(stream.duration_ts);
+  if (timeBase === undefined || start === undefined || duration === undefined || duration <= 0n) {
+    state.complete = false;
+    return state;
+  }
+  state.firstPts = start;
+  state.lastEndPts = start + duration;
+  return state;
+}
+
 function observeFrame(state: TimingState, frame: FfprobeFrame): void {
   if (integer(frame.stream_index) !== state.index
     || (state.kind !== "other" && frame.media_type !== state.kind)) return;
@@ -194,7 +225,7 @@ function timing(state: TimingState): {
     decodedUnitCount: state.decodedUnitCount,
     decodedSampleFrames: state.decodedSampleFrames,
   };
-  if (!state.complete || state.decodedUnitCount === 0 || state.timeBase === undefined
+  if (!state.complete || state.timeBase === undefined
     || state.firstPts === undefined || state.lastEndPts === undefined
     || state.lastEndPts <= state.firstPts) return base;
   return {
@@ -205,7 +236,10 @@ function timing(state: TimingState): {
 }
 
 /** Incrementally collect decoded-unit facts without retaining one object per frame. */
-export function createMediaInspectionCollector(value: unknown): {
+export function createMediaInspectionCollector(
+  value: unknown,
+  options: MediaInspectionCollectorOptions,
+): {
   readonly observe: (frame: unknown) => void;
   readonly finish: () => MediaInspection;
 } {
@@ -221,7 +255,10 @@ export function createMediaInspectionCollector(value: unknown): {
     if (index === undefined || index < 0) throw new Error("ffprobe stream index is invalid");
     const codecType = typeof stream.codec_type === "string" && stream.codec_type.length > 0 ? stream.codec_type : "unknown";
     const kind = codecType === "video" || codecType === "audio" ? codecType : "other";
-    return timingState(stream, kind, index, rational(stream.time_base));
+    const timeBase = rational(stream.time_base);
+    return options.timingSource === "container-index"
+      ? indexedTimingState(stream, kind, index, timeBase, options.constantPicture === true)
+      : timingState(stream, kind, index, timeBase);
   });
   const stateByIndex = new Map(states.map((state) => [state.index, state]));
   return {
@@ -300,8 +337,21 @@ export function createMediaInspectionCollector(value: unknown): {
 export function parseMediaInspection(value: unknown): MediaInspection {
   const root = object(value);
   if (root === undefined) throw new Error("ffprobe output must be an object");
-  const collector = createMediaInspectionCollector(root);
+  const collector = createMediaInspectionCollector(root, { timingSource: "decoded-frames" });
   const frames = Array.isArray(root.frames) ? root.frames : [];
   for (const frame of frames) collector.observe(frame);
   return collector.finish();
+}
+
+/** Parse only exact integer timing declared by the container index. It never observes decoded frames. */
+export function parseMediaContainerIndex(
+  value: unknown,
+  options: { readonly constantPicture?: boolean } = {},
+): MediaInspection {
+  const root = object(value);
+  if (root === undefined) throw new Error("ffprobe output must be an object");
+  return createMediaInspectionCollector(root, {
+    timingSource: "container-index",
+    ...(options.constantPicture === undefined ? {} : { constantPicture: options.constantPicture }),
+  }).finish();
 }

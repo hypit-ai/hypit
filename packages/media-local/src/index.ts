@@ -7,7 +7,10 @@ export {
   executeMuxProgramMedia,
   executeRenderAudioProgram,
 } from "./execute.js";
-export { inspectMediaFile } from "./execute.js";
+export {
+  inspectMediaFileByDecodedFrames,
+  inspectMediaFileFromContainerIndex,
+} from "./execute.js";
 export {
   importLocalMediaAsset,
   localMediaImportSelection,
