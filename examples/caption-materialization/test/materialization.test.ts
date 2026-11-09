@@ -21,14 +21,20 @@ test("one Script materializes complete editable Karaoke Caption Items over three
     assertCaptionCuePayload(parameters.caption, item.duration);
     assert(parameters.caption.words.length > 0);
     assert(parameters.caption.units.length > 0);
-    assert.equal((parameters.style as Record<string, unknown>).karaoke === undefined, false);
-    styleIds.push(parameters.styleId as string);
+    const styleRef = item.bindings?.find((binding) => binding.slot === "style")?.ref;
+    assert.equal(typeof styleRef, "string");
+    const style = project.componentValues.find((value) => value.id === styleRef);
+    assert.notEqual(style, undefined);
+    assert.equal((style!.value as Record<string, unknown>).karaoke === undefined, false);
+    styleIds.push(style!.id.replace(/^caption-style:/u, ""));
     if (!item.enabled) disabled.push(parameters.caption.cueId);
   }
   assert.deepEqual(styleIds.toSorted(), [
     "alice", "alice", "alice", "base", "base", "bob", "bob", "bob", "warning",
   ]);
   assert.equal(disabled.length, 1);
+  assert.equal(project.pictureLayouts.length, 1);
+  assert.equal(project.componentValues.length, 4);
 
   const serialized = JSON.stringify(project);
   assert.doesNotMatch(serialized, /TimedTranscript|Narrative|selection\.|moment\./u);

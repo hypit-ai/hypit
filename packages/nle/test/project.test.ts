@@ -11,20 +11,24 @@ import {
   createComponentMaterialization,
   createNleProject,
   createMediaAssetMaterialization,
+  findNleComponentValue,
   findNleItem,
+  findNlePictureLayout,
   nleLinearSourceTime,
   nleProjectDuration,
   parseNleProject,
+  resolveNleComponentBinding,
+  resolveNlePictureLayout,
   serializeNleProject,
   type NleComponentItem,
   type NleMediaItem,
   type NlePictureAppearance,
 } from "../src/index.js";
 
-const fullPicture: NlePictureAppearance = {
+const fullPicture = {
   layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" },
   effects: [],
-};
+} as const satisfies NlePictureAppearance;
 
 const interviewAsset = { path: "./media/interview.media.json" } as const;
 const frame = (value: number) => exactTemporalValueFromFrames(value, {
@@ -124,6 +128,89 @@ test("one revision stores Media and Component Items directly", () => {
   const reopened = parseNleProject(text);
   assert.deepEqual(reopened.media[0]?.asset, interviewAsset);
   assert.deepEqual(reopened, edited);
+});
+
+test("Component slots and picture layouts link ordinary Items to explicit shared project values", () => {
+  const symbol = componentItem.component;
+  const linkedItem: NleComponentItem = {
+    ...componentItem,
+    bindings: [{ slot: "appearance", ref: "shared-appearance" }],
+    picture: { layout: { ref: "lower-third" }, effects: [] },
+  };
+  const secondLinkedItem: NleComponentItem = {
+    ...linkedItem,
+    id: "title-card-two",
+    parameters: { title: "Another direct item" },
+  };
+  const base = applyNleTransaction(createNleProject({
+    id: "linked-values", name: "Linked values",
+    canvas: { width: 100, height: 100, clearColor: "black" },
+  }), { revision: 0, commands: [
+    { kind: "component-value.add", value: {
+      id: "shared-appearance", name: "Shared appearance", component: symbol,
+      slot: "appearance", value: { color: "white", weight: 700 },
+    } },
+    { kind: "picture-layout.add", value: {
+      id: "lower-third", name: "Lower third",
+      layout: { x: 10, y: 70, width: 80, height: 20, fit: "contain" },
+    } },
+    { kind: "track.add", track: {
+      id: "picture", name: "Picture", kind: "picture", locked: false, muted: false,
+      items: [linkedItem, secondLinkedItem],
+    } },
+  ] });
+
+  assert.deepEqual(resolveNleComponentBinding(base, linkedItem, "appearance").value,
+    { color: "white", weight: 700 });
+  assert.deepEqual(resolveNlePictureLayout(base, linkedItem.picture!.layout),
+    { x: 10, y: 70, width: 80, height: 20, fit: "contain" });
+  assert.deepEqual(parseNleProject(serializeNleProject(base)), base);
+
+  const edited = applyNleTransaction(base, { revision: 1, commands: [
+    { kind: "component-value.replace", value: {
+      ...findNleComponentValue(base, "shared-appearance"),
+      value: { color: "yellow", weight: 900 },
+    } },
+    { kind: "picture-layout.replace", value: {
+      ...findNlePictureLayout(base, "lower-third"),
+      layout: { x: 5, y: 60, width: 90, height: 30, fit: "contain" },
+    } },
+  ] });
+  const persistedItem = findNleItem(edited, "title-card").item as NleComponentItem;
+  assert.deepEqual(persistedItem.bindings, linkedItem.bindings);
+  assert.deepEqual(persistedItem.picture, linkedItem.picture);
+  assert.deepEqual(resolveNleComponentBinding(edited, persistedItem, "appearance").value,
+    { color: "yellow", weight: 900 });
+  assert.deepEqual(resolveNlePictureLayout(edited, persistedItem.picture!.layout),
+    { x: 5, y: 60, width: 90, height: 30, fit: "contain" });
+  const secondPersistedItem = findNleItem(edited, "title-card-two").item as NleComponentItem;
+  assert.deepEqual(resolveNleComponentBinding(edited, secondPersistedItem, "appearance").value,
+    { color: "yellow", weight: 900 });
+  assert.deepEqual(resolveNlePictureLayout(edited, secondPersistedItem.picture!.layout),
+    { x: 5, y: 60, width: 90, height: 30, fit: "contain" });
+
+  assert.throws(() => applyNleTransaction(edited, { revision: 2, commands: [{
+    kind: "component-value.replace",
+    value: { ...findNleComponentValue(edited, "shared-appearance"), slot: "another-slot" },
+  }] }), /binding appearance references Component Value slot another-slot/u);
+  assert.throws(() => applyNleTransaction(edited, { revision: 2, commands: [{
+    kind: "component-value.remove", id: "shared-appearance",
+  }] }), /still used by Items: title-card, title-card-two/u);
+  assert.throws(() => applyNleTransaction(edited, { revision: 2, commands: [{
+    kind: "picture-layout.remove", id: "lower-third",
+  }] }), /still used by Items: title-card, title-card-two/u);
+
+  const locked = applyNleTransaction(edited, { revision: 2, commands: [{
+    kind: "track.update", id: "picture", locked: true,
+  }] });
+  assert.throws(() => applyNleTransaction(locked, { revision: 3, commands: [{
+    kind: "component-value.replace",
+    value: { ...findNleComponentValue(locked, "shared-appearance"), value: { color: "blue" } },
+  }] }), /Track picture is locked/u);
+  assert.throws(() => applyNleTransaction(locked, { revision: 3, commands: [{
+    kind: "picture-layout.replace",
+    value: { ...findNlePictureLayout(locked, "lower-third"), name: "Moved lower third" },
+  }] }), /Track picture is locked/u);
 });
 
 test("edit rate is only an editing grid and never quantizes exact project time", () => {

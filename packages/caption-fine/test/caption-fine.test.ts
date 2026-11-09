@@ -150,6 +150,11 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
     canvas: { width: 1080, height: 1920, clearColor: "#111827" },
   });
   project = applyNleTransaction(project, { revision: project.revision, commands: [{
+    kind: "picture-layout.add",
+    value: { id: "caption-bottom", name: "Caption bottom", layout: {
+      x: 60, y: 1380, width: 960, height: 340, fit: "fill",
+    } },
+  }, {
     kind: "track.add",
     track: { id: "captions", name: "Captions", kind: "picture", locked: false, muted: false, items: [] },
   }] });
@@ -160,7 +165,7 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
     timing,
     presentation,
     at: at(0),
-    picture: { layout: { x: 60, y: 1380, width: 960, height: 340, fit: "fill" }, effects: [] },
+    picture: { layout: { ref: "caption-bottom" }, effects: [] },
   }));
 
   assert.equal(hypitPackage.modules.length, 1);
@@ -221,18 +226,30 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
   assert.equal(visualData.entry.startScale, 0.4);
 
   const authoring = createNleAuthoringHostFromFacets(hypitPackage.facets);
-  const restyled = applyNleTransaction(project, authoring.planComponentParameterEdit(project, alice.id, {
-    kind: "set-style",
-    styleId: "manual",
-    style: { color: "#22d3ee", outlineWidth: 0 },
+  const attributed = applyNleTransaction(project, authoring.planComponentParameterEdit(project, alice.id, {
+    kind: "set-word-attribute",
+    wordId: "alice-a",
+    name: "emphasis",
+    value: true,
   }));
+  const attributedItem = findNleItem(attributed, alice.id).item;
+  if (attributedItem.kind !== "component") throw new Error("Attributed Caption changed Item kind.");
+  const attributedCaption = (attributedItem.parameters as { caption: CaptionDocument }).caption;
+  assert.deepEqual(attributedCaption.words[0]?.attributes, [{ name: "emphasis", value: true }]);
+
+  const styleRef = alice.bindings?.find((binding) => binding.slot === "style")?.ref;
+  if (styleRef === undefined) throw new Error("Fine Caption has no linked Style.");
+  const linkedStyle = project.componentValues.find((value) => value.id === styleRef)!;
+  const restyled = applyNleTransaction(project, { revision: project.revision, commands: [{
+    kind: "component-value.replace",
+    value: { ...linkedStyle, value: { color: "#22d3ee", outlineWidth: 0 } },
+  }] });
   const restyledItem = findNleItem(restyled, alice.id).item;
   if (restyledItem.kind !== "component") throw new Error("Restyled Caption changed Item kind.");
-  assert.deepEqual(restyledItem.parameters, {
-    ...(alice.parameters as Record<string, unknown>),
-    styleId: "manual",
-    style: { color: "#22d3ee", outlineWidth: 0 },
-  });
+  assert.deepEqual(restyledItem.parameters, alice.parameters,
+    "editing a shared Style must not rewrite Cue content");
+  const restyledValue = restyled.componentValues.find((value) => value.id === styleRef)?.value;
+  assert.equal((restyledValue as Record<string, unknown>).color, "#22d3ee");
 });
 
 test("Fine Caption rejects family parameters the package does not own", () => {

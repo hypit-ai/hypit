@@ -15,12 +15,14 @@ import {
 } from "@hypit/temporal/algebra";
 import type {
   NleCanvas,
+  NleComponentValue,
   NleEditRate,
   NleGroup,
   NleItem,
   NleMatte,
   NleMedia,
   NleMediaAssetReference,
+  NlePictureLayoutValue,
   NleProject,
   NleSourceTime,
   NleTrack,
@@ -34,6 +36,12 @@ export type NleCommand =
       readonly editRate?: NleEditRate;
       readonly canvas?: NleCanvas;
     }
+  | { readonly kind: "component-value.add"; readonly value: NleComponentValue }
+  | { readonly kind: "component-value.replace"; readonly value: NleComponentValue }
+  | { readonly kind: "component-value.remove"; readonly id: string }
+  | { readonly kind: "picture-layout.add"; readonly value: NlePictureLayoutValue }
+  | { readonly kind: "picture-layout.replace"; readonly value: NlePictureLayoutValue }
+  | { readonly kind: "picture-layout.remove"; readonly id: string }
   | { readonly kind: "media.add"; readonly media: NleMedia }
   | { readonly kind: "media.rename"; readonly id: string; readonly name: string }
   | { readonly kind: "media.relink"; readonly id: string; readonly asset: NleMediaAssetReference }
@@ -111,11 +119,14 @@ type MutableTrack = Omit<NleTrack, "name" | "locked" | "muted" | "items"> & {
   muted: boolean;
   items: NleItem[];
 };
-type MutableProject = Omit<NleProject, "revision" | "name" | "editRate" | "canvas" | "media" | "tracks"> & {
+type MutableProject = Omit<NleProject,
+  "revision" | "name" | "editRate" | "canvas" | "componentValues" | "pictureLayouts" | "media" | "tracks"> & {
   revision: number;
   name: string;
   editRate: NleEditRate;
   canvas: NleCanvas;
+  componentValues: NleComponentValue[];
+  pictureLayouts: NlePictureLayoutValue[];
   media: NleMedia[];
   tracks: MutableTrack[];
   transitions: NleTransition[];
@@ -145,6 +156,17 @@ function editableItems(project: MutableProject, ids: readonly string[]): void {
   const tracks = new Set<MutableTrack>();
   for (const id of ids) tracks.add(mutableItem(project, id).track);
   for (const track of tracks) editable(track);
+}
+
+function componentValueUsers(project: MutableProject, id: string): string[] {
+  return project.tracks.flatMap((track) => track.items.flatMap((item) =>
+    item.kind === "component" && item.bindings?.some((binding) => binding.ref === id) ? [item.id] : []));
+}
+
+function pictureLayoutUsers(project: MutableProject, id: string): string[] {
+  return project.tracks.flatMap((track) => track.items.flatMap((item) =>
+    item.picture !== undefined && Object.hasOwn(item.picture.layout, "ref")
+      && (item.picture.layout as { readonly ref: string }).ref === id ? [item.id] : []));
 }
 
 function itemEnd(item: NleItem): ExactTemporalValue {
@@ -196,6 +218,46 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         if (command.editRate !== undefined) next.editRate = structuredClone(command.editRate);
         if (command.canvas !== undefined) next.canvas = structuredClone(command.canvas);
         break;
+      case "component-value.add":
+        next.componentValues.push(structuredClone(command.value));
+        break;
+      case "component-value.replace": {
+        const index = next.componentValues.findIndex((candidate) => candidate.id === command.value.id);
+        if (index < 0) throw new Error(`Unknown NLE Component Value: ${command.value.id}`);
+        editableItems(next, componentValueUsers(next, command.value.id));
+        next.componentValues.splice(index, 1, structuredClone(command.value));
+        break;
+      }
+      case "component-value.remove": {
+        const index = next.componentValues.findIndex((candidate) => candidate.id === command.id);
+        if (index < 0) throw new Error(`Unknown NLE Component Value: ${command.id}`);
+        const users = componentValueUsers(next, command.id);
+        if (users.length > 0) {
+          throw new Error(`NLE Component Value ${command.id} is still used by Items: ${users.join(", ")}.`);
+        }
+        next.componentValues.splice(index, 1);
+        break;
+      }
+      case "picture-layout.add":
+        next.pictureLayouts.push(structuredClone(command.value));
+        break;
+      case "picture-layout.replace": {
+        const index = next.pictureLayouts.findIndex((candidate) => candidate.id === command.value.id);
+        if (index < 0) throw new Error(`Unknown NLE Picture Layout: ${command.value.id}`);
+        editableItems(next, pictureLayoutUsers(next, command.value.id));
+        next.pictureLayouts.splice(index, 1, structuredClone(command.value));
+        break;
+      }
+      case "picture-layout.remove": {
+        const index = next.pictureLayouts.findIndex((candidate) => candidate.id === command.id);
+        if (index < 0) throw new Error(`Unknown NLE Picture Layout: ${command.id}`);
+        const users = pictureLayoutUsers(next, command.id);
+        if (users.length > 0) {
+          throw new Error(`NLE Picture Layout ${command.id} is still used by Items: ${users.join(", ")}.`);
+        }
+        next.pictureLayouts.splice(index, 1);
+        break;
+      }
       case "media.add":
         next.media.push(structuredClone(command.media));
         break;

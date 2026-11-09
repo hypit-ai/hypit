@@ -7,8 +7,10 @@ import type {
   NleComponentItem,
   NleComponentParameterAuthoring,
   NleComponentResolver,
+  NleLoweringContext,
   NlePackageSymbol,
 } from "@hypit/nle";
+import { resolveNlePictureLayout } from "@hypit/nle";
 import { assertBlobRef, canonicalize, type BlobRef } from "@hypit/protocol";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
 import {
@@ -78,8 +80,15 @@ function exact(value: unknown, label: string): ExactTemporalValue {
   return value as ExactTemporalValue;
 }
 
-function source(item: NleComponentItem, suffix: string): { source: ProgramSource; output: "picture" } {
+type NleProjectContext = Pick<NleLoweringContext, "project">;
+
+function source(
+  item: NleComponentItem,
+  context: NleProjectContext,
+  suffix: string,
+): { source: ProgramSource; output: "picture" } {
   assert(item.picture !== undefined, `NLE Component ${item.id} has no Picture appearance.`);
+  const layout = resolveNlePictureLayout(context.project, item.picture.layout);
   const id = `${item.id}:${suffix}`;
   return {
     source: {
@@ -90,7 +99,7 @@ function source(item: NleComponentItem, suffix: string): { source: ProgramSource
         domain: sealLocalTemporalDomain({ id: `${id}:time`, duration: structuredClone(item.duration) }),
         spatialDomain: sealLocalSpatialDomain({
           id: `${id}:picture`,
-          region: { x: 0, y: 0, width: item.picture.layout.width, height: item.picture.layout.height },
+          region: { x: 0, y: 0, width: layout.width, height: layout.height },
         }),
       } },
     },
@@ -156,7 +165,7 @@ function rankingVisual(value: unknown, label: string): RankingEntryVisual {
   throw new Error(`${label}.kind is invalid.`);
 }
 
-function resolveRankingBoard(item: NleComponentItem) {
+function resolveRankingBoard(item: NleComponentItem, context: NleProjectContext) {
   const parameters = record(item.parameters, `Ranking Board ${item.id}`);
   fields(parameters, ["appearance", "entries", "layout", "motion", "rows", "title"], `Ranking Board ${item.id}`);
   const title = text(parameters.title, `Ranking Board ${item.id}.title`);
@@ -197,8 +206,10 @@ function resolveRankingBoard(item: NleComponentItem) {
   assert(new Set(entries.map((entry) => entry.id)).size === entries.length,
     `Ranking Board ${item.id} repeats an entry.`);
 
-  const width = item.picture?.layout.width ?? 0;
-  const height = item.picture?.layout.height ?? 0;
+  assert(item.picture !== undefined, `Ranking Board ${item.id} has no Picture appearance.`);
+  const pictureLayout = resolveNlePictureLayout(context.project, item.picture.layout);
+  const width = pictureLayout.width;
+  const height = pictureLayout.height;
   const layoutInput = parameters.layout === undefined ? {} : record(parameters.layout, `Ranking Board ${item.id}.layout`);
   fields(layoutInput, ["board", "gap", "itemWidth", "labelWidthRatio", "stagePoint", "stageSize", "titleHeight"],
     `Ranking Board ${item.id}.layout`);
@@ -278,7 +289,7 @@ function resolveRankingBoard(item: NleComponentItem) {
   const visualHtml = (visual: RankingEntryVisual): string => visual.kind === "text"
     ? `<span data-ranking-icon>${escapeHtml(visual.text)}</span>`
     : `<img data-ranking-icon src="hypit-artifact://${escapeHtml(visual.artifact.resource)}"/>`;
-  const resolved = source(item, "ranking-board");
+  const resolved = source(item, context, "ranking-board");
   return {
     ...resolved,
     html: visualProgramHtmlSource(resolved.source.id, resolved.output, htmlVisual({
@@ -357,7 +368,7 @@ function resolveRankingBoard(item: NleComponentItem) {
   };
 }
 
-function resolveVerdictBurst(item: NleComponentItem) {
+function resolveVerdictBurst(item: NleComponentItem, context: NleProjectContext) {
   const parameters = record(item.parameters, `Verdict Burst ${item.id}`);
   fields(parameters, ["kicker", "title", "accent", "enterFrames"], `Verdict Burst ${item.id}`);
   const kicker = text(parameters.kicker, `Verdict Burst ${item.id}.kicker`);
@@ -365,7 +376,7 @@ function resolveVerdictBurst(item: NleComponentItem) {
   const accent = color(parameters.accent, `Verdict Burst ${item.id}.accent`);
   const enterFrames = parameters.enterFrames === undefined ? 7
     : integer(parameters.enterFrames, `Verdict Burst ${item.id}.enterFrames`, 1, 120);
-  const resolved = source(item, "verdict-burst");
+  const resolved = source(item, context, "verdict-burst");
   return {
     ...resolved,
     html: visualProgramHtmlSource(resolved.source.id, resolved.output, htmlVisual({
@@ -387,19 +398,19 @@ function resolveVerdictBurst(item: NleComponentItem) {
 
 function nleResolver(
   component: NlePackageSymbol,
-  resolve: (item: NleComponentItem) => ReturnType<typeof resolveRankingBoard>,
+  resolve: (item: NleComponentItem, context: NleProjectContext) => ReturnType<typeof resolveRankingBoard>,
 ): NleComponentResolver {
-  return { component, resolve: (item) => {
-    const value = resolve(item);
+  return { component, resolve: (item, context) => {
+    const value = resolve(item, context);
     return { source: value.source, pictureOutput: value.output };
   } };
 }
 
 function htmlResolver(
   component: NlePackageSymbol,
-  resolve: (item: NleComponentItem) => ReturnType<typeof resolveRankingBoard>,
+  resolve: (item: NleComponentItem, context: NleProjectContext) => ReturnType<typeof resolveRankingBoard>,
 ): NleHtmlVideoComponentResolver {
-  return { component, resolve: (item) => ({ html: resolve(item).html }) };
+  return { component, resolve: (item, context) => ({ html: resolve(item, context).html }) };
 }
 
 export const rankingBoardNleResolver = nleResolver(rankingBoardComponentSymbol, resolveRankingBoard);
@@ -409,11 +420,11 @@ export const verdictBurstHtmlResolver = htmlResolver(verdictBurstComponentSymbol
 
 export const rankingBoardNleAuthoring: NleComponentParameterAuthoring = {
   component: rankingBoardComponentSymbol,
-  inspect: ({ item }) => {
-    resolveRankingBoard(item);
+  inspect: ({ item, project }) => {
+    resolveRankingBoard(item, { project });
     return canonicalize(item.parameters);
   },
-  edit: (operation, { item }) => {
+  edit: (operation, { item, project }) => {
     const input = record(operation, `Ranking Board ${item.id} edit`);
     const parameters = structuredClone(record(item.parameters, `Ranking Board ${item.id}`));
     if (input.kind === "set-title") {
@@ -439,7 +450,7 @@ export const rankingBoardNleAuthoring: NleComponentParameterAuthoring = {
       throw new Error(`Ranking Board ${item.id} edit.kind is invalid.`);
     }
     const next = canonicalize(parameters);
-    resolveRankingBoard({ ...structuredClone(item), parameters: next });
+    resolveRankingBoard({ ...structuredClone(item), parameters: next }, { project });
     return next;
   },
 };

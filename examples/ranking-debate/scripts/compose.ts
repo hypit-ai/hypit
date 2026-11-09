@@ -246,6 +246,11 @@ async function main(): Promise<void> {
     canvas: { width: 720, height: 1280, clearColor: "#111827" },
   });
   project = applyNleTransaction(project, { revision: project.revision, commands: [
+    { kind: "picture-layout.add", value: {
+      id: "caption-bottom",
+      name: "Caption bottom",
+      layout: { x: 42, y: 930, width: 636, height: 240, fit: "fill" },
+    } },
     { kind: "track.add", track: { id: "picture-main", name: "Picture + production audio", kind: "picture", locked: false, muted: false, items: [] } },
     { kind: "track.add", track: { id: "ranking", name: "Ranking board", kind: "picture", locked: false, muted: false, items: [] } },
     { kind: "track.add", track: { id: "captions", name: "Captions", kind: "picture", locked: false, muted: false, items: [] } },
@@ -293,7 +298,8 @@ async function main(): Promise<void> {
       timing: captionTiming,
       presentation,
       selection,
-      picture: { layout: { x: 42, y: 930, width: 636, height: 240, fit: "fill" }, effects: [] },
+      styleRef: (styleId) => `caption-style:${styleId}`,
+      picture: { layout: { ref: "caption-bottom" }, effects: [] },
     }));
   }
 

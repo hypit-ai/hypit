@@ -14,12 +14,9 @@ import type { CaptionPresentation, CaptionStyle } from "./types.js";
 const captionFineFamily: CaptionNleFamily<"fine"> = {
   family: "fine",
   component: captionFineNleComponentSymbol,
-  parameters: (caption, style) => canonicalize({
-    caption,
-    styleId: style.id,
-    family: style.family,
-    style: style.parameters,
-  }),
+  styleSlot: "style",
+  parameters: (caption) => canonicalize({ caption }),
+  style: (style) => canonicalize(style.parameters),
 };
 
 export type CaptionFineNleMaterializationInput =

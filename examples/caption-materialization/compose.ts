@@ -106,6 +106,11 @@ function transcriptForSegment(narrative: Narrative, excerpt: NarrativeSegmentRef
 
 function addTracks(project: NleProject): NleProject {
   return applyNleTransaction(project, { revision: project.revision, commands: [{
+    kind: "picture-layout.add",
+    value: { id: "caption-bottom", name: "Caption bottom", layout: {
+      x: 120, y: 760, width: 1680, height: 250, fit: "fill",
+    } },
+  }, {
     kind: "track.add",
     track: { id: "picture", name: "A-roll", kind: "picture", locked: false, muted: false, items: [] },
   }, {
@@ -189,7 +194,8 @@ export async function buildCaptionMaterializationExample(): Promise<{
       presentation: resolvedPresentation,
       selection: { kind: "units", ids: unitIds },
       itemId: (cueId, occurrence) => `caption:${cueId}:${occurrence + 1}`,
-      picture: { layout: { x: 120, y: 760, width: 1680, height: 250, fit: "fill" }, effects: [] },
+      styleRef: (styleId) => `caption-style:${styleId}`,
+      picture: { layout: { ref: "caption-bottom" }, effects: [] },
     });
     project = applyNleTransaction(project, captionTransaction);
     programmeAt = addExactTemporalValues(programmeAt, duration);

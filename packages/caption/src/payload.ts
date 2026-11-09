@@ -6,6 +6,7 @@ import {
 } from "@hypit/temporal/algebra";
 
 import type { CaptionCuePayload } from "./types.js";
+import type { CaptionWordAttribute } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -113,6 +114,48 @@ export function replaceCaptionWord(
       if (word.id !== wordId) return structuredClone(word);
       found = true;
       return { ...structuredClone(word), text };
+    }),
+  };
+  assert(found, `Unknown Caption Word: ${wordId}`);
+  return sealCaptionCuePayload(result);
+}
+
+export function setCaptionWordAttribute(
+  payload: CaptionCuePayload,
+  wordId: string,
+  attribute: CaptionWordAttribute,
+): CaptionCuePayload {
+  assertCaptionCuePayload(payload);
+  let found = false;
+  const result: CaptionCuePayload = {
+    ...structuredClone(payload),
+    words: payload.words.map((word) => {
+      if (word.id !== wordId) return structuredClone(word);
+      found = true;
+      return {
+        ...structuredClone(word),
+        attributes: [...word.attributes.filter((candidate) => candidate.name !== attribute.name),
+          structuredClone(attribute)],
+      };
+    }),
+  };
+  assert(found, `Unknown Caption Word: ${wordId}`);
+  return sealCaptionCuePayload(result);
+}
+
+export function removeCaptionWordAttribute(
+  payload: CaptionCuePayload,
+  wordId: string,
+  name: string,
+): CaptionCuePayload {
+  assertCaptionCuePayload(payload);
+  let found = false;
+  const result: CaptionCuePayload = {
+    ...structuredClone(payload),
+    words: payload.words.map((word) => {
+      if (word.id !== wordId) return structuredClone(word);
+      found = true;
+      return { ...structuredClone(word), attributes: word.attributes.filter((attribute) => attribute.name !== name) };
     }),
   };
   assert(found, `Unknown Caption Word: ${wordId}`);

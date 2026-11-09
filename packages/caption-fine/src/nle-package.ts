@@ -10,11 +10,14 @@ import {
 } from "@hypit/html-program";
 import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
 import { assertFontStackRef } from "@hypit/media";
-import type {
-  NleComponentItem,
-  NleComponentParameterAuthoring,
-  NleComponentResolver,
-  NlePackageSymbol,
+import {
+  resolveNleComponentBinding,
+  resolveNlePictureLayout,
+  type NleComponentItem,
+  type NleComponentParameterAuthoring,
+  type NleComponentResolver,
+  type NlePackageSymbol,
+  type NleProject,
 } from "@hypit/nle";
 import { canonicalize, type ModuleManifest } from "@hypit/protocol";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
@@ -294,12 +297,14 @@ function structuralLineCount(payload: CaptionCuePayload, maxWordsPerLine: number
   return lines;
 }
 
-function resolveCaptionFine(item: NleComponentItem) {
+function resolveCaptionFine(item: NleComponentItem, context: { readonly project: NleProject }) {
   assert(item.picture !== undefined, `NLE Fine Caption ${item.id} has no Picture appearance.`);
-  assertCaptionNleComponentParameters(item.parameters, "fine", item.duration);
+  assertCaptionNleComponentParameters(item.parameters, item.duration);
   const parameters = item.parameters;
   const caption = parameters.caption;
-  const style = record(parameters.style, `NLE Fine Caption ${item.id} style`) as CaptionFineStyleParameters;
+  const linkedStyle = resolveNleComponentBinding(context.project, item, "style");
+  const style = record(linkedStyle.value, `NLE Fine Caption ${item.id} style`) as CaptionFineStyleParameters;
+  const pictureLayout = resolveNlePictureLayout(context.project, item.picture.layout);
   exactKeys(style as Readonly<Record<string, unknown>>, [
     "fonts", "color", "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "wordGap",
     "language", "direction", "writingMode", "textTransform", "variantCaps", "kerning",
@@ -595,7 +600,7 @@ function resolveCaptionFine(item: NleComponentItem) {
   const sourceId = `${item.id}:caption-source`;
   const spatialDomain = sealLocalSpatialDomain({
     id: `${sourceId}:picture`,
-    region: { x: 0, y: 0, width: item.picture.layout.width, height: item.picture.layout.height },
+    region: { x: 0, y: 0, width: pictureLayout.width, height: pictureLayout.height },
   });
   const source: ProgramSource = {
     id: sourceId,
@@ -997,31 +1002,32 @@ function resolveCaptionFine(item: NleComponentItem) {
 
 export const captionFineNleResolver: NleComponentResolver = {
   component: captionFineNleComponentSymbol,
-  resolve: (item) => {
-    const { source, pictureOutput } = resolveCaptionFine(item);
+  resolve: (item, context) => {
+    const { source, pictureOutput } = resolveCaptionFine(item, context);
     return { source, pictureOutput };
   },
 };
 
 export const captionFineNleAuthoring: NleComponentParameterAuthoring = {
   component: captionFineNleComponentSymbol,
-  inspect: ({ item }) => {
-    resolveCaptionFine(item);
-    return canonicalize(item.parameters);
+  inspect: (context) => {
+    resolveCaptionFine(context.item, context);
+    return canonicalize(context.item.parameters);
   },
-  edit: (operation, { item }) => {
-    assertCaptionNleComponentParameters(item.parameters, "fine", item.duration);
+  edit: (operation, context) => {
+    const { item } = context;
+    assertCaptionNleComponentParameters(item.parameters, item.duration);
     const parameters = editCaptionNleComponentParameters(
-      item.parameters as CaptionNleComponentParameters<"fine">,
+      item.parameters as CaptionNleComponentParameters,
       operation as unknown as CaptionNleComponentEdit,
       item.duration,
     );
-    resolveCaptionFine({ ...structuredClone(item), parameters: canonicalize(parameters) });
+    resolveCaptionFine({ ...structuredClone(item), parameters: canonicalize(parameters) }, context);
     return canonicalize(parameters);
   },
 };
 
 export const captionFineNleHtmlVideoResolver: NleHtmlVideoComponentResolver = {
   component: captionFineNleComponentSymbol,
-  resolve: (item) => ({ html: resolveCaptionFine(item).html }),
+  resolve: (item, context) => ({ html: resolveCaptionFine(item, context).html }),
 };

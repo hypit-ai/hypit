@@ -8,11 +8,13 @@ import {
   type HtmlTextNode,
 } from "@hypit/html-program";
 import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
-import type {
-  NleComponentItem,
-  NleComponentParameterAuthoring,
-  NleComponentResolver,
-  NlePackageSymbol,
+import {
+  resolveNlePictureLayout,
+  type NleComponentItem,
+  type NleComponentParameterAuthoring,
+  type NleComponentResolver,
+  type NlePackageSymbol,
+  type NleProject,
 } from "@hypit/nle";
 import { canonicalize, type ModuleManifest } from "@hypit/protocol";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
@@ -521,8 +523,9 @@ function compileTextSequences(
   });
 }
 
-function resolveTextFine(item: NleComponentItem) {
+function resolveTextFine(item: NleComponentItem, context: { readonly project: NleProject }) {
   if (item.picture === undefined) throw new Error(`NLE Fine Text ${item.id} has no Picture appearance.`);
+  const pictureLayout = resolveNlePictureLayout(context.project, item.picture.layout);
   assertTextFineNleParameters(item.parameters);
   const parameters = item.parameters;
   const sequences = parameters.sequences ?? [];
@@ -543,7 +546,7 @@ function resolveTextFine(item: NleComponentItem) {
       domain: sealLocalTemporalDomain({ id: `${sourceId}:time`, duration: structuredClone(item.duration) }),
       spatialDomain: sealLocalSpatialDomain({
         id: `${sourceId}:picture`,
-        region: { x: 0, y: 0, width: item.picture.layout.width, height: item.picture.layout.height },
+        region: { x: 0, y: 0, width: pictureLayout.width, height: pictureLayout.height },
       }),
     } },
   };
@@ -625,22 +628,22 @@ export function editTextFineNleParameters(
 
 export const textFineNleResolver: NleComponentResolver = {
   component: textFineNleComponentSymbol,
-  resolve: (item) => {
-    const { source, pictureOutput } = resolveTextFine(item);
+  resolve: (item, context) => {
+    const { source, pictureOutput } = resolveTextFine(item, context);
     return { source, pictureOutput };
   },
 };
 
 export const textFineNleHtmlVideoResolver: NleHtmlVideoComponentResolver = {
   component: textFineNleComponentSymbol,
-  resolve: (item) => ({ html: resolveTextFine(item).html }),
+  resolve: (item, context) => ({ html: resolveTextFine(item, context).html }),
 };
 
 export const textFineNleAuthoring: NleComponentParameterAuthoring = {
   component: textFineNleComponentSymbol,
-  inspect: ({ item }) => {
-    resolveTextFine(item);
-    return canonicalize(item.parameters);
+  inspect: (context) => {
+    resolveTextFine(context.item, context);
+    return canonicalize(context.item.parameters);
   },
   edit: (operation, { item }) => {
     assertTextFineNleParameters(item.parameters);

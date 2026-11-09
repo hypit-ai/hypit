@@ -9,6 +9,9 @@ import {
   captionSelectedUnitIds,
   captionUnitText,
   captionWordIdsForAttribute,
+  removeCaptionWordAttribute,
+  setCaptionWordAttribute,
+  type CaptionCuePayload,
   type CaptionDocument,
   type LocalCaptionTiming,
 } from "../src/index.js";
@@ -55,6 +58,31 @@ test("Caption Cues partition every Unit exactly", () => {
       { id: "cue-two", unitIds: ["unit-two"] },
     ],
   }), /more than one Cue/u);
+});
+
+test("word attributes are local editable content rather than duplicated Component styles", () => {
+  const payload: CaptionCuePayload = {
+    documentId: document.id,
+    cueId: "cue-one",
+    role: "HOST",
+    words: [document.words[0]!],
+    units: [{ ...document.units[0]!, start: at(0), end: at(1) }],
+  };
+  const attributed = setCaptionWordAttribute(payload, "word-one", {
+    name: "emphasis", value: 2,
+  });
+  assert.deepEqual(attributed.words[0]?.attributes,
+    [{ name: "emphasis", value: 2 }]);
+  assert.deepEqual(payload.words[0]?.attributes, []);
+
+  const replaced = setCaptionWordAttribute(attributed, "word-one", {
+    name: "emphasis", value: true,
+  });
+  assert.deepEqual(replaced.words[0]?.attributes, [{ name: "emphasis", value: true }]);
+  assert.deepEqual(removeCaptionWordAttribute(replaced, "word-one", "emphasis").words[0]?.attributes, []);
+  assert.throws(() => setCaptionWordAttribute(payload, "missing-word", {
+    name: "emphasis", value: true,
+  }), /Unknown Caption Word/u);
 });
 
 test("LocalCaptionTiming stays source-local and contains no NLE placement", () => {

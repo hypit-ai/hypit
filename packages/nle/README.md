@@ -14,6 +14,15 @@ roll, ripple-trim, replace and remove for Items; and add, replace and remove for
 A failed multi-command transaction leaves
 the input revision untouched.
 
+Two kinds of deliberately linked project value complement those direct Item facts. A Component package may define
+a named value slot; an Item binds that slot to one project `componentValues` entry whose exact Component symbol and
+slot remain explicit. NLE Core validates identity and stores the canonical value but never interprets its meaning.
+Separately, a picture Item may keep its `layout` inline or reference one named `pictureLayouts` entry owned by NLE.
+This is the general mechanism behind “many captions share one visual style” and “many overlays move together”, not
+a Caption-specific object model. Cue words, word attributes, Item times and source-time pieces remain local direct
+facts. Replacing either linked value is one revisioned edit, observes every affected Track lock, and does not rewrite
+the Items; a referenced value cannot be removed until its bindings are explicitly changed or removed.
+
 These are direct editing operations, not declarations. `item.move` changes programme placement, `item.trim`
 changes a visible edge, `item.slip` shifts every exact source coordinate, and `item.retime` replaces the Item-local
 piecewise source-time fact. An affine piece owns an exact rational rate: positive values play forward, negative
@@ -85,12 +94,14 @@ NleProject
 Each media-bin entry stores only a portable relative Media Asset document path. Opening, editing and saving the
 NLE project therefore performs no media inspection, staging or analysis and does not require the media files to be
 online. Before preview/export, the Host explicitly resolves those paths to ephemeral media values and supplies an
-`NleMediaResolver`; AVIR lowering never writes them back into the project. Component items retain only their package reference, parameters and
+`NleMediaResolver`; AVIR lowering never writes them back into the project. Component items retain only their package reference, local parameters,
+explicit package-slot bindings and
 NLE-owned placement; the selected NLE Host resolves only their package-owned `ProgramSource` contract and selected
 Picture/Audio output names. A Component may be Picture-only, Audio-only or expose both. Effects resolve to ordinary
 Picture or Audio Operators whose opaque execution programme travels with the Operator.
-Materialized Caption cues are ordinary Component items whose package parameters own text and style; NLE Core has
-no Caption item kind or resolver category.
+Materialized Caption cues are ordinary Component items whose local parameters own text and word timing while a
+package-defined `style` slot may link them to one shared project value; NLE Core still has no Caption item kind,
+Style schema or resolver category.
 The NLE therefore contains media and HTML-capable effects in one paint graph without storing DOM or making package
 internals into parent timeline items.
 
@@ -142,7 +153,8 @@ flat `NleProject`, closes that child as an ordinary multi-output AVIR Source and
 other Item. Child and parent may use different editing grids because source-time pieces and all programme placements
 are exact times rather than grid indices.
 
-The spatial policy stores an explicit rectangle and `fill | contain | cover` fit on each picture item.
+The spatial policy stores an explicit rectangle and `fill | contain | cover` fit either inline on a picture Item or
+in one explicitly referenced project Picture Layout.
 Lowering first fits the Source into an Item-local picture domain, then applies package Effects, and only
 then places that result into Programme canvas coordinates. Consequently an Effect sees the item's own
 width, height and local clock; changing `layout.x` or `layout.y` does not silently change the Effect's

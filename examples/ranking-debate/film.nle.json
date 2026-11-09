@@ -12,6 +12,165 @@
     "height": 1280,
     "clearColor": "#111827"
   },
+  "componentValues": [
+    {
+      "id": "caption-style:alice",
+      "name": "alice",
+      "component": {
+        "module": {
+          "name": "@hypit/caption-fine",
+          "version": "1"
+        },
+        "name": "fine"
+      },
+      "slot": "style",
+      "value": {
+        "activeBox": {
+          "mode": "off"
+        },
+        "attributeFaces": [
+          {
+            "attribute": "face",
+            "fontFamily": "Georgia, serif",
+            "fontStyle": "italic",
+            "fontWeight": 700,
+            "value": "serif"
+          }
+        ],
+        "color": "#f8fafc",
+        "cueBox": {
+          "background": "#0b1020e8",
+          "borderColor": "#ffffff24",
+          "borderRadius": 18,
+          "borderWidth": 1,
+          "paddingX": 22,
+          "paddingY": 14
+        },
+        "entry": {
+          "frames": 4,
+          "kind": "fade"
+        },
+        "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
+        "fontSize": 48,
+        "fontWeight": 800,
+        "karaoke": {
+          "activeColor": "#67e8f9",
+          "mode": "current",
+          "transition": "step"
+        },
+        "lineHeight": 1.16,
+        "outlineColor": "#020617cc",
+        "outlineWidth": 2,
+        "shadowBlur": 12,
+        "shadowColor": "#02061799",
+        "shadowOffsetY": 5,
+        "textAlign": "center"
+      }
+    },
+    {
+      "id": "caption-style:bob",
+      "name": "bob",
+      "component": {
+        "module": {
+          "name": "@hypit/caption-fine",
+          "version": "1"
+        },
+        "name": "fine"
+      },
+      "slot": "style",
+      "value": {
+        "activeBox": {
+          "mode": "off"
+        },
+        "color": "#f8fafc",
+        "cueBox": {
+          "background": "#0b1020e8",
+          "borderColor": "#ffffff24",
+          "borderRadius": 18,
+          "borderWidth": 1,
+          "paddingX": 22,
+          "paddingY": 14
+        },
+        "entry": {
+          "frames": 4,
+          "kind": "fade"
+        },
+        "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
+        "fontSize": 48,
+        "fontWeight": 800,
+        "karaoke": {
+          "activeColor": "#fdba74",
+          "mode": "current",
+          "transition": "step"
+        },
+        "lineHeight": 1.16,
+        "outlineColor": "#020617cc",
+        "outlineWidth": 2,
+        "shadowBlur": 12,
+        "shadowColor": "#02061799",
+        "shadowOffsetY": 5,
+        "textAlign": "center"
+      }
+    },
+    {
+      "id": "caption-style:warning",
+      "name": "warning",
+      "component": {
+        "module": {
+          "name": "@hypit/caption-fine",
+          "version": "1"
+        },
+        "name": "fine"
+      },
+      "slot": "style",
+      "value": {
+        "activeBox": {
+          "mode": "off"
+        },
+        "color": "#f8fafc",
+        "cueBox": {
+          "background": "#2a0e16ed",
+          "borderColor": "#fb718566",
+          "borderRadius": 18,
+          "borderWidth": 1,
+          "paddingX": 22,
+          "paddingY": 14
+        },
+        "entry": {
+          "frames": 4,
+          "kind": "fade"
+        },
+        "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
+        "fontSize": 50,
+        "fontWeight": 850,
+        "karaoke": {
+          "activeColor": "#fde68a",
+          "mode": "current",
+          "transition": "step"
+        },
+        "lineHeight": 1.12,
+        "outlineColor": "#020617cc",
+        "outlineWidth": 2,
+        "shadowBlur": 12,
+        "shadowColor": "#02061799",
+        "shadowOffsetY": 5,
+        "textAlign": "center"
+      }
+    }
+  ],
+  "pictureLayouts": [
+    {
+      "id": "caption-bottom",
+      "name": "Caption bottom",
+      "layout": {
+        "x": 42,
+        "y": 930,
+        "width": 636,
+        "height": 240,
+        "fit": "fill"
+      }
+    }
+  ],
   "media": [
     {
       "id": "alice-video-1",
@@ -586,6 +745,12 @@
             },
             "name": "fine"
           },
+          "bindings": [
+            {
+              "slot": "style",
+              "ref": "caption-style:alice"
+            }
+          ],
           "parameters": {
             "caption": {
               "cueId": "ranking-debate.caption:cue:1",
@@ -1135,59 +1300,11 @@
                   "unitId": "ranking-debate.caption:unit:20"
                 }
               ]
-            },
-            "family": "fine",
-            "style": {
-              "activeBox": {
-                "mode": "off"
-              },
-              "attributeFaces": [
-                {
-                  "attribute": "face",
-                  "fontFamily": "Georgia, serif",
-                  "fontStyle": "italic",
-                  "fontWeight": 700,
-                  "value": "serif"
-                }
-              ],
-              "color": "#f8fafc",
-              "cueBox": {
-                "background": "#0b1020e8",
-                "borderColor": "#ffffff24",
-                "borderRadius": 18,
-                "borderWidth": 1,
-                "paddingX": 22,
-                "paddingY": 14
-              },
-              "entry": {
-                "frames": 4,
-                "kind": "fade"
-              },
-              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
-              "fontSize": 48,
-              "fontWeight": 800,
-              "karaoke": {
-                "activeColor": "#67e8f9",
-                "mode": "current",
-                "transition": "step"
-              },
-              "lineHeight": 1.16,
-              "outlineColor": "#020617cc",
-              "outlineWidth": 2,
-              "shadowBlur": 12,
-              "shadowColor": "#02061799",
-              "shadowOffsetY": 5,
-              "textAlign": "center"
-            },
-            "styleId": "alice"
+            }
           },
           "picture": {
             "layout": {
-              "x": 42,
-              "y": 930,
-              "width": 636,
-              "height": 240,
-              "fit": "fill"
+              "ref": "caption-bottom"
             },
             "effects": []
           }
@@ -1250,6 +1367,12 @@
             },
             "name": "fine"
           },
+          "bindings": [
+            {
+              "slot": "style",
+              "ref": "caption-style:bob"
+            }
+          ],
           "parameters": {
             "caption": {
               "cueId": "ranking-debate.caption:cue:2",
@@ -1691,50 +1814,11 @@
                   "unitId": "ranking-debate.caption:unit:36"
                 }
               ]
-            },
-            "family": "fine",
-            "style": {
-              "activeBox": {
-                "mode": "off"
-              },
-              "color": "#f8fafc",
-              "cueBox": {
-                "background": "#0b1020e8",
-                "borderColor": "#ffffff24",
-                "borderRadius": 18,
-                "borderWidth": 1,
-                "paddingX": 22,
-                "paddingY": 14
-              },
-              "entry": {
-                "frames": 4,
-                "kind": "fade"
-              },
-              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
-              "fontSize": 48,
-              "fontWeight": 800,
-              "karaoke": {
-                "activeColor": "#fdba74",
-                "mode": "current",
-                "transition": "step"
-              },
-              "lineHeight": 1.16,
-              "outlineColor": "#020617cc",
-              "outlineWidth": 2,
-              "shadowBlur": 12,
-              "shadowColor": "#02061799",
-              "shadowOffsetY": 5,
-              "textAlign": "center"
-            },
-            "styleId": "bob"
+            }
           },
           "picture": {
             "layout": {
-              "x": 42,
-              "y": 930,
-              "width": 636,
-              "height": 240,
-              "fit": "fill"
+              "ref": "caption-bottom"
             },
             "effects": []
           }
@@ -1797,6 +1881,12 @@
             },
             "name": "fine"
           },
+          "bindings": [
+            {
+              "slot": "style",
+              "ref": "caption-style:bob"
+            }
+          ],
           "parameters": {
             "caption": {
               "cueId": "ranking-debate.caption:cue:3",
@@ -2211,50 +2301,11 @@
                   "unitId": "ranking-debate.caption:unit:51"
                 }
               ]
-            },
-            "family": "fine",
-            "style": {
-              "activeBox": {
-                "mode": "off"
-              },
-              "color": "#f8fafc",
-              "cueBox": {
-                "background": "#0b1020e8",
-                "borderColor": "#ffffff24",
-                "borderRadius": 18,
-                "borderWidth": 1,
-                "paddingX": 22,
-                "paddingY": 14
-              },
-              "entry": {
-                "frames": 4,
-                "kind": "fade"
-              },
-              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
-              "fontSize": 48,
-              "fontWeight": 800,
-              "karaoke": {
-                "activeColor": "#fdba74",
-                "mode": "current",
-                "transition": "step"
-              },
-              "lineHeight": 1.16,
-              "outlineColor": "#020617cc",
-              "outlineWidth": 2,
-              "shadowBlur": 12,
-              "shadowColor": "#02061799",
-              "shadowOffsetY": 5,
-              "textAlign": "center"
-            },
-            "styleId": "bob"
+            }
           },
           "picture": {
             "layout": {
-              "x": 42,
-              "y": 930,
-              "width": 636,
-              "height": 240,
-              "fit": "fill"
+              "ref": "caption-bottom"
             },
             "effects": []
           }
@@ -2317,6 +2368,12 @@
             },
             "name": "fine"
           },
+          "bindings": [
+            {
+              "slot": "style",
+              "ref": "caption-style:warning"
+            }
+          ],
           "parameters": {
             "caption": {
               "cueId": "ranking-debate.caption:cue:4",
@@ -2596,50 +2653,11 @@
                   "unitId": "ranking-debate.caption:unit:61"
                 }
               ]
-            },
-            "family": "fine",
-            "style": {
-              "activeBox": {
-                "mode": "off"
-              },
-              "color": "#f8fafc",
-              "cueBox": {
-                "background": "#2a0e16ed",
-                "borderColor": "#fb718566",
-                "borderRadius": 18,
-                "borderWidth": 1,
-                "paddingX": 22,
-                "paddingY": 14
-              },
-              "entry": {
-                "frames": 4,
-                "kind": "fade"
-              },
-              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
-              "fontSize": 50,
-              "fontWeight": 850,
-              "karaoke": {
-                "activeColor": "#fde68a",
-                "mode": "current",
-                "transition": "step"
-              },
-              "lineHeight": 1.12,
-              "outlineColor": "#020617cc",
-              "outlineWidth": 2,
-              "shadowBlur": 12,
-              "shadowColor": "#02061799",
-              "shadowOffsetY": 5,
-              "textAlign": "center"
-            },
-            "styleId": "warning"
+            }
           },
           "picture": {
             "layout": {
-              "x": 42,
-              "y": 930,
-              "width": 636,
-              "height": 240,
-              "fit": "fill"
+              "ref": "caption-bottom"
             },
             "effects": []
           }
@@ -2702,6 +2720,12 @@
             },
             "name": "fine"
           },
+          "bindings": [
+            {
+              "slot": "style",
+              "ref": "caption-style:alice"
+            }
+          ],
           "parameters": {
             "caption": {
               "cueId": "ranking-debate.caption:cue:5",
@@ -3204,59 +3228,11 @@
                   "unitId": "ranking-debate.caption:unit:77"
                 }
               ]
-            },
-            "family": "fine",
-            "style": {
-              "activeBox": {
-                "mode": "off"
-              },
-              "attributeFaces": [
-                {
-                  "attribute": "face",
-                  "fontFamily": "Georgia, serif",
-                  "fontStyle": "italic",
-                  "fontWeight": 700,
-                  "value": "serif"
-                }
-              ],
-              "color": "#f8fafc",
-              "cueBox": {
-                "background": "#0b1020e8",
-                "borderColor": "#ffffff24",
-                "borderRadius": 18,
-                "borderWidth": 1,
-                "paddingX": 22,
-                "paddingY": 14
-              },
-              "entry": {
-                "frames": 4,
-                "kind": "fade"
-              },
-              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
-              "fontSize": 48,
-              "fontWeight": 800,
-              "karaoke": {
-                "activeColor": "#67e8f9",
-                "mode": "current",
-                "transition": "step"
-              },
-              "lineHeight": 1.16,
-              "outlineColor": "#020617cc",
-              "outlineWidth": 2,
-              "shadowBlur": 12,
-              "shadowColor": "#02061799",
-              "shadowOffsetY": 5,
-              "textAlign": "center"
-            },
-            "styleId": "alice"
+            }
           },
           "picture": {
             "layout": {
-              "x": 42,
-              "y": 930,
-              "width": 636,
-              "height": 240,
-              "fit": "fill"
+              "ref": "caption-bottom"
             },
             "effects": []
           }
@@ -3319,6 +3295,12 @@
             },
             "name": "fine"
           },
+          "bindings": [
+            {
+              "slot": "style",
+              "ref": "caption-style:bob"
+            }
+          ],
           "parameters": {
             "caption": {
               "cueId": "ranking-debate.caption:cue:6",
@@ -3841,50 +3823,11 @@
                   "unitId": "ranking-debate.caption:unit:96"
                 }
               ]
-            },
-            "family": "fine",
-            "style": {
-              "activeBox": {
-                "mode": "off"
-              },
-              "color": "#f8fafc",
-              "cueBox": {
-                "background": "#0b1020e8",
-                "borderColor": "#ffffff24",
-                "borderRadius": 18,
-                "borderWidth": 1,
-                "paddingX": 22,
-                "paddingY": 14
-              },
-              "entry": {
-                "frames": 4,
-                "kind": "fade"
-              },
-              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
-              "fontSize": 48,
-              "fontWeight": 800,
-              "karaoke": {
-                "activeColor": "#fdba74",
-                "mode": "current",
-                "transition": "step"
-              },
-              "lineHeight": 1.16,
-              "outlineColor": "#020617cc",
-              "outlineWidth": 2,
-              "shadowBlur": 12,
-              "shadowColor": "#02061799",
-              "shadowOffsetY": 5,
-              "textAlign": "center"
-            },
-            "styleId": "bob"
+            }
           },
           "picture": {
             "layout": {
-              "x": 42,
-              "y": 930,
-              "width": 636,
-              "height": 240,
-              "fit": "fill"
+              "ref": "caption-bottom"
             },
             "effects": []
           }
@@ -3947,6 +3890,12 @@
             },
             "name": "fine"
           },
+          "bindings": [
+            {
+              "slot": "style",
+              "ref": "caption-style:bob"
+            }
+          ],
           "parameters": {
             "caption": {
               "cueId": "ranking-debate.caption:cue:7",
@@ -4064,50 +4013,11 @@
                   "unitId": "ranking-debate.caption:unit:100"
                 }
               ]
-            },
-            "family": "fine",
-            "style": {
-              "activeBox": {
-                "mode": "off"
-              },
-              "color": "#f8fafc",
-              "cueBox": {
-                "background": "#0b1020e8",
-                "borderColor": "#ffffff24",
-                "borderRadius": 18,
-                "borderWidth": 1,
-                "paddingX": 22,
-                "paddingY": 14
-              },
-              "entry": {
-                "frames": 4,
-                "kind": "fade"
-              },
-              "fontFamily": "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
-              "fontSize": 48,
-              "fontWeight": 800,
-              "karaoke": {
-                "activeColor": "#fdba74",
-                "mode": "current",
-                "transition": "step"
-              },
-              "lineHeight": 1.16,
-              "outlineColor": "#020617cc",
-              "outlineWidth": 2,
-              "shadowBlur": 12,
-              "shadowColor": "#02061799",
-              "shadowOffsetY": 5,
-              "textAlign": "center"
-            },
-            "styleId": "bob"
+            }
           },
           "picture": {
             "layout": {
-              "x": 42,
-              "y": 930,
-              "width": 636,
-              "height": 240,
-              "fit": "fill"
+              "ref": "caption-bottom"
             },
             "effects": []
           }

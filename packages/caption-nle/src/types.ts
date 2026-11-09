@@ -75,7 +75,10 @@ export type CaptionProjection<Family extends string = string> = {
 export type CaptionNleFamily<Family extends string = string> = {
   readonly family: Family;
   readonly component: NlePackageSymbol;
-  parameters(caption: CaptionCuePayload, style: CaptionStyle<Family>): CanonicalValue;
+  /** Exact package-defined slot used by every materialized Cue Item. */
+  readonly styleSlot: string;
+  parameters(caption: CaptionCuePayload): CanonicalValue;
+  style(style: CaptionStyle<Family>): CanonicalValue;
 };
 
 export type CaptionNleMaterializationSelection = CaptionSelection;

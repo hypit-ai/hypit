@@ -36,13 +36,18 @@ import {
   type SpatialMap,
 } from "@hypit/spatial/algebra";
 
-import { assertNleProject, findNleMedia, nleProjectDuration } from "./project.js";
+import {
+  assertNleProject,
+  findNleMedia,
+  nleProjectDuration,
+  resolveNlePictureAppearance,
+} from "./project.js";
 import type {
   NleEffect,
   NleItem,
   NleLoweringContext,
   NleLoweringHost,
-  NlePictureAppearance,
+  NleResolvedPictureAppearance,
   NleProject,
   NleResolvedItemSource,
   NleTrack,
@@ -90,7 +95,7 @@ function programmeSpace(project: NleProject): LocalSpatialDomain {
   });
 }
 
-function itemSpace(item: NleItem, appearance: NlePictureAppearance): LocalSpatialDomain {
+function itemSpace(item: NleItem, appearance: NleResolvedPictureAppearance): LocalSpatialDomain {
   return sealLocalSpatialDomain({
     id: `${item.id}:picture`,
     region: { x: 0, y: 0, width: appearance.layout.width, height: appearance.layout.height },
@@ -100,7 +105,7 @@ function itemSpace(item: NleItem, appearance: NlePictureAppearance): LocalSpatia
 function fitMap(
   target: LocalSpatialDomain,
   source: LocalSpatialDomain,
-  appearance: NlePictureAppearance,
+  appearance: NleResolvedPictureAppearance,
 ): SpatialMap {
   const layout = appearance.layout;
   const sourceWidth = source.region.width;
@@ -128,7 +133,7 @@ function fitMap(
 function placementMap(
   target: LocalSpatialDomain,
   source: LocalSpatialDomain,
-  appearance: NlePictureAppearance,
+  appearance: NleResolvedPictureAppearance,
 ): SpatialMap {
   return sealSpatialMap({
     target,
@@ -369,7 +374,7 @@ export function lowerNleProjectToAudiovisual(
 
     if (needsPicture) {
       const pictureOutput = resolved.pictureOutput!;
-      const appearance = item.picture!;
+      const appearance = resolveNlePictureAppearance(project, item.picture!);
       const use = `${item.id}:picture`;
       const fitted = `${item.id}:fitted`;
       const placed = `${item.id}:placed`;

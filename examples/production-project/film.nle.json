@@ -12,6 +12,8 @@
     "height": 720,
     "clearColor": "#000000"
   },
+  "componentValues": [],
+  "pictureLayouts": [],
   "media": [
     {
       "id": "poster",

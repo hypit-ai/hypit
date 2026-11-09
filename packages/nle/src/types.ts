@@ -27,6 +27,21 @@ export type NlePackageSymbol = {
   readonly name: string;
 };
 
+/** One project-owned value for one exact package-defined Component slot. */
+export type NleComponentValue = {
+  readonly id: string;
+  readonly name: string;
+  readonly component: NlePackageSymbol;
+  readonly slot: string;
+  readonly value: CanonicalValue;
+};
+
+/** An Item binds a package-defined slot to one explicit project value. */
+export type NleComponentBinding = {
+  readonly slot: string;
+  readonly ref: string;
+};
+
 export type NleMediaAssetReference = {
   readonly path: string;
 };
@@ -52,6 +67,16 @@ export type NlePictureLayout = {
   readonly fit: "fill" | "contain" | "cover";
 };
 
+export type NlePictureLayoutValue = {
+  readonly id: string;
+  readonly name: string;
+  readonly layout: NlePictureLayout;
+};
+
+export type NlePictureLayoutReference = {
+  readonly ref: string;
+};
+
 export type NleEffect = {
   readonly id: string;
   readonly effect: NlePackageSymbol;
@@ -59,9 +84,14 @@ export type NleEffect = {
 };
 
 export type NlePictureAppearance = {
-  readonly layout: NlePictureLayout;
+  /** Inline occurrence layout or one explicit project-owned linked layout. */
+  readonly layout: NlePictureLayout | NlePictureLayoutReference;
   /** Ordered inner-to-outer. */
   readonly effects: readonly NleEffect[];
+};
+
+export type NleResolvedPictureAppearance = Omit<NlePictureAppearance, "layout"> & {
+  readonly layout: NlePictureLayout;
 };
 
 export type NleAudioAppearance = {
@@ -102,6 +132,8 @@ export type NleMediaItem = NleItemBase & {
 export type NleComponentItem = NleItemBase & {
   readonly kind: "component";
   readonly component: NlePackageSymbol;
+  /** Package-defined reusable value slots; Core validates identity, not value meaning. */
+  readonly bindings?: readonly NleComponentBinding[];
   readonly parameters: CanonicalValue;
   readonly picture?: NlePictureAppearance;
   readonly audio?: NleAudioAppearance;
@@ -160,6 +192,8 @@ export type NleProject = {
   /** Editor display and snap grid; Programme time remains exact and independent of this rate. */
   readonly editRate: NleEditRate;
   readonly canvas: NleCanvas;
+  readonly componentValues: readonly NleComponentValue[];
+  readonly pictureLayouts: readonly NlePictureLayoutValue[];
   readonly media: readonly NleMedia[];
   readonly tracks: readonly NleTrack[];
   readonly transitions: readonly NleTransition[];

@@ -10,8 +10,10 @@ export {
 } from "./document.js";
 export {
   assertCaptionCuePayload,
+  removeCaptionWordAttribute,
   replaceCaptionWord,
   retimeCaptionUnit,
   sealCaptionCuePayload,
+  setCaptionWordAttribute,
 } from "./payload.js";
 export type * from "./types.js";

@@ -1,4 +1,4 @@
-import { canonicalize, isModuleRef } from "@hypit/protocol";
+import { canonicalize, isModuleRef, moduleKey } from "@hypit/protocol";
 import {
   addExactTemporalValues,
   assertExactTemporalValue,
@@ -13,12 +13,18 @@ import { assertNleSourceTime } from "./source-time.js";
 import type {
   NleAudioAppearance,
   NleCanvas,
+  NleComponentItem,
+  NleComponentValue,
   NleEditRate,
   NleItem,
   NleMedia,
   NlePackageSymbol,
   NlePictureAppearance,
+  NlePictureLayout,
+  NlePictureLayoutReference,
+  NlePictureLayoutValue,
   NleProject,
+  NleResolvedPictureAppearance,
   NleTrack,
 } from "./types.js";
 
@@ -91,8 +97,14 @@ function assertEffects(value: NlePictureAppearance["effects"], label: string): v
   }
 }
 
-function assertPicture(value: NlePictureAppearance, project: NleProject, label: string): void {
-  const layout = value.layout;
+function isPictureLayoutReference(
+  value: NlePictureLayout | NlePictureLayoutReference,
+): value is NlePictureLayoutReference {
+  return Object.hasOwn(value, "ref");
+}
+
+function assertPictureLayout(value: NlePictureLayout, project: NleProject, label: string): void {
+  const layout = value;
   for (const [name, coordinate] of Object.entries(layout).filter(([name]) => name !== "fit")) {
     assert(typeof coordinate === "number" && Number.isFinite(coordinate), `${label} ${name} must be finite.`);
   }
@@ -103,6 +115,22 @@ function assertPicture(value: NlePictureAppearance, project: NleProject, label: 
   `${label} must lie inside the NLE Canvas.`);
   assert(layout.fit === "fill" || layout.fit === "contain" || layout.fit === "cover",
     `${label} fit is invalid.`);
+}
+
+function assertPicture(
+  value: NlePictureAppearance,
+  project: NleProject,
+  pictureLayouts: ReadonlyMap<string, NlePictureLayoutValue>,
+  label: string,
+): void {
+  const layout = value.layout;
+  if (isPictureLayoutReference(layout)) {
+    assert(Object.keys(layout).length === 1, `${label} layout reference must contain only ref.`);
+    identity(layout.ref, `${label} layout reference`);
+    assert(pictureLayouts.has(layout.ref), `${label} references missing Picture Layout ${layout.ref}.`);
+  } else {
+    assertPictureLayout(layout, project, `${label} layout`);
+  }
   assertEffects(value.effects, label);
 }
 
@@ -121,10 +149,11 @@ function assertAppearances(
   value: NleItem,
   track: NleTrack,
   project: NleProject,
+  pictureLayouts: ReadonlyMap<string, NlePictureLayoutValue>,
 ): void {
   if (track.kind === "picture") {
     assert(value.picture !== undefined, `NLE ${value.kind} Item ${value.id} on a Picture Track has no Picture appearance.`);
-    assertPicture(value.picture, project, `NLE ${value.kind} Item ${value.id} Picture`);
+    assertPicture(value.picture, project, pictureLayouts, `NLE ${value.kind} Item ${value.id} Picture`);
   } else {
     assert(value.picture === undefined, `NLE ${value.kind} Item ${value.id} on an Audio Track has Picture state.`);
     assert(value.audio !== undefined, `NLE ${value.kind} Item ${value.id} on an Audio Track has no Audio appearance.`);
@@ -143,6 +172,8 @@ function assertItem(
   track: NleTrack,
   project: NleProject,
   media: ReadonlySet<string>,
+  componentValues: ReadonlyMap<string, NleComponentValue>,
+  pictureLayouts: ReadonlyMap<string, NlePictureLayoutValue>,
   ancestors: Set<object>,
 ): void {
   identity(value.id, "NLE Item id");
@@ -153,10 +184,10 @@ function assertItem(
   if (value.kind === "media") {
     identity(value.media, `NLE Media Item ${value.id} media`);
     assert(media.has(value.media), `NLE Media Item ${value.id} references missing Media ${value.media}.`);
-    assertAppearances(value, track, project);
+    assertAppearances(value, track, project, pictureLayouts);
     return;
   }
-  assertAppearances(value, track, project);
+  assertAppearances(value, track, project, pictureLayouts);
   if (value.kind === "compound") {
     assertNleProjectValue(value.project, ancestors);
     const duration = nleProjectDuration(value.project);
@@ -170,6 +201,25 @@ function assertItem(
     return;
   }
   assertSymbol(value.component, `NLE Component Item ${value.id} component`);
+  const slots = new Set<string>();
+  for (const binding of value.bindings ?? []) {
+    assert(binding !== null && typeof binding === "object" && !Array.isArray(binding),
+      `NLE Component Item ${value.id} binding is invalid.`);
+    assert(Object.keys(binding).sort().join("\u0000") === ["ref", "slot"].join("\u0000"),
+      `NLE Component Item ${value.id} binding fields are invalid.`);
+    identity(binding.slot, `NLE Component Item ${value.id} binding slot`);
+    assert(!slots.has(binding.slot), `NLE Component Item ${value.id} repeats binding slot ${binding.slot}.`);
+    slots.add(binding.slot);
+    identity(binding.ref, `NLE Component Item ${value.id} binding reference`);
+    const resource = componentValues.get(binding.ref);
+    assert(resource !== undefined,
+      `NLE Component Item ${value.id} binding ${binding.slot} references missing Component Value ${binding.ref}.`);
+    assert(resource.slot === binding.slot,
+      `NLE Component Item ${value.id} binding ${binding.slot} references Component Value slot ${resource.slot}.`);
+    assert(resource.component.name === value.component.name
+      && moduleKey(resource.component.module) === moduleKey(value.component.module),
+    `NLE Component Item ${value.id} binding ${binding.slot} belongs to another Component.`);
+  }
   canonicalize(value.parameters);
 }
 
@@ -183,7 +233,8 @@ function assertNleProjectValue(value: NleProject, ancestors: Set<object>): void 
   nonNegativeInteger(value.revision, "NLE Project revision");
   assertEditRate(value.editRate);
   assertCanvas(value.canvas);
-  assert(Array.isArray(value.media) && Array.isArray(value.tracks)
+  assert(Array.isArray(value.componentValues) && Array.isArray(value.pictureLayouts)
+    && Array.isArray(value.media) && Array.isArray(value.tracks)
     && Array.isArray(value.transitions) && Array.isArray(value.mattes) && Array.isArray(value.groups),
   `NLE Project ${value.id} collections are invalid.`);
   const identities = new Set<string>([value.id]);
@@ -192,6 +243,20 @@ function assertNleProjectValue(value: NleProject, ancestors: Set<object>): void 
     assert(!identities.has(id), `${label} ${id} is duplicated in the NLE Project.`);
     identities.add(id);
   };
+  for (const resource of value.componentValues) {
+    addIdentity(resource.id, "NLE Component Value id");
+    assert(resource.name.trim().length > 0, `NLE Component Value ${resource.id} name is empty.`);
+    assertSymbol(resource.component, `NLE Component Value ${resource.id} component`);
+    identity(resource.slot, `NLE Component Value ${resource.id} slot`);
+    canonicalize(resource.value);
+  }
+  const componentValues = new Map(value.componentValues.map((resource) => [resource.id, resource] as const));
+  for (const resource of value.pictureLayouts) {
+    addIdentity(resource.id, "NLE Picture Layout id");
+    assert(resource.name.trim().length > 0, `NLE Picture Layout ${resource.id} name is empty.`);
+    assertPictureLayout(resource.layout, value, `NLE Picture Layout ${resource.id}`);
+  }
+  const pictureLayouts = new Map(value.pictureLayouts.map((resource) => [resource.id, resource] as const));
   for (const media of value.media) {
     addIdentity(media.id, "NLE Media id");
     assert(media.name.trim().length > 0, `NLE Media ${media.id} name is empty.`);
@@ -207,7 +272,7 @@ function assertNleProjectValue(value: NleProject, ancestors: Set<object>): void 
       `NLE Track ${track.id} state is invalid.`);
     for (const [index, item] of track.items.entries()) {
       addIdentity(item.id, "NLE Item id");
-      assertItem(item, track, value, mediaIds, ancestors);
+      assertItem(item, track, value, mediaIds, componentValues, pictureLayouts, ancestors);
       items.set(item.id, { track, item, index });
     }
   }
@@ -329,6 +394,8 @@ export function createNleProject(input: {
     revision: 0,
     editRate: input.editRate ?? { numerator: 30, denominator: 1 },
     canvas: input.canvas ?? { width: 1920, height: 1080, clearColor: "#000000" },
+    componentValues: [],
+    pictureLayouts: [],
     media: [],
     tracks: [],
     transitions: [],
@@ -357,6 +424,47 @@ export function findNleTrack(value: NleProject, id: string): NleTrack {
   const track = value.tracks.find((candidate) => candidate.id === id);
   if (track === undefined) throw new Error(`Unknown NLE Track: ${id}`);
   return track;
+}
+
+export function findNleComponentValue(value: NleProject, id: string): NleComponentValue {
+  const resource = value.componentValues.find((candidate) => candidate.id === id);
+  if (resource === undefined) throw new Error(`Unknown NLE Component Value: ${id}`);
+  return resource;
+}
+
+export function findNlePictureLayout(value: NleProject, id: string): NlePictureLayoutValue {
+  const resource = value.pictureLayouts.find((candidate) => candidate.id === id);
+  if (resource === undefined) throw new Error(`Unknown NLE Picture Layout: ${id}`);
+  return resource;
+}
+
+export function resolveNlePictureLayout(
+  project: NleProject,
+  value: NlePictureLayout | NlePictureLayoutReference,
+): NlePictureLayout {
+  return structuredClone(isPictureLayoutReference(value) ? findNlePictureLayout(project, value.ref).layout : value);
+}
+
+export function resolveNlePictureAppearance(
+  project: NleProject,
+  value: NlePictureAppearance,
+): NleResolvedPictureAppearance {
+  return { ...structuredClone(value), layout: resolveNlePictureLayout(project, value.layout) };
+}
+
+export function resolveNleComponentBinding(
+  project: NleProject,
+  item: NleComponentItem,
+  slot: string,
+): NleComponentValue {
+  const binding = item.bindings?.find((candidate) => candidate.slot === slot);
+  if (binding === undefined) throw new Error(`NLE Component Item ${item.id} has no binding for slot ${slot}.`);
+  const resource = findNleComponentValue(project, binding.ref);
+  if (resource.slot !== slot || resource.component.name !== item.component.name
+    || moduleKey(resource.component.module) !== moduleKey(item.component.module)) {
+    throw new Error(`NLE Component Item ${item.id} binding ${slot} belongs to another owner.`);
+  }
+  return structuredClone(resource);
 }
 
 export function findNleItem(value: NleProject, id: string): { readonly track: NleTrack; readonly item: NleItem } {

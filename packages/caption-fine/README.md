@@ -3,7 +3,9 @@
 Fine flowing Caption for ordinary NLE projects.
 
 Each materialized Cue is one normal Component Item containing complete display Words and exact
-Item-local Unit time. Fine owns typography, outline and shadow paint, Cue and active-word boxes,
+Item-local Unit time. Its package-defined `style` slot explicitly binds to a shared project Component Value;
+changing that value restyles every bound Cue without changing their Words, Unit time or per-word attributes.
+Fine owns typography, outline and shadow paint, Cue and active-word boxes,
 word-attribute faces, explicit structural rows, language-aware flow, shrink/ellipsis policy, Cue and
 Unit motion, Cue/active-box shadow and active-box transitions, authored Cue entry scale, and
 current/trailing step or wipe Karaoke. Placement and the resolved visible lifetime remain direct NLE
@@ -24,7 +26,7 @@ generic Fine Text placement concern rather than a second Caption timing model.
 It deliberately does not restore the former authoring architecture. It owns no Script declarations,
 semantic Timeline, tracking lookup, Recipe language, Studio companion or upstream alignment.
 `@hypit/caption-nle` performs common one-way materialization; Fine contributes its component symbol,
-persisted parameters and terminal implementation. Further visual capability belongs behind that same
+local Cue parameters, shared Style value and terminal implementation. Further visual capability belongs behind that same
 NLE contract rather than rebuilding the removed live dependency chain.
 
 The former role-to-tracked-region binding is likewise not a Caption Style field. Object observations

@@ -7,6 +7,7 @@ import {
 } from "@hypit/caption";
 import type { NlePictureAppearance, NleProject, NleTransaction } from "@hypit/nle";
 import { assertNleProject, findNleItem, findNleTrack, nleLinearSourceTime } from "@hypit/nle";
+import { canonicalStringify } from "@hypit/protocol";
 import {
   addExactTemporalValues,
   compareExactTemporalValues,
@@ -121,6 +122,8 @@ export type CaptionNleMaterializationInput<Family extends string = string> = {
   readonly picture: NlePictureAppearance;
   readonly selection?: CaptionSelection;
   readonly itemId?: (cueId: string, occurrence: number) => string;
+  /** Stable project identity for a shared Style value. */
+  readonly styleRef?: (styleId: string) => string;
 };
 
 function materializeCaptionProjection<Family extends string>(
@@ -145,6 +148,24 @@ function materializeCaptionProjection<Family extends string>(
   const styles = new Map(schedule.styles.map((style) => [style.id, style] as const));
   const unitRegions = projectedUnitRegions(input.timing, occurrenceMapping);
   const commands: NleTransaction["commands"][number][] = [];
+  const styleRefs = new Map<string, string>();
+  const usedStyleIds = new Set(projected.cues.map((cue) => cue.styleId));
+  for (const style of schedule.styles) {
+    if (!usedStyleIds.has(style.id)) continue;
+    const ref = input.styleRef?.(style.id) ?? `${input.id}:style:${style.id}`;
+    const candidate = {
+      id: ref,
+      name: style.id,
+      component: structuredClone(input.family.component),
+      slot: input.family.styleSlot,
+      value: input.family.style(style),
+    };
+    const existing = project.componentValues.find((value) => value.id === ref);
+    assert(existing === undefined || canonicalStringify(existing) === canonicalStringify(candidate),
+      `Caption Style ${style.id} conflicts with existing NLE Component Value ${ref}.`);
+    if (existing === undefined) commands.push({ kind: "component-value.add", value: candidate });
+    styleRefs.set(style.id, ref);
+  }
   const upperBound = occurrenceMapping?.stages[0]!.target.duration;
   const occurrences = projected.cues.flatMap((cue) => {
     const style = styles.get(cue.styleId);
@@ -187,6 +208,8 @@ function materializeCaptionProjection<Family extends string>(
     const duration = subtractExactTemporalValues(end, start);
     const caption = cuePayload(input.document, occurrence.cue, occurrence.content,
       occurrence.visible, unitRegions, duration);
+    const styleRef = styleRefs.get(occurrence.style.id);
+    assert(styleRef !== undefined, `Caption Style ${occurrence.style.id} has no Component Value.`);
     commands.push({
       kind: "item.add",
       track: track.id,
@@ -200,7 +223,8 @@ function materializeCaptionProjection<Family extends string>(
         sourceTime: nleLinearSourceTime(duration),
         enabled: occurrence.cue.presentation.kind !== "hidden",
         component: structuredClone(input.family.component),
-        parameters: input.family.parameters(caption, occurrence.style),
+        bindings: [{ slot: input.family.styleSlot, ref: styleRef }],
+        parameters: input.family.parameters(caption),
         picture: structuredClone(input.picture),
       },
     });
