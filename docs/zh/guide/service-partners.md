@@ -22,6 +22,7 @@ npm install @hypit/provider-tokendance
 npm install @hypit/provider-hiapi
 npm install @hypit/provider-pollo
 npm install @hypit/provider-beatapi
+npm install @hypit/provider-sume
 npm install @hypit/provider-monid
 ```
 
@@ -55,6 +56,14 @@ Pollo 只接受公网 URL 形式的参考素材，带参考素材的请求需要
 提供 Seedance 2.0、2.5 系列、MiniMax H3、Grok Imagine 1.5、GPT Image 2 和 Nano Banana，
 并通过 BeatAPI 的文件接口上传参考素材。
 其余模型见它的[视频](https://docs.beatapi.io/video-api)与[图片](https://docs.beatapi.io/image-api)模型索引。
+
+### Sume
+
+[Sume](https://www.sume.com) 通过一个任务接口提供视频和图片模型。
+[`@hypit/provider-sume`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-sume/README.md)
+提供 Seedance 2.0、2.5 系列、MiniMax H3、Grok Imagine 1.5、PixVerse V6 与 C1、GPT Image 2、
+Nano Banana 2.1 与 Pro、Seedream 5.0 lite，并通过 Sume 的上传地址上传参考素材。
+其余模型见它的[开发者文档](https://docs.sume.com/llms.txt)与实时模型目录。
 
 ### Monid
 

@@ -29,6 +29,7 @@ const packageDirectories = [
   "provider-hiapi",
   "provider-monid",
   "provider-pollo",
+  "provider-sume",
   "provider-tokendance",
 ];
 const packageNames = packageDirectories.map((name) => `@hypit/${name}`);
@@ -45,6 +46,7 @@ const optionalPackages = [
   "@hypit/provider-hiapi",
   "@hypit/provider-monid",
   "@hypit/provider-pollo",
+  "@hypit/provider-sume",
   "@hypit/provider-tokendance",
 ];
 
