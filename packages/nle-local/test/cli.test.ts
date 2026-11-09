@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createLocalNleCliCommandModules } from "../src/index.js";
+import { createLocalNleCliCommandModules } from "../src/cli.js";
 
 test("the local NLE CLI adapter explicitly owns the export command", async () => {
   const module = createLocalNleCliCommandModules()

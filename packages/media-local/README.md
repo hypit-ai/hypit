@@ -28,7 +28,7 @@ or a root `@hypit/hypit` facade. A Provider may adapt these operations to public
 Endpoint policy back into this package.
 
 `@hypit/media-file-local` owns direct named-file observations and transcript-aware grids;
-`@hypit/media-local-cli` presents them as `hypit media`. `@hypit/provider-media-local` owns the
+`@hypit/media-file-local/cli` presents them as `hypit media`. `@hypit/provider-media-local` owns the
 speech-evidence projection adapter. Keeping these packages separate means direct NLE export does not
 install timed transcripts or speech semantics while all three still share this bounded process runner.
 Inspection and extraction contracts remain in

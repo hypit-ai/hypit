@@ -1,3 +1,4 @@
+/** CLI contribution owned by the Local Runtime implementation. */
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -9,12 +10,12 @@ import {
   clearRuntimeProfile,
   findRuntimeProfile,
   selectRuntimeProfile,
-} from "@hypit/runtime-local";
+} from "./index.js";
 import type {
   LocalRuntimeHost,
   ManagedProgramProgress,
   ManagedProgramReport,
-} from "@hypit/runtime-local";
+} from "./index.js";
 
 type LocalCommand = {
   readonly root: "runtime" | "programs" | "paths" | "_worker";

@@ -4,13 +4,13 @@ import {
   mediaCommands,
   runMediaCli,
   writeMediaHelp,
-} from "@hypit/media-file-local";
+} from "./index.js";
 
 /** Direct local media-file tools; no Runtime or Build is opened. */
 export function createLocalMediaCliCommandModules(): readonly CliCommandModule[] {
   return [{
     format: "hypit.cli-command@1",
-    id: "@hypit/media-local-cli",
+    id: "@hypit/media-file-local#cli",
     commands: ["media"],
     writeRootHelp(io) {
       io.write(`\nLocal media\n  media ${mediaCommands.join(" | ")}\n  hypit media --help for exact options\n`);

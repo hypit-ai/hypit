@@ -159,7 +159,7 @@ The implementation follows those same boundaries: `command.ts` defines the gener
 union, while argument parsing and option ownership live in `arguments.ts`; project Result
 browsing/export lives under `commands/results.ts`; generic diagnosis and credentials live under
 `commands/environment.ts`; active Build observation is read-only code in `observation.ts`; and human
-rendering is separate from the explicit machine-view union. `@hypit/runtime-local-cli` owns local Profile
+rendering is separate from the explicit machine-view union. `@hypit/runtime-local/cli` owns local Profile
 selection, paths, Programs and Worker lifecycle. `main.ts` consumes only `CliRuntimeHost`; it never
 imports the Local Runtime implementation. Result commands do not consult or construct a Runtime;
 the build CLI opens the resolved project's Result history and cannot silently choose a

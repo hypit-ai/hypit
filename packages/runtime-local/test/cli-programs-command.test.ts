@@ -6,15 +6,15 @@ import test from "node:test";
 
 import { commandHint, runCliApplication } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
-import type { BuildCliServices } from "@hypit/build-cli";
-import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";
+import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local/cli";
 import type { ManagedProgramProgress as CliManagedProgramProgress, ManagedProgramReport as CliManagedProgramReport } from "@hypit/runtime-local/programs";
 import type { LocalRuntimeHost, RuntimeController as CliRuntimeController } from "@hypit/runtime-local";
-import { buildCliServices } from "./services-scenario.js";
+import { buildCliServices } from "./cli-services-scenario.js";
+import type { LocalRuntimeCliScenario } from "./cli-services-scenario.js";
 
 const io = { write: () => {} };
 const applicationCwd = tmpdir();
-const runCli = async (argv: readonly string[], output: CliIo, selected: BuildCliServices) =>
+const runCli = async (argv: readonly string[], output: CliIo, selected: LocalRuntimeCliScenario) =>
   await runCliApplication(argv, output, {
     // This suite mounts the Local Runtime command contribution onto deliberately
     // small Distribution doubles. Assemble its product-specific Host port just
@@ -55,9 +55,8 @@ function controller(
   };
 }
 
-function distribution(calls: string[], reports: readonly CliManagedProgramReport[] = []): BuildCliServices {
+function distribution(calls: string[], reports: readonly CliManagedProgramReport[] = []): LocalRuntimeCliScenario {
   return buildCliServices({
-    bootstrapPackages: [],
     openRuntimeHost: async (path: string) => ({
       profile: path,
       createRuntime: async () => ({ close: async () => {} }),
@@ -223,7 +222,6 @@ test("programs down accepts a ready probe-only Program with nothing to stop", as
 
 test("Runtime headlines preserve a running Worker when Programs are down or stop fails", async () => {
   const selected = buildCliServices({
-    bootstrapPackages: [],
     openRuntimeHost: async () => ({
       controller: async () => ({
         worker: {
@@ -250,7 +248,6 @@ test("Runtime headlines preserve a running Worker when Programs are down or stop
 test("program startup reports actions, not no-op checks", async () => {
   let output = "";
   const selected = buildCliServices({
-    bootstrapPackages: [],
     openRuntimeHost: async (path: string) => ({
       profile: path,
       controller: async () => ({
@@ -326,7 +323,6 @@ test("JSON startup keeps live preparation evidence on stderr and one result on s
   let output = "";
   let progress = "";
   const selected = buildCliServices({
-    bootstrapPackages: [],
     openRuntimeHost: async () => ({
       controller: async () => ({
         programs: {
@@ -368,7 +364,6 @@ test("runtime up validates the Runtime before it starts Programs", async () => {
 test("runtime status keeps scheduling phases out of the default view", async () => {
   let output = "";
   const selected = buildCliServices({
-    bootstrapPackages: [],
     openRuntimeHost: async (path: string) => ({
       profile: path,
       controller: async () => ({

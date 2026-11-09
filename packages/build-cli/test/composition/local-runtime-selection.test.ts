@@ -11,11 +11,11 @@ import { createSourceBuildCliCommandModules } from "@hypit/build-cli";
 import { createBuildOperationsCliCommandModules } from "@hypit/build-operations-cli";
 import { resolveProjectRoot } from "@hypit/project";
 import { findRuntimeProfile, selectRuntimeProfile } from "@hypit/runtime-local";
-import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";
-import type { LocalRuntimeCliServices } from "@hypit/runtime-local-cli";
+import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local/cli";
+import type { LocalRuntimeCliServices } from "@hypit/runtime-local/cli";
 import type { LocalRuntimeHost } from "@hypit/runtime-local";
-import { buildCliServices } from "./services-scenario.js";
-import { runtimeControl } from "./control-scenario.js";
+import { buildCliServices } from "../services-scenario.js";
+import { runtimeControl } from "../control-scenario.js";
 
 const runCli = async (
   argv: readonly string[],

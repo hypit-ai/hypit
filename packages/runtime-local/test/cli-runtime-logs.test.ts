@@ -6,12 +6,12 @@ import test from "node:test";
 
 import { runCliApplication } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
-import type { BuildCliServices } from "@hypit/build-cli";
-import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";
+import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local/cli";
 import type { LocalRuntimeHost } from "@hypit/runtime-local";
-import { buildCliServices } from "./services-scenario.js";
+import { buildCliServices } from "./cli-services-scenario.js";
+import type { LocalRuntimeCliScenario } from "./cli-services-scenario.js";
 
-const runCli = async (argv: readonly string[], output: CliIo, selected: BuildCliServices) => await runCliApplication(
+const runCli = async (argv: readonly string[], output: CliIo, selected: LocalRuntimeCliScenario) => await runCliApplication(
   argv,
   output,
   {

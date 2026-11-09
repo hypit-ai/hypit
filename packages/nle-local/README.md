@@ -22,3 +22,7 @@ already installed executables explicitly; managed tool provisioning is environme
 than NLE project preparation or Runtime execution.
 
 `--frame-rate` chooses output sampling and never reinterprets the project's exact rational times.
+
+The package-owned `@hypit/nle-local/cli` export contributes the `nle` root to an explicitly assembled
+CLI application. It is only terminal presentation over this direct local export port; selecting the package's
+main API does not activate the command.

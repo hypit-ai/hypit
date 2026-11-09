@@ -11,7 +11,7 @@ capabilities by assembling command modules explicitly.
 import { runNodeCliApplication } from "@hypit/cli";
 import { createSourceBuildCliCommandModules } from "@hypit/build-cli";
 import { createBuildOperationsCliCommandModules } from "@hypit/build-operations-cli";
-import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local-cli";
+import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local/cli";
 
 await runNodeCliApplication(process.argv.slice(2), {
   commandModules: [
@@ -55,5 +55,7 @@ result; progress uses standard error. Shared output helpers keep `--json`, `--js
 errors and debug traces consistent without putting domain services into the Host.
 
 Source compilation commands live in [`@hypit/build-cli`](../build-cli/README.md); accepted-Build and
-Result operations live in `@hypit/build-operations-cli`. Local Runtime, media and NLE commands are separate
-adapters assembled by the executable.
+Result operations live in `@hypit/build-operations-cli`. Local Runtime, media and NLE commands are package-owned
+`./cli` exports assembled by the executable. A separate `*-cli` package is reserved for an application adapter
+whose command spans independently reusable domains or would otherwise reverse a dependency into its host; the
+command ABI does not make every terminal entry a new distribution unit.

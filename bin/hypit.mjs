@@ -36,9 +36,9 @@ const {
 } = await import("@hypit/build-cli");
 const { createBuildOperationsCliCommandModules } = await import("@hypit/build-operations-cli");
 const { createGenerationGraphCliCommandModules } = await import("@hypit/generation-graph-cli");
-const { createLocalRuntimeCliCommandModules } = await import("@hypit/runtime-local-cli");
-const { createLocalMediaCliCommandModules } = await import("@hypit/media-local-cli");
-const { createLocalNleCliCommandModules } = await import("@hypit/nle-local-cli");
+const { createLocalRuntimeCliCommandModules } = await import("@hypit/runtime-local/cli");
+const { createLocalMediaCliCommandModules } = await import("@hypit/media-file-local/cli");
+const { createLocalNleCliCommandModules } = await import("@hypit/nle-local/cli");
 const { createProjectCliCommandModules } = await import("@hypit/project-cli");
 const { createSpeechEstimateCliCommandModules } = await import("@hypit/speech-estimate/cli");
 const { createWhisperXCliCommandModules } = await import("@hypit/whisperx/cli");

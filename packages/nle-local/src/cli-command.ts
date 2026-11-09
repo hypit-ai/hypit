@@ -1,8 +1,9 @@
+/** Terminal presentation for the local NLE file exporter owned by this package. */
 import { dirname, resolve } from "node:path";
 
 import type { CliIo } from "@hypit/cli";
-import { exportLocalNleProject } from "@hypit/nle-local";
-import type { LocalNleExportProgress } from "@hypit/nle-local";
+import { exportLocalNleProject } from "./index.js";
+import type { LocalNleExportProgress } from "./index.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

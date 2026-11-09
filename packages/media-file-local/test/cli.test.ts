@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createLocalMediaCliCommandModules } from "../src/index.js";
+import { createLocalMediaCliCommandModules } from "../src/cli.js";
 
 test("the local media CLI adapter explicitly owns the media command", async () => {
   const module = createLocalMediaCliCommandModules()

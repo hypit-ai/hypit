@@ -20,18 +20,18 @@ importers:
       '@hypit/generation-graph-cli':
         specifier: workspace:^0.1.0
         version: link:packages/generation-graph-cli
-      '@hypit/media-local-cli':
+      '@hypit/media-file-local':
         specifier: workspace:^0.1.0
-        version: link:packages/media-local-cli
-      '@hypit/nle-local-cli':
+        version: link:packages/media-file-local
+      '@hypit/nle-local':
         specifier: workspace:^0.1.0
-        version: link:packages/nle-local-cli
+        version: link:packages/nle-local
       '@hypit/project-cli':
         specifier: workspace:^0.1.0
         version: link:packages/project-cli
-      '@hypit/runtime-local-cli':
-        specifier: workspace:^0.1.0
-        version: link:packages/runtime-local-cli
+      '@hypit/runtime-local':
+        specifier: workspace:^0.2.0
+        version: link:packages/runtime-local
       '@hypit/speech-estimate':
         specifier: workspace:^0.1.2
         version: link:packages/speech-estimate
@@ -1356,6 +1356,9 @@ importers:
 
   packages/media-file-local:
     dependencies:
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
       '@hypit/media-local':
         specifier: workspace:^0.3.0
         version: link:../media-local
@@ -1365,10 +1368,6 @@ importers:
       sharp:
         specifier: 0.35.4
         version: 0.35.4(@types/node@24.10.1)
-    devDependencies:
-      '@hypit/cli':
-        specifier: workspace:*
-        version: link:../cli
 
   packages/media-local:
     dependencies:
@@ -1403,15 +1402,6 @@ importers:
       '@hypit/blob':
         specifier: workspace:*
         version: link:../blob
-
-  packages/media-local-cli:
-    dependencies:
-      '@hypit/cli':
-        specifier: workspace:^0.0.0-dev
-        version: link:../cli
-      '@hypit/media-file-local':
-        specifier: workspace:^0.1.0
-        version: link:../media-file-local
 
   packages/media-product-local:
     dependencies:
@@ -1559,6 +1549,9 @@ importers:
 
   packages/nle-local:
     dependencies:
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
       '@hypit/facet':
         specifier: workspace:^0.0.0-dev
         version: link:../facet
@@ -1596,15 +1589,6 @@ importers:
       '@hypit/audio-program':
         specifier: workspace:*
         version: link:../audio-program
-
-  packages/nle-local-cli:
-    dependencies:
-      '@hypit/cli':
-        specifier: workspace:^0.0.0-dev
-        version: link:../cli
-      '@hypit/nle-local':
-        specifier: workspace:^0.1.0
-        version: link:../nle-local
 
   packages/object-track:
     dependencies:
@@ -2383,6 +2367,9 @@ importers:
       '@hypit/atomic-file':
         specifier: workspace:^0.0.0-dev
         version: link:../atomic-file
+      '@hypit/cli':
+        specifier: workspace:^0.0.0-dev
+        version: link:../cli
       '@hypit/endpoint':
         specifier: workspace:^0.0.0-dev
         version: link:../endpoint
@@ -2432,31 +2419,6 @@ importers:
       '@hypit/generation-graph':
         specifier: workspace:*
         version: link:../generation-graph
-      '@hypit/project':
-        specifier: workspace:*
-        version: link:../project
-
-  packages/runtime-local-cli:
-    dependencies:
-      '@hypit/cli':
-        specifier: workspace:^0.0.0-dev
-        version: link:../cli
-      '@hypit/host-paths':
-        specifier: workspace:^0.1.0
-        version: link:../host-paths
-      '@hypit/protocol':
-        specifier: workspace:^0.0.0-dev
-        version: link:../protocol
-      '@hypit/runtime-local':
-        specifier: workspace:^0.2.0
-        version: link:../runtime-local
-    devDependencies:
-      '@hypit/build-cli':
-        specifier: workspace:*
-        version: link:../build-cli
-      '@hypit/build-operations-cli':
-        specifier: workspace:*
-        version: link:../build-operations-cli
       '@hypit/project':
         specifier: workspace:*
         version: link:../project
@@ -2854,9 +2816,6 @@ importers:
       '@hypit/runtime-local':
         specifier: workspace:^0.2.0
         version: link:../runtime-local
-      '@hypit/runtime-local-cli':
-        specifier: workspace:^0.1.0
-        version: link:../runtime-local-cli
       '@hypit/seedance':
         specifier: workspace:^0.3.0
         version: link:../seedance

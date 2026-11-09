@@ -54,7 +54,6 @@
     "@hypit/provider-media-local": "workspace:^0.1.0",
     "@hypit/provider-whisperx-local": "workspace:^0.3.0",
     "@hypit/runtime-local": "workspace:^0.2.0",
-    "@hypit/runtime-local-cli": "workspace:^0.1.0",
     "@hypit/refinement": "workspace:^0.0.0-dev",
     "@hypit/seedance": "workspace:^0.3.0",
     "@hypit/seedance-kits": "workspace:^0.1.2",

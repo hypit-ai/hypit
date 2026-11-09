@@ -5,6 +5,8 @@ boundaries. Transcript overlays are optional authoring observations; they are de
 the neutral `@hypit/media-local` execution closure used by NLE export.
 
 The package creates no Runtime, Build or retained graph state. Callers name input and output files.
+Its `@hypit/media-file-local/cli` export contributes the `media` root when an application or project
+explicitly selects it. The main export remains the callable file API; importing it never activates a command.
 
 ## File authoring and inspection
 

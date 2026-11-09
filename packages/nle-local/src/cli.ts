@@ -1,6 +1,6 @@
 import type { CliCommandModule } from "@hypit/cli";
 
-import { runNleCli, writeNleHelp } from "./cli.js";
+import { runNleCli, writeNleHelp } from "./cli-command.js";
 
 /** Direct local NLE file tasks; no Runtime or Build is opened. */
 export function createLocalNleCliCommandModules(options: {
@@ -8,7 +8,7 @@ export function createLocalNleCliCommandModules(options: {
 } = {}): readonly CliCommandModule[] {
   return [{
     format: "hypit.cli-command@1",
-    id: "@hypit/nle-local-cli",
+    id: "@hypit/nle-local#cli",
     commands: ["nle"],
     writeRootHelp(io) {
       io.write("\nLocal HTML-effects NLE\n  nle export\n  hypit nle --help for exact options\n");
@@ -22,4 +22,4 @@ export function createLocalNleCliCommandModules(options: {
   }];
 }
 
-export { runNleCli, writeNleHelp } from "./cli.js";
+export { runNleCli, writeNleHelp } from "./cli-command.js";

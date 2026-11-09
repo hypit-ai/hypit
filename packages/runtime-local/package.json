@@ -9,6 +9,7 @@
     "./extension": "./src/extension.ts",
     "./node": "./src/node.ts",
     "./config": "./src/config.ts",
+    "./cli": "./src/cli.ts",
     "./programs": "./src/programs.ts",
     "./resource-store": "./src/resource-store.ts",
     "./worker-process": "./src/worker-process.ts"
@@ -19,6 +20,7 @@
   ],
   "dependencies": {
     "@hypit/atomic-file": "workspace:^0.0.0-dev",
+    "@hypit/cli": "workspace:^0.0.0-dev",
     "@hypit/endpoint": "workspace:^0.0.0-dev",
     "@hypit/executor": "workspace:^0.0.0-dev",
     "@hypit/facet": "workspace:^0.0.0-dev",

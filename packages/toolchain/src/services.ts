@@ -12,7 +12,7 @@ import {
   openLocalRuntimeHost,
   openProjectPublicationStores,
 } from "@hypit/runtime-local";
-import type { LocalRuntimeCliServices } from "@hypit/runtime-local-cli";
+import type { LocalRuntimeCliServices } from "@hypit/runtime-local/cli";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
