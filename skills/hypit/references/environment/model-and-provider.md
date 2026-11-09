@@ -56,6 +56,7 @@ npm install @hypit/provider-tokendance
 npm install @hypit/provider-hiapi
 npm install @hypit/provider-pollo
 npm install @hypit/provider-beatapi
+npm install @hypit/provider-sume
 npm install @hypit/provider-monid
 ```
 

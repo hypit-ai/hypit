@@ -201,6 +201,9 @@ importers:
       '@hypit/provider-pollo':
         specifier: workspace:*
         version: link:packages/provider-pollo
+      '@hypit/provider-sume':
+        specifier: workspace:*
+        version: link:packages/provider-sume
       '@hypit/provider-tokendance':
         specifier: workspace:*
         version: link:packages/provider-tokendance
@@ -2110,6 +2113,49 @@ importers:
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../runtime-local
+
+  packages/provider-sume:
+    dependencies:
+      '@hypit/generation':
+        specifier: workspace:^0.1.0
+        version: link:../generation
+    devDependencies:
+      '@hypit/endpoint':
+        specifier: workspace:*
+        version: link:../endpoint
+      '@hypit/gpt-image':
+        specifier: workspace:*
+        version: link:../gpt-image
+      '@hypit/grok-imagine':
+        specifier: workspace:*
+        version: link:../grok-imagine
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
+      '@hypit/minimax-h3':
+        specifier: workspace:*
+        version: link:../minimax-h3
+      '@hypit/nano-banana':
+        specifier: workspace:*
+        version: link:../nano-banana
+      '@hypit/pixverse':
+        specifier: workspace:*
+        version: link:../pixverse
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@hypit/runtime-local':
+        specifier: workspace:*
+        version: link:../runtime-local
+      '@hypit/seedance':
+        specifier: workspace:*
+        version: link:../seedance
+      '@hypit/seedream':
+        specifier: workspace:*
+        version: link:../seedream
 
   packages/provider-tokendance:
     dependencies:
