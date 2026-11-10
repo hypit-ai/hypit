@@ -33,7 +33,7 @@ export async function browseBuildOutputHistory(
       const manifest = page.results[index]!;
       const sameSource = source === undefined
         || resolve(request.projectRoot, manifest.source.id) === source;
-      if (sameSource && manifest.outputs[request.output] !== undefined) matches.push(manifest);
+      if (sameSource && Object.hasOwn(manifest.outputs, request.output)) matches.push(manifest);
       if (matches.length === request.limit) {
         const hasOlder = index < page.results.length - 1 || page.next !== undefined;
         return { results: matches, ...(hasOlder ? { next: manifest.id } : {}) };
