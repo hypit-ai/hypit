@@ -6,6 +6,7 @@ import { mountMaterialPreview } from "./material-preview.js";
 import type { State, Store } from "./selection.js";
 import { createHandle } from "./resize.js";
 import { createZoom } from "./zoom.js";
+import { frameTimecode } from "./timecode.js";
 import { chooseDomainGesture, domainGestureSpan } from "../temporal-edit.js";
 import { applyStudioMutation } from "./writeback.js";
 
@@ -218,12 +219,6 @@ export function createTimeline(store: Store): Timeline {
   };
   const frameAt = (clientX: number): number => snapFrame(rawFrameAt(clientX));
 
-  const frameTimecode = (snapshot: StudioSnapshot, frame: number): string => {
-    const rate = Math.max(1, Math.round(fps(snapshot)));
-    const seconds = Math.floor(frame / fps(snapshot));
-    return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}:${String(frame % rate).padStart(2, "0")}`;
-  };
-
   let pointerArmed = false;
   let pointerDownX = 0;
   let pointerDownOnItem = false;
@@ -305,7 +300,7 @@ export function createTimeline(store: Store): Timeline {
     const frame = frameAt(event.clientX);
     const at = place(frame, state?.snapshot.timeline.frameCount ?? 1, zoom.window()) * lanes.clientWidth;
     hover.style.transform = `translate3d(${at}px,0,0)`;
-    hoverTime.textContent = state === undefined ? "" : frameTimecode(state.snapshot, frame);
+    hoverTime.textContent = state === undefined ? "" : frameTimecode(frame, state.snapshot.timeline.frameRate);
     hover.classList.add("visible");
     if (activeEdit !== undefined && state !== undefined) {
       const nextFrame = activeEdit.handle.coordinate === "domain-anchor"
@@ -782,7 +777,7 @@ export function createTimeline(store: Store): Timeline {
     playheadGrip.style.transform = `translate3d(${position - 5}px,0,0)`;
     playhead.classList.toggle("outside", position < 0 || position > lanes.clientWidth);
     playheadGrip.classList.toggle("outside", position < 0 || position > lanes.clientWidth);
-    timelineTime.textContent = frameTimecode(snapshot, head.frame);
+    timelineTime.textContent = frameTimecode(head.frame, snapshot.timeline.frameRate);
     const chosen = selection.kind === "item" ? store.item(selection.itemId) : undefined;
     for (const item of itemNodes) {
       const selected = chosen !== undefined && (chosen.id === item.id
