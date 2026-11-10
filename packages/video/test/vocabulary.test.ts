@@ -141,3 +141,10 @@ test("the human view distinguishes logical Modules contributed by one physical p
   assert.match(human.text(), /image  Blob \(@hypit\/blob@1\)/u);
   assert.doesNotMatch(human.text(), /\{"name":"image"/u);
 });
+
+test("the printed import uses the Surface's own prefix when its example opens with another element", async () => {
+  const human = io();
+  await runVocabularyCli(["vocabulary", "@hypit/visual-track", "--tag", "Track"], human.io, repositoryRoot);
+  assert.match(human.text(), /example\n\s+<visual:Motion/u);
+  assert.match(human.text(), /import   <import as="visual" from="@hypit\/visual-track@1"\/>/u);
+});
