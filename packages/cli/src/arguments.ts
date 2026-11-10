@@ -404,7 +404,9 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
     }
     if (item === "--follow") { follow = true; continue; }
     if (item === "--max-wait-ms") {
-      const value = Number(optionValue(values, index, "--max-wait-ms requires milliseconds"));
+      const raw = optionValue(values, index, "--max-wait-ms requires milliseconds");
+      // Number() reads "" as 0 and "0x10" as 16; an unset shell variable must not mean "do not wait".
+      const value = /^\d+$/u.test(raw) ? Number(raw) : Number.NaN;
       if (!Number.isSafeInteger(value) || value < 0) throw new Error("--max-wait-ms must be a non-negative safe integer");
       maxWaitMs = value; index += 1; continue;
     }
@@ -472,7 +474,7 @@ function optionValue(values: readonly string[], index: number, message: string):
 }
 
 function positiveInteger(value: string, option: string): number {
-  const parsed = Number(value);
+  const parsed = /^\d+$/u.test(value) ? Number(value) : Number.NaN;
   if (!Number.isSafeInteger(parsed) || parsed < 1) throw new Error(`${option} requires a positive integer`);
   return parsed;
 }
