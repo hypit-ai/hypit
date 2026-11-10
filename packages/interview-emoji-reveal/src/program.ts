@@ -142,9 +142,13 @@ function revealAnimation(atFrame: number, duration: number, revealFrames: number
   marks.set(0, { opacity: atFrame === 0 ? 1 : 0, scale: 0.72 });
   if (atFrame > 0) marks.set(atFrame - 1, { opacity: 0, scale: 0.72 });
   marks.set(atFrame, { opacity: 1, scale: 0.72 });
-  marks.set(Math.min(duration, atFrame + Math.max(1, Math.round(revealFrames * 0.34))), { opacity: 1, scale: 1.14 });
-  marks.set(Math.min(duration, atFrame + Math.max(2, Math.round(revealFrames * 0.68))), { opacity: 1, scale: 0.95 });
-  marks.set(Math.min(duration, atFrame + revealFrames), { opacity: 1, scale: 1 });
+  // The overshoot and undershoot belong inside the reveal; a one-frame reveal has room for neither.
+  const settle = Math.min(duration, atFrame + revealFrames);
+  const overshoot = atFrame + Math.max(1, Math.round(revealFrames * 0.34));
+  const undershoot = atFrame + Math.max(2, Math.round(revealFrames * 0.68));
+  if (overshoot < settle) marks.set(overshoot, { opacity: 1, scale: 1.14 });
+  if (undershoot < settle) marks.set(undershoot, { opacity: 1, scale: 0.95 });
+  marks.set(settle, { opacity: 1, scale: 1 });
   marks.set(duration, { opacity: 1, scale: 1 });
   return { keyframes: [...marks].sort(([left], [right]) => left - right).map(([frame, value]) => ({
     atFrame: frame, easing: "linear", style: [{ name: "opacity", value: value.opacity }, { name: "transform", value: scale(value.scale) }],
