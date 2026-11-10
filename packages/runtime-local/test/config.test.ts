@@ -132,6 +132,19 @@ test("Local Runtime Profile rejects source ownership fields", () => {
   assert.throws(() => parseLocalRuntimeProfile({ ...profile(), root: "." }), /does not accept root/u);
 });
 
+test("a Runtime Profile that is not JSON is named in the error", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-profile-json-"));
+  const path = join(root, "hypit.runtime.json");
+  try {
+    await writeFile(path, '{"format": "hypit.runtime-local@1",}');
+    await assert.rejects(doctorRuntimeConfig(path),
+      (error: Error) => error.message.startsWith(`Runtime Profile ${path} is not valid JSON: `)
+        && error.cause instanceof SyntaxError);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("active Build inspection requires no selected ResourceStore", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-slice-"));
   const path = join(root, "hypit.runtime.json");
