@@ -803,10 +803,10 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
   #rate(resource: CapacityResourceClaim, now: number): number {
     const row = this.#database.prepare("SELECT * FROM hypit_rates WHERE resource_id = ?").get(resource.id) as Row | undefined;
     if (row === undefined) return resource.limit;
-    assert(row.limit_units === resource.limit && row.period_ms === resource.periodMs,
-      `Shared rate ${resource.id} has conflicting limit or periodMs`);
+    // The bucket refills at the rate it was stored with. A Profile whose rate has since changed
+    // continues from that balance, capped by its new limit, and the next admission stores the new rate.
     return Math.min(resource.limit, (row.tokens as number)
-      + Math.max(0, now - (row.updated_at as number)) * resource.limit / resource.periodMs!);
+      + Math.max(0, now - (row.updated_at as number)) * (row.limit_units as number) / (row.period_ms as number));
   }
 
   #blocked(resources: readonly CapacityResourceClaim[], now: number): Extract<CapacityAcquire, { status: "blocked" }> | undefined {
@@ -855,7 +855,8 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
         if (resource.periodMs === undefined) continue;
         this.#database.prepare(`
           INSERT INTO hypit_rates (resource_id, limit_units, period_ms, tokens, updated_at) VALUES (?, ?, ?, ?, ?)
-          ON CONFLICT(resource_id) DO UPDATE SET tokens = excluded.tokens, updated_at = excluded.updated_at
+          ON CONFLICT(resource_id) DO UPDATE SET limit_units = excluded.limit_units, period_ms = excluded.period_ms,
+            tokens = excluded.tokens, updated_at = excluded.updated_at
         `).run(resource.id, resource.limit, resource.periodMs, this.#rate(resource, request.now) - capacityUnits(resource), request.now);
       }
       const reservation: CapacityReservation = {

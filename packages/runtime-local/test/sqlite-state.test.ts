@@ -404,6 +404,28 @@ test("shared action rates spend tokens on admission, independently of occupancy 
   } finally { state.close(); await rm(directory, { recursive: true, force: true }); }
 });
 
+test("a changed action rate continues the stored bucket instead of failing admission", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-rate-change-"));
+  const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
+  try {
+    const acquire = (build: string, rate: { limit: number; periodMs: number }, now: number) =>
+      state.execution.acquireCapacity({ build, command: "submit", resources: [{ id: "rate:account/submit", ...rate }], now });
+    assert.equal((await acquire("a", { limit: 2, periodMs: 1_000 }, 0)).status, "acquired");
+    assert.equal((await acquire("b", { limit: 2, periodMs: 1_000 }, 0)).status, "acquired");
+    // The Profile now allows 10 per minute. The bucket is still empty, so the next admission waits
+    // for the new rate rather than throwing on the old one.
+    const raised = { limit: 10, periodMs: 60_000 };
+    const blocked = await acquire("c", raised, 0);
+    assert.equal(blocked.status, "blocked");
+    assert.equal(blocked.status === "blocked" && blocked.availableAt, 6_000);
+    assert.equal((await acquire("c", raised, 86_400_000)).status, "acquired");
+    const lowered = { limit: 1, periodMs: 1_000 };
+    assert.equal((await acquire("d", lowered, 86_400_000)).status, "acquired");
+    assert.equal((await acquire("e", lowered, 86_400_000)).status, "blocked",
+      "a lowered limit caps the balance it inherits");
+  } finally { state.close(); await rm(directory, { recursive: true, force: true }); }
+});
+
 test("a resource release before parking is observed and later releases wake a fitting waiter", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-capacity-wakeup-"));
   const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
