@@ -355,6 +355,14 @@ test("SVS parses and serializes canonical arrays and objects as one Recipe value
   assert.equal(formatRecipeValue(recipe.value.properties.colors!), '["#FF3F56","#FFA72D"]');
 });
 
+test("formatted SVS string values read back unchanged", () => {
+  for (const value of ["assets/*.png", "</sheet>", "plain-value", "two words"]) {
+    const source = `<sheet version="1">\n  demo.value { value: ${formatRecipeValue(value)}; }\n</sheet>`;
+    assert.equal(parseRecipe("format.svs", source).recipes[0]!.value.properties.value, value, value);
+  }
+  assert.equal(formatRecipeValue("plain-value"), "plain-value");
+});
+
 test("SVS exposes exact property and value spans without inventing editor metadata", () => {
   const source = `<sheet version="1">
   caption.primary {
