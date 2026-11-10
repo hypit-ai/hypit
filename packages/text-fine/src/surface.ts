@@ -521,7 +521,7 @@ export const decodeTypographyPathMotionSurface: StructuredSurfaceHandler = ({ el
 };
 
 function dedent(value: string): string {
-  const lines = value.replace(/^\n/u, "").replace(/\n\s*$/u, "").split("\n");
+  const lines = value.replace(/\r\n?/gu, "\n").replace(/^\n/u, "").replace(/\n\s*$/u, "").split("\n");
   const indentation = lines.filter((line) => line.trim()).reduce((min, line) => Math.min(min, /^\s*/u.exec(line)?.[0].length ?? 0), Number.POSITIVE_INFINITY);
   return lines.map((line) => line.slice(Number.isFinite(indentation) ? indentation : 0)).join("\n");
 }
