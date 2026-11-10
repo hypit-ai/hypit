@@ -22,6 +22,7 @@ import {
   bindVisualClipPath,
   createMediaLayerSet,
   createVisualTrackSet,
+  decodeMediaFramePaint,
   decodeVisualTrackSurface,
   finalizeVisualTrack,
   projectVisualTrack,
@@ -719,4 +720,17 @@ test("the Visual author Surface emits explicit graph edges for layers, absolute 
   const clipSpecs = result.records.filter((entry) => entry.type.name === "VisualClipSpec");
   assert.equal(clipSpecs.length, 6);
   assert.ok(visualTrackMarkupSurfaces.some((surface) => surface.name === "track"));
+});
+
+test("gradient frame paints accept functional colors in their stops", () => {
+  const paint = (value: string) => decodeMediaFramePaint({ path: "scrim", properties: { "frame-paint": value } }, "scrim")?.paint;
+  assert.deepEqual(paint("linear(180;rgba(0,0,0,0)@0,rgba(0,0,0,0.8)@1)"), {
+    kind: "linear-gradient", angleDeg: 180,
+    stops: [{ color: "rgba(0,0,0,0)", offset: 0 }, { color: "rgba(0,0,0,0.8)", offset: 1 }],
+  });
+  assert.deepEqual(paint("radial(0.5,0.5;hsl(0, 100%, 50%)@0,#00f@1)"), {
+    kind: "radial-gradient", center: { x: 0.5, y: 0.5 },
+    stops: [{ color: "hsl(0, 100%, 50%)", offset: 0 }, { color: "#00f", offset: 1 }],
+  });
+  assert.throws(() => paint("linear(180;rgba(0,0,0,0)@0)"), /at least two stops/u);
 });
