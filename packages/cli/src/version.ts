@@ -60,7 +60,11 @@ export async function runVersionCli(
       }
       registry = `${url.href.replace(/\/+$/u, "")}/`;
     } else if (arg === "--help") { writeVersionHelp(io); return; }
-    else if (arg !== "--no-color" && arg !== "--debug") throw new Error(`Unknown version option: ${arg}`);
+    else if (arg === "--color") {
+      // Global presentation options apply to every command; the terminal adapter reads them.
+      const value = argv[++i];
+      if (value !== "auto" && value !== "always" && value !== "never") throw new Error("--color requires auto, always or never");
+    } else if (arg !== "--no-color" && arg !== "--debug" && arg !== "--verbose") throw new Error(`Unknown version option: ${arg}`);
   }
   if (selectedRegistry && !check) throw new Error("--registry selects the source for --check; add --check to query it");
   const manifest = JSON.parse(await readFile(resolve(environment.packageRoot, "package.json"), "utf8")) as {
