@@ -142,10 +142,17 @@ function resolveRate(
     const at = (sample: number) => sourceAt(sourceAnchor, targetAnchor, relation.rate, sample);
     const startSample = firstTrue(target.startSample, target.endSampleExclusive,
       (sample) => compare(at(sample), permittedSource.startSample) >= 0);
-    const endSampleExclusive = firstTrue(startSample, target.endSampleExclusive,
+    const clippedEnd = firstTrue(startSample, target.endSampleExclusive,
       (sample) => compare(at(sample), permittedSource.endSampleExclusive) >= 0);
-    assert(endSampleExclusive > startSample, `${label} does not sample any source audio.`);
-    target = { startSample, endSampleExclusive };
+    // A non-integer rate reaches a whole source sample only every `step` target samples; Composition
+    // requires both ends of a piece on one, so snap inward to the nearest such samples.
+    const step = relation.rate.denominator / Number(gcd(BigInt(relation.rate.numerator), BigInt(relation.rate.denominator)));
+    const phase = (sample: number) => ((sample - targetAnchor) % step + step) % step;
+    const exactStart = startSample + (step - phase(startSample)) % step;
+    const lastWithin = compare(at(clippedEnd), permittedSource.endSampleExclusive) > 0 ? clippedEnd - 1 : clippedEnd;
+    const endSampleExclusive = lastWithin - phase(lastWithin);
+    assert(endSampleExclusive > exactStart, `${label} does not sample any source audio.`);
+    target = { startSample: exactStart, endSampleExclusive };
   }
   const rawStart = sourceAt(sourceAnchor, targetAnchor, relation.rate, target.startSample);
   let sourceAtStart = rawStart;
