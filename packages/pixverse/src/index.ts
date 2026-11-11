@@ -44,6 +44,7 @@ function pixversePortTable(model: PixverseModel): GenerationPortTable {
         // continuous shot rather than several cuts.
         { kind: "atMostOneOf", ports: ["multiClip", "lastFrame"] },
         { kind: "atMostOneOf", ports: ["multiClip", "referenceImage"] },
+        { kind: "atMostOneOf", ports: ["multiClip", "referenceVideo"] },
         // The reference videos carry the length of the generated run.
         { kind: "atMostOneOf", ports: ["duration", "referenceVideo"] },
       ]
@@ -132,8 +133,13 @@ const pixverseCommonAttributes: readonly SurfaceAttributeVocabulary[] = [
 ];
 
 const pixverseAspectRatio: SurfaceAttributeVocabulary = {
-  name: "aspect-ratio", kind: "literal", required: false, values: [...PIXVERSE_V6_ASPECT_RATIOS],
+  name: "aspect-ratio", kind: "literal", required: false, values: [...PIXVERSE_ASPECT_RATIOS],
   summary: "The Frame shape of the generated video.",
+};
+
+const pixverseReferenceAspectRatio: SurfaceAttributeVocabulary = {
+  ...pixverseAspectRatio, values: [...PIXVERSE_V6_ASPECT_RATIOS],
+  summary: "The Frame shape of the generated video; `auto` takes the shape of the V6 video references.",
 };
 
 const pixverseVideoPort: readonly SurfacePortVocabulary[] = [{
@@ -197,7 +203,7 @@ export const pixverseMarkupSurfaces = [
         ...pixverseCommonAttributes,
         { name: "duration", kind: "literal" as const, required: false,
           summary: "How many seconds of video to render, from 1 to 15; video references carry their own length." },
-        pixverseAspectRatio,
+        pixverseReferenceAspectRatio,
       ],
       children: [{
         tag: "Reference",
@@ -220,7 +226,7 @@ export const pixverseMarkupSurfaces = [
         pixverseModelNote,
         "The prompt addresses the references in order as `@ref_1`, `@ref_2` and so on.",
         "`Reference` carries exactly one of `image` or `video`, and is empty.",
-        "V6 accepts up to two video references totalling 15 seconds, which carry the length of the run in place of `duration`; `aspect-ratio=\"auto\"` takes their shape.",
+        "V6 accepts up to two video references totalling 15 seconds, which carry the length of the run in place of `duration`; `aspect-ratio=\"auto\"` takes their shape and requires at least one video reference.",
         pixversePromptNote,
       ],
     },

@@ -33,8 +33,8 @@ const seedance = (name: string): GenerationWireMapping => ({
 
 /**
  * PixVerse V6 and C1 on `POST /v1/videos`. Both take the same body; V6 additionally accepts
- * reference videos, which carry the length of the run in place of `seconds`. The model's own
- * `quality` band is HypiHub's `resolution`.
+ * reference videos, which carry the length of the run in place of `seconds`, a sampling `seed`
+ * and the `multi_clip` switch. The model's own `quality` band is HypiHub's `resolution`.
  */
 const pixverse = (name: string, model: string): GenerationWireMapping => ({
   capability: { module: PIXVERSE, name }, result: "video", routes: [{ model }],
@@ -43,7 +43,11 @@ const pixverse = (name: string, model: string): GenerationWireMapping => ({
     firstFrame: { as: "url", field: "first_frame" },
     lastFrame: { as: "url", field: "last_frame" },
     referenceImage: { as: "urlArray", field: "reference_image_urls" },
-    ...(name === "pixverse-v6" ? { referenceVideo: { as: "urlArray" as const, field: "reference_videos" } } : {}),
+    ...(name === "pixverse-v6" ? {
+      referenceVideo: { as: "urlArray" as const, field: "reference_videos" },
+      seed: { as: "value" as const, field: "seed" },
+      multiClip: { as: "value" as const, field: "multi_clip" },
+    } : {}),
     duration: { as: "value", field: "seconds" },
     quality: { as: "value", field: "resolution" },
     aspectRatio: { as: "value", field: "aspect_ratio" },
@@ -63,8 +67,10 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
       seed: { as: "value", field: "seed" },
       firstFrame: { as: "url", field: "first_frame" },
       lastFrame: { as: "url", field: "last_frame" },
-      referenceImage: { as: "urlArray", field: "reference_image_urls" },
-      referenceAudio: { as: "urlArray", field: "reference_audios" },
+      // Each reference may carry a `start_time` offset, sent as `{ url, start_time }`.
+      referenceImage: { as: "itemObject", field: "reference_image_urls", urlKey: "url", fieldKeys: { startTime: "start_time" } },
+      referenceVideo: { as: "itemObject", field: "reference_videos", urlKey: "url", fieldKeys: { startTime: "start_time" } },
+      referenceAudio: { as: "itemObject", field: "reference_audios", urlKey: "url", fieldKeys: { startTime: "start_time" } },
     },
   },
   {
