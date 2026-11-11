@@ -122,6 +122,11 @@ function sampleElements(
     xPx: layer.source.extent.widthPx / 2,
     yPx: layer.source.extent.heightPx / 2,
   }, layer.mapping);
+  // Layers are absolutely positioned inside the bordered frame element, so CSS places them from
+  // its padding edge. The mapping is already inset by the border; measure from that edge too.
+  const border = clip.treatment.border?.widthPx ?? 0;
+  const originX = clip.frame.xPx + border;
+  const originY = clip.frame.yPx + border;
   const sampling = `${layer.id}:sampling`;
   const appearance = `${layer.id}:appearance`;
   const mapping = `${layer.id}:mapping`;
@@ -136,7 +141,7 @@ function sampleElements(
       { name: "left", value: 0 },
       { name: "position", value: "absolute" },
       { name: "top", value: 0 },
-      { name: "transform-origin", value: `${px(sourceCenter.xPx - clip.frame.xPx)} ${px(sourceCenter.yPx - clip.frame.yPx)}` },
+      { name: "transform-origin", value: `${px(sourceCenter.xPx - originX)} ${px(sourceCenter.yPx - originY)}` },
       { name: "width", value: "100%" },
     ],
     ...(() => {
@@ -148,15 +153,15 @@ function sampleElements(
       };
     })(),
   };
-  const localTx = layer.mapping.tx - clip.frame.xPx;
-  const localTy = layer.mapping.ty - clip.frame.yPx;
+  const localTx = layer.mapping.tx - originX;
+  const localTy = layer.mapping.ty - originY;
   const corners = [
     { xPx: 0, yPx: 0 },
     { xPx: layer.source.extent.widthPx, yPx: 0 },
     { xPx: layer.source.extent.widthPx, yPx: layer.source.extent.heightPx },
     { xPx: 0, yPx: layer.source.extent.heightPx },
   ].map((point) => mapSpatialPoint(point, layer.mapping))
-    .map((point) => `${px(point.xPx - clip.frame.xPx)} ${px(point.yPx - clip.frame.yPx)}`);
+    .map((point) => `${px(point.xPx - originX)} ${px(point.yPx - originY)}`);
   const appearanceStyle: VisualStyleDeclaration[] = [
     { name: "filter", value: filter(layer) },
     { name: "height", value: "100%" },
