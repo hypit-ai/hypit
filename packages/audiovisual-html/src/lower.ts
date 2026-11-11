@@ -1,6 +1,6 @@
 import {
   assertAudiovisualProgram,
-  evaluateAudiovisualProgramAt,
+  createAudiovisualProgramEvaluator,
   isPointwiseOperatorTemporalSupport,
   type AudiovisualProgram,
   type EvaluatedPictureGraph,
@@ -41,7 +41,7 @@ import type { Rational } from "@hypit/temporal/algebra";
 
 import { assertAudiovisualHtmlOutput, resolveAudiovisualHtmlSource } from "./source.js";
 import type { AudiovisualHtmlOutput, AudiovisualHtmlSourceSet } from "./source.js";
-import { evaluateAudiovisualProgramFrame, outputFrameCount } from "./sampling.js";
+import { outputFrameCount, outputFramePosition } from "./sampling.js";
 
 export type AudiovisualHtmlLowering = {
   readonly program: AudiovisualProgram;
@@ -211,19 +211,33 @@ return localFrame => {
   });
 }
 
-type PictureSequence = readonly (EvaluatedPictureGraph | undefined)[];
+type PictureNodeSequence = ReadonlyMap<string, readonly (EvaluatedPictureNode | undefined)[]>;
+
+function collectPictureNodeSequence(
+  graph: PictureGraph,
+  frameCount: number,
+  evaluate: (frame: number) => EvaluatedPictureGraph | undefined,
+): PictureNodeSequence {
+  const sequence = new Map<string, (EvaluatedPictureNode | undefined)[]>();
+  for (const id of Object.keys(graph.nodes)) sequence.set(id, []);
+  for (let frame = 0; frame < frameCount; frame += 1) {
+    const value = evaluate(frame);
+    for (const [id, nodes] of sequence) nodes.push(value?.nodes[id]);
+  }
+  return sequence;
+}
 
 function lowerGraph(
   program: AudiovisualProgram,
   graph: PictureGraph,
-  sequence: PictureSequence,
+  sequence: PictureNodeSequence,
   sampling: TemporalSamplingGrid,
   sources: AudiovisualHtmlSourceSet,
   prefix: string,
   available: readonly boolean[],
 ): HtmlPictureElement {
   const domains = pictureNodeDomains(graph, program);
-  const nodesAt = (id: string) => sequence.map((value) => value?.nodes[id]);
+  const nodesAt = (id: string) => sequence.get(id)!;
   const lower = (nodeId: string, path: readonly string[], mask: readonly boolean[]): HtmlPictureElement => {
     const node = graph.nodes[nodeId]!;
     const evaluated = nodesAt(nodeId);
@@ -232,6 +246,9 @@ function lowerGraph(
     const own = evaluated.map((value) => value !== undefined && value.kind !== "transparent");
     const active = and(mask, own);
     const activeSpans = spans(active);
+    if (activeSpans.length === 0) {
+      return { id, kind: "box", spans: [], style: sizeStyle(domain), children: [] };
+    }
     switch (node.kind) {
       case "transparent": return { id, kind: "box", spans: [], style: sizeStyle(domain), children: [] };
       case "use": {
@@ -278,15 +295,20 @@ function lowerGraph(
           return { ...common, kind: "video", source: preparedSignalPictureSource(media), muted: true,
             ...(reconstruction === undefined ? {} : { reconstruction }),
             sampling: composeTemporalMaps(
-              sampledTemporalMap(id, active, positions, sampling, media.domain), media.picture.map,
+              sampledTemporalMap(`${source.source}:${source.output}`, active, positions, sampling, media.domain),
+              media.picture.map,
             ) };
         }
         const child = source.implementation.program;
         assert(reconstruction === undefined,
           `Picture reconstruction on nested Programme ${child.id} is unsupported by the HTML terminal.`);
         assert(child.picture !== undefined, `Nested Programme ${child.id} has no Picture output.`);
-        const childSequence = samples.map((sample, frame) => !active[frame] || sample?.temporal.kind !== "signal"
-          ? undefined : evaluateAudiovisualProgramAt(child, sample.temporal.at).picture);
+        const evaluateChild = createAudiovisualProgramEvaluator(child);
+        const childSequence = collectPictureNodeSequence(child.picture, samples.length, (frame) => {
+          const sample = samples[frame];
+          return !active[frame] || sample?.temporal.kind !== "signal"
+            ? undefined : evaluateChild(sample.temporal.at).picture;
+        });
         return { ...common, kind: "box", style: sizeStyle(domain), children: [lowerGraph(
           child, child.picture, childSequence, sampling, source.implementation.sources,
           `${id}:nested`, active,
@@ -322,7 +344,10 @@ function lowerGraph(
           program: dynamicSpatialProgram(maps), slots: [{ name: "picture", element: child }] };
       }
       case "over": return { id, kind: "box", spans: activeSpans, style: sizeStyle(domain),
-        children: node.inputs.map((child, index) => lower(child, [...path, `over-${index + 1}`, child], active)) };
+        children: node.inputs.map((child, index) => {
+          const lowered = lower(child, [...path, `over-${index + 1}`, child], active);
+          return { ...lowered, style: [...lowered.style, { name: "z-index", value: index }] };
+        }) };
       case "apply": {
         assert(isPointwiseOperatorTemporalSupport(node.operator.temporalSupport),
           `HTML Picture Operator ${node.operator.id} requires non-pointwise temporal support.`);
@@ -352,8 +377,9 @@ export function lowerAudiovisualPictureProgramToHtmlProgram(input: AudiovisualHt
   assert(sameSpatialDomain(input.output.pictureMapping.source, input.program.pictureDomain!),
     `Audiovisual HTML Picture Mapping does not read Programme Space ${input.program.pictureDomain!.id}.`);
   const frameCount = outputFrameCount(input.program.domain.duration, input.output.sampling);
-  const sequence = Array.from({ length: frameCount }, (_, frame) =>
-    evaluateAudiovisualProgramFrame(input.program, input.output.sampling, frame).evaluation.picture);
+  const evaluate = createAudiovisualProgramEvaluator(input.program);
+  const sequence = collectPictureNodeSequence(graph, frameCount, (frame) =>
+    evaluate(outputFramePosition(frame, input.output.sampling)).picture);
   const picture = lowerGraph(input.program, graph, sequence, input.output.sampling, input.sources,
     input.output.id, Array.from({ length: frameCount }, () => true));
   const full = [{ startFrame: 0, endFrameExclusive: frameCount }];

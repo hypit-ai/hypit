@@ -34,16 +34,18 @@ write the number here. Nothing in the graph computes it, so a Build plan is comp
 
 ## Generation Graph nodes
 
-The package contributes exact `model.mode` components such as `seedance-2.5.frame-video` and
-`seedance-2-mini.text-video`. Exact model identity is part of `using`; it is not a mutable model field or a Provider
-choice. A frame-video recipe can stay concise:
+The package contributes one Generation Graph node for each exact model: `seedance-2.video`,
+`seedance-2-fast.video`, `seedance-2-mini.video` and `seedance-2.5.video`. Text-only, frame-guided and
+reference-guided generation are invocation shapes of the same model node, selected from the authored inputs.
+The package resolver validates that shape during both inspection and execution; Canvas does not infer or
+duplicate Seedance rules. A frame-guided recipe can stay concise:
 
 ```json
 {
   "id": "motion",
   "using": {
     "module": { "name": "@hypit/seedance", "version": "1" },
-    "name": "seedance-2.5.frame-video"
+    "name": "seedance-2.5.video"
   },
   "inputs": {
     "prompt": { "value": "A slow camera move reveals the full room." },

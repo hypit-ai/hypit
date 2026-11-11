@@ -10,12 +10,9 @@ import type {
   ExactTemporalValue,
   LocalTemporalDomain,
   TemporalMapPiece,
-  TemporalRate,
 } from "@hypit/temporal/algebra";
 
-/** Editor display and snap grid. It never changes the meaning of persisted exact times. */
-export type NleEditRate = TemporalRate;
-
+/** Finite logical Programme Picture extent; width and height do not prescribe output pixel density. */
 export type NleCanvas = {
   readonly width: number;
   readonly height: number;
@@ -52,19 +49,16 @@ export type NleResolvedMedia = PreparedMedia;
 /** File-persistent media facts sufficient to create a direct NLE edit. */
 export type NleMediaInterpretation = Omit<PreparedMedia, "source">;
 
-export type NleMedia = {
-  readonly id: string;
-  readonly name: string;
-  /** Portable Media Asset document path, relative to the NLE Project file. */
-  readonly asset: NleMediaAssetReference;
-};
-
 export type NlePictureLayout = {
   readonly x: number;
   readonly y: number;
   readonly width: number;
   readonly height: number;
   readonly fit: "fill" | "contain" | "cover";
+  /** Normalized source point aligned within the fitted box. Defaults to the centre. */
+  readonly contentX?: number;
+  /** Normalized source point aligned within the fitted box. Defaults to the centre. */
+  readonly contentY?: number;
 };
 
 export type NlePictureLayoutValue = {
@@ -77,17 +71,18 @@ export type NlePictureLayoutReference = {
   readonly ref: string;
 };
 
-export type NleEffect = {
+/** One package-owned Picture operator applied only to its Present Item, ordered inner-to-outer. */
+export type NlePictureEffect = {
   readonly id: string;
-  readonly effect: NlePackageSymbol;
+  readonly component: NlePackageSymbol;
   readonly parameters: CanonicalValue;
 };
 
 export type NlePictureAppearance = {
   /** Inline occurrence layout or one explicit project-owned linked layout. */
   readonly layout: NlePictureLayout | NlePictureLayoutReference;
-  /** Ordered inner-to-outer. */
-  readonly effects: readonly NleEffect[];
+  /** Local treatment of this Item after fitting and before Programme-space placement. */
+  readonly effects?: readonly NlePictureEffect[];
 };
 
 export type NleResolvedPictureAppearance = Omit<NlePictureAppearance, "layout"> & {
@@ -100,8 +95,6 @@ export type NleAudioAppearance = {
     readonly using: NlePackageSymbol;
     readonly parameters: CanonicalValue;
   };
-  /** Ordered source-to-output. Package code owns every effect's behavior and parameter spelling. */
-  readonly effects: readonly NleEffect[];
 };
 
 /** Direct Item-local target-to-Source coordinates. Concrete Source domains are attached only during lowering. */
@@ -111,6 +104,8 @@ export type NleSourceTime = {
 
 type NleItemBase = {
   readonly id: string;
+  /** Optional author-facing occurrence name; it never changes Programme output. */
+  readonly name?: string;
   /** Exact Programme-local position. */
   readonly start: ExactTemporalValue;
   /** Exact visible duration. */
@@ -121,16 +116,17 @@ type NleItemBase = {
 };
 
 export type NleMediaItem = NleItemBase & {
-  readonly kind: "media";
-  readonly media: string;
-  /** Required on a Picture track and absent on an Audio track. */
+  readonly kind: "present";
+  readonly source: "media";
+  /** Portable Media Asset document path, relative to the NLE Project file. */
+  readonly asset: NleMediaAssetReference;
   readonly picture?: NlePictureAppearance;
-  /** Presence includes the selected Audio output in the Programme mix. */
   readonly audio?: NleAudioAppearance;
 };
 
 export type NleComponentItem = NleItemBase & {
-  readonly kind: "component";
+  readonly kind: "present";
+  readonly source: "component";
   readonly component: NlePackageSymbol;
   /** Package-defined reusable value slots; Core validates identity, not value meaning. */
   readonly bindings?: readonly NleComponentBinding[];
@@ -139,21 +135,31 @@ export type NleComponentItem = NleItemBase & {
   readonly audio?: NleAudioAppearance;
 };
 
-/** One nested flat NLE Project. It closes as an ordinary multi-output AVIR Source. */
+/** One nested audiovisual composition. File revision and editor-view state stay outside it. */
 export type NleCompoundItem = NleItemBase & {
-  readonly kind: "compound";
-  readonly project: NleProject;
+  readonly kind: "present";
+  readonly source: "composition";
+  readonly composition: NleComposition;
   readonly picture?: NlePictureAppearance;
   readonly audio?: NleAudioAppearance;
 };
 
-export type NleItem = NleMediaItem | NleComponentItem | NleCompoundItem;
+/** A source-owning contribution placed on the Timeline. */
+export type NlePresentItem = NleMediaItem | NleComponentItem | NleCompoundItem;
+
+/** A package Component that transforms the Picture or Audio accumulated below its Track position. */
+export type NleAdjustmentItem = NleItemBase & {
+  readonly kind: "adjustment";
+  readonly component: NlePackageSymbol;
+  readonly parameters: CanonicalValue;
+};
+
+export type NleItem = NlePresentItem | NleAdjustmentItem;
 
 export type NleTrack = {
   readonly id: string;
   readonly name: string;
   readonly kind: "picture" | "audio";
-  readonly locked: boolean;
   readonly muted: boolean;
   /** Picture tracks and their items are ordered back-to-front. */
   readonly items: readonly NleItem[];
@@ -177,28 +183,22 @@ export type NleMatte = {
   readonly parameters: CanonicalValue;
 };
 
-/** Editing-only selection relation; it has no AVIR meaning. */
-export type NleGroup = {
+/** Recursive, renderer-independent audiovisual content owned by an NLE document. */
+export type NleComposition = {
   readonly id: string;
   readonly name: string;
-  readonly items: readonly string[];
-};
-
-export type NleProject = {
-  readonly format: "hypit.nle@1";
-  readonly id: string;
-  readonly name: string;
-  readonly revision: number;
-  /** Editor display and snap grid; Programme time remains exact and independent of this rate. */
-  readonly editRate: NleEditRate;
   readonly canvas: NleCanvas;
   readonly componentValues: readonly NleComponentValue[];
   readonly pictureLayouts: readonly NlePictureLayoutValue[];
-  readonly media: readonly NleMedia[];
   readonly tracks: readonly NleTrack[];
   readonly transitions: readonly NleTransition[];
   readonly mattes: readonly NleMatte[];
-  readonly groups: readonly NleGroup[];
+};
+
+/** Persistent file envelope. Compound Items embed only NleComposition, never this envelope. */
+export type NleProject = NleComposition & {
+  readonly format: "hypit.nle@1";
+  readonly revision: number;
 };
 
 export type NleResolvedItemSource = {
@@ -207,11 +207,11 @@ export type NleResolvedItemSource = {
   readonly audioOutput?: string;
 };
 
-export type NleResolvedEffect = {
+export type NleResolvedPictureAdjustment = {
   readonly operator: PictureOperator;
 };
 
-export type NleResolvedAudioEffect = {
+export type NleResolvedAudioAdjustment = {
   readonly operator: AudioOperator;
 };
 
@@ -220,7 +220,7 @@ export type NleResolvedSignalReconstruction = {
 };
 
 export type NleLoweringContext = {
-  readonly project: NleProject;
+  readonly project: NleComposition;
   readonly track: NleTrack;
 };
 
@@ -229,42 +229,43 @@ export type NleMediaLoweringContext = NleLoweringContext & {
 };
 
 export type NleTransitionLoweringContext = NleLoweringContext & {
-  readonly outgoing: NleItem;
-  readonly incoming: NleItem;
+  readonly outgoing: NlePresentItem;
+  readonly incoming: NlePresentItem;
   readonly domain: LocalTemporalDomain;
 };
 
 export type NleMatteLoweringContext = NleLoweringContext & {
-  readonly content: NleItem;
-  readonly matte: NleItem;
+  readonly content: NlePresentItem;
+  readonly matte: NlePresentItem;
 };
 
 /** Package behavior is selected by the Host; it is not serialized into the NLE project. */
 export type NleLoweringHost = {
   /** Resolve a file-backed asset previously opened by the Host. This seam performs no persistence. */
-  readonly resolveMedia: (media: NleMedia, context: NleMediaLoweringContext) => NleResolvedMedia;
-  readonly resolveComponent: (item: NleComponentItem, context: NleLoweringContext) => NleResolvedItemSource;
-  readonly resolveEffect: (
-    effect: NleEffect,
-    item: NleItem,
+  readonly resolveMedia: (asset: NleMediaAssetReference, context: NleMediaLoweringContext) => NleResolvedMedia;
+  readonly resolveComponent: (
+    item: NleComponentItem,
     context: NleLoweringContext,
-  ) => NleResolvedEffect;
-  readonly resolveAudioEffect: (
-    effect: NleEffect,
-    item: NleItem,
+  ) => NleResolvedItemSource;
+  readonly resolvePictureAdjustment: (
+    item: NleAdjustmentItem,
     context: NleLoweringContext,
-  ) => NleResolvedAudioEffect;
+  ) => NleResolvedPictureAdjustment;
+  readonly resolveAudioAdjustment: (
+    item: NleAdjustmentItem,
+    context: NleLoweringContext,
+  ) => NleResolvedAudioAdjustment;
   readonly resolveSignalReconstruction: (
     reconstruction: NonNullable<NleAudioAppearance["reconstruction"]>,
-    item: NleItem,
+    item: NlePresentItem,
     context: NleLoweringContext,
   ) => NleResolvedSignalReconstruction;
   readonly resolveTransition: (
     transition: NleTransition,
     context: NleTransitionLoweringContext,
-  ) => NleResolvedEffect;
+  ) => NleResolvedPictureAdjustment;
   readonly resolveMatte: (
     matte: NleMatte,
     context: NleMatteLoweringContext,
-  ) => NleResolvedEffect;
+  ) => NleResolvedPictureAdjustment;
 };

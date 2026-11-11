@@ -7,7 +7,7 @@ subsystem files instead of preserving one live cross-domain program.
 ## Files and phases
 
 1. `generation.graph.json` generates two portraits, two reusable voice identities, two cloned follow-up
-   lines and four speaking videos. `generation.canvas.json` is only their saved spatial view.
+   lines and four speaking videos. `generation.workspace.json` saves their Canvas interaction state.
 2. Accepted video outputs are materialized under `media/<turn>/` as ordinary `.media.json` bundles.
 3. `analysis.graph.json` is generated after acceptance and runs WhisperX over those files. Each exported
    TimedTranscript is attached to its Media Asset as an editable representation.

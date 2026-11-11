@@ -16,12 +16,8 @@ import {
 import type {
   NleCanvas,
   NleComponentValue,
-  NleEditRate,
-  NleGroup,
   NleItem,
   NleMatte,
-  NleMedia,
-  NleMediaAssetReference,
   NlePictureLayoutValue,
   NleProject,
   NleSourceTime,
@@ -33,7 +29,6 @@ export type NleCommand =
   | {
       readonly kind: "project.update";
       readonly name?: string;
-      readonly editRate?: NleEditRate;
       readonly canvas?: NleCanvas;
     }
   | { readonly kind: "component-value.add"; readonly value: NleComponentValue }
@@ -42,23 +37,18 @@ export type NleCommand =
   | { readonly kind: "picture-layout.add"; readonly value: NlePictureLayoutValue }
   | { readonly kind: "picture-layout.replace"; readonly value: NlePictureLayoutValue }
   | { readonly kind: "picture-layout.remove"; readonly id: string }
-  | { readonly kind: "media.add"; readonly media: NleMedia }
-  | { readonly kind: "media.rename"; readonly id: string; readonly name: string }
-  | { readonly kind: "media.relink"; readonly id: string; readonly asset: NleMediaAssetReference }
-  | { readonly kind: "media.replace"; readonly media: NleMedia }
-  | { readonly kind: "media.remove"; readonly id: string }
   | { readonly kind: "track.add"; readonly track: NleTrack; readonly before?: string }
   | { readonly kind: "track.move"; readonly id: string; readonly before?: string }
   | {
       readonly kind: "track.update";
       readonly id: string;
       readonly name?: string;
-      readonly locked?: boolean;
       readonly muted?: boolean;
     }
   | { readonly kind: "track.replace"; readonly track: NleTrack }
   | { readonly kind: "track.remove"; readonly id: string }
   | { readonly kind: "item.add"; readonly track: string; readonly item: NleItem; readonly before?: string }
+  | { readonly kind: "item.update"; readonly id: string; readonly name?: string | null }
   | {
       readonly kind: "item.move";
       readonly ids: readonly string[];
@@ -96,10 +86,7 @@ export type NleCommand =
   | { readonly kind: "transition.remove"; readonly id: string }
   | { readonly kind: "matte.add"; readonly matte: NleMatte }
   | { readonly kind: "matte.replace"; readonly matte: NleMatte }
-  | { readonly kind: "matte.remove"; readonly id: string }
-  | { readonly kind: "group.add"; readonly group: NleGroup }
-  | { readonly kind: "group.replace"; readonly group: NleGroup }
-  | { readonly kind: "group.remove"; readonly id: string };
+  | { readonly kind: "matte.remove"; readonly id: string };
 
 export type NleTransaction = {
   readonly revision: number;
@@ -113,25 +100,21 @@ export class NleRevisionConflict extends Error {
   }
 }
 
-type MutableTrack = Omit<NleTrack, "name" | "locked" | "muted" | "items"> & {
+type MutableTrack = Omit<NleTrack, "name" | "muted" | "items"> & {
   name: string;
-  locked: boolean;
   muted: boolean;
   items: NleItem[];
 };
 type MutableProject = Omit<NleProject,
-  "revision" | "name" | "editRate" | "canvas" | "componentValues" | "pictureLayouts" | "media" | "tracks"> & {
+  "revision" | "name" | "canvas" | "componentValues" | "pictureLayouts" | "tracks"> & {
   revision: number;
   name: string;
-  editRate: NleEditRate;
   canvas: NleCanvas;
   componentValues: NleComponentValue[];
   pictureLayouts: NlePictureLayoutValue[];
-  media: NleMedia[];
   tracks: MutableTrack[];
   transitions: NleTransition[];
   mattes: NleMatte[];
-  groups: NleGroup[];
 };
 
 function mutableTrack(project: MutableProject, id: string): MutableTrack {
@@ -148,24 +131,15 @@ function mutableItem(project: MutableProject, id: string): { track: MutableTrack
   throw new Error(`Unknown NLE Item: ${id}`);
 }
 
-function editable(track: NleTrack): void {
-  if (track.locked) throw new Error(`NLE Track ${track.id} is locked.`);
-}
-
-function editableItems(project: MutableProject, ids: readonly string[]): void {
-  const tracks = new Set<MutableTrack>();
-  for (const id of ids) tracks.add(mutableItem(project, id).track);
-  for (const track of tracks) editable(track);
-}
-
 function componentValueUsers(project: MutableProject, id: string): string[] {
   return project.tracks.flatMap((track) => track.items.flatMap((item) =>
-    item.kind === "component" && item.bindings?.some((binding) => binding.ref === id) ? [item.id] : []));
+    item.kind === "present" && item.source === "component"
+      && item.bindings?.some((binding) => binding.ref === id) ? [item.id] : []));
 }
 
 function pictureLayoutUsers(project: MutableProject, id: string): string[] {
   return project.tracks.flatMap((track) => track.items.flatMap((item) =>
-    item.picture !== undefined && Object.hasOwn(item.picture.layout, "ref")
+    item.kind === "present" && item.picture !== undefined && Object.hasOwn(item.picture.layout, "ref")
       && (item.picture.layout as { readonly ref: string }).ref === id ? [item.id] : []));
 }
 
@@ -215,7 +189,6 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
     switch (command.kind) {
       case "project.update":
         if (command.name !== undefined) next.name = command.name;
-        if (command.editRate !== undefined) next.editRate = structuredClone(command.editRate);
         if (command.canvas !== undefined) next.canvas = structuredClone(command.canvas);
         break;
       case "component-value.add":
@@ -224,7 +197,6 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       case "component-value.replace": {
         const index = next.componentValues.findIndex((candidate) => candidate.id === command.value.id);
         if (index < 0) throw new Error(`Unknown NLE Component Value: ${command.value.id}`);
-        editableItems(next, componentValueUsers(next, command.value.id));
         next.componentValues.splice(index, 1, structuredClone(command.value));
         break;
       }
@@ -244,7 +216,6 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       case "picture-layout.replace": {
         const index = next.pictureLayouts.findIndex((candidate) => candidate.id === command.value.id);
         if (index < 0) throw new Error(`Unknown NLE Picture Layout: ${command.value.id}`);
-        editableItems(next, pictureLayoutUsers(next, command.value.id));
         next.pictureLayouts.splice(index, 1, structuredClone(command.value));
         break;
       }
@@ -258,43 +229,11 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         next.pictureLayouts.splice(index, 1);
         break;
       }
-      case "media.add":
-        next.media.push(structuredClone(command.media));
-        break;
-      case "media.rename": {
-        const index = next.media.findIndex((candidate) => candidate.id === command.id);
-        if (index < 0) throw new Error(`Unknown NLE Media: ${command.id}`);
-        next.media.splice(index, 1, { ...next.media[index]!, name: command.name });
-        break;
-      }
-      case "media.relink": {
-        const index = next.media.findIndex((candidate) => candidate.id === command.id);
-        if (index < 0) throw new Error(`Unknown NLE Media: ${command.id}`);
-        next.media.splice(index, 1, { ...next.media[index]!, asset: structuredClone(command.asset) });
-        break;
-      }
-      case "media.replace": {
-        const index = next.media.findIndex((candidate) => candidate.id === command.media.id);
-        if (index < 0) throw new Error(`Unknown NLE Media: ${command.media.id}`);
-        next.media.splice(index, 1, structuredClone(command.media));
-        break;
-      }
-      case "media.remove":
-        if (!next.media.some((candidate) => candidate.id === command.id)) {
-          throw new Error(`Unknown NLE Media: ${command.id}`);
-        }
-        if (next.tracks.some((track) => track.items.some((item) =>
-          item.kind === "media" && item.media === command.id))) {
-          throw new Error(`NLE Media ${command.id} is still used by an Item.`);
-        }
-        next.media.splice(next.media.findIndex((entry) => entry.id === command.id), 1);
-        break;
       case "track.add":
         next.tracks = insert(next.tracks, structuredClone(command.track) as MutableTrack, command.before);
         break;
       case "track.move": {
         const track = mutableTrack(next, command.id);
-        editable(track);
         const remaining = next.tracks.filter((candidate) => candidate.id !== command.id);
         next.tracks = insert(remaining, track, command.before);
         break;
@@ -302,37 +241,37 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       case "track.update": {
         const track = mutableTrack(next, command.id);
         if (command.name !== undefined) track.name = command.name;
-        if (command.locked !== undefined) track.locked = command.locked;
         if (command.muted !== undefined) track.muted = command.muted;
         break;
       }
       case "track.replace": {
         const current = mutableTrack(next, command.track.id);
-        editable(current);
         next.tracks.splice(next.tracks.indexOf(current), 1, structuredClone(command.track) as MutableTrack);
         break;
       }
       case "track.remove": {
         const track = mutableTrack(next, command.id);
-        editable(track);
         if (track.items.length > 0) throw new Error(`NLE Track ${track.id} still contains Items.`);
         next.tracks.splice(next.tracks.indexOf(track), 1);
         break;
       }
       case "item.add": {
         const track = mutableTrack(next, command.track);
-        editable(track);
         track.items = insert(track.items, structuredClone(command.item), command.before);
+        break;
+      }
+      case "item.update": {
+        const { item } = mutableItem(next, command.id);
+        if (command.name === null) delete (item as { name?: string }).name;
+        else if (command.name !== undefined) (item as { name?: string }).name = command.name;
         break;
       }
       case "item.move": {
         const ids = [...new Set(command.ids)];
         assertExactTemporalValue(command.delta, "NLE Item move delta");
         const destination = command.track === undefined ? undefined : mutableTrack(next, command.track);
-        if (destination !== undefined) editable(destination);
         for (const id of ids) {
           const { track, item } = mutableItem(next, id);
-          editable(track);
           (item as { start: ExactTemporalValue }).start = addExactTemporalValues(item.start, command.delta);
           if (destination !== undefined && destination.id !== track.id) {
             track.items = track.items.filter((candidate) => candidate.id !== id);
@@ -343,14 +282,12 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       }
       case "item.trim": {
         const { track, item } = mutableItem(next, command.id);
-        editable(track);
         assertExactTemporalValue(command.at, "NLE Item trim position");
         trimItem(item, command.edge, command.at);
         break;
       }
       case "item.slip": {
         const { track, item } = mutableItem(next, command.id);
-        editable(track);
         assertExactTemporalValue(command.delta, "NLE Item slip delta");
         (item as { sourceTime: NleSourceTime }).sourceTime = shiftNleSourceTime(
           item.sourceTime,
@@ -361,7 +298,6 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       }
       case "item.retime": {
         const { track, item } = mutableItem(next, command.id);
-        editable(track);
         (item as { sourceTime: NleSourceTime }).sourceTime = structuredClone(command.sourceTime);
         break;
       }
@@ -370,7 +306,6 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         assertExactTemporalValue(command.at, "NLE roll boundary");
         const left = mutableItem(next, command.left);
         const right = mutableItem(next, command.right);
-        editableItems(next, [command.left, command.right]);
         if (left.track.id !== right.track.id) {
           throw new Error("NLE roll Items must belong to the same Track.");
         }
@@ -412,7 +347,6 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
           if (scope.has(id)) throw new Error(`NLE ripple-trim scope repeats Item ${id}.`);
           scope.add(id);
         }
-        editableItems(next, [command.id, ...scope]);
         const target = mutableItem(next, command.id).item;
         const before = command.edge === "start" ? target.start : itemEnd(target);
         trimItem(target, command.edge, command.at);
@@ -426,7 +360,6 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       }
       case "item.split": {
         const { track, item } = mutableItem(next, command.id);
-        editable(track);
         assertExactTemporalValue(command.at, "NLE Item split position");
         const offset = subtractExactTemporalValues(command.at, item.start);
         if (compareExactTemporalValues(offset, item.duration) >= 0
@@ -456,8 +389,7 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       case "item.detach-audio": {
         const { track, item } = mutableItem(next, command.id);
         const destination = mutableTrack(next, command.track);
-        editable(track);
-        editable(destination);
+        if (item.kind !== "present") throw new Error(`NLE Item ${item.id} is not a Present.`);
         if (track.kind !== "picture") throw new Error(`NLE Item ${item.id} is not on a Picture Track.`);
         if (destination.kind !== "audio") throw new Error(`NLE Track ${destination.id} is not an Audio Track.`);
         if (item.picture === undefined || item.audio === undefined) {
@@ -475,76 +407,43 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       }
       case "item.replace": {
         const { track, item } = mutableItem(next, command.item.id);
-        editable(track);
         track.items.splice(track.items.indexOf(item), 1, structuredClone(command.item));
         break;
       }
       case "item.remove":
         for (const id of new Set(command.ids)) {
           const { track, item } = mutableItem(next, id);
-          editable(track);
           track.items = track.items.filter((candidate) => candidate !== item);
         }
         break;
       case "transition.add":
-        editableItems(next, [command.transition.outgoing, command.transition.incoming]);
         next.transitions.push(structuredClone(command.transition));
         break;
       case "transition.replace": {
         const index = next.transitions.findIndex((value) => value.id === command.transition.id);
         if (index < 0) throw new Error(`Unknown NLE Transition: ${command.transition.id}`);
-        const current = next.transitions[index]!;
-        editableItems(next, [
-          current.outgoing, current.incoming,
-          command.transition.outgoing, command.transition.incoming,
-        ]);
         next.transitions.splice(index, 1, structuredClone(command.transition));
         break;
       }
       case "transition.remove": {
         const index = next.transitions.findIndex((value) => value.id === command.id);
         if (index < 0) throw new Error(`Unknown NLE Transition: ${command.id}`);
-        const current = next.transitions[index]!;
-        editableItems(next, [current.outgoing, current.incoming]);
         next.transitions.splice(index, 1);
         break;
       }
       case "matte.add":
-        editableItems(next, [command.matte.content, command.matte.matte]);
         next.mattes.push(structuredClone(command.matte));
         break;
       case "matte.replace": {
         const index = next.mattes.findIndex((value) => value.id === command.matte.id);
         if (index < 0) throw new Error(`Unknown NLE Matte: ${command.matte.id}`);
-        const current = next.mattes[index]!;
-        editableItems(next, [current.content, current.matte, command.matte.content, command.matte.matte]);
         next.mattes.splice(index, 1, structuredClone(command.matte));
         break;
       }
       case "matte.remove": {
         const index = next.mattes.findIndex((value) => value.id === command.id);
         if (index < 0) throw new Error(`Unknown NLE Matte: ${command.id}`);
-        const current = next.mattes[index]!;
-        editableItems(next, [current.content, current.matte]);
         next.mattes.splice(index, 1);
-        break;
-      }
-      case "group.add":
-        editableItems(next, command.group.items);
-        next.groups.push(structuredClone(command.group));
-        break;
-      case "group.replace": {
-        const index = next.groups.findIndex((value) => value.id === command.group.id);
-        if (index < 0) throw new Error(`Unknown NLE Group: ${command.group.id}`);
-        editableItems(next, [...next.groups[index]!.items, ...command.group.items]);
-        next.groups.splice(index, 1, structuredClone(command.group));
-        break;
-      }
-      case "group.remove": {
-        const index = next.groups.findIndex((value) => value.id === command.id);
-        if (index < 0) throw new Error(`Unknown NLE Group: ${command.id}`);
-        editableItems(next, next.groups[index]!.items);
-        next.groups.splice(index, 1);
         break;
       }
     }

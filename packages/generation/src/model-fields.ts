@@ -41,6 +41,12 @@ export {
   verifyModelFieldRequest,
 } from "./request.js";
 export {
+  modelAuthoringControl,
+  modelAuthoringMediaList,
+  modelAuthoringMediaSlot,
+} from "./model-fields-authoring.js";
+export type { ModelAuthoringMediaListField } from "./model-fields-authoring.js";
+export {
   createFieldModelGenerationFragment,
   createFieldModelPrimaryFragment,
   defineFieldModelModule,

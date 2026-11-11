@@ -1,5 +1,5 @@
 /** Terminal presentation for the local NLE file exporter owned by this package. */
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 
 import type { CliIo } from "@hypit/cli";
 import { exportLocalNleProject } from "./index.js";
@@ -15,8 +15,9 @@ export function writeNleHelp(io: Pick<CliIo, "write">): void {
     + "Options:\n"
     + "  --to <file>             New .mp4 file to create (required; never overwrites)\n"
     + "  --quality <quality>     draft | standard | high (default: standard)\n"
-    + "  --frame-rate <rate>     Output fps, e.g. 60 or 30000/1001 (default: project edit rate)\n"
-    + "  --package-root <path>   Resolve project component packages here (default: NLE directory)\n"
+    + "  --frame-rate <rate>     Output fps, e.g. 60 or 30000/1001 (default: 30)\n"
+    + "  --resolution <WxH>      Same-aspect output pixels, e.g. 1920x1080 (default: project extent)\n"
+    + "  --package-root <path>   Resolve project component packages here (default: Project Root)\n"
     + "  --chrome-path <path>    Use this installed Chrome/Chromium executable\n"
     + "  --ffmpeg-path <path>    Use this FFmpeg executable\n"
     + "  --ffprobe-path <path>   Use this FFprobe executable\n"
@@ -60,10 +61,22 @@ function frameRate(raw: string | undefined): { readonly numerator: number; reado
   return { numerator, denominator };
 }
 
+function resolution(raw: string | undefined): { readonly width: number; readonly height: number } | undefined {
+  if (raw === undefined) return undefined;
+  const match = /^(\d+)[x×](\d+)$/iu.exec(raw);
+  assert(match !== null, "--resolution must use WIDTHxHEIGHT, such as 1920x1080");
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  assert(Number.isSafeInteger(width) && width > 0 && Number.isSafeInteger(height) && height > 0,
+    "--resolution dimensions must be positive safe integers");
+  return { width, height };
+}
+
 export async function runNleCli(
   argv: readonly string[],
   io: CliIo,
   cwd: string,
+  projectRoot: string,
   distributionPackageRoot?: string,
 ): Promise<void> {
   if (argv[1] === "--help" || argv[1] === "help" || argv.length < 2) {
@@ -80,7 +93,7 @@ export async function runNleCli(
     if (["--debug", "--verbose", "--no-color"].includes(item)) continue;
     if (item === "--color") { index += 1; continue; }
     if (!item.startsWith("--")) { positionals.push(item); continue; }
-    assert(["--to", "--quality", "--frame-rate", "--package-root", "--chrome-path", "--ffmpeg-path",
+    assert(["--to", "--quality", "--frame-rate", "--resolution", "--package-root", "--chrome-path", "--ffmpeg-path",
       "--ffprobe-path", "--workers"].includes(item), `Unknown option ${item}`);
     assert(!options.has(item), `${item} cannot be repeated`);
     const value = argv[index + 1];
@@ -96,20 +109,23 @@ export async function runNleCli(
 
   const projectFile = resolve(cwd, positionals[0]!);
   const outputFile = resolve(cwd, to);
-  const packageRoot = resolve(cwd, options.get("--package-root") ?? dirname(projectFile));
+  const packageRoot = resolve(cwd, options.get("--package-root") ?? projectRoot);
   const renderWorkers = workers(options.get("--workers"));
   const outputFrameRate = frameRate(options.get("--frame-rate"));
+  const outputResolution = resolution(options.get("--resolution"));
   const controller = new AbortController();
   const abort = (): void => controller.abort(new Error("NLE export was interrupted."));
   process.once("SIGINT", abort);
   try {
     const result = await exportLocalNleProject({
+      projectRoot,
       projectFile,
       outputFile,
       packageRoot,
       ...(distributionPackageRoot === undefined ? {} : { distributionPackageRoot }),
       quality: quality as "draft" | "standard" | "high",
       ...(outputFrameRate === undefined ? {} : { frameRate: outputFrameRate }),
+      ...(outputResolution === undefined ? {} : { resolution: outputResolution }),
       signal: controller.signal,
       html: {
         ...(renderWorkers === undefined ? {} : { workers: renderWorkers }),

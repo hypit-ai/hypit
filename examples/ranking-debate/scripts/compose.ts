@@ -29,6 +29,7 @@ import {
   serializeNleProject,
   type NleProject,
 } from "@hypit/nle";
+import { createNleTimelineView, serializeNleTimelineView } from "@hypit/nle-view";
 import { parseScript, projectScript, scriptSegmentSpeech } from "@hypit/script";
 import {
   addExactTemporalValues,
@@ -242,7 +243,6 @@ async function main(): Promise<void> {
   let project = createNleProject({
     id: "ranking-debate",
     name: "Ranking debate",
-    editRate: { numerator: 24, denominator: 1 },
     canvas: { width: 720, height: 1280, clearColor: "#111827" },
   });
   project = applyNleTransaction(project, { revision: project.revision, commands: [
@@ -251,10 +251,10 @@ async function main(): Promise<void> {
       name: "Caption bottom",
       layout: { x: 42, y: 930, width: 636, height: 240, fit: "fill" },
     } },
-    { kind: "track.add", track: { id: "picture-main", name: "Picture + production audio", kind: "picture", locked: false, muted: false, items: [] } },
-    { kind: "track.add", track: { id: "ranking", name: "Ranking board", kind: "picture", locked: false, muted: false, items: [] } },
-    { kind: "track.add", track: { id: "captions", name: "Captions", kind: "picture", locked: false, muted: false, items: [] } },
-    { kind: "track.add", track: { id: "verdict", name: "Verdict", kind: "picture", locked: false, muted: false, items: [] } },
+    { kind: "track.add", track: { id: "picture-main", name: "Picture + production audio", kind: "picture", muted: false, items: [] } },
+    { kind: "track.add", track: { id: "ranking", name: "Ranking board", kind: "picture", muted: false, items: [] } },
+    { kind: "track.add", track: { id: "captions", name: "Captions", kind: "picture", muted: false, items: [] } },
+    { kind: "track.add", track: { id: "verdict", name: "Verdict", kind: "picture", muted: false, items: [] } },
   ] });
 
   const starts = new Map<string, ExactTemporalValue>();
@@ -264,17 +264,16 @@ async function main(): Promise<void> {
     const domain = domains.get(turn.media)!;
     starts.set(turn.media, cursor);
     mediaCommands.push(
-      { kind: "media.add", media: { id: turn.media, name: turn.media, asset: { path: portableMediaAssetPath(turn.media) } } },
       { kind: "item.add", track: "picture-main", item: {
         id: `${turn.media}-use`,
-        kind: "media",
-        media: turn.media,
+        kind: "present", source: "media",
+        asset: { path: portableMediaAssetPath(turn.media) },
         start: cursor,
         duration: domain.duration,
         sourceTime: nleLinearSourceTime(domain.duration),
         enabled: true,
-        picture: { layout: { x: 0, y: 0, width: 720, height: 1280, fit: "cover" }, effects: [] },
-        audio: { effects: [] },
+        picture: { layout: { x: 0, y: 0, width: 720, height: 1280, fit: "cover" } },
+        audio: { },
       } },
     );
     cursor = addExactTemporalValues(cursor, domain.duration);
@@ -299,7 +298,7 @@ async function main(): Promise<void> {
       presentation,
       selection,
       styleRef: (styleId) => `caption-style:${styleId}`,
-      picture: { layout: { ref: "caption-bottom" }, effects: [] },
+      picture: { layout: { ref: "caption-bottom" } },
     }));
   }
 
@@ -317,7 +316,7 @@ async function main(): Promise<void> {
     track: "ranking",
     item: {
       id: "ranking-board",
-      kind: "component",
+      kind: "present", source: "component",
       start: exactTemporalZero(),
       duration: cursor,
       sourceTime: nleLinearSourceTime(cursor),
@@ -362,26 +361,34 @@ async function main(): Promise<void> {
           fontFamily: "PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif",
         },
       },
-      picture: { layout: { x: 0, y: 0, width: 720, height: 1280, fit: "fill" }, effects: [] },
+      picture: { layout: { x: 0, y: 0, width: 720, height: 1280, fit: "fill" } },
     },
   }, {
     kind: "item.add",
     track: "verdict",
     item: {
       id: "verdict-burst",
-      kind: "component",
+      kind: "present", source: "component",
       start: verdictAt,
       duration: subtractExactTemporalValues(cursor, verdictAt),
       sourceTime: nleLinearSourceTime(subtractExactTemporalValues(cursor, verdictAt)),
       enabled: true,
       component: verdictBurstComponentSymbol,
       parameters: { kicker: "最终结论", title: "S 级：生成后还能剪", accent: "#38bdf8", enterFrames: 7 },
-      picture: { layout: { x: 90, y: 735, width: 540, height: 145, fit: "fill" }, effects: [] },
+      picture: { layout: { x: 90, y: 735, width: 540, height: 145, fit: "fill" } },
     },
   }];
   project = applyNleTransaction(project, { revision: project.revision, commands: graphicsCommands });
 
   await writeFile(resolve(projectRoot, "film.nle.json"), serializeNleProject(project), "utf8");
+  const view = createNleTimelineView({
+    id: "ranking-debate-main",
+    name: "Ranking Debate Timeline",
+    project: { path: "film.nle.json" },
+    editRate: { numerator: 24, denominator: 1 },
+    tracks: project.tracks.map((track) => track.id),
+  });
+  await writeFile(resolve(projectRoot, "film.nle-view.json"), serializeNleTimelineView(view), "utf8");
   process.stdout.write(`${JSON.stringify({
     format: "hypit.ranking-debate-composition@1",
     project: "film.nle.json",

@@ -34,11 +34,13 @@ const { createSvmlToolchainCliCommandModules } = await import("@hypit/svml-toolc
 const {
   createSourceBuildCliCommandModules,
 } = await import("@hypit/build-cli");
-const { createBuildOperationsCliCommandModules } = await import("@hypit/build-operations-cli");
+const { acquireOAuthCredential, createBuildOperationsCliCommandModules } = await import("@hypit/build-operations-cli");
 const { createGenerationGraphCliCommandModules } = await import("@hypit/generation-graph-cli");
 const { createLocalRuntimeCliCommandModules } = await import("@hypit/runtime-local/cli");
+const { selectRuntimeProfile } = await import("@hypit/runtime-local");
 const { createLocalMediaCliCommandModules } = await import("@hypit/media-file-local/cli");
 const { createLocalNleCliCommandModules } = await import("@hypit/nle-local/cli");
+const { createWorkbenchCliCommandModules } = await import("@hypit/workbench/cli");
 const { createProjectCliCommandModules } = await import("@hypit/project-cli");
 const { createSpeechEstimateCliCommandModules } = await import("@hypit/speech-estimate/cli");
 const { createWhisperXCliCommandModules } = await import("@hypit/whisperx/cli");
@@ -54,6 +56,19 @@ await runNodeCli(args, async (argv, io) => await runInstalledCliApplication(argv
     ...createGenerationGraphCliCommandModules(toolchainServices.generation),
     ...createLocalMediaCliCommandModules(),
     ...createLocalNleCliCommandModules({ distributionPackageRoot: distributionRoot }),
+    ...createWorkbenchCliCommandModules({
+      distributionPackageRoot: distributionRoot,
+      resolveProjectRuntime: toolchainServices.generation.resolveProjectRuntime,
+      openRuntimeHost: toolchainServices.localRuntime.openLocalRuntimeHost,
+      selectProjectRuntime: async (projectRoot, profile) => { await selectRuntimeProfile(projectRoot, profile); },
+      acquireOAuthCredential,
+      materializeMediaProduct: toolchainServices.generation.materializeMediaProduct,
+      openProjectResults: async (projectRoot) =>
+        await toolchainServices.buildOperations.openProjectResults(projectRoot, {
+          packageRoot: distributionRoot,
+          distributionPackageRoot: distributionRoot,
+        }),
+    }),
     ...createSourceBuildCliCommandModules(svmlServices),
     ...createBuildOperationsCliCommandModules(toolchainServices.buildOperations),
     ...createLocalRuntimeCliCommandModules(toolchainServices.localRuntime),

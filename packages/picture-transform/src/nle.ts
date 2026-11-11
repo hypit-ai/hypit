@@ -1,4 +1,8 @@
-import type { NleEffectParameterAuthoring, NleEffectResolver, NlePackageSymbol } from "@hypit/nle";
+import type {
+  NleAdjustmentParameterAuthoring,
+  NlePackageSymbol,
+  NlePictureAdjustmentResolver,
+} from "@hypit/nle";
 import { canonicalize } from "@hypit/protocol";
 import {
   assertExactTemporalValue,
@@ -155,10 +159,10 @@ export function editPictureTransformNleParameters(
   return next;
 }
 
-export const pictureTransformNleResolver: NleEffectResolver = {
-  effect: pictureTransformNleSymbol,
-  resolve: (effect, item) => {
-    const parameters = effect.parameters as unknown;
+export const pictureTransformNleResolver: NlePictureAdjustmentResolver = {
+  component: pictureTransformNleSymbol,
+  resolve: (item) => {
+    const parameters = item.parameters as unknown;
     assertPictureTransformNleParameters(parameters, item.duration);
     return parameters.kind === "constant"
       ? { operator: pictureTransformOperator(parameters.state) }
@@ -169,15 +173,15 @@ export const pictureTransformNleResolver: NleEffectResolver = {
   },
 };
 
-export const pictureTransformNleAuthoring: NleEffectParameterAuthoring = {
-  effect: pictureTransformNleSymbol,
-  inspect: ({ effect, item }) => {
-    const parameters = effect.parameters as unknown;
+export const pictureTransformNleAuthoring: NleAdjustmentParameterAuthoring = {
+  component: pictureTransformNleSymbol,
+  inspect: ({ item }) => {
+    const parameters = item.parameters as unknown;
     assertPictureTransformNleParameters(parameters, item.duration);
     return canonicalize(parameters);
   },
-  edit: (operation, { effect, item }) => {
-    const parameters = effect.parameters as unknown;
+  edit: (operation, { item }) => {
+    const parameters = item.parameters as unknown;
     assertPictureTransformNleParameters(parameters, item.duration);
     return canonicalize(editPictureTransformNleParameters(
       parameters,

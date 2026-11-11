@@ -1,0 +1,10 @@
+{
+  "format": "hypit.nle-view@1",
+  "id": "title-card-main",
+  "name": "Title Card Timeline",
+  "revision": 0,
+  "project": { "path": "title-card.nle.json" },
+  "editRate": { "numerator": 30, "denominator": 1 },
+  "tracks": [{ "track": "picture-main", "locked": false }],
+  "groups": []
+}

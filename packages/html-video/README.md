@@ -23,8 +23,11 @@ not install Author Graph or Temporal Graph.
 `lowerNleProjectToHtmlVideoDeliveryPlan` is the downstream NLE adapter. It structurally lowers one `NleProject`
 once, derives both terminal programmes from that same AVIR value, and supplies an exact silent `AudioProgram` when a
 picture-only project is exported. NLE Core therefore remains unaware of terminal Source implementations, delivery
-policy and provider execution. The caller supplies the output frame rate explicitly: it samples exact NLE programme
-time and is independent of the project's editing/snap rate.
+policy and provider execution. The caller supplies one invocation-local `NleHtmlOutputSelection`: its sampling grid
+samples exact NLE programme time independently of the editing/snap rate, while its Canvas and Picture transform map
+the output viewport into Programme Space independently of authored Item coordinates. `createNleScaledHtmlOutput()`
+constructs the ordinary same-aspect 720p/1080p/4K case and rejects an aspect change; callers choosing contain, cover,
+stretch or another reframe policy provide the exact transform explicitly.
 
 The adapter's link session is transient. The `hypit.nle-package@1` facet supplies only `ProgramSource` contracts and
 AVIR Operators. A package that supports this HTML-plus-Audio delivery path may independently publish
@@ -32,6 +35,11 @@ AVIR Operators. A package that supports this HTML-plus-Audio delivery path may i
 Audio Source factory. Prepared Media and nested NLE projects are bound by this package itself. The session observes
 the single recursive NLE→AVIR pass, retains no named dependency after export, and is never serialized into the NLE
 Project or AVIR.
+
+The same terminal facet may expose package-owned `NleHtmlVideoResource` values. Each resource pairs one typed
+`BlobRef` identity with an invocation-time `open()` function; the application Host retains those bytes and binds the
+Artifact when it materializes or executes the Programme. Package files, HTTP URLs and cache locations therefore do
+not enter NLE or AVIR, and large images or fonts do not need to be embedded as data URLs.
 
 An optional selected-range form accepts an absolute visual `FrameSpan` and an audio render range.
 Those are request-time selections, not a Timeline author model.

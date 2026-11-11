@@ -9,8 +9,6 @@ import type {
 import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
 import { promptTypes } from "@hypit/hypit/prompt";
 
-import { pixverseRequestValidator } from "./validation.js";
-
 export const pixverseModuleRef = { name: "@hypit/pixverse", version: "1" } as const;
 export const pixverseModels = ["pixverse-v6", "pixverse-c1"] as const;
 export type PixverseModel = typeof pixverseModels[number];
@@ -55,7 +53,7 @@ function pixverseFieldTable(model: PixverseModel): ModelFieldTable {
       { name: "referenceImage", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: v6 ? 10 : 7 },
       ...referenceVideo,
       // Required except in the reference-video mode, which pixverseRequestValidator states.
-      { name: "duration", value: { kind: "number", integer: true, minimum: 1, maximum: 15 }, minItems: 0, maxItems: 1 },
+      { name: "duration", value: { kind: "number", integer: true, minimum: 1, maximum: 15 }, minItems: v6 ? 0 : 1, maxItems: 1 },
       { name: "quality", value: { kind: "enum", values: [...PIXVERSE_QUALITIES] }, minItems: 1, maxItems: 1 },
       {
         name: "aspectRatio",
@@ -67,6 +65,7 @@ function pixverseFieldTable(model: PixverseModel): ModelFieldTable {
       ...v6Switches,
     ],
     requires: [
+      ...(v6 ? [{ kind: "atLeastOneOf" as const, fields: ["duration", "referenceVideo"] }] : []),
       // A last frame states where a run that already has a first frame ends.
       { kind: "requiresPresent", field: "lastFrame", needs: ["firstFrame"] },
       // A run that starts from a frame inherits that frame's shape.
@@ -98,7 +97,6 @@ const pixverseBaseDefinition = defineFieldModelModule({
     producerName: `request-${model}`,
     fields: pixverseFields[model],
     result: standardGenerationResults.video,
-    validateRequest: pixverseRequestValidator(model),
   })),
 });
 

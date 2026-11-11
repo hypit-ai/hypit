@@ -2,28 +2,28 @@ import type { Facet } from "@hypit/facet";
 import { isModuleRef, moduleKey } from "@hypit/protocol";
 
 import type {
-  NleResolvedAudioEffect,
+  NleResolvedAudioAdjustment,
+  NleAdjustmentItem,
   NleComponentItem,
-  NleEffect,
-  NleItem,
   NleLoweringContext,
   NleLoweringHost,
   NleMatte,
   NleMatteLoweringContext,
-  NleMedia,
+  NleMediaAssetReference,
   NleMediaLoweringContext,
   NleResolvedMedia,
   NlePackageSymbol,
-  NleResolvedEffect,
+  NleResolvedPictureAdjustment,
   NleResolvedItemSource,
   NleResolvedSignalReconstruction,
   NleAudioAppearance,
   NleTransition,
   NleTransitionLoweringContext,
+  NlePresentItem,
 } from "./types.js";
 
 export type NleMediaResolver = (
-  media: NleMedia,
+  asset: NleMediaAssetReference,
   context: NleMediaLoweringContext,
 ) => NleResolvedMedia;
 
@@ -31,42 +31,45 @@ export const nlePackageFacetAbi = "hypit.nle-package@1";
 
 export type NleComponentResolver = {
   readonly component: NlePackageSymbol;
-  readonly resolve: (item: NleComponentItem, context: NleLoweringContext) => NleResolvedItemSource;
+  readonly resolve: (
+    item: NleComponentItem,
+    context: NleLoweringContext,
+  ) => NleResolvedItemSource;
 };
 
-export type NleEffectResolver = {
-  readonly effect: NlePackageSymbol;
-  readonly resolve: (effect: NleEffect, item: NleItem, context: NleLoweringContext) => NleResolvedEffect;
+export type NlePictureAdjustmentResolver = {
+  readonly component: NlePackageSymbol;
+  readonly resolve: (item: NleAdjustmentItem, context: NleLoweringContext) => NleResolvedPictureAdjustment;
 };
 
-export type NleAudioEffectResolver = {
-  readonly effect: NlePackageSymbol;
-  readonly resolve: (effect: NleEffect, item: NleItem, context: NleLoweringContext) => NleResolvedAudioEffect;
+export type NleAudioAdjustmentResolver = {
+  readonly component: NlePackageSymbol;
+  readonly resolve: (item: NleAdjustmentItem, context: NleLoweringContext) => NleResolvedAudioAdjustment;
 };
 
 export type NleSignalReconstructionResolver = {
   readonly reconstruction: NlePackageSymbol;
   readonly resolve: (
     reconstruction: NonNullable<NleAudioAppearance["reconstruction"]>,
-    item: NleItem,
+    item: NlePresentItem,
     context: NleLoweringContext,
   ) => NleResolvedSignalReconstruction;
 };
 
 export type NleTransitionResolver = {
   readonly transition: NlePackageSymbol;
-  readonly resolve: (transition: NleTransition, context: NleTransitionLoweringContext) => NleResolvedEffect;
+  readonly resolve: (transition: NleTransition, context: NleTransitionLoweringContext) => NleResolvedPictureAdjustment;
 };
 
 export type NleMatteResolver = {
   readonly matte: NlePackageSymbol;
-  readonly resolve: (matte: NleMatte, context: NleMatteLoweringContext) => NleResolvedEffect;
+  readonly resolve: (matte: NleMatte, context: NleMatteLoweringContext) => NleResolvedPictureAdjustment;
 };
 
 export type NlePackage = {
   readonly components?: readonly NleComponentResolver[];
-  readonly effects?: readonly NleEffectResolver[];
-  readonly audioEffects?: readonly NleAudioEffectResolver[];
+  readonly pictureAdjustments?: readonly NlePictureAdjustmentResolver[];
+  readonly audioAdjustments?: readonly NleAudioAdjustmentResolver[];
   readonly signalReconstructions?: readonly NleSignalReconstructionResolver[];
   readonly transitions?: readonly NleTransitionResolver[];
   readonly mattes?: readonly NleMatteResolver[];
@@ -96,14 +99,14 @@ function assertPackage(value: NlePackage): void {
     keys.add(key);
     assert(typeof resolver.resolve === "function", `NLE resolver ${key} is not callable.`);
   }
-  for (const resolver of value.effects ?? []) {
-    const key = `effect:${nlePackageSymbolKey(resolver.effect)}`;
+  for (const resolver of value.pictureAdjustments ?? []) {
+    const key = `picture-adjustment:${nlePackageSymbolKey(resolver.component)}`;
     assert(!keys.has(key), `NLE package repeats resolver ${key}.`);
     keys.add(key);
     assert(typeof resolver.resolve === "function", `NLE resolver ${key} is not callable.`);
   }
-  for (const resolver of value.audioEffects ?? []) {
-    const key = `audio-effect:${nlePackageSymbolKey(resolver.effect)}`;
+  for (const resolver of value.audioAdjustments ?? []) {
+    const key = `audio-adjustment:${nlePackageSymbolKey(resolver.component)}`;
     assert(!keys.has(key), `NLE package repeats resolver ${key}.`);
     keys.add(key);
     assert(typeof resolver.resolve === "function", `NLE resolver ${key} is not callable.`);
@@ -145,8 +148,8 @@ export function createNleLoweringHost(
   resolveMedia?: NleMediaResolver,
 ): NleLoweringHost {
   const components = new Map<string, NleComponentResolver>();
-  const effects = new Map<string, NleEffectResolver>();
-  const audioEffects = new Map<string, NleAudioEffectResolver>();
+  const pictureAdjustments = new Map<string, NlePictureAdjustmentResolver>();
+  const audioAdjustments = new Map<string, NleAudioAdjustmentResolver>();
   const signalReconstructions = new Map<string, NleSignalReconstructionResolver>();
   const transitions = new Map<string, NleTransitionResolver>();
   const mattes = new Map<string, NleMatteResolver>();
@@ -157,9 +160,11 @@ export function createNleLoweringHost(
   for (const value of packages) {
     assertPackage(value);
     for (const resolver of value.components ?? []) add(components, nlePackageSymbolKey(resolver.component), resolver);
-    for (const resolver of value.effects ?? []) add(effects, nlePackageSymbolKey(resolver.effect), resolver);
-    for (const resolver of value.audioEffects ?? []) {
-      add(audioEffects, nlePackageSymbolKey(resolver.effect), resolver);
+    for (const resolver of value.pictureAdjustments ?? []) {
+      add(pictureAdjustments, nlePackageSymbolKey(resolver.component), resolver);
+    }
+    for (const resolver of value.audioAdjustments ?? []) {
+      add(audioAdjustments, nlePackageSymbolKey(resolver.component), resolver);
     }
     for (const resolver of value.signalReconstructions ?? []) {
       add(signalReconstructions, nlePackageSymbolKey(resolver.reconstruction), resolver);
@@ -168,8 +173,8 @@ export function createNleLoweringHost(
     for (const resolver of value.mattes ?? []) add(mattes, nlePackageSymbolKey(resolver.matte), resolver);
   }
   return {
-    resolveMedia: resolveMedia ?? ((media) => {
-      throw new Error(`NLE Media ${media.id} has not been resolved by the Host.`);
+    resolveMedia: resolveMedia ?? ((asset) => {
+      throw new Error(`NLE Media Asset ${asset.path} has not been resolved by the Host.`);
     }),
     resolveComponent: (item, context) => {
       const key = nlePackageSymbolKey(item.component);
@@ -177,17 +182,17 @@ export function createNleLoweringHost(
       if (resolver === undefined) throw new Error(`NLE Component ${key} is not installed.`);
       return resolver.resolve(item, context);
     },
-    resolveEffect: (effect, item, context) => {
-      const key = nlePackageSymbolKey(effect.effect);
-      const resolver = effects.get(key);
-      if (resolver === undefined) throw new Error(`NLE Effect ${key} is not installed.`);
-      return resolver.resolve(effect, item, context);
+    resolvePictureAdjustment: (item, context) => {
+      const key = nlePackageSymbolKey(item.component);
+      const resolver = pictureAdjustments.get(key);
+      if (resolver === undefined) throw new Error(`NLE Picture Adjustment ${key} is not installed.`);
+      return resolver.resolve(item, context);
     },
-    resolveAudioEffect: (effect, item, context) => {
-      const key = nlePackageSymbolKey(effect.effect);
-      const resolver = audioEffects.get(key);
-      if (resolver === undefined) throw new Error(`NLE Audio Effect ${key} is not installed.`);
-      return resolver.resolve(effect, item, context);
+    resolveAudioAdjustment: (item, context) => {
+      const key = nlePackageSymbolKey(item.component);
+      const resolver = audioAdjustments.get(key);
+      if (resolver === undefined) throw new Error(`NLE Audio Adjustment ${key} is not installed.`);
+      return resolver.resolve(item, context);
     },
     resolveSignalReconstruction: (reconstruction, item, context) => {
       const key = nlePackageSymbolKey(reconstruction.using);

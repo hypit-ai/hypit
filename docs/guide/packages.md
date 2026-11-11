@@ -29,7 +29,7 @@ caption cue or overlay can remain independent. Each component owns the content w
 together, while the NLE project owns direct placement and paint order.
 
 For spoken work, Script and transcript packages retain source-local selections and timing. An explicit
-materializer can turn the chosen presentation into ordinary Component Items. The saved NLE contains
+materializer can turn the chosen presentation into ordinary Component Presents. The saved NLE contains
 the resulting exact values rather than a live semantic lookup.
 [NLE project structure](../quickstart/tracks.md) and
 [export](../quickstart/composition.md) explain how these contributions fit together.

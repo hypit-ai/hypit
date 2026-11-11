@@ -1,0 +1,25 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "rear-medium",
+  "name": "背面中景",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets",
+      "version": "1"
+    },
+    "name": "camera-preset"
+  },
+  "resources": {},
+  "parameters": {
+    "cameraPreset": {
+      "targetMode": "subject",
+      "yawDeg": 180,
+      "elevationDeg": 1,
+      "rollDeg": 0,
+      "framing": "medium",
+      "distanceScale": 1.32,
+      "focusY": 0.72,
+      "fov": 40
+    }
+  }
+}

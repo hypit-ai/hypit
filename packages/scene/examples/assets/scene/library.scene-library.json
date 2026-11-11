@@ -1,0 +1,2261 @@
+{
+  "format": "hypit.scene-library@1",
+  "id": "project-scene-assets",
+  "name": "项目场景资产",
+  "collections": [
+    {
+      "id": "characters",
+      "label": "角色",
+      "icon": "person",
+      "children": [
+        {
+          "id": "people",
+          "label": "基础人物",
+          "children": []
+        },
+        {
+          "id": "stylized",
+          "label": "造型角色",
+          "children": []
+        },
+        {
+          "id": "groups",
+          "label": "多人组合",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "objects",
+      "label": "物体",
+      "icon": "object",
+      "children": [
+        {
+          "id": "geometry",
+          "label": "几何体",
+          "children": []
+        },
+        {
+          "id": "furniture",
+          "label": "家具",
+          "children": []
+        },
+        {
+          "id": "architecture",
+          "label": "建筑",
+          "children": []
+        },
+        {
+          "id": "nature",
+          "label": "自然",
+          "children": []
+        },
+        {
+          "id": "street",
+          "label": "街道",
+          "children": []
+        },
+        {
+          "id": "office",
+          "label": "办公",
+          "children": []
+        },
+        {
+          "id": "kitchen",
+          "label": "厨房",
+          "children": []
+        },
+        {
+          "id": "bathroom",
+          "label": "卫浴",
+          "children": []
+        },
+        {
+          "id": "daily",
+          "label": "日用",
+          "children": []
+        },
+        {
+          "id": "production",
+          "label": "拍摄与舞台",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "environments",
+      "label": "环境",
+      "icon": "image",
+      "children": [
+        {
+          "id": "world",
+          "label": "世界环境",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "cameras",
+      "label": "机位",
+      "icon": "camera",
+      "children": []
+    }
+  ],
+  "entries": [
+    {
+      "id": "standard-male",
+      "label": "男性 · 标准",
+      "description": "基础人物 · 高 1.76 m",
+      "asset": {
+        "path": "characters/standard-male/standard-male.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "男性 · 标准",
+        "adult",
+        "male",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "standard-female",
+      "label": "女性 · 标准",
+      "description": "基础人物 · 高 1.63 m",
+      "asset": {
+        "path": "characters/standard-female/standard-female.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "女性 · 标准",
+        "adult",
+        "female",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "slim-male",
+      "label": "男性 · 纤瘦",
+      "description": "基础人物 · 高 1.80 m",
+      "asset": {
+        "path": "characters/slim-male/slim-male.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "男性 · 纤瘦",
+        "adult",
+        "male",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "slim-female",
+      "label": "女性 · 纤瘦",
+      "description": "基础人物 · 高 1.68 m",
+      "asset": {
+        "path": "characters/slim-female/slim-female.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "女性 · 纤瘦",
+        "adult",
+        "female",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "athletic-male",
+      "label": "男性 · 健壮",
+      "description": "基础人物 · 高 1.80 m",
+      "asset": {
+        "path": "characters/athletic-male/athletic-male.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "男性 · 健壮",
+        "adult",
+        "male",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "athletic-female",
+      "label": "女性 · 健壮",
+      "description": "基础人物 · 高 1.67 m",
+      "asset": {
+        "path": "characters/athletic-female/athletic-female.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "女性 · 健壮",
+        "adult",
+        "female",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "full-male",
+      "label": "男性 · 丰腴",
+      "description": "基础人物 · 高 1.75 m",
+      "asset": {
+        "path": "characters/full-male/full-male.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "男性 · 丰腴",
+        "adult",
+        "male",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "full-female",
+      "label": "女性 · 丰腴",
+      "description": "基础人物 · 高 1.62 m",
+      "asset": {
+        "path": "characters/full-female/full-female.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "女性 · 丰腴",
+        "adult",
+        "female",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "teen-male",
+      "label": "男性 · 少年",
+      "description": "基础人物 · 高 1.72 m",
+      "asset": {
+        "path": "characters/teen-male/teen-male.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "男性 · 少年",
+        "adolescent",
+        "male",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "teen-female",
+      "label": "女性 · 少年",
+      "description": "基础人物 · 高 1.59 m",
+      "asset": {
+        "path": "characters/teen-female/teen-female.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "女性 · 少年",
+        "adolescent",
+        "female",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "child-male",
+      "label": "男性 · 儿童",
+      "description": "基础人物 · 高 1.34 m",
+      "asset": {
+        "path": "characters/child-male/child-male.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "男性 · 儿童",
+        "child-8-9",
+        "male",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "child-female",
+      "label": "女性 · 儿童",
+      "description": "基础人物 · 高 1.34 m",
+      "asset": {
+        "path": "characters/child-female/child-female.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "女性 · 儿童",
+        "child-8-9",
+        "female",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "elder-male",
+      "label": "男性 · 老年",
+      "description": "基础人物 · 高 1.70 m",
+      "asset": {
+        "path": "characters/elder-male/elder-male.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "男性 · 老年",
+        "elder",
+        "male",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "elder-female",
+      "label": "女性 · 老年",
+      "description": "基础人物 · 高 1.57 m",
+      "asset": {
+        "path": "characters/elder-female/elder-female.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "女性 · 老年",
+        "elder",
+        "female",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "neutral-mannequin",
+      "label": "人物 · 中性",
+      "description": "基础人物 · 高 1.72 m",
+      "asset": {
+        "path": "characters/neutral-mannequin/neutral-mannequin.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "人物 · 中性",
+        "adult",
+        "neutral",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "toddler",
+      "label": "人物 · 幼儿",
+      "description": "基础人物 · 高 0.94 m",
+      "asset": {
+        "path": "characters/toddler/toddler.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "人物 · 幼儿",
+        "toddler-2-3",
+        "neutral",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "pregnant-female",
+      "label": "女性 · 孕期",
+      "description": "基础人物 · 高 1.64 m",
+      "asset": {
+        "path": "characters/pregnant-female/pregnant-female.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "people"
+      ],
+      "tags": [
+        "女性 · 孕期",
+        "adult",
+        "female",
+        "人物",
+        "person"
+      ]
+    },
+    {
+      "id": "hero-bot",
+      "label": "角色 · 机械",
+      "description": "造型角色 · 高 1.82 m",
+      "asset": {
+        "path": "characters/hero-bot/hero-bot.scene-asset.json"
+      },
+      "collections": [
+        "characters",
+        "stylized"
+      ],
+      "tags": [
+        "角色 · 机械",
+        "机械",
+        "robot"
+      ]
+    },
+    {
+      "id": "scale-human",
+      "label": "简化人体",
+      "description": "尺度参照 · 高 1.75 m",
+      "asset": {
+        "path": "geometry/scale-human/scale-human.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "geometry"
+      ],
+      "tags": [
+        "简化人体",
+        "几何体",
+        "geometry",
+        "human-scale-reference"
+      ]
+    },
+    {
+      "id": "cube",
+      "label": "立方体",
+      "description": "几何体 · 1 × 1 × 1 m",
+      "asset": {
+        "path": "geometry/cube/cube.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "geometry"
+      ],
+      "tags": [
+        "立方体",
+        "几何体",
+        "geometry",
+        "cube"
+      ]
+    },
+    {
+      "id": "sphere",
+      "label": "球体",
+      "description": "几何体 · 直径 1 m",
+      "asset": {
+        "path": "geometry/sphere/sphere.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "geometry"
+      ],
+      "tags": [
+        "球体",
+        "几何体",
+        "geometry",
+        "sphere"
+      ]
+    },
+    {
+      "id": "cuboid",
+      "label": "长方体",
+      "description": "几何体 · 1.4 × 0.8 × 0.8 m",
+      "asset": {
+        "path": "geometry/cuboid/cuboid.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "geometry"
+      ],
+      "tags": [
+        "长方体",
+        "几何体",
+        "geometry",
+        "cuboid"
+      ]
+    },
+    {
+      "id": "cylinder",
+      "label": "圆柱体",
+      "description": "几何体 · 高 1 m",
+      "asset": {
+        "path": "geometry/cylinder/cylinder.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "geometry"
+      ],
+      "tags": [
+        "圆柱体",
+        "几何体",
+        "geometry",
+        "cylinder"
+      ]
+    },
+    {
+      "id": "cone",
+      "label": "圆锥体",
+      "description": "几何体 · 高 1 m",
+      "asset": {
+        "path": "geometry/cone/cone.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "geometry"
+      ],
+      "tags": [
+        "圆锥体",
+        "几何体",
+        "geometry",
+        "cone"
+      ]
+    },
+    {
+      "id": "square-pyramid",
+      "label": "四棱锥",
+      "description": "几何体 · 高 1 m",
+      "asset": {
+        "path": "geometry/square-pyramid/square-pyramid.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "geometry"
+      ],
+      "tags": [
+        "四棱锥",
+        "几何体",
+        "geometry",
+        "square-pyramid"
+      ]
+    },
+    {
+      "id": "torus",
+      "label": "圆环体",
+      "description": "几何体 · 外径 1 m",
+      "asset": {
+        "path": "geometry/torus/torus.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "geometry"
+      ],
+      "tags": [
+        "圆环体",
+        "几何体",
+        "geometry",
+        "torus"
+      ]
+    },
+    {
+      "id": "plane",
+      "label": "基础平面",
+      "description": "几何体 · 1 × 1 m",
+      "asset": {
+        "path": "geometry/plane/plane.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "geometry"
+      ],
+      "tags": [
+        "基础平面",
+        "几何体",
+        "geometry",
+        "plane"
+      ]
+    },
+    {
+      "id": "capsule",
+      "label": "胶囊体",
+      "description": "几何体 · 高 1 m",
+      "asset": {
+        "path": "geometry/capsule/capsule.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "geometry"
+      ],
+      "tags": [
+        "胶囊体",
+        "几何体",
+        "geometry",
+        "capsule"
+      ]
+    },
+    {
+      "id": "disk",
+      "label": "圆盘",
+      "description": "几何体 · 直径 1 m",
+      "asset": {
+        "path": "geometry/disk/disk.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "geometry"
+      ],
+      "tags": [
+        "圆盘",
+        "几何体",
+        "geometry",
+        "disk"
+      ]
+    },
+    {
+      "id": "half-arc",
+      "label": "半圆弧",
+      "description": "几何体 · 宽 0.96 m",
+      "asset": {
+        "path": "geometry/half-arc/half-arc.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "geometry"
+      ],
+      "tags": [
+        "半圆弧",
+        "几何体",
+        "geometry",
+        "half-arc"
+      ]
+    },
+    {
+      "id": "half-cylinder",
+      "label": "半圆柱",
+      "description": "几何体 · 1 × 0.5 × 1 m",
+      "asset": {
+        "path": "geometry/half-cylinder/half-cylinder.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "geometry"
+      ],
+      "tags": [
+        "半圆柱",
+        "几何体",
+        "geometry",
+        "half-cylinder"
+      ]
+    },
+    {
+      "id": "round-table",
+      "label": "圆桌",
+      "description": "家具 · 高 0.75 m",
+      "asset": {
+        "path": "props/round-table/round-table.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "圆桌",
+        "桌子",
+        "家具",
+        "table"
+      ]
+    },
+    {
+      "id": "lounge-chair",
+      "label": "椅子",
+      "description": "家具 · 高 0.9 m",
+      "asset": {
+        "path": "props/lounge-chair/lounge-chair.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "椅子",
+        "座椅",
+        "家具",
+        "chair"
+      ]
+    },
+    {
+      "id": "four-step",
+      "label": "楼梯",
+      "description": "建筑 · 高 1.5 m",
+      "asset": {
+        "path": "props/four-step/four-step.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "architecture"
+      ],
+      "tags": [
+        "台阶",
+        "楼梯",
+        "建筑",
+        "stairs"
+      ]
+    },
+    {
+      "id": "round-stool",
+      "label": "圆凳",
+      "description": "家具 · 高 0.48 m",
+      "asset": {
+        "path": "objects/furniture/round-stool/round-stool.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "圆凳",
+        "家具"
+      ]
+    },
+    {
+      "id": "armchair",
+      "label": "扶手椅",
+      "description": "家具 · 高 0.88 m",
+      "asset": {
+        "path": "objects/furniture/armchair/armchair.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "扶手椅",
+        "家具"
+      ]
+    },
+    {
+      "id": "sofa",
+      "label": "沙发",
+      "description": "家具 · 高 0.88 m",
+      "asset": {
+        "path": "objects/furniture/sofa/sofa.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "沙发",
+        "家具"
+      ]
+    },
+    {
+      "id": "square-table",
+      "label": "方桌",
+      "description": "家具 · 高 0.75 m",
+      "asset": {
+        "path": "objects/furniture/square-table/square-table.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "方桌",
+        "家具"
+      ]
+    },
+    {
+      "id": "long-table",
+      "label": "长桌",
+      "description": "家具 · 高 0.75 m",
+      "asset": {
+        "path": "objects/furniture/long-table/long-table.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "长桌",
+        "家具"
+      ]
+    },
+    {
+      "id": "bed",
+      "label": "床",
+      "description": "家具 · 高 0.55 m",
+      "asset": {
+        "path": "objects/furniture/bed/bed.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "床",
+        "家具"
+      ]
+    },
+    {
+      "id": "bookshelf",
+      "label": "书架",
+      "description": "家具 · 高 1.8 m",
+      "asset": {
+        "path": "objects/furniture/bookshelf/bookshelf.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "书架",
+        "家具"
+      ]
+    },
+    {
+      "id": "low-cabinet",
+      "label": "矮柜",
+      "description": "家具 · 高 0.72 m",
+      "asset": {
+        "path": "objects/furniture/low-cabinet/low-cabinet.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "矮柜",
+        "家具"
+      ]
+    },
+    {
+      "id": "wardrobe",
+      "label": "衣柜",
+      "description": "家具 · 高 2 m",
+      "asset": {
+        "path": "objects/furniture/wardrobe/wardrobe.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "衣柜",
+        "家具"
+      ]
+    },
+    {
+      "id": "tv-console",
+      "label": "电视",
+      "description": "家具 · 高 0.68 m",
+      "asset": {
+        "path": "objects/furniture/tv-console/tv-console.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "电视",
+        "家具"
+      ]
+    },
+    {
+      "id": "wall-tv",
+      "label": "壁挂电视",
+      "description": "家具 · 高 0.7 m",
+      "asset": {
+        "path": "objects/furniture/wall-tv/wall-tv.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "壁挂电视",
+        "家具"
+      ]
+    },
+    {
+      "id": "floor-lamp",
+      "label": "落地灯",
+      "description": "家具 · 高 1.65 m",
+      "asset": {
+        "path": "objects/furniture/floor-lamp/floor-lamp.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "落地灯",
+        "家具"
+      ]
+    },
+    {
+      "id": "table-lamp",
+      "label": "台灯",
+      "description": "家具 · 高 0.5 m",
+      "asset": {
+        "path": "objects/furniture/table-lamp/table-lamp.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "台灯",
+        "家具"
+      ]
+    },
+    {
+      "id": "rug",
+      "label": "地毯",
+      "description": "家具 · 高 0.02 m",
+      "asset": {
+        "path": "objects/furniture/rug/rug.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "地毯",
+        "家具"
+      ]
+    },
+    {
+      "id": "coffee-table",
+      "label": "茶几",
+      "description": "家具 · 高 0.42 m",
+      "asset": {
+        "path": "objects/furniture/coffee-table/coffee-table.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "茶几",
+        "家具"
+      ]
+    },
+    {
+      "id": "side-table",
+      "label": "边桌",
+      "description": "家具 · 高 0.55 m",
+      "asset": {
+        "path": "objects/furniture/side-table/side-table.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "furniture"
+      ],
+      "tags": [
+        "边桌",
+        "家具"
+      ]
+    },
+    {
+      "id": "wall",
+      "label": "墙体",
+      "description": "建筑 · 高 2.6 m",
+      "asset": {
+        "path": "objects/architecture/wall/wall.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "architecture"
+      ],
+      "tags": [
+        "墙体",
+        "建筑"
+      ]
+    },
+    {
+      "id": "column",
+      "label": "立柱",
+      "description": "建筑 · 高 2.8 m",
+      "asset": {
+        "path": "objects/architecture/column/column.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "architecture"
+      ],
+      "tags": [
+        "立柱",
+        "建筑"
+      ]
+    },
+    {
+      "id": "ramp",
+      "label": "坡道",
+      "description": "建筑 · 高 0.8 m",
+      "asset": {
+        "path": "objects/architecture/ramp/ramp.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "architecture"
+      ],
+      "tags": [
+        "坡道",
+        "建筑"
+      ]
+    },
+    {
+      "id": "platform",
+      "label": "平台",
+      "description": "建筑 · 高 0.3 m",
+      "asset": {
+        "path": "objects/architecture/platform/platform.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "architecture"
+      ],
+      "tags": [
+        "平台",
+        "建筑"
+      ]
+    },
+    {
+      "id": "arch",
+      "label": "拱门",
+      "description": "建筑 · 高 2.6 m",
+      "asset": {
+        "path": "objects/architecture/arch/arch.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "architecture"
+      ],
+      "tags": [
+        "拱门",
+        "建筑"
+      ]
+    },
+    {
+      "id": "door",
+      "label": "门",
+      "description": "建筑 · 高 2.1 m",
+      "asset": {
+        "path": "objects/architecture/door/door.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "architecture"
+      ],
+      "tags": [
+        "门",
+        "建筑"
+      ]
+    },
+    {
+      "id": "fence",
+      "label": "围栏",
+      "description": "建筑 · 高 1.1 m",
+      "asset": {
+        "path": "objects/architecture/fence/fence.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "architecture"
+      ],
+      "tags": [
+        "围栏",
+        "建筑"
+      ]
+    },
+    {
+      "id": "ladder",
+      "label": "梯子",
+      "description": "建筑 · 高 2.4 m",
+      "asset": {
+        "path": "objects/architecture/ladder/ladder.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "architecture"
+      ],
+      "tags": [
+        "梯子",
+        "建筑"
+      ]
+    },
+    {
+      "id": "abstract-sculpture",
+      "label": "抽象雕像",
+      "description": "建筑 · 高 2 m",
+      "asset": {
+        "path": "objects/architecture/abstract-sculpture/abstract-sculpture.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "architecture"
+      ],
+      "tags": [
+        "抽象雕像",
+        "建筑"
+      ]
+    },
+    {
+      "id": "window",
+      "label": "窗户",
+      "description": "建筑 · 高 1.2 m",
+      "asset": {
+        "path": "objects/architecture/window/window.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "architecture"
+      ],
+      "tags": [
+        "窗户",
+        "建筑"
+      ]
+    },
+    {
+      "id": "railing",
+      "label": "栏杆",
+      "description": "建筑 · 高 1.05 m",
+      "asset": {
+        "path": "objects/architecture/railing/railing.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "architecture"
+      ],
+      "tags": [
+        "栏杆",
+        "建筑"
+      ]
+    },
+    {
+      "id": "small-tree",
+      "label": "小树",
+      "description": "自然 · 高 3.5 m",
+      "asset": {
+        "path": "objects/nature/small-tree/small-tree.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "nature"
+      ],
+      "tags": [
+        "小树",
+        "自然"
+      ]
+    },
+    {
+      "id": "large-tree",
+      "label": "大树",
+      "description": "自然 · 高 7 m",
+      "asset": {
+        "path": "objects/nature/large-tree/large-tree.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "nature"
+      ],
+      "tags": [
+        "大树",
+        "自然"
+      ]
+    },
+    {
+      "id": "rock",
+      "label": "石头",
+      "description": "自然 · 高 0.8 m",
+      "asset": {
+        "path": "objects/nature/rock/rock.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "nature"
+      ],
+      "tags": [
+        "石头",
+        "自然"
+      ]
+    },
+    {
+      "id": "bush",
+      "label": "灌木",
+      "description": "自然 · 高 1 m",
+      "asset": {
+        "path": "objects/nature/bush/bush.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "nature"
+      ],
+      "tags": [
+        "灌木",
+        "自然"
+      ]
+    },
+    {
+      "id": "potted-plant",
+      "label": "盆栽",
+      "description": "自然 · 高 1.2 m",
+      "asset": {
+        "path": "objects/nature/potted-plant/potted-plant.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "nature"
+      ],
+      "tags": [
+        "盆栽",
+        "自然"
+      ]
+    },
+    {
+      "id": "stump",
+      "label": "树桩",
+      "description": "自然 · 高 0.6 m",
+      "asset": {
+        "path": "objects/nature/stump/stump.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "nature"
+      ],
+      "tags": [
+        "树桩",
+        "自然"
+      ]
+    },
+    {
+      "id": "flower-bed",
+      "label": "花坛",
+      "description": "自然 · 高 0.5 m",
+      "asset": {
+        "path": "objects/nature/flower-bed/flower-bed.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "nature"
+      ],
+      "tags": [
+        "花坛",
+        "自然"
+      ]
+    },
+    {
+      "id": "car",
+      "label": "轿车",
+      "description": "街道 · 高 1.5 m",
+      "asset": {
+        "path": "objects/street/car/car.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "street"
+      ],
+      "tags": [
+        "轿车",
+        "街道"
+      ]
+    },
+    {
+      "id": "truck",
+      "label": "卡车",
+      "description": "街道 · 高 2.6 m",
+      "asset": {
+        "path": "objects/street/truck/truck.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "street"
+      ],
+      "tags": [
+        "卡车",
+        "街道"
+      ]
+    },
+    {
+      "id": "bicycle",
+      "label": "自行车",
+      "description": "街道 · 高 1.15 m",
+      "asset": {
+        "path": "objects/street/bicycle/bicycle.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "street"
+      ],
+      "tags": [
+        "自行车",
+        "街道"
+      ]
+    },
+    {
+      "id": "motorcycle",
+      "label": "摩托车",
+      "description": "街道 · 高 1.2 m",
+      "asset": {
+        "path": "objects/street/motorcycle/motorcycle.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "street"
+      ],
+      "tags": [
+        "摩托车",
+        "街道"
+      ]
+    },
+    {
+      "id": "streetlight",
+      "label": "路灯",
+      "description": "街道 · 高 3.8 m",
+      "asset": {
+        "path": "objects/street/streetlight/streetlight.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "street"
+      ],
+      "tags": [
+        "路灯",
+        "街道"
+      ]
+    },
+    {
+      "id": "street-bench",
+      "label": "长椅",
+      "description": "街道 · 高 0.85 m",
+      "asset": {
+        "path": "objects/street/street-bench/street-bench.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "street"
+      ],
+      "tags": [
+        "长椅",
+        "街道"
+      ]
+    },
+    {
+      "id": "trash-bin",
+      "label": "垃圾桶",
+      "description": "街道 · 高 1 m",
+      "asset": {
+        "path": "objects/street/trash-bin/trash-bin.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "street"
+      ],
+      "tags": [
+        "垃圾桶",
+        "街道"
+      ]
+    },
+    {
+      "id": "traffic-cone",
+      "label": "路锥",
+      "description": "街道 · 高 0.7 m",
+      "asset": {
+        "path": "objects/street/traffic-cone/traffic-cone.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "street"
+      ],
+      "tags": [
+        "路锥",
+        "街道"
+      ]
+    },
+    {
+      "id": "road-barrier",
+      "label": "水马",
+      "description": "街道 · 高 1 m",
+      "asset": {
+        "path": "objects/street/road-barrier/road-barrier.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "street"
+      ],
+      "tags": [
+        "水马",
+        "街道"
+      ]
+    },
+    {
+      "id": "road-sign",
+      "label": "路牌",
+      "description": "街道 · 高 2.4 m",
+      "asset": {
+        "path": "objects/street/road-sign/road-sign.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "street"
+      ],
+      "tags": [
+        "路牌",
+        "街道"
+      ]
+    },
+    {
+      "id": "fire-hydrant",
+      "label": "消防栓",
+      "description": "街道 · 高 0.85 m",
+      "asset": {
+        "path": "objects/street/fire-hydrant/fire-hydrant.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "street"
+      ],
+      "tags": [
+        "消防栓",
+        "街道"
+      ]
+    },
+    {
+      "id": "oil-drum",
+      "label": "油桶",
+      "description": "街道 · 高 0.9 m",
+      "asset": {
+        "path": "objects/street/oil-drum/oil-drum.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "street"
+      ],
+      "tags": [
+        "油桶",
+        "街道"
+      ]
+    },
+    {
+      "id": "wood-crate",
+      "label": "木箱",
+      "description": "街道 · 高 0.65 m",
+      "asset": {
+        "path": "objects/street/wood-crate/wood-crate.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "street"
+      ],
+      "tags": [
+        "木箱",
+        "街道"
+      ]
+    },
+    {
+      "id": "office-desk",
+      "label": "书桌",
+      "description": "办公 · 高 0.75 m",
+      "asset": {
+        "path": "objects/office/office-desk/office-desk.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "office"
+      ],
+      "tags": [
+        "书桌",
+        "办公"
+      ]
+    },
+    {
+      "id": "monitor",
+      "label": "显示器",
+      "description": "办公 · 高 0.48 m",
+      "asset": {
+        "path": "objects/office/monitor/monitor.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "office"
+      ],
+      "tags": [
+        "显示器",
+        "办公"
+      ]
+    },
+    {
+      "id": "laptop",
+      "label": "笔记本电脑",
+      "description": "办公 · 高 0.22 m",
+      "asset": {
+        "path": "objects/office/laptop/laptop.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "office"
+      ],
+      "tags": [
+        "笔记本电脑",
+        "办公"
+      ]
+    },
+    {
+      "id": "fridge",
+      "label": "冰箱",
+      "description": "厨房 · 高 1.85 m",
+      "asset": {
+        "path": "objects/kitchen/fridge/fridge.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "kitchen"
+      ],
+      "tags": [
+        "冰箱",
+        "厨房"
+      ]
+    },
+    {
+      "id": "stove",
+      "label": "灶台",
+      "description": "厨房 · 高 0.9 m",
+      "asset": {
+        "path": "objects/kitchen/stove/stove.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "kitchen"
+      ],
+      "tags": [
+        "灶台",
+        "厨房"
+      ]
+    },
+    {
+      "id": "kitchen-sink",
+      "label": "厨房水槽",
+      "description": "厨房 · 高 1.2 m",
+      "asset": {
+        "path": "objects/kitchen/kitchen-sink/kitchen-sink.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "kitchen"
+      ],
+      "tags": [
+        "厨房水槽",
+        "厨房"
+      ]
+    },
+    {
+      "id": "kitchen-counter",
+      "label": "厨房台面",
+      "description": "厨房 · 高 0.9 m",
+      "asset": {
+        "path": "objects/kitchen/kitchen-counter/kitchen-counter.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "kitchen"
+      ],
+      "tags": [
+        "厨房台面",
+        "厨房"
+      ]
+    },
+    {
+      "id": "kitchen-island",
+      "label": "厨房岛台",
+      "description": "厨房 · 高 0.92 m",
+      "asset": {
+        "path": "objects/kitchen/kitchen-island/kitchen-island.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "kitchen"
+      ],
+      "tags": [
+        "厨房岛台",
+        "厨房"
+      ]
+    },
+    {
+      "id": "microwave",
+      "label": "微波炉",
+      "description": "厨房 · 高 0.3 m",
+      "asset": {
+        "path": "objects/kitchen/microwave/microwave.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "kitchen"
+      ],
+      "tags": [
+        "微波炉",
+        "厨房"
+      ]
+    },
+    {
+      "id": "wall-cabinet",
+      "label": "吊柜",
+      "description": "厨房 · 高 0.7 m",
+      "asset": {
+        "path": "objects/kitchen/wall-cabinet/wall-cabinet.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "kitchen"
+      ],
+      "tags": [
+        "吊柜",
+        "厨房"
+      ]
+    },
+    {
+      "id": "toilet",
+      "label": "马桶",
+      "description": "卫浴 · 高 0.8 m",
+      "asset": {
+        "path": "objects/bathroom/toilet/toilet.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "bathroom"
+      ],
+      "tags": [
+        "马桶",
+        "卫浴"
+      ]
+    },
+    {
+      "id": "washbasin",
+      "label": "洗手盆",
+      "description": "卫浴 · 高 0.85 m",
+      "asset": {
+        "path": "objects/bathroom/washbasin/washbasin.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "bathroom"
+      ],
+      "tags": [
+        "洗手盆",
+        "卫浴"
+      ]
+    },
+    {
+      "id": "bathtub",
+      "label": "浴缸",
+      "description": "卫浴 · 高 0.6 m",
+      "asset": {
+        "path": "objects/bathroom/bathtub/bathtub.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "bathroom"
+      ],
+      "tags": [
+        "浴缸",
+        "卫浴"
+      ]
+    },
+    {
+      "id": "shower",
+      "label": "淋浴间",
+      "description": "卫浴 · 高 2.1 m",
+      "asset": {
+        "path": "objects/bathroom/shower/shower.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "bathroom"
+      ],
+      "tags": [
+        "淋浴间",
+        "卫浴"
+      ]
+    },
+    {
+      "id": "washing-machine",
+      "label": "洗衣机",
+      "description": "卫浴 · 高 0.9 m",
+      "asset": {
+        "path": "objects/bathroom/washing-machine/washing-machine.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "bathroom"
+      ],
+      "tags": [
+        "洗衣机",
+        "卫浴"
+      ]
+    },
+    {
+      "id": "cardboard-box",
+      "label": "纸箱",
+      "description": "日用 · 高 0.5 m",
+      "asset": {
+        "path": "objects/daily/cardboard-box/cardboard-box.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "daily"
+      ],
+      "tags": [
+        "纸箱",
+        "日用"
+      ]
+    },
+    {
+      "id": "suitcase",
+      "label": "行李箱",
+      "description": "日用 · 高 0.75 m",
+      "asset": {
+        "path": "objects/daily/suitcase/suitcase.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "daily"
+      ],
+      "tags": [
+        "行李箱",
+        "日用"
+      ]
+    },
+    {
+      "id": "mug",
+      "label": "马克杯",
+      "description": "日用 · 高 0.1 m",
+      "asset": {
+        "path": "objects/daily/mug/mug.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "daily"
+      ],
+      "tags": [
+        "马克杯",
+        "日用"
+      ]
+    },
+    {
+      "id": "mirror",
+      "label": "镜子",
+      "description": "日用 · 高 0.9 m",
+      "asset": {
+        "path": "objects/daily/mirror/mirror.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "daily"
+      ],
+      "tags": [
+        "镜子",
+        "日用"
+      ]
+    },
+    {
+      "id": "pendant-light",
+      "label": "吊灯",
+      "description": "日用 · 高 0.9 m",
+      "asset": {
+        "path": "objects/daily/pendant-light/pendant-light.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "daily"
+      ],
+      "tags": [
+        "吊灯",
+        "日用"
+      ]
+    },
+    {
+      "id": "ceiling-fan",
+      "label": "吊扇",
+      "description": "日用 · 高 0.25 m",
+      "asset": {
+        "path": "objects/daily/ceiling-fan/ceiling-fan.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "daily"
+      ],
+      "tags": [
+        "吊扇",
+        "日用"
+      ]
+    },
+    {
+      "id": "world-neutral",
+      "label": "中性",
+      "description": "世界环境 · 清晰体块与接触阴影",
+      "asset": {
+        "path": "environments/world-neutral/world-neutral.scene-asset.json"
+      },
+      "collections": [
+        "environments",
+        "world"
+      ],
+      "tags": [
+        "中性",
+        "世界环境",
+        "environment",
+        "灰色",
+        "neutral",
+        "预演"
+      ]
+    },
+    {
+      "id": "world-clear-day",
+      "label": "晴日",
+      "description": "世界环境 · 清晰日光",
+      "asset": {
+        "path": "environments/world-clear-day/world-clear-day.scene-asset.json"
+      },
+      "collections": [
+        "environments",
+        "world"
+      ],
+      "tags": [
+        "晴日",
+        "世界环境",
+        "environment",
+        "日光",
+        "daylight"
+      ]
+    },
+    {
+      "id": "world-overcast",
+      "label": "阴天",
+      "description": "世界环境 · 柔和漫射",
+      "asset": {
+        "path": "environments/world-overcast/world-overcast.scene-asset.json"
+      },
+      "collections": [
+        "environments",
+        "world"
+      ],
+      "tags": [
+        "阴天",
+        "世界环境",
+        "environment",
+        "柔光",
+        "overcast"
+      ]
+    },
+    {
+      "id": "world-golden-hour",
+      "label": "黄金时刻",
+      "description": "世界环境 · 低角度暖光",
+      "asset": {
+        "path": "environments/world-golden-hour/world-golden-hour.scene-asset.json"
+      },
+      "collections": [
+        "environments",
+        "world"
+      ],
+      "tags": [
+        "黄金时刻",
+        "世界环境",
+        "environment",
+        "黄昏",
+        "sunset"
+      ]
+    },
+    {
+      "id": "world-blue-hour",
+      "label": "蓝调时刻",
+      "description": "世界环境 · 冷暖交界",
+      "asset": {
+        "path": "environments/world-blue-hour/world-blue-hour.scene-asset.json"
+      },
+      "collections": [
+        "environments",
+        "world"
+      ],
+      "tags": [
+        "蓝调时刻",
+        "世界环境",
+        "environment",
+        "傍晚",
+        "blue hour"
+      ]
+    },
+    {
+      "id": "world-night",
+      "label": "夜间",
+      "description": "世界环境 · 冷色月光",
+      "asset": {
+        "path": "environments/world-night/world-night.scene-asset.json"
+      },
+      "collections": [
+        "environments",
+        "world"
+      ],
+      "tags": [
+        "夜间",
+        "世界环境",
+        "environment",
+        "月光",
+        "night"
+      ]
+    },
+    {
+      "id": "world-desert",
+      "label": "沙地",
+      "description": "世界环境 · 高亮暖色地面",
+      "asset": {
+        "path": "environments/world-desert/world-desert.scene-asset.json"
+      },
+      "collections": [
+        "environments",
+        "world"
+      ],
+      "tags": [
+        "沙地",
+        "世界环境",
+        "environment",
+        "沙漠",
+        "desert"
+      ]
+    },
+    {
+      "id": "world-black-void",
+      "label": "黑场",
+      "description": "世界环境 · 纯黑空间",
+      "asset": {
+        "path": "environments/world-black-void/world-black-void.scene-asset.json"
+      },
+      "collections": [
+        "environments",
+        "world"
+      ],
+      "tags": [
+        "黑场",
+        "世界环境",
+        "environment",
+        "轮廓",
+        "black void"
+      ]
+    },
+    {
+      "id": "current-view",
+      "label": "当前视角",
+      "description": "保存当前导演视角",
+      "asset": {
+        "path": "cameras/current-view/current-view.scene-asset.json"
+      },
+      "collections": [
+        "cameras"
+      ],
+      "tags": [
+        "当前视角",
+        "机位",
+        "camera",
+        "当前",
+        "视角"
+      ]
+    },
+    {
+      "id": "front-medium",
+      "label": "正面中景",
+      "description": "选择对象 · 腰部以上",
+      "asset": {
+        "path": "cameras/front-medium/front-medium.scene-asset.json"
+      },
+      "collections": [
+        "cameras"
+      ],
+      "tags": [
+        "正面中景",
+        "机位",
+        "camera",
+        "正面",
+        "中景"
+      ]
+    },
+    {
+      "id": "front-close",
+      "label": "正面特写",
+      "description": "选择对象 · 面部与上身",
+      "asset": {
+        "path": "cameras/front-close/front-close.scene-asset.json"
+      },
+      "collections": [
+        "cameras"
+      ],
+      "tags": [
+        "正面特写",
+        "机位",
+        "camera",
+        "正面",
+        "特写"
+      ]
+    },
+    {
+      "id": "front-wide",
+      "label": "正面全景",
+      "description": "选择对象 · 完整人物与环境",
+      "asset": {
+        "path": "cameras/front-wide/front-wide.scene-asset.json"
+      },
+      "collections": [
+        "cameras"
+      ],
+      "tags": [
+        "正面全景",
+        "机位",
+        "camera",
+        "正面",
+        "全景"
+      ]
+    },
+    {
+      "id": "side-follow",
+      "label": "侧面跟拍",
+      "description": "选择对象 · 运动方向留白",
+      "asset": {
+        "path": "cameras/side-follow/side-follow.scene-asset.json"
+      },
+      "collections": [
+        "cameras"
+      ],
+      "tags": [
+        "侧面跟拍",
+        "机位",
+        "camera",
+        "侧面",
+        "跟拍"
+      ]
+    },
+    {
+      "id": "side-close",
+      "label": "侧面近景",
+      "description": "选择对象 · 侧脸与肩部",
+      "asset": {
+        "path": "cameras/side-close/side-close.scene-asset.json"
+      },
+      "collections": [
+        "cameras"
+      ],
+      "tags": [
+        "侧面近景",
+        "机位",
+        "camera",
+        "侧面",
+        "近景"
+      ]
+    },
+    {
+      "id": "rear-medium",
+      "label": "背面中景",
+      "description": "选择对象 · 背部跟随视角",
+      "asset": {
+        "path": "cameras/rear-medium/rear-medium.scene-asset.json"
+      },
+      "collections": [
+        "cameras"
+      ],
+      "tags": [
+        "背面中景",
+        "机位",
+        "camera",
+        "背面",
+        "跟随"
+      ]
+    },
+    {
+      "id": "high-wide",
+      "label": "俯拍全景",
+      "description": "选择对象 · 高位交代空间",
+      "asset": {
+        "path": "cameras/high-wide/high-wide.scene-asset.json"
+      },
+      "collections": [
+        "cameras"
+      ],
+      "tags": [
+        "俯拍全景",
+        "机位",
+        "camera",
+        "俯拍",
+        "全景"
+      ]
+    },
+    {
+      "id": "three-quarter-high",
+      "label": "45° 俯拍",
+      "description": "选择对象 · 三分之四角度",
+      "asset": {
+        "path": "cameras/three-quarter-high/three-quarter-high.scene-asset.json"
+      },
+      "collections": [
+        "cameras"
+      ],
+      "tags": [
+        "45° 俯拍",
+        "机位",
+        "camera",
+        "45度",
+        "俯拍"
+      ]
+    },
+    {
+      "id": "low-angle",
+      "label": "低角度仰拍",
+      "description": "选择对象 · 强化主体气势",
+      "asset": {
+        "path": "cameras/low-angle/low-angle.scene-asset.json"
+      },
+      "collections": [
+        "cameras"
+      ],
+      "tags": [
+        "低角度仰拍",
+        "机位",
+        "camera",
+        "低角度",
+        "仰拍"
+      ]
+    },
+    {
+      "id": "low-wide",
+      "label": "低角度广角",
+      "description": "选择对象 · 近大远小",
+      "asset": {
+        "path": "cameras/low-wide/low-wide.scene-asset.json"
+      },
+      "collections": [
+        "cameras"
+      ],
+      "tags": [
+        "低角度广角",
+        "机位",
+        "camera",
+        "低角度",
+        "广角"
+      ]
+    },
+    {
+      "id": "over-shoulder",
+      "label": "过肩镜头",
+      "description": "选择前景角色与注视对象",
+      "asset": {
+        "path": "cameras/over-shoulder/over-shoulder.scene-asset.json"
+      },
+      "collections": [
+        "cameras"
+      ],
+      "tags": [
+        "过肩镜头",
+        "机位",
+        "camera",
+        "过肩",
+        "对话"
+      ]
+    },
+    {
+      "id": "bird-eye",
+      "label": "鸟瞰",
+      "description": "选择对象 · 垂直空间关系",
+      "asset": {
+        "path": "cameras/bird-eye/bird-eye.scene-asset.json"
+      },
+      "collections": [
+        "cameras"
+      ],
+      "tags": [
+        "鸟瞰",
+        "机位",
+        "camera",
+        "顶视"
+      ]
+    },
+    {
+      "id": "dutch-angle",
+      "label": "荷兰角",
+      "description": "选择对象 · 倾斜制造张力",
+      "asset": {
+        "path": "cameras/dutch-angle/dutch-angle.scene-asset.json"
+      },
+      "collections": [
+        "cameras"
+      ],
+      "tags": [
+        "荷兰角",
+        "机位",
+        "camera",
+        "倾斜"
+      ]
+    },
+    {
+      "id": "display-pedestal",
+      "label": "展示台",
+      "description": "拍摄与舞台 · 高 0.94 m",
+      "asset": {
+        "path": "props/display-pedestal/display-pedestal.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "production"
+      ],
+      "tags": [
+        "展示台",
+        "产品台",
+        "舞台",
+        "pedestal"
+      ]
+    },
+    {
+      "id": "softbox",
+      "label": "柔光箱",
+      "description": "拍摄与舞台 · 高 2.06 m",
+      "asset": {
+        "path": "props/softbox/softbox.scene-asset.json"
+      },
+      "collections": [
+        "objects",
+        "production"
+      ],
+      "tags": [
+        "柔光箱",
+        "灯光",
+        "拍摄",
+        "softbox"
+      ]
+    }
+  ]
+}

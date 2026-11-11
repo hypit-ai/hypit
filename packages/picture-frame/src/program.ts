@@ -191,7 +191,10 @@ if (data.shadows.length > 0) shadow.style.boxShadow = data.shadows.map(value =>
 if (data.clip.kind === 'none') frame.style.overflow = 'visible';
 else {
   frame.style.overflow = 'hidden';
-  if (data.clip.kind === 'rounded') frame.style.borderRadius = px(data.clip.radiusPx);
+  if (data.clip.kind === 'rounded') {
+    frame.style.borderRadius = px(data.clip.radiusPx);
+    shadow.style.borderRadius = px(data.clip.radiusPx);
+  }
   if (data.clip.kind === 'path') frame.style.clipPath = \`path("${'${path(data.clip.commands)}'}")\`;
 }
 return () => {};`,

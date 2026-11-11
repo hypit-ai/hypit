@@ -3,10 +3,6 @@
   "id": "ranking-debate",
   "name": "Ranking debate",
   "revision": 7,
-  "editRate": {
-    "numerator": 24,
-    "denominator": 1
-  },
   "canvas": {
     "width": 720,
     "height": 1280,
@@ -171,48 +167,20 @@
       }
     }
   ],
-  "media": [
-    {
-      "id": "alice-video-1",
-      "name": "alice-video-1",
-      "asset": {
-        "path": "media/alice-video-1/alice-video-1.media.json"
-      }
-    },
-    {
-      "id": "bob-video-1",
-      "name": "bob-video-1",
-      "asset": {
-        "path": "media/bob-video-1/bob-video-1.media.json"
-      }
-    },
-    {
-      "id": "alice-video-2",
-      "name": "alice-video-2",
-      "asset": {
-        "path": "media/alice-video-2/alice-video-2.media.json"
-      }
-    },
-    {
-      "id": "bob-video-2",
-      "name": "bob-video-2",
-      "asset": {
-        "path": "media/bob-video-2/bob-video-2.media.json"
-      }
-    }
-  ],
   "tracks": [
     {
       "id": "picture-main",
       "name": "Picture + production audio",
       "kind": "picture",
-      "locked": false,
       "muted": false,
       "items": [
         {
           "id": "alice-video-1-use",
-          "kind": "media",
-          "media": "alice-video-1",
+          "kind": "present",
+          "source": "media",
+          "asset": {
+            "path": "media/alice-video-1/alice-video-1.media.json"
+          },
           "start": {
             "ticks": "0",
             "timeBase": {
@@ -268,17 +236,18 @@
               "width": 720,
               "height": 1280,
               "fit": "cover"
-            },
-            "effects": []
+            }
           },
           "audio": {
-            "effects": []
-          }
+            }
         },
         {
           "id": "bob-video-1-use",
-          "kind": "media",
-          "media": "bob-video-1",
+          "kind": "present",
+          "source": "media",
+          "asset": {
+            "path": "media/bob-video-1/bob-video-1.media.json"
+          },
           "start": {
             "ticks": "145",
             "timeBase": {
@@ -334,17 +303,18 @@
               "width": 720,
               "height": 1280,
               "fit": "cover"
-            },
-            "effects": []
+            }
           },
           "audio": {
-            "effects": []
-          }
+            }
         },
         {
           "id": "alice-video-2-use",
-          "kind": "media",
-          "media": "alice-video-2",
+          "kind": "present",
+          "source": "media",
+          "asset": {
+            "path": "media/alice-video-2/alice-video-2.media.json"
+          },
           "start": {
             "ticks": "193",
             "timeBase": {
@@ -400,17 +370,18 @@
               "width": 720,
               "height": 1280,
               "fit": "cover"
-            },
-            "effects": []
+            }
           },
           "audio": {
-            "effects": []
-          }
+            }
         },
         {
           "id": "bob-video-2-use",
-          "kind": "media",
-          "media": "bob-video-2",
+          "kind": "present",
+          "source": "media",
+          "asset": {
+            "path": "media/bob-video-2/bob-video-2.media.json"
+          },
           "start": {
             "ticks": "193",
             "timeBase": {
@@ -466,12 +437,10 @@
               "width": 720,
               "height": 1280,
               "fit": "cover"
-            },
-            "effects": []
+            }
           },
           "audio": {
-            "effects": []
-          }
+            }
         }
       ]
     },
@@ -479,12 +448,12 @@
       "id": "ranking",
       "name": "Ranking board",
       "kind": "picture",
-      "locked": false,
       "muted": false,
       "items": [
         {
           "id": "ranking-board",
-          "kind": "component",
+          "kind": "present",
+          "source": "component",
           "start": {
             "ticks": "0",
             "timeBase": {
@@ -674,8 +643,7 @@
               "width": 720,
               "height": 1280,
               "fit": "fill"
-            },
-            "effects": []
+            }
           }
         }
       ]
@@ -684,12 +652,12 @@
       "id": "captions",
       "name": "Captions",
       "kind": "picture",
-      "locked": false,
       "muted": false,
       "items": [
         {
           "id": "alice-opening-captions:ranking-debate.caption:cue:1",
-          "kind": "component",
+          "kind": "present",
+          "source": "component",
           "start": {
             "ticks": "131",
             "timeBase": {
@@ -1305,13 +1273,13 @@
           "picture": {
             "layout": {
               "ref": "caption-bottom"
-            },
-            "effects": []
+            }
           }
         },
         {
           "id": "bob-generation-captions:ranking-debate.caption:cue:2",
-          "kind": "component",
+          "kind": "present",
+          "source": "component",
           "start": {
             "ticks": "18641",
             "timeBase": {
@@ -1819,13 +1787,13 @@
           "picture": {
             "layout": {
               "ref": "caption-bottom"
-            },
-            "effects": []
+            }
           }
         },
         {
           "id": "bob-generation-captions:ranking-debate.caption:cue:3",
-          "kind": "component",
+          "kind": "present",
+          "source": "component",
           "start": {
             "ticks": "30869",
             "timeBase": {
@@ -2306,13 +2274,13 @@
           "picture": {
             "layout": {
               "ref": "caption-bottom"
-            },
-            "effects": []
+            }
           }
         },
         {
           "id": "bob-generation-captions:ranking-debate.caption:cue:4",
-          "kind": "component",
+          "kind": "present",
+          "source": "component",
           "start": {
             "ticks": "40751",
             "timeBase": {
@@ -2658,13 +2626,13 @@
           "picture": {
             "layout": {
               "ref": "caption-bottom"
-            },
-            "effects": []
+            }
           }
         },
         {
           "id": "alice-timeline-captions:ranking-debate.caption:cue:5",
-          "kind": "component",
+          "kind": "present",
+          "source": "component",
           "start": {
             "ticks": "48703",
             "timeBase": {
@@ -3233,13 +3201,13 @@
           "picture": {
             "layout": {
               "ref": "caption-bottom"
-            },
-            "effects": []
+            }
           }
         },
         {
           "id": "bob-verdict-captions:ranking-debate.caption:cue:6",
-          "kind": "component",
+          "kind": "present",
+          "source": "component",
           "start": {
             "ticks": "6109",
             "timeBase": {
@@ -3828,13 +3796,13 @@
           "picture": {
             "layout": {
               "ref": "caption-bottom"
-            },
-            "effects": []
+            }
           }
         },
         {
           "id": "bob-verdict-captions:ranking-debate.caption:cue:7",
-          "kind": "component",
+          "kind": "present",
+          "source": "component",
           "start": {
             "ticks": "31323",
             "timeBase": {
@@ -4018,8 +3986,7 @@
           "picture": {
             "layout": {
               "ref": "caption-bottom"
-            },
-            "effects": []
+            }
           }
         }
       ]
@@ -4028,12 +3995,12 @@
       "id": "verdict",
       "name": "Verdict",
       "kind": "picture",
-      "locked": false,
       "muted": false,
       "items": [
         {
           "id": "verdict-burst",
-          "kind": "component",
+          "kind": "present",
+          "source": "component",
           "start": {
             "ticks": "31323",
             "timeBase": {
@@ -4102,14 +4069,12 @@
               "width": 540,
               "height": 145,
               "fit": "fill"
-            },
-            "effects": []
+            }
           }
         }
       ]
     }
   ],
   "transitions": [],
-  "mattes": [],
-  "groups": []
+  "mattes": []
 }

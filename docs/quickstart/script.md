@@ -19,7 +19,7 @@ produces the evidence does not need to know the eventual canvas, frame rate or N
 
 Caption authoring chooses the cues and presentation to make visible. An explicit materializer combines
 the selected source-local timing with one concrete media occurrence and expands the result into ordinary
-caption Component Items.
+caption Component Presents.
 
 Each materialized cue stores direct programme placement and package-owned parameters such as text and
 style. The parent NLE project contains no live transcript query and no special Caption Track. Several

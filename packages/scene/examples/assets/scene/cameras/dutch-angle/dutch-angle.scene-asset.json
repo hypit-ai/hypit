@@ -1,0 +1,25 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "dutch-angle",
+  "name": "荷兰角",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets",
+      "version": "1"
+    },
+    "name": "camera-preset"
+  },
+  "resources": {},
+  "parameters": {
+    "cameraPreset": {
+      "targetMode": "subject",
+      "yawDeg": -24,
+      "elevationDeg": 5,
+      "rollDeg": -16,
+      "framing": "medium",
+      "distanceScale": 1.34,
+      "focusY": 0.72,
+      "fov": 42
+    }
+  }
+}

@@ -12,6 +12,7 @@ import {
 import {
   canonicalize,
   sameModule,
+  sameType,
   type LogicalOutput,
   type TypedRecord,
 } from "@hypit/protocol";
@@ -19,6 +20,9 @@ import {
 import { assertGenerationGraphProject } from "./project.js";
 import type {
   GenerationGraphLoweringHost,
+  GenerationGraphDependencyDecision,
+  GenerationGraphDependencyPolicy,
+  GenerationGraphResourceAttachment,
   GenerationGraphNode,
   GenerationGraphProject,
   GenerationNodeImplementation,
@@ -65,28 +69,66 @@ export async function lowerGenerationGraph(
   project: GenerationGraphProject,
   program: import("@hypit/protocol").LinkedProgram,
   host: GenerationGraphLoweringHost,
-  options: { readonly targets?: readonly string[] } = {},
+  options: {
+    readonly targets?: readonly string[];
+    readonly dependencyPolicy?: GenerationGraphDependencyPolicy;
+  } = {},
 ): Promise<LoweredGenerationGraph> {
   assertGenerationGraphProject(project);
   const nodes = new Map(project.nodes.map((node) => [node.id, node]));
+  const targets = options.targets ?? project.nodes.map((node) => node.id);
+  const targetSet = new Set(targets);
   const active = new Set<string>();
-  const visit = (id: string): void => {
+  const implementations = new Map<string, GenerationNodeImplementation>();
+  const selectedAttachments: GenerationGraphResourceAttachment[] = [];
+  const useDependencyDecision = (
+    id: string,
+    node: GenerationGraphNode,
+    output: import("@hypit/protocol").TypeRef,
+    decision: GenerationGraphDependencyDecision,
+  ): boolean => {
+    if (decision.kind === "execute") return false;
+    const value = decision.value;
+    assert(sameType(value.type, output),
+      `Generation Graph dependency ${id} resolved ${value.type.module.name}/${value.type.name}, expected ${output.module.name}/${output.name}.`);
+    implementations.set(id, { kind: "value", using: node.using, type: value.type, value: value.value });
+    selectedAttachments.push(...(value.attachments ?? []));
+    return true;
+  };
+  const visit = async (id: string): Promise<void> => {
     if (active.has(id)) return;
     const node = nodes.get(id);
     assert(node !== undefined, `Unknown Generation Graph target: ${id}`);
     active.add(id);
-    for (const input of Object.values(node.inputs)) if ("node" in input) visit(input.node);
+    let dependencyDecision: GenerationGraphDependencyDecision | undefined;
+    if (!targetSet.has(id) && options.dependencyPolicy?.kind === "selective"
+      && "inspectNode" in host && typeof host.inspectNode === "function") {
+      const inspection = await host.inspectNode(node, project);
+      if (inspection.kind === "operation") {
+        dependencyDecision = await options.dependencyPolicy.decide(node, inspection.output, project);
+        if (useDependencyDecision(id, node, inspection.output, dependencyDecision)) return;
+      }
+    }
+    const resolved = implementationFor(node, await host.resolveImplementation(node, project));
+    if (resolved.kind === "operation") verifyGraphFragment(program, resolved.fragment);
+    let effective: GenerationNodeImplementation = resolved;
+    if (resolved.kind === "operation" && !targetSet.has(id)
+      && options.dependencyPolicy?.kind === "selective" && dependencyDecision === undefined) {
+      const outputType = resolved.fragment.exports[0]!.type;
+      dependencyDecision = await options.dependencyPolicy.decide(node, outputType, project);
+      if (dependencyDecision.kind === "resolved-value") {
+        useDependencyDecision(id, node, outputType, dependencyDecision);
+        effective = implementations.get(id)!;
+      }
+    }
+    implementations.set(id, effective);
+    if (effective.kind === "operation") {
+      const bindings = effective.inputs ?? node.inputs;
+      for (const input of Object.values(bindings)) if ("node" in input) await visit(input.node);
+    }
   };
-  (options.targets ?? project.nodes.map((node) => node.id)).forEach(visit);
+  for (const target of targets) await visit(target);
   const selectedNodes = project.nodes.filter((node) => active.has(node.id));
-  const resolvedImplementations = await Promise.all(selectedNodes.map(async (node) => [
-    node.id,
-    implementationFor(node, await host.resolveImplementation(node, project)),
-  ] as const));
-  const implementations = new Map<string, GenerationNodeImplementation>(resolvedImplementations);
-  for (const implementation of implementations.values()) {
-    if (implementation.kind === "operation") verifyGraphFragment(program, implementation.fragment);
-  }
 
   const records = new Map(program.records.map((record) => [record.id, record]));
   const addRecord = (record: TypedRecord): void => {
@@ -157,10 +199,21 @@ export async function lowerGenerationGraph(
     operations: generated.operations,
   });
   verifyAuthorGraph(linked, graph);
+  const attachments = [
+    ...(host.attachments === undefined ? [] : [...await host.attachments()]),
+    ...selectedAttachments,
+  ];
+  const uniqueAttachments = new Map<string, GenerationGraphResourceAttachment>();
+  for (const attachment of attachments) {
+    const existing = uniqueAttachments.get(attachment.blob.resource);
+    assert(existing === undefined || JSON.stringify(existing.blob) === JSON.stringify(attachment.blob),
+      `Generation Graph resource ${attachment.blob.resource} has conflicting BlobRefs.`);
+    if (existing === undefined) uniqueAttachments.set(attachment.blob.resource, attachment);
+  }
   return {
     program: linked,
     graph,
-    attachments: host.attachments === undefined ? [] : [...await host.attachments()],
+    attachments: [...uniqueAttachments.values()],
     executionPackages: [...new Set([...implementations.values()].flatMap((implementation) =>
       implementation.kind === "operation" && implementation.executionPackage !== undefined
         ? [implementation.executionPackage]

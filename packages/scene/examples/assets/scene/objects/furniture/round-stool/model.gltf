@@ -1,0 +1,268 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "Hypit example Scene Asset generator"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "圆凳",
+      "nodes": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Seat",
+      "mesh": 0,
+      "translation": [
+        0,
+        0.43,
+        0
+      ],
+      "scale": [
+        0.42,
+        0.1,
+        0.42
+      ]
+    },
+    {
+      "name": "Leg.1",
+      "mesh": 0,
+      "translation": [
+        -0.11000000000000001,
+        0.2,
+        -0.11000000000000001
+      ],
+      "scale": [
+        0.045,
+        0.4,
+        0.045
+      ]
+    },
+    {
+      "name": "Leg.2",
+      "mesh": 0,
+      "translation": [
+        -0.11000000000000001,
+        0.2,
+        0.11000000000000001
+      ],
+      "scale": [
+        0.045,
+        0.4,
+        0.045
+      ]
+    },
+    {
+      "name": "Leg.3",
+      "mesh": 0,
+      "translation": [
+        0.11000000000000001,
+        0.2,
+        -0.11000000000000001
+      ],
+      "scale": [
+        0.045,
+        0.4,
+        0.045
+      ]
+    },
+    {
+      "name": "Leg.4",
+      "mesh": 0,
+      "translation": [
+        0.11000000000000001,
+        0.2,
+        0.11000000000000001
+      ],
+      "scale": [
+        0.045,
+        0.4,
+        0.045
+      ]
+    }
+  ],
+  "meshes": [
+    {
+      "name": "cylinder-Wood",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 3
+        }
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "Body",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.56,
+          0.58,
+          0.62,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.78
+      }
+    },
+    {
+      "name": "Dark",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.12,
+          0.13,
+          0.16,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.58
+      }
+    },
+    {
+      "name": "Light",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.82,
+          0.81,
+          0.77,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.86
+      }
+    },
+    {
+      "name": "Wood",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.42,
+          0.27,
+          0.15,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.72
+      }
+    },
+    {
+      "name": "Metal",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.34,
+          0.37,
+          0.42,
+          1
+        ],
+        "metallicFactor": 0.45,
+        "roughnessFactor": 0.36
+      }
+    },
+    {
+      "name": "Glass",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.36,
+          0.58,
+          0.68,
+          1
+        ],
+        "metallicFactor": 0.12,
+        "roughnessFactor": 0.24
+      }
+    },
+    {
+      "name": "Foliage",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.24,
+          0.42,
+          0.25,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.92
+      }
+    },
+    {
+      "name": "Accent",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.78,
+          0.3,
+          0.16,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.72
+      }
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 2496,
+      "uri": "data:application/octet-stream;base64,AAAAPwAAAL8AAAAAAAAAPwAAAD8AAAAA8wS1PgAAAD/zBLU+AAAAPwAAAL8AAAAA8wS1PgAAAD/zBLU+8wS1PgAAAL/zBLU+8wS1PgAAAL/zBLU+8wS1PgAAAD/zBLU+MjENJAAAAD8AAAA/8wS1PgAAAL/zBLU+MjENJAAAAD8AAAA/MjENJAAAAL8AAAA/MjENJAAAAL8AAAA/MjENJAAAAD8AAAA/8wS1vgAAAD/zBLU+MjENJAAAAL8AAAA/8wS1vgAAAD/zBLU+8wS1vgAAAL/zBLU+8wS1vgAAAL/zBLU+8wS1vgAAAD/zBLU+AAAAvwAAAD8yMY0k8wS1vgAAAL/zBLU+AAAAvwAAAD8yMY0kAAAAvwAAAL8yMY0kAAAAvwAAAL8yMY0kAAAAvwAAAD8yMY0k8wS1vgAAAD/zBLW+AAAAvwAAAL8yMY0k8wS1vgAAAD/zBLW+8wS1vgAAAL/zBLW+8wS1vgAAAL/zBLW+8wS1vgAAAD/zBLW+ysnTpAAAAD8AAAC/8wS1vgAAAL/zBLW+ysnTpAAAAD8AAAC/ysnTpAAAAL8AAAC/ysnTpAAAAL8AAAC/ysnTpAAAAD8AAAC/8wS1PgAAAD/zBLW+ysnTpAAAAL8AAAC/8wS1PgAAAD/zBLW+8wS1PgAAAL/zBLW+8wS1PgAAAL/zBLW+8wS1PgAAAD/zBLW+AAAAPwAAAD8yMQ2l8wS1PgAAAL/zBLW+AAAAPwAAAD8yMQ2lAAAAPwAAAL8yMQ2lAAAAAAAAAD8AAAAA8wS1PgAAAD/zBLU+AAAAPwAAAD8AAAAAAAAAAAAAAD8AAAAAMjENJAAAAD8AAAA/8wS1PgAAAD/zBLU+AAAAAAAAAD8AAAAA8wS1vgAAAD/zBLU+MjENJAAAAD8AAAA/AAAAAAAAAD8AAAAAAAAAvwAAAD8yMY0k8wS1vgAAAD/zBLU+AAAAAAAAAD8AAAAA8wS1vgAAAD/zBLW+AAAAvwAAAD8yMY0kAAAAAAAAAD8AAAAAysnTpAAAAD8AAAC/8wS1vgAAAD/zBLW+AAAAAAAAAD8AAAAA8wS1PgAAAD/zBLW+ysnTpAAAAD8AAAC/AAAAAAAAAD8AAAAAAAAAPwAAAD8yMQ2l8wS1PgAAAD/zBLW+AAAAAAAAAL8AAAAAAAAAPwAAAL8AAAAA8wS1PgAAAL/zBLU+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"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 1152,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1152,
+      "byteLength": 1152,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 2304,
+      "byteLength": 192,
+      "target": 34963
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 96,
+      "type": "VEC3",
+      "min": [
+        -0.5,
+        -0.5,
+        -0.5
+      ],
+      "max": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 96,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5123,
+      "count": 96,
+      "type": "SCALAR"
+    }
+  ]
+}

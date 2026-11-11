@@ -23,6 +23,7 @@
     "@hypit/html-video": "workspace:^0.2.1",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/nle-view": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/spatial": "workspace:^0.1.1",
     "@hypit/temporal": "workspace:^0.1.1"

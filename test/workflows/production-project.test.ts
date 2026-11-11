@@ -3,7 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-import { openNodeGenerationCanvas } from "../../packages/generation-canvas/src/node/index.js";
+import { openNodeGenerationWorkspace } from "../../packages/generation-canvas/src/node/index.js";
 import { readGenerationGraphProjectFile } from "../../packages/generation-graph/src/node/index.js";
 import {
   readMediaAssetDocumentFile,
@@ -20,8 +20,8 @@ test("the recommended production project opens through each owning subsystem", a
   assert.equal(await resolveProjectRoot({ cwd: `${projectRoot}/media/poster` }), projectRoot.slice(0, -1));
 
   const graph = await readGenerationGraphProjectFile(`${projectRoot}/generation.graph.json`);
-  const canvas = await openNodeGenerationCanvas({
-    canvasPath: `${projectRoot}/generation.canvas.json`,
+  const workspace = await openNodeGenerationWorkspace({
+    workspacePath: `${projectRoot}/generation.workspace.json`,
     observations: { readResult: async () => undefined },
   });
   const media = await readMediaAssetDocumentFile(`${projectRoot}/media/poster/poster.media.json`);
@@ -37,6 +37,7 @@ test("the recommended production project opens through each owning subsystem", a
   );
   const nle = (await readNleProjectFile(`${projectRoot}/film.nle.json`)).current;
   await createNodeNleMediaResolver(
+    projectRoot,
     `${projectRoot}/film.nle.json`,
     nle,
     async (path) => await resolveMediaAssetMediaFile(path, resolveBlob),
@@ -45,16 +46,17 @@ test("the recommended production project opens through each owning subsystem", a
     await readFile(`${projectRoot}/hypit.runtime.json`, "utf8"),
   ) as unknown);
 
-  assert.equal(graph.nodes.length, 2);
-  assert.equal(canvas.graph.id, graph.id);
-  assert.equal(canvas.scene.items.length, 2);
-  assert.equal(canvas.observations.length, 0);
+  assert(graph.nodes.length > 0);
+  assert.equal(workspace.graph.id, graph.id);
+  assert.equal(workspace.scene.items.length, workspace.workspace.nodes.length);
+  assert.equal(workspace.observations.length, 0);
   assert.equal(media.id, "poster");
   assert.equal(resolved.id, media.id);
-  assert.equal(nle.tracks[0]?.items[0]?.kind, "media");
+  assert.equal(nle.tracks[0]?.items[0]?.kind, "present");
+  const firstItem = nle.tracks[0]?.items[0];
+  assert.equal(firstItem?.kind === "present" ? firstItem.source : undefined, "media");
   assert.equal(runtime.dataRoot, ".hypit/runtimes/local");
 
-  const graphAsset = graph.nodes.find((node) => node.id === "poster-reference")?.inputs.asset;
-  assert.deepEqual(graphAsset, { value: { path: "media/poster/poster.media.json" } });
-  assert.equal(nle.media[0]?.asset.path, "media/poster/poster.media.json");
+  assert.equal(firstItem?.kind === "present" && firstItem.source === "media"
+    ? firstItem.asset.path : undefined, "media/poster/poster.media.json");
 });

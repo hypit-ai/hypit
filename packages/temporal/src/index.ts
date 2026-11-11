@@ -3,6 +3,7 @@ export * from "./exact.js";
 export * from "./sampling.js";
 export * from "./extent.js";
 export * from "./map.js";
+export * from "./control.js";
 export * from "./exact-relation.js";
 export { parseTemporalDuration } from "./literal.js";
 export * from "./relation-literal.js";

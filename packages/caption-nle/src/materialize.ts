@@ -217,7 +217,8 @@ function materializeCaptionProjection<Family extends string>(
         id: input.itemId?.(occurrence.cue.cueId, occurrence.index)
           ?? `${input.id}:${occurrence.cue.cueId}${counts.get(occurrence.cue.cueId) === 1
             ? "" : `:${occurrence.index + 1}`}`,
-        kind: "component",
+        kind: "present",
+        source: "component",
         start,
         duration,
         sourceTime: nleLinearSourceTime(duration),
@@ -248,7 +249,8 @@ export function createCaptionNleMaterializationForMediaItem<Family extends strin
 ): NleTransaction {
   assertNleProject(project);
   const occurrence = findNleItem(project, input.mediaItem).item;
-  assert(occurrence.kind === "media", `Caption materialization target ${input.mediaItem} is not a Media Item.`);
+  assert(occurrence.kind === "present" && occurrence.source === "media",
+    `Caption materialization target ${input.mediaItem} is not a Media Present.`);
   const mapping = sealTemporalMap({ stages: [{
     target: sealLocalTemporalDomain({
       id: `${input.id}:${occurrence.id}:occurrence`,

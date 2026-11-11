@@ -1,0 +1,25 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "abstract-sculpture",
+  "name": "抽象雕像",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets",
+      "version": "1"
+    },
+    "name": "prop"
+  },
+  "resources": {
+    "model": {
+      "path": "model.gltf",
+      "mediaType": "model/gltf+json"
+    }
+  },
+  "parameters": {
+    "boundsM": {
+      "width": 1.1,
+      "depth": 0.8,
+      "height": 2
+    }
+  }
+}

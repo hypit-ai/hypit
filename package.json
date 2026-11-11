@@ -75,6 +75,16 @@
       "types": "./dist/public/generation-canvas-node.d.ts",
       "import": "./packages/generation-canvas/src/node/index.ts"
     },
+    "./nle-view": {
+      "hypit-source": "./packages/nle-view/src/index.ts",
+      "types": "./dist/public/nle-view.d.ts",
+      "import": "./packages/nle-view/src/index.ts"
+    },
+    "./nle-view/node": {
+      "hypit-source": "./packages/nle-view/src/node/index.ts",
+      "types": "./dist/public/nle-view-node.d.ts",
+      "import": "./packages/nle-view/src/node/index.ts"
+    },
     "./workspace": {
       "hypit-source": "./packages/workspace/src/index.ts",
       "types": "./dist/public/workspace.d.ts",
@@ -84,6 +94,21 @@
       "hypit-source": "./packages/workspace/src/node/index.ts",
       "types": "./dist/public/workspace-node.d.ts",
       "import": "./packages/workspace/src/node/index.ts"
+    },
+    "./workbench": {
+      "hypit-source": "./packages/workbench/src/index.ts",
+      "types": "./dist/public/workbench.d.ts",
+      "import": "./packages/workbench/src/index.ts"
+    },
+    "./workbench/node": {
+      "hypit-source": "./packages/workbench/src/node/index.ts",
+      "types": "./dist/public/workbench-node.d.ts",
+      "import": "./packages/workbench/src/node/index.ts"
+    },
+    "./workbench/cli": {
+      "hypit-source": "./packages/workbench/src/cli.ts",
+      "types": "./dist/public/workbench-cli.d.ts",
+      "import": "./packages/workbench/src/cli.ts"
     },
     "./blob": {
       "hypit-source": "./packages/blob/src/index.ts",
@@ -286,6 +311,19 @@
     "vitepress": "^1.6.4"
   },
   "dependencies": {
+    "@hypit/elevenlabs-speech": "workspace:^0.3.0",
+    "@hypit/fishaudio-speech": "workspace:^0.3.0",
+    "@hypit/gpt-image": "workspace:^0.3.0",
+    "@hypit/grok-imagine": "workspace:^0.3.0",
+    "@hypit/media-asset-generation": "workspace:^0.1.0",
+    "@hypit/mimo-speech": "workspace:^0.3.0",
+    "@hypit/minimax-h3": "workspace:^0.3.0",
+    "@hypit/nano-banana": "workspace:^0.3.0",
+    "@hypit/pixverse": "workspace:^0.3.0",
+    "@hypit/seedance": "workspace:^0.3.0",
+    "@hypit/seedream": "workspace:^0.3.0",
+    "@hypit/volcengine-matting": "workspace:^0.3.0",
+    "@hypit/wan": "workspace:^0.3.0",
     "@hypit/build-operations-cli": "workspace:^0.1.0",
     "@hypit/build-cli": "workspace:^0.1.0",
     "@hypit/generation-graph-cli": "workspace:^0.1.0",
@@ -293,6 +331,7 @@
     "@hypit/speech-estimate": "workspace:^0.1.2",
     "@hypit/media-file-local": "workspace:^0.1.0",
     "@hypit/nle-local": "workspace:^0.1.0",
+    "@hypit/workbench": "workspace:^0.0.0-dev",
     "@hypit/project-cli": "workspace:^0.1.0",
     "@hypit/runtime-local": "workspace:^0.2.0",
     "@hypit/toolchain": "workspace:^0.3.0",

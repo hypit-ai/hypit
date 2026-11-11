@@ -7,6 +7,23 @@ export {
   serializeGenerationGraphProject,
 } from "./project.js";
 export { lowerGenerationGraph } from "./lower.js";
+export { assertGenerationNodeAuthoringShape } from "./authoring.js";
+export type {
+  GenerationAuthoringControl,
+  GenerationAuthoringItemField,
+  GenerationAuthoringMediaList,
+  GenerationAuthoringMediaListEntry,
+  GenerationAuthoringMediaRole,
+  GenerationAuthoringMediaSlot,
+  GenerationAuthoringPort,
+  GenerationAuthoringRule,
+  GenerationAuthoringScalar,
+  GenerationAuthoringVariant,
+  GenerationAuthoringVariantSelector,
+  GenerationNodeAuthoringHost,
+  GenerationNodeAuthoringShape,
+} from "./authoring.js";
+export { inspectGenerationGraphProject } from "./inspect.js";
 export {
   createGenerationGraphLoweringHost,
   createGenerationNodePackageFacet,
@@ -19,6 +36,7 @@ export type {
   GenerationNodeDeclaration,
   GenerationOperationNodeCompileContext,
   GenerationOperationNodeDeclaration,
+  GenerationResolvedOperationNode,
   GenerationNodePackage,
   GenerationNodePackageFacet,
   GenerationValueNodeDeclaration,
@@ -41,8 +59,14 @@ export type {
 } from "./transaction.js";
 export type {
   GenerationComponentRef,
+  GenerationGraphDependencyDecision,
   GenerationGraphInput,
+  GenerationGraphDependencyPolicy,
+  GenerationGraphDependencyValue,
   GenerationGraphLoweringHost,
+  GenerationGraphInspectionHost,
+  GenerationGraphNodeInspection,
+  GenerationGraphNodeReport,
   GenerationGraphNode,
   GenerationGraphProject,
   GenerationGraphResourceAttachment,

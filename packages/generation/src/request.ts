@@ -266,6 +266,15 @@ export function verifyModelFields(
         `${table.model} accepts at most one of ${requirement.fields.join(", ")} but received ${used.join(", ")}`);
       continue;
     }
+    if (requirement.kind === "atLeastOneOf") {
+      const suppliedLater = requirement.fields.some((name) => omit.has(name) || defer.has(name));
+      if (!suppliedLater) {
+        const used = requirement.fields.filter((name) => present.has(name));
+        assert(used.length >= 1,
+          `${table.model} needs at least one of ${requirement.fields.join(", ")}`);
+      }
+      continue;
+    }
     if (requirement.kind === "requiresAnyOf") {
       if (!present.has(requirement.field)) continue;
       const satisfied = requirement.anyOf.some((name) => present.has(name) || omit.has(name) || defer.has(name));

@@ -1,0 +1,25 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "fridge",
+  "name": "冰箱",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets",
+      "version": "1"
+    },
+    "name": "prop"
+  },
+  "resources": {
+    "model": {
+      "path": "model.gltf",
+      "mediaType": "model/gltf+json"
+    }
+  },
+  "parameters": {
+    "boundsM": {
+      "width": 0.76,
+      "depth": 0.72,
+      "height": 1.85
+    }
+  }
+}

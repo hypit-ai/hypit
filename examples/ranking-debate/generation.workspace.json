@@ -1,0 +1,92 @@
+{
+  "format": "hypit.generation-workspace@1",
+  "id": "ranking-debate-generation-workspace",
+  "name": "Ranking debate generation",
+  "revision": 7,
+  "graph": {
+    "path": "generation.graph.json"
+  },
+  "packages": [
+    "@hypit/media-asset-generation",
+    "@hypit/gpt-image",
+    "@hypit/nano-banana",
+    "@hypit/seedream",
+    "@hypit/wan",
+    "@hypit/seedance",
+    "@hypit/grok-imagine",
+    "@hypit/pixverse",
+    "@hypit/minimax-h3",
+    "@hypit/volcengine-matting",
+    "@hypit/mimo-speech",
+    "@hypit/elevenlabs-speech",
+    "@hypit/fishaudio-speech"
+  ],
+  "viewport": {
+    "centerX": 781.5879285221257,
+    "centerY": 631.8736647201263,
+    "zoom": 0.68
+  },
+  "nodes": [
+    {
+      "node": "alice-portrait",
+      "name": "Alice 肖像",
+      "x": 80,
+      "y": 80
+    },
+    {
+      "node": "alice-voice-1",
+      "name": "Alice 第一段语音",
+      "x": -129,
+      "y": 347
+    },
+    {
+      "node": "alice-video-1",
+      "name": "Alice 第一段视频",
+      "x": 520,
+      "y": 180
+    },
+    {
+      "node": "alice-voice-2",
+      "name": "Alice 第二段语音",
+      "x": 520,
+      "y": 440
+    },
+    {
+      "node": "alice-video-2",
+      "name": "Alice 第二段视频",
+      "x": 960,
+      "y": 300
+    },
+    {
+      "node": "bob-portrait",
+      "name": "Bob 肖像",
+      "x": 80,
+      "y": 780
+    },
+    {
+      "node": "bob-voice-1",
+      "name": "Bob 第一段语音",
+      "x": 80,
+      "y": 1040
+    },
+    {
+      "node": "bob-video-1",
+      "name": "Bob 第一段视频",
+      "x": 520,
+      "y": 880
+    },
+    {
+      "node": "bob-voice-2",
+      "name": "Bob 第二段语音",
+      "x": 520,
+      "y": 1140
+    },
+    {
+      "node": "bob-video-2",
+      "name": "Bob 第二段视频",
+      "x": 960,
+      "y": 1000
+    }
+  ],
+  "outputs": []
+}

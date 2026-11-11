@@ -25,7 +25,7 @@ Hypit 项目把可复用组件、生成模型和服务作为普通包安装，�
 和绘制顺序。
 
 对于说话视频，Script 与转写包保留 source-local selection 和 timing；显式 materializer 可以把
-选中的呈现变成普通 Component Item。保存后的 NLE 只有得到的精确值，不保留活的语义查找。
+选中的呈现变成普通 Component Present。保存后的 NLE 只有得到的精确值，不保留活的语义查找。
 [NLE 工程结构](../quickstart/tracks.md)与[导出](../quickstart/composition.md)介绍这些贡献如何组成作品。
 
 新组件通常放在视频项目的 `packages/` 中，使用所有者自己的 scope，由项目的普通包管理器声明。需要跨项目复用时，所有者可以把同一个组件发布为有版本的 npm 或私有 Registry 包。使用方安装选定版本，并将 lockfile 与项目一起保存。

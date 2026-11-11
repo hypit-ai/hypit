@@ -17,6 +17,7 @@ import {
   applyNleTransaction,
   createNleProject,
   nleLinearSourceTime,
+  nleProjectComposition,
 } from "@hypit/nle";
 
 import { exportLocalNleProject, nleProjectModuleKeys } from "../src/export.js";
@@ -57,22 +58,17 @@ function project() {
   const base = createNleProject({
     id: "export-project",
     name: "Export project",
-    editRate: { numerator: 30, denominator: 1 },
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   return applyNleTransaction(base, { revision: 0, commands: [{
-    kind: "media.add",
-    media: { id: "clip", name: "Clip", asset: { path: "./clip.media.json" } },
-  }, {
     kind: "track.add",
     track: {
-      id: "picture", name: "Picture", kind: "picture", locked: false, muted: false,
+      id: "picture", name: "Picture", kind: "picture", muted: false,
       items: [{
-        id: "clip-use", kind: "media", media: "clip", enabled: true,
+        id: "clip-use", kind: "present", source: "media", asset: { path: "./clip.media.json" }, enabled: true,
         start: second(0), duration: second(1), sourceTime: nleLinearSourceTime(second(1)),
         picture: {
           layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" },
-          effects: [],
         },
       }],
     },
@@ -90,9 +86,11 @@ test("whole-project export stages files, closes the delivery plan and atomically
     const progress: string[] = [];
 
     const result = await exportLocalNleProject({
+      projectRoot: directory,
       projectFile,
       outputFile,
       frameRate: { numerator: 60, denominator: 1 },
+      resolution: { width: 200, height: 200 },
       onProgress: event => progress.push(event.phase),
     }, {
       createExecutor(resources) {
@@ -127,16 +125,23 @@ test("whole-project export stages files, closes the delivery plan and atomically
 
     assert.deepEqual(result.frameRate, { numerator: 60, denominator: 1 });
     assert.equal(result.frameCount, 60);
+    assert.deepEqual(result.canvas, { width: 200, height: 200 });
     assert.equal(Buffer.from(await readFile(outputFile)).toString("utf8"), "final-mp4");
     assert(progress.includes("media") && progress.includes("lower") && progress.includes("mux"));
-    await assert.rejects(exportLocalNleProject({ projectFile, outputFile }), /already exists/u);
+    await assert.rejects(exportLocalNleProject({ projectRoot: directory, projectFile, outputFile }), /already exists/u);
+    await assert.rejects(exportLocalNleProject({
+      projectRoot: directory,
+      projectFile,
+      outputFile: join(directory, "wrong-aspect.mp4"),
+      resolution: { width: 200, height: 100 },
+    }), /changes Programme aspect/u);
     assert.equal(Buffer.from(await readFile(outputFile)).toString("utf8"), "final-mp4");
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
 });
 
-test("module selection includes nested component and effect owners exactly once", () => {
+test("module selection includes nested Present and Adjustment Component owners exactly once", () => {
   const symbol = (name: string) => ({ module: { name, version: "1" }, name: "operator" });
   const nested = createNleProject({ id: "nested", name: "Nested" });
   const value = applyNleTransaction(createNleProject({ id: "modules", name: "Modules" }), {
@@ -144,27 +149,27 @@ test("module selection includes nested component and effect owners exactly once"
     commands: [{
       kind: "track.add",
       track: {
-        id: "picture", name: "Picture", kind: "picture", locked: false, muted: false,
+        id: "picture", name: "Picture", kind: "picture", muted: false,
         items: [{
-          id: "component", kind: "component", component: symbol("@example/component"), parameters: {},
+          id: "component", kind: "present", source: "component", component: symbol("@example/component"), parameters: {},
           start: second(0), duration: second(1), sourceTime: nleLinearSourceTime(second(1)), enabled: true,
-          picture: {
-            layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "fill" },
-            effects: [{ id: "effect", effect: symbol("@example/effect"), parameters: {} }],
-          },
+          picture: { layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "fill" } },
         }, {
-          id: "compound", kind: "compound", project: applyNleTransaction(nested, { revision: 0, commands: [{
+          id: "effect", kind: "adjustment", component: symbol("@example/effect"), parameters: {},
+          start: second(0), duration: second(1), sourceTime: nleLinearSourceTime(second(1)), enabled: true,
+        }, {
+          id: "compound", kind: "present", source: "composition", composition: nleProjectComposition(applyNleTransaction(nested, { revision: 0, commands: [{
             kind: "track.add", track: {
-              id: "inner", name: "Inner", kind: "picture", locked: false, muted: false,
+              id: "inner", name: "Inner", kind: "picture", muted: false,
               items: [{
-                id: "inner-component", kind: "component", component: symbol("@example/nested"), parameters: {},
+                id: "inner-component", kind: "present", source: "component", component: symbol("@example/nested"), parameters: {},
                 start: second(0), duration: second(1), sourceTime: nleLinearSourceTime(second(1)), enabled: true,
-                picture: { layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "fill" }, effects: [] },
+                picture: { layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "fill" } },
               }],
             },
-          }] }),
+          }] })),
           start: second(1), duration: second(1), sourceTime: nleLinearSourceTime(second(1)), enabled: true,
-          picture: { layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "fill" }, effects: [] },
+          picture: { layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "fill" } },
         }],
       },
     }],

@@ -1,0 +1,25 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "wall-tv",
+  "name": "壁挂电视",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets",
+      "version": "1"
+    },
+    "name": "prop"
+  },
+  "resources": {
+    "model": {
+      "path": "model.gltf",
+      "mediaType": "model/gltf+json"
+    }
+  },
+  "parameters": {
+    "boundsM": {
+      "width": 1.28,
+      "depth": 0.08,
+      "height": 0.7
+    }
+  }
+}

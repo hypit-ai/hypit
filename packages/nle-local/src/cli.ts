@@ -11,13 +11,13 @@ export function createLocalNleCliCommandModules(options: {
     id: "@hypit/nle-local#cli",
     commands: ["nle"],
     writeRootHelp(io) {
-      io.write("\nLocal HTML-effects NLE\n  nle export\n  hypit nle --help for exact options\n");
+      io.write("\nLocal component-driven NLE\n  nle export\n  hypit nle --help for exact options\n");
     },
     writeHelp(_argv, io) {
       writeNleHelp(io);
     },
     async run(argv, io, context) {
-      await runNleCli(argv, io, context.cwd, options.distributionPackageRoot);
+      await runNleCli(argv, io, context.cwd, await context.resolveProjectRoot(), options.distributionPackageRoot);
     },
   }];
 }

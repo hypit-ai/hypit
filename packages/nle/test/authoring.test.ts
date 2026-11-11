@@ -11,7 +11,8 @@ import {
   nleLinearSourceTime,
   nlePackagesFromFacets,
   type NleComponentParameterAuthoring,
-  type NleEffectParameterAuthoring,
+  type NleComponentValueAuthoring,
+  type NleAdjustmentParameterAuthoring,
   type NleMatteParameterAuthoring,
   type NleTransitionParameterAuthoring,
 } from "../src/index.js";
@@ -22,9 +23,9 @@ const effectSymbol = {
 } as const;
 const second = (value: number) => ({ ticks: String(value), timeBase: { numerator: 1, denominator: 1 } });
 
-const authoring: NleEffectParameterAuthoring = {
-  effect: effectSymbol,
-  inspect: ({ effect }) => effect.parameters,
+const authoring: NleAdjustmentParameterAuthoring = {
+  component: effectSymbol,
+  inspect: ({ item }) => item.parameters,
   edit: (operation) => {
     if (operation === null || typeof operation !== "object" || Array.isArray(operation)) {
       throw new Error("Example amount edit is invalid.");
@@ -40,6 +41,13 @@ const authoring: NleEffectParameterAuthoring = {
 const componentAuthoring: NleComponentParameterAuthoring = {
   component: { module: { name: "@example/title", version: "1" }, name: "title" },
   inspect: ({ item }) => item.parameters,
+  edit: (operation) => operation,
+};
+
+const componentValueAuthoring: NleComponentValueAuthoring = {
+  component: componentAuthoring.component,
+  slot: "style",
+  inspect: ({ value }) => value.value,
   edit: (operation) => operation,
 };
 
@@ -62,40 +70,40 @@ const matteAuthoring: NleMatteParameterAuthoring = {
   edit: (operation) => operation,
 };
 
-function project(locked = false) {
+function project() {
   return applyNleTransaction(createNleProject({
     id: "authoring",
     name: "Authoring",
     canvas: { width: 100, height: 100, clearColor: "black" },
   }), { revision: 0, commands: [{
     kind: "track.add",
-    track: { id: "picture", name: "Picture", kind: "picture", locked, muted: false, items: [{
+    track: { id: "picture", name: "Picture", kind: "picture", muted: false, items: [{
       id: "title",
-      kind: "component",
+      kind: "present", source: "component",
       start: second(0),
       duration: second(1),
       sourceTime: nleLinearSourceTime(second(1)),
       enabled: true,
       component: { module: { name: "@example/title", version: "1" }, name: "title" },
       parameters: {},
-      picture: {
-        layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" },
-        effects: [{ id: "amount", effect: effectSymbol, parameters: { amount: 1 } }],
-      },
+      picture: { layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" } },
+    }, {
+      id: "amount", kind: "adjustment", component: effectSymbol, parameters: { amount: 1 },
+      start: second(0), duration: second(1), sourceTime: nleLinearSourceTime(second(1)), enabled: true,
     }] },
   }] });
 }
 
-function effectParameters(value: ReturnType<typeof project>) {
-  const item = findNleItem(value, "title").item;
-  if (item.kind !== "component") throw new Error("Authoring fixture Item changed kind.");
-  return item.picture?.effects[0]?.parameters;
+function adjustmentParameters(value: ReturnType<typeof project>) {
+  const item = findNleItem(value, "amount").item;
+  if (item.kind !== "adjustment") throw new Error("Authoring fixture Adjustment changed kind.");
+  return item.parameters;
 }
 
 function relationItem(id: string, start: number, duration: number) {
   return {
     id,
-    kind: "component" as const,
+    kind: "present" as const, source: "component" as const,
     start: second(start),
     duration: second(duration),
     sourceTime: nleLinearSourceTime(second(duration)),
@@ -104,7 +112,6 @@ function relationItem(id: string, start: number, duration: number) {
     parameters: {},
     picture: {
       layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" as const },
-      effects: [],
     },
   };
 }
@@ -116,7 +123,7 @@ function transitionProject() {
     canvas: { width: 100, height: 100, clearColor: "black" },
   }), { revision: 0, commands: [
     { kind: "track.add", track: {
-      id: "picture", name: "Picture", kind: "picture", locked: false, muted: false,
+      id: "picture", name: "Picture", kind: "picture", muted: false,
       items: [relationItem("left", 0, 2), relationItem("right", 1, 2)],
     } },
     { kind: "transition.add", transition: {
@@ -133,7 +140,7 @@ function matteProject() {
     canvas: { width: 100, height: 100, clearColor: "black" },
   }), { revision: 0, commands: [
     { kind: "track.add", track: {
-      id: "picture", name: "Picture", kind: "picture", locked: false, muted: false,
+      id: "picture", name: "Picture", kind: "picture", muted: false,
       items: [relationItem("content", 0, 2), relationItem("mask", 0, 2)],
     } },
     { kind: "matte.add", matte: {
@@ -144,47 +151,79 @@ function matteProject() {
 }
 
 test("package authoring plans an ordinary revisioned NLE transaction", () => {
-  const facet = createNleAuthoringFacet({ effectParameters: [authoring] });
+  const facet = createNleAuthoringFacet({ adjustmentParameters: [authoring] });
   assert.equal(nlePackagesFromFacets([facet]).length, 0);
   const host = createNleAuthoringHostFromFacets([facet]);
   const original = project();
 
-  assert.deepEqual(host.inspectEffectParameters(original, "title", "amount"), { amount: 1 });
-  const transaction = host.planEffectParameterEdit(original, "title", "amount", {
+  assert.deepEqual(host.inspectAdjustmentParameters(original, "amount"), { amount: 1 });
+  const transaction = host.planAdjustmentParameterEdit(original, "amount", {
     kind: "set-amount", amount: 0.25,
   });
   assert.equal(transaction.revision, original.revision);
   assert.deepEqual(transaction.commands.map((command) => command.kind), ["item.replace"]);
-  assert.deepEqual(effectParameters(original), { amount: 1 });
+  assert.deepEqual(adjustmentParameters(original), { amount: 1 });
 
   const edited = applyNleTransaction(original, transaction);
-  assert.deepEqual(effectParameters(edited), { amount: 0.25 });
+  assert.deepEqual(adjustmentParameters(edited), { amount: 0.25 });
 });
 
-test("authoring is optional, uniquely selected and cannot bypass Track locks", () => {
-  const original = project(true);
+test("authoring is optional and uniquely selected", () => {
+  const original = project();
   const host = createNleAuthoringHost([{
     componentParameters: [componentAuthoring],
-    effectParameters: [authoring],
+    adjustmentParameters: [authoring],
   }]);
-  const transaction = host.planEffectParameterEdit(original, "title", "amount", {
-    kind: "set-amount", amount: 0.5,
-  });
-  assert.throws(() => applyNleTransaction(original, transaction), /is locked/u);
-  const componentTransaction = host.planComponentParameterEdit(original, "title", { title: "Changed" });
-  assert.throws(() => applyNleTransaction(original, componentTransaction), /is locked/u);
+  assert.equal(host.hasComponentParameterAuthoring(componentAuthoring.component), true);
+  assert.equal(host.hasComponentValueAuthoring(componentAuthoring.component, "style"), false);
+  assert.equal(host.hasAdjustmentParameterAuthoring(effectSymbol), true);
   assert.throws(() => createNleAuthoringHost([])
-    .inspectEffectParameters(original, "title", "amount"), /is not installed/u);
+    .inspectAdjustmentParameters(original, "amount"), /is not installed/u);
   assert.throws(() => createNleAuthoringHost([])
     .inspectComponentParameters(original, "title"), /is not installed/u);
   assert.throws(() => createNleAuthoringHost([
-    { effectParameters: [authoring] },
-    { effectParameters: [authoring] },
-  ]), /multiple Effect parameter owners/u);
+    { adjustmentParameters: [authoring] },
+    { adjustmentParameters: [authoring] },
+  ]), /multiple Adjustment parameter owners/u);
   assert.throws(() => createNleAuthoringHost([
     { componentParameters: [componentAuthoring] },
     { componentParameters: [componentAuthoring] },
   ]), /multiple Component parameter owners/u);
+  assert.throws(() => createNleAuthoringHost([
+    { componentValues: [componentValueAuthoring] },
+    { componentValues: [componentValueAuthoring] },
+  ]), /multiple Component value owners/u);
+});
+
+test("shared Component values are edited in place without rewriting their users", () => {
+  const base = project();
+  const title = findNleItem(base, "title").item;
+  if (title.kind !== "present" || title.source !== "component") {
+    throw new Error("Authoring fixture title changed kind.");
+  }
+  const original = applyNleTransaction(base, { revision: base.revision, commands: [{
+    kind: "component-value.add",
+    value: {
+      id: "title-style",
+      name: "Title style",
+      component: componentAuthoring.component,
+      slot: "style",
+      value: { color: "#ffffff" },
+    },
+  }, {
+    kind: "item.replace",
+    item: {
+      ...title,
+      bindings: [{ slot: "style", ref: "title-style" }],
+    },
+  }] });
+  const before = findNleItem(original, "title").item;
+  const host = createNleAuthoringHost([{ componentValues: [componentValueAuthoring] }]);
+  assert.deepEqual(host.inspectComponentValue(original, "title-style"), { color: "#ffffff" });
+  const edited = applyNleTransaction(original,
+    host.planComponentValueEdit(original, "title-style", { color: "#e3406a" }));
+  assert.deepEqual(edited.componentValues[0]?.value, { color: "#e3406a" });
+  assert.deepEqual(findNleItem(edited, "title").item, before);
 });
 
 test("Transition and Matte packages own relation parameter editing without extending NLE Core", () => {

@@ -15,6 +15,19 @@ export type TemporalRange = {
   readonly end: ExactTemporalValue;
 };
 
+/** One total value signal over a finite local time domain. Value interpolation remains owner-defined. */
+export type TemporalControlSegment<Value, Interpolation> = {
+  readonly range: TemporalRange;
+  readonly from: Value;
+  readonly to: Value;
+  readonly interpolation: Interpolation;
+};
+
+export type TemporalControl<Value, Interpolation> = {
+  readonly domain: LocalTemporalDomain;
+  readonly segments: readonly TemporalControlSegment<Value, Interpolation>[];
+};
+
 export type TemporalRate = {
   readonly numerator: number;
   readonly denominator: number;

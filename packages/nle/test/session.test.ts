@@ -21,7 +21,6 @@ import {
 
 const picture = {
   layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" },
-  effects: [],
 } as const;
 
 const time = (value: number) => ({ ticks: String(value), timeBase: { numerator: 1, denominator: 1 } });
@@ -29,7 +28,7 @@ const time = (value: number) => ({ ticks: String(value), timeBase: { numerator: 
 function caption(id: string, text: string, start: number): NleComponentItem {
   return {
     id,
-    kind: "component",
+    kind: "present", source: "component",
     start: time(start),
     duration: time(4),
     sourceTime: nleLinearSourceTime(time(4)),
@@ -58,7 +57,6 @@ function withCaptions(): NleEditSession {
         id: "captions",
         name: "Captions",
         kind: "picture",
-        locked: false,
         muted: false,
         items: [caption("a", "A", 0), caption("b", "B", 8), caption("c", "C", 16)],
       },
@@ -79,7 +77,6 @@ test("one edit intention becomes one undoable history entry", () => {
         id: "captions",
         name: "Captions",
         kind: "picture",
-        locked: false,
         muted: false,
         items: [caption("a", "A", 0), caption("b", "B", 8), caption("c", "C", 16)],
       },

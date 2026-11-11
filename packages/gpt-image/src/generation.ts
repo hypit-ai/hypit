@@ -2,13 +2,21 @@ import type {
   GenerationGraphInput,
   GenerationOperationNodeDeclaration,
 } from "@hypit/hypit/generation-graph";
+import type { GenerationNodeAuthoringShape } from "@hypit/hypit/generation-graph";
+import type { GenerationCanvasNodePresentation } from "@hypit/generation-canvas";
+import { blobTypes } from "@hypit/hypit/blob";
 import { canonicalize, type CanonicalValue } from "@hypit/hypit/protocol";
 import { sealPrompt } from "@hypit/hypit/prompt";
 import {
   collectIndexedFieldModelArtifacts,
   fieldModelGraphOperation,
 } from "@hypit/generation/model-fields/graph";
-import type { ModelFieldValue } from "@hypit/generation/model-fields";
+import {
+  modelAuthoringControl,
+  modelAuthoringMediaList,
+  verifyModelFields,
+  type ModelFieldValue,
+} from "@hypit/generation/model-fields";
 
 import {
   gptImageEndpoints,
@@ -23,6 +31,35 @@ function assert(condition: unknown, message: string): asserts condition {
 export const gptImageGenerationNodes = {
   image: { module: gptImageModuleRef, name: "gpt-image-2.image" },
 } as const;
+
+export const gptImageGenerationPresentation: GenerationCanvasNodePresentation = {
+  using: gptImageGenerationNodes.image,
+  displayName: "Image Generation",
+  modelLabel: "GPT Image 2",
+  role: "image",
+  summaryInput: "prompt",
+  authoring: {
+    controls: [
+      { id: "prompt", label: "Prompt", placement: "primary", placeholder: "Describe the image to create" },
+      { id: "aspectRatio", label: "Aspect ratio", placement: "compact" },
+      { id: "resolution", label: "Resolution", placement: "compact" },
+      { id: "background", label: "Background", placement: "advanced" },
+    ],
+    ports: [{ id: "images", label: "Reference images" }],
+  },
+};
+
+const gptImageAuthoring: GenerationNodeAuthoringShape = {
+  using: gptImageGenerationNodes.image,
+  output: { type: blobTypes.blob, connectable: true, media: ["image"] },
+  controls: [
+    modelAuthoringControl(gptImageEndpoints.image!.fields, "prompt"),
+    modelAuthoringControl(gptImageEndpoints.image!.fields, "aspectRatio"),
+    modelAuthoringControl(gptImageEndpoints.image!.fields, "resolution"),
+    modelAuthoringControl(gptImageEndpoints.image!.fields, "background"),
+  ],
+  ports: [modelAuthoringMediaList(gptImageEndpoints.image!.fields, "images", [{ field: "images" }])],
+};
 
 function authoredValue(
   inputs: Readonly<Record<string, GenerationGraphInput>>,
@@ -45,11 +82,10 @@ function promptInput(input: GenerationGraphInput): GenerationGraphInput {
 export const gptImageGenerationNode: GenerationOperationNodeDeclaration = {
   kind: "operation",
   using: gptImageGenerationNodes.image,
-  compile({ node }) {
+  output: blobTypes.blob,
+  authoring: gptImageAuthoring,
+  resolve({ node }) {
     const subject = `GPT Image Node ${node.id}`;
-    for (const name of ["prompt", "aspectRatio", "resolution"]) {
-      assert(node.inputs[name] !== undefined, `${subject} is missing input ${name}.`);
-    }
     const endpoint = gptImageEndpoints.image!;
     const collected = collectIndexedFieldModelArtifacts({
       endpoint,
@@ -62,22 +98,40 @@ export const gptImageGenerationNode: GenerationOperationNodeDeclaration = {
       assert(fixed.has(name) || collected.consumed.has(name),
         `${subject} has unknown input ${name}.`);
     }
+    const consumedInputs = Object.keys(node.inputs);
+    if (node.inputs.prompt !== undefined && "value" in node.inputs.prompt
+      && typeof node.inputs.prompt.value === "string") sealPrompt(node.inputs.prompt.value);
+    const supplied = Object.fromEntries(["aspectRatio", "resolution", "background"].flatMap((name) => {
+      const input = node.inputs[name];
+      if (input === undefined) return [];
+      assert("value" in input, `${subject} input ${name} must be an authored value.`);
+      return [[name, [input.value]]];
+    }));
+    verifyModelFields(endpoint.fields, supplied, {
+      defer: endpoint.fields.fields.map((field) => field.name),
+    });
+    const missing = ["prompt", "aspectRatio", "resolution"].filter((name) => node.inputs[name] === undefined);
+    if (missing.length > 0) return { kind: "incomplete", consumedInputs, missing };
     const background = node.inputs.background === undefined
       ? undefined
       : authoredValue(node.inputs, "background", subject);
-    return fieldModelGraphOperation({
-      endpoint,
-      draft: sealGptImage2Draft({
-        aspectRatio: [authoredValue(node.inputs, "aspectRatio", subject) as ModelFieldValue],
-        resolution: [authoredValue(node.inputs, "resolution", subject) as ModelFieldValue],
-        ...(background === undefined ? {} : { background: [background as ModelFieldValue] }),
+    return {
+      kind: "ready",
+      consumedInputs,
+      compiled: fieldModelGraphOperation({
+        endpoint,
+        draft: sealGptImage2Draft({
+          aspectRatio: [authoredValue(node.inputs, "aspectRatio", subject) as ModelFieldValue],
+          resolution: [authoredValue(node.inputs, "resolution", subject) as ModelFieldValue],
+          ...(background === undefined ? {} : { background: [background as ModelFieldValue] }),
+        }),
+        artifacts: collected.artifacts,
+        textFields: [{
+          name: "prompt",
+          field: "prompt",
+          source: promptInput(node.inputs.prompt!),
+        }],
       }),
-      artifacts: collected.artifacts,
-      textFields: [{
-        name: "prompt",
-        field: "prompt",
-        source: promptInput(node.inputs.prompt!),
-      }],
-    });
+    };
   },
 };

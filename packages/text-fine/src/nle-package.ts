@@ -14,7 +14,7 @@ import {
   type NleComponentParameterAuthoring,
   type NleComponentResolver,
   type NlePackageSymbol,
-  type NleProject,
+  type NleComposition,
 } from "@hypit/nle";
 import { canonicalize, type ModuleManifest } from "@hypit/protocol";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
@@ -523,7 +523,7 @@ function compileTextSequences(
   });
 }
 
-function resolveTextFine(item: NleComponentItem, context: { readonly project: NleProject }) {
+function resolveTextFine(item: NleComponentItem, context: { readonly project: NleComposition }) {
   if (item.picture === undefined) throw new Error(`NLE Fine Text ${item.id} has no Picture appearance.`);
   const pictureLayout = resolveNlePictureLayout(context.project, item.picture.layout);
   assertTextFineNleParameters(item.parameters);

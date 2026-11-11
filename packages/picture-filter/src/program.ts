@@ -130,7 +130,7 @@ function pictureFilterProgram(
 ): PictureOperator["program"] {
   return htmlVisual({
     html: '<div data-hypit-picture-filter-layer>{{picture}}</div>',
-    css: `:scope { position: absolute; inset: 0; overflow: hidden; }
+    css: `:scope { position: absolute; inset: 0; overflow: visible; }
 :scope > [data-hypit-picture-filter-layer] { position: absolute; inset: 0; }`,
     data: structuredClone(value),
     setup: `const layer = root.querySelector('[data-hypit-picture-filter-layer]');

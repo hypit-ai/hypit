@@ -2,7 +2,13 @@ import { lstat, realpath } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 
 import {
+  assertPlannedRequests,
+  assertPreflight,
   createPublicBuildId,
+  describePlanEndpoints,
+  evaluatePlanNeeds,
+  plannedEndpointQueries,
+  preflightPlan,
   submitLongBuild,
   type BuildSubmissionHost,
   type BuildSubmissionInspection,
@@ -17,6 +23,10 @@ import {
   type CliCommandModule,
   type CliIo,
 } from "@hypit/cli";
+import {
+  inspectGenerationGraphProject,
+  lowerGenerationGraph,
+} from "@hypit/generation-graph";
 import {
   createGenerationGraphRuntimeRequest,
   createNodeGenerationGraphProjectHost,
@@ -79,7 +89,8 @@ export type GenerationGraphCliServices = {
   ): Promise<GenerationMediaProductMaterializationResult>;
 };
 
-type ParsedRun = {
+type ParsedGraphAction = {
+  readonly action: "check" | "plan" | "run";
   readonly graph: string;
   readonly targets: readonly string[];
   readonly project?: string;
@@ -104,13 +115,14 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function parseRun(argv: readonly string[]): ParsedRun | undefined {
+function parseGraphAction(argv: readonly string[]): ParsedGraphAction | undefined {
   const global = parseCliGlobalOptions(argv);
   assert(global.issue === undefined, global.issue ?? "invalid global options");
   const values = global.remaining;
   if (values.length < 2 || values[1] === "help" || values.includes("--help")) return undefined;
-  assert(values[0] === "generation" && values[1] === "run",
+  assert(values[0] === "generation" && ["check", "plan", "run"].includes(values[1]!),
     `Unknown generation command ${values[1] ?? "<missing>"}`);
+  const action = values[1] as ParsedGraphAction["action"];
   const positionals: string[] = [];
   const targets: string[] = [];
   const options = new Map<string, string>();
@@ -130,8 +142,10 @@ function parseRun(argv: readonly string[]): ParsedRun | undefined {
     assert(value !== undefined && !value.startsWith("--"), `${item} requires a value`);
     options.set(item, value);
   }
-  assert(positionals.length === 1, "generation run requires exactly one Generation Graph file");
-  assert(targets.length > 0, "generation run requires at least one --target Node id");
+  assert(positionals.length === 1, `generation ${action} requires exactly one Generation Graph file`);
+  assert(action === "check" || targets.length > 0,
+    `generation ${action} requires at least one --target Node id`);
+  assert(action !== "check" || targets.length === 0, "generation check does not accept --target");
   const maxWaitRaw = options.get("--max-wait-ms");
   const maxWaitMs = maxWaitRaw === undefined ? undefined : parseCliDecimalInteger(maxWaitRaw);
   assert(maxWaitRaw === undefined || maxWaitMs !== undefined,
@@ -140,6 +154,7 @@ function parseRun(argv: readonly string[]): ParsedRun | undefined {
   const runtime = options.get("--runtime");
   const packageRoot = options.get("--package-root");
   return {
+    action,
     graph: positionals[0]!,
     targets,
     ...(project === undefined ? {} : { project }),
@@ -221,12 +236,14 @@ function packageRequest(project: Awaited<ReturnType<typeof readGenerationGraphPr
 
 export function writeGenerationGraphHelp(io: Pick<CliIo, "write">): void {
   io.write("Usage:\n"
+    + "  hypit generation check <project.graph.json> [options]\n"
+    + "  hypit generation plan <project.graph.json> --target <node> [options]\n"
     + "  hypit generation run <project.graph.json> --target <node> [options]\n"
     + "  hypit generation materialize <build-id> --output <node> --to <asset.media.json> [options]\n\n"
-    + "Run one or more Generation Graph nodes through the selected long-running Runtime.\n"
+    + "Check package-owned node semantics, inspect one finite Runtime plan, or submit it.\n"
     + "Materialize one exact media Product as an ordinary Media Asset without rewriting the recipe.\n\n"
     + "Options:\n"
-    + "  --target <node>         Node to resolve; repeat for multiple targets\n"
+    + "  --target <node>         Node to plan or run; repeat for multiple targets\n"
     + "  --project <directory>   Explicit Hypit project (default: nearest marked project)\n"
     + "  --runtime <profile>     Runtime Profile (default: project selection)\n"
     + "  --package-root <path>   Installed component root (default: project root)\n"
@@ -287,6 +304,62 @@ async function runGenerationMediaMaterializeCli(
   }
 }
 
+async function openGenerationGraphAuthoring(
+  parsed: ParsedGraphAction,
+  context: Pick<CliApplicationContext, "cwd" | "resolveProjectRoot">,
+  services: GenerationGraphCliServices,
+) {
+  const projectRoot = await realpath(await context.resolveProjectRoot(
+    parsed.project === undefined ? undefined : resolve(context.cwd, parsed.project),
+  ));
+  const graphPath = await realpath(resolve(context.cwd, parsed.graph));
+  assert(within(projectRoot, graphPath), `Generation Graph ${graphPath} is outside project ${projectRoot}`);
+  const packageRoot = resolve(context.cwd, parsed.packageRoot ?? projectRoot);
+  const project = await readGenerationGraphProjectFile(graphPath);
+  const workspace = await new NodeFilesystemWorkspace({
+    root: projectRoot,
+    sourceAdapter: (unit) => ({ unit, frontend: "generation-graph" }),
+  }).open(graphPath);
+  const packages = await services.loadPackages(packageRequest(project), packageRoot, {
+    ...(services.packageRoot === undefined ? {} : { fallbackRoots: [services.packageRoot] }),
+  });
+  const host = createNodeGenerationGraphProjectHost({
+    packages,
+    assets: {
+      resolveAsset: (request) => workspace.resolveAsset(workspace.entry.unit, request),
+      readAsset: async (request) => {
+        if (workspace.readAsset === undefined) throw new Error("Generation Graph Workspace cannot read author assets.");
+        return await workspace.readAsset(workspace.entry.unit, request);
+      },
+      attachments: async () => (await workspace.attachments()).map((item) => ({
+        blob: item.blob,
+        open: async () => await item.open(),
+      })),
+    },
+  });
+  return { projectRoot, graphPath, packageRoot, project, packages, host };
+}
+
+async function selectedRuntimeHost(
+  parsed: ParsedGraphAction,
+  context: Pick<CliApplicationContext, "cwd">,
+  services: GenerationGraphCliServices,
+  projectRoot: string,
+  packageRoot: string,
+) {
+  const selectedRuntime = parsed.runtime === undefined
+    ? await services.resolveProjectRuntime?.(projectRoot)
+    : { profile: resolve(context.cwd, parsed.runtime) };
+  assert(selectedRuntime !== undefined,
+    `No Runtime Profile is selected for ${projectRoot}; run hypit runtime use <profile> there, or pass --runtime <profile>`);
+  const profile = resolve(selectedRuntime.profile);
+  const host = await services.openRuntimeHost(profile, {
+    packageRoot,
+    ...(services.packageRoot === undefined ? {} : { distributionPackageRoot: services.packageRoot }),
+  });
+  return { profile, host };
+}
+
 export async function runGenerationGraphCli(
   argv: readonly string[],
   io: CliIo,
@@ -300,56 +373,113 @@ export async function runGenerationGraphCli(
     await runGenerationMediaMaterializeCli(parsed, io, context, services);
     return;
   }
-  const parsed = parseRun(argv);
+  const parsed = parseGraphAction(argv);
   if (parsed === undefined) { writeGenerationGraphHelp(io); return; }
-  const projectRoot = await realpath(await context.resolveProjectRoot(
-    parsed.project === undefined ? undefined : resolve(context.cwd, parsed.project),
-  ));
-  const graphPath = await realpath(resolve(context.cwd, parsed.graph));
-  assert(within(projectRoot, graphPath), `Generation Graph ${graphPath} is outside project ${projectRoot}`);
-  const packageRoot = resolve(context.cwd, parsed.packageRoot ?? projectRoot);
+  const openedGraph = await openGenerationGraphAuthoring(parsed, context, services);
+  const { projectRoot, graphPath, packageRoot, project, packages, host } = openedGraph;
+  if (parsed.action === "check") {
+    const reports = await inspectGenerationGraphProject(project, host.lowering);
+    let loweringIssue: string | undefined;
+    if (reports.every((report) => report.readiness === "ready")) {
+      try {
+        await lowerGenerationGraph(project, host.program, host.lowering);
+      } catch (error) {
+        loweringIssue = error instanceof Error ? error.message : String(error);
+      }
+    }
+    const invalid = reports.filter((report) => report.readiness === "invalid");
+    const incomplete = reports.filter((report) => report.readiness === "incomplete");
+    const valid = invalid.length === 0 && loweringIssue === undefined;
+    const ready = valid && incomplete.length === 0;
+    writeCliOutput(io, parsed.presentation, {
+      kind: "operational",
+      machine: {
+        format: "hypit.generation-check@1",
+        valid,
+        ready,
+        graph: graphPath,
+        revision: project.revision,
+        nodes: reports,
+        ...(loweringIssue === undefined ? {} : { loweringIssue }),
+      },
+      title: !valid ? "Generation Graph is invalid" : ready ? "Generation Graph is ready" : "Generation Graph is incomplete",
+      status: !valid ? "error" : ready ? "success" : "warning",
+      facts: [
+        ["Graph", graphPath],
+        ["Nodes", String(reports.length)],
+        ["Ready", String(reports.filter((report) => report.readiness === "ready").length)],
+        ["Incomplete", String(incomplete.length)],
+        ["Invalid", String(invalid.length + (loweringIssue === undefined ? 0 : 1))],
+      ],
+      lines: [
+        ...reports.flatMap((report) => report.readiness === "ready" ? []
+          : report.readiness === "incomplete"
+            ? [`${report.node}: missing ${report.missing.join(", ")}`]
+            : [`${report.node}: ${"message" in report ? report.message : "invalid node"}`]),
+        ...(loweringIssue === undefined ? [] : [`Graph: ${loweringIssue}`]),
+      ],
+    });
+    if (!ready) io.setExitCode?.(1);
+    return;
+  }
+  const prepared = await host.prepare(project, parsed.targets);
+  const selected = await selectedRuntimeHost(parsed, context, services, projectRoot, packageRoot);
+  if (parsed.action === "plan") {
+    const policy = await selected.host.planningPolicy?.();
+    const evaluation = await evaluatePlanNeeds(
+      prepared.definition,
+      packages.map((item) => item.contribution),
+      policy?.producerExecutionLimits,
+    );
+    const inspection = await selected.host.openInspection(plannedEndpointQueries(evaluation.state, evaluation));
+    try {
+      const endpoints = await describePlanEndpoints(inspection);
+      const preflight = await preflightPlan(inspection, evaluation.state);
+      let issue: string | undefined;
+      try {
+        assertPlannedRequests(evaluation.state, evaluation, endpoints);
+        assertPreflight(preflight);
+      } catch (error) {
+        issue = error instanceof Error ? error.message : String(error);
+      }
+      const ok = issue === undefined;
+      writeCliOutput(io, parsed.presentation, {
+        kind: "operational",
+        machine: {
+          format: "hypit.generation-plan@1",
+          ok,
+          graph: graphPath,
+          revision: project.revision,
+          targets: prepared.targets.map((target) => target.node),
+          requests: [...evaluation.needs.entries()].map(([need, request]) => ({ need, ...request })),
+          endpoints,
+          preflight,
+          ...(issue === undefined ? {} : { issue }),
+        },
+        title: ok ? "Generation plan is ready" : "Generation plan needs attention",
+        status: ok ? "success" : "error",
+        facts: [
+          [prepared.targets.length === 1 ? "Target" : "Targets", prepared.targets.map((target) => target.node).join(", ")],
+          ["Requests", String(evaluation.needs.size)],
+          ["Runtime", selected.profile],
+          ["Preflight", preflight.ok ? "ready" : "needs attention"],
+        ],
+        lines: issue === undefined ? [] : [issue],
+      });
+      if (!ok) io.setExitCode?.(1);
+    } finally {
+      await inspection.close();
+    }
+    return;
+  }
   const opened = await services.openProjectResults(projectRoot, {
     packageRoot,
     ...(services.packageRoot === undefined ? {} : { distributionPackageRoot: services.packageRoot }),
   });
   let acceptedSession: { close(): Promise<void> } | undefined;
   try {
-    const project = await readGenerationGraphProjectFile(graphPath);
-    const workspace = await new NodeFilesystemWorkspace({
-      root: projectRoot,
-      sourceAdapter: (unit) => ({ unit, frontend: "generation-graph" }),
-    }).open(graphPath);
-    const packages = await services.loadPackages(packageRequest(project), packageRoot, {
-      ...(services.packageRoot === undefined ? {} : { fallbackRoots: [services.packageRoot] }),
-    });
-    const host = createNodeGenerationGraphProjectHost({
-      packages,
-      assets: {
-        resolveAsset: (request) => workspace.resolveAsset(workspace.entry.unit, request),
-        readAsset: async (request) => {
-          if (workspace.readAsset === undefined) {
-            throw new Error("Generation Graph Workspace cannot read author assets.");
-          }
-          return await workspace.readAsset(workspace.entry.unit, request);
-        },
-        attachments: async () => (await workspace.attachments()).map((item) => ({
-          blob: item.blob,
-          open: async () => await item.open(),
-        })),
-      },
-    });
-    const prepared = await host.prepare(project, parsed.targets);
-
-    const selectedRuntime = parsed.runtime === undefined
-      ? await services.resolveProjectRuntime?.(projectRoot)
-      : { profile: resolve(context.cwd, parsed.runtime) };
-    assert(selectedRuntime !== undefined,
-      `No Runtime Profile is selected for ${projectRoot}; run hypit runtime use <profile> there, or pass --runtime <profile>`);
-    const profile = resolve(selectedRuntime.profile);
-    const runtimeHost = await services.openRuntimeHost(profile, {
-      packageRoot,
-      ...(services.packageRoot === undefined ? {} : { distributionPackageRoot: services.packageRoot }),
-    });
+    const profile = selected.profile;
+    const runtimeHost = selected.host;
     const build = createPublicBuildId();
     const submitted = await submitLongBuild({
       host: runtimeHost,
@@ -404,7 +534,7 @@ export function createGenerationGraphCliCommandModules(
     id: "@hypit/generation-graph-cli",
     commands: ["generation"],
     writeRootHelp(io) {
-      io.write("\nLong-running generation\n  generation run | materialize\n  hypit generation --help for exact options\n");
+      io.write("\nLong-running generation\n  generation check | plan | run | materialize\n  hypit generation --help for exact options\n");
     },
     writeHelp(_argv, io) { writeGenerationGraphHelp(io); },
     async run(argv, io, context) { await runGenerationGraphCli(argv, io, context, services); },

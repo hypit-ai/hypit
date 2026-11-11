@@ -5,33 +5,28 @@ import type {
   GenerationGraphTransaction,
 } from "@hypit/generation-graph";
 
-import type {
-  GenerationCanvasTransaction,
-} from "./transaction.js";
-import type { GenerationCanvasView } from "./types.js";
+import type { GenerationWorkspace, GenerationWorkspaceOutputAddress } from "./types.js";
+import type { GenerationWorkspaceTransaction } from "./transaction.js";
+import { generationWorkspaceOutputKey } from "./types.js";
 
-export type GenerationCanvasBuildOutputAdoptionPlan = {
+export type GenerationWorkspaceOutputAdoptionPlan = {
   readonly graph: GenerationGraphTransaction;
-  readonly canvas: GenerationCanvasTransaction;
+  readonly workspace: GenerationWorkspaceTransaction;
 };
 
-/**
- * Replace one exact Result card with its already-materialized authored value node.
- * Product Type owners create the node; this layer only coordinates ordinary document transactions.
- */
-export function planGenerationCanvasBuildOutputAdoption(input: {
+/** Promote one exact Product into a new authored value node while retaining its result history. */
+export function planGenerationWorkspaceOutputAdoption(input: {
   readonly graph: GenerationGraphProject;
-  readonly canvas: GenerationCanvasView;
-  readonly item: string;
+  readonly workspace: GenerationWorkspace;
+  readonly output: GenerationWorkspaceOutputAddress;
   readonly node: GenerationGraphNode;
-  /** Optional author edits, such as connecting the new value node to an existing operation node. */
+  readonly name: string;
+  readonly placement: { readonly x: number; readonly y: number };
   readonly graphCommands?: readonly GenerationGraphCommand[];
-}): GenerationCanvasBuildOutputAdoptionPlan {
-  const item = input.canvas.items.find((candidate) => candidate.id === input.item);
-  if (item === undefined) throw new Error(`Unknown Generation Canvas Item: ${input.item}`);
-  if (item.subject.kind !== "build-output") {
-    throw new Error(`Generation Canvas Item ${input.item} is not a Build output.`);
-  }
+}): GenerationWorkspaceOutputAdoptionPlan {
+  const output = input.workspace.outputs.find((candidate) =>
+    generationWorkspaceOutputKey(candidate) === generationWorkspaceOutputKey(input.output));
+  if (output === undefined) throw new Error(`Unknown Generation Workspace Output: ${input.output.build}/${input.output.output}`);
   if (input.graph.nodes.some((candidate) => candidate.id === input.node.id)) {
     throw new Error(`Generation Graph Node ${input.node.id} already exists.`);
   }
@@ -46,11 +41,13 @@ export function planGenerationCanvasBuildOutputAdoption(input: {
         ...(input.graphCommands ?? []).map((command) => structuredClone(command)),
       ],
     },
-    canvas: {
-      revision: input.canvas.revision,
-      commands: [{ kind: "item.replace", item: {
-        ...item,
-        subject: { kind: "graph-node", node: input.node.id },
+    workspace: {
+      revision: input.workspace.revision,
+      commands: [{ kind: "node.add", node: {
+        node: input.node.id,
+        name: input.name,
+        x: input.placement.x,
+        y: input.placement.y,
       } }],
     },
   };

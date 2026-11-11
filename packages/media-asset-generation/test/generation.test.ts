@@ -8,7 +8,7 @@ import hypitPackage from "../src/activation.js";
 import {
   mediaAssetGenerationNode,
   mediaAssetGenerationNodes,
-  mediaAssetResourceGenerationNode,
+  mediaAssetResourceGenerationNodes,
 } from "../src/index.js";
 import {
   serializeMediaAssetDocument,
@@ -47,7 +47,7 @@ function document(): MediaAssetDocument {
 
 test("Media Asset owns a file-backed PreparedMedia value node", async () => {
   const packages = generationNodePackagesFromFacets(hypitPackage.facets);
-  assert.deepEqual(packages, [{ nodes: [mediaAssetGenerationNode, mediaAssetResourceGenerationNode] }]);
+  assert.deepEqual(packages, [{ nodes: [mediaAssetGenerationNode, ...Object.values(mediaAssetResourceGenerationNodes)] }]);
   assert.equal(mediaAssetGenerationNode.kind, "value");
   assert.deepEqual(mediaAssetGenerationNode.using, mediaAssetGenerationNodes.media);
   assert.deepEqual(mediaAssetGenerationNode.type, mediaTypes.prepared);
@@ -82,12 +82,12 @@ test("Media Asset owns a file-backed PreparedMedia value node", async () => {
   assert.equal((value as { readonly source: { readonly resource: string } }).source.resource, "res_interview");
 });
 
-test("Media Asset also exposes its primary file as an ordinary model input Blob", async () => {
+test("Media Asset exposes an exact media-role source node for model inputs", async () => {
   const resolved: string[] = [];
-  const value = await mediaAssetResourceGenerationNode.load({
+  const value = await mediaAssetResourceGenerationNodes.video.load({
     node: {
       id: "interview-file",
-      using: mediaAssetGenerationNodes.resource,
+      using: mediaAssetGenerationNodes.video,
       inputs: { asset: { value: { path: "assets/interview.media.json" } } },
     },
     project: {
@@ -108,4 +108,12 @@ test("Media Asset also exposes its primary file as an ordinary model input Blob"
   assert.deepEqual(value, {
     kind: "blob", resource: "res_interview", size: 100, mediaType: "video/mp4",
   });
+  await assert.rejects(async () => await mediaAssetResourceGenerationNodes.image.load({
+    node: { id: "wrong-kind", using: mediaAssetGenerationNodes.image,
+      inputs: { asset: { value: { path: "assets/interview.media.json" } } } },
+    project: { format: "hypit.generation-graph@1", id: "podcast", name: "Podcast", revision: 0, nodes: [] },
+    inputs: { asset: { path: "assets/interview.media.json" } },
+    readAsset: () => new TextEncoder().encode(serializeMediaAssetDocument(document())),
+    resolveAsset: () => ({ kind: "blob", resource: "res_unused", size: 0, mediaType: "image/png" }),
+  }), /image asset .* resolves to video\/mp4/u);
 });

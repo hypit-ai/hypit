@@ -30,10 +30,10 @@ receives the complete `TemporalMap`.
 
 ## Edit rate is a grid, not storage
 
-`editRate` tells an editor how to display time and where frame snapping normally lands:
+The separate Timeline View's `editRate` tells an editor how to display time and where frame snapping normally lands:
 
 ```json
-"editRate": { "numerator": 30000, "denominator": 1001 }
+{ "format": "hypit.nle-view@1", "editRate": { "numerator": 30000, "denominator": 1001 } }
 ```
 
 Changing this value does not retime, quantize or reinterpret any existing Item. Media audio retains

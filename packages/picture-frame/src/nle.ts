@@ -1,4 +1,8 @@
-import type { NleEffectParameterAuthoring, NleEffectResolver, NlePackageSymbol } from "@hypit/nle";
+import type {
+  NleAdjustmentParameterAuthoring,
+  NlePackageSymbol,
+  NlePictureAdjustmentResolver,
+} from "@hypit/nle";
 import { canonicalize } from "@hypit/protocol";
 
 import { pictureFrameModuleRef } from "./manifest.js";
@@ -17,24 +21,24 @@ function assertParameters(value: unknown): asserts value is PictureFrameNleParam
   assertPictureFrameTreatment(value.treatment as PictureFrameTreatment, "NLE Picture Frame treatment");
 }
 
-export const pictureFrameNleResolver: NleEffectResolver = {
-  effect: pictureFrameNleSymbol,
-  resolve: (effect) => {
-    const parameters = effect.parameters as unknown;
+export const pictureFrameNleResolver: NlePictureAdjustmentResolver = {
+  component: pictureFrameNleSymbol,
+  resolve: (item) => {
+    const parameters = item.parameters as unknown;
     assertParameters(parameters);
     return { operator: pictureFrameOperator(parameters.treatment) };
   },
 };
 
-export const pictureFrameNleAuthoring: NleEffectParameterAuthoring = {
-  effect: pictureFrameNleSymbol,
-  inspect: ({ effect }) => {
-    const parameters = effect.parameters as unknown;
+export const pictureFrameNleAuthoring: NleAdjustmentParameterAuthoring = {
+  component: pictureFrameNleSymbol,
+  inspect: ({ item }) => {
+    const parameters = item.parameters as unknown;
     assertParameters(parameters);
     return canonicalize(parameters);
   },
-  edit: (operation, { effect }) => {
-    const parameters = effect.parameters as unknown;
+  edit: (operation, { item }) => {
+    const parameters = item.parameters as unknown;
     assertParameters(parameters);
     if (operation === null || typeof operation !== "object" || Array.isArray(operation)
       || Object.keys(operation).sort().join("\u0000") !== ["kind", "treatment"].sort().join("\u0000")

@@ -6,7 +6,7 @@ description: Packages own visual behavior while the NLE stores editable instance
 Hypit does not define one central style language for every visual role. A title card, caption family,
 picture filter, transition and audio effect each own the parameters needed by their behavior.
 
-An NLE Component or Effect instance stores:
+An NLE Present or Adjustment Component instance stores:
 
 - the exact package module symbol;
 - a name within that module;

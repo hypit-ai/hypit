@@ -16,15 +16,15 @@ import {
 const symbol = { module: { name: "@example/title", version: "1" }, name: "card" } as const;
 const second = (value: number) => ({ ticks: String(value), timeBase: { numerator: 1, denominator: 1 } });
 const item: NleComponentItem = {
-  id: "title", kind: "component", component: symbol, parameters: {},
+  id: "title", kind: "present", source: "component", component: symbol, parameters: {},
   start: second(0), duration: second(1), sourceTime: nleLinearSourceTime(second(1)), enabled: true,
-  picture: { layout: { x: 0, y: 0, width: 10, height: 10, fit: "fill" }, effects: [] },
+  picture: { layout: { x: 0, y: 0, width: 10, height: 10, fit: "fill" } },
 };
 const project = createNleProject({
   id: "host", name: "Host", canvas: { width: 10, height: 10, clearColor: "black" },
 });
 const track: NleTrack = {
-  id: "main", name: "Main", kind: "picture", locked: false, muted: false, items: [],
+  id: "main", name: "Main", kind: "picture", muted: false, items: [],
 };
 
 test("selected package facets dispatch exact NLE symbols without serialized registry state", () => {

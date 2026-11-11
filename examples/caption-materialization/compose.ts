@@ -112,10 +112,10 @@ function addTracks(project: NleProject): NleProject {
     } },
   }, {
     kind: "track.add",
-    track: { id: "picture", name: "A-roll", kind: "picture", locked: false, muted: false, items: [] },
+    track: { id: "picture", name: "A-roll", kind: "picture", muted: false, items: [] },
   }, {
     kind: "track.add",
-    track: { id: "captions", name: "Captions", kind: "picture", locked: false, muted: false, items: [] },
+    track: { id: "captions", name: "Captions", kind: "picture", muted: false, items: [] },
   }] });
 }
 
@@ -140,7 +140,6 @@ export async function buildCaptionMaterializationExample(): Promise<{
   let project = addTracks(createNleProject({
     id: "caption-materialization-example",
     name: "Complete Caption materialization",
-    editRate: { numerator: 30, denominator: 1 },
     canvas: { width: 1920, height: 1080, clearColor: "#111827" },
   }));
   let programmeAt = at(0);
@@ -149,25 +148,19 @@ export async function buildCaptionMaterializationExample(): Promise<{
     const excerpt: NarrativeSegmentRef = script.segments.find((segment) => segment.id === parsedSegment.id)!;
     const { duration, transcript } = transcriptForSegment(narrative, excerpt);
     const domain = sealLocalTemporalDomain({ id: `${parsedSegment.id}:media-time`, duration });
-    const mediaId = `media:${parsedSegment.id}`;
     const itemId = `aroll:${parsedSegment.id}`;
     project = applyNleTransaction(project, { revision: project.revision, commands: [{
-      kind: "media.add",
-      media: { id: mediaId, name: `${parsedSegment.id} A-roll`, asset: {
-        path: `media/${parsedSegment.id}.media.json`,
-      } },
-    }, {
       kind: "item.add",
       track: "picture",
       item: {
         id: itemId,
-        kind: "media",
-        media: mediaId,
+        kind: "present", source: "media",
+        asset: { path: `media/${parsedSegment.id}.media.json` },
         start: programmeAt,
         duration,
         sourceTime: nleLinearSourceTime(duration),
         enabled: true,
-        picture: { layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "cover" }, effects: [] },
+        picture: { layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "cover" } },
       },
     }] });
 
@@ -195,14 +188,14 @@ export async function buildCaptionMaterializationExample(): Promise<{
       selection: { kind: "units", ids: unitIds },
       itemId: (cueId, occurrence) => `caption:${cueId}:${occurrence + 1}`,
       styleRef: (styleId) => `caption-style:${styleId}`,
-      picture: { layout: { ref: "caption-bottom" }, effects: [] },
+      picture: { layout: { ref: "caption-bottom" } },
     });
     project = applyNleTransaction(project, captionTransaction);
     programmeAt = addExactTemporalValues(programmeAt, duration);
   }
 
   for (const item of project.tracks.find((track) => track.id === "captions")!.items) {
-    if (item.kind !== "component") throw new Error(`Caption Track contains non-Component Item ${item.id}.`);
+    if ((item.kind !== "present" || item.source !== "component")) throw new Error(`Caption Track contains non-Component Item ${item.id}.`);
     const parameters = item.parameters as Record<string, unknown>;
       assertCaptionCuePayload(parameters.caption, item.duration);
   }

@@ -1,0 +1,28 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "cuboid",
+  "name": "长方体",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets",
+      "version": "1"
+    },
+    "name": "prop"
+  },
+  "resources": {
+    "model": {
+      "path": "model.gltf",
+      "mediaType": "model/gltf+json"
+    }
+  },
+  "parameters": {
+    "primitive": {
+      "kind": "cuboid",
+      "dimensionsM": {
+        "width": 1.4,
+        "height": 0.8,
+        "depth": 0.8
+      }
+    }
+  }
+}

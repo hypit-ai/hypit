@@ -9,6 +9,7 @@
   "dependencies": {
     "@hypit/hypit": "workspace:*",
     "@hypit/caption-fine": "workspace:*",
+    "@hypit/nle-view": "workspace:*",
     "@hypit-example/ranking-debate-components": "workspace:*"
   },
   "scripts": {

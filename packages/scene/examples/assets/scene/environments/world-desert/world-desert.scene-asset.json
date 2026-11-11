@@ -1,0 +1,53 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "world-desert",
+  "name": "沙地",
+  "using": {
+    "module": {
+      "name": "@hypit/scene-environment",
+      "version": "1"
+    },
+    "name": "world-environment"
+  },
+  "resources": {},
+  "parameters": {
+    "world": {
+      "sky": {
+        "top": "#70a1c4",
+        "horizon": "#ead7b6"
+      },
+      "ground": {
+        "visible": true,
+        "color": "#b89a6c",
+        "opacity": 1
+      },
+      "atmosphere": {
+        "fogColor": "#d4b98f",
+        "fogDensity": 0.0045
+      },
+      "lighting": {
+        "ambient": {
+          "sky": "#dcecff",
+          "ground": "#b89a6c",
+          "intensity": 1.85
+        },
+        "key": {
+          "color": "#ffe2ad",
+          "intensity": 5.4,
+          "azimuth": -30,
+          "elevation": 58,
+          "shadows": true
+        },
+        "fill": {
+          "color": "#a8c8dc",
+          "intensity": 1.1
+        },
+        "rim": {
+          "color": "#fff0cf",
+          "intensity": 0.75
+        }
+      },
+      "exposure": 1.1
+    }
+  }
+}

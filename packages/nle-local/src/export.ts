@@ -8,6 +8,7 @@ import { moduleKey, modulePackageAbi } from "@hypit/protocol";
 import type { ModuleRef } from "@hypit/protocol";
 import type { ResourceStore } from "@hypit/resource-store";
 import {
+  createNleScaledHtmlOutput,
   createNleTerminalLinkHostFromFacets,
   executeHtmlVideoDeliveryPlan,
   htmlVideoDeliverySpec,
@@ -17,7 +18,7 @@ import type { HtmlVideoDeliveryExecutor } from "@hypit/html-video";
 import { resolveMediaAssetMediaFile } from "@hypit/media-asset/node";
 import type { MuxedMedia, VisualDeliverySpec } from "@hypit/media";
 import type { CreateMediaExecutionEnvironmentOptions } from "@hypit/media-local/execution";
-import type { NleItem, NleProject } from "@hypit/nle";
+import { assertNleProject, type NleComposition, type NleItem, type NleProject } from "@hypit/nle";
 import type { TemporalRate } from "@hypit/temporal/algebra";
 import { createNodeNleMediaResolver, readNleProjectFile } from "@hypit/nle/node";
 import type {
@@ -35,15 +36,24 @@ export type LocalNleExportProgress =
   | { readonly phase: "complete"; readonly outputFile: string };
 
 export type LocalNleExportRequest = {
+  /** Application-owned Hypit Project Root used to resolve portable NLE asset references. */
+  readonly projectRoot: string;
   readonly projectFile: string;
+  /** Optional application-owned current edit snapshot. The Project file remains the base for portable references. */
+  readonly project?: NleProject;
   readonly outputFile: string;
-  /** Package-manager resolution root. Defaults to the NLE file's directory. */
+  /** Package-manager resolution root. Defaults to the Hypit Project Root. */
   readonly packageRoot?: string;
   /** Read-only application Distribution used only as an installed-package fallback. */
   readonly distributionPackageRoot?: string;
   readonly quality?: VisualDeliverySpec["encoding"]["quality"];
-  /** Output sampling only. Defaults to the project's editor display rate. */
+  /** Output sampling only. Defaults to 30 fps; editor display rate belongs to the NLE View. */
   readonly frameRate?: TemporalRate;
+  /** Same-aspect output pixel extent. Defaults to the Project Programme extent. */
+  readonly resolution?: {
+    readonly width: number;
+    readonly height: number;
+  };
   readonly signal?: AbortSignal;
   readonly onProgress?: (progress: LocalNleExportProgress) => void;
   readonly html?: Omit<ChromiumHtmlRasterOptions, "resources" | "signal" | "onProgress">;
@@ -75,19 +85,20 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function visitProjectModules(project: NleProject, accept: (module: ModuleRef) => void): void {
-  const visitEffects = (item: NleItem): void => {
-    for (const effect of item.picture?.effects ?? []) accept(effect.effect.module);
-    for (const effect of item.audio?.effects ?? []) accept(effect.effect.module);
-    if (item.kind === "component") accept(item.component.module);
-    if (item.kind === "compound") visitProjectModules(item.project, accept);
+function visitProjectModules(project: NleComposition, accept: (module: ModuleRef) => void): void {
+  const visitItem = (item: NleItem): void => {
+    if (item.kind === "adjustment") accept(item.component.module);
+    if (item.kind === "present" && item.source === "component") accept(item.component.module);
+    if (item.kind === "present" && item.source === "composition") {
+      visitProjectModules(item.composition, accept);
+    }
   };
-  for (const track of project.tracks) for (const item of track.items) visitEffects(item);
+  for (const track of project.tracks) for (const item of track.items) visitItem(item);
   for (const transition of project.transitions) accept(transition.operator.module);
   for (const matte of project.mattes) accept(matte.operator.module);
 }
 
-export function nleProjectModuleKeys(project: NleProject): readonly string[] {
+export function nleProjectModuleKeys(project: NleComposition): readonly string[] {
   const values = new Set<string>();
   visitProjectModules(project, module => values.add(moduleKey(module)));
   return [...values].sort();
@@ -95,10 +106,10 @@ export function nleProjectModuleKeys(project: NleProject): readonly string[] {
 
 function uniqueMediaAssetCount(project: NleProject): number {
   const paths = new Set<string>();
-  const visit = (current: NleProject): void => {
-    for (const media of current.media) paths.add(media.asset.path);
+  const visit = (current: NleComposition): void => {
     for (const track of current.tracks) for (const item of track.items) {
-      if (item.kind === "compound") visit(item.project);
+      if (item.kind === "present" && item.source === "media") paths.add(item.asset.path);
+      if (item.kind === "present" && item.source === "composition") visit(item.composition);
     }
   };
   visit(project);
@@ -190,6 +201,7 @@ export async function exportLocalNleProject(
   request: LocalNleExportRequest,
   environment: LocalNleExportEnvironment = {},
 ): Promise<LocalNleExportResult> {
+  const projectRoot = resolve(request.projectRoot);
   const projectFile = resolve(request.projectFile);
   const outputFile = resolve(request.outputFile);
   assert(extname(outputFile).toLowerCase() === ".mp4", "Local NLE export currently requires an .mp4 output file.");
@@ -198,10 +210,20 @@ export async function exportLocalNleProject(
   const report = (progress: LocalNleExportProgress): void => request.onProgress?.(progress);
 
   report({ phase: "open", state: "start" });
-  const project = (await readNleProjectFile(projectFile)).current;
+  const project = request.project === undefined
+    ? (await readNleProjectFile(projectFile)).current
+    : structuredClone(request.project);
+  assertNleProject(project);
   report({ phase: "open", state: "complete" });
+  const output = createNleScaledHtmlOutput(
+    project,
+    request.frameRate ?? { numerator: 30, denominator: 1 },
+    request.resolution === undefined
+      ? project.canvas
+      : { ...request.resolution, clearColor: project.canvas.clearColor },
+  );
 
-  const packageRoot = resolve(request.packageRoot ?? dirname(projectFile));
+  const packageRoot = resolve(request.packageRoot ?? projectRoot);
   report({ phase: "load-packages", state: "start" });
   const facets = await selectedFacets(project, packageRoot, request.distributionPackageRoot);
   report({ phase: "load-packages", state: "complete" });
@@ -213,7 +235,7 @@ export async function exportLocalNleProject(
     const totalMedia = uniqueMediaAssetCount(project);
     let completedMedia = 0;
     report({ phase: "media", completed: 0, total: totalMedia });
-    const resolveMedia = await createNodeNleMediaResolver(projectFile, project, async path => {
+    const resolveMedia = await createNodeNleMediaResolver(projectRoot, projectFile, project, async path => {
       const resolved = await resolveMediaAssetMediaFile(path, async (file, mediaType) => {
         request.signal?.throwIfAborted();
         return await resources.putStream(
@@ -233,7 +255,7 @@ export async function exportLocalNleProject(
     const plan = lowerNleProjectToHtmlVideoDeliveryPlan(
       project,
       host,
-      request.frameRate ?? project.editRate,
+      output,
       htmlVideoDeliverySpec(request.quality ?? "standard"),
     );
     report({ phase: "lower", state: "complete" });

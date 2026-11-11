@@ -1,0 +1,10 @@
+{
+  "format": "hypit.nle-view@1",
+  "id": "launch-film-main",
+  "name": "Launch Film Timeline",
+  "revision": 0,
+  "project": { "path": "film.nle.json" },
+  "editRate": { "numerator": 30, "denominator": 1 },
+  "tracks": [{ "track": "picture-main", "locked": false }],
+  "groups": []
+}

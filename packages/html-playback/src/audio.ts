@@ -20,7 +20,12 @@ import {
   scaleExactTemporalValue,
   subtractExactTemporalValues,
 } from "@hypit/temporal";
-import type { ExactTemporalValue, TemporalMap, TemporalRange } from "@hypit/temporal";
+import type {
+  ExactTemporalValue,
+  TemporalAffineMapPiece,
+  TemporalMap,
+  TemporalRange,
+} from "@hypit/temporal";
 
 export type PlaybackResourceUrlResolver = (artifact: BlobRef) => string;
 
@@ -62,6 +67,38 @@ function playbackControl(control: AudioGainControl, offsetSamples: number): Play
     from: segment.from,
     to: segment.to,
   })) };
+}
+
+function playbackSamplingPieces(value: TemporalMap): readonly TemporalAffineMapPiece[] {
+  if (value.stages.length === 1) {
+    const pieces = value.stages[0]!.pieces;
+    if (pieces.every(isAffineTemporalMapPiece)) return pieces;
+    throw new Error("Browser playback requires affine occurrence sampling.");
+  }
+  let numerator = 1;
+  let denominator = 1;
+  for (const stage of value.stages) {
+    const piece = stage.pieces[0];
+    if (stage.pieces.length !== 1 || piece === undefined || !isAffineTemporalMapPiece(piece)
+      || piece.wrap !== undefined || piece.rate.numerator <= 0
+      || compareExactTemporalValues(piece.target.start, exactTemporalZero()) !== 0
+      || compareExactTemporalValues(piece.target.end, stage.target.duration) !== 0) {
+      throw new Error("Browser playback cannot flatten piecewise occurrence sampling.");
+    }
+    numerator *= piece.rate.numerator;
+    denominator *= piece.rate.denominator;
+    if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator)) {
+      throw new Error("Browser playback occurrence sampling rate exceeds safe arithmetic.");
+    }
+  }
+  const first = value.stages[0]!.pieces[0]!;
+  const mapped = evaluateTemporalMap(value, first.target.start, "after");
+  if (mapped === undefined) throw new Error("Browser playback occurrence sampling has no initial value.");
+  return [{
+    target: structuredClone(first.target),
+    sourceAtStart: mapped.position,
+    rate: { numerator, denominator },
+  }];
 }
 
 function playbackGainRoutes(program: AudioProgram): readonly PlaybackGainRoute[] {
@@ -162,9 +199,7 @@ export function lowerPlaybackAudio(
     }
     const preservePitch = reconstruction !== undefined;
     if (reconstruction !== undefined) readPreservePitch(reconstruction);
-    if (sampling.stages.length !== 1) {
-      throw new Error(`Playback audio ${media.id} supports one occurrence-to-prepared Map stage`);
-    }
+    const samplingPieces = playbackSamplingPieces(sampling);
     if (!media.preparation.stages.every((stage) => stage.pieces.length === 1
       && isAffineTemporalMapPiece(stage.pieces[0]!)
       && stage.pieces[0]!.wrap === undefined && stage.pieces[0]!.rate.numerator > 0)) {
@@ -177,7 +212,7 @@ export function lowerPlaybackAudio(
       const absolute = exactTemporalRational(addExactTemporalValues(media.source.presentationStart, mapped.position));
       return Number(absolute.numerator) / Number(absolute.denominator);
     };
-    return sampling.stages[0]!.pieces.map((piece, pieceIndex) => {
+    return samplingPieces.map((piece, pieceIndex) => {
       if (!isAffineTemporalMapPiece(piece)) {
         throw new Error(`Playback audio ${media.id} piece ${pieceIndex} is outside this adapter's affine capability`);
       }

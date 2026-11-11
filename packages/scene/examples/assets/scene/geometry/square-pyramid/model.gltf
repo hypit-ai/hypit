@@ -1,0 +1,117 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "Hypit example Scene Asset generator"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "四棱锥",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Square Pyramid",
+      "mesh": 0,
+      "translation": [
+        0,
+        0.5,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    }
+  ],
+  "meshes": [
+    {
+      "name": "squarePyramid-Geometry",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "Geometry",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.72,
+          0.73,
+          0.76,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.78
+      }
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 468,
+      "uri": "data:application/octet-stream;base64,AAAAvwAAAL8AAAC/AAAAvwAAAL8AAAA/AAAAPwAAAL8AAAA/AAAAvwAAAL8AAAC/AAAAPwAAAL8AAAA/AAAAPwAAAL8AAAC/AAAAvwAAAL8AAAC/AAAAPwAAAL8AAAC/AAAAAAAAAD8AAAAAAAAAPwAAAL8AAAC/AAAAPwAAAL8AAAA/AAAAAAAAAD8AAAAAAAAAPwAAAL8AAAA/AAAAvwAAAL8AAAA/AAAAAAAAAD8AAAAAAAAAvwAAAL8AAAA/AAAAvwAAAL8AAAC/AAAAAAAAAD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAC755L4u+WQ/AAAAAC755L4u+WQ/AAAAAC755L4u+WQ/Lvlkvy755L4AAAAALvlkvy755L4AAAAALvlkvy755L4AAAAAAAAAgC755L4u+WS/AAAAgC755L4u+WS/AAAAgC755L4u+WS/LvlkPy755L4AAAAALvlkPy755L4AAAAALvlkPy755L4AAAAAAAABAAIAAwAEAAUABgAHAAgACQAKAAsADAANAA4ADwAQABEA"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 216,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 216,
+      "byteLength": 216,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 432,
+      "byteLength": 36,
+      "target": 34963
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 18,
+      "type": "VEC3",
+      "min": [
+        -0.5,
+        -0.5,
+        -0.5
+      ],
+      "max": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 18,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5123,
+      "count": 18,
+      "type": "SCALAR"
+    }
+  ]
+}

@@ -11,6 +11,7 @@ import {
   createNleEditSession,
   createNleProject,
   isNleEditSessionDirty,
+  nleLinearSourceTime,
   prepareNleProjectSave,
 } from "../src/index.js";
 import { createNodeNleMediaResolver, readNleProjectFile, writeNleProjectFile } from "../src/node/index.js";
@@ -28,7 +29,7 @@ test("the Node adapter atomically writes and reopens exact NLE JSON", async () =
       label: "Add picture track",
       transaction: { revision: 0, commands: [{
         kind: "track.add",
-        track: { id: "picture", name: "Picture", kind: "picture", locked: false, muted: false, items: [] },
+        track: { id: "picture", name: "Picture", kind: "picture", muted: false, items: [] },
       }] },
     });
     const ticket = prepareNleProjectSave(session);
@@ -51,11 +52,19 @@ test("media files open explicitly after the project and are cached by file path"
   const directory = await mkdtemp(join(tmpdir(), "hypit-nle-media-"));
   try {
     await mkdir(join(directory, "media"));
+    await mkdir(join(directory, "edits"));
     const base = createNleProject({ id: "media-files", name: "Media files" });
-    const project = applyNleTransaction(base, { revision: 0, commands: [
-      { kind: "media.add", media: { id: "left", name: "Left", asset: { path: "./media/shared.media.json" } } },
-      { kind: "media.add", media: { id: "right", name: "Right", asset: { path: "./media/shared.media.json" } } },
-    ] });
+    const second = { ticks: "1", timeBase: { numerator: 1, denominator: 1 } } as const;
+    const project = applyNleTransaction(base, { revision: 0, commands: [{
+      kind: "track.add",
+      track: { id: "picture", name: "Picture", kind: "picture", muted: false, items: ["left", "right"].map((id) => ({
+        id, kind: "present" as const, source: "media" as const,
+        asset: { path: "../media/shared.media.json" },
+        start: { ticks: "0", timeBase: second.timeBase }, duration: second,
+        sourceTime: nleLinearSourceTime(second), enabled: true,
+        picture: { layout: { x: 0, y: 0, width: 1, height: 1, fit: "fill" as const } },
+      })) },
+    }] });
     const opened: string[] = [];
     const media = {
       id: "shared",
@@ -73,12 +82,23 @@ test("media files open explicitly after the project and are cached by file path"
         },
       },
     };
-    const resolver = await createNodeNleMediaResolver(join(directory, "edit.nle.json"), project,
+    const resolver = await createNodeNleMediaResolver(directory, join(directory, "edits", "edit.nle.json"), project,
       async (path) => { opened.push(path); return media; });
     assert.equal(opened.length, 1);
     assert.equal(opened[0], join(directory, "media", "shared.media.json"));
-    const left = project.media[0]!;
-    assert.equal(resolver(left, { project, track: undefined as never, item: undefined as never }).id, "shared");
+    const left = project.tracks[0]!.items[0]!;
+    if (left.kind !== "present" || left.source !== "media") throw new Error("Media fixture is invalid.");
+    assert.equal(resolver(left.asset, { project, track: project.tracks[0]!, item: left }).id, "shared");
+    const outside = applyNleTransaction(project, { revision: project.revision, commands: [{
+      kind: "item.replace",
+      item: { ...left, asset: { path: "../../outside.media.json" } },
+    }] });
+    await assert.rejects(createNodeNleMediaResolver(
+      directory,
+      join(directory, "edits", "edit.nle.json"),
+      outside,
+      async () => media,
+    ), /leaves the application Project Root/u);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

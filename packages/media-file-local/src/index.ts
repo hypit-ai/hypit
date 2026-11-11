@@ -35,6 +35,8 @@ export type {
   WaveformScale,
   WaveformViewOptions,
 } from "./waveform.js";
+export { renderStoryboardAtlas } from "./storyboard.js";
+export type { StoryboardAtlas, StoryboardOptions } from "./storyboard.js";
 export { renderSpectrogram, renderSpectrogramView, writeSpectrogram } from "./spectrogram.js";
 export type {
   FrequencyScale,

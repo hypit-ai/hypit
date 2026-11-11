@@ -81,7 +81,7 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
   }
 
   var media = [];
-  for (var element of document.querySelectorAll('.hypit-visual-present video')) {
+  for (var element of document.querySelectorAll('[data-hypit-media-display-plane] video[data-hypit-video-source="media"]')) {
     var plane = element.closest && element.closest('[data-hypit-media-display-plane]');
     var plan = directMediaPlans.get(plane ? plane.id : element.id);
     var timestamps = plan && plan.timestamps;

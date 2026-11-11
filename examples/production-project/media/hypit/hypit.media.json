@@ -1,0 +1,101 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "hypit",
+  "media": {
+    "file": {
+      "path": "hypit.mp3",
+      "mediaType": "audio/mpeg"
+    },
+    "interpretation": {
+      "audio": {
+        "map": {
+          "stages": [
+            {
+              "pieces": [
+                {
+                  "rate": {
+                    "denominator": 1,
+                    "numerator": 1
+                  },
+                  "sourceAtStart": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "target": {
+                    "end": {
+                      "ticks": "1783",
+                      "timeBase": {
+                        "denominator": 25,
+                        "numerator": 1
+                      }
+                    },
+                    "start": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "denominator": 1,
+                        "numerator": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "source": {
+                "duration": {
+                  "ticks": "1783",
+                  "timeBase": {
+                    "denominator": 25,
+                    "numerator": 1
+                  }
+                },
+                "id": "hypit:media:audio-source"
+              },
+              "target": {
+                "duration": {
+                  "ticks": "1783",
+                  "timeBase": {
+                    "denominator": 25,
+                    "numerator": 1
+                  }
+                },
+                "id": "hypit:media"
+              }
+            }
+          ]
+        },
+        "presentationStart": {
+          "ticks": "324870",
+          "timeBase": {
+            "denominator": 14112000,
+            "numerator": 1
+          }
+        },
+        "sourceDomain": {
+          "duration": {
+            "ticks": "1783",
+            "timeBase": {
+              "denominator": 25,
+              "numerator": 1
+            }
+          },
+          "id": "hypit:media:audio-source"
+        },
+        "streamIndex": 0
+      },
+      "domain": {
+        "duration": {
+          "ticks": "1783",
+          "timeBase": {
+            "denominator": 25,
+            "numerator": 1
+          }
+        },
+        "id": "hypit:media"
+      },
+      "id": "hypit:media"
+    }
+  },
+  "representations": []
+}

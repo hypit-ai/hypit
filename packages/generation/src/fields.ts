@@ -80,6 +80,7 @@ export type ModelField = ModelScalarField | ModelArtifactField;
 
 export type ModelFieldRequirement =
   | { readonly kind: "atMostOneOf"; readonly fields: readonly string[] }
+  | { readonly kind: "atLeastOneOf"; readonly fields: readonly string[] }
   | { readonly kind: "requiresPresent"; readonly field: string; readonly needs: readonly string[] }
   /** This field needs company, but any one of several will do — reference audio needs a visual. */
   | { readonly kind: "requiresAnyOf"; readonly field: string; readonly anyOf: readonly string[] }
@@ -221,12 +222,12 @@ export function assertModelFieldTable(value: ModelFieldTable): void {
   }
 
   for (const requirement of value.requires) {
-    if (requirement.kind === "atMostOneOf") {
-      assert(requirement.fields.length >= 2, `${value.model} atMostOneOf needs at least two fields`);
+    if (requirement.kind === "atMostOneOf" || requirement.kind === "atLeastOneOf") {
+      assert(requirement.fields.length >= 2, `${value.model} ${requirement.kind} needs at least two fields`);
       requirement.fields.forEach((name) => assert(names.has(name),
-        `${value.model} atMostOneOf names unknown field ${name}`));
+        `${value.model} ${requirement.kind} names unknown field ${name}`));
       assert(new Set(requirement.fields).size === requirement.fields.length,
-        `${value.model} atMostOneOf repeats a field`);
+        `${value.model} ${requirement.kind} repeats a field`);
       continue;
     }
     if (requirement.kind === "requiresAnyOf") {

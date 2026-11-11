@@ -15,8 +15,8 @@ test("one Script materializes complete editable Karaoke Caption Items over three
   const styleIds: string[] = [];
   const disabled: string[] = [];
   for (const item of captions.items) {
-    assert.equal(item.kind, "component");
-    if (item.kind !== "component") continue;
+    assert.equal(item.kind, "present");
+    if (item.kind !== "present" || item.source !== "component") continue;
     const parameters = item.parameters as Record<string, unknown>;
     assertCaptionCuePayload(parameters.caption, item.duration);
     assert(parameters.caption.words.length > 0);

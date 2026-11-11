@@ -1,0 +1,47 @@
+{
+  "name": "@hypit/workbench",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node/index.ts",
+    "./cli": "./src/cli.ts"
+  },
+  "dependencies": {
+    "@hypit/audio-program": "workspace:^0.1.0",
+    "@hypit/build-submission": "workspace:^0.0.0-dev",
+    "@hypit/browser-capture": "workspace:^0.2.1",
+    "@hypit/cli": "workspace:^0.0.0-dev",
+    "@hypit/facet": "workspace:^0.0.0-dev",
+    "@hypit/feedback": "workspace:^0.0.0-dev",
+    "@hypit/generation-canvas": "workspace:^0.0.0-dev",
+    "@hypit/generation-graph": "workspace:^0.0.0-dev",
+    "@hypit/loader": "workspace:^0.0.0-dev",
+    "@hypit/html-document": "workspace:^0.1.0",
+    "@hypit/html-playback": "workspace:^0.1.0",
+    "@hypit/html-video": "workspace:^0.2.1",
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/media-asset": "workspace:^0.1.0",
+    "@hypit/media-asset-generation": "workspace:^0.1.0",
+    "@hypit/media-file-local": "workspace:^0.1.0",
+    "@hypit/media-local": "workspace:^0.3.0",
+    "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/nle-local": "workspace:^0.1.0",
+    "@hypit/nle-view": "workspace:^0.0.0-dev",
+    "@hypit/product": "workspace:^0.0.0-dev",
+    "@hypit/project": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/result": "workspace:^0.0.0-dev",
+    "@hypit/runtime": "workspace:^0.0.0-dev",
+    "@hypit/scene": "workspace:^0.0.0-dev",
+    "@hypit/scene-view": "workspace:^0.0.0-dev",
+    "@hypit/temporal": "workspace:^0.1.1",
+    "@hypit/workspace": "workspace:^0.0.0-dev",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@hypit/scene-motion": "workspace:*"
+  }
+}

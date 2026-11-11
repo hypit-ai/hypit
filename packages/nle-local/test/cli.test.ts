@@ -10,4 +10,5 @@ test("the local NLE CLI adapter explicitly owns the export command", async () =>
   let output = "";
   await module.writeHelp(["nle", "--help"], { write: text => { output += text; } });
   assert.match(output, /hypit nle export <project\.nle\.json> --to <output\.mp4>/u);
+  assert.match(output, /--resolution <WxH>/u);
 });

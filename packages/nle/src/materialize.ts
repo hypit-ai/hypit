@@ -7,8 +7,7 @@ import { nleLinearSourceTime } from "./source-time.js";
 import type { NleTransaction } from "./transaction.js";
 import type {
   NleAudioAppearance,
-  NleComponentItem,
-  NleEffect,
+  NleAdjustmentItem,
   NlePackageSymbol,
   NlePictureAppearance,
   NlePictureLayout,
@@ -28,9 +27,7 @@ function fullCanvas(project: NleProject): NlePictureLayout {
 
 /** NLE-owned import transaction; applying it does not retain a live dependency on the producer. */
 export function createMediaAssetMaterialization(project: NleProject, input: {
-  readonly mediaId: string;
   readonly itemId: string;
-  readonly name: string;
   /** Persistent project reference. The NLE never embeds runtime BlobRefs. */
   readonly asset: NleMediaAssetReference;
   /** File-persistent facts used only to derive and validate the direct edit. */
@@ -38,7 +35,7 @@ export function createMediaAssetMaterialization(project: NleProject, input: {
   readonly track: string;
   readonly at: ExactTemporalValue;
   readonly duration?: ExactTemporalValue;
-  /** Defaults to an empty Audio effect chain when the interpretation has Audio; false excludes it. */
+  /** Includes the selected Audio source when present; false excludes it. */
   readonly audio?: Partial<NleAudioAppearance> | false;
   readonly picture?: Partial<NlePictureAppearance> & { readonly layout?: NlePictureLayout };
 }): NleTransaction {
@@ -57,7 +54,7 @@ export function createMediaAssetMaterialization(project: NleProject, input: {
     ? undefined
     : input.interpretation.domain.duration);
   assert(duration !== undefined,
-    `Constant NLE Media ${input.mediaId} requires an explicit occurrence duration.`);
+    `Constant NLE Media Asset ${input.asset.path} requires an explicit occurrence duration.`);
   const includeAudio = input.audio !== false && input.interpretation.audio !== undefined;
   assert(input.audio === undefined || input.audio === false || input.interpretation.audio !== undefined,
     `Media Interpretation ${input.interpretation.id} cannot include missing Audio.`);
@@ -68,23 +65,20 @@ export function createMediaAssetMaterialization(project: NleProject, input: {
   return {
     revision: project.revision,
     commands: [{
-      kind: "media.add",
-      media: { id: input.mediaId, name: input.name, asset: structuredClone(input.asset) },
-    }, {
       kind: "item.add",
       track: track.id,
       item: {
         id: input.itemId,
-        kind: "media",
-        media: input.mediaId,
+        kind: "present",
+        source: "media",
+        asset: structuredClone(input.asset),
         start: structuredClone(input.at),
         duration: structuredClone(duration),
         sourceTime: nleLinearSourceTime(duration),
         enabled: true,
-        ...(includeAudio ? { audio: { effects: structuredClone(input.audio?.effects ?? []) } } : {}),
+        ...(includeAudio ? { audio: structuredClone(input.audio ?? {}) } : {}),
         ...(track.kind === "audio" ? {} : { picture: {
           layout: structuredClone(input.picture?.layout ?? fullCanvas(project)),
-          effects: structuredClone(input.picture?.effects ?? []),
         } }),
       },
     }],
@@ -101,29 +95,51 @@ export function createComponentMaterialization(project: NleProject, input: {
   readonly duration: ExactTemporalValue;
   readonly sourceTime?: NleSourceTime;
   readonly layout?: NlePictureLayout;
-  readonly effects?: readonly NleEffect[];
   readonly audio?: Partial<NleAudioAppearance>;
 }): NleTransaction {
   assertNleProject(project);
   const track = findNleTrack(project, input.track);
-  const item: NleComponentItem = {
+  const item = {
     id: input.id,
-    kind: "component",
+    kind: "present" as const,
+    source: "component" as const,
     component: structuredClone(input.component),
     parameters: structuredClone(input.parameters),
     start: structuredClone(input.at),
     duration: structuredClone(input.duration),
     sourceTime: structuredClone(input.sourceTime ?? nleLinearSourceTime(input.duration)),
     enabled: true,
-    ...(input.audio === undefined ? {} : { audio: {
-      effects: structuredClone(input.audio.effects ?? []),
-    } }),
+    ...(input.audio === undefined ? {} : { audio: structuredClone(input.audio) }),
     ...(track.kind === "audio" ? {} : { picture: {
       layout: structuredClone(input.layout ?? fullCanvas(project)),
-      effects: structuredClone(input.effects ?? []),
     } }),
   };
   assert(track.kind !== "audio" || item.audio !== undefined,
     `NLE Component ${input.id} on an Audio Track requires Audio appearance.`);
   return { revision: project.revision, commands: [{ kind: "item.add", track: track.id, item }] };
+}
+
+/** Materialize one independently timed Adjustment Component. */
+export function createAdjustmentMaterialization(project: NleProject, input: {
+  readonly id: string;
+  readonly track: string;
+  readonly component: NlePackageSymbol;
+  readonly parameters: CanonicalValue;
+  readonly at: ExactTemporalValue;
+  readonly duration: ExactTemporalValue;
+  readonly sourceTime?: NleSourceTime;
+}): NleTransaction {
+  assertNleProject(project);
+  findNleTrack(project, input.track);
+  const item: NleAdjustmentItem = {
+    id: input.id,
+    kind: "adjustment",
+    component: structuredClone(input.component),
+    parameters: structuredClone(input.parameters),
+    start: structuredClone(input.at),
+    duration: structuredClone(input.duration),
+    sourceTime: structuredClone(input.sourceTime ?? nleLinearSourceTime(input.duration)),
+    enabled: true,
+  };
+  return { revision: project.revision, commands: [{ kind: "item.add", track: input.track, item }] };
 }

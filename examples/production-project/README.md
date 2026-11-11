@@ -4,7 +4,7 @@ This is the smallest complete example of the recommended Hypit project boundary.
 one production, while each subsystem keeps its own file and semantics:
 
 - `generation.graph.json` is the long-running generation dependency graph.
-- `generation.canvas.json` is only the saved spatial view of that graph and selected Build outputs.
+- `generation.workspace.json` saves Canvas placement, attached Build outputs and each operation's explicit selection.
 - `media/` contains portable Media Asset bundles accepted into the production.
 - `film.nle.json` is the directly editable media-and-effects timeline.
 - `packages/` is where production-specific components belong.
@@ -30,7 +30,7 @@ hypit generation materialize <build> --output campaign-variation --to media/<ass
 hypit nle export film.nle.json --to exports/film.mp4
 ```
 
-An Agent or Studio edits the Graph, Canvas and NLE files through their ordinary transactions and file
+An Agent or Studio edits the Graph, Generation Workspace and NLE files through their ordinary transactions and file
 stores. Hypit does not mirror every move, trim, parameter edit or Canvas coordinate as a shell command.
 
 The checked-in poster demonstrates the acceptance seam. `poster.media.json` owns the media facts,

@@ -4,6 +4,7 @@ import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
 import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { elevenLabsSpeechComponent, elevenLabsSpeechManifest, elevenLabsSpeechModuleRef } from "./index.js";
 import { elevenLabsSpeechAuthorDeclarations, elevenLabsSpeechMarkupDeclarations } from "./declaration.js";
+import { elevenLabsSpeechGenerationFacets } from "./generation.js";
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
@@ -13,6 +14,7 @@ export const hypitPackage = {
     ...elevenLabsSpeechAuthorDeclarations.map(createAuthorDeclarationFacet),
     ...elevenLabsSpeechMarkupDeclarations.map((declaration) =>
       createMarkupDeclarationFacet({ module: elevenLabsSpeechModuleRef, declaration })),
+    ...elevenLabsSpeechGenerationFacets,
   ],
 };
 

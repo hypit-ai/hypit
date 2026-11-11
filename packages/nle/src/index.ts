@@ -1,16 +1,20 @@
 export {
+  assertNleComposition,
   assertNleProject,
+  createNleComposition,
   createNleProject,
   findNleItem,
   findNleComponentValue,
-  findNleMedia,
   findNlePictureLayout,
   findNleTrack,
+  nleCompositionDuration,
+  nleProjectComposition,
   nleProjectDuration,
   parseNleProject,
   resolveNleComponentBinding,
   resolveNlePictureAppearance,
   resolveNlePictureLayout,
+  sealNleComposition,
   sealNleProject,
   serializeNleProject,
 } from "./project.js";
@@ -50,9 +54,10 @@ export {
 export { snapNleTime } from "./snap.js";
 export type { NleSnapGuide, NleSnapResult } from "./snap.js";
 export {
+  lowerNleCompositionToAudiovisual,
   lowerNleProjectToAudiovisual,
-  nlePointwiseAudioEffect,
-  nlePointwisePictureEffect,
+  nlePointwiseAudioAdjustment,
+  nlePointwisePictureAdjustment,
 } from "./lower.js";
 export type { NleLoweringObserver } from "./lower.js";
 export {
@@ -64,13 +69,13 @@ export {
   nlePackagesFromFacets,
 } from "./package.js";
 export type {
-  NleAudioEffectResolver,
+  NleAudioAdjustmentResolver,
   NleComponentResolver,
-  NleEffectResolver,
   NleMatteResolver,
   NleMediaResolver,
   NlePackage,
   NlePackageFacet,
+  NlePictureAdjustmentResolver,
   NleSignalReconstructionResolver,
   NleTransitionResolver,
 } from "./package.js";
@@ -87,14 +92,17 @@ export type {
   NleAuthoringPackage,
   NleComponentParameterAuthoring,
   NleComponentParameterAuthoringContext,
-  NleEffectParameterAuthoring,
-  NleEffectParameterAuthoringContext,
+  NleComponentValueAuthoring,
+  NleComponentValueAuthoringContext,
+  NleAdjustmentParameterAuthoring,
+  NleAdjustmentParameterAuthoringContext,
   NleMatteParameterAuthoring,
   NleMatteParameterAuthoringContext,
   NleTransitionParameterAuthoring,
   NleTransitionParameterAuthoringContext,
 } from "./authoring.js";
 export {
+  createAdjustmentMaterialization,
   createComponentMaterialization,
   createMediaAssetMaterialization,
 } from "./materialize.js";

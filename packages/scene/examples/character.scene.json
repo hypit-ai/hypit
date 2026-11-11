@@ -1,0 +1,180 @@
+{
+  "format": "hypit.scene@1",
+  "id": "character-stage",
+  "name": "Character Stage",
+  "revision": 0,
+  "libraries": [
+    { "path": "assets/scene/library.scene-library.json" }
+  ],
+  "environment": {
+    "using": {
+      "module": { "name": "@hypit/scene-environment", "version": "1" },
+      "name": "world-environment"
+    },
+    "parameters": {
+      "preset": { "path": "assets/scene/environments/world-neutral/world-neutral.scene-asset.json" },
+      "world": {
+        "sky": { "top": "#151820", "horizon": "#303640" },
+        "ground": { "visible": true, "color": "#25282e", "opacity": 1 },
+        "atmosphere": { "fogColor": "#252a33", "fogDensity": 0.006 },
+        "lighting": {
+          "ambient": { "sky": "#dce5f2", "ground": "#20232a", "intensity": 0.65 },
+          "key": { "color": "#ffe6d0", "intensity": 3.6, "azimuth": -35, "elevation": 48, "shadows": true, "softness": 2.5 },
+          "fill": { "color": "#95adcf", "intensity": 0.35 },
+          "rim": { "color": "#a9c8ff", "intensity": 0.9 }
+        },
+        "exposure": 0.98
+      }
+    }
+  },
+  "objects": [
+    {
+      "id": "actor-main",
+      "name": "男性 · 标准",
+      "using": {
+        "module": { "name": "@project/characters", "version": "1" },
+        "name": "actor"
+      },
+      "transform": {
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0, "w": 1 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "enabled": true,
+      "parameters": {
+        "asset": { "path": "assets/scene/characters/standard-male/standard-male.scene-asset.json" },
+        "pose": "neutral"
+      }
+    },
+    {
+      "id": "actor-secondary",
+      "name": "女性 · 标准",
+      "using": {
+        "module": { "name": "@project/characters", "version": "1" },
+        "name": "actor"
+      },
+      "transform": {
+        "position": { "x": 1.45, "y": 0, "z": -0.15 },
+        "rotation": { "x": 0, "y": -0.13, "z": 0, "w": 0.9915 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "enabled": true,
+      "parameters": {
+        "asset": { "path": "assets/scene/characters/standard-female/standard-female.scene-asset.json" },
+        "pose": "neutral"
+      }
+    },
+    {
+      "id": "table-main",
+      "name": "圆桌",
+      "using": {
+        "module": { "name": "@project/scene-components", "version": "1" },
+        "name": "prop"
+      },
+      "transform": {
+        "position": { "x": 0.15, "y": 0, "z": -1.35 },
+        "rotation": { "x": 0, "y": 0, "z": 0, "w": 1 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "enabled": true,
+      "parameters": {
+        "asset": { "path": "assets/scene/props/round-table/round-table.scene-asset.json" }
+      }
+    },
+    {
+      "id": "chair-left",
+      "name": "单椅",
+      "using": {
+        "module": { "name": "@project/scene-components", "version": "1" },
+        "name": "prop"
+      },
+      "transform": {
+        "position": { "x": -2.25, "y": 0, "z": -1.05 },
+        "rotation": { "x": 0, "y": 0.2164, "z": 0, "w": 0.9763 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "enabled": true,
+      "parameters": {
+        "asset": { "path": "assets/scene/props/lounge-chair/lounge-chair.scene-asset.json" }
+      }
+    },
+    {
+      "id": "pedestal-right",
+      "name": "展示台",
+      "using": {
+        "module": { "name": "@project/scene-components", "version": "1" },
+        "name": "prop"
+      },
+      "transform": {
+        "position": { "x": 2.55, "y": 0, "z": -1.3 },
+        "rotation": { "x": 0, "y": 0, "z": 0, "w": 1 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "enabled": true,
+      "parameters": {
+        "asset": { "path": "assets/scene/props/display-pedestal/display-pedestal.scene-asset.json" }
+      }
+    }
+  ],
+  "cameras": [
+    {
+      "id": "camera-main",
+      "name": "Camera 1",
+      "pose": {
+        "position": { "x": 6.8, "y": 4.2, "z": 10.2 },
+        "rotation": {
+          "x": -0.10907528343480907,
+          "y": 0.2878961268371902,
+          "z": 0.033025338502772394,
+          "w": 0.9508563139152718
+        }
+      },
+      "lens": {
+        "fov": 42,
+        "aspect": { "numerator": 16, "denominator": 9 }
+      }
+    }
+  ],
+  "performances": [
+    {
+      "id": "main-performance",
+      "name": "Main",
+      "duration": { "ticks": "120", "timeBase": { "numerator": 1, "denominator": 24 } },
+      "tracks": [
+        {
+          "id": "camera-main-motion",
+          "name": "Camera 1 Motion",
+          "subject": { "kind": "camera", "ref": "camera-main" },
+          "items": [
+            {
+              "id": "opening-dolly",
+              "name": "Opening Dolly",
+              "start": { "ticks": "0", "timeBase": { "numerator": 1, "denominator": 24 } },
+              "duration": { "ticks": "120", "timeBase": { "numerator": 1, "denominator": 24 } },
+              "enabled": true,
+              "using": {
+                "module": { "name": "@hypit/scene-motion", "version": "1" },
+                "name": "camera-motion"
+              },
+              "parameters": {
+                "kind": "dolly",
+                "distance": 1.4,
+                "aim": { "kind": "point", "position": { "x": 0, "y": 1.35, "z": 0 } },
+                "easing": "ease-in-out"
+              }
+            }
+          ]
+        }
+      ],
+      "shots": [
+        {
+          "id": "opening-shot",
+          "name": "Opening",
+          "camera": "camera-main",
+          "start": { "ticks": "0", "timeBase": { "numerator": 1, "denominator": 24 } },
+          "duration": { "ticks": "120", "timeBase": { "numerator": 1, "denominator": 24 } }
+        }
+      ]
+    }
+  ]
+}

@@ -14,15 +14,16 @@ import {
   audiovisualProgramHtmlSource,
   lowerAudiovisualPictureProgramToHtmlProgram,
   preparedMediaHtmlSource,
+  type AudiovisualHtmlOutput,
   type AudiovisualHtmlSource,
   type AudiovisualHtmlSourceSet,
 } from "@hypit/audiovisual-html";
 import type { Facet } from "@hypit/facet";
 import type { HtmlProgram } from "@hypit/html-program";
+import { assertBlobRef, type BlobRef } from "@hypit/protocol";
 import {
   createNleLoweringHost,
   findNleItem,
-  findNleMedia,
   lowerNleProjectToAudiovisual,
   nlePackagesFromFacets,
   type NleComponentItem,
@@ -31,12 +32,15 @@ import {
   type NleMediaResolver,
   type NlePackage,
   type NlePackageSymbol,
+  type NleComposition,
   type NleProject,
   type NleResolvedMedia,
   type NleResolvedItemSource,
 } from "@hypit/nle";
 import { nlePackageSymbolKey } from "@hypit/nle";
 import { sealLocalSpatialDomain, sealSpatialMap } from "@hypit/spatial/algebra";
+import type { SpatialTransform } from "@hypit/spatial/algebra";
+import type { TemporalSamplingGrid } from "@hypit/temporal";
 import type { TemporalRate } from "@hypit/temporal/algebra";
 
 export type NleTerminalComponentResolution = {
@@ -54,8 +58,15 @@ export type NleHtmlVideoComponentResolver = {
   ) => NleTerminalComponentResolution;
 };
 
+/** Package-owned terminal bytes retained by the Host outside NLE and AVIR documents. */
+export type NleHtmlVideoResource = {
+  readonly artifact: BlobRef;
+  readonly open: () => Uint8Array | Promise<Uint8Array>;
+};
+
 export type NleHtmlVideoPackage = {
   readonly components?: readonly NleHtmlVideoComponentResolver[];
+  readonly resources?: readonly NleHtmlVideoResource[];
 };
 
 export const nleHtmlVideoPackageFacetAbi = "hypit.html-video-nle-package@1";
@@ -83,8 +94,51 @@ export type NleTerminalLink = {
   }[];
 };
 
+/**
+ * Invocation-local spatial and temporal sampling selected by an HTML terminal.
+ * `pictureTransform` maps output-viewport coordinates into NLE Programme Space.
+ * It is never persisted in the NLE Project or Timeline View.
+ */
+export type NleHtmlOutputSelection = {
+  readonly sampling: TemporalSamplingGrid;
+  readonly canvas: AudiovisualHtmlOutput["canvas"];
+  readonly pictureTransform: SpatialTransform;
+};
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
+}
+
+/**
+ * Select another pixel density without changing the authored Programme aspect.
+ * A different aspect requires an explicit output-to-Programme transform instead
+ * of an implicit contain, cover or stretch decision.
+ */
+export function createNleScaledHtmlOutput(
+  project: NleComposition,
+  frameRate: TemporalRate,
+  canvas: AudiovisualHtmlOutput["canvas"] = project.canvas,
+): NleHtmlOutputSelection {
+  assert(Number.isSafeInteger(canvas.width) && canvas.width > 0
+    && Number.isSafeInteger(canvas.height) && canvas.height > 0,
+  "NLE HTML output Canvas must have positive integer dimensions.");
+  assert(canvas.clearColor.trim().length > 0, "NLE HTML output Canvas clear color is empty.");
+  assert(BigInt(project.canvas.width) * BigInt(canvas.height)
+    === BigInt(project.canvas.height) * BigInt(canvas.width),
+    `NLE output ${canvas.width}x${canvas.height} changes Programme aspect ${project.canvas.width}x${project.canvas.height}; supply an explicit Picture transform.`);
+  return {
+    sampling: { frameRate: structuredClone(frameRate) },
+    canvas: structuredClone(canvas),
+    pictureTransform: {
+      kind: "affine",
+      xx: project.canvas.width / canvas.width,
+      xy: 0,
+      yx: 0,
+      yy: project.canvas.height / canvas.height,
+      tx: 0,
+      ty: 0,
+    },
+  };
 }
 
 export function createNleHtmlVideoPackageFacet(
@@ -96,6 +150,15 @@ export function createNleHtmlVideoPackageFacet(
     assert(!keys.has(key), `NLE HTML-video package repeats Component resolver ${key}.`);
     assert(typeof resolver.resolve === "function", `NLE HTML-video Component resolver ${key} is not callable.`);
     keys.add(key);
+  }
+  const resources = new Set<string>();
+  for (const resource of implementation.resources ?? []) {
+    assertBlobRef(resource.artifact, "NLE HTML-video package resource");
+    assert(!resources.has(resource.artifact.resource),
+      `NLE HTML-video package repeats resource ${resource.artifact.resource}.`);
+    assert(typeof resource.open === "function",
+      `NLE HTML-video package resource ${resource.artifact.resource} cannot be opened.`);
+    resources.add(resource.artifact.resource);
   }
   return { abi: nleHtmlVideoPackageFacetAbi, implementation };
 }
@@ -162,21 +225,21 @@ export function linkNleProjectTerminals(
   project: NleProject,
   host: NleTerminalLinkHost,
 ): NleTerminalLink {
-  const programs = new Map<NleProject, AudiovisualProgram>();
-  const components = new Map<NleProject, Map<string, NleResolvedItemSource & NleTerminalComponentResolution>>();
-  const media = new Map<NleProject, Map<string, NleResolvedMedia>>();
+  const programs = new Map<NleComposition, AudiovisualProgram>();
+  const components = new Map<NleComposition, Map<string, NleResolvedItemSource & NleTerminalComponentResolution>>();
+  const media = new Map<NleComposition, Map<string, NleResolvedMedia>>();
   const structuralHost: NleLoweringHost = {
     ...host,
-    resolveMedia(declaration, context) {
+    resolveMedia(asset, context) {
       let byMedia = media.get(context.project);
       if (byMedia === undefined) {
         byMedia = new Map();
         media.set(context.project, byMedia);
       }
-      const cached = byMedia.get(declaration.id);
+      const cached = byMedia.get(asset.path);
       if (cached !== undefined) return cached;
-      const resolved = host.resolveMedia(declaration, context);
-      byMedia.set(declaration.id, resolved);
+      const resolved = host.resolveMedia(asset, context);
+      byMedia.set(asset.path, resolved);
       return resolved;
     },
     resolveComponent(item, context) {
@@ -195,7 +258,7 @@ export function linkNleProjectTerminals(
     lowered: (nestedProject, nestedProgram) => programs.set(nestedProject, nestedProgram),
   });
 
-  const link = (current: NleProject): NleTerminalLink => {
+  const link = (current: NleComposition): NleTerminalLink => {
     const currentProgram = programs.get(current);
     assert(currentProgram !== undefined, `NLE Project ${current.id} was not structurally lowered.`);
     const htmlSources = new Map<string, AudiovisualHtmlSource>();
@@ -203,16 +266,16 @@ export function linkNleProjectTerminals(
 
     for (const occurrence of Object.values(currentProgram.occurrences)) {
       const { item } = findNleItem(current, occurrence.id);
+      assert(item.kind === "present", `NLE occurrence ${occurrence.id} does not refer to a Present Item.`);
       let terminal: NleResolvedItemSource & NleTerminalComponentResolution;
-      if (item.kind === "component") {
+      if (item.source === "component") {
         const resolved = components.get(current)?.get(item.id);
         assert(resolved !== undefined, `NLE Component ${item.id} has no terminal resolution.`);
         terminal = resolved;
-      } else if (item.kind === "media") {
-        const declaration = findNleMedia(current, item.media);
-        const resolvedMedia = media.get(current)?.get(declaration.id);
+      } else if (item.source === "media") {
+        const resolvedMedia = media.get(current)?.get(item.asset.path);
         assert(resolvedMedia !== undefined,
-          `NLE Media ${declaration.id} has no terminal resolution.`);
+          `NLE Media Asset ${item.asset.path} has no terminal resolution.`);
         terminal = {
           source: occurrence.source,
           ...(occurrence.source.outputs.picture === undefined ? {} : {
@@ -225,7 +288,7 @@ export function linkNleProjectTerminals(
           }),
         };
       } else {
-        const child = link(item.project);
+        const child = link(item.composition);
         terminal = {
           source: occurrence.source,
           ...(child.program.picture === undefined ? {} : {
@@ -283,27 +346,26 @@ export function linkNleProjectTerminals(
 }
 
 export function lowerNleAudiovisualToHtmlProgram(
-  project: NleProject,
   lowering: NleTerminalLink,
-  frameRate: TemporalRate,
+  output: NleHtmlOutputSelection,
 ): HtmlProgram {
   assert(lowering.program.picture !== undefined && lowering.program.pictureDomain !== undefined,
     "NLE Project has no Picture output for HTML lowering.");
   const viewport = sealLocalSpatialDomain({
-    id: `${project.id}:viewport`,
-    region: { x: 0, y: 0, width: project.canvas.width, height: project.canvas.height },
+    id: `${lowering.program.id}:viewport`,
+    region: { x: 0, y: 0, width: output.canvas.width, height: output.canvas.height },
   });
   return lowerAudiovisualPictureProgramToHtmlProgram({
     program: lowering.program,
     sources: lowering.htmlSources,
     output: {
-      id: `${project.id}:html`,
-      sampling: { frameRate: structuredClone(frameRate) },
-      canvas: structuredClone(project.canvas),
+      id: `${lowering.program.id}:html`,
+      sampling: structuredClone(output.sampling),
+      canvas: structuredClone(output.canvas),
       pictureMapping: sealSpatialMap({
         target: viewport,
         source: lowering.program.pictureDomain,
-        transform: { kind: "affine", xx: 1, xy: 0, yx: 0, yy: 1, tx: 0, ty: 0 },
+        transform: structuredClone(output.pictureTransform),
       }),
     },
   });
@@ -312,9 +374,9 @@ export function lowerNleAudiovisualToHtmlProgram(
 export function lowerNleProjectToHtmlProgram(
   project: NleProject,
   host: NleTerminalLinkHost,
-  frameRate: TemporalRate,
+  output: NleHtmlOutputSelection,
 ): HtmlProgram {
-  return lowerNleAudiovisualToHtmlProgram(project, linkNleProjectTerminals(project, host), frameRate);
+  return lowerNleAudiovisualToHtmlProgram(linkNleProjectTerminals(project, host), output);
 }
 
 export function lowerNleAudiovisualToAudioProgram(

@@ -170,6 +170,39 @@ test("generation run submits a fresh Build every time without rewriting the reci
       };
     };
 
+    let checkOutput = "";
+    await runCliApplication(
+      ["generation", "check", graphPath, "--json"],
+      { write(text) { checkOutput += text; } },
+      {
+        cwd: directory,
+        resolveProjectRoot: async () => directory,
+        commandModules: createGenerationGraphCliCommandModules(services),
+      },
+    );
+    const checked = JSON.parse(checkOutput) as { valid: boolean; ready: boolean; nodes: readonly { readiness: string }[] };
+    assert.equal(checked.valid, true);
+    assert.equal(checked.ready, true);
+    assert.deepEqual(checked.nodes.map((node) => node.readiness), ["ready"]);
+    assert.equal(runtimeOpens, 0);
+
+    let planOutput = "";
+    await runCliApplication(
+      ["generation", "plan", graphPath, "--target", "hero", "--json"],
+      { write(text) { planOutput += text; } },
+      {
+        cwd: directory,
+        resolveProjectRoot: async () => directory,
+        commandModules: createGenerationGraphCliCommandModules(services),
+      },
+    );
+    const planned = JSON.parse(planOutput) as { ok: boolean; targets: readonly string[]; preflight: { ok: boolean } };
+    assert.equal(planned.ok, true);
+    assert.deepEqual(planned.targets, ["hero"]);
+    assert.equal(planned.preflight.ok, true);
+    assert.equal(runtimeOpens, 1);
+    assert.equal(calls.filter((call) => call === "build").length, 0);
+
     const first = await run();
     assert.equal(first.mode, "build");
     assert.equal(typeof first.build, "string");
@@ -178,7 +211,7 @@ test("generation run submits a fresh Build every time without rewriting the reci
       node: "hero",
       product: { publication: first.build, name: "hero" },
     }]);
-    assert.equal(runtimeOpens, 1);
+    assert.equal(runtimeOpens, 2);
     assert.equal(calls.filter((call) => call === "build").length, 1);
     assert.deepEqual(await readGenerationGraphProjectFile(graphPath), project);
 
@@ -190,7 +223,7 @@ test("generation run submits a fresh Build every time without rewriting the reci
       product: { publication: second.build, name: "hero" },
     }]);
     assert.notEqual(second.build, first.build);
-    assert.equal(runtimeOpens, 2);
+    assert.equal(runtimeOpens, 3);
     assert.equal(calls.filter((call) => call === "build").length, 2);
     assert.deepEqual(await readGenerationGraphProjectFile(graphPath), project);
   } finally {

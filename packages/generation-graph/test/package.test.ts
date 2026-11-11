@@ -4,6 +4,7 @@ import test from "node:test";
 import { sealGraphFragment } from "@hypit/author";
 
 import {
+  assertGenerationNodeAuthoringShape,
   createGenerationGraphLoweringHost,
   createGenerationNodePackageFacet,
   generationNodePackagesFromFacets,
@@ -57,11 +58,15 @@ test("an operation package compiles concise authored inputs without teaching Cor
     implementation: { nodes: [{
       kind: "operation",
       using: authoredUsing,
-      compile({ node }) {
-        return {
-          fragment,
-          inputs: { source: node.inputs.prompt! },
-        };
+      output: type,
+      resolve({ node }) {
+        return node.inputs.prompt === undefined
+          ? { kind: "incomplete", consumedInputs: [], missing: ["prompt"] }
+          : {
+              kind: "ready",
+              consumedInputs: ["prompt"],
+              compiled: { fragment, inputs: { source: node.inputs.prompt } },
+            };
       },
     }] },
   }]);
@@ -83,6 +88,30 @@ test("an operation package compiles concise authored inputs without teaching Cor
     inputs: { source: { value: "a lighthouse" } },
     executionPackage: "@example/image",
   });
+});
+
+test("the exact node owner exposes one data-only authoring shape to every host", () => {
+  const authoredUsing = { module: moduleRef, name: "editable" } as const;
+  const authoring = {
+    using: authoredUsing,
+    output: { type, connectable: true, media: ["image"] as const },
+    controls: [{ id: "prompt", input: "prompt", value: { kind: "text" as const }, required: true }],
+    ports: [{ id: "images", kind: "list" as const, entries: [{ role: "image" as const, prefix: "images" }],
+      minItems: 0, maxItems: 4 }],
+  };
+  assertGenerationNodeAuthoringShape(authoring);
+  const host = createGenerationGraphLoweringHost([{
+    specifier: "@example/image",
+    implementation: { nodes: [{ kind: "operation", using: authoredUsing, fragment, authoring }] },
+  }]);
+  assert.deepEqual(host.resolveAuthoring({ id: "hero", using: authoredUsing, inputs: {} }), authoring);
+  assert.deepEqual(host.listAuthoring(), [authoring]);
+  assert.throws(() => createGenerationGraphLoweringHost([{
+    specifier: "@example/image",
+    implementation: { nodes: [{ kind: "operation", using: authoredUsing, fragment, authoring: {
+      ...authoring, output: { ...authoring.output, type: { module: moduleRef, name: "Video" } },
+    } }] },
+  }]), /authoring output differs/u);
 });
 
 test("the Host refuses missing and duplicate component owners", async () => {

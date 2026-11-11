@@ -26,6 +26,7 @@
     "@hypit/svml": "workspace:*"
   },
   "dependencies": {
-    "@hypit/generation": "workspace:^0.2.0"
+    "@hypit/generation": "workspace:^0.2.0",
+    "@hypit/generation-canvas": "workspace:^0.0.0-dev"
   }
 }

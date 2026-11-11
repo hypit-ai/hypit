@@ -76,3 +76,7 @@ examples/**/.svml/
 
 # Reverse-engineering scratch projects live outside the repository too
 /projects/*
+
+# Local production studies and migration handoffs are not repository packages.
+/artifacts/
+/handoffs/

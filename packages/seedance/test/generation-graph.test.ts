@@ -25,6 +25,7 @@ import seedancePackage from "../src/activation.js";
 import {
   seedanceGenerationNodeDeclarations,
   seedanceGenerationNodes,
+  seedanceGenerationPresentations,
 } from "../src/generation.js";
 import { seedanceEndpointsByModel } from "../src/index.js";
 
@@ -32,6 +33,26 @@ const blobValueUsing = {
   module: { name: "@test/seedance-values", version: "1" },
   name: "blob",
 } as const;
+
+test("Canvas keeps exact Seedance versions separate while each version accepts multiple invocation shapes", () => {
+  assert.deepEqual(seedanceGenerationPresentations.map((presentation) => ({
+    name: presentation.using.name,
+    displayName: presentation.displayName,
+    modelLabel: presentation.modelLabel,
+    modelGroup: presentation.modelGroup,
+    modes: presentation.authoring?.variants?.map((variant) => variant.value),
+  })), [
+    { name: "seedance-2.video", displayName: "Seedance 2 Video", modelLabel: "Seedance 2",
+      modelGroup: undefined, modes: ["references", "frames", "text"] },
+    { name: "seedance-2-fast.video", displayName: "Seedance 2 Fast Video", modelLabel: "Seedance 2 Fast",
+      modelGroup: undefined, modes: ["references", "frames", "text"] },
+    { name: "seedance-2-mini.video", displayName: "Seedance 2 Mini Video", modelLabel: "Seedance 2 Mini",
+      modelGroup: undefined, modes: ["references", "frames", "text"] },
+    { name: "seedance-2.5.video", displayName: "Seedance 2.5 Video", modelLabel: "Seedance 2.5",
+      modelGroup: undefined, modes: ["references", "frames", "text"] },
+  ]);
+  assert(seedanceGenerationNodeDeclarations.every((item) => item.authoring?.variant?.default === "references"));
+});
 
 function installedPackages() {
   return [
@@ -97,12 +118,13 @@ test("a file-backed image and concise Seedance node lower into one typed image-t
     revision: 0,
     nodes: [{
       id: "opening-frame",
-      using: mediaAssetGenerationNodes.resource,
+      using: mediaAssetGenerationNodes.image,
       inputs: { asset: { value: { path: "assets/opening-frame.media.json" } } },
     }, {
       id: "opening-motion",
-      using: seedanceGenerationNodes["seedance-2.5"].frameVideo,
+      using: seedanceGenerationNodes["seedance-2.5"],
       inputs: {
+        mode: { value: "frames" },
         prompt: { value: "A slow camera move reveals the full room." },
         duration: { value: 5 },
         resolution: { value: "720p" },
@@ -163,8 +185,9 @@ test("four existing media values close into one heterogeneous reference-video Bu
       })),
       {
         id: "motion",
-        using: seedanceGenerationNodes["seedance-2.5"].referenceVideo,
+        using: seedanceGenerationNodes["seedance-2.5"],
         inputs: {
+          mode: { value: "references" },
           prompt: { value: "Keep the person and borrow the camera rhythm." },
           duration: { value: 6 },
           "referenceImage.1": { node: "portrait" },
@@ -202,25 +225,24 @@ test("four existing media values close into one heterogeneous reference-video Bu
   assert.deepEqual(prepared.executionPackages, ["@hypit/seedance"]);
 });
 
-test("Seedance graph nodes preserve exact model modes and explicit visual classification", () => {
+test("Seedance graph nodes preserve exact models while invocation shape follows authored inputs", () => {
   const components = seedancePackage.facets.flatMap((facet) =>
     facet.abi === "hypit.generation-node-package@1"
       ? (facet as { implementation: { nodes: readonly { using: { name: string } }[] } }).implementation.nodes
       : []);
   assert.deepEqual(components.map((item) => item.using.name), [
-    "seedance-2.text-video", "seedance-2.frame-video", "seedance-2.reference-video",
-    "seedance-2-fast.text-video", "seedance-2-fast.frame-video", "seedance-2-fast.reference-video",
-    "seedance-2-mini.text-video", "seedance-2-mini.frame-video", "seedance-2-mini.reference-video",
-    "seedance-2.5.text-video", "seedance-2.5.frame-video", "seedance-2.5.reference-video",
+    "seedance-2.video", "seedance-2-fast.video", "seedance-2-mini.video", "seedance-2.5.video",
   ]);
   const frame = seedanceGenerationNodeDeclarations.find((item) =>
-    item.using.name === "seedance-2.5.frame-video")!;
-  assert.ok("compile" in frame);
-  assert.throws(() => frame.compile({
+    item.using.name === "seedance-2.5.video")!;
+  assert.ok("resolve" in frame);
+  if (!("resolve" in frame)) return;
+  const incomplete = frame.resolve({
     node: {
       id: "unclassified",
       using: frame.using,
       inputs: {
+        mode: { value: "frames" },
         prompt: { value: "Move the camera." },
         duration: { value: 5 },
         firstFrame: { node: "frame" },
@@ -233,13 +255,18 @@ test("Seedance graph nodes preserve exact model modes and explicit visual classi
       revision: 0,
       nodes: [],
     },
-  }), /firstFramePersonReference/u);
+  });
+  assert.ok(!(incomplete instanceof Promise));
+  if (incomplete instanceof Promise) return;
+  assert.equal(incomplete.kind, "incomplete");
+  if (incomplete.kind === "incomplete") assert.deepEqual(incomplete.missing, ["firstFramePersonReference"]);
 });
 
 test("reference-video compiles indexed heterogeneous references through the common field-model graph helper", () => {
   const reference = seedanceGenerationNodeDeclarations.find((item) =>
-    item.using.name === "seedance-2.5.reference-video")!;
-  assert.ok("compile" in reference);
+    item.using.name === "seedance-2.5.video")!;
+  assert.ok("resolve" in reference);
+  if (!("resolve" in reference)) return;
   const project = {
     format: "hypit.generation-graph@1" as const,
     id: "references",
@@ -247,11 +274,12 @@ test("reference-video compiles indexed heterogeneous references through the comm
     revision: 0,
     nodes: [],
   };
-  const compiled = reference.compile({
+  const resolved = reference.resolve({
     node: {
       id: "motion",
       using: reference.using,
       inputs: {
+        mode: { value: "references" },
         prompt: { value: "Keep the person and borrow the camera rhythm." },
         duration: { value: 6 },
         "referenceImage.1": { node: "portrait" },
@@ -265,8 +293,11 @@ test("reference-video compiles indexed heterogeneous references through the comm
     },
     project,
   });
-  assert.ok(!(compiled instanceof Promise));
-  if (compiled instanceof Promise) return;
+  assert.ok(!(resolved instanceof Promise));
+  if (resolved instanceof Promise) return;
+  assert.equal(resolved.kind, "ready");
+  if (resolved.kind !== "ready") return;
+  const compiled = resolved.compiled;
   assert.deepEqual(compiled.inputs["referenceImage.1:artifact"], { node: "portrait" });
   assert.deepEqual(compiled.inputs["referenceImage.2:binding"], {
     value: { fields: { personReference: false }, role: "image" },
@@ -277,11 +308,12 @@ test("reference-video compiles indexed heterogeneous references through the comm
   assert.deepEqual(compiled.inputs["referenceAudio.1:binding"], { value: { role: "audio" } });
   assert.equal(Object.keys(compiled.inputs).filter((name) => name.endsWith(":artifact")).length, 4);
 
-  assert.throws(() => reference.compile({
+  assert.throws(() => reference.resolve({
     node: {
       id: "gap",
       using: reference.using,
       inputs: {
+        mode: { value: "references" },
         prompt: { value: "Move." }, duration: { value: 5 },
         "referenceImage.2": { node: "room" },
         "referenceImage.2.personReference": { value: false },
@@ -289,11 +321,12 @@ test("reference-video compiles indexed heterogeneous references through the comm
     },
     project,
   }), /indices must be contiguous from 1/u);
-  assert.throws(() => reference.compile({
+  assert.throws(() => reference.resolve({
     node: {
       id: "classified-audio",
       using: reference.using,
       inputs: {
+        mode: { value: "references" },
         prompt: { value: "Move." }, duration: { value: 5 },
         "referenceAudio.1": { node: "voice" },
         "referenceAudio.1.personReference": { value: false },

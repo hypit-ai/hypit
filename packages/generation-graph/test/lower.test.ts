@@ -118,6 +118,71 @@ test("preparing a target ignores unrelated recipe branches", async () => {
   assert.deepEqual(prepared.generated.map((item) => item.node), ["base"]);
 });
 
+test("selected dependency values stop traversal while the target uses the normal Build path", async () => {
+  const attachment = {
+    blob: { kind: "blob" as const, resource: "res_selected" as const, size: 1, mediaType: "application/octet-stream" },
+    open: async () => (async function* () { yield new Uint8Array([7]); })(),
+  };
+  const resolved: string[] = [];
+  const prepared = await prepareGenerationGraphTargets(
+    project(),
+    link(createResolvedClosure([manifest]), []),
+    host,
+    ["delivery"],
+    { dependencyPolicy: {
+      kind: "selective",
+      decide(node) {
+        resolved.push(node.id);
+        return { kind: "resolved-value", value: {
+          type: artifactType, value: attachment.blob, attachments: [attachment],
+        } };
+      },
+    } },
+  );
+  assert.deepEqual(resolved, ["final"]);
+  assert.equal(prepared.definition.plan.steps.length, 1);
+  assert.deepEqual(prepared.generated.map((item) => item.node), ["delivery"]);
+  assert.deepEqual(prepared.attachments, [attachment]);
+});
+
+test("a selected dependency uses its stable output contract even when its current recipe is incomplete", async () => {
+  const selectedHost = {
+    inspectNode(node: GenerationGraphProject["nodes"][number]) {
+      return {
+        node: node.id,
+        kind: "operation" as const,
+        readiness: node.id === "final" ? "incomplete" as const : "ready" as const,
+        output: artifactType,
+        missing: node.id === "final" ? ["source"] : [],
+      };
+    },
+    resolveImplementation(node: GenerationGraphProject["nodes"][number]) {
+      if (node.id === "final") throw new Error("incomplete dependency must not compile");
+      return {
+        kind: "operation" as const,
+        using: { module: moduleRef, name: "transform" },
+        fragment,
+        executionPackage: "@example/generator",
+      };
+    },
+  };
+  const prepared = await prepareGenerationGraphTargets(
+    project(),
+    link(createResolvedClosure([manifest]), []),
+    selectedHost,
+    ["delivery"],
+    { dependencyPolicy: {
+      kind: "selective",
+      decide: () => ({
+        kind: "resolved-value",
+        value: { type: artifactType, value: "selected artifact" },
+      }),
+    } },
+  );
+  assert.equal(prepared.definition.plan.steps.length, 1);
+  assert.deepEqual(prepared.generated.map((item) => item.node), ["delivery"]);
+});
+
 test("an authored value node closes over a Record without becoming Build work", async () => {
   const existing = { module: moduleRef, name: "existing" } as const;
   const valueProject: GenerationGraphProject = {

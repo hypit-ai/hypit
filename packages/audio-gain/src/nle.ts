@@ -1,6 +1,6 @@
 import type {
-  NleAudioEffectResolver,
-  NleEffectParameterAuthoring,
+  NleAudioAdjustmentResolver,
+  NleAdjustmentParameterAuthoring,
   NlePackageSymbol,
 } from "@hypit/nle";
 import { canonicalize } from "@hypit/protocol";
@@ -165,10 +165,10 @@ export function editAudioGainNleParameters(
   return next;
 }
 
-export const audioGainNleResolver: NleAudioEffectResolver = {
-  effect: audioGainNleSymbol,
-  resolve: (effect, item) => {
-    const parameters = effect.parameters as unknown;
+export const audioGainNleResolver: NleAudioAdjustmentResolver = {
+  component: audioGainNleSymbol,
+  resolve: (item) => {
+    const parameters = item.parameters as unknown;
     assertAudioGainNleParameters(parameters, item.duration);
     if (parameters.kind === "constant") return { operator: audioGainOperator(parameters.gain) };
     return { operator: audioGainControlOperator(audioGainControlFromNleParameters(parameters, {
@@ -178,17 +178,17 @@ export const audioGainNleResolver: NleAudioEffectResolver = {
   },
 };
 
-export const audioGainNleAuthoring: NleEffectParameterAuthoring = {
-  effect: audioGainNleSymbol,
-  inspect: ({ effect, item, medium }) => {
-    if (medium !== "audio") throw new Error("Audio Gain must belong to an Audio effect chain.");
-    const parameters = effect.parameters as unknown;
+export const audioGainNleAuthoring: NleAdjustmentParameterAuthoring = {
+  component: audioGainNleSymbol,
+  inspect: ({ item, medium }) => {
+    if (medium !== "audio") throw new Error("Audio Gain must belong to an Audio Track.");
+    const parameters = item.parameters as unknown;
     assertAudioGainNleParameters(parameters, item.duration);
     return canonicalize(parameters);
   },
-  edit: (operation, { effect, item, medium }) => {
-    if (medium !== "audio") throw new Error("Audio Gain must belong to an Audio effect chain.");
-    const parameters = effect.parameters as unknown;
+  edit: (operation, { item, medium }) => {
+    if (medium !== "audio") throw new Error("Audio Gain must belong to an Audio Track.");
+    const parameters = item.parameters as unknown;
     assertAudioGainNleParameters(parameters, item.duration);
     return canonicalize(editAudioGainNleParameters(
       parameters,

@@ -86,9 +86,10 @@
       "id": "alice-video-1",
       "using": {
         "module": { "name": "@hypit/seedance", "version": "1" },
-        "name": "seedance-2-mini.reference-video"
+        "name": "seedance-2-mini.video"
       },
       "inputs": {
+        "mode": { "value": "references" },
         "prompt": {
           "value": "Create a realistic vertical phone-shot talking-head video. @image1 is the visible speaker and scene reference. Preserve the person's identity, face, outfit, setting, lighting, lens feel, and broad composition. @audio1 is the speaker's voice-timbre reference.\n\nDeliver the supplied script exactly in order with clear lip-sync. The visible person speaks every line. Do not rewrite, summarize, add, remove, or reorder words.\n\nCOMPOSITION: keep the speaker in the same general region and preserve the reference composition, allowing natural posture changes and tiny crop or scale breathing.\n\nCAMERA: use one subtle push-in on the most important phrase, then return smoothly to the original framing.\n\nEDIT RHYTHM: polished pause-trim jump cuts at phrase boundaries while keeping the framing coherent.\n\nPERFORMANCE: playful, responsive delivery with teasing inflection, lively timing, and an audible smile. Let her impatience with empty hype come through in the voice and matching visible reactions.\n\nGESTURE: compact explanatory hand movement close to the torso and inside the frame.\n\nKeep face, hands, skin texture, lighting, and motion photoreal and stable. Add no subtitles, captions, labels, logos, UI text, floating words, or other readable on-screen text.\n\nSCRIPT TO DELIVER:\n今天别聊谁最会营销，直接把 AI 视频能力排个级。\n\nPERFORMANCE AND ACTION DIRECTION:\nShe dismisses the hype with a tiny sideways hand beat, leans in on 直接, and lands 排个级 with a quick challenging nod."
         },
@@ -105,9 +106,10 @@
       "id": "bob-video-1",
       "using": {
         "module": { "name": "@hypit/seedance", "version": "1" },
-        "name": "seedance-2-mini.reference-video"
+        "name": "seedance-2-mini.video"
       },
       "inputs": {
+        "mode": { "value": "references" },
         "prompt": {
           "value": "Create a realistic vertical phone-shot talking-head video. @image1 is the visible speaker and scene reference. Preserve the person's identity, face, outfit, setting, lighting, lens feel, and broad composition. @audio1 is the speaker's voice-timbre reference.\n\nDeliver the supplied script exactly in order with clear lip-sync. The visible person speaks every line. Do not rewrite, summarize, add, remove, or reorder words.\n\nCOMPOSITION: keep the speaker in the same general region and preserve the reference composition, allowing natural posture changes and tiny crop or scale breathing.\n\nCAMERA: hold a steady fixed framing.\n\nEDIT RHYTHM: polished pause-trim jump cuts at phrase boundaries while keeping the framing coherent.\n\nPERFORMANCE: composed, thoughtful conviction with measured phrasing and purposeful vocal emphasis. Let dry skepticism and a little amusement develop together as he reaches the judgment.\n\nGESTURE: restrained body language; let face, eyes, one small palm-up beat and voice carry the meaning.\n\nKeep face, hands, skin texture, lighting, and motion photoreal and stable. Add no subtitles, captions, labels, logos, UI text, floating words, or other readable on-screen text.\n\nSCRIPT TO DELIVER:\n那我先说，能生成漂亮画面只能算 B 级。这一句保留在工程里，但默认不显示。能稳定修改，才算真本事。\n\nPERFORMANCE AND ACTION DIRECTION:\nHe weighs 漂亮画面 with a conceding half-nod, lightly dismisses B 级, lets the middle sentence pass deadpan, then gives 真本事 a small decisive nod."
         },
@@ -124,9 +126,10 @@
       "id": "alice-video-2",
       "using": {
         "module": { "name": "@hypit/seedance", "version": "1" },
-        "name": "seedance-2-mini.reference-video"
+        "name": "seedance-2-mini.video"
       },
       "inputs": {
+        "mode": { "value": "references" },
         "prompt": {
           "value": "Create a realistic vertical phone-shot talking-head video. @image1 is the visible speaker and scene reference. Preserve the person's identity, face, outfit, setting, lighting, lens feel, and broad composition. @audio1 is the speaker's voice-timbre reference.\n\nDeliver the supplied script exactly in order with clear lip-sync. The visible person speaks every line. Do not rewrite, summarize, add, remove, or reorder words.\n\nCOMPOSITION: keep the speaker in the same general region and preserve the reference composition, allowing natural posture changes and tiny crop or scale breathing.\n\nCAMERA: use one subtle push-in on the most important phrase, then return smoothly to the original framing.\n\nEDIT RHYTHM: polished pause-trim jump cuts at phrase boundaries while keeping the framing coherent.\n\nPERFORMANCE: vivid, energetic short-form delivery with nimble phrasing, animated intonation, and emphatic key ideas. Let her delight grow as the list becomes a real argument.\n\nGESTURE: natural creator gestures such as open palms, small pointing beats, nods, and posture shifts where the script calls for them.\n\nKeep face, hands, skin texture, lighting, and motion photoreal and stable. Add no subtitles, captions, labels, logos, UI text, floating words, or other readable on-screen text.\n\nSCRIPT TO DELIVER:\n字幕、排名和特效都能按照词语落在时间线上，这才配进 S 级。\n\nPERFORMANCE AND ACTION DIRECTION:\nShe marks the three-item list with compact rhythmic beats, points down on 时间线上 as if placing it precisely, and brightens into a satisfied S 级 verdict."
         },
@@ -143,9 +146,10 @@
       "id": "bob-video-2",
       "using": {
         "module": { "name": "@hypit/seedance", "version": "1" },
-        "name": "seedance-2-mini.reference-video"
+        "name": "seedance-2-mini.video"
       },
       "inputs": {
+        "mode": { "value": "references" },
         "prompt": {
           "value": "Create a realistic vertical phone-shot talking-head video. @image1 is the visible speaker and scene reference. Preserve the person's identity, face, outfit, setting, lighting, lens feel, and broad composition. @audio1 is the speaker's voice-timbre reference.\n\nDeliver the supplied script exactly in order with clear lip-sync. The visible person speaks every line. Do not rewrite, summarize, add, remove, or reorder words.\n\nCOMPOSITION: keep the speaker in the same general region and preserve the reference composition, allowing natural posture changes and tiny crop or scale breathing.\n\nCAMERA: use one subtle push-in on the most important phrase, then return smoothly to the original framing.\n\nEDIT RHYTHM: polished pause-trim jump cuts at phrase boundaries while keeping the framing coherent.\n\nPERFORMANCE: playful, responsive delivery with teasing inflection and dry timing. Let skepticism soften into reluctant respect, with the concession visible before the final words.\n\nGESTURE: restrained body language; let face, eyes, and voice carry the meaning, ending with one open-palmed concession.\n\nKeep face, hands, skin texture, lighting, and motion photoreal and stable. Add no subtitles, captions, labels, logos, UI text, floating words, or other readable on-screen text.\n\nSCRIPT TO DELIVER:\n而且生成完就是普通工程，关掉脚本照样能剪。这局我服。\n\nPERFORMANCE AND ACTION DIRECTION:\nHe tests the claim with a doubtful glance, realizes it holds on 照样能剪, then exhales a small laugh and concedes 这局我服 with an open palm."
         },

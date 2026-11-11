@@ -3,10 +3,6 @@
   "id": "launch-film",
   "name": "Launch film",
   "revision": 0,
-  "editRate": {
-    "numerator": 30,
-    "denominator": 1
-  },
   "canvas": {
     "width": 1280,
     "height": 720,
@@ -14,27 +10,20 @@
   },
   "componentValues": [],
   "pictureLayouts": [],
-  "media": [
-    {
-      "id": "poster",
-      "name": "Accepted poster",
-      "asset": {
-        "path": "media/poster/poster.media.json"
-      }
-    }
-  ],
   "tracks": [
     {
       "id": "picture-main",
       "name": "Picture",
       "kind": "picture",
-      "locked": false,
       "muted": false,
       "items": [
         {
           "id": "poster-use",
-          "kind": "media",
-          "media": "poster",
+          "kind": "present",
+          "source": "media",
+          "asset": {
+            "path": "media/poster/poster.media.json"
+          },
           "start": {
             "ticks": "0",
             "timeBase": {
@@ -90,14 +79,12 @@
               "width": 1280,
               "height": 720,
               "fit": "fill"
-            },
-            "effects": []
+            }
           }
         }
       ]
     }
   ],
   "transitions": [],
-  "mattes": [],
-  "groups": []
+  "mattes": []
 }

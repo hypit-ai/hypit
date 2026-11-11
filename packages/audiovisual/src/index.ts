@@ -25,16 +25,19 @@ export {
 } from "./manifest.js";
 export {
   assertSpatialMapControl,
-  assertTemporalControl,
-  assertTemporalControlMapping,
   evaluateMappedSpatialMapControl,
   evaluateSpatialMapControl,
-  evaluateTemporalControl,
-  resolveTemporalControlPosition,
   sealSpatialMapControl,
   spatialMapControlDomains,
 } from "./control.js";
-export { evaluateAudiovisualProgramAt } from "./evaluation.js";
+export {
+  assertTemporalControl,
+  assertTemporalControlMapping,
+  evaluateTemporalControl,
+  resolveTemporalControlPosition,
+} from "@hypit/temporal/algebra";
+export type { TemporalControl, TemporalControlSegment } from "@hypit/temporal/algebra";
+export { createAudiovisualProgramEvaluator, evaluateAudiovisualProgramAt } from "./evaluation.js";
 export {
   assertPictureGraph,
   pictureGraphUses,

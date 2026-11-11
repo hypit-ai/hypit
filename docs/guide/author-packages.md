@@ -56,12 +56,13 @@ actual composition too, where its content, space and timing have a purpose.
 
 ## Use and share it
 
-Install the package in the video project, then create an ordinary NLE Component Item whose symbol names
+Install the package in the video project, then create an ordinary NLE Component Present whose symbol names
 the package's logical Module and component:
 
 ```json
 {
-  "kind": "component",
+  "kind": "present",
+  "source": "component",
   "component": {
     "module": { "name": "@your-scope/my-component", "version": "1" },
     "name": "title-card"

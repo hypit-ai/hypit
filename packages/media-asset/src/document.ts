@@ -53,10 +53,23 @@ function portablePath(value: unknown, subject: string): asserts value is string 
     `${subject} must not contain empty, current or parent segments.`);
 }
 
+function portableReferencePath(value: unknown, subject: string): asserts value is string {
+  assert(typeof value === "string" && value.length > 0, `${subject} must be a non-empty relative path.`);
+  assert(!value.includes("\\") && !value.startsWith("/") && !/^[A-Za-z]:/u.test(value),
+    `${subject} must use a portable relative path.`);
+  const relative = value.startsWith("./") ? value.slice(2) : value;
+  const parts = relative.split("/");
+  assert(relative.length > 0 && parts.every((part) => part.length > 0 && part !== "."),
+    `${subject} must not contain empty or current segments.`);
+  const firstOwned = parts.findIndex((part) => part !== "..");
+  assert(firstOwned >= 0 && parts.slice(firstOwned).every((part) => part !== ".."),
+    `${subject} may contain parent segments only before its owned path.`);
+}
+
 export function verifyMediaAssetReference(value: unknown): asserts value is MediaAssetReference {
   const reference = object(value, "MediaAssetReference");
   exactFields(reference, ["path"], "MediaAssetReference");
-  portablePath(reference.path, "MediaAssetReference.path");
+  portableReferencePath(reference.path, "MediaAssetReference.path");
 }
 
 function verifyFile(value: unknown, subject: string): asserts value is MediaAssetFile {

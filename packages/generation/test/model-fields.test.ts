@@ -183,6 +183,19 @@ test("field combination rules enforce mutually exclusive input modes", () => {
   );
 });
 
+test("atLeastOneOf is shared by draft finalization and model request validation", () => {
+  const choice = defineModelFields({
+    model: "choice",
+    fields: [
+      { name: "duration", value: { kind: "number", integer: true }, minItems: 0, maxItems: 1 },
+      { name: "referenceVideo", value: { kind: "media", accepts: ["video"] }, minItems: 0, maxItems: 1 },
+    ],
+    requires: [{ kind: "atLeastOneOf", fields: ["duration", "referenceVideo"] }],
+  });
+  assert.throws(() => sealModelFieldRequest(choice, {}), /needs at least one of duration, referenceVideo/u);
+  assert.deepEqual(sealModelFieldRequest(choice, { duration: [5] }), { fields: { duration: [5] } });
+});
+
 test("one mapping compiles every field shape and routes by field presence", async () => {
   const { image, video, audio } = artifacts();
   const request = sealModelFieldRequest(table, {

@@ -29,10 +29,10 @@ Hypit NLE 工程把已经接受的剪辑保存为直接值。它没有具名 Tim
 
 ## editRate 是网格，不是存储单位
 
-`editRate` 告诉编辑器如何显示时间，以及按帧吸附通常落在哪里：
+独立 Timeline View 中的 `editRate` 告诉编辑器如何显示时间，以及按帧吸附通常落在哪里：
 
 ```json
-"editRate": { "numerator": 30000, "denominator": 1001 }
+{ "format": "hypit.nle-view@1", "editRate": { "numerator": 30000, "denominator": 1001 } }
 ```
 
 修改它不会重定时、量化或重新解释已有 Item。媒体音频保留自己的采样域，最终导出另行选择

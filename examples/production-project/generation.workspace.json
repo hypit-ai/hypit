@@ -1,0 +1,104 @@
+{
+  "format": "hypit.generation-workspace@1",
+  "id": "launch-variation-workspace",
+  "name": "Launch variation",
+  "revision": 142,
+  "graph": {
+    "path": "generation.graph.json"
+  },
+  "packages": [
+    "@hypit/media-asset-generation",
+    "@hypit/gpt-image",
+    "@hypit/nano-banana",
+    "@hypit/seedream",
+    "@hypit/wan",
+    "@hypit/seedance",
+    "@hypit/grok-imagine",
+    "@hypit/pixverse",
+    "@hypit/minimax-h3",
+    "@hypit/volcengine-matting",
+    "@hypit/mimo-speech",
+    "@hypit/elevenlabs-speech",
+    "@hypit/fishaudio-speech"
+  ],
+  "viewport": {
+    "centerX": 1916,
+    "centerY": 149,
+    "zoom": 0.76
+  },
+  "nodes": [
+    {
+      "node": "poster-reference",
+      "name": "海报参考素材",
+      "x": 175,
+      "y": 420
+    },
+    {
+      "node": "campaign-variation",
+      "name": "活动海报变体",
+      "x": 1096,
+      "y": -186
+    },
+    {
+      "node": "campaign-keyframe",
+      "name": "活动主视觉关键帧",
+      "x": 475,
+      "y": 180
+    },
+    {
+      "node": "seedance-25-frame-video",
+      "name": "首尾帧动态视频",
+      "x": 832,
+      "y": 154
+    },
+    {
+      "node": "seedance-2-text-video",
+      "name": "Seedance 2 文生视频",
+      "x": 588,
+      "y": 647
+    },
+    {
+      "node": "seedance-2-fast-text-video",
+      "name": "Seedance 2 Fast 视频",
+      "x": 2143,
+      "y": -135
+    },
+    {
+      "node": "seedance-2-mini-text-video",
+      "name": "Seedance 2 Mini 视频",
+      "x": 1220,
+      "y": 390
+    },
+    {
+      "node": "seedance-25-text-video",
+      "name": "Seedance 2.5 文生视频",
+      "x": 1766,
+      "y": -16
+    },
+    {
+      "node": "launch-voice",
+      "name": "发布旁白",
+      "x": 1880,
+      "y": 355
+    },
+    {
+      "node": "hypit",
+      "name": "hypit牛逼",
+      "x": 1580,
+      "y": 671
+    },
+    {
+      "node": "media-_chuck-replica-v13-compare",
+      "name": "播客剪辑_chuck-replica-v13-compare",
+      "x": 1070,
+      "y": 713
+    },
+    {
+      "node": "node_mwafox3w_0c8ydm",
+      "name": "Seedance 2 Mini",
+      "x": 982,
+      "y": 911
+    }
+  ],
+  "outputs": []
+}

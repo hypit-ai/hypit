@@ -152,7 +152,10 @@ export function htmlVisualScript(entries: readonly {
   readonly frameRate?: { readonly numerator: number; readonly denominator: number };
 } = { width: 0, height: 0 }): string {
   return `(() => {
-    const fail = error => { window.__hypitHtmlVisualError = String(error?.stack || error); };
+    const fail = error => {
+      window.__hypitHtmlVisualError = String(error?.stack || error);
+      console.error('HTML visual failed:', error);
+    };
     const entries = ${scriptJson(entries)}.filter(entry =>
       htmlSelectionOverlaps(entry.startFrame, entry.startFrame + entry.durationFrames));
     const renders = entries.map((entry, order) => {

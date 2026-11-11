@@ -188,11 +188,10 @@ function evaluateAudio(
  * Evaluate exact authored relations at one Programme-local position.
  * No frame rate, sample rate, Canvas or renderer policy is selected here.
  */
-export function evaluateAudiovisualProgramAt(
+function evaluateVerifiedAudiovisualProgramAt(
   value: AudiovisualProgram,
   at: AudiovisualEvaluation["at"],
 ): AudiovisualEvaluation {
-  assertAudiovisualProgram(value);
   assertExactTemporalValue(at, "Audiovisual evaluation position");
   assert(compareExactTemporalValues(at, { ticks: "0", timeBase: { numerator: 1, denominator: 1 } }) >= 0
     && compareExactTemporalValues(at, value.domain.duration) < 0,
@@ -203,4 +202,19 @@ export function evaluateAudiovisualProgramAt(
     ...(value.picture === undefined ? {} : { picture: evaluatePicture(value.picture, value, at) }),
     ...(value.audio === undefined ? {} : { audio: evaluateAudio(value.audio, value, at) }),
   };
+}
+
+/** Validate one immutable Programme once, then evaluate any number of exact positions against it. */
+export function createAudiovisualProgramEvaluator(
+  value: AudiovisualProgram,
+): (at: AudiovisualEvaluation["at"]) => AudiovisualEvaluation {
+  assertAudiovisualProgram(value);
+  return (at) => evaluateVerifiedAudiovisualProgramAt(value, at);
+}
+
+export function evaluateAudiovisualProgramAt(
+  value: AudiovisualProgram,
+  at: AudiovisualEvaluation["at"],
+): AudiovisualEvaluation {
+  return createAudiovisualProgramEvaluator(value)(at);
 }

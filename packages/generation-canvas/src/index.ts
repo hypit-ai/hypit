@@ -1,49 +1,59 @@
-export { planGenerationCanvasBuildOutputAdoption } from "./adoption.js";
-export type { GenerationCanvasBuildOutputAdoptionPlan } from "./adoption.js";
-export { planAcceptedGenerationCanvasBuild } from "./accepted-build.js";
-export type {
-  AcceptedGenerationCanvasBuild,
-  GenerationCanvasBuildOutputPlacement,
-} from "./accepted-build.js";
-export { planGenerationCanvasBuildOutputPlacement } from "./build-output.js";
-export type {
-  GenerationCanvasBuildOutputAddress,
-  GenerationCanvasBuildOutputItemPlacement,
-} from "./build-output.js";
+export { planGenerationWorkspaceOutputAdoption } from "./adoption.js";
+export type { GenerationWorkspaceOutputAdoptionPlan } from "./adoption.js";
+export { planAcceptedGenerationWorkspaceBuild } from "./accepted-build.js";
+export type { AcceptedGenerationWorkspaceBuild } from "./accepted-build.js";
+export { planGenerationWorkspaceOutputAttachment } from "./build-output.js";
 export {
-  generationCanvasBuildOutputKey,
-  observeGenerationCanvasBuildOutputs,
+  generationWorkspaceBuildOutputKey,
+  observeGenerationWorkspaceOutputs,
 } from "./observation.js";
 export type {
-  GenerationCanvasActiveBuild,
-  GenerationCanvasBuildOutputObservation,
-  GenerationCanvasObservationHost,
+  GenerationWorkspaceActiveBuild,
+  GenerationWorkspaceObservationHost,
+  GenerationWorkspaceOutputObservation,
 } from "./observation.js";
 export { projectGenerationCanvas } from "./projection.js";
 export type {
   GenerationCanvasScene,
   GenerationCanvasSceneEdge,
   GenerationCanvasSceneItem,
+  GenerationCanvasSceneNodeType,
 } from "./projection.js";
+export { prepareGenerationWorkspaceNode } from "./preparation.js";
 export {
-  assertGenerationCanvasView,
-  createGenerationCanvasView,
-  parseGenerationCanvasView,
-  sealGenerationCanvasView,
-  serializeGenerationCanvasView,
+  createGenerationCanvasPresentationFacet,
+  createGenerationCanvasPresentationHost,
+  generationCanvasPresentationFacetAbi,
+  generationCanvasPresentationPackagesFromFacets,
+} from "./presentation.js";
+export type {
+  GenerationCanvasNodePresentation,
+  GenerationCanvasNodeEditor,
+  GenerationCanvasCatalogItem,
+  GenerationCanvasAuthoringLabels,
+  GenerationCanvasNodeRole,
+  GenerationCanvasPresentationFacet,
+  GenerationCanvasPresentationHost,
+  GenerationCanvasPresentationPackage,
+} from "./presentation.js";
+export {
+  assertGenerationWorkspace,
+  createGenerationWorkspace,
+  parseGenerationWorkspace,
+  sealGenerationWorkspace,
+  serializeGenerationWorkspace,
 } from "./project.js";
 export {
-  applyGenerationCanvasTransaction,
-  GenerationCanvasRevisionConflict,
+  applyGenerationWorkspaceTransaction,
+  GenerationWorkspaceRevisionConflict,
 } from "./transaction.js";
+export type { GenerationWorkspaceCommand, GenerationWorkspaceTransaction } from "./transaction.js";
 export type {
-  GenerationCanvasCommand,
-  GenerationCanvasTransaction,
-} from "./transaction.js";
-export type {
-  GenerationCanvasGraphReference,
-  GenerationCanvasItem,
-  GenerationCanvasSubject,
-  GenerationCanvasView,
+  GenerationWorkspace,
+  GenerationWorkspaceGraphReference,
+  GenerationWorkspaceNode,
+  GenerationWorkspaceOutput,
+  GenerationWorkspaceOutputAddress,
+  GenerationWorkspaceViewport,
 } from "./types.js";
-export { generationCanvasSubjectKey } from "./types.js";
+export { generationWorkspaceOutputKey } from "./types.js";

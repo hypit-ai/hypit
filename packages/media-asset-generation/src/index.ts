@@ -1,5 +1,7 @@
 import { blobDependency, blobTypes } from "@hypit/blob";
-import type { GenerationValueNodeDeclaration } from "@hypit/generation-graph";
+import type { GenerationGraphNode, GenerationValueNodeDeclaration } from "@hypit/generation-graph";
+import type { GenerationNodeAuthoringShape } from "@hypit/generation-graph";
+import type { GenerationCanvasNodePresentation } from "@hypit/generation-canvas";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import {
   parseMediaAssetDocument,
@@ -26,8 +28,23 @@ export const mediaAssetGenerationManifest: ModuleManifest = {
 
 export const mediaAssetGenerationNodes = {
   media: { module: mediaAssetGenerationModuleRef, name: "media" },
-  resource: { module: mediaAssetGenerationModuleRef, name: "resource" },
+  image: { module: mediaAssetGenerationModuleRef, name: "image" },
+  video: { module: mediaAssetGenerationModuleRef, name: "video" },
+  audio: { module: mediaAssetGenerationModuleRef, name: "audio" },
 } as const;
+
+export const mediaAssetGenerationPresentations: readonly GenerationCanvasNodePresentation[] = ([
+  ["image", "Image Asset"], ["video", "Video Asset"], ["audio", "Audio Asset"],
+] as const).map(([role, displayName]) => ({
+  using: mediaAssetGenerationNodes[role], displayName, modelLabel: "Project Asset", role, category: "asset", summaryInput: "asset",
+}));
+
+const mediaAssetAuthoring: GenerationNodeAuthoringShape = {
+  using: mediaAssetGenerationNodes.media,
+  output: { type: mediaTypes.prepared, connectable: false },
+  controls: [],
+  ports: [],
+};
 
 function fileLocator(reference: MediaAssetReference, file: string): string {
   const manifest = reference.path.startsWith("./") ? reference.path.slice(2) : reference.path;
@@ -45,6 +62,7 @@ export const mediaAssetGenerationNode: GenerationValueNodeDeclaration = {
   using: mediaAssetGenerationNodes.media,
   inputs: ["asset"],
   type: mediaTypes.prepared,
+  authoring: mediaAssetAuthoring,
   async load({ inputs, readAsset, resolveAsset }) {
     const reference = inputs.asset as unknown as MediaAssetReference;
     verifyMediaAssetReference(reference);
@@ -57,19 +75,51 @@ export const mediaAssetGenerationNode: GenerationValueNodeDeclaration = {
   },
 };
 
-export const mediaAssetResourceGenerationNode: GenerationValueNodeDeclaration = {
-  kind: "value",
-  using: mediaAssetGenerationNodes.resource,
-  inputs: ["asset"],
-  type: blobTypes.blob,
-  async load({ inputs, readAsset, resolveAsset }) {
-    const reference = inputs.asset as unknown as MediaAssetReference;
-    verifyMediaAssetReference(reference);
-    const bytes = await readAsset({ from: referenceLocator(reference), mediaType: "application/json" });
-    const document = parseMediaAssetDocument(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-    return await resolveAsset({
-      from: fileLocator(reference, document.media.file.path),
-      mediaType: document.media.file.mediaType,
-    }) as unknown as CanonicalValue;
-  },
-};
+function resourceNode(role: "image" | "video" | "audio"): GenerationValueNodeDeclaration {
+  const using = mediaAssetGenerationNodes[role];
+  return {
+    kind: "value",
+    using,
+    inputs: ["asset"],
+    type: blobTypes.blob,
+    authoring: {
+      using,
+      output: { type: blobTypes.blob, connectable: true, media: [role] },
+      controls: [],
+      ports: [],
+    },
+    async load({ inputs, readAsset, resolveAsset }) {
+      const reference = inputs.asset as unknown as MediaAssetReference;
+      verifyMediaAssetReference(reference);
+      const bytes = await readAsset({ from: referenceLocator(reference), mediaType: "application/json" });
+      const document = parseMediaAssetDocument(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+      if (!document.media.file.mediaType.startsWith(`${role}/`)) {
+        throw new Error(`${role} asset ${reference.path} resolves to ${document.media.file.mediaType}.`);
+      }
+      return await resolveAsset({
+        from: fileLocator(reference, document.media.file.path),
+        mediaType: document.media.file.mediaType,
+      }) as unknown as CanonicalValue;
+    },
+  };
+}
+
+export const mediaAssetResourceGenerationNodes = {
+  image: resourceNode("image"),
+  video: resourceNode("video"),
+  audio: resourceNode("audio"),
+} as const;
+
+/** Package-owned recipe node for one already published Media Asset. Hosts never guess component names. */
+export function createMediaAssetGenerationGraphNode(input: {
+  readonly id: string;
+  readonly role: "image" | "video" | "audio";
+  readonly asset: MediaAssetReference;
+}): GenerationGraphNode {
+  verifyMediaAssetReference(input.asset);
+  return {
+    id: input.id,
+    using: mediaAssetGenerationNodes[input.role],
+    inputs: { asset: { value: { path: input.asset.path } } },
+  };
+}

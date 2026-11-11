@@ -34,11 +34,12 @@ preview Source 为作者提供可打开或渲染的小例子。查看能说明�
 
 ## 使用与分享
 
-先在视频项目中安装这个包，再创建一个普通 NLE Component Item，用包的逻辑 Module 和组件名指向它：
+先在视频项目中安装这个包，再创建一个普通 NLE Component Present，用包的逻辑 Module 和组件名指向它：
 
 ```json
 {
-  "kind": "component",
+  "kind": "present",
+  "source": "component",
   "component": {
     "module": { "name": "@your-scope/my-component", "version": "1" },
     "name": "title-card"

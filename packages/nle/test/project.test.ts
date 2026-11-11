@@ -8,6 +8,7 @@ import { exactTemporalValueFromFrames } from "@hypit/temporal/sampling";
 import {
   NleRevisionConflict,
   applyNleTransaction,
+  createAdjustmentMaterialization,
   createComponentMaterialization,
   createNleProject,
   createMediaAssetMaterialization,
@@ -27,7 +28,6 @@ import {
 
 const fullPicture = {
   layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" },
-  effects: [],
 } as const satisfies NlePictureAppearance;
 
 const interviewAsset = { path: "./media/interview.media.json" } as const;
@@ -67,19 +67,19 @@ function prepared() {
 
 const mediaItem: NleMediaItem = {
   id: "interview-use",
-  kind: "media",
-  media: "interview",
+  kind: "present", source: "media",
+  asset: interviewAsset,
   start: frame(0),
   duration: frame(6),
   sourceTime: linear(frame(6)),
   enabled: true,
   picture: fullPicture,
-  audio: { effects: [] },
+  audio: { },
 };
 
 const captionItem: NleComponentItem = {
   id: "caption-one",
-  kind: "component",
+  kind: "present", source: "component",
   start: frame(1),
   duration: frame(2),
   sourceTime: linear(frame(2)),
@@ -88,13 +88,12 @@ const captionItem: NleComponentItem = {
   parameters: { text: "Hello NLE", color: "white" },
   picture: {
     layout: { x: 10, y: 70, width: 80, height: 20, fit: "contain" },
-    effects: [],
   },
 };
 
 const componentItem: NleComponentItem = {
   id: "title-card",
-  kind: "component",
+  kind: "present", source: "component",
   start: frame(0),
   duration: frame(4),
   sourceTime: linear(frame(4)),
@@ -104,17 +103,15 @@ const componentItem: NleComponentItem = {
   picture: fullPicture,
 };
 
-test("one revision stores Media and Component Items directly", () => {
+test("one revision stores Media and Component Presents directly", () => {
   const project = createNleProject({
     id: "editorial",
     name: "Editorial",
-    editRate: { numerator: 2, denominator: 1 },
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const edited = applyNleTransaction(project, { revision: 0, commands: [
-    { kind: "media.add", media: { id: "interview", name: "Interview", asset: interviewAsset } },
     { kind: "track.add", track: { id: "picture-main", name: "Picture", kind: "picture",
-      locked: false, muted: false, items: [] } },
+      muted: false, items: [] } },
     { kind: "item.add", track: "picture-main", item: mediaItem },
     { kind: "item.add", track: "picture-main", item: captionItem },
     { kind: "item.add", track: "picture-main", item: componentItem },
@@ -123,10 +120,13 @@ test("one revision stores Media and Component Items directly", () => {
   assert.equal(project.revision, 0);
   assert.equal(project.tracks.length, 0);
   assert.equal(edited.revision, 1);
-  assert.deepEqual(edited.tracks[0]?.items.map((item) => item.kind), ["media", "component", "component"]);
+  assert.deepEqual(edited.tracks[0]?.items.map((item) => [item.kind,
+    item.kind === "present" ? item.source : undefined]), [
+    ["present", "media"], ["present", "component"], ["present", "component"],
+  ]);
   const text = serializeNleProject(edited);
   const reopened = parseNleProject(text);
-  assert.deepEqual(reopened.media[0]?.asset, interviewAsset);
+  assert.deepEqual((reopened.tracks[0]?.items[0] as NleMediaItem).asset, interviewAsset);
   assert.deepEqual(reopened, edited);
 });
 
@@ -135,7 +135,7 @@ test("Component slots and picture layouts link ordinary Items to explicit shared
   const linkedItem: NleComponentItem = {
     ...componentItem,
     bindings: [{ slot: "appearance", ref: "shared-appearance" }],
-    picture: { layout: { ref: "lower-third" }, effects: [] },
+    picture: { layout: { ref: "lower-third" } },
   };
   const secondLinkedItem: NleComponentItem = {
     ...linkedItem,
@@ -155,7 +155,7 @@ test("Component slots and picture layouts link ordinary Items to explicit shared
       layout: { x: 10, y: 70, width: 80, height: 20, fit: "contain" },
     } },
     { kind: "track.add", track: {
-      id: "picture", name: "Picture", kind: "picture", locked: false, muted: false,
+      id: "picture", name: "Picture", kind: "picture", muted: false,
       items: [linkedItem, secondLinkedItem],
     } },
   ] });
@@ -200,28 +200,17 @@ test("Component slots and picture layouts link ordinary Items to explicit shared
     kind: "picture-layout.remove", id: "lower-third",
   }] }), /still used by Items: title-card, title-card-two/u);
 
-  const locked = applyNleTransaction(edited, { revision: 2, commands: [{
-    kind: "track.update", id: "picture", locked: true,
-  }] });
-  assert.throws(() => applyNleTransaction(locked, { revision: 3, commands: [{
-    kind: "component-value.replace",
-    value: { ...findNleComponentValue(locked, "shared-appearance"), value: { color: "blue" } },
-  }] }), /Track picture is locked/u);
-  assert.throws(() => applyNleTransaction(locked, { revision: 3, commands: [{
-    kind: "picture-layout.replace",
-    value: { ...findNlePictureLayout(locked, "lower-third"), name: "Moved lower third" },
-  }] }), /Track picture is locked/u);
 });
 
-test("edit rate is only an editing grid and never quantizes exact project time", () => {
+test("exact project time is independent of any editor grid", () => {
   const base = createNleProject({
-    id: "exact-time", name: "Exact time", editRate: { numerator: 24, denominator: 1 },
+    id: "exact-time", name: "Exact time",
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const edited = applyNleTransaction(base, { revision: 0, commands: [{
     kind: "track.add",
     track: {
-      id: "picture", name: "Picture", kind: "picture", locked: false, muted: false,
+      id: "picture", name: "Picture", kind: "picture", muted: false,
       items: [{
         ...componentItem,
         start: third(1),
@@ -233,22 +222,57 @@ test("edit rate is only an editing grid and never quantizes exact project time",
 
   assert.deepEqual(findNleItem(edited, "title-card").item.start, third(1));
   assert.deepEqual(nleProjectDuration(edited), exactSecond);
-  const anotherGrid = parseNleProject(serializeNleProject({
-    ...edited,
-    editRate: { numerator: 60, denominator: 1 },
-  }));
-  assert.deepEqual(findNleItem(anotherGrid, "title-card").item.start, third(1));
-  assert.deepEqual(nleProjectDuration(anotherGrid), exactSecond);
+  const reopened = parseNleProject(serializeNleProject(edited));
+  assert.deepEqual(findNleItem(reopened, "title-card").item.start, third(1));
+  assert.deepEqual(nleProjectDuration(reopened), exactSecond);
+});
+
+test("Picture layouts preserve off-canvas placement and an explicit cover focal point", () => {
+  const base = createNleProject({
+    id: "spatial-media", name: "Spatial media",
+    canvas: { width: 1920, height: 1080, clearColor: "black" },
+  });
+  const layout = {
+    x: -315, y: 461, width: 1100, height: 619, fit: "cover" as const,
+    contentX: 0.62, contentY: 0.35,
+  };
+  const project = applyNleTransaction(base, { revision: 0, commands: [
+    { kind: "track.add", track: { id: "picture", name: "Picture", kind: "picture", muted: false,
+      items: [{ ...mediaItem, id: "host-use", picture: { layout } }] } },
+  ] });
+  assert.deepEqual(parseNleProject(serializeNleProject(project)).tracks[0]?.items[0]?.kind === "present"
+    ? (parseNleProject(serializeNleProject(project)).tracks[0]!.items[0] as NleMediaItem).picture?.layout
+    : undefined, layout);
+
+  const invalid = structuredClone(project);
+  const item = invalid.tracks[0]!.items[0] as NleMediaItem;
+  (item.picture!.layout as { contentX: number }).contentX = 1.1;
+  assert.throws(() => serializeNleProject(invalid), /contentX must lie between zero and one/u);
+});
+
+test("Project parsing rejects Timeline View state inside composition", () => {
+  const project = createNleProject({ id: "separated-view", name: "Separated View" });
+  assert.throws(() => parseNleProject(JSON.stringify({
+    ...project,
+    editRate: { numerator: 30, denominator: 1 },
+    groups: [],
+  })), /belong to hypit\.nle-view@1/u);
+  const withTrack = applyNleTransaction(project, { revision: 0, commands: [{
+    kind: "track.add", track: { id: "picture", name: "Picture", kind: "picture", muted: false, items: [] },
+  }] });
+  assert.throws(() => parseNleProject(JSON.stringify({
+    ...withTrack,
+    tracks: [{ ...withTrack.tracks[0], locked: false }],
+  })), /lock belongs to hypit\.nle-view@1/u);
 });
 
 test("move, trim and split are atomic direct NLE edits", () => {
   const base = applyNleTransaction(createNleProject({
-    id: "edit-proof", name: "Edit proof", editRate: { numerator: 2, denominator: 1 },
+    id: "edit-proof", name: "Edit proof",
     canvas: { width: 100, height: 100, clearColor: "black" },
   }), { revision: 0, commands: [
-    { kind: "media.add", media: { id: "interview", name: "Interview", asset: interviewAsset } },
     { kind: "track.add", track: { id: "picture-main", name: "Picture", kind: "picture",
-      locked: false, muted: false, items: [mediaItem, componentItem] } },
+      muted: false, items: [mediaItem, componentItem] } },
   ] });
 
   const edited = applyNleTransaction(base, { revision: 1, commands: [
@@ -272,6 +296,29 @@ test("move, trim and split are atomic direct NLE edits", () => {
   assert.throws(() => applyNleTransaction(edited, { revision: 1, commands: [] }), NleRevisionConflict);
 });
 
+test("an Item occurrence name can override and restore its inferred author-facing label", () => {
+  const base = applyNleTransaction(createNleProject({
+    id: "named-item", name: "Named Item",
+    canvas: { width: 100, height: 100, clearColor: "black" },
+  }), { revision: 0, commands: [{
+    kind: "track.add",
+    track: { id: "picture", name: "Picture", kind: "picture", muted: false, items: [mediaItem] },
+  }] });
+  const renamed = applyNleTransaction(base, { revision: 1, commands: [{
+    kind: "item.update", id: mediaItem.id, name: "Opening interview",
+  }] });
+  assert.equal(findNleItem(parseNleProject(serializeNleProject(renamed)), mediaItem.id).item.name,
+    "Opening interview");
+
+  const restored = applyNleTransaction(renamed, { revision: 2, commands: [{
+    kind: "item.update", id: mediaItem.id, name: null,
+  }] });
+  assert.equal(Object.hasOwn(findNleItem(restored, mediaItem.id).item, "name"), false);
+  assert.throws(() => applyNleTransaction(base, { revision: 1, commands: [{
+    kind: "item.update", id: mediaItem.id, name: "   ",
+  }] }), /Item interview-use name is empty/u);
+});
+
 test("split exactly subdivides a cubic source-time curve", () => {
   const at = (ticks: number, denominator = 1) => ({
     ticks: String(ticks), timeBase: { numerator: 1, denominator },
@@ -290,7 +337,7 @@ test("split exactly subdivides a cubic source-time curve", () => {
     canvas: { width: 100, height: 100, clearColor: "black" },
   }), { revision: 0, commands: [{
     kind: "track.add", track: { id: "picture", name: "Picture", kind: "picture",
-      locked: false, muted: false, items: [curved] },
+      muted: false, items: [curved] },
   }] });
   const edited = applyNleTransaction(base, { revision: 1, commands: [{
     kind: "item.split", id: "curved", at: at(2), rightId: "curved-right",
@@ -319,7 +366,7 @@ test("retime replaces direct source-time facts and slip shifts every source coor
     canvas: { width: 100, height: 100, clearColor: "black" },
   }), { revision: 0, commands: [{
     kind: "track.add", track: { id: "picture", name: "Picture", kind: "picture",
-      locked: false, muted: false, items: [componentItem] },
+      muted: false, items: [componentItem] },
   }] });
   const retimed = applyNleTransaction(base, { revision: 1, commands: [{
     kind: "item.retime", id: "title-card", sourceTime,
@@ -336,50 +383,42 @@ test("retime replaces direct source-time facts and slip shifts every source coor
   }] });
 });
 
-test("project, media and Track facts remain directly editable", () => {
+test("project, Media Item and Track facts remain directly editable", () => {
   const base = applyNleTransaction(createNleProject({
-    id: "direct-facts", name: "Before", editRate: { numerator: 24, denominator: 1 },
+    id: "direct-facts", name: "Before",
     canvas: { width: 100, height: 100, clearColor: "black" },
   }), { revision: 0, commands: [
-    { kind: "media.add", media: { id: "interview", name: "Before", asset: interviewAsset } },
     { kind: "track.add", track: { id: "picture", name: "V1", kind: "picture",
-      locked: false, muted: false, items: [] } },
+      muted: false, items: [mediaItem] } },
   ] });
 
   const edited = applyNleTransaction(base, { revision: 1, commands: [
-    { kind: "project.update", name: "After", editRate: { numerator: 60, denominator: 1 },
+    { kind: "project.update", name: "After",
       canvas: { width: 200, height: 100, clearColor: "transparent" } },
-    { kind: "media.rename", id: "interview", name: "Renamed interview" },
-    { kind: "media.relink", id: "interview", asset: { path: "./media/relinked.media.json" } },
-    { kind: "track.update", id: "picture", name: "Primary picture", locked: true, muted: true },
+    { kind: "item.replace", item: { ...mediaItem, asset: { path: "./media/relinked.media.json" } } },
+    { kind: "track.update", id: "picture", name: "Primary picture", muted: true },
   ] });
 
   assert.equal(edited.name, "After");
-  assert.deepEqual(edited.editRate, { numerator: 60, denominator: 1 });
   assert.deepEqual(edited.canvas, { width: 200, height: 100, clearColor: "transparent" });
-  assert.deepEqual(edited.media[0], {
-    id: "interview", name: "Renamed interview", asset: { path: "./media/relinked.media.json" },
-  });
+  assert.deepEqual((edited.tracks[0]?.items[0] as NleMediaItem).asset,
+    { path: "./media/relinked.media.json" });
   assert.deepEqual(edited.tracks[0], {
-    id: "picture", name: "Primary picture", kind: "picture", locked: true, muted: true, items: [],
+    id: "picture", name: "Primary picture", kind: "picture", muted: true,
+    items: [{ ...mediaItem, asset: { path: "./media/relinked.media.json" } }],
   });
 
-  const unlocked = applyNleTransaction(edited, { revision: 2, commands: [
-    { kind: "track.update", id: "picture", locked: false },
-  ] });
-  assert.equal(unlocked.tracks[0]?.locked, false);
 });
 
 test("slip and detach-audio preserve direct programme and source time facts", () => {
   const base = applyNleTransaction(createNleProject({
-    id: "source-time-edits", name: "Source time edits", editRate: { numerator: 2, denominator: 1 },
+    id: "source-time-edits", name: "Source time edits",
     canvas: { width: 100, height: 100, clearColor: "black" },
   }), { revision: 0, commands: [
-    { kind: "media.add", media: { id: "interview", name: "Interview", asset: interviewAsset } },
     { kind: "track.add", track: { id: "picture", name: "V1", kind: "picture",
-      locked: false, muted: false, items: [mediaItem] } },
+      muted: false, items: [mediaItem] } },
     { kind: "track.add", track: { id: "audio", name: "A1", kind: "audio",
-      locked: false, muted: false, items: [] } },
+      muted: false, items: [] } },
   ] });
 
   const edited = applyNleTransaction(base, { revision: 1, commands: [
@@ -388,13 +427,16 @@ test("slip and detach-audio preserve direct programme and source time facts", ()
   ] });
   const picture = findNleItem(edited, "interview-use");
   const audio = findNleItem(edited, "interview-audio");
+  if (picture.item.kind !== "present" || audio.item.kind !== "present") {
+    throw new Error("Detached Media Items changed role.");
+  }
 
   assert.equal(picture.track.id, "picture");
   assert.equal(picture.item.picture !== undefined, true);
   assert.equal(picture.item.audio, undefined);
   assert.equal(audio.track.id, "audio");
   assert.equal(audio.item.picture, undefined);
-  assert.deepEqual(audio.item.audio, { effects: [] });
+  assert.deepEqual(audio.item.audio, { });
   assert.deepEqual(picture.item.sourceTime, linear(frame(6), frame(1)));
   assert.deepEqual(audio.item.sourceTime, linear(frame(6), frame(1)));
   assert.deepEqual(audio.item.start, picture.item.start);
@@ -409,11 +451,11 @@ test("roll moves one shared cut while preserving the two outer Item edges", () =
     ...componentItem, id: "right", start: frame(4), duration: frame(4), sourceTime: linear(frame(4), frame(2)),
   };
   const base = applyNleTransaction(createNleProject({
-    id: "roll-edit", name: "Roll edit", editRate: { numerator: 2, denominator: 1 },
+    id: "roll-edit", name: "Roll edit",
     canvas: { width: 100, height: 100, clearColor: "black" },
   }), { revision: 0, commands: [{
     kind: "track.add",
-    track: { id: "picture", name: "V1", kind: "picture", locked: false, muted: false,
+    track: { id: "picture", name: "V1", kind: "picture", muted: false,
       items: [left, right] },
   }] });
 
@@ -447,23 +489,16 @@ test("ripple-trim moves only the caller's explicit scope", () => {
     ...componentItem, id: "untouched", start: frame(8), duration: frame(2), sourceTime: linear(frame(2)),
   };
   const base = applyNleTransaction(createNleProject({
-    id: "ripple-edit", name: "Ripple edit", editRate: { numerator: 2, denominator: 1 },
+    id: "ripple-edit", name: "Ripple edit",
     canvas: { width: 100, height: 100, clearColor: "black" },
   }), { revision: 0, commands: [
     { kind: "track.add", track: { id: "main", name: "V1", kind: "picture",
-      locked: false, muted: false, items: [target, following, untouched] } },
+      muted: false, items: [target, following, untouched] } },
     { kind: "track.add", track: { id: "overlay-track", name: "V2", kind: "picture",
-      locked: true, muted: false, items: [overlay] } },
+      muted: false, items: [overlay] } },
   ] });
 
-  assert.throws(() => applyNleTransaction(base, { revision: 1, commands: [{
-    kind: "item.ripple-trim", id: "target", edge: "end", at: frame(3),
-    scope: ["following", "overlay"],
-  }] }), /is locked/u);
-  assert.deepEqual(findNleItem(base, "target").item, target);
-
   const edited = applyNleTransaction(base, { revision: 1, commands: [
-    { kind: "track.update", id: "overlay-track", locked: false },
     { kind: "item.ripple-trim", id: "target", edge: "end", at: frame(3),
       scope: ["following", "overlay"] },
   ] });
@@ -473,17 +508,17 @@ test("ripple-trim moves only the caller's explicit scope", () => {
   assert.deepEqual(findNleItem(edited, "untouched").item.start, frame(8));
 });
 
-test("Track lock protects Transition, matte and Group relations and can be explicitly released", () => {
+test("Transition and matte remain direct composition relations", () => {
   const operator = { module: { name: "@example/relations", version: "1" }, name: "default" } as const;
   const item = (id: string, start: number, duration: number): NleComponentItem => ({
     ...componentItem, id, start: frame(start), duration: frame(duration),
   });
   const base = applyNleTransaction(createNleProject({
-    id: "locked-relations", name: "Locked relations", editRate: { numerator: 2, denominator: 1 },
+    id: "locked-relations", name: "Locked relations",
     canvas: { width: 100, height: 100, clearColor: "black" },
   }), { revision: 0, commands: [{
     kind: "track.add",
-    track: { id: "picture", name: "V1", kind: "picture", locked: true, muted: false, items: [
+    track: { id: "picture", name: "V1", kind: "picture", muted: false, items: [
       item("outgoing", 0, 4), item("incoming", 2, 4), item("matte-source", 0, 8),
     ] },
   }] });
@@ -491,50 +526,36 @@ test("Track lock protects Transition, matte and Group relations and can be expli
     operator, parameters: {} } as const;
   const matte = { id: "matte", content: "incoming", matte: "matte-source",
     operator, parameters: {} } as const;
-  const group = { id: "group", name: "Pair", items: ["outgoing", "incoming"] } as const;
-
-  assert.throws(() => applyNleTransaction(base, { revision: 1, commands: [
-    { kind: "transition.add", transition },
-  ] }), /is locked/u);
-  assert.throws(() => applyNleTransaction(base, { revision: 1, commands: [
-    { kind: "matte.add", matte },
-  ] }), /is locked/u);
-  assert.throws(() => applyNleTransaction(base, { revision: 1, commands: [
-    { kind: "group.add", group },
-  ] }), /is locked/u);
-
   const edited = applyNleTransaction(base, { revision: 1, commands: [
-    { kind: "track.update", id: "picture", locked: false },
     { kind: "transition.add", transition },
     { kind: "matte.add", matte },
-    { kind: "group.add", group },
   ] });
   assert.equal(edited.transitions.length, 1);
   assert.equal(edited.mattes.length, 1);
-  assert.equal(edited.groups.length, 1);
 });
 
-test("Media Asset files and package Components materialize as inspectable NLE transactions", () => {
+test("Media Assets, Present Components and Adjustments materialize as inspectable NLE transactions", () => {
   const empty = createNleProject({
-    id: "materialization", name: "Materialization", editRate: { numerator: 2, denominator: 1 },
+    id: "materialization", name: "Materialization",
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const withTrack = applyNleTransaction(empty, { revision: 0, commands: [{
     kind: "track.add",
-    track: { id: "main", name: "Main", kind: "picture", locked: false, muted: false, items: [] },
+    track: { id: "main", name: "Main", kind: "picture", muted: false, items: [] },
   }] });
   const resolved = prepared();
   const { source: _source, ...interpretation } = resolved;
   const mediaTransaction = createMediaAssetMaterialization(withTrack, {
-    mediaId: "interview", itemId: "interview-use", name: "Interview",
+    itemId: "interview-use",
     asset: interviewAsset, interpretation,
     track: "main", at: frame(2), picture: fullPicture,
   });
-  assert.deepEqual(mediaTransaction.commands.map((command) => command.kind), ["media.add", "item.add"]);
+  assert.deepEqual(mediaTransaction.commands.map((command) => command.kind), ["item.add"]);
   const withMedia = applyNleTransaction(withTrack, mediaTransaction);
   assert.deepEqual(findNleItem(withMedia, "interview-use").item, {
-    id: "interview-use", kind: "media", media: "interview", start: frame(2), duration: frame(8),
-    sourceTime: linear(frame(8)), enabled: true, audio: { effects: [] }, picture: fullPicture,
+    id: "interview-use", kind: "present", source: "media", asset: interviewAsset,
+    start: frame(2), duration: frame(8),
+    sourceTime: linear(frame(8)), enabled: true, audio: { }, picture: fullPicture,
   });
 
   const componentTransaction = createComponentMaterialization(withMedia, {
@@ -544,9 +565,22 @@ test("Media Asset files and package Components materialize as inspectable NLE tr
   });
   const finished = applyNleTransaction(withMedia, componentTransaction);
   assert.deepEqual(findNleItem(finished, "title").item, {
-    id: "title", kind: "component", start: frame(1), duration: frame(4), sourceTime: linear(frame(4)),
+    id: "title", kind: "present", source: "component", start: frame(1), duration: frame(4), sourceTime: linear(frame(4)),
     enabled: true,
     component: { module: { name: "@example/title", version: "1" }, name: "card" },
     parameters: { title: "Already materialized" }, picture: fullPicture,
+  });
+
+  const adjustmentTransaction = createAdjustmentMaterialization(finished, {
+    id: "grade", track: "main", at: frame(1), duration: frame(4),
+    component: { module: { name: "@example/color", version: "1" }, name: "grade" },
+    parameters: { contrast: 1.2 },
+  });
+  const adjusted = applyNleTransaction(finished, adjustmentTransaction);
+  assert.deepEqual(findNleItem(adjusted, "grade").item, {
+    id: "grade", kind: "adjustment", start: frame(1), duration: frame(4), sourceTime: linear(frame(4)),
+    enabled: true,
+    component: { module: { name: "@example/color", version: "1" }, name: "grade" },
+    parameters: { contrast: 1.2 },
   });
 });

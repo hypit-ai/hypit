@@ -9,6 +9,7 @@ import {
 } from "@hypit/audiovisual";
 import { sealAudioProgram, verifyAudioProgram, type AudioOutputSampling } from "@hypit/audio-program";
 import {
+  createNleScaledHtmlOutput,
   createNleTerminalLinkHost,
   linkNleProjectTerminals,
   lowerNleProjectToAudioProgram,
@@ -27,7 +28,8 @@ import {
   createNleProject,
   lowerNleProjectToAudiovisual,
   nleLinearSourceTime,
-  nlePointwisePictureEffect,
+  nlePointwisePictureAdjustment,
+  nleProjectComposition,
   serializeNleProject,
   type NleComponentItem,
   type NlePictureAppearance,
@@ -65,7 +67,6 @@ function prepared() {
 
 const full: NlePictureAppearance = {
   layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" },
-  effects: [],
 };
 
 function visualSource(id: string, marker: string) {
@@ -132,15 +133,15 @@ const host = createNleTerminalLinkHost([{
     component: audioComponentRenderer,
     resolve: (item) => coreAudioSource(`${item.id}:source`),
   }],
-  effects: [{ effect: effectRenderer, resolve: (effect) => ({
-    operator: nlePointwisePictureEffect(`effect:${effect.id}`, htmlVisual({
+  pictureAdjustments: [{ component: effectRenderer, resolve: (item) => ({
+    operator: nlePointwisePictureAdjustment(`adjustment:${item.id}`, htmlVisual({
       html: '<div data-nle-effect="mono">{{picture}}</div>',
       css: ":scope>[data-nle-effect]{position:absolute;inset:0;filter:grayscale(1)}",
     })),
   }) }],
-  audioEffects: [{ effect: audioEffectRenderer, resolve: (effect) => ({
+  audioAdjustments: [{ component: audioEffectRenderer, resolve: (item) => ({
     operator: {
-      id: `audio-effect:${effect.id}`,
+      id: `audio-effect:${item.id}`,
       inputs: ["signal"],
       temporalControls: {},
       temporalSupport: pointwiseOperatorTemporalSupport(["signal"]),
@@ -189,65 +190,70 @@ function project(): NleProject {
   const document = createNleProject({
     id: "html-editorial",
     name: "HTML Editorial",
-    editRate: outputRate,
     canvas: { width: 100, height: 100, clearColor: "#101010" },
   });
   const caption: NleComponentItem = {
-    id: "subtitle-one", kind: "component", start: frame(1), duration: frame(2),
+    id: "subtitle-one", kind: "present", source: "component", start: frame(1), duration: frame(2),
     sourceTime: nleLinearSourceTime(frame(2)),
     enabled: true,
     component: captionRenderer,
     parameters: { text: "A direct caption block", color: "white" },
-    picture: { layout: { x: 10, y: 70, width: 80, height: 20, fit: "contain" }, effects: [{
-      id: "caption-treatment", effect: effectRenderer, parameters: { amount: 1 },
-    }] },
+    picture: { layout: { x: 10, y: 70, width: 80, height: 20, fit: "contain" } },
   };
   const component: NleComponentItem = {
-    id: "title", kind: "component", start: frame(0), duration: frame(4),
+    id: "title", kind: "present", source: "component", start: frame(0), duration: frame(4),
     sourceTime: nleLinearSourceTime(frame(4)),
     enabled: true,
     component: componentRenderer,
     parameters: { title: "HTML component" }, picture: full,
   };
   return applyNleTransaction(document, { revision: 0, commands: [
-    { kind: "media.add", media: { id: "camera", name: "Camera",
-      asset: { path: "./media/camera.media.json" } } },
     { kind: "track.add", track: { id: "main", name: "Main picture", kind: "picture",
-      locked: false, muted: false, items: [] } },
+      muted: false, items: [] } },
     { kind: "item.add", track: "main", item: {
-      id: "camera-use", kind: "media", media: "camera", start: frame(0), duration: frame(4),
+      id: "camera-use", kind: "present", source: "media",
+      asset: { path: "./media/camera.media.json" }, start: frame(0), duration: frame(4),
       sourceTime: nleLinearSourceTime(frame(4)), enabled: true, audio: {
         reconstruction: { using: audioReconstructionRenderer, parameters: {} },
-        effects: [{
-        id: "quiet", effect: audioEffectRenderer, parameters: { gain: 0.5 },
-        }],
       },
-      picture: { ...full, effects: [{ id: "mono", effect: {
-        ...effectRenderer,
-      }, parameters: { amount: 1 } }] },
+      picture: {
+        ...full,
+        effects: [{ id: "item-mono", component: effectRenderer, parameters: { amount: 0.5 } }],
+      },
+    } },
+    { kind: "item.add", track: "main", item: {
+      id: "mono", kind: "adjustment", component: effectRenderer, parameters: { amount: 1 },
+      start: frame(0), duration: frame(4), sourceTime: nleLinearSourceTime(frame(4)), enabled: true,
     } },
     { kind: "item.add", track: "main", item: caption },
+    { kind: "item.add", track: "main", item: {
+      id: "caption-treatment", kind: "adjustment", component: effectRenderer, parameters: { amount: 1 },
+      start: frame(1), duration: frame(2), sourceTime: nleLinearSourceTime(frame(2)), enabled: true,
+    } },
     { kind: "item.add", track: "main", item: component },
   ] });
 }
 
-test("Media, caption Component and Effect lower into one audiovisual Programme", () => {
+test("Media, Present Components and Adjustments lower into one audiovisual Programme", () => {
   const document = project();
   const program = lowerNleProjectToAudiovisual(document, host);
 
   assert.deepEqual(Object.keys(program.occurrences), ["camera-use", "subtitle-one", "title"]);
-  assert.equal(program.picture?.nodes["camera-use:effect:mono"]?.kind, "apply");
+  const itemEffect = program.picture?.nodes["camera-use:effect:item-mono:picture-adjustment"];
+  assert.equal(itemEffect?.kind, "apply");
+  if (itemEffect?.kind !== "apply") throw new Error("Item-local Picture effect did not lower.");
+  assert.equal(itemEffect.inputs.picture, "camera-use:fitted");
+  const cameraPlaced = program.picture?.nodes["camera-use:placed"];
+  assert.equal(cameraPlaced?.kind, "remap");
+  if (cameraPlaced?.kind !== "remap") throw new Error("Camera did not lower through Canvas placement.");
+  assert.equal(cameraPlaced.input, "camera-use:effect:item-mono:picture-adjustment");
+  assert.equal(program.picture?.nodes["mono:picture-adjustment"]?.kind, "apply");
   const captionFitted = program.picture?.nodes["subtitle-one:fitted"];
   assert.equal(captionFitted?.kind, "remap");
   if (captionFitted?.kind !== "remap") throw new Error("Caption did not lower through Item-local fitting.");
   assert.deepEqual(captionFitted.mapping.target.region, { x: 0, y: 0, width: 80, height: 20 });
-  const captionEffect = program.picture?.nodes["subtitle-one:effect:caption-treatment"];
-  assert.deepEqual(captionEffect, {
-    kind: "apply",
-    operator: captionEffect?.kind === "apply" ? captionEffect.operator : undefined,
-    inputs: { picture: "subtitle-one:fitted" },
-    controlMappings: {},
-  });
+  const captionEffect = program.picture?.nodes["caption-treatment:picture-adjustment"];
+  assert.equal(captionEffect?.kind, "apply");
   const captionPlaced = program.picture?.nodes["subtitle-one:placed"];
   assert.equal(captionPlaced?.kind, "remap");
   if (captionPlaced?.kind !== "remap") throw new Error("Caption did not lower through Canvas placement.");
@@ -255,9 +261,8 @@ test("Media, caption Component and Effect lower into one audiovisual Programme",
   assert.deepEqual(captionPlaced.mapping.transform, {
     kind: "affine", xx: 1, xy: 0, yx: 0, yy: 1, tx: -10, ty: -70,
   });
-  assert.equal(program.picture?.nodes["html-editorial:picture-root"]?.kind, "over");
+  assert.equal(program.picture === undefined ? undefined : program.picture.nodes[program.picture.root]?.kind, "over");
   assert.equal(program.audio?.nodes["camera-use:audio"]?.kind, "use");
-  assert.equal(program.audio?.nodes["camera-use:audio-effect:quiet"]?.kind, "apply");
   const audioSelection = program.occurrences["camera-use"]?.selections.audio;
   assert.equal(audioSelection?.kind, "signal");
   if (audioSelection?.kind !== "signal") throw new Error("Camera Audio did not lower as a signal.");
@@ -282,15 +287,14 @@ test("NLE source-time pieces close as one resolved AVIR TemporalMap", () => {
     sourceAtStart: frame(0), sourceControl1: frame(1), sourceControl2: frame(5), sourceAtEnd: frame(8),
   }] as const;
   const base = createNleProject({
-    id: "source-time", name: "Source time", editRate: outputRate,
+    id: "source-time", name: "Source time",
     canvas: { width: 100, height: 100, clearColor: "black" },
   });
   const document = applyNleTransaction(base, { revision: 0, commands: [
-    { kind: "media.add", media: { id: "camera", name: "Camera",
-      asset: { path: "./media/camera.media.json" } } },
     { kind: "track.add", track: { id: "picture", name: "Picture", kind: "picture",
-      locked: false, muted: false, items: [{
-        id: "retimed", kind: "media", media: "camera", start: frame(0), duration: frame(8),
+      muted: false, items: [{
+        id: "retimed", kind: "present", source: "media",
+        asset: { path: "./media/camera.media.json" }, start: frame(0), duration: frame(8),
         sourceTime: { pieces }, enabled: true, picture: full,
       }] } },
   ] });
@@ -310,33 +314,58 @@ test("NLE source-time pieces close as one resolved AVIR TemporalMap", () => {
   assert.throws(() => lowerNleProjectToAudiovisual(invalid, host), /source domain/u);
 });
 
+test("cover fitting aligns an explicit source focal point", () => {
+  const base = createNleProject({
+    id: "focal-cover", name: "Focal cover",
+    canvas: { width: 100, height: 100, clearColor: "black" },
+  });
+  const document = applyNleTransaction(base, { revision: 0, commands: [
+    { kind: "track.add", track: { id: "picture", name: "Picture", kind: "picture", muted: false,
+      items: [{
+        id: "focal", kind: "present", source: "media",
+        asset: { path: "./media/camera.media.json" }, start: frame(0), duration: frame(4),
+        sourceTime: nleLinearSourceTime(frame(4)), enabled: true,
+        picture: { layout: { x: 0, y: 0, width: 50, height: 100, fit: "cover", contentX: 0.75 } },
+      }] } },
+  ] });
+  const program = lowerNleProjectToAudiovisual(document, host);
+  const fitted = program.picture?.nodes["focal:fitted"];
+  assert.equal(fitted?.kind, "remap");
+  if (fitted?.kind !== "remap") throw new Error("Focal media did not lower through fitting.");
+  assert.deepEqual(fitted.mapping.transform, {
+    kind: "affine", xx: 1, xy: 0, yx: 0, yy: 1, tx: 37.5, ty: 0,
+  });
+});
+
 test("the same project lowers directly to a browser HtmlProgram without Build execution", () => {
-  const html = lowerNleProjectToHtmlProgram(project(), host, outputRate);
+  const document = project();
+  const html = lowerNleProjectToHtmlProgram(document, host,
+    createNleScaledHtmlOutput(document, outputRate));
 
   assert.doesNotThrow(() => assertHtmlProgram(html));
   assert.equal(html.frameCount, 4);
   assert.deepEqual(html.frameRate, { numerator: 2, denominator: 1 });
   assert.deepEqual(html.canvas, { width: 100, height: 100 });
-  assert.equal(selectHtmlVideoSources(html).length, 1);
+  assert.equal(selectHtmlVideoSources(html).length, 3);
   assert.match(html.html, /data-nle-caption/u);
   assert.match(html.html, /data-nle-component/u);
   assert.match(html.html, /data-nle-effect="mono"/u);
   assert.match(html.html, /filter:grayscale\(1\)/u);
 });
 
-test("Transition, matte and editing Group remain direct NLE relations", () => {
+test("Transition and matte remain direct NLE relations", () => {
   const empty = createNleProject({
-    id: "relations", name: "Relations", editRate: outputRate,
+    id: "relations", name: "Relations",
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const component = (id: string, startFrame: number, durationFrames: number): NleComponentItem => ({
-    id, kind: "component", component: componentRenderer, parameters: { title: id },
+    id, kind: "present", source: "component", component: componentRenderer, parameters: { title: id },
     start: frame(startFrame), duration: frame(durationFrames),
     sourceTime: nleLinearSourceTime(frame(durationFrames)), enabled: true, picture: full,
   });
   const document = applyNleTransaction(empty, { revision: 0, commands: [{
     kind: "track.add", track: { id: "main", name: "Main", kind: "picture",
-      locked: false, muted: false, items: [
+      muted: false, items: [
         component("outgoing", 0, 4), component("incoming", 3, 4),
         component("content", 0, 7), component("matte-source", 0, 7),
       ] },
@@ -350,14 +379,12 @@ test("Transition, matte and editing Group remain direct NLE relations", () => {
       id: "content-alpha", content: "content", matte: "matte-source",
       operator: matteRenderer, parameters: {},
     },
-  }, {
-    kind: "group.add", group: { id: "pair", name: "Pair", items: ["outgoing", "incoming"] },
   }] });
   const program = lowerNleProjectToAudiovisual(document, host);
   assert.equal(program.picture?.nodes["join:apply"]?.kind, "apply");
   assert.equal(program.picture?.nodes["content:matte:content-alpha"]?.kind, "apply");
-  assert.equal(Object.hasOwn(program.picture?.nodes ?? {}, "pair"), false);
-  const html = lowerNleProjectToHtmlProgram(document, host, outputRate);
+  const html = lowerNleProjectToHtmlProgram(document, host,
+    createNleScaledHtmlOutput(document, outputRate));
   assert.match(html.html, /data-nle-transition/u);
   assert.match(html.html, /data-nle-matte/u);
   assert.throws(() => applyNleTransaction(document, { revision: document.revision, commands: [{
@@ -371,62 +398,70 @@ test("the NLE Audio DAG lowers directly to a continuous AudioProgram", () => {
   assert.doesNotThrow(() => verifyAudioProgram(audio));
   assert.equal(audio.sampling.sampleRate, 48_000);
   assert.ok(audio.graph.nodes.some((node) => node.kind === "program"));
-  assert.ok(audio.graph.nodes.some((node) => node.kind === "process"
-    && node.program.format === "hypit.test-audio@1"));
+  assert.equal(audio.graph.nodes.some((node) => node.kind === "process"
+    && node.program.format === "hypit.test-audio@1"), false);
 });
 
 test("an Audio-only package Component closes through the same NLE and terminal chain", () => {
   const base = createNleProject({
-    id: "synth-project", name: "Synth project", editRate: outputRate,
+    id: "synth-project", name: "Synth project",
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const document = applyNleTransaction(base, { revision: 0, commands: [{
     kind: "track.add", track: {
-      id: "audio", name: "Audio", kind: "audio", locked: false, muted: false, items: [{
-        id: "tone", kind: "component", component: audioComponentRenderer, parameters: { frequency: 440 },
+      id: "audio", name: "Audio", kind: "audio", muted: false, items: [{
+        id: "tone", kind: "present", source: "component", component: audioComponentRenderer, parameters: { frequency: 440 },
         start: frame(0), duration: frame(4), sourceTime: nleLinearSourceTime(frame(4)), enabled: true,
-        audio: { effects: [{
-          id: "quiet", effect: audioEffectRenderer, parameters: { gain: 0.5 },
-        }] },
+        audio: {},
+      }, {
+        id: "quiet", kind: "adjustment", component: audioEffectRenderer, parameters: { gain: 0.5 },
+        start: frame(0), duration: frame(4), sourceTime: nleLinearSourceTime(frame(4)), enabled: true,
       }],
     },
   }] });
   const program = lowerNleProjectToAudiovisual(document, host);
   assert.equal(program.picture, undefined);
-  assert.equal(program.audio?.nodes["tone:audio-effect:quiet"]?.kind, "apply");
+  assert.equal(program.audio?.nodes["quiet:audio-adjustment"]?.kind, "apply");
   const audio = lowerNleProjectToAudioProgram(document, host, { sampleRate: 48_000 });
   assert.doesNotThrow(() => verifyAudioProgram(audio));
   assert.ok(audio.graph.nodes.some((node) => node.kind === "process"));
 });
 
-test("a Compound Item closes one child NLE Project as an ordinary nested Source", () => {
+test("a composition-source Present closes one child NLE Composition as an ordinary nested Source", () => {
   const childBase = createNleProject({
-    id: "child", name: "Child", editRate: outputRate,
+    id: "child", name: "Child",
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const child = applyNleTransaction(childBase, { revision: 0, commands: [
-    { kind: "media.add", media: { id: "camera", name: "Camera",
-      asset: { path: "./media/camera.media.json" } } },
     { kind: "track.add", track: { id: "child-main", name: "Child main", kind: "picture",
-      locked: false, muted: false, items: [{
-        id: "child-camera", kind: "media", media: "camera", start: frame(0), duration: frame(4),
-        sourceTime: nleLinearSourceTime(frame(4)), enabled: true, picture: full, audio: { effects: [] },
+      muted: false, items: [{
+        id: "child-camera", kind: "present", source: "media",
+        asset: { path: "./media/camera.media.json" }, start: frame(0), duration: frame(4),
+        sourceTime: nleLinearSourceTime(frame(4)), enabled: true, picture: full, audio: { },
       }] } },
   ] });
   const parentBase = createNleProject({
-    id: "parent", name: "Parent", editRate: outputRate,
+    id: "parent", name: "Parent",
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const parent = applyNleTransaction(parentBase, { revision: 0, commands: [{
     kind: "track.add", track: { id: "parent-main", name: "Parent main", kind: "picture",
-      locked: false, muted: false, items: [{
-        id: "nested", kind: "compound", project: child, start: frame(0), duration: frame(4),
-        sourceTime: nleLinearSourceTime(frame(4)), enabled: true, picture: full, audio: { effects: [] },
+      muted: false, items: [{
+        id: "nested", kind: "present", source: "composition", composition: nleProjectComposition(child), start: frame(0), duration: frame(4),
+        sourceTime: nleLinearSourceTime(frame(4)), enabled: true, picture: full, audio: { },
       }] },
   }] });
+  const nested = parent.tracks[0]?.items[0];
+  assert.equal(nested?.kind, "present");
+  if (nested?.kind !== "present" || nested.source !== "composition") {
+    throw new Error("Nested fixture changed kind.");
+  }
+  assert.equal(Object.hasOwn(nested.composition, "format"), false);
+  assert.equal(Object.hasOwn(nested.composition, "revision"), false);
   const program = lowerNleProjectToAudiovisual(parent, host);
   assert.equal(program.occurrences.nested?.source.id, "child");
-  const html = lowerNleProjectToHtmlProgram(parent, host, outputRate);
+  const html = lowerNleProjectToHtmlProgram(parent, host,
+    createNleScaledHtmlOutput(parent, outputRate));
   assert.equal(selectHtmlVideoSources(html).length, 1);
   const audio = lowerNleProjectToAudioProgram(parent, host, { sampleRate: 48_000 });
   assert.doesNotThrow(() => verifyAudioProgram(audio));

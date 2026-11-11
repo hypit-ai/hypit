@@ -1,0 +1,53 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "world-overcast",
+  "name": "阴天",
+  "using": {
+    "module": {
+      "name": "@hypit/scene-environment",
+      "version": "1"
+    },
+    "name": "world-environment"
+  },
+  "resources": {},
+  "parameters": {
+    "world": {
+      "sky": {
+        "top": "#737d88",
+        "horizon": "#bfc6ca"
+      },
+      "ground": {
+        "visible": true,
+        "color": "#777d77",
+        "opacity": 1
+      },
+      "atmosphere": {
+        "fogColor": "#aeb6bb",
+        "fogDensity": 0.006
+      },
+      "lighting": {
+        "ambient": {
+          "sky": "#edf2f5",
+          "ground": "#777d77",
+          "intensity": 2.5
+        },
+        "key": {
+          "color": "#eef2f4",
+          "intensity": 1.7,
+          "azimuth": -25,
+          "elevation": 64,
+          "shadows": true
+        },
+        "fill": {
+          "color": "#cbd5dc",
+          "intensity": 1.4
+        },
+        "rim": {
+          "color": "#ffffff",
+          "intensity": 0.4
+        }
+      },
+      "exposure": 1.02
+    }
+  }
+}

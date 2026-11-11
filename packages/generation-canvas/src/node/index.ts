@@ -1,16 +1,16 @@
 export * from "../index.js";
 export {
-  adoptBuildOutputInGenerationCanvas,
-  openNodeGenerationCanvas,
-  placeAcceptedBuildInGenerationCanvas,
-  placeBuildOutputInGenerationCanvas,
+  adoptOutputInGenerationWorkspace,
+  attachAcceptedBuildToGenerationWorkspace,
+  attachOutputToGenerationWorkspace,
+  openNodeGenerationWorkspace,
+  selectGenerationWorkspaceOutput,
 } from "./host.js";
 export type {
-  AdoptedNodeGenerationCanvasBuildOutput,
-  GenerationCanvasProductMaterializationContext,
-  OpenedNodeGenerationCanvas,
+  GenerationWorkspaceProductMaterializationContext,
+  OpenedNodeGenerationWorkspace,
 } from "./host.js";
 export {
-  readGenerationCanvasViewFile,
-  writeGenerationCanvasViewFile,
+  readGenerationWorkspaceFile,
+  writeGenerationWorkspaceFile,
 } from "./store.js";

@@ -1,0 +1,15 @@
+{
+  "format": "hypit.nle-view@1",
+  "id": "ranking-debate-main",
+  "name": "Ranking Debate Timeline",
+  "revision": 0,
+  "project": { "path": "film.nle.json" },
+  "editRate": { "numerator": 24, "denominator": 1 },
+  "tracks": [
+    { "track": "picture-main", "locked": false },
+    { "track": "ranking", "locked": false },
+    { "track": "captions", "locked": false },
+    { "track": "verdict", "locked": false }
+  ],
+  "groups": []
+}

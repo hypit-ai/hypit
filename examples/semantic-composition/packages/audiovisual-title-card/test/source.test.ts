@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  createNleScaledHtmlOutput,
   createNleTerminalLinkHostFromFacets,
   lowerNleProjectToHtmlProgram,
 } from "../../../../../packages/html-video/src/index.js";
@@ -56,12 +57,11 @@ test("the project component projects direct parameters to finite Source and HTML
 test("the installed project package resolves and edits one materialized NLE Component", () => {
   const empty = createNleProject({
     id: "component-editorial", name: "Component editorial",
-    editRate: { numerator: 1, denominator: 1 },
     canvas: { width: 1280, height: 720, clearColor: "#000000" },
   });
   const withTrack = applyNleTransaction(empty, { revision: 0, commands: [{
     kind: "track.add", track: {
-      id: "main", name: "Main", kind: "picture", locked: false, muted: false, items: [],
+      id: "main", name: "Main", kind: "picture", muted: false, items: [],
     },
   }] });
   const project = applyNleTransaction(withTrack, createComponentMaterialization(withTrack, {
@@ -73,7 +73,8 @@ test("the installed project package resolves and edits one materialized NLE Comp
     at: at(0), duration: at(2),
   }));
   const host = createNleTerminalLinkHostFromFacets(titleCardHypitPackage.facets);
-  const html = lowerNleProjectToHtmlProgram(project, host, { numerator: 1, denominator: 1 });
+  const html = lowerNleProjectToHtmlProgram(project, host,
+    createNleScaledHtmlOutput(project, { numerator: 1, denominator: 1 }));
   assert.match(html.html, /A materialized Component/u);
   assert.match(html.html, /resolved by its project package/u);
 
@@ -83,14 +84,15 @@ test("the installed project package resolves and edits one materialized NLE Comp
   });
   let session = createNleEditSession(project);
   session = commitNleEdit(session, { label: "Edit title", transaction });
-  const editedHtml = lowerNleProjectToHtmlProgram(session.current, host, { numerator: 1, denominator: 1 });
+  const editedHtml = lowerNleProjectToHtmlProgram(session.current, host,
+    createNleScaledHtmlOutput(session.current, { numerator: 1, denominator: 1 }));
   assert.match(editedHtml.html, /Edited by its package/u);
   const editedItem = findNleItem(session.current, "opening").item;
-  if (editedItem.kind !== "component") throw new Error("Title Card Item changed kind.");
+  if ((editedItem.kind !== "present" || editedItem.source !== "component")) throw new Error("Title Card Item changed kind.");
   assert.equal((editedItem.parameters as { readonly title: string }).title, "Edited by its package");
   session = undoNleEdit(session);
   const restoredItem = findNleItem(session.current, "opening").item;
-  if (restoredItem.kind !== "component") throw new Error("Restored Title Card Item changed kind.");
+  if ((restoredItem.kind !== "present" || restoredItem.source !== "component")) throw new Error("Restored Title Card Item changed kind.");
   assert.equal((restoredItem.parameters as { readonly title: string }).title, "A materialized Component");
   assert.throws(() => authoring.planComponentParameterEdit(project, "opening", {
     kind: "set-colors", background: "black", foreground: "#ffffff",

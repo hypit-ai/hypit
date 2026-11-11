@@ -32,7 +32,7 @@ tree coordinates videos, text, masks and graphics. Group content that shares beh
 contributions remain separate Items with explicit paint order.
 
 A caption family can consume a caption document and source-local timing when it materializes cues.
-Each resulting Component Item then owns package parameters for its text and treatment. A new family
+Each resulting Component Present then owns package parameters for its text and treatment. A new family
 can materialize the same evidence into a different visual behavior without adding an NLE primitive.
 
 ## Make it useful to another author

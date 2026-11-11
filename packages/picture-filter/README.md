@@ -13,7 +13,7 @@ Transform, position, scale and rotation intentionally do not exist here. Those a
 Author frontends may offer separate Opacity, Blur or Color conveniences, but they lower into this one
 complete state rather than inventing another keyframe or normalized-progress model.
 
-For a persistent NLE project the package contributes an `hypit.nle-package@1` Effect resolver. The NLE stores
+For a persistent NLE project the package contributes an `hypit.nle-package@1` Picture Adjustment resolver. The NLE stores
 the package symbol and one package-owned parameter value:
 
 Keyframed parameters select `linear`, `ease-in`, `ease-out` or `ease-in-out`. The package applies that
@@ -26,11 +26,11 @@ selection in both AVIR evaluation and its HTML implementation; NLE Core does not
 
 The package owns the complete state, parameter spelling, validation and interpolation. NLE Core sees only
 `CanonicalValue`; it has no Picture Filter fields, central Keyframe type or easing catalogue. The controlled
-Operator's `filter` Domain is identical to the Item Occurrence Domain, so default NLE lowering makes the
-animation follow an Item move. A keyframe outside the current Item duration is rejected rather than clamped or
+Operator's `filter` Domain is identical to the Adjustment Item Domain, so default NLE lowering makes the
+animation follow an Adjustment move. A keyframe outside the current Item duration is rejected rather than clamped or
 silently discarded.
 
-The package also contributes an optional `hypit.nle-authoring@1` Effect-parameter owner. Its first typed edit
+The package also contributes an optional `hypit.nle-authoring@1` Adjustment-parameter owner. Its first typed edit
 operations replace a constant state or insert/replace one Item-local keyframe state. The generic NLE Host does not
 interpret either operation: it asks this package for the next canonical parameter value and wraps that result in
 one ordinary `item.replace` transaction. Consequently Track locks and snapshot-based undo apply without a

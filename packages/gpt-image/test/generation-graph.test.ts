@@ -64,8 +64,9 @@ test("two GPT Image nodes feed one Seedance reference-video without duplicating 
       },
     }, {
       id: "motion",
-      using: seedanceGenerationNodes["seedance-2.5"].referenceVideo,
+      using: seedanceGenerationNodes["seedance-2.5"],
       inputs: {
+        mode: { value: "references" },
         prompt: { value: "A continuous camera move connects both poses." },
         duration: { value: 6 },
         aspectRatio: { value: "9:16" },

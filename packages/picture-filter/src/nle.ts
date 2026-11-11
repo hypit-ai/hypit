@@ -1,6 +1,6 @@
 import type {
-  NleEffectParameterAuthoring,
-  NleEffectResolver,
+  NleAdjustmentParameterAuthoring,
+  NlePictureAdjustmentResolver,
   NlePackageSymbol,
 } from "@hypit/nle";
 import { canonicalize } from "@hypit/protocol";
@@ -167,10 +167,10 @@ export function editPictureFilterNleParameters(
 }
 
 /** NLE instance parameters and their interpolation remain package-owned. */
-export const pictureFilterNleResolver: NleEffectResolver = {
-  effect: pictureFilterNleSymbol,
-  resolve: (effect, item) => {
-    const parameters = effect.parameters as unknown;
+export const pictureFilterNleResolver: NlePictureAdjustmentResolver = {
+  component: pictureFilterNleSymbol,
+  resolve: (item) => {
+    const parameters = item.parameters as unknown;
     assertPictureFilterNleParameters(parameters, item.duration);
     if (parameters.kind === "constant") {
       return { operator: pictureFilterOperator(parameters.state) };
@@ -182,15 +182,15 @@ export const pictureFilterNleResolver: NleEffectResolver = {
   },
 };
 
-export const pictureFilterNleAuthoring: NleEffectParameterAuthoring = {
-  effect: pictureFilterNleSymbol,
-  inspect: ({ effect, item }) => {
-    const parameters = effect.parameters as unknown;
+export const pictureFilterNleAuthoring: NleAdjustmentParameterAuthoring = {
+  component: pictureFilterNleSymbol,
+  inspect: ({ item }) => {
+    const parameters = item.parameters as unknown;
     assertPictureFilterNleParameters(parameters, item.duration);
     return canonicalize(parameters);
   },
-  edit: (operation, { effect, item }) => {
-    const parameters = effect.parameters as unknown;
+  edit: (operation, { item }) => {
+    const parameters = item.parameters as unknown;
     assertPictureFilterNleParameters(parameters, item.duration);
     return canonicalize(editPictureFilterNleParameters(
       parameters,

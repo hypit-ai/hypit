@@ -14,7 +14,7 @@ import {
   type PreparedGenerationGraphBuild,
 } from "../prepare.js";
 import type {
-  GenerationGraphLoweringHost,
+  GenerationGraphInspectionHost,
   GenerationGraphProject,
   GenerationNodeAssetHost,
 } from "../types.js";
@@ -24,7 +24,7 @@ import {
 
 export type NodeGenerationGraphProjectHost = {
   readonly program: import("@hypit/protocol").LinkedProgram;
-  readonly lowering: GenerationGraphLoweringHost;
+  readonly lowering: GenerationGraphInspectionHost;
   prepare(
     project: GenerationGraphProject,
     targets: readonly string[],

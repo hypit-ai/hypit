@@ -17,7 +17,7 @@ const at = (value: number) => exactTemporalValue({ numerator: BigInt(value), den
 
 const item: NleComponentItem = {
   id: "board",
-  kind: "component",
+  kind: "present", source: "component",
   component: rankingBoardComponentSymbol,
   start: at(0),
   duration: at(12),
@@ -46,7 +46,7 @@ const item: NleComponentItem = {
       fontFamily: "system-ui, sans-serif",
     },
   }),
-  picture: { layout: { x: 0, y: 0, width: 720, height: 1280, fit: "fill" }, effects: [] },
+  picture: { layout: { x: 0, y: 0, width: 720, height: 1280, fit: "fill" } },
 };
 
 test("project Ranking Board preserves the mature full-canvas stage-to-cell relationship", () => {

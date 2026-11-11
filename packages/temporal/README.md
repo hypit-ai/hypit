@@ -8,6 +8,7 @@ New low-level code imports `@hypit/temporal/algebra`. That entry owns only:
 - `LocalTemporalDomain` and `TemporalRange`;
 - edge-relative `ExactTemporalRelationSpec` author intent and its finite-domain resolver;
 - `TemporalMap`, its pieces, composition and sided evaluation; and
+- total `TemporalControl<Value, Interpolation>` segments over one local Domain;
 - exact variable-rate profile integration.
 
 The `algebra` source and type graph does not import frame projection, NLE views, Studio or author
@@ -97,3 +98,7 @@ project components either keep timing local or publish an explicit occurrence re
 
 Temporal rejects positions outside their local domain and invalid map pieces. It does not clip,
 repair, infer semantic meaning or perform rendering.
+
+`TemporalControl` likewise owns only exact segment coverage and evaluation progress. The Value owner
+validates states and interprets interpolation, so Picture filters, audio gain and Scene motion share
+one time algebra without Temporal learning any visual, audio or spatial parameter catalogue.

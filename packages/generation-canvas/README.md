@@ -1,72 +1,79 @@
 # `@hypit/generation-canvas`
 
-Persistent spatial projection for one Generation Graph.
+Interactive Generation Workspace for one Generation Graph.
 
-The referenced `hypit.generation-graph@1` file owns reusable recipe nodes, authored inputs and execution
-dependencies. A `hypit.generation-canvas@1` View owns only which Graph nodes and exact Build outputs are visible
-and where they are placed. Moving or removing a Canvas Item never changes the recipe, Build or Product.
+The referenced `hypit.generation-graph@1` file owns reusable recipe nodes, authored inputs and
+execution dependencies. A `hypit.generation-workspace@1` file owns the interaction facts that must
+survive reopening the Canvas: editable occurrence names, node placement, optional explicit node size, viewport, exact Build
+outputs attached to each operation node, and the author's explicit selected output. Runtime state
+and Product values remain observations.
 
 ```json
 {
-  "format": "hypit.generation-canvas@1",
+  "format": "hypit.generation-workspace@1",
   "id": "campaign-main",
   "name": "Campaign",
   "revision": 4,
   "graph": { "path": "campaign.graph.json" },
-  "items": [
+  "viewport": { "centerX": 640, "centerY": 360, "zoom": 0.82 },
+  "nodes": [
     {
-      "id": "node-hero",
-      "subject": { "kind": "graph-node", "node": "hero" },
+      "node": "hero",
+      "name": "Opening portrait",
       "x": 120,
-      "y": 80
-    },
-    {
-      "id": "result-build-a-hero",
-      "subject": { "kind": "build-output", "build": "Build-A", "output": "hero" },
-      "x": 120,
-      "y": 340
+      "y": 80,
+      "selected": { "build": "Build-A", "output": "hero" }
     }
+  ],
+  "outputs": [
+    { "node": "hero", "build": "Build-A", "output": "hero" }
   ]
 }
 ```
 
-A `build-output` is an exact observation address, not a copied Product and not a Media node. It may be added as
-soon as Runtime durably accepts the Build. The Host resolves its current active state through Runtime and its
-finished value through Product/Result history. No status, preview, Provider, media type or failure text is copied
-into the View. Refresh therefore restores the card without making the Generation Graph own execution history.
+Node `width` and `height` are written together only after the author explicitly resizes a node. When
+they are absent, an ungenerated operation is a square regardless of its output role. Once a Product
+or Media Asset is displayed, Canvas derives the media frame from that resource; audio Products use a
+compact player. Clearing the explicit size restores that derived behavior. These are Workspace
+presentation facts and never enter Graph lowering or Build requests.
 
-Selection, hover, viewport, zoom and an in-progress drag remain Session state. Product preview stays Type-owned.
-Removing a Build-output Item removes only its Canvas projection; History can place the same exact output again.
-Turning a completed output into reusable authored input remains an explicit Type-owned materialization followed by
-an ordinary Generation Graph transaction.
+An attached output is an exact observation address, not a copied Product or Media Asset. It may be
+attached as soon as Runtime durably accepts the Build. The Host observes active state through Runtime
+and finished state through Result/Product history. Pending, ready, failed, preview and Provider data
+are never copied into the Workspace.
 
-`planGenerationCanvasBuildOutputPlacement()` and the Node Host's
-`placeBuildOutputInGenerationCanvas()` place one exact `{ build, output }` selected by History. They do not read
-History themselves, resolve a Product or search for a latest result. Observation resolves the card after it is
-placed, using the same active-Runtime-then-finished-History path as every other Build-output Item.
+`selected` is different: it is an author choice, so it belongs in the Workspace. It says which exact
+Product an operation node supplies when another node is generated interactively. It does not change
+the recipe, mark the node complete, or select a global latest result.
 
-`planGenerationCanvasBuildOutputAdoption()` coordinates that authoring gesture without interpreting the Product:
-the installed Product Type owner first materializes its ordinary author file and returns a dependency-free value
-node; the plan then adds that node, applies any explicit downstream rewiring, and replaces the Build-output Item
-with the Graph-node subject at the same Canvas position. The Product remains in Result history, so adoption copies
-no execution state and does not make the authored node depend on a past Build.
+Canvas generation resolves a reached upstream operation to its selected Product when it has one.
+An unselected upstream operation continues through the saved recipe and is generated in the same
+Build. The target itself is always generated, while authored value nodes still load their stable
+value (for example, a Media Asset) normally.
 
-`planAcceptedGenerationCanvasBuild()` turns a durably accepted Build receipt plus Host-owned placements into one
-Canvas transaction. It requires a placement for every published operation output and copies no execution state.
-`observeGenerationCanvasBuildOutputs()` inspects each referenced active Build once, then falls back to finished
-Result history when Runtime no longer owns it. `projectGenerationCanvas()` joins those observations with the Graph
-and View, deriving recipe and `produced-by` edges without persisting either edge in the View.
+Attached output history never implies selection. A node may retain any number of exact outputs while
+having no `selected` output; in that state downstream interactive generation executes the node. Selecting
+one exact output makes it the reuse boundary for downstream nodes, and clearing that selection restores
+recipe execution without deleting history.
 
-The Node Host closes the first headless workflow. `placeAcceptedBuildInGenerationCanvas()` checks the caller's
-View revision and atomically saves all cards for one accepted receipt. `openNodeGenerationCanvas()` follows the
-View's portable Graph path, observes every referenced Build and returns the complete projected Scene. A receipt
-write failure does not cancel or relabel the already accepted Build; its Result remains recoverable from History.
+The selected Product is supplied to Graph lowering as an invocation-local typed value plus resource
+attachments. Generation Graph Core therefore does not know Product storage and the recipe file does
+not acquire result history. Host-side type validation and resource opening remain authoritative even
+if a browser submits the action.
 
-`adoptBuildOutputInGenerationCanvas()` supplies the Node filesystem coordination around the pure adoption plan.
-Its materializer is injected by the caller and remains Type-owned. The Host validates both current revisions and
-re-reads both author documents after materialization, so an edit made while ordinary file I/O is running becomes
-an explicit revision conflict rather than being overwritten. It needs no queue, persistent task or process lock.
-The Host validates both next documents before saving the Graph first and the Canvas second. Ordinary files cannot
-provide one atomic transaction across those two paths: if the second save fails, the new author node deliberately
-remains in the Graph and the error identifies the Canvas Item that was not replaced. Retrying or removing that
-visible node is therefore possible without a hidden recovery table.
+Adopting an output is a separate authoring action. Its Type owner materializes the Product into an
+ordinary author value such as a Media Asset, then an ordinary Graph transaction adds that value node.
+The original operation result remains attached as history; adoption does not mutate it into an asset.
+
+`projectGenerationCanvas()` joins Graph recipe, Workspace author choices and transient observations.
+Recipe edges are derived from the Graph. The Node Host follows the Workspace's portable Graph path and
+persists each Workspace transaction atomically; Graph and Workspace retain independent revisions.
+
+Packages may additionally contribute a `hypit.generation-canvas-presentation@1` Facet for their exact
+Generation Node symbols. Each entry supplies a node-type `displayName`, one finite semantic role
+(`text`, `image`, `video`, `audio`, `transcript`, `asset` or `generic`) and, when useful, the exact
+authored `summaryInput`. Field labels and layout hints may name ids from the node owner's
+`GenerationNodeAuthoringShape`, but the presentation never redeclares schemas, cardinality, media roles or Graph
+input encoding. Canvas joins both package-owned contributions, owns all markup, icons, colors and layout, and
+parses only the finite authoring vocabulary. Missing presentation contributions fall back to `generic`; Canvas
+never guesses meaning from package or component names.

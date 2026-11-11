@@ -1,5 +1,6 @@
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createGenerationNodePackageFacet } from "@hypit/generation-graph";
+import { createGenerationCanvasPresentationFacet } from "@hypit/generation-canvas";
 import {
   whisperXComponent,
   whisperXGenerationNodes,
@@ -19,6 +20,11 @@ export const hypitPackage = {
         fragment: whisperXTranscriptionFragment,
       }],
     }),
+    createGenerationCanvasPresentationFacet({ nodes: [{
+      using: whisperXGenerationNodes.transcribe,
+      displayName: "WhisperX · Transcription",
+      role: "transcript",
+    }] }),
   ],
 };
 export default hypitPackage;

@@ -91,13 +91,13 @@ export function materializeHtmlDocument(
   const options = ${settings};
   const count = ${program.frameCount};
   const fps = ${program.frameRate.numerator}/${program.frameRate.denominator};
-  let frame = 0, playing = false, request, generation = 0, started, lastReport = 0;
+  let frame = 0, playing = false, request, generation = 0, started, lastReport = 0, commandId = 0;
   function report(force = false) {
     if (window.parent === window) return;
     const now = performance.now();
     if (!force && now - lastReport < 100) return;
     lastReport = now;
-    window.parent.postMessage({type:'hypit.html-document.state@1',frame,frameCount:count,frameRate:fps,playing}, '*');
+    window.parent.postMessage({type:'hypit.html-document.state@1',frame,frameCount:count,frameRate:fps,playing,commandId}, '*');
   }
   let readyResolve, readyReject;
   const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
@@ -143,14 +143,16 @@ export function materializeHtmlDocument(
   window.addEventListener('message', event => {
     if (event.source !== window.parent || window.parent === window
       || event.data?.type !== 'hypit.html-document.command@1') return;
-    const {action,frame:target,muted} = event.data;
+    const {action,frame:target,muted,commandId:requestedCommandId} = event.data;
     commands = commands.then(async () => {
       await ready;
       if (action === 'play') await play();
       else if (action === 'pause') await pause();
       else if (action === 'seek') await window.__hypitDocument.seekFrame(target);
       else if (action === 'mute') await window.__hypitDocument.setMuted(muted);
-      else if (action === 'state') report(true);
+      else if (action !== 'state') throw new Error('Unknown HTML document command ' + action + '.');
+      if (Number.isSafeInteger(requestedCommandId) && requestedCommandId > commandId) commandId = requestedCommandId;
+      report(true);
     }).catch(error => window.parent.postMessage({
       type:'hypit.html-document.error@1', message:String(error)
     }, '*'));

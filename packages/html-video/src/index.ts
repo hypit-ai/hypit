@@ -8,6 +8,7 @@ export type { HtmlVideoDeliveryExecutor, HtmlVideoDeliveryPlan } from "./deliver
 export {
   createNleTerminalLinkHost,
   createNleTerminalLinkHostFromFacets,
+  createNleScaledHtmlOutput,
   createNleHtmlVideoPackageFacet,
   linkNleProjectTerminals,
   lowerNleAudiovisualToAudioProgram,
@@ -21,6 +22,8 @@ export type {
   NleHtmlVideoComponentResolver,
   NleHtmlVideoPackage,
   NleHtmlVideoPackageFacet,
+  NleHtmlVideoResource,
+  NleHtmlOutputSelection,
   NleTerminalLink,
   NleTerminalLinkHost,
   NleTerminalComponentResolution,

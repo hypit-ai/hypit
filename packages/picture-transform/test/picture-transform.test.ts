@@ -83,18 +83,18 @@ test("Picture Transform resolves and edits materialized NLE parameters through p
     kind: "constant" as const,
     state: IDENTITY_PICTURE_TRANSFORM,
   };
-  const effect = {
-    id: "pose",
-    effect: pictureTransformNleSymbol,
+  const adjustment = {
+    id: "pose", kind: "adjustment" as const,
+    component: pictureTransformNleSymbol,
     parameters: canonicalize(parameters),
+    duration: at(2),
   };
-  const item = { id: "clip", duration: at(2) } as never;
   const project = {} as never;
   const lowering = createNleLoweringHostFromFacets(hypitPackage.facets);
-  assert.deepEqual(lowering.resolveEffect(effect, item, project), {
+  assert.deepEqual(lowering.resolvePictureAdjustment(adjustment as never, project), {
     operator: pictureTransformOperator(IDENTITY_PICTURE_TRANSFORM),
   });
 
-  assert.deepEqual(pictureTransformNleAuthoring.inspect({ effect, item, project } as never),
+  assert.deepEqual(pictureTransformNleAuthoring.inspect({ item: adjustment, project } as never),
     canonicalize(parameters));
 });

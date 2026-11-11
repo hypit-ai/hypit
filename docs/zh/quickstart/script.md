@@ -15,7 +15,7 @@ Script 可以命名 segment、selection、speaker 与 moment。Speech evidence �
 ## 物化字幕
 
 字幕创作选择要显化的 cue 与呈现。显式 materializer 把所选 source-local timing 与一次具体媒体
-occurrence 结合，展开成普通字幕 Component Item。
+occurrence 结合，展开成普通字幕 Component Present。
 
 每条已物化 cue 保存直接节目放置和由包拥有的文字、样式等参数。父 NLE 工程没有活的转写查询，
 也没有特殊 Caption Track。同一文档可以被多个字幕实例物化为不同 selection 或外观。

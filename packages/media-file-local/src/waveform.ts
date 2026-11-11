@@ -30,6 +30,7 @@ export type WaveformOptions = {
   readonly splitChannels?: boolean;
   readonly scale?: WaveformScale;
   readonly filter?: WaveformFilter;
+  readonly color?: string;
 };
 
 export type WaveformViewOptions = WaveformOptions & {
@@ -59,12 +60,14 @@ async function renderInspectedWaveform(
   assert(Number.isFinite(start) && start >= 0 && Number.isFinite(end) && end > start && end <= inspection.duration + 0.001,
     `waveform range must satisfy 0 <= start < end <= ${inspection.duration} s`);
   const { width, height } = audioViewDimensions(options, stream, { width: 2048, height: 96, splitChannelHeight: 48 });
+  const color = options.color ?? "white";
+  assert(color === "white" || /^#[0-9a-f]{6}$/i.test(color), "waveform color must be white or a six-digit hex color");
   const filter = [
     "aresample=async=1:first_pts=0",
     "apad",
     `atrim=start=${roundMediaSeconds(start)}:end=${roundMediaSeconds(end)}`,
     "asetpts=PTS-STARTPTS",
-    `showwavespic=s=${width}x${height}:colors=white:scale=${scaleName(options.scale ?? "linear")}:filter=${options.filter ?? "peak"}:split_channels=${options.splitChannels ? 1 : 0}`,
+    `showwavespic=s=${width}x${height}:colors=${color.replace("#", "0x")}:scale=${scaleName(options.scale ?? "linear")}:filter=${options.filter ?? "peak"}:split_channels=${options.splitChannels ? 1 : 0}`,
   ].join(",");
   return Buffer.from(await runBoundedMediaProcess({
     executable: "ffmpeg",

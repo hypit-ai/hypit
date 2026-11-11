@@ -6,7 +6,7 @@ description: 包拥有视觉行为，NLE 保存可编辑实例。
 Hypit 不为所有视觉角色定义一套中央样式语言。标题卡、字幕家族、画面滤镜、转场和音频特效分别
 拥有自身行为需要的参数。
 
-一个 NLE Component 或 Effect 实例保存：
+一个 NLE Present 或 Adjustment Component 实例保存：
 
 - 精确的 package module symbol；
 - module 内的名称；

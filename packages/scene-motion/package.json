@@ -1,0 +1,25 @@
+{
+  "name": "@hypit/scene-motion",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@hypit/scene": "workspace:^0.0.0-dev",
+    "@hypit/temporal": "workspace:^0.1.1"
+  },
+  "devDependencies": {
+    "@hypit/protocol": "workspace:*",
+    "typescript": "5.9.3"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

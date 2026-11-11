@@ -1,0 +1,21 @@
+{
+  "name": "@hypit/nle-view",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node/index.ts"
+  },
+  "dependencies": {
+    "@hypit/atomic-file": "workspace:^0.0.0-dev",
+    "@hypit/facet": "workspace:^0.0.0-dev",
+    "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/temporal": "workspace:^0.1.1"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

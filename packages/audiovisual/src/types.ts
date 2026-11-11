@@ -1,6 +1,7 @@
 import type {
   ExactTemporalValue,
   LocalTemporalDomain,
+  TemporalControl,
   TemporalMap,
   TemporalRange,
 } from "@hypit/temporal/algebra";
@@ -63,20 +64,6 @@ export type OccurrenceOutputSelection =
       readonly reconstruction?: SignalReconstruction;
     }
   | { readonly kind: "constant" };
-
-/** One total, resolved signal over an exact local temporal Domain. */
-export type TemporalControlSegment<Value, Interpolation> = {
-  readonly range: TemporalRange;
-  readonly from: Value;
-  readonly to: Value;
-  /** Opaque value-type-owned interpolation policy. */
-  readonly interpolation: Interpolation;
-};
-
-export type TemporalControl<Value, Interpolation> = {
-  readonly domain: LocalTemporalDomain;
-  readonly segments: readonly TemporalControlSegment<Value, Interpolation>[];
-};
 
 /** First value-owned interpolation policy; it linearly interpolates affine coefficients. */
 export type SpatialMapInterpolation = { readonly kind: "affine-linear" };

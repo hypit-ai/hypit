@@ -72,23 +72,23 @@ function project() {
     id: "fine-text", name: "Fine Text", canvas: { width: 1920, height: 1080, clearColor: "#000000" },
   }), { revision: 0, commands: [{
     kind: "track.add",
-    track: { id: "titles", name: "Titles", kind: "picture", locked: false, muted: false, items: [{
+    track: { id: "titles", name: "Titles", kind: "picture", muted: false, items: [{
       id: "headline",
-      kind: "component",
+      kind: "present", source: "component",
       start: at(0),
       duration: at(3),
       sourceTime: nleLinearSourceTime(at(3)),
       enabled: true,
       component: textFineNleComponentSymbol,
       parameters: canonicalize(parameters),
-      picture: { layout: { x: 160, y: 100, width: 1600, height: 300, fit: "fill" }, effects: [] },
+      picture: { layout: { x: 160, y: 100, width: 1600, height: 300, fit: "fill" } },
     }] },
   }] });
 }
 
 test("Fine Text resolves rich Flow text as an ordinary Picture Component", () => {
   const item = findNleItem(project(), "headline").item;
-  if (item.kind !== "component") throw new Error("Fine Text fixture changed Item kind.");
+  if ((item.kind !== "present" || item.source !== "component")) throw new Error("Fine Text fixture changed Item kind.");
   const resolved = textFineNleResolver.resolve(item, { project: project(), track: project().tracks[0]! });
   assert.equal(resolved.source.outputs.picture?.type.name, pictureType.name);
   assert.equal(resolved.source.outputs.picture?.kind, "signal");
@@ -105,7 +105,7 @@ test("Fine Text package authors document, style and local placement through item
   assert.deepEqual(transaction.commands.map((command) => command.kind), ["item.replace"]);
   const edited = applyNleTransaction(original, transaction);
   const item = findNleItem(edited, "headline").item;
-  if (item.kind !== "component") throw new Error("Fine Text edit changed Item kind.");
+  if ((item.kind !== "present" || item.source !== "component")) throw new Error("Fine Text edit changed Item kind.");
   assert.deepEqual((item.parameters as unknown as TextFineNleParameters).children,
     [{ kind: "text", id: "replacement", text: "Changed title" }]);
 });
@@ -113,7 +113,7 @@ test("Fine Text package authors document, style and local placement through item
 test("Fine Text lays rich runs on an authored path without a Composition intermediary", () => {
   const selectedProject = project();
   const item = findNleItem(selectedProject, "headline").item;
-  if (item.kind !== "component") throw new Error("Fine Text fixture changed Item kind.");
+  if ((item.kind !== "present" || item.source !== "component")) throw new Error("Fine Text fixture changed Item kind.");
   const pathItem = { ...item, parameters: canonicalize({ ...parameters, placement: {
     kind: "path",
     commands: [
@@ -168,7 +168,7 @@ test("Fine Text authors internal sequence motion as direct Component parameters"
   });
   const edited = applyNleTransaction(original, transaction);
   const item = findNleItem(edited, "headline").item;
-  if (item.kind !== "component") throw new Error("Fine Text edit changed Item kind.");
+  if ((item.kind !== "present" || item.source !== "component")) throw new Error("Fine Text edit changed Item kind.");
   assert.equal((item.parameters as unknown as TextFineNleParameters).sequences?.[0]?.cycles, 2);
 });
 

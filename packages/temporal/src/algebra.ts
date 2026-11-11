@@ -2,6 +2,7 @@
 export * from "./domain.js";
 export * from "./exact.js";
 export * from "./map.js";
+export * from "./control.js";
 export * from "./exact-relation.js";
 export * from "./rate-profile.js";
 export type { Rational } from "./rational.js";
@@ -13,6 +14,8 @@ export type {
   ExactTemporalRelativeRange,
   LocalTemporalDomain,
   TemporalAffineMapPiece,
+  TemporalControl,
+  TemporalControlSegment,
   TemporalCubicMapPiece,
   TemporalMap,
   TemporalMapPiece,

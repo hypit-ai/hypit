@@ -46,7 +46,7 @@ constant because the same file type may be animated; choose decoded-frame inspec
 
 The import call accepts an `AbortSignal` and progress callback with `inspect | interpret | copy | publish | complete`
 stages. These are invocation facts, not Media Asset or NLE fields. A CLI invocation waits in the foreground; a
-Studio Host may display the same task in the background and apply `media.add + item.add` only after it completes.
+Studio Host may display the same task in the background and apply `item.add` only after it completes.
 Neither path requires a persistent queue. Long-running Analyzers may later use Runtime scheduling while continuing
 to publish ordinary Representation files.
 
@@ -55,9 +55,7 @@ A drag-and-drop Host closes the import into NLE with ordinary public APIs:
 ```ts
 const imported = await importLocalMediaAsset(request, { signal, progress });
 const transaction = createMediaAssetMaterialization(project, {
-  mediaId: "interview",
   itemId: "interview-use",
-  name: "Interview",
   asset: { path: "./media/interview.media.json" },
   interpretation: imported.document.media.interpretation,
   track: "picture-main",

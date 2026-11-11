@@ -94,7 +94,7 @@ test("PreparedMedia preview samples the HtmlProgram TemporalMap as its timing au
   const window: Record<string, any> = { addEventListener() {}, __hypitFrameProgram: { async applyFrame() {} } };
   const script = injectHtmlPlayback("", "", program).trim().slice("<script>".length, -"</script>".length);
   vm.runInNewContext(script, { window, document: { querySelector: () => root,
-    querySelectorAll: (selector: string) => selector === ".hypit-visual-present video" ? [video] : [] } });
+    querySelectorAll: (selector: string) => selector === '[data-hypit-media-display-plane] video[data-hypit-video-source="media"]' ? [video] : [] } });
   await window.__hypitSeekFrame(2);
   assert.equal(currentTime, 2 + 2 / 30);
 });
@@ -153,7 +153,7 @@ test("PreparedMedia playback evaluates one complete multi-stage cubic Map behind
   const window: Record<string, any> = { addEventListener() {}, __hypitFrameProgram: { async applyFrame() {} } };
   const script = injectHtmlPlayback("", "", program).trim().slice("<script>".length, -"</script>".length);
   vm.runInNewContext(script, { window, document: { querySelector: () => root,
-    querySelectorAll: (selector: string) => selector === ".hypit-visual-present video" ? [video] : [] } });
+    querySelectorAll: (selector: string) => selector === '[data-hypit-media-display-plane] video[data-hypit-video-source="media"]' ? [video] : [] } });
   await window.__hypitSeekFrame(2);
   assert.equal(currentTime, 2 / 30);
 });
@@ -185,7 +185,7 @@ test("long preview releases remote Clips and cancels obsolete metadata waits", a
   })));
   const script = injectHtmlPlayback("", "", program).trim().slice("<script>".length, -"</script>".length);
   vm.runInNewContext(script, { window, document: { querySelector: () => root,
-    querySelectorAll: (selector: string) => selector === ".hypit-visual-present video" ? clips : [] } });
+    querySelectorAll: (selector: string) => selector === '[data-hypit-media-display-plane] video[data-hypit-video-source="media"]' ? clips : [] } });
   assert.equal(clips.filter((clip) => clip.attrs.src !== undefined).length, 1);
   const original = window.__hypitFrameReady;
   for (let index = 1; index < clips.length; index += 1) {
@@ -222,7 +222,7 @@ test("preview scrubs to the same source frame as rendering at fractional sample 
   const html = injectHtmlPlayback("", "", program).trim();
   vm.runInNewContext(html.slice("<script>".length, -"</script>".length), {
     window, document: { querySelector: () => root,
-      querySelectorAll: (selector: string) => selector === ".hypit-visual-present video" ? [video] : [] },
+      querySelectorAll: (selector: string) => selector === '[data-hypit-media-display-plane] video[data-hypit-video-source="media"]' ? [video] : [] },
     CustomEvent: class {},
   });
   await window.__hypitFrameReady;
@@ -260,7 +260,7 @@ test("preview keeps a compact zero-rate sampling interval paused on its source f
   const html = injectHtmlPlayback("", "", program).trim();
   vm.runInNewContext(html.slice("<script>".length, -"</script>".length), {
     window, document: { querySelector: () => root,
-      querySelectorAll: (selector: string) => selector === ".hypit-visual-present video" ? [video] : [] },
+      querySelectorAll: (selector: string) => selector === '[data-hypit-media-display-plane] video[data-hypit-video-source="media"]' ? [video] : [] },
     CustomEvent: class {},
   });
   await window.__hypitSeekFrame(60);
@@ -299,7 +299,7 @@ test("preview gives an exact reverse boundary to its left-hand source frame", as
   const html = injectHtmlPlayback("", "", program).trim();
   vm.runInNewContext(html.slice("<script>".length, -"</script>".length), {
     window, document: { querySelector: () => root,
-      querySelectorAll: (selector: string) => selector === ".hypit-visual-present video" ? [video] : [] },
+      querySelectorAll: (selector: string) => selector === '[data-hypit-media-display-plane] video[data-hypit-video-source="media"]' ? [video] : [] },
     CustomEvent: class {},
   });
   await window.__hypitPlayFrame(3);
@@ -343,7 +343,7 @@ test("playback parks the next Clip on its entry frame and shows it only once dec
   })));
   const script = injectHtmlPlayback("", "", program).trim().slice("<script>".length, -"</script>".length);
   vm.runInNewContext(script, { window, document: { querySelector: () => root,
-    querySelectorAll: (selector: string) => selector === ".hypit-visual-present video" ? clips : [] } });
+    querySelectorAll: (selector: string) => selector === '[data-hypit-media-display-plane] video[data-hypit-video-source="media"]' ? clips : [] } });
   await window.__hypitFrameReady;
   // Inside the next Clip's preload window its decoder is moved to the entry frame.
   await window.__hypitPlayFrame(80);

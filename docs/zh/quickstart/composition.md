@@ -28,8 +28,8 @@ hypit nle export edit.nle.json --to output.mp4 --frame-rate 30000/1001
 命令验证快照，只加载实例点名的包，解析主媒体文件，lower 画面与音频，完成渲染后发布 MP4，
 且不会覆盖已有输出。
 
-`--frame-rate` 只选择本次交付的画面采样，不修改工程中的精确时间。省略时，`editRate` 只是一个
-方便的默认选择。
+`--frame-rate` 只选择本次交付的画面采样，不修改工程中的精确时间；省略时按 30 fps 导出。
+时间轴 View 可以另外保存 UI 的编辑网格，但这项显示偏好不会决定导出帧率。
 
 这条命令不是 AIGC Build，不创建 Runtime Profile、Result 历史、语义依赖或持久 prepare 状态。
 生成媒体只有在导出为文件、由 Media Asset 文档描述并通过普通物化编辑插入 NLE 后，才成为工程

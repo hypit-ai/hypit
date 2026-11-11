@@ -20,7 +20,7 @@ description: 将场景的创作接口变成可复用的项目组件。
 AVIR lowering 时由明确映射连接。Picture layout 定位实例，内部 HTML/CSS 或元素树协调视频、文字、
 遮罩和图形。共享行为的内容组织在一起，独立贡献保持为具有明确绘制顺序的独立 Item。
 
-字幕家族可以在物化 cue 时消费字幕文档和 source-local timing。得到的每个 Component Item 保存文字
+字幕家族可以在物化 cue 时消费字幕文档和 source-local timing。得到的每个 Component Present 保存文字
 与呈现参数；新的字幕家族可以把同一证据物化为另一种视觉行为，而不增加 NLE 原语。
 
 ## 让另一个作者用得好

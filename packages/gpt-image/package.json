@@ -16,7 +16,8 @@
     "README.md"
   ],
   "dependencies": {
-    "@hypit/generation": "workspace:^0.2.0"
+    "@hypit/generation": "workspace:^0.2.0",
+    "@hypit/generation-canvas": "workspace:^0.0.0-dev"
   },
   "peerDependencies": {
     "@hypit/hypit": "workspace:^0.4.0"

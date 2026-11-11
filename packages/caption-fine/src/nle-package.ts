@@ -17,7 +17,7 @@ import {
   type NleComponentParameterAuthoring,
   type NleComponentResolver,
   type NlePackageSymbol,
-  type NleProject,
+  type NleComposition,
 } from "@hypit/nle";
 import { canonicalize, type ModuleManifest } from "@hypit/protocol";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
@@ -297,7 +297,7 @@ function structuralLineCount(payload: CaptionCuePayload, maxWordsPerLine: number
   return lines;
 }
 
-function resolveCaptionFine(item: NleComponentItem, context: { readonly project: NleProject }) {
+function resolveCaptionFine(item: NleComponentItem, context: { readonly project: NleComposition }) {
   assert(item.picture !== undefined, `NLE Fine Caption ${item.id} has no Picture appearance.`);
   assertCaptionNleComponentParameters(item.parameters, item.duration);
   const parameters = item.parameters;

@@ -4,6 +4,7 @@ import test from "node:test";
 import type { CaptionDocument, LocalCaptionTiming } from "@hypit/caption";
 import { readHtmlVisual } from "@hypit/html-program";
 import {
+  createNleScaledHtmlOutput,
   createNleTerminalLinkHostFromFacets,
   lowerNleProjectToHtmlProgram,
 } from "../../html-video/src/index.js";
@@ -14,6 +15,11 @@ import {
   findNleItem,
 } from "@hypit/nle";
 import { exactTemporalValue, sealLocalTemporalDomain } from "@hypit/temporal/algebra";
+import {
+  createNleInspectorPresentationHost,
+  createNleTimelineView,
+  nleInspectorPresentationPackagesFromFacets,
+} from "@hypit/nle-view";
 
 import { hypitPackage } from "../src/activation.js";
 import {
@@ -146,7 +152,7 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
     bob,
   ), { id: "hide-one", selector: { cues: ["cue-hidden"] } });
   let project = createNleProject({
-    id: "fine-caption", name: "Fine Caption", editRate: { numerator: 30, denominator: 1 },
+    id: "fine-caption", name: "Fine Caption",
     canvas: { width: 1080, height: 1920, clearColor: "#111827" },
   });
   project = applyNleTransaction(project, { revision: project.revision, commands: [{
@@ -156,7 +162,7 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
     } },
   }, {
     kind: "track.add",
-    track: { id: "captions", name: "Captions", kind: "picture", locked: false, muted: false, items: [] },
+    track: { id: "captions", name: "Captions", kind: "picture", muted: false, items: [] },
   }] });
   project = applyNleTransaction(project, createCaptionFineNleMaterialization(project, {
     id: "dialogue-captions",
@@ -165,23 +171,25 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
     timing,
     presentation,
     at: at(0),
-    picture: { layout: { ref: "caption-bottom" }, effects: [] },
+    picture: { layout: { ref: "caption-bottom" } },
   }));
 
   assert.equal(hypitPackage.modules.length, 1);
   assert.equal(project.tracks[0]!.items.length, 3);
   const [alice, bobItem, hidden] = project.tracks[0]!.items;
-  assert.deepEqual(alice?.kind === "component" ? alice.component : undefined, captionFineNleComponentSymbol);
+  assert.deepEqual(alice?.kind === "present" && alice.source === "component"
+    ? alice.component : undefined, captionFineNleComponentSymbol);
   assert.equal(hidden?.enabled, false);
-  assert.equal((bobItem?.kind === "component" ? bobItem.parameters : null as unknown) !== null, true);
-  assert.equal(alice?.kind === "component" ? captionFineNleResolver.resolve(alice, {
+  assert.equal((bobItem?.kind === "present" && bobItem.source === "component"
+    ? bobItem.parameters : null as unknown) !== null, true);
+  assert.equal(alice?.kind === "present" && alice.source === "component" ? captionFineNleResolver.resolve(alice, {
     project,
     track: project.tracks[0]!,
   }).source.outputs.picture?.kind : undefined, "signal");
 
   const html = lowerNleProjectToHtmlProgram(project,
     createNleTerminalLinkHostFromFacets(hypitPackage.facets),
-    { numerator: 30, denominator: 1 });
+    createNleScaledHtmlOutput(project, { numerator: 30, denominator: 1 }));
   assert.match(html.html, /data-hypit-text-node="unit-a"/u);
   assert.ok(html.artifacts.some((entry) => entry.artifact.resource === "res_caption_font"));
   assert.match(html.html, /font-family:Georgia, serif/u);
@@ -196,7 +204,9 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
   assert.match(html.html, /data-caption-layout/u);
   assert.match(html.html, /font-variant-caps:small-caps/u);
   assert.match(html.html, /<br data-hypit-text-node="caption-row-/u);
-  if (alice?.kind !== "component") throw new Error("Fine Caption fixture is not a Component.");
+  if (alice?.kind !== "present" || alice.source !== "component") {
+    throw new Error("Fine Caption fixture is not a Component Present.");
+  }
   const terminal = captionFineNleHtmlVideoResolver.resolve(alice, {
     project,
     track: project.tracks[0]!,
@@ -226,6 +236,16 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
   assert.equal(visualData.entry.startScale, 0.4);
 
   const authoring = createNleAuthoringHostFromFacets(hypitPackage.facets);
+  const renamed = applyNleTransaction(project, authoring.planComponentParameterEdit(project, alice.id, {
+    kind: "replace-word",
+    wordId: "alice-a",
+    text: "Precise",
+  }));
+  const renamedItem = findNleItem(renamed, alice.id).item;
+  if (renamedItem.kind !== "present" || renamedItem.source !== "component") {
+    throw new Error("Renamed Caption changed Item kind.");
+  }
+  assert.equal(((renamedItem.parameters as { caption: CaptionDocument }).caption.words[0]?.text), "Precise");
   const attributed = applyNleTransaction(project, authoring.planComponentParameterEdit(project, alice.id, {
     kind: "set-word-attribute",
     wordId: "alice-a",
@@ -233,19 +253,61 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
     value: true,
   }));
   const attributedItem = findNleItem(attributed, alice.id).item;
-  if (attributedItem.kind !== "component") throw new Error("Attributed Caption changed Item kind.");
+  if ((attributedItem.kind !== "present" || attributedItem.source !== "component")) throw new Error("Attributed Caption changed Item kind.");
   const attributedCaption = (attributedItem.parameters as { caption: CaptionDocument }).caption;
   assert.deepEqual(attributedCaption.words[0]?.attributes, [{ name: "emphasis", value: true }]);
 
   const styleRef = alice.bindings?.find((binding) => binding.slot === "style")?.ref;
   if (styleRef === undefined) throw new Error("Fine Caption has no linked Style.");
   const linkedStyle = project.componentValues.find((value) => value.id === styleRef)!;
+  const authoredStyle = applyNleTransaction(project, authoring.planComponentValueEdit(project, styleRef, {
+    kind: "field.set", field: "font-size", value: 72,
+  }));
+  const authoredStyleValue = authoredStyle.componentValues.find((value) => value.id === styleRef)?.value as Readonly<Record<string, unknown>>;
+  assert.equal(authoredStyleValue.fontSize, 72);
+  assert.deepEqual(findNleItem(authoredStyle, alice.id).item, alice,
+    "editing a shared Style must preserve the bound Cue Item");
+  assert.throws(() => authoring.planComponentValueEdit(project, styleRef, {
+    kind: "field.set", field: "font-size", value: 501,
+  }), /font-size is invalid/u);
+  const unlimited = applyNleTransaction(project, authoring.planComponentValueEdit(project, styleRef, {
+    kind: "field.set", field: "max-lines", value: 0,
+  }));
+  const unlimitedValue = unlimited.componentValues.find((value) => value.id === styleRef)?.value as Readonly<Record<string, unknown>>;
+  assert.equal(Object.hasOwn(unlimitedValue, "maxLines"), false);
+  const bobStyleRef = bobItem?.kind === "present" && bobItem.source === "component"
+    ? bobItem.bindings?.find((binding) => binding.slot === "style")?.ref : undefined;
+  if (bobStyleRef === undefined) throw new Error("Bob Fine Caption has no linked Style.");
+  const shrink = applyNleTransaction(project, authoring.planComponentValueEdit(project, bobStyleRef, {
+    kind: "field.set", field: "minimum-scale", value: .4,
+  }));
+  assert.deepEqual(shrink.componentValues.find((value) => value.id === bobStyleRef)?.value, {
+    ...(project.componentValues.find((value) => value.id === bobStyleRef)?.value as Readonly<Record<string, unknown>>),
+    minimumScale: .4,
+    overflow: "shrink",
+  });
+
+  const inspectors = createNleInspectorPresentationHost(
+    nleInspectorPresentationPackagesFromFacets(hypitPackage.facets),
+    authoring,
+  );
+  const view = createNleTimelineView({
+    id: "caption-view", name: "Caption view", project: { path: "caption.nle.json" },
+    tracks: project.tracks.map((track) => track.id),
+  });
+  const scene = inspectors.scene(project, view, alice.id);
+  const content = scene.sections.find((section) => section.id === "caption-content");
+  assert.equal(content?.fields.find((field) => field.id === "word-alice-a")?.editable, true);
+  const typography = scene.sections.find((section) => section.id
+    === `component-value:${styleRef}:caption-style-typography`);
+  assert.equal(typography?.owner.kind, "component-value");
+  assert.equal(typography?.fields.find((field) => field.id === "font-size")?.editable, true);
   const restyled = applyNleTransaction(project, { revision: project.revision, commands: [{
     kind: "component-value.replace",
     value: { ...linkedStyle, value: { color: "#22d3ee", outlineWidth: 0 } },
   }] });
   const restyledItem = findNleItem(restyled, alice.id).item;
-  if (restyledItem.kind !== "component") throw new Error("Restyled Caption changed Item kind.");
+  if ((restyledItem.kind !== "present" || restyledItem.source !== "component")) throw new Error("Restyled Caption changed Item kind.");
   assert.deepEqual(restyledItem.parameters, alice.parameters,
     "editing a shared Style must not rewrite Cue content");
   const restyledValue = restyled.componentValues.find((value) => value.id === styleRef)?.value;
@@ -254,20 +316,21 @@ test("Fine Caption materializes role styles, hidden Cues and complete local word
 
 test("Fine Caption rejects family parameters the package does not own", () => {
   const project = applyNleTransaction(createNleProject({
-    id: "invalid-fine", name: "Invalid Fine", editRate: { numerator: 30, denominator: 1 },
+    id: "invalid-fine", name: "Invalid Fine",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
   }), { revision: 0, commands: [{
     kind: "track.add",
-    track: { id: "captions", name: "Captions", kind: "picture", locked: false, muted: false, items: [] },
+    track: { id: "captions", name: "Captions", kind: "picture", muted: false, items: [] },
   }] });
   const invalid: CaptionStyle = { id: "invalid", family: "fine", parameters: { semanticFollow: "forbidden" } };
   const materialized = applyNleTransaction(project, createCaptionFineNleMaterialization(project, {
     id: "invalid", track: "captions", document, timing, presentation: invalid, at: at(0),
-    picture: { layout: { x: 0, y: 0, width: 1080, height: 300, fit: "fill" }, effects: [] },
+    picture: { layout: { x: 0, y: 0, width: 1080, height: 300, fit: "fill" } },
   }));
   assert.throws(() => lowerNleProjectToHtmlProgram(materialized,
     createNleTerminalLinkHostFromFacets(hypitPackage.facets),
-    { numerator: 30, denominator: 1 }), /field semanticFollow is unknown/u);
+    createNleScaledHtmlOutput(materialized, { numerator: 30, denominator: 1 })),
+  /field semanticFollow is unknown/u);
 });
 
 test("Caption visibility policy bakes lead, tail and same-role handoff into direct Item times", () => {
@@ -282,23 +345,25 @@ test("Caption visibility policy bakes lead, tail and same-role handoff into dire
     selector: { cues: ["cue-hidden"] },
   });
   let project = createNleProject({
-    id: "caption-envelope", name: "Caption envelope", editRate: { numerator: 30, denominator: 1 },
+    id: "caption-envelope", name: "Caption envelope",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
   });
   project = applyNleTransaction(project, { revision: project.revision, commands: [{
     kind: "track.add",
-    track: { id: "captions", name: "Captions", kind: "picture", locked: false, muted: false, items: [] },
+    track: { id: "captions", name: "Captions", kind: "picture", muted: false, items: [] },
   }] });
   project = applyNleTransaction(project, createCaptionFineNleMaterialization(project, {
     id: "dialogue", track: "captions", document, timing, presentation, at: at(0),
-    picture: { layout: { x: 0, y: 0, width: 1080, height: 320, fit: "fill" }, effects: [] },
+    picture: { layout: { x: 0, y: 0, width: 1080, height: 320, fit: "fill" } },
   }));
 
   const [alice, bobItem, hidden] = project.tracks[0]!.items;
   assert.deepEqual([alice?.start, alice?.duration], [at(0), at(4)]);
   assert.deepEqual([bobItem?.start, bobItem?.duration], [at(2), at(3)]);
   assert.deepEqual([hidden?.start, hidden?.duration, hidden?.enabled], [at(5), at(3), false]);
-  if (bobItem?.kind !== "component") throw new Error("Bob Caption is not a Component.");
+  if (bobItem?.kind !== "present" || bobItem.source !== "component") {
+    throw new Error("Bob Caption is not a Component Present.");
+  }
   const bobCaption = (bobItem.parameters as { caption: { units: readonly { start: unknown }[] } }).caption;
   assert.deepEqual(bobCaption.units[0]?.start, at(1));
 });

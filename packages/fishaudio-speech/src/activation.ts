@@ -4,6 +4,7 @@ import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
 import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { fishAudioSpeechComponent, fishAudioSpeechManifest, fishAudioSpeechModuleRef } from "./index.js";
 import { fishAudioSpeechAuthorDeclarations, fishAudioSpeechMarkupDeclarations } from "./declaration.js";
+import { fishAudioSpeechGenerationFacets } from "./generation.js";
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
@@ -13,6 +14,7 @@ export const hypitPackage = {
     ...fishAudioSpeechAuthorDeclarations.map(createAuthorDeclarationFacet),
     ...fishAudioSpeechMarkupDeclarations.map((declaration) =>
       createMarkupDeclarationFacet({ module: fishAudioSpeechModuleRef, declaration })),
+    ...fishAudioSpeechGenerationFacets,
 
   ],
 };

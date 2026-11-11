@@ -2,46 +2,32 @@
   "format": "hypit.generation-graph@1",
   "id": "launch-variation",
   "name": "Launch variation",
-  "revision": 0,
+  "revision": 18,
   "nodes": [
     {
-      "id": "poster-reference",
+      "id": "node_mwagew9j_cqnows",
       "using": {
         "module": {
-          "name": "@hypit/media-asset",
+          "name": "@hypit/seedance",
           "version": "1"
         },
-        "name": "resource"
+        "name": "seedance-2.5.video"
       },
       "inputs": {
-        "asset": {
-          "value": {
-            "path": "media/poster/poster.media.json"
-          }
-        }
-      }
-    },
-    {
-      "id": "campaign-variation",
-      "using": {
-        "module": {
-          "name": "@hypit/gpt-image",
-          "version": "1"
+        "mode": {
+          "value": "references"
         },
-        "name": "gpt-image-2.image"
-      },
-      "inputs": {
-        "prompt": {
-          "value": "Reinterpret the supplied geometric launch card as a tactile studio still while preserving its composition."
-        },
-        "aspectRatio": {
-          "value": "16:9"
+        "duration": {
+          "value": -1
         },
         "resolution": {
-          "value": "2K"
+          "value": "720p"
         },
-        "images.1": {
-          "node": "poster-reference"
+        "aspectRatio": {
+          "value": "9:16"
+        },
+        "generateAudio": {
+          "value": false
         }
       }
     }

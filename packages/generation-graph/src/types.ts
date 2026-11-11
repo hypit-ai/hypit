@@ -50,7 +50,7 @@ export type GenerationValueNodeImplementation = {
   readonly kind: "value";
   readonly using: GenerationComponentRef;
   readonly type: TypeRef;
-  readonly value: CanonicalValue;
+  readonly value: import("@hypit/protocol").Value;
 };
 
 export type GenerationNodeImplementation =
@@ -61,6 +61,32 @@ export type GenerationNodeImplementation =
 export type GenerationGraphResourceAttachment = {
   readonly blob: BlobRef;
   open(): Promise<AsyncIterable<Uint8Array>>;
+};
+
+/** One invocation-local value that may stand in for an upstream operation result. */
+export type GenerationGraphDependencyValue = {
+  readonly type: TypeRef;
+  readonly value: import("@hypit/protocol").Value;
+  readonly attachments?: readonly GenerationGraphResourceAttachment[];
+};
+
+export type GenerationGraphDependencyDecision =
+  | { readonly kind: "execute" }
+  | { readonly kind: "resolved-value"; readonly value: GenerationGraphDependencyValue };
+
+/**
+ * Dependency execution is an invocation policy, never recipe state. The default executes the
+ * complete dependency closure. Interactive hosts may instead resolve selected non-target
+ * operations to exact values while continuing to execute unselected operations through the same
+ * saved recipe.
+ */
+export type GenerationGraphDependencyPolicy = {
+  readonly kind: "selective";
+  readonly decide: (
+    node: GenerationGraphNode,
+    output: TypeRef,
+    project: GenerationGraphProject,
+  ) => Awaitable<GenerationGraphDependencyDecision>;
 };
 
 /** Host authority available to package-owned value loaders. It never exposes filesystem paths. */
@@ -78,6 +104,31 @@ export type GenerationGraphLoweringHost = {
   ) => Awaitable<GenerationNodeImplementation>;
   readonly attachments?: () => Awaitable<readonly GenerationGraphResourceAttachment[]>;
 };
+
+export type GenerationGraphNodeInspection = {
+  readonly node: string;
+  readonly kind: "operation" | "value";
+  readonly readiness: "ready" | "incomplete";
+  /** Stable result contract available even while an operation is incomplete. */
+  readonly output: TypeRef;
+  readonly missing: readonly string[];
+};
+
+/** Package-backed authoring inspection; it carries no Canvas or Runtime policy. */
+export type GenerationGraphInspectionHost = GenerationGraphLoweringHost & {
+  readonly inspectNode: (
+    node: GenerationGraphNode,
+    project: GenerationGraphProject,
+  ) => Awaitable<GenerationGraphNodeInspection>;
+};
+
+export type GenerationGraphNodeReport =
+  | GenerationGraphNodeInspection
+  | {
+      readonly node: string;
+      readonly readiness: "invalid";
+      readonly message: string;
+    };
 
 export type LoweredGenerationGraph = {
   readonly program: LinkedProgram;

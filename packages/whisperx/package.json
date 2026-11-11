@@ -21,6 +21,7 @@
   "dependencies": {
     "@hypit/cli": "workspace:^0.0.0-dev",
     "@hypit/generation-graph": "workspace:^0.0.0-dev",
+    "@hypit/generation-canvas": "workspace:^0.0.0-dev",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-file-local": "workspace:^0.1.0",
     "@hypit/media-local": "workspace:^0.3.0",

@@ -42,6 +42,17 @@ test("audio DOM is owned by shared playback and preserves the exact AudioProgram
     sampling: sealTemporalMap({ stages: [{
       target: { id: "voice:occurrence", duration: exactTemporalValueFromFrames(24_000,
         { frameRate: { numerator: 48_000, denominator: 1 } }) },
+      source: { id: "voice:intermediate", duration: exactTemporalValueFromFrames(24_000,
+        { frameRate: { numerator: 48_000, denominator: 1 } }) },
+      pieces: [{
+        target: { start: exactTemporalZero(),
+          end: exactTemporalValueFromFrames(24_000, { frameRate: { numerator: 48_000, denominator: 1 } }) },
+        sourceAtStart: exactTemporalZero(),
+        rate: { numerator: 1, denominator: 1 },
+      }],
+    }, {
+      target: { id: "voice:intermediate", duration: exactTemporalValueFromFrames(24_000,
+        { frameRate: { numerator: 48_000, denominator: 1 } }) },
       source: voiceDomain,
       pieces: [{
         target: { start: exactTemporalZero(),

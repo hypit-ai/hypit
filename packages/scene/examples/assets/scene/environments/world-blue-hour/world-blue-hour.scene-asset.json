@@ -1,0 +1,54 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "world-blue-hour",
+  "name": "蓝调时刻",
+  "using": {
+    "module": {
+      "name": "@hypit/scene-environment",
+      "version": "1"
+    },
+    "name": "world-environment"
+  },
+  "resources": {},
+  "parameters": {
+    "world": {
+      "sky": {
+        "top": "#182a48",
+        "horizon": "#687b9a"
+      },
+      "ground": {
+        "visible": true,
+        "color": "#293340",
+        "opacity": 1
+      },
+      "atmosphere": {
+        "fogColor": "#4e6078",
+        "fogDensity": 0.0065
+      },
+      "lighting": {
+        "ambient": {
+          "sky": "#7393c5",
+          "ground": "#202936",
+          "intensity": 0.55
+        },
+        "key": {
+          "color": "#ffc593",
+          "intensity": 3,
+          "azimuth": -78,
+          "elevation": 10,
+          "shadows": true,
+          "softness": 1.5
+        },
+        "fill": {
+          "color": "#789bd1",
+          "intensity": 0.18
+        },
+        "rim": {
+          "color": "#a7c9ff",
+          "intensity": 1.1
+        }
+      },
+      "exposure": 0.95
+    }
+  }
+}

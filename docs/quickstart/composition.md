@@ -33,7 +33,8 @@ lowers picture and audio, renders them and publishes the completed MP4 without r
 output.
 
 `--frame-rate` selects picture sampling for this delivery. It never changes the exact times stored in
-the project. Without the option, `editRate` is used as a convenient default.
+the project. Without the option, export samples at 30 fps. A timeline View may keep a separate edit
+grid for the UI, but that display preference never chooses an export frame rate.
 
 This command is not an AIGC Build. It creates no Runtime Profile, Result history, semantic dependency
 or durable prepare state. Generated media becomes ordinary project material only after it is exported

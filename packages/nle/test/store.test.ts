@@ -18,7 +18,6 @@ function session(): NleEditSession {
   return createNleEditSession(createNleProject({
     id: "project-file",
     name: "Project file",
-    editRate: { numerator: 30, denominator: 1 },
     canvas: { width: 1920, height: 1080, clearColor: "#000000" },
   }));
 }
@@ -28,7 +27,7 @@ function addTrack(value: NleEditSession, id: string): NleEditSession {
     label: `Add ${id}`,
     transaction: { revision: value.current.revision, commands: [{
       kind: "track.add",
-      track: { id, name: id, kind: "picture", locked: false, muted: false, items: [] },
+      track: { id, name: id, kind: "picture", muted: false, items: [] },
     }] },
   });
 }

@@ -20,6 +20,7 @@ import {
 } from "@hypit/nle";
 
 import {
+  createNleScaledHtmlOutput,
   createNleTerminalLinkHost,
   createHtmlVideoDeliveryPlan,
   executeHtmlVideoDeliveryPlan,
@@ -124,24 +125,40 @@ test("the downstream NLE adapter shares one lowering and supplies silence for pi
     }),
   }] }]);
   const base = createNleProject({
-    id: "silent-card", name: "Silent card", editRate: frameRate,
+    id: "silent-card", name: "Silent card",
     canvas: { width: 100, height: 100, clearColor: "#000000" },
   });
   const project = applyNleTransaction(base, { revision: 0, commands: [{
     kind: "track.add", track: {
-      id: "picture", name: "Picture", kind: "picture", locked: false, muted: false, items: [{
-        id: "card", kind: "component", component, parameters: {},
+      id: "picture", name: "Picture", kind: "picture", muted: false, items: [{
+        id: "card", kind: "present", source: "component", component, parameters: {},
         start: exactTemporalValueFromFrames(0, { frameRate }),
         duration: exactTemporalValueFromFrames(frameCount, { frameRate }),
         sourceTime: nleLinearSourceTime(exactTemporalValueFromFrames(frameCount, { frameRate })), enabled: true,
         picture: {
-          layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" }, effects: [],
+          layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" },
         },
       }],
     },
   }] });
-  const plan = lowerNleProjectToHtmlVideoDeliveryPlan(project, host, frameRate, htmlVideoDeliverySpec());
+  const output = createNleScaledHtmlOutput(project, frameRate, {
+    width: 200, height: 200, clearColor: "#101010",
+  });
+  const plan = lowerNleProjectToHtmlVideoDeliveryPlan(project, host, output, htmlVideoDeliverySpec());
   assert.deepEqual(plan.audio.program.graph.nodes.map((node) => node.kind), ["silence"]);
   assert.equal(audioProgramSampleFrames(plan.audio.program), 48_000);
+  assert.deepEqual(plan.visual.program.canvas, { width: 200, height: 200 });
+  assert.match(plan.visual.program.html, /transform:matrix\(2,0,0,2,0,0\)/u);
   assert.match(plan.visual.program.html, /card/u);
+  assert.throws(() => createNleScaledHtmlOutput(project, frameRate, {
+    width: 200, height: 100, clearColor: "#101010",
+  }), /changes Programme aspect/u);
+
+  const explicitlyMapped = lowerNleProjectToHtmlVideoDeliveryPlan(project, host, {
+    sampling: { frameRate },
+    canvas: { width: 200, height: 100, clearColor: "#101010" },
+    pictureTransform: { kind: "affine", xx: 0.5, xy: 0, yx: 0, yy: 1, tx: 0, ty: 0 },
+  }, htmlVideoDeliverySpec());
+  assert.deepEqual(explicitlyMapped.visual.program.canvas, { width: 200, height: 100 });
+  assert.match(explicitlyMapped.visual.program.html, /transform:matrix\(2,0,0,1,0,0\)/u);
 });

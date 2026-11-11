@@ -17,6 +17,7 @@
   "dependencies": {
     "@hypit/blob": "workspace:^0.0.0-dev",
     "@hypit/generation-graph": "workspace:^0.0.0-dev",
+    "@hypit/generation-canvas": "workspace:^0.0.0-dev",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-asset": "workspace:^0.1.0",
     "@hypit/protocol": "workspace:^0.0.0-dev"

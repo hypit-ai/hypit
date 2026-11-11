@@ -15,6 +15,7 @@ import { lowerGenerationGraph } from "./lower.js";
 import { assertGenerationGraphProject } from "./project.js";
 import type {
   GenerationGraphLoweringHost,
+  GenerationGraphDependencyPolicy,
   GenerationGraphProject,
   GenerationGraphResourceAttachment,
 } from "./types.js";
@@ -52,6 +53,7 @@ export async function prepareGenerationGraphTargets(
   program: import("@hypit/protocol").LinkedProgram,
   host: GenerationGraphLoweringHost,
   targets: readonly string[],
+  options: { readonly dependencyPolicy?: GenerationGraphDependencyPolicy } = {},
 ): Promise<PreparedGenerationGraphBuild> {
   assertGenerationGraphProject(project);
   assert(targets.length > 0, "Generation Graph selection has no Targets.");
@@ -60,7 +62,10 @@ export async function prepareGenerationGraphTargets(
   const nodes = new Map(project.nodes.map((node) => [node.id, node]));
   for (const target of targets) assert(nodes.has(target), `Unknown Generation Graph target: ${target}`);
 
-  const lowered = await lowerGenerationGraph(project, program, host, { targets });
+  const lowered = await lowerGenerationGraph(project, program, host, {
+    targets,
+    ...(options.dependencyPolicy === undefined ? {} : { dependencyPolicy: options.dependencyPolicy }),
+  });
   const execution = planBuild(lowered.program, lowered.graph, targets);
   const sliced = sliceExecution(lowered.program, targets, execution);
   const outputs = new Map(execution.outputs.map((output) => [output.output, output.record]));

@@ -1,0 +1,19 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "current-view",
+  "name": "当前视角",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets",
+      "version": "1"
+    },
+    "name": "camera-preset"
+  },
+  "resources": {},
+  "parameters": {
+    "cameraPreset": {
+      "targetMode": "current-view",
+      "fov": 40
+    }
+  }
+}

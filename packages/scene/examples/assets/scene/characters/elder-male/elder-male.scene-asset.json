@@ -1,0 +1,69 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "elder-male",
+  "name": "男性 · 老年",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets",
+      "version": "1"
+    },
+    "name": "humanoid-character"
+  },
+  "preview": {
+    "path": "preview.glb",
+    "mediaType": "model/gltf-binary"
+  },
+  "resources": {
+    "model": {
+      "path": "model.glb",
+      "mediaType": "model/gltf-binary"
+    }
+  },
+  "parameters": {
+    "rigProfile": "hypit-humanoid",
+    "rig": {
+      "format": "hypit.humanoid-rig@1",
+      "root": "Rig.Root",
+      "joints": {
+        "hips": "Rig.Hips",
+        "spine": "Rig.Spine",
+        "chest": "Rig.Chest",
+        "neck": "Rig.Neck",
+        "head": "Rig.Head",
+        "leftShoulder": "Rig.Shoulder.L",
+        "leftElbow": "Rig.Elbow.L",
+        "leftWrist": "Rig.Wrist.L",
+        "rightShoulder": "Rig.Shoulder.R",
+        "rightElbow": "Rig.Elbow.R",
+        "rightWrist": "Rig.Wrist.R",
+        "leftHip": "Rig.Hip.L",
+        "leftKnee": "Rig.Knee.L",
+        "leftAnkle": "Rig.Ankle.L",
+        "rightHip": "Rig.Hip.R",
+        "rightKnee": "Rig.Knee.R",
+        "rightAnkle": "Rig.Ankle.R"
+      }
+    },
+    "anthropometry": {
+      "basis": "observed figure landmarks for low-poly blocking",
+      "ageBand": "elder",
+      "sex": "male",
+      "statureM": 1.7,
+      "headCount": 7.1,
+      "upperArmRatio": 0.185,
+      "legRatio": 0.505,
+      "shoulderRatio": 0.245,
+      "hipRatio": 0.205,
+      "waistRatio": 0.19
+    },
+    "bodyShape": {
+      "type": "elder",
+      "armBuild": 0.94,
+      "legBuild": 0.94,
+      "depthBuild": 0.98,
+      "chestVolume": 0.12,
+      "abdomenVolume": 0.16,
+      "gluteVolume": 0.1
+    }
+  }
+}
