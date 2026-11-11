@@ -284,6 +284,7 @@
     "@hypit/media-local": "workspace:*",
     "@hypit/provider-monid": "workspace:*",
     "@hypit/provider-pollo": "workspace:*",
+    "@hypit/provider-sume": "workspace:*",
     "@hypit/provider-tokendance": "workspace:*",
     "@hypit/provider-whisperx-local": "workspace:*",
     "@hypit/ranking": "workspace:*",

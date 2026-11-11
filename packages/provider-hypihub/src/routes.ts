@@ -42,9 +42,6 @@ function hypiHubGenerationRejection(
   pendingPorts: readonly string[] = [],
 ): string | undefined {
   if (mapping.capability.module.name === "@hypit/bach") {
-    if ((request.ports.referenceVideo?.length ?? 0) > 0 || pendingPorts.includes("referenceVideo")) {
-      return "HypiHub Bach reference videos await verification of upstream input billing";
-    }
     try { selectWireModelForRequest(mapping, request, pendingPorts); }
     catch (error) { return error instanceof Error ? error.message : String(error); }
     return undefined;
@@ -146,15 +143,24 @@ function normalizeHypiHubRequest(
   delete input.last_frame;
   if (typeof firstFrame === "string" && firstFrame.length > 0) input.first_frame = firstFrame;
   if (typeof lastFrame === "string" && lastFrame.length > 0) input.last_frame = lastFrame;
-  if (Array.isArray(imageRefs) && imageRefs.length > 0) input.reference_image_urls = imageRefs;
+  if (Array.isArray(imageRefs) && imageRefs.length > 0) input.reference_image_urls = referenceItems(imageRefs);
   if (Array.isArray(genericImageRefs) && genericImageRefs.length > 0) {
     const urls = genericImageRefs.map((item) => item !== null && typeof item === "object"
       ? (item as Record<string, unknown>).url : item).filter((item): item is string => typeof item === "string" && item.length > 0);
     if (urls.length > 0) input.reference_image_urls = urls;
   }
-  if (Array.isArray(videoRefs) && videoRefs.length > 0) input.reference_videos = videoRefs;
-  if (Array.isArray(audioRefs) && audioRefs.length > 0) input.reference_audios = audioRefs;
+  if (Array.isArray(videoRefs) && videoRefs.length > 0) input.reference_videos = referenceItems(videoRefs);
+  if (Array.isArray(audioRefs) && audioRefs.length > 0) input.reference_audios = referenceItems(audioRefs);
   return { model: request.model, input: canonicalize(input) };
+}
+
+/** A reference with an offset is sent as `{ url, start_time }`; one with only a URL is sent as that URL. */
+function referenceItems(items: readonly unknown[]): readonly unknown[] {
+  return items.map((item) => {
+    if (item === null || typeof item !== "object") return item;
+    const object = item as Record<string, unknown>;
+    return Object.keys(object).length === 1 && typeof object.url === "string" ? object.url : object;
+  });
 }
 
 function capabilityKey(capability: { module: { name: string; version: string }; name: string }): string {

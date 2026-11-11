@@ -190,7 +190,9 @@ export const decodePixverseVideoSurface: StructuredSurfaceHandler = ({ element, 
   exact(element, VIDEO_ATTRIBUTES, ["id", "model", "prompt", "duration", "quality"]);
   empty(element);
   const { endpoint } = selectModel(element);
-  const frames = ([["firstFrame", "first-frame"], ["lastFrame", "last-frame"]] as const)
+  assert(element.attributes["aspect-ratio"] !== "auto",
+    `${element.name}.aspect-ratio auto requires video references; use ReferenceVideo`);
+  const frames =([["firstFrame", "first-frame"], ["lastFrame", "last-frame"]] as const)
     .filter(([, attribute]) => element.attributes[attribute] !== undefined)
     .map(([port, attribute]) => ({
       port, role: "image" as const, source: media(element, attribute, "image", resolveReference),
@@ -234,6 +236,8 @@ export const decodePixverseReferenceVideoSurface: StructuredSurfaceHandler = ({ 
     capacity(element, endpoint, port, references.filter((item) => item.port === port).length);
   }
   const videos = references.some((item) => item.port === "referenceVideo");
+  assert(videos || element.attributes["aspect-ratio"] !== "auto",
+    `${element.name}.aspect-ratio auto requires a video Reference`);
   if (videos) {
     assert(element.attributes["duration"] === undefined,
       `${element.name} takes no duration; its video references carry the length of the run`);
