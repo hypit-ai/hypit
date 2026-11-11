@@ -40,7 +40,7 @@
     "@hypit/narrative": "workspace:^0.1.0",
     "@hypit/narrative-caption": "workspace:^0.1.0",
     "@hypit/narrative-temporal": "workspace:^0.1.0",
-    "@hypit/pixverse": "workspace:^0.2.0",
+    "@hypit/pixverse": "workspace:^0.2.1",
     "@hypit/provider-html-local": "workspace:^0.2.0",
     "@hypit/provider-hypihub": "workspace:^0.2.1",
     "@hypit/provider-image-opencv-local": "workspace:^0.2.0",
