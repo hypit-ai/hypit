@@ -21,7 +21,7 @@ importers:
         specifier: workspace:^0.2.1
         version: link:packages/browser-capture
       '@hypit/media-local':
-        specifier: workspace:^0.2.1
+        specifier: workspace:^0.2.2
         version: link:packages/media-local
       '@hypit/runtime-local':
         specifier: workspace:^0.1.1
@@ -30,10 +30,10 @@ importers:
         specifier: workspace:^0.1.1
         version: link:packages/speech-estimate
       '@hypit/studio':
-        specifier: workspace:^0.2.1
+        specifier: workspace:^0.2.2
         version: link:packages/studio
       '@hypit/video':
-        specifier: workspace:^0.2.1
+        specifier: workspace:^0.2.2
         version: link:packages/video
       '@hypit/whisperx':
         specifier: workspace:^0.2.0
@@ -690,7 +690,7 @@ importers:
   packages/browser-capture:
     dependencies:
       '@hypit/media-local':
-        specifier: workspace:^0.2.0
+        specifier: workspace:^0.2.2
         version: link:../media-local
       '@puppeteer/browsers':
         specifier: 3.2.4
@@ -2567,7 +2567,7 @@ importers:
         specifier: workspace:^0.1.1
         version: link:../html-program
       '@hypit/media-local':
-        specifier: workspace:^0.2.0
+        specifier: workspace:^0.2.2
         version: link:../media-local
       '@hypit/media-operations':
         specifier: workspace:^0.2.0

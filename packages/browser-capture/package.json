@@ -9,7 +9,7 @@
     "./cli": "./src/cli.ts"
   },
   "dependencies": {
-    "@hypit/media-local": "workspace:^0.2.0",
+    "@hypit/media-local": "workspace:^0.2.2",
     "@puppeteer/browsers": "3.2.4",
     "puppeteer-core": "25.13.0",
     "sharp": "0.35.5"
