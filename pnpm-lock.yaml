@@ -2871,7 +2871,7 @@ importers:
         specifier: workspace:^0.1.0
         version: link:../narrative-temporal
       '@hypit/pixverse':
-        specifier: workspace:^0.2.0
+        specifier: workspace:^0.2.1
         version: link:../pixverse
       '@hypit/provider-html-local':
         specifier: workspace:^0.2.0
