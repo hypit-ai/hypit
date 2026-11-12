@@ -226,3 +226,46 @@ test("Text Render projects only declared SVS Recipe properties and lets explicit
     energy: "calm",
   });
 });
+
+test("Text replace expression treats authored 'to' as literal text, not a JS replacement pattern", () => {
+  // $& expands to the matched substring in a JS string replacement — but the
+  // authored `to` value must always be taken verbatim.
+  const make = (from: string, to: string, mode: "all" | "first") =>
+    sealTextTemplate({
+      root: {
+        kind: "replace",
+        input: { kind: "literal", value: "price: X" },
+        replacements: [{ from, to, mode }],
+      },
+    });
+
+  // $& would expand to the matched text ("X") without the fix → "price: X USD"
+  assert.equal(
+    renderText(make("X", "$& USD", "all"), sealTextBindings({})).value,
+    "price: $& USD",
+  );
+
+  // $$ would collapse to a single "$" without the fix → "price: $ off"
+  assert.equal(
+    renderText(make("X", "$$ off", "all"), sealTextBindings({})).value,
+    "price: $$ off",
+  );
+
+  // $` would expand to the text before the match without the fix → "price:  off"
+  assert.equal(
+    renderText(make("X", "$` off", "first"), sealTextBindings({})).value,
+    "price: $` off",
+  );
+
+  // $' would expand to the text after the match without the fix → "price:  USD"
+  assert.equal(
+    renderText(make("X", "$' USD", "first"), sealTextBindings({})).value,
+    "price: $' USD",
+  );
+
+  // A plain replacement without any $-patterns must still work.
+  assert.equal(
+    renderText(make("X", "€42", "all"), sealTextBindings({})).value,
+    "price: €42",
+  );
+});
