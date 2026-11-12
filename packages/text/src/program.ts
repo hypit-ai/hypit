@@ -269,6 +269,7 @@ function collectBindings(
   template: TextTemplate,
   result: Set<string>,
   locals: ReadonlySet<string>,
+  definitions: Map<TextExpression, Map<string, readonly string[]>>,
 ): void {
   const add = (id: string) => { if (!locals.has(id)) result.add(id); };
   const collectCondition = (item: TextCondition): void => {
@@ -288,39 +289,57 @@ function collectBindings(
     return;
   }
   if (value.kind === "sequence" || value.kind === "join") {
-    value.items.forEach((item) => collectBindings(item, template, result, locals));
+    value.items.forEach((item) => collectBindings(item, template, result, locals, definitions));
     return;
   }
   if (value.kind === "choice") {
     value.cases.forEach((item) => {
       collectCondition(item.when);
-      collectBindings(item.value, template, result, locals);
+      collectBindings(item.value, template, result, locals, definitions);
     });
-    if (value.otherwise !== undefined) collectBindings(value.otherwise, template, result, locals);
+    if (value.otherwise !== undefined) collectBindings(value.otherwise, template, result, locals, definitions);
     return;
   }
   if (value.kind === "optional") {
     collectCondition(value.when);
-    collectBindings(value.value, template, result, locals);
+    collectBindings(value.value, template, result, locals, definitions);
     return;
   }
   if (value.kind === "each") {
     add(value.binding);
-    collectBindings(value.value, template, result, new Set([...locals, value.as]));
+    collectBindings(value.value, template, result, new Set([...locals, value.as]), definitions);
     return;
   }
   if (value.kind === "replace" || value.kind === "transform") {
-    collectBindings(value.input, template, result, locals);
+    collectBindings(value.input, template, result, locals, definitions);
     return;
   }
   const definition = template.definitions?.[value.template];
-  if (definition !== undefined) collectBindings(definition, template, result, locals);
+  if (definition === undefined) return;
+  // A call DAG can still be a diamond: definitions reached through many paths would each be
+  // walked again. What one definition contributes is fixed by its locals scope, so that pair
+  // is memoized — exponential expansion becomes one walk per (definition, scope).
+  const signature = [...locals].sort().join("\0");
+  const cached = definitions.get(definition)?.get(signature);
+  if (cached !== undefined) {
+    cached.forEach((id) => result.add(id));
+    return;
+  }
+  const contributed = new Set<string>();
+  collectBindings(definition, template, contributed, locals, definitions);
+  let scopes = definitions.get(definition);
+  if (scopes === undefined) {
+    scopes = new Map();
+    definitions.set(definition, scopes);
+  }
+  scopes.set(signature, [...contributed]);
+  contributed.forEach((id) => result.add(id));
 }
 
 export function textTemplateBindingNames(template: TextTemplate): ReadonlySet<string> {
   verifyTextTemplate(template);
   const result = new Set<string>();
-  collectBindings(template.root, template, result, new Set());
+  collectBindings(template.root, template, result, new Set(), new Map());
   return result;
 }
 
@@ -357,35 +376,56 @@ function applyTransform(value: string, operation: TextTransform): string {
   return JSON.stringify(value);
 }
 
+/**
+ * Total output one render may produce before it is refused. `call` graphs are DAGs but can be
+ * diamonds that double output per level, and `each`/`replace` multiply further — a bounded
+ * template could otherwise expand without end.
+ */
+export const textRenderOutputLimit = 8 * 1024 * 1024;
+
 function renderExpression(
   value: TextExpression,
   template: TextTemplate,
   bindings: Readonly<Record<string, TextBindingValue>>,
+  state: { produced: number },
+): string {
+  const rendered = renderExpressionNode(value, template, bindings, state);
+  state.produced += rendered.length;
+  assert(state.produced <= textRenderOutputLimit,
+    `Text render exceeds the ${textRenderOutputLimit}-character output budget`);
+  return rendered;
+}
+
+function renderExpressionNode(
+  value: TextExpression,
+  template: TextTemplate,
+  bindings: Readonly<Record<string, TextBindingValue>>,
+  state: { produced: number },
 ): string {
   if (value.kind === "literal") return value.value;
   if (value.kind === "slot") return scalarText(bindings[value.binding], `Text binding ${value.binding}`);
-  if (value.kind === "sequence") return value.items.map((item) => renderExpression(item, template, bindings)).join("");
+  if (value.kind === "sequence") return value.items.map((item) => renderExpression(item, template, bindings, state)).join("");
   if (value.kind === "join") {
-    const items = value.items.map((item) => renderExpression(item, template, bindings));
+    const items = value.items.map((item) => renderExpression(item, template, bindings, state));
     return (value.omitEmpty === true ? items.filter((item) => item.length > 0) : items).join(value.separator);
   }
   if (value.kind === "choice") {
     const selected = value.cases.filter((item) => matches(item.when, bindings));
     assert(selected.length <= 1, `Text choice matched ${selected.length} cases`);
-    if (selected.length === 1) return renderExpression(selected[0]!.value, template, bindings);
+    if (selected.length === 1) return renderExpression(selected[0]!.value, template, bindings, state);
     assert(value.otherwise !== undefined, "Text choice matched no case and has no otherwise branch");
-    return renderExpression(value.otherwise, template, bindings);
+    return renderExpression(value.otherwise, template, bindings, state);
   }
   if (value.kind === "optional") {
-    return matches(value.when, bindings) ? renderExpression(value.value, template, bindings) : "";
+    return matches(value.when, bindings) ? renderExpression(value.value, template, bindings, state) : "";
   }
   if (value.kind === "each") {
     const source = bindings[value.binding];
     assert(Array.isArray(source), `Text binding ${value.binding} must be a list`);
-    return source.map((item) => renderExpression(value.value, template, { ...bindings, [value.as]: item })).join(value.separator);
+    return source.map((item) => renderExpression(value.value, template, { ...bindings, [value.as]: item }, state)).join(value.separator);
   }
   if (value.kind === "replace") {
-    let result = renderExpression(value.input, template, bindings);
+    let result = renderExpression(value.input, template, bindings, state);
     for (const replacement of value.replacements) {
       result = replacement.mode === "all"
         ? result.replaceAll(replacement.from, replacement.to)
@@ -396,12 +436,12 @@ function renderExpression(
   if (value.kind === "transform") {
     return value.transforms.reduce(
       (result, operation) => applyTransform(result, operation),
-      renderExpression(value.input, template, bindings),
+      renderExpression(value.input, template, bindings, state),
     );
   }
   const definition = template.definitions?.[value.template];
   assert(definition !== undefined, `TextTemplate definition ${value.template} is missing`);
-  return renderExpression(definition, template, bindings);
+  return renderExpression(definition, template, bindings, state);
 }
 
 export function renderText(template: TextTemplate, bindings: TextBindings): Text {
@@ -414,5 +454,5 @@ export function renderText(template: TextTemplate, bindings: TextBindings): Text
   for (const id of Object.keys(bindings.values)) {
     assert(known.has(id), `Text binding ${id} is not declared by the template`);
   }
-  return sealText(renderExpression(template.root, template, { ...template.defaults, ...bindings.values }));
+  return sealText(renderExpression(template.root, template, { ...template.defaults, ...bindings.values }, { produced: 0 }));
 }
