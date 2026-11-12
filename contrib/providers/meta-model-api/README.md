@@ -73,6 +73,11 @@ Both Providers narrow the Model's vocabulary to what the live service actually d
   `/images/edits` as multipart; no references route to `/images/generations` as JSON. Muse sets the
   output pixel size itself, so a Source declares the ratio (via `space:Extent`) and not an exact
   resolution; the Model's `resolution` port is accepted and not forwarded.
+- **Images, transparency**: `background: "transparent"` is refused in `supports()` with a reason.
+  Muse Image has no transparent background — the service rejects the field with a 400 and its
+  response echoes `"background": "opaque"` — so the request is stopped before it is paid for rather
+  than returning an opaque picture that silently drops the authored requirement. `"opaque"` and
+  `"auto"` are accepted, because an opaque result is exactly what they ask for.
 - **Voice**: mono 16-bit PCM WAV at 16 kHz or 24 kHz, at most 10 minutes and 32 MB, which is the
   service's own cap. Anything else is refused before a request is charged.
 

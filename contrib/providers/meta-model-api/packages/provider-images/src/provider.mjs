@@ -37,6 +37,16 @@ function support(request) {
   if (!(ratio in MUSE_SIZES)) {
     return { status: "unsupported", reason: `Muse Image supports ${Object.keys(MUSE_SIZES).join(", ")}` };
   }
+  // Muse Image has no transparency: `background: "transparent"` is rejected by the service with a
+  // 400, and every response is opaque. Refuse it here so the Build fails before it is paid for.
+  const background = firstText(ports.background) ?? "auto";
+  if (background === "transparent") {
+    return {
+      status: "unsupported",
+      reason: "Muse Image always returns an opaque background (background: \"transparent\" is rejected); "
+        + "ask for \"opaque\" or \"auto\" and cut the subject out afterwards",
+    };
+  }
   const references = (ports.images?.length ?? 0)
     + (request.pendingInputs?.filter((slot) => slot.input === "images").length ?? 0);
   if (references > MAX_REFERENCES) {
@@ -59,6 +69,11 @@ export function createMetaImageProvider(options) {
     const ratio = firstText(ports.aspectRatio) ?? "1:1";
     const size = MUSE_SIZES[ratio];
     if (size === undefined) throw new Error(`Muse Image supports ${Object.keys(MUSE_SIZES).join(", ")}`);
+    // Guard the same rule at execution time: a transparent request must never be sent, because an
+    // image that silently comes back opaque breaks the authored requirement.
+    if ((firstText(ports.background) ?? "auto") === "transparent") {
+      throw new Error("Muse Image has no transparent background; use \"opaque\" or \"auto\" and cut the subject out afterwards");
+    }
     const apiKey = context.credentials.apiKey?.secret;
     if (typeof apiKey !== "string" || apiKey.length === 0) {
       throw new Error("Muse Image API key credential is unavailable for this Endpoint");
