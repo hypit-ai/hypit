@@ -29,7 +29,8 @@ selects the calling Node executable, ignores user yt-dlp configuration/plugins, 
 and remote component acquisition. Fetching source media remains a network operation.
 
 The request selects `bv*+ba/b`, with `res:1080,vcodec:h264` format preferences and `--no-playlist`.
-Available source streams determine the result. It stages the download in the OS temporary directory,
+Available source streams determine the result. Merged streams and a single muxed file are both
+written in the target's container. It stages the download in the OS temporary directory,
 then moves the completed file to the target, copying on a cross-volume `EXDEV` error. Temporary
 files are removed when the operation ends. Download errors retain the tool's diagnostic output.
 
