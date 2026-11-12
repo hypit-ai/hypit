@@ -164,7 +164,7 @@ async function extractFrames(sourcePath, dir) {
 }
 
 /** Writes one alpha-composited PNG per frame using the mask that covers it. */
-async function compositeFrames(framePaths, masks, dir, { decodeMaskToRaster, sharp }) {
+export async function compositeFrames(framePaths, masks, dir, { decodeMaskToRaster, sharp }) {
   const byFrame = new Map();
   for (const m of masks) {
     if (!byFrame.has(m.frame)) byFrame.set(m.frame, []);
@@ -173,7 +173,7 @@ async function compositeFrames(framePaths, masks, dir, { decodeMaskToRaster, sha
   const ordered = [...byFrame.keys()].sort((a, b) => a - b);
   const outDir = join(dir, "alpha");
   await run("mkdir", ["-p", outDir]);
-  const written = [];
+  const paths = [];
   let carried = 0;
   let lastMasks = [];
 
@@ -181,9 +181,23 @@ async function compositeFrames(framePaths, masks, dir, { decodeMaskToRaster, sha
     const current = byFrame.get(index);
     if (current) lastMasks = current;
     else if (lastMasks.length > 0) carried += 1;
+
+    const frameMeta = await sharp(framePaths[index]).metadata();
+    const path = join(outDir, `alpha-${String(index + 1).padStart(5, "0")}.png`);
+
     if (lastMasks.length === 0 && !current) {
-      // No mask yet at the head of the clip: keep the frame fully transparent.
-      written.push(await sharp(framePaths[index]).ensureAlpha().png().toBuffer());
+      // No mask yet at the head of the clip: write a genuinely transparent frame. sharp's
+      // ensureAlpha() only *adds* an alpha channel, defaulting to opaque, so passing the source
+      // frame through here exposed the original background on every leading frame.
+      await writeFile(path, await sharp({
+        create: {
+          width: frameMeta.width,
+          height: frameMeta.height,
+          channels: 4,
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        },
+      }).png().toBuffer());
+      paths.push(path);
       continue;
     }
 
@@ -206,25 +220,21 @@ async function compositeFrames(framePaths, masks, dir, { decodeMaskToRaster, sha
       plates.push({ input: plate, left: Math.round(m.bounds.left), top: Math.round(m.bounds.top) });
     }
 
-    const frameMeta = await sharp(framePaths[index]).metadata();
     const canvas = await sharp({
       create: { width: frameMeta.width, height: frameMeta.height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
     }).composite(plates).png().toBuffer();
 
-    written.push(await sharp(framePaths[index])
+    // Write each frame as it is composed: holding every PNG in memory made peak usage grow with
+    // the whole clip, which a multi-minute 1080p source turns into gigabytes.
+    await writeFile(path, await sharp(framePaths[index])
       .ensureAlpha()
       .composite([{ input: canvas, blend: "dest-in" }])
       .png()
       .toBuffer());
-  }
-
-  const paths = [];
-  for (let i = 0; i < written.length; i += 1) {
-    const path = join(outDir, `alpha-${String(i + 1).padStart(5, "0")}.png`);
-    await writeFile(path, written[i]);
     paths.push(path);
   }
-  return { paths, frames: written.length, carriedFrames: carried, firstMaskFrame: ordered[0] ?? null };
+
+  return { paths, frames: paths.length, carriedFrames: carried, firstMaskFrame: ordered[0] ?? null };
 }
 
 async function encodeAlphaVideo(paths, dir, { fps, format }) {
