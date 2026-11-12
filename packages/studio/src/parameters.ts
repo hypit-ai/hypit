@@ -247,10 +247,24 @@ function attributeGroup(file: StudioSourceFile, target: AuthorElement, draft: St
     if (target.references[name] !== undefined) { writable = false; value[name] = target.references[name]!; continue; }
     value[name] = target.attributes[name] ?? target.references[name] ?? "";
     const before = file.text.slice(target.range.start, range.start);
-    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const prefix = new RegExp(`\\s+${escaped}\\s*=\\s*["']$`, "u").exec(before);
-    if (!prefix) throw new Error(`Cannot locate scalar attribute ${name}.`);
-    ranges[name] = { start: prefix.index, end: range.end - target.range.start + 1 };
+    // The tail must end `<ws>+ name <ws>* = <ws>* quote`. Scanned backward from the end: a
+    // regex anchored at the end still retried from every position and went quadratic on long
+    // whitespace runs.
+    const located = ((): number | undefined => {
+      let i = before.length - 1;
+      if (i < 0 || (before[i] !== '"' && before[i] !== "'")) return undefined;
+      while (i > 0 && /\s/u.test(before[i - 1]!)) i--;
+      if (i === 0 || before[i - 1] !== "=") return undefined;
+      i--;
+      while (i > 0 && /\s/u.test(before[i - 1]!)) i--;
+      if (i < name.length || before.slice(i - name.length, i) !== name) return undefined;
+      i -= name.length;
+      if (i === 0 || !/\s/u.test(before[i - 1]!)) return undefined;
+      while (i > 0 && /\s/u.test(before[i - 1]!)) i--;
+      return i;
+    })();
+    if (located === undefined) throw new Error(`Cannot locate scalar attribute ${name}.`);
+    ranges[name] = { start: located, end: range.end - target.range.start + 1 };
   }
   const schema = parameterRecordSchema(declaration.schema, value);
   for (const [name, held] of Object.entries(value)) {
