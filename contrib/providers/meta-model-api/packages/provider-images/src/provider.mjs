@@ -31,7 +31,8 @@ function artifactsOf(values) {
   }).filter((artifact) => typeof artifact.resource === "string");
 }
 
-function support(request) {
+/** Exported so the support rules can be unit-checked without a runtime. */
+export function support(request) {
   const ports = portsOf(request);
   const ratio = firstText(ports.aspectRatio) ?? "1:1";
   if (!(ratio in MUSE_SIZES)) {
@@ -47,12 +48,15 @@ function support(request) {
         + "ask for \"opaque\" or \"auto\" and cut the subject out afterwards",
     };
   }
-  const references = (ports.images?.length ?? 0)
-    + (request.pendingInputs?.filter((slot) => slot.input === "images").length ?? 0);
+  // A pre-Build request carries every reference twice: exactModelSpecification inserts a
+  // placeholder into ports.images *and* lists it in pendingInputs. Summing both counted three
+  // references as six and rejected a valid Build, so take the larger single view instead.
+  const pendingImages = request.pendingInputs?.filter((slot) => slot.input === "images").length ?? 0;
+  const references = Math.max(ports.images?.length ?? 0, pendingImages);
   if (references > MAX_REFERENCES) {
     return { status: "unsupported", reason: `Muse Image accepts at most ${MAX_REFERENCES} reference images` };
   }
-  if (references > 0 && request.pendingInputs?.some((slot) => slot.input === "images")) {
+  if (references > 0 && pendingImages > 0) {
     return { status: "supported" };
   }
   if (firstText(ports.prompt) === undefined) {

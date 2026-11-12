@@ -9,6 +9,9 @@
 export const DEFAULT_BASE_URL = "https://api.meta.ai/v1";
 export const DEFAULT_MODEL = "muse-voice-transcribe-1.0";
 export const SUPPORTED_SAMPLE_RATES = Object.freeze([16000, 24000]);
+/** The service's own caps: 10 minutes and 32 MB, refused before a request is charged. */
+export const MAX_DURATION_SECONDS = 600;
+export const MAX_BYTES = 32 * 1024 * 1024;
 
 export function wavHeader(bytes) {
   if (bytes.byteLength < 44) throw new Error("Muse Voice evidence is shorter than a WAV header");
@@ -17,6 +20,7 @@ export function wavHeader(bytes) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let offset = 12;
   let format;
+  let dataSize;
   while (offset + 8 <= bytes.byteLength) {
     const id = ascii(offset, 4);
     const size = view.getUint32(offset + 4, true);
@@ -29,11 +33,11 @@ export function wavHeader(bytes) {
         bits: view.getUint16(body + 14, true),
       };
     }
-    if (id === "data") break;
+    if (id === "data") { dataSize = size; break; }
     offset = body + size + (size % 2);
   }
   if (format === undefined) throw new Error("Muse Voice evidence has no fmt chunk");
-  return format;
+  return { ...format, dataSize };
 }
 
 export function assertTranscribableWav(bytes, sampleFrames) {
@@ -44,7 +48,19 @@ export function assertTranscribableWav(bytes, sampleFrames) {
   if (!SUPPORTED_SAMPLE_RATES.includes(format.sampleRate)) {
     throw new Error(`Muse Voice needs 16 kHz or 24 kHz audio; evidence is ${format.sampleRate} Hz`);
   }
-  const frames = (bytes.byteLength - 44) / 2;
+  // Enforce the documented caps on the bytes actually about to be posted: the service charges for
+  // what it accepts, so an over-limit clip must be refused here rather than after the call.
+  if (bytes.byteLength > MAX_BYTES) {
+    throw new Error(`Muse Voice takes at most ${MAX_BYTES / (1024 * 1024)} MB of audio; evidence is ${(bytes.byteLength / (1024 * 1024)).toFixed(1)} MB`);
+  }
+  const frameBytes = 2 * format.channels;
+  const frames = format.dataSize === undefined
+    ? (bytes.byteLength - 44) / frameBytes
+    : format.dataSize / frameBytes;
+  const seconds = frames / format.sampleRate;
+  if (seconds > MAX_DURATION_SECONDS) {
+    throw new Error(`Muse Voice takes at most ${MAX_DURATION_SECONDS / 60} minutes of audio; evidence is ${seconds.toFixed(1)} s`);
+  }
   if (Number.isFinite(sampleFrames) && Math.abs(frames - sampleFrames) > format.sampleRate) {
     throw new Error(`Muse Voice evidence holds ${frames} frames but the request declares ${sampleFrames}`);
   }
