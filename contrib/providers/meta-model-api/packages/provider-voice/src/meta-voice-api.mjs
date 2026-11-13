@@ -8,7 +8,14 @@
 
 export const DEFAULT_BASE_URL = "https://api.meta.ai/v1";
 export const DEFAULT_MODEL = "muse-voice-transcribe-1.0";
-export const SUPPORTED_SAMPLE_RATES = Object.freeze([16000, 24000]);
+// Hypit's alignment domain is 16 kHz mono PCM: the WhisperX evidence contract
+// (`assertWhisperXEvidenceWav`) requires sampleRate === 16000 and downstream
+// `SpeechTranscriptPassage` indices are read at 16 kHz
+// (packages/speech-evidence/src/transcript-document.ts). Accepting 24 kHz here meant a
+// 24 kHz clip passed this check and then had its sample indices interpreted at 16 kHz,
+// truncating every turn past the 16 kHz count -- so only the domain Hypit can carry is
+// accepted.
+export const SUPPORTED_SAMPLE_RATES = Object.freeze([16000]);
 /** The service's own caps: 10 minutes and 32 MB, refused before a request is charged. */
 export const MAX_DURATION_SECONDS = 600;
 export const MAX_BYTES = 32 * 1024 * 1024;
@@ -46,7 +53,7 @@ export function assertTranscribableWav(bytes, sampleFrames) {
     throw new Error(`Muse Voice needs mono 16-bit PCM; evidence is codec=${format.codec} bits=${format.bits} channels=${format.channels}`);
   }
   if (!SUPPORTED_SAMPLE_RATES.includes(format.sampleRate)) {
-    throw new Error(`Muse Voice needs 16 kHz or 24 kHz audio; evidence is ${format.sampleRate} Hz`);
+    throw new Error(`Muse Voice needs 16 kHz mono PCM evidence (Hypit's alignment domain); evidence is ${format.sampleRate} Hz`);
   }
   // Enforce the documented caps on the bytes actually about to be posted: the service charges for
   // what it accepts, so an over-limit clip must be refused here rather than after the call.

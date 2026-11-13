@@ -92,4 +92,7 @@ test("a WAV over 32 MB is refused with the size it measured", () => {
 
 test("a declared frame count that disagrees is still refused", () => {
   assert.throws(() => assertTranscribableWav(wav({ seconds: 5 }), 5 * 16000 + 16000 * 2), /declares/);
+  // 24 kHz used to be accepted here and then reinterpreted at 16 kHz downstream.
+  assert.throws(() => assertTranscribableWav(wav({ seconds: 4, sampleRate: 24000 }), 4 * 16000),
+    /16 kHz mono PCM evidence/u);
 });

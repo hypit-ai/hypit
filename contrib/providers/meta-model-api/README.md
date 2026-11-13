@@ -78,7 +78,7 @@ Both Providers narrow the Model's vocabulary to what the live service actually d
   response echoes `"background": "opaque"` — so the request is stopped before it is paid for rather
   than returning an opaque picture that silently drops the authored requirement. `"opaque"` and
   `"auto"` are accepted, because an opaque result is exactly what they ask for.
-- **Voice**: mono 16-bit PCM WAV at 16 kHz or 24 kHz, at most 10 minutes and 32 MB, which is the
+- **Voice**: mono 16-bit PCM WAV at 16 kHz (Hypit's alignment domain; 24 kHz is refused rather than rescaled), at most 10 minutes and 32 MB, which is the
   service's own cap. Anything else is refused before a request is charged.
 
 ## Muse Voice timing — read this before trusting caption sync
