@@ -24,7 +24,7 @@ corepack enable
 pnpm install --frozen-lockfile
 ```
 
-Live Builds additionally need Python 3.10–3.13, uv, ffmpeg and Chromium. The
+Live Builds additionally need Python 3.11–3.13, uv, ffmpeg and Chromium. The
 [Development Guide](https://hypit.ai/guide/develop/) lists what each one is for.
 
 For a Profile selecting local rendering, run `hypit programs up --runtime <profile> --endpoint
