@@ -4,3 +4,12 @@ packages:
   # Shipped examples are repository fixtures. Real authored projects always live outside this
   # tool checkout and resolve their own project-local packages through the Host's project root.
   - examples/*/packages/*
+
+# Security floors for transitive dependencies that a direct range bump cannot reach.
+# VitePress 1.x (docs only) still declares vite ^5, which has no patched release; Vite 6.4.5 is
+# the closest patched line and VitePress 1.6 runs on it.
+overrides:
+  vitepress>vite: 6.4.5
+  vue@<3.5.42: ^3.5.42
+  "@vue/shared@<3.5.42": ^3.5.42
+  source-map-js@<1.2.2: ^1.2.2
