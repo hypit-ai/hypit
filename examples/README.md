@@ -10,6 +10,7 @@ Adapt those relationships to a new work; its scene list and styling are choices 
 | [Podcast](podcast/README.md) | Related host views, product references, motivated cuts and a lifestyle montage | Generate from `reference.svrun` |
 | [Street interview](interview/README.md) | A shared encounter, derived close views, coordinated Moments and Caption tracking | Generate from `reference.svrun` |
 | [Complex spoken explainer](complex-explainer/README.md) | Coordinated project scenes, moving presenter framing, independent Caption, semantic graphic events and graphics-only intervals | Download its accepted media/Result bundle; render locally |
+| [Manim explainer](manim-explainer/README.md) | Three project-local mathematical animations rendered separately, then composed with semantic cues | `hypit build` prepares its declared Manim inputs automatically |
 
 The three generation entries use `reference.svml` and an adjacent `reference.svrun`. They generate
 their main images, recurring voice references and generated clips, then normalize media, align the
