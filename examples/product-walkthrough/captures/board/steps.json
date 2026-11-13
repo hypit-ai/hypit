@@ -1,0 +1,151 @@
+{
+  "format": "hypit.capture-plan@1",
+  "startUrl": "./app.html",
+  "startLoads": 1,
+  "viewport": {
+    "width": 1280,
+    "height": 800,
+    "scale": 2
+  },
+  "cursor": "none",
+  "auth": null,
+  "failed": null,
+  "recording": {
+    "kind": "video",
+    "path": "recording.mp4",
+    "url": "./app.html",
+    "width": 2560,
+    "height": 1600,
+    "format": "mp4",
+    "duration": 13.433,
+    "frameRate": 30,
+    "hasAudio": false
+  },
+  "steps": [
+    {
+      "index": 0,
+      "action": "pause",
+      "note": "the board list settles on screen",
+      "start": 0,
+      "end": 0.801,
+      "url": "./app.html"
+    },
+    {
+      "index": 1,
+      "action": "dismiss",
+      "note": "close the what's-new note",
+      "start": 1.402,
+      "end": 1.913,
+      "url": "./app.html"
+    },
+    {
+      "index": 2,
+      "action": "click",
+      "note": "open the create panel",
+      "start": 2.514,
+      "end": 2.962,
+      "url": "./app.html",
+      "box": [
+        1127,
+        32,
+        109,
+        41
+      ],
+      "pointer": [
+        1182,
+        53
+      ]
+    },
+    {
+      "index": 3,
+      "action": "wait",
+      "note": null,
+      "start": 3.563,
+      "end": 3.566,
+      "url": "./app.html"
+    },
+    {
+      "index": 4,
+      "action": "fill",
+      "note": "clear the default name",
+      "start": 4.167,
+      "end": 4.617,
+      "url": "./app.html",
+      "box": [
+        290,
+        154,
+        360,
+        43
+      ],
+      "pointer": [
+        470,
+        176
+      ]
+    },
+    {
+      "index": 5,
+      "action": "type",
+      "note": "name the board",
+      "start": 4.769,
+      "end": 6.751,
+      "url": "./app.html",
+      "box": [
+        290,
+        154,
+        360,
+        43
+      ],
+      "pointer": [
+        470,
+        176
+      ]
+    },
+    {
+      "index": 6,
+      "action": "click",
+      "note": "choose the Kanban template",
+      "start": 7.352,
+      "end": 7.764,
+      "url": "./app.html",
+      "box": [
+        290,
+        244,
+        150,
+        49
+      ],
+      "pointer": [
+        365,
+        269
+      ]
+    },
+    {
+      "index": 7,
+      "action": "click",
+      "note": "create the board",
+      "start": 8.366,
+      "end": 8.765,
+      "url": "./app.html",
+      "pointer": [
+        352,
+        336
+      ]
+    },
+    {
+      "index": 8,
+      "action": "wait",
+      "note": null,
+      "start": 9.365,
+      "end": 9.491,
+      "url": "./app.html",
+      "screenshot": "08-board.png"
+    },
+    {
+      "index": 9,
+      "action": "pause",
+      "note": "hold the result",
+      "start": 10.091,
+      "end": 11.592,
+      "url": "./app.html"
+    }
+  ]
+}

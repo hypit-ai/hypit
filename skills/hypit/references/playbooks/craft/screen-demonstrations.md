@@ -22,6 +22,21 @@ piece, actual Studio footage showed the working interface while an authored chat
 explained how a request becomes an attached reference. Their different jobs guided the choice of
 material in that work.
 
+## Turn a product requirement into a recorded shot
+
+For each recording, write down before capturing: what the viewer must understand, which supplied
+material supports it, the real starting state, the actions that produce the result, and what counts
+as completion. Prepared input, a submitted job, a finished output and a comparison are different
+outcomes. Explore the real product until these are known, then record a repeatable plan. When a
+login, credit or provider capability is missing, name that dependency instead of inventing a result
+or substituting another product's footage.
+
+Review a take with separate questions: did the intended action or result actually happen; is the
+correct product material shown, without residue from an older example; are action and result
+readable at the delivery size and matched to the narration; and does loading or irrelevant movement
+prevent the shot from serving its purpose? Keep raw takes and their useful time ranges, so a later
+edit can reuse the successful part instead of recording again.
+
 ## Stage the useful view
 
 Choose the part of the screen that carries the fact or action. The audience may need the whole
@@ -45,6 +60,9 @@ while deciding what the presenter, Caption and other graphics contribute beside 
 [Graphic composition](graphic-compositions.md) owns that shared hierarchy; [motion graphics](motion-graphics.md)
 owns the animation around or within an authored demonstration.
 
+When a reference demonstrates a product on screen and the target product is a website or app,
+[transformations](../../creation/transformations.md#when-the-new-product-is-a-website-or-app)
+explains when the real interface must be recorded instead of generated.
 [Browser capture](../../production/browser-capture.md) owns saving a real page or recording,
 [Media presentation](../../production/visual-clips.md) owns its playback and crop, and
 [component design](../../production/component-design.md) owns an editable screen scene. Choose the
