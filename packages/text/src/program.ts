@@ -387,9 +387,11 @@ function renderExpression(
   if (value.kind === "replace") {
     let result = renderExpression(value.input, template, bindings);
     for (const replacement of value.replacements) {
+      // A replacer function keeps the authored `to` literal: as a plain replacement
+      // string, JavaScript would expand $&, $$, $` and $' substitution patterns.
       result = replacement.mode === "all"
-        ? result.replaceAll(replacement.from, replacement.to)
-        : result.replace(replacement.from, replacement.to);
+        ? result.replaceAll(replacement.from, () => replacement.to)
+        : result.replace(replacement.from, () => replacement.to);
     }
     return result;
   }
