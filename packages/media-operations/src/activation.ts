@@ -8,6 +8,7 @@ import {
   decodeExtractAudioSurface,
   decodeExtractFrameSurface,
   decodeTransformMediaSurface,
+  decodeCompositeSurface,
   mediaOperationsComponent,
   mediaOperationsManifest,
   mediaOperationsModuleRef,
@@ -44,6 +45,10 @@ export const hypitPackage = {
     module: mediaOperationsModuleRef,
     declaration: mediaOperationsMarkupSurfaces.find((item) => item.name === "extract-frame")!,
     handler: decodeExtractFrameSurface,
+  }), createMarkupSurfaceFacet({
+    module: mediaOperationsModuleRef,
+    declaration: mediaOperationsMarkupSurfaces.find((item) => item.name === "composite")!,
+    handler: decodeCompositeSurface,
   })],
 };
 export default hypitPackage;

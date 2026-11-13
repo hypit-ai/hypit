@@ -170,3 +170,17 @@ export type MuxMediaNeed = {
   readonly visual: TimelineVisual;
   readonly audio: TimelineAudio;
 };
+
+/**
+ * Composite a subject carrying alpha over a rendered layer.
+ *
+ * Both operands are plain Blobs: the subject is whatever a matte/segmentation Endpoint produced
+ * (VP9-alpha WebM or ProRes 4444 MOV), the under layer is anything decodable as video. Execution
+ * scales the subject onto the under layer's frame size, keeps the under layer's duration and lets
+ * the picture show through once the subject stream ends, so a caption layer beneath the subject
+ * reads as occlusion rather than a full-frame overlay.
+ */
+export type CompositeMediaNeed = {
+  readonly under: BlobRef;
+  readonly over: BlobRef;
+};

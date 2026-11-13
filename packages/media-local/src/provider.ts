@@ -1,6 +1,7 @@
 import { mediaTypes } from "@hypit/media";
 import { blobTypes } from "@hypit/hypit/blob";
 import {
+  executeCompositeMedia,
   executeExtractAudio,
   executeExtractFrame,
   executeInspectMedia,
@@ -139,6 +140,13 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
         capability: mediaOperationsCapabilities.mux,
         returns: mediaTypes.muxed,
         handler: operation(executeMuxProgramMedia),
+      },
+      {
+        lifecycle: "immediate" as const,
+        transient: true,
+        capability: mediaOperationsCapabilities.composite,
+        returns: blobTypes.blob,
+        handler: operation(executeCompositeMedia),
       },
     ],
   });

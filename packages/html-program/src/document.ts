@@ -844,6 +844,38 @@ function normalizedDocument(value: HtmlProgram): HtmlProgram {
   };
 }
 
+/** Absolute z window of the presents a render pass may paint. */
+export type PresentZBand = {
+  readonly minInclusive: number;
+  readonly maxExclusive: number;
+};
+
+/**
+ * Drop every visual Present outside `band`, and every VisualTrack left empty.
+ *
+ * This is how one programme is split into layers without teaching the browser about z: each pass
+ * compiles its own programme from a restricted Composition, so artifacts belonging to excluded
+ * presents are never staged either. Audio tracks are untouched — they carry no pixels.
+ */
+export function restrictCompositionToBand(composition: Composition, band: PresentZBand): Composition {
+  if (!Number.isSafeInteger(band.minInclusive) || !Number.isSafeInteger(band.maxExclusive)
+    || band.maxExclusive <= band.minInclusive) {
+    throw new Error("Present z band must be integers with maxExclusive above minInclusive.");
+  }
+  const tracks: Track[] = [];
+  for (const track of composition.tracks) {
+    if (track.kind !== "visual") {
+      tracks.push(track);
+      continue;
+    }
+    const presents = track.presents.filter(
+      (present) => present.z >= band.minInclusive && present.z < band.maxExclusive,
+    );
+    if (presents.length > 0) tracks.push({ ...track, presents });
+  }
+  return { ...composition, tracks };
+}
+
 export function compileHtmlProgram(composition: Composition, timeline: Timeline): HtmlProgram {
   assertCompositionIdentity(composition, timeline);
   const frameSources: HtmlFrameSource[] = [];

@@ -26,6 +26,7 @@ export const mediaOperationsCapabilities = {
   renderStill: { module: mediaOperationsModuleRef, name: "render-still-video" },
   renderAudio: { module: mediaOperationsModuleRef, name: "render-timeline-audio" },
   mux: { module: mediaOperationsModuleRef, name: "mux-program-media" },
+  composite: { module: mediaOperationsModuleRef, name: "composite-media" },
 } satisfies Record<string, CapabilityRef>;
 export const mediaOperationsProducers = {
   inspect: { module: mediaOperationsModuleRef, name: "request-media-inspection" },
@@ -42,6 +43,8 @@ export const mediaOperationsProducers = {
   renderAudioRange: { module: mediaOperationsModuleRef, name: "request-audio-range" },
   mux: { module: mediaOperationsModuleRef, name: "request-media-mux" },
   projectMuxed: { module: mediaOperationsModuleRef, name: "project-muxed-media" },
+  composite: { module: mediaOperationsModuleRef, name: "request-media-composite" },
+  visualArtifact: { module: mediaOperationsModuleRef, name: "project-visual-artifact" },
 } satisfies Record<string, ProducerRef>;
 
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
@@ -426,6 +429,35 @@ export const mediaOperationsMarkupSurfaces = [
         ],
       },
     },
+    {
+      name: "composite", tag: "Composite", mode: "structured",
+      outputs: [blobTypes.blob],
+      vocabulary: {
+        summary:
+          "Draws a subject that carries alpha over another video, so a layer painted beneath the subject reads as occlusion rather than a full-frame overlay.",
+        attributes: [
+          { name: "id", kind: "identifier", required: true,
+            summary: "Names the composited video this element publishes." },
+          { name: "under", kind: "reference", required: true,
+            accepts: [blobTypes.blob],
+            summary: "Selects the video that stays visible where the subject is transparent." },
+          { name: "over", kind: "reference", required: true,
+            accepts: [blobTypes.blob],
+            summary: "Selects the subject video whose alpha channel decides what it covers." },
+        ],
+        ports: [
+          { name: "video", type: blobTypes.blob,
+            summary: "The composited video Artifact, addressed as `<id>.video`." },
+        ],
+        example: '<mediaop:Composite id="occluded" under={captioned} over={subject.mask}/>',
+        notes: [
+          "The subject is scaled onto the under layer's frame size; the under layer decides the frame size and the duration.",
+          "Where the subject stream ends, the under layer shows through: the composite never freezes the last mask.",
+          "Both operands are ordinary Blobs, so a segmentation mask, a matte or any other alpha video can be the subject.",
+          "The element accepts no children and no text content, and the output is an opaque MP4.",
+        ],
+      },
+    },
   ] as const;
 
 
@@ -473,6 +505,7 @@ export const mediaOperationsManifest: ModuleManifest = {
     { name: mediaOperationsCapabilities.renderStill.name, returns: blobTypes.blob },
     { name: mediaOperationsCapabilities.renderAudio.name, returns: mediaTypes.timelineAudio },
     { name: mediaOperationsCapabilities.mux.name, returns: mediaTypes.muxed },
+    { name: mediaOperationsCapabilities.composite.name, returns: blobTypes.blob },
   ],
   producers: [
     {
@@ -550,6 +583,25 @@ export const mediaOperationsManifest: ModuleManifest = {
       needs: [{
         name: "image",
         capability: mediaOperationsCapabilities.extractFrame,
+        returns: blobTypes.blob,
+      }],
+    },
+    {
+      name: mediaOperationsProducers.visualArtifact.name,
+      inputs: [{ name: "visual", type: mediaTypes.timelineVisual }],
+      outputs: [{ name: "artifact", type: blobTypes.blob }],
+      needs: [],
+    },
+    {
+      name: mediaOperationsProducers.composite.name,
+      inputs: [
+        { name: "under", type: blobTypes.blob },
+        { name: "over", type: blobTypes.blob },
+      ],
+      outputs: [],
+      needs: [{
+        name: "video",
+        capability: mediaOperationsCapabilities.composite,
         returns: blobTypes.blob,
       }],
     },

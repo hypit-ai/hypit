@@ -1,0 +1,21 @@
+{
+  "name": "@example/provider-sam-cutout",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Project Provider that fulfils SAM 3.1 cutout video (Segment Anything on Meta Model API) for @hypit/sam-cutout.",
+  "hypit": {
+    "activation": "./src/activation.mjs"
+  },
+  "exports": {
+    ".": "./src/provider.mjs",
+    "./sam-video": "./src/sam-video.mjs"
+  },
+  "dependencies": {
+    "@hypit/hypit": "workspace:*",
+    "@hypit/generation": "workspace:*",
+    "@hypit/runtime-local": "workspace:*",
+    "@meta-sam/parser": "^0.1.0",
+    "sharp": "^0.34.0"
+  }
+}

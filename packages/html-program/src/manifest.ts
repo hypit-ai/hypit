@@ -7,6 +7,8 @@ export const htmlProgramModuleRef = { name: "@hypit/html-program", version: "1" 
 export const htmlProgramTypes = {
   program: { module: htmlProgramModuleRef, name: "HtmlProgram" },
   frameImages: { module: htmlProgramModuleRef, name: "FrameImages" },
+  /** Absolute z window a render pass may paint; `maxExclusive` is one past the last z. */
+  zBand: { module: htmlProgramModuleRef, name: "PresentZBand" },
 } satisfies Record<string, TypeRef>;
 export const htmlProgramCapabilities = {
   rasterizeVisual: { module: htmlProgramModuleRef, name: "rasterize-visual" },
@@ -14,6 +16,7 @@ export const htmlProgramCapabilities = {
 } satisfies Record<string, CapabilityRef>;
 export const htmlProgramProducers = {
   compile: { module: htmlProgramModuleRef, name: "compile-composition" },
+  compileBand: { module: htmlProgramModuleRef, name: "compile-composition-band" },
   requestVisual: { module: htmlProgramModuleRef, name: "request-visual" },
   requestVisualRange: { module: htmlProgramModuleRef, name: "request-visual-range" },
 } satisfies Record<string, ProducerRef>;
@@ -86,12 +89,25 @@ export const htmlProgramManifest: ModuleManifest = {
   name: htmlProgramModuleRef.name,
   version: htmlProgramModuleRef.version,
   dependencies: [compositionDependency, mediaDependency, timelineDependency],
-  types: [{ name: htmlProgramTypes.program.name }, { name: htmlProgramTypes.frameImages.name }],
+  types: [
+    { name: htmlProgramTypes.program.name },
+    { name: htmlProgramTypes.frameImages.name },
+    { name: htmlProgramTypes.zBand.name },
+  ],
   capabilities: [
     { name: htmlProgramCapabilities.rasterizeVisual.name, returns: mediaTypes.timelineVisual },
     { name: htmlProgramCapabilities.rasterizeFrames.name, returns: htmlProgramTypes.frameImages },
   ],
   producers: [{
+    name: htmlProgramProducers.compileBand.name,
+    inputs: [
+      { name: "composition", type: compositionTypes.composition },
+      { name: "timeline", type: timelineTypes.timeline },
+      { name: "band", type: htmlProgramTypes.zBand },
+    ],
+    outputs: [{ name: "program", type: htmlProgramTypes.program }],
+    needs: [],
+  }, {
     name: htmlProgramProducers.compile.name,
     inputs: [
       { name: "composition", type: compositionTypes.composition },
