@@ -4,10 +4,30 @@ import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { generationTypes } from "@hypit/generation";
 import { blobTypes } from "@hypit/hypit/blob";
 import type { ModuleManifest } from "@hypit/hypit/protocol";
-import { samCutoutDefinition, samCutoutModuleRef, samCutoutProducers, samCutoutSurface } from "./index.js";
+import {
+  samCutoutDefinition,
+  samCutoutModuleRef,
+  samCutoutProducers,
+  samCutoutSurface,
+  samSegmentProducers,
+  samSegmentSurface,
+} from "./index.js";
 import { decodeSamCutoutSurface } from "./surface.js";
+import { decodeSamSegmentSurface } from "./segment-surface.js";
 
-/** The exact-model manifest plus the alternate selector this package adds on top of it. */
+/**
+ * Unwrap a StoredValue holding a GeneratedVideoSet. The graph hands over the stored wrapper;
+ * generation's own primary() unwraps it the same way.
+ */
+function videosOf(stored: unknown): readonly unknown[] {
+  const value = stored as { readonly kind?: string; readonly value?: unknown } | undefined;
+  const set = (value !== null && typeof value === "object" && value.kind === "inline"
+    ? value.value
+    : value) as { readonly videos?: readonly unknown[] } | undefined;
+  return Array.isArray(set?.videos) ? set.videos : [];
+}
+
+/** The exact-model manifest plus the selectors this package adds on top of it. */
 const manifest: ModuleManifest = {
   ...samCutoutDefinition.manifest,
   producers: [
@@ -18,6 +38,14 @@ const manifest: ModuleManifest = {
       outputs: [{ name: "alternate", type: blobTypes.blob }],
       needs: [],
     },
+    // One selector per supported object ordinal. The mask set carries one video per authored
+    // concept, in authored order, so ordinal selection is what gives each object its own Artifact.
+    ...samSegmentProducers.ordinals.map((ordinal) => ({
+      name: samSegmentProducers.maskAt(ordinal).name,
+      inputs: [{ name: "set", type: generationTypes.videoSet }],
+      outputs: [{ name: "mask", type: blobTypes.blob }],
+      needs: [],
+    })),
   ],
 };
 
@@ -32,18 +60,24 @@ const alternateComponent = {
     {
       producer: samCutoutProducers.alternate,
       handler: ({ inputs }: { inputs: Record<string, { readonly value: unknown } | undefined> }) => {
-        // The graph hands over a StoredValue; generation's own primary() unwraps it the same way.
-        const stored = inputs.set?.value as { readonly kind?: string; readonly value?: unknown } | undefined;
-        const set = (stored !== null && typeof stored === "object" && stored.kind === "inline"
-          ? stored.value
-          : stored) as { readonly videos?: readonly unknown[] } | undefined;
-        const videos = set?.videos;
-        if (!Array.isArray(videos) || videos.length < 2) {
+        const videos = videosOf(inputs.set?.value);
+        if (videos.length < 2) {
           throw new Error("Generated video set has no alternate artifact; enable compatibilityCopy on the Endpoint");
         }
         return { outputs: { alternate: videos[1] }, needs: {} };
       },
     },
+    ...samSegmentProducers.ordinals.map((ordinal) => ({
+      producer: samSegmentProducers.maskAt(ordinal),
+      handler: ({ inputs }: { inputs: Record<string, { readonly value: unknown } | undefined> }) => {
+        const videos = videosOf(inputs.set?.value);
+        const mask = videos[ordinal - 1];
+        if (mask === undefined) {
+          throw new Error(`SAM segment returned ${videos.length} mask video(s); object ${ordinal} is missing`);
+        }
+        return { outputs: { mask }, needs: {} };
+      },
+    })),
   ],
 };
 
@@ -60,6 +94,11 @@ export const hypitPackage = {
       module: samCutoutModuleRef,
       declaration: samCutoutSurface,
       handler: decodeSamCutoutSurface,
+    }),
+    createMarkupSurfaceFacet({
+      module: samCutoutModuleRef,
+      declaration: samSegmentSurface,
+      handler: decodeSamSegmentSurface,
     }),
   ],
 };
