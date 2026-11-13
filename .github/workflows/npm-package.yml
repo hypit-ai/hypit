@@ -66,8 +66,13 @@ jobs:
       - name: Prepare the local media toolchain on Linux
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          for source in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+            if [ -f "$source" ]; then
+              sudo sed -i -E 's|https?://azure\.archive\.ubuntu\.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' "$source"
+            fi
+          done
+          sudo apt-get -o Acquire::Retries=3 update
+          sudo apt-get -o Acquire::Retries=3 install -y --no-install-recommends ffmpeg
       - name: Prepare the local media toolchain on Windows
         if: runner.os == 'Windows'
         run: choco install ffmpeg --yes --no-progress

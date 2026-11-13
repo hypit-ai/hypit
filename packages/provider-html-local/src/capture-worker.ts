@@ -1,6 +1,7 @@
 import { releaseCaptureExitCleanup } from "./capture-exit.js";
 import { captureStagedVisual } from "./capture.js";
 import type { CaptureInput } from "./capture.js";
+import { createRequire } from "node:module";
 
 const controller = new AbortController();
 const message = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -21,6 +22,7 @@ const finish = (value: { type: "completed" } | { type: "failed"; error: string }
   process.send?.(value, undefined, undefined, (error) => {
     if (error) { console.error(message(error)); process.exitCode = 1; }
     if (process.connected) process.disconnect();
+    if (process.versions.electron !== undefined) createRequire(import.meta.url)("electron").app.exit(error ? 1 : 0);
   });
 };
 controller.signal.addEventListener("abort", () => {

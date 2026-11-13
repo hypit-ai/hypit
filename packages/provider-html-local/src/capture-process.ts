@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { killRenderTree } from "./process-tree.js";
 import type { CaptureInput } from "./capture.js";
 import type { HtmlRasterProgress } from "./render.js";
+import { electronEnvironment } from "./electron.js";
 
 const cleanupMs = 5_000;
 
@@ -17,11 +18,15 @@ export async function runCaptureProcess(
 ): Promise<void> {
   signal.throwIfAborted();
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(process.execPath, [
+    const gpu = input.frames === undefined && input.config.electronPath !== undefined;
+    const child = spawn(gpu ? input.config.electronPath! : process.execPath, gpu ? [
+      fileURLToPath(new URL("../src/gpu-worker.cjs", import.meta.url)), input.directory, entry.href,
+    ] : [
       "--import", import.meta.resolve("tsx"),
       "--import", new URL("./capture-exit.js", import.meta.url).href,
       fileURLToPath(entry),
     ], {
+      ...(gpu ? { env: electronEnvironment() } : {}),
       detached: process.platform !== "win32", windowsHide: true,
       stdio: ["ignore", "pipe", "pipe", "ipc"],
     });
