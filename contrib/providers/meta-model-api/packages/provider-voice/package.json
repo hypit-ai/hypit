@@ -1,0 +1,23 @@
+{
+  "name": "@example/provider-meta-voice",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Hypit project Provider for Meta Model API Muse Voice Transcribe (muse-voice-transcribe-1.0), speech alignment with turn-level timing.",
+  "hypit": {
+    "activation": "./src/activation.mjs"
+  },
+  "exports": {
+    ".": "./src/provider.mjs",
+    "./asr": "./src/meta-voice-api.mjs"
+  },
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "@hypit/hypit": "0.3.2",
+    "@hypit/speech-evidence": "^0.1.0",
+    "@hypit/whisperx": "^0.2.0",
+    "@hypit/runtime-local": "^0.1.1"
+  }
+}
