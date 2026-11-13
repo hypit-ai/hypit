@@ -206,6 +206,7 @@ test("local media opts only reusable display materialization into transient exec
     "extract-media-audio",
     "extract-media-frame",
     "render-still-video",
+    "composite-media",
   ]);
   assert.deepEqual(provider.offers.filter((offer) => offer.transient !== true)
     .map((offer) => offer.capability.name), [

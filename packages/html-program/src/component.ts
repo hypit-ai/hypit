@@ -6,7 +6,8 @@ import type { Timeline } from "@hypit/timeline";
 import type { CanonicalValue, StoredValue } from "@hypit/hypit/protocol";
 import { canonicalize } from "@hypit/hypit/protocol";
 
-import { compileHtmlProgram } from "./document.js";
+import { compileHtmlProgram, restrictCompositionToBand } from "./document.js";
+import type { PresentZBand } from "./document.js";
 import type { MediaFrameRange } from "@hypit/media";
 import { htmlRasterRequest } from "./execution.js";
 import type { HtmlRasterRequest } from "./execution.js";
@@ -27,6 +28,23 @@ export const htmlProgramComponent = {
           kind: "inline",
           value: canonicalize(compileHtmlProgram(
             inline(inputs.composition!.value, "Composition") as unknown as Composition,
+            inline(inputs.timeline!.value, "Timeline") as unknown as Timeline,
+          )),
+        },
+      },
+      needs: {},
+    }),
+  }, {
+    producer: htmlProgramProducers.compileBand,
+    handler: ({ inputs }: { inputs: Record<string, { value: StoredValue } | undefined> }) => ({
+      outputs: {
+        program: {
+          kind: "inline",
+          value: canonicalize(compileHtmlProgram(
+            restrictCompositionToBand(
+              inline(inputs.composition!.value, "Composition") as unknown as Composition,
+              inline(inputs.band!.value, "PresentZBand") as unknown as PresentZBand,
+            ),
             inline(inputs.timeline!.value, "Timeline") as unknown as Timeline,
           )),
         },

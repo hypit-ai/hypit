@@ -3,6 +3,7 @@ export {
   mediaOperationsComponents,
 } from "./component.js";
 export {
+  compositeMediaFragment,
   extractAudioFragment,
   extractFrameFragment,
   synchronizedMediaFragment,
@@ -21,7 +22,11 @@ export {
   selectMediaStreams,
   verifyMediaSelectionRequest,
 } from "./selection.js";
-export { decodeSynchronizedMediaSurface, decodeStillVideoSurface } from "./surface.js";
+export {
+  decodeCompositeSurface,
+  decodeSynchronizedMediaSurface,
+  decodeStillVideoSurface,
+} from "./surface.js";
 export {
   decodeExtractAudioSurface,
   decodeExtractFrameSurface,
