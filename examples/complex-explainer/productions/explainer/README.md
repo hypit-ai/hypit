@@ -4,15 +4,22 @@ A 137-second Chinese explainer built from 17 accepted performance clips, recorde
 
 ## Start here
 
-From this production directory:
+Read the [archive compatibility and checkout instructions](../../README.md#archive-compatibility)
+first. The hosted `20260914` Results require the pinned legacy source and CLI; they cannot be opened
+with the current 0.3.x checkout by adding missing metadata fields.
+
+From this production directory in the pinned checkout, use its own executable:
 
 ```sh
-hypit check runs/render.svrun
-hypit plan runs/render.svrun
-hypit studio --run runs/render.svrun
+node ../../../../bin/hypit.mjs check runs/render.svrun
+node ../../../../bin/hypit.mjs programs prepare --runtime ../../hypit.runtime.json --endpoint hyperframes.local
+node ../../../../bin/hypit.mjs plan runs/render.svrun --runtime ../../hypit.runtime.json
+node ../../../../bin/hypit.mjs studio --run runs/render.svrun --runtime ../../hypit.runtime.json
 ```
 
-The current production Run explicitly selects accepted Outputs. Read the plan before submitting a Build: composition edits should retain that selected material. The included local-only Profile is sufficient for opening and rendering this accepted work.
+The production Run explicitly selects accepted Outputs. Read the plan before submitting a Build:
+composition edits should retain that selected material. With matching source and Results, the
+included local-only Profile selects the services needed to open and render the accepted work.
 
 ## Where an edit belongs
 

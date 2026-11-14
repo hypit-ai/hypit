@@ -53,6 +53,6 @@ preview Source 为作者提供可打开或渲染的小例子。查看能说明�
 
 ## 阅读一个完整作品
 
-[复杂口播示例](https://github.com/hypit-ai/hypit/tree/main/examples/complex-explainer) 将主持人变场、独立字幕、网页演示和多个协同动效场景组合成完整作品。项目说明把每种修改指向负责它的 Source、Recipe 或组件包。它区分了三件事：划分组件职责、开放有用参数、为真实需求设计复用。已接受素材单独提供，默认 Run 可以直接打开并渲染这份编排，无需重新请求生成。
+[复杂口播示例](https://github.com/hypit-ai/hypit/tree/main/examples/complex-explainer) 将主持人变场、独立字幕、网页演示和多个协同动效场景组合成完整作品。项目说明把每种修改指向负责它的 Source、Recipe 或组件包。它区分了三件事：划分组件职责、开放有用参数、为真实需求设计复用。已接受素材单独提供，但托管的 `20260914` 归档包含旧版 Result，与 0.3.x 不兼容。回放时请遵循示例的[归档兼容性说明](https://github.com/hypit-ai/hypit/tree/main/examples/complex-explainer#archive-compatibility)，将 Source、可执行程序和 Result 保持在同一旧版环境中。
 
-可以直接[观看最终成片](https://storage.googleapis.com/hypit-public-assets/assets/examples/complex-explainer/v1/20260914/final.mp4)，也可以按照示例中的下载说明取得素材包，在 Studio 中打开完整作品。
+可以直接[观看最终成片](https://storage.googleapis.com/hypit-public-assets/assets/examples/complex-explainer/v1/20260914/final.mp4)，也可以按照示例中的固定版本 checkout 与下载说明取得素材包，在 Studio 中打开完整作品。
