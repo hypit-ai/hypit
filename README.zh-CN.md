@@ -16,6 +16,8 @@
   <a href="https://hypit.ai/zh/guide/develop/"><strong>开发指南</strong></a>
   &nbsp;&bull;&nbsp;
   <a href="./README.md"><strong>English</strong></a>
+  &nbsp;&bull;&nbsp;
+  <a href="./README.ja.md"><strong>日本語</strong></a>
 </p>
 
 <p align="center">
