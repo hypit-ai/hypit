@@ -23,7 +23,7 @@ export { prepareGenerationWorkspaceNode } from "./preparation.js";
 export {
   createGenerationCanvasPresentationFacet,
   createGenerationCanvasPresentationHost,
-  generationCanvasPresentationFacetAbi,
+  generationCanvasPresentationFacetKind,
   generationCanvasPresentationPackagesFromFacets,
 } from "./presentation.js";
 export type {
@@ -56,4 +56,4 @@ export type {
   GenerationWorkspaceOutputAddress,
   GenerationWorkspaceViewport,
 } from "./types.js";
-export { generationWorkspaceOutputKey } from "./types.js";
+export { generationWorkspaceFormat, generationWorkspaceOutputKey } from "./types.js";

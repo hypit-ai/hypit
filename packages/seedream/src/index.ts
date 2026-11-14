@@ -1,9 +1,9 @@
-import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
-import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
-import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+import { sealModelFieldRequest, defineModelFields } from "@hypit/generation-model/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation-model/model-fields";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation-model/model-fields";
 import { promptTypes } from "@hypit/hypit/prompt";
 
-export const seedreamModuleRef = { name: "@hypit/seedream", version: "1" } as const;
+export const seedreamModuleRef = { name: "@hypit/seedream" } as const;
 
 export const seedream5LiteFields: ModelFieldTable = defineModelFields({
   model: "seedream-5-lite",

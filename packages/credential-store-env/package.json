@@ -15,12 +15,12 @@
     "activation": "./src/activation.ts"
   },
   "peerDependencies": {
-    "@hypit/runtime-local": "workspace:^0.2.0"
+    "@hypit/execution-environment-local": "workspace:^0.2.0"
   },
   "dependencies": {
-    "@hypit/runtime": "workspace:^0.0.0-dev"
+    "@hypit/execution-environment": "workspace:^0.0.0-dev"
   },
   "devDependencies": {
-    "@hypit/runtime-local": "workspace:*"
+    "@hypit/execution-environment-local": "workspace:*"
   }
 }

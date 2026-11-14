@@ -1,0 +1,35 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "icon-kimberly",
+  "media": {
+    "file": {
+      "path": "icon-kimberly.png",
+      "mediaType": "image/png"
+    },
+    "interpretation": {
+      "id": "icon-kimberly:media",
+      "picture": {
+        "interpretation": {
+          "codedHeight": 572,
+          "codedWidth": 588,
+          "picture": {
+            "alphaMode": "straight",
+            "bitDepth": 8,
+            "colorMatrix": "rgb",
+            "colorPrimaries": "bt709",
+            "colorRange": "full",
+            "colorTransfer": "srgb"
+          },
+          "rotationDegrees": 0,
+          "sampleAspectRatio": {
+            "denominator": 1,
+            "numerator": 1
+          }
+        },
+        "kind": "constant",
+        "streamIndex": 0
+      }
+    }
+  },
+  "representations": []
+}

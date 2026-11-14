@@ -7,7 +7,7 @@ import {
   generationCanvasPresentationPackagesFromFacets,
 } from "../src/index.js";
 
-const using = { module: { name: "@example/image", version: "1" }, name: "create" } as const;
+const using = { module: { name: "@example/image" }, name: "create" } as const;
 
 test("packages contribute finite Canvas meaning without contributing markup or CSS", () => {
   const presentation = {

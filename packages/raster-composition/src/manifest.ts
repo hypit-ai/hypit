@@ -1,7 +1,10 @@
-import { blobDependency, blobTypes } from "@hypit/hypit/blob";
-import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
+import type { TypeRef } from "@hypit/hypit/module";
+import { blobDependency, blobTypes } from "@hypit/hypit/generation/blob";
+import type { CapabilityRef } from "@hypit/hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/hypit/generation/build";
+import type { ProducerRef } from "@hypit/hypit/module";
 
-export const rasterCompositionModuleRef = { name: "@hypit/raster-composition", version: "1" } as const;
+export const rasterCompositionModuleRef = { name: "@hypit/raster-composition" } as const;
 export const rasterCompositionTypes = {
   options: { module: rasterCompositionModuleRef, name: "RasterCompositionOptions" },
   placement: { module: rasterCompositionModuleRef, name: "RasterLayerPlacement" },
@@ -16,10 +19,8 @@ export const rasterCompositionProducers = {
   render: { module: rasterCompositionModuleRef, name: "request-raster-composition" },
 } satisfies Record<string, ProducerRef>;
 
-export const rasterCompositionManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const rasterCompositionManifest: GenerationModuleDefinition = {
   name: rasterCompositionModuleRef.name,
-  version: rasterCompositionModuleRef.version,
   dependencies: [blobDependency],
   types: Object.values(rasterCompositionTypes).map((type) => type.name),
   capabilities: [{ name: rasterCompositionCapabilities.render.name, returns: blobTypes.blob }],

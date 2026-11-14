@@ -11,7 +11,7 @@ import {
   createNleEditSession,
   createNleProject,
   isNleEditSessionDirty,
-  nleLinearSourceTime,
+  nleLinearTimeMapping,
   prepareNleProjectSave,
 } from "../src/index.js";
 import { createNodeNleMediaResolver, readNleProjectFile, writeNleProjectFile } from "../src/node/index.js";
@@ -57,13 +57,20 @@ test("media files open explicitly after the project and are cached by file path"
     const second = { ticks: "1", timeBase: { numerator: 1, denominator: 1 } } as const;
     const project = applyNleTransaction(base, { revision: 0, commands: [{
       kind: "track.add",
-      track: { id: "picture", name: "Picture", kind: "picture", muted: false, items: ["left", "right"].map((id) => ({
+      track: { id: "picture", name: "Picture", kind: "picture", muted: false, items: [...["left", "right"].map((id) => ({
         id, kind: "present" as const, source: "media" as const,
         asset: { path: "../media/shared.media.json" },
         start: { ticks: "0", timeBase: second.timeBase }, duration: second,
-        sourceTime: nleLinearSourceTime(second), enabled: true,
+        sourceTime: nleLinearTimeMapping(second), enabled: true,
         picture: { layout: { x: 0, y: 0, width: 1, height: 1, fit: "fill" as const } },
-      })) },
+      })), {
+        id: "board", kind: "present" as const, source: "component" as const,
+        component: { module: { name: "@example/ranking" }, name: "board" },
+        parameters: {}, media: { portrait: { path: "../media/shared.media.json" } },
+        start: { ticks: "0", timeBase: second.timeBase }, duration: second,
+        sourceTime: nleLinearTimeMapping(second), enabled: true,
+        picture: { layout: { x: 0, y: 0, width: 1, height: 1, fit: "fill" as const } },
+      }] },
     }] });
     const opened: string[] = [];
     const media = {
@@ -88,7 +95,14 @@ test("media files open explicitly after the project and are cached by file path"
     assert.equal(opened[0], join(directory, "media", "shared.media.json"));
     const left = project.tracks[0]!.items[0]!;
     if (left.kind !== "present" || left.source !== "media") throw new Error("Media fixture is invalid.");
-    assert.equal(resolver(left.asset, { project, track: project.tracks[0]!, item: left }).id, "shared");
+    assert.equal(resolver(left.asset, {
+      kind: "item", project, track: project.tracks[0]!, item: left,
+    }).id, "shared");
+    const board = project.tracks[0]!.items[2]!;
+    if (board.kind !== "present" || board.source !== "component") throw new Error("Component fixture is invalid.");
+    assert.equal(resolver(board.media!.portrait!, {
+      kind: "component-input", project, track: project.tracks[0]!, item: board, input: "portrait",
+    }).id, "shared");
     const outside = applyNleTransaction(project, { revision: project.revision, commands: [{
       kind: "item.replace",
       item: { ...left, asset: { path: "../../outside.media.json" } },

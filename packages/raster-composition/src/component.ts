@@ -1,7 +1,7 @@
-import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
-import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { Value } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalize } from "@hypit/hypit/value";
+import type { ProducerPackage } from "@hypit/hypit/generation/producer";
+import type { RefinementPackage } from "@hypit/hypit/generation/refinement";
+import type { Value } from "@hypit/hypit/value";
 import { rasterCompositionProducers, rasterCompositionTypes } from "./manifest.js";
 import {
   appendRasterCompositionLayer,

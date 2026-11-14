@@ -9,8 +9,9 @@
     "./http": "./src/http.ts"
   },
   "dependencies": {
+    "@hypit/execution-environment": "workspace:^0.0.0-dev",
+    "@hypit/module": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",
-    "@hypit/resource-store": "workspace:^0.1.0",
-    "@hypit/runtime": "workspace:^0.0.0-dev"
+    "@hypit/resource-store": "workspace:^0.1.0"
   }
 }

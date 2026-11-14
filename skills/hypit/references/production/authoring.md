@@ -122,8 +122,8 @@ and make the consumer reference that Record. The durable choice now lives beside
 authored production:
 
 ```svml
-<import as="asset" from="@hypit/media-author@1"/>
-<import as="mediaop" from="@hypit/media-operations@1"/>
+<import as="asset" from="@hypit/media-author"/>
+<import as="mediaop" from="@hypit/media-operations"/>
 
 <asset:Video id="accepted-opening" src="./assets/opening.mp4"/>
 <media:Video id="opening-media" source={accepted-opening}

@@ -1,0 +1,24 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "high-wide",
+  "name": "俯拍全景",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets"
+    },
+    "name": "camera-preset"
+  },
+  "resources": {},
+  "parameters": {
+    "cameraPreset": {
+      "targetMode": "subject",
+      "yawDeg": 25,
+      "elevationDeg": 32,
+      "rollDeg": 0,
+      "framing": "wide",
+      "distanceScale": 2.15,
+      "focusY": 0.4,
+      "fov": 50
+    }
+  }
+}

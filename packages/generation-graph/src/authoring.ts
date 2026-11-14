@@ -1,4 +1,5 @@
-import type { CanonicalValue, TypeRef } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
 
 import type { GenerationComponentRef, GenerationGraphNode } from "./types.js";
 

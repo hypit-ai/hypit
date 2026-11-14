@@ -1,14 +1,13 @@
-import type { ModuleManifest, TypeRef } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
 
-export const objectTrackModuleRef = { name: "@hypit/object-track", version: "1" } as const;
+export const objectTrackModuleRef = { name: "@hypit/object-track" } as const;
 export const objectTrackTypes = {
   document: { module: objectTrackModuleRef, name: "ObjectTrackDocument" },
 } satisfies Record<string, TypeRef>;
 
-export const objectTrackManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const objectTrackManifest: GenerationModuleDefinition = {
   name: objectTrackModuleRef.name,
-  version: objectTrackModuleRef.version,
   dependencies: [],
   types: [objectTrackTypes.document.name],
   capabilities: [],

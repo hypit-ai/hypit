@@ -1,0 +1,41 @@
+{
+  "name": "@hypit/generation-runtime-local",
+  "version": "0.2.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts",
+    "./worker-process": "./src/worker-process.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@hypit/atomic-file": "workspace:^0.0.0-dev",
+    "@hypit/cli": "workspace:^0.0.0-dev",
+    "@hypit/endpoint": "workspace:^0.0.0-dev",
+    "@hypit/execution-environment": "workspace:^0.0.0-dev",
+    "@hypit/execution-environment-local": "workspace:^0.2.0",
+    "@hypit/executor": "workspace:^0.0.0-dev",
+    "@hypit/facet": "workspace:^0.0.0-dev",
+    "@hypit/generation-authoring": "workspace:*",
+    "@hypit/generation-build": "workspace:^0.0.0-dev",
+    "@hypit/generation-runtime": "workspace:^0.0.0-dev",
+    "@hypit/host-paths": "workspace:^0.1.0",
+    "@hypit/loader": "workspace:^0.0.0-dev",
+    "@hypit/producer": "workspace:^0.0.0-dev",
+    "@hypit/product": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/refinement": "workspace:^0.0.0-dev",
+    "@hypit/resource-store": "workspace:^0.1.0",
+    "@hypit/result": "workspace:^0.0.0-dev"
+  },
+  "devDependencies": {
+    "@hypit/generation-graph": "workspace:*",
+    "@hypit/project": "workspace:*",
+    "@hypit/module": "workspace:^0.0.0-dev"
+  }
+}

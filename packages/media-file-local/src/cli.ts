@@ -1,4 +1,4 @@
-import type { CliCommandModule } from "@hypit/cli";
+import type { CliCommandModule } from "@hypit/cli/public";
 import {
   isMediaCommand,
   mediaCommands,
@@ -9,7 +9,6 @@ import {
 /** Direct local media-file tools; no Runtime or Build is opened. */
 export function createLocalMediaCliCommandModules(): readonly CliCommandModule[] {
   return [{
-    format: "hypit.cli-command@1",
     id: "@hypit/media-file-local#cli",
     commands: ["media"],
     writeRootHelp(io) {

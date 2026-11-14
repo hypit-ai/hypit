@@ -1,6 +1,6 @@
 import { createGenerationCanvasPresentationFacet, type GenerationCanvasNodePresentation } from "@hypit/generation-canvas";
-import { createFieldModelGenerationNode } from "@hypit/generation/model-fields/graph";
-import { createGenerationNodePackageFacet } from "@hypit/hypit/generation-graph";
+import { createFieldModelGenerationNode } from "@hypit/generation-model/model-fields/graph";
+import { createGenerationNodePackageFacet } from "@hypit/hypit/generation/graph";
 import { wanEndpoints, wanModuleRef, wanModels } from "./index.js";
 
 const endpoints = { "wan-2.7-image": wanEndpoints.image!, "wan-2.7-image-pro": wanEndpoints.pro! } as const;

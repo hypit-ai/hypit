@@ -1,11 +1,11 @@
-import type { NleInspectorAdjustmentPresentation } from "@hypit/nle-view";
+import type { NleInspectorOperatorPresentation } from "@hypit/nle-view";
 
 import { pictureFrameNleAuthoring, pictureFrameNleSymbol, type PictureFrameNleParameters } from "./nle.js";
 
-export const pictureFrameNleInspector: NleInspectorAdjustmentPresentation = {
-  component: pictureFrameNleSymbol,
-  project: ({ project, item }) => {
-    const parameters = pictureFrameNleAuthoring.inspect({ project, item, medium: "picture" }) as PictureFrameNleParameters;
+export const pictureFrameNleInspector: NleInspectorOperatorPresentation = {
+  operator: pictureFrameNleSymbol,
+  project: (context) => {
+    const parameters = pictureFrameNleAuthoring.inspect(context) as PictureFrameNleParameters;
     const treatment = parameters.treatment;
     const padding = (side: keyof typeof treatment.padding, value: string | number | boolean) => ({
       kind: "set-treatment",
@@ -25,9 +25,9 @@ export const pictureFrameNleInspector: NleInspectorAdjustmentPresentation = {
           edit: (value) => padding("bottomPx", value) },
         { id: "padding-left", label: "左内边距", control: "number", value: treatment.padding.leftPx, unit: "px",
           edit: (value) => padding("leftPx", value) },
-        { id: "border", label: "描边", control: "readout", value: treatment.border === undefined
+        { id: "border", label: "画框描边", control: "readout", value: treatment.border === undefined
           ? "无" : `${treatment.border.widthPx}px ${treatment.border.style}` },
-        { id: "shadows", label: "阴影", control: "readout", value: `${treatment.shadows.length} 层` },
+        { id: "shadows", label: "画框阴影", control: "readout", value: `${treatment.shadows.length} 层` },
       ],
     }];
   },

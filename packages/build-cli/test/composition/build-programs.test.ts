@@ -4,17 +4,17 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 
-import { FileBuildFinalizationStore } from "../../../runtime-local/src/result-storage/index.js";
+import { FileBuildFinalizationStore } from "../../../generation-runtime-local/src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
 import { FileProductHistory } from "@hypit/product/node";
 import { createProducerPackageFacet } from "@hypit/producer";
-import { verifyRecordStructure } from "@hypit/kernel";
-import type { LinkedProgram, TypedRecord } from "@hypit/protocol";
+import { verifyRecordStructure } from "@hypit/generation-build";
+import type { LinkedProgram, TypedRecord } from "@hypit/generation-build";
 
 import { runSourceBuildCli as runCliEngine } from "../../src/main.js";
 import { commandHint } from "@hypit/cli";
 import type { SourceBuildCliServices } from "../../src/services.js";
-import type { CliDiagnostic as RuntimeDoctorDiagnostic } from "@hypit/build-operations-cli";
+import type { CliDiagnostic as ExecutionEnvironmentDoctorDiagnostic } from "@hypit/build-operations-cli";
 import { buildCliServices } from "../services-scenario.js";
 
 const io = { write: () => {} };
@@ -29,7 +29,7 @@ const runCli: typeof runCliEngine = async (argv, output, selected) => await runC
  */
 function distribution(
   calls: string[],
-  diagnostics: readonly RuntimeDoctorDiagnostic[],
+  diagnostics: readonly ExecutionEnvironmentDoctorDiagnostic[],
   execution?: object,
   producerError?: string,
   producerOutput?: string,
@@ -39,9 +39,8 @@ function distribution(
     bootstrapPackages: producerError === undefined && producerOutput === undefined ? [] : [{
       specifier: "@example/run-frontend",
       contribution: {
-        format: "hypit.package@1",
         facets: [createProducerPackageFacet([{
-            producer: { module: { name: "example.value", version: "1" }, name: "produce" },
+            producer: { module: { name: "example.value" }, name: "produce" },
             handler() {
               if (producerError !== undefined) throw new Error(producerError);
               return { kind: "output", value: producerOutput! };
@@ -53,43 +52,41 @@ function distribution(
       openEntry: async (path: string) => {
         const source = async (name: string) => ({
           unit: { id: name, name, bytes: new TextEncoder().encode(await readFile(name, "utf8")) },
-          frontend: "@hypit/markup@1",
+          frontend: "@hypit/markup",
         });
         return {
           entry: await source(path),
           attachments: async () => [],
         };
       },
-      supportsFrontend: (id: string) => id === "@hypit/markup@1",
+      supportsFrontend: (id: string) => id === "@hypit/markup",
       compileResolvedSource: async (entry: { readonly unit: { readonly id: string } }) => ({
         closure: { entry: entry.unit.id, units: [] },
-        program: { closure: { format: "hypit.closure@1", modules: [{
-          format: "hypit.module@1",
+        program: { closure: { modules: [{
           name: "example.value",
-          version: "1",
           dependencies: [],
           types: ["Value"],
           capabilities: [],
           producers: [{
-            name: "produce", inputs: [], result: { kind: "output" as const, name: "result", type: { module: { name: "example.value", version: "1" }, name: "Value" } },
+            name: "produce", inputs: [], result: { kind: "output" as const, name: "result", type: { module: { name: "example.value" }, name: "Value" } },
           }],
         }] }, records: [] },
         graph: {
           format: "hypit.graph@1",
           outputs: [{
             id: "result",
-            type: { module: { name: "example.value", version: "1" }, name: "Value" },
+            type: { module: { name: "example.value" }, name: "Value" },
             result: { kind: "operation-result", operation: "produce-result" },
           }],
           operations: [{
             id: "produce-result",
-            producer: { module: { name: "example.value", version: "1" }, name: "produce" },
+            producer: { module: { name: "example.value" }, name: "produce" },
             inputs: {}, result: { kind: "output" as const, name: "result", record: "record-result" },
           }],
         },
         exports: [{
           name: "result",
-          type: { module: { name: "example.value", version: "1" }, name: "Value" },
+          type: { module: { name: "example.value" }, name: "Value" },
           ref: { kind: "logical-output", id: "result" },
         }],
         publications: [],
@@ -101,17 +98,17 @@ function distribution(
     }),
     openProjectResults: async (projectRoot: string) => {
       const finalization = new FileBuildFinalizationStore(
-        join(projectRoot, ".hypit", "results"),
-        join(projectRoot, ".hypit", "products"),
+        join(projectRoot, ".hypit", "generation", "results"),
+        join(projectRoot, ".hypit", "generation", "products"),
       );
       return {
         location: {
           root: projectRoot,
-          historyPath: ".hypit/results",
-          productsPath: ".hypit/products",
+          historyPath: ".hypit/generation/results",
+          productsPath: ".hypit/generation/products",
         },
-        history: new FileBuildResultHistory(join(projectRoot, ".hypit", "results")),
-        products: new FileProductHistory(join(projectRoot, ".hypit", "products")),
+        history: new FileBuildResultHistory(join(projectRoot, ".hypit", "generation", "results")),
+        products: new FileProductHistory(join(projectRoot, ".hypit", "generation", "products")),
         close() {},
       };
     },
@@ -196,7 +193,7 @@ test("Build fails its cheap preflight before submitting or starting programs", a
   const source = await authorSource();
   await assert.rejects(
     async () => await runCli(
-      ["build", source, "--target", "result", "--runtime", "/p/hypit.runtime.json"],
+      ["build", source, "--target", "result", "--runtime", "/p/hypit.generation-runtime.json"],
       io,
       distribution(calls, [{
         severity: "error",
@@ -215,7 +212,7 @@ test("Build never provisions programs after a clean preflight", async () => {
   const source = await authorSource();
   await assert.rejects(
     async () => await runCli(
-      ["build", source, "--target", "result", "--runtime", "/p/hypit.runtime.json"],
+      ["build", source, "--target", "result", "--runtime", "/p/hypit.generation-runtime.json"],
       io,
       distribution(calls, []),
     ),
@@ -252,7 +249,7 @@ test("Build confirms durable submission before following stable work progress", 
   let output = "";
 
   await runCli(
-    ["build", source, "--target", "result", "--runtime", "/p/hypit.runtime.json", "--follow", "--max-wait-ms", "0"],
+    ["build", source, "--target", "result", "--runtime", "/p/hypit.generation-runtime.json", "--follow", "--max-wait-ms", "0"],
     { write(text) { output += text; } },
     distribution(calls, [], execution),
   );
@@ -295,14 +292,14 @@ test("plan preserves the selected work summary but exits non-zero when cheap pre
   let output = "";
   let exitCode: number | undefined;
   await runCli(
-    ["plan", source, "--target", "result", "--runtime", "/p/hypit.runtime.json", "--json"],
+    ["plan", source, "--target", "result", "--runtime", "/p/hypit.generation-runtime.json", "--json"],
     {
       write(text) { output += text; },
       setExitCode(code) { exitCode = code; },
     },
     distribution([], [{
       severity: "error",
-      code: "RUNTIME_CREDENTIAL_MISSING",
+      code: "ENVIRONMENT_CREDENTIAL_MISSING",
       message: "credential is absent",
     }]),
   );
@@ -323,7 +320,7 @@ test("pricing reports a Producer failure with no external Need and exits non-zer
       let output = "";
       let exitCode = 0;
       await runCli([
-        "pricing", source, "--target", "result", "--runtime", "/p/hypit.runtime.json", "--limit", "1",
+        "pricing", source, "--target", "result", "--runtime", "/p/hypit.generation-runtime.json", "--limit", "1",
         ...(json ? ["--json"] : []),
       ], {
         write(text) { output += text; },
@@ -347,7 +344,7 @@ test("plan uses the selected Runtime Producer policy before opening execution", 
   let output = "";
   let exitCode = 0;
   await runCli([
-    "plan", source, "--target", "result", "--runtime", "/p/hypit.runtime.json", "--json",
+    "plan", source, "--target", "result", "--runtime", "/p/hypit.generation-runtime.json", "--json",
   ], {
     write(text) { output += text; },
     setExitCode(code) { exitCode = code; },

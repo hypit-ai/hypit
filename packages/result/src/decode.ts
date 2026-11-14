@@ -1,6 +1,4 @@
-import {
-  assertOrderedBuildId,
-} from "@hypit/protocol";
+import { assertOrderedBuildId } from "@hypit/generation-build";
 import { decodeProduct } from "@hypit/product";
 import type { Product } from "@hypit/product";
 import type { BuildResultOperation } from "./types.js";

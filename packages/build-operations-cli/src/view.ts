@@ -2,11 +2,12 @@ import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import type { BuildResult, BuildResultOperation } from "@hypit/result";
 import { buildResultOutput } from "@hypit/result";
-import { buildIdCreatedAt, compareCodeUnits } from "@hypit/protocol";
-import { typeKey } from "@hypit/protocol";
-import type { TypeRef } from "@hypit/protocol";
+import { compareCodeUnits } from "@hypit/protocol";
+import { buildIdCreatedAt } from "@hypit/generation-build";
+import { typeKey } from "@hypit/module";
+import type { TypeRef } from "@hypit/module";
 import type { CliBuildView as BuildView } from "./runtime-port.js";
-import type { CommandScope } from "@hypit/cli";
+import type { CommandScope } from "@hypit/cli/public";
 
 export type PublicOutputRepresentation = "inline" | "file" | "structured";
 

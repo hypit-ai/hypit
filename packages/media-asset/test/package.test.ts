@@ -7,8 +7,8 @@ import {
 } from "../src/index.js";
 import type { ResolvedMediaAsset } from "../src/index.js";
 
-const speechType = { module: { name: "@example/speech", version: "1" }, name: "Transcript" } as const;
-const objectsType = { module: { name: "@example/object-tracks", version: "1" }, name: "TrackedObjects" } as const;
+const speechType = { module: { name: "@example/speech" }, name: "Transcript" } as const;
+const objectsType = { module: { name: "@example/object-tracks" }, name: "TrackedObjects" } as const;
 
 function asset(): ResolvedMediaAsset {
   const source = { kind: "blob" as const, resource: "res_media" as const, size: 1, mediaType: "video/mp4" };

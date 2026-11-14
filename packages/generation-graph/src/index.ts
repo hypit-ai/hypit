@@ -29,7 +29,7 @@ export {
   createGenerationNodePackageFacet,
   generationComponentKey,
   generationNodePackagesFromFacets,
-  generationNodePackageFacetAbi,
+  generationNodePackageFacetKind,
 } from "./package.js";
 export type {
   GenerationCompiledOperationNode,
@@ -76,3 +76,4 @@ export type {
   GenerationValueNodeImplementation,
   LoweredGenerationGraph,
 } from "./types.js";
+export { generationGraphFormat } from "./types.js";

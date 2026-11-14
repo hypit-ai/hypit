@@ -1,21 +1,21 @@
 import {
-  createRuntimeEndpointAdapterFacet,
-  runtimeConfigCredentialRef,
-  runtimeConfigActionLimits,
-  runtimeConfigExact,
-  runtimeConfigObject,
-  runtimeConfigPositiveInteger,
-  runtimeConfigString,
-} from "@hypit/runtime-local/extension";
+  createExecutionEnvironmentEndpointAdapterFacet,
+  executionEnvironmentConfigCredentialRef,
+  executionEnvironmentConfigActionLimits,
+  executionEnvironmentConfigExact,
+  executionEnvironmentConfigObject,
+  executionEnvironmentConfigPositiveInteger,
+  executionEnvironmentConfigString,
+} from "@hypit/execution-environment-local/extension";
 
 import { createBeatApiProvider } from "./provider.js";
 
-const adapter = createRuntimeEndpointAdapterFacet({
+const adapter = createExecutionEnvironmentEndpointAdapterFacet({
   use: "@hypit/provider-beatapi",
   activate(context) {
     if (context.pool === undefined) throw new Error("BeatAPI Provider Pool is required");
-    const config = runtimeConfigObject(context.config, "BeatAPI");
-    runtimeConfigExact(config, [
+    const config = executionEnvironmentConfigObject(context.config, "BeatAPI");
+    executionEnvironmentConfigExact(config, [
       "baseUrl",
       "apiKey",
       "defaultConcurrency",
@@ -24,20 +24,20 @@ const adapter = createRuntimeEndpointAdapterFacet({
       "requestTimeoutMs",
       "operationTimeoutMs",
     ], "BeatAPI");
-    const baseUrl = runtimeConfigString(config.baseUrl, "BeatAPI baseUrl");
+    const baseUrl = executionEnvironmentConfigString(config.baseUrl, "BeatAPI baseUrl");
     if (baseUrl !== undefined) {
       const url = new URL(baseUrl);
       if (url.protocol !== "https:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
         throw new Error("BeatAPI baseUrl must use HTTPS or loopback");
       }
     }
-    const apiKey = runtimeConfigCredentialRef(config.apiKey, "BeatAPI apiKey");
+    const apiKey = executionEnvironmentConfigCredentialRef(config.apiKey, "BeatAPI apiKey");
     if (apiKey === undefined) throw new Error("BeatAPI apiKey CredentialRef is required");
-    const actionLimits = runtimeConfigActionLimits(config.actionLimits);
-    const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "BeatAPI defaultConcurrency");
-    const pollIntervalMs = runtimeConfigPositiveInteger(config.pollIntervalMs, "BeatAPI pollIntervalMs");
-    const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "BeatAPI requestTimeoutMs");
-    const operationTimeoutMs = runtimeConfigPositiveInteger(config.operationTimeoutMs, "BeatAPI operationTimeoutMs");
+    const actionLimits = executionEnvironmentConfigActionLimits(config.actionLimits);
+    const defaultConcurrency = executionEnvironmentConfigPositiveInteger(config.defaultConcurrency, "BeatAPI defaultConcurrency");
+    const pollIntervalMs = executionEnvironmentConfigPositiveInteger(config.pollIntervalMs, "BeatAPI pollIntervalMs");
+    const requestTimeoutMs = executionEnvironmentConfigPositiveInteger(config.requestTimeoutMs, "BeatAPI requestTimeoutMs");
+    const operationTimeoutMs = executionEnvironmentConfigPositiveInteger(config.operationTimeoutMs, "BeatAPI operationTimeoutMs");
     return {
       endpoint: createBeatApiProvider({
         instance: context.instance,
@@ -55,7 +55,6 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
   facets: [adapter],
 };
 

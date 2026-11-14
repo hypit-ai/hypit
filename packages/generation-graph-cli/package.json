@@ -14,15 +14,16 @@
   "dependencies": {
     "@hypit/build-submission": "workspace:^0.0.0-dev",
     "@hypit/cli": "workspace:^0.0.0-dev",
+    "@hypit/generation-authoring": "workspace:*",
+    "@hypit/generation-build": "workspace:*",
     "@hypit/generation-graph": "workspace:^0.0.0-dev",
     "@hypit/loader": "workspace:^0.0.0-dev",
+    "@hypit/module": "workspace:^0.0.0-dev",
     "@hypit/product": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",
-    "@hypit/result": "workspace:^0.0.0-dev",
-    "@hypit/workspace": "workspace:^0.0.0-dev"
+    "@hypit/result": "workspace:^0.0.0-dev"
   },
   "devDependencies": {
-    "@hypit/author": "workspace:*",
     "@hypit/product": "workspace:^0.0.0-dev"
   }
 }

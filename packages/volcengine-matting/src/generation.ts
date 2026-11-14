@@ -1,6 +1,6 @@
 import { createGenerationCanvasPresentationFacet, type GenerationCanvasNodePresentation } from "@hypit/generation-canvas";
-import { createFieldModelGenerationNode } from "@hypit/generation/model-fields/graph";
-import { createGenerationNodePackageFacet } from "@hypit/hypit/generation-graph";
+import { createFieldModelGenerationNode } from "@hypit/generation-model/model-fields/graph";
+import { createGenerationNodePackageFacet } from "@hypit/hypit/generation/graph";
 import { portraitMattingEndpoint, volcengineMattingModuleRef } from "./index.js";
 
 const using = { module: volcengineMattingModuleRef, name: "matte-portrait-video.video" } as const;

@@ -1,7 +1,11 @@
 import type { NleProject, NleTransaction } from "@hypit/nle";
 import type { TemporalRate } from "@hypit/temporal/algebra";
 
-import type { NleTimelineGroup, NleTimelineView } from "./types.js";
+import type {
+  NleTimelineGroup,
+  NleTimelineItemCapabilities,
+  NleTimelineView,
+} from "./types.js";
 import { assertNleTimelineViewForProject } from "./view.js";
 
 export type NleTimelineViewCommand =
@@ -37,6 +41,7 @@ export function assertNleTimelineViewAllowsTransaction(
   view: NleTimelineView,
   project: NleProject,
   transaction: NleTransaction,
+  capabilities: readonly NleTimelineItemCapabilities[] = [],
 ): void {
   assertNleTimelineViewForProject(view, project);
   const locked = new Set(view.tracks.filter((state) => state.locked).map((state) => state.track));
@@ -46,13 +51,15 @@ export function assertNleTimelineViewAllowsTransaction(
     }
     throw new Error(`Unknown NLE Item: ${id}`);
   };
-  const requireMediaTimeItems = (items: readonly string[], operation: string): void => {
+  const itemCapabilities = new Map(capabilities.map((value) => [value.item, value] as const));
+  const requireCapability = (
+    items: readonly string[],
+    operation: keyof Omit<NleTimelineItemCapabilities, "item">,
+  ): void => {
     for (const id of new Set(items)) {
-      const item = project.tracks.flatMap((track) => track.items).find((candidate) => candidate.id === id);
-      if (item === undefined) throw new Error(`Unknown NLE Item: ${id}`);
-      if (item.kind !== "present" || item.source !== "media") {
-        throw new Error(`NLE Timeline ${operation} is available only for Media Items; ${id} is ${item.kind === "adjustment" ? "an Adjustment" : `a ${item.source} Present`}.`);
-      }
+      if (itemCapabilities.get(id)?.[operation] !== true) throw new Error(
+        `NLE Timeline Item ${id} does not offer ${operation}.`,
+      );
     }
   };
   const requireTracks = (tracks: readonly string[]): void => {
@@ -76,7 +83,7 @@ export function assertNleTimelineViewAllowsTransaction(
       case "component-value.replace":
         requireItems(project.tracks.flatMap((track) => track.items.flatMap((item) =>
           item.kind === "present" && item.source === "component"
-            && item.bindings?.some((binding) => binding.ref === command.value.id)
+            && item.sharedValues?.some((reference) => reference.ref === command.value.id)
             ? [item.id] : [])));
         break;
       case "picture-layout.replace":
@@ -99,35 +106,39 @@ export function assertNleTimelineViewAllowsTransaction(
         break;
       case "item.move":
         requireItems(command.ids);
+        requireCapability(command.ids, "move");
         if (command.track !== undefined) requireTracks([command.track]);
         break;
       case "item.trim":
         requireItems([command.id]);
-        requireMediaTimeItems([command.id], "trim");
+        requireCapability([command.id], command.edge === "start" ? "trimStart" : "trimEnd");
         break;
       case "item.slip":
       case "item.retime":
         requireItems([command.id]);
-        requireMediaTimeItems([command.id], command.kind === "item.slip" ? "slip" : "retime");
         break;
       case "item.replace":
         requireItems([command.item.id]);
         break;
+      case "operator-application.add":
+      case "operator-application.move":
+      case "operator-application.replace":
+      case "operator-application.retime":
+      case "operator-application.remove":
+        requireItems([command.item]);
+        break;
       case "item.roll":
         requireItems([command.left, command.right]);
-        requireMediaTimeItems([command.left, command.right], "roll");
         break;
       case "item.ripple-trim":
         requireItems([command.id, ...command.scope]);
-        requireMediaTimeItems([command.id], "ripple trim");
         break;
       case "item.split":
         requireItems([command.id]);
-        requireMediaTimeItems([command.id], "split");
+        requireCapability([command.id], "split");
         break;
       case "item.detach-audio":
         requireItems([command.id]);
-        requireMediaTimeItems([command.id], "detach audio");
         requireTracks([command.track]);
         break;
       case "item.remove":

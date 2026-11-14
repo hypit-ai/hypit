@@ -25,7 +25,7 @@ import { createNarrativeLocalTiming, momentTemporalValue } from "@hypit/narrativ
 import {
   applyNleTransaction,
   createNleProject,
-  nleLinearSourceTime,
+  nleLinearTimeMapping,
   serializeNleProject,
   type NleProject,
 } from "@hypit/nle";
@@ -270,7 +270,7 @@ async function main(): Promise<void> {
         asset: { path: portableMediaAssetPath(turn.media) },
         start: cursor,
         duration: domain.duration,
-        sourceTime: nleLinearSourceTime(domain.duration),
+        sourceTime: nleLinearTimeMapping(domain.duration),
         enabled: true,
         picture: { layout: { x: 0, y: 0, width: 720, height: 1280, fit: "cover" } },
         audio: { },
@@ -319,7 +319,7 @@ async function main(): Promise<void> {
       kind: "present", source: "component",
       start: exactTemporalZero(),
       duration: cursor,
-      sourceTime: nleLinearSourceTime(cursor),
+      sourceTime: nleLinearTimeMapping(cursor),
       enabled: true,
       component: rankingBoardComponentSymbol,
       parameters: {
@@ -371,7 +371,7 @@ async function main(): Promise<void> {
       kind: "present", source: "component",
       start: verdictAt,
       duration: subtractExactTemporalValues(cursor, verdictAt),
-      sourceTime: nleLinearSourceTime(subtractExactTemporalValues(cursor, verdictAt)),
+      sourceTime: nleLinearTimeMapping(subtractExactTemporalValues(cursor, verdictAt)),
       enabled: true,
       component: verdictBurstComponentSymbol,
       parameters: { kicker: "最终结论", title: "S 级：生成后还能剪", accent: "#38bdf8", enterFrames: 7 },

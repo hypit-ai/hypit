@@ -1,5 +1,6 @@
 export {
   readMediaAssetDocumentFile,
+  replaceMediaAssetDocumentFile,
   resolveMediaAssetDocumentFile,
   resolveMediaAssetMediaFile,
   writeMediaAssetDocumentFile,
@@ -11,3 +12,8 @@ export type {
   NodeMediaAssetImportRequest,
   NodeMediaAssetImportResult,
 } from "./import.js";
+export {
+  createMediaProjectObjectOwner,
+  createMediaProjectObjectOwnerFacet,
+  discoverMediaAssetDocuments,
+} from "./project-object.js";

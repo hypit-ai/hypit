@@ -3,18 +3,24 @@ import test from "node:test";
 
 import {
   applyNleTransaction,
+  createNleAuthoringHost,
   createNleProject,
-  nleLinearSourceTime,
+  nleLinearTimeMapping,
   type NleComponentItem,
 } from "@hypit/nle";
 
 import {
   applyNleTimelineViewTransaction,
+  assertNleSpatialEditAllowed,
   assertNleTimelineViewAllowsTransaction,
   createNleTimelineView,
   parseNleTimelineView,
   projectNleCanvas,
   projectNleTimeline,
+  allNleTimelineAffordances,
+  allNleCanvasAffordances,
+  resolveNleTimelineItemCapabilities,
+  resolveNleSpatialItemCapabilities,
   serializeNleTimelineView,
 } from "../src/index.js";
 
@@ -24,11 +30,11 @@ function project() {
   const item: NleComponentItem = {
     id: "title",
     kind: "present", source: "component",
-    component: { module: { name: "@example/title", version: "1" }, name: "default" },
+    component: { module: { name: "@example/title" }, name: "default" },
     parameters: { text: "Title" },
     start: second(0),
     duration: second(2),
-    sourceTime: nleLinearSourceTime(second(2)),
+    sourceTime: nleLinearTimeMapping(second(2)),
     enabled: true,
     picture: {
       layout: { x: 0, y: 0, width: 100, height: 100, fit: "contain" },
@@ -68,7 +74,22 @@ test("edit grid, Track guards and Groups persist outside audiovisual composition
   assert.equal(Object.hasOwn(document, "groups"), false);
 });
 
-test("a Timeline Track lock guards edits at the surface boundary without entering NLE Core", () => {
+test("a View may reference an NLE document in a sibling owner directory", () => {
+  const view = createNleTimelineView({
+    id: "film-main",
+    name: "Film timeline",
+    project: { path: "../edits/film.nle.json" },
+  });
+  assert.equal(parseNleTimelineView(serializeNleTimelineView(view)).project.path,
+    "../edits/film.nle.json");
+  assert.throws(() => createNleTimelineView({
+    id: "invalid-main",
+    name: "Invalid timeline",
+    project: { path: "../edits/../film.nle.json" },
+  }), /parent segments only before its owned path/u);
+});
+
+test("a Timeline Track lock guards edits at the surface boundary without entering NLE domain model", () => {
   const document = project();
   const initial = createNleTimelineView({
     id: "film-main",
@@ -95,7 +116,7 @@ test("a Timeline Track lock guards edits at the surface boundary without enterin
   assert.equal(reopened.tracks[0]?.locked, true);
 });
 
-test("the Timeline surface reserves source-time cutting for Media Items", () => {
+test("Timeline cutting is offered by invocation-local Item capabilities", () => {
   const componentDocument = project();
   const componentView = createNleTimelineView({
     id: "film-main",
@@ -104,18 +125,48 @@ test("the Timeline surface reserves source-time cutting for Media Items", () => 
     editRate: { numerator: 24, denominator: 1 },
     tracks: ["picture"],
   });
-  const componentScene = projectNleTimeline(componentDocument, componentView);
-  assert.deepEqual(componentScene.tracks[0]?.items[0]?.editing,
-    { move: true, trimStart: false, trimEnd: false, split: false });
+  const componentCapabilities = resolveNleTimelineItemCapabilities(componentDocument, componentView);
+  const componentScene = projectNleTimeline(
+    componentDocument, componentView, [], componentCapabilities, allNleTimelineAffordances,
+  );
+  assert.deepEqual(componentScene.tracks[0]?.items[0]?.affordances,
+    { select: true, move: true, trimStart: false, trimEnd: false, split: false });
 
   const componentSplit = {
     revision: componentDocument.revision,
     commands: [{ kind: "item.split" as const, id: "title", at: second(1), rightId: "title-right" }],
   };
   assert.throws(() => assertNleTimelineViewAllowsTransaction(
-    componentView, componentDocument, componentSplit,
-  ), /split is available only for Media Items/u);
+    componentView, componentDocument, componentSplit, componentCapabilities,
+  ), /does not offer split/u);
   assert.doesNotThrow(() => applyNleTransaction(componentDocument, componentSplit));
+  const component = componentDocument.tracks[0]!.items[0]!;
+  assert.equal(component.kind, "present");
+  assert.equal(component.source, "component");
+  if (component.kind !== "present" || component.source !== "component") throw new Error("fixture");
+  const authoring = createNleAuthoringHost([{ componentOccurrences: [{
+    component: component.component,
+    temporalSupport: () => ({ timeWindow: true }),
+  }] }]);
+  const componentEditing = resolveNleTimelineItemCapabilities(componentDocument, componentView, authoring);
+  const editableComponentScene = projectNleTimeline(
+    componentDocument,
+    componentView,
+    [],
+    componentEditing,
+    { move: true, trimStart: true, trimEnd: true, split: true },
+  );
+  assert.equal(editableComponentScene.tracks[0]?.items[0]?.affordances.split, true);
+  assert.doesNotThrow(() => assertNleTimelineViewAllowsTransaction(
+    componentView, componentDocument, componentSplit, componentEditing,
+  ));
+  const fixedComponent = [{
+    item: "title", move: false, trimStart: false, trimEnd: false, split: false,
+  }] as const;
+  assert.throws(() => assertNleTimelineViewAllowsTransaction(componentView, componentDocument, {
+    revision: componentDocument.revision,
+    commands: [{ kind: "item.move", ids: ["title"], delta: second(1) }],
+  }, fixedComponent), /does not offer move/u);
 
   const mediaDocument = applyNleTransaction(componentDocument, {
     revision: componentDocument.revision,
@@ -129,7 +180,7 @@ test("the Timeline surface reserves source-time cutting for Media Items", () => 
         asset: { path: "media/camera.media.json" },
         start: second(4),
         duration: second(2),
-        sourceTime: nleLinearSourceTime(second(2)),
+        sourceTime: nleLinearTimeMapping(second(2)),
         enabled: true,
         picture: { layout: { x: 0, y: 0, width: 100, height: 100, fit: "cover" } },
       },
@@ -142,13 +193,39 @@ test("the Timeline surface reserves source-time cutting for Media Items", () => 
     editRate: { numerator: 24, denominator: 1 },
     tracks: ["picture"],
   });
-  const mediaScene = projectNleTimeline(mediaDocument, mediaView);
-  assert.deepEqual(mediaScene.tracks[0]?.items.find((item) => item.id === "camera-use")?.editing,
-    { move: true, trimStart: true, trimEnd: true, split: true });
+  const mediaCapabilities = resolveNleTimelineItemCapabilities(mediaDocument, mediaView);
+  const mediaScene = projectNleTimeline(
+    mediaDocument, mediaView, [], mediaCapabilities,
+    { move: true, trimStart: true, trimEnd: true, split: true },
+  );
+  assert.deepEqual(mediaScene.tracks[0]?.items.find((item) => item.id === "camera-use")?.affordances,
+    { select: true, move: true, trimStart: true, trimEnd: true, split: true });
   assert.doesNotThrow(() => assertNleTimelineViewAllowsTransaction(mediaView, mediaDocument, {
     revision: mediaDocument.revision,
     commands: [{ kind: "item.split", id: "camera-use", at: second(5), rightId: "camera-right" }],
-  }));
+  }, mediaCapabilities));
+
+  const filter = { module: { name: "@example/filter" }, name: "default" } as const;
+  const mediaWithFilter = applyNleTransaction(mediaDocument, {
+    revision: mediaDocument.revision,
+    commands: [{
+      kind: "operator-application.add",
+      item: "camera-use",
+      medium: "picture",
+      application: {
+        id: "camera-filter", operator: filter, parameters: {},
+        controlTime: nleLinearTimeMapping(second(2)),
+      },
+    }],
+  });
+  assert.equal(resolveNleTimelineItemCapabilities(mediaWithFilter, mediaView)
+    .find((capability) => capability.item === "camera-use")?.trimEnd, false);
+  const filterAuthoring = createNleAuthoringHost([{ operatorOccurrences: [{
+    operator: filter,
+    temporalSupport: () => ({ timeWindow: true }),
+  }] }]);
+  assert.equal(resolveNleTimelineItemCapabilities(mediaWithFilter, mediaView, filterAuthoring)
+    .find((capability) => capability.item === "camera-use")?.trimEnd, true);
 });
 
 test("projects Project, View and transient observations into one read-only Timeline Scene", () => {
@@ -194,7 +271,7 @@ test("projects Project, View and transient observations into one read-only Timel
       layers: [{ kind: "text", role: "content", text: "Title" }],
     },
     presentation: { tone: "magenta", chrome: "standard" },
-    editing: { move: false, trimStart: false, trimEnd: false, split: false },
+    affordances: { select: true, move: false, trimStart: false, trimEnd: false, split: false },
   });
   assert.equal(Object.hasOwn(document.tracks[0]!.items[0]!, "display"), false);
   assert.throws(() => projectNleTimeline(document, view, [
@@ -222,23 +299,34 @@ test("projects only Item-level Picture layers into one Canvas Scene", () => {
     editRate: { numerator: 24, denominator: 1 },
     tracks: ["picture"],
   }), document, { revision: 0, commands: [{ kind: "track-lock.set", track: "picture", locked: true }] });
-  const scene = projectNleCanvas(document, view, [{ item: "title", title: "Opening title" }]);
+  const spatialCapabilities = resolveNleSpatialItemCapabilities(document, view);
+  const scene = projectNleCanvas(document, view, [{
+    item: "title",
+    title: "Opening title",
+    picture: { sourceExtent: { width: 200, height: 100 } },
+  }], spatialCapabilities, allNleCanvasAffordances);
 
   assert.deepEqual(scene.canvas, { width: 100, height: 100, clearColor: "black" });
   assert.deepEqual(scene.layers.map((layer) => ({
-    id: layer.id, title: layer.title, layout: layer.layout, owner: layer.owner, transform: layer.editing.transform,
+    id: layer.id, title: layer.title, layout: layer.layout, content: layer.content, owner: layer.owner,
+    transform: layer.affordances.translate || layer.affordances.resize !== false,
+    aspectRatio: layer.affordances.resize === false ? undefined : layer.affordances.resize.aspectRatio,
   })), [{
     id: "title",
     title: "Opening title",
     layout: { x: 0, y: 0, width: 100, height: 100, fit: "contain" },
+    content: { x: 0, y: 25, width: 100, height: 50 },
     owner: { kind: "item" },
     transform: false,
+    aspectRatio: undefined,
   }, {
     id: "title-copy",
     title: "default",
     layout: { x: 10, y: 20, width: 80, height: 60, fit: "cover" },
+    content: undefined,
     owner: { kind: "picture-layout", ref: "shared-title", name: "Shared title", sharedBy: ["title-copy"] },
     transform: false,
+    aspectRatio: undefined,
   }]);
   assert.throws(() => assertNleTimelineViewAllowsTransaction(view, document, {
     revision: document.revision,
@@ -248,6 +336,10 @@ test("projects only Item-level Picture layers into one Canvas Scene", () => {
       },
     } }],
   }), /Track picture is locked/u);
+  assert.equal(spatialCapabilities.find((capability) => capability.item === "title-copy")?.translateFrame, false);
+  assert.throws(() => assertNleSpatialEditAllowed(spatialCapabilities, "title-copy", {
+    kind: "frame.translate", deltaX: 1, deltaY: 1,
+  }), /does not allow spatial edit/u);
 });
 
 function documentItem(document: ReturnType<typeof project>, id: string): NleComponentItem {

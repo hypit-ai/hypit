@@ -25,10 +25,11 @@
     "@hypit/prompt": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/svml": "workspace:*",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "@hypit/module": "workspace:^0.0.0-dev"
   },
   "dependencies": {
-    "@hypit/generation": "workspace:^0.2.0",
-    "@hypit/generation-canvas": "workspace:^0.0.0-dev"
+    "@hypit/generation-canvas": "workspace:^0.0.0-dev",
+    "@hypit/generation-model": "workspace:*"
   }
 }

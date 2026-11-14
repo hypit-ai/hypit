@@ -16,5 +16,5 @@ npx hypit check swap-effect-banana-reference-sync.svml
 This writes the public example clips to `reused/`, where ordinary `asset:Video` declarations feed the
 media preparation used by the composition. Downloaded videos stay outside Git.
 Keep the parent `ranking-football` directory when copying this example so the downloader remains
-available. Review `npx hypit plan swap-effect-banana-reference-sync.svml --target final.video --runtime ./hypit.runtime.json` before executing the
+available. Review `npx hypit plan swap-effect-banana-reference-sync.svml --target final.video --runtime ./hypit.generation-runtime.json` before executing the
 remaining work; reusing these clips does not mean every other operation is already satisfied.

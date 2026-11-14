@@ -4,11 +4,20 @@
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "files": ["dist", "README.md"],
-  "hypit": { "activation": "./src/activation.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
+    "@hypit/generation-build": "workspace:*",
     "@hypit/blob": "workspace:^0.0.0-dev",
+    "@hypit/module": "workspace:^0.0.0-dev",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/producer": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",

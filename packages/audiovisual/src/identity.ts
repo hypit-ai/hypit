@@ -1,6 +1,6 @@
-import type { TypeRef } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
 
-export const audiovisualModuleRef = { name: "@hypit/audiovisual", version: "1" } as const;
+export const audiovisualModuleRef = { name: "@hypit/audiovisual" } as const;
 
 /** The signal value produced by a Picture Program before renderer lowering. */
 export const pictureType = {

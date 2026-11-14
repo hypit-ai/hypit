@@ -11,13 +11,12 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/source": "workspace:^0.0.0-dev",
-    "@hypit/author": "workspace:^0.0.0-dev",
+    "@hypit/generation-authoring": "workspace:*",
+    "@hypit/generation-build": "workspace:*",
+    "@hypit/module": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev"
   },
   "devDependencies": {
-    "@hypit/compiler": "workspace:*",
-    "@hypit/kernel": "workspace:*",
     "@hypit/markup": "workspace:*"
   }
 }

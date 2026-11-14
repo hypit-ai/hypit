@@ -20,14 +20,15 @@
   },
   "devDependencies": {
     "@hypit/blob": "workspace:*",
-    "@hypit/generation": "workspace:*",
+    "@hypit/generation-authoring": "workspace:*",
+    "@hypit/generation-model": "workspace:*",
     "@hypit/hypit": "workspace:*",
+    "@hypit/markup": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/text": "workspace:*",
-    "@hypit/markup": "workspace:*"
+    "@hypit/text": "workspace:*"
   },
   "dependencies": {
-    "@hypit/generation": "workspace:^0.2.0",
-    "@hypit/generation-canvas": "workspace:^0.0.0-dev"
+    "@hypit/generation-canvas": "workspace:^0.0.0-dev",
+    "@hypit/generation-model": "workspace:*"
   }
 }

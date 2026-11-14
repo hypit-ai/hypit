@@ -1,14 +1,19 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
+import {
+  audiovisualExecutionDependency,
+  audiovisualExecutionTypes,
+} from "@hypit/audiovisual-execution";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
 import { htmlProgramModuleRef, htmlProgramTypes } from "@hypit/html-program";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 
-export const audiovisualHtmlModuleRef = { name: "@hypit/audiovisual-html", version: "1" } as const;
+export const audiovisualHtmlModuleRef = { name: "@hypit/audiovisual-html" } as const;
 
 export const audiovisualHtmlTypes = {
   source: { module: audiovisualHtmlModuleRef, name: "AudiovisualHtmlSource" },
   sourceSet: { module: audiovisualHtmlModuleRef, name: "AudiovisualHtmlSourceSet" },
-  output: { module: audiovisualHtmlModuleRef, name: "AudiovisualHtmlOutput" },
 } satisfies Record<string, TypeRef>;
 
 export const audiovisualHtmlProducers = {
@@ -19,10 +24,9 @@ export const audiovisualHtmlProducers = {
   compile: { module: audiovisualHtmlModuleRef, name: "compile" },
 } satisfies Record<string, ProducerRef>;
 
-export const audiovisualHtmlManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const audiovisualHtmlManifest: GenerationModuleDefinition = {
   ...audiovisualHtmlModuleRef,
-  dependencies: [audiovisualDependency, htmlProgramModuleRef, mediaDependency],
+  dependencies: [audiovisualDependency, audiovisualExecutionDependency, htmlProgramModuleRef, mediaDependency],
   types: Object.values(audiovisualHtmlTypes).map((type) => type.name),
   capabilities: [],
   producers: [
@@ -57,7 +61,7 @@ export const audiovisualHtmlManifest: ModuleManifest = {
       inputs: [
         { name: "program", type: audiovisualTypes.program },
         { name: "sources", type: audiovisualHtmlTypes.sourceSet },
-        { name: "output", type: audiovisualHtmlTypes.output },
+        { name: "output", type: audiovisualExecutionTypes.pictureOutput },
       ],
       result: { kind: "output", name: "program", type: htmlProgramTypes.program },
     },

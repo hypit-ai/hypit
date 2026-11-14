@@ -1,13 +1,11 @@
 import { blobDependency } from "@hypit/blob";
 import { mediaDependency } from "@hypit/media";
-import type { ModuleManifest } from "@hypit/protocol";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
 import { temporalDependency } from "@hypit/temporal-graph";
 
-export const mediaAuthorModuleRef = { name: "@hypit/media-author", version: "1" } as const;
-export const mediaAuthorManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const mediaAuthorModuleRef = { name: "@hypit/media-author" } as const;
+export const mediaAuthorManifest: GenerationModuleDefinition = {
   name: mediaAuthorModuleRef.name,
-  version: mediaAuthorModuleRef.version,
   dependencies: [blobDependency, mediaDependency, temporalDependency],
   types: [],
   capabilities: [],

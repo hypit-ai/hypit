@@ -1,3 +1,5 @@
+export const generationWorkspaceFormat = "hypit.generation-workspace@1";
+
 export type GenerationWorkspaceGraphReference = {
   /** Portable path relative to the Workspace file. */
   readonly path: string;
@@ -43,7 +45,7 @@ export function generationWorkspaceOutputKey(output: GenerationWorkspaceOutputAd
  * Product selection. Runtime activity, Result outcome and Product values remain observations.
  */
 export type GenerationWorkspace = {
-  readonly format: "hypit.generation-workspace@1";
+  readonly format: typeof generationWorkspaceFormat;
   readonly id: string;
   readonly name: string;
   readonly revision: number;

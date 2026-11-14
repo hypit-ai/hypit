@@ -12,13 +12,13 @@ every returned file and stores it in the current Build.
 
 | Capability | Monid endpoint |
 | --- | --- |
-| `@hypit/seedance@1#seedance-2` | `bytedance` `/v1/video/seedance-2.0` |
-| `@hypit/seedance@1#seedance-2-fast` | `bytedance` `/v1/video/seedance-2.0-fast` |
-| `@hypit/seedance@1#seedance-2-mini` | `bytedance` `/v1/video/seedance-2.0-mini` |
-| `@hypit/seedance@1#seedance-2.5` | `bytedance` `/v1/video/seedance-2.5` |
-| `@hypit/minimax-h3@1#minimax-h3` | `minimax` `/v1/video/minimax-h3` |
-| `@hypit/wan@1#wan-2.7-image` | `alibaba` `/v1/image/wan2.7-image` |
-| `@hypit/wan@1#wan-2.7-image-pro` | `alibaba` `/v1/image/wan2.7-image-pro` |
+| `@hypit/seedance#seedance-2` | `bytedance` `/v1/video/seedance-2.0` |
+| `@hypit/seedance#seedance-2-fast` | `bytedance` `/v1/video/seedance-2.0-fast` |
+| `@hypit/seedance#seedance-2-mini` | `bytedance` `/v1/video/seedance-2.0-mini` |
+| `@hypit/seedance#seedance-2.5` | `bytedance` `/v1/video/seedance-2.5` |
+| `@hypit/minimax-h3#minimax-h3` | `minimax` `/v1/video/minimax-h3` |
+| `@hypit/wan#wan-2.7-image` | `alibaba` `/v1/image/wan2.7-image` |
+| `@hypit/wan#wan-2.7-image-pro` | `alibaba` `/v1/image/wan2.7-image-pro` |
 
 Monid's catalogue lists further generation endpoints, including the H3 Fast, Max and Max Turbo
 variants, Hailuo 2.3 and the Kling, Gemini and Qwen families; their models are not the ones the
@@ -68,8 +68,8 @@ Runtime Profile example:
 
 ```json
 {
-  "format": "hypit.runtime-local@1",
-  "dataRoot": ".hypit/runtimes/local",
+  "format": "hypit.execution-environment-local@1",
+  "dataRoot": ".hypit/environment/local",
   "credentials": {
     "local": {
       "use": "@hypit/credential-store-local"
@@ -91,7 +91,7 @@ Runtime Profile example:
 ```
 
 `baseUrl` defaults to `https://api.monid.ai`. Store the API key with
-`hypit auth login monid.default --runtime hypit.runtime.json`. Optional `requestTimeoutMs`,
+`hypit auth login monid.default --runtime hypit.generation-runtime.json`. Optional `requestTimeoutMs`,
 `operationTimeoutMs` and `actionLimits` bound single HTTP calls, the whole remote run and action
 concurrency; file-system runs poll at most every five seconds within `requestTimeoutMs`.
 Polling transport failures and HTTP 429/5xx preserve the same run and honor standard `Retry-After`;

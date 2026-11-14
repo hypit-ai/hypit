@@ -1,4 +1,9 @@
-import type { NleCanvas, NlePictureLayout } from "@hypit/nle";
+import type {
+  NleCanvas,
+  NlePictureExtent,
+  NlePictureLayout,
+  NlePictureRect,
+} from "@hypit/nle";
 import type { TemporalRate } from "@hypit/temporal/algebra";
 
 export type NleTimelineProjectReference = {
@@ -70,6 +75,21 @@ export type NleTimelineDisplayLayer =
       readonly direction?: "forward" | "reverse";
     };
 
+/** Semantic capability after package/Core support and current View guards are applied. */
+export type NleTimelineItemCapabilities = {
+  readonly item: string;
+  readonly move: boolean;
+  readonly trimStart: boolean;
+  readonly trimEnd: boolean;
+  readonly split: boolean;
+};
+
+/** Product-visible subset of semantic capabilities. */
+export type NleTimelineAffordancePolicy = Omit<NleTimelineItemCapabilities, "item">;
+export type NleTimelineItemAffordances = NleTimelineAffordancePolicy & {
+  readonly select: true;
+};
+
 /**
  * Invocation-local description or preview for one exact Item. It may come from
  * a package presentation facet or a Workbench cache and is never serialized.
@@ -78,6 +98,10 @@ export type NleTimelineItemObservation = {
   readonly item: string;
   readonly title?: string;
   readonly layers?: readonly NleTimelineDisplayLayer[];
+  /** Host-observed Source geometry used only by the spatial editing projection. */
+  readonly picture?: {
+    readonly sourceExtent: NlePictureExtent;
+  };
   readonly presentation?: {
     readonly tone: NleTimelineTone;
     readonly chrome: "standard" | "group" | "compact";
@@ -103,12 +127,7 @@ export type NleTimelineSceneItem = {
     readonly chrome: "standard" | "group" | "compact";
     readonly heightPx?: number;
   };
-  readonly editing: {
-    readonly move: boolean;
-    readonly trimStart: boolean;
-    readonly trimEnd: boolean;
-    readonly split: boolean;
-  };
+  readonly affordances: NleTimelineItemAffordances;
 };
 
 export type NleTimelineSceneTrack = {
@@ -151,10 +170,19 @@ export type NleCanvasSceneLayer = {
   readonly durationFrames: number;
   /** Adjustment layers transform accumulated Picture and therefore own no rectangle. */
   readonly layout?: NlePictureLayout;
+  /** Source content after fit, in Programme coordinates; it may extend beyond the Item frame for cover. */
+  readonly content?: NlePictureRect;
   readonly owner: NleCanvasSceneLayerOwner;
-  readonly editing: {
+  readonly affordances: {
     readonly select: true;
-    readonly transform: boolean;
+    readonly translate: boolean;
+    readonly resize: false | {
+      readonly handles: readonly ["nw", "ne", "se", "sw"];
+      readonly minimumWidth: number;
+      readonly minimumHeight: number;
+      /** Corner drags preserve the authored frame ratio unless the user explicitly requests free resize. */
+      readonly aspectRatio: number;
+    };
   };
 };
 

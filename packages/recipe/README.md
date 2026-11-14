@@ -1,7 +1,7 @@
 # `@hypit/recipe`
 
 Minimal official parameter-recipe Frontend normally used by `.svs` SourceUnits. The source must
-select it explicitly with `<?svml using="@hypit/recipe@1"?>`; the suffix is only a human convention.
+select it explicitly with `<?svml using="@hypit/recipe"?>`; Source identities do not repeat the npm version.
 
 The SVS Frontend reads a `<sheet version="1">` containing named rule blocks and emits one immutable generic
 `Recipe` Record per rule. It does not know Caption, Film, Track or Provider parameters and it does
@@ -14,7 +14,7 @@ JSON array/object syntax. SVS only parses and serializes those shapes. The
 consuming domain package owns their schema and meaning.
 
 ```svs
-<?svml using="@hypit/recipe@1"?>
+<?svml using="@hypit/recipe"?>
 <sheet version="1">
 ranking.column {
   rank-colors: ["#ff3f56", "#ffa72d", "#eadc2a"];

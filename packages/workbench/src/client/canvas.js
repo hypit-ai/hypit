@@ -146,7 +146,7 @@ function renderUnavailableSurface() {
   const label = selected === "timeline" ? "时间线" : selected === "comments" ? "评论" : "场景";
   document.title = `${label} · Hypit`;
   app.className = "unavailable-surface";
-  app.innerHTML = `${topbar(label, selected)}<main><div class="unavailable-card">${icon(selected === "scene" ? "cube" : selected === "comments" ? "transcript" : selected, 26)}<strong>${label}工作面未随当前文档打开</strong><span>当前 Host 打开的是生成画布。选择“画布”返回，或用对应工程文件启动 Workbench。</span><a href="/canvas">返回画布</a></div></main>`;
+  app.innerHTML = `${topbar(label)}<main><div class="unavailable-card">${icon(selected === "scene" ? "cube" : selected === "comments" ? "transcript" : selected, 26)}<strong>${label}工作面未随当前文档打开</strong><span>当前 Host 打开的是生成画布。选择“画布”返回，或用对应工程文件启动 Workbench。</span><a href="/canvas">返回画布</a></div></main>`;
   bindWorkbenchTopbar(app);
   app.dataset.loading = "false";
 }
@@ -158,8 +158,8 @@ function brand() {
   </span></div>`;
 }
 
-function topbar(title, selected = "canvas", environment) {
-  return workbenchTopbar({ projectName: title, active: selected, mode: "floating", environment });
+function topbar(title, environment) {
+  return workbenchTopbar({ projectName: title, mode: "floating", environment });
 }
 
 if (location.pathname !== "/canvas") {
@@ -484,7 +484,7 @@ async function startCanvas() {
       ...state.snapshot.environment,
       connecting: state.environmentConnecting,
     };
-    app.querySelector("#topbar-slot").innerHTML = topbar(workspace.name, "canvas", environment);
+    app.querySelector("#topbar-slot").innerHTML = topbar(workspace.name, environment);
     bindWorkbenchTopbar(app);
     app.classList.toggle("library-open", state.libraryOpen);
     app.classList.toggle("tool-select", state.tool === "select");

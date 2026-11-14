@@ -53,6 +53,11 @@ import type {
 } from "../scene-protocol.js";
 import type { WorkbenchErrorView } from "../protocol.js";
 import { recordSceneOutput } from "../scene-record.js";
+import {
+  connectWorkbenchEnvironment,
+  observeWorkbenchEnvironment,
+  type WorkbenchEnvironmentHost,
+} from "./environment.js";
 
 const clientDirectory = fileURLToPath(new URL("../client/", import.meta.url));
 const clientAssets = new Map([
@@ -255,13 +260,29 @@ function ownedPath(ownerFile: string, path: string, suffix?: string): string | u
   return suffix === undefined || destination.endsWith(suffix) ? destination : undefined;
 }
 
-function assetDocumentPath(value: SceneObject, projectFile: string): string | undefined {
+function projectReferencePath(
+  projectRoot: string,
+  ownerFile: string,
+  path: string,
+  suffix?: string,
+): string | undefined {
+  if (path.length === 0 || path.includes("\\") || path.startsWith("/") || /^[A-Za-z]:/u.test(path)) return undefined;
+  if (path.split("/").some((part) => part.length === 0 || part === ".")) return undefined;
+  const destination = resolve(dirname(ownerFile), path);
+  const inside = relative(projectRoot, destination);
+  if (inside === "" || inside === ".." || inside.startsWith(`..${sep}`) || resolve(inside) === inside) return undefined;
+  return suffix === undefined || destination.endsWith(suffix) ? destination : undefined;
+}
+
+function assetDocumentPath(value: SceneObject, projectFile: string, projectRoot: string): string | undefined {
   const parameters = value.parameters;
   if (parameters === null || typeof parameters !== "object" || Array.isArray(parameters)) return undefined;
   const asset = (parameters as Readonly<Record<string, unknown>>).asset;
   if (asset === null || typeof asset !== "object" || Array.isArray(asset)) return undefined;
   const path = (asset as Readonly<Record<string, unknown>>).path;
-  return typeof path === "string" ? ownedPath(projectFile, path, ".scene-asset.json") : undefined;
+  return typeof path === "string"
+    ? projectReferencePath(projectRoot, projectFile, path, ".scene-asset.json")
+    : undefined;
 }
 
 function documentModel(document: SceneAssetDocument, documentPath: string): { path: string; mediaType: string } | undefined {
@@ -282,8 +303,12 @@ function documentPreview(document: SceneAssetDocument, documentPath: string): { 
   return path === undefined ? undefined : { path, mediaType: preview.mediaType };
 }
 
-async function assetModel(value: SceneObject, projectFile: string): Promise<{ path: string; mediaType: string } | undefined> {
-  const documentPath = assetDocumentPath(value, projectFile);
+async function assetModel(
+  value: SceneObject,
+  projectFile: string,
+  projectRoot: string,
+): Promise<{ path: string; mediaType: string } | undefined> {
+  const documentPath = assetDocumentPath(value, projectFile, projectRoot);
   if (documentPath === undefined) return undefined;
   return documentModel(parseSceneAssetDocument(await readFile(documentPath, "utf8")), documentPath);
 }
@@ -291,6 +316,7 @@ async function assetModel(value: SceneObject, projectFile: string): Promise<{ pa
 async function openSceneLibraries(
   libraries: readonly ResolvedSceneLibrary[],
   projectFile: string,
+  projectRoot: string,
 ): Promise<OpenedSceneLibraries> {
   const models = new Map<string, { path: string; mediaType: string }>();
   const views = await Promise.all(libraries.map(async ({ document: library, file: libraryFile }) => ({
@@ -298,7 +324,7 @@ async function openSceneLibraries(
     name: library.name,
     collections: structuredClone(library.collections),
     entries: await Promise.all(library.entries.map(async (entry) => {
-      const assetPath = ownedPath(libraryFile, entry.asset.path, ".scene-asset.json");
+      const assetPath = projectReferencePath(projectRoot, libraryFile, entry.asset.path, ".scene-asset.json");
       if (assetPath === undefined) throw new Error(`Scene Library Entry ${entry.id} has an invalid Scene Asset path.`);
       const asset = parseSceneAssetDocument(await readFile(assetPath, "utf8"));
       const preview = documentPreview(asset, assetPath);
@@ -318,8 +344,8 @@ async function openSceneLibraries(
   return { views, models };
 }
 
-function observations(session: SceneEditSession, projectFile: string): SceneObjectObservation[] {
-  return session.current.objects.flatMap((object) => assetDocumentPath(object, projectFile) === undefined ? [] : [{
+function observations(session: SceneEditSession, projectFile: string, projectRoot: string): SceneObjectObservation[] {
+  return session.current.objects.flatMap((object) => assetDocumentPath(object, projectFile, projectRoot) === undefined ? [] : [{
     object: object.id,
     preview: {
       kind: "model" as const,
@@ -372,6 +398,7 @@ function snapshot(
   session: SceneEditSession,
   view: SceneView,
   projectFile: string,
+  projectRoot: string,
   viewFile: string,
   viewDirty: boolean,
   libraries: readonly SceneWorkbenchLibrary[],
@@ -383,7 +410,7 @@ function snapshot(
     format: "hypit.workbench-scene@1",
     project: session.current,
     view,
-    scene: projectSceneWorkbench(session.current, view, observations(session, projectFile)),
+    scene: projectSceneWorkbench(session.current, view, observations(session, projectFile, projectRoot)),
     performancePreviews: performancePreviews(session.current, view, lowering),
     libraries,
     projectFile,
@@ -408,6 +435,7 @@ export async function startSceneWorkbenchServer(options: {
   readonly port?: number;
   readonly authoring?: SceneAuthoringHost;
   readonly lowering?: SceneLoweringHost;
+  readonly environment?: WorkbenchEnvironmentHost;
 }): Promise<SceneWorkbenchServer> {
   const projectFile = resolve(options.projectFile);
   const projectRoot = resolve(options.projectRoot ?? dirname(projectFile));
@@ -428,11 +456,11 @@ export async function startSceneWorkbenchServer(options: {
 
   let session = await readSceneProjectFile(projectFile);
   const libraryDocuments = await Promise.all(session.current.libraries.map(async (reference) => {
-    const file = ownedPath(projectFile, reference.path, ".scene-library.json");
+    const file = projectReferencePath(projectRoot, projectFile, reference.path, ".scene-library.json");
     if (file === undefined) throw new Error(`Scene Project Library path is invalid: ${reference.path}`);
     return { file, document: parseSceneLibraryDocument(await readFile(file, "utf8")) };
   }));
-  const libraries = await openSceneLibraries(libraryDocuments, projectFile);
+  const libraries = await openSceneLibraries(libraryDocuments, projectFile, projectRoot);
   let viewExists = true;
   const openedView = await readSceneViewFile(viewFile).catch((error: unknown) => {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
@@ -479,6 +507,12 @@ export async function startSceneWorkbenchServer(options: {
         });
         response.end(html); return;
       }
+      if (request.method === "GET" && url.pathname === "/api/workbench/environment") {
+        json(response, 200, await observeWorkbenchEnvironment(options.environment)); return;
+      }
+      if (request.method === "POST" && url.pathname === "/api/workbench/environment") {
+        json(response, 200, await connectWorkbenchEnvironment(options.environment)); return;
+      }
       const asset = clientAssets.get(url.pathname);
       if (request.method === "GET" && asset !== undefined) {
         response.writeHead(200, { "cache-control": "no-cache", "content-type": asset.type, "x-content-type-options": "nosniff" });
@@ -495,7 +529,7 @@ export async function startSceneWorkbenchServer(options: {
         return;
       }
       if (request.method === "GET" && url.pathname === "/api/scene") {
-        json(response, 200, snapshot(session, view, projectFile, viewFile, viewDirty, libraries.views, lowering)); return;
+        json(response, 200, snapshot(session, view, projectFile, projectRoot, viewFile, viewDirty, libraries.views, lowering)); return;
       }
       if (request.method === "GET" && url.pathname === "/api/scene/export") {
         json(response, 200, exportState); return;
@@ -629,7 +663,7 @@ export async function startSceneWorkbenchServer(options: {
         const id = decodeURIComponent(url.pathname.slice("/api/scene/object-model/".length));
         const object = session.current.objects.find((entry) => entry.id === id);
         if (object === undefined) throw new Error(`Unknown Scene Object: ${id}`);
-        const model = await assetModel(object, projectFile);
+        const model = await assetModel(object, projectFile, projectRoot);
         if (model === undefined) throw new Error(`Scene Object ${id} has no supported project-relative Scene Asset model.`);
         const bytes = await readFile(model.path);
         response.writeHead(200, { "cache-control": "no-store", "content-type": model.mediaType, "x-content-type-options": "nosniff" });
@@ -644,12 +678,12 @@ export async function startSceneWorkbenchServer(options: {
           viewDirty ||= reconciled.revision !== view.revision;
           view = reconciled;
         });
-        json(response, 200, snapshot(session, view, projectFile, viewFile, viewDirty, libraries.views, lowering)); return;
+        json(response, 200, snapshot(session, view, projectFile, projectRoot, viewFile, viewDirty, libraries.views, lowering)); return;
       }
       if (request.method === "POST" && url.pathname === "/api/scene/view-transaction") {
         const input = viewTransactionRequest(await requestJson(request));
         await mutate(() => { view = applySceneViewTransaction(view, session.current, input.transaction); viewDirty = true; });
-        json(response, 200, snapshot(session, view, projectFile, viewFile, viewDirty, libraries.views, lowering)); return;
+        json(response, 200, snapshot(session, view, projectFile, projectRoot, viewFile, viewDirty, libraries.views, lowering)); return;
       }
       if (request.method === "POST" && url.pathname === "/api/scene/object-parameter") {
         const input = objectParameterRequest(await requestJson(request));
@@ -662,7 +696,7 @@ export async function startSceneWorkbenchServer(options: {
             transaction,
           });
         });
-        json(response, 200, snapshot(session, view, projectFile, viewFile, viewDirty, libraries.views, lowering)); return;
+        json(response, 200, snapshot(session, view, projectFile, projectRoot, viewFile, viewDirty, libraries.views, lowering)); return;
       }
       if (request.method === "POST" && url.pathname === "/api/scene/environment-parameter") {
         const input = environmentParameterRequest(await requestJson(request));
@@ -673,7 +707,7 @@ export async function startSceneWorkbenchServer(options: {
             transaction: { ...planned, revision: input.revision },
           });
         });
-        json(response, 200, snapshot(session, view, projectFile, viewFile, viewDirty, libraries.views, lowering)); return;
+        json(response, 200, snapshot(session, view, projectFile, projectRoot, viewFile, viewDirty, libraries.views, lowering)); return;
       }
       if (request.method === "POST" && url.pathname === "/api/scene/behavior-parameter") {
         const input = behaviorParameterRequest(await requestJson(request));
@@ -688,15 +722,15 @@ export async function startSceneWorkbenchServer(options: {
             transaction,
           });
         });
-        json(response, 200, snapshot(session, view, projectFile, viewFile, viewDirty, libraries.views, lowering)); return;
+        json(response, 200, snapshot(session, view, projectFile, projectRoot, viewFile, viewDirty, libraries.views, lowering)); return;
       }
       if (request.method === "POST" && url.pathname === "/api/scene/undo") {
         await mutate(() => { session = undoSceneEdit(session); view = reconcileSceneView(view, session.current); });
-        json(response, 200, snapshot(session, view, projectFile, viewFile, viewDirty, libraries.views, lowering)); return;
+        json(response, 200, snapshot(session, view, projectFile, projectRoot, viewFile, viewDirty, libraries.views, lowering)); return;
       }
       if (request.method === "POST" && url.pathname === "/api/scene/redo") {
         await mutate(() => { session = redoSceneEdit(session); view = reconcileSceneView(view, session.current); });
-        json(response, 200, snapshot(session, view, projectFile, viewFile, viewDirty, libraries.views, lowering)); return;
+        json(response, 200, snapshot(session, view, projectFile, projectRoot, viewFile, viewDirty, libraries.views, lowering)); return;
       }
       if (request.method === "POST" && url.pathname === "/api/scene/save") {
         await mutate(async () => {
@@ -706,7 +740,7 @@ export async function startSceneWorkbenchServer(options: {
           session = completeSceneProjectSave(session, ticket);
           viewDirty = false;
         });
-        json(response, 200, snapshot(session, view, projectFile, viewFile, viewDirty, libraries.views, lowering)); return;
+        json(response, 200, snapshot(session, view, projectFile, projectRoot, viewFile, viewDirty, libraries.views, lowering)); return;
       }
       json(response, 404, errorView(new Error(`Unknown Workbench route: ${url.pathname}`)));
     } catch (error) {

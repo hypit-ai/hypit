@@ -17,12 +17,12 @@ const media = createLocalMediaProvider({
 });
 ```
 
-The declarative Runtime form is:
+The declarative Environment form is:
 
 ```json
 {
-  "format": "hypit.runtime-local@1",
-  "dataRoot": ".hypit/runtimes/local",
+  "format": "hypit.execution-environment-local@1",
+  "dataRoot": ".hypit/environment/local",
   "credentials": {},
   "endpoints": {
     "media.local": { "use": "@hypit/provider-media-local" }

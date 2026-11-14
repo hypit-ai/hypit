@@ -24,7 +24,7 @@ The checked-in Graph is safe to inspect before login. Running it incurs the paid
 `BRIEF.md`. HypiHub authentication is intentionally project/profile scoped:
 
 ```bash
-hypit auth login hypihub.default --project . --runtime hypit.runtime.json
+hypit auth login hypihub.default --project . --runtime hypit.generation-runtime.json
 hypit generation run generation.graph.json --target alice-video-1 --target bob-video-1 \
   --target alice-video-2 --target bob-video-2
 ```

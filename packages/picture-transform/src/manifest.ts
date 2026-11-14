@@ -1,7 +1,10 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import type { ValueSchema } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
 
-export const pictureTransformModuleRef = { name: "@hypit/picture-transform", version: "1" } as const;
+export const pictureTransformModuleRef = { name: "@hypit/picture-transform" } as const;
 export const pictureTransformTypes = {
   state: { module: pictureTransformModuleRef, name: "PictureTransformState" },
   control: { module: pictureTransformModuleRef, name: "PictureTransformControl" },
@@ -22,10 +25,8 @@ export const pictureTransformStateSchema: ValueSchema = { kind: "object", fields
   originY: numberField,
 } };
 
-export const pictureTransformManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const pictureTransformManifest: GenerationModuleDefinition = {
   name: pictureTransformModuleRef.name,
-  version: pictureTransformModuleRef.version,
   dependencies: [audiovisualDependency],
   types: Object.values(pictureTransformTypes).map((type) => type.name),
   capabilities: [],

@@ -64,7 +64,7 @@ production/
 ├── packages/                   # production-owned components
 ├── drafts/                     # unaccepted working material
 ├── exports/                    # viewing deliverables
-├── hypit.runtime.json          # optional deployment selection
+├── hypit.generation-runtime.json          # optional deployment selection
 └── .hypit/                     # local execution and Result history; normally ignored
 ```
 

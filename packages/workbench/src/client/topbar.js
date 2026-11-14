@@ -1,9 +1,5 @@
 const labels = {
   zh: {
-    scene: "场景",
-    canvas: "画布",
-    timeline: "时间线",
-    comments: "评论",
     language: "切换到 English",
     themeLight: "切换到浅色模式",
     themeDark: "切换到深色模式",
@@ -13,14 +9,9 @@ const labels = {
     environmentUnavailable: "不可用",
     environmentConnecting: "等待授权…",
     connect: "连接 HypiHub",
-    runtime: "本地 Runtime",
-    navigation: "工作空间",
+    environmentService: "本地环境",
   },
   en: {
-    scene: "Scene",
-    canvas: "Canvas",
-    timeline: "Timeline",
-    comments: "Comments",
     language: "切换到中文",
     themeLight: "Switch to light mode",
     themeDark: "Switch to dark mode",
@@ -30,8 +21,7 @@ const labels = {
     environmentUnavailable: "Unavailable",
     environmentConnecting: "Waiting for authorization…",
     connect: "Connect HypiHub",
-    runtime: "Local Runtime",
-    navigation: "Workspaces",
+    environmentService: "Local Environment",
   },
 };
 
@@ -78,23 +68,17 @@ function workbenchEnvironment(environment, copy, hydrate = false) {
       <button class="workbench-chrome-button workbench-environment-trigger" type="button" popovertarget="workbench-environment-popover" aria-label="${escapeHtml(`${copy.environment}：${environmentCopy}`)}" title="${escapeHtml(`${copy.environment}：${environmentCopy}`)}"><span class="workbench-status-mark" aria-hidden="true">${environmentMark}</span></button>
       <div id="workbench-environment-popover" class="workbench-environment-popover" popover="auto">
         <header><strong>${copy.environment}</strong><span><i></i>${environmentCopy}</span></header>
-        <div class="workbench-environment-service"><span class="workbench-service-mark">${environmentMark}</span><div><strong>${escapeHtml(service)}</strong><small>${environment?.runtime?.selected ? `${copy.runtime} · ${environment.runtime.label ?? ""}` : environment?.runtime?.candidate ?? copy.runtime}</small></div></div>
+        <div class="workbench-environment-service"><span class="workbench-service-mark">${environmentMark}</span><div><strong>${escapeHtml(service)}</strong><small>${environment?.environment?.selected ? `${copy.environmentService} · ${environment.environment.label ?? ""}` : environment?.environment?.candidate ?? copy.environmentService}</small></div></div>
         ${environment?.issue === undefined ? "" : `<p>${escapeHtml(environment.issue)}</p>`}
         ${environmentStatus === "ready" ? "" : `<button class="workbench-environment-connect" type="button" data-environment-connect ${environmentStatus === "unavailable" || environmentStatus === "connecting" ? "disabled" : ""}>${environmentStatus === "connecting" ? copy.environmentConnecting : copy.connect}</button>`}
       </div>
     </div>`;
 }
 
-export function workbenchTopbar({ projectName, active, mode = "floating", environment }) {
+export function workbenchTopbar({ projectName, mode = "floating", environment }) {
   const locale = currentLocale();
   const copy = labels[locale];
   const theme = currentTheme();
-  const tabs = [
-    ["scene", "/3d"],
-    ["canvas", "/canvas"],
-    ["timeline", "/nle"],
-    ["comments", "/comments"],
-  ];
   document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
   document.documentElement.dataset.theme = theme;
   const environmentMarkup = workbenchEnvironment(environment ?? { status: "unavailable", credentials: [] },
@@ -108,10 +92,6 @@ export function workbenchTopbar({ projectName, active, mode = "floating", enviro
       ${environmentMarkup}
       <button class="workbench-chrome-button" type="button" data-topbar-language aria-label="${copy.language}" title="${copy.language}">${icon("globe")}</button>
       <button class="workbench-chrome-button" type="button" data-topbar-theme aria-label="${theme === "dark" ? copy.themeLight : copy.themeDark}" title="${theme === "dark" ? copy.themeLight : copy.themeDark}">${icon(theme === "dark" ? "sun" : "moon")}</button>
-      <span class="workbench-topbar-divider" aria-hidden="true"></span>
-      <nav class="workbench-view-tabs" aria-label="${copy.navigation}">
-        ${tabs.map(([key, href]) => `<a href="${href}" aria-current="${active === key ? "page" : "false"}" data-workspace="${key}">${copy[key]}</a>`).join("")}
-      </nav>
     </div>
   </header>`;
 }

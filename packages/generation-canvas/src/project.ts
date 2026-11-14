@@ -7,6 +7,7 @@ import type {
   GenerationWorkspaceViewport,
 } from "./types.js";
 import { generationWorkspaceOutputKey } from "./types.js";
+import { generationWorkspaceFormat } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -88,7 +89,7 @@ function assertOutput(value: GenerationWorkspaceOutput): void {
 export function assertGenerationWorkspace(value: GenerationWorkspace): void {
   object(value, "Generation Workspace");
   exactKeys(value, ["format", "id", "name", "revision", "graph", "packages", "viewport", "nodes", "outputs"], "Generation Workspace");
-  assert(value.format === "hypit.generation-workspace@1", "Unsupported Generation Workspace format.");
+  assert(value.format === generationWorkspaceFormat, "Unsupported Generation Workspace format.");
   identity(value.id, "Generation Workspace id");
   assert(typeof value.name === "string" && value.name.trim().length > 0, "Generation Workspace name is empty.");
   assert(Number.isSafeInteger(value.revision) && value.revision >= 0,
@@ -139,7 +140,7 @@ export function createGenerationWorkspace(input: {
   readonly packages?: readonly string[];
 }): GenerationWorkspace {
   return sealGenerationWorkspace({
-    format: "hypit.generation-workspace@1",
+    format: generationWorkspaceFormat,
     id: input.id,
     name: input.name,
     revision: 0,

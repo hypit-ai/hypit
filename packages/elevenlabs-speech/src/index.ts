@@ -1,8 +1,8 @@
-import { sealModelFieldRequest, sealModelFieldBuilder, defineModelFields } from "@hypit/generation/model-fields";
-import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
-import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+import { sealModelFieldRequest, sealModelFieldBuilder, defineModelFields } from "@hypit/generation-model/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation-model/model-fields";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation-model/model-fields";
 
-export const elevenLabsSpeechModuleRef = { name: "@hypit/elevenlabs-speech", version: "1" } as const;
+export const elevenLabsSpeechModuleRef = { name: "@hypit/elevenlabs-speech" } as const;
 export const elevenLabsSpeechModels = ["eleven_ttv_v3"] as const;
 export type ElevenLabsSpeechModel = typeof elevenLabsSpeechModels[number];
 

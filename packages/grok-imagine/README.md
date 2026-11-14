@@ -7,7 +7,7 @@ validated before yielding an ordinary video Artifact. The package declares the m
 choice; it does not route to another model or access a Provider. The selected Provider implements its exact capability.
 
 ```svml
-module grok from "@hypit/grok-imagine@1"
+module grok from "@hypit/grok-imagine"
 
 grok.video {
   id: clip prompt: @prompt duration: 6 aspect-ratio: 9:16 resolution: 720p

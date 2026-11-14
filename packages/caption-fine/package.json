@@ -15,14 +15,16 @@
     "README.md"
   ],
   "dependencies": {
+    "@hypit/generation-build": "workspace:*",
     "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/audiovisual-html": "workspace:^0.1.0",
     "@hypit/caption": "workspace:^0.1.1",
     "@hypit/caption-nle": "workspace:^0.1.0",
+    "@hypit/module": "workspace:^0.0.0-dev",
     "@hypit/html-program": "workspace:^0.2.0",
-    "@hypit/html-video": "workspace:^0.2.1",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/nle-audiovisual": "workspace:^0.1.0",
     "@hypit/nle-view": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/spatial": "workspace:^0.1.1",

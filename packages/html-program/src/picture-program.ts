@@ -1,9 +1,9 @@
 import { assertBlobRef, canonicalStringify, compareCodeUnits } from "@hypit/protocol";
 import type { BlobRef, CanonicalValue, ResourceId } from "@hypit/protocol";
 import { verifyPictureInterpretation } from "@hypit/media";
-import type { PictureInterpretation, PreparedSignalPictureSource } from "@hypit/media";
+import type { PictureInterpretation, PreparedPictureSampling, PreparedSignalPictureSource } from "@hypit/media";
 import { assertFrameSpan } from "@hypit/temporal";
-import type { ExactTemporalValue, FrameSpan, TemporalMap } from "@hypit/temporal";
+import type { ExactTemporalValue, FrameSpan } from "@hypit/temporal";
 
 import { presentationCaptureScopeRuntime } from "./capture-scope.js";
 import { assertHtmlProgram, htmlArtifactUri } from "./program.js";
@@ -38,10 +38,8 @@ export type HtmlPictureElement =
       readonly artifact: BlobRef;
       readonly picture: PictureInterpretation;
     })
-  | (HtmlPictureElementBase & {
+  | (HtmlPictureElementBase & PreparedPictureSampling & {
       readonly kind: "video";
-      readonly source: PreparedSignalPictureSource;
-      readonly sampling: TemporalMap;
       readonly reconstruction?: HtmlPictureReconstruction;
       readonly muted?: boolean;
     });

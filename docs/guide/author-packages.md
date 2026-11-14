@@ -64,7 +64,7 @@ the package's logical Module and component:
   "kind": "present",
   "source": "component",
   "component": {
-    "module": { "name": "@your-scope/my-component", "version": "1" },
+    "module": { "name": "@your-scope/my-component" },
     "name": "title-card"
   },
   "parameters": { "title": "Opening" }

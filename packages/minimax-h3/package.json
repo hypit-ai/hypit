@@ -19,13 +19,13 @@
   },
   "devDependencies": {
     "@hypit/blob": "workspace:*",
-    "@hypit/generation": "workspace:*",
+    "@hypit/generation-model": "workspace:*",
     "@hypit/hypit": "workspace:*",
     "@hypit/prompt": "workspace:*",
     "@hypit/protocol": "workspace:*"
   },
   "dependencies": {
-    "@hypit/generation": "workspace:^0.2.0",
-    "@hypit/generation-canvas": "workspace:^0.0.0-dev"
+    "@hypit/generation-canvas": "workspace:^0.0.0-dev",
+    "@hypit/generation-model": "workspace:*"
   }
 }

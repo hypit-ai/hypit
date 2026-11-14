@@ -1,11 +1,7 @@
 import { compareCodeUnits, isBlobRef, mapValueBlobs } from "@hypit/protocol";
-import type {
-  BlobRef,
-  CanonicalValue,
-  PublicationIntent,
-  TypeRef,
-  TypedRecord,
-} from "@hypit/protocol";
+import type { BlobRef, CanonicalValue } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { PublicationIntent, TypedRecord } from "@hypit/generation-build";
 
 export type ProductFileRef = {
   readonly kind: "product-file";

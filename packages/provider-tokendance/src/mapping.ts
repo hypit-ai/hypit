@@ -1,4 +1,4 @@
-import type { GenerationWireMapping } from "@hypit/generation/provider";
+import type { GenerationWireMapping } from "@hypit/generation-model/provider";
 import { minimaxH3ModuleRef } from "@hypit/minimax-h3";
 import { seedanceModuleRef } from "@hypit/seedance";
 import { seedreamModuleRef } from "@hypit/seedream";

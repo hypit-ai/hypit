@@ -1,22 +1,19 @@
-import type {
-  GenerationGraphInput,
-  GenerationOperationNodeDeclaration,
-} from "@hypit/hypit/generation-graph";
-import type { GenerationNodeAuthoringShape } from "@hypit/hypit/generation-graph";
+import type { GenerationGraphInput, GenerationOperationNodeDeclaration, } from "@hypit/hypit/generation/graph";
+import type { GenerationNodeAuthoringShape } from "@hypit/hypit/generation/graph";
 import type { GenerationCanvasNodePresentation } from "@hypit/generation-canvas";
-import { blobTypes } from "@hypit/hypit/blob";
-import { canonicalize, type CanonicalValue } from "@hypit/hypit/protocol";
+import { blobTypes } from "@hypit/hypit/generation/blob";
+import { canonicalize, type CanonicalValue } from "@hypit/hypit/value";
 import { sealPrompt } from "@hypit/hypit/prompt";
 import {
   collectIndexedFieldModelArtifacts,
   fieldModelGraphOperation,
-} from "@hypit/generation/model-fields/graph";
+} from "@hypit/generation-model/model-fields/graph";
 import {
   modelAuthoringControl,
   modelAuthoringMediaList,
   verifyModelFields,
   type ModelFieldValue,
-} from "@hypit/generation/model-fields";
+} from "@hypit/generation-model/model-fields";
 
 import {
   gptImageEndpoints,

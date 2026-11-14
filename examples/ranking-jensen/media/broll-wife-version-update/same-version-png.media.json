@@ -1,0 +1,35 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "ranking-jensen-broll-same-version",
+  "media": {
+    "file": {
+      "path": "same-version.png",
+      "mediaType": "image/png"
+    },
+    "interpretation": {
+      "id": "ranking-jensen-broll-same-version:media",
+      "picture": {
+        "interpretation": {
+          "codedHeight": 506,
+          "codedWidth": 506,
+          "picture": {
+            "alphaMode": "straight",
+            "bitDepth": 8,
+            "colorMatrix": "rgb",
+            "colorPrimaries": "bt709",
+            "colorRange": "full",
+            "colorTransfer": "srgb"
+          },
+          "rotationDegrees": 0,
+          "sampleAspectRatio": {
+            "denominator": 1,
+            "numerator": 1
+          }
+        },
+        "kind": "constant",
+        "streamIndex": 0
+      }
+    }
+  },
+  "representations": []
+}

@@ -70,6 +70,12 @@ domains; only the Picture projection carries pixel interpretation because visual
 They choose no file format, frame grid, sample buffer, decoder or cache. A renderer may decode, cache or transcode privately,
 but those choices do not become graph values or fields of `PreparedMedia`.
 
+`PreparedPictureSampling` is the shared terminal relation between one decodable
+`PreparedSignalPictureSource` and an existing `TemporalMap`. The Map's target is the consumer's local signal domain and its
+terminal source is the stream presentation domain. `PreparedMedia` can project this relation through
+`preparedPictureSampling()`, while a transient renderer may publish the same relation for execution-owned bytes. The latter
+does not acquire a Media Asset identity: the shared type unifies sampling facts, not lifecycle or ownership.
+
 ## Terminal delivery
 
 `PictureObservation` is the inspection vocabulary for source pixel meaning. It can preserve tags that the
@@ -78,7 +84,8 @@ current execution path does not implement so Preparation can reject them accurat
 by current preparation and rendering. Composition and Program do not carry a selectable or extensible-looking
 working-picture record. `OutputPictureSpec`
 describes a delivery picture: encoded video uses `VideoOutputPictureSpec`, while PNG frame capture uses
-`FrameOutputPictureSpec`. `MediaDeliverySpec` is the author-owned requirement for one finished file. It declares the picture
+`FrameOutputPictureSpec`. Final video delivery is opaque and owns its matte; frame capture may either apply that explicit
+opaque matte or preserve straight alpha for a transient Picture Product. `MediaDeliverySpec` is the author-owned requirement for one finished file. It declares the picture
 profile and matte policy, coded video target, audio target and container once. The pure
 `project-visual-delivery` Producer derives the `VisualDeliverySpec` needed by a visual renderer;
 the complete value independently reaches final mux.
@@ -95,7 +102,7 @@ The current delivery contract is deliberately one complete family: opaque BT.709
 H.264/yuv420p visual, 48 kHz stereo AAC audio and MP4. The author selects quality and opaque matte:
 
 ```svml
-module media from "@hypit/media-author@1"
+module media from "@hypit/media-author"
 
 media.delivery { id: delivery profile: bt709-h264 quality: high matte: "#000000" }
 ```

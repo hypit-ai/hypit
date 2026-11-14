@@ -2,8 +2,8 @@ import { replaceFile } from "@hypit/hypit/atomic-file";
 import { randomUUID } from "node:crypto";
 import { mkdir, open, rm, stat, unlink } from "node:fs/promises";
 import { join } from "node:path";
-import { verifyCredentialRef } from "@hypit/runtime-local/extension";
-import type { CredentialRef, CredentialValue, WritableCredentialStore } from "@hypit/runtime-local/extension";
+import { verifyCredentialRef } from "@hypit/execution-environment-local/extension";
+import type { CredentialRef, CredentialValue, WritableCredentialStore } from "@hypit/execution-environment-local/extension";
 
 function missing(error: unknown): boolean {
   return error instanceof Error && "code" in error && error.code === "ENOENT";

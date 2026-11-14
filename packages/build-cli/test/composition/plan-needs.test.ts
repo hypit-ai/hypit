@@ -31,7 +31,6 @@ test("Plan retains a deterministic Producer failure even when the Build has no e
     plan: state.plan,
   };
   const evaluated = await evaluatePlanNeeds(definition, [{
-    format: "hypit.package@1",
     facets: [createProducerPackageFacet([{
         producer: producers.makePrompt,
         handler() {
@@ -53,7 +52,6 @@ test("Plan evaluates deterministic Producers under the selected Host inline Valu
     program: state.program,
     plan: state.plan,
   }, [{
-    format: "hypit.package@1",
     facets: [createProducerPackageFacet([{
       producer: producers.makePrompt,
       handler: ({ limits }) => {
@@ -70,7 +68,6 @@ test("Plan evaluates deterministic Producers under the selected Host inline Valu
 test("a structurally planned request stays blocked without creating partial constraints", async () => {
   const definition = greetingDefinition();
   const evaluated = await evaluatePlanNeeds(definition, [{
-    format: "hypit.package@1",
     facets: [createProducerPackageFacet([{
         producer: producers.requestText,
         handler: () => ({ kind: "need", constraints: { prompt: "unreachable" } }),
@@ -84,13 +81,13 @@ test("a structurally planned request stays blocked without creating partial cons
   assert.deepEqual(plannedEndpointQueries(evaluated.state, evaluated), [{
     kind: "demand",
     need: "need:generation",
-    capability: { module: { name: "example.greeting", version: "0.0.0" }, name: "generate-greeting-text" },
-    returns: { module: { name: "example.greeting", version: "0.0.0" }, name: "GeneratedText" },
+    capability: { module: { name: "example.greeting" }, name: "generate-greeting-text" },
+    returns: { module: { name: "example.greeting" }, name: "GeneratedText" },
   }]);
   assert.throws(() => assertPlannedRequests(evaluated.state, evaluated, []), /no selected Endpoint offers/u);
   const endpoints = [{
     need: "need:generation",
-    capability: "example.greeting@0.0.0#generate-greeting-text",
+    capability: "example.greeting#generate-greeting-text",
     status: "resolved" as const,
     support: "not-evaluated" as const,
     endpoint: "generation.default",
@@ -109,7 +106,6 @@ test("a structurally planned request stays blocked without creating partial cons
 test("an executed request Producer upgrades its structural demand to a concrete Provider query", async () => {
   const definition = greetingDefinition();
   const evaluated = await evaluatePlanNeeds(definition, [{
-    format: "hypit.package@1",
     facets: [createProducerPackageFacet([{
         producer: producers.makePrompt,
         handler: () => ({ kind: "output", value: ("Greet Ada") }),
@@ -125,8 +121,8 @@ test("an executed request Producer upgrades its structural demand to a concrete 
   assert.deepEqual(plannedEndpointQueries(evaluated.state, evaluated), [{
     kind: "concrete",
     need: "need:generation",
-    capability: { module: { name: "example.greeting", version: "0.0.0" }, name: "generate-greeting-text" },
-    returns: { module: { name: "example.greeting", version: "0.0.0" }, name: "GeneratedText" },
+    capability: { module: { name: "example.greeting" }, name: "generate-greeting-text" },
+    returns: { module: { name: "example.greeting" }, name: "GeneratedText" },
     constraints: { prompt: "Greet Ada" },
   }]);
   assert.deepEqual(describePlanRequest("main.svml", 1, evaluated.state, evaluated, []), {
@@ -134,8 +130,8 @@ test("an executed request Producer upgrades its structural demand to a concrete 
     source: "main.svml",
     ordinal: 1,
     requestCount: 1,
-    returns: "example.greeting@0.0.0#GeneratedText",
-    capability: "example.greeting@0.0.0#generate-greeting-text",
+    returns: "example.greeting#GeneratedText",
+    capability: "example.greeting#generate-greeting-text",
     readiness: "concrete",
     pending: [],
     constraints: { prompt: "Greet Ada" },

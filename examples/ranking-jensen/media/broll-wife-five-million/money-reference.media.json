@@ -1,0 +1,35 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "ranking-jensen-broll-five-million",
+  "media": {
+    "file": {
+      "path": "money-reference.jpg",
+      "mediaType": "image/jpeg"
+    },
+    "interpretation": {
+      "id": "ranking-jensen-broll-five-million:media",
+      "picture": {
+        "interpretation": {
+          "codedHeight": 476,
+          "codedWidth": 736,
+          "picture": {
+            "alphaMode": "straight",
+            "bitDepth": 8,
+            "colorMatrix": "rgb",
+            "colorPrimaries": "bt709",
+            "colorRange": "full",
+            "colorTransfer": "srgb"
+          },
+          "rotationDegrees": 0,
+          "sampleAspectRatio": {
+            "denominator": 1,
+            "numerator": 1
+          }
+        },
+        "kind": "constant",
+        "streamIndex": 0
+      }
+    }
+  },
+  "representations": []
+}

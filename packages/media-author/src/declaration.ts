@@ -5,9 +5,10 @@ import {
   type AuthorDeclarationCompiler,
   type AuthorResolvedReference,
   type Awaitable,
-} from "@hypit/author";
+} from "@hypit/generation-authoring/author";
 import { blobTypes } from "@hypit/blob";
-import { sameType, type CanonicalValue, type TypeRef } from "@hypit/protocol";
+import { type CanonicalValue } from "@hypit/protocol";
+import { sameType, type TypeRef } from "@hypit/module";
 import { temporalTypes } from "@hypit/temporal-graph";
 import {
   assertFontArtifactRef,

@@ -8,7 +8,7 @@ import test from "node:test";
 
 import {
   FileBuildFinalization,
-} from "../../../runtime-local/src/result-storage/index.js";
+} from "../../../generation-runtime-local/src/result-storage/index.js";
 
 import { buildCliServices } from "../services-scenario.js";
 import { runBuildOperationsCli as runCli } from "@hypit/build-operations-cli";
@@ -26,7 +26,7 @@ test("a failed Result exposes task receipts without a Runtime", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-receipts-"));
   const id = "bld_20260906T110000000Z_0000000001";
   try {
-    const result = await FileBuildFinalization.create(join(root, ".hypit", "results"), join(root, ".hypit", "products"), {
+    const result = await FileBuildFinalization.create(join(root, ".hypit", "generation", "results"), join(root, ".hypit", "generation", "products"), {
       id, sourcePath: "main.svml", targets: [], publication: publicationIntent([]),
     });
     const operation = {
@@ -56,14 +56,14 @@ test("logs reads finished evidence without a Runtime and clearly limits the tail
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-logs-"));
   try {
     const id = "bld_20260913T130000000Z_0000000001";
-    const result = await FileBuildFinalization.create(join(root, ".hypit/results"), join(root, ".hypit/products"), {
+    const result = await FileBuildFinalization.create(join(root, ".hypit/generation/results"), join(root, ".hypit/generation/products"), {
       id, sourcePath: "main.svml", targets: [], publication: publicationIntent([]),
     });
     const records = ["started", "completed"].map((kind, time) => ({ format: "hypit.execution-log@1", time, kind, endpoint: "renderer", request: "need:render" }));
     await result.finish({ outcome: "complete", executionLog: (async function* () {
       yield Buffer.from(records.map((record) => JSON.stringify(record) + "\n").join(""));
     })() });
-    await writeFile(join(root, ".hypit/runtime"), "missing-profile.json\n");
+    await writeFile(join(root, ".hypit/generation/runtime-profile"), "missing-profile.json\n");
     assert.ok((await humanCommand(["inspect", id], root)).includes(
       commandHint(["logs", id], { projectRoot: await realpath(root) }),
     ));
@@ -82,7 +82,7 @@ test("logs reports unavailable evidence as unsuccessful, while an existing empty
     for (const state of ["missing", "no-log", "empty-log"] as const) {
       if (state === "no-log") await fixture(root);
       if (state === "empty-log") {
-        const result = await FileBuildFinalization.create(join(root, ".hypit/results"), join(root, ".hypit/products"), {
+        const result = await FileBuildFinalization.create(join(root, ".hypit/generation/results"), join(root, ".hypit/generation/products"), {
           id: "bld_20260902T110000001Z_0000000001", sourcePath: "main.svml", targets: [], publication: publicationIntent([]),
         });
         await result.finish({ outcome: "complete", executionLog: (async function* () {})() });

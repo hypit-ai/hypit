@@ -89,10 +89,8 @@ try {
   });
   const installedSeedance = loaded.find((item) => item.specifier === "@hypit/seedance");
   assert.ok(installedSeedance);
-  assert.deepEqual(installedSeedance.contribution.modules?.map((item) => [
-    item.manifest.name,
-    item.manifest.version,
-  ]), [["@hypit/seedance", "1"]]);
+  assert.ok(installedSeedance.contribution.facets?.some((facet) =>
+    facet.kind === "hypit.module" && facet.address === "@hypit/seedance"));
 
   const source = resolveNodePackageSource("@hypit/seedance-kits/speaker", {
     from: join(consumer, "package.json"),

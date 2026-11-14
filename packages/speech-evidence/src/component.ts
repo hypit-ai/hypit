@@ -1,9 +1,9 @@
-import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { ProducerPackage } from "@hypit/hypit/producer";
+import type { RefinementPackage } from "@hypit/hypit/generation/refinement";
+import type { ProducerPackage } from "@hypit/hypit/generation/producer";
 import { preparedAudioSource, verifyPreparedMedia } from "@hypit/media";
 import type { PreparedMedia } from "@hypit/media";
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { Value } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/hypit/value";
+import type { Value } from "@hypit/hypit/value";
 import {
   assertSpeechEvidenceAudioIdentity,
   speechEvidenceProducers,

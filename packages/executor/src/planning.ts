@@ -1,16 +1,15 @@
-import { BuildMachine, resolveCapability, resolveProducer } from "@hypit/kernel";
-import type { BuildView } from "@hypit/kernel";
-import type {
-  BuildDefinition,
-  ProducerRef,
-  TypeRef,
-} from "@hypit/protocol";
+import { BuildMachine, resolveCapability, resolveProducer } from "@hypit/generation-build";
+import type { BuildView } from "@hypit/generation-build";
+import type { TypeRef } from "@hypit/module";
+import type { ProducerRef } from "@hypit/module";
+import type { BuildDefinition } from "@hypit/generation-build";
 import { RefinementRegistry } from "@hypit/refinement";
 import type { RefinementRegistryLike } from "@hypit/refinement";
 import type { ProducerExecutionLimits } from "@hypit/producer";
+import { EndpointRegistry } from "@hypit/endpoint";
 
 import { Executor } from "./executor.js";
-import { EndpointRegistry, ProducerRegistry } from "./registry.js";
+import { ProducerRegistry } from "./registry.js";
 
 export type PlanEvaluationBlocker =
   | {

@@ -1,7 +1,7 @@
 import { defineEndpoint } from "@hypit/hypit/endpoint";
 import { mediaTypes } from "@hypit/media";
 import { htmlProgramCapabilities, verifyHtmlRasterRequest } from "@hypit/html-program";
-import { canonicalize } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/hypit/value";
 import {
   localHtmlRasterRejection,
   renderWorkerLimit,
@@ -14,7 +14,6 @@ import { rasterizeElectronHtmlProgram } from "./render.js";
 
 export const localElectronHtmlProviderModuleRef = {
   name: "@hypit/provider-html-electron-local",
-  version: "1",
 } as const;
 
 export type CreateLocalElectronHtmlProviderOptions = HtmlExecutionOptions & {

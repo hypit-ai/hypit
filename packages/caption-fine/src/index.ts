@@ -10,7 +10,7 @@ export {
 } from "./materialize.js";
 export {
   captionFineNleComponentSymbol,
-  captionFineNleHtmlVideoResolver,
+  captionFineNleAudiovisualResolver,
   captionFineNleAuthoring,
   captionFineNleManifest,
   captionFineNleResolver,

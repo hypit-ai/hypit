@@ -8,12 +8,14 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@hypit/producer": "workspace:*",
-    "@hypit/kernel": "workspace:*",
     "@hypit/endpoint": "workspace:*",
+    "@hypit/execution-environment": "workspace:*",
+    "@hypit/module": "workspace:^0.0.0-dev",
+    "@hypit/generation-build": "workspace:*",
+    "@hypit/generation-runtime": "workspace:*",
+    "@hypit/producer": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/resource-store": "workspace:^0.1.0",
-    "@hypit/runtime": "workspace:*",
-    "@hypit/refinement": "workspace:*"
+    "@hypit/refinement": "workspace:*",
+    "@hypit/resource-store": "workspace:^0.1.0"
   }
 }

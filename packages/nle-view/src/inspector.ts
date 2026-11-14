@@ -4,15 +4,19 @@ import {
   findNleItem,
   findNleComponentValue,
   findNlePictureLayout,
+  indexNleComposition,
   nlePackageSymbolKey,
-  resolveNleComponentBinding,
+  resolveNleComponentSharedValue,
   resolveNlePictureLayout,
   type NleAdjustmentItem,
   type NleAuthoringHost,
   type NleComponentItem,
   type NleComponentValue,
   type NleItem,
+  type NleOperatorApplicationAddress,
+  type NleOperatorParameterAuthoringContext,
   type NlePackageSymbol,
+  type NlePresentItem,
   type NleProject,
   type NleTrack,
 } from "@hypit/nle";
@@ -20,7 +24,7 @@ import {
 import type { NleTimelineView } from "./types.js";
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 
-export const nleInspectorPresentationFacetAbi = "hypit.nle-inspector-presentation@1";
+export const nleInspectorPresentationFacetKind = "hypit.nle-inspector-presentation";
 
 export type NleInspectorDomain = "where" | "when" | "how";
 export type NleInspectorControl = "readout" | "text" | "number" | "boolean" | "select" | "color";
@@ -58,7 +62,7 @@ export type NleInspectorFieldDraft = Omit<NleInspectorField, "editable"> & {
 
 export type NleInspectorSectionOwner =
   | { readonly kind: "nle" }
-  | { readonly kind: "package"; readonly component: NlePackageSymbol }
+  | { readonly kind: "package"; readonly symbol: NlePackageSymbol }
   | {
       readonly kind: "component-value";
       readonly component: NlePackageSymbol;
@@ -113,7 +117,11 @@ export type NleInspectorSectionDraft = Omit<NleInspectorSection, "owner" | "fiel
 
 export type NleInspectorPackageEdit =
   | { readonly kind: "component"; readonly operation: CanonicalValue }
-  | { readonly kind: "adjustment"; readonly operation: CanonicalValue }
+  | {
+      readonly kind: "operator";
+      readonly address: NleOperatorApplicationAddress;
+      readonly operation: CanonicalValue;
+    }
   | { readonly kind: "component-value"; readonly value: string; readonly operation: CanonicalValue };
 
 export type NleInspectorComponentPresentation = {
@@ -125,13 +133,9 @@ export type NleInspectorComponentPresentation = {
   }) => readonly NleInspectorSectionDraft[];
 };
 
-export type NleInspectorAdjustmentPresentation = {
-  readonly component: NlePackageSymbol;
-  readonly project: (context: {
-    readonly project: NleProject;
-    readonly track: NleTrack;
-    readonly item: NleAdjustmentItem;
-  }) => readonly NleInspectorSectionDraft[];
+export type NleInspectorOperatorPresentation = {
+  readonly operator: NlePackageSymbol;
+  readonly project: (context: NleOperatorParameterAuthoringContext) => readonly NleInspectorSectionDraft[];
 };
 
 export type NleInspectorComponentValuePresentation = {
@@ -147,11 +151,11 @@ export type NleInspectorComponentValuePresentation = {
 export type NleInspectorPresentationPackage = {
   readonly components?: readonly NleInspectorComponentPresentation[];
   readonly componentValues?: readonly NleInspectorComponentValuePresentation[];
-  readonly adjustments?: readonly NleInspectorAdjustmentPresentation[];
+  readonly operators?: readonly NleInspectorOperatorPresentation[];
 };
 
 export type NleInspectorPresentationFacet = Facet & {
-  readonly abi: typeof nleInspectorPresentationFacetAbi;
+  readonly kind: typeof nleInspectorPresentationFacetKind;
   readonly implementation: NleInspectorPresentationPackage;
 };
 
@@ -270,9 +274,9 @@ function assertPackage(value: NleInspectorPresentationPackage): void {
     assert(typeof presentation.project === "function", `NLE Inspector ${key} projector is not callable.`);
     keys.add(key);
   }
-  for (const presentation of value.adjustments ?? []) {
-    assertSymbol(presentation.component, "NLE Inspector Adjustment symbol");
-    const key = `adjustment:${nlePackageSymbolKey(presentation.component)}`;
+  for (const presentation of value.operators ?? []) {
+    assertSymbol(presentation.operator, "NLE Inspector Operator symbol");
+    const key = `operator:${nlePackageSymbolKey(presentation.operator)}`;
     assert(!keys.has(key), `NLE Inspector presentation package repeats ${key}.`);
     assert(typeof presentation.project === "function", `NLE Inspector ${key} projector is not callable.`);
     keys.add(key);
@@ -286,7 +290,7 @@ function frameNumber(value: ExactTemporalValue, view: NleTimelineView): number {
 
 function itemTitle(item: NleItem): string {
   if (item.name !== undefined) return item.name;
-  if (item.kind === "adjustment") return item.component.name;
+  if (item.kind === "adjustment") return item.operator.name;
   if (item.source === "media") {
     const parts = item.asset.path.split("/");
     return parts[parts.length - 1]!.replace(/\.media\.json$/u, "");
@@ -304,17 +308,43 @@ function componentValueKey(component: NlePackageSymbol, slot: string): string {
 }
 
 function componentValueUsers(project: NleProject, ref: string): readonly NleComponentItem[] {
-  return allItems(project).flatMap((item) => item.kind === "present" && item.source === "component"
-    && item.bindings?.some((binding) => binding.ref === ref) ? [item] : []);
+  return indexNleComposition(project).componentValueUsers(ref).flatMap(({ item }) =>
+    item.kind === "present" && item.source === "component" ? [item] : []);
+}
+
+function itemTracksWritable(project: NleProject, view: NleTimelineView, items: readonly string[]): boolean {
+  const affected = new Set(items);
+  const locked = new Set(view.tracks.filter((state) => state.locked).map((state) => state.track));
+  return !project.tracks.some((track) => locked.has(track.id)
+    && track.items.some((item) => affected.has(item.id)));
 }
 
 function componentValueSectionId(ref: string, section: string): string {
   return `component-value:${ref}:${section}`;
 }
 
+function operatorSectionId(address: NleOperatorApplicationAddress, section: string): string {
+  return address.kind === "adjustment"
+    ? section
+    : `operator:${encodeURIComponent(address.medium)}:${encodeURIComponent(address.application)}:${section}`;
+}
+
+type NleInspectorPackageSectionContext =
+  | {
+      readonly kind: "component";
+      readonly item: NleComponentItem;
+      readonly symbol: NlePackageSymbol;
+    }
+  | {
+      readonly kind: "operator";
+      readonly item: NleAdjustmentItem | NlePresentItem;
+      readonly symbol: NlePackageSymbol;
+      readonly address: NleOperatorApplicationAddress;
+    };
+
 function packageSections(
   project: NleProject,
-  item: NleComponentItem | NleAdjustmentItem,
+  context: NleInspectorPackageSectionContext,
   drafts: readonly NleInspectorSectionDraft[],
   authoringInstalled: boolean,
 ): readonly NleInspectorSection[] {
@@ -322,15 +352,16 @@ function packageSections(
   return drafts.map((value, index) => {
     const label = `NLE Inspector section ${index}`;
     assertDraft(value, label);
-    assert(!ids.has(value.id), `NLE Inspector repeats section ${value.id}.`);
-    ids.add(value.id);
-    let owner: NleInspectorSectionOwner = { kind: "package", component: structuredClone(item.component) };
+    const id = context.kind === "operator" ? operatorSectionId(context.address, value.id) : value.id;
+    assert(!ids.has(id), `NLE Inspector repeats section ${id}.`);
+    ids.add(id);
+    let owner: NleInspectorSectionOwner = { kind: "package", symbol: structuredClone(context.symbol) };
     if (value.owner?.kind === "binding") {
       assert(value.fields.every((field) => field.edit === undefined),
         `NLE Inspector shared binding section ${value.id} cannot edit Item parameters.`);
-      assert(item.kind === "present" && item.source === "component",
-        `NLE Inspector Adjustment section ${value.id} cannot own a binding.`);
-      const resource = resolveNleComponentBinding(project, item, value.owner.slot);
+      assert(context.kind === "component",
+        `NLE Inspector Operator section ${value.id} cannot own a binding.`);
+      const resource = resolveNleComponentSharedValue(project, context.item, value.owner.slot);
       owner = {
         kind: "component-value",
         component: structuredClone(resource.component),
@@ -339,12 +370,12 @@ function packageSections(
         name: resource.name,
         sharedBy: allItems(project).flatMap((candidate) => candidate.kind === "present"
           && candidate.source === "component"
-          && candidate.bindings?.some((binding) => binding.ref === resource.id)
+          && candidate.sharedValues?.some((reference) => reference.ref === resource.id)
           ? [candidate.id] : []),
       };
     }
     return {
-      id: value.id,
+      id,
       label: value.label,
       domain: value.domain,
       ...(value.page === undefined ? {} : { page: structuredClone(value.page) }),
@@ -355,6 +386,51 @@ function packageSections(
       })),
     };
   });
+}
+
+function operatorContexts(
+  project: NleProject,
+  track: NleTrack,
+  item: NleItem,
+): readonly NleOperatorParameterAuthoringContext[] {
+  if (item.kind === "adjustment") {
+    return [{
+      project,
+      track,
+      item,
+      application: item,
+      address: { kind: "adjustment", item: item.id },
+      medium: track.kind,
+    }];
+  }
+  return [
+    ...(item.picture?.operators ?? []).map((application) => ({
+      project,
+      track,
+      item,
+      application,
+      address: {
+        kind: "occurrence" as const,
+        item: item.id,
+        medium: "picture" as const,
+        application: application.id,
+      },
+      medium: "picture" as const,
+    })),
+    ...(item.audio?.operators ?? []).map((application) => ({
+      project,
+      track,
+      item,
+      application,
+      address: {
+        kind: "occurrence" as const,
+        item: item.id,
+        medium: "audio" as const,
+        application: application.id,
+      },
+      medium: "audio" as const,
+    })),
+  ];
 }
 
 function editableValue(field: NleInspectorFieldDraft, value: string | number | boolean): void {
@@ -377,12 +453,14 @@ function editableValue(field: NleInspectorFieldDraft, value: string | number | b
 
 function sharedSections(
   project: NleProject,
+  view: NleTimelineView,
   value: NleComponentValue,
   drafts: readonly NleInspectorSectionDraft[],
   authoringInstalled: boolean,
 ): readonly NleInspectorSection[] {
   const ids = new Set<string>();
   const users = componentValueUsers(project, value.id);
+  const writable = authoringInstalled && itemTracksWritable(project, view, users.map((item) => item.id));
   return drafts.map((draft, index) => {
     const label = `NLE Inspector Component value section ${index}`;
     assertDraft(draft, label);
@@ -404,7 +482,7 @@ function sharedSections(
       },
       fields: draft.fields.map(({ edit, ...field }) => ({
         ...structuredClone(field),
-        ...(edit === undefined || !authoringInstalled ? {} : { editable: true as const }),
+        ...(edit === undefined || !writable ? {} : { editable: true as const }),
       })),
     };
   });
@@ -431,7 +509,12 @@ function coreSections(
       { id: "enabled", label: "启用", control: "boolean", value: item.enabled },
       { id: "start", label: "开始", control: "number", value: frameNumber(item.start, view), unit: "帧" },
       { id: "duration", label: "时长", control: "number", value: frameNumber(item.duration, view), unit: "帧" },
-      { id: "source-pieces", label: "源时间映射", control: "readout", value: `${item.sourceTime.pieces.length} 段` },
+      {
+        id: item.kind === "present" ? "source-pieces" : "control-pieces",
+        label: item.kind === "present" ? "源时间映射" : "控制时间映射",
+        control: "readout",
+        value: `${(item.kind === "present" ? item.sourceTime : item.controlTime).pieces.length} 段`,
+      },
     ],
   }];
   if (item.kind === "present" && item.picture !== undefined) {
@@ -483,13 +566,13 @@ export function createNleInspectorPresentationFacet(
   value: NleInspectorPresentationPackage,
 ): NleInspectorPresentationFacet {
   assertPackage(value);
-  return { abi: nleInspectorPresentationFacetAbi, implementation: value };
+  return { kind: nleInspectorPresentationFacetKind, implementation: value };
 }
 
 export function nleInspectorPresentationPackagesFromFacets(
   facets: readonly Facet[],
 ): readonly NleInspectorPresentationPackage[] {
-  return facets.flatMap((facet) => facet.abi === nleInspectorPresentationFacetAbi
+  return facets.flatMap((facet) => facet.kind === nleInspectorPresentationFacetKind
     ? [(facet as NleInspectorPresentationFacet).implementation]
     : []);
 }
@@ -497,11 +580,11 @@ export function nleInspectorPresentationPackagesFromFacets(
 export function createNleInspectorPresentationHost(
   packages: readonly NleInspectorPresentationPackage[],
   authoring?: Pick<NleAuthoringHost,
-    "hasComponentParameterAuthoring" | "hasComponentValueAuthoring" | "hasAdjustmentParameterAuthoring">,
+    "hasComponentParameterAuthoring" | "hasComponentValueAuthoring" | "hasOperatorParameterAuthoring">,
 ): NleInspectorPresentationHost {
   const components = new Map<string, NleInspectorComponentPresentation>();
   const componentValues = new Map<string, NleInspectorComponentValuePresentation>();
-  const adjustments = new Map<string, NleInspectorAdjustmentPresentation>();
+  const operators = new Map<string, NleInspectorOperatorPresentation>();
   for (const value of packages) {
     assertPackage(value);
     for (const presentation of value.components ?? []) {
@@ -514,10 +597,10 @@ export function createNleInspectorPresentationHost(
       assert(!componentValues.has(key), `NLE Inspector has multiple Component value presentations for ${key}.`);
       componentValues.set(key, presentation);
     }
-    for (const presentation of value.adjustments ?? []) {
-      const key = nlePackageSymbolKey(presentation.component);
-      assert(!adjustments.has(key), `NLE Inspector has multiple Adjustment presentations for ${key}.`);
-      adjustments.set(key, presentation);
+    for (const presentation of value.operators ?? []) {
+      const key = nlePackageSymbolKey(presentation.operator);
+      assert(!operators.has(key), `NLE Inspector has multiple Operator presentations for ${key}.`);
+      operators.set(key, presentation);
     }
   }
   return {
@@ -531,23 +614,35 @@ export function createNleInspectorPresentationHost(
       }
       const displayedTitle = item.name ?? observedTitle ?? itemTitle(item);
       const sections = coreSections(project, view, track, item, displayedTitle);
-      if (item.kind === "adjustment") {
-        const presentation = adjustments.get(nlePackageSymbolKey(item.component));
+      for (const context of operatorContexts(project, track, item)) {
+        const presentation = operators.get(nlePackageSymbolKey(context.application.operator));
         if (presentation !== undefined) {
-          sections.push(...packageSections(project, item, presentation.project({ project, track, item }),
-            authoring?.hasAdjustmentParameterAuthoring(item.component) === true));
+          sections.push(...packageSections(project, {
+            kind: "operator",
+            item,
+            symbol: context.application.operator,
+            address: context.address,
+          }, presentation.project(context),
+            authoring?.hasOperatorParameterAuthoring(context.application.operator) === true
+              && itemTracksWritable(project, view, [item.id])));
         }
-      } else if (item.source === "component") {
+      }
+      if (item.kind === "present" && item.source === "component") {
         const presentation = components.get(nlePackageSymbolKey(item.component));
         if (presentation !== undefined) {
-          sections.push(...packageSections(project, item, presentation.project({ project, track, item }),
-            authoring?.hasComponentParameterAuthoring(item.component) === true));
+          sections.push(...packageSections(project, {
+            kind: "component",
+            item,
+            symbol: item.component,
+          }, presentation.project({ project, track, item }),
+            authoring?.hasComponentParameterAuthoring(item.component) === true
+              && itemTracksWritable(project, view, [item.id])));
         }
-        for (const binding of item.bindings ?? []) {
-          const resource = findNleComponentValue(project, binding.ref);
+        for (const reference of item.sharedValues ?? []) {
+          const resource = findNleComponentValue(project, reference.ref);
           const shared = componentValues.get(componentValueKey(resource.component, resource.slot));
           if (shared !== undefined) {
-            sections.push(...sharedSections(project, resource, shared.project({
+            sections.push(...sharedSections(project, view, resource, shared.project({
               project,
               value: resource,
               users: componentValueUsers(project, resource.id),
@@ -564,6 +659,11 @@ export function createNleInspectorPresentationHost(
           sections.push(structuredClone(section));
         }
       }
+      const sectionIds = new Set<string>();
+      for (const section of sections) {
+        assert(!sectionIds.has(section.id), `NLE Inspector repeats section ${section.id}.`);
+        sectionIds.add(section.id);
+      }
       return {
         format: "hypit.nle-inspector-scene@1",
         item: id,
@@ -574,41 +674,45 @@ export function createNleInspectorPresentationHost(
     },
     packageEdit(project, id, sectionId, fieldId, value) {
       const { track, item } = findNleItem(project, id);
-      let kind: "component" | "adjustment" | undefined;
-      let drafts: readonly NleInspectorSectionDraft[] = [];
-      if (item.kind === "adjustment") {
-        const presentation = adjustments.get(nlePackageSymbolKey(item.component));
-        if (presentation !== undefined) {
-          kind = "adjustment";
-          drafts = presentation.project({ project, track, item });
-        }
-      } else if (item.source === "component") {
+      if (item.kind === "present" && item.source === "component") {
         const presentation = components.get(nlePackageSymbolKey(item.component));
         if (presentation !== undefined) {
-          kind = "component";
-          drafts = presentation.project({ project, track, item });
+          const drafts = presentation.project({ project, track, item });
+          const section = drafts.find((candidate) => candidate.id === sectionId);
+          if (section !== undefined) {
+            assertDraft(section, `NLE Inspector section ${sectionId}`);
+            assert(section.owner?.kind !== "binding", `NLE Inspector section ${sectionId} owns a shared value.`);
+            const field = section.fields.find((candidate) => candidate.id === fieldId);
+            if (field === undefined || field.edit === undefined) {
+              throw new Error(`NLE Inspector field ${sectionId}.${fieldId} is read-only.`);
+            }
+            assert(authoring?.hasComponentParameterAuthoring(item.component) === true,
+              `NLE Inspector component authoring for ${nlePackageSymbolKey(item.component)} is not installed.`);
+            editableValue(field, value);
+            return { kind: "component", operation: canonicalize(field.edit(value)) };
+          }
         }
-      } else {
-        throw new Error(`NLE Item ${id} has no package-owned parameters.`);
       }
-      const section = drafts.find((candidate) => candidate.id === sectionId);
-      if (section !== undefined && kind !== undefined) {
+      for (const context of operatorContexts(project, track, item)) {
+        const presentation = operators.get(nlePackageSymbolKey(context.application.operator));
+        if (presentation === undefined) continue;
+        const drafts = presentation.project(context);
+        const section = drafts.find((candidate) => operatorSectionId(context.address, candidate.id) === sectionId);
+        if (section === undefined) continue;
         assertDraft(section, `NLE Inspector section ${sectionId}`);
         assert(section.owner?.kind !== "binding", `NLE Inspector section ${sectionId} owns a shared value.`);
         const field = section.fields.find((candidate) => candidate.id === fieldId);
         if (field === undefined || field.edit === undefined) {
           throw new Error(`NLE Inspector field ${sectionId}.${fieldId} is read-only.`);
         }
-        const installed = kind === "component"
-          ? authoring?.hasComponentParameterAuthoring(item.component) === true
-          : authoring?.hasAdjustmentParameterAuthoring(item.component) === true;
-        assert(installed, `NLE Inspector ${kind} authoring for ${nlePackageSymbolKey(item.component)} is not installed.`);
+        assert(authoring?.hasOperatorParameterAuthoring(context.application.operator) === true,
+          `NLE Inspector Operator authoring for ${nlePackageSymbolKey(context.application.operator)} is not installed.`);
         editableValue(field, value);
-        return { kind, operation: canonicalize(field.edit(value)) };
+        return { kind: "operator", address: context.address, operation: canonicalize(field.edit(value)) };
       }
       if (item.kind === "present" && item.source === "component") {
-        for (const binding of item.bindings ?? []) {
-          const resource = findNleComponentValue(project, binding.ref);
+        for (const reference of item.sharedValues ?? []) {
+          const resource = findNleComponentValue(project, reference.ref);
           const presentation = componentValues.get(componentValueKey(resource.component, resource.slot));
           if (presentation === undefined) continue;
           const sharedDrafts = presentation.project({

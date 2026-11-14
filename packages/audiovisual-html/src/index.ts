@@ -4,20 +4,23 @@ export {
 export type {
   AudiovisualHtmlLowering,
 } from "./lower.js";
+export { planAudiovisualHtmlExecution } from "./execution.js";
 export {
-  evaluateAudiovisualProgramFrame,
-  outputFrameCount,
-  outputFramePosition,
-} from "./sampling.js";
-export type { AudiovisualHtmlFrameEvaluation } from "./sampling.js";
+  createAudiovisualHtmlTerminalCapability,
+  createAudiovisualHtmlTerminalExecutor,
+} from "./terminal.js";
+export type {
+  AudiovisualHtmlTerminal,
+  AudiovisualHtmlTerminalCapabilityInput,
+} from "./terminal.js";
 export { compileAudiovisualHtmlProgram } from "./compile.js";
 export {
   appendAudiovisualHtmlSource,
-  assertAudiovisualHtmlOutput,
   assertAudiovisualHtmlSourceSet,
   audiovisualProgramHtmlSource,
   createAudiovisualHtmlSourceSet,
   preparedMediaHtmlSource,
+  pictureProductHtmlSource,
   resolveAudiovisualHtmlSource,
   sealAudiovisualHtmlSource,
   visualProgramHtmlSource,

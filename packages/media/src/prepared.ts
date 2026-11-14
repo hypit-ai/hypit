@@ -27,8 +27,12 @@ import type {
   PreparedMedia,
   PreparedPictureMember,
   PreparedPictureSource,
+  PreparedPictureSampling,
   PreparedSignalPictureSource,
 } from "./types.js";
+
+/** Neutral identity for an execution-owned decodable Picture sampling product. */
+export const preparedPictureSamplingRepresentation = "prepared-picture-sampling";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -178,17 +182,24 @@ export function prepareMedia(input: {
   return value;
 }
 
-/** Display geometry after pixel aspect and rotation, without materializing pixels. */
-export function preparedPictureExtent(media: PreparedMedia): { readonly widthPx: number; readonly heightPx: number } {
-  verifyPreparedMedia(media);
-  assert(media.picture !== undefined, "Prepared Media has no Picture member.");
-  const value = media.picture.interpretation;
+/** Display geometry for one prepared Picture member after pixel aspect and rotation. */
+export function preparedPictureMemberExtent(
+  picture: PreparedPictureMember,
+): { readonly widthPx: number; readonly heightPx: number } {
+  const value = picture.interpretation;
   let width = value.codedWidth * value.sampleAspectRatio.numerator / value.sampleAspectRatio.denominator;
   let height = value.codedHeight;
   if (value.rotationDegrees === 90 || value.rotationDegrees === 270) [width, height] = [height, width];
   assert(Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0,
     "Prepared visual display extent is not finite and positive.");
   return { widthPx: width, heightPx: height };
+}
+
+/** Display geometry after pixel aspect and rotation, without materializing pixels. */
+export function preparedPictureExtent(media: PreparedMedia): { readonly widthPx: number; readonly heightPx: number } {
+  verifyPreparedMedia(media);
+  assert(media.picture !== undefined, "Prepared Media has no Picture member.");
+  return preparedPictureMemberExtent(media.picture);
 }
 
 export function preparedMediaExtent(media: PreparedMedia): ExactTemporalValue {
@@ -213,6 +224,16 @@ export function preparedSignalPictureSource(media: PreparedMedia): PreparedSigna
   const source = preparedPictureSource(media);
   assert(source.kind === "signal", "Prepared Media Picture is not a temporal signal.");
   return source;
+}
+
+/** Project one moving Picture as a decodable Source plus its exact sampling relation. */
+export function preparedPictureSampling(media: PreparedMedia): PreparedPictureSampling {
+  verifyPreparedMedia(media);
+  assert(media.picture?.kind === "signal", "Prepared Media Picture is not a temporal signal.");
+  return canonicalize({
+    source: preparedSignalPictureSource(media),
+    sampling: media.picture.map,
+  }) as unknown as PreparedPictureSampling;
 }
 
 /** Project only the selected audio signal facts needed by terminal audio programmes. */

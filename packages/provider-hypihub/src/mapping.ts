@@ -1,6 +1,6 @@
-import { capabilityKey } from "@hypit/hypit/protocol";
-import type { CapabilityRef } from "@hypit/hypit/protocol";
-import type { GenerationWireMapping } from "@hypit/generation/provider";
+import { capabilityKey } from "@hypit/hypit/module";
+import type { CapabilityRef } from "@hypit/hypit/module";
+import type { GenerationWireMapping } from "@hypit/generation-model/provider";
 import { elevenLabsSpeechModuleRef } from "@hypit/elevenlabs-speech";
 import { fishAudioSpeechModuleRef } from "@hypit/fishaudio-speech";
 import { gptImageModuleRef } from "@hypit/gpt-image";

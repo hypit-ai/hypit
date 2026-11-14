@@ -11,12 +11,12 @@ import {
   resolveMediaAssetMediaFile,
 } from "../../packages/media-asset/src/node/index.js";
 import { createNodeNleMediaResolver, readNleProjectFile } from "../../packages/nle/src/node/index.js";
-import { resolveProjectRoot } from "../../packages/project/src/index.js";
-import { parseLocalRuntimeProfile } from "../../packages/runtime-local/src/index.js";
+import { resolveProjectRoot } from "../../packages/project/src/node/index.js";
+import { parseLocalRuntimeProfile } from "../../packages/generation-runtime-local/src/index.js";
 
 const projectRoot = fileURLToPath(new URL("../../examples/production-project/", import.meta.url));
 
-test("the recommended production project opens through each owning subsystem", async () => {
+test("the production-project fixture opens through each owning subsystem", async () => {
   assert.equal(await resolveProjectRoot({ cwd: `${projectRoot}/media/poster` }), projectRoot.slice(0, -1));
 
   const graph = await readGenerationGraphProjectFile(`${projectRoot}/generation.graph.json`);
@@ -43,7 +43,7 @@ test("the recommended production project opens through each owning subsystem", a
     async (path) => await resolveMediaAssetMediaFile(path, resolveBlob),
   );
   const runtime = parseLocalRuntimeProfile(JSON.parse(
-    await readFile(`${projectRoot}/hypit.runtime.json`, "utf8"),
+    await readFile(`${projectRoot}/hypit.generation-runtime.json`, "utf8"),
   ) as unknown);
 
   assert(graph.nodes.length > 0);
@@ -55,7 +55,7 @@ test("the recommended production project opens through each owning subsystem", a
   assert.equal(nle.tracks[0]?.items[0]?.kind, "present");
   const firstItem = nle.tracks[0]?.items[0];
   assert.equal(firstItem?.kind === "present" ? firstItem.source : undefined, "media");
-  assert.equal(runtime.dataRoot, ".hypit/runtimes/local");
+  assert.equal(runtime.dataRoot, ".hypit/generation/runtime/local");
 
   assert.equal(firstItem?.kind === "present" && firstItem.source === "media"
     ? firstItem.asset.path : undefined, "media/poster/poster.media.json");

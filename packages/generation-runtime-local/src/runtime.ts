@@ -1,0 +1,286 @@
+import { createActionExecutor } from "./actions.js";
+import { isAbsolute, relative, resolve, sep } from "node:path";
+
+import {
+  producerPackagesFromFacets,
+  registerProducerFacets,
+} from "@hypit/producer";
+import {
+  ProducerRegistry,
+  Executor,
+} from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
+import { isStreamingResourceStore } from "@hypit/resource-store";
+import { installEndpoint } from "@hypit/endpoint";
+import { valueBlobRefs } from "@hypit/protocol";
+import { assertOrderedBuildId } from "@hypit/generation-build";
+import { refinementPackagesFromFacets, registerTypeRefinements, RefinementRegistry } from "@hypit/refinement";
+import { materializeBuild } from "@hypit/generation-build";
+
+import { createLocalRuntimeControl } from "./control.js";
+import { applyLocalExecutionEnvironmentBindings } from "@hypit/execution-environment-local/deployment";
+import { createLocalBuildFinalizer } from "./build-finalizer.js";
+import { createDurableLocalWorker } from "./worker.js";
+import type {
+  CreateLocalRuntimeOptions,
+  LocalBuildOptions,
+  LocalBuildRequest,
+  LocalBuildSubmission,
+  LocalRuntime,
+} from "./types.js";
+
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
+
+function nonNegativeInteger(value: number, subject: string): number {
+  assert(Number.isSafeInteger(value) && value >= 0, `${subject} must be a non-negative safe integer`);
+  return value;
+}
+
+function projectPath(root: string, path: string): string {
+  const absolute = isAbsolute(path) ? resolve(path) : resolve(root, path);
+  const relation = relative(resolve(root), absolute);
+  assert(relation === "" || (relation !== ".." && !relation.startsWith(`..${sep}`) && !isAbsolute(relation)),
+    `Build Result source ${path} is outside project ${resolve(root)}`);
+  return (relation || ".").split(sep).join("/");
+}
+
+function requiredInitialResources(request: LocalBuildRequest): ReadonlySet<string> {
+  const definition = request.definition;
+  const publicationRecords = request.authoring.publication.outputs.map((output) => output.record);
+  const recordIds = new Set([
+    ...publicationRecords,
+    ...definition.plan.steps.flatMap((step) => Object.values(step.inputs)),
+  ]);
+  const resources = new Set<string>();
+  definition.program.records
+    .filter((record) => recordIds.has(record.id))
+    .forEach((record) => {
+      for (const { blob } of valueBlobRefs(record.value)) resources.add(blob.resource);
+    });
+  return resources;
+}
+
+async function wait(delayMs: number, signal: AbortSignal | undefined): Promise<void> {
+  if (signal?.aborted === true) throw signal.reason ?? new Error("Local Runtime follow was aborted");
+  await new Promise<void>((resolveWait, reject) => {
+    const done = (): void => {
+      signal?.removeEventListener("abort", abort);
+      resolveWait();
+    };
+    const timer = setTimeout(done, delayMs);
+    const abort = (): void => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
+      reject(signal?.reason ?? new Error("Local Runtime follow was aborted"));
+    };
+    signal?.addEventListener("abort", abort, { once: true });
+  });
+}
+
+export async function createLocalRuntime(
+  options: CreateLocalRuntimeOptions,
+): Promise<LocalRuntime> {
+  const openPublicationStores = options.openPublicationStores;
+  const producers = new ProducerRegistry();
+  const endpoints = new EndpointRegistry();
+  const refinements = new RefinementRegistry();
+  registerProducerFacets(producers, options.producers ?? []);
+  registerTypeRefinements(refinements, options.refinements ?? []);
+  for (const endpoint of options.endpoints ?? []) await installEndpoint(endpoint, endpoints);
+  applyLocalExecutionEnvironmentBindings(endpoints, options.bindings);
+  const loadedProducerPackages = new Set<string>();
+  let componentInstallation = Promise.resolve();
+  const installProducerPackages = async (specifiers: readonly string[]): Promise<void> => {
+    const task = componentInstallation.then(async () => {
+      const missing = [...new Set(specifiers)].filter((item) => !loadedProducerPackages.has(item));
+      if (missing.length === 0) return;
+      assert(options.loadProducerPackages !== undefined,
+        `Build requires execution package ${missing[0]} but this Runtime cannot load installed packages`);
+      const loaded = await options.loadProducerPackages(missing);
+      const fresh = loaded.filter((item) => !loadedProducerPackages.has(item.specifier));
+      for (const item of fresh) {
+        const facets = item.contribution.facets ?? [];
+        for (const pack of producerPackagesFromFacets(facets)) registerProducerFacets(producers, pack);
+        for (const pack of refinementPackagesFromFacets(facets)) registerTypeRefinements(refinements, pack);
+      }
+      for (const item of fresh) loadedProducerPackages.add(item.specifier);
+    });
+    componentInstallation = task.then(() => undefined, () => undefined);
+    await task;
+  };
+  const driver = new Executor({
+    producers,
+    endpoints,
+    resources: options.resourceStore,
+    ...(options.resourceStoreForBuild === undefined ? {} : { resourcesForBuild: options.resourceStoreForBuild }),
+    credentials: options.credentialStore,
+    operations: options.operationStore,
+    actions: createActionExecutor(options.executionStore),
+    refinements,
+    ...(options.producerExecutionLimits === undefined ? {} : { producerExecutionLimits: options.producerExecutionLimits }),
+  });
+  const buildFinalizer = createLocalBuildFinalizer({
+    ...(options.executionLogs === undefined ? {} : { executionLogs: options.executionLogs }),
+    buildStore: options.buildStore,
+    operationStore: options.operationStore,
+    commandExecutionStore: options.commandExecutionStore,
+    executionStore: options.executionStore,
+    removeActiveBuild: options.removeActiveBuild,
+    submissionStore: options.submissionStore,
+    resourceStore: options.resourceStore,
+    ...(options.resourceStoreForBuild === undefined ? {} : { resourceStoreForBuild: options.resourceStoreForBuild }),
+    ...(options.clearBuildResources === undefined ? {} : { clearBuildResources: options.clearBuildResources }),
+    openPublicationStores,
+  });
+  const worker = createDurableLocalWorker(driver, {
+    ...(options.executionBuild === undefined ? {} : { executionBuild: options.executionBuild }),
+    ...(options.executionLogs === undefined ? {} : { executionLogs: options.executionLogs }),
+    stores: {
+      builds: options.buildStore,
+      operations: options.operationStore,
+      executions: options.commandExecutionStore,
+      execution: options.executionStore,
+    },
+    resourceStore: options.resourceStore,
+    ...(options.resourceStoreForBuild === undefined ? {} : { resourceStoreForBuild: options.resourceStoreForBuild }),
+    openPublicationStores,
+    installProducerPackages,
+    buildFinalizer,
+  });
+  const control = createLocalRuntimeControl({
+    ...(options.executionLogs === undefined ? {} : { executionLogs: options.executionLogs }),
+    buildStore: options.buildStore,
+    commandExecutionStore: options.commandExecutionStore,
+    openPublicationStores,
+    operationStore: options.operationStore,
+    executionStore: options.executionStore,
+    submissionStore: options.submissionStore,
+  });
+  const stageAttachments = async (request: LocalBuildRequest): Promise<void> => {
+    const resourceStore = options.resourceStoreForBuild?.(request.id) ?? options.resourceStore;
+    const required = requiredInitialResources(request);
+    for (const item of (request.attachments ?? []).filter((attachment) =>
+      required.has(attachment.blob.resource))) {
+      if (await resourceStore.has(item.blob.resource)) continue;
+      const stream = await item.open();
+      if (isStreamingResourceStore(resourceStore)) {
+        await resourceStore.writeStream(item.blob, stream);
+      } else {
+        await resourceStore.write(item.blob, await (async () => {
+            const chunks: Uint8Array[] = [];
+            let size = 0;
+            for await (const chunk of stream) {
+              chunks.push(Uint8Array.from(chunk));
+              size += chunk.byteLength;
+            }
+            const bytes = new Uint8Array(size);
+            let offset = 0;
+            for (const chunk of chunks) {
+              bytes.set(chunk, offset);
+              offset += chunk.byteLength;
+            }
+            return bytes;
+          })());
+      }
+    }
+  };
+  const presentation = async (
+    build: string,
+    publicationStores: LocalBuildRequest["publicationStores"],
+    previousState?: LocalBuildSubmission["state"],
+  ): Promise<LocalBuildSubmission> => {
+    const [snapshot, execution] = await Promise.all([
+      options.buildStore.read(build),
+      options.executionStore.read(build),
+    ]);
+    const state = snapshot === undefined
+      ? previousState
+      : materializeBuild(snapshot.definition, snapshot.facts);
+    assert(state !== undefined, `Build ${build} has no execution state`);
+    if (execution !== undefined) {
+      const view = await control.inspect(build);
+      assert(view !== undefined, `Build ${build} has no active Runtime view`);
+      return { id: build, state, view };
+    }
+    const opened = await openPublicationStores(publicationStores);
+    try {
+      const result = await opened.history.read(build);
+      assert(result?.outcome !== undefined, `Build ${build} has neither active execution nor a finished Result`);
+      return {
+        id: build,
+        state,
+        completion: result.outcome === "complete"
+          ? { build, outcome: "complete" }
+          : { build, outcome: result.outcome, reason: result.failure },
+      };
+    } finally {
+      await opened.close?.();
+    }
+  };
+
+  const submit = async (request: LocalBuildRequest): Promise<LocalBuildSubmission> => {
+    assertOrderedBuildId(request.id);
+    const executionRequest = {
+      build: request.id,
+      ...(options.executionContext === undefined ? {} : { context: options.executionContext }),
+      executionPackages: [...new Set(request.executionPackages ?? [])].sort(),
+      publicationStores: request.publicationStores,
+    } as const;
+    let prepared = false;
+    try {
+      await options.submissionStore.prepare(executionRequest);
+      prepared = true;
+      await stageAttachments(request);
+      const opened = await openPublicationStores(request.publicationStores);
+      try {
+        await opened.finalization.create({
+          id: request.id,
+          sourcePath: projectPath(request.publicationStores.root, request.authoring.sourcePath),
+          targets: request.authoring.targets,
+          publication: request.authoring.publication,
+        });
+      } finally {
+        await opened.close?.();
+      }
+      await options.submissionStore.commit({
+        ...executionRequest,
+        definition: request.definition,
+      });
+      return await presentation(request.id, request.publicationStores);
+    } catch (error) {
+      if (prepared) await buildFinalizer.discardSubmission(request.id).catch(() => undefined);
+      throw error;
+    }
+  };
+
+  const runBuild = async (
+    request: LocalBuildRequest,
+    follow: LocalBuildOptions = {},
+  ): Promise<LocalBuildSubmission> => {
+    let result = await submit(request);
+    const startedAt = Date.now();
+    const pollIntervalMs = nonNegativeInteger(follow.pollIntervalMs ?? 1_000, "pollIntervalMs");
+    const maxWaitMs = follow.maxWaitMs === undefined
+      ? undefined
+      : nonNegativeInteger(follow.maxWaitMs, "maxWaitMs");
+    while (follow.follow === true && "view" in result && result.view.issue === undefined) {
+      if (maxWaitMs !== undefined && Date.now() - startedAt + pollIntervalMs > maxWaitMs) return result;
+      await wait(pollIntervalMs, follow.signal);
+      result = await presentation(request.id, request.publicationStores, result.state);
+    }
+    return result;
+  };
+  return {
+    ...control,
+    ...buildFinalizer,
+    build: runBuild,
+    async workOnce(workOptions) {
+      return await worker.runOnce(workOptions);
+    },
+    close() {
+      return options.close?.();
+    },
+  };
+}

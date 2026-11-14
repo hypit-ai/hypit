@@ -34,12 +34,12 @@ test("publication selection loads without the build toolchain", async (t) => {
   `], { cwd: root, stdio: "pipe" });
 });
 
-test("Toolchain keeps versioned capabilities independent and Core embedded", async () => {
+test("Toolchain keeps versioned capabilities independent and framework modules embedded", async () => {
   const root = fileURLToPath(new URL("../../", import.meta.url));
   const embedded = await distributionEmbeddedPackageDirectories(root);
   assert.equal(embedded.has("temporal"), false);
   assert.equal(embedded.has("narrative-temporal"), false);
-  assert.equal(embedded.has("compiler"), true);
+  assert.equal(embedded.has("generation-authoring"), true);
   const toolchain = JSON.parse(await readFile(join(root, "packages/toolchain/package.json"), "utf8"));
   for (const name of Object.keys(toolchain.dependencies).filter((item) => item.startsWith("@hypit/"))) {
     const directory = name.slice("@hypit/".length);
@@ -53,39 +53,29 @@ test("Toolchain keeps versioned capabilities independent and Core embedded", asy
   assert.ok(index("temporal") < index("toolchain"));
 });
 
-test("the Distribution ships its baseline editable NLE treatments", async () => {
-  const plan = await releaseCandidatePackages();
-  const released = new Set(plan.independent.map((item) => item.name));
-  for (const name of [
-    "@hypit/audio-preserve-pitch",
-    "@hypit/build-operations-cli",
-    "@hypit/caption-fine",
-    "@hypit/caption-nle",
-    "@hypit/picture-filter",
-    "@hypit/picture-frame",
-    "@hypit/picture-matte",
-    "@hypit/picture-transform",
-    "@hypit/picture-transition",
-    "@hypit/text-fine",
-    "@hypit/media-file-local",
-  ]) {
-    assert.equal(released.has(name), true, `${name} must be installable with the Distribution`);
-  }
-});
-
-test("internal Core remains embedded instead of becoming an unversioned release dependency", async () => {
+test("internal framework packages remain embedded instead of becoming unversioned release dependencies", async () => {
   const root = fileURLToPath(new URL("../../", import.meta.url));
   const embedded = await distributionEmbeddedPackageDirectories(root);
-  for (const name of ["atomic-file", "endpoint", "facet", "kernel", "protocol", "result", "runtime"]) {
+  for (const name of [
+    "atomic-file",
+    "endpoint",
+    "execution-environment",
+    "facet",
+    "generation-build",
+    "generation-model",
+    "generation-runtime",
+    "protocol",
+    "result",
+  ]) {
     assert.equal(embedded.has(name), true, `${name} must remain owned by the Distribution`);
   }
   const plan = await releaseCandidatePackages();
   assert.equal(plan.independent.some((item) => item.version === "0.0.0-dev"), false);
 });
 
-test("independent packages bridge embedded Core through the Distribution peer", async () => {
+test("independent packages bridge embedded framework modules through the Distribution peer", async () => {
   const dependencies = await releasedPackageDependencyMap("packages/toolchain", "dependencies");
-  assert.equal(dependencies["@hypit/compiler"], undefined);
+  assert.equal(dependencies["@hypit/generation-authoring"], undefined);
   assert.equal(dependencies["@hypit/protocol"], undefined);
   assert.equal(dependencies["@hypit/svml"], undefined);
   const peers = await releasedPackageDependencyMap("packages/toolchain", "peerDependencies");

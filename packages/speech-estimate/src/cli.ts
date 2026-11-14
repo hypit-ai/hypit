@@ -1,7 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import type { CliApplicationContext, CliCommandModule, CliIo } from "@hypit/cli";
+import type { CliApplicationContext, CliCommandModule, CliIo } from "@hypit/cli/public";
 import { parseScript, scriptSegmentSpeech } from "@hypit/script";
 
 import {
@@ -111,7 +111,6 @@ export async function runEstimateCli(
 
 export function createSpeechEstimateCliCommandModules(): readonly CliCommandModule[] {
   return [{
-    format: "hypit.cli-command@1",
     id: "@hypit/speech-estimate",
     commands: ["estimate"],
     writeRootHelp(io) { io.write("\nSpeech estimation\n  estimate\n  hypit estimate --help for inputs and delivery options\n"); },

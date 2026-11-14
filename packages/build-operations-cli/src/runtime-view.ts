@@ -1,4 +1,4 @@
-import type { OperationProgress } from "@hypit/runtime";
+import type { OperationProgress } from "@hypit/execution-environment";
 
 export function formatOperationProgress(progress: OperationProgress): string {
   if (progress.completed === undefined) return progress.phase;

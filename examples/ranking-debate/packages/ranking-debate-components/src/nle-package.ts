@@ -1,17 +1,18 @@
 import { pictureType, type ProgramSource } from "@hypit/audiovisual";
 import { visualProgramHtmlSource } from "@hypit/audiovisual-html";
 import { htmlVisual } from "@hypit/html-program";
-import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
+import type { NleAudiovisualComponentResolver } from "@hypit/nle-audiovisual";
 import { verifyPictureInterpretation, type PictureInterpretation } from "@hypit/media";
 import type {
   NleComponentItem,
+  NleComponentLoweringContext,
+  NleComponentMediaAuthoring,
   NleComponentParameterAuthoring,
   NleComponentResolver,
-  NleLoweringContext,
   NlePackageSymbol,
 } from "@hypit/nle";
 import { resolveNlePictureLayout } from "@hypit/nle";
-import { assertBlobRef, canonicalize, type BlobRef } from "@hypit/protocol";
+import { canonicalize, type BlobRef } from "@hypit/protocol";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
 import {
   assertExactTemporalValue,
@@ -20,20 +21,18 @@ import {
 } from "@hypit/temporal/algebra";
 
 export const rankingBoardComponentSymbol: NlePackageSymbol = {
-  module: { name: "@hypit-example/ranking-debate-components", version: "1" },
+  module: { name: "@hypit-example/ranking-debate-components" },
   name: "ranking-board",
 };
 
 export const verdictBurstComponentSymbol: NlePackageSymbol = {
-  module: { name: "@hypit-example/ranking-debate-components", version: "1" },
+  module: { name: "@hypit-example/ranking-debate-components" },
   name: "verdict-burst",
 };
 
 /** Logical package identity selected from Component symbols; rendering remains facet-owned. */
 export const rankingDebateComponentsManifest = {
-  format: "hypit.module@1" as const,
   name: rankingBoardComponentSymbol.module.name,
-  version: rankingBoardComponentSymbol.module.version,
   dependencies: [],
   types: [],
   capabilities: [],
@@ -80,7 +79,8 @@ function exact(value: unknown, label: string): ExactTemporalValue {
   return value as ExactTemporalValue;
 }
 
-type NleProjectContext = Pick<NleLoweringContext, "project">;
+type NleProjectContext = Pick<NleComponentLoweringContext, "project"> &
+  Partial<Pick<NleComponentLoweringContext, "media">>;
 
 function source(
   item: NleComponentItem,
@@ -110,7 +110,7 @@ function source(
 type RankingRow = { readonly id: string; readonly label: string; readonly color: string };
 type RankingEntryVisual =
   | { readonly kind: "text"; readonly text: string }
-  | { readonly kind: "picture"; readonly artifact: BlobRef; readonly picture: PictureInterpretation };
+  | { readonly kind: "media"; readonly input: string };
 type RankingEntry = {
   readonly id: string;
   readonly label: string;
@@ -152,15 +152,9 @@ function rankingVisual(value: unknown, label: string): RankingEntryVisual {
     fields(selected, ["kind", "text"], label);
     return { kind: "text", text: text(selected.text, `${label}.text`) };
   }
-  if (selected.kind === "picture") {
-    fields(selected, ["kind", "artifact", "picture"], label);
-    assertBlobRef(selected.artifact, `${label}.artifact`);
-    verifyPictureInterpretation(selected.picture as PictureInterpretation, `${label}.picture`);
-    return {
-      kind: "picture",
-      artifact: structuredClone(selected.artifact),
-      picture: structuredClone(selected.picture as PictureInterpretation),
-    };
+  if (selected.kind === "media") {
+    fields(selected, ["kind", "input"], label);
+    return { kind: "media", input: text(selected.input, `${label}.input`) };
   }
   throw new Error(`${label}.kind is invalid.`);
 }
@@ -279,16 +273,25 @@ function resolveRankingBoard(item: NleComponentItem, context: NleProjectContext)
       `Ranking Board row ${entry.tier} cannot fit Entry ${entry.id}.`);
     return { ...entry, final };
   });
-  const dependencies = new Map<string, Extract<RankingEntryVisual, { readonly kind: "picture" }>>();
-  for (const entry of entries) if (entry.visual.kind === "picture") {
-    const previous = dependencies.get(entry.visual.artifact.resource);
-    assert(previous === undefined || JSON.stringify(previous) === JSON.stringify(entry.visual),
-      `Ranking Board ${item.id} gives one Artifact conflicting picture meaning.`);
-    dependencies.set(entry.visual.artifact.resource, entry.visual);
+  const dependencies = new Map<string, { readonly artifact: BlobRef; readonly picture: PictureInterpretation }>();
+  for (const entry of entries) if (entry.visual.kind === "media" && context.media !== undefined) {
+    const media = context.media[entry.visual.input];
+    assert(media !== undefined,
+      `Ranking Board ${item.id} is missing Media input ${entry.visual.input}.`);
+    assert(media.picture?.kind === "constant",
+      `Ranking Board ${item.id} Media input ${entry.visual.input} must be a still Picture.`);
+    const picture = media.picture.interpretation.picture;
+    verifyPictureInterpretation(picture, `Ranking Board ${item.id} Media input ${entry.visual.input}`);
+    const previous = dependencies.get(media.source.resource);
+    assert(previous === undefined || JSON.stringify(previous) === JSON.stringify({ artifact: media.source, picture }),
+      `Ranking Board ${item.id} gives one Media Artifact conflicting picture meaning.`);
+    dependencies.set(media.source.resource, { artifact: media.source, picture });
   }
   const visualHtml = (visual: RankingEntryVisual): string => visual.kind === "text"
     ? `<span data-ranking-icon>${escapeHtml(visual.text)}</span>`
-    : `<img data-ranking-icon src="hypit-artifact://${escapeHtml(visual.artifact.resource)}"/>`;
+    : context.media === undefined
+      ? `<span data-ranking-icon></span>`
+      : `<img data-ranking-icon src="hypit-artifact://${escapeHtml(context.media[visual.input]!.source.resource)}"/>`;
   const resolved = source(item, context, "ranking-board");
   return {
     ...resolved,
@@ -409,7 +412,7 @@ function nleResolver(
 function htmlResolver(
   component: NlePackageSymbol,
   resolve: (item: NleComponentItem, context: NleProjectContext) => ReturnType<typeof resolveRankingBoard>,
-): NleHtmlVideoComponentResolver {
+): NleAudiovisualComponentResolver {
   return { component, resolve: (item, context) => ({ html: resolve(item, context).html }) };
 }
 
@@ -452,5 +455,24 @@ export const rankingBoardNleAuthoring: NleComponentParameterAuthoring = {
     const next = canonicalize(parameters);
     resolveRankingBoard({ ...structuredClone(item), parameters: next }, { project });
     return next;
+  },
+};
+
+export const rankingBoardNleMediaAuthoring: NleComponentMediaAuthoring = {
+  component: rankingBoardComponentSymbol,
+  inputs: ({ item }) => {
+    const parameters = record(item.parameters, `Ranking Board ${item.id}`);
+    assert(Array.isArray(parameters.entries), `Ranking Board ${item.id}.entries is invalid.`);
+    return parameters.entries.flatMap((value, index) => {
+      const entry = record(value, `Ranking Board ${item.id}.entries.${index}`);
+      const visual = rankingVisual(entry.visual, `Ranking Board ${item.id}.entries.${index}.visual`);
+      if (visual.kind !== "media") return [];
+      return [{
+        key: visual.input,
+        label: `${text(entry.label, `Ranking Board ${item.id}.entries.${index}.label`)} image`,
+        requires: ["picture"] as const,
+        required: true,
+      }];
+    });
   },
 };

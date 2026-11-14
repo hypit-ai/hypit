@@ -14,17 +14,17 @@ the original task.
 
 | Capability | HiAPI model |
 | --- | --- |
-| `@hypit/seedance@1#seedance-2` | `seedance-2.0` |
-| `@hypit/seedance@1#seedance-2-fast` | `seedance-2.0-fast` |
-| `@hypit/seedance@1#seedance-2-mini` | `seedance-2.0-mini` |
-| `@hypit/seedance@1#seedance-2.5` | `seedance-2.5/reference-to-video` with a reference video, `seedance-2.5/image-to-video` with frames, reference images or reference audio, otherwise `seedance-2.5/text-to-video` |
-| `@hypit/seedream@1#seedream-5-lite` | `seedream-5.0-lite/image-to-image` with references, otherwise `seedream-5.0-lite/text-to-image` |
-| `@hypit/minimax-h3@1#minimax-h3` | `minimax-h3` |
-| `@hypit/gpt-image@1#gpt-image-2` | `gpt-image-2/image-to-image` with references, otherwise `gpt-image-2/text-to-image` |
-| `@hypit/nano-banana@1#nano-banana-2` | `Nano-Banana-2` |
-| `@hypit/nano-banana@1#nano-banana-pro` | `Nano-Banana-Pro` |
-| `@hypit/grok-imagine@1#grok-imagine-video` | `grok-imagine/image-to-video` with images, otherwise `grok-imagine/text-to-video` |
-| `@hypit/grok-imagine@1#grok-imagine-video-1.5-preview` | `grok-imagine-1.5/image-to-video` |
+| `@hypit/seedance#seedance-2` | `seedance-2.0` |
+| `@hypit/seedance#seedance-2-fast` | `seedance-2.0-fast` |
+| `@hypit/seedance#seedance-2-mini` | `seedance-2.0-mini` |
+| `@hypit/seedance#seedance-2.5` | `seedance-2.5/reference-to-video` with a reference video, `seedance-2.5/image-to-video` with frames, reference images or reference audio, otherwise `seedance-2.5/text-to-video` |
+| `@hypit/seedream#seedream-5-lite` | `seedream-5.0-lite/image-to-image` with references, otherwise `seedream-5.0-lite/text-to-image` |
+| `@hypit/minimax-h3#minimax-h3` | `minimax-h3` |
+| `@hypit/gpt-image#gpt-image-2` | `gpt-image-2/image-to-image` with references, otherwise `gpt-image-2/text-to-image` |
+| `@hypit/nano-banana#nano-banana-2` | `Nano-Banana-2` |
+| `@hypit/nano-banana#nano-banana-pro` | `Nano-Banana-Pro` |
+| `@hypit/grok-imagine#grok-imagine-video` | `grok-imagine/image-to-video` with images, otherwise `grok-imagine/text-to-video` |
+| `@hypit/grok-imagine#grok-imagine-video-1.5-preview` | `grok-imagine-1.5/image-to-video` |
 
 HiAPI's model index at `https://www.hiapi.ai/docs/models.json` lists further models and routes;
 this Provider maps only the models the Distribution already describes, on each model's standard
@@ -58,8 +58,8 @@ Runtime Profile example:
 
 ```json
 {
-  "format": "hypit.runtime-local@1",
-  "dataRoot": ".hypit/runtimes/local",
+  "format": "hypit.execution-environment-local@1",
+  "dataRoot": ".hypit/environment/local",
   "credentials": {
     "local": {
       "use": "@hypit/credential-store-local"
@@ -81,7 +81,7 @@ Runtime Profile example:
 ```
 
 `baseUrl` defaults to `https://api.hiapi.ai`. Store the API key with
-`hypit auth login hiapi.default --runtime hypit.runtime.json`. Optional `requestTimeoutMs`,
+`hypit auth login hiapi.default --runtime hypit.generation-runtime.json`. Optional `requestTimeoutMs`,
 `operationTimeoutMs` and `actionLimits` bound single HTTP calls, the whole remote task and action
 concurrency. HTTP failures keep HiAPI's `error_code` and message; failed tasks keep
 `data.error.code` and message, with any signed URL in the message redacted.

@@ -1,0 +1,264 @@
+{
+  "language": "en",
+  "segments": [
+    {
+      "start": 0.553,
+      "end": 10.88,
+      "text": "My wife is D tier. Forty years. Same version. Zero updates. Divorce gets her seventy-five billion. That's five million a day! Highest-paid job in history.",
+      "words": [
+        {
+          "word": "My",
+          "start": 0.553,
+          "end": 0.674
+        },
+        {
+          "word": "wife",
+          "start": 0.734,
+          "end": 0.955
+        },
+        {
+          "word": "is",
+          "start": 1.076,
+          "end": 1.156
+        },
+        {
+          "word": "D",
+          "start": 1.236,
+          "end": 1.336625
+        },
+        {
+          "word": "tier",
+          "start": 1.336625,
+          "end": 1.739
+        },
+        {
+          "word": "Forty",
+          "start": 2.362,
+          "end": 2.739875
+        },
+        {
+          "word": "years",
+          "start": 2.739875,
+          "end": 3.1176875
+        },
+        {
+          "word": "Same",
+          "start": 3.1176875,
+          "end": 3.42
+        },
+        {
+          "word": "version",
+          "start": 3.42,
+          "end": 3.949
+        },
+        {
+          "word": "Zero",
+          "start": 4.25,
+          "end": 4.612
+        },
+        {
+          "word": "updates",
+          "start": 4.692,
+          "end": 5.094
+        },
+        {
+          "word": "Divorce",
+          "start": 5.435,
+          "end": 5.797
+        },
+        {
+          "word": "gets",
+          "start": 5.837,
+          "end": 6.018
+        },
+        {
+          "word": "her",
+          "start": 6.058,
+          "end": 6.179
+        },
+        {
+          "word": "seventy-five",
+          "start": 6.279,
+          "end": 7.0730625
+        },
+        {
+          "word": "billion",
+          "start": 7.0730625,
+          "end": 7.5783125
+        },
+        {
+          "word": "That's",
+          "start": 7.5783125,
+          "end": 7.93925
+        },
+        {
+          "word": "five",
+          "start": 7.93925,
+          "end": 8.228
+        },
+        {
+          "word": "million",
+          "start": 8.308,
+          "end": 8.61
+        },
+        {
+          "word": "a",
+          "start": 8.65,
+          "end": 8.69
+        },
+        {
+          "word": "day",
+          "start": 8.73,
+          "end": 8.991
+        },
+        {
+          "word": "Highest-paid",
+          "start": 9.333,
+          "end": 9.916
+        },
+        {
+          "word": "job",
+          "start": 9.976,
+          "end": 10.257
+        },
+        {
+          "word": "in",
+          "start": 10.297,
+          "end": 10.378
+        },
+        {
+          "word": "history",
+          "start": 10.478,
+          "end": 10.88
+        }
+      ]
+    }
+  ],
+  "word_segments": [
+    {
+      "word": "My",
+      "start": 0.553,
+      "end": 0.674
+    },
+    {
+      "word": "wife",
+      "start": 0.734,
+      "end": 0.955
+    },
+    {
+      "word": "is",
+      "start": 1.076,
+      "end": 1.156
+    },
+    {
+      "word": "D",
+      "start": 1.236,
+      "end": 1.336625
+    },
+    {
+      "word": "tier",
+      "start": 1.336625,
+      "end": 1.739
+    },
+    {
+      "word": "Forty",
+      "start": 2.362,
+      "end": 2.739875
+    },
+    {
+      "word": "years",
+      "start": 2.739875,
+      "end": 3.1176875
+    },
+    {
+      "word": "Same",
+      "start": 3.1176875,
+      "end": 3.42
+    },
+    {
+      "word": "version",
+      "start": 3.42,
+      "end": 3.949
+    },
+    {
+      "word": "Zero",
+      "start": 4.25,
+      "end": 4.612
+    },
+    {
+      "word": "updates",
+      "start": 4.692,
+      "end": 5.094
+    },
+    {
+      "word": "Divorce",
+      "start": 5.435,
+      "end": 5.797
+    },
+    {
+      "word": "gets",
+      "start": 5.837,
+      "end": 6.018
+    },
+    {
+      "word": "her",
+      "start": 6.058,
+      "end": 6.179
+    },
+    {
+      "word": "seventy-five",
+      "start": 6.279,
+      "end": 7.0730625
+    },
+    {
+      "word": "billion",
+      "start": 7.0730625,
+      "end": 7.5783125
+    },
+    {
+      "word": "That's",
+      "start": 7.5783125,
+      "end": 7.93925
+    },
+    {
+      "word": "five",
+      "start": 7.93925,
+      "end": 8.228
+    },
+    {
+      "word": "million",
+      "start": 8.308,
+      "end": 8.61
+    },
+    {
+      "word": "a",
+      "start": 8.65,
+      "end": 8.69
+    },
+    {
+      "word": "day",
+      "start": 8.73,
+      "end": 8.991
+    },
+    {
+      "word": "Highest-paid",
+      "start": 9.333,
+      "end": 9.916
+    },
+    {
+      "word": "job",
+      "start": 9.976,
+      "end": 10.257
+    },
+    {
+      "word": "in",
+      "start": 10.297,
+      "end": 10.378
+    },
+    {
+      "word": "history",
+      "start": 10.478,
+      "end": 10.88
+    }
+  ]
+}

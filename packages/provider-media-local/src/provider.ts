@@ -1,24 +1,19 @@
 import { mediaCapabilities, mediaTypes } from "@hypit/media";
-import { blobTypes } from "@hypit/hypit/blob";
+import { blobTypes } from "@hypit/hypit/generation/blob";
 import {
-  executeExtractAudio,
-  executeExtractFrame,
-  executeInspectMedia,
-  executeMuxProgramMedia,
-  executeRenderAudioProgram,
-} from "@hypit/media-local/execution";
+  executeExtractAudio, executeExtractFrame, executeInspectMedia, executeMuxProgramMedia, executeRenderAudioProgram, } from "@hypit/media-local/execution";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@hypit/media-local/execution";
 import { audioProgramCapabilities } from "@hypit/audio-program";
 import { mediaDeliveryCapabilities } from "@hypit/media-delivery";
 import { speechEvidenceCapabilities, speechEvidenceTypes } from "@hypit/speech-evidence";
 import { defineEndpoint } from "@hypit/hypit/endpoint";
 import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
-import type { Value } from "@hypit/hypit/protocol";
+import type { Value } from "@hypit/hypit/value";
 import { supportsLocalAudioProgram, supportsLocalSpeechEvidenceAudio } from "./support.js";
 import { createMediaExecutionEnvironment } from "@hypit/media-local/execution";
 import { executeProjectSpeechEvidenceAudio } from "./speech.js";
 
-export const localMediaProviderModuleRef = { name: "@hypit/provider-media-local", version: "1" } as const;
+export const localMediaProviderModuleRef = { name: "@hypit/provider-media-local" } as const;
 
 export type CreateLocalMediaProviderOptions = {
   readonly instance?: string;

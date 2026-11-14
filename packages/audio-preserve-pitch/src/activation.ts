@@ -1,3 +1,5 @@
+import { createModuleFacet } from "@hypit/module";
+import { createGenerationModuleFacet } from "@hypit/generation-build";
 import { createProducerPackageFacet } from "@hypit/producer";
 import { createNlePackageFacet } from "@hypit/nle";
 
@@ -6,9 +8,8 @@ import { audioPreservePitchManifest } from "./manifest.js";
 import { audioPreservePitchNleResolver } from "./nle.js";
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [{ manifest: audioPreservePitchManifest }],
   facets: [
+    createModuleFacet(audioPreservePitchManifest), createGenerationModuleFacet(audioPreservePitchManifest),
     createProducerPackageFacet(audioPreservePitchComponent.producers),
     createNlePackageFacet({ signalReconstructions: [audioPreservePitchNleResolver] }),
   ],

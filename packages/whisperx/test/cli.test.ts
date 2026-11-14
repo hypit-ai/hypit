@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { Need } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/hypit/value";
+import type { CapabilityInvocationRequest } from "@hypit/hypit/endpoint";
 import { decodeTimedTranscript } from "@hypit/timed-transcript";
 import { interpretWhisperXTranscript } from "@hypit/whisperx";
 import type { WhisperXTranscriptionRequest } from "@hypit/whisperx";
@@ -29,8 +29,8 @@ function wav(sampleFrames: number): Uint8Array {
 
 const page = { kind: "page" as const, url: "https://prices.example/models" };
 
-/** A host whose Profile serves everything through one paid Endpoint, answering each Need in kind. */
-function host(seen: Need[]): Awaited<ReturnType<TranscribeEnvironment["openHost"]>>["host"] {
+/** A host whose Profile serves everything through one paid Endpoint, answering each request in kind. */
+function host(seen: CapabilityInvocationRequest[]): Awaited<ReturnType<TranscribeEnvironment["openHost"]>>["host"] {
   return {
     endpoints: async (queries) => queries.map((query) => ({
       need: query.need,
@@ -57,8 +57,8 @@ function host(seen: Need[]): Awaited<ReturnType<TranscribeEnvironment["openHost"
   };
 }
 
-function environment(cwd: string, seen: Need[]): TranscribeEnvironment {
-  return { cwd, openHost: async () => ({ profile: join(cwd, "hypit.runtime.json"), host: host(seen) }) };
+function environment(cwd: string, seen: CapabilityInvocationRequest[]): TranscribeEnvironment {
+  return { cwd, openHost: async () => ({ profile: join(cwd, "hypit.environment.json"), host: host(seen) }) };
 }
 
 function capture() {
@@ -66,20 +66,16 @@ function capture() {
   return { io: { write: (text: string) => { output += text; } }, text: () => output };
 }
 
-test("the CLI contribution owns its exact project and Runtime selection port", async () => {
+test("the CLI contribution opens the project Environment directly", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-transcribe-services-"));
   const project = join(root, "project");
-  const profile = join(root, "runtime.json");
+  const profile = join(project, "hypit.environment.json");
   const distribution = join(root, "distribution");
   const opened: unknown[] = [];
   const selectedHost = host([]);
   const services: TranscribeCliServices = {
     packageRoot: distribution,
-    resolveProjectRuntime: async (projectRoot) => {
-      assert.equal(projectRoot, project);
-      return { profile };
-    },
-    openRuntimeHost: async (path, options) => {
+    openEnvironmentHost: async (path, options) => {
       opened.push(path, options);
       return selectedHost;
     },
@@ -98,9 +94,9 @@ test("the CLI contribution owns its exact project and Runtime selection port", a
   await rm(root, { recursive: true, force: true });
 });
 
-test("transcribe writes exact editable evidence from the Profile's transcription Endpoint", async () => {
+test("transcribe writes exact editable evidence from the Environment's transcription Endpoint", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-transcribe-"));
-  const seen: Need[] = [];
+  const seen: CapabilityInvocationRequest[] = [];
   try {
     await writeFile(join(root, "speech.wav"), wav(32_000));
     const out = capture();
@@ -119,26 +115,26 @@ test("transcribe writes exact editable evidence from the Profile's transcription
   }
 });
 
-test("a Profile that does not serve the capability stops before anything is spent", async () => {
+test("an Environment that does not serve the capability stops before anything is spent", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-creation-unserved-"));
   try {
     await writeFile(join(root, "speech.wav"), wav(16_000));
     let invoked = false;
     const unserved: TranscribeEnvironment = {
       cwd: root,
-      openHost: async () => ({ profile: join(root, "hypit.runtime.json"), host: {
-        endpoints: async (queries) => queries.map((query) => ({
-          need: query.need,
-          capability: query.capability,
-          status: "unresolved" as const,
-          support: "not-evaluated" as const,
-        })),
-        invoke: async () => { invoked = true; throw new Error("must not be reached"); },
+      openHost: async () => ({ profile: join(root, "hypit.environment.json"), host: {
+          endpoints: async (queries) => queries.map((query) => ({
+            need: query.need,
+            capability: query.capability,
+            status: "unresolved" as const,
+            support: "not-evaluated" as const,
+          })),
+          invoke: async () => { invoked = true; throw new Error("must not be reached"); },
       } }),
     };
     await assert.rejects(
       runTranscribeCli(["transcribe", "speech.wav", "--to", "speech.transcript.json", "--language", "en"], capture().io, unserved),
-      /No Endpoint in .*hypit\.runtime\.json serves @hypit\/whisperx@1#whisperx-transcription; configure an Endpoint/u,
+      /No Endpoint in .*hypit\.environment\.json serves @hypit\/whisperx#whisperx-transcription; configure an Endpoint/u,
     );
     assert.equal(invoked, false);
   } finally {
@@ -156,9 +152,9 @@ test("transcribe passes Korean to the selected endpoint", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-transcribe-ko-"));
   try {
     await writeFile(join(root, "speech.wav"), wav(32_000));
-    const seen: Need[] = [];
+    const seen: CapabilityInvocationRequest[] = [];
     await runTranscribeCli(["transcribe", "speech.wav", "--language", "ko", "--to", "speech.transcript.json"], capture().io, {
-      cwd: root, openHost: async () => ({ profile: join(root, "runtime.json"), host: host(seen) }),
+      cwd: root, openHost: async () => ({ profile: join(root, "hypit.environment.json"), host: host(seen) }),
     });
     assert.equal((seen[0]!.constraints as unknown as WhisperXTranscriptionRequest).language, "ko");
     assert.equal(decodeTimedTranscript(await readFile(join(root, "speech.transcript.json"), "utf8")).language, "ko");
@@ -170,16 +166,16 @@ test("Chinese transcription explicitly sends zh and retains individual word wind
   try {
     await writeFile(join(root, "speech.wav"), wav(32_000));
     const selected = host([]);
-    const env: TranscribeEnvironment = { cwd: root, openHost: async () => ({ profile: join(root, "runtime.json"), host: {
-      ...selected,
-      invoke: async (need) => {
+    const env: TranscribeEnvironment = { cwd: root, openHost: async () => ({ profile: join(root, "hypit.environment.json"), host: {
+        ...selected,
+        invoke: async (need) => {
         const request = need.constraints as unknown as WhisperXTranscriptionRequest;
         assert.equal(request.language, "zh");
         return canonicalize(interpretWhisperXTranscript({
           language: request.language,
           segments: [{ start: 0, end: 1.1, words: [{ word: "你", start: 0.1, end: 0.24 }, { word: "好！", start: 0.5, end: 1.1 }] }],
         }));
-      },
+        },
     } }) };
     await runTranscribeCli(["transcribe", "speech.wav", "--language", "zh", "--to", "speech.transcript.json"], capture().io, env);
     const result = decodeTimedTranscript(await readFile(join(root, "speech.transcript.json"), "utf8"));
@@ -201,11 +197,11 @@ test("transcription explains ambiguous selection and preserves unsupported reque
     ]) {
       let invoked = false;
       const env: TranscribeEnvironment = { cwd: root, openHost: async () => ({
-        profile: join(root, "runtime.json"), host: {
-          endpoints: async (queries) => queries.map((query) => ({
-            need: query.need, capability: query.capability, ...selection,
-          })),
-          invoke: async () => { invoked = true; throw new Error("must not invoke rejected selection"); },
+        profile: join(root, "hypit.environment.json"), host: {
+            endpoints: async (queries) => queries.map((query) => ({
+              need: query.need, capability: query.capability, ...selection,
+            })),
+            invoke: async () => { invoked = true; throw new Error("must not invoke rejected selection"); },
         },
       }) };
       await assert.rejects(runTranscribeCli([
@@ -213,12 +209,11 @@ test("transcription explains ambiguous selection and preserves unsupported reque
       ], capture().io, env), (error: Error) => {
         if (selection.status === "ambiguous") {
           assert.match(error.message, /local\.words, hosted\.words/u);
-          assert.match(error.message, /bindings\["@hypit\/whisperx@1#whisperx-transcription"\]/u);
+          assert.match(error.message, /bindings\["@hypit\/whisperx#whisperx-transcription"\]/u);
         } else {
           assert.match(error.message, /binding: hosted\.words/u);
           assert.match(error.message, /hosted\.words: This deployment does not support zh alignment/u);
         }
-        assert.doesNotMatch(error.message, /keep exactly one|hypit plan --runtime/u);
         return true;
       });
       assert.equal(invoked, false);

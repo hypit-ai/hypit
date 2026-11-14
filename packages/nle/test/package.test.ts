@@ -6,18 +6,18 @@ import {
   createNleLoweringHostFromFacets,
   createNlePackageFacet,
   createNleProject,
-  nleLinearSourceTime,
+  nleLinearTimeMapping,
   nlePackagesFromFacets,
   type NleComponentItem,
   type NleResolvedItemSource,
   type NleTrack,
 } from "../src/index.js";
 
-const symbol = { module: { name: "@example/title", version: "1" }, name: "card" } as const;
+const symbol = { module: { name: "@example/title" }, name: "card" } as const;
 const second = (value: number) => ({ ticks: String(value), timeBase: { numerator: 1, denominator: 1 } });
 const item: NleComponentItem = {
   id: "title", kind: "present", source: "component", component: symbol, parameters: {},
-  start: second(0), duration: second(1), sourceTime: nleLinearSourceTime(second(1)), enabled: true,
+  start: second(0), duration: second(1), sourceTime: nleLinearTimeMapping(second(1)), enabled: true,
   picture: { layout: { x: 0, y: 0, width: 10, height: 10, fit: "fill" } },
 };
 const project = createNleProject({
@@ -32,10 +32,10 @@ test("selected package facets dispatch exact NLE symbols without serialized regi
   const facet = createNlePackageFacet({ components: [{ component: symbol, resolve: () => resolved }] });
   assert.equal(nlePackagesFromFacets([facet]).length, 1);
   const host = createNleLoweringHostFromFacets([facet]);
-  assert.equal(host.resolveComponent(item, { project, track }), resolved);
+  assert.equal(host.resolveComponent(item, { project, track, media: {} }), resolved);
 
   const missing = createNleLoweringHost([]);
-  assert.throws(() => missing.resolveComponent(item, { project, track }), /is not installed/u);
+  assert.throws(() => missing.resolveComponent(item, { project, track, media: {} }), /is not installed/u);
   assert.throws(() => createNleLoweringHost([
     { components: [{ component: symbol, resolve: () => resolved }] },
     { components: [{ component: symbol, resolve: () => resolved }] },

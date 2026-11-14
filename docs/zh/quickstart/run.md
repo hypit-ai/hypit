@@ -9,7 +9,7 @@ Author Source 定义视频本身。每次 `plan`、`pricing` 或 `build` 命令�
 先为项目选择一次 Runtime：
 
 ```bash
-hypit runtime use hypit.runtime.json
+hypit runtime use hypit.generation-runtime.json
 ```
 
 日常制作只需要这条短路径：
@@ -39,7 +39,8 @@ my-video/
   kits/                     可选的项目内 Recipe Kit
   packages/                 作品需要时创建的项目本地 Author 包
   output/                   显式导出给人或其他工具的副本
-  hypit.runtime.json        执行环境
+  hypit.generation-runtime.json  Generation 执行策略
+  hypit.environment.json         Endpoint 与凭据部署
   .hypit/                   自动产生的本地 Runtime 与 Result 数据
 ```
 
@@ -47,7 +48,7 @@ my-video/
 直接平铺在根目录，其他项目也可以采用不同分组。Hypit 只服从 Source import、CLI 参数和
 `result export --to` 中明确写出的路径，不要求这些名字，也不会特殊识别
 `authors/`、`recipes/`、`assets/` 或 `output/`。Author Source 的闭包可以显式导入多份 Author 或 Recipe Source。受管理的 Result 仓库与它们分开，
-零配置时仍位于 `.hypit/results`。
+零配置时仍位于 `.hypit/generation/results`。
 
 Target 选择与 Runtime Profile 不会悄悄改写视频。创作性的模型选择仍然留在 Author Source，或它显式导入的包里。
 
@@ -85,27 +86,27 @@ hypit result export <build-id> --output opening-generation.video --to assets/ope
 出现在哪里。相机素材、下载文件、CLI 产物和生成 Result 都经过同一文件入口。需要新 take 时，
 单独 Target `opening-generation.video`；是否采用它，由之后一次显式 NLE 编辑决定。
 
-## Runtime Profile
+## Generation Runtime 与 Environment Profile
 
-官方视频 Distribution 已经选择 Local Runtime。它的 Profile 通过逻辑 `use` 名称选择 Credential
-Store 与 Endpoint，并配置 Endpoint 容量等部署参数；它不选择 Runtime Host，也不定义 Source
-Workspace、Author 包或项目 Result Repository。
+官方视频 Distribution 已经选择本机实现。Generation Runtime Profile 负责 Worker 与 Build 执行策略；
+它引用的 Environment Profile 通过逻辑 `use` 名称选择 Credential Store 与 Endpoint。两者都不选择
+Host 实现，也不定义 Source Workspace、Author 包或项目 Result Repository。
 
 ```bash
 hypit runtime init
 hypit paths
 ```
 
-`runtime init` 会写入视频 Distribution 提供的起始 `hypit.runtime.json` 并完成选择。它不覆盖
-已有文件，不安装任何东西、不连接服务，也不启动 Worker。项目已有明确 Profile 时，使用
-`hypit runtime use <profile>`；该命令只写入 `.hypit/runtime`。
+`runtime init` 会写入视频 Distribution 提供的 `hypit.generation-runtime.json` 和
+`hypit.environment.json`，并选择前者。它不覆盖任一已有文件，不安装任何东西、不连接服务，也不启动 Worker。项目已有明确 Profile 时，使用
+`hypit runtime use <profile>`；该命令只写入 `.hypit/generation/runtime-profile`。
 
-`runtime use` 只写入 `.hypit/runtime`，不会启动 Worker、创建 Runtime 数据或修改已安装
+`runtime use` 只写入 `.hypit/generation/runtime-profile`，不会启动 Worker、创建 Runtime 数据或修改已安装
 包。Profile 结构和完整边界见 [Runtime](../guide/runtime.md)。
 CLI 必须先确定项目：显式 `--project` 直接给出边界；否则向上寻找
 `package.json` 中明确声明 `"hypit": { "project": true }` 的目录。组件包与任意当前目录不会
 静默成为项目。随后只读取这个项目自己的
-`.hypit/runtime`。它不会按约定文件名猜 Profile，也不会从父目录继承另一个项目的选择。
+`.hypit/generation/runtime-profile`。它不会按约定文件名猜 Profile，也不会从父目录继承另一个项目的选择。
 ## 配置所选凭据
 
 `check` 与 `plan` 不会请求在线 Provider。没有所选 Runtime 的 `plan` 只看图，不需要部署
@@ -173,7 +174,7 @@ npm install --save-exact @fontsource-variable/inter@5.3.0
 ```bash
 cd /work/my-film
 
-hypit runtime use hypit.runtime.json
+hypit runtime use hypit.generation-runtime.json
 hypit plan main.svml --target final.video
 ```
 
@@ -188,7 +189,7 @@ Runtime 选择都无权改变这条源码边界。`--package-root` 只定位已�
 output/
 ```
 
-每次 Build 的权威结果位于 `.hypit/results/<UTC-date>/<build-id>/`：`result.json` 记录名字、状态、Target
+每次 Build 的权威结果位于 `.hypit/generation/results/<UTC-date>/<build-id>/`：`result.json` 记录名字、状态、Target
 和公开 Output，媒体在 `files/`，结构化值在 `values/`。
 
 这个项目本地目录就是 Result 仓库；需要长期归档或迁移时，在 Build 完成后显式处理这些文件。
@@ -206,18 +207,18 @@ hypit plan /work/my-film/main.svml --target final.video --asset-root /work/share
 `--asset-root` 可重复使用，只授权读取素材字节，不允许从那里导入 `.svml/.svs` 源码。该 Host
 选项不进入作者或 Build 身份；真正进入图的是由该文件形成的显式 Resource 值。
 
-Runtime Profile 只选择 Credential Store、Endpoint 及其封闭配置。完整结构只在
+Environment Profile 选择 Credential Store、Endpoint 及其封闭配置。完整结构只在
 [Runtime](../guide/runtime.md) 维护，不在 Quickstart 复制第二份。
 
 ### 1. 选择 Runtime
 
 ```bash
 cd examples/podcast
-hypit runtime use hypit.runtime.json
+hypit runtime use hypit.generation-runtime.json
 ```
 
-Author Source 通过 import 选择作者包；官方视频 Distribution 已经选择 Local Runtime，Profile
-只通过 `use` 选择 Credential Store 与 Endpoint。安装、版本与完整性由 npm 或 pnpm 负责。
+Author Source 通过 import 选择作者包；官方视频 Distribution 已经选择 Local Runtime，Environment
+Profile 通过 `use` 选择 Credential Store 与 Endpoint。安装、版本与完整性由 npm 或 pnpm 负责。
 
 ### 2. 诊断环境
 
@@ -254,7 +255,7 @@ hypit plan reference.svml --target final.video
 本地 Worker。它不会启动或探测远程 Endpoint；需要主动只读检查远程能力时使用 `doctor`。
 `build` 只重跑便宜的只读预检；任何依赖或 Program 未就绪都会在提交前失败，绝不在 Build
 中准备它们。若部署已经准备完毕而只有 Worker 停止，`build` 会在耐久提交前启动该 Worker。
-`runtime status` 用于观察，`programs up|status|down` 只管理外部程序。
+`runtime status` 用于观察，`programs up|status|down --environment <profile>` 只管理外部程序。
 
 ### 4. 提交 Build
 

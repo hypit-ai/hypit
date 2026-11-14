@@ -55,7 +55,7 @@ const escapeHtml = value => String(value).replace(/[&<>"']/gu, character => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
 })[character]);
 
-app.innerHTML = `${workbenchTopbar({ projectName: "3D Scene", active: "scene" })}
+app.innerHTML = `${workbenchTopbar({ projectName: "3D Scene" })}
 <main class="scene-shell" data-preview="closed" data-assets-collapsed="false" data-inspector-collapsed="false">
   <canvas id="viewport" aria-label="3D Scene viewport"></canvas>
   <div class="viewport-vignette"></div><div class="scene-noise"></div>

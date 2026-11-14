@@ -1,30 +1,23 @@
+import type { CanonicalValue, Value } from "@hypit/protocol";
+import type { CapabilityRef, TypeRef } from "@hypit/module";
+import { canonicalize, compareCodeUnits } from "@hypit/protocol";
+import { capabilityKey } from "@hypit/module";
 import type {
-  CanonicalValue,
-  CapabilityRef,
-  Need,
-  Value,
-  TypeRef,
-} from "@hypit/protocol";
-import { canonicalize, capabilityKey, compareCodeUnits } from "@hypit/protocol";
-import type {
+  CapacityResourceClaim,
   CredentialAcquisition,
   CredentialRef,
   CredentialValue,
   OperationFailure,
   OperationProgress,
-  CapacityResourceClaim,
   OperationReceipt,
-} from "@hypit/runtime";
-import { capacityUnits, verifyCredentialRef } from "@hypit/runtime";
+} from "@hypit/execution-environment";
+import { capacityUnits, verifyCredentialRef } from "@hypit/execution-environment";
 import type { ResourceStore } from "@hypit/resource-store";
 
 export { canonicalize } from "@hypit/protocol";
-export type { BlobRef, CanonicalValue, CapabilityRef, ModuleRef, ResourceId, Value, TypeRef } from "@hypit/protocol";
-export {
-  credentialRef,
-  decodeOAuth2Credential,
-  encodeOAuth2Credential,
-} from "@hypit/runtime";
+export type { BlobRef, CanonicalValue, ResourceId, Value } from "@hypit/protocol";
+export type { CapabilityRef, ModuleRef, TypeRef } from "@hypit/module";
+export { credentialRef, decodeOAuth2Credential, encodeOAuth2Credential } from "@hypit/execution-environment";
 export type {
   CapacityResourceClaim,
   CredentialAcquisition,
@@ -34,23 +27,26 @@ export type {
   OperationFailure,
   OperationProgress,
   OperationReceipt,
-} from "@hypit/runtime";
+} from "@hypit/execution-environment";
 
 export type Awaitable<T> = T | Promise<T>;
 
 /** Deployment demand known from the finite BuildPlan before a concrete request exists. */
 export type EndpointDemand = {
-  readonly capability: Need["capability"];
-  readonly returns: Need["returns"];
+  readonly capability: CapabilityRef;
+  readonly returns: TypeRef;
 };
 
 /**
- * One concrete support-relevant request. Execution-only ids and the result Record are deliberately
- * absent. This object exists only after its Producer has consumed every input and emitted a Need.
+ * One concrete capability invocation. Build Need ids, result Records and persistence are deliberately
+ * absent; direct domain Actions and Generation execution use the same request boundary.
  */
-export type EndpointRequest = EndpointDemand & {
-  readonly constraints: Need["constraints"];
+export type CapabilityInvocationRequest = EndpointDemand & {
+  readonly constraints: Value;
 };
+
+/** The exact request shape an Endpoint evaluates and executes. */
+export type EndpointRequest = CapabilityInvocationRequest;
 
 export type EndpointCredential = CredentialValue & {
   /** Narrow write authority for this declared slot only, when its selected Store is writable. */
@@ -92,7 +88,7 @@ export type EndpointInvocationContext = {
   /** Only slots explicitly declared by this configured Endpoint instance are present. */
   readonly credentials: Readonly<Record<string, EndpointCredential>>;
   /** Explicit non-secret diagnostic output. The Provider owns its content, never its storage. */
-  readonly reportDiagnostic?: (diagnostic: import("@hypit/runtime").ExecutionDiagnostic) => Promise<void>;
+  readonly reportDiagnostic?: (diagnostic: import("@hypit/execution-environment").ExecutionDiagnostic) => Promise<void>;
   /** Report non-secret activity while an immediate call or asynchronous action is still running. */
   readonly reportProgress?: (progress: OperationProgress) => Promise<void>;
 };
@@ -251,6 +247,9 @@ export type EndpointInstance = {
   /** Optional live pricing-material reader owned by this Provider. */
   readonly readPricing?: EndpointPricingReader;
 };
+
+export { EndpointRegistry } from "./registry.js";
+export type { EndpointRegistration, EndpointSelection } from "./registry.js";
 
 export type EndpointExecutableCapability = (
   | { readonly lifecycle: "immediate"; readonly handler: ImmediateEndpointHandler }

@@ -13,7 +13,7 @@ Providers, and users can connect their own services through project Providers.
 The services introduced below are independent partners. They have their own accounts, terms,
 prices, model availability and APIs. A partnership is an introduction, not a shared HypiHub account.
 These Providers are independently versioned optional npm packages, not installed with Hypit. Install the one the project
-selects with the ordinary package manager, then name it in the Runtime Profile; merely installing it
+selects with the ordinary package manager, then name it in the Environment Profile; merely installing it
 does not activate the service. Each Provider maps the installed models that service offers and reports
 that service's input limits, and its README lists both. A model the service offers beyond that set connects through the ordinary
 [Model and Provider](./providers.md) extension path.

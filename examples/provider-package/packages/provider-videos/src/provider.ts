@@ -3,18 +3,18 @@ import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "@hypit/hypit
 import {
   generationTypes,
   sealGeneratedVideoSet,
-} from "@hypit/generation";
-import type { ProviderFieldRequest } from "@hypit/generation/provider";
+} from "@hypit/generation-model";
+import type { ProviderFieldRequest } from "@hypit/generation-model/provider";
 import {
   mappingSupportsRequest,
   materializeWireRequest,
   planWireRequest,
   selectWireModelForRequest,
-} from "@hypit/generation/provider";
-import type { GenerationWireMapping } from "@hypit/generation/provider";
+} from "@hypit/generation-model/provider";
+import type { GenerationWireMapping } from "@hypit/generation-model/provider";
 
-export const providerModule = { name: "@example/provider-videos", version: "1" } as const;
-export const capability = { module: { name: "@hypit/seedance", version: "1" }, name: "seedance-2-mini" } as const;
+export const providerModule = { name: "@example/provider-videos" } as const;
+export const capability = { module: { name: "@hypit/seedance" }, name: "seedance-2-mini" } as const;
 
 // This example service implements only this subset of the model. Its API is described in README.
 export const mapping: GenerationWireMapping = {

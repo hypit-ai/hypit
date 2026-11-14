@@ -1,0 +1,38 @@
+{
+  "name": "hypit-ranking-jensen",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "hypit": {
+    "project": true
+  },
+  "dependencies": {
+    "@hypit-example/ranking-football-components": "workspace:*",
+    "@hypit/audio-gain": "workspace:*",
+    "@hypit/caption": "workspace:*",
+    "@hypit/caption-fine": "workspace:*",
+    "@hypit/hypit": "workspace:*",
+    "@hypit/media-asset": "workspace:*",
+    "@hypit/narrative-caption": "workspace:*",
+    "@hypit/narrative-speech-alignment": "workspace:*",
+    "@hypit/narrative-temporal": "workspace:*",
+    "@hypit/nle": "workspace:*",
+    "@hypit/nle-view": "workspace:*",
+    "@hypit/picture-frame": "workspace:*",
+    "@hypit/picture-filter": "workspace:*",
+    "@hypit/picture-transform": "workspace:*",
+    "@hypit/picture-transition": "workspace:*",
+    "@hypit/script": "workspace:*",
+    "@hypit/temporal": "workspace:*",
+    "@hypit/timed-transcript": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "4.21.0"
+  },
+  "scripts": {
+    "compose": "tsx scripts/compose.ts",
+    "broll-layout-editor": "node tools/broll-layout-editor/server.mjs",
+    "layout-editor": "node tools/meme-layout-editor/server.mjs",
+    "render": "hypit nle export film.nle.json --frame-rate 24 --to exports/ranking-jensen.mp4"
+  }
+}

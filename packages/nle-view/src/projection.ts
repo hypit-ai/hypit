@@ -1,9 +1,16 @@
-import { findNlePictureLayout, resolveNlePictureLayout } from "@hypit/nle";
+import {
+  findNlePictureLayout,
+  fitNlePictureContent,
+  indexNleComposition,
+  resolveNlePictureLayout,
+} from "@hypit/nle";
 import type { NleItem, NleProject, NleTrack } from "@hypit/nle";
 import type { ExactTemporalValue, TemporalRate } from "@hypit/temporal/algebra";
 
 import type {
   NleTimelineItemObservation,
+  NleTimelineAffordancePolicy,
+  NleTimelineItemCapabilities,
   NleCanvasScene,
   NleCanvasSceneLayer,
   NleTimelineScene,
@@ -11,6 +18,7 @@ import type {
   NleTimelineTone,
   NleTimelineView,
 } from "./types.js";
+import type { NleCanvasAffordancePolicy, NleSpatialItemCapabilities } from "./spatial-authoring.js";
 import { assertNleTimelineViewForProject } from "./view.js";
 
 function frames(value: ExactTemporalValue, rate: TemporalRate): number {
@@ -43,7 +51,7 @@ function observationsByItem(
 
 function title(item: NleItem): string {
   if (item.name !== undefined) return item.name;
-  if (item.kind === "adjustment") return item.component.name;
+  if (item.kind === "adjustment") return item.operator.name;
   if (item.source === "media") {
     const parts = item.asset.path.split("/");
     return parts[parts.length - 1]!.replace(/\.media\.json$/u, "");
@@ -86,6 +94,11 @@ export function mergeNleTimelineItemObservations(
         || current.presentation.heightPx !== observation.presentation.heightPx)) {
       throw new Error(`NLE Timeline observations conflict on Item ${observation.item} presentation.`);
     }
+    if (current.picture !== undefined && observation.picture !== undefined
+      && (current.picture.sourceExtent.width !== observation.picture.sourceExtent.width
+        || current.picture.sourceExtent.height !== observation.picture.sourceExtent.height)) {
+      throw new Error(`NLE Timeline observations conflict on Item ${observation.item} Picture extent.`);
+    }
     merged.set(observation.item, {
       item: observation.item,
       ...(current.title === undefined && observation.title === undefined
@@ -95,6 +108,9 @@ export function mergeNleTimelineItemObservations(
       ...(current.presentation === undefined && observation.presentation === undefined
         ? {}
         : { presentation: current.presentation ?? observation.presentation }),
+      ...(current.picture === undefined && observation.picture === undefined
+        ? {}
+        : { picture: current.picture ?? observation.picture }),
     });
   }
   return [...merged.values()];
@@ -104,10 +120,15 @@ export function mergeNleTimelineItemObservations(
 export function projectNleTimeline(
   project: NleProject,
   view: NleTimelineView,
-  observations: readonly NleTimelineItemObservation[] = [],
+  observations: readonly NleTimelineItemObservation[],
+  capabilities: readonly NleTimelineItemCapabilities[] = [],
+  policy: NleTimelineAffordancePolicy = {
+    move: false, trimStart: false, trimEnd: false, split: false,
+  },
 ): NleTimelineScene {
   assertNleTimelineViewForProject(view, project);
   const itemObservations = observationsByItem(project, observations);
+  const itemCapabilities = new Map(capabilities.map((value) => [value.item, value] as const));
 
   let maximumFrame = 1;
   // NLE composition stores Picture Tracks back-to-front. Timeline convention presents the
@@ -122,7 +143,6 @@ export function projectNleTimeline(
     const items = track.items.map((item): NleTimelineSceneItem => {
       const startFrame = frames(item.start, view.editRate);
       const durationFrames = frames(item.duration, view.editRate);
-      const mediaTimeEditing = !locked && item.kind === "present" && item.source === "media";
       maximumFrame = Math.max(maximumFrame, startFrame + durationFrames);
       const observation = itemObservations.get(item.id);
       return {
@@ -138,11 +158,12 @@ export function projectNleTimeline(
           layers: structuredClone(observation?.layers ?? []),
         },
         presentation: observation?.presentation ?? { tone: tone(item, track), chrome: chrome(item) },
-        editing: {
-          move: !locked,
-          trimStart: mediaTimeEditing,
-          trimEnd: mediaTimeEditing,
-          split: mediaTimeEditing,
+        affordances: {
+          select: true,
+          move: itemCapabilities.get(item.id)?.move === true && policy.move,
+          trimStart: itemCapabilities.get(item.id)?.trimStart === true && policy.trimStart,
+          trimEnd: itemCapabilities.get(item.id)?.trimEnd === true && policy.trimEnd,
+          split: itemCapabilities.get(item.id)?.split === true && policy.split,
         },
       };
     });
@@ -171,18 +192,16 @@ export function projectNleCanvas(
   project: NleProject,
   view: NleTimelineView,
   observations: readonly NleTimelineItemObservation[] = [],
+  capabilities: readonly NleSpatialItemCapabilities[],
+  policy: NleCanvasAffordancePolicy,
 ): NleCanvasScene {
   assertNleTimelineViewForProject(view, project);
   const itemObservations = observationsByItem(project, observations);
-  const layoutUsers = new Map(project.pictureLayouts.map((layout) => [layout.id,
-    project.tracks.flatMap((track) => track.items.flatMap((item) =>
-      item.kind === "present" && item.picture !== undefined && "ref" in item.picture.layout
-        && item.picture.layout.ref === layout.id ? [item.id] : [])),
-  ] as const));
+  const index = indexNleComposition(project);
+  const itemCapabilities = new Map(capabilities.map((value) => [value.item, value] as const));
   const layers: NleCanvasSceneLayer[] = [];
   for (const track of project.tracks) {
     if (track.kind !== "picture") continue;
-    const locked = view.tracks.find((state) => state.track === track.id)?.locked ?? false;
     for (const item of track.items) {
       const observation = itemObservations.get(item.id);
       const common = {
@@ -197,7 +216,11 @@ export function projectNleCanvas(
         durationFrames: frames(item.duration, view.editRate),
       } as const;
       if (item.kind === "adjustment") {
-        layers.push({ ...common, owner: { kind: "item" }, editing: { select: true, transform: false } });
+        layers.push({
+          ...common,
+          owner: { kind: "item" },
+          affordances: { select: true, translate: false, resize: false },
+        });
         continue;
       }
       if (item.picture === undefined) continue;
@@ -208,14 +231,29 @@ export function projectNleCanvas(
           kind: "picture-layout" as const,
           ref: resource.id,
           name: resource.name,
-          sharedBy: structuredClone(layoutUsers.get(resource.id) ?? []),
+          sharedBy: index.pictureLayoutUsers(resource.id).map(({ item: user }) => user.id),
         };
       })() : { kind: "item" };
+      const capability = itemCapabilities.get(item.id);
+      const layout = resolveNlePictureLayout(project, layoutSource);
+      const sourceExtent = observation?.picture?.sourceExtent;
       layers.push({
         ...common,
-        layout: resolveNlePictureLayout(project, layoutSource),
+        layout,
+        ...(sourceExtent === undefined ? {} : {
+          content: fitNlePictureContent(layout, sourceExtent),
+        }),
         owner,
-        editing: { select: true, transform: !locked },
+        affordances: {
+          select: true,
+          translate: capability?.translateFrame === true && policy.translateFrame,
+          resize: capability?.resizeFrame === true && policy.resizeFrame ? {
+            handles: ["nw", "ne", "se", "sw"],
+            minimumWidth: 1,
+            minimumHeight: 1,
+            aspectRatio: layout.width / layout.height,
+          } : false,
+        },
       });
     }
   }

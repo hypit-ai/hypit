@@ -9,7 +9,7 @@ network execution. The selected Provider implements its exact capability.
 Import the model variant you mean and connect prompt and references as ordinary graph edges:
 
 ```svml
-module nano from "@hypit/nano-banana@1"
+module nano from "@hypit/nano-banana"
 
 nano.image {
   id: draft prompt: @prompt aspect-ratio: 9:16 resolution: 2K output-format: png

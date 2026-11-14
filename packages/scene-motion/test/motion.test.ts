@@ -20,7 +20,7 @@ test("semantic dolly parameters lower to one exact Camera-state control", () => 
     id: "dolly-stage",
     name: "Dolly Stage",
     environment: {
-      using: { module: { name: "@test/environment", version: "1" }, name: "environment" },
+      using: { module: { name: "@test/environment" }, name: "environment" },
       parameters: {},
     },
     cameras: [{
@@ -46,7 +46,7 @@ test("semantic dolly parameters lower to one exact Camera-state control", () => 
           start: time(0),
           duration: time(5),
           enabled: true,
-          using: { module: { name: "@hypit/scene-motion", version: "1" }, name: "camera-motion" },
+          using: { module: { name: "@hypit/scene-motion" }, name: "camera-motion" },
           parameters: {
             kind: "dolly",
             distance: 4,
@@ -70,12 +70,12 @@ test("camera and object paths evaluate as one shared Performance", () => {
     id: "tracking-stage",
     name: "Tracking Stage",
     environment: {
-      using: { module: { name: "@test/environment", version: "1" }, name: "environment" },
+      using: { module: { name: "@test/environment" }, name: "environment" },
       parameters: {},
     },
     objects: [{
       id: "actor", name: "Actor",
-      using: { module: { name: "@test/assets", version: "1" }, name: "person" },
+      using: { module: { name: "@test/assets" }, name: "person" },
       transform: {
         position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0, w: 1 },
         scale: { x: 1, y: 1, z: 1 },
@@ -93,7 +93,7 @@ test("camera and object paths evaluate as one shared Performance", () => {
         id: "actor-path", name: "Actor Path", subject: { kind: "object", ref: "actor" },
         items: [{
           id: "actor-move", name: "Actor Move", start: time(0), duration: time(10), enabled: true,
-          using: { module: { name: "@hypit/scene-motion", version: "1" }, name: "object-path" },
+          using: { module: { name: "@hypit/scene-motion" }, name: "object-path" },
           parameters: { kind: "object-path", curve: "linear", points: [
             { at: 0, position: { x: 0, y: 0, z: 0 } },
             { at: 1, position: { x: 0, y: 0, z: 10 } },
@@ -103,7 +103,7 @@ test("camera and object paths evaluate as one shared Performance", () => {
         id: "camera-path", name: "Camera Path", subject: { kind: "camera", ref: "camera" },
         items: [{
           id: "camera-move", name: "Camera Move", start: time(0), duration: time(10), enabled: true,
-          using: { module: { name: "@hypit/scene-motion", version: "1" }, name: "camera-path" },
+          using: { module: { name: "@hypit/scene-motion" }, name: "camera-path" },
           parameters: { kind: "camera-path", curve: "linear", points: [
             { at: 0, position: { x: 0, y: 2, z: -5 }, aim: { x: 0, y: 1, z: 0 }, fov: 45 },
             { at: 1, position: { x: 2, y: 2, z: 5 }, aim: { x: 0, y: 1, z: 10 }, fov: 35 },

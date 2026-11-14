@@ -14,8 +14,7 @@
       "name": "alice",
       "component": {
         "module": {
-          "name": "@hypit/caption-fine",
-          "version": "1"
+          "name": "@hypit/caption-fine"
         },
         "name": "fine"
       },
@@ -68,8 +67,7 @@
       "name": "bob",
       "component": {
         "module": {
-          "name": "@hypit/caption-fine",
-          "version": "1"
+          "name": "@hypit/caption-fine"
         },
         "name": "fine"
       },
@@ -113,8 +111,7 @@
       "name": "warning",
       "component": {
         "module": {
-          "name": "@hypit/caption-fine",
-          "version": "1"
+          "name": "@hypit/caption-fine"
         },
         "name": "fine"
       },
@@ -504,8 +501,7 @@
           "enabled": true,
           "component": {
             "module": {
-              "name": "@hypit-example/ranking-debate-components",
-              "version": "1"
+              "name": "@hypit-example/ranking-debate-components"
             },
             "name": "ranking-board"
           },
@@ -708,12 +704,11 @@
           "enabled": true,
           "component": {
             "module": {
-              "name": "@hypit/caption-fine",
-              "version": "1"
+              "name": "@hypit/caption-fine"
             },
             "name": "fine"
           },
-          "bindings": [
+          "sharedValues": [
             {
               "slot": "style",
               "ref": "caption-style:alice"
@@ -1330,12 +1325,11 @@
           "enabled": true,
           "component": {
             "module": {
-              "name": "@hypit/caption-fine",
-              "version": "1"
+              "name": "@hypit/caption-fine"
             },
             "name": "fine"
           },
-          "bindings": [
+          "sharedValues": [
             {
               "slot": "style",
               "ref": "caption-style:bob"
@@ -1844,12 +1838,11 @@
           "enabled": false,
           "component": {
             "module": {
-              "name": "@hypit/caption-fine",
-              "version": "1"
+              "name": "@hypit/caption-fine"
             },
             "name": "fine"
           },
-          "bindings": [
+          "sharedValues": [
             {
               "slot": "style",
               "ref": "caption-style:bob"
@@ -2331,12 +2324,11 @@
           "enabled": true,
           "component": {
             "module": {
-              "name": "@hypit/caption-fine",
-              "version": "1"
+              "name": "@hypit/caption-fine"
             },
             "name": "fine"
           },
-          "bindings": [
+          "sharedValues": [
             {
               "slot": "style",
               "ref": "caption-style:warning"
@@ -2683,12 +2675,11 @@
           "enabled": true,
           "component": {
             "module": {
-              "name": "@hypit/caption-fine",
-              "version": "1"
+              "name": "@hypit/caption-fine"
             },
             "name": "fine"
           },
-          "bindings": [
+          "sharedValues": [
             {
               "slot": "style",
               "ref": "caption-style:alice"
@@ -3258,12 +3249,11 @@
           "enabled": true,
           "component": {
             "module": {
-              "name": "@hypit/caption-fine",
-              "version": "1"
+              "name": "@hypit/caption-fine"
             },
             "name": "fine"
           },
-          "bindings": [
+          "sharedValues": [
             {
               "slot": "style",
               "ref": "caption-style:bob"
@@ -3853,12 +3843,11 @@
           "enabled": true,
           "component": {
             "module": {
-              "name": "@hypit/caption-fine",
-              "version": "1"
+              "name": "@hypit/caption-fine"
             },
             "name": "fine"
           },
-          "bindings": [
+          "sharedValues": [
             {
               "slot": "style",
               "ref": "caption-style:bob"
@@ -4051,8 +4040,7 @@
           "enabled": true,
           "component": {
             "module": {
-              "name": "@hypit-example/ranking-debate-components",
-              "version": "1"
+              "name": "@hypit-example/ranking-debate-components"
             },
             "name": "verdict-burst"
           },

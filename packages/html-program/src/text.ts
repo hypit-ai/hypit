@@ -107,6 +107,8 @@ export type HtmlTextStyle = {
   readonly typography?: HtmlTextTypography;
   readonly paints?: readonly HtmlTextPaintLayer[];
   readonly decoration?: HtmlTextDecoration;
+  /** Exact inline advance for authored separators that must not inherit a font's space glyph. */
+  readonly inlineAdvancePx?: number;
 };
 
 export type HtmlTextNode =
@@ -329,7 +331,63 @@ function boxCss(paints: readonly HtmlTextPaintLayer[], label: string): string[] 
   return css;
 }
 
-function paintCss(paint: Exclude<HtmlTextPaintLayer, { kind: "box" }>, label: string): string[] {
+function glyphFilterDefinition(
+  paint: Extract<HtmlTextPaintLayer, { kind: "shadow" | "glow" }>,
+  id: string,
+  label: string,
+): string {
+  const selected = color(paint.color, `${label} ${paint.kind}`);
+  assert(paint.blurPx >= 0, `${label} ${paint.kind} blur is invalid.`);
+  const spreadPx = paint.spreadPx ?? 0;
+  assert(Number.isFinite(spreadPx) && spreadPx >= 0, `${label} ${paint.kind} spread is invalid.`);
+  // Fine's authored blur is the CSS blur radius. The former Hyperframes terminal
+  // converted that radius to Gaussian deviation before painting the silhouette.
+  // Radius zero is the identity and keeps the same primitive addressable when
+  // a live component switches to an Active Paint with non-zero spread.
+  const spread = `<feMorphology data-hypit-text-filter-spread in="SourceAlpha" operator="dilate" radius="${number(spreadPx, `${label} spread`)}" result="spread"/>`;
+  const blur = `<feGaussianBlur data-hypit-text-filter-blur in="spread" stdDeviation="${number(paint.blurPx / 2, `${label} blur`)}" result="blurred"/>`;
+  const shape = paint.kind === "shadow"
+    ? `<feOffset data-hypit-text-filter-offset in="blurred" dx="${number(paint.offsetX, `${label} shadow x`)}" dy="${number(paint.offsetY, `${label} shadow y`)}" result="shape"/>`
+    : `<feComposite in="blurred" in2="blurred" operator="in" result="shape"/>`;
+  const flood = `<feFlood data-hypit-text-filter-flood flood-color="${selected}" result="paint"/>`;
+  return `<filter id="${id}" x="-100%" y="-100%" width="300%" height="300%" color-interpolation-filters="sRGB">${spread}${blur}${shape}${flood}<feComposite in="paint" in2="shape" operator="in"/></filter>`;
+}
+
+type GlyphFilterPaint = Extract<HtmlTextPaintLayer, { kind: "shadow" | "glow" }>;
+
+type GlyphFilterRegistry = {
+  readonly fragmentId: string;
+  readonly ids: Map<string, string>;
+  readonly definitions: string[];
+};
+
+function safeIdentity(value: string): string {
+  return value.replaceAll(/[^A-Za-z0-9_-]/gu, "-");
+}
+
+/**
+ * One fragment owns one definition for every distinct soft Paint.
+ *
+ * Caption words intentionally repeat the same ordered Paint. Keeping a filter beside every word
+ * makes the DOM grow as words × effects even though the browser resolves filter identifiers across
+ * the whole fragment. A small structural registry preserves Paint order while sharing only equal
+ * terminal implementations; it introduces no authoring identity or persistent metadata.
+ */
+function glyphFilterId(paint: GlyphFilterPaint, registry: GlyphFilterRegistry, label: string): string {
+  const key = canonicalStringify(paint);
+  const existing = registry.ids.get(key);
+  if (existing !== undefined) return existing;
+  const id = `hypit-text-filter-${safeIdentity(registry.fragmentId)}-${registry.ids.size + 1}`;
+  registry.ids.set(key, id);
+  registry.definitions.push(glyphFilterDefinition(paint, id, label));
+  return id;
+}
+
+function paintCss(
+  paint: Exclude<HtmlTextPaintLayer, { kind: "box" }>,
+  label: string,
+  filterId?: string,
+): string[] {
   const common = ["grid-area:1/1", "position:relative", "pointer-events:none"];
   if (paint.kind === "fill") {
     if (paint.paint.kind === "solid") {
@@ -348,35 +406,15 @@ function paintCss(paint: Exclude<HtmlTextPaintLayer, { kind: "box" }>, label: st
       `-webkit-text-stroke:${number(width, `${label} stroke width`)}px ${selected}`,
       "paint-order:stroke fill"];
   }
-  const spreadShadows = (
-    offsetX: number,
-    offsetY: number,
-    blurPx: number,
-    spreadPx: number,
-    selected: string,
-  ): string => {
-    assert(Number.isFinite(spreadPx) && spreadPx >= 0, `${label} spread is invalid.`);
-    const offsets = spreadPx === 0 ? [[offsetX, offsetY]] : [
-      [offsetX, offsetY],
-      ...Array.from({ length: 16 }, (_, index) => {
-        const angle = index * Math.PI / 8;
-        return [offsetX + Math.cos(angle) * spreadPx, offsetY + Math.sin(angle) * spreadPx];
-      }),
-    ];
-    return offsets.map(([x, y]) =>
-      `${number(x!, `${label} shadow x`)}px ${number(y!, `${label} shadow y`)}px ${number(blurPx, `${label} shadow blur`)}px ${selected}`).join(",");
-  };
   if (paint.kind === "shadow") {
-    assert(paint.blurPx >= 0, `${label} shadow blur is invalid.`);
-    const selected = color(paint.color, `${label} shadow`);
-    return [...common, `color:${selected}`, `-webkit-text-fill-color:${selected}`,
-      `text-shadow:${spreadShadows(paint.offsetX, paint.offsetY, paint.blurPx, paint.spreadPx ?? 0, selected)}`];
+    assert(filterId !== undefined, `${label} shadow filter identity is missing.`);
+    return [...common, "color:#ffffff", "-webkit-text-fill-color:#ffffff", "text-shadow:none",
+      `filter:url(#${filterId})`];
   }
   if (paint.kind === "glow") {
-    assert(paint.blurPx >= 0, `${label} glow blur is invalid.`);
-    const selected = color(paint.color, `${label} glow`);
-    return [...common, `color:${selected}`, `-webkit-text-fill-color:${selected}`,
-      `text-shadow:${spreadShadows(0, 0, paint.blurPx, paint.spreadPx ?? 0, selected)}`];
+    assert(filterId !== undefined, `${label} glow filter identity is missing.`);
+    return [...common, "color:#ffffff", "-webkit-text-fill-color:#ffffff", "text-shadow:none",
+      `filter:url(#${filterId})`];
   }
   assert(paint.distancePx >= 0 && Number.isFinite(paint.distancePx), `${label} distance is invalid.`);
   assert(Number.isFinite(paint.angleDeg), `${label} angle is invalid.`);
@@ -425,6 +463,7 @@ function renderNode(
   decoration: HtmlTextDecoration | undefined,
   fonts: FontClosure,
   identities: Set<string>,
+  filters: GlyphFilterRegistry,
 ): string {
   identity(node.id, "HTML Text node id");
   assert(!identities.has(node.id), `HTML Text repeats node ${node.id}.`);
@@ -435,6 +474,12 @@ function renderNode(
   const selectedDecoration = node.style?.decoration ?? decoration;
   const style = [
     "position:relative",
+    ...(node.style?.inlineAdvancePx === undefined ? [] : (() => {
+      assert(Number.isFinite(node.style.inlineAdvancePx) && node.style.inlineAdvancePx >= 0,
+        `HTML Text node ${node.id} inline advance is invalid.`);
+      return ["display:inline-block", `width:${number(node.style.inlineAdvancePx, `HTML Text node ${node.id} inline advance`)}px`,
+        "font-size:0", "line-height:0", "flex:none"];
+    })()),
     ...typographyCss(selectedTypography, fonts, `HTML Text node ${node.id}`),
     ...boxCss(selectedPaints, `HTML Text node ${node.id}`),
     ...decorationCss(selectedDecoration, `HTML Text node ${node.id} decoration`),
@@ -442,15 +487,21 @@ function renderNode(
   if (node.kind === "group") {
     assert(node.children.length > 0, `HTML Text group ${node.id} is empty.`);
     return `<span data-hypit-text-node="${escapeHtml(node.id)}" data-hypit-text-kind="group"${languageAttributes(selectedTypography, `HTML Text node ${node.id}`)} style="${escapeHtml(style)}">${node.children.map((child) =>
-      renderNode(child, selectedTypography, selectedPaints, selectedDecoration, fonts, identities)).join("")}</span>`;
+      renderNode(child, selectedTypography, selectedPaints, selectedDecoration, fonts, identities, filters)).join("")}</span>`;
   }
   assert(node.text.length > 0, `HTML Text node ${node.id} is empty.`);
   const glyphPaints = selectedPaints.filter((paint): paint is Exclude<HtmlTextPaintLayer, { kind: "box" }> =>
     paint.kind !== "box");
+  const described = glyphPaints.map((paint, index) => ({
+    paint,
+    filterId: paint.kind === "shadow" || paint.kind === "glow"
+      ? glyphFilterId(paint, filters, `HTML Text node ${node.id} Paint ${index}`) : undefined,
+  }));
   const layers = glyphPaints.length === 0
     ? escapeHtml(node.text)
-    : glyphPaints.map((paint, index) => `<span data-hypit-text-paint="${paint.kind}" aria-hidden="${index === glyphPaints.length - 1 ? "false" : "true"}" style="${escapeHtml(paintCss(paint, `HTML Text node ${node.id}`).join(";"))}">${escapeHtml(node.text)}</span>`).join("");
-  return `<span data-hypit-text-node="${escapeHtml(node.id)}" data-hypit-text-kind="text"${languageAttributes(selectedTypography, `HTML Text node ${node.id}`)} style="${escapeHtml(`${style};display:inline-grid`)}">${layers}</span>`;
+    : described.map(({ paint, filterId }, index) => `<span data-hypit-text-paint="${paint.kind}" aria-hidden="${index === glyphPaints.length - 1 ? "false" : "true"}" style="${escapeHtml(paintCss(paint, `HTML Text node ${node.id}`, filterId).join(";"))}">${escapeHtml(node.text)}</span>`).join("");
+  const display = node.style?.inlineAdvancePx === undefined ? ";display:inline-grid" : "";
+  return `<span data-hypit-text-node="${escapeHtml(node.id)}" data-hypit-text-kind="text"${languageAttributes(selectedTypography, `HTML Text node ${node.id}`)} style="${escapeHtml(`${style}${display}`)}">${layers}</span>`;
 }
 
 /**
@@ -470,10 +521,13 @@ export function htmlTextFragment(spec: HtmlTextFragmentSpec): HtmlTextFragment {
     ...decorationCss(spec.decoration, `HTML Text fragment ${spec.id} decoration`),
   ].join(";");
   const identities = new Set<string>();
+  const filters: GlyphFilterRegistry = { fragmentId: spec.id, ids: new Map(), definitions: [] };
   const content = spec.children.map((node) =>
-    renderNode(node, spec.typography, spec.paints, spec.decoration, fonts, identities)).join("");
+    renderNode(node, spec.typography, spec.paints, spec.decoration, fonts, identities, filters)).join("");
+  const definitions = filters.definitions.length === 0 ? ""
+    : `<svg aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden"><defs>${filters.definitions.join("")}</defs></svg>`;
   return {
-    html: `${fonts.css === "" ? "" : `<style>${fonts.css}</style>`}<span data-hypit-text-fragment="${escapeHtml(spec.id)}"${languageAttributes(spec.typography, `HTML Text fragment ${spec.id}`)} style="${escapeHtml(rootStyle)}">${content}</span>`,
+    html: `${fonts.css === "" ? "" : `<style>${fonts.css}</style>`}${definitions}<span data-hypit-text-fragment="${escapeHtml(spec.id)}"${languageAttributes(spec.typography, `HTML Text fragment ${spec.id}`)} style="${escapeHtml(rootStyle)}">${content}</span>`,
     dependencies: fonts.dependencies,
   };
 }

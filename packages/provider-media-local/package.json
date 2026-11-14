@@ -23,20 +23,21 @@
     "@hypit/temporal": "workspace:^0.1.1"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0",
-    "@hypit/runtime-local": "workspace:^0.2.0"
+    "@hypit/execution-environment-local": "workspace:^0.2.0",
+    "@hypit/hypit": "workspace:^0.4.0"
   },
   "devDependencies": {
     "@hypit/audio-gain": "workspace:*",
     "@hypit/audio-preserve-pitch": "workspace:*",
     "@hypit/blob": "workspace:*",
     "@hypit/endpoint": "workspace:*",
+    "@hypit/execution-environment-local": "workspace:*",
     "@hypit/executor": "workspace:*",
+    "@hypit/generation-build": "workspace:*",
     "@hypit/hypit": "workspace:*",
+    "@hypit/module": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/resource-store": "workspace:*",
-    "@hypit/runtime": "workspace:*",
-    "@hypit/runtime-local": "workspace:*",
     "@hypit/temporal": "workspace:*"
   }
 }

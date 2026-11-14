@@ -1,15 +1,14 @@
-import type { ModuleManifest, TypeRef } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
 
-export const textModuleRef = { name: "@hypit/text", version: "1" } as const;
+export const textModuleRef = { name: "@hypit/text" } as const;
 
 export const textTypes = {
   text: { module: textModuleRef, name: "Text" },
 } satisfies Record<string, TypeRef>;
 
-export const textManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const textManifest: GenerationModuleDefinition = {
   name: textModuleRef.name,
-  version: textModuleRef.version,
   dependencies: [],
   types: [textTypes.text.name],
   capabilities: [],

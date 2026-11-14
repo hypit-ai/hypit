@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { readHtmlVisual } from "@hypit/html-program";
 import { canonicalize } from "@hypit/protocol";
-import { createNleLoweringHostFromFacets } from "@hypit/nle";
+import { createNleLoweringHostFromFacets, nleLinearTimeMapping } from "@hypit/nle";
 import { exactTemporalValue, sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 
 import { hypitPackage } from "../src/activation.js";
@@ -85,16 +85,17 @@ test("Picture Transform resolves and edits materialized NLE parameters through p
   };
   const adjustment = {
     id: "pose", kind: "adjustment" as const,
-    component: pictureTransformNleSymbol,
+    operator: pictureTransformNleSymbol,
     parameters: canonicalize(parameters),
     duration: at(2),
+    controlTime: nleLinearTimeMapping(at(2)),
   };
   const project = {} as never;
   const lowering = createNleLoweringHostFromFacets(hypitPackage.facets);
-  assert.deepEqual(lowering.resolvePictureAdjustment(adjustment as never, project), {
+  assert.deepEqual(lowering.resolvePictureOperator(adjustment as never, project), {
     operator: pictureTransformOperator(IDENTITY_PICTURE_TRANSFORM),
   });
 
-  assert.deepEqual(pictureTransformNleAuthoring.inspect({ item: adjustment, project } as never),
+  assert.deepEqual(pictureTransformNleAuthoring.inspect({ application: adjustment, project } as never),
     canonicalize(parameters));
 });

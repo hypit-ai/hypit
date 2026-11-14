@@ -16,7 +16,7 @@ and usage instructions through an installable package.
 Keep the same name when distributing it. The Source import uses the component's stable address:
 
 ```xml
-<import as="score" from="@studio/score-strip@1"/>
+<import as="score" from="@studio/score-strip"/>
 ```
 
 The package manager separately records the installed release, such as `1.2.0`. Follow the package's

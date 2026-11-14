@@ -45,16 +45,16 @@ test("Picture Frame preserves structured path, padding, border and multi-shadow 
 test("Picture Frame is an ordinary materialized NLE Adjustment with package-owned editing", () => {
   const adjustment = {
     id: "card-frame", kind: "adjustment" as const,
-    component: pictureFrameNleSymbol,
+    operator: pictureFrameNleSymbol,
     parameters: canonicalize({ treatment }),
   };
   const resolved = createNleLoweringHostFromFacets(hypitPackage.facets)
-    .resolvePictureAdjustment(adjustment as never, {} as never);
+    .resolvePictureOperator(adjustment as never, {} as never);
   assert.deepEqual(resolved, { operator: pictureFrameOperator(treatment) });
   assert.deepEqual(pictureFrameNleAuthoring.edit({
     kind: "set-treatment",
     treatment: { ...treatment, clip: { kind: "rounded", radiusPx: 32 } },
-  }, { item: adjustment } as never), canonicalize({
+  }, { application: adjustment } as never), canonicalize({
     treatment: { ...treatment, clip: { kind: "rounded", radiusPx: 32 } },
   }));
 });

@@ -21,8 +21,8 @@ The Source binding exported by each file is the file's `*-v1` label. A caller ma
 finite choices with `prompt.Preset`, then bind exact authored Text when it renders the Prompt:
 
 ```svml
-module prompt from "@hypit/prompt@1"
-module seedance from "@hypit/seedance@1"
+module prompt from "@hypit/prompt"
+module seedance from "@hypit/seedance"
 source kit from "@hypit/seedance-kits/speaker"
 
 prompt.Preset "speaker-style" {

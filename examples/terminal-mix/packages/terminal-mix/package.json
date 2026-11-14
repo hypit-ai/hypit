@@ -1,0 +1,36 @@
+{
+  "name": "@example/terminal-mix",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "hypit": {
+    "activation": "./dist/activation.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "pnpm run build"
+  },
+  "dependencies": {
+    "@hypit/audiovisual": "workspace:^0.1.0",
+    "@hypit/audiovisual-blender-local": "workspace:^0.1.0",
+    "@hypit/audiovisual-html": "workspace:^0.1.0",
+    "@hypit/audiovisual-manim-local": "workspace:^0.1.0",
+    "@hypit/html-program": "workspace:^0.2.0",
+    "@hypit/nle-audiovisual": "workspace:^0.1.0",
+    "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/spatial": "workspace:^0.1.1",
+    "@hypit/temporal": "workspace:^0.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "typescript": "5.9.3"
+  }
+}

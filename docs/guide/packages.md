@@ -12,9 +12,9 @@ The project selects each package where it is used.
 | --- | --- | --- |
 | Author component | Turns author inputs into media requests, visual behavior or other outputs | Source imports |
 | Model | Defines an exact generation request and its outputs | Source imports |
-| Provider Endpoint | Executes supported requests through an API or local tool | Runtime Profile |
-| Credential store | Resolves the named credentials for an Endpoint | Runtime Profile |
-| Results | Keeps a project's Build records and produced files | Project `.hypit/results` |
+| Provider Endpoint | Executes supported requests through an API or local tool | Environment Profile |
+| Credential store | Resolves the named credentials for an Endpoint | Environment Profile |
+| Results | Keeps a project's Build records and produced files | Project `.hypit/generation/results` |
 | Hypit installation | Supplies the commands and included packages | Installed `@hypit/hypit` release |
 
 For example, a Model describes a requested video, while a Provider maps that request to a service.
@@ -45,7 +45,7 @@ The Skill, Hypit installation and video project are installed and updated separa
 components are ordinary project dependencies. Selected local services can prepare their files and
 processes through `hypit runtime up`.
 
-Source uses a component address such as `@your-studio/scoreboard@1`. The project package manager
+Source uses a component address such as `@your-studio/scoreboard`. The project package manager
 selects the installed release and records it in the lockfile. Missing packages are reported with the
 name needed for installation.
 

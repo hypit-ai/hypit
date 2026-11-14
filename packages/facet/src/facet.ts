@@ -1,7 +1,7 @@
-/** One package contribution understood only by the owner of its exact ABI. */
+/** One package contribution understood only by the owner of its exact kind. */
 export type Facet = {
-  readonly abi: string;
-  /** Optional logical address interpreted only by the owner of this exact ABI. */
+  readonly kind: string;
+  /** Optional logical address interpreted only by the owner of this kind. */
   readonly address?: string;
   readonly implementation: unknown;
 };

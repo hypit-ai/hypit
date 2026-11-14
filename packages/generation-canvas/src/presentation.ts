@@ -1,9 +1,9 @@
 import type { Facet } from "@hypit/facet";
-import { isModuleRef, moduleKey } from "@hypit/protocol";
+import { isModuleRef, moduleKey } from "@hypit/module";
 import type { GenerationComponentRef, GenerationGraphNode } from "@hypit/generation-graph";
 import type { GenerationNodeAuthoringShape } from "@hypit/generation-graph";
 
-export const generationCanvasPresentationFacetAbi = "hypit.generation-canvas-presentation@1";
+export const generationCanvasPresentationFacetKind = "hypit.generation-canvas-presentation";
 
 /** Finite visual vocabulary owned by Canvas. Packages contribute meaning, never CSS or markup. */
 export type GenerationCanvasNodeRole =
@@ -56,7 +56,7 @@ export type GenerationCanvasPresentationPackage = {
 };
 
 export type GenerationCanvasPresentationFacet = Facet & {
-  readonly abi: typeof generationCanvasPresentationFacetAbi;
+  readonly kind: typeof generationCanvasPresentationFacetKind;
   readonly implementation: GenerationCanvasPresentationPackage;
 };
 
@@ -133,13 +133,13 @@ export function createGenerationCanvasPresentationFacet(
   value: GenerationCanvasPresentationPackage,
 ): GenerationCanvasPresentationFacet {
   assertPackage(value);
-  return { abi: generationCanvasPresentationFacetAbi, implementation: value };
+  return { kind: generationCanvasPresentationFacetKind, implementation: value };
 }
 
 export function generationCanvasPresentationPackagesFromFacets(
   facets: readonly Facet[],
 ): readonly GenerationCanvasPresentationPackage[] {
-  return facets.flatMap((facet) => facet.abi === generationCanvasPresentationFacetAbi
+  return facets.flatMap((facet) => facet.kind === generationCanvasPresentationFacetKind
     ? [(facet as GenerationCanvasPresentationFacet).implementation]
     : []);
 }

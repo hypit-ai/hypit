@@ -11,7 +11,7 @@ It contains no API URL, credential, retry, queue or ElevenLabs wire encoding. Th
 Runtime Endpoint such as `@hypit/provider-hypihub`.
 
 ```xml
-<import as="eleven" from="@hypit/elevenlabs-speech@1"/>
+<import as="eleven" from="@hypit/elevenlabs-speech"/>
 
 <eleven:VoiceDesign id="host" speech={story.segment.voiceSample.speech}>
   A clear young woman with a grounded, confident conversational delivery.

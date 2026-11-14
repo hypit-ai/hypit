@@ -1,13 +1,16 @@
+import { sameType } from "@hypit/hypit/module";
 import { installPortraitTransition } from "./portrait-transition.js";
 import { installPortraitInset } from "./portrait-inset.js";
 import { installReframe } from "./reframe.js";
 import { installPullback } from "./pullback.js";
 import { installPresenter } from "./presenter.js";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
-import { canonicalize, sameType } from "@hypit/hypit/protocol";
-import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/author";
+import { createRefinementPackageFacet } from "@hypit/hypit/generation/refinement";
+import { createProducerPackageFacet } from "@hypit/hypit/generation/producer";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
+import { createModuleFacet } from "@hypit/hypit/module";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/generation/markup";
+import { canonicalize } from "@hypit/hypit/value";
+import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/generation/author";
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
 import { timelineTypes } from "@hypit/timeline";
@@ -37,7 +40,6 @@ const common = [
   port("options", optionsType),
 ];
 export const manifest = {
-  format: "hypit.module@1",
   ...module,
   dependencies: [
     ...new Map(
@@ -422,9 +424,9 @@ const portraitInset = installPortraitInset(module, manifest, component);
 const presenter = installPresenter(module, manifest, component);
 const styles = [pullback, fadeOut, reframe, portraitTransition, portraitInset];
 export const hypitPackage = {
-  format: "hypit.package@1",
-  modules: [{ manifest }],
   facets: [
+    createModuleFacet(manifest),
+    createGenerationModuleFacet(manifest),
     createProducerPackageFacet(component.producers ?? []),
     createRefinementPackageFacet(component.refinements ?? []),
     ...[

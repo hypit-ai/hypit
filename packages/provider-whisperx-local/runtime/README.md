@@ -19,8 +19,8 @@ semantic projection combines this evidence with one explicit Script Segment late
 ## Install
 
 For an ordinary installed Distribution, select the local WhisperX Endpoint and run
-`hypit programs prepare --endpoint <instance>` after setting `alignmentLanguages` in its Profile.
-`hypit programs up --endpoint <instance>` also prepares resources and starts the service.
+`hypit programs prepare --environment <profile> --endpoint <instance>` after setting `alignmentLanguages` in its Profile.
+`hypit programs up --environment <profile> --endpoint <instance>` also prepares resources and starts the service.
 The Runtime creates or reconciles the cold environment in
 the machine Program Home and reuses a running service across projects and sessions. The commands below are contributor/operator
 diagnostics for a deliberately managed deployment:
@@ -100,7 +100,7 @@ while fetching the NLTK data index, even when uv and Hugging Face downloads work
 For a proxy you trust, scope NLTK's native opt-in to the explicit preparation command:
 
 ```bash
-NLTK_ALLOW_PROXIED_URLOPEN=1 hypit programs prepare --endpoint whisperx.local
+NLTK_ALLOW_PROXIED_URLOPEN=1 hypit programs prepare --environment ./hypit.environment.json --endpoint whisperx.local
 ```
 
 Use your selected Endpoint instance id. On PowerShell, set `$env:NLTK_ALLOW_PROXIED_URLOPEN = "1"`

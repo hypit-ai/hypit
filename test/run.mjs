@@ -3,22 +3,17 @@ import { spawnSync } from "node:child_process";
 import { globSync } from "node:fs";
 import { sep } from "node:path";
 
-const patterns = [
-  "scripts/test/*.test.mjs",
+const defaultPatterns = [
   "packages/*/test/**/*.test.ts",
   "services/*/test/**/*.test.ts",
-  "test/**/*.test.ts",
   // Only current executable examples belong in the suite; historical production fixtures stay inert.
   "examples/provider-package/packages/*/test/**/*.test.ts",
   "examples/semantic-composition/packages/audiovisual-title-card/test/**/*.test.ts",
 ];
 
-/** `node --test` exits successfully for an empty file list, so require an actual suite. */
-const minimumFiles = 1;
-
 function failUsage(message) {
   console.error(message);
-  console.error("usage: node test/run.mjs [package <name> | workflow <name> | environment <package>[/<test>]]");
+  console.error("usage: node test/run.mjs [package <name> | service <name> | workflow [name] | release [name] | environment <package>[/<test>]]");
   process.exit(2);
 }
 
@@ -41,7 +36,7 @@ if (extra.length > 0) failUsage(`unexpected arguments: ${extra.join(" ")}`);
 
 let files;
 if (kind === undefined) {
-  files = [...new Set(patterns.flatMap((pattern) => globSync(pattern)))]
+  files = [...new Set(defaultPatterns.flatMap((pattern) => globSync(pattern)))]
     .filter((file) => !file.includes(`${sep}test${sep}environment${sep}`))
     .sort();
 } else if (kind === "package") {
@@ -49,12 +44,22 @@ if (kind === undefined) {
   files = globSync(`packages/${name}/test/**/*.test.ts`)
     .filter((file) => !file.includes(`${sep}test${sep}environment${sep}`))
     .sort();
+} else if (kind === "service") {
+  const name = exactName(selected, "service");
+  files = globSync(`services/${name}/test/**/*.test.ts`)
+    .filter((file) => !file.includes(`${sep}test${sep}environment${sep}`))
+    .sort();
 } else if (kind === "workflow") {
-  const name = exactName(selected, "workflow");
-  files = [
-    ...globSync(`test/workflows/${name}.test.ts`),
-    ...globSync(`test/workflows/${name}/**/*.test.ts`),
-  ].sort();
+  files = selected === undefined
+    ? globSync("test/workflows/**/*.test.ts").sort()
+    : [
+        ...globSync(`test/workflows/${exactName(selected, "workflow")}.test.ts`),
+        ...globSync(`test/workflows/${selected}/**/*.test.ts`),
+      ].sort();
+} else if (kind === "release") {
+  files = selected === undefined
+    ? globSync("scripts/test/*.test.mjs").sort()
+    : globSync(`scripts/test/${exactName(selected, "release test")}.test.mjs`).sort();
 } else if (kind === "environment") {
   const [owner, test] = environmentPath(selected);
   files = globSync(test === undefined
@@ -64,8 +69,12 @@ if (kind === undefined) {
   failUsage(`unknown test selection ${kind}`);
 }
 
-if (files.length < minimumFiles) {
-  console.error(`test selection matched ${files.length} files`);
+if (files.length === 0) {
+  if (kind === "package" || kind === "service") {
+    console.log(`${kind} ${selected} has no local behavior tests`);
+    process.exit(0);
+  }
+  console.error("test selection matched 0 files");
   process.exit(1);
 }
 

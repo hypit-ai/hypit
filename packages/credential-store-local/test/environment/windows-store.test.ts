@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
-import { credentialRef } from "@hypit/runtime";
+import { credentialRef } from "@hypit/execution-environment";
 import { OsCredentialStore } from "../../src/os.js";
 
 test("Windows locker replaces credentials and retains the previous value if replacement fails", {

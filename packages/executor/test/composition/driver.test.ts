@@ -3,14 +3,13 @@ import test from "node:test";
 
 // This suite verifies Executor handoff to Producer and Endpoint implementations.
 
-import {
-  ProducerRegistry,
-  Executor,
-  EndpointRegistry,
-} from "@hypit/executor";
-import { credentialRef, InProcessBuildScheduler } from "@hypit/runtime";
-import type { ScheduledBuildResult, WritableCredentialStore } from "@hypit/runtime";
-import type { BuildView } from "@hypit/kernel";
+import { ProducerRegistry, Executor } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
+import { credentialRef } from "@hypit/execution-environment";
+import { InProcessBuildScheduler } from "@hypit/generation-runtime";
+import type { WritableCredentialStore } from "@hypit/execution-environment";
+import type { ScheduledBuildResult } from "@hypit/generation-runtime";
+import type { BuildView } from "@hypit/generation-build";
 
 import { capabilities, createGreetingBuild, producers as greetingProducers, types } from "../execution-scenario.js";
 
@@ -94,7 +93,7 @@ test("the Scheduler can continue a returned state after its missing Endpoint is 
   assert.equal(completed.state.records.some((record) => record.id === "generated:root"), true);
 });
 
-test("Endpoint Registry rejects an ambiguous Runtime Profile", async () => {
+test("Endpoint Registry rejects ambiguous Environment selection", async () => {
   const { producers, endpoints } = configuredRegistry();
   endpoints.registerImmediateEndpoint("example:alpha", capabilities.generation, types.generated, () => "Alpha");
   endpoints.registerImmediateEndpoint("example:beta", capabilities.generation, types.generated, () => "Beta");

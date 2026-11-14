@@ -1,4 +1,4 @@
-<?svml using="@hypit/recipe@1"?>
+<?svml using="@hypit/recipe"?>
 <sheet version="1">
   film.main { background: #090f1b; }
   media.hidden { fit: cover; opacity: 0; }

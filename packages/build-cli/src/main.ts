@@ -1,28 +1,29 @@
 import { resolve } from "node:path";
 
 import { createPublicBuildId, submitLongBuild } from "@hypit/build-submission";
-import { isBlobRef, moduleKey } from "@hypit/protocol";
-import { BuildCompiler } from "@hypit/compiler";
+import { isBlobRef } from "@hypit/protocol";
+import { moduleKey } from "@hypit/module";
+import { BuildCompiler } from "@hypit/generation-authoring/compiler";
 
 import type {
   SourceBuildCliServices,
 } from "./services.js";
-import type { CliApplicationContext } from "@hypit/cli";
+import type { CliApplicationContext } from "@hypit/cli/public";
 import type {
   CliBuildSubmission,
   CliRuntime,
   CliRuntimeHost,
   CliRuntimeInspection,
 } from "@hypit/build-operations-cli";
-import { CliUsageError, commandHint } from "@hypit/cli";
-import type { CliIo } from "@hypit/cli";
+import { CliUsageError, commandHint } from "@hypit/cli/public";
+import type { CliIo } from "@hypit/cli/public";
 import { createPlanOutput, createPricingOutput, writeCliHelp, writeCliOutput } from "@hypit/build-operations-cli";
 import type { OperationalMachineView } from "@hypit/build-operations-cli";
 import { parseCommand } from "@hypit/build-operations-cli";
 import type { AuthorCommand, CliCommand, RuntimeOption } from "@hypit/build-operations-cli";
 import { createBuildAuthoring, describePlanEndpoints, describePlanRequest, describePlanRequests, describePlanPricing, describePricingRequests, evaluatePlanNeeds, plannedEndpointQueries, preflightPlan } from "./build-planning.js";
 import { buildProgressLines, inlineValuePreview, observeBuild } from "@hypit/build-operations-cli";
-import { resolveProjectRoot } from "@hypit/project";
+import { resolveProjectRoot } from "@hypit/project/node";
 import { loadDiscoveredSourcePackages } from "./source-packages.js";
 import {
   buildStatusView,
@@ -231,7 +232,7 @@ async function runOwnedCli(
         ...(loadedPackageSet === undefined ? {} : {
           executionPackages: loadedPackageSet
             .filter((item) => (item.contribution.facets?.some((facet) =>
-              facet.abi === "hypit.producer-package@1" || facet.abi === "hypit.refinement-package@1") ?? false))
+              facet.kind === "hypit.producer-package" || facet.kind === "hypit.refinement-package") ?? false))
             .map((item) => item.specifier),
         }),
         authoring,

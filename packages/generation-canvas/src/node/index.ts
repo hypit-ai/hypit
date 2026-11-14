@@ -14,3 +14,7 @@ export {
   readGenerationWorkspaceFile,
   writeGenerationWorkspaceFile,
 } from "./store.js";
+export {
+  createGenerationWorkspaceProjectObjectOwner,
+  createGenerationWorkspaceProjectObjectOwnerFacet,
+} from "./project-object.js";

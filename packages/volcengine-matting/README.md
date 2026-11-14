@@ -4,7 +4,7 @@ Provider-neutral portrait-video matting. The package removes a moving portrait's
 returns a generated video Blob whose alpha can later be used by an audiovisual Source or another
 generation operation.
 
-The capability is `@hypit/volcengine-matting@1#matte-portrait-video`. Its model fields are:
+The capability is `@hypit/volcengine-matting#matte-portrait-video`. Its model fields are:
 
 - `source`: one video reference;
 - `format`: `WEBM` by default, or `MOV` for transparent QuickTime output.
@@ -27,7 +27,7 @@ collection and Result storage remain responsibilities of the selected Runtime En
 ```json
 {
   "bindings": {
-    "@hypit/volcengine-matting@1#matte-portrait-video": "hypihub.default"
+    "@hypit/volcengine-matting#matte-portrait-video": "hypihub.default"
   }
 }
 ```

@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EndpointRegistry } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
 import { MemoryResourceStore } from "@hypit/resource-store";
 import { sealGptImage2Request } from "@hypit/gpt-image";
 import type { BlobRef, EndpointStartContext } from "@hypit/hypit/endpoint";
 import { canonicalize, endpointOffers, installEndpoint } from "@hypit/hypit/endpoint";
-import { generationTypes } from "@hypit/generation";
+import { generationTypes } from "@hypit/generation-model";
 import { capability, createImageProvider } from "../src/provider.js";
 
 test("project Provider maps a reference, retains its receipt and collects through the public resource port", async () => {

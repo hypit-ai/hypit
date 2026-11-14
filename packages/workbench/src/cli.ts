@@ -1,6 +1,13 @@
 import type { CliCommandModule } from "@hypit/cli";
 
-import { runWorkbenchCli, writeWorkbenchHelp, type WorkbenchCliOptions } from "./cli-command.js";
+import {
+  runWorkbenchCli,
+  startCanvasProjectWorkbench,
+  startNleProjectWorkbench,
+  startSceneProjectWorkbench,
+  writeWorkbenchHelp,
+  type WorkbenchCliOptions,
+} from "./cli-command.js";
 import { runSceneRecordCli, writeSceneRecordHelp } from "./scene-record-cli.js";
 
 export type { WorkbenchCliOptions } from "./cli-command.js";
@@ -9,7 +16,6 @@ export function createWorkbenchCliCommandModules(
   options: WorkbenchCliOptions = {},
 ): readonly CliCommandModule[] {
   return [{
-  format: "hypit.cli-command@1",
   id: "@hypit/workbench#cli",
   commands: ["workbench"],
   writeRootHelp(io) {
@@ -22,7 +28,6 @@ export function createWorkbenchCliCommandModules(
     await runWorkbenchCli(argv, io, context.cwd, await context.resolveProjectRoot(), options);
   },
   }, {
-    format: "hypit.cli-command@1",
     id: "@hypit/workbench#scene-record-cli",
     commands: ["scene"],
     writeRootHelp(io) {
@@ -37,5 +42,11 @@ export function createWorkbenchCliCommandModules(
   }] as const satisfies readonly CliCommandModule[];
 }
 
-export { runWorkbenchCli, writeWorkbenchHelp } from "./cli-command.js";
+export {
+  runWorkbenchCli,
+  startCanvasProjectWorkbench,
+  startNleProjectWorkbench,
+  startSceneProjectWorkbench,
+  writeWorkbenchHelp,
+};
 export { runSceneRecordCli, writeSceneRecordHelp } from "./scene-record-cli.js";

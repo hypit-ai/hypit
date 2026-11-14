@@ -1,4 +1,4 @@
-import type { CliOutputOptions } from "@hypit/cli";
+import type { CliOutputOptions } from "@hypit/cli/public";
 
 type CommandBase = {
   readonly presentation: CliOutputOptions;
@@ -6,6 +6,10 @@ type CommandBase = {
 
 export type RuntimeOption = ProjectOption & {
   readonly runtimeProfile: string | undefined;
+};
+
+export type EnvironmentOption = {
+  readonly environmentProfile: string | undefined;
 };
 
 export type ProjectOption = {
@@ -87,21 +91,21 @@ export type ExecutionCommand =
     });
 
 export type AuthCommand =
-  | (CommandBase & RuntimeOption & {
+  | (CommandBase & RuntimeOption & EnvironmentOption & {
       readonly command: "auth";
       readonly action: "status";
       readonly endpoint: string;
       readonly slot?: string;
       readonly limit: number;
     })
-  | (CommandBase & RuntimeOption & {
+  | (CommandBase & RuntimeOption & EnvironmentOption & {
       readonly command: "auth";
       readonly action: "login";
       readonly endpoint: string;
       readonly slot?: string;
       readonly credentialFile?: string;
     })
-  | (CommandBase & RuntimeOption & {
+  | (CommandBase & RuntimeOption & EnvironmentOption & {
       readonly command: "auth";
       readonly action: "logout";
       readonly endpoint: string;
@@ -110,7 +114,7 @@ export type AuthCommand =
 
 export type EnvironmentCommand =
   | AuthCommand
-  | (CommandBase & ProjectOption & RuntimeOption & {
+  | (CommandBase & ProjectOption & RuntimeOption & EnvironmentOption & {
       readonly command: "doctor";
       readonly endpoints?: readonly string[];
       readonly limit: number;

@@ -1,4 +1,5 @@
-import { canonicalize, isModuleRef, moduleKey } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import { isModuleRef, moduleKey } from "@hypit/module";
 import {
   addExactTemporalValues,
   assertExactTemporalValue,
@@ -9,7 +10,7 @@ import {
   type ExactTemporalValue,
 } from "@hypit/temporal/algebra";
 
-import { assertNleSourceTime } from "./source-time.js";
+import { assertNleTimeMapping } from "./source-time.js";
 import type {
   NleAudioAppearance,
   NleCanvas,
@@ -18,6 +19,7 @@ import type {
   NleComponentValue,
   NleItem,
   NleMediaAssetReference,
+  NleOperatorApplication,
   NlePackageSymbol,
   NlePictureAppearance,
   NlePictureLayout,
@@ -31,6 +33,12 @@ import type {
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
+}
+
+function assertOnlyKeys(value: object, keys: readonly string[], label: string): void {
+  const allowed = new Set(keys);
+  const unknown = Object.keys(value).filter((key) => !allowed.has(key));
+  assert(unknown.length === 0, `${label} contains unknown fields: ${unknown.join(", ")}.`);
 }
 
 function identity(value: string, label: string): void {
@@ -75,12 +83,16 @@ function itemEnd(value: NleItem): ExactTemporalValue {
 }
 
 function assertCanvas(value: NleCanvas): void {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value), "NLE Canvas must be an object.");
+  assertOnlyKeys(value, ["width", "height", "clearColor"], "NLE Canvas");
   positiveInteger(value.width, "NLE Canvas width");
   positiveInteger(value.height, "NLE Canvas height");
   assert(value.clearColor.trim().length > 0, "NLE Canvas clear color is empty.");
 }
 
 function assertSymbol(value: NlePackageSymbol, label: string): void {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value), `${label} must be an object.`);
+  assertOnlyKeys(value, ["module", "name"], label);
   assert(isModuleRef(value.module), `${label} Module is invalid.`);
   identity(value.name, `${label} name`);
 }
@@ -92,6 +104,8 @@ function isPictureLayoutReference(
 }
 
 function assertPictureLayout(value: NlePictureLayout, _project: NleComposition, label: string): void {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value), `${label} must be an object.`);
+  assertOnlyKeys(value, ["x", "y", "width", "height", "fit", "contentX", "contentY"], label);
   const layout = value;
   for (const [name, coordinate] of Object.entries(layout).filter(([name]) => name !== "fit")) {
     assert(typeof coordinate === "number" && Number.isFinite(coordinate), `${label} ${name} must be finite.`);
@@ -109,9 +123,11 @@ function assertPicture(
   value: NlePictureAppearance,
   project: NleComposition,
   pictureLayouts: ReadonlyMap<string, NlePictureLayoutValue>,
+  duration: ExactTemporalValue,
   label: string,
 ): void {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), `${label} is invalid.`);
+  assertOnlyKeys(value, ["layout", "operators"], label);
   const layout = value.layout;
   if (isPictureLayoutReference(layout)) {
     assert(Object.keys(layout).length === 1, `${label} layout reference must contain only ref.`);
@@ -120,28 +136,46 @@ function assertPicture(
   } else {
     assertPictureLayout(layout, project, `${label} layout`);
   }
-  const effectIds = new Set<string>();
-  for (const effect of value.effects ?? []) {
-    assert(effect !== null && typeof effect === "object" && !Array.isArray(effect),
-      `${label} effect is invalid.`);
-    assert(Object.keys(effect).sort().join("\u0000") === ["component", "id", "parameters"].join("\u0000"),
-      `${label} effect fields are invalid.`);
-    identity(effect.id, `${label} effect id`);
-    assert(!effectIds.has(effect.id), `${label} repeats effect ${effect.id}.`);
-    effectIds.add(effect.id);
-    assertSymbol(effect.component, `${label} effect ${effect.id} component`);
-    canonicalize(effect.parameters);
+  assertOperatorApplications(value.operators ?? [], duration, label);
+}
+
+function assertOperatorApplications(
+  applications: readonly NleOperatorApplication[],
+  duration: ExactTemporalValue,
+  label: string,
+): void {
+  assert(Array.isArray(applications), `${label} operators must be an array.`);
+  const operatorIds = new Set<string>();
+  for (const application of applications) {
+    assert(application !== null && typeof application === "object" && !Array.isArray(application),
+      `${label} Operator Application is invalid.`);
+    assert(Object.keys(application).sort().join("\u0000")
+      === ["controlTime", "id", "operator", "parameters"].join("\u0000"),
+    `${label} Operator Application fields are invalid.`);
+    identity(application.id, `${label} Operator Application id`);
+    assert(!operatorIds.has(application.id), `${label} repeats Operator Application ${application.id}.`);
+    operatorIds.add(application.id);
+    assertSymbol(application.operator, `${label} Operator Application ${application.id} operator`);
+    canonicalize(application.parameters);
+    assertNleTimeMapping(
+      application.controlTime,
+      duration,
+      `${label} Operator Application ${application.id} controlTime`,
+    );
   }
 }
 
-function assertAudio(value: NleAudioAppearance, label: string): void {
+function assertAudio(value: NleAudioAppearance, label: string, duration: ExactTemporalValue): void {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), `${label} is invalid.`);
+  assertOnlyKeys(value, ["reconstruction", "operators"], label);
   if (value.reconstruction !== undefined) {
     assert(value.reconstruction !== null && typeof value.reconstruction === "object"
       && !Array.isArray(value.reconstruction), `${label} reconstruction is invalid.`);
+    assertOnlyKeys(value.reconstruction, ["using", "parameters"], `${label} reconstruction`);
     assertSymbol(value.reconstruction.using, `${label} reconstruction`);
     canonicalize(value.reconstruction.parameters);
   }
+  assertOperatorApplications(value.operators ?? [], duration, label);
 }
 
 function assertAppearances(
@@ -152,12 +186,16 @@ function assertAppearances(
 ): void {
   if (track.kind === "picture") {
     assert(value.picture !== undefined, `NLE ${value.kind} Item ${value.id} on a Picture Track has no Picture appearance.`);
-    assertPicture(value.picture, project, pictureLayouts, `NLE ${value.kind} Item ${value.id} Picture`);
+    assertPicture(value.picture, project, pictureLayouts, value.duration, `NLE ${value.kind} Item ${value.id} Picture`);
   } else {
     assert(value.picture === undefined, `NLE ${value.kind} Item ${value.id} on an Audio Track has Picture state.`);
     assert(value.audio !== undefined, `NLE ${value.kind} Item ${value.id} on an Audio Track has no Audio appearance.`);
   }
-  if (value.audio !== undefined) assertAudio(value.audio, `NLE ${value.kind} Item ${value.id} Audio`);
+  if (value.audio !== undefined) assertAudio(
+    value.audio,
+    `NLE ${value.kind} Item ${value.id} Audio`,
+    value.duration,
+  );
 }
 
 function assertItem(
@@ -168,6 +206,32 @@ function assertItem(
   pictureLayouts: ReadonlyMap<string, NlePictureLayoutValue>,
   ancestors: Set<object>,
 ): void {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value), "NLE Item must be an object.");
+  const baseKeys = ["id", "name", "start", "duration", "enabled"] as const;
+  assert(value.kind === "present" || value.kind === "adjustment", "NLE Item kind is invalid.");
+  if (value.kind === "present") {
+    assert(value.source === "media" || value.source === "component" || value.source === "composition",
+      `NLE Present Item ${value.id ?? "<unknown>"} source is invalid.`);
+  }
+  if (value.kind === "adjustment") {
+    assertOnlyKeys(
+      value,
+      [...baseKeys, "kind", "operator", "parameters", "controlTime"],
+      `NLE Adjustment Item ${value.id}`,
+    );
+  } else if (value.source === "media") {
+    assertOnlyKeys(
+      value,
+      [...baseKeys, "kind", "source", "sourceTime", "asset", "picture", "audio"],
+      `NLE Media Item ${value.id}`,
+    );
+  } else if (value.source === "component") {
+    assertOnlyKeys(value, [...baseKeys, "kind", "source", "sourceTime", "component", "sharedValues", "media", "parameters", "picture", "audio"],
+      `NLE Component Item ${value.id}`);
+  } else if (value.source === "composition") {
+    assertOnlyKeys(value, [...baseKeys, "kind", "source", "sourceTime", "composition", "picture", "audio"],
+      `NLE Composition Item ${value.id}`);
+  }
   identity(value.id, "NLE Item id");
   if (value.name !== undefined) {
     assert(typeof value.name === "string" && value.name.trim().length > 0,
@@ -175,15 +239,16 @@ function assertItem(
   }
   assertNonNegativeTime(value.start, `NLE Item ${value.id} start`);
   assertPositiveTime(value.duration, `NLE Item ${value.id} duration`);
-  assertNleSourceTime(value.sourceTime, value.duration, `NLE Item ${value.id} sourceTime`);
   assert(typeof value.enabled === "boolean", `NLE Item ${value.id} enabled is invalid.`);
   if (value.kind === "adjustment") {
     assert(!Object.hasOwn(value, "picture") && !Object.hasOwn(value, "audio"),
       `NLE Adjustment Item ${value.id} must not own a Present appearance.`);
-    assertSymbol(value.component, `NLE Adjustment Item ${value.id} component`);
+    assertSymbol(value.operator, `NLE Adjustment Item ${value.id} operator`);
     canonicalize(value.parameters);
+    assertNleTimeMapping(value.controlTime, value.duration, `NLE Adjustment Item ${value.id} controlTime`);
     return;
   }
+  assertNleTimeMapping(value.sourceTime, value.duration, `NLE Item ${value.id} sourceTime`);
   assertAppearances(value, track, project, pictureLayouts);
   if (value.source === "media") {
     assertMediaAssetReference(value.asset, `NLE Media Present ${value.id} asset`);
@@ -205,23 +270,32 @@ function assertItem(
   }
   assertSymbol(value.component, `NLE Component Present ${value.id} component`);
   const slots = new Set<string>();
-  for (const binding of value.bindings ?? []) {
-    assert(binding !== null && typeof binding === "object" && !Array.isArray(binding),
-      `NLE Component Item ${value.id} binding is invalid.`);
-    assert(Object.keys(binding).sort().join("\u0000") === ["ref", "slot"].join("\u0000"),
-      `NLE Component Item ${value.id} binding fields are invalid.`);
-    identity(binding.slot, `NLE Component Item ${value.id} binding slot`);
-    assert(!slots.has(binding.slot), `NLE Component Item ${value.id} repeats binding slot ${binding.slot}.`);
-    slots.add(binding.slot);
-    identity(binding.ref, `NLE Component Item ${value.id} binding reference`);
-    const resource = componentValues.get(binding.ref);
+  for (const reference of value.sharedValues ?? []) {
+    assert(reference !== null && typeof reference === "object" && !Array.isArray(reference),
+      `NLE Component Item ${value.id} shared value reference is invalid.`);
+    assert(Object.keys(reference).sort().join("\u0000") === ["ref", "slot"].join("\u0000"),
+      `NLE Component Item ${value.id} shared value reference fields are invalid.`);
+    identity(reference.slot, `NLE Component Item ${value.id} shared value slot`);
+    assert(!slots.has(reference.slot),
+      `NLE Component Item ${value.id} repeats shared value slot ${reference.slot}.`);
+    slots.add(reference.slot);
+    identity(reference.ref, `NLE Component Item ${value.id} shared value reference`);
+    const resource = componentValues.get(reference.ref);
     assert(resource !== undefined,
-      `NLE Component Item ${value.id} binding ${binding.slot} references missing Component Value ${binding.ref}.`);
-    assert(resource.slot === binding.slot,
-      `NLE Component Item ${value.id} binding ${binding.slot} references Component Value slot ${resource.slot}.`);
+      `NLE Component Item ${value.id} shared value ${reference.slot} references missing Component Value ${reference.ref}.`);
+    assert(resource.slot === reference.slot,
+      `NLE Component Item ${value.id} shared value ${reference.slot} references Component Value slot ${resource.slot}.`);
     assert(resource.component.name === value.component.name
       && moduleKey(resource.component.module) === moduleKey(value.component.module),
-    `NLE Component Item ${value.id} binding ${binding.slot} belongs to another Component.`);
+    `NLE Component Item ${value.id} shared value ${reference.slot} belongs to another Component.`);
+  }
+  if (value.media !== undefined) {
+    assert(value.media !== null && typeof value.media === "object" && !Array.isArray(value.media),
+      `NLE Component Item ${value.id} media inputs must be an object.`);
+    for (const [input, asset] of Object.entries(value.media)) {
+      identity(input, `NLE Component Item ${value.id} media input`);
+      assertMediaAssetReference(asset, `NLE Component Item ${value.id} media input ${input}`);
+    }
   }
   canonicalize(value.parameters);
 }
@@ -235,10 +309,12 @@ function assertNleCompositionValue(value: NleComposition, ancestors: Set<object>
     "NLE editor grid and Groups belong to hypit.nle-view@1, not the Composition.");
   ancestors.add(value);
   identity(value.id, "NLE Composition id");
-  assert(value.name.trim().length > 0, "NLE Composition name is empty.");
+  assert(typeof value.name === "string" && value.name.trim().length > 0, "NLE Composition name is empty.");
   assertCanvas(value.canvas);
   assert(!Object.hasOwn(value, "media"),
     "NLE Composition must reference Media Assets from Items, not own a Media collection.");
+  assertOnlyKeys(value, ["id", "name", "canvas", "componentValues", "pictureLayouts", "tracks", "transitions", "mattes"],
+    "NLE Composition");
   assert(Array.isArray(value.componentValues) && Array.isArray(value.pictureLayouts)
     && Array.isArray(value.tracks)
     && Array.isArray(value.transitions) && Array.isArray(value.mattes),
@@ -250,6 +326,9 @@ function assertNleCompositionValue(value: NleComposition, ancestors: Set<object>
     identities.add(id);
   };
   for (const resource of value.componentValues) {
+    assert(resource !== null && typeof resource === "object" && !Array.isArray(resource),
+      "NLE Component Value must be an object.");
+    assertOnlyKeys(resource, ["id", "name", "component", "slot", "value"], "NLE Component Value");
     addIdentity(resource.id, "NLE Component Value id");
     assert(resource.name.trim().length > 0, `NLE Component Value ${resource.id} name is empty.`);
     assertSymbol(resource.component, `NLE Component Value ${resource.id} component`);
@@ -258,6 +337,9 @@ function assertNleCompositionValue(value: NleComposition, ancestors: Set<object>
   }
   const componentValues = new Map(value.componentValues.map((resource) => [resource.id, resource] as const));
   for (const resource of value.pictureLayouts) {
+    assert(resource !== null && typeof resource === "object" && !Array.isArray(resource),
+      "NLE Picture Layout must be an object.");
+    assertOnlyKeys(resource, ["id", "name", "layout"], "NLE Picture Layout");
     addIdentity(resource.id, "NLE Picture Layout id");
     assert(resource.name.trim().length > 0, `NLE Picture Layout ${resource.id} name is empty.`);
     assertPictureLayout(resource.layout, value, `NLE Picture Layout ${resource.id}`);
@@ -265,11 +347,13 @@ function assertNleCompositionValue(value: NleComposition, ancestors: Set<object>
   const pictureLayouts = new Map(value.pictureLayouts.map((resource) => [resource.id, resource] as const));
   const items = new Map<string, { readonly track: NleTrack; readonly item: NleItem; readonly index: number }>();
   for (const track of value.tracks) {
+    assert(track !== null && typeof track === "object" && !Array.isArray(track), "NLE Track must be an object.");
     addIdentity(track.id, "NLE Track id");
     assert(track.name.trim().length > 0, `NLE Track ${track.id} name is empty.`);
     assert(track.kind === "picture" || track.kind === "audio", `NLE Track ${track.id} kind is invalid.`);
     assert(!Object.hasOwn(track, "locked"),
       `NLE Track ${track.id} lock belongs to hypit.nle-view@1.`);
+    assertOnlyKeys(track, ["id", "name", "kind", "muted", "items"], "NLE Track");
     assert(typeof track.muted === "boolean", `NLE Track ${track.id} mute state is invalid.`);
     for (const [index, item] of track.items.entries()) {
       addIdentity(item.id, "NLE Item id");
@@ -280,6 +364,9 @@ function assertNleCompositionValue(value: NleComposition, ancestors: Set<object>
   const outgoing = new Set<string>();
   const incoming = new Set<string>();
   for (const transition of value.transitions) {
+    assert(transition !== null && typeof transition === "object" && !Array.isArray(transition),
+      "NLE Transition must be an object.");
+    assertOnlyKeys(transition, ["id", "outgoing", "incoming", "operator", "parameters"], "NLE Transition");
     addIdentity(transition.id, "NLE Transition id");
     const left = items.get(transition.outgoing);
     const right = items.get(transition.incoming);
@@ -316,6 +403,8 @@ function assertNleCompositionValue(value: NleComposition, ancestors: Set<object>
   const matteByContent = new Map<string, string>();
   const matteSources = new Set<string>();
   for (const matte of value.mattes) {
+    assert(matte !== null && typeof matte === "object" && !Array.isArray(matte), "NLE Matte must be an object.");
+    assertOnlyKeys(matte, ["id", "content", "matte", "operator", "parameters"], "NLE Matte");
     addIdentity(matte.id, "NLE Matte id");
     const content = items.get(matte.content);
     const source = items.get(matte.matte);
@@ -471,17 +560,17 @@ export function resolveNlePictureAppearance(
   return { ...structuredClone(value), layout: resolveNlePictureLayout(project, value.layout) };
 }
 
-export function resolveNleComponentBinding(
+export function resolveNleComponentSharedValue(
   project: NleComposition,
   item: NleComponentItem,
   slot: string,
 ): NleComponentValue {
-  const binding = item.bindings?.find((candidate) => candidate.slot === slot);
-  if (binding === undefined) throw new Error(`NLE Component Item ${item.id} has no binding for slot ${slot}.`);
-  const resource = findNleComponentValue(project, binding.ref);
+  const reference = item.sharedValues?.find((candidate) => candidate.slot === slot);
+  if (reference === undefined) throw new Error(`NLE Component Item ${item.id} has no shared value for slot ${slot}.`);
+  const resource = findNleComponentValue(project, reference.ref);
   if (resource.slot !== slot || resource.component.name !== item.component.name
     || moduleKey(resource.component.module) !== moduleKey(item.component.module)) {
-    throw new Error(`NLE Component Item ${item.id} binding ${slot} belongs to another owner.`);
+    throw new Error(`NLE Component Item ${item.id} shared value ${slot} belongs to another owner.`);
   }
   return structuredClone(resource);
 }

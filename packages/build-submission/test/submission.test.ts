@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createResolvedClosure, defineBuild, link } from "@hypit/kernel";
-import { assertOrderedBuildId } from "@hypit/protocol";
+import { createResolvedClosure, defineBuild, link } from "@hypit/generation-build";
+import { assertOrderedBuildId } from "@hypit/generation-build";
 
 import {
   createPublicBuildId,

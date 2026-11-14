@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 
-import type { CliApplicationContext, CliIo } from "@hypit/cli";
-import { resolveProjectRoot } from "@hypit/project";
+import type { CliApplicationContext, CliIo } from "@hypit/cli/public";
+import { resolveProjectRoot } from "@hypit/project/node";
 
 import { parseCommand } from "./arguments.js";
 import type { CliCommand, RuntimeOption } from "./command.js";
@@ -10,7 +10,7 @@ import { isExecutionCommand, runExecutionCommand } from "./commands/execution.js
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
 import type { OperationalMachineView } from "./machine-view.js";
 import { writeCliHelp, writeCliOutput } from "./output.js";
-import type { CliRuntimeHost } from "./runtime-port.js";
+import type { CliEnvironmentHost, CliRuntimeHost } from "./runtime-port.js";
 import type { BuildOperationsCliServices } from "./services.js";
 
 function commandProjectRootOption(command: CliCommand): string | undefined {
@@ -65,6 +65,7 @@ export async function runBuildOperationsCli(
     kind: "operational", machine, title, status, facts, lines,
   });
   const runtimeHosts = new Map<string, Promise<CliRuntimeHost>>();
+  const environmentHosts = new Map<string, Promise<CliEnvironmentHost>>();
   const runtimeHost = async (path: string, requestedPackageRoot?: string): Promise<CliRuntimeHost> => {
     const profile = resolve(path);
     const packageRoot = requestedPackageRoot ?? await packageRootForProject();
@@ -79,6 +80,20 @@ export async function runBuildOperationsCli(
     }
     return await opened;
   };
+  const environmentHost = async (path: string, requestedPackageRoot?: string): Promise<CliEnvironmentHost> => {
+    const profile = resolve(path);
+    const packageRoot = requestedPackageRoot ?? await packageRootForProject();
+    const key = `${profile}\u0000${packageRoot}`;
+    let opened = environmentHosts.get(key);
+    if (opened === undefined) {
+      opened = services.openEnvironmentHost(profile, {
+        packageRoot,
+        ...(services.packageRoot === undefined ? {} : { distributionPackageRoot: services.packageRoot }),
+      });
+      environmentHosts.set(key, opened);
+    }
+    return await opened;
+  };
   const projectResults = async (requestedProjectRoot?: string) => {
     const projectRoot = requestedProjectRoot ?? await commandProjectRoot();
     const packageRoot = await packageRootForProject(projectRoot);
@@ -88,8 +103,9 @@ export async function runBuildOperationsCli(
     });
   };
   let runtimeProfile = acceptsRuntimeContext(args) ? args.runtimeProfile : undefined;
+  const environmentProfile = "environmentProfile" in args ? args.environmentProfile : undefined;
   let runtimeFromProject = false;
-  if (acceptsRuntimeContext(args) && runtimeProfile === undefined && args.command !== "logs") {
+  if (acceptsRuntimeContext(args) && runtimeProfile === undefined && environmentProfile === undefined && args.command !== "logs") {
     const selected = await services.resolveProjectRuntime?.(await commandProjectRoot());
     if (selected !== undefined) {
       runtimeProfile = selected.profile;
@@ -101,6 +117,7 @@ export async function runBuildOperationsCli(
       args,
       runtimeProfile,
       runtimeFromProject,
+      environmentProfile,
       io,
       projectRoot: await commandProjectRoot(),
       diagnoseProjectResults: async () => {
@@ -111,6 +128,7 @@ export async function runBuildOperationsCli(
         });
       },
       runtimeHost,
+      environmentHost,
       write: writeOperational,
     });
     return;

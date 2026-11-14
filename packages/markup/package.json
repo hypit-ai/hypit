@@ -8,12 +8,12 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@hypit/source": "workspace:*",
-    "@hypit/author": "workspace:*",
     "@hypit/facet": "workspace:*",
+    "@hypit/generation-authoring": "workspace:*",
+    "@hypit/module": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@hypit/kernel": "workspace:*"
+    "@hypit/generation-build": "workspace:*"
   }
 }

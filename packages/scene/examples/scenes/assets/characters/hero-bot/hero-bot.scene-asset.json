@@ -1,0 +1,47 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "hero-bot",
+  "name": "角色 · 机械",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets"
+    },
+    "name": "humanoid-character"
+  },
+  "preview": {
+    "path": "preview.gltf",
+    "mediaType": "model/gltf+json"
+  },
+  "resources": {
+    "model": {
+      "path": "model.gltf",
+      "mediaType": "model/gltf+json"
+    }
+  },
+  "parameters": {
+    "rigProfile": "hypit-humanoid",
+    "rig": {
+      "format": "hypit.humanoid-rig@1",
+      "root": "Rig.Root",
+      "joints": {
+        "hips": "Rig.Hips",
+        "spine": "Rig.Spine",
+        "chest": "Rig.Chest",
+        "neck": "Rig.Neck",
+        "head": "Rig.Head",
+        "leftShoulder": "Rig.Shoulder.L",
+        "leftElbow": "Rig.Elbow.L",
+        "leftWrist": "Rig.Wrist.L",
+        "rightShoulder": "Rig.Shoulder.R",
+        "rightElbow": "Rig.Elbow.R",
+        "rightWrist": "Rig.Wrist.R",
+        "leftHip": "Rig.Hip.L",
+        "leftKnee": "Rig.Knee.L",
+        "leftAnkle": "Rig.Ankle.L",
+        "rightHip": "Rig.Hip.R",
+        "rightKnee": "Rig.Knee.R",
+        "rightAnkle": "Rig.Ankle.R"
+      }
+    }
+  }
+}

@@ -13,11 +13,11 @@ generation's `url` and stores the files in the current Build.
 
 | Capability | Pollo generation path |
 | --- | --- |
-| `@hypit/minimax-h3@1#minimax-h3` | `/v1/generation/minimax/minimax-h3/video` |
-| `@hypit/grok-imagine@1#grok-imagine-video-1.5-preview` | `/v1/generation/xai/grok-imagine-video-1-5/video` |
-| `@hypit/gpt-image@1#gpt-image-2` | `/v1/generation/openai/gpt-image-2/image` |
-| `@hypit/nano-banana@1#nano-banana-2` | `/v1/generation/google/nano-banana-2/image` |
-| `@hypit/nano-banana@1#nano-banana-pro` | `/v1/generation/google/nano-banana-pro/image` |
+| `@hypit/minimax-h3#minimax-h3` | `/v1/generation/minimax/minimax-h3/video` |
+| `@hypit/grok-imagine#grok-imagine-video-1.5-preview` | `/v1/generation/xai/grok-imagine-video-1-5/video` |
+| `@hypit/gpt-image#gpt-image-2` | `/v1/generation/openai/gpt-image-2/image` |
+| `@hypit/nano-banana#nano-banana-2` | `/v1/generation/google/nano-banana-2/image` |
+| `@hypit/nano-banana#nano-banana-pro` | `/v1/generation/google/nano-banana-pro/image` |
 
 Pollo documents further models; this Provider maps only the models the Distribution already
 describes. Seedance and Seedream are not offered by Pollo.
@@ -43,8 +43,8 @@ Runtime Profile example:
 
 ```json
 {
-  "format": "hypit.runtime-local@1",
-  "dataRoot": ".hypit/runtimes/local",
+  "format": "hypit.execution-environment-local@1",
+  "dataRoot": ".hypit/environment/local",
   "credentials": {
     "local": {
       "use": "@hypit/credential-store-local"
@@ -66,7 +66,7 @@ Runtime Profile example:
 ```
 
 `baseUrl` defaults to `https://pollo.ai/api/platform`. Store the API key with
-`hypit auth login pollo.default --runtime hypit.runtime.json`. Optional `requestTimeoutMs`,
+`hypit auth login pollo.default --runtime hypit.generation-runtime.json`. Optional `requestTimeoutMs`,
 `operationTimeoutMs` and `actionLimits` bound single HTTP calls, the whole remote task and action
 concurrency. HTTP failures keep Pollo's `errorCode`, message and `requestId`; a failed generation
 keeps its `failMsg`, with any signed URL in the message redacted. Pollo stores generated files for

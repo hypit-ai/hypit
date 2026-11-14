@@ -1,0 +1,36 @@
+{
+  "name": "@hypit/execution-environment-local",
+  "version": "0.2.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts",
+    "./deployment": "./src/deployment.ts",
+    "./extension": "./src/extension.ts",
+    "./host": "./src/host.ts",
+    "./profile": "./src/profile.ts",
+    "./node": "./src/node.ts",
+    "./process-control": "./src/process-control.ts",
+    "./process-logs": "./src/process-logs.ts",
+    "./programs": "./src/programs.ts",
+    "./program-lock": "./src/program-lock.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@hypit/cli": "workspace:^0.0.0-dev",
+    "@hypit/endpoint": "workspace:^0.0.0-dev",
+    "@hypit/execution-environment": "workspace:^0.0.0-dev",
+    "@hypit/facet": "workspace:^0.0.0-dev",
+    "@hypit/host-paths": "workspace:^0.1.0",
+    "@hypit/loader": "workspace:^0.0.0-dev",
+    "@hypit/module": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/resource-store": "workspace:^0.1.0",
+    "koffi": "3.2.1"
+  }
+}

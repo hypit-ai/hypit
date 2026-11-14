@@ -1,3 +1,5 @@
+import { createModuleFacet } from "@hypit/module";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -61,35 +63,32 @@ function assetDocument(): MediaAssetDocument {
 test("Media Asset, speech evidence and WhisperX form one typed graph without central node knowledge", async () => {
   const packages = [
     { specifier: "@hypit/blob", contribution: {
-      format: "hypit.package@1" as const, modules: [{ manifest: blobManifest }],
+      facets: [createModuleFacet(blobManifest), createGenerationModuleFacet(blobManifest)],
     } },
     { specifier: "@hypit/temporal-graph", contribution: {
-      format: "hypit.package@1" as const, modules: [{ manifest: temporalManifest }],
+      facets: [createModuleFacet(temporalManifest), createGenerationModuleFacet(temporalManifest)],
     } },
     { specifier: "@hypit/media", contribution: {
-      format: "hypit.package@1" as const, modules: [{ manifest: mediaManifest }],
+      facets: [createModuleFacet(mediaManifest), createGenerationModuleFacet(mediaManifest)],
     } },
     { specifier: "@hypit/media-asset-generation", contribution: {
-      format: "hypit.package@1" as const,
-      modules: [{ manifest: mediaAssetGenerationManifest }],
-      facets: [createGenerationNodePackageFacet({ nodes: [mediaAssetGenerationNode] })],
+      facets: [
+    createModuleFacet(mediaAssetGenerationManifest), createGenerationModuleFacet(mediaAssetGenerationManifest), createGenerationNodePackageFacet({ nodes: [mediaAssetGenerationNode] })],
     } },
     { specifier: "@hypit/speech-evidence", contribution: {
-      format: "hypit.package@1" as const,
-      modules: [{ manifest: speechEvidenceManifest }],
-      facets: [createGenerationNodePackageFacet({ nodes: [{
+      facets: [
+    createModuleFacet(speechEvidenceManifest), createGenerationModuleFacet(speechEvidenceManifest), createGenerationNodePackageFacet({ nodes: [{
         kind: "operation",
         using: speechEvidenceGenerationNodes.projectAudio,
         fragment: speechEvidenceAudioFragment,
       }] })],
     } },
     { specifier: "@hypit/timed-transcript", contribution: {
-      format: "hypit.package@1" as const, modules: [{ manifest: timedTranscriptManifest }],
+      facets: [createModuleFacet(timedTranscriptManifest), createGenerationModuleFacet(timedTranscriptManifest)],
     } },
     { specifier: "@hypit/whisperx", contribution: {
-      format: "hypit.package@1" as const,
-      modules: [{ manifest: whisperXManifest }],
-      facets: [createGenerationNodePackageFacet({ nodes: [{
+      facets: [
+    createModuleFacet(whisperXManifest), createGenerationModuleFacet(whisperXManifest), createGenerationNodePackageFacet({ nodes: [{
         kind: "operation",
         using: whisperXGenerationNodes.transcribe,
         fragment: whisperXTranscriptionFragment,

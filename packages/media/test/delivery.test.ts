@@ -51,6 +51,11 @@ test("video delivery and still image pixels keep their distinct color interpreta
   assert.doesNotThrow(() => verifyOutputPictureSpec(image));
   assert.equal(sameOutputPictureSpec(image, { ...image }), true);
   assert.equal(sameOutputPictureSpec(image, { ...image, alpha: { mode: "opaque", matte: "#ffffff" } }), false);
+  const transparent = { ...image, alpha: { mode: "straight" as const } };
+  assert.doesNotThrow(() => verifyOutputPictureSpec(transparent));
+  assert.equal(sameOutputPictureSpec(transparent, { ...transparent }), true);
+  assert.throws(() => verifyOutputPictureSpec({ ...visual.picture, alpha: { mode: "straight" } }),
+    /Video OutputPictureSpec alpha mode must be opaque/u);
   assert.throws(() => verifyOutputPictureSpec({ ...image, colorMatrix: "bt709" }), /SDR picture signal/u);
   assert.throws(() => verifyVisualDeliverySpec({ ...visual, picture: image }), /video interpretation/u);
 });

@@ -1,7 +1,7 @@
 import { mkdir, stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-import type { CliCommandModule, CliIo } from "@hypit/cli";
+import type { CliCommandModule, CliIo } from "@hypit/cli/public";
 import { probeMedia } from "@hypit/media-file-local";
 
 import { downloadVideo, isVideoUrl } from "./download.js";
@@ -76,7 +76,6 @@ export async function runDownloadCli(argv: readonly string[], io: CliIo, cwd = p
 }
 
 export const cliCommandModules = [{
-  format: "hypit.cli-command@1",
   id: "@hypit/yt-dlp",
   commands: ["download"],
   writeRootHelp(io) { io.write("\nNetwork media\n  download\n  hypit download --help for preparation and destination options\n"); },

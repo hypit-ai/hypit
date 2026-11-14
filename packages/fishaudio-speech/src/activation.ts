@@ -1,15 +1,16 @@
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
-import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
+import { createModuleFacet } from "@hypit/hypit/module";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
+import { createRefinementPackageFacet } from "@hypit/hypit/generation/refinement";
+import { createProducerPackageFacet } from "@hypit/hypit/generation/producer";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/generation/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/generation/markup";
 import { fishAudioSpeechComponent, fishAudioSpeechManifest, fishAudioSpeechModuleRef } from "./index.js";
 import { fishAudioSpeechAuthorDeclarations, fishAudioSpeechMarkupDeclarations } from "./declaration.js";
 import { fishAudioSpeechGenerationFacets } from "./generation.js";
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [{ manifest: fishAudioSpeechManifest }],
   facets: [
+    createModuleFacet(fishAudioSpeechManifest), createGenerationModuleFacet(fishAudioSpeechManifest),
     ...[fishAudioSpeechComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     ...fishAudioSpeechAuthorDeclarations.map(createAuthorDeclarationFacet),
     ...fishAudioSpeechMarkupDeclarations.map((declaration) =>

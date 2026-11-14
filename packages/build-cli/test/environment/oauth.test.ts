@@ -7,7 +7,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { decodeOAuth2Credential } from "@hypit/runtime";
+import { decodeOAuth2Credential } from "@hypit/execution-environment";
 
 import { acquireOAuthCredential, authorizeBrowserLaunch } from "@hypit/build-operations-cli";
 

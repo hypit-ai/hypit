@@ -4,14 +4,15 @@ import {
   type AuthorDeclarationCompiler,
   type AuthorResolvedReference,
   type DecodedAuthorSource,
-} from "@hypit/author";
+} from "@hypit/generation-authoring/author";
 import {
   declarationsFromMarkupDocument,
   MarkupDeclarationRegistry,
   parseMarkupDocument,
   type MarkupDeclarationSyntax,
 } from "@hypit/markup";
-import type { BlobRef, ModuleRef } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
+import type { ModuleRef } from "@hypit/module";
 
 type Options = {
   readonly source: string;
@@ -35,7 +36,7 @@ export async function compileMarkupDeclaration(options: Options): Promise<Decode
     tag: declaration.tag,
     ...(declaration.body === undefined ? {} : { body: declaration.body }),
   });
-  const text = `<svml>\n<import from="${options.module.name}@${options.module.version}" as="${options.alias}"/>\n${options.source}\n</svml>`;
+  const text = `<svml>\n<import from="${options.module.name}" as="${options.alias}"/>\n${options.source}\n</svml>`;
   const source = { name: "test.svml", text };
   const document = parseMarkupDocument(source);
   const authored = declarationsFromMarkupDocument(document, {

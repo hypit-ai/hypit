@@ -1,8 +1,8 @@
-import { blobTypes } from "@hypit/hypit/blob";
-import { sealGraphFragment } from "@hypit/hypit/author";
-import { generationProducers } from "@hypit/generation";
-import { createFieldModelPrimaryFragment } from "@hypit/generation/model-fields";
-import type { FieldModelOperation, ModelArtifactInput, ModelTextFieldInput } from "@hypit/generation/model-fields";
+import { blobTypes } from "@hypit/hypit/generation/blob";
+import { sealGraphFragment } from "@hypit/hypit/generation/author";
+import { generationProducers } from "@hypit/generation-model";
+import { createFieldModelPrimaryFragment } from "@hypit/generation-model/model-fields";
+import type { FieldModelOperation, ModelArtifactInput, ModelTextFieldInput } from "@hypit/generation-model/model-fields";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });

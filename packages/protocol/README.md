@@ -1,24 +1,17 @@
-# `@hypit/protocol`
+# Internal shared value representation
 
-Data contracts shared across package boundaries.
+This workspace module is an implementation seam, not a public universal Hypit protocol. The
+Distribution exposes canonical values and byte-resource leaves through `@hypit/hypit/value`, and
+semantic Module／Type／Capability identities through `@hypit/hypit/module`.
 
-This package defines module manifests, nominal references, typed values, AuthorGraph,
-build plans, Core commands, command results, build facts and neutral publication requests. It also
-parses a module manifest from JSON without loading executable package code. The materialized
-`BuildView` belongs to `@hypit/kernel`; it is not a protocol document.
+The current implementation contains canonical `Value`, `BlobRef`, resource identity and ordering helpers.
+Module／Type／Capability references, semantic Module manifests and Producer identity belong to
+`@hypit/module`; AuthorGraph, Build plans, commands, facts, Build ids and publication intent belong
+to `@hypit/generation-build`. NLE, Media, Scene and Feedback keep their own domain documents.
 
-Protocol contains no source parser, package loader, runtime, filesystem access or video vocabulary.
-Source units and source ranges belong to `@hypit/source`; Protocol records only graph and execution
-meaning after source-local structure has been decoded.
-One `LogicalOutput` has one fixed value root. An `OperationResultRef` asks a Build to produce it; a
-`RecordRef` exposes a value that already exists in the linked program and therefore truncates planning.
-This distinction adds no filesystem, Result repository or reuse policy to Protocol.
+The shared implementation contains no source parser, package loader, runtime, filesystem access or video vocabulary.
+Source units and source ranges belong to `@hypit/generation-authoring/source`; graph and execution meaning are not smuggled
+back into the Value or Module foundation merely because several Generation packages exchange them.
 `BlobRef` is the reserved byte-resource leaf inside a recursive `Value`. `valueBlobRefs` reports
 each occurrence as `{ at, blob }`, while `mapValueBlobs` returns `BlobMappedValue<T>` after replacing
 those leaves; neither API assigns media-domain meaning to the bytes.
-Packages own their types, producers and capabilities by module name and version. Core and Hosts
-communicate through those names and the values declared here.
-`PublicationIntent` carries the completed Record, its author-facing name, an exact domain-owned
-publisher and optional publisher parameters. Build Targets remain separate execution evidence and do
-not become products merely by being demanded. Protocol defines only this transport envelope: publisher
-behavior, graph identities, paths, writer state and physical storage stay outside Protocol and Compiler.

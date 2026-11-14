@@ -91,32 +91,45 @@ function exportTargets(value) {
   return Object.values(value).flatMap(exportTargets);
 }
 
-async function embeddedPublicSpecifiers() {
+async function embeddedPublicOwnership() {
   const rootManifest = JSON.parse(await readFile(resolve(repositoryRoot, "package.json"), "utf8"));
+  const manifests = new Map();
   const candidates = new Map();
+  const packageNames = new Set();
   for (const [exportName, value] of Object.entries(rootManifest.exports ?? {})) {
     if (!exportName.startsWith("./")) continue;
     for (const target of exportTargets(value)) {
       const match = /^\.\/packages\/([^/]+)\//u.exec(target);
       if (match === null) continue;
-      const list = candidates.get(match[1]) ?? [];
-      list.push(`${rootManifest.name}${exportName.slice(1)}`);
-      candidates.set(match[1], list);
+      const directory = match[1];
+      let manifest = manifests.get(directory);
+      if (manifest === undefined) {
+        manifest = JSON.parse(await readFile(resolve(repositoryRoot, "packages", directory, "package.json"), "utf8"));
+        manifests.set(directory, manifest);
+      }
+      if (manifest.version !== "0.0.0-dev" || typeof manifest.name !== "string") continue;
+      packageNames.add(manifest.name);
+      const localTarget = `.${target.slice(`./packages/${directory}`.length)}`;
+      for (const [ownerExport, declared] of Object.entries(manifest.exports ?? {})) {
+        if (!exportTargets(declared).includes(localTarget)) continue;
+        const internal = ownerExport === "."
+          ? manifest.name
+          : `${manifest.name}${ownerExport.slice(1)}`;
+        const list = candidates.get(internal) ?? [];
+        list.push(`${rootManifest.name}${exportName.slice(1)}`);
+        candidates.set(internal, list);
+      }
     }
   }
   const specifiers = new Map();
-  for (const [directory, values] of candidates) {
-    const manifest = JSON.parse(await readFile(resolve(repositoryRoot, "packages", directory, "package.json"), "utf8"));
-    if (manifest.version !== "0.0.0-dev") continue;
+  for (const [internal, values] of candidates) {
     const publicSpecifier = [...new Set(values)].sort((left, right) => {
       const depth = left.split("/").length - right.split("/").length;
       return depth === 0 ? compareCodeUnits(left, right) : depth;
     })[0];
-    if (typeof manifest.name === "string" && publicSpecifier !== undefined) {
-      specifiers.set(manifest.name, publicSpecifier);
-    }
+    if (publicSpecifier !== undefined) specifiers.set(internal, publicSpecifier);
   }
-  return specifiers;
+  return { packageNames, specifiers };
 }
 
 function referencedModuleSpecifiers(sourceFile) {
@@ -210,9 +223,10 @@ async function assertPublishedSourceDependencies(packageRoot, manifest) {
  * package as a second npm identity.
  */
 async function rewritePublishedModuleSpecifiers(stage) {
-  const publicSpecifiers = await embeddedPublicSpecifiers();
+  const { packageNames, specifiers: publicSpecifiers } = await embeddedPublicOwnership();
+  const orderedSpecifiers = [...publicSpecifiers].sort(([left], [right]) => right.length - left.length);
   const rewrite = (value) => {
-    for (const [embedded, published] of publicSpecifiers) {
+    for (const [embedded, published] of orderedSpecifiers) {
       if (value === embedded || value.startsWith(`${embedded}/`)) {
         return `${published}${value.slice(embedded.length)}`;
       }
@@ -235,7 +249,7 @@ async function rewritePublishedModuleSpecifiers(stage) {
       typescript.ScriptKind.TS);
     const leaked = referencedModuleSpecifiers(rewritten)
       .map((literal) => literal.text)
-      .filter((value) => rewrite(value) !== value);
+      .filter((value) => packageNames.has(packageNameFromSpecifier(value)));
     if (leaked.length > 0) {
       throw new Error(`${module} exposes embedded package specifiers: ${[...new Set(leaked)].join(", ")}`);
     }
@@ -251,15 +265,15 @@ async function releasedDependencyMap(manifest, values) {
 
 async function releasedPackageDependencyMaps(manifest) {
   const rootManifest = JSON.parse(await readFile(resolve(repositoryRoot, "package.json"), "utf8"));
-  const publicSpecifiers = await embeddedPublicSpecifiers();
+  const { packageNames } = await embeddedPublicOwnership();
   const dependencies = Object.fromEntries(Object.entries(manifest.dependencies ?? {})
-    .filter(([name]) => !publicSpecifiers.has(name)));
+    .filter(([name]) => !packageNames.has(name)));
   const peers = { ...(manifest.peerDependencies ?? {}) };
   const usesDistribution = Object.keys({
     ...(manifest.dependencies ?? {}),
     ...(manifest.optionalDependencies ?? {}),
     ...(manifest.peerDependencies ?? {}),
-  }).some((name) => publicSpecifiers.has(name));
+  }).some((name) => packageNames.has(name));
   if (usesDistribution && peers[rootManifest.name] === undefined) {
     peers[rootManifest.name] = `workspace:^${rootManifest.version}`;
   }

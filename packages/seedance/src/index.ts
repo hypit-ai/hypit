@@ -1,14 +1,14 @@
-import { defineModelFields } from "@hypit/generation/model-fields";
+import { defineModelFields } from "@hypit/generation-model/model-fields";
 import type {
   ModelFieldTable,
   ModelFieldValue,
   ModelFieldRequest,
-} from "@hypit/generation/model-fields";
-import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+} from "@hypit/generation-model/model-fields";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation-model/model-fields";
 import { promptTypes } from "@hypit/hypit/prompt";
 import { validateSeedanceInputs } from "./validation.js";
 
-export const seedanceModuleRef = { name: "@hypit/seedance", version: "1" } as const;
+export const seedanceModuleRef = { name: "@hypit/seedance" } as const;
 export const seedanceModels = ["seedance-2", "seedance-2-fast", "seedance-2-mini", "seedance-2.5"] as const;
 export type SeedanceModel = typeof seedanceModels[number];
 

@@ -3,19 +3,15 @@ import {
   verifyGraphFragment,
   type AuthorComponent,
   type AuthorValueRef,
-} from "@hypit/author";
+} from "@hypit/generation-authoring/author";
 import {
   link,
   sealAuthorGraph,
   verifyAuthorGraph,
-} from "@hypit/kernel";
-import {
-  canonicalize,
-  sameModule,
-  sameType,
-  type LogicalOutput,
-  type TypedRecord,
-} from "@hypit/protocol";
+} from "@hypit/generation-build";
+import { canonicalize } from "@hypit/protocol";
+import { sameModule, sameType } from "@hypit/module";
+import { type LogicalOutput, type TypedRecord } from "@hypit/generation-build";
 
 import { assertGenerationGraphProject } from "./project.js";
 import type {
@@ -67,7 +63,7 @@ function implementationFor(
  */
 export async function lowerGenerationGraph(
   project: GenerationGraphProject,
-  program: import("@hypit/protocol").LinkedProgram,
+  program: import("@hypit/generation-build").LinkedProgram,
   host: GenerationGraphLoweringHost,
   options: {
     readonly targets?: readonly string[];
@@ -84,7 +80,7 @@ export async function lowerGenerationGraph(
   const useDependencyDecision = (
     id: string,
     node: GenerationGraphNode,
-    output: import("@hypit/protocol").TypeRef,
+    output: import("@hypit/module").TypeRef,
     decision: GenerationGraphDependencyDecision,
   ): boolean => {
     if (decision.kind === "execute") return false;

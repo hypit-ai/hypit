@@ -15,85 +15,215 @@
       "types": "./dist/public/cli.d.ts",
       "import": "./packages/cli/src/public.ts"
     },
-    "./compiler": {
-      "hypit-source": "./packages/compiler/src/index.ts",
-      "types": "./dist/public/compiler.d.ts",
-      "import": "./packages/compiler/src/index.ts"
+    "./generation/authoring": {
+      "hypit-source": "./packages/generation-authoring/src/index.ts",
+      "types": "./dist/public/generation-authoring.d.ts",
+      "import": "./packages/generation-authoring/src/index.ts"
     },
-    "./executor": {
+    "./generation/compiler": {
+      "hypit-source": "./packages/generation-authoring/src/compiler/index.ts",
+      "types": "./dist/public/generation-compiler.d.ts",
+      "import": "./packages/generation-authoring/src/compiler/index.ts"
+    },
+    "./generation/executor": {
       "hypit-source": "./packages/executor/src/index.ts",
-      "types": "./dist/public/executor.d.ts",
+      "types": "./dist/public/generation-executor.d.ts",
       "import": "./packages/executor/src/index.ts"
     },
-    "./build-submission": {
+    "./generation/submission": {
       "hypit-source": "./packages/build-submission/src/index.ts",
-      "types": "./dist/public/build-submission.d.ts",
+      "types": "./dist/public/generation-submission.d.ts",
       "import": "./packages/build-submission/src/index.ts"
     },
-    "./kernel": {
-      "hypit-source": "./packages/kernel/src/index.ts",
-      "types": "./dist/public/kernel.d.ts",
-      "import": "./packages/kernel/src/index.ts"
+    "./generation/build": {
+      "hypit-source": "./packages/generation-build/src/index.ts",
+      "types": "./dist/public/generation-build.d.ts",
+      "import": "./packages/generation-build/src/index.ts"
+    },
+    "./module": {
+      "hypit-source": "./packages/module/src/index.ts",
+      "types": "./dist/public/module.d.ts",
+      "import": "./packages/module/src/index.ts"
     },
     "./project": {
       "hypit-source": "./packages/project/src/index.ts",
       "types": "./dist/public/project.d.ts",
       "import": "./packages/project/src/index.ts"
     },
-    "./runtime": {
-      "hypit-source": "./packages/runtime/src/index.ts",
-      "types": "./dist/public/runtime.d.ts",
-      "import": "./packages/runtime/src/index.ts"
+    "./project/node": {
+      "hypit-source": "./packages/project/src/node/index.ts",
+      "types": "./dist/public/project-node.d.ts",
+      "import": "./packages/project/src/node/index.ts"
     },
-    "./source": {
-      "hypit-source": "./packages/source/src/index.ts",
-      "types": "./dist/public/source.d.ts",
-      "import": "./packages/source/src/index.ts"
+    "./project/context": {
+      "hypit-source": "./packages/production-context/src/index.ts",
+      "types": "./dist/public/project-context.d.ts",
+      "import": "./packages/production-context/src/index.ts"
     },
-    "./source/text": {
-      "hypit-source": "./packages/source/src/header.ts",
-      "types": "./dist/public/source-text.d.ts",
-      "import": "./packages/source/src/header.ts"
+    "./project/bench": {
+      "hypit-source": "./packages/bench/src/index.ts",
+      "types": "./dist/public/project-bench.d.ts",
+      "import": "./packages/bench/src/index.ts"
     },
-    "./generation-graph": {
+    "./execution": {
+      "hypit-source": "./packages/execution-environment/src/index.ts",
+      "types": "./dist/public/execution-environment.d.ts",
+      "import": "./packages/execution-environment/src/index.ts"
+    },
+    "./generation/runtime": {
+      "hypit-source": "./packages/generation-runtime/src/index.ts",
+      "types": "./dist/public/generation-runtime.d.ts",
+      "import": "./packages/generation-runtime/src/index.ts"
+    },
+    "./generation/source": {
+      "hypit-source": "./packages/generation-authoring/src/source/index.ts",
+      "types": "./dist/public/generation-source.d.ts",
+      "import": "./packages/generation-authoring/src/source/index.ts"
+    },
+    "./generation/source/text": {
+      "hypit-source": "./packages/generation-authoring/src/source/header.ts",
+      "types": "./dist/public/generation-source-text.d.ts",
+      "import": "./packages/generation-authoring/src/source/header.ts"
+    },
+    "./generation/model": {
+      "hypit-source": "./packages/generation-model/src/index.ts",
+      "types": "./dist/public/generation-model.d.ts",
+      "import": "./packages/generation-model/src/index.ts"
+    },
+    "./generation/model/contract": {
+      "hypit-source": "./packages/generation-model/src/model-contract.ts",
+      "types": "./dist/public/generation-model-contract.d.ts",
+      "import": "./packages/generation-model/src/model-contract.ts"
+    },
+    "./generation/model/fields": {
+      "hypit-source": "./packages/generation-model/src/model-fields.ts",
+      "types": "./dist/public/generation-model-fields.d.ts",
+      "import": "./packages/generation-model/src/model-fields.ts"
+    },
+    "./generation/model/fields/author": {
+      "hypit-source": "./packages/generation-model/src/model-fields-author.ts",
+      "types": "./dist/public/generation-model-fields-author.d.ts",
+      "import": "./packages/generation-model/src/model-fields-author.ts"
+    },
+    "./generation/model/fields/graph": {
+      "hypit-source": "./packages/generation-model/src/model-fields-graph.ts",
+      "types": "./dist/public/generation-model-fields-graph.d.ts",
+      "import": "./packages/generation-model/src/model-fields-graph.ts"
+    },
+    "./generation/model/provider": {
+      "hypit-source": "./packages/generation-model/src/provider.ts",
+      "types": "./dist/public/generation-model-provider.d.ts",
+      "import": "./packages/generation-model/src/provider.ts"
+    },
+    "./generation/graph": {
       "hypit-source": "./packages/generation-graph/src/index.ts",
       "types": "./dist/public/generation-graph.d.ts",
       "import": "./packages/generation-graph/src/index.ts"
     },
-    "./generation-graph/node": {
+    "./generation/graph/node": {
       "hypit-source": "./packages/generation-graph/src/node/index.ts",
       "types": "./dist/public/generation-graph-node.d.ts",
       "import": "./packages/generation-graph/src/node/index.ts"
     },
-    "./generation-canvas": {
+    "./generation/canvas": {
       "hypit-source": "./packages/generation-canvas/src/index.ts",
       "types": "./dist/public/generation-canvas.d.ts",
       "import": "./packages/generation-canvas/src/index.ts"
     },
-    "./generation-canvas/node": {
+    "./generation/canvas/node": {
       "hypit-source": "./packages/generation-canvas/src/node/index.ts",
       "types": "./dist/public/generation-canvas-node.d.ts",
       "import": "./packages/generation-canvas/src/node/index.ts"
     },
-    "./nle-view": {
+    "./nle/view": {
       "hypit-source": "./packages/nle-view/src/index.ts",
       "types": "./dist/public/nle-view.d.ts",
       "import": "./packages/nle-view/src/index.ts"
     },
-    "./nle-view/node": {
+    "./nle/view/node": {
       "hypit-source": "./packages/nle-view/src/node/index.ts",
       "types": "./dist/public/nle-view-node.d.ts",
       "import": "./packages/nle-view/src/node/index.ts"
     },
-    "./workspace": {
-      "hypit-source": "./packages/workspace/src/index.ts",
-      "types": "./dist/public/workspace.d.ts",
-      "import": "./packages/workspace/src/index.ts"
+    "./generation/workspace": {
+      "hypit-source": "./packages/generation-authoring/src/workspace/index.ts",
+      "types": "./dist/public/generation-workspace.d.ts",
+      "import": "./packages/generation-authoring/src/workspace/index.ts"
     },
-    "./workspace/node": {
-      "hypit-source": "./packages/workspace/src/node/index.ts",
-      "types": "./dist/public/workspace-node.d.ts",
-      "import": "./packages/workspace/src/node/index.ts"
+    "./generation/workspace/node": {
+      "hypit-source": "./packages/generation-authoring/src/workspace/node/index.ts",
+      "types": "./dist/public/generation-workspace-node.d.ts",
+      "import": "./packages/generation-authoring/src/workspace/node/index.ts"
+    },
+    "./audiovisual": {
+      "hypit-source": "./packages/audiovisual/src/index.ts",
+      "types": "./dist/public/audiovisual.d.ts",
+      "import": "./packages/audiovisual/src/index.ts"
+    },
+    "./media": {
+      "hypit-source": "./packages/media/src/index.ts",
+      "types": "./dist/public/media.d.ts",
+      "import": "./packages/media/src/index.ts"
+    },
+    "./media/asset": {
+      "hypit-source": "./packages/media-asset/src/index.ts",
+      "types": "./dist/public/media-asset.d.ts",
+      "import": "./packages/media-asset/src/index.ts"
+    },
+    "./media/asset/node": {
+      "hypit-source": "./packages/media-asset/src/node/index.ts",
+      "types": "./dist/public/media-asset-node.d.ts",
+      "import": "./packages/media-asset/src/node/index.ts"
+    },
+    "./media/service": {
+      "hypit-source": "./packages/media-service/src/index.ts",
+      "types": "./dist/public/media-service.d.ts",
+      "import": "./packages/media-service/src/index.ts"
+    },
+    "./media/service/node": {
+      "hypit-source": "./packages/media-service/src/node/index.ts",
+      "types": "./dist/public/media-service-node.d.ts",
+      "import": "./packages/media-service/src/node/index.ts"
+    },
+    "./nle": {
+      "hypit-source": "./packages/nle/src/index.ts",
+      "types": "./dist/public/nle.d.ts",
+      "import": "./packages/nle/src/index.ts"
+    },
+    "./nle/node": {
+      "hypit-source": "./packages/nle/src/node/index.ts",
+      "types": "./dist/public/nle-node.d.ts",
+      "import": "./packages/nle/src/node/index.ts"
+    },
+    "./nle/service": {
+      "hypit-source": "./packages/nle-service/src/index.ts",
+      "types": "./dist/public/nle-service.d.ts",
+      "import": "./packages/nle-service/src/index.ts"
+    },
+    "./nle/service/node": {
+      "hypit-source": "./packages/nle-service/src/node/index.ts",
+      "types": "./dist/public/nle-service-node.d.ts",
+      "import": "./packages/nle-service/src/node/index.ts"
+    },
+    "./scene": {
+      "hypit-source": "./packages/scene/src/index.ts",
+      "types": "./dist/public/scene.d.ts",
+      "import": "./packages/scene/src/index.ts"
+    },
+    "./scene/node": {
+      "hypit-source": "./packages/scene/src/node/index.ts",
+      "types": "./dist/public/scene-node.d.ts",
+      "import": "./packages/scene/src/node/index.ts"
+    },
+    "./feedback": {
+      "hypit-source": "./packages/feedback/src/index.ts",
+      "types": "./dist/public/feedback.d.ts",
+      "import": "./packages/feedback/src/index.ts"
+    },
+    "./feedback/node": {
+      "hypit-source": "./packages/feedback/src/node/index.ts",
+      "types": "./dist/public/feedback-node.d.ts",
+      "import": "./packages/feedback/src/node/index.ts"
     },
     "./workbench": {
       "hypit-source": "./packages/workbench/src/index.ts",
@@ -110,19 +240,19 @@
       "types": "./dist/public/workbench-cli.d.ts",
       "import": "./packages/workbench/src/cli.ts"
     },
-    "./blob": {
+    "./generation/blob": {
       "hypit-source": "./packages/blob/src/index.ts",
-      "types": "./dist/public/blob.d.ts",
+      "types": "./dist/public/generation-blob.d.ts",
       "import": "./packages/blob/src/index.ts"
     },
-    "./refinement": {
+    "./generation/refinement": {
       "hypit-source": "./packages/refinement/src/index.ts",
-      "types": "./dist/public/refinement.d.ts",
+      "types": "./dist/public/generation-refinement.d.ts",
       "import": "./packages/refinement/src/index.ts"
     },
-    "./producer": {
+    "./generation/producer": {
       "hypit-source": "./packages/producer/src/index.ts",
-      "types": "./dist/public/producer.d.ts",
+      "types": "./dist/public/generation-producer.d.ts",
       "import": "./packages/producer/src/index.ts"
     },
     "./facet": {
@@ -130,44 +260,44 @@
       "types": "./dist/public/facet.d.ts",
       "import": "./packages/facet/src/index.ts"
     },
-    "./protocol": {
-      "hypit-source": "./packages/protocol/src/index.ts",
-      "types": "./dist/public/protocol.d.ts",
-      "import": "./packages/protocol/src/index.ts"
+    "./value": {
+      "hypit-source": "./packages/protocol/src/public-value.ts",
+      "types": "./dist/public/value.d.ts",
+      "import": "./packages/protocol/src/public-value.ts"
     },
-    "./product": {
+    "./generation/product": {
       "hypit-source": "./packages/product/src/index.ts",
-      "types": "./dist/public/product.d.ts",
+      "types": "./dist/public/generation-product.d.ts",
       "import": "./packages/product/src/index.ts"
     },
-    "./product/node": {
+    "./generation/product/node": {
       "hypit-source": "./packages/product/src/node/index.ts",
-      "types": "./dist/public/product-node.d.ts",
+      "types": "./dist/public/generation-product-node.d.ts",
       "import": "./packages/product/src/node/index.ts"
     },
-    "./media-product-local": {
+    "./generation/media-product-local": {
       "hypit-source": "./packages/media-product-local/src/index.ts",
-      "types": "./dist/public/media-product-local.d.ts",
+      "types": "./dist/public/generation-media-product-local.d.ts",
       "import": "./packages/media-product-local/src/index.ts"
     },
-    "./author": {
-      "hypit-source": "./packages/author/src/index.ts",
-      "types": "./dist/public/author.d.ts",
-      "import": "./packages/author/src/index.ts"
+    "./generation/author": {
+      "hypit-source": "./packages/generation-authoring/src/author/index.ts",
+      "types": "./dist/public/generation-author.d.ts",
+      "import": "./packages/generation-authoring/src/author/index.ts"
     },
-    "./markup": {
+    "./generation/markup": {
       "hypit-source": "./packages/markup/src/index.ts",
-      "types": "./dist/public/markup.d.ts",
+      "types": "./dist/public/generation-markup.d.ts",
       "import": "./packages/markup/src/index.ts"
     },
-    "./result": {
+    "./generation/result": {
       "hypit-source": "./packages/result/src/index.ts",
-      "types": "./dist/public/result.d.ts",
+      "types": "./dist/public/generation-result.d.ts",
       "import": "./packages/result/src/index.ts"
     },
-    "./result/node": {
+    "./generation/result/node": {
       "hypit-source": "./packages/result/src/node/index.ts",
-      "types": "./dist/public/result-node.d.ts",
+      "types": "./dist/public/generation-result-node.d.ts",
       "import": "./packages/result/src/node/index.ts"
     },
     "./endpoint": {
@@ -247,6 +377,9 @@
     "migrations/*.md",
     "LICENSE",
     "examples/semantic-composition/README.md",
+    "examples/semantic-composition/title-card.nle.json",
+    "examples/semantic-composition/hypit.generation-runtime.json",
+    "examples/semantic-composition/hypit.environment.json",
     "examples/semantic-composition/packages/audiovisual-title-card/src/**/*",
     "examples/semantic-composition/packages/audiovisual-title-card/package.json",
     "examples/semantic-composition/packages/audiovisual-title-card/tsconfig.json",
@@ -255,13 +388,14 @@
     "examples/provider-package/packages/*/package.json",
     "examples/provider-package/packages/*/tsconfig.json",
     "examples/provider-package/packages/*/src/**/*",
-    "examples/provider-package/hypit.runtime.json"
+    "examples/provider-package/hypit.generation-runtime.json",
+    "examples/provider-package/hypit.environment.json"
   ],
   "scripts": {
     "pack:independent": "node scripts/pack-independent-package.mjs",
     "check:seedance-package": "node --import tsx scripts/check-independent-seedance.mjs",
     "check:hypihub-package": "node --import tsx scripts/check-independent-hypihub.mjs",
-    "check:runtime-packages": "node --import tsx scripts/check-independent-runtime-packages.mjs",
+    "check:host-packages": "node --import tsx scripts/check-independent-host-packages.mjs",
     "pack:distribution": "node scripts/pack-distribution.mjs",
     "check:distribution": "node scripts/check-distribution.mjs",
     "pack:release-candidate": "node scripts/pack-release-candidate.mjs",
@@ -274,6 +408,8 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "test": "node test/run.mjs",
+    "test:workflow": "node test/run.mjs workflow",
+    "test:release": "node test/run.mjs release",
     "test:whisperx-service": "uv run --project packages/provider-whisperx-local/runtime --frozen python -m unittest discover -s packages/provider-whisperx-local/test/service -p \"test_*.py\"",
     "test:image-opencv": "node test/run.mjs environment provider-image-opencv-local",
     "hypit": "node bin/hypit.mjs",
@@ -283,65 +419,67 @@
     "node": ">=22.15.0"
   },
   "devDependencies": {
-    "@hypit/author": "workspace:*",
-    "@hypit/caption-fine": "workspace:*",
-    "@hypit/markup": "workspace:*",
-    "@hypit/media": "workspace:*",
-    "@hypit/narrative": "workspace:*",
-    "@hypit/narrative-caption": "workspace:*",
-    "@hypit/narrative-speech-alignment": "workspace:*",
-    "@hypit/narrative-temporal": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/prompt": "workspace:*",
-    "@hypit/raster-composition": "workspace:*",
-    "@hypit/script": "workspace:*",
-    "@hypit/svml": "workspace:*",
-    "@hypit/speech-evidence": "workspace:*",
-    "@hypit/timed-transcript": "workspace:*",
-    "@hypit/temporal": "workspace:*",
-    "@hypit/temporal-graph": "workspace:*",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/league-spartan": "5.3.0",
     "@fontsource-variable/montserrat": "5.3.0",
     "@fontsource-variable/noto-sans-sc": "5.3.0",
     "@fontsource/archivo-black": "5.3.0",
+    "@hypit/caption-fine": "workspace:*",
+    "@hypit/generation-authoring": "workspace:*",
+    "@hypit/markup": "workspace:*",
+    "@hypit/media": "workspace:*",
+    "@hypit/module": "workspace:*",
+    "@hypit/narrative": "workspace:*",
+    "@hypit/narrative-caption": "workspace:*",
+    "@hypit/narrative-speech-alignment": "workspace:*",
+    "@hypit/narrative-temporal": "workspace:*",
+    "@hypit/prompt": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/raster-composition": "workspace:*",
+    "@hypit/script": "workspace:*",
+    "@hypit/speech-evidence": "workspace:*",
+    "@hypit/svml": "workspace:*",
+    "@hypit/temporal": "workspace:*",
+    "@hypit/temporal-graph": "workspace:*",
+    "@hypit/timed-transcript": "workspace:*",
     "linkedom": "0.18.13",
     "rollup": "4.62.4",
     "rollup-plugin-dts": "6.2.3",
     "vitepress": "^1.6.4"
   },
   "dependencies": {
+    "@hypit/browser-capture": "workspace:^0.2.1",
+    "@hypit/build-cli": "workspace:^0.1.0",
+    "@hypit/build-operations-cli": "workspace:^0.1.0",
     "@hypit/elevenlabs-speech": "workspace:^0.3.0",
+    "@hypit/execution-environment-local": "workspace:^0.2.0",
     "@hypit/fishaudio-speech": "workspace:^0.3.0",
+    "@hypit/generation-graph-cli": "workspace:^0.1.0",
+    "@hypit/generation-runtime-local": "workspace:^0.2.0",
     "@hypit/gpt-image": "workspace:^0.3.0",
     "@hypit/grok-imagine": "workspace:^0.3.0",
     "@hypit/media-asset-generation": "workspace:^0.1.0",
+    "@hypit/media-file-local": "workspace:^0.1.0",
     "@hypit/mimo-speech": "workspace:^0.3.0",
     "@hypit/minimax-h3": "workspace:^0.3.0",
     "@hypit/nano-banana": "workspace:^0.3.0",
+    "@hypit/nle-local": "workspace:^0.1.0",
     "@hypit/pixverse": "workspace:^0.3.0",
+    "@hypit/project-cli": "workspace:^0.1.0",
     "@hypit/seedance": "workspace:^0.3.0",
     "@hypit/seedream": "workspace:^0.3.0",
+    "@hypit/speech-estimate": "workspace:^0.1.2",
+    "@hypit/svml-toolchain": "workspace:^0.1.0",
+    "@hypit/toolchain": "workspace:^0.3.0",
     "@hypit/volcengine-matting": "workspace:^0.3.0",
     "@hypit/wan": "workspace:^0.3.0",
-    "@hypit/build-operations-cli": "workspace:^0.1.0",
-    "@hypit/build-cli": "workspace:^0.1.0",
-    "@hypit/generation-graph-cli": "workspace:^0.1.0",
-    "@hypit/browser-capture": "workspace:^0.2.1",
-    "@hypit/speech-estimate": "workspace:^0.1.2",
-    "@hypit/media-file-local": "workspace:^0.1.0",
-    "@hypit/nle-local": "workspace:^0.1.0",
-    "@hypit/workbench": "workspace:^0.0.0-dev",
-    "@hypit/project-cli": "workspace:^0.1.0",
-    "@hypit/runtime-local": "workspace:^0.2.0",
-    "@hypit/toolchain": "workspace:^0.3.0",
-    "@hypit/svml-toolchain": "workspace:^0.1.0",
     "@hypit/whisperx": "workspace:^0.3.0",
     "@hypit/yt-dlp": "workspace:^0.2.1",
     "@types/node": "24.10.1",
+    "cjs-module-lexer": "2.2.1",
     "koffi": "3.2.1",
+    "three": "0.180.0",
     "tsx": "4.21.0",
-    "typescript": "5.9.3",
-    "cjs-module-lexer": "2.2.1"
+    "typescript": "5.9.3"
   }
 }

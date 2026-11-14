@@ -1,6 +1,8 @@
-import { declarationField, type AuthorDeclarationCompiler, type AuthorResolvedReference } from "@hypit/hypit/author";
-import { blobTypes } from "@hypit/hypit/blob";
-import { sameType, type CanonicalValue, type TypeRef } from "@hypit/hypit/protocol";
+import { type TypeRef } from "@hypit/hypit/module";
+import { declarationField, type AuthorDeclarationCompiler, type AuthorResolvedReference } from "@hypit/hypit/generation/author";
+import { blobTypes } from "@hypit/hypit/generation/blob";
+import { sameType } from "@hypit/hypit/module";
+import type { CanonicalValue } from "@hypit/hypit/value";
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
 import { recipeType } from "@hypit/hypit/recipe";

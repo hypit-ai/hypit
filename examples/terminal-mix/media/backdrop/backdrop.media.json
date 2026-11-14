@@ -1,0 +1,35 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "terminal-mix-backdrop",
+  "media": {
+    "file": {
+      "path": "backdrop.png",
+      "mediaType": "image/png"
+    },
+    "interpretation": {
+      "id": "terminal-mix-backdrop-media",
+      "picture": {
+        "kind": "constant",
+        "streamIndex": 0,
+        "interpretation": {
+          "codedWidth": 640,
+          "codedHeight": 360,
+          "sampleAspectRatio": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "rotationDegrees": 0,
+          "picture": {
+            "colorPrimaries": "bt709",
+            "colorTransfer": "srgb",
+            "colorMatrix": "rgb",
+            "colorRange": "full",
+            "bitDepth": 8,
+            "alphaMode": "opaque"
+          }
+        }
+      }
+    }
+  },
+  "representations": []
+}

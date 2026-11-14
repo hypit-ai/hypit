@@ -6,9 +6,9 @@ import { installEndpoint } from "@hypit/endpoint";
 import { sealSpeechEvidenceAudio, speechEvidenceTypes } from "@hypit/speech-evidence";
 import { timedTranscriptTypes } from "@hypit/timed-transcript";
 import assert from "node:assert/strict";
-import { EndpointRegistry } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
 import { MemoryResourceStore } from "@hypit/resource-store";
-import type { Need } from "@hypit/protocol";
+import type { Need } from "@hypit/generation-build";
 import {
   whisperXCapabilities,
   whisperXRequestForEvidenceAudio,

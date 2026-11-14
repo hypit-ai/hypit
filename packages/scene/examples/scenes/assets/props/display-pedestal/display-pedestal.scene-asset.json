@@ -1,0 +1,18 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "display-pedestal",
+  "name": "展示台",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets"
+    },
+    "name": "prop"
+  },
+  "resources": {
+    "model": {
+      "path": "model.gltf",
+      "mediaType": "model/gltf+json"
+    }
+  },
+  "parameters": {}
+}

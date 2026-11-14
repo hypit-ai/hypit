@@ -1,8 +1,5 @@
 export * from "./canonical.js";
-export * from "./build-id.js";
 export * from "./order.js";
-export * from "./error.js";
-export { modulePackageAbi } from "./module.js";
 export {
   assertBlobRef,
   blobRefSchema,
@@ -11,9 +8,5 @@ export {
   normalizeValue,
   valueBlobRefs,
 } from "./value.js";
-export type * from "./build.js";
-export { assertPublicationIntent } from "./publication-intent.js";
-export type * from "./publication-intent.js";
-export * from "./identity.js";
-export type * from "./module.js";
+export * from "./resource-id.js";
 export type * from "./value.js";

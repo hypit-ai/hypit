@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { credentialRef } from "@hypit/runtime";
+import { credentialRef } from "@hypit/execution-environment";
 import { FileCredentialStore } from "../../src/file.js";
 
 const distribution = fileURLToPath(new URL("../../../../", import.meta.url));

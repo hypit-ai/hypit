@@ -12,7 +12,7 @@ Domain projection and direct clock declarations happen upstream; drawing code co
 Windows. Direct time is useful for a rapid montage, while a projected Window can follow a Segment.
 
 ```svml
-<import as="gfx" from="@explainer/opening-system@1"/>
+<import as="gfx" from="@explainer/opening-system"/>
 <gfx:Title id="opening-title" timeline={program.timeline} within={canvas.bounds} font={display-font}
   during={opening-title-window}
   title="Hypit" subtitle="一分钟了解" seconds="60"/>

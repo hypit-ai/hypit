@@ -3,7 +3,7 @@ import { chmod, mkdtemp, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { credentialRef } from "@hypit/runtime";
+import { credentialRef } from "@hypit/execution-environment";
 import { FileCredentialStore } from "../../src/file.js";
 
 test("file credentials create private files and require an owner-private directory on POSIX", {

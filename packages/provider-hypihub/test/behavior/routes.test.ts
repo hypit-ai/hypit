@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { GenerationArtifactUrlResolver } from "@hypit/generation/provider";
+import type { GenerationArtifactUrlResolver } from "@hypit/generation-model/provider";
 import type { EndpointSupport } from "@hypit/endpoint";
 import type { BlobRef, CanonicalValue } from "@hypit/protocol";
 import { sealMinimaxH3Request } from "@hypit/minimax-h3";

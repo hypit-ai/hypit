@@ -6,9 +6,10 @@ import {
   type EvaluatedPlan,
   type PlanEndpointView,
 } from "@hypit/build-submission";
-import { capabilityKey, typeKey } from "@hypit/protocol";
-import type { CanonicalValue, PublicationIntent } from "@hypit/protocol";
-import type { BuildView } from "@hypit/kernel";
+import { capabilityKey, typeKey } from "@hypit/module";
+import type { CanonicalValue } from "@hypit/protocol";
+import type { PublicationIntent } from "@hypit/generation-build";
+import type { BuildView } from "@hypit/generation-build";
 import type {
   CliBuildAuthoring,
   CliRuntimeInspection,
@@ -16,7 +17,7 @@ import type {
   PlanRequestOutput,
   PricingRequest,
 } from "@hypit/build-operations-cli";
-import { plannedNeeds } from "@hypit/kernel";
+import { plannedNeeds } from "@hypit/generation-build";
 
 export {
   assertPlannedRequests,

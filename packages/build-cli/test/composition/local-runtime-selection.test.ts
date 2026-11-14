@@ -9,11 +9,11 @@ import type { CliIo } from "@hypit/cli";
 import type { BuildCliServices } from "@hypit/build-cli";
 import { createSourceBuildCliCommandModules } from "@hypit/build-cli";
 import { createBuildOperationsCliCommandModules } from "@hypit/build-operations-cli";
-import { resolveProjectRoot } from "@hypit/project";
-import { findRuntimeProfile, selectRuntimeProfile } from "@hypit/runtime-local";
-import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local/cli";
-import type { LocalRuntimeCliServices } from "@hypit/runtime-local/cli";
-import type { LocalRuntimeHost } from "@hypit/runtime-local";
+import { resolveProjectRoot } from "@hypit/project/node";
+import { findRuntimeProfile, selectRuntimeProfile } from "@hypit/generation-runtime-local";
+import { createLocalRuntimeCliCommandModules } from "@hypit/generation-runtime-local/cli";
+import type { LocalRuntimeCliServices } from "@hypit/generation-runtime-local/cli";
+import type { LocalRuntimeHost } from "@hypit/generation-runtime-local";
 import { buildCliServices } from "../services-scenario.js";
 import { runtimeControl } from "../control-scenario.js";
 
@@ -21,7 +21,7 @@ const runCli = async (
   argv: readonly string[],
   io: CliIo,
   distribution: BuildCliServices,
-  local: Pick<LocalRuntimeCliServices, "initialRuntimeProfile"> = {},
+  local: Pick<LocalRuntimeCliServices, "initialRuntimeProfile" | "initialEnvironmentProfile"> = {},
 ): Promise<void> =>
   await runCliApplication(argv, io, {
     commandModules: [
@@ -44,6 +44,9 @@ const runCli = async (
         ...(local.initialRuntimeProfile === undefined
           ? {}
           : { initialRuntimeProfile: local.initialRuntimeProfile }),
+        ...(local.initialEnvironmentProfile === undefined
+          ? {}
+          : { initialEnvironmentProfile: local.initialEnvironmentProfile }),
         openLocalRuntimeHost: async (path, options) =>
           await distribution.openRuntimeHost(path, options) as LocalRuntimeHost,
       }),
@@ -70,7 +73,7 @@ test("paths reports project selection, argument override and no selection withou
     assert.equal(absent.project, await realpath(root));
     assert.equal(absent.profileSource, "none");
     assert.equal(absent.profile, undefined);
-    assert.equal(absent.selectionFile, join(await realpath(root), ".hypit", "runtime"));
+    assert.equal(absent.selectionFile, join(await realpath(root), ".hypit", "generation", "runtime-profile"));
     const selected = await selectRuntimeProfile(root, profile);
     const project = await readPaths();
     assert.equal(project.profileSource, "project");
@@ -96,7 +99,7 @@ test("project resolution precedes exact project Runtime selection", async () => 
 
     const selected = await selectRuntimeProfile(root, profile);
     assert.equal(selected.profile, await realpath(profile));
-    assert.equal((await readFile(join(root, ".hypit", "runtime"), "utf8")).trim(), join("runtime", "local.json"));
+    assert.equal((await readFile(join(root, ".hypit", "generation", "runtime-profile"), "utf8")).trim(), join("runtime", "local.json"));
 
     assert.equal(await findRuntimeProfile(nested), undefined);
     const project = await resolveProjectRoot({ cwd: nested });
@@ -166,7 +169,7 @@ test("runtime use lets later CLI commands reuse the selected Profile", async () 
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-cli-"));
   const previous = process.cwd();
   try {
-    const profile = join(root, "hypit.runtime.json");
+    const profile = join(root, "hypit.generation-runtime.json");
     const otherProfile = join(root, "other.runtime.json");
     await writeFile(join(root, "package.json"), '{"hypit":{"project":true}}\n', "utf8");
     await writeFile(profile, "{}\n", "utf8");
@@ -215,8 +218,13 @@ test("runtime init writes and selects the Distribution starter without opening a
     process.chdir(root);
     let opened = false;
     const starter = {
-      format: "hypit.runtime-local@1" as const,
-      dataRoot: ".hypit/runtimes/local",
+      format: "hypit.generation-runtime-local@1" as const,
+      dataRoot: ".hypit/generation/runtime/local",
+      environment: "./hypit.environment.json",
+    };
+    const environment = {
+      format: "hypit.execution-environment-local@1" as const,
+      dataRoot: ".hypit/environment/local",
       credentials: {},
       endpoints: {},
     };
@@ -229,17 +237,21 @@ test("runtime init writes and selects the Distribution starter without opening a
     let output = "";
     await runCli(["runtime", "init", "--project", root], {
       write(text) { output += text; },
-    }, distribution, { initialRuntimeProfile: starter });
+    }, distribution, { initialRuntimeProfile: starter, initialEnvironmentProfile: environment });
 
-    const profile = join(root, "hypit.runtime.json");
+    const profile = join(root, "hypit.generation-runtime.json");
     assert.deepEqual(JSON.parse(await readFile(profile, "utf8")), starter);
+    assert.deepEqual(JSON.parse(await readFile(join(root, "hypit.environment.json"), "utf8")), environment);
     assert.equal((await findRuntimeProfile(root))?.profile, await realpath(profile));
     assert.equal(opened, false);
     assert.match(output, /No package was installed, no service was contacted and no Worker was started/u);
 
     await assert.rejects(
-      runCli(["runtime", "init", "--project", root], { write() {} }, distribution, { initialRuntimeProfile: starter }),
-      /Runtime Profile already exists/u,
+      runCli(["runtime", "init", "--project", root], { write() {} }, distribution, {
+        initialRuntimeProfile: starter,
+        initialEnvironmentProfile: environment,
+      }),
+      /Generation Runtime or Environment Profile already exists/u,
     );
     assert.deepEqual(JSON.parse(await readFile(profile, "utf8")), starter);
   } finally {
@@ -256,7 +268,7 @@ test("runtime status without a selected Profile reports the missing context inst
     process.chdir(root);
     await assert.rejects(
       async () => await runCli(["runtime", "status"], { write() {} }, buildCliServices()),
-      /runtime requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>/u,
+      /runtime requires a Generation Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>/u,
     );
   } finally {
     process.chdir(previous);
@@ -268,10 +280,10 @@ test("runtime status without a selected Profile reports the missing context inst
 test("Runtime selection explains a directory collision without changing its contents", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-collision-"));
   try {
-    const selection = join(root, ".hypit", "runtime");
+    const selection = join(root, ".hypit", "generation", "runtime-profile");
     await mkdir(selection, { recursive: true });
     await writeFile(join(selection, "kept.txt"), "runtime data");
-    const profile = join(root, "hypit.runtime.json");
+    const profile = join(root, "hypit.generation-runtime.json");
     await writeFile(profile, "{}\n");
     await assert.rejects(findRuntimeProfile(root), /Runtime selection must be a file:.*occupied by a directory/u);
     await assert.rejects(selectRuntimeProfile(root, profile), /Runtime selection must be a file:.*occupied by a directory/u);

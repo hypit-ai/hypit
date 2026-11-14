@@ -6,7 +6,7 @@ runs; it does not turn prose into Records, Components or AuthorGraph Operations.
 Select it with the irreducible Source Header and write the document directly after it:
 
 ```svml
-<?svml using="@hypit/document@1"?>
+<?svml using="@hypit/document"?>
 # Production notes
 
 This file is already a complete document with **bold**, *italic*, ~underline~,

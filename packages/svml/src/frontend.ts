@@ -6,15 +6,15 @@ import {
   type AuthorSourceAssetRequest,
   type DecodedAuthorSource,
   type ResolvedAuthorSourceImport,
-} from "@hypit/author";
+} from "@hypit/generation-authoring/author";
 import type { BlobRef } from "@hypit/protocol";
-import { decodeSourceText, type SourceUnit } from "@hypit/source";
+import { decodeSourceText, type SourceUnit } from "@hypit/generation-authoring/source";
 
 import { declarationsFromSvmlDocument, svmlStructureFrontend } from "./document.js";
 import { SvmlFrontendError } from "./error.js";
 import { parseSvmlDocument } from "./parser.js";
 
-export const svmlAuthorFrontendId = "@hypit/svml@1";
+export const svmlAuthorFrontendId = "@hypit/svml";
 
 export type SvmlDeclarationDecodeOptions = {
   readonly compilers: AuthorDeclarationRegistryLike;

@@ -28,15 +28,14 @@
     "tsx": "4.21.0"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0",
-    "@hypit/runtime-local": "workspace:^0.2.0"
+    "@hypit/execution-environment-local": "workspace:^0.2.0",
+    "@hypit/hypit": "workspace:^0.4.0"
   },
   "devDependencies": {
-    "@hypit/html-chromium-local": "workspace:*",
     "@hypit/executor": "workspace:*",
+    "@hypit/html-chromium-local": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/resource-store": "workspace:^0.1.0",
-    "@hypit/runtime": "workspace:*",
     "@hypit/script": "workspace:*",
     "electron": "45.0.0",
     "puppeteer-core": "25.10.0",

@@ -1,4 +1,4 @@
-<?svml using="@hypit/text/svs@1"?>
+<?svml using="@hypit/text/svs"?>
 <sheet version="1" id="performance">
   text-template.performance { separator: paragraph; }
   text-template.performance.block.direction {

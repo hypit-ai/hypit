@@ -1,7 +1,9 @@
-import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
 import { textDependency, textTypes } from "@hypit/hypit/text";
 
-export const promptModuleRef = { name: "@hypit/prompt", version: "1" } as const;
+export const promptModuleRef = { name: "@hypit/prompt" } as const;
 
 export const promptTypes = {
   prompt: { module: promptModuleRef, name: "Prompt" },
@@ -16,10 +18,8 @@ export const promptProducers = {
   render: { module: promptModuleRef, name: "render" },
 } satisfies Record<string, ProducerRef>;
 
-export const promptManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const promptManifest: GenerationModuleDefinition = {
   name: promptModuleRef.name,
-  version: promptModuleRef.version,
   dependencies: [textDependency],
   types: Object.values(promptTypes).map((type) => type.name),
   capabilities: [],

@@ -1,0 +1,269 @@
+import { BuildMachine } from "@hypit/generation-build";
+import type { BuildView } from "@hypit/generation-build";
+import type { BuildFact, CommandResult } from "@hypit/generation-build";
+import { capacityUnits } from "@hypit/execution-environment";
+
+import type {
+  BuildSchedulerOptions,
+  RuntimeCommandExecutor,
+  RuntimeExecutionResult,
+  RuntimeRunnableCommand,
+  ScheduledBuild,
+  ScheduledBuildResult,
+  SchedulerExecutionOutcome,
+} from "./types.js";
+
+type MutableBuild = {
+  readonly id: string;
+  state: BuildView;
+  readonly machine: BuildMachine;
+  readonly facts: BuildFact[];
+  readonly outcomes: SchedulerExecutionOutcome[];
+  blocked: ScheduledBuildResult["blocked"];
+  stopped: boolean;
+  failure?: Extract<CommandResult, { readonly kind: "command-failed" }>;
+  readonly attempted: Set<string>;
+};
+
+type ActiveResult = {
+  readonly key: string;
+  readonly build: MutableBuild;
+  readonly command: RuntimeRunnableCommand;
+  readonly execution?: RuntimeExecutionResult;
+  readonly error?: unknown;
+};
+
+type ActiveCommand = {
+  readonly build: MutableBuild;
+  readonly command: RuntimeRunnableCommand;
+  readonly promise: Promise<ActiveResult>;
+};
+
+function positiveInteger(value: number, name: string): number {
+  if (!Number.isSafeInteger(value) || value < 1) throw new Error(`${name} must be a positive safe integer`);
+  return value;
+}
+
+function buildCommandKey(build: string, command: string): string {
+  return `${build}\u0000${command}`;
+}
+
+/**
+ * Queue-free, one-process reference Scheduler. It atomically admits every declared resource
+ * across all submitted Builds,
+ * but never searches a Graph: Generation Build regenerates every runnable command through the Executor.
+ */
+export class InProcessBuildScheduler {
+  readonly #executor: RuntimeCommandExecutor;
+  readonly #buildStore: BuildSchedulerOptions["buildStore"];
+  readonly #onStateChange: BuildSchedulerOptions["onStateChange"];
+  readonly #executionContext: BuildSchedulerOptions["executionContext"];
+
+  constructor(executor: RuntimeCommandExecutor, options: BuildSchedulerOptions = {}) {
+    this.#executor = executor;
+    this.#buildStore = options.buildStore;
+    this.#onStateChange = options.onStateChange;
+    this.#executionContext = options.executionContext;
+  }
+
+  async run(requests: readonly ScheduledBuild[]): Promise<readonly ScheduledBuildResult[]> {
+    const ids = new Set<string>();
+    const builds: MutableBuild[] = [];
+    for (const request of requests) {
+      if (request.id.trim().length === 0) throw new Error("scheduled build id must not be empty");
+      if (ids.has(request.id)) throw new Error(`scheduled build ${request.id} is duplicated`);
+      ids.add(request.id);
+      const facts: BuildFact[] = structuredClone([...request.facts]);
+      const machine = new BuildMachine(request.definition, facts);
+      const state = machine.view();
+      builds.push({
+        id: request.id,
+        state,
+        machine,
+        facts,
+        outcomes: [],
+        blocked: [],
+        stopped: false,
+        attempted: new Set(),
+      });
+    }
+    const active = new Map<string, ActiveCommand>();
+    const resourceDefaults = new Map<string, number>();
+    let cursor = 0;
+
+    const resourceLimit = (resource: RuntimeRunnableCommand["resources"][number]): number => {
+      capacityUnits(resource);
+      const proposed = positiveInteger(resource.limit, `resource ${resource.id} limit`);
+      const previous = resourceDefaults.get(resource.id);
+      if (previous !== undefined && previous !== proposed) {
+        throw new Error(`resource ${resource.id} has conflicting default concurrency ${previous} and ${proposed}`);
+      }
+      resourceDefaults.set(resource.id, proposed);
+      return proposed;
+    };
+
+    const accept = async (build: MutableBuild, event: CommandResult): Promise<void> => {
+      const fact = build.machine.evaluate(event);
+      if (fact === undefined) {
+        build.state = build.machine.view();
+        return;
+      }
+      await this.#buildStore?.append(build.id, fact);
+      build.machine.commit();
+      build.facts.push(fact);
+      build.state = build.machine.view();
+      await this.#onStateChange?.(build.id, build.state);
+    };
+
+    const preparations = async (): Promise<Map<string, readonly RuntimeRunnableCommand[]>> => {
+      const ready = new Map<string, readonly RuntimeRunnableCommand[]>();
+      for (const build of builds) {
+        if (build.stopped || build.state.status === "complete" || build.state.status === "failed") {
+          ready.set(build.id, []);
+          continue;
+        }
+        const prepared = this.#executor.prepare(build.machine);
+        build.state = prepared.state;
+        build.blocked = prepared.blocked;
+        ready.set(build.id, prepared.runnable.filter((item) =>
+          !active.has(buildCommandKey(build.id, item.command.id)) && !build.attempted.has(item.command.id)));
+      }
+      return ready;
+    };
+
+    const resourceCounts = (): Map<string, number> => {
+      const counts = new Map<string, number>();
+      for (const item of active.values()) {
+        for (const resource of item.command.resources) {
+          counts.set(resource.id, (counts.get(resource.id) ?? 0) + capacityUnits(resource));
+        }
+      }
+      return counts;
+    };
+
+    const launch = (build: MutableBuild, command: RuntimeRunnableCommand): void => {
+      const key = buildCommandKey(build.id, command.command.id);
+      const execution = this.#executor.executeCommand(build.machine, command, {
+        ...this.#executionContext?.(build.id),
+        build: build.id,
+      });
+      const promise = execution.then(
+        (execution) => ({ key, build, command, execution }),
+        (error: unknown) => ({ key, build, command, error }),
+      );
+      active.set(key, { build, command, promise });
+    };
+
+    try {
+      while (true) {
+        const ready = await preparations();
+        const counts = resourceCounts();
+
+        while (builds.length > 0) {
+          let selected = false;
+          for (let offset = 0; offset < builds.length; offset += 1) {
+            const index = (cursor + offset) % builds.length;
+            const build = builds[index]!;
+            const command = (ready.get(build.id) ?? []).find((candidate) =>
+              candidate.resources.every((resource) =>
+                (counts.get(resource.id) ?? 0) + capacityUnits(resource) <= resourceLimit(resource)));
+            if (command === undefined) continue;
+            ready.set(build.id, (ready.get(build.id) ?? []).filter((item) =>
+              item.command.id !== command.command.id));
+            launch(build, command);
+            for (const resource of command.resources) {
+              counts.set(resource.id, (counts.get(resource.id) ?? 0) + capacityUnits(resource));
+            }
+            cursor = (index + 1) % builds.length;
+            selected = true;
+            break;
+          }
+          if (!selected) break;
+        }
+
+        if (active.size === 0) break;
+        const settled = await Promise.race([...active.values()].map((item) => item.promise));
+        active.delete(settled.key);
+        const build = settled.build;
+        if (build.state.status === "failed" || build.state.status === "complete") continue;
+        if (settled.execution === undefined) {
+          build.stopped = true;
+          const message = settled.error instanceof Error ? settled.error.message : String(settled.error);
+          build.failure ??= {
+            kind: "command-failed",
+            command: settled.command.command.id,
+            code: "EXECUTION_FAILED",
+            message,
+          };
+          build.outcomes.push({
+            status: "error",
+            message,
+          });
+          continue;
+        }
+        if (settled.execution.status === "pending") {
+          build.attempted.add(settled.command.command.id);
+          build.outcomes.push({
+            status: "pending",
+            operation: settled.execution.operation,
+            ...(settled.execution.wakeAt === undefined ? {} : { wakeAt: settled.execution.wakeAt }),
+          });
+          continue;
+        }
+        if (settled.execution.status === "deferred") {
+          build.attempted.add(settled.command.command.id);
+          build.outcomes.push({
+            status: "deferred",
+            ...(settled.execution.wakeAt === undefined ? {} : { wakeAt: settled.execution.wakeAt }),
+            message: settled.execution.reason,
+          });
+          continue;
+        }
+        const event = settled.execution.event;
+        try {
+          if (event.kind === "command-failed") {
+            // Stop launching work immediately, but accept results of calls already running
+            // before the failure clears Generation Build's outstanding commands. No pending job is polled.
+            build.stopped = true;
+            build.failure ??= event;
+          } else {
+            await accept(build, event);
+            if (settled.execution.operation !== undefined) {
+              await this.#executor.completeOperation?.(settled.execution.operation);
+            }
+          }
+          build.outcomes.push({
+            status: "completed",
+          });
+        } catch (error) {
+          build.stopped = true;
+          build.outcomes.push({
+            status: "error",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
+      for (const build of builds) {
+        if (build.failure !== undefined) await accept(build, build.failure);
+      }
+
+    } catch (error) {
+      // Do not let a classification/configuration error release capacity beneath other active calls.
+      await Promise.allSettled([...active.values()].map((item) => item.promise));
+      throw error;
+    }
+
+    return builds.map((build) => ({
+      id: build.id,
+      status: build.state.status === "complete"
+        ? "complete"
+        : build.state.status === "failed" ? "failed" : "paused",
+      definition: build.machine.definition,
+      state: build.state,
+      facts: [...build.facts],
+      outcomes: [...build.outcomes],
+      blocked: [...build.blocked],
+    }));
+  }
+}

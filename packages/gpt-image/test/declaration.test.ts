@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { blobTypes } from "@hypit/blob";
-import type { AuthorDeclarationCompiler, AuthorResolvedReference } from "@hypit/author";
+import type { AuthorDeclarationCompiler, AuthorResolvedReference } from "@hypit/generation-authoring/author";
 import { promptTypes } from "@hypit/prompt";
 import { compileSvmlDeclaration } from "../../../test/compile-svml-declaration.js";
 

@@ -1,11 +1,11 @@
 import {
-  runtimeConfigExact,
-  runtimeConfigObject,
-  runtimeConfigPositiveInteger,
-  runtimeConfigString,
-} from "@hypit/runtime-local/extension";
-import type { RuntimeAdapterFactoryContext } from "@hypit/runtime-local/extension";
-import { resolveRuntimeExecutable } from "@hypit/runtime-local/node";
+  executionEnvironmentConfigExact,
+  executionEnvironmentConfigObject,
+  executionEnvironmentConfigPositiveInteger,
+  executionEnvironmentConfigString,
+} from "@hypit/execution-environment-local/extension";
+import type { ExecutionEnvironmentAdapterFactoryContext } from "@hypit/execution-environment-local/extension";
+import { resolveEnvironmentExecutable } from "@hypit/execution-environment-local/node";
 import type { HtmlBrowserGpu, HtmlWorkers } from "@hypit/html-render-local";
 
 const executionKeys = [
@@ -16,21 +16,21 @@ const executionKeys = [
 ] as const;
 
 /** Parse deployment policy shared by local HTML Endpoint implementations. */
-export function localHtmlRuntimeConfig(context: RuntimeAdapterFactoryContext, label: string,
+export function localHtmlRuntimeConfig(context: ExecutionEnvironmentAdapterFactoryContext, label: string,
   endpointKeys: readonly string[]) {
-  const config = runtimeConfigObject(context.config, label);
-  runtimeConfigExact(config, [...endpointKeys, ...executionKeys], label);
+  const config = executionEnvironmentConfigObject(context.config, label);
+  executionEnvironmentConfigExact(config, [...endpointKeys, ...executionKeys], label);
   const workers = config.workers;
-  if (workers !== undefined && workers !== "auto") runtimeConfigPositiveInteger(workers, "HTML renderer workers");
-  const browserGpu = runtimeConfigString(config.browserGpu, "HTML renderer browserGpu");
+  if (workers !== undefined && workers !== "auto") executionEnvironmentConfigPositiveInteger(workers, "HTML renderer workers");
+  const browserGpu = executionEnvironmentConfigString(config.browserGpu, "HTML renderer browserGpu");
   if (browserGpu !== undefined && browserGpu !== "auto" && browserGpu !== "software" && browserGpu !== "hardware") {
     throw new Error("HTML renderer browserGpu is invalid");
   }
-  const configuredFfprobe = runtimeConfigString(config.ffprobePath, "HTML renderer ffprobePath");
-  const configuredFfmpeg = runtimeConfigString(config.ffmpegPath, "HTML renderer ffmpegPath");
-  const ffmpegPath = resolveRuntimeExecutable(context.dataRoot, configuredFfmpeg ?? "ffmpeg");
-  const ffprobePath = resolveRuntimeExecutable(context.dataRoot, configuredFfprobe ?? "ffprobe");
-  const optionalPositive = (key: string, subject: string) => runtimeConfigPositiveInteger(config[key], subject);
+  const configuredFfprobe = executionEnvironmentConfigString(config.ffprobePath, "HTML renderer ffprobePath");
+  const configuredFfmpeg = executionEnvironmentConfigString(config.ffmpegPath, "HTML renderer ffmpegPath");
+  const ffmpegPath = resolveEnvironmentExecutable(context.dataRoot, configuredFfmpeg ?? "ffmpeg");
+  const ffprobePath = resolveEnvironmentExecutable(context.dataRoot, configuredFfprobe ?? "ffprobe");
+  const optionalPositive = (key: string, subject: string) => executionEnvironmentConfigPositiveInteger(config[key], subject);
   const value = (key: string, subject: string) => {
     const parsed = optionalPositive(key, subject);
     return parsed === undefined ? {} : { [key]: parsed };

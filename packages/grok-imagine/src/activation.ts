@@ -1,14 +1,15 @@
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createModuleFacet } from "@hypit/hypit/module";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
+import { createRefinementPackageFacet } from "@hypit/hypit/generation/refinement";
+import { createProducerPackageFacet } from "@hypit/hypit/generation/producer";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/generation/author";
 import { grokImagineComponent, grokImagineManifest } from "./index.js";
 import { grokImagineAuthorDeclarations } from "./declaration.js";
 import { grokImagineGenerationFacets } from "./generation.js";
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [{ manifest: grokImagineManifest }],
   facets: [
+    createModuleFacet(grokImagineManifest), createGenerationModuleFacet(grokImagineManifest),
     ...[grokImagineComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     ...grokImagineAuthorDeclarations.map(createAuthorDeclarationFacet),
     ...grokImagineGenerationFacets,

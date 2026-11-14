@@ -1,0 +1,48 @@
+{
+  "format": "hypit.nle-view@1",
+  "id": "ranking-jensen-main",
+  "name": "Jensen Dating Ranking Timeline",
+  "revision": 0,
+  "project": {
+    "path": "film.nle.json"
+  },
+  "editRate": {
+    "numerator": 24,
+    "denominator": 1
+  },
+  "tracks": [
+    {
+      "track": "performance",
+      "locked": false
+    },
+    {
+      "track": "music",
+      "locked": false
+    },
+    {
+      "track": "reveal-sfx",
+      "locked": false
+    },
+    {
+      "track": "ranking",
+      "locked": false
+    },
+    {
+      "track": "broll",
+      "locked": false
+    },
+    {
+      "track": "title",
+      "locked": false
+    },
+    {
+      "track": "captions",
+      "locked": false
+    },
+    {
+      "track": "reveal-flash",
+      "locked": false
+    }
+  ],
+  "groups": []
+}

@@ -95,8 +95,6 @@ test("AudioProgram preserves general Operator support windows without effect-spe
   const support = {
     ...temporalSupport,
     inputs: { signal: { before: look, after: look } },
-    state: { kind: "sequential" as const, preRoll: look },
-    latency: look,
     tail: look,
   };
   const program = sealAudioProgram({ ...base, graph: {

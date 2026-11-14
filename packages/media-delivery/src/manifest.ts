@@ -1,8 +1,10 @@
 import { blobDependency, blobTypes } from "@hypit/blob";
 import { mediaDependency, mediaTypes } from "@hypit/media";
-import type { CapabilityRef, ModuleManifest, ProducerRef } from "@hypit/protocol";
+import type { CapabilityRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
 
-export const mediaDeliveryModuleRef = { name: "@hypit/media-delivery", version: "1" } as const;
+export const mediaDeliveryModuleRef = { name: "@hypit/media-delivery" } as const;
 export const mediaDeliveryCapabilities = {
   mux: { module: mediaDeliveryModuleRef, name: "mux-program-media" },
 } satisfies Record<string, CapabilityRef>;
@@ -11,8 +13,7 @@ export const mediaDeliveryProducers = {
   projectVideo: { module: mediaDeliveryModuleRef, name: "project-muxed-video" },
 } satisfies Record<string, ProducerRef>;
 
-export const mediaDeliveryManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const mediaDeliveryManifest: GenerationModuleDefinition = {
   ...mediaDeliveryModuleRef,
   dependencies: [blobDependency, mediaDependency],
   types: [],

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { sealGraphFragment } from "@hypit/author";
+import { sealGraphFragment } from "@hypit/generation-authoring/author";
 
 import {
   assertGenerationNodeAuthoringShape,
@@ -10,7 +10,7 @@ import {
   generationNodePackagesFromFacets,
 } from "../src/index.js";
 
-const moduleRef = { name: "@example/image", version: "1" } as const;
+const moduleRef = { name: "@example/image" } as const;
 const type = { module: moduleRef, name: "Image" } as const;
 const using = { module: moduleRef, name: "generate" } as const;
 const fragment = sealGraphFragment({

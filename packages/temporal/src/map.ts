@@ -94,6 +94,29 @@ export function assertTemporalMapPreimage(value: TemporalMapPreimage): void {
 
 export const assertTemporalMapRegionSet = assertTemporalMapPreimage;
 
+/** One half-open exact range expressed in sided region order. */
+export function temporalRangeRegionSet(
+  domain: LocalTemporalDomain,
+  range: TemporalRange,
+): TemporalMapRegionSet {
+  assertLocalTemporalDomain(domain);
+  assertExactTemporalValue(range.start, "Temporal range region start");
+  assertExactTemporalValue(range.end, "Temporal range region end");
+  assert(compareExactTemporalValues(range.start, range.end) < 0,
+    "Temporal range region must be positive.");
+  const zero = exactTemporalZero();
+  assert(compareExactTemporalValues(range.start, zero) >= 0
+    && compareExactTemporalValues(range.end, domain.duration) <= 0,
+  `Temporal range lies outside domain ${domain.id}.`);
+  return {
+    domain: structuredClone(domain),
+    regions: [{
+      start: { position: structuredClone(range.start), side: "after" },
+      end: { position: structuredClone(range.end), side: "before" },
+    }],
+  };
+}
+
 export type TemporalMapEvaluator = (
   targetAt: ExactTemporalValue,
   side: TemporalMapSide,
@@ -554,6 +577,47 @@ function normalizeMapRegions(regions: readonly TemporalMapRegion[]): readonly Te
   return result;
 }
 
+function assertSameRegionSetDomain(
+  left: TemporalMapRegionSet,
+  right: TemporalMapRegionSet,
+): void {
+  assert(left.domain.id === right.domain.id
+    && compareExactTemporalValues(left.domain.duration, right.domain.duration) === 0,
+  `Temporal region sets belong to ${left.domain.id} and ${right.domain.id}.`);
+}
+
+/** Exact set union for two demands in the same local temporal domain. */
+export function unionTemporalMapRegionSets(
+  left: TemporalMapRegionSet,
+  right: TemporalMapRegionSet,
+): TemporalMapRegionSet {
+  assertTemporalMapRegionSet(left);
+  assertTemporalMapRegionSet(right);
+  assertSameRegionSetDomain(left, right);
+  return {
+    domain: structuredClone(left.domain),
+    regions: structuredClone(normalizeMapRegions([...left.regions, ...right.regions])),
+  };
+}
+
+/** Exact set intersection for two demands in the same local temporal domain. */
+export function intersectTemporalMapRegionSets(
+  left: TemporalMapRegionSet,
+  right: TemporalMapRegionSet,
+): TemporalMapRegionSet {
+  assertTemporalMapRegionSet(left);
+  assertTemporalMapRegionSet(right);
+  assertSameRegionSetDomain(left, right);
+  const regions = left.regions.flatMap((leftRegion) => right.regions.flatMap((rightRegion) => {
+    const overlap = intersectMapRegions(leftRegion, rightRegion);
+    return overlap === undefined ? [] : [overlap];
+  }));
+  return {
+    domain: structuredClone(left.domain),
+    regions: structuredClone(normalizeMapRegions(regions)),
+  };
+}
+
 function floorRational(value: Rational): bigint {
   let quotient = value.numerator / value.denominator;
   if (value.numerator < 0n && value.numerator % value.denominator !== 0n) quotient -= 1n;
@@ -684,6 +748,70 @@ function pieceImage(piece: TemporalMapPiece): TemporalMapRegion {
     direction === 0 ? "after" : direction > 0 ? end.side : flipMapSide(end.side)),
   direction === 0 ? "after" : direction > 0 ? end.side : flipMapSide(end.side));
   return compareMapPoints(left, right) <= 0 ? mapRegion(left, right) : mapRegion(right, left);
+}
+
+function stageImage(
+  stage: TemporalMapStage,
+  target: readonly TemporalMapRegion[],
+): readonly TemporalMapRegion[] {
+  const results: TemporalMapRegion[] = [];
+  for (const piece of stage.pieces) {
+    if (isAffineTemporalMapPiece(piece)) {
+      for (const branch of affineBranches(piece)) for (const region of target) {
+        const overlap = intersectMapRegions(branch.target, region);
+        if (overlap === undefined) continue;
+        const left = affinePointValue(piece, overlap.start);
+        const right = affinePointValue(piece, overlap.end);
+        results.push(compareMapPoints(left, right) <= 0
+          ? mapRegion(left, right) : mapRegion(right, left));
+      }
+      continue;
+    }
+    const pieceTarget = mapRegion(
+      mapPoint(piece.target.start, "after"),
+      mapPoint(piece.target.end, "before"),
+    );
+    for (const region of target) {
+      const overlap = intersectMapRegions(pieceTarget, region);
+      if (overlap === undefined) continue;
+      const direction = pieceDirection(piece);
+      const sourcePoint = (point: TemporalMapPoint): TemporalMapPoint => {
+        const sourceSide = direction === 0 ? "after"
+          : direction > 0 ? point.side : flipMapSide(point.side);
+        return mapPoint(sidedPieceValue(piece, point.position, sourceSide), sourceSide);
+      };
+      const left = sourcePoint(overlap.start);
+      const right = sourcePoint(overlap.end);
+      results.push(compareMapPoints(left, right) <= 0
+        ? mapRegion(left, right) : mapRegion(right, left));
+    }
+  }
+  return normalizeMapRegions(results);
+}
+
+/**
+ * Return the complete exact forward image of a target demand through a Map.
+ *
+ * Unlike point sampling, this preserves gaps, cuts, reverse pieces, holds,
+ * wraps and composed stages. It is the temporal primitive used by execution
+ * planners to ask a Source for only the regions consumed by an occurrence.
+ */
+export function imageTemporalMapRegions(
+  value: TemporalMap,
+  target: TemporalMapRegionSet,
+): TemporalMapRegionSet {
+  assertTemporalMap(value);
+  assertTemporalMapRegionSet(target);
+  const targetDomain = value.stages[0]!.target;
+  assert(target.domain.id === targetDomain.id
+    && compareExactTemporalValues(target.domain.duration, targetDomain.duration) === 0,
+  `Temporal Map region set belongs to ${target.domain.id}, not target domain ${targetDomain.id}.`);
+  let regions: readonly TemporalMapRegion[] = target.regions;
+  for (const stage of value.stages) regions = stageImage(stage, regions);
+  return {
+    domain: structuredClone(value.stages.at(-1)!.source),
+    regions: structuredClone(regions),
+  };
 }
 
 function stagePreimage(

@@ -8,7 +8,7 @@ Timeline is the work's finite absolute frame domain. Named Instant and Window ex
 on one another, with one required `end`.
 
 ```svml
-<import as="time" from="@hypit/timeline-author@1"/>
+<import as="time" from="@hypit/timeline-author"/>
 <time:Clock id="clock" frame-rate="30"/>
 <time:Timeline id="program" clock={clock}
   end="latest(answer.end,outro.end)">

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 
-import { createLocalCredentialControl } from "@hypit/runtime-local";
+import { createLocalEnvironmentCredentialControl } from "@hypit/execution-environment-local";
 import { commandHint } from "@hypit/cli";
 import { buildCliServices } from "../services-scenario.js";
 import { credentialControl, runtimeControl } from "../control-scenario.js";
@@ -97,8 +97,8 @@ test("status --watch follows active execution, then reads its finished Result", 
   const calls: string[] = [];
   const resultLocation = {
     root: "/project",
-    historyPath: ".hypit/results",
-    productsPath: ".hypit/products",
+    historyPath: ".hypit/generation/results",
+    productsPath: ".hypit/generation/products",
   } as const;
   const view = () => ({
     id: "build-watch",

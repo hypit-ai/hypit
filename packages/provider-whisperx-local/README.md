@@ -82,7 +82,7 @@ service are trusted code; this is not a community-plugin sandbox.
 the service host includes its port. The default service is `http://127.0.0.1:8765` and exposes
 its configuration through `/health`. Inspect an existing Profile's address and expected settings
 when locating that service. A custom `serviceCommand` supplies its own installation and start command.
-`hypit programs prepare --endpoint <instance>` prepares the configured ASR model, requested alignment
+`hypit programs prepare --environment <profile> --endpoint <instance>` prepares the configured ASR model, requested alignment
 models and sentence data without starting a process. It also works when the service is already online.
 `programs up` prepares and starts the selected Programs; `programs status` reports process readiness.
 Adding a language requires preparation, not a service restart, when its cache location is unchanged.

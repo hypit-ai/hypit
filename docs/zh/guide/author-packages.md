@@ -41,7 +41,7 @@ preview Source 为作者提供可打开或渲染的小例子。查看能说明�
   "kind": "present",
   "source": "component",
   "component": {
-    "module": { "name": "@your-scope/my-component", "version": "1" },
+    "module": { "name": "@your-scope/my-component" },
     "name": "title-card"
   },
   "parameters": { "title": "Opening" }

@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  createNleScaledHtmlOutput,
-  createNleTerminalLinkHostFromFacets,
+  createNleScaledPictureOutput,
+  createNleAudiovisualLinkHostFromFacets,
   lowerNleProjectToHtmlProgram,
-} from "../../../../../packages/html-video/src/index.js";
+} from "../../../../../packages/nle-audiovisual/src/index.js";
 import {
   applyNleTransaction,
   commitNleEdit,
@@ -72,9 +72,9 @@ test("the installed project package resolves and edits one materialized NLE Comp
     },
     at: at(0), duration: at(2),
   }));
-  const host = createNleTerminalLinkHostFromFacets(titleCardHypitPackage.facets);
+  const host = createNleAudiovisualLinkHostFromFacets(titleCardHypitPackage.facets);
   const html = lowerNleProjectToHtmlProgram(project, host,
-    createNleScaledHtmlOutput(project, { numerator: 1, denominator: 1 }));
+    createNleScaledPictureOutput(project, { numerator: 1, denominator: 1 }));
   assert.match(html.html, /A materialized Component/u);
   assert.match(html.html, /resolved by its project package/u);
 
@@ -85,7 +85,7 @@ test("the installed project package resolves and edits one materialized NLE Comp
   let session = createNleEditSession(project);
   session = commitNleEdit(session, { label: "Edit title", transaction });
   const editedHtml = lowerNleProjectToHtmlProgram(session.current, host,
-    createNleScaledHtmlOutput(session.current, { numerator: 1, denominator: 1 }));
+    createNleScaledPictureOutput(session.current, { numerator: 1, denominator: 1 }));
   assert.match(editedHtml.html, /Edited by its package/u);
   const editedItem = findNleItem(session.current, "opening").item;
   if ((editedItem.kind !== "present" || editedItem.source !== "component")) throw new Error("Title Card Item changed kind.");

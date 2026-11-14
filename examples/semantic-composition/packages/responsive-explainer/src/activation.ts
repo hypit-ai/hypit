@@ -1,12 +1,16 @@
-import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
-import { canonicalize, sameType } from "@hypit/hypit/protocol";
-import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/author";
-import type { AuthorDeclarationCompiler, AuthorResolvedReference } from "@hypit/hypit/author";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { ModuleManifest, TypeRef, TypedRecord } from "@hypit/hypit/protocol";
+import { sameType } from "@hypit/hypit/module";
+import { createModuleFacet } from "@hypit/hypit/module";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/generation/markup";
+import { canonicalize } from "@hypit/hypit/value";
+import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/generation/author";
+import type { AuthorDeclarationCompiler, AuthorResolvedReference } from "@hypit/hypit/generation/author";
+import { createRefinementPackageFacet } from "@hypit/hypit/generation/refinement";
+import { createProducerPackageFacet } from "@hypit/hypit/generation/producer";
+import type { ProducerPackage } from "@hypit/hypit/generation/producer";
+import type { RefinementPackage } from "@hypit/hypit/generation/refinement";
+import type { TypeRef } from "@hypit/hypit/module";
+import type { GenerationModuleDefinition, TypedRecord } from "@hypit/hypit/generation/build";
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
 import type { FontStackRef } from "@hypit/media";
@@ -20,7 +24,7 @@ import type { TemporalInstant, TemporalWindow } from "@hypit/timeline";
 import { renderExplainer } from "./render.js";
 import type { ExplainerOptions } from "./render.js";
 
-const module = { name: "@example/responsive-explainer", version: "1" } as const;
+const module = { name: "@example/responsive-explainer" } as const;
 const optionsType = { module, name: "ExplainerOptions" };
 const producer = { module, name: "compose" };
 const inputs = [
@@ -29,7 +33,7 @@ const inputs = [
   { name: "media", type: mediaTypes.prepared }, { name: "sourceWindow", type: timelineTypes.window },
   { name: "font", type: mediaTypes.fontStack }, { name: "options", type: optionsType },
 ];
-export const manifest: ModuleManifest = { format: "hypit.module@1", ...module,
+export const manifest: GenerationModuleDefinition = { ...module,
   dependencies: [...[compositionTypes.visualTrack, mediaTypes.fontStack, timelineTypes.timeline,
     spatialTypes.frame, timelineTypes.window, timelineTypes.instant]
     .map(type => type.module)],
@@ -110,7 +114,7 @@ const authorDeclaration: AuthorDeclarationCompiler = {
   },
 };
 const markupDeclaration = { name: "scene", tag: "Scene" } as const;
-export const hypitPackage = { format: "hypit.package@1" as const, modules: [{ manifest }],
-  facets: [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? []),
+export const hypitPackage = { facets: [
+    createModuleFacet(manifest), createGenerationModuleFacet(manifest),createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? []),
     createAuthorDeclarationFacet(authorDeclaration), createMarkupDeclarationFacet({ module, declaration: markupDeclaration })] };
 export default hypitPackage;

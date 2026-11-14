@@ -6,7 +6,7 @@ import {
   createGenerationNodePackageFacet,
   type GenerationGraphProject,
 } from "@hypit/generation-graph";
-import { generationProducers } from "@hypit/generation";
+import { generationProducers } from "@hypit/generation-model";
 import { blobTypes } from "@hypit/blob";
 import { prepareMedia } from "@hypit/media";
 import {
@@ -15,7 +15,7 @@ import {
 import { serializeMediaAssetDocument, type MediaAssetDocument } from "@hypit/media-asset";
 
 import blobPackage from "../../blob/src/activation.js";
-import generationPackage from "../../generation/src/activation.js";
+import generationPackage from "../../generation-model/src/activation.js";
 import mediaPackage from "../../media/src/activation.js";
 import mediaAssetPackage from "../../media-asset-generation/src/activation.js";
 import promptPackage from "../../prompt/src/activation.js";
@@ -30,7 +30,7 @@ import {
 import { seedanceEndpointsByModel } from "../src/index.js";
 
 const blobValueUsing = {
-  module: { name: "@test/seedance-values", version: "1" },
+  module: { name: "@test/seedance-values" },
   name: "blob",
 } as const;
 
@@ -60,12 +60,11 @@ function installedPackages() {
     { specifier: "@hypit/temporal-graph", contribution: temporalPackage },
     { specifier: "@hypit/media", contribution: mediaPackage },
     { specifier: "@hypit/media-asset-generation", contribution: mediaAssetPackage },
-    { specifier: "@hypit/generation", contribution: generationPackage },
+    { specifier: "@hypit/generation-model", contribution: generationPackage },
     { specifier: "@hypit/text", contribution: textPackage },
     { specifier: "@hypit/prompt", contribution: promptPackage },
     { specifier: "@hypit/seedance", contribution: seedancePackage },
     { specifier: "@test/seedance-values", contribution: {
-      format: "hypit.package@1" as const,
       facets: [createGenerationNodePackageFacet({ nodes: [{
         kind: "value",
         using: blobValueUsing,
@@ -227,7 +226,7 @@ test("four existing media values close into one heterogeneous reference-video Bu
 
 test("Seedance graph nodes preserve exact models while invocation shape follows authored inputs", () => {
   const components = seedancePackage.facets.flatMap((facet) =>
-    facet.abi === "hypit.generation-node-package@1"
+    facet.kind === "hypit.generation-node-package"
       ? (facet as { implementation: { nodes: readonly { using: { name: string } }[] } }).implementation.nodes
       : []);
   assert.deepEqual(components.map((item) => item.using.name), [

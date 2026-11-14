@@ -1,4 +1,4 @@
-import type { SourceRange, SourceUnit } from "@hypit/source";
+import type { SourceRange, SourceUnit } from "@hypit/generation-authoring/source";
 
 type SvmlSyntaxNode = {
   readonly range: SourceRange;

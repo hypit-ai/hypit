@@ -1,9 +1,11 @@
 import { audioProgramDependency, audioProgramTypes } from "@hypit/audio-program";
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 
-export const audiovisualAudioModuleRef = { name: "@hypit/audiovisual-audio", version: "1" } as const;
+export const audiovisualAudioModuleRef = { name: "@hypit/audiovisual-audio" } as const;
 
 export const audiovisualAudioTypes = {
   source: { module: audiovisualAudioModuleRef, name: "AudiovisualAudioSource" },
@@ -19,8 +21,7 @@ export const audiovisualAudioProducers = {
   compile: { module: audiovisualAudioModuleRef, name: "compile" },
 } satisfies Record<string, ProducerRef>;
 
-export const audiovisualAudioManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const audiovisualAudioManifest: GenerationModuleDefinition = {
   ...audiovisualAudioModuleRef,
   dependencies: [audioProgramDependency, audiovisualDependency, mediaDependency],
   types: Object.values(audiovisualAudioTypes).map((type) => type.name),

@@ -1,4 +1,4 @@
-<?svml using="@hypit/recipe@1"?>
+<?svml using="@hypit/recipe"?>
 <sheet version="1">
   text.title { size: 54; weight: 700; }
   film.main { background: #18212A; }

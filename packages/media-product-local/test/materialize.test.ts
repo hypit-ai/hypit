@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
-import { blobTypes } from "@hypit/hypit/blob";
+import { blobTypes } from "@hypit/hypit/generation/blob";
 import type { LocalMediaAssetImportRequest } from "@hypit/media-local";
 import type { ProductHistory } from "@hypit/product";
 
@@ -18,7 +18,7 @@ function products(): ProductHistory {
         ? {
             address,
             type: blobTypes.blob,
-            publisher: "@hypit/product@1#product",
+            publisher: "@hypit/product#product",
             representation: "file",
             mediaType: blob.mediaType,
             size: blob.size,
@@ -30,7 +30,7 @@ function products(): ProductHistory {
         ? {
             address,
             type: blobTypes.blob,
-            publisher: "@hypit/product@1#product",
+            publisher: "@hypit/product#product",
             value: blob,
             openResource: async (resource) => resource.resource === blob.resource
               ? (async function* () { yield new Uint8Array([1, 2, 3, 4]); })()
@@ -85,7 +85,7 @@ test("structured and non-media Products do not enter Media Asset import", async 
       return {
         address,
         type: blobTypes.blob,
-        publisher: "@hypit/product@1#product",
+        publisher: "@hypit/product#product",
         representation: "structured",
       };
     },

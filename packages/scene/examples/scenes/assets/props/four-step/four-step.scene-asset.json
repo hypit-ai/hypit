@@ -1,0 +1,24 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "four-step",
+  "name": "楼梯",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets"
+    },
+    "name": "prop"
+  },
+  "resources": {
+    "model": {
+      "path": "model.gltf",
+      "mediaType": "model/gltf+json"
+    }
+  },
+  "parameters": {
+    "boundsM": {
+      "width": 1.8,
+      "height": 1.5,
+      "depth": 2.4
+    }
+  }
+}

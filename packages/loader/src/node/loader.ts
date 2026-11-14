@@ -3,7 +3,7 @@ import { realpathSync } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { compareCodeUnits, moduleKey } from "@hypit/protocol";
+import { compareCodeUnits } from "@hypit/protocol";
 import {
   logicalPackageAddressKey,
   packageContributionOffers,
@@ -127,9 +127,7 @@ async function importContribution(
   const imported = await (options.importModule !== undefined && !embeddedByDistribution(item, distributionRoots)
     ? options.importModule(url) : import(url)) as { readonly default?: unknown };
   assert(imported.default !== null && typeof imported.default === "object", `${item.json.name} activation has no default package export`);
-  const contribution = imported.default as Partial<PackageContribution>;
-  assert(contribution.format === "hypit.package@1", `${item.json.name} activation has an unsupported package format`);
-  return contribution as PackageContribution;
+  return imported.default as PackageContribution;
 }
 
 async function assertExternalDependencies(
@@ -157,21 +155,18 @@ async function assertExternalDependencies(
   }
 }
 
-/** Conventional physical package spelling for a logical @scope/name@version address. */
+/** Physical npm package spelling for an unversioned logical package name, including exported subpaths. */
 export function physicalPackageName(logical: string): string {
-  const slash = logical.startsWith("@") ? logical.indexOf("/", 1) : -1;
-  const version = logical.lastIndexOf("@");
-  const unversioned = version > Math.max(slash, 0) ? logical.slice(0, version) : logical;
-  if (!unversioned.startsWith("@")) return unversioned.split("/", 1)[0]!;
-  const packageSlash = unversioned.indexOf("/", 1);
-  const subpath = unversioned.indexOf("/", packageSlash + 1);
-  return subpath < 0 ? unversioned : unversioned.slice(0, subpath);
+  if (!logical.startsWith("@")) return logical.split("/", 1)[0]!;
+  const packageSlash = logical.indexOf("/", 1);
+  const subpath = logical.indexOf("/", packageSlash + 1);
+  return subpath < 0 ? logical : logical.slice(0, subpath);
 }
 
 export class NodePackageSelectionMissingError extends Error {
   readonly code = "PACKAGE_SELECTION_MISSING";
   constructor(readonly address: LogicalPackageAddress) {
-    super(`installed packages do not provide ${address.abi} ${address.name}`);
+    super(`installed packages do not provide ${address.kind} ${address.name}`);
     this.name = "NodePackageSelectionMissingError";
   }
 }
@@ -202,22 +197,9 @@ export async function loadNodePackageSelection(
     await resolvePackage(name, resolutionRoots(name, projectRoots, distributionRoots))));
   type ActivatedPackage = { readonly physical: ResolvedPackage; readonly contribution: PackageContribution };
   const activated = new Map<string, ActivatedPackage>();
-  const providedModules = new Set<string>();
-  const requirements: { readonly key: string; readonly from: string }[] = [];
   const add = (item: ActivatedPackage): void => {
     assert(!activated.has(item.physical.json.name), `selected package ${item.physical.json.name} is repeated`);
     activated.set(item.physical.json.name, item);
-    for (const module of item.contribution.modules ?? []) {
-      const key = moduleKey(module.manifest);
-      assert(!providedModules.has(key), `selected packages provide ${key} more than once`);
-      providedModules.add(key);
-      for (const dependency of module.manifest.dependencies) {
-        requirements.push({
-          key: moduleKey(dependency),
-          from: item.physical.root,
-        });
-      }
-    }
   };
   for (const item of await Promise.all(roots.map(async (physical) => ({
     physical,
@@ -226,21 +208,6 @@ export async function loadNodePackageSelection(
       return await importContribution(physical, options, distributionRoots);
     })(),
   })))) add(item);
-
-  for (let cursor = 0; cursor < requirements.length; cursor += 1) {
-    const requirement = requirements[cursor] as { readonly key: string; readonly from: string };
-    if (providedModules.has(requirement.key)) continue;
-    const providerPackage = physicalPackageName(requirement.key);
-    assert(!activated.has(providerPackage), `selected package ${providerPackage} provides the wrong ${requirement.key}`);
-    const physical = await resolvePackage(
-      providerPackage,
-      resolutionRoots(providerPackage, [requirement.from, root], distributionRoots),
-    );
-    await assertExternalDependencies(physical, distributionRoots);
-    const provider = { physical, contribution: await importContribution(physical, options, distributionRoots) };
-    add(provider);
-    assert(providedModules.has(requirement.key), `${providerPackage} does not provide the required ${requirement.key}`);
-  }
 
   const offerOwners = new Map<string, Set<string>>();
   for (const item of activated.values()) {
@@ -254,7 +221,7 @@ export async function loadNodePackageSelection(
   for (const address of normalized.logical ?? []) {
     const providers = offerOwners.get(logicalPackageAddressKey(address));
     if (providers === undefined || providers.size === 0) throw new NodePackageSelectionMissingError(address);
-    assert(providers.size === 1, `${address.abi} ${address.name} is provided by more than one selected package`);
+    assert(providers.size === 1, `${address.kind} ${address.name} is provided by more than one selected package`);
   }
 
   const packages: LoadedPackage[] = [...activated.values()]

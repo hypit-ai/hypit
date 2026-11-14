@@ -1,32 +1,41 @@
-import { createReadStream } from "node:fs";
-import { link, mkdir, mkdtemp, open as openFile, rm, stat } from "node:fs/promises";
+import { link, mkdir, mkdtemp, open as openFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
 
 import type { Facet } from "@hypit/facet";
+import type { AudioProgram } from "@hypit/audio-program";
 import { loadNodePackageSelection } from "@hypit/loader/node";
-import { moduleKey, modulePackageAbi } from "@hypit/protocol";
-import type { ModuleRef } from "@hypit/protocol";
-import type { ResourceStore } from "@hypit/resource-store";
+import { moduleKey } from "@hypit/module";
+import { moduleFacetKind } from "@hypit/module";
+import type { ModuleRef } from "@hypit/module";
+import { isStreamingResourceStore, type ResourceStore } from "@hypit/resource-store";
 import {
-  createNleScaledHtmlOutput,
-  createNleTerminalLinkHostFromFacets,
+  createHtmlVideoDeliveryPlan,
   executeHtmlVideoDeliveryPlan,
   htmlVideoDeliverySpec,
-  lowerNleProjectToHtmlVideoDeliveryPlan,
 } from "@hypit/html-video";
 import type { HtmlVideoDeliveryExecutor } from "@hypit/html-video";
-import { resolveMediaAssetMediaFile } from "@hypit/media-asset/node";
-import type { MuxedMedia, VisualDeliverySpec } from "@hypit/media";
+import type { HtmlProgram } from "@hypit/html-program";
+import { rasterizeHtmlFrames } from "@hypit/html-chromium-local";
+import type { MediaDeliverySpec, MuxedMedia, VisualDeliverySpec } from "@hypit/media";
 import type { CreateMediaExecutionEnvironmentOptions } from "@hypit/media-local/execution";
 import { assertNleProject, type NleComposition, type NleItem, type NleProject } from "@hypit/nle";
 import type { TemporalRate } from "@hypit/temporal/algebra";
-import { createNodeNleMediaResolver, readNleProjectFile } from "@hypit/nle/node";
+import { assertFrameSpan } from "@hypit/temporal";
+import type { FrameSpan, TemporalRange } from "@hypit/temporal";
+import { readNleProjectFile } from "@hypit/nle/node";
 import type {
   ChromiumHtmlRasterOptions,
   HtmlRasterProgress,
 } from "@hypit/html-chromium-local";
 import { FileResourceStore } from "@hypit/resource-store/node";
 import { createLocalNleDeliveryExecutor } from "./delivery.js";
+import {
+  closePreparedNleProgramme,
+  nodeFileProgrammeResources,
+  prepareNodeNleProgramme,
+  type PreparedNodeNleProgramme,
+} from "./programme.js";
+import { createNleProgrammeResourceOverlay } from "./resource-overlay.js";
 
 export type LocalNleExportProgress =
   | { readonly phase: "open" | "load-packages" | "lower" | "publish"; readonly state: "start" | "complete" }
@@ -35,13 +44,14 @@ export type LocalNleExportProgress =
   | { readonly phase: "audio" | "mux"; readonly state: "start" | "complete" }
   | { readonly phase: "complete"; readonly outputFile: string };
 
-export type LocalNleExportRequest = {
+export type LocalNleProgrammeRequest = {
   /** Application-owned Hypit Project Root used to resolve portable NLE asset references. */
   readonly projectRoot: string;
   readonly projectFile: string;
   /** Optional application-owned current edit snapshot. The Project file remains the base for portable references. */
   readonly project?: NleProject;
-  readonly outputFile: string;
+  /** Invocation-only Picture root selection. It is never persisted in the Project or AVIR. */
+  readonly pictureTarget?: "html" | "gpu-composition";
   /** Package-manager resolution root. Defaults to the Hypit Project Root. */
   readonly packageRoot?: string;
   /** Read-only application Distribution used only as an installed-package fallback. */
@@ -58,6 +68,69 @@ export type LocalNleExportRequest = {
   readonly onProgress?: (progress: LocalNleExportProgress) => void;
   readonly html?: Omit<ChromiumHtmlRasterOptions, "resources" | "signal" | "onProgress">;
   readonly media?: Omit<CreateMediaExecutionEnvironmentOptions, "signal">;
+};
+
+export type LocalNleExportRequest = LocalNleProgrammeRequest & {
+  readonly outputFile: string;
+  /** Optional absolute half-open interval on the selected output frame grid. */
+  readonly range?: FrameSpan;
+};
+
+export type PreparedNleExportRequest = Omit<
+  LocalNleExportRequest,
+  "projectRoot" | "projectFile" | "project" | "packageRoot" | "distributionPackageRoot"
+>;
+
+export type LocalNleFrameCaptureRequest = LocalNleProgrammeRequest & {
+  readonly frames: readonly number[];
+  /** New directory receiving one full-size PNG per requested absolute frame. */
+  readonly toDirectory: string;
+};
+
+export type PreparedNleFrameCaptureRequest = Omit<
+  LocalNleFrameCaptureRequest,
+  "projectRoot" | "projectFile" | "project" | "packageRoot" | "distributionPackageRoot"
+>;
+
+export type LocalNleReviewRequest = LocalNleProgrammeRequest & {
+  /** Absolute half-open Programme interval used by both Picture and Audio review delivery. */
+  readonly range: FrameSpan;
+  /** Strictly increasing absolute Programme frames inside range. */
+  readonly frames: readonly number[];
+  /** New directory receiving review.mp4 and frames/*.png. */
+  readonly toDirectory: string;
+};
+
+export type PreparedNleReviewRequest = Omit<
+  LocalNleReviewRequest,
+  "projectRoot" | "projectFile" | "project" | "packageRoot" | "distributionPackageRoot"
+>;
+
+export type LocalNleFrameCaptureResult = {
+  readonly projectFile: string;
+  readonly frameRate: TemporalRate;
+  readonly frameCount: number;
+  readonly canvas: HtmlProgram["canvas"];
+  readonly frames: readonly { readonly frame: number; readonly file: string }[];
+};
+
+export type LocalNleFrameCaptureEnvironment = {
+  /** Test and embedding seam; normal callers use the built-in Chromium frame rasterizer. */
+  readonly rasterizeFrames?: typeof rasterizeHtmlFrames;
+};
+
+export type LocalNleReviewResult = {
+  readonly projectFile: string;
+  readonly toDirectory: string;
+  readonly videoFile: string;
+  readonly frameRate: TemporalRate;
+  /** Full Programme frame count before review selection. */
+  readonly programmeFrameCount: number;
+  /** Frames delivered by review.mp4. */
+  readonly reviewFrameCount: number;
+  readonly range: FrameSpan;
+  readonly canvas: HtmlProgram["canvas"];
+  readonly frames: readonly { readonly frame: number; readonly file: string }[];
 };
 
 export type LocalNleExportResult = {
@@ -81,14 +154,21 @@ export type LocalNleExportEnvironment = {
   readonly createExecutor?: LocalNleExportExecutorFactory;
 };
 
+export type LocalNleReviewEnvironment = LocalNleExportEnvironment & LocalNleFrameCaptureEnvironment;
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
 function visitProjectModules(project: NleComposition, accept: (module: ModuleRef) => void): void {
   const visitItem = (item: NleItem): void => {
-    if (item.kind === "adjustment") accept(item.component.module);
+    if (item.kind === "adjustment") accept(item.operator.module);
     if (item.kind === "present" && item.source === "component") accept(item.component.module);
+    if (item.kind === "present") {
+      for (const application of item.picture?.operators ?? []) accept(application.operator.module);
+      for (const application of item.audio?.operators ?? []) accept(application.operator.module);
+      if (item.audio?.reconstruction !== undefined) accept(item.audio.reconstruction.using.module);
+    }
     if (item.kind === "present" && item.source === "composition") {
       visitProjectModules(item.composition, accept);
     }
@@ -104,18 +184,6 @@ export function nleProjectModuleKeys(project: NleComposition): readonly string[]
   return [...values].sort();
 }
 
-function uniqueMediaAssetCount(project: NleProject): number {
-  const paths = new Set<string>();
-  const visit = (current: NleComposition): void => {
-    for (const track of current.tracks) for (const item of track.items) {
-      if (item.kind === "present" && item.source === "media") paths.add(item.asset.path);
-      if (item.kind === "present" && item.source === "composition") visit(item.composition);
-    }
-  };
-  visit(project);
-  return paths.size;
-}
-
 async function selectedFacets(
   project: NleProject,
   packageRoot: string,
@@ -125,7 +193,7 @@ async function selectedFacets(
   if (names.length === 0) return [];
   const packages = await loadNodePackageSelection({
     selected: [],
-    logical: names.map(name => ({ abi: modulePackageAbi, name })),
+    logical: names.map(name => ({ kind: moduleFacetKind, name })),
   }, packageRoot, distributionPackageRoot === undefined ? {} : {
     fallbackRoots: [distributionPackageRoot],
   });
@@ -133,14 +201,17 @@ async function selectedFacets(
 }
 
 async function publishArtifact(
-  resources: FileResourceStore,
+  resources: ResourceStore,
   media: MuxedMedia,
   temporaryDirectory: string,
   outputFile: string,
   signal?: AbortSignal,
 ): Promise<void> {
   signal?.throwIfAborted();
-  const source = await resources.open(media.artifact.resource, signal === undefined ? {} : { signal });
+  const source = isStreamingResourceStore(resources)
+    ? await resources.open(media.artifact.resource, signal === undefined ? {} : { signal })
+    : await resources.get(media.artifact.resource, signal === undefined ? {} : { signal })
+      .then(bytes => bytes === undefined ? undefined : (async function* () { yield bytes; })());
   assert(source !== undefined, `Rendered resource ${media.artifact.resource} is unavailable.`);
   const temporary = join(temporaryDirectory, basename(outputFile));
   const file = await openFile(temporary, "wx");
@@ -190,24 +261,36 @@ function observedExecutor(
   };
 }
 
-/**
- * Export one persistent NLE snapshot as a whole local MP4.
- *
- * Opening, package activation and byte staging are Host work. NLE→AVIR→terminal lowering remains
- * deterministic and in-memory; the temporary ResourceStore and rendered products are discarded
- * after the final file is atomically linked into place.
- */
-export async function exportLocalNleProject(
-  request: LocalNleExportRequest,
-  environment: LocalNleExportEnvironment = {},
-): Promise<LocalNleExportResult> {
+type PreparedLocalNleProgramme = {
+  readonly projectFile: string;
+  readonly visual: HtmlProgram;
+  readonly audio: AudioProgram;
+  readonly delivery: MediaDeliverySpec;
+  readonly programmeFrameCount: number;
+  readonly audioRange?: TemporalRange;
+};
+
+function sparseFrameSpan(frames: readonly number[]): FrameSpan {
+  assert(frames.length > 0, "NLE frame capture needs at least one absolute frame.");
+  for (const [index, frame] of frames.entries()) {
+    assert(Number.isSafeInteger(frame) && frame >= 0
+      && (index === 0 || frame > frames[index - 1]!),
+    "NLE capture frames must be strictly increasing non-negative safe integers.");
+  }
+  const endFrameExclusive = frames.at(-1)! + 1;
+  assert(Number.isSafeInteger(endFrameExclusive), "NLE capture frame exceeds safe arithmetic.");
+  return { startFrame: frames[0]!, endFrameExclusive };
+}
+
+async function prepareLocalNleProgramme(
+  request: LocalNleProgrammeRequest,
+  resources: FileResourceStore,
+  report: (progress: LocalNleExportProgress) => void,
+  pictureRange?: FrameSpan,
+): Promise<PreparedLocalNleProgramme> {
   const projectRoot = resolve(request.projectRoot);
   const projectFile = resolve(request.projectFile);
-  const outputFile = resolve(request.outputFile);
-  assert(extname(outputFile).toLowerCase() === ".mp4", "Local NLE export currently requires an .mp4 output file.");
-  assert(!(await stat(outputFile).then(() => true, () => false)), `Output ${outputFile} already exists.`);
   request.signal?.throwIfAborted();
-  const report = (progress: LocalNleExportProgress): void => request.onProgress?.(progress);
 
   report({ phase: "open", state: "start" });
   const project = request.project === undefined
@@ -215,50 +298,88 @@ export async function exportLocalNleProject(
     : structuredClone(request.project);
   assertNleProject(project);
   report({ phase: "open", state: "complete" });
-  const output = createNleScaledHtmlOutput(
-    project,
-    request.frameRate ?? { numerator: 30, denominator: 1 },
-    request.resolution === undefined
-      ? project.canvas
-      : { ...request.resolution, clearColor: project.canvas.clearColor },
-  );
-
   const packageRoot = resolve(request.packageRoot ?? projectRoot);
   report({ phase: "load-packages", state: "start" });
   const facets = await selectedFacets(project, packageRoot, request.distributionPackageRoot);
   report({ phase: "load-packages", state: "complete" });
+  report({ phase: "lower", state: "start" });
+  const programme = await prepareNodeNleProgramme({
+    projectRoot,
+    projectFile,
+    project,
+    facets,
+    resources: nodeFileProgrammeResources(resources),
+    ...(request.signal === undefined ? {} : { signal: request.signal }),
+    onMediaProgress: (completed, total) => report({ phase: "media", completed, total }),
+  });
+  const closed = await closePreparedNleProgramme({
+    programme,
+    resources,
+    ...(request.pictureTarget === undefined ? {} : { pictureTarget: request.pictureTarget }),
+    ...(request.quality === undefined ? {} : { quality: request.quality }),
+    ...(request.frameRate === undefined ? {} : { frameRate: request.frameRate }),
+    ...(request.resolution === undefined ? {} : { resolution: request.resolution }),
+    ...(pictureRange === undefined ? {} : { range: pictureRange }),
+    ...(request.signal === undefined ? {} : { signal: request.signal }),
+    ...(request.html === undefined ? {} : { html: request.html }),
+    ...(request.media === undefined ? {} : { media: request.media }),
+  });
+  report({ phase: "lower", state: "complete" });
+  return {
+    projectFile,
+    ...closed,
+  };
+}
+
+/**
+ * Export one persistent NLE snapshot as a whole local MP4.
+ *
+ * Opening, package activation and byte staging are Host work. NLE→AVIR→terminal lowering remains
+ * deterministic and in-memory; the temporary ResourceStore and rendered products are discarded
+ * after the final file is atomically linked into place.
+ */
+async function exportNleProgramme(
+  request: LocalNleExportRequest,
+  environment: LocalNleExportEnvironment = {},
+  programme?: PreparedNodeNleProgramme,
+): Promise<LocalNleExportResult> {
+  const outputFile = resolve(request.outputFile);
+  assert(extname(outputFile).toLowerCase() === ".mp4", "Local NLE export currently requires an .mp4 output file.");
+  assert(request.pictureTarget === undefined || request.pictureTarget === "html"
+    || request.pictureTarget === "gpu-composition",
+  "Local NLE export Picture target must be html or gpu-composition.");
+  assert(!(await stat(outputFile).then(() => true, () => false)), `Output ${outputFile} already exists.`);
+  request.signal?.throwIfAborted();
+  const report = (progress: LocalNleExportProgress): void => request.onProgress?.(progress);
 
   await mkdir(dirname(outputFile), { recursive: true });
   const temporaryDirectory = await mkdtemp(join(dirname(outputFile), ".hypit-nle-export-"));
-  const resources = new FileResourceStore(join(temporaryDirectory, "resources"));
+  const products = new FileResourceStore(join(temporaryDirectory, "resources"));
+  const resources = programme === undefined
+    ? products
+    : createNleProgrammeResourceOverlay(programme.resources, products);
   try {
-    const totalMedia = uniqueMediaAssetCount(project);
-    let completedMedia = 0;
-    report({ phase: "media", completed: 0, total: totalMedia });
-    const resolveMedia = await createNodeNleMediaResolver(projectRoot, projectFile, project, async path => {
-      const resolved = await resolveMediaAssetMediaFile(path, async (file, mediaType) => {
-        request.signal?.throwIfAborted();
-        return await resources.putStream(
-          createReadStream(file, request.signal === undefined ? {} : { signal: request.signal }),
-          mediaType,
-          request.signal === undefined ? {} : { signal: request.signal },
-        );
-      });
-      completedMedia += 1;
-      report({ phase: "media", completed: completedMedia, total: totalMedia });
-      return resolved;
-    });
-
-    request.signal?.throwIfAborted();
-    report({ phase: "lower", state: "start" });
-    const host = createNleTerminalLinkHostFromFacets(facets, resolveMedia);
-    const plan = lowerNleProjectToHtmlVideoDeliveryPlan(
-      project,
-      host,
-      output,
-      htmlVideoDeliverySpec(request.quality ?? "standard"),
-    );
-    report({ phase: "lower", state: "complete" });
+    const prepared = programme === undefined
+      ? await prepareLocalNleProgramme(request, products, report, request.range)
+      : await (async (): Promise<PreparedLocalNleProgramme> => {
+          report({ phase: "lower", state: "start" });
+          const closed = await closePreparedNleProgramme({
+            programme,
+            resources,
+            ...(request.pictureTarget === undefined ? {} : { pictureTarget: request.pictureTarget }),
+            ...(request.quality === undefined ? {} : { quality: request.quality }),
+            ...(request.frameRate === undefined ? {} : { frameRate: request.frameRate }),
+            ...(request.resolution === undefined ? {} : { resolution: request.resolution }),
+            ...(request.range === undefined ? {} : { range: request.range }),
+            ...(request.signal === undefined ? {} : { signal: request.signal }),
+            ...(request.html === undefined ? {} : { html: request.html }),
+            ...(request.media === undefined ? {} : { media: request.media }),
+          });
+          report({ phase: "lower", state: "complete" });
+          return { projectFile: programme.projectFile, ...closed };
+        })();
+    const plan = createHtmlVideoDeliveryPlan(prepared.visual, prepared.audio, prepared.delivery,
+      prepared.audioRange === undefined ? {} : { audioRange: prepared.audioRange });
 
     const onPictureProgress = (detail: HtmlRasterProgress): void => {
       report({ phase: "picture", state: "progress", detail });
@@ -271,6 +392,7 @@ export async function exportLocalNleProject(
         resources,
         html: {
           ...request.html,
+          ...(request.pictureTarget === "gpu-composition" ? { webGpu: "required" as const } : {}),
           ...(request.signal === undefined ? {} : { signal: request.signal }),
           onProgress: onPictureProgress,
         },
@@ -290,13 +412,300 @@ export async function exportLocalNleProject(
     report({ phase: "publish", state: "complete" });
     report({ phase: "complete", outputFile });
     return {
-      projectFile,
+      projectFile: prepared.projectFile,
       outputFile,
       frameRate: structuredClone(rendered.frameRate),
       frameCount: rendered.frameCount,
       canvas: structuredClone(rendered.canvas),
     };
   } finally {
-    await rm(temporaryDirectory, { recursive: true, force: true });
+    await rm(temporaryDirectory, { recursive: true, force: true, maxRetries: 3, retryDelay: 20 });
   }
+}
+
+export async function exportLocalNleProject(
+  request: LocalNleExportRequest,
+  environment: LocalNleExportEnvironment = {},
+): Promise<LocalNleExportResult> {
+  return await exportNleProgramme(request, environment);
+}
+
+/** Deliver one already linked Programme generation without reopening Project inputs. */
+export async function exportPreparedNleProgramme(
+  programme: PreparedNodeNleProgramme,
+  request: PreparedNleExportRequest,
+  environment: LocalNleExportEnvironment = {},
+): Promise<LocalNleExportResult> {
+  return await exportNleProgramme({
+    ...request,
+    projectRoot: programme.projectRoot,
+    projectFile: programme.projectFile,
+    project: programme.project,
+  }, environment, programme);
+}
+
+/** Capture sparse absolute Programme frames without encoding an intermediate video. */
+async function captureNleFrames(
+  request: LocalNleFrameCaptureRequest,
+  environment: LocalNleFrameCaptureEnvironment = {},
+  programme?: PreparedNodeNleProgramme,
+): Promise<LocalNleFrameCaptureResult> {
+  const toDirectory = resolve(request.toDirectory);
+  assert(request.pictureTarget === undefined || request.pictureTarget === "html"
+    || request.pictureTarget === "gpu-composition",
+  "Local NLE frame capture Picture target must be html or gpu-composition.");
+  assert(!(await stat(toDirectory).then(() => true, () => false)),
+    `Destination ${toDirectory} already exists.`);
+  await mkdir(dirname(toDirectory), { recursive: true });
+  const temporaryDirectory = await mkdtemp(join(dirname(toDirectory), ".hypit-nle-frames-"));
+  const products = new FileResourceStore(join(temporaryDirectory, "resources"));
+  const resources = programme === undefined
+    ? products
+    : createNleProgrammeResourceOverlay(programme.resources, products);
+  const staging = join(temporaryDirectory, "output");
+  const report = (progress: LocalNleExportProgress): void => request.onProgress?.(progress);
+  const selection = sparseFrameSpan(request.frames);
+  try {
+    const prepared = programme === undefined
+      ? await prepareLocalNleProgramme(request, products, report, selection)
+      : await (async (): Promise<PreparedLocalNleProgramme> => {
+          report({ phase: "lower", state: "start" });
+          const closed = await closePreparedNleProgramme({
+            programme,
+            resources,
+            ...(request.pictureTarget === undefined ? {} : { pictureTarget: request.pictureTarget }),
+            ...(request.quality === undefined ? {} : { quality: request.quality }),
+            ...(request.frameRate === undefined ? {} : { frameRate: request.frameRate }),
+            ...(request.resolution === undefined ? {} : { resolution: request.resolution }),
+            range: selection,
+            ...(request.signal === undefined ? {} : { signal: request.signal }),
+            ...(request.html === undefined ? {} : { html: request.html }),
+            ...(request.media === undefined ? {} : { media: request.media }),
+          });
+          report({ phase: "lower", state: "complete" });
+          return { projectFile: programme.projectFile, ...closed };
+        })();
+    const relativeFrames = request.frames.map(frame => frame - selection.startFrame);
+    report({ phase: "picture", state: "start" });
+    const frames = await (environment.rasterizeFrames ?? rasterizeHtmlFrames)({
+      program: prepared.visual,
+      picture: {
+        colorPrimaries: "bt709",
+        colorTransfer: "srgb",
+        colorMatrix: "rgb",
+        colorRange: "full",
+        bitDepth: 8,
+        alpha: { mode: "opaque", matte: "#000000" },
+      },
+      frames: relativeFrames,
+    }, {
+      resources,
+      ...request.html,
+      ...(request.pictureTarget === "gpu-composition" ? { webGpu: "required" as const } : {}),
+      ...(request.signal === undefined ? {} : { signal: request.signal }),
+      onProgress: detail => report({ phase: "picture", state: "progress", detail }),
+    });
+    report({ phase: "picture", state: "complete" });
+    await mkdir(staging);
+    const files: Array<{ readonly frame: number; readonly file: string }> = [];
+    for (const image of frames.frames) {
+      request.signal?.throwIfAborted();
+      const bytes = await resources.get(image.artifact.resource,
+        request.signal === undefined ? {} : { signal: request.signal });
+      assert(bytes !== undefined,
+        `Captured frame ${image.frame} resource ${image.artifact.resource} is unavailable.`);
+      const absoluteFrame = image.frame + selection.startFrame;
+      const name = `frame-${String(absoluteFrame).padStart(9, "0")}.png`;
+      await writeFile(join(staging, name), bytes, { flag: "wx" });
+      files.push({ frame: absoluteFrame, file: join(toDirectory, name) });
+    }
+    await rename(staging, toDirectory);
+    return {
+      projectFile: prepared.projectFile,
+      frameRate: structuredClone(prepared.visual.frameRate),
+      frameCount: prepared.programmeFrameCount,
+      canvas: structuredClone(prepared.visual.canvas),
+      frames: files,
+    };
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true, maxRetries: 3, retryDelay: 20 });
+  }
+}
+
+export async function captureLocalNleFrames(
+  request: LocalNleFrameCaptureRequest,
+  environment: LocalNleFrameCaptureEnvironment = {},
+): Promise<LocalNleFrameCaptureResult> {
+  return await captureNleFrames(request, environment);
+}
+
+/** Capture sparse evidence from one already linked Programme generation. */
+export async function capturePreparedNleFrames(
+  programme: PreparedNodeNleProgramme,
+  request: PreparedNleFrameCaptureRequest,
+  environment: LocalNleFrameCaptureEnvironment = {},
+): Promise<LocalNleFrameCaptureResult> {
+  return await captureNleFrames({
+    ...request,
+    projectRoot: programme.projectRoot,
+    projectFile: programme.projectFile,
+    project: programme.project,
+  }, environment, programme);
+}
+
+/**
+ * Close one focused Programme once, then derive both a review clip and explicit frame evidence.
+ *
+ * Package loading, Media binding, NLE→AVIR lowering and Terminal acquisition are shared by both
+ * products. The bundle is invocation-local review evidence: it never becomes an NLE fact, Media
+ * Asset, Result or persistent cache entry.
+ */
+async function reviewNleProgramme(
+  request: LocalNleReviewRequest,
+  environment: LocalNleReviewEnvironment = {},
+  programme?: PreparedNodeNleProgramme,
+): Promise<LocalNleReviewResult> {
+  const toDirectory = resolve(request.toDirectory);
+  assert(request.pictureTarget === undefined || request.pictureTarget === "html"
+    || request.pictureTarget === "gpu-composition",
+  "Local NLE review Picture target must be html or gpu-composition.");
+  assert(!(await stat(toDirectory).then(() => true, () => false)),
+    `Destination ${toDirectory} already exists.`);
+  assertFrameSpan(request.range);
+  sparseFrameSpan(request.frames);
+  assert(request.frames[0]! >= request.range.startFrame
+    && request.frames.at(-1)! < request.range.endFrameExclusive,
+  "NLE review frames must lie inside the selected review range.");
+
+  await mkdir(dirname(toDirectory), { recursive: true });
+  const temporaryDirectory = await mkdtemp(join(dirname(toDirectory), ".hypit-nle-review-"));
+  const products = new FileResourceStore(join(temporaryDirectory, "resources"));
+  const resources = programme === undefined
+    ? products
+    : createNleProgrammeResourceOverlay(programme.resources, products);
+  const staging = join(temporaryDirectory, "bundle");
+  const stagingFrames = join(staging, "frames");
+  const report = (progress: LocalNleExportProgress): void => request.onProgress?.(progress);
+  try {
+    const prepared = programme === undefined
+      ? await prepareLocalNleProgramme(request, products, report, request.range)
+      : await (async (): Promise<PreparedLocalNleProgramme> => {
+          report({ phase: "lower", state: "start" });
+          const closed = await closePreparedNleProgramme({
+            programme,
+            resources,
+            ...(request.pictureTarget === undefined ? {} : { pictureTarget: request.pictureTarget }),
+            ...(request.quality === undefined ? {} : { quality: request.quality }),
+            ...(request.frameRate === undefined ? {} : { frameRate: request.frameRate }),
+            ...(request.resolution === undefined ? {} : { resolution: request.resolution }),
+            range: request.range,
+            ...(request.signal === undefined ? {} : { signal: request.signal }),
+            ...(request.html === undefined ? {} : { html: request.html }),
+            ...(request.media === undefined ? {} : { media: request.media }),
+          });
+          report({ phase: "lower", state: "complete" });
+          return { projectFile: programme.projectFile, ...closed };
+        })();
+    const relativeFrames = request.frames.map(frame => frame - request.range.startFrame);
+
+    report({ phase: "picture", state: "start" });
+    const evidence = await (environment.rasterizeFrames ?? rasterizeHtmlFrames)({
+      program: prepared.visual,
+      picture: {
+        colorPrimaries: "bt709",
+        colorTransfer: "srgb",
+        colorMatrix: "rgb",
+        colorRange: "full",
+        bitDepth: 8,
+        alpha: { mode: "opaque", matte: "#000000" },
+      },
+      frames: relativeFrames,
+    }, {
+      resources,
+      ...request.html,
+      ...(request.pictureTarget === "gpu-composition" ? { webGpu: "required" as const } : {}),
+      ...(request.signal === undefined ? {} : { signal: request.signal }),
+      onProgress: detail => report({ phase: "picture", state: "progress", detail }),
+    });
+    report({ phase: "picture", state: "complete" });
+
+    await mkdir(stagingFrames, { recursive: true });
+    const files: Array<{ readonly frame: number; readonly file: string }> = [];
+    for (const image of evidence.frames) {
+      request.signal?.throwIfAborted();
+      const bytes = await resources.get(image.artifact.resource,
+        request.signal === undefined ? {} : { signal: request.signal });
+      assert(bytes !== undefined,
+        `Captured review frame ${image.frame} resource ${image.artifact.resource} is unavailable.`);
+      const absoluteFrame = image.frame + request.range.startFrame;
+      const name = `frame-${String(absoluteFrame).padStart(9, "0")}.png`;
+      await writeFile(join(stagingFrames, name), bytes, { flag: "wx" });
+      files.push({ frame: absoluteFrame, file: join(toDirectory, "frames", name) });
+    }
+
+    const plan = createHtmlVideoDeliveryPlan(prepared.visual, prepared.audio, prepared.delivery,
+      prepared.audioRange === undefined ? {} : { audioRange: prepared.audioRange });
+    const onPictureProgress = (detail: HtmlRasterProgress): void => {
+      report({ phase: "picture", state: "progress", detail });
+    };
+    const injected = environment.createExecutor?.(resources, {
+      ...(request.signal === undefined ? {} : { signal: request.signal }),
+      onPictureProgress,
+    });
+    const executor = injected ?? createLocalNleDeliveryExecutor({
+      resources,
+      html: {
+        ...request.html,
+        ...(request.pictureTarget === "gpu-composition" ? { webGpu: "required" as const } : {}),
+        ...(request.signal === undefined ? {} : { signal: request.signal }),
+        onProgress: onPictureProgress,
+      },
+      media: {
+        ...request.media,
+        ...(request.signal === undefined ? {} : { signal: request.signal }),
+      },
+    });
+    const rendered = await executeHtmlVideoDeliveryPlan(
+      plan,
+      observedExecutor(executor, report, request.signal),
+    );
+    const videoFile = join(toDirectory, "review.mp4");
+    await publishArtifact(resources, rendered, temporaryDirectory, join(staging, "review.mp4"), request.signal);
+    await rename(staging, toDirectory);
+    report({ phase: "complete", outputFile: videoFile });
+    return {
+      projectFile: prepared.projectFile,
+      toDirectory,
+      videoFile,
+      frameRate: structuredClone(rendered.frameRate),
+      programmeFrameCount: prepared.programmeFrameCount,
+      reviewFrameCount: rendered.frameCount,
+      range: structuredClone(request.range),
+      canvas: structuredClone(rendered.canvas),
+      frames: files,
+    };
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true, maxRetries: 3, retryDelay: 20 });
+  }
+}
+
+export async function reviewLocalNleProject(
+  request: LocalNleReviewRequest,
+  environment: LocalNleReviewEnvironment = {},
+): Promise<LocalNleReviewResult> {
+  return await reviewNleProgramme(request, environment);
+}
+
+/** Derive focused review evidence from an already linked Programme generation. */
+export async function reviewPreparedNleProgramme(
+  programme: PreparedNodeNleProgramme,
+  request: PreparedNleReviewRequest,
+  environment: LocalNleReviewEnvironment = {},
+): Promise<LocalNleReviewResult> {
+  return await reviewNleProgramme({
+    ...request,
+    projectRoot: programme.projectRoot,
+    projectFile: programme.projectFile,
+    project: programme.project,
+  }, environment, programme);
 }

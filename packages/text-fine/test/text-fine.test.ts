@@ -9,14 +9,14 @@ import {
   createNleAuthoringHostFromFacets,
   createNleProject,
   findNleItem,
-  nleLinearSourceTime,
+  nleLinearTimeMapping,
 } from "@hypit/nle";
 import { exactTemporalValue } from "@hypit/temporal/algebra";
 
 import { hypitPackage } from "../src/activation.js";
 import {
   textFineNleComponentSymbol,
-  textFineNleHtmlVideoResolver,
+  textFineNleAudiovisualResolver,
   textFineNleResolver,
   type TextFineNleParameters,
 } from "../src/index.js";
@@ -77,7 +77,7 @@ function project() {
       kind: "present", source: "component",
       start: at(0),
       duration: at(3),
-      sourceTime: nleLinearSourceTime(at(3)),
+      sourceTime: nleLinearTimeMapping(at(3)),
       enabled: true,
       component: textFineNleComponentSymbol,
       parameters: canonicalize(parameters),
@@ -89,10 +89,10 @@ function project() {
 test("Fine Text resolves rich Flow text as an ordinary Picture Component", () => {
   const item = findNleItem(project(), "headline").item;
   if ((item.kind !== "present" || item.source !== "component")) throw new Error("Fine Text fixture changed Item kind.");
-  const resolved = textFineNleResolver.resolve(item, { project: project(), track: project().tracks[0]! });
+  const resolved = textFineNleResolver.resolve(item, { project: project(), track: project().tracks[0]!, media: {} });
   assert.equal(resolved.source.outputs.picture?.type.name, pictureType.name);
   assert.equal(resolved.source.outputs.picture?.kind, "signal");
-  assert.ok(hypitPackage.facets.some((facet) => facet.abi === "hypit.html-video-nle-package@1"));
+  assert.ok(hypitPackage.facets.some((facet) => facet.kind === "hypit.nle-audiovisual-package"));
 });
 
 test("Fine Text package authors document, style and local placement through item.replace", () => {
@@ -132,10 +132,13 @@ test("Fine Text lays rich runs on an authored path without a Composition interme
       { atFrame: 45, startMarginPx: 120, easing: "ease-in-out" },
     ] },
   } }) };
-  const terminal = textFineNleHtmlVideoResolver.resolve(pathItem, {
+  const terminal = textFineNleAudiovisualResolver.resolve(pathItem, {
     project: selectedProject,
     track: selectedProject.tracks[0]!,
-  }, textFineNleResolver.resolve(pathItem, { project: selectedProject, track: selectedProject.tracks[0]! }));
+    media: {},
+  }, textFineNleResolver.resolve(pathItem, {
+    project: selectedProject, track: selectedProject.tracks[0]!, media: {},
+  }));
   if (terminal.html?.implementation.kind !== "program") throw new Error("Fine Text terminal is not a Program.");
   const visual = readHtmlVisual(terminal.html.implementation.program);
   assert.match(visual.html, /data-hypit-text-fine-path-guide/u);

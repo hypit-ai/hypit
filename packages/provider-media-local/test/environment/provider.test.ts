@@ -10,11 +10,9 @@ import type { MediaAudioStream, MediaInspection, MediaVideoStream, MuxedMedia, R
 import { assertSpeechEvidenceAudioIdentity, speechEvidenceCapabilities, speechEvidenceTypes } from "@hypit/speech-evidence";
 import type { SpeechEvidenceAudio } from "@hypit/speech-evidence";
 import assert from "node:assert/strict";
-import {
-  EndpointRegistry,
-} from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
 import { MemoryResourceStore } from "@hypit/resource-store";
-import type { EndpointRegistration } from "@hypit/executor";
+import type { EndpointRegistration } from "@hypit/endpoint";
 import type { ImmediateEndpointHandler } from "@hypit/endpoint";
 import { installEndpoint } from "@hypit/endpoint";
 import { audioProgramCapabilities, audioProgramGraphFromMediaSources, sealAudioProgram } from "@hypit/audio-program";
@@ -23,7 +21,9 @@ import { audioGainControlProcess, audioGainProcess } from "@hypit/audio-gain";
 import { preservePitch } from "@hypit/audio-preserve-pitch";
 import { mediaDeliveryCapabilities } from "@hypit/media-delivery";
 import { assertBlobRef, canonicalize } from "@hypit/protocol";
-import type { CapabilityRef, CanonicalValue, Need, TypeRef } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
+import type { CapabilityRef, TypeRef } from "@hypit/module";
+import type { Need } from "@hypit/generation-build";
 import { identityTemporalMap, sealTemporalMap } from "@hypit/temporal";
 import type { TemporalMap, TemporalMapPiece, TemporalRange } from "@hypit/temporal";
 import { frameRangeFixture, frameSamplingMapFixture } from "../../../../test/exact-temporal-fixture.js";

@@ -1,0 +1,53 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "world-neutral",
+  "name": "中性",
+  "using": {
+    "module": {
+      "name": "@hypit/scene-environment"
+    },
+    "name": "world-environment"
+  },
+  "resources": {},
+  "parameters": {
+    "world": {
+      "sky": {
+        "top": "#151820",
+        "horizon": "#303640"
+      },
+      "ground": {
+        "visible": true,
+        "color": "#25282e",
+        "opacity": 1
+      },
+      "atmosphere": {
+        "fogColor": "#252a33",
+        "fogDensity": 0.006
+      },
+      "lighting": {
+        "ambient": {
+          "sky": "#dce5f2",
+          "ground": "#20232a",
+          "intensity": 0.65
+        },
+        "key": {
+          "color": "#ffe6d0",
+          "intensity": 3.6,
+          "azimuth": -35,
+          "elevation": 48,
+          "shadows": true,
+          "softness": 2.5
+        },
+        "fill": {
+          "color": "#95adcf",
+          "intensity": 0.35
+        },
+        "rim": {
+          "color": "#a9c8ff",
+          "intensity": 0.9
+        }
+      },
+      "exposure": 0.98
+    }
+  }
+}

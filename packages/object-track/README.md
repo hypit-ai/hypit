@@ -8,7 +8,7 @@ authority, analyzer identity, smoothing policy or Timeline coordinate. The Media
 Representation binding maps the document's local domain to media time and declares the picture
 space.
 
-The package owns the `@hypit/object-track@1#ObjectTrackDocument` Representation reader. It checks
+The package owns the `@hypit/object-track#ObjectTrackDocument` Representation reader. It checks
 that the opened document domain is exactly the temporal binding target and that the representation
 is bound to media display coordinates. Importing or opening the file never runs detection or
 tracking.

@@ -1,6 +1,6 @@
 import { createGenerationCanvasPresentationFacet, type GenerationCanvasNodePresentation } from "@hypit/generation-canvas";
-import { createFieldModelGenerationNode } from "@hypit/generation/model-fields/graph";
-import { createGenerationNodePackageFacet } from "@hypit/hypit/generation-graph";
+import { createFieldModelGenerationNode } from "@hypit/generation-model/model-fields/graph";
+import { createGenerationNodePackageFacet } from "@hypit/hypit/generation/graph";
 import { pixverseEndpointsByModel, pixverseModuleRef, pixverseModels } from "./index.js";
 
 const label = { "pixverse-v6": "PixVerse V6", "pixverse-c1": "PixVerse C1" } as const;

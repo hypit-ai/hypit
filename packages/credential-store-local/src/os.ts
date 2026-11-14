@@ -1,16 +1,15 @@
 import { execFile } from "node:child_process";
 import { windowsCredential } from "./windows.js";
 
-import { verifyCredentialRef } from "@hypit/runtime-local/extension";
+import { verifyCredentialRef } from "@hypit/execution-environment-local/extension";
 import type {
   CredentialRef,
   CredentialValue,
   WritableCredentialStore,
-} from "@hypit/runtime-local/extension";
+} from "@hypit/execution-environment-local/extension";
 
 export const osCredentialStoreModuleRef = {
   name: "@hypit/credential-store-local",
-  version: "1",
 } as const;
 
 export type OsCredentialReader = (service: string, account: string) => Promise<string | undefined>;

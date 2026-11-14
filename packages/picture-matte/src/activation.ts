@@ -1,3 +1,5 @@
+import { createModuleFacet } from "@hypit/module";
+import { createGenerationModuleFacet } from "@hypit/generation-build";
 import { createProducerPackageFacet } from "@hypit/producer";
 import { createRefinementPackageFacet } from "@hypit/refinement";
 import { createNleAuthoringFacet, createNlePackageFacet } from "@hypit/nle";
@@ -7,9 +9,8 @@ import { pictureMatteManifest } from "./manifest.js";
 import { pictureMatteNleAuthoring, pictureMatteNleResolver } from "./nle.js";
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [{ manifest: pictureMatteManifest }],
   facets: [
+    createModuleFacet(pictureMatteManifest), createGenerationModuleFacet(pictureMatteManifest),
     createProducerPackageFacet(pictureMatteComponent.producers),
     createRefinementPackageFacet(pictureMatteComponent.refinements),
     createNlePackageFacet({ mattes: [pictureMatteNleResolver] }),

@@ -11,32 +11,24 @@ import {
   planBuild,
   sealAuthorGraph,
   verifyRecordStructure,
-} from "@hypit/kernel";
-import {
-  ProducerRegistry,
-  Executor,
-  EndpointRegistry,
-} from "@hypit/executor";
-import { InProcessBuildScheduler } from "@hypit/runtime";
-import type {
-  CapabilityRef,
-  AuthorGraph,
-  LinkedProgram,
-  ModuleManifest,
-  ProducerRef,
-  TypeRef,
-} from "@hypit/protocol";
-import type { BuildView } from "@hypit/kernel";
+} from "@hypit/generation-build";
+import { ProducerRegistry, Executor } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
+import { InProcessBuildScheduler } from "@hypit/generation-runtime";
+import type { CapabilityRef, TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
+import type { AuthorGraph, LinkedProgram } from "@hypit/generation-build";
+import type { BuildView } from "@hypit/generation-build";
 import {
   RefinementError,
   RefinementRegistry,
-  refineRecord,
   refineValue,
 } from "@hypit/refinement";
 
-const contractModule = { name: "example.measurement-contract", version: "1.0.0" } as const;
-const sensorModule = { name: "example.sensor", version: "1.0.0" } as const;
-const reportModule = { name: "example.report", version: "1.0.0" } as const;
+const contractModule = { name: "example.measurement-contract" } as const;
+const sensorModule = { name: "example.sensor" } as const;
+const reportModule = { name: "example.report" } as const;
 
 const measurementType = { module: contractModule, name: "Measurement" } satisfies TypeRef;
 const reportType = { module: reportModule, name: "Report" } satisfies TypeRef;
@@ -56,10 +48,8 @@ async function runBuild(executor: Executor, state: BuildView) {
   }]))[0]!;
 }
 
-const contractManifest: ModuleManifest = {
-  format: "hypit.module@1",
+const contractManifest: GenerationModuleDefinition = {
   name: contractModule.name,
-  version: contractModule.version,
   dependencies: [],
   types: [measurementType.name],
   capabilities: [],
@@ -68,10 +58,8 @@ const contractManifest: ModuleManifest = {
 
 const contractDependency = contractModule;
 
-const sensorManifest: ModuleManifest = {
-  format: "hypit.module@1",
+const sensorManifest: GenerationModuleDefinition = {
   name: sensorModule.name,
-  version: sensorModule.version,
   dependencies: [contractDependency],
   types: [],
   capabilities: [{ name: measurementCapability.name, returns: measurementType }],
@@ -89,10 +77,8 @@ const sensorManifest: ModuleManifest = {
   ],
 };
 
-const reportManifest: ModuleManifest = {
-  format: "hypit.module@1",
+const reportManifest: GenerationModuleDefinition = {
   name: reportModule.name,
-  version: reportModule.version,
   dependencies: [contractDependency],
   types: [reportType.name],
   capabilities: [],
@@ -254,7 +240,7 @@ test("authored values cross the Type owner's validation gate without carrying va
     value: ({ value: 10, unit: "ticks" }),
   });
   verifyRecordStructure(linked.closure, raw);
-  await refineRecord(raw, registry());
+  await refineValue(raw.type, raw.value, registry());
   verifyRecordStructure(linked.closure, raw);
 });
 

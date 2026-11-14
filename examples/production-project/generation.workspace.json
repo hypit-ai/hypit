@@ -2,7 +2,7 @@
   "format": "hypit.generation-workspace@1",
   "id": "launch-variation-workspace",
   "name": "Launch variation",
-  "revision": 142,
+  "revision": 146,
   "graph": {
     "path": "generation.graph.json"
   },
@@ -22,9 +22,9 @@
     "@hypit/fishaudio-speech"
   ],
   "viewport": {
-    "centerX": 1916,
-    "centerY": 149,
-    "zoom": 0.76
+    "centerX": 2377.6374099022246,
+    "centerY": 116.42690080555326,
+    "zoom": 0.6
   },
   "nodes": [
     {
@@ -98,6 +98,12 @@
       "name": "Seedance 2 Mini",
       "x": 982,
       "y": 911
+    },
+    {
+      "node": "node_mwbt6qc6_n4ny21",
+      "name": "Grok Imagine Video 1.5",
+      "x": 1466,
+      "y": 64
     }
   ],
   "outputs": []

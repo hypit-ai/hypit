@@ -1,27 +1,27 @@
 import { resolve } from "node:path";
 import {
-  createRuntimeEndpointAdapterFacet,
-  runtimeConfigExact,
-  runtimeConfigObject,
-  runtimeConfigPositiveInteger,
-  runtimeConfigString,
-} from "@hypit/runtime-local/extension";
+  createExecutionEnvironmentEndpointAdapterFacet,
+  executionEnvironmentConfigExact,
+  executionEnvironmentConfigObject,
+  executionEnvironmentConfigPositiveInteger,
+  executionEnvironmentConfigString,
+} from "@hypit/execution-environment-local/extension";
 
 import { createLocalWhisperXProvider, localWhisperXDefaults } from "./provider.js";
 import { localWhisperXProgram } from "./program.js";
 
-const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
+const localWhisperXRuntimeAdapter = createExecutionEnvironmentEndpointAdapterFacet({
   use: "@hypit/provider-whisperx-local",
   activate(context) {
     if (context.pool === undefined) throw new Error("WhisperX Provider Pool is required");
-    const config = runtimeConfigObject(context.config, "local WhisperX");
-    runtimeConfigExact(config, [
+    const config = executionEnvironmentConfigObject(context.config, "local WhisperX");
+    executionEnvironmentConfigExact(config, [
       "baseUrl", "expectedModel", "expectedDevice", "expectedCompute", "expectedBatchSize",
       "expectedServiceVersion", "expectedWhisperXVersion",
       "defaultConcurrency", "requestTimeoutMs", "maxResponseBytes",
       "serviceCommand", "alignmentLanguages", "modelCacheDirectory",
     ], "local WhisperX");
-    const baseUrl = runtimeConfigString(config.baseUrl, "WhisperX baseUrl");
+    const baseUrl = executionEnvironmentConfigString(config.baseUrl, "WhisperX baseUrl");
     if (baseUrl !== undefined) {
       const parsed = new URL(baseUrl);
       if (parsed.protocol !== "http:"
@@ -29,16 +29,16 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         throw new Error("local WhisperX Provider requires a loopback HTTP service");
       }
     }
-    const expectedModel = runtimeConfigString(config.expectedModel, "WhisperX expectedModel");
-    const expectedDevice = runtimeConfigString(config.expectedDevice, "WhisperX expectedDevice");
-    const expectedCompute = runtimeConfigString(config.expectedCompute, "WhisperX expectedCompute");
-    const expectedBatchSize = runtimeConfigPositiveInteger(config.expectedBatchSize, "WhisperX expectedBatchSize");
-    const expectedServiceVersion = runtimeConfigString(config.expectedServiceVersion, "WhisperX expectedServiceVersion");
-    const expectedWhisperXVersion = runtimeConfigString(config.expectedWhisperXVersion, "WhisperX expectedWhisperXVersion");
-    const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "WhisperX defaultConcurrency");
-    const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "WhisperX requestTimeoutMs");
-    const maxResponseBytes = runtimeConfigPositiveInteger(config.maxResponseBytes, "WhisperX maxResponseBytes");
-    const modelCacheDirectory = runtimeConfigString(config.modelCacheDirectory, "WhisperX modelCacheDirectory");
+    const expectedModel = executionEnvironmentConfigString(config.expectedModel, "WhisperX expectedModel");
+    const expectedDevice = executionEnvironmentConfigString(config.expectedDevice, "WhisperX expectedDevice");
+    const expectedCompute = executionEnvironmentConfigString(config.expectedCompute, "WhisperX expectedCompute");
+    const expectedBatchSize = executionEnvironmentConfigPositiveInteger(config.expectedBatchSize, "WhisperX expectedBatchSize");
+    const expectedServiceVersion = executionEnvironmentConfigString(config.expectedServiceVersion, "WhisperX expectedServiceVersion");
+    const expectedWhisperXVersion = executionEnvironmentConfigString(config.expectedWhisperXVersion, "WhisperX expectedWhisperXVersion");
+    const defaultConcurrency = executionEnvironmentConfigPositiveInteger(config.defaultConcurrency, "WhisperX defaultConcurrency");
+    const requestTimeoutMs = executionEnvironmentConfigPositiveInteger(config.requestTimeoutMs, "WhisperX requestTimeoutMs");
+    const maxResponseBytes = executionEnvironmentConfigPositiveInteger(config.maxResponseBytes, "WhisperX maxResponseBytes");
+    const modelCacheDirectory = executionEnvironmentConfigString(config.modelCacheDirectory, "WhisperX modelCacheDirectory");
     const alignmentLanguages = config.alignmentLanguages;
     if (alignmentLanguages !== undefined && (!Array.isArray(alignmentLanguages)
       || alignmentLanguages.some((item) => typeof item !== "string" || !/^[a-z]+$/u.test(item)))) {
@@ -95,7 +95,6 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
 });
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
   facets: [localWhisperXRuntimeAdapter],
 };
 

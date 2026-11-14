@@ -1,0 +1,119 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "ranking-jensen-broll-forty-years",
+  "media": {
+    "file": {
+      "path": "reference.mp4",
+      "mediaType": "video/mp4"
+    },
+    "interpretation": {
+      "domain": {
+        "duration": {
+          "ticks": "23",
+          "timeBase": {
+            "denominator": 10,
+            "numerator": 1
+          }
+        },
+        "id": "ranking-jensen-broll-forty-years:media"
+      },
+      "id": "ranking-jensen-broll-forty-years:media",
+      "picture": {
+        "interpretation": {
+          "codedHeight": 244,
+          "codedWidth": 244,
+          "picture": {
+            "alphaMode": "opaque",
+            "bitDepth": 8,
+            "colorMatrix": "bt709",
+            "colorPrimaries": "bt709",
+            "colorRange": "limited",
+            "colorTransfer": "bt709"
+          },
+          "rotationDegrees": 0,
+          "sampleAspectRatio": {
+            "denominator": 1,
+            "numerator": 1
+          }
+        },
+        "kind": "signal",
+        "map": {
+          "stages": [
+            {
+              "pieces": [
+                {
+                  "rate": {
+                    "denominator": 1,
+                    "numerator": 1
+                  },
+                  "sourceAtStart": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "target": {
+                    "end": {
+                      "ticks": "23",
+                      "timeBase": {
+                        "denominator": 10,
+                        "numerator": 1
+                      }
+                    },
+                    "start": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "denominator": 1,
+                        "numerator": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "source": {
+                "duration": {
+                  "ticks": "23",
+                  "timeBase": {
+                    "denominator": 10,
+                    "numerator": 1
+                  }
+                },
+                "id": "ranking-jensen-broll-forty-years:media:picture-source"
+              },
+              "target": {
+                "duration": {
+                  "ticks": "23",
+                  "timeBase": {
+                    "denominator": 10,
+                    "numerator": 1
+                  }
+                },
+                "id": "ranking-jensen-broll-forty-years:media"
+              }
+            }
+          ]
+        },
+        "presentationStart": {
+          "ticks": "0",
+          "timeBase": {
+            "denominator": 10240,
+            "numerator": 1
+          }
+        },
+        "sourceDomain": {
+          "duration": {
+            "ticks": "23",
+            "timeBase": {
+              "denominator": 10,
+              "numerator": 1
+            }
+          },
+          "id": "ranking-jensen-broll-forty-years:media:picture-source"
+        },
+        "streamIndex": 0
+      }
+    }
+  },
+  "representations": []
+}

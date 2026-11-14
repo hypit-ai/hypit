@@ -94,7 +94,8 @@ The module publishes two capability contracts:
 - `rasterize-visual`: `HtmlProgram` + `VisualDeliverySpec` + optional absolute `FrameSpan` ->
   `RenderedVisual`;
 - `rasterize-frames`: `HtmlProgram` + sRGB/full-range `FrameOutputPictureSpec` + selected absolute
-  frames -> typed PNG `FrameImages`.
+  frames -> typed PNG `FrameImages`; the picture requirement chooses an opaque matte or preserved
+  straight alpha.
 
 These contracts do not name a browser, FFmpeg, filesystem, machine or Provider. Direct and Provider-backed
 execution implementations may realize them differently while consuming the same programme.

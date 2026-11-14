@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { AuthorDeclarationRegistry } from "@hypit/author";
+import { AuthorDeclarationRegistry } from "@hypit/generation-authoring/author";
 import {
   bindPromptSlot,
   promptAuthorDeclarations,
@@ -44,7 +44,7 @@ test("Prompt choices and required slots are closed by their Template", () => {
 test("ordinary SVML authors Template, Preset and Render without an SVS frontend", async () => {
   const registry = new AuthorDeclarationRegistry();
   promptAuthorDeclarations.forEach((declaration) => registry.register(declaration));
-  const source = `module prompt from "@hypit/prompt@1"
+  const source = `module prompt from "@hypit/prompt"
 
 prompt.Template "shot" {
   fixed "base" { text: "Create a product shot." }

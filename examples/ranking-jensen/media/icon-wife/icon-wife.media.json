@@ -1,0 +1,35 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "icon-wife",
+  "media": {
+    "file": {
+      "path": "e6a9545c615c22aa4a1b320e723aa545.png",
+      "mediaType": "image/png"
+    },
+    "interpretation": {
+      "id": "icon-wife:media",
+      "picture": {
+        "interpretation": {
+          "codedHeight": 370,
+          "codedWidth": 316,
+          "picture": {
+            "alphaMode": "straight",
+            "bitDepth": 8,
+            "colorMatrix": "rgb",
+            "colorPrimaries": "bt709",
+            "colorRange": "full",
+            "colorTransfer": "srgb"
+          },
+          "rotationDegrees": 0,
+          "sampleAspectRatio": {
+            "denominator": 1,
+            "numerator": 1
+          }
+        },
+        "kind": "constant",
+        "streamIndex": 0
+      }
+    }
+  },
+  "representations": []
+}

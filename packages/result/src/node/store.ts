@@ -2,7 +2,8 @@ import { createReadStream } from "node:fs";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 
-import { assertOrderedBuildId, buildIdCreatedAt, compareCodeUnits } from "@hypit/protocol";
+import { compareCodeUnits } from "@hypit/protocol";
+import { assertOrderedBuildId, buildIdCreatedAt } from "@hypit/generation-build";
 import {
   decodeBuildResultJson,
   decodeFinishedBuildResult,

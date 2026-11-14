@@ -1,0 +1,52 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "world-clear-day",
+  "name": "晴日",
+  "using": {
+    "module": {
+      "name": "@hypit/scene-environment"
+    },
+    "name": "world-environment"
+  },
+  "resources": {},
+  "parameters": {
+    "world": {
+      "sky": {
+        "top": "#6295c4",
+        "horizon": "#d8e6ed"
+      },
+      "ground": {
+        "visible": true,
+        "color": "#879083",
+        "opacity": 1
+      },
+      "atmosphere": {
+        "fogColor": "#c8d7df",
+        "fogDensity": 0.0035
+      },
+      "lighting": {
+        "ambient": {
+          "sky": "#d9ecff",
+          "ground": "#8d9385",
+          "intensity": 2.1
+        },
+        "key": {
+          "color": "#fff1d4",
+          "intensity": 5.1,
+          "azimuth": -42,
+          "elevation": 52,
+          "shadows": true
+        },
+        "fill": {
+          "color": "#a9c9e8",
+          "intensity": 1.5
+        },
+        "rim": {
+          "color": "#e8f3ff",
+          "intensity": 0.65
+        }
+      },
+      "exposure": 1.08
+    }
+  }
+}

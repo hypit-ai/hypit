@@ -1,8 +1,11 @@
 import { htmlProgramModuleRef, htmlProgramSchema, htmlProgramTypes } from "@hypit/html-program";
 import { audioProgramModuleRef, audioProgramSchema, audioProgramTypes } from "@hypit/audio-program";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import type { ValueSchema } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
 
-export const htmlDocumentModuleRef = { name: "@hypit/html-document", version: "1" } as const;
+export const htmlDocumentModuleRef = { name: "@hypit/html-document" } as const;
 export const htmlDocumentTypes = {
   document: { module: htmlDocumentModuleRef, name: "HtmlDocument" },
 } satisfies Record<string, TypeRef>;
@@ -17,8 +20,7 @@ export const htmlDocumentSchema: ValueSchema = {
     audio: { schema: audioProgramSchema },
   },
 };
-export const htmlDocumentManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const htmlDocumentManifest: GenerationModuleDefinition = {
   ...htmlDocumentModuleRef,
   dependencies: [
     htmlProgramModuleRef,

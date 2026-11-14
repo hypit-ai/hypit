@@ -39,7 +39,7 @@ spelling and interpolation; Scene Core owns neither a central keyframe schema
 nor an easing catalogue.
 
 `lowerScenePerformance()` resolves every enabled Item through an explicitly
-assembled `hypit.scene-package@1` Host. Missing and duplicate Behavior symbols
+assembled `hypit.scene-package` Host. Missing and duplicate Behavior symbols
 fail. The resulting `SceneProgram` is disposable execution state, never saved
 to the Scene file and never used as Undo authority. `evaluateSceneProgramAt()`
 starts from base states, evaluates the active Behavior for each subject, and
@@ -65,7 +65,7 @@ Scene Core owns Transform, Pose, Lens, exact Performance placement and subject
 references. It deliberately does not interpret `SceneEnvironment.parameters`,
 `SceneObject.parameters`, or `ScenePerformanceItem.parameters`.
 
-An installed package may contribute a `hypit.scene-authoring@1` Facet for one
+An installed package may contribute a `hypit.scene-authoring` Facet for one
 exact Environment, Object, or Behavior symbol. Its `inspect` function projects
 the package's own canonical value, and its `edit` function interprets an opaque
 canonical operation. `SceneAuthoringHost` converts the returned value into an
@@ -79,10 +79,12 @@ missing or duplicate authoring owners instead of inferring schemas from package
 names or parameter keys.
 
 Project-owned models, rigs, motions and environment resources live outside
-`media/`, conventionally under `assets/scene/`. A Scene Object refers to one
+`media/`, conventionally under the Scene owner's `scenes/assets/` collection. A Scene Object refers to one
 explicit `hypit.scene-asset@1` document from its package-owned parameters; the
 asset document in turn names its files relative to itself. Neither Scene nor
-the Workbench discovers assets by scanning a directory.
+the Workbench infers use from a directory scan. A Project Host may discover
+`scenes/assets/**/*.scene-asset.json` for navigation, but only an explicit
+Scene, Library or package-owned reference establishes a relationship.
 
 ```json
 {
@@ -90,7 +92,7 @@ the Workbench discovers assets by scanning a directory.
   "id": "standard-male",
   "name": "男性 · 标准",
   "using": {
-    "module": { "name": "@project/scene-assets", "version": "1" },
+    "module": { "name": "@project/scene-assets" },
     "name": "humanoid-character"
   },
   "resources": {
@@ -100,7 +102,12 @@ the Workbench discovers assets by scanning a directory.
 }
 ```
 
-The example asset library under `examples/assets/scene/` contains generated
+Scene and Library references may cross owner directories with `..`; the Node
+Host resolves them against the referring document and rejects any path that
+leaves the selected Project Boundary. Files owned by one Scene Asset remain
+confined to that Asset bundle.
+
+The example asset library under `examples/scenes/assets/` contains generated
 low-poly mesh assets. Its `library.scene-library.json` declares the Workbench collection
 tree, entry membership and search tags. Collection identities such as
 `characters`, `furniture` or a project-specific grouping have no Core meaning;
@@ -116,6 +123,14 @@ runs the generator; that single action writes the glTF, the corresponding
 then resolves every Library reference and every declared resource, and checks
 that the people presets retain their declared anthropometric basis. This avoids
 maintaining a model and its Library card as two unrelated edits.
+
+The Node port contributes independent Project Object owners for `hypit.scene@1`,
+`hypit.scene-library@1` and `hypit.scene-asset@1`. Scene Projects may be placed
+anywhere inside the selected Project Boundary. The Scene owner discovers them
+without defining a project singleton; the Library and Asset owners conventionally
+discover their private documents under `scenes/`, and explicit references remain
+valid outside that default discovery location. These owners publish no Bench or
+central asset index.
 
 Library Collections and search tags have separate jobs. A Collection controls
 where a card is rendered; a tag only makes that card searchable. In the example
@@ -140,7 +155,7 @@ const project = createSceneProject({
   id: "shot",
   name: "Shot",
   environment: {
-    using: { module: { name: "@project/environment", version: "1" }, name: "world" },
+    using: { module: { name: "@project/environment" }, name: "world" },
     parameters: {},
   },
 });

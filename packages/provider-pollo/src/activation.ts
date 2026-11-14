@@ -1,21 +1,21 @@
 import {
-  createRuntimeEndpointAdapterFacet,
-  runtimeConfigCredentialRef,
-  runtimeConfigActionLimits,
-  runtimeConfigExact,
-  runtimeConfigObject,
-  runtimeConfigPositiveInteger,
-  runtimeConfigString,
-} from "@hypit/runtime-local/extension";
+  createExecutionEnvironmentEndpointAdapterFacet,
+  executionEnvironmentConfigCredentialRef,
+  executionEnvironmentConfigActionLimits,
+  executionEnvironmentConfigExact,
+  executionEnvironmentConfigObject,
+  executionEnvironmentConfigPositiveInteger,
+  executionEnvironmentConfigString,
+} from "@hypit/execution-environment-local/extension";
 
 import { createPolloProvider } from "./provider.js";
 
-const adapter = createRuntimeEndpointAdapterFacet({
+const adapter = createExecutionEnvironmentEndpointAdapterFacet({
   use: "@hypit/provider-pollo",
   activate(context) {
     if (context.pool === undefined) throw new Error("Pollo Provider Pool is required");
-    const config = runtimeConfigObject(context.config, "Pollo");
-    runtimeConfigExact(config, [
+    const config = executionEnvironmentConfigObject(context.config, "Pollo");
+    executionEnvironmentConfigExact(config, [
       "baseUrl",
       "apiKey",
       "defaultConcurrency",
@@ -24,20 +24,20 @@ const adapter = createRuntimeEndpointAdapterFacet({
       "requestTimeoutMs",
       "operationTimeoutMs",
     ], "Pollo");
-    const baseUrl = runtimeConfigString(config.baseUrl, "Pollo baseUrl");
+    const baseUrl = executionEnvironmentConfigString(config.baseUrl, "Pollo baseUrl");
     if (baseUrl !== undefined) {
       const url = new URL(baseUrl);
       if (url.protocol !== "https:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
         throw new Error("Pollo baseUrl must use HTTPS or loopback");
       }
     }
-    const apiKey = runtimeConfigCredentialRef(config.apiKey, "Pollo apiKey");
+    const apiKey = executionEnvironmentConfigCredentialRef(config.apiKey, "Pollo apiKey");
     if (apiKey === undefined) throw new Error("Pollo apiKey CredentialRef is required");
-    const actionLimits = runtimeConfigActionLimits(config.actionLimits);
-    const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "Pollo defaultConcurrency");
-    const pollIntervalMs = runtimeConfigPositiveInteger(config.pollIntervalMs, "Pollo pollIntervalMs");
-    const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "Pollo requestTimeoutMs");
-    const operationTimeoutMs = runtimeConfigPositiveInteger(config.operationTimeoutMs, "Pollo operationTimeoutMs");
+    const actionLimits = executionEnvironmentConfigActionLimits(config.actionLimits);
+    const defaultConcurrency = executionEnvironmentConfigPositiveInteger(config.defaultConcurrency, "Pollo defaultConcurrency");
+    const pollIntervalMs = executionEnvironmentConfigPositiveInteger(config.pollIntervalMs, "Pollo pollIntervalMs");
+    const requestTimeoutMs = executionEnvironmentConfigPositiveInteger(config.requestTimeoutMs, "Pollo requestTimeoutMs");
+    const operationTimeoutMs = executionEnvironmentConfigPositiveInteger(config.operationTimeoutMs, "Pollo operationTimeoutMs");
     return {
       endpoint: createPolloProvider({
         instance: context.instance,
@@ -55,7 +55,6 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
   facets: [adapter],
 };
 

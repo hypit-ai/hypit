@@ -21,19 +21,20 @@
     "activation": "./src/activation.ts"
   },
   "peerDependencies": {
+    "@hypit/execution-environment-local": "workspace:^0.2.0",
     "@hypit/hypit": "workspace:^0.4.0",
-    "@hypit/runtime-local": "workspace:^0.2.0",
     "@hypit/whisperx": "workspace:^0.3.0"
   },
   "devDependencies": {
     "@hypit/endpoint": "workspace:*",
+    "@hypit/execution-environment-local": "workspace:*",
+    "@hypit/executor": "workspace:*",
+    "@hypit/generation-build": "workspace:*",
     "@hypit/hypit": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/resource-store": "workspace:^0.1.0",
-    "@hypit/runtime-local": "workspace:*",
     "@hypit/timed-transcript": "workspace:*",
-    "@hypit/whisperx": "workspace:*",
-    "@hypit/executor": "workspace:*"
+    "@hypit/whisperx": "workspace:*"
   },
   "dependencies": {
     "@hypit/timed-transcript": "workspace:^0.1.0"

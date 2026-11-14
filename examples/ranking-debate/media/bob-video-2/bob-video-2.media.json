@@ -197,8 +197,7 @@
       "id": "speech.zh",
       "type": {
         "module": {
-          "name": "@hypit/timed-transcript",
-          "version": "1"
+          "name": "@hypit/timed-transcript"
         },
         "name": "TimedTranscript"
       },

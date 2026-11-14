@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 
-import { createLocalCredentialControl } from "@hypit/runtime-local";
+import { createLocalEnvironmentCredentialControl } from "@hypit/execution-environment-local";
 import { commandHint } from "@hypit/cli";
 import { buildCliServices } from "../services-scenario.js";
 import { credentialControl, runtimeControl } from "../control-scenario.js";
@@ -28,22 +28,18 @@ test("auth opens only one Endpoint credential control, never the execution Runti
     async close() { calls.push("credentials.close"); },
   });
   const distribution = buildCliServices({
-    openRuntimeHost: async (path: string) => ({
+    openEnvironmentHost: async (path: string) => ({
       profile: path,
       openCredentials: async (endpoint: string) => {
         calls.push(`credentials.create:${endpoint}`);
         return credentials;
-      },
-      createRuntime: async () => {
-        calls.push("execution.create");
-        throw new Error("auth must not construct execution");
       },
     }),
   });
   let output = "";
 
   await runCli([
-    "auth", "status", "images.project", "--runtime", "/tmp/runtime.json", "--json",
+    "auth", "status", "images.project", "--environment", "/tmp/environment.json", "--json",
   ], { write: (text) => { output += text; } }, distribution);
 
   assert.deepEqual(calls, [
@@ -63,7 +59,7 @@ test("auth status exposes declared acquisition without acquiring or revealing cr
     tokenEndpoint: "https://service.example/token", clientId: "example-client", scopes: ["inference"],
   };
   const distribution = buildCliServices({
-    openRuntimeHost: async () => ({
+    openEnvironmentHost: async () => ({
       openCredentials: async () => ({
         credentials: async () => [
           { endpoint: "service.project", slot: "browser", label: "Service access", kind: "secret",
@@ -77,12 +73,11 @@ test("auth status exposes declared acquisition without acquiring or revealing cr
         putCredential: async () => { throw new Error("Status must not acquire a credential"); },
         close() {},
       }),
-      createRuntime: async () => { throw new Error("Status must not start execution"); },
     }),
   });
   for (const json of [true, false]) {
     let output = "";
-    await runCli(["auth", "status", "service.project", "--runtime", "/tmp/runtime.json", ...(json ? ["--json"] : [])], {
+    await runCli(["auth", "status", "service.project", "--environment", "/tmp/environment.json", ...(json ? ["--json"] : [])], {
       write: (text) => { output += text; },
       readSecret: async () => { throw new Error("Status must not request user input"); },
     }, distribution);
@@ -122,7 +117,7 @@ test("auth login explains an environment-owned credential before asking for a se
     async close() { closed = true; },
   });
   const distribution = buildCliServices({
-    openRuntimeHost: async (path: string) => ({
+    openEnvironmentHost: async (path: string) => ({
       profile: path,
       openCredentials: async () => credentials,
     }),
@@ -130,7 +125,7 @@ test("auth login explains an environment-owned credential before asking for a se
 
   await assert.rejects(
     async () => await runCli([
-      "auth", "login", "images.project", "--runtime", "/tmp/runtime.json",
+      "auth", "login", "images.project", "--environment", "/tmp/environment.json",
     ], {
       write() {},
       readSecret: async () => {
@@ -148,7 +143,7 @@ test("auth login explains an environment-owned credential before asking for a se
 test("auth can replace and delete a credential whose Store cannot read its old value", async () => {
   let value = "damaged";
   let reads = 0;
-  const endpoint: Parameters<typeof createLocalCredentialControl>[0]["endpoints"][number] = {
+  const endpoint: Parameters<typeof createLocalEnvironmentCredentialControl>[0]["endpoints"][number] = {
     instance: { id: "service.project", pool: "service.project" }, capabilities: [],
     credentials: [{ endpoint: "service.project", slot: "apiKey", label: "Service key", kind: "secret",
       ref: { store: "test", key: "service" } }],
@@ -160,16 +155,16 @@ test("auth can replace and delete a credential whose Store cannot read its old v
     async delete() { value = ""; return true; },
   };
   const distribution = buildCliServices({
-    openRuntimeHost: async () => ({
-      openCredentials: async () => createLocalCredentialControl({ credentialStore, endpoints: [endpoint] }),
+    openEnvironmentHost: async () => ({
+      openCredentials: async () => createLocalEnvironmentCredentialControl({ credentialStore, endpoints: [endpoint] }),
     }),
   });
-  await assert.rejects(runCli(["auth", "status", "service.project", "--runtime", "/tmp/runtime.json"],
+  await assert.rejects(runCli(["auth", "status", "service.project", "--environment", "/tmp/environment.json"],
     { write() {} }, distribution), /credential cannot be read/u);
   reads = 0;
   for (const action of ["login", "logout"]) {
     let output = "";
-    await runCli(["auth", action, "service.project", "--runtime", "/tmp/runtime.json", "--json"], {
+    await runCli(["auth", action, "service.project", "--environment", "/tmp/environment.json", "--json"], {
       write(text) { output += text; }, readSecret: async () => "replacement",
     }, distribution);
     assert.equal(JSON.parse(output).configured, action === "login");

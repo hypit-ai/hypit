@@ -1,4 +1,4 @@
-import type { CliCommandModule } from "@hypit/cli";
+import type { CliCommandModule } from "@hypit/cli/public";
 
 import { runSvmlVocabularyCli, writeVocabularyHelp } from "./vocabulary.js";
 
@@ -7,7 +7,6 @@ export function createSvmlToolchainCliCommandModules(options: {
   readonly distributionPackageRoot?: string;
 } = {}): readonly CliCommandModule[] {
   return [{
-    format: "hypit.cli-command@1",
     id: "@hypit/toolchain",
     commands: ["vocabulary"],
     writeRootHelp(io) {

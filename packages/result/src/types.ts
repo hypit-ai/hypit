@@ -1,4 +1,4 @@
-import type { NeedId } from "@hypit/protocol";
+import type { NeedId } from "@hypit/generation-build";
 import type { Product, ResolvedProduct } from "@hypit/product";
 
 /** The one durable conclusion of a finished Build. Active execution belongs to Runtime. */

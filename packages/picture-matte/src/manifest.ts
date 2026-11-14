@@ -1,7 +1,10 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import type { ValueSchema } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
 
-export const pictureMatteModuleRef = { name: "@hypit/picture-matte", version: "1" } as const;
+export const pictureMatteModuleRef = { name: "@hypit/picture-matte" } as const;
 export const pictureMatteTypes = {
   operatorSpec: { module: pictureMatteModuleRef, name: "PictureMatteOperatorSpec" },
 } satisfies Record<string, TypeRef>;
@@ -13,10 +16,8 @@ export const pictureMatteOperatorSpecSchema: ValueSchema = { kind: "object", fie
   invert: { schema: { kind: "boolean" } },
 } };
 
-export const pictureMatteManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const pictureMatteManifest: GenerationModuleDefinition = {
   name: pictureMatteModuleRef.name,
-  version: pictureMatteModuleRef.version,
   dependencies: [audiovisualDependency],
   types: [pictureMatteTypes.operatorSpec.name],
   capabilities: [],

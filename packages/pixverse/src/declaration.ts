@@ -1,12 +1,12 @@
-import { declarationField, type AuthorDeclaration, type AuthorDeclarationChild,
-  type AuthorDeclarationBinding, type AuthorDeclarationCompiler, type AuthorResolvedReference } from "@hypit/hypit/author";
-import { blobTypes } from "@hypit/hypit/blob";
-import { sameType, type TypeRef } from "@hypit/hypit/protocol";
+import { type TypeRef } from "@hypit/hypit/module";
+import { declarationField, type AuthorDeclaration, type AuthorDeclarationChild, type AuthorDeclarationBinding, type AuthorDeclarationCompiler, type AuthorResolvedReference } from "@hypit/hypit/generation/author";
+import { blobTypes } from "@hypit/hypit/generation/blob";
+import { sameType } from "@hypit/hypit/module";
 import { promptTypes } from "@hypit/hypit/prompt";
-import { productPublication } from "@hypit/hypit/product";
-import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
+import { productPublication } from "@hypit/hypit/generation/product";
+import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation-model/model-fields/author";
 import { createFieldModelPrimaryFragment, sealModelFieldBuilder,
-  type FieldModelOperation, type ModelFieldValue } from "@hypit/generation/model-fields";
+  type FieldModelOperation, type ModelFieldValue } from "@hypit/generation-model/model-fields";
 
 import { pixverseEndpoints, pixverseEndpointsByModel, pixverseModuleRef } from "./index.js";
 

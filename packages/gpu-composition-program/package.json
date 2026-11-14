@@ -1,0 +1,19 @@
+{
+  "name": "@hypit/gpu-composition-program",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/spatial": "workspace:^0.1.1",
+    "@hypit/temporal": "workspace:^0.1.1"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

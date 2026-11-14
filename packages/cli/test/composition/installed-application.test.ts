@@ -7,7 +7,6 @@ import test from "node:test";
 import { runInstalledCliApplication } from "../../src/installed-application.js";
 import type { CliCommandModule } from "../../src/application.js";
 const hostModule: CliCommandModule = {
-  format: "hypit.cli-command@1",
   id: "test.host-bound",
   commands: ["host-tool"],
   writeHelp(_argv, io) { io.write("host tool help\n"); },
@@ -15,7 +14,6 @@ const hostModule: CliCommandModule = {
 };
 
 const buildModule: CliCommandModule = {
-  format: "hypit.cli-command@1",
   id: "test.build",
   commands: ["build"],
   writeHelp() {},
@@ -44,7 +42,6 @@ async function fixture(command = "greet"): Promise<{
     name: "@acme/tools", version: "1.2.3", type: "module", exports: { "./cli": "./cli.mjs" },
   }));
   await writeFile(join(extension, "cli.mjs"), `export const cliCommandModules = [{
-    format: "hypit.cli-command@1",
     id: "@acme/tools",
     commands: [${JSON.stringify(command)}],
     writeRootHelp(io) { io.write("\\nAcme\\n  ${command} <name>\\n"); },

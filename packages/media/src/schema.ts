@@ -34,22 +34,27 @@ export const pictureObservationSchema: ValueSchema = object({
   colorMatrix: { schema: observedMatrixSchema, optional: true }, colorRange: { schema: rangeSchema, optional: true },
   bitDepth: { schema: observedBitDepthSchema, optional: true }, alphaMode: { schema: alphaModeSchema, optional: true },
 });
+const opaqueOutputAlphaSchema = object({
+  mode: { schema: { kind: "literal", value: "opaque" } },
+  matte: { schema: { kind: "string", minLength: 7, maxLength: 7 } },
+});
+const straightOutputAlphaSchema = object({
+  mode: { schema: { kind: "literal", value: "straight" } },
+});
 const outputPictureBase = {
   colorPrimaries: { schema: { kind: "literal", value: "bt709" } },
   bitDepth: { schema: { kind: "literal", value: 8 } },
-  alpha: { schema: object({
-    mode: { schema: { kind: "literal", value: "opaque" } },
-    matte: { schema: { kind: "string", minLength: 7, maxLength: 7 } },
-  }) },
 } as const;
 const videoOutputPictureSpecSchema: ValueSchema = object({
   ...outputPictureBase,
+  alpha: { schema: opaqueOutputAlphaSchema },
   colorTransfer: { schema: { kind: "literal", value: "bt709" } },
   colorMatrix: { schema: { kind: "literal", value: "bt709" } },
   colorRange: { schema: { kind: "literal", value: "limited" } },
 });
 const frameOutputPictureSpecSchema: ValueSchema = object({
   ...outputPictureBase,
+  alpha: { schema: { kind: "oneOf", variants: [opaqueOutputAlphaSchema, straightOutputAlphaSchema] } },
   colorTransfer: { schema: { kind: "literal", value: "srgb" } },
   colorMatrix: { schema: { kind: "literal", value: "rgb" } },
   colorRange: { schema: { kind: "literal", value: "full" } },

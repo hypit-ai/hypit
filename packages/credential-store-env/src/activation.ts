@@ -1,16 +1,16 @@
 import {
-  createRuntimeCredentialStoreAdapterFacet,
-  runtimeConfigExact,
-  runtimeConfigObject,
-} from "@hypit/runtime-local/extension";
+  createExecutionEnvironmentCredentialStoreAdapterFacet,
+  executionEnvironmentConfigExact,
+  executionEnvironmentConfigObject,
+} from "@hypit/execution-environment-local/extension";
 
 import { EnvironmentCredentialStore } from "./index.js";
 
-const environmentCredentialStoreAdapter = createRuntimeCredentialStoreAdapterFacet({
+const environmentCredentialStoreAdapter = createExecutionEnvironmentCredentialStoreAdapterFacet({
   use: "@hypit/credential-store-env",
   validate(context) {
-    const config = runtimeConfigObject(context.config, "environment CredentialStore");
-    runtimeConfigExact(config, [], "environment CredentialStore");
+    const config = executionEnvironmentConfigObject(context.config, "environment CredentialStore");
+    executionEnvironmentConfigExact(config, [], "environment CredentialStore");
   },
   open() {
     return { value: new EnvironmentCredentialStore() };
@@ -18,7 +18,6 @@ const environmentCredentialStoreAdapter = createRuntimeCredentialStoreAdapterFac
 });
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
   facets: [environmentCredentialStoreAdapter],
 };
 

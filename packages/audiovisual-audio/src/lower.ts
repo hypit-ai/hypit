@@ -3,11 +3,14 @@ import type {
   AudioOutputSampling,
   AudioProgram,
   AudioProgramNode,
+  RenderAudioNeed,
 } from "@hypit/audio-program";
 import { assertAudiovisualProgram } from "@hypit/audiovisual";
 import type { AudiovisualProgram } from "@hypit/audiovisual";
 import { compareExactTemporalValues } from "@hypit/temporal/algebra";
 
+import { planAudiovisualAudioExecution } from "./execution.js";
+import type { AudiovisualAudioDemand } from "./execution.js";
 import { occurrenceAudioProgramUse } from "./source-use.js";
 import { assertAudiovisualAudioOutput, resolveAudiovisualAudioSource } from "./source.js";
 import type { AudiovisualAudioSourceSet } from "./source.js";
@@ -93,4 +96,19 @@ export function lowerAudiovisualAudioProgram(input: AudiovisualAudioLowering): A
     sampling: structuredClone(input.sampling),
     graph: { nodes, output: { node: nodeId(graph.root) } },
   });
+}
+
+/**
+ * Close the continuous Audio DAG and retain the exact requested range as the
+ * terminal need. No video frame grid is introduced by this execution path.
+ */
+export function lowerAudiovisualAudioRenderNeed(
+  input: AudiovisualAudioLowering,
+  demand: AudiovisualAudioDemand,
+): RenderAudioNeed {
+  planAudiovisualAudioExecution(input.program, input.sources, demand);
+  return {
+    program: lowerAudiovisualAudioProgram(input),
+    range: structuredClone(demand.range),
+  };
 }

@@ -3,7 +3,7 @@ title: 模型与 Provider
 description: 选择账户、连接服务或添加模型，沿用同一套视频执行系统。
 ---
 
-**Model** 定义要生成什么：输入、支持的参数和输出类型。**Provider** 知道如何通过某个服务完成这个请求。**Endpoint** 是配置好的 Provider 实例，包含服务地址、凭据引用和容量。Runtime Profile 将所需能力绑定到 Endpoint。
+**Model** 定义要生成什么：输入、支持的参数和输出类型。**Provider** 知道如何通过某个服务完成这个请求。**Endpoint** 是配置好的 Provider 实例，包含服务地址、凭据引用和容量。Environment Profile 将所需能力绑定到 Endpoint。
 
 起始 Profile 包含本地服务与 HypiHub。其他服务通过视频项目安装的 Provider 包接入。告诉 Agent 想使用哪个服务并提供 API 文档，Agent 可以安装已有包或创建项目 Provider。[模型与部署服务](./service-partners.md) 介绍可选服务。选择执行服务，与[选择 Agent 工作环境](./agents.md)是两件事。
 
@@ -42,7 +42,7 @@ Model 定义生成请求，Provider 实现推理服务的 API，Endpoint 选择�
 
 ## 添加 Provider
 
-创建项目 Provider 包，把已选择的 Model 连接到 API 或本地服务。实现该服务真正支持的请求形态与限制，用项目包管理器安装，然后在 [Runtime Profile](./runtime.md) 的 `endpoints` 中配置，并通过 `bindings` 选择。[Endpoint 包 README](https://github.com/hypit-ai/hypit/blob/main/packages/endpoint/README.md) 负责准确 TypeScript API 与包字段。
+创建项目 Provider 包，把已选择的 Model 连接到 API 或本地服务。实现该服务真正支持的请求形态与限制，用项目包管理器安装，然后在 [Environment Profile](./runtime.md) 的 `endpoints` 中配置，并通过 `bindings` 选择。[Endpoint 包 README](https://github.com/hypit-ai/hypit/blob/main/packages/endpoint/README.md) 负责准确 TypeScript API 与包字段。
 
 [完整项目 Provider 示例](https://github.com/hypit-ai/hypit/tree/main/examples/provider-package) 使用示意 API 展示参考上传、任务回执、结果收集与价格读取。示例随执行包分发，Agent 无需仓库 checkout 就能读取和改写。它包含两个包：`provider-images` 对应生成图像，`provider-videos` 对应生成视频——后者的服务接收更宽的参考词汇（图像、视频、音频以及首尾帧），并通过独立的结果收集步骤返回产物。
 

@@ -14,7 +14,7 @@ import type {
   NleTimelineTone,
 } from "./types.js";
 
-export const nleTimelinePresentationFacetAbi = "hypit.nle-timeline-presentation@1";
+export const nleTimelinePresentationFacetKind = "hypit.nle-timeline-presentation";
 
 export type NleTimelinePresentationChrome = "standard" | "group" | "compact";
 export type NleTimelinePresentationLayer = Extract<NleTimelineDisplayLayer, { readonly kind: "text" }>;
@@ -71,7 +71,7 @@ export type NleTimelineComponentPresentation = NleTimelinePresentationBase & {
 };
 
 export type NleTimelineAdjustmentPresentation = NleTimelinePresentationBase & {
-  readonly component: NlePackageSymbol;
+  readonly operator: NlePackageSymbol;
   readonly project?: (context: NleTimelineAdjustmentPresentationContext) => NleTimelinePresentationDraft;
 };
 
@@ -81,7 +81,7 @@ export type NleTimelinePresentationPackage = {
 };
 
 export type NleTimelinePresentationFacet = Facet & {
-  readonly abi: typeof nleTimelinePresentationFacetAbi;
+  readonly kind: typeof nleTimelinePresentationFacetKind;
   readonly implementation: NleTimelinePresentationPackage;
 };
 
@@ -145,7 +145,7 @@ function assertPackage(value: NleTimelinePresentationPackage): void {
       `NLE Timeline presentation ${key} project is not callable.`);
   }
   for (const presentation of value.adjustments ?? []) {
-    const key = `adjustment:${nlePackageSymbolKey(presentation.component)}`;
+    const key = `adjustment:${nlePackageSymbolKey(presentation.operator)}`;
     assert(!keys.has(key), `NLE Timeline presentation package repeats ${key}.`);
     keys.add(key);
     assertBase(presentation, key);
@@ -184,13 +184,13 @@ export function createNleTimelinePresentationFacet(
   value: NleTimelinePresentationPackage,
 ): NleTimelinePresentationFacet {
   assertPackage(value);
-  return { abi: nleTimelinePresentationFacetAbi, implementation: value };
+  return { kind: nleTimelinePresentationFacetKind, implementation: value };
 }
 
 export function nleTimelinePresentationPackagesFromFacets(
   facets: readonly Facet[],
 ): readonly NleTimelinePresentationPackage[] {
-  return facets.flatMap((facet) => facet.abi === nleTimelinePresentationFacetAbi
+  return facets.flatMap((facet) => facet.kind === nleTimelinePresentationFacetKind
     ? [(facet as NleTimelinePresentationFacet).implementation]
     : []);
 }
@@ -225,7 +225,7 @@ export function createNleTimelinePresentationHost(
       registerResource(`component:${key}`, presentation.poster);
     }
     for (const presentation of value.adjustments ?? []) {
-      const key = nlePackageSymbolKey(presentation.component);
+      const key = nlePackageSymbolKey(presentation.operator);
       assert(!adjustments.has(key), `NLE Timeline has multiple Adjustment presentations for ${key}.`);
       adjustments.set(key, presentation);
       registerResource(`adjustment:${key}`, presentation.poster);
@@ -237,9 +237,9 @@ export function createNleTimelinePresentationHost(
       for (const track of project.tracks) {
         for (const item of track.items) {
           if (item.kind === "adjustment") {
-            const presentation = adjustments.get(nlePackageSymbolKey(item.component));
+            const presentation = adjustments.get(nlePackageSymbolKey(item.operator));
             if (presentation === undefined) continue;
-            const key = `adjustment:${nlePackageSymbolKey(item.component)}`;
+            const key = `adjustment:${nlePackageSymbolKey(item.operator)}`;
             const display = draft(presentation.project?.({ project, track, item }) ?? {}, key);
             const poster = display.poster ?? presentation.poster;
             const resourceKey = display.poster === undefined ? key : `${key}:item:${item.id}`;

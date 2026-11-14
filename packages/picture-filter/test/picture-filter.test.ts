@@ -14,7 +14,7 @@ import {
   createNleProject,
   findNleItem,
   lowerNleProjectToAudiovisual,
-  nleLinearSourceTime,
+  nleLinearTimeMapping,
   parseNleProject,
   serializeNleProject,
   undoNleEdit,
@@ -115,12 +115,12 @@ test("Picture Filter owns only photometric state; placement remains SpatialMap",
 
 test("the package resolves a materialized NLE Adjustment through its ordinary state", () => {
   const adjustment = {
-    id: "faded", kind: "adjustment" as const, component: pictureFilterNleSymbol,
+    id: "faded", kind: "adjustment" as const, operator: pictureFilterNleSymbol,
     parameters: canonicalize({ kind: "constant", state: faded }),
     duration: at(2),
   };
   const resolved = createNleLoweringHostFromFacets(pictureFilterHypitPackage.facets)
-    .resolvePictureAdjustment(adjustment as never, {} as never);
+    .resolvePictureOperator(adjustment as never, {} as never);
   assert.deepEqual(resolved, { operator: pictureFilterOperator(faded) });
 });
 
@@ -152,7 +152,7 @@ test("the package compiles its own exact NLE keyframes into the shared Control",
 
 test("an animated NLE Adjustment round-trips and lowers its moved Item to a factual mapping", () => {
   const baseComponent = {
-    module: { name: "@example/base-picture", version: "1" },
+    module: { name: "@example/base-picture" },
     name: "base-picture",
   } as const;
   const baseSource = {
@@ -190,25 +190,25 @@ test("an animated NLE Adjustment round-trips and lowers its moved Item to a fact
       kind: "present", source: "component",
       start: at(0),
       duration: at(2),
-      sourceTime: nleLinearSourceTime(at(2)),
+      sourceTime: nleLinearTimeMapping(at(2)),
       enabled: true,
       component: baseComponent,
       parameters: {},
       picture: { layout: { x: 0, y: 0, width: 100, height: 100, fit: "fill" } },
     }, {
-      id: "animated", kind: "adjustment", component: pictureFilterNleSymbol,
+      id: "animated", kind: "adjustment", operator: pictureFilterNleSymbol,
       parameters: canonicalize(animatedParameters), start: at(0), duration: at(2),
-      sourceTime: nleLinearSourceTime(at(2)), enabled: true,
+      controlTime: nleLinearTimeMapping(at(2)), enabled: true,
     }] },
   }] });
 
   const reopened = parseNleProject(serializeNleProject(project));
   assert.deepEqual(reopened, project);
   const authoringHost = createNleAuthoringHostFromFacets(pictureFilterHypitPackage.facets);
-  assert.deepEqual(authoringHost.inspectAdjustmentParameters(reopened, "animated"),
+  assert.deepEqual(authoringHost.inspectOperatorParameters(reopened, { kind: "adjustment", item: "animated" }),
     canonicalize(animatedParameters));
   const insertedState = { ...IDENTITY_PICTURE_FILTER, opacity: 0.75, grayscale: 1 };
-  const editTransaction = authoringHost.planAdjustmentParameterEdit(reopened, "animated", {
+  const editTransaction = authoringHost.planOperatorParameterEdit(reopened, { kind: "adjustment", item: "animated" }, {
     kind: "set-keyframe-state",
     at: at(1, 2),
     state: insertedState,
@@ -227,7 +227,7 @@ test("an animated NLE Adjustment round-trips and lowers its moved Item to a fact
   assert.deepEqual(editSession.current, { ...reopened, revision: 3 });
 
   const initial = lowerNleProjectToAudiovisual(reopened, host);
-  const initialNode = initial.picture?.nodes["animated:picture-adjustment"];
+  const initialNode = initial.picture?.nodes["animated:picture-operator:animated"];
   assert.equal(initialNode?.kind, "apply");
   if (initialNode?.kind !== "apply") throw new Error("Animated Adjustment did not lower to apply.");
   const initialMapping = initialNode.controlMappings.filter;
@@ -243,7 +243,7 @@ test("an animated NLE Adjustment round-trips and lowers its moved Item to a fact
     kind: "item.move", ids: ["animated"], delta: at(1),
   }] });
   const movedProgram = lowerNleProjectToAudiovisual(moved, host);
-  const movedNode = movedProgram.picture?.nodes["animated:picture-adjustment"];
+  const movedNode = movedProgram.picture?.nodes["animated:picture-operator:animated"];
   if (movedNode?.kind !== "apply") throw new Error("Moved animated Adjustment did not lower to apply.");
   const movedMapping = movedNode.controlMappings.filter;
   if (movedMapping === undefined) throw new Error("Moved Adjustment did not lower to a factual Mapping.");

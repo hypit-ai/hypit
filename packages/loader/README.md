@@ -9,11 +9,12 @@ remain ordinary project-overridable dependencies in both development and install
 A product may explicitly name dependency owners with `hypit.packageSources` in its package.json.
 Each name must be a declared dependency. Lookup uses those installed package locations after project
 selection; it does not scan for plugins, install anything or activate an owner merely to locate bytes.
-Logical Module dependencies are resolved from the package that declares them.
+Module dependencies are requested by the consumer that is building a semantic closure; the current
+Generation compiler does this for a Build. Loader itself does not interpret their Manifest.
 
-Defines the package contribution value consumed by Hypit Hosts. It contains logical Modules and
-opaque Facets, but no package-manager policy or platform I/O. `verifyPackageContributions()` checks
-the selected declarations without interpreting executable Facets.
+Defines the package contribution value consumed by Hypit Hosts. It contains only opaque Facets,
+not a privileged Module field, package-manager policy or platform I/O.
+`verifyPackageContributions()` checks logical ownership without interpreting domain Facets.
 
 ## Node Host
 
@@ -36,8 +37,9 @@ project `package.json`. `resolveNodePackageModule` follows the exact npm export 
 `import` condition) without scanning dependencies; importing the resolved module is the Host's
 separate, explicitly authorized action.
 
-Module dependencies declared by selected packages are loaded from ordinary installed dependencies.
-Syntax, components and Runtime facets remain inert until a matching Facet ABI consumes them.
+Semantic Modules, syntax, components and Runtime adapters are peer Facets. Their respective owners
+interpret dependency closure and behavior; Loader only resolves the physical packages explicitly
+selected for logical addresses.
 
 Physical lookup distinguishes package identity, ESM imports, package resources and npm executables.
 It does not use a CommonJS root export as evidence that a package is installed: CLI-only,

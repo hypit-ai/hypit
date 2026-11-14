@@ -1,10 +1,11 @@
 import { sealPresentVisualTrack } from "@hypit/composition";
 import type { Timeline } from "@hypit/timeline";
 import type { SpatialFrame } from "@hypit/spatial";
-import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, TypedRecord } from "@hypit/hypit/protocol";
-import type { ProducerPackage, ProducerHandler } from "@hypit/hypit/producer";
-import type { RefinementPackage } from "@hypit/hypit/refinement";
+import { assertBlobRef, canonicalize } from "@hypit/hypit/value";
+import type { BlobRef } from "@hypit/hypit/value";
+import type { TypedRecord } from "@hypit/hypit/generation/build";
+import type { ProducerPackage, ProducerHandler } from "@hypit/hypit/generation/producer";
+import type { RefinementPackage } from "@hypit/hypit/generation/refinement";
 import { htmlVisualElement } from "@hypit/html-program";
 import { exampleProducers, exampleTypes } from "./manifest.js";
 import { SRGB_STRAIGHT_PICTURE } from "@hypit/media";

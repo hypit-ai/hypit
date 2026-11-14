@@ -10,23 +10,25 @@ import {
   materializeBuild,
   planBuild,
   sealAuthorGraph,
-} from "@hypit/kernel";
-import { elaborateAuthorGraph } from "@hypit/author";
-import { generationManifest } from "@hypit/generation";
+} from "@hypit/generation-build";
+import { elaborateAuthorGraph } from "@hypit/generation-authoring/author";
+import { generationManifest } from "@hypit/generation-model";
 import {
   sealModelArtifactBinding,
   sealModelFieldBuilder,
-} from "@hypit/generation/model-fields";
+} from "@hypit/generation-model/model-fields";
 import {
   gptImage2Fields,
   gptImageEndpoints,
   gptImageManifest,
   sealGptImage2Draft,
 } from "@hypit/gpt-image";
-import { createFieldModelPrimaryFragment, modelArtifactInputNames, modelTextFieldInputName } from "@hypit/generation/model-fields";
+import { createFieldModelPrimaryFragment, modelArtifactInputNames, modelTextFieldInputName } from "@hypit/generation-model/model-fields";
 import { mediaManifest } from "@hypit/media";
 import { temporalManifest } from "@hypit/temporal-graph";
-import type { CanonicalValue, ResourceId, ModuleManifest, Value, TypeRef } from "@hypit/protocol";
+import type { CanonicalValue, ResourceId, Value } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
 import {
   createSeedanceAssembledGenerationFragment,
   seedanceEndpoints,
@@ -55,7 +57,7 @@ const image = (name: string) => ({
   mediaType: "image/png",
 });
 function fixture() {
-  const manifests: ModuleManifest[] = [
+  const manifests: GenerationModuleDefinition[] = [
     blobManifest,
     textManifest,
     promptManifest,

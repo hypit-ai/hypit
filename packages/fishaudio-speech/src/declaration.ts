@@ -1,10 +1,9 @@
-import { declarationField, type AuthorDeclaration, type AuthorDeclarationCompiler,
-  type AuthorResolvedReference } from "@hypit/hypit/author";
-import { blobTypes } from "@hypit/hypit/blob";
-import { sameType } from "@hypit/hypit/protocol";
+import { declarationField, type AuthorDeclaration, type AuthorDeclarationCompiler, type AuthorResolvedReference } from "@hypit/hypit/generation/author";
+import { blobTypes } from "@hypit/hypit/generation/blob";
+import { sameType } from "@hypit/hypit/module";
 import { textTypes } from "@hypit/hypit/text";
-import { productPublication } from "@hypit/hypit/product";
-import { fieldModelAuthorComponent } from "@hypit/generation/model-fields/author";
+import { productPublication } from "@hypit/hypit/generation/product";
+import { fieldModelAuthorComponent } from "@hypit/generation-model/model-fields/author";
 
 import { createFishAudioSpeechAudioFragment } from "./fragment.js";
 import { fishAudioSpeechEndpoints, fishAudioSpeechModuleRef,

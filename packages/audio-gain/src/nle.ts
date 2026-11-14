@@ -1,8 +1,10 @@
 import type {
-  NleAudioAdjustmentResolver,
-  NleAdjustmentParameterAuthoring,
+  NleAudioOperatorResolver,
+  NleOperatorParameterAuthoring,
+  NleOperatorOccurrenceAuthoring,
   NlePackageSymbol,
 } from "@hypit/nle";
+import { nleTimeMappingRequiredDuration } from "@hypit/nle";
 import { canonicalize } from "@hypit/protocol";
 import {
   assertExactTemporalValue,
@@ -165,35 +167,46 @@ export function editAudioGainNleParameters(
   return next;
 }
 
-export const audioGainNleResolver: NleAudioAdjustmentResolver = {
-  component: audioGainNleSymbol,
-  resolve: (item) => {
-    const parameters = item.parameters as unknown;
-    assertAudioGainNleParameters(parameters, item.duration);
+export const audioGainNleResolver: NleAudioOperatorResolver = {
+  operator: audioGainNleSymbol,
+  resolve: (application, context) => {
+    const parameters = application.parameters as unknown;
+    assertAudioGainNleParameters(parameters, context.controlDuration);
     if (parameters.kind === "constant") return { operator: audioGainOperator(parameters.gain) };
     return { operator: audioGainControlOperator(audioGainControlFromNleParameters(parameters, {
-      itemId: item.id,
-      duration: item.duration,
+      itemId: application.id,
+      duration: context.controlDuration,
     })) };
   },
 };
 
-export const audioGainNleAuthoring: NleAdjustmentParameterAuthoring = {
-  component: audioGainNleSymbol,
-  inspect: ({ item, medium }) => {
-    if (medium !== "audio") throw new Error("Audio Gain must belong to an Audio Track.");
-    const parameters = item.parameters as unknown;
-    assertAudioGainNleParameters(parameters, item.duration);
+export const audioGainNleAuthoring: NleOperatorParameterAuthoring = {
+  operator: audioGainNleSymbol,
+  inspect: ({ application, medium }) => {
+    if (medium !== "audio") throw new Error("Audio Gain must be an Audio Operator Application.");
+    const parameters = application.parameters as unknown;
+    assertAudioGainNleParameters(parameters, nleTimeMappingRequiredDuration(application.controlTime));
     return canonicalize(parameters);
   },
-  edit: (operation, { item, medium }) => {
-    if (medium !== "audio") throw new Error("Audio Gain must belong to an Audio Track.");
-    const parameters = item.parameters as unknown;
-    assertAudioGainNleParameters(parameters, item.duration);
+  edit: (operation, { application, medium }) => {
+    if (medium !== "audio") throw new Error("Audio Gain must be an Audio Operator Application.");
+    const parameters = application.parameters as unknown;
+    const duration = nleTimeMappingRequiredDuration(application.controlTime);
+    assertAudioGainNleParameters(parameters, duration);
     return canonicalize(editAudioGainNleParameters(
       parameters,
       operation as unknown as AudioGainNleEdit,
-      item.duration,
+      duration,
     ));
+  },
+};
+
+export const audioGainNleOccurrence: NleOperatorOccurrenceAuthoring = {
+  operator: audioGainNleSymbol,
+  temporalSupport: ({ application, medium }) => {
+    if (medium !== "audio") throw new Error("Audio Gain must be an Audio Operator Application.");
+    const parameters = application.parameters as unknown;
+    assertAudioGainNleParameters(parameters, nleTimeMappingRequiredDuration(application.controlTime));
+    return { timeWindow: parameters.kind === "constant" };
   },
 };

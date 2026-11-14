@@ -1,6 +1,6 @@
 # `@hypit/timed-transcript`
 
-`@hypit/timed-transcript@1#TimedTranscript` is the one editable, provider-neutral speech timing
+`@hypit/timed-transcript#TimedTranscript` is the one editable, provider-neutral speech timing
 document attached to a Media Asset. Its JSON shape follows the useful part of WhisperX aligned JSON:
 segments and words use seconds, while recognizer scores, model identity and workflow state do not
 become media data.

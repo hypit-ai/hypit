@@ -15,19 +15,32 @@ export {
 } from "./transaction.js";
 export { mergeNleTimelineItemObservations, projectNleCanvas, projectNleTimeline } from "./projection.js";
 export {
+  allNleTimelineAffordances,
+  resolveNleTimelineItemCapabilities,
+} from "./affordances.js";
+export {
+  assertNleSpatialEditAllowed,
+  allNleCanvasAffordances,
+  resolveNleSpatialItemCapabilities,
+} from "./spatial-authoring.js";
+export type {
+  NleCanvasAffordancePolicy,
+  NleSpatialItemCapabilities,
+} from "./spatial-authoring.js";
+export {
   createNleTimelinePresentationFacet,
   createNleTimelinePresentationHost,
-  nleTimelinePresentationFacetAbi,
+  nleTimelinePresentationFacetKind,
   nleTimelinePresentationPackagesFromFacets,
 } from "./presentation.js";
 export {
   createNleInspectorPresentationFacet,
   createNleInspectorPresentationHost,
-  nleInspectorPresentationFacetAbi,
+  nleInspectorPresentationFacetKind,
   nleInspectorPresentationPackagesFromFacets,
 } from "./inspector.js";
 export type {
-  NleInspectorAdjustmentPresentation,
+  NleInspectorOperatorPresentation,
   NleInspectorComponentPresentation,
   NleInspectorComponentValuePresentation,
   NleInspectorControl,

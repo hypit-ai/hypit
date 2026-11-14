@@ -25,6 +25,7 @@ export {
   editPictureFilterNleParameters,
   pictureFilterControlFromNleParameters,
   pictureFilterNleAuthoring,
+  pictureFilterNleOccurrence,
   pictureFilterNleResolver,
   pictureFilterNleSymbol,
 } from "./nle.js";

@@ -1,5 +1,5 @@
 import { MarkupFrontendError } from "./error.js";
-import type { SourceRange } from "@hypit/source";
+import type { SourceRange } from "@hypit/generation-authoring/source";
 import type {
   MarkupSource,
   StructuredElement,

@@ -10,7 +10,7 @@ import { beatApiRouteForCapability } from "../src/routes.js";
 
 const image: BlobRef = { kind: "blob", resource: "res_beatapi_1", size: 3, mediaType: "image/png" };
 const resolve = async (artifact: { resource: string }) => `https://media.beatapi.io/inputs/${artifact.resource}.png`;
-const route = (module: string, name: string) => beatApiRouteForCapability({ module: { name: module, version: "1" }, name })!;
+const route = (module: string, name: string) => beatApiRouteForCapability({ module: { name: module }, name })!;
 const constraints = (request: unknown) => request as CanonicalValue;
 
 test("frames travel as one ordered images array", async () => {

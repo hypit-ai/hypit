@@ -1,6 +1,7 @@
-import type { ModuleManifest, TypeRef } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
 
-export const temporalGraphModuleRef = { name: "@hypit/temporal-graph", version: "1" } as const;
+export const temporalGraphModuleRef = { name: "@hypit/temporal-graph" } as const;
 
 export const temporalTypes = {
   duration: { module: temporalGraphModuleRef, name: "TemporalDuration" },
@@ -16,10 +17,8 @@ export const temporalTypes = {
   localDomain: { module: temporalGraphModuleRef, name: "LocalTemporalDomain" },
 } satisfies Record<string, TypeRef>;
 
-export const temporalManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const temporalManifest: GenerationModuleDefinition = {
   name: temporalGraphModuleRef.name,
-  version: temporalGraphModuleRef.version,
   dependencies: [],
   types: Object.values(temporalTypes).map((type) => type.name),
   capabilities: [],

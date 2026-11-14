@@ -1,0 +1,52 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "world-black-void",
+  "name": "黑场",
+  "using": {
+    "module": {
+      "name": "@hypit/scene-environment"
+    },
+    "name": "world-environment"
+  },
+  "resources": {},
+  "parameters": {
+    "world": {
+      "sky": {
+        "top": "#010203",
+        "horizon": "#030405"
+      },
+      "ground": {
+        "visible": false,
+        "color": "#050607",
+        "opacity": 0
+      },
+      "atmosphere": {
+        "fogColor": "#020304",
+        "fogDensity": 0
+      },
+      "lighting": {
+        "ambient": {
+          "sky": "#11151d",
+          "ground": "#020304",
+          "intensity": 0.3
+        },
+        "key": {
+          "color": "#f2f4f8",
+          "intensity": 2.8,
+          "azimuth": -35,
+          "elevation": 52,
+          "shadows": true
+        },
+        "fill": {
+          "color": "#4b5870",
+          "intensity": 0.12
+        },
+        "rim": {
+          "color": "#9ec1ff",
+          "intensity": 3
+        }
+      },
+      "exposure": 0.92
+    }
+  }
+}

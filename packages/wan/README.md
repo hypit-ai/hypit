@@ -11,7 +11,7 @@ The selected Provider implements its exact capability.
 Import the model variant you mean and connect prompt and references as ordinary graph edges:
 
 ```svml
-module wan from "@hypit/wan@1"
+module wan from "@hypit/wan"
 
 wan.image {
   id: draft prompt: @prompt resolution: 2K

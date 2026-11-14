@@ -1,0 +1,334 @@
+{
+  "language": "en",
+  "segments": [
+    {
+      "start": 0.232,
+      "end": 10.9,
+      "text": "Trump is B tier. Heard my affair with a Chinese spy and called me an honorable guy. Told him I cheated on my wife. He said, 'No big deal. But which one?'",
+      "words": [
+        {
+          "word": "Trump",
+          "start": 0.232,
+          "end": 0.513
+        },
+        {
+          "word": "is",
+          "start": 0.694,
+          "end": 0.794
+        },
+        {
+          "word": "B",
+          "start": 0.915,
+          "end": 1.0716875
+        },
+        {
+          "word": "tier",
+          "start": 1.0716875,
+          "end": 1.6985
+        },
+        {
+          "word": "Heard",
+          "start": 1.6985,
+          "end": 2.482
+        },
+        {
+          "word": "my",
+          "start": 2.542,
+          "end": 2.683
+        },
+        {
+          "word": "affair",
+          "start": 2.723,
+          "end": 3.065
+        },
+        {
+          "word": "with",
+          "start": 3.125,
+          "end": 3.266
+        },
+        {
+          "word": "a",
+          "start": 3.306,
+          "end": 3.346
+        },
+        {
+          "word": "Chinese",
+          "start": 3.406,
+          "end": 3.788
+        },
+        {
+          "word": "spy",
+          "start": 3.828,
+          "end": 4.19
+        },
+        {
+          "word": "and",
+          "start": 4.551,
+          "end": 4.632
+        },
+        {
+          "word": "called",
+          "start": 4.712,
+          "end": 4.973
+        },
+        {
+          "word": "me",
+          "start": 5.014,
+          "end": 5.134
+        },
+        {
+          "word": "an",
+          "start": 5.235,
+          "end": 5.315
+        },
+        {
+          "word": "honorable",
+          "start": 5.456,
+          "end": 5.918
+        },
+        {
+          "word": "guy",
+          "start": 5.978,
+          "end": 6.319
+        },
+        {
+          "word": "Told",
+          "start": 7.002,
+          "end": 7.143
+        },
+        {
+          "word": "him",
+          "start": 7.183,
+          "end": 7.264
+        },
+        {
+          "word": "I",
+          "start": 7.324,
+          "end": 7.404
+        },
+        {
+          "word": "cheated",
+          "start": 7.444,
+          "end": 7.706
+        },
+        {
+          "word": "on",
+          "start": 7.746,
+          "end": 7.826
+        },
+        {
+          "word": "my",
+          "start": 7.846,
+          "end": 7.947
+        },
+        {
+          "word": "wife",
+          "start": 8.007,
+          "end": 8.268
+        },
+        {
+          "word": "He",
+          "start": 8.73,
+          "end": 8.811
+        },
+        {
+          "word": "said",
+          "start": 8.871,
+          "end": 9.052
+        },
+        {
+          "word": "No",
+          "start": 9.192,
+          "end": 9.313
+        },
+        {
+          "word": "big",
+          "start": 9.373,
+          "end": 9.534
+        },
+        {
+          "word": "deal",
+          "start": 9.554,
+          "end": 9.815
+        },
+        {
+          "word": "But",
+          "start": 10.096,
+          "end": 10.237
+        },
+        {
+          "word": "which",
+          "start": 10.338,
+          "end": 10.579
+        },
+        {
+          "word": "one",
+          "start": 10.78,
+          "end": 10.9
+        }
+      ]
+    }
+  ],
+  "word_segments": [
+    {
+      "word": "Trump",
+      "start": 0.232,
+      "end": 0.513
+    },
+    {
+      "word": "is",
+      "start": 0.694,
+      "end": 0.794
+    },
+    {
+      "word": "B",
+      "start": 0.915,
+      "end": 1.0716875
+    },
+    {
+      "word": "tier",
+      "start": 1.0716875,
+      "end": 1.6985
+    },
+    {
+      "word": "Heard",
+      "start": 1.6985,
+      "end": 2.482
+    },
+    {
+      "word": "my",
+      "start": 2.542,
+      "end": 2.683
+    },
+    {
+      "word": "affair",
+      "start": 2.723,
+      "end": 3.065
+    },
+    {
+      "word": "with",
+      "start": 3.125,
+      "end": 3.266
+    },
+    {
+      "word": "a",
+      "start": 3.306,
+      "end": 3.346
+    },
+    {
+      "word": "Chinese",
+      "start": 3.406,
+      "end": 3.788
+    },
+    {
+      "word": "spy",
+      "start": 3.828,
+      "end": 4.19
+    },
+    {
+      "word": "and",
+      "start": 4.551,
+      "end": 4.632
+    },
+    {
+      "word": "called",
+      "start": 4.712,
+      "end": 4.973
+    },
+    {
+      "word": "me",
+      "start": 5.014,
+      "end": 5.134
+    },
+    {
+      "word": "an",
+      "start": 5.235,
+      "end": 5.315
+    },
+    {
+      "word": "honorable",
+      "start": 5.456,
+      "end": 5.918
+    },
+    {
+      "word": "guy",
+      "start": 5.978,
+      "end": 6.319
+    },
+    {
+      "word": "Told",
+      "start": 7.002,
+      "end": 7.143
+    },
+    {
+      "word": "him",
+      "start": 7.183,
+      "end": 7.264
+    },
+    {
+      "word": "I",
+      "start": 7.324,
+      "end": 7.404
+    },
+    {
+      "word": "cheated",
+      "start": 7.444,
+      "end": 7.706
+    },
+    {
+      "word": "on",
+      "start": 7.746,
+      "end": 7.826
+    },
+    {
+      "word": "my",
+      "start": 7.846,
+      "end": 7.947
+    },
+    {
+      "word": "wife",
+      "start": 8.007,
+      "end": 8.268
+    },
+    {
+      "word": "He",
+      "start": 8.73,
+      "end": 8.811
+    },
+    {
+      "word": "said",
+      "start": 8.871,
+      "end": 9.052
+    },
+    {
+      "word": "No",
+      "start": 9.192,
+      "end": 9.313
+    },
+    {
+      "word": "big",
+      "start": 9.373,
+      "end": 9.534
+    },
+    {
+      "word": "deal",
+      "start": 9.554,
+      "end": 9.815
+    },
+    {
+      "word": "But",
+      "start": 10.096,
+      "end": 10.237
+    },
+    {
+      "word": "which",
+      "start": 10.338,
+      "end": 10.579
+    },
+    {
+      "word": "one",
+      "start": 10.78,
+      "end": 10.9
+    }
+  ]
+}

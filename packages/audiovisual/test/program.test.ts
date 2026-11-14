@@ -279,7 +279,7 @@ test("Programme rejects hidden unused facts, graph cycles and wrong signal ports
   assert.throws(() => sealAudiovisualProgram({
     ...valid, picture: { ...valid.picture!, nodes: { ...valid.picture!.nodes,
       interview: { kind: "use", occurrence: "interview-use", output: "audio" } } },
-  }), /expected @hypit\/audiovisual@1#Picture/u);
+  }), /expected @hypit\/audiovisual#Picture/u);
   assert.throws(() => sealAudiovisualProgram({
     ...valid,
     picture: { root: "interview", nodes: {

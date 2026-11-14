@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createMediaRepresentationHostFromFacets } from "@hypit/media-asset";
-import { productExporterForType, productExportersFromFacets } from "@hypit/hypit/product";
+import { productExporterForType, productExportersFromFacets } from "@hypit/hypit/generation/product";
 
 import {
   decodeTimedTranscript,

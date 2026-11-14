@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import blobPackage from "../../blob/src/activation.js";
-import generationPackage from "../../generation/src/activation.js";
+import generationPackage from "../../generation-model/src/activation.js";
 import promptPackage from "../../prompt/src/activation.js";
 import textPackage from "../../text/src/activation.js";
 import {
   createGenerationNodePackageFacet,
   type GenerationGraphProject,
-} from "@hypit/hypit/generation-graph";
-import { createNodeGenerationGraphProjectHost } from "@hypit/hypit/generation-graph/node";
+} from "@hypit/hypit/generation/graph";
+import { createNodeGenerationGraphProjectHost } from "@hypit/hypit/generation/graph/node";
 import { blobTypes } from "@hypit/blob";
 
 import mimoPackage from "../src/activation.js";
@@ -19,19 +19,18 @@ import {
 import { mimoSpeechGenerationNodes } from "../src/generation.js";
 
 const audioValueUsing = {
-  module: { name: "@test/mimo-values", version: "1" },
+  module: { name: "@test/mimo-values" },
   name: "audio",
 } as const;
 
 function installedPackages() {
   return [
     { specifier: "@hypit/blob", contribution: blobPackage },
-    { specifier: "@hypit/generation", contribution: generationPackage },
+    { specifier: "@hypit/generation-model", contribution: generationPackage },
     { specifier: "@hypit/text", contribution: textPackage },
     { specifier: "@hypit/prompt", contribution: promptPackage },
     { specifier: "@hypit/mimo-speech", contribution: mimoPackage },
     { specifier: "@test/mimo-values", contribution: {
-      format: "hypit.package@1" as const,
       facets: [createGenerationNodePackageFacet({ nodes: [{
         kind: "value",
         using: audioValueUsing,
@@ -45,7 +44,7 @@ function installedPackages() {
 
 test("MiMo contributes graph-native VoiceDesign and VoiceClone nodes", () => {
   const nodes = mimoPackage.facets.flatMap((facet) =>
-    facet.abi === "hypit.generation-node-package@1"
+    facet.kind === "hypit.generation-node-package"
       ? (facet as { implementation: { nodes: readonly { using: { name: string } }[] } }).implementation.nodes
       : []);
   assert.deepEqual(nodes.map((node) => node.using.name), [

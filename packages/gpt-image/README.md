@@ -12,11 +12,11 @@ network code. The selected Provider implements its exact capability.
 Provider-specific combination limits are checked by that Provider before any paid operation. They
 do not narrow this model-owned vocabulary or leak into author source.
 
-The package exposes one exact `@hypit/gpt-image@1` module and one `Image` author declaration:
+The package exposes one exact `@hypit/gpt-image` module and one `Image` author declaration:
 
 ```svml
-module prompt from "@hypit/prompt@1"
-module gpt from "@hypit/gpt-image@1"
+module prompt from "@hypit/prompt"
+module gpt from "@hypit/gpt-image"
 
 prompt.Prompt "direction" {
   text: "A woman holding the product, editorial photography."
@@ -44,20 +44,20 @@ Provider's selected image unchanged. Denoising, grading or other project-specifi
 is not hidden inside the model contract.
 
 The declaration compiler belongs to this package. The public
-`@hypit/generation/model` helpers remain responsible only for the exact request and Fragment
+`@hypit/generation-model/contract` helpers remain responsible only for the exact request and Fragment
 shell; they own no author syntax registry or model syntax.
 
 ## Generation Graph node
 
-The package contributes `@hypit/gpt-image@1#gpt-image-2.image` through its own
-`hypit.generation-node-package@1` facet. Generation Graph Core has no GPT Image component list or request branch.
+The package contributes `@hypit/gpt-image#gpt-image-2.image` through its own
+`hypit.generation-node-package` facet. Generation Graph Core has no GPT Image component list or request branch.
 The node keeps exact model settings explicit and accepts zero to sixteen indexed image edges:
 
 ```json
 {
   "id": "walking",
   "using": {
-    "module": { "name": "@hypit/gpt-image", "version": "1" },
+    "module": { "name": "@hypit/gpt-image" },
     "name": "gpt-image-2.image"
   },
   "inputs": {

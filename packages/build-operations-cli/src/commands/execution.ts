@@ -1,11 +1,11 @@
 import { resolve } from "node:path";
 
-import { readExecutionLog } from "@hypit/runtime";
+import { readExecutionLog } from "@hypit/generation-runtime";
 import type { BuildResult, BuildResultHistory } from "@hypit/result";
 
 import type { CliCommand, ExecutionCommand } from "../command.js";
 import { activityObservationKey, buildProgressLines, buildProgressView, observeBuildView } from "../observation.js";
-import type { CliIo } from "@hypit/cli";
+import type { CliIo } from "@hypit/cli/public";
 import type { CliRuntimeHost } from "../runtime-port.js";
 import { formatOperationProgress } from "../runtime-view.js";
 import { buildStatusView } from "../view.js";
@@ -53,7 +53,7 @@ export async function runExecutionCommand(input: {
   if (args.command === "logs") {
     const opened = await openProjectResults();
     let source: "runtime" | "result" | "unavailable" = "unavailable";
-    let view: import("@hypit/runtime").ExecutionLogView | undefined;
+    let view: import("@hypit/generation-runtime").ExecutionLogView | undefined;
     let finished = false;
     try {
       const result = await opened.history.read(args.build);

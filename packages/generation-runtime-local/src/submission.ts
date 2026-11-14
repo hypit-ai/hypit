@@ -1,0 +1,22 @@
+import type { BuildDefinition } from "@hypit/generation-build";
+import type { BuildExecutionRequest, BuildExecutionSnapshot } from "./execution.js";
+
+export type PendingBuildSubmission = BuildExecutionRequest & {
+  readonly createdAt: number;
+};
+
+export type PendingBuildCommit = BuildExecutionRequest & {
+  readonly definition: BuildDefinition;
+};
+
+/**
+ * One exact cross-store submission transaction. A pending submission is not schedulable and can
+ * only become active execution or be explicitly discarded with its Result draft and temporary resources.
+ */
+export type PendingBuildStore = {
+  prepare(request: BuildExecutionRequest, options?: { readonly now?: number }): Promise<PendingBuildSubmission>;
+  read(build: string): Promise<PendingBuildSubmission | undefined>;
+  list(): Promise<readonly PendingBuildSubmission[]>;
+  commit(request: PendingBuildCommit): Promise<BuildExecutionSnapshot>;
+  discard(build: string): Promise<void>;
+};

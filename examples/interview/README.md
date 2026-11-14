@@ -41,11 +41,11 @@ npx hypit check reference.svml
 npx hypit estimate reference.svml --segment manifest-rule --language en --pace fast --rounding ceil
 npx hypit estimate reference.svml --segment real-estate-rule --language en --pace fast --rounding ceil
 npx hypit estimate reference.svml --segment bitcoin-rule --language en --pace fast --rounding ceil
-npx hypit plan reference.svml --target final.video --runtime ./hypit.runtime.json
+npx hypit plan reference.svml --target final.video --runtime ./hypit.generation-runtime.json
 ```
 
 Those estimates are eleven, eight and eight seconds. Review the selected Endpoints and pricing;
-under spending authorization, `npx hypit build reference.svml --target final.video --runtime ./hypit.runtime.json --follow`
+under spending authorization, `npx hypit build reference.svml --target final.video --runtime ./hypit.generation-runtime.json --follow`
 generates and composes the work. The initial result uses fixed Caption positions. Watch it to judge
 performance, cuts, reading and reveal timing.
 
@@ -70,7 +70,7 @@ Once that real Recipe exists, add its import to the Source's opening prologue:
 After `vertical` is declared, add its measured timeline and connect it to the existing Caption Track:
 
 ```svml
-<import as="sequence" from="@hypit/spatial-sequence@1"/>
+<import as="sequence" from="@hypit/spatial-sequence"/>
 <sequence:TimelineRegions id="wife-heads" document={heads.heads}
   timeline={speech.timeline} canvas={vertical.canvas}/>
 <caption-fine:Caption id="captions" document={story.caption} timing={caption-timing}
@@ -96,8 +96,8 @@ hypit get ACTUAL_BUILD_ID --output manifest-rule-take.video \
 ```
 
 ```svml
-<import as="media" from="@hypit/media-author@1"/>
-<import as="mediaop" from="@hypit/media-operations@1"/>
+<import as="media" from="@hypit/media-author"/>
+<import as="mediaop" from="@hypit/media-operations"/>
 
 <media:Video id="accepted-manifest-rule" src="./assets/accepted/manifest-rule.mp4"/>
 <media:Video id="manifest-rule-media" source={accepted-manifest-rule}

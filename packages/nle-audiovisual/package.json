@@ -1,0 +1,28 @@
+{
+  "name": "@hypit/nle-audiovisual",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@hypit/audio-program": "workspace:^0.1.0",
+    "@hypit/audiovisual": "workspace:^0.1.0",
+    "@hypit/audiovisual-audio": "workspace:^0.1.0",
+    "@hypit/audiovisual-execution": "workspace:^0.1.0",
+    "@hypit/audiovisual-html": "workspace:^0.1.0",
+    "@hypit/facet": "workspace:^0.0.0-dev",
+    "@hypit/html-program": "workspace:^0.2.0",
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/spatial": "workspace:^0.1.1",
+    "@hypit/temporal": "workspace:^0.1.1"
+  }
+}

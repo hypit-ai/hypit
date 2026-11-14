@@ -7,7 +7,7 @@ import {
   htmlVisual,
   type HtmlTextNode,
 } from "@hypit/html-program";
-import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
+import type { NleAudiovisualComponentResolver } from "@hypit/nle-audiovisual";
 import {
   resolveNlePictureLayout,
   type NleComponentItem,
@@ -16,7 +16,8 @@ import {
   type NlePackageSymbol,
   type NleComposition,
 } from "@hypit/nle";
-import { canonicalize, type ModuleManifest } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import { type GenerationModuleDefinition } from "@hypit/generation-build";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
 import { sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 
@@ -32,14 +33,12 @@ import type {
 } from "./types.js";
 
 export const textFineNleComponentSymbol: NlePackageSymbol = {
-  module: { name: "@hypit/text-fine", version: "1" },
+  module: { name: "@hypit/text-fine" },
   name: "fine",
 };
 
-export const textFineNleManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const textFineNleManifest: GenerationModuleDefinition = {
   name: textFineNleComponentSymbol.module.name,
-  version: textFineNleComponentSymbol.module.version,
   dependencies: [],
   types: [],
   capabilities: [],
@@ -634,7 +633,7 @@ export const textFineNleResolver: NleComponentResolver = {
   },
 };
 
-export const textFineNleHtmlVideoResolver: NleHtmlVideoComponentResolver = {
+export const textFineNleAudiovisualResolver: NleAudiovisualComponentResolver = {
   component: textFineNleComponentSymbol,
   resolve: (item, context) => ({ html: resolveTextFine(item, context).html }),
 };

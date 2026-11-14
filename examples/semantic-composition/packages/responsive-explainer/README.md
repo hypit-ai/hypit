@@ -7,7 +7,7 @@ With `PreparedMedia`, its exact source Window, a projected Instant, Canvas and e
 already available:
 
 ```svml
-<import as="explainer" from="@example/responsive-explainer@1"/>
+<import as="explainer" from="@example/responsive-explainer"/>
 
 <explainer:Scene id="scene" timeline={speech.timeline}
   within={canvas.bounds} font={font} media={speaker-media.media} source-window={speech.speaker}

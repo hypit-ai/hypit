@@ -1,9 +1,12 @@
 import { mediaDependency, mediaTypes, pictureInterpretationSchema, preparedSignalPictureSourceSchema } from "@hypit/media";
 import { blobRefSchema } from "@hypit/protocol";
-import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import type { ValueSchema } from "@hypit/protocol";
+import type { CapabilityRef, TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
 import { frameSpanSchema, temporalDependency, temporalMapSchema, temporalTypes } from "@hypit/temporal-graph";
 
-export const htmlProgramModuleRef = { name: "@hypit/html-program", version: "1" } as const;
+export const htmlProgramModuleRef = { name: "@hypit/html-program" } as const;
 export const htmlProgramTypes = {
   program: { module: htmlProgramModuleRef, name: "HtmlProgram" },
   frameImages: { module: htmlProgramModuleRef, name: "FrameImages" },
@@ -86,10 +89,8 @@ export const htmlProgramSchema: ValueSchema = {
   },
 };
 
-export const htmlProgramManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const htmlProgramManifest: GenerationModuleDefinition = {
   name: htmlProgramModuleRef.name,
-  version: htmlProgramModuleRef.version,
   dependencies: [mediaDependency, temporalDependency],
   types: [htmlProgramTypes.program.name, htmlProgramTypes.frameImages.name],
   capabilities: [

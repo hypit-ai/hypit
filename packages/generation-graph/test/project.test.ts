@@ -10,7 +10,7 @@ import {
 } from "../src/index.js";
 
 const component = {
-  module: { name: "@example/image", version: "1" },
+  module: { name: "@example/image" },
   name: "generate",
 } as const;
 

@@ -8,9 +8,10 @@ Runtime 使用选定服务执行这份有限工作，项目把接受的材料作
 
 | 部分 | 包含内容 |
 | --- | --- |
-| 项目 | Source、素材、组件包与选定的 Runtime Profile |
+| 项目 | Source、素材、组件包与选定的 Generation Runtime Profile |
 | Hypit 安装 | 命令与已安装的包 |
-| Runtime Profile | Provider Endpoint、凭据引用、路由与共享容量 |
+| Generation Runtime Profile | Worker 与 Build 执行策略，以及 Environment 引用 |
+| Environment Profile | Provider Endpoint、凭据引用、路由与共享容量 |
 | Build | 使用选定工作和配置的一次执行尝试 |
 | Result 仓库 | 已完成的公开 Output、执行结果和保留的运行证据 |
 
@@ -25,22 +26,30 @@ hypit paths
 hypit runtime init
 ```
 
-`runtime init` 写入可编辑的起始 `hypit.runtime.json`，通过项目的 `.hypit/runtime`
-文件选择它。已有 Profile 会保留；此操作不安装、不登录、不执行。
-起始配置提供 HypiHub 托管生成和 WhisperX，以及本地媒体处理、渲染。先按作品需要选择服务，
+`runtime init` 写入 `hypit.generation-runtime.json` 及其引用的 `hypit.environment.json`，再通过项目的
+`.hypit/generation/runtime-profile` 文件选择 Generation Runtime Profile。已有文件会保留；此操作不安装、
+不登录、不执行。起始配置提供 HypiHub 托管能力，以及本地媒体处理、渲染。先按作品需要选择服务，
 再准备它们。本地推理、项目 Provider 可以走同一条路径，也可以与 HypiHub 混合使用。
 
 `hypit runtime use <profile>` 选择已有配置；`--runtime <profile>` 只覆盖当前命令。
 命令只读取当前项目的选择，不继承其他项目的 Runtime。命令行相对路径以当前目录为基准。
 
-## Runtime Profile
+## Generation Runtime 与 Environment Profile
 
-一个只配置本地媒体处理的例子：
+Generation 执行状态与部署选择属于不同所有者。Generation Runtime Profile 引用 Environment Profile：
 
 ```json
 {
-  "format": "hypit.runtime-local@1",
-  "dataRoot": ".hypit/runtimes/local",
+  "format": "hypit.generation-runtime-local@1",
+  "dataRoot": ".hypit/generation/runtime/local",
+  "environment": "./hypit.environment.json"
+}
+```
+
+```json
+{
+  "format": "hypit.execution-environment-local@1",
+  "dataRoot": ".hypit/environment/local",
   "credentials": {},
   "endpoints": {
     "media.local": { "use": "@hypit/provider-media-local" }
@@ -49,16 +58,16 @@ hypit runtime init
 }
 ```
 
-`dataRoot` 放活跃执行数据和工作文件，与 `.hypit/runtime` 选择文件分开。
+第一份 `dataRoot` 放 Generation 活跃执行数据；Environment 的 `dataRoot` 属于凭据和受管 Program。
 `endpoints` 选择已安装的 Provider 及其配置。凭据通过选定 Store 中的引用获取，
-密钥值不写进 Profile 或 Source。
+密钥值不写进两份 Profile 或 Source。
 
 只有一个兼容 Endpoint 时无需 binding；多个 Endpoint 都能提供同一能力时，用 binding
 表达选择。例如已明确配置本地 WhisperX 后：
 
 ```json
 "bindings": {
-  "@hypit/whisperx@1#whisperx-transcription": "whisperx.local"
+  "@hypit/whisperx#whisperx-transcription": "whisperx.local"
 }
 ```
 
@@ -74,20 +83,32 @@ hypit runtime up --endpoint media.local
 hypit runtime status
 ```
 
-只准备资源、暂不启动助手或 Worker 时，使用 `hypit programs prepare --endpoint media.local`。
-通过 `hypit programs status --endpoint media.local` 查看就绪情况；检查配置或排查失败时，
-使用 `hypit doctor --endpoint media.local`。按当前问题选择命令，不必依次执行所有检查。
+只准备资源、暂不启动助手或 Worker 时，使用
+`hypit programs prepare --environment ./hypit.environment.json --endpoint media.local`。
+通过 `hypit programs status --environment ./hypit.environment.json --endpoint media.local` 查看就绪情况；检查配置或排查失败时，
+使用 `hypit doctor --environment ./hypit.environment.json --endpoint media.local`。按当前问题选择命令，不必依次执行所有检查。
 
 本地媒体处理没有凭据要求。选中的服务若声明了凭据槽，再单独使用
 `hypit auth status <endpoint>` 检查。例如，选择 HypiHub 后使用
 `hypit auth status hypihub.default`，需要连接账户时执行 `hypit auth login hypihub.default`。
 
+认证与环境诊断不要求启动 Generation。脱离 Build 使用时可以直接选择 Environment Profile：
+
+```bash
+hypit doctor --environment ./hypit.environment.json
+hypit auth status hypihub.default --environment ./hypit.environment.json
+hypit auth login hypihub.default --environment ./hypit.environment.json
+```
+
+`--runtime ./hypit.generation-runtime.json` 仍可作为间接选择方式：它沿 Runtime Profile 找到其引用的
+Environment，并不表示凭据属于 Generation Runtime。
+
 使用 Profile 里的实际 Endpoint 名称，可重复 `--endpoint` 选择多个；省略时覆盖整个 Profile。
 `doctor` 读取配置、运行 Provider 的诊断，不提交生成。除了错误，也要阅读警告：有凭据或能读取
-模型目录，不代表每种请求一定成功。没有选定 Runtime 时，doctor 只检查项目 Result。
+模型目录，不代表每种请求一定成功。Environment 与 Runtime 均未选择时，doctor 只检查项目 Result。
 
 `runtime up` 准备所选本地依赖和 Managed Program，再启动 Worker；它不登录或启动托管服务。
-`programs prepare|up|status|down` 单独管理这些本地资源和助手。首次推理环境准备可能涉及大量下载，
+`programs prepare|up|status|down --environment <profile>` 单独管理这些本地资源和助手。首次推理环境准备可能涉及大量下载，
 应先比较本地准备成本和托管方式，再选择执行路径。
 
 `hypit plan <source> --target <output>` 检查当前工作需要的能力和轻量就绪状态。发现 Provider 能力需要可加载的包声明；
@@ -130,7 +151,7 @@ Provider 可以分别声明任务容量和 submit、poll、collect 的短调用�
 
 ## 产物留在项目里
 
-Result 位于运行 Hypit 的机器上、项目自己的 `.hypit/results`。本地电脑、SSH Linux 主机和
+Result 位于运行 Hypit 的机器上、项目自己的 `.hypit/generation/results`。本地电脑、SSH Linux 主机和
 官方 WebUI 后端遵循同一规则：整套 Runtime 部署到那个宿主，不把队列、工作文件和 Result
 存储拆到不同服务。需要长期归档或迁移时，在 Build 完成后显式处理这些文件。
 
@@ -141,4 +162,4 @@ Result 在公开 Output 完成时发布它们，最后保留终态。新 Output 
 `builds`、`history`、`inspect`、`result export` 读取项目 Result，不依赖原 Runtime。
 精确存储和执行接口见
 [Result 包](https://github.com/hypit-ai/hypit/blob/main/packages/result/README.md) 与
-[本地 Runtime 包](https://github.com/hypit-ai/hypit/blob/main/packages/runtime-local/README.md)。
+[本地生成 Runtime 包](https://github.com/hypit-ai/hypit/blob/main/packages/generation-runtime-local/README.md)。

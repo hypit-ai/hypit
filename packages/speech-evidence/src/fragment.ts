@@ -1,4 +1,4 @@
-import { sealGraphFragment } from "@hypit/hypit/author";
+import { sealGraphFragment } from "@hypit/hypit/generation/author";
 import { mediaTypes } from "@hypit/media";
 
 import {

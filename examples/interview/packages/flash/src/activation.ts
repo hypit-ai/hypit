@@ -1,12 +1,16 @@
-import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
-import { canonicalize, sameType } from "@hypit/hypit/protocol";
-import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/author";
-import type { AuthorDeclarationCompiler, AuthorResolvedReference } from "@hypit/hypit/author";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { ModuleManifest, TypeRef } from "@hypit/hypit/protocol";
+import { sameType } from "@hypit/hypit/module";
+import { createModuleFacet } from "@hypit/hypit/module";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/generation/markup";
+import { canonicalize } from "@hypit/hypit/value";
+import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/generation/author";
+import type { AuthorDeclarationCompiler, AuthorResolvedReference } from "@hypit/hypit/generation/author";
+import { createRefinementPackageFacet } from "@hypit/hypit/generation/refinement";
+import { createProducerPackageFacet } from "@hypit/hypit/generation/producer";
+import type { ProducerPackage } from "@hypit/hypit/generation/producer";
+import type { RefinementPackage } from "@hypit/hypit/generation/refinement";
+import type { TypeRef } from "@hypit/hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/hypit/generation/build";
 import {
   assertVisualTrackIdentity,
   compositionTypes,
@@ -28,7 +32,7 @@ import {
 } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 
-const moduleRef = { name: "@interview/flash", version: "1" } as const;
+const moduleRef = { name: "@interview/flash" } as const;
 const optionsType = { module: moduleRef, name: "FlashOptions" } as const;
 const renderProducer = { module: moduleRef, name: "render" } as const;
 
@@ -41,10 +45,8 @@ type FlashOptions = {
   readonly decayFrames: number;
 };
 
-const manifest: ModuleManifest = {
-  format: "hypit.module@1",
+const manifest: GenerationModuleDefinition = {
   name: moduleRef.name,
-  version: moduleRef.version,
   dependencies: [timelineTypes.timeline, timelineTypes.window, spatialTypes.frame, compositionTypes.visualTrack]
     .map((type) => type.module),
   types: [optionsType.name],
@@ -252,9 +254,8 @@ const authorDeclaration: AuthorDeclarationCompiler = {
 const markupDeclaration = { name: "flash", tag: "Flash" } as const;
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [{ manifest }],
   facets: [
+    createModuleFacet(manifest), createGenerationModuleFacet(manifest),
     createProducerPackageFacet(component.producers ?? []),
     createRefinementPackageFacet(component.refinements ?? []),
     createAuthorDeclarationFacet(authorDeclaration),

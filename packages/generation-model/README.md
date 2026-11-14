@@ -1,0 +1,100 @@
+# `@hypit/generation-model`
+
+This internal workspace package owns the generated-media Model contract. It is not an independently
+published product: the Distribution embeds it and exposes `@hypit/hypit/generation/model/*`. Its
+workspace coordinate and semantic Module owner are both `@hypit/generation-model`; the package that
+defines generated-media Types and Capabilities is also the package selected for them.
+
+Optional standard Products for generated audio, images and video. A generated set is an ordered,
+non-empty collection of accepted Blob references. It has no universal maximum count: request count
+belongs to the Model contract, and a narrower service quota belongs to the selected Endpoint.
+
+Every Model package owns its complete canonical request Type, validator, exact Capability and result
+Type. Core carries that request opaquely as the concrete Need constraints. Provider choice,
+credentials, queues and retries remain Runtime concerns.
+
+## Model contract
+
+`@hypit/generation-model/contract` defines the small common shell around a model-owned request:
+
+```ts
+import { defineModelModule, standardGenerationResultTypes } from "@hypit/generation-model/contract";
+
+const model = defineModelModule({
+  module: { name: "@owner/region-model" },
+  operations: [{
+    key: "render",
+    capabilityName: "region-model-v1",
+    requestTypeName: "RegionRequest",
+    producerName: "request-region-model-v1",
+    returns: standardGenerationResultTypes.image,
+    validateRequest(request) {
+      // The Model validates its own arbitrary structured request here.
+    },
+  }],
+});
+```
+
+The helper only emits the request Type, Capability, Producer and Need Fragment. Request-building
+Producers and author declarations are ordinary Model-package code. A Model is not required to classify
+its inputs as text, media or scalar.
+
+Existing field-oriented packages may use `@hypit/generation-model/model-fields`. That subpath is an
+optional authoring implementation, not the Generation protocol. Its builder never reaches an
+Endpoint; only the complete Model-validated request does. `defineFieldModelModule()` layers its
+draft, binding and finalize Producers on `defineModelModule()`; it does not declare a second model
+facet or rebuild the request Capability separately.
+
+`@hypit/generation-model/model-fields/author` contains the corresponding optional declaration-compiler
+assembly helper. It is nested under `model-fields` because it composes that optional field vocabulary.
+
+`@hypit/generation-model/model-fields/graph` is the Generation Graph counterpart. A Model package supplies one
+validated draft plus named text and media sources; the helper creates the exact binding/finalization Fragment and
+normalized Graph inputs. Repeated references remain separate typed edges and are folded in declared order. The
+helper does not choose field names, invocation modes, defaults or media metadata—those stay in the Model package.
+
+A field whose wire kind is `text` may declare an exact `inputType`. The binding Producer accepts that
+nominal graph Type and extracts its string payload only at request assembly. Generation therefore does
+not equate ordinary Text, Prompt or another package's textual value. Current image/video generation
+packages declare their prompt field as `@hypit/prompt#Prompt`; speech packages may still select ordinary
+`@hypit/text#Text`. The helper names this boundary `textFieldBindings`, not a generic Text input.
+
+A required scalar field may declare Model-owned `defaultItems`. It may then be absent from the
+authoring draft, but request finalization inserts the value and every complete request carries it
+explicitly. Provider mappings have no defaulting mechanism: deployments can rename or encode a
+value, but cannot decide what an omitted Model field means. `defaultItems` is for unconditional
+scalar defaults; context-dependent finalization remains ordinary Model-owned Producer logic.
+
+An activated Model package contributes a generic Module Definition and a Generation Module Definition.
+Package and vocabulary views read the selected Facets' fully qualified Capabilities and result Types
+through the ordinary package loader.
+
+The standard media Products are also optional. A Model explicitly selects its result Type and, when
+an authoring Fragment wants one artifact, the ordinary selector Producer it uses.
+`createFieldModelGenerationFragment()` lets a Model
+declaration publish the complete result, an explicitly selected primary artifact, or both; the output
+names and choice remain owned by that declaration.
+
+## Provider adapter
+
+Providers depend one way on the Model packages whose exact Capabilities they implement. They use the
+Model's exported module identity and request contract; the Model never imports a Provider.
+
+`@hypit/generation-model/provider` is an optional helper for the current field-map plus URL transport. It
+is not required by custom multipart, provider-file-id, inline-byte or other adapters. Its two phases
+keep pure projection separate from effects:
+
+```ts
+import { materializeWireRequest, planWireRequest } from "@hypit/generation-model/provider";
+
+const plan = planWireRequest(mapping, completeRequest); // pure; Resources remain explicit
+const wire = await materializeWireRequest(plan, resolveUrl); // upload/URL effect boundary
+```
+
+Route selection only chooses a service operation inside the already selected Endpoint. Request
+support and service-specific limits run after deployment selection against the complete request.
+They do not narrow the Model contract or cause fallback to another Provider.
+
+Optional per-artifact fields must be carried either through `resourceFields` to transport or through
+`fieldKeys` to the request body. Both `true` and `false` are values; omitted fields remain absent.
+The pure planning phase rejects an unmapped supplied field before any Resource is uploaded.

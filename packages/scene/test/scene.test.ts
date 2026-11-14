@@ -51,14 +51,14 @@ async function readModelDocument(path: string, mediaType: string) {
 const actor: SceneObject = {
   id: "actor-main",
   name: "Actor",
-  using: { module: { name: "@project/characters", version: "1" }, name: "actor" },
+  using: { module: { name: "@project/characters" }, name: "actor" },
   transform: {
     position: { x: 0, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0, w: 1 },
     scale: { x: 1, y: 1, z: 1 },
   },
   enabled: true,
-  parameters: { asset: { path: "assets/scene/characters/actor/actor.scene-asset.json" } },
+  parameters: { asset: { path: "scenes/assets/characters/actor/actor.scene-asset.json" } },
 };
 
 test("a Scene Asset owns explicit package-interpreted files", () => {
@@ -66,7 +66,7 @@ test("a Scene Asset owns explicit package-interpreted files", () => {
     format: "hypit.scene-asset@1",
     id: "actor",
     name: "Actor",
-    using: { module: { name: "@project/scene-assets", version: "1" }, name: "humanoid-character" },
+    using: { module: { name: "@project/scene-assets" }, name: "humanoid-character" },
     resources: { model: { path: "model.gltf", mediaType: "model/gltf+json" } },
     parameters: { rigProfile: "hypit-humanoid" },
   };
@@ -100,7 +100,7 @@ test("a Scene Library owns arbitrary presentation collections rather than fixed 
 });
 
 test("the example Library resolves every generated asset and its model", async () => {
-  const assetRoot = fileURLToPath(new URL("../examples/assets/scene/", import.meta.url));
+  const assetRoot = fileURLToPath(new URL("../examples/scenes/assets/", import.meta.url));
   const library = parseSceneLibraryDocument(await readFile(resolve(assetRoot, "library.scene-library.json"), "utf8"));
   const people = library.entries.filter((entry) => entry.collections.includes("people"));
   assert.ok(people.length >= 17, `expected a useful set of body structures, received ${people.length}`);
@@ -147,7 +147,7 @@ function project() {
     id: "stage",
     name: "Stage",
     environment: {
-      using: { module: { name: "@test/environment", version: "1" }, name: "environment" },
+      using: { module: { name: "@test/environment" }, name: "environment" },
       parameters: {},
     },
     objects: [actor],
@@ -179,7 +179,7 @@ function project() {
           start: second(0),
           duration: second(3),
           enabled: true,
-          using: { module: { name: "@project/motions", version: "1" }, name: "walk" },
+          using: { module: { name: "@project/motions" }, name: "walk" },
           parameters: { speed: 1 },
         }],
       }, {
@@ -192,7 +192,7 @@ function project() {
           start: second(0),
           duration: second(5),
           enabled: true,
-          using: { module: { name: "@project/motions", version: "1" }, name: "dolly" },
+          using: { module: { name: "@project/motions" }, name: "dolly" },
           parameters: { distance: 2 },
         }],
       }],
@@ -217,7 +217,7 @@ test("object and camera Behaviors lower to complete states on one exact Performa
     left + (right - left) * Number(progress.numerator) / Number(progress.denominator);
   const host = createSceneLoweringHost([{ behaviors: [
     {
-      behavior: { module: { name: "@project/motions", version: "1" }, name: "walk" },
+      behavior: { module: { name: "@project/motions" }, name: "walk" },
       resolve: (_item, context) => sceneControlBehavior({
         domain: context.domain,
         segments: [{
@@ -239,7 +239,7 @@ test("object and camera Behaviors lower to complete states on one exact Performa
       })),
     },
     {
-      behavior: { module: { name: "@project/motions", version: "1" }, name: "dolly" },
+      behavior: { module: { name: "@project/motions" }, name: "dolly" },
       resolve: (_item, context) => {
         const camera = value.cameras[0]!;
         return sceneControlBehavior({

@@ -1,33 +1,33 @@
 import {
-  createRuntimeEndpointAdapterFacet,
-  runtimeConfigExact,
-  runtimeConfigObject,
-  runtimeConfigPositiveInteger,
-  runtimeConfigString,
-} from "@hypit/runtime-local/extension";
+  createExecutionEnvironmentEndpointAdapterFacet,
+  executionEnvironmentConfigExact,
+  executionEnvironmentConfigObject,
+  executionEnvironmentConfigPositiveInteger,
+  executionEnvironmentConfigString,
+} from "@hypit/execution-environment-local/extension";
 import {
-  diagnoseRuntimeExecutable,
-  resolveRuntimeExecutable,
-} from "@hypit/runtime-local/node";
+  diagnoseEnvironmentExecutable,
+  resolveEnvironmentExecutable,
+} from "@hypit/execution-environment-local/node";
 
 import { createLocalMediaProvider } from "./provider.js";
 import { localMediaToolchainProgram } from "./program.js";
 
-const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
+const localMediaRuntimeAdapter = createExecutionEnvironmentEndpointAdapterFacet({
   use: "@hypit/provider-media-local",
   activate(context) {
     if (context.pool === undefined) throw new Error("local media Provider Pool is required");
-    const config = runtimeConfigObject(context.config, "local media");
-    runtimeConfigExact(config, [
+    const config = executionEnvironmentConfigObject(context.config, "local media");
+    executionEnvironmentConfigExact(config, [
       "ffmpegPath", "ffprobePath", "defaultConcurrency", "processTimeoutMs", "maxProbeOutputBytes",
     ], "local media");
-    const configuredFfmpeg = runtimeConfigString(config.ffmpegPath, "media ffmpegPath");
-    const configuredFfprobe = runtimeConfigString(config.ffprobePath, "media ffprobePath");
-    const ffmpegPath = resolveRuntimeExecutable(context.dataRoot, configuredFfmpeg ?? "ffmpeg");
-    const ffprobePath = resolveRuntimeExecutable(context.dataRoot, configuredFfprobe ?? "ffprobe");
-    const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "media defaultConcurrency");
-    const processTimeoutMs = runtimeConfigPositiveInteger(config.processTimeoutMs, "media processTimeoutMs");
-    const maxProbeOutputBytes = runtimeConfigPositiveInteger(config.maxProbeOutputBytes, "media maxProbeOutputBytes");
+    const configuredFfmpeg = executionEnvironmentConfigString(config.ffmpegPath, "media ffmpegPath");
+    const configuredFfprobe = executionEnvironmentConfigString(config.ffprobePath, "media ffprobePath");
+    const ffmpegPath = resolveEnvironmentExecutable(context.dataRoot, configuredFfmpeg ?? "ffmpeg");
+    const ffprobePath = resolveEnvironmentExecutable(context.dataRoot, configuredFfprobe ?? "ffprobe");
+    const defaultConcurrency = executionEnvironmentConfigPositiveInteger(config.defaultConcurrency, "media defaultConcurrency");
+    const processTimeoutMs = executionEnvironmentConfigPositiveInteger(config.processTimeoutMs, "media processTimeoutMs");
+    const maxProbeOutputBytes = executionEnvironmentConfigPositiveInteger(config.maxProbeOutputBytes, "media maxProbeOutputBytes");
     return {
       endpoint: createLocalMediaProvider({
         instance: context.instance,
@@ -40,13 +40,13 @@ const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
       }),
       program: localMediaToolchainProgram({ id: context.instance, ffmpegPath, ffprobePath }),
       diagnose: async () => [
-        ...await diagnoseRuntimeExecutable({
+        ...await diagnoseEnvironmentExecutable({
           root: context.dataRoot,
           configured: configuredFfmpeg,
           fallback: "ffmpeg",
           subject: "FFmpeg",
         }),
-        ...await diagnoseRuntimeExecutable({
+        ...await diagnoseEnvironmentExecutable({
           root: context.dataRoot,
           configured: configuredFfprobe,
           fallback: "ffprobe",
@@ -58,7 +58,6 @@ const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
 });
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
   facets: [localMediaRuntimeAdapter],
 };
 

@@ -1,4 +1,5 @@
-import type { NleInspectorAdjustmentPresentation, NleInspectorFieldDraft } from "@hypit/nle-view";
+import { nleTimeMappingRequiredDuration } from "@hypit/nle";
+import type { NleInspectorFieldDraft, NleInspectorOperatorPresentation } from "@hypit/nle-view";
 
 import { assertPictureFilterNleParameters, pictureFilterNleSymbol } from "./nle.js";
 import type { PictureFilterState } from "./program.js";
@@ -21,17 +22,18 @@ function stateFields(state: PictureFilterState): NleInspectorFieldDraft[] {
   ];
 }
 
-export const pictureFilterNleInspector: NleInspectorAdjustmentPresentation = {
-  component: pictureFilterNleSymbol,
-  project: ({ item }) => {
-    assertPictureFilterNleParameters(item.parameters, item.duration);
-    return item.parameters.kind === "constant" ? [{
+export const pictureFilterNleInspector: NleInspectorOperatorPresentation = {
+  operator: pictureFilterNleSymbol,
+  project: ({ application }) => {
+    assertPictureFilterNleParameters(application.parameters,
+      nleTimeMappingRequiredDuration(application.controlTime));
+    return application.parameters.kind === "constant" ? [{
       id: "filter-state", label: "滤镜", domain: "how", page: { id: "appearance", label: "外观" },
-      fields: stateFields(item.parameters.state),
+      fields: stateFields(application.parameters.state),
     }] : [{
       id: "filter-animation", label: "滤镜动画", domain: "when", page: { id: "motion", label: "动画" }, fields: [
-        { id: "keyframes", label: "关键帧", control: "readout", value: `${item.parameters.keyframes.length} 个` },
-        { id: "interpolation", label: "插值", control: "readout", value: item.parameters.interpolation.kind },
+        { id: "keyframes", label: "关键帧", control: "readout", value: `${application.parameters.keyframes.length} 个` },
+        { id: "interpolation", label: "插值", control: "readout", value: application.parameters.interpolation.kind },
       ],
     }];
   },

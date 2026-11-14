@@ -1,5 +1,5 @@
 import type { Facet } from "@hypit/facet";
-import { isModuleRef, moduleKey } from "@hypit/protocol";
+import { isModuleRef, moduleKey } from "@hypit/module";
 
 import type {
   SceneBehaviorResolverContext,
@@ -8,7 +8,7 @@ import type {
 } from "./motion.js";
 import type { ScenePackageSymbol, ScenePerformanceItem } from "./types.js";
 
-export const scenePackageFacetAbi = "hypit.scene-package@1";
+export const scenePackageFacetKind = "hypit.scene-package";
 
 export type SceneBehaviorResolver = {
   readonly behavior: ScenePackageSymbol;
@@ -23,7 +23,7 @@ export type ScenePackage = {
 };
 
 export type ScenePackageFacet = Facet & {
-  readonly abi: typeof scenePackageFacetAbi;
+  readonly kind: typeof scenePackageFacetKind;
   readonly implementation: ScenePackage;
 };
 
@@ -50,11 +50,11 @@ function assertPackage(value: ScenePackage): void {
 
 export function createScenePackageFacet(value: ScenePackage): ScenePackageFacet {
   assertPackage(value);
-  return { abi: scenePackageFacetAbi, implementation: value };
+  return { kind: scenePackageFacetKind, implementation: value };
 }
 
 export function scenePackagesFromFacets(facets: readonly Facet[]): readonly ScenePackage[] {
-  return facets.flatMap((facet) => facet.abi === scenePackageFacetAbi
+  return facets.flatMap((facet) => facet.kind === scenePackageFacetKind
     ? [(facet as ScenePackageFacet).implementation]
     : []);
 }

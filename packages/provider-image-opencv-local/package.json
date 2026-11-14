@@ -16,17 +16,18 @@
     "README.md"
   ],
   "peerDependencies": {
+    "@hypit/execution-environment-local": "workspace:^0.2.0",
     "@hypit/hypit": "workspace:^0.4.0",
-    "@hypit/raster-composition": "workspace:^0.1.0",
-    "@hypit/runtime-local": "workspace:^0.2.0"
+    "@hypit/raster-composition": "workspace:^0.1.0"
   },
   "devDependencies": {
     "@hypit/blob": "workspace:*",
+    "@hypit/execution-environment-local": "workspace:*",
     "@hypit/executor": "workspace:*",
+    "@hypit/generation-build": "workspace:*",
     "@hypit/hypit": "workspace:*",
-    "@hypit/raster-composition": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/resource-store": "workspace:^0.1.0",
-    "@hypit/runtime-local": "workspace:*"
+    "@hypit/raster-composition": "workspace:*",
+    "@hypit/resource-store": "workspace:^0.1.0"
   }
 }

@@ -3,7 +3,7 @@ import { mkdtemp, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { credentialRef } from "@hypit/runtime";
+import { credentialRef } from "@hypit/execution-environment";
 import { FileCredentialStore } from "@hypit/credential-store-local";
 import { OsCredentialStore } from "@hypit/credential-store-local";
 import { LocalCredentialStore } from "@hypit/credential-store-local";

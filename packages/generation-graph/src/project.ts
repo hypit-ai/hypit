@@ -1,13 +1,12 @@
-import {
-  canonicalize,
-  isModuleRef,
-} from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import { isModuleRef } from "@hypit/module";
 
 import type {
   GenerationGraphInput,
   GenerationGraphNode,
   GenerationGraphProject,
 } from "./types.js";
+import { generationGraphFormat } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -50,7 +49,7 @@ function assertNode(value: GenerationGraphNode): void {
 
 export function assertGenerationGraphProject(value: GenerationGraphProject): void {
   object(value, "Generation Graph Project");
-  assert(value.format === "hypit.generation-graph@1", "Unsupported Generation Graph Project format.");
+  assert(value.format === generationGraphFormat, "Unsupported Generation Graph Project format.");
   identity(value.id, "Generation Graph Project id");
   assert(typeof value.name === "string" && value.name.trim().length > 0,
     "Generation Graph Project name is empty.");
@@ -103,7 +102,7 @@ export function createGenerationGraphProject(input: {
   readonly name: string;
 }): GenerationGraphProject {
   return sealGenerationGraphProject({
-    format: "hypit.generation-graph@1",
+    format: generationGraphFormat,
     id: input.id,
     name: input.name,
     revision: 0,

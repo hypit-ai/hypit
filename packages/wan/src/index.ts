@@ -1,9 +1,9 @@
-import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
-import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
-import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+import { sealModelFieldRequest, defineModelFields } from "@hypit/generation-model/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation-model/model-fields";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation-model/model-fields";
 import { promptTypes } from "@hypit/hypit/prompt";
 
-export const wanModuleRef = { name: "@hypit/wan", version: "1" } as const;
+export const wanModuleRef = { name: "@hypit/wan" } as const;
 export const wanModels = ["wan-2.7-image", "wan-2.7-image-pro"] as const;
 export type WanModel = typeof wanModels[number];
 

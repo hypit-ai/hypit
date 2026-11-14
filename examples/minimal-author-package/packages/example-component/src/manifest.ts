@@ -1,13 +1,15 @@
 import { compositionTypes } from "@hypit/composition";
-import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
+import type { TypeRef } from "@hypit/hypit/module";
+import type { ProducerRef } from "@hypit/hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/hypit/generation/build";
 import { timelineTypes } from "@hypit/timeline";
 import { temporalTypes } from "@hypit/temporal";
 import { mediaTypes } from "@hypit/media";
 import { recipeType } from "@hypit/hypit/recipe";
-import { blobTypes } from "@hypit/hypit/blob";
+import { blobTypes } from "@hypit/hypit/generation/blob";
 import { spatialTypes } from "@hypit/spatial";
 
-export const exampleModuleRef = { name: "@example/example-component", version: "1" } as const;
+export const exampleModuleRef = { name: "@example/example-component" } as const;
 export const exampleTypes = {
   box: { module: exampleModuleRef, name: "ExampleBox" },
   text: { module: exampleModuleRef, name: "ExampleText" },
@@ -22,8 +24,8 @@ export const exampleProducers = {
   appendItems: { module: exampleModuleRef, name: "append-example-items" },
 } satisfies Record<string, ProducerRef>;
 
-export const exampleManifest: ModuleManifest = {
-  format: "hypit.module@1", name: exampleModuleRef.name, version: exampleModuleRef.version,
+export const exampleManifest: GenerationModuleDefinition = {
+  name: exampleModuleRef.name,
   dependencies: [
     blobTypes.blob.module,
     compositionTypes.visualTrack.module,

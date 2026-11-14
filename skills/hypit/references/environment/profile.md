@@ -21,14 +21,15 @@ hypit runtime init
 hypit paths
 ```
 
-`runtime init` writes and selects an editable starter `hypit.runtime.json`. It preserves an existing
-Profile and performs no installation or login. Its hosted generation/alignment, local media and local
-rendering entries are initial routing choices, not a requirement to prepare every service for every
-video. Keep the entries and bindings appropriate to the work and the user's chosen setup.
+`runtime init` writes an editable `hypit.generation-runtime.json` and its referenced
+`hypit.environment.json`, then selects the Generation Runtime Profile. It preserves existing files
+and performs no installation or login. Hosted generation/alignment, local media and local rendering
+entries belong to the Environment Profile; they are initial routing choices, not a requirement to
+prepare every service for every video.
 
 Use `hypit runtime use <profile>` to record an existing Profile for this project.
 `--runtime <profile>` selects one for a single invocation. Commands read the project's
-`.hypit/runtime` selection file; they do not guess from a familiar filename or another project's
+`.hypit/generation/runtime-profile` selection file; they do not guess from a familiar filename or another project's
 selection. From elsewhere, `hypit paths --project /path/to/project` inspects that project. The same
 project option applies to environment commands and Build status/control. See the
 [project boundary](../creation/project-files.md#establish-the-project-boundary).
@@ -38,11 +39,13 @@ Keep these locations distinct:
 | Location | Responsibility |
 | --- | --- |
 | Project directory | Sources, assets and component dependencies |
-| `.hypit/runtime` | File naming the selected Profile |
-| Profile file | Editable execution choices; may be shared intentionally |
-| Profile `dataRoot` | Execution data, Worker state and working files; relative to the Profile's directory |
+| `.hypit/generation/runtime-profile` | File naming the selected Profile |
+| Generation Runtime Profile | Worker policy, Generation execution policy and Environment Profile reference |
+| Environment Profile | Endpoint, credential-store and binding choices |
+| Generation `dataRoot` | Build execution data, Worker state and working files |
+| Environment `dataRoot` | Credential and managed-Program state |
 | Host state / Program Home | Machine-level prepared packages and helpers, reported by `hypit paths` |
-| Project `.hypit/results` | Finished Results and Outputs owned by this project |
+| Project `.hypit/generation/results` | Finished Generation Build history owned by this project |
 
 The selection file and execution directory must be different paths. CLI and creation
 commands address the same project context.
@@ -50,12 +53,12 @@ Installed code, selected configuration and existing execution data remain separa
 
 ## Read and edit the actual configuration
 
-A complete minimal Profile for credential-free local media work is:
+A complete minimal Environment Profile for credential-free local media work is:
 
 ```json
 {
-  "format": "hypit.runtime-local@1",
-  "dataRoot": ".hypit/execution",
+  "format": "hypit.execution-environment-local@1",
+  "dataRoot": ".hypit/environment/local",
   "credentials": {},
   "endpoints": {
     "media.local": {
@@ -76,12 +79,11 @@ are the actual requirements, not as a replacement for a production's existing Pr
 | `endpoints` | Named Provider instances. `use` selects the package; its README defines `config` |
 | `bindings` | Complete capability keys mapped to Endpoint instance names |
 | Endpoint `pool` | Optional identity of a real shared account, deployment or compute quota |
-| `dataRoot` | Where this Runtime keeps execution state; changing it selects different state |
-| Optional `worker.executionMemoryMb` | Soft RSS retirement threshold for the execution carrier; not a Build memory limit |
+| `dataRoot` | Where this Environment keeps credential and Program state; changing it selects different state |
 
 Merge documentation fragments into the corresponding existing objects. Retain other services,
 credential references and bindings the project uses. A fragment without `format` and `dataRoot`
-is not a complete Profile. Package installation makes an adapter available; declaring it here
+is not a complete Environment Profile. Package installation makes an adapter available; declaring it here
 selects an instance. Use the configuration keys documented by that Provider package.
 
 ## Connect Model, capability, Need and Endpoint
@@ -99,7 +101,7 @@ declaring and configuring `whisperx.local`, merge:
 ```json
 {
   "bindings": {
-    "@hypit/whisperx@1#whisperx-transcription": "whisperx.local"
+    "@hypit/whisperx#whisperx-transcription": "whisperx.local"
   }
 }
 ```

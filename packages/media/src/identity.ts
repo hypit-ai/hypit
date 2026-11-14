@@ -28,6 +28,7 @@ import type {
   PreparedMedia,
   PreparedAudioSource,
   PreparedPictureSource,
+  PreparedPictureSampling,
   PreparedPictureMember,
   PreparedSignalPictureMember,
   PreparedSignalPictureSource,
@@ -131,8 +132,11 @@ export function verifyOutputPictureSpec(value: unknown): asserts value is Output
     && signal.colorMatrix === "bt709" && signal.colorRange === "limited" && signal.bitDepth === 8;
   assert(image || video, "OutputPictureSpec color interpretation is invalid");
   const alpha = object(picture.alpha, "OutputPictureSpec.alpha") as unknown as OutputPictureSpec["alpha"];
-  assert(alpha.mode === "opaque", "OutputPictureSpec alpha mode must be opaque");
-  verifyHexColor(alpha.matte, "OutputPictureSpec.alpha.matte");
+  assert(alpha.mode === "opaque" || alpha.mode === "straight", "OutputPictureSpec alpha mode is unsupported");
+  assert(image || alpha.mode === "opaque", "Video OutputPictureSpec alpha mode must be opaque");
+  if (alpha.mode === "opaque") verifyHexColor(alpha.matte, "OutputPictureSpec.alpha.matte");
+  else assert(Object.keys(alpha).every(key => key === "mode"),
+    "Straight OutputPictureSpec alpha must not declare a matte");
 }
 
 export function sameOutputPictureSpec(left: OutputPictureSpec, right: OutputPictureSpec): boolean {
@@ -146,6 +150,8 @@ export function verifyVisualDeliverySpec(value: unknown): asserts value is Visua
   verifyOutputPictureSpec(item.picture);
   assert(item.picture.colorRange === "limited",
     "VisualDeliverySpec picture must use a video interpretation");
+  assert(item.picture.alpha.mode === "opaque",
+    "VisualDeliverySpec picture must use opaque delivery alpha");
   const encoding = object(item.encoding, "VisualDeliverySpec.encoding") as unknown as VisualDeliverySpec["encoding"];
   assert(encoding.codec === "h264", "VisualDeliverySpec.encoding.codec must be h264");
   assert(encoding.pixelFormat === "yuv420p", "VisualDeliverySpec.encoding.pixelFormat must be yuv420p");
@@ -341,6 +347,16 @@ export function verifyPreparedPictureSource(value: unknown): asserts value is Pr
 export function verifyPreparedSignalPictureSource(value: unknown): asserts value is PreparedSignalPictureSource {
   verifyPreparedPictureSource(value);
   assert(value.kind === "signal", "PreparedSignalPictureSource is not a temporal signal");
+}
+
+export function verifyPreparedPictureSampling(value: unknown): asserts value is PreparedPictureSampling {
+  const item = object(value, "PreparedPictureSampling") as unknown as PreparedPictureSampling;
+  verifyPreparedSignalPictureSource(item.source);
+  assertTemporalMap(item.sampling);
+  const terminal = item.sampling.stages.at(-1)!.source;
+  assert(terminal.id === item.source.sourceDomain.id
+    && compareExactTemporalValues(terminal.duration, item.source.sourceDomain.duration) === 0,
+  "PreparedPictureSampling does not map to its stream domain");
 }
 
 export function verifyPreparedAudioSource(value: unknown): asserts value is PreparedAudioSource {

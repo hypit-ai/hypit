@@ -2,10 +2,10 @@
 
 XML-like Author Frontend for `.svml` source units. The filename suffix does not select a parser;
 the Workspace binds this Frontend explicitly, normally through
-`<?svml using="@hypit/markup@1"?>`.
+`<?svml using="@hypit/markup"?>`.
 
 Markup owns the `<svml>` envelope, the leading import prologue, tag and attribute syntax, and the
-lossless author document. Package semantics belong to `@hypit/author` declaration compilers.
+lossless author document. Package semantics belong to `@hypit/generation-authoring/author` declaration compilers.
 
 ## Package declarations
 
@@ -14,12 +14,12 @@ An imported package contributes two independent facts:
 - an Author declaration compiler defines fields, children, bindings, outputs and compilation;
 - a Markup declaration facet assigns that declaration a tag spelling.
 
-The facet ABI is `hypit.markup-declaration@1`. Its implementation contains the Module reference,
+The Facet kind is `hypit.markup-declaration`. Its implementation contains the Module reference,
 declaration name, tag and optional `body: "opaque"` parsing mode.
 
 ```ts
 createMarkupDeclarationFacet({
-  module: { name: "@example/text", version: "1" },
+  module: { name: "@example/text" },
   declaration: { name: "document", tag: "Document" },
 });
 ```
@@ -33,9 +33,9 @@ package's declaration or graph semantics.
 Imports precede body declarations:
 
 ```svml
-<?svml using="@hypit/markup@1"?>
+<?svml using="@hypit/markup"?>
 <svml>
-  <import from="@example/text@1" as="text"/>
+  <import from="@example/text" as="text"/>
   <import source="./shared.svml" as="shared"/>
 
   <text:Document id="story" source={shared.copy}>
@@ -55,7 +55,7 @@ Braces contain a binding path, not JavaScript. Structured text and quoted attrib
 standard `lt`, `gt`, `amp`, `quot` and `apos` entities. Comments use `<!-- ... -->`.
 
 Source order does not determine declaration dependencies. Markup first projects the complete
-document to Author declarations. `@hypit/author` then resolves their symbolic bindings and compiles
+document to Author declarations. `@hypit/generation-authoring/author` then resolves their symbolic bindings and compiles
 them in dependency order.
 
 ## Structured and opaque bodies

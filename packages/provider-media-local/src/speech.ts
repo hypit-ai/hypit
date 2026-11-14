@@ -9,13 +9,10 @@ import { inspectMediaFileByDecodedFrames } from "@hypit/media-local";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@hypit/media-local/execution";
 import { runBoundedMediaProcess } from "@hypit/media-local/process";
 import {
-  assertSpeechEvidenceAudioIdentity,
-  sealSpeechEvidenceAudio,
-  speechEvidenceSampleFrames,
-} from "@hypit/speech-evidence";
+  assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvidenceSampleFrames, } from "@hypit/speech-evidence";
 import type { ProjectSpeechEvidenceAudioNeed, SpeechEvidenceAudio } from "@hypit/speech-evidence";
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, CanonicalValue } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/hypit/value";
+import type { BlobRef, CanonicalValue } from "@hypit/hypit/value";
 import {
   addExactTemporalValues,
   assertTemporalMap,

@@ -20,18 +20,20 @@ JavaScript packages remain trusted code and may still possess ambient authority 
 
 A component normally lives in the video's `packages/` and is installed through that project's
 ordinary package manager. Use the owner's scope, such as `@studio/score-strip`; the active
-Hypit project publishes under `@hypit/*`. A Source imports the package's logical Module ABI, for example
-`module score from "@studio/score-strip@1"`. That `1` is not its npm release version.
+Hypit project publishes under `@hypit/*`. A Source imports the package's logical Module name, for example
+`module score from "@studio/score-strip"`. The installed implementation version belongs only to npm and
+the project lockfile.
 
 External Author Packages use the released Distribution's narrow public subpaths. There is no central
 Author Kit; import only the owner of each responsibility:
 
 | Owner | Interface |
 | --- | --- |
-| `@hypit/hypit/protocol` | Module manifests and serializable graph identities |
-| `@hypit/hypit/producer` | deterministic Producer handlers and Producer package facets |
-| `@hypit/hypit/refinement` | package-owned Type refinements and Refinement package facets |
-| `@hypit/hypit/author` | syntax-neutral Author Declarations, compilers and sealed Graph Fragments |
+| `@hypit/hypit/value` | canonical values and byte-resource leaves |
+| `@hypit/hypit/module` | Module, Type, Capability and Producer identity |
+| `@hypit/hypit/generation/producer` | deterministic Producer handlers and Producer package facets |
+| `@hypit/hypit/generation/refinement` | package-owned Type refinements and Refinement package facets |
+| `@hypit/hypit/generation/author` | syntax-neutral Author Declarations, compilers and sealed Graph Fragments |
 | `@hypit/temporal` | exact duration, rate and relation values and literal parsing |
 | `@hypit/temporal-graph` | optional nominal graph Types and refinements for temporal values |
 | `@hypit/audiovisual` | resolved Source, Occurrence, Picture, Audio, Operator and Programme values |
@@ -52,17 +54,19 @@ The activation module connects the implementation pieces; this is a wiring excer
 local Manifest, Producer/Refinement packages and declaration compilers already exist:
 
 ```ts
-import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/generation/author";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
+import { createRefinementPackageFacet } from "@hypit/hypit/generation/refinement";
+import { createProducerPackageFacet } from "@hypit/hypit/generation/producer";
+import { createModuleFacet } from "@hypit/hypit/module";
 import { authorDeclarations } from "./declaration.js";
 import { manifest } from "./manifest.js";
 import { component } from "./component.js";
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [{ manifest }],
   facets: [
+    createModuleFacet(manifest),
+    createGenerationModuleFacet(manifest),
     createProducerPackageFacet(component.producers ?? []),
     createRefinementPackageFacet(component.refinements ?? []),
     ...authorDeclarations.map(createAuthorDeclarationFacet),
@@ -88,7 +92,7 @@ Component output mappings use **Fragment export name → public Source name**. I
 rename the Fragment port. The Manifest's Producer ports, Fragment wiring and handler output names
 must agree for that operation.
 
-Read the closest installed owner for the behavior being authored: `@hypit/audiovisual-media` for
+Read the closest installed owner for the behavior being authored: `@hypit/media-avir-author` for
 prepared media Sources, `@hypit/picture-transition` for a two-Picture Operator, and
 `@hypit/picture-filter` for a unary Picture Operator. A new component owns its local mechanics and
 publishes the corresponding typed Source or Operator; it does not recreate Track, Composition,

@@ -4,8 +4,8 @@ import type {
   AuthorDocumentInline,
   AuthorDocumentInlineDraft,
   AuthorDocumentTextMark,
-} from "@hypit/author";
-import type { SourceRange } from "@hypit/source";
+} from "@hypit/generation-authoring/author";
+import type { SourceRange } from "@hypit/generation-authoring/source";
 import type { PhrasingContent, RootContent } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { gfmFromMarkdown } from "mdast-util-gfm";

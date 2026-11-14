@@ -1,6 +1,6 @@
-<?svml using="@hypit/markup@1"?>
+<?svml using="@hypit/markup"?>
 <svml>
-  <import from="@hypit/script@1"/>
+  <import from="@hypit/script"/>
 
   <script id="story">
     <opening>

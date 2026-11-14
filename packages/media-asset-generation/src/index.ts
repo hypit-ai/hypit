@@ -9,17 +9,15 @@ import {
   verifyMediaAssetReference,
   type MediaAssetReference,
 } from "@hypit/media-asset";
-import type { CanonicalValue, ModuleManifest } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
 
 export const mediaAssetGenerationModuleRef = {
   name: "@hypit/media-asset-generation",
-  version: "1",
 } as const;
 
-export const mediaAssetGenerationManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const mediaAssetGenerationManifest: GenerationModuleDefinition = {
   name: mediaAssetGenerationModuleRef.name,
-  version: mediaAssetGenerationModuleRef.version,
   dependencies: [blobDependency, mediaDependency],
   types: [],
   capabilities: [],

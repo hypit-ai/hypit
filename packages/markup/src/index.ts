@@ -3,7 +3,7 @@ export {
   MarkupDeclarationRegistry,
   createMarkupDeclarationFacet,
   installMarkupDeclarationFacets,
-  markupDeclarationFacetAbi,
+  markupDeclarationFacetKind,
 } from "./declaration-registry.js";
 export type {
   MarkupDeclarationRegistryLike,

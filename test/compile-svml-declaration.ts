@@ -4,8 +4,9 @@ import {
   type AuthorDeclarationCompiler,
   type AuthorResolvedReference,
   type DecodedAuthorSource,
-} from "@hypit/author";
-import type { BlobRef, ModuleRef } from "@hypit/protocol";
+} from "@hypit/generation-authoring/author";
+import type { BlobRef } from "@hypit/protocol";
+import type { ModuleRef } from "@hypit/module";
 import { declarationsFromSvmlDocument, parseSvmlDocument } from "@hypit/svml";
 
 type Options = {
@@ -22,7 +23,7 @@ type Options = {
 export async function compileSvmlDeclaration(options: Options): Promise<DecodedAuthorSource> {
   const declarations = new AuthorDeclarationRegistry();
   for (const compiler of options.compilers) declarations.register(compiler);
-  const text = `module ${options.alias} from "${options.module.name}@${options.module.version}"
+  const text = `module ${options.alias} from "${options.module.name}"
 
 ${options.source}
 `;

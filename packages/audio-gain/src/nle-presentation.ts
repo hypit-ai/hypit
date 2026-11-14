@@ -3,7 +3,7 @@ import type { NleTimelineAdjustmentPresentation } from "@hypit/nle-view";
 import { audioGainNleSymbol } from "./nle.js";
 
 export const audioGainNlePresentation: NleTimelineAdjustmentPresentation = {
-  component: audioGainNleSymbol,
+  operator: audioGainNleSymbol,
   displayName: "Gain",
   tone: "green",
   chrome: "compact",

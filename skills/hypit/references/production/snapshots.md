@@ -28,7 +28,7 @@ Snapshot sends one immediate frame-rasterization request. It does not create a B
 material or encode video.
 
 Use `--runtime <profile>` and `--project <project>` when the command needs an explicit selection.
-If several Endpoints offer frame capture, bind `@hypit/html-program@1#rasterize-frames` in the Profile.
+If several Endpoints offer frame capture, bind `@hypit/html-program#rasterize-frames` in the Profile.
 Browser preparation remains with that Provider: see
 [local tools](../environment/local-tools.md#prepare-the-local-rendering-browser).
 

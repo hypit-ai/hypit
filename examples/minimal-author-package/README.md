@@ -14,7 +14,7 @@ on a renderer root implicitly meaning the whole Canvas.
 The package builds against the public Hypit language SDK and declares its video-domain libraries as
 ordinary dependencies. `pnpm --dir packages/example-component pack` produces a JavaScript tarball;
 its dependencies are installed by the package manager, not bundled. Installing it in another project
-and importing `@example/example-component@1` loads
+and importing `@example/example-component` loads
 the same Module and declarations through the consumer's active Hypit Distribution. The packaged
 `@example/example-component/preview` Source exists so this boundary can be checked without copying a
 Source out of the package.

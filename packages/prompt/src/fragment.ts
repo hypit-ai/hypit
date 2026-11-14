@@ -1,5 +1,5 @@
-import { sealGraphFragment } from "@hypit/hypit/author";
-import type { GraphFragment, FragmentOperation } from "@hypit/author";
+import { sealGraphFragment } from "@hypit/hypit/generation/author";
+import type { GraphFragment, FragmentOperation } from "@hypit/generation-authoring/author";
 import { textTypes } from "@hypit/hypit/text";
 
 import { promptProducers, promptTypes } from "./manifest.js";

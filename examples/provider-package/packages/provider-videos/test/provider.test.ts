@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EndpointRegistry } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
 import { MemoryResourceStore } from "@hypit/resource-store";
 import { sealSeedanceRequest } from "@hypit/seedance";
 import type { BlobRef, EndpointStartContext } from "@hypit/hypit/endpoint";
 import { canonicalize, endpointOffers, installEndpoint } from "@hypit/hypit/endpoint";
-import { generationTypes } from "@hypit/generation";
+import { generationTypes } from "@hypit/generation-model";
 import { capability, createVideoProvider, mapping } from "../src/provider.js";
 
 test("project video Provider uploads a reference, retains its receipt and collects the generated video", async () => {

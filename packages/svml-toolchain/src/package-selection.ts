@@ -1,5 +1,5 @@
 import { discoverSourcePackages } from "@hypit/build-cli";
-import { AuthorDeclarationRegistry } from "@hypit/author";
+import { AuthorDeclarationRegistry } from "@hypit/generation-authoring/author";
 import { createSvmlAuthorFrontend } from "@hypit/svml";
 import { svmlAuthorFrontendId } from "@hypit/svml";
 import type { LoadedPackage } from "@hypit/loader";

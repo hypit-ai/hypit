@@ -60,7 +60,9 @@ iframe.contentWindow.postMessage({
 ```
 
 Actions are `play`, `pause`, `seek` with `frame`, `mute` with `muted`, and `state`.
-The document accepts commands from its embedding parent and serializes them.
+The document accepts commands from its embedding parent and coalesces commands that arrive while an earlier frame is
+being prepared. Repeated seeks retain the newest frame and merge a following play or pause intent, so pointer scrubbing
+does not leave an obsolete render queue behind.
 It sends `hypit.html-document.state@1` messages containing `frame`, `frameCount`,
 `frameRate` and `playing`, at up to ten updates per second during playback and
 immediately after state changes. Command errors use `hypit.html-document.error@1`.

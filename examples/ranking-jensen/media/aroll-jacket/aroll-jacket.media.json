@@ -1,0 +1,275 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "arroll-jacket",
+  "media": {
+    "file": {
+      "path": "1794510383369-wzd4o77i76.mp4",
+      "mediaType": "video/mp4"
+    },
+    "interpretation": {
+      "audio": {
+        "map": {
+          "stages": [
+            {
+              "pieces": [
+                {
+                  "rate": {
+                    "denominator": 1,
+                    "numerator": 1
+                  },
+                  "sourceAtStart": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "target": {
+                    "end": {
+                      "ticks": "337",
+                      "timeBase": {
+                        "denominator": 24,
+                        "numerator": 1
+                      }
+                    },
+                    "start": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "denominator": 1,
+                        "numerator": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "source": {
+                "duration": {
+                  "ticks": "1756",
+                  "timeBase": {
+                    "denominator": 125,
+                    "numerator": 1
+                  }
+                },
+                "id": "arroll-jacket:media:audio-source"
+              },
+              "target": {
+                "duration": {
+                  "ticks": "337",
+                  "timeBase": {
+                    "denominator": 24,
+                    "numerator": 1
+                  }
+                },
+                "id": "arroll-jacket:media"
+              }
+            }
+          ]
+        },
+        "presentationStart": {
+          "ticks": "0",
+          "timeBase": {
+            "denominator": 32000,
+            "numerator": 1
+          }
+        },
+        "sourceDomain": {
+          "duration": {
+            "ticks": "1756",
+            "timeBase": {
+              "denominator": 125,
+              "numerator": 1
+            }
+          },
+          "id": "arroll-jacket:media:audio-source"
+        },
+        "streamIndex": 1
+      },
+      "domain": {
+        "duration": {
+          "ticks": "337",
+          "timeBase": {
+            "denominator": 24,
+            "numerator": 1
+          }
+        },
+        "id": "arroll-jacket:media"
+      },
+      "id": "arroll-jacket:media",
+      "picture": {
+        "interpretation": {
+          "codedHeight": 1280,
+          "codedWidth": 720,
+          "picture": {
+            "alphaMode": "opaque",
+            "bitDepth": 8,
+            "colorMatrix": "bt709",
+            "colorPrimaries": "bt709",
+            "colorRange": "limited",
+            "colorTransfer": "bt709"
+          },
+          "rotationDegrees": 0,
+          "sampleAspectRatio": {
+            "denominator": 1,
+            "numerator": 1
+          }
+        },
+        "kind": "signal",
+        "map": {
+          "stages": [
+            {
+              "pieces": [
+                {
+                  "rate": {
+                    "denominator": 1,
+                    "numerator": 1
+                  },
+                  "sourceAtStart": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "target": {
+                    "end": {
+                      "ticks": "337",
+                      "timeBase": {
+                        "denominator": 24,
+                        "numerator": 1
+                      }
+                    },
+                    "start": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "denominator": 1,
+                        "numerator": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "source": {
+                "duration": {
+                  "ticks": "337",
+                  "timeBase": {
+                    "denominator": 24,
+                    "numerator": 1
+                  }
+                },
+                "id": "arroll-jacket:media:picture-source"
+              },
+              "target": {
+                "duration": {
+                  "ticks": "337",
+                  "timeBase": {
+                    "denominator": 24,
+                    "numerator": 1
+                  }
+                },
+                "id": "arroll-jacket:media"
+              }
+            }
+          ]
+        },
+        "presentationStart": {
+          "ticks": "0",
+          "timeBase": {
+            "denominator": 90000,
+            "numerator": 1
+          }
+        },
+        "sourceDomain": {
+          "duration": {
+            "ticks": "337",
+            "timeBase": {
+              "denominator": 24,
+              "numerator": 1
+            }
+          },
+          "id": "arroll-jacket:media:picture-source"
+        },
+        "streamIndex": 0
+      }
+    }
+  },
+  "representations": [
+    {
+      "id": "speech.en",
+      "type": {
+        "module": {
+          "name": "@hypit/timed-transcript"
+        },
+        "name": "TimedTranscript"
+      },
+      "document": {
+        "path": "aroll-jacket.transcript.json",
+        "mediaType": "application/json"
+      },
+      "resources": {},
+      "binding": {
+        "temporal": {
+          "mapToMedia": {
+            "stages": [
+              {
+                "target": {
+                  "duration": {
+                    "ticks": "337",
+                    "timeBase": {
+                      "denominator": 24,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "arroll-jacket:media"
+                },
+                "source": {
+                  "duration": {
+                    "ticks": "337",
+                    "timeBase": {
+                      "denominator": 24,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "arroll-jacket:media"
+                },
+                "pieces": [
+                  {
+                    "target": {
+                      "start": {
+                        "ticks": "0",
+                        "timeBase": {
+                          "numerator": 1,
+                          "denominator": 1
+                        }
+                      },
+                      "end": {
+                        "ticks": "337",
+                        "timeBase": {
+                          "denominator": 24,
+                          "numerator": 1
+                        }
+                      }
+                    },
+                    "sourceAtStart": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "numerator": 1,
+                        "denominator": 1
+                      }
+                    },
+                    "rate": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "audio": {
+          "member": "audio"
+        }
+      }
+    }
+  ]
+}

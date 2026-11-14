@@ -1,7 +1,10 @@
 import type { PreparedMedia } from "@hypit/media";
 import type { MediaInspection, MediaSelectionRequest } from "@hypit/media";
-import type { BlobRef, TypeRef } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
 import type { TemporalMap } from "@hypit/temporal/algebra";
+
+export const mediaAssetDocumentFormat = "hypit.media-asset@1";
 
 /** One portable file address, resolved relative to the Media Asset document. */
 export type MediaAssetFile = {
@@ -48,7 +51,7 @@ export type MediaRepresentationDeclaration = {
 
 /** Portable authority for one media file plus independently owned representations. */
 export type MediaAssetDocument = {
-  readonly format: "hypit.media-asset@1";
+  readonly format: typeof mediaAssetDocumentFormat;
   readonly id: string;
   readonly media: {
     readonly file: MediaAssetFile;

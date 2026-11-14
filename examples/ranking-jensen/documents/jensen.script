@@ -1,0 +1,64 @@
+<wife>
+  <HOST> My wife is D tier.
+  <HOST> @{broll-01-1}Forty years.
+  <HOST> @{broll-01-2}Same version.
+  <HOST> @{broll-01-3}Zero updates.@{/broll-01-3}@{/broll-01-2}@{/broll-01-1}
+  <HOST> @{broll-02-1}Divorce gets her
+  <HOST> @{broll-02-2}seventy-five billion.@{/broll-02-2}@{/broll-02-1}
+  <HOST> @{broll-03-1}That's
+  <HOST> @{broll-03-2}five million a day!@{/broll-03-2}@{/broll-03-1}
+  <HOST> @{broll-04-1}Highest-paid job
+  <HOST> in history.@{/broll-04-1}
+</wife>
+
+<trump>
+  <HOST> Trump is B tier.
+  <HOST> @{broll-05-1}Heard my affair
+  <HOST> with a Chinese spy
+  <HOST> @{broll-05-2}and called me
+  <HOST> an honorable guy.@{/broll-05-2}@{/broll-05-1}
+  <HOST> @{broll-06-1}Told him
+  <HOST> I cheated on
+  <HOST> my wife.
+  <HOST> @{broll-06-2}He said,
+  <HOST> 'No big deal.
+  <HOST> @{broll-06-3}But which one?'@{/broll-06-3}@{/broll-06-2}@{/broll-06-1}
+</trump>
+
+<kimberly>
+  <HOST> Kimberly is C tier.
+  <HOST> @{broll-07-1}VP of healthcare.@{/broll-07-1}
+  <HOST> @{broll-08-1}Well,
+  <HOST> she did give me
+  <HOST> @{broll-08-2}hands-on healthcare.@{/broll-08-2}@{/broll-08-1}
+  <HOST> @{broll-09-1}Side effects were@{/broll-09-1~}
+  <HOST> @{broll-09-2}losing my wife
+  <HOST> and my job.@{/broll-09-2}
+</kimberly>
+
+<alice>
+  <HOST> Alice is A tier.
+  <HOST> @{broll-10-1}She's not like
+  <HOST> other women.@{/broll-10-1}
+  <HOST> @{broll-11-1}Other women want ||Hermes.@{/broll-11-1~}
+  <HOST> @{broll-11-2}She wanted H100s.@{/broll-11-2}
+  <HOST> @{broll-12-1}Sadly,
+  <HOST> she's too busy
+  <HOST> extracting my source code
+  <HOST> @{broll-12-2}and sending it to
+  <HOST> Deepseek.@{/broll-12-2}@{/broll-12-1}
+</alice>
+
+<jacket>
+  <HOST> My jacket is S tier.
+  <HOST> @{broll-13-1}Didn't you guys know
+  <HOST> it's DLSS 5?@{/broll-13-1}
+  <HOST> @{broll-14-1}Forty years,
+  <HOST> not a single glitch.@{/broll-14-1}
+  <HOST> @{broll-15-1}Honestly,
+  <HOST> every human being
+  <HOST> @{broll-15-2}should seriously consider
+  <HOST> dating a GPU
+  <HOST> @{broll-15-3}before it becomes AGI
+  <HOST> @{broll-15-4}and replaces you.@{/broll-15-4}@{/broll-15-3}@{/broll-15-2}@{/broll-15-1}
+</jacket>

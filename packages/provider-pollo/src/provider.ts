@@ -1,17 +1,18 @@
-import { capabilityKey } from "@hypit/hypit/protocol";
+import { capabilityKey } from "@hypit/hypit/module";
 import type { AsyncEndpoint, EndpointCredential, EndpointInvocationContext, EndpointOutcome } from "@hypit/hypit/endpoint";
 import { EndpointServiceError, defineEndpoint, wakeAfter } from "@hypit/hypit/endpoint";
 import { EndpointHttpError, EndpointResponseError, EndpointTransportError, withRequestDeadline } from "@hypit/hypit/endpoint/http";
-import type { GenerationArtifactUrlResolver } from "@hypit/generation/provider";
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, CanonicalValue, CapabilityRef } from "@hypit/hypit/protocol";
+import type { GenerationArtifactUrlResolver } from "@hypit/generation-model/provider";
+import { canonicalize } from "@hypit/hypit/value";
+import type { CapabilityRef } from "@hypit/hypit/module";
+import type { BlobRef, CanonicalValue } from "@hypit/hypit/value";
 import { credentialRef } from "@hypit/hypit/endpoint";
 import type { CredentialRef } from "@hypit/hypit/endpoint";
 import type { ResourceStore } from "@hypit/resource-store";
 import { polloRouteForCapability, polloRoutes } from "./routes.js";
 import { PolloHttpError, PolloServiceError, polloTaskFailure } from "./errors.js";
 
-export const polloProviderModuleRef = { name: "@hypit/provider-pollo", version: "1" } as const;
+export const polloProviderModuleRef = { name: "@hypit/provider-pollo" } as const;
 
 export type CreatePolloProviderOptions = {
   readonly instance?: string;

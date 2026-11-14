@@ -1,0 +1,538 @@
+{
+  "format": "hypit.ranking-jensen-broll-sequence@1",
+  "project": "ranking-jensen",
+  "behavior": {
+    "defaultEntry": "pop",
+    "defaultExit": "group-end",
+    "accumulation": "earlier-items-persist",
+    "motion": {
+      "alternating": [
+        "pop",
+        "rise"
+      ],
+      "wideAspectRatio": 1.55,
+      "wide": "wide"
+    }
+  },
+  "groups": [
+    {
+      "id": "01",
+      "segment": "wife",
+      "mode": "accumulate",
+      "items": [
+        {
+          "id": "forty-years",
+          "selection": "broll-01-1",
+          "asset": "media/broll-wife-84-years/reference.media.json",
+          "source": "media/broll-wife-84-years/reference.mp4",
+          "playback": "loop",
+          "layout": {
+            "x": 7,
+            "y": 701,
+            "width": 399,
+            "height": 399,
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "same-version",
+          "selection": "broll-01-2",
+          "asset": "media/broll-wife-version-update/same-version-png.media.json",
+          "source": "media/broll-wife-version-update/same-version.png",
+          "playback": "hold",
+          "layout": {
+            "x": 386,
+            "y": 668,
+            "width": 306,
+            "height": 306,
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "zero-updates",
+          "selection": "broll-01-3",
+          "asset": "media/broll-wife-version-update/zero-updates-png.media.json",
+          "source": "media/broll-wife-version-update/zero-updates.png",
+          "playback": "hold",
+          "layout": {
+            "x": 134,
+            "y": 894,
+            "width": 557,
+            "height": 353.647,
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "segment": "wife",
+      "mode": "accumulate",
+      "items": [
+        {
+          "id": "loris-lawyer",
+          "selection": "broll-02-1",
+          "asset": "media/broll-wife-divorce-lawyer/final-loris-lawyer-v3.media.json",
+          "source": "media/broll-wife-divorce-lawyer/final-loris-lawyer-v3.png",
+          "playback": "hold",
+          "layout": {
+            "x": 11,
+            "y": 579,
+            "width": 380,
+            "height": 473.89,
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "lori-after-divorce",
+          "selection": "broll-02-2",
+          "asset": "media/broll-wife-huell-money/final-lori-after-divorce-v3.media.json",
+          "source": "media/broll-wife-huell-money/final-lori-after-divorce-v3.png",
+          "playback": "hold",
+          "layout": {
+            "x": 56,
+            "y": 873,
+            "width": 636,
+            "height": 358.464,
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "segment": "wife",
+      "mode": "accumulate",
+      "items": [
+        {
+          "id": "math-lady",
+          "selection": "broll-03-1",
+          "asset": "media/broll-wife-five-million/math-lady.media.json",
+          "source": "media/broll-wife-five-million/math-lady.png",
+          "playback": "hold",
+          "layout": {
+            "x": 350,
+            "y": 652,
+            "width": 330,
+            "height": 215.956,
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "five-million",
+          "selection": "broll-03-2",
+          "asset": "media/broll-wife-five-million/money-reference-png.media.json",
+          "source": "media/broll-wife-five-million/money-reference.png",
+          "playback": "hold",
+          "layout": {
+            "x": 30,
+            "y": 808,
+            "width": 587,
+            "height": 379.639,
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "segment": "wife",
+      "mode": "accumulate",
+      "items": [
+        {
+          "id": "linkedin-job",
+          "selection": "broll-04-1",
+          "asset": "media/broll-wife-linkedin-job/source-user.media.json",
+          "source": "media/broll-wife-linkedin-job/source-user.png",
+          "playback": "hold",
+          "layout": {
+            "x": 17,
+            "y": 328,
+            "width": 691,
+            "height": 518.25,
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "05",
+      "segment": "trump",
+      "mode": "accumulate",
+      "items": [
+        {
+          "id": "honeytrap",
+          "selection": "broll-05-1",
+          "asset": "media/broll-trump-honeytrap/source-user.media.json",
+          "source": "media/broll-trump-honeytrap/source-user.png",
+          "playback": "hold",
+          "layout": {
+            "x": 367,
+            "y": 582,
+            "width": 330,
+            "height": 330,
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "honorable",
+          "selection": "broll-05-2",
+          "asset": "media/broll-trump-honorable/source-user.media.json",
+          "source": "media/broll-trump-honorable/source-user.png",
+          "playback": "hold",
+          "layout": {
+            "x": 25,
+            "y": 846,
+            "width": 638,
+            "height": 358.882,
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "06",
+      "segment": "trump",
+      "mode": "accumulate",
+      "items": [
+        {
+          "id": "trump-jensen",
+          "selection": "broll-06-1",
+          "asset": "media/broll-trump-pointing/final-trump-jensen-v3.media.json",
+          "source": "media/broll-trump-pointing/final-trump-jensen-v3.png",
+          "playback": "hold",
+          "layout": {
+            "x": 11,
+            "y": 760,
+            "width": 382,
+            "height": 286.5,
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "no-big-deal",
+          "selection": "broll-06-2",
+          "asset": "media/broll-trump-no-big-deal/final-wife-ranking-v2.media.json",
+          "source": "media/broll-trump-no-big-deal/final-wife-ranking-v2.png",
+          "playback": "hold",
+          "layout": {
+            "x": 34,
+            "y": 524,
+            "width": 644,
+            "height": 429.331,
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "which-one",
+          "selection": "broll-06-3",
+          "asset": "media/broll-trump-which-one/final-which-one-v2.media.json",
+          "source": "media/broll-trump-which-one/final-which-one-v2.png",
+          "playback": "hold",
+          "layout": {
+            "x": 16,
+            "y": 825,
+            "width": 687,
+            "height": 366.737,
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "07",
+      "segment": "kimberly",
+      "mode": "accumulate",
+      "items": [
+        {
+          "id": "healthcare-vp",
+          "selection": "broll-07-1",
+          "asset": "media/broll-kimberly-healthcare-vp/source-user.media.json",
+          "source": "media/broll-kimberly-healthcare-vp/source-user.png",
+          "playback": "hold",
+          "layout": {
+            "x": 34,
+            "y": 564,
+            "width": 654,
+            "height": 490.5,
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "08",
+      "segment": "kimberly",
+      "mode": "accumulate",
+      "items": [
+        {
+          "id": "training",
+          "selection": "broll-08-1",
+          "asset": "media/broll-kimberly-training/source-user.media.json",
+          "source": "media/broll-kimberly-training/source-user.png",
+          "playback": "hold",
+          "layout": {
+            "x": 32,
+            "y": 738,
+            "width": 306,
+            "height": 408,
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "heart-rate",
+          "selection": "broll-08-2",
+          "asset": "media/broll-kimberly-heart-rate/source-user.media.json",
+          "source": "media/broll-kimberly-heart-rate/source-user.png",
+          "playback": "hold",
+          "layout": {
+            "x": 63,
+            "y": 703,
+            "width": 632,
+            "height": 474,
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "09",
+      "segment": "kimberly",
+      "mode": "replace",
+      "transition": {
+        "kind": "crossfade",
+        "frames": 5
+      },
+      "items": [
+        {
+          "id": "side-effects",
+          "selection": "broll-09-1",
+          "asset": "media/broll-kimberly-side-effects/final-no-wife-no-job-v3.media.json",
+          "source": "media/broll-kimberly-side-effects/final-no-wife-no-job-v3.png",
+          "playback": "hold",
+          "layout": {
+            "x": 280,
+            "y": 506,
+            "width": 393,
+            "height": 594.749,
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "wife-lost",
+          "selection": "broll-09-2",
+          "asset": "media/broll-kimberly-wife-lost/final-no-wife-no-job-both-v3.media.json",
+          "source": "media/broll-kimberly-wife-lost/final-no-wife-no-job-both-v3.png",
+          "playback": "hold",
+          "layout": {
+            "x": 280,
+            "y": 506,
+            "width": 393,
+            "height": 594.749,
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "10",
+      "segment": "alice",
+      "mode": "accumulate",
+      "items": [
+        {
+          "id": "not-like-others",
+          "selection": "broll-10-1",
+          "asset": "media/broll-alice-not-like-others/huang-png.media.json",
+          "source": "media/broll-alice-not-like-others/huang.png",
+          "playback": "hold",
+          "layout": {
+            "x": 33,
+            "y": 502,
+            "width": 656,
+            "height": 492,
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "11",
+      "segment": "alice",
+      "mode": "replace",
+      "transition": {
+        "kind": "crossfade",
+        "frames": 5
+      },
+      "items": [
+        {
+          "id": "hermes",
+          "selection": "broll-11-1",
+          "asset": "media/broll-alice-hermes-h100/final-hermes-stage.media.json",
+          "source": "media/broll-alice-hermes-h100/final-hermes-stage.png",
+          "playback": "hold",
+          "layout": {
+            "x": 63,
+            "y": 491,
+            "width": 600,
+            "height": 600,
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "h100",
+          "selection": "broll-11-2",
+          "asset": "media/broll-alice-hermes-h100/final-h100-stage.media.json",
+          "source": "media/broll-alice-hermes-h100/final-h100-stage.png",
+          "playback": "hold",
+          "layout": {
+            "x": 63,
+            "y": 491,
+            "width": 600,
+            "height": 600,
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "12",
+      "segment": "alice",
+      "mode": "accumulate",
+      "items": [
+        {
+          "id": "source-extraction",
+          "selection": "broll-12-1",
+          "asset": "media/broll-alice-source-extraction/source-user.media.json",
+          "source": "media/broll-alice-source-extraction/source-user.png",
+          "playback": "hold",
+          "layout": {
+            "x": 120,
+            "y": 510,
+            "width": 572,
+            "height": 429,
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "deepseek-transfer",
+          "selection": "broll-12-2",
+          "asset": "media/broll-alice-deepseek-transfer/source-user.media.json",
+          "source": "media/broll-alice-deepseek-transfer/source-user.png",
+          "playback": "hold",
+          "layout": {
+            "x": 26,
+            "y": 448,
+            "width": 615,
+            "height": 615,
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "13",
+      "segment": "jacket",
+      "mode": "accumulate",
+      "items": [
+        {
+          "id": "dlss",
+          "selection": "broll-13-1",
+          "asset": "media/broll-jacket-dlss/source-user.media.json",
+          "source": "media/broll-jacket-dlss/source-user.png",
+          "playback": "hold",
+          "layout": {
+            "x": 65,
+            "y": 812,
+            "width": 584,
+            "height": 438,
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "14",
+      "segment": "jacket",
+      "mode": "accumulate",
+      "items": [
+        {
+          "id": "no-glitch",
+          "selection": "broll-14-1",
+          "asset": "media/broll-jacket-no-glitch/source-user.media.json",
+          "source": "media/broll-jacket-no-glitch/source-user.png",
+          "playback": "hold",
+          "layout": {
+            "x": 86,
+            "y": 681,
+            "width": 555,
+            "height": 555,
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "15",
+      "segment": "jacket",
+      "mode": "accumulate",
+      "items": [
+        {
+          "id": "galaxy-brain",
+          "selection": "broll-15-1",
+          "asset": "media/broll-jacket-galaxy-brain/final-galaxy-brain-v2.media.json",
+          "source": "media/broll-jacket-galaxy-brain/final-galaxy-brain-v2.png",
+          "playback": "hold",
+          "layout": {
+            "x": 9,
+            "y": 656,
+            "width": 493,
+            "height": 480.065,
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "gpu-date",
+          "selection": "broll-15-2",
+          "asset": "media/broll-jacket-gpu-date/source-user.media.json",
+          "source": "media/broll-jacket-gpu-date/source-user.png",
+          "playback": "hold",
+          "layout": {
+            "x": 60,
+            "y": 806,
+            "width": 586,
+            "height": 439.5,
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "agi",
+          "selection": "broll-15-3",
+          "asset": "media/broll-jacket-agi/source-png.media.json",
+          "source": "media/broll-jacket-agi/source.png",
+          "playback": "hold",
+          "layout": {
+            "x": 414,
+            "y": 849,
+            "width": 208,
+            "height": 274.82,
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "new-ceo",
+          "selection": "broll-15-4",
+          "asset": "media/broll-jacket-ceo/source-user.media.json",
+          "source": "media/broll-jacket-ceo/source-user.png",
+          "playback": "hold",
+          "layout": {
+            "x": 85,
+            "y": 671,
+            "width": 586,
+            "height": 586,
+            "fit": "contain"
+          }
+        }
+      ]
+    }
+  ]
+}

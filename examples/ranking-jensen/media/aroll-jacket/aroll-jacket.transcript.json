@@ -1,0 +1,364 @@
+{
+  "language": "en",
+  "segments": [
+    {
+      "start": 0.171,
+      "end": 13.991,
+      "text": "My jacket is S tier. Didn't you guys know it's DLSS 5? Forty years, not a single glitch. Honestly, every human being should seriously consider dating a GPU before it becomes AGI and replaces you.",
+      "words": [
+        {
+          "word": "My",
+          "start": 0.171,
+          "end": 0.312
+        },
+        {
+          "word": "jacket",
+          "start": 0.352,
+          "end": 0.693
+        },
+        {
+          "word": "is",
+          "start": 0.753,
+          "end": 0.813
+        },
+        {
+          "word": "S",
+          "start": 1.034,
+          "end": 1.114
+        },
+        {
+          "word": "tier",
+          "start": 1.214,
+          "end": 1.515
+        },
+        {
+          "word": "Didn't",
+          "start": 1.876,
+          "end": 2.037
+        },
+        {
+          "word": "you",
+          "start": 2.057,
+          "end": 2.117
+        },
+        {
+          "word": "guys",
+          "start": 2.137,
+          "end": 2.318
+        },
+        {
+          "word": "know",
+          "start": 2.358,
+          "end": 2.518
+        },
+        {
+          "word": "it's",
+          "start": 2.558,
+          "end": 2.679
+        },
+        {
+          "word": "DLSS",
+          "start": 2.759,
+          "end": 3.545375
+        },
+        {
+          "word": "5",
+          "start": 3.545375,
+          "end": 3.742
+        },
+        {
+          "word": "Forty",
+          "start": 4.123,
+          "end": 4.5395625
+        },
+        {
+          "word": "years",
+          "start": 4.5395625,
+          "end": 4.9560625
+        },
+        {
+          "word": "not",
+          "start": 4.9560625,
+          "end": 5.206
+        },
+        {
+          "word": "a",
+          "start": 5.246,
+          "end": 5.266
+        },
+        {
+          "word": "single",
+          "start": 5.386,
+          "end": 5.687
+        },
+        {
+          "word": "glitch",
+          "start": 5.727,
+          "end": 6.068
+        },
+        {
+          "word": "Honestly",
+          "start": 6.57,
+          "end": 7.031
+        },
+        {
+          "word": "every",
+          "start": 7.593,
+          "end": 7.833
+        },
+        {
+          "word": "human",
+          "start": 7.893,
+          "end": 8.194
+        },
+        {
+          "word": "being",
+          "start": 8.234,
+          "end": 8.495
+        },
+        {
+          "word": "should",
+          "start": 8.736,
+          "end": 8.916
+        },
+        {
+          "word": "seriously",
+          "start": 9.077,
+          "end": 9.578
+        },
+        {
+          "word": "consider",
+          "start": 9.618,
+          "end": 10.06
+        },
+        {
+          "word": "dating",
+          "start": 10.22,
+          "end": 10.521
+        },
+        {
+          "word": "a",
+          "start": 10.561,
+          "end": 10.601
+        },
+        {
+          "word": "GPU",
+          "start": 10.641,
+          "end": 11.163
+        },
+        {
+          "word": "before",
+          "start": 11.444,
+          "end": 11.764
+        },
+        {
+          "word": "it",
+          "start": 11.805,
+          "end": 11.865
+        },
+        {
+          "word": "becomes",
+          "start": 11.905,
+          "end": 12.186
+        },
+        {
+          "word": "AGI",
+          "start": 12.206,
+          "end": 12.848
+        },
+        {
+          "word": "and",
+          "start": 13.108,
+          "end": 13.188
+        },
+        {
+          "word": "replaces",
+          "start": 13.229,
+          "end": 13.79
+        },
+        {
+          "word": "you",
+          "start": 13.83,
+          "end": 13.991
+        }
+      ]
+    }
+  ],
+  "word_segments": [
+    {
+      "word": "My",
+      "start": 0.171,
+      "end": 0.312
+    },
+    {
+      "word": "jacket",
+      "start": 0.352,
+      "end": 0.693
+    },
+    {
+      "word": "is",
+      "start": 0.753,
+      "end": 0.813
+    },
+    {
+      "word": "S",
+      "start": 1.034,
+      "end": 1.114
+    },
+    {
+      "word": "tier",
+      "start": 1.214,
+      "end": 1.515
+    },
+    {
+      "word": "Didn't",
+      "start": 1.876,
+      "end": 2.037
+    },
+    {
+      "word": "you",
+      "start": 2.057,
+      "end": 2.117
+    },
+    {
+      "word": "guys",
+      "start": 2.137,
+      "end": 2.318
+    },
+    {
+      "word": "know",
+      "start": 2.358,
+      "end": 2.518
+    },
+    {
+      "word": "it's",
+      "start": 2.558,
+      "end": 2.679
+    },
+    {
+      "word": "DLSS",
+      "start": 2.759,
+      "end": 3.545375
+    },
+    {
+      "word": "5",
+      "start": 3.545375,
+      "end": 3.742
+    },
+    {
+      "word": "Forty",
+      "start": 4.123,
+      "end": 4.5395625
+    },
+    {
+      "word": "years",
+      "start": 4.5395625,
+      "end": 4.9560625
+    },
+    {
+      "word": "not",
+      "start": 4.9560625,
+      "end": 5.206
+    },
+    {
+      "word": "a",
+      "start": 5.246,
+      "end": 5.266
+    },
+    {
+      "word": "single",
+      "start": 5.386,
+      "end": 5.687
+    },
+    {
+      "word": "glitch",
+      "start": 5.727,
+      "end": 6.068
+    },
+    {
+      "word": "Honestly",
+      "start": 6.57,
+      "end": 7.031
+    },
+    {
+      "word": "every",
+      "start": 7.593,
+      "end": 7.833
+    },
+    {
+      "word": "human",
+      "start": 7.893,
+      "end": 8.194
+    },
+    {
+      "word": "being",
+      "start": 8.234,
+      "end": 8.495
+    },
+    {
+      "word": "should",
+      "start": 8.736,
+      "end": 8.916
+    },
+    {
+      "word": "seriously",
+      "start": 9.077,
+      "end": 9.578
+    },
+    {
+      "word": "consider",
+      "start": 9.618,
+      "end": 10.06
+    },
+    {
+      "word": "dating",
+      "start": 10.22,
+      "end": 10.521
+    },
+    {
+      "word": "a",
+      "start": 10.561,
+      "end": 10.601
+    },
+    {
+      "word": "GPU",
+      "start": 10.641,
+      "end": 11.163
+    },
+    {
+      "word": "before",
+      "start": 11.444,
+      "end": 11.764
+    },
+    {
+      "word": "it",
+      "start": 11.805,
+      "end": 11.865
+    },
+    {
+      "word": "becomes",
+      "start": 11.905,
+      "end": 12.186
+    },
+    {
+      "word": "AGI",
+      "start": 12.206,
+      "end": 12.848
+    },
+    {
+      "word": "and",
+      "start": 13.108,
+      "end": 13.188
+    },
+    {
+      "word": "replaces",
+      "start": 13.229,
+      "end": 13.79
+    },
+    {
+      "word": "you",
+      "start": 13.83,
+      "end": 13.991
+    }
+  ]
+}

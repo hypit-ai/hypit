@@ -12,6 +12,8 @@ export type HtmlExecutionOptions = {
   readonly maxWorkers?: number;
   /** Browser compositor policy. Shared-texture backends require auto or hardware. */
   readonly browserGpu?: HtmlBrowserGpu;
+  /** Require the selected browser host to expose WebGPU for this execution. */
+  readonly webGpu?: "required";
   readonly processTimeoutMs?: number;
   readonly initializationTimeoutMs?: number;
   readonly frameTimeoutMs?: number;

@@ -8,8 +8,8 @@ import type {
   ProjectResultCommand,
   RuntimeOption,
 } from "./command.js";
-import type { CliOutputOptions } from "@hypit/cli";
-import { CliUsageError, parseCliDecimalInteger, parseCliGlobalOptions } from "@hypit/cli";
+import type { CliOutputOptions } from "@hypit/cli/public";
+import { CliUsageError, parseCliDecimalInteger, parseCliGlobalOptions } from "@hypit/cli/public";
 
 type RawOptions = {
   readonly presentation: CliOutputOptions;
@@ -19,6 +19,7 @@ type RawOptions = {
   readonly endpoints: readonly string[];
   readonly packageRoot?: string;
   readonly runtimeProfile?: string;
+  readonly environmentProfile?: string;
   readonly follow: boolean;
   readonly maxWaitMs?: number;
   readonly outputName?: string;
@@ -198,9 +199,12 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
     case "auth": return parseAuthCommand(tail, cwd);
     case "doctor": {
       const [profile, rest] = optionalPositional(tail);
-      const options = commandOptions(command, rest, cwd, "--project", "--runtime", "--limit", "--endpoint");
+      const options = commandOptions(command, rest, cwd, "--project", "--runtime", "--environment", "--limit", "--endpoint");
       if (profile !== undefined && options.runtimeProfile !== undefined) {
         throw new Error("doctor accepts the Buildtime Profile either positionally or with --runtime, not both");
+      }
+      if ((profile !== undefined || options.runtimeProfile !== undefined) && options.environmentProfile !== undefined) {
+        throw new Error("doctor accepts either a Runtime Profile or --environment, not both");
       }
       return {
         command,
@@ -209,6 +213,7 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
         limit: options.limit,
         ...optionalProject(options),
         ...runtimeOption(profile ?? options.runtimeProfile),
+        environmentProfile: options.environmentProfile,
       };
     }
     default: throw new CliUsageError(command === undefined ? "A command is required"
@@ -245,14 +250,18 @@ function parseAuthCommand(tail: readonly string[], cwd: string): AuthCommand {
   }
   const [endpoint, rest] = requiredPositional(values, `auth ${action} requires one Endpoint instance`);
   const options = commandOptions(`auth ${action}`, rest, cwd,
-    "--runtime", "--project", "--slot", ...(action === "login" ? ["--from"] as const : []),
+    "--runtime", "--environment", "--project", "--slot", ...(action === "login" ? ["--from"] as const : []),
     ...(action === "status" ? ["--limit"] as const : []));
+  if (options.runtimeProfile !== undefined && options.environmentProfile !== undefined) {
+    throw new Error("auth accepts either --runtime or --environment, not both");
+  }
   const common = {
     command: "auth" as const,
     action,
     endpoint,
     presentation: options.presentation,
     ...optionalRuntime(options),
+    environmentProfile: options.environmentProfile,
     ...(options.slot === undefined ? {} : { slot: options.slot }),
   };
   if (action === "status") return { ...common, action, limit: options.limit };
@@ -282,6 +291,7 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
   const targets: string[] = [];
   let packageRoot: string | undefined;
   let runtimeProfile: string | undefined;
+  let environmentProfile: string | undefined;
   let follow = false;
   let maxWaitMs: number | undefined;
   const endpoints: string[] = [];
@@ -322,6 +332,9 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
     }
     if (item === "--runtime") {
       runtimeProfile = resolve(cwd, optionValue(global.remaining, index, "--runtime requires a Runtime Profile")); index += 1; continue;
+    }
+    if (item === "--environment") {
+      environmentProfile = resolve(cwd, optionValue(global.remaining, index, "--environment requires an Environment Profile")); index += 1; continue;
     }
     if (item === "--out") {
       throw new Error("--out does not apply to Build submission; use `result export <build-id> --output <name> --to <path>` to export one published Output");
@@ -380,6 +393,7 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
     ...(projectRoot === undefined ? {} : { projectRoot }),
     ...(packageRoot === undefined ? {} : { packageRoot }),
     ...(runtimeProfile === undefined ? {} : { runtimeProfile }),
+    ...(environmentProfile === undefined ? {} : { environmentProfile }),
     ...(maxWaitMs === undefined ? {} : { maxWaitMs }),
     ...(outputName === undefined ? {} : { outputName }),
     ...(before === undefined ? {} : { before }),

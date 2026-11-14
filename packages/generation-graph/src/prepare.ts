@@ -2,13 +2,10 @@ import {
   defineBuild,
   planBuild,
   sliceExecution,
-} from "@hypit/kernel";
+} from "@hypit/generation-build";
 import { productPublisher } from "@hypit/product";
-import type {
-  BuildDefinition,
-  PublicationIntent,
-  TypeRef,
-} from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { BuildDefinition, PublicationIntent } from "@hypit/generation-build";
 import { compareCodeUnits } from "@hypit/protocol";
 
 import { lowerGenerationGraph } from "./lower.js";
@@ -50,7 +47,7 @@ export type PreparedGenerationGraphBuild = {
 /** Prepare one finite target selection without touching Runtime, Result storage or the project file. */
 export async function prepareGenerationGraphTargets(
   project: GenerationGraphProject,
-  program: import("@hypit/protocol").LinkedProgram,
+  program: import("@hypit/generation-build").LinkedProgram,
   host: GenerationGraphLoweringHost,
   targets: readonly string[],
   options: { readonly dependencyPolicy?: GenerationGraphDependencyPolicy } = {},

@@ -201,7 +201,7 @@ its Profile fragment has this shape:
     }
   },
   "bindings": {
-    "@hypit/seedance@1#seedance-2-mini": "videos.personal"
+    "@hypit/seedance#seedance-2-mini": "videos.personal"
   }
 }
 ```

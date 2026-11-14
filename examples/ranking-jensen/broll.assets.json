@@ -1,0 +1,561 @@
+{
+  "format": "hypit.ranking-jensen-broll-assets@1",
+  "project": "ranking-jensen",
+  "items": [
+    {
+      "id": "broll-wife-84-years",
+      "segment": "wife",
+      "cues": ["Forty years."],
+      "concept": "Rose 的 84 years 视觉语法，改成四十年等待",
+      "strategy": "redraw-meme",
+      "status": "reference-found",
+      "projectFiles": [
+        "media/broll-wife-84-years/reference.gif",
+        "media/broll-wife-84-years/reference.mp4"
+      ],
+      "sourceCandidates": [
+        {
+          "label": "Know Your Meme origin and examples",
+          "url": "https://knowyourmeme.com/memes/its-been-84-years-ja-faz-84-anos-han-pasado-84-anos",
+          "usage": "reference-only",
+          "note": "Titanic film frame; redraw the long-wait visual grammar rather than publishing the still."
+        },
+        {
+          "label": "1188x1393 reference image",
+          "url": "https://knowyourmeme.com/photos/2609665-its-been-84-years-ja-faz-84-anos-han-pasado-84-anos",
+          "usage": "reference-only"
+        }
+      ]
+    },
+    {
+      "id": "broll-wife-version-update",
+      "segment": "wife",
+      "cues": ["Same version.", "Zero updates."],
+      "concept": "Windows 95 风格 Wife_v1.0.exe 与更新失败弹窗",
+      "strategy": "generate-original",
+      "status": "reference-found",
+      "projectFiles": [
+        "media/broll-wife-version-update/same-version.jpeg",
+        "media/broll-wife-version-update/same-version.png",
+        "media/broll-wife-version-update/zero-updates.jpg",
+        "media/broll-wife-version-update/zero-updates.png"
+      ],
+      "sourceCandidates": [
+        {
+          "label": "Windows 95 screenshot category",
+          "url": "https://commons.wikimedia.org/wiki/Category:Windows_95_screenshots",
+          "usage": "design-reference",
+          "note": "Rebuild the era's colors, bevels and typography without copying a complete branded screen."
+        }
+      ]
+    },
+    {
+      "id": "broll-wife-divorce-lawyer",
+      "segment": "wife",
+      "cues": ["Divorce gets her"],
+      "concept": "Anthony Adams 躲树后搓手，改成离婚律师等分成",
+      "strategy": "direct-meme",
+      "status": "final-image-ready",
+      "projectFiles": [
+        "media/broll-wife-divorce-lawyer/source.jpg",
+        "media/broll-wife-divorce-lawyer/final-loris-lawyer.png",
+        "media/broll-wife-divorce-lawyer/final-loris-lawyer-v2.png",
+        "media/broll-wife-divorce-lawyer/final-loris-lawyer-v3.png"
+      ],
+      "sourceCandidates": [
+        {
+          "label": "Anthony Adams meme origin",
+          "url": "https://knowyourmeme.com/memes/anthony-adams-rubbing-hands-together",
+          "usage": "provenance"
+        },
+        {
+          "label": "Clean 770x960 image",
+          "url": "https://i.kym-cdn.com/photos/images/newsfeed/001/513/012/625.jpg",
+          "usage": "prototype-direct",
+          "note": "No text or watermark; public release still needs rights review or redraw."
+        }
+      ]
+    },
+    {
+      "id": "broll-wife-huell-money",
+      "segment": "wife",
+      "cues": ["seventy-five billion."],
+      "concept": "Huell 躺在钱堆上，钱替换为绿色 RTX 5090",
+      "strategy": "redraw-meme",
+      "status": "final-image-ready",
+      "projectFiles": [
+        "media/broll-wife-huell-money/source.jpg",
+        "media/broll-wife-huell-money/final-lori-after-divorce.png",
+        "media/broll-wife-huell-money/final-lori-after-divorce-v2.png",
+        "media/broll-wife-huell-money/final-lori-after-divorce-v3.png"
+      ],
+      "sourceCandidates": [
+        {
+          "label": "Huell money-pile meme origin",
+          "url": "https://knowyourmeme.com/memes/huell-rolling-in-money",
+          "usage": "reference-only"
+        },
+        {
+          "label": "1920x1080 reference still",
+          "url": "https://knowyourmeme.com/photos/2449685-huell-rolling-in-money",
+          "usage": "reference-only",
+          "note": "Breaking Bad frame; redraw the money-bed relationship with RTX boxes."
+        }
+      ]
+    },
+    {
+      "id": "broll-wife-five-million",
+      "segment": "wife",
+      "cues": ["That's", "five million a day!"],
+      "concept": "疯狂撒钱与 Math Lady 计算叠加",
+      "strategy": "direct-meme",
+      "status": "direct-use-review",
+      "projectFiles": [
+        "media/broll-wife-five-million/math-lady.png",
+        "media/broll-wife-five-million/money-reference.jpg",
+        "media/broll-wife-five-million/money-reference.png"
+      ],
+      "sourceCandidates": [
+        {
+          "label": "Confused Math Lady origin",
+          "url": "https://knowyourmeme.com/memes/confused-math-lady",
+          "usage": "provenance"
+        },
+        {
+          "label": "1822x1192 PNG",
+          "url": "https://i.kym-cdn.com/photos/images/newsfeed/001/279/128/630.png",
+          "usage": "prototype-direct",
+          "note": "Television frame and actor likeness; final can redraw with $5M/day arithmetic."
+        }
+      ]
+    },
+    {
+      "id": "broll-wife-linkedin-job",
+      "segment": "wife",
+      "cues": ["Highest-paid job", "in history."],
+      "concept": "LinkedIn 招聘卡 Ex-Wife of Nvidia CEO 与 HIRED 印章",
+      "strategy": "user-supplied-image",
+      "status": "final-image-ready",
+      "projectFiles": ["media/broll-wife-linkedin-job/source-user.png"],
+      "productionNote": "用户提供的 LinkedIn 招聘职位成图；作为普通图片素材进入 NLE，不再建立项目组件。",
+      "sourceCandidates": [
+        {
+          "label": "LinkedIn job-post information hierarchy",
+          "url": "https://www.linkedin.com/help/linkedin/answer/a517545/posting-a-job-on-linkedin?lang=en",
+          "usage": "design-reference",
+          "note": "The user-supplied final image already resolves the interface design."
+        }
+      ]
+    },
+    {
+      "id": "broll-trump-honeytrap",
+      "segment": "trump",
+      "cues": ["Heard my affair", "with a Chinese spy"],
+      "concept": "虚构 FBI 监控车与 TOP SECRET H100 Honeytrap 档案",
+      "strategy": "generate-original",
+      "status": "final-image-ready",
+      "projectFiles": ["media/broll-trump-honeytrap/source-user.png"],
+      "sourceCandidates": [
+        {
+          "label": "Dark control-room background",
+          "url": "https://www.pexels.com/photo/security-officer-in-dark-control-room-with-monitors-30692441/",
+          "usage": "direct-background",
+          "note": "7008x4672; treat as a generic control room, not evidence of an FBI action."
+        },
+        {
+          "label": "1989 FBI surveillance-equipment reference",
+          "url": "https://leb.fbi.gov/file-repository/archives/april-1989.pdf",
+          "usage": "design-reference"
+        }
+      ]
+    },
+    {
+      "id": "broll-trump-honorable",
+      "segment": "trump",
+      "cues": ["and called me", "an honorable guy."],
+      "concept": "Trump 竖拇指并配 Make Nvidia Great Again 绿色帽子",
+      "strategy": "direct-meme",
+      "status": "final-image-ready",
+      "projectFiles": ["media/broll-trump-honorable/source-user.png"],
+      "sourceCandidates": [
+        {
+          "label": "Trump thumbs-up public-domain photograph",
+          "url": "https://commons.wikimedia.org/wiki/File:President_Trump_Visit_to_Kenosha_03.jpg",
+          "usage": "direct-source",
+          "note": "4928x3264 US government photograph; composite must remain obvious satire and not imply endorsement."
+        }
+      ]
+    },
+    {
+      "id": "broll-trump-pointing",
+      "segment": "trump",
+      "cues": ["Told him", "I cheated on", "my wife."],
+      "concept": "两个 Spider-Man 互指，标为 Jensen 与 Trump",
+      "strategy": "direct-meme",
+      "status": "final-image-ready",
+      "projectFiles": [
+        "media/broll-trump-pointing/source.png",
+        "media/broll-trump-pointing/final-trump-jensen.png",
+        "media/broll-trump-pointing/final-trump-jensen-v2.png",
+        "media/broll-trump-pointing/final-trump-jensen-v3.png"
+      ],
+      "sourceCandidates": [
+        {
+          "label": "Spider-Man pointing meme origin",
+          "url": "https://knowyourmeme.com/memes/spider-man-pointing-at-spider-man",
+          "usage": "reference-only"
+        },
+        {
+          "label": "4096x3072 clean reference",
+          "url": "https://i.kym-cdn.com/photos/images/newsfeed/002/549/160/a0d.png",
+          "usage": "reference-only",
+          "note": "Marvel animation frame; redraw the mutual-accusation relationship."
+        }
+      ]
+    },
+    {
+      "id": "broll-trump-no-big-deal",
+      "segment": "trump",
+      "cues": ["He said,", "'No big deal."],
+      "concept": "Trump 摊手，背景用三任妻子姓名走马灯",
+      "strategy": "generate-original",
+      "status": "final-image-ready",
+      "projectFiles": [
+        "media/broll-trump-no-big-deal/source.jpeg",
+        "media/broll-trump-no-big-deal/final-wife-ranking.png",
+        "media/broll-trump-no-big-deal/final-wife-ranking-v2.png"
+      ],
+      "sourceCandidates": []
+    },
+    {
+      "id": "broll-trump-which-one",
+      "segment": "trump",
+      "cues": ["But which one?'"],
+      "concept": "Confused Nick Young 加虚构红线人物板",
+      "strategy": "direct-meme",
+      "status": "final-image-ready",
+      "projectFiles": [
+        "media/broll-trump-which-one/source.png",
+        "media/broll-trump-which-one/final-which-one.png",
+        "media/broll-trump-which-one/final-which-one-v2.png"
+      ],
+      "sourceCandidates": [
+        {
+          "label": "Confused Nick Young origin",
+          "url": "https://knowyourmeme.com/memes/confused-nick-young-swaggy-p",
+          "usage": "provenance"
+        },
+        {
+          "label": "1434x765 clean PNG",
+          "url": "https://i.kym-cdn.com/photos/images/newsfeed/001/515/682/ca8.png",
+          "usage": "prototype-direct",
+          "note": "No text or watermark; final publication can redraw the confused face and question marks."
+        }
+      ]
+    },
+    {
+      "id": "broll-kimberly-healthcare-vp",
+      "segment": "kimberly",
+      "cues": ["VP of healthcare."],
+      "concept": "Kimberly Powell 的公开 GTC 医疗演讲画面，找不到合适来源则改画医疗部门胸牌",
+      "strategy": "redraw-meme",
+      "status": "final-image-ready",
+      "projectFiles": ["media/broll-kimberly-healthcare-vp/source-user.png"],
+      "sourceCandidates": [
+        {
+          "label": "NVIDIA GTC 2025 healthcare segment",
+          "url": "https://blogs.nvidia.com/blog/nvidia-keynote-at-gtc-2025-ai-news-live-updates/",
+          "usage": "provenance",
+          "note": "Verifies the public Healthcare VP and GTC context only."
+        },
+        {
+          "label": "Kimberly Powell GTC stage image 1680x1261",
+          "url": "https://blogs.nvidia.com/wp-content/uploads/2025/03/kptalk-1680x1261.jpg",
+          "usage": "direct-reference",
+          "note": "Use only for the public presentation context; the claimed cartoon detail was not verified."
+        }
+      ]
+    },
+    {
+      "id": "broll-kimberly-training",
+      "segment": "kimberly",
+      "cues": ["Well,", "she did give me"],
+      "concept": "酒店走廊门牌 Do Not Disturb AI Training in Progress",
+      "strategy": "generate-original",
+      "status": "final-image-ready",
+      "projectFiles": ["media/broll-kimberly-training/source-user.png"],
+      "sourceCandidates": []
+    },
+    {
+      "id": "broll-kimberly-heart-rate",
+      "segment": "kimberly",
+      "cues": ["hands-on healthcare."],
+      "concept": "心电图变成皮衣轮廓与 CUDA Core Heart Rate 180 BPM",
+      "strategy": "generate-original",
+      "status": "final-image-ready",
+      "projectFiles": ["media/broll-kimberly-heart-rate/source-user.png"],
+      "sourceCandidates": [
+        {
+          "label": "Vertical heart-monitor video",
+          "url": "https://www.pexels.com/video/hospital-heart-monitor-display-in-operation-33643950/",
+          "usage": "direct-background",
+          "note": "1080x1920, 17 seconds, 30 fps; overlay a custom leather-jacket waveform."
+        },
+        {
+          "label": "Heart-monitor still",
+          "url": "https://www.pexels.com/photo/hospital-monitor-displaying-heart-rate-6291261/",
+          "usage": "direct-background"
+        }
+      ]
+    },
+    {
+      "id": "broll-kimberly-side-effects",
+      "segment": "kimberly",
+      "cues": ["Side effects were"],
+      "concept": "美式药品广告警告与 BSOD 叠加",
+      "strategy": "generate-original",
+      "status": "final-image-ready",
+      "projectFiles": [
+        "media/broll-kimberly-side-effects/two-buttons.jpg",
+        "media/broll-kimberly-side-effects/final-no-wife-no-job.png",
+        "media/broll-kimberly-side-effects/final-no-wife-no-job-v2.png",
+        "media/broll-kimberly-side-effects/final-no-wife-no-job-v3.png"
+      ],
+      "sourceCandidates": [
+        {
+          "label": "Microsoft stop-error structure",
+          "url": "https://learn.microsoft.com/en-us/windows/client-management/troubleshoot-stop-errors",
+          "usage": "design-reference",
+          "note": "Draw a fictional RELATIONSHIP_STATUS_NOT_FOUND screen rather than copying Windows branding."
+        }
+      ]
+    },
+    {
+      "id": "broll-kimberly-wife-lost",
+      "segment": "kimberly",
+      "cues": ["losing my wife"],
+      "concept": "GTA WASTED 与 Married 到 404 Not Found 状态切换",
+      "strategy": "direct-meme",
+      "status": "final-image-ready",
+      "projectFiles": [
+        "media/broll-kimberly-wife-lost/source.png",
+        "media/broll-kimberly-wife-lost/final-no-wife-no-job-both.png",
+        "media/broll-kimberly-wife-lost/final-no-wife-no-job-both-v2.png",
+        "media/broll-kimberly-wife-lost/final-no-wife-no-job-both-v3.png"
+      ],
+      "sourceCandidates": [
+        {
+          "label": "GTA WASTED visual history",
+          "url": "https://knowyourmeme.com/memes/wasted",
+          "usage": "design-reference",
+          "note": "Implement the desaturation and red MARRIAGE WASTED typography directly in Hypit."
+        }
+      ]
+    },
+    {
+      "id": "broll-kimberly-job-lost",
+      "segment": "kimberly",
+      "cues": ["and my job."],
+      "concept": "黑皮衣人物抱纸箱离开办公室，背景股票垂直下跌",
+      "strategy": "generate-original",
+      "status": "reference-found",
+      "sourceCandidates": [
+        {
+          "label": "Office exit with belongings",
+          "url": "https://unsplash.com/photos/man-carrying-box-of-belongings-in-office-5Op64LvHEtw",
+          "usage": "pose-reference"
+        },
+        {
+          "label": "Open-license NVIDIA office exteriors",
+          "url": "https://commons.wikimedia.org/wiki/Category:Nvidia_offices",
+          "usage": "background-candidates"
+        }
+      ]
+    },
+    {
+      "id": "broll-alice-not-like-others",
+      "segment": "alice",
+      "cues": ["She's not like", "other women."],
+      "concept": "Girls with a time machine 对比 Alice 特工版本",
+      "strategy": "redraw-meme",
+      "status": "reference-imported",
+      "projectFiles": [
+        "media/broll-alice-not-like-others/huang.webp",
+        "media/broll-alice-not-like-others/huang.png"
+      ],
+      "sourceCandidates": []
+    },
+    {
+      "id": "broll-alice-hermes-h100",
+      "segment": "alice",
+      "cues": ["Other women want Hermes.", "She wanted H100s."],
+      "concept": "Drake 两格拒绝 Birkin、接受高奢礼盒中的 H100",
+      "strategy": "direct-meme",
+      "status": "final-image-ready",
+      "projectFiles": [
+        "media/broll-alice-hermes-h100/drake.jpg",
+        "media/broll-alice-hermes-h100/product-birkin.jpg",
+        "media/broll-alice-hermes-h100/product-birkin-cutout.png",
+        "media/broll-alice-hermes-h100/product-h100.jpg",
+        "media/broll-alice-hermes-h100/final-hermes-stage.png",
+        "media/broll-alice-hermes-h100/final-h100-stage.png"
+      ],
+      "sourceCandidates": [
+        {
+          "label": "Drakeposting origin",
+          "url": "https://knowyourmeme.com/memes/drakeposting",
+          "usage": "reference-only",
+          "note": "Redraw the reject/approve gesture rather than publishing the music-video frames."
+        },
+        {
+          "label": "HGX H100 visual reference",
+          "url": "https://images.nvidia.com/aem-dam/Solutions/documents/HGX-H100-PCF-Summary.pdf",
+          "usage": "product-reference"
+        }
+      ]
+    },
+    {
+      "id": "broll-alice-source-extraction",
+      "segment": "alice",
+      "cues": ["Sadly,", "she's too busy", "extracting my source code"],
+      "concept": "USB 4.0 接入后脑与 Downloading Source_Code.zip 99%",
+      "strategy": "generate-original",
+      "status": "final-image-ready",
+      "projectFiles": [
+        "media/broll-alice-source-extraction/source-user.png",
+        "media/broll-alice-source-extraction/source.jpeg",
+        "media/broll-alice-source-extraction/final-alice-icon.png"
+      ],
+      "sourceCandidates": []
+    },
+    {
+      "id": "broll-alice-deepseek-transfer",
+      "segment": "alice",
+      "cues": ["and sending it to", "Deepseek."],
+      "concept": "文件传输助手发送 888 TB 源码包，DeepSeek 回复收到",
+      "strategy": "generate-original",
+      "status": "final-image-ready",
+      "projectFiles": ["media/broll-alice-deepseek-transfer/source-user.png"],
+      "sourceCandidates": []
+    },
+    {
+      "id": "broll-jacket-dlss",
+      "segment": "jacket",
+      "cues": ["Didn't you guys know", "it's DLSS 5?"],
+      "concept": "皮衣 X 光扫描，内部为 RGB 水冷与 RTX 阵列",
+      "strategy": "generate-original",
+      "status": "final-image-ready",
+      "projectFiles": ["media/broll-jacket-dlss/source-user.png"],
+      "sourceCandidates": [
+        {
+          "label": "RTX 5090 official product reference",
+          "url": "https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5090/",
+          "usage": "product-reference"
+        }
+      ]
+    },
+    {
+      "id": "broll-jacket-no-glitch",
+      "segment": "jacket",
+      "cues": ["Forty years,", "not a single glitch."],
+      "concept": "末日废土中皮衣作为圣物悬浮发光",
+      "strategy": "generate-original",
+      "status": "final-image-ready",
+      "projectFiles": ["media/broll-jacket-no-glitch/source-user.png"],
+      "sourceCandidates": [
+        {
+          "label": "GigaChad visual history",
+          "url": "https://knowyourmeme.com/memes/gigachad",
+          "usage": "reference-only",
+          "note": "Use only the exaggerated survivor energy; do not reproduce the photographer's portrait."
+        }
+      ]
+    },
+    {
+      "id": "broll-jacket-galaxy-brain",
+      "segment": "jacket",
+      "cues": ["Honestly,", "every human being"],
+      "concept": "Galaxy Brain 最后一格升级成 B200 芯片",
+      "strategy": "direct-meme",
+      "status": "final-image-ready",
+      "projectFiles": [
+        "media/broll-jacket-galaxy-brain/source.webp",
+        "media/broll-jacket-galaxy-brain/final-galaxy-brain.png",
+        "media/broll-jacket-galaxy-brain/final-galaxy-brain-v2.png"
+      ],
+      "sourceCandidates": [
+        {
+          "label": "Galaxy Brain origin",
+          "url": "https://knowyourmeme.com/memes/galaxy-brain",
+          "usage": "reference-only"
+        },
+        {
+          "label": "DGX B200 official visual reference",
+          "url": "https://www.nvidia.com/en-eu/data-center/dgx-b200/",
+          "usage": "product-reference",
+          "note": "Redraw the final brain as an original luminous B200-style chip."
+        }
+      ]
+    },
+    {
+      "id": "broll-jacket-gpu-date",
+      "segment": "jacket",
+      "cues": ["should seriously consider", "dating a GPU"],
+      "concept": "烛光晚餐中系粉色蝴蝶结的 RTX 5090",
+      "strategy": "generate-original",
+      "status": "final-image-ready",
+      "projectFiles": ["media/broll-jacket-gpu-date/source-user.png"],
+      "sourceCandidates": [
+        {
+          "label": "RTX 5090 Founders Edition product view",
+          "url": "https://marketplace.nvidia.com/en-us/consumer/graphics-cards/geforce-rtx-5090-founders-edition/",
+          "usage": "product-reference",
+          "note": "Redraw the card before adding a bow, face and dinner scene."
+        }
+      ]
+    },
+    {
+      "id": "broll-jacket-agi",
+      "segment": "jacket",
+      "cues": ["before it becomes AGI"],
+      "concept": "约会显卡亮起红眼并长出机械手臂",
+      "strategy": "generate-original",
+      "status": "final-image-ready",
+      "projectFiles": ["media/broll-jacket-ceo/source-user.png"],
+      "projectFiles": [
+        "media/broll-jacket-agi/source.jpg",
+        "media/broll-jacket-agi/source.png"
+      ],
+      "sourceCandidates": [
+        {
+          "label": "CC0 one-eye red robot",
+          "url": "https://commons.wikimedia.org/wiki/File:Robot_Rocket_Version_-_Red_with_one_eye.png",
+          "usage": "direct-reference",
+          "note": "CC0; useful as a mechanical-eye starting point without borrowing Terminator imagery."
+        }
+      ]
+    },
+    {
+      "id": "broll-jacket-ceo",
+      "segment": "jacket",
+      "cues": ["and replaces you."],
+      "concept": "董事会主位坐着空皮衣与显卡头，桌牌 New CEO JacketGPT",
+      "strategy": "generate-original",
+      "status": "final-image-ready",
+      "projectFiles": ["media/broll-jacket-ceo/source-user.png"],
+      "sourceCandidates": [
+        {
+          "label": "Vertical empty conference room",
+          "url": "https://www.pexels.com/photo/empty-seats-inside-a-conference-room-9300769/",
+          "usage": "direct-background",
+          "note": "4000x6000; add the empty jacket, GPU head and JacketGPT nameplate as authored elements."
+        },
+        {
+          "label": "Alternative empty boardroom",
+          "url": "https://www.pexels.com/photo/conference-table-and-chairs-in-an-empty-office-17739892/",
+          "usage": "direct-background"
+        }
+      ]
+    }
+  ]
+}

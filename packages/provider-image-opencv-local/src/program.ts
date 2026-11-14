@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 
-import type { ManagedProgram, ManagedProgramState } from "@hypit/runtime-local/extension";
+import type { ManagedProgram, ManagedProgramState } from "@hypit/execution-environment-local/extension";
 
 import type { LocalOpenCvDeployment } from "./deployment.js";
 

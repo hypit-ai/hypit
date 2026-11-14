@@ -1,4 +1,7 @@
-import { canonicalize, isModuleRef } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import { isModuleRef } from "@hypit/module";
+
+import { sceneAssetFormat } from "./types.js";
 
 import type {
   SceneAssetDocument,
@@ -28,7 +31,15 @@ function name(value: unknown, label: string): asserts value is string {
   assert(typeof value === "string" && value.trim().length > 0, `${label} is empty.`);
 }
 
-function portablePath(value: unknown, label: string): asserts value is string {
+function portableReferencePath(value: unknown, label: string): asserts value is string {
+  assert(typeof value === "string" && value.length > 0, `${label} must be a non-empty relative path.`);
+  assert(!value.includes("\\") && !value.startsWith("/") && !/^[A-Za-z]:/u.test(value),
+    `${label} must use a portable relative path.`);
+  assert(value.split("/").every((part) => part.length > 0 && part !== "."),
+    `${label} must not contain empty or current segments.`);
+}
+
+function portableOwnedPath(value: unknown, label: string): asserts value is string {
   assert(typeof value === "string" && value.length > 0, `${label} must be a non-empty relative path.`);
   assert(!value.includes("\\") && !value.startsWith("/") && !/^[A-Za-z]:/u.test(value),
     `${label} must use a portable relative path.`);
@@ -52,21 +63,21 @@ function symbol(value: unknown, label: string): asserts value is ScenePackageSym
 function file(value: unknown, label: string): asserts value is SceneAssetFile {
   object(value, label);
   exactFields(value, ["path", "mediaType"], label);
-  portablePath(value.path, `${label}.path`);
+  portableOwnedPath(value.path, `${label}.path`);
   mediaType(value.mediaType, `${label}.mediaType`);
 }
 
 export function assertSceneAssetReference(value: unknown): asserts value is SceneAssetReference {
   object(value, "SceneAssetReference");
   exactFields(value, ["path"], "SceneAssetReference");
-  portablePath(value.path, "SceneAssetReference.path");
+  portableReferencePath(value.path, "SceneAssetReference.path");
   assert(value.path.endsWith(".scene-asset.json"), "SceneAssetReference.path must name a .scene-asset.json document.");
 }
 
 export function assertSceneAssetDocument(value: unknown): asserts value is SceneAssetDocument {
   object(value, "SceneAssetDocument");
   exactFields(value, ["format", "id", "name", "using", "preview", "resources", "parameters"], "SceneAssetDocument");
-  assert(value.format === "hypit.scene-asset@1", "Unsupported Scene Asset document format.");
+  assert(value.format === sceneAssetFormat, "Unsupported Scene Asset document format.");
   identity(value.id, "SceneAssetDocument.id");
   name(value.name, "SceneAssetDocument.name");
   symbol(value.using, "SceneAssetDocument.using");

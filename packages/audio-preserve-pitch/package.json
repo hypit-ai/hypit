@@ -18,7 +18,9 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
+    "@hypit/generation-build": "workspace:*",
     "@hypit/audiovisual": "workspace:^0.1.0",
+    "@hypit/module": "workspace:^0.0.0-dev",
     "@hypit/nle": "workspace:^0.1.0",
     "@hypit/producer": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev"

@@ -1,0 +1,101 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "ranking-reveal-sfx",
+  "media": {
+    "file": {
+      "path": "rule-reveal.wav",
+      "mediaType": "audio/wav"
+    },
+    "interpretation": {
+      "audio": {
+        "map": {
+          "stages": [
+            {
+              "pieces": [
+                {
+                  "rate": {
+                    "denominator": 1,
+                    "numerator": 1
+                  },
+                  "sourceAtStart": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "target": {
+                    "end": {
+                      "ticks": "33",
+                      "timeBase": {
+                        "denominator": 50,
+                        "numerator": 1
+                      }
+                    },
+                    "start": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "denominator": 1,
+                        "numerator": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "source": {
+                "duration": {
+                  "ticks": "33",
+                  "timeBase": {
+                    "denominator": 50,
+                    "numerator": 1
+                  }
+                },
+                "id": "ranking-reveal-sfx:media:audio-source"
+              },
+              "target": {
+                "duration": {
+                  "ticks": "33",
+                  "timeBase": {
+                    "denominator": 50,
+                    "numerator": 1
+                  }
+                },
+                "id": "ranking-reveal-sfx:media"
+              }
+            }
+          ]
+        },
+        "presentationStart": {
+          "ticks": "0",
+          "timeBase": {
+            "denominator": 44100,
+            "numerator": 1
+          }
+        },
+        "sourceDomain": {
+          "duration": {
+            "ticks": "33",
+            "timeBase": {
+              "denominator": 50,
+              "numerator": 1
+            }
+          },
+          "id": "ranking-reveal-sfx:media:audio-source"
+        },
+        "streamIndex": 0
+      },
+      "domain": {
+        "duration": {
+          "ticks": "33",
+          "timeBase": {
+            "denominator": 50,
+            "numerator": 1
+          }
+        },
+        "id": "ranking-reveal-sfx:media"
+      },
+      "id": "ranking-reveal-sfx:media"
+    }
+  },
+  "representations": []
+}

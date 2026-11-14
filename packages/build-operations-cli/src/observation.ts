@@ -1,9 +1,10 @@
 import type { BuildResult } from "@hypit/result";
-import { buildIdCreatedAt, compareCodeUnits } from "@hypit/protocol";
+import { compareCodeUnits } from "@hypit/protocol";
+import { buildIdCreatedAt } from "@hypit/generation-build";
 
 import type { CliBuildSubmission, CliBuildView, CliRuntimeControl } from "./runtime-port.js";
-import { commandHint } from "@hypit/cli";
-import type { CommandScope } from "@hypit/cli";
+import { commandHint } from "@hypit/cli/public";
+import type { CommandScope } from "@hypit/cli/public";
 import { formatOperationProgress } from "./runtime-view.js";
 
 const FIRST_HEARTBEAT_MS = 30_000;

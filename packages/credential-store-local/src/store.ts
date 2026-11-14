@@ -1,12 +1,12 @@
 import {
   credentialRef,
   verifyCredentialRef,
-} from "@hypit/runtime-local/extension";
+} from "@hypit/execution-environment-local/extension";
 import type {
   CredentialRef,
   CredentialValue,
   WritableCredentialStore,
-} from "@hypit/runtime-local/extension";
+} from "@hypit/execution-environment-local/extension";
 import { FileCredentialStore } from "./file.js";
 import { OsCredentialStore } from "./os.js";
 import type {

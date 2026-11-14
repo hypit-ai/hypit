@@ -7,3 +7,8 @@ packages:
   - examples/semantic-composition/packages/audiovisual-title-card
   - examples/ranking-debate
   - examples/ranking-debate/packages/*
+  - examples/ranking-football
+  - examples/ranking-football/packages/*
+  - examples/ranking-jensen
+  - examples/terminal-mix
+  - examples/terminal-mix/packages/*

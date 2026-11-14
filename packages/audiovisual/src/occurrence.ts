@@ -11,7 +11,7 @@ import type {
   LocalTemporalDomain,
   TemporalRange,
 } from "@hypit/temporal/algebra";
-import { isTypeRef, sameType } from "@hypit/protocol";
+import { isTypeRef, sameType } from "@hypit/module";
 import { assertLocalSpatialDomain } from "@hypit/spatial/algebra";
 
 import { pictureType } from "./identity.js";

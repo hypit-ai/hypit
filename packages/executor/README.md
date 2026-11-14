@@ -1,9 +1,10 @@
 # `@hypit/executor`
 
-Environment-neutral execution of commands produced by the domain-neutral Kernel.
+Environment-neutral execution of commands produced by the domain-neutral Generation Build.
 
-`ProducerRegistry` installs deterministic component handlers. `EndpointRegistry` installs exact
-capability implementations. `Executor.prepare()` regenerates the current commands from Core and
+`ProducerRegistry` installs deterministic component handlers. The Environment-owned
+`EndpointRegistry` comes from `@hypit/endpoint` and installs exact capability implementations.
+`Executor.prepare()` regenerates the current commands from Core and
 classifies each as runnable or blocked; it does not search the graph or choose an output producer.
 
 Producer handlers receive immutable typed inputs. External work is represented by a declared Need
@@ -28,5 +29,5 @@ selected Endpoint identity without interpreting service-specific phases or treat
 
 `acceptOperation()` validates an already received value without making a remote call. Runtime can
 retain such a sibling result when another Need fails, without polling unfinished jobs to completion.
-The Executor validates returned values before offering a command result to the Kernel. It does not load
+The Executor validates returned values before offering a command result to the Generation Build. It does not load
 packages, parse source files, own the active Build work set or know any video vocabulary.

@@ -18,6 +18,7 @@ export function buildCliServices(overrides: BuildCliServicesScenario = {}): Buil
     createWorkspace() { return unopened("workspace"); },
     createCompiler() { return unopened("compiler"); },
     async openRuntimeHost() { return unopened("runtime"); },
+    async openEnvironmentHost() { return unopened("environment"); },
     async openProjectResults() { return unopened("project results"); },
     async diagnoseProjectResults() { return unopened("project result diagnosis"); },
   };

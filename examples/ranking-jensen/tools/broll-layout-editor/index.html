@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Jensen B-roll Layout</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; overflow: hidden; background: #111215; color: #f4f4f5; }
+    header { height: 66px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 0 20px; border-bottom: 1px solid #2a2b31; background: #17181c; }
+    h1 { margin: 0; font-size: 16px; font-weight: 700; }
+    .sub { margin-top: 3px; color: #8d9098; font-size: 11px; }
+    button, select { border: 1px solid #34353c; border-radius: 7px; padding: 7px 10px; color: #e8e8eb; background: #27282e; font: inherit; }
+    button { cursor: pointer; }
+    button:hover { background: #34353c; }
+    button.active { border-color: #72757f; background: #494b54; }
+    button.primary { border-color: #e24b5d; background: #e24b5d; color: white; font-weight: 700; }
+    .actions { display: flex; align-items: center; gap: 9px; }
+    .status { min-width: 72px; color: #92949c; font-size: 12px; text-align: right; }
+    main { height: calc(100vh - 66px); display: grid; grid-template-columns: 230px minmax(420px, 1fr) 240px; }
+    aside { min-width: 0; overflow: auto; padding: 14px; background: #17181c; }
+    aside.left { border-right: 1px solid #292a30; }
+    aside.right { border-left: 1px solid #292a30; }
+    .label { margin: 4px 0 8px; color: #868992; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+    .groups, .items { display: grid; gap: 6px; }
+    .groups button, .items button { width: 100%; text-align: left; }
+    .groups button { display: flex; justify-content: space-between; }
+    .groups small { color: #8d9098; }
+    .items button { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .stage-shell { position: relative; display: grid; place-items: center; min-width: 0; overflow: auto; padding: 24px; background: #0a0b0d; }
+    .stage { position: relative; width: 360px; height: 640px; overflow: hidden; background: #090a0f; box-shadow: 0 18px 60px rgba(0,0,0,.55); touch-action: none; }
+    .aroll { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .title { position: absolute; top: 37px; left: 0; z-index: 40; width: 100%; min-height: 47px; display: grid; place-items: center; padding: 5px 14px; background: #f2f0e8; color: #060606; font-size: 18px; font-weight: 950; line-height: 1.04; text-align: center; }
+    .board { position: absolute; z-index: 10; inset: 60% 0 0; background: #2b2b30; }
+    .row { height: 20%; border: 1.5px solid #111315; }
+    .row span { display: grid; place-items: center; width: 77px; height: 100%; color: #242424; font-size: 20px; }
+    .row:nth-child(1) span { background: #ee5f52; }.row:nth-child(2) span { background: #f0a04c; }.row:nth-child(3) span { background: #f0c84d; }.row:nth-child(4) span { background: #ede356; }.row:nth-child(5) span { background: #a6da7b; }
+    .broll { position: absolute; z-index: 20; object-fit: contain; box-shadow: 0 9px 17px -4px rgba(0,0,0,.85); cursor: grab; user-select: none; -webkit-user-drag: none; }
+    .broll.dragging { cursor: grabbing; }
+    .broll.selected { z-index: 21; outline: 2px solid #ff6478; outline-offset: 2px; }
+    .caption { position: absolute; z-index: 50; left: 42px; right: 42px; top: 368px; color: white; font-size: 24px; font-weight: 950; line-height: 1.1; text-align: center; text-shadow: 0 2px 4px #000, 0 0 2px #000; pointer-events: none; }
+    .caption mark { padding: 2px 5px; border-radius: 3px; background: #83e21b; color: white; }
+    label { display: block; margin: 16px 0 7px; color: #a8aab1; font-size: 12px; }
+    input[type="range"] { width: 100%; accent-color: #e24b5d; }
+    .readout { display: flex; justify-content: space-between; margin-top: 7px; color: #dadbe0; font-size: 12px; font-variant-numeric: tabular-nums; }
+    .hint { margin-top: 18px; color: #72757e; font-size: 11px; line-height: 1.55; }
+    @media (max-width: 900px) { main { grid-template-columns: 180px minmax(380px,1fr); } aside.right { display: none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1>Jensen B-roll Layout</h1><div class="sub">时序已锁定。这里只改每张图的位置与等比大小，保存到 broll.sequence.json。</div></div>
+    <div class="actions"><span class="status" id="status">正在读取…</span><button id="reset">恢复</button><button class="primary" id="save">保存布局</button></div>
+  </header>
+  <main>
+    <aside class="left"><div class="label">分组</div><div class="groups" id="groups"></div></aside>
+    <section class="stage-shell"><div class="stage" id="stage"><video class="aroll" id="aroll" autoplay muted loop playsinline></video><div class="title">RANKING THE BEST PERSON<br>JENSEN EVER DATED 🔥💦🍑</div><div class="board"><div class="row"><span>S</span></div><div class="row"><span>A</span></div><div class="row"><span>B</span></div><div class="row"><span>C</span></div><div class="row"><span>D</span></div></div><div class="caption"><mark>对应台词</mark></div></div></section>
+    <aside class="right"><div class="label">本组图片</div><div class="items" id="items"></div><label>大小</label><input id="size" type="range" min="40" max="900" step="1"><label>水平位置 X</label><input id="positionX" type="range" min="-720" max="1440" step="1"><label>垂直位置 Y</label><input id="positionY" type="range" min="-1280" max="2560" step="1"><div class="readout"><span id="sizeValue">—</span><span id="position">—</span></div><div class="hint">可直接拖动选中的图片，也可以使用 X/Y 滑杆。<br>当前选中图会临时显示在同组最上层，但不改变最终渲染层级。<br>大小保持原来的宽高比。</div></aside>
+  </main>
+  <script>
+    const stage = document.querySelector('#stage');
+    const groupsEl = document.querySelector('#groups');
+    const itemsEl = document.querySelector('#items');
+    const status = document.querySelector('#status');
+    const size = document.querySelector('#size');
+    const positionX = document.querySelector('#positionX');
+    const positionY = document.querySelector('#positionY');
+    const sizeValue = document.querySelector('#sizeValue');
+    const position = document.querySelector('#position');
+    const ar = document.querySelector('#aroll');
+    const scale = .5;
+    const videos = {
+      wife: '/media/aroll-wife/1794510378024-txge92qir4a.mp4',
+      trump: '/media/aroll-trump/1794509913035-4ts5mw9t1jk.mp4',
+      kimberly: '/media/aroll-kimberly/1794509933441-8qjelg8f4cp.mp4',
+      alice: '/media/aroll-alice/1794510073000-1xmdjteob3h.mp4',
+      jacket: '/media/aroll-jacket/1794510383369-wzd4o77i76.mp4',
+    };
+    let sequence, initial, activeGroup, selected;
+    const mediaNodes = new Map();
+    const clone = value => JSON.parse(JSON.stringify(value));
+    const groupLabel = group => `${group.id} · ${group.segment}`;
+
+    function setDirty() { status.textContent = '未保存'; }
+    function drawGroups() {
+      groupsEl.replaceChildren(...sequence.groups.map(group => {
+        const button = document.createElement('button');
+        button.innerHTML = `<span>${groupLabel(group)}</span><small>${group.mode === 'replace' ? '替换' : `${group.items.length} 张`}</small>`;
+        button.classList.toggle('active', group === activeGroup);
+        button.onclick = () => { activeGroup = group; selected = group.items[0]; render(); };
+        return button;
+      }));
+    }
+    function mediaNode(item) {
+      const node = item.source.endsWith('.mp4') ? document.createElement('video') : document.createElement('img');
+      node.className = 'broll';
+      node.src = `/${item.source}`;
+      node.draggable = false;
+      if (node.tagName === 'VIDEO') { node.autoplay = true; node.muted = true; node.loop = true; node.playsInline = true; }
+      node.dataset.id = item.id;
+      pointer(node, item);
+      return node;
+    }
+    function place(node, item) {
+      const layout = item.layout;
+      Object.assign(node.style, { left: `${layout.x * scale}px`, top: `${layout.y * scale}px`, width: `${layout.width * scale}px`, height: `${layout.height * scale}px` });
+      node.classList.toggle('selected', item === selected);
+    }
+    function pointer(node, item) {
+      let dragging = false, origin;
+      node.addEventListener('pointerdown', event => {
+        event.preventDefault();
+        selected = item; dragging = true; origin = { clientX: event.clientX, clientY: event.clientY, x: item.layout.x, y: item.layout.y };
+        node.setPointerCapture(event.pointerId); node.classList.add('dragging');
+        for (const [id, candidate] of mediaNodes) candidate.classList.toggle('selected', id === item.id);
+        syncControls();
+      });
+      node.addEventListener('pointermove', event => {
+        if (!dragging) return;
+        item.layout.x = Math.round(origin.x + (event.clientX - origin.clientX) / scale);
+        item.layout.y = Math.round(origin.y + (event.clientY - origin.clientY) / scale);
+        place(node, item); syncControls(); setDirty();
+      });
+      const stop = () => { dragging = false; node.classList.remove('dragging'); };
+      node.addEventListener('pointerup', stop); node.addEventListener('pointercancel', stop);
+    }
+    function renderItems() {
+      for (const node of mediaNodes.values()) node.remove();
+      mediaNodes.clear();
+      const visible = activeGroup.mode === 'replace' ? [selected] : activeGroup.items;
+      for (const item of visible) { const node = mediaNode(item); mediaNodes.set(item.id, node); place(node, item); stage.append(node); }
+    }
+    function syncControls() {
+      itemsEl.replaceChildren(...activeGroup.items.map((item, index) => {
+        const button = document.createElement('button'); button.textContent = `${index + 1}. ${item.id}`; button.classList.toggle('active', item === selected);
+        button.onclick = () => { selected = item; renderItems(); syncControls(); };
+        return button;
+      }));
+      size.value = selected.layout.width;
+      positionX.value = selected.layout.x;
+      positionY.value = selected.layout.y;
+      sizeValue.textContent = `${selected.layout.width} × ${selected.layout.height}`;
+      position.textContent = `x ${selected.layout.x} · y ${selected.layout.y}`;
+    }
+    function render() {
+      ar.src = videos[activeGroup.segment];
+      drawGroups(); renderItems(); syncControls();
+    }
+    size.addEventListener('input', () => {
+      const ratio = selected.layout.height / selected.layout.width;
+      selected.layout.width = Number(size.value); selected.layout.height = Math.round(selected.layout.width * ratio * 1000) / 1000;
+      const node = mediaNodes.get(selected.id); if (node) place(node, selected);
+      syncControls(); setDirty();
+    });
+    positionX.addEventListener('input', () => {
+      selected.layout.x = Number(positionX.value);
+      const node = mediaNodes.get(selected.id); if (node) place(node, selected);
+      syncControls(); setDirty();
+    });
+    positionY.addEventListener('input', () => {
+      selected.layout.y = Number(positionY.value);
+      const node = mediaNodes.get(selected.id); if (node) place(node, selected);
+      syncControls(); setDirty();
+    });
+    document.querySelector('#save').onclick = async () => {
+      status.textContent = '保存中…';
+      const response = await fetch('/api/sequence', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(sequence) });
+      if (!response.ok) { status.textContent = '保存失败'; return; }
+      sequence = (await response.json()).sequence; initial = clone(sequence); activeGroup = sequence.groups.find(group => group.id === activeGroup.id); selected = activeGroup.items.find(item => item.id === selected.id); status.textContent = '已保存'; render();
+    };
+    document.querySelector('#reset').onclick = () => { const id = activeGroup.id; sequence = clone(initial); activeGroup = sequence.groups.find(group => group.id === id); selected = activeGroup.items[0]; status.textContent = '已恢复'; render(); };
+    fetch('/api/sequence').then(response => response.json()).then(value => { sequence = value; initial = clone(value); activeGroup = sequence.groups[0]; selected = activeGroup.items[0]; status.textContent = '已读取'; render(); }).catch(error => { status.textContent = error.message; });
+  </script>
+</body>
+</html>

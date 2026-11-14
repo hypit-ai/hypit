@@ -1,5 +1,5 @@
 import { probeMediaToolchain } from "@hypit/media-local";
-import type { ManagedProgram } from "@hypit/runtime-local/extension";
+import type { ManagedProgram } from "@hypit/execution-environment-local/extension";
 
 /** A system/custom FFmpeg deployment is external: programs up probes it but never mutates a package manager. */
 export function localMediaToolchainProgram(input: {

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { blobTypes } from "@hypit/blob";
-import type { AuthorResolvedReference } from "@hypit/author";
-import { generationTypes } from "@hypit/generation";
+import type { AuthorResolvedReference } from "@hypit/generation-authoring/author";
+import { generationTypes } from "@hypit/generation-model";
 import { sealText, textTypes } from "@hypit/text";
 import { compileMarkupDeclaration } from "../../../test/compile-markup-declaration.js";
 

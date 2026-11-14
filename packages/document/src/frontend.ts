@@ -2,12 +2,12 @@ import type {
   AuthorDocument,
   AuthorDocumentOperation,
   AuthorFrontend,
-} from "@hypit/author";
-import { decodeSourceText } from "@hypit/source";
+} from "@hypit/generation-authoring/author";
+import { decodeSourceText } from "@hypit/generation-authoring/source";
 
 import { parseDocument, serializeDocumentBlock } from "./markdown.js";
 
-export const documentFrontendId = "@hypit/document@1";
+export const documentFrontendId = "@hypit/document";
 const rootNode = "document:root";
 
 type DocumentRepresentation = {
@@ -74,7 +74,7 @@ function insertionText(source: string, offset: number, markdown: string, before:
   return `${separationBefore(source, offset)}${markdown}${terminalNewline}`;
 }
 
-function project(source: import("@hypit/source").SourceUnit): AuthorDocument {
+function project(source: import("@hypit/generation-authoring/source").SourceUnit): AuthorDocument {
   const parsed = parseDocument(decodeSourceText(source));
   return {
     source,

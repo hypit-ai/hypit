@@ -7,7 +7,7 @@ import type {
 } from "@hypit/scene";
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 
-const pathSceneMotionModuleRef = { name: "@hypit/scene-motion", version: "1" } as const;
+const pathSceneMotionModuleRef = { name: "@hypit/scene-motion" } as const;
 
 export const cameraPathSymbol = { module: pathSceneMotionModuleRef, name: "camera-path" } as const;
 export const objectPathSymbol = { module: pathSceneMotionModuleRef, name: "object-path" } as const;

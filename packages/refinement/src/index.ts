@@ -1,6 +1,7 @@
 import type { Facet } from "@hypit/facet";
-import type { Value, TypeRef, TypedRecord } from "@hypit/protocol";
-import { typeIdentity, typeKey } from "@hypit/protocol";
+import type { Value } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import { typeIdentity, typeKey } from "@hypit/module";
 
 export type TypeRefinementContext = {
   readonly type: TypeRef;
@@ -23,23 +24,23 @@ export type TypeRefinement = {
 
 export type RefinementPackage = readonly TypeRefinement[];
 
-export const refinementPackageFacetAbi = "hypit.refinement-package@1";
+export const refinementPackageFacetKind = "hypit.refinement-package";
 
 export type RefinementPackageFacet = Facet & {
-  readonly abi: typeof refinementPackageFacetAbi;
+  readonly kind: typeof refinementPackageFacetKind;
   readonly implementation: RefinementPackage;
 };
 
 export function createRefinementPackageFacet(refinements: RefinementPackage): RefinementPackageFacet {
   if (!Array.isArray(refinements)) throw new Error("Refinement package must be an array of Type refinements");
   return {
-    abi: refinementPackageFacetAbi,
+    kind: refinementPackageFacetKind,
     implementation: refinements,
   };
 }
 
 export function refinementPackagesFromFacets(facets: readonly Facet[]): readonly RefinementPackage[] {
-  return facets.flatMap((facet) => facet.abi === refinementPackageFacetAbi
+  return facets.flatMap((facet) => facet.kind === refinementPackageFacetKind
     ? [(facet as RefinementPackageFacet).implementation]
     : []);
 }
@@ -66,7 +67,6 @@ export class RefinementError extends Error {
     this.subject = subject;
   }
 }
-
 export class RefinementRegistry implements RefinementRegistryLike, TypeRefinementRegistrar {
   readonly #refinements = new Map<string, TypeRefinementHandler>();
 
@@ -103,11 +103,4 @@ export async function refineValue(
       typeKey(type),
     );
   }
-}
-
-export async function refineRecord(
-  record: TypedRecord,
-  registry: RefinementRegistryLike,
-): Promise<void> {
-  await refineValue(record.type, record.value, registry);
 }

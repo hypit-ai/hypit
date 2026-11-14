@@ -1,0 +1,24 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "bush",
+  "name": "灌木",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets"
+    },
+    "name": "prop"
+  },
+  "resources": {
+    "model": {
+      "path": "model.gltf",
+      "mediaType": "model/gltf+json"
+    }
+  },
+  "parameters": {
+    "boundsM": {
+      "width": 1.35,
+      "depth": 1,
+      "height": 1
+    }
+  }
+}

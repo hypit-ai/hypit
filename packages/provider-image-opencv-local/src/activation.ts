@@ -1,37 +1,37 @@
 import {
-  createRuntimeEndpointAdapterFacet,
-  runtimeConfigExact,
-  runtimeConfigObject,
-  runtimeConfigPositiveInteger,
-  runtimeConfigString,
-} from "@hypit/runtime-local/extension";
+  createExecutionEnvironmentEndpointAdapterFacet,
+  executionEnvironmentConfigExact,
+  executionEnvironmentConfigObject,
+  executionEnvironmentConfigPositiveInteger,
+  executionEnvironmentConfigString,
+} from "@hypit/execution-environment-local/extension";
 import {
-  diagnoseRuntimeExecutable,
-} from "@hypit/runtime-local/node";
+  diagnoseEnvironmentExecutable,
+} from "@hypit/execution-environment-local/node";
 
 import { resolveLocalOpenCvDeployment } from "./deployment.js";
 import { createLocalOpenCvImageProvider } from "./provider.js";
 import { localOpenCvProgram } from "./program.js";
 
-const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
+const localOpenCvRuntimeAdapter = createExecutionEnvironmentEndpointAdapterFacet({
   use: "@hypit/provider-image-opencv-local",
   activate(context) {
     if (context.pool === undefined) throw new Error("local OpenCV Provider Pool is required");
-    const config = runtimeConfigObject(context.config, "local OpenCV image");
-    runtimeConfigExact(config, [
+    const config = executionEnvironmentConfigObject(context.config, "local OpenCV image");
+    executionEnvironmentConfigExact(config, [
       "pythonExecutable", "defaultConcurrency", "processTimeoutMs", "maxInputBytes", "maxOutputBytes",
     ], "local OpenCV image");
-    const configuredPython = runtimeConfigString(config.pythonExecutable, "OpenCV pythonExecutable");
+    const configuredPython = executionEnvironmentConfigString(config.pythonExecutable, "OpenCV pythonExecutable");
     const deployment = resolveLocalOpenCvDeployment({
       hostStateRoot: context.hostStateRoot,
       dataRoot: context.dataRoot,
       instance: context.instance,
       ...(configuredPython === undefined ? {} : { pythonExecutable: configuredPython }),
     });
-    const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "OpenCV defaultConcurrency");
-    const processTimeoutMs = runtimeConfigPositiveInteger(config.processTimeoutMs, "OpenCV processTimeoutMs");
-    const maxInputBytes = runtimeConfigPositiveInteger(config.maxInputBytes, "OpenCV maxInputBytes");
-    const maxOutputBytes = runtimeConfigPositiveInteger(config.maxOutputBytes, "OpenCV maxOutputBytes");
+    const defaultConcurrency = executionEnvironmentConfigPositiveInteger(config.defaultConcurrency, "OpenCV defaultConcurrency");
+    const processTimeoutMs = executionEnvironmentConfigPositiveInteger(config.processTimeoutMs, "OpenCV processTimeoutMs");
+    const maxInputBytes = executionEnvironmentConfigPositiveInteger(config.maxInputBytes, "OpenCV maxInputBytes");
+    const maxOutputBytes = executionEnvironmentConfigPositiveInteger(config.maxOutputBytes, "OpenCV maxOutputBytes");
     return {
       endpoint: createLocalOpenCvImageProvider({
         instance: context.instance,
@@ -43,7 +43,7 @@ const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ...(maxOutputBytes === undefined ? {} : { maxOutputBytes }),
       }),
       program: localOpenCvProgram(context.instance, deployment),
-      diagnose: () => diagnoseRuntimeExecutable({
+      diagnose: () => diagnoseEnvironmentExecutable({
         root: context.dataRoot,
         configured: deployment.pythonExecutable,
         fallback: deployment.pythonExecutable,
@@ -54,7 +54,6 @@ const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
 });
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
   facets: [localOpenCvRuntimeAdapter],
 };
 

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import type { CliIo } from "@hypit/cli";
-import { authorDeclarationFacetAbi } from "@hypit/author";
+import { authorDeclarationFacetKind } from "@hypit/generation-authoring/author";
 
 import { listDeclarations, listPackages, runSvmlVocabularyCli } from "../src/vocabulary.js";
 
@@ -36,8 +36,8 @@ test("the listing sees every activatable package from the repository root", asyn
   assert.deepEqual(seedance?.capabilities?.map((item) => item.name).sort(),
     ["seedance-2", "seedance-2-fast", "seedance-2-mini", "seedance-2.5"]);
   assert.ok(seedance?.capabilities?.every((item) =>
-    item.module === "@hypit/seedance@1"
-      && item.returns === "@hypit/generation@1#GeneratedVideoSet"));
+    item.module === "@hypit/seedance"
+      && item.returns === "@hypit/generation-model#GeneratedVideoSet"));
 });
 
 test("vocabulary discovers bundled packages from a separate project without node_modules", async () => {
@@ -56,11 +56,10 @@ test("vocabulary discovers bundled packages from a separate project without node
       hypit: { activation: "./activation.mjs" },
     }));
     await writeFile(join(directory, "activation.mjs"), activation ?? `export default {
-      format: "hypit.package@1",
       facets: [{
-        abi: ${JSON.stringify(authorDeclarationFacetAbi)},
+        kind: ${JSON.stringify(authorDeclarationFacetKind)},
         implementation: {
-          module: { name: ${JSON.stringify(name)}, version: "1" },
+          module: { name: ${JSON.stringify(name)} },
           declaration: "card", outputs: [],
           shape: { summary: "Authors one Card.", fields: [] },
           bindings: () => [], compile: () => ({ records: [], components: [] }),
@@ -104,35 +103,34 @@ test("vocabulary discovers bundled packages from a separate project without node
     assert.equal(listing.find((item) => item.name === "@studio/custom")!.description, "project package");
     assert.ok(listing.every((item) => item.unreadable === undefined && item.declarations.includes("card")));
 
-    // Model discovery is a projection of the named package's Manifest. Loading its dependency
-    // closure must not attribute a dependency's capabilities to the package being listed.
+    // Capability discovery reads the named package's Generation facet, not its semantic Module.
     const inner = join(project, "node_modules", "@studio", "inner");
     await packageAt(inner, "@studio/inner", "inner model", `export default {
-      format: "hypit.package@1",
-      modules: [{ manifest: {
-        format: "hypit.module@1", name: "@studio/inner", version: "1",
+      facets: [{ kind: "hypit.module", address: "@studio/inner", implementation: {
+        name: "@studio/inner",
         dependencies: [], types: [],
+      } }, { kind: "hypit.generation-module", address: "@studio/inner", implementation: {
+        module: { name: "@studio/inner" },
         capabilities: [{
           name: "inner-model",
-          returns: { module: { name: "@hypit/generation", version: "1" }, name: "GeneratedImageSet" },
+          returns: { module: { name: "@hypit/generation-model" }, name: "GeneratedImageSet" },
         }],
         producers: [],
-      }}],
+      } }],
     };`);
     const outer = join(project, "node_modules", "@studio", "outer");
     await packageAt(outer, "@studio/outer", "outer package", `export default {
-      format: "hypit.package@1",
-      modules: [{ manifest: {
-        format: "hypit.module@1", name: "@studio/outer", version: "1",
-        dependencies: [{ module: { name: "@studio/inner", version: "1" } }],
-        types: [], capabilities: [], producers: [],
-      }}],
+      facets: [{ kind: "hypit.module", address: "@studio/outer", implementation: {
+        name: "@studio/outer",
+        dependencies: [{ name: "@studio/inner" }],
+        types: [],
+      } }],
     };`);
     const modelListing = await listPackages(project, distribution);
     assert.deepEqual(modelListing.find((item) => item.name === "@studio/inner")?.capabilities, [{
-      module: "@studio/inner@1",
+      module: "@studio/inner",
       name: "inner-model",
-      returns: "@hypit/generation@1#GeneratedImageSet",
+      returns: "@hypit/generation-model#GeneratedImageSet",
     }]);
     assert.equal(modelListing.find((item) => item.name === "@studio/outer")?.capabilities, undefined);
   } finally {
@@ -169,9 +167,9 @@ test("the human view distinguishes logical Modules contributed by one physical p
   const human = io();
   await runSvmlVocabularyCli(["vocabulary", "@hypit/gpt-image", "--declaration", "image"], human.io, repositoryRoot);
   assert.match(human.text(), /package  @hypit\/gpt-image/u);
-  assert.match(human.text(), /module   @hypit\/gpt-image@1/u);
-  assert.match(human.text(), /import   module owner from "@hypit\/gpt-image@1"/u);
+  assert.match(human.text(), /module   @hypit\/gpt-image/u);
+  assert.match(human.text(), /import   module owner from "@hypit\/gpt-image"/u);
   assert.doesNotMatch(human.text(), /gpt-image\/clean/u);
-  assert.match(human.text(), /Blob \(@hypit\/blob@1\)/u);
+  assert.match(human.text(), /Blob \(@hypit\/blob\)/u);
   assert.doesNotMatch(human.text(), /\{"name":"image"/u);
 });

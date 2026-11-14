@@ -2,11 +2,11 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { ManagedProgramCommand } from "@hypit/runtime-local/extension";
+import type { ManagedProgramCommand } from "@hypit/execution-environment-local/extension";
 import {
   pythonEnvironmentExecutable,
-  resolveRuntimeExecutable,
-} from "@hypit/runtime-local/node";
+  resolveEnvironmentExecutable,
+} from "@hypit/execution-environment-local/node";
 
 /** The locked Python project is immutable material owned and shipped by this Provider. */
 export const localOpenCvManagedProject = fileURLToPath(new URL("../runtime", import.meta.url));
@@ -34,7 +34,7 @@ export function resolveLocalOpenCvDeployment(
 ): LocalOpenCvDeployment {
   if (input.pythonExecutable !== undefined) {
     return {
-      pythonExecutable: resolveRuntimeExecutable(input.dataRoot, input.pythonExecutable),
+      pythonExecutable: resolveEnvironmentExecutable(input.dataRoot, input.pythonExecutable),
       ownership: "external",
     };
   }

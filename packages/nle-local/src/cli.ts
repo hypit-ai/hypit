@@ -1,4 +1,4 @@
-import type { CliCommandModule } from "@hypit/cli";
+import type { CliCommandModule } from "@hypit/cli/public";
 
 import { runNleCli, writeNleHelp } from "./cli-command.js";
 
@@ -7,11 +7,10 @@ export function createLocalNleCliCommandModules(options: {
   readonly distributionPackageRoot?: string;
 } = {}): readonly CliCommandModule[] {
   return [{
-    format: "hypit.cli-command@1",
     id: "@hypit/nle-local#cli",
     commands: ["nle"],
     writeRootHelp(io) {
-      io.write("\nLocal component-driven NLE\n  nle export\n  hypit nle --help for exact options\n");
+      io.write("\nLocal component-driven NLE\n  nle export | frames | review\n  hypit nle --help for exact options\n");
     },
     writeHelp(_argv, io) {
       writeNleHelp(io);

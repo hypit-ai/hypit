@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { findProjectRoot } from "../src/index.js";
+import { findProjectRoot } from "../src/node/index.js";
 
 test("project discovery names a malformed package manifest", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-project-json-"));

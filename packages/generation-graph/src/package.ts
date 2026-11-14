@@ -1,5 +1,6 @@
 import type { Facet } from "@hypit/facet";
-import { canonicalize, isModuleRef, isTypeRef, sameType } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import { isModuleRef, isTypeRef, sameType } from "@hypit/module";
 import type { CanonicalValue } from "@hypit/protocol";
 
 import type {
@@ -17,7 +18,7 @@ import {
   type GenerationNodeAuthoringShape,
 } from "./authoring.js";
 
-export const generationNodePackageFacetAbi = "hypit.generation-node-package@1";
+export const generationNodePackageFacetKind = "hypit.generation-node-package";
 
 export type GenerationOperationNodeCompileContext = {
   readonly node: GenerationGraphNode;
@@ -25,7 +26,7 @@ export type GenerationOperationNodeCompileContext = {
 };
 
 export type GenerationCompiledOperationNode = {
-  readonly fragment: import("@hypit/author").GraphFragment;
+  readonly fragment: import("@hypit/generation-authoring/author").GraphFragment;
   readonly inputs: Readonly<Record<string, GenerationGraphInput>>;
 };
 
@@ -55,7 +56,7 @@ export type GenerationOperationNodeDeclaration =
       readonly kind: "operation";
       readonly using: GenerationComponentRef;
       /** Stable result Type used by draft inspection and selected-result substitution. */
-      readonly output: import("@hypit/protocol").TypeRef;
+      readonly output: import("@hypit/module").TypeRef;
       readonly authoring?: GenerationNodeAuthoringShape;
       /** One package-owned path validates supplied facts and compiles a complete invocation. */
       readonly resolve: (context: GenerationOperationNodeCompileContext) =>
@@ -74,7 +75,7 @@ export type GenerationValueNodeDeclaration = {
   readonly kind: "value";
   readonly using: GenerationComponentRef;
   readonly inputs: readonly string[];
-  readonly type: import("@hypit/protocol").TypeRef;
+  readonly type: import("@hypit/module").TypeRef;
   readonly authoring?: GenerationNodeAuthoringShape;
   readonly load: (context: GenerationValueNodeLoadContext) =>
     import("./types.js").Awaitable<CanonicalValue>;
@@ -89,7 +90,7 @@ export type GenerationNodePackage = {
 };
 
 export type GenerationNodePackageFacet = Facet & {
-  readonly abi: typeof generationNodePackageFacetAbi;
+  readonly kind: typeof generationNodePackageFacetKind;
   readonly implementation: GenerationNodePackage;
 };
 
@@ -106,7 +107,7 @@ export function generationComponentKey(component: GenerationComponentRef): strin
   assert(isModuleRef(component.module), "Generation Node component Module is invalid.");
   assert(/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(component.name),
     "Generation Node component name is invalid.");
-  return JSON.stringify([component.module.name, component.module.version, component.name]);
+  return JSON.stringify([component.module.name, component.name]);
 }
 
 function assertPackage(value: GenerationNodePackage): void {
@@ -149,13 +150,13 @@ export function createGenerationNodePackageFacet(
   value: GenerationNodePackage,
 ): GenerationNodePackageFacet {
   assertPackage(value);
-  return { abi: generationNodePackageFacetAbi, implementation: value };
+  return { kind: generationNodePackageFacetKind, implementation: value };
 }
 
 export function generationNodePackagesFromFacets(
   facets: readonly Facet[],
 ): readonly GenerationNodePackage[] {
-  return facets.flatMap((facet) => facet.abi === generationNodePackageFacetAbi
+  return facets.flatMap((facet) => facet.kind === generationNodePackageFacetKind
     ? [(facet as GenerationNodePackageFacet).implementation]
     : []);
 }

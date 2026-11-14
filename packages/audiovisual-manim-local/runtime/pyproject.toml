@@ -1,0 +1,13 @@
+[project]
+name = "hypit-audiovisual-manim-local"
+version = "0.1.0"
+description = "Pinned Manim Community runtime for Hypit Picture Source execution"
+readme = "README.md"
+requires-python = ">=3.11,<3.15"
+license = { text = "Hypit Open Source License (Apache-2.0 with additional conditions); see LICENSE at the repository root" }
+dependencies = [
+  "manim==0.22.1",
+]
+
+[tool.uv]
+package = false

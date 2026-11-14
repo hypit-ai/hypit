@@ -49,16 +49,23 @@ import {
   nleInspectorPresentationPackagesFromFacets,
   nleTimelinePresentationPackagesFromFacets,
 } from "@hypit/nle-view";
-import { moduleKey, modulePackageAbi } from "@hypit/protocol";
-import { findProjectRoot } from "@hypit/project";
-import type { CredentialAcquisition } from "@hypit/runtime";
-import { NodeFilesystemWorkspace } from "@hypit/workspace/node";
+import { moduleKey } from "@hypit/module";
+import { moduleFacetKind } from "@hypit/module";
+import { findProjectRoot } from "@hypit/project/node";
+import {
+  createNodeProjectMediaServicePool,
+  startNodeProjectMediaHttpServer,
+  type NodeProjectMediaService,
+} from "@hypit/media-service/node";
+import type { CredentialAcquisition } from "@hypit/execution-environment";
+import { NodeFilesystemWorkspace } from "@hypit/generation-authoring/workspace/node";
 
 import {
   startGenerationCanvasWorkbenchServer,
   startSceneWorkbenchServer,
   startWorkbenchSuiteServer,
   startWorkbenchServer,
+  type WorkbenchEnvironmentHost,
 } from "./node/index.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -87,19 +94,20 @@ function portValue(raw: string | undefined): number {
 
 function nlePackageNames(composition: NleComposition): readonly string[] {
   const names = new Set<string>();
-  const add = (symbol: { readonly module: { readonly name: string; readonly version: string } }) => {
+  const add = (symbol: { readonly module: { readonly name: string } }) => {
     names.add(moduleKey(symbol.module));
   };
   for (const value of composition.componentValues) add(value.component);
   for (const track of composition.tracks) {
     for (const item of track.items) {
-      if (item.kind === "adjustment") add(item.component);
+      if (item.kind === "adjustment") add(item.operator);
       else if (item.source === "component") add(item.component);
       else if (item.source === "composition") {
         for (const name of nlePackageNames(item.composition)) names.add(name);
       }
       if (item.kind === "present") {
-        for (const effect of item.picture?.effects ?? []) add(effect.component);
+        for (const application of item.picture?.operators ?? []) add(application.operator);
+        for (const application of item.audio?.operators ?? []) add(application.operator);
       }
       if (item.kind === "present" && item.audio?.reconstruction !== undefined) {
         add(item.audio.reconstruction.using);
@@ -113,7 +121,7 @@ function nlePackageNames(composition: NleComposition): readonly string[] {
 
 function scenePackageNames(project: SceneProject): readonly string[] {
   const names = new Set<string>();
-  const add = (symbol: { readonly module: { readonly name: string; readonly version: string } }) => {
+  const add = (symbol: { readonly module: { readonly name: string } }) => {
     names.add(moduleKey(symbol.module));
   };
   add(project.environment.using);
@@ -163,12 +171,15 @@ async function waitForStop(): Promise<void> {
 
 export type WorkbenchCliOptions = {
   readonly distributionPackageRoot?: string;
+  readonly openEnvironmentHost?: (path: string, options: {
+    readonly packageRoot: string;
+    readonly distributionPackageRoot?: string;
+  }) => Promise<WorkbenchEnvironmentServiceHost>;
   readonly resolveProjectRuntime?: (projectRoot: string) => Promise<{ readonly profile: string } | undefined>;
   readonly openRuntimeHost?: (path: string, options: {
     readonly packageRoot: string;
     readonly distributionPackageRoot?: string;
   }) => Promise<WorkbenchRuntimeHost>;
-  readonly selectProjectRuntime?: (projectRoot: string, profile: string) => Promise<void>;
   readonly acquireOAuthCredential?: (acquisition: CredentialAcquisition) => Promise<string>;
   readonly openProjectResults?: (projectRoot: string) => Promise<{
     readonly location: {
@@ -203,13 +214,25 @@ export async function startSceneProjectWorkbench(
       : { fallbackRoots: [workbenchOptions.distributionPackageRoot] }),
   });
   const facets = packages.flatMap((item) => item.contribution.facets ?? []);
-  return await startSceneWorkbenchServer({
+  const environment = openProjectWorkbenchEnvironment(projectRoot, workbenchOptions);
+  const server = await startSceneWorkbenchServer({
     projectFile: documentFile,
     projectRoot,
     port,
     authoring: createSceneAuthoringHost(sceneAuthoringPackagesFromFacets(facets)),
     lowering: createSceneLoweringHost(scenePackagesFromFacets(facets)),
+    ...(environment.host === undefined ? {} : { environment: environment.host }),
+  }).catch(async (error: unknown) => {
+    await environment.close();
+    throw error;
   });
+  return {
+    ...server,
+    async close() {
+      await server.close();
+      await environment.close();
+    },
+  };
 }
 
 type WorkbenchGenerationRuntime = BuildSubmissionRuntime<GenerationGraphRuntimeRequest, { readonly id: string }>;
@@ -236,10 +259,150 @@ type WorkbenchCredentialControl = {
   putCredential(endpoint: string, slot: string, secret: string): Promise<WorkbenchCredentialStatus>;
   close(): void | Promise<void>;
 };
-type WorkbenchRuntimeHost = BuildSubmissionHost<WorkbenchGenerationInspection> & {
-  openControl(options?: { readonly readOnly?: boolean }): Promise<WorkbenchRuntimeControl>;
+type WorkbenchEnvironmentServiceHost = {
   openCredentials(endpoint: string): Promise<WorkbenchCredentialControl>;
 };
+type WorkbenchRuntimeHost = BuildSubmissionHost<WorkbenchGenerationInspection> & {
+  openControl(options?: { readonly readOnly?: boolean }): Promise<WorkbenchRuntimeControl>;
+};
+
+type OpenedProjectWorkbenchEnvironment = {
+  readonly host: WorkbenchEnvironmentHost | undefined;
+  readonly observe: WorkbenchEnvironmentHost["observe"];
+  readonly selectedRuntimeHost: () => Promise<{
+    readonly profile: string;
+    readonly host: WorkbenchRuntimeHost;
+    readonly control: WorkbenchRuntimeControl;
+  } | undefined>;
+  close(): Promise<void>;
+};
+
+export function openProjectWorkbenchEnvironment(
+  projectRoot: string,
+  workbenchOptions: WorkbenchCliOptions,
+): OpenedProjectWorkbenchEnvironment {
+  const environmentCandidate = resolve(projectRoot, "hypit.environment.json");
+  let openedRuntime: {
+    readonly profile: string;
+    readonly host: WorkbenchRuntimeHost;
+    readonly control: WorkbenchRuntimeControl;
+  } | undefined;
+  let openedEnvironment: {
+    readonly profile: string;
+    readonly host: WorkbenchEnvironmentServiceHost;
+  } | undefined;
+  const close = async () => {
+    await openedRuntime?.control.close();
+    openedRuntime = undefined;
+    openedEnvironment = undefined;
+  };
+  const selectedRuntimeHost = async () => {
+    const selected = await workbenchOptions.resolveProjectRuntime?.(projectRoot);
+    if (selected === undefined || workbenchOptions.openRuntimeHost === undefined) {
+      await close();
+      return undefined;
+    }
+    if (openedRuntime?.profile === selected.profile) return openedRuntime;
+    await close();
+    const host = await workbenchOptions.openRuntimeHost(selected.profile, {
+      packageRoot: projectRoot,
+      ...(workbenchOptions.distributionPackageRoot === undefined
+        ? {}
+        : { distributionPackageRoot: workbenchOptions.distributionPackageRoot }),
+    });
+    openedRuntime = { profile: selected.profile, host, control: await host.openControl({ readOnly: true }) };
+    return openedRuntime;
+  };
+  const selectedEnvironmentHost = async () => {
+    if (openedEnvironment !== undefined) return openedEnvironment;
+    if (workbenchOptions.openEnvironmentHost === undefined
+      || !(await stat(environmentCandidate).then((value) => value.isFile(), () => false))) return undefined;
+    const host = await workbenchOptions.openEnvironmentHost(environmentCandidate, {
+      packageRoot: projectRoot,
+      ...(workbenchOptions.distributionPackageRoot === undefined
+        ? {}
+        : { distributionPackageRoot: workbenchOptions.distributionPackageRoot }),
+    });
+    openedEnvironment = { profile: environmentCandidate, host };
+    return openedEnvironment;
+  };
+  const profileEndpoints = async (profile: string): Promise<readonly string[]> => {
+    const value = JSON.parse(await readFile(profile, "utf8")) as { readonly endpoints?: unknown };
+    return value.endpoints !== null && typeof value.endpoints === "object" && !Array.isArray(value.endpoints)
+      ? Object.keys(value.endpoints) : [];
+  };
+  const environmentCredentials = async (
+    environment: NonNullable<Awaited<ReturnType<typeof selectedEnvironmentHost>>>,
+  ) => {
+    const values: WorkbenchCredentialStatus[] = [];
+    for (const endpoint of await profileEndpoints(environment.profile)) {
+      const control = await environment.host.openCredentials(endpoint);
+      try {
+        values.push(...await control.credentials(endpoint));
+      } finally {
+        await control.close();
+      }
+    }
+    return values;
+  };
+  const observe = async () => {
+    const candidate = await stat(environmentCandidate).then((value) => value.isFile(), () => false)
+      ? basename(environmentCandidate) : undefined;
+    const environment = await selectedEnvironmentHost();
+    if (environment === undefined) {
+      return {
+        status: "unavailable" as const,
+        environment: { selected: false, ...(candidate === undefined ? {} : { candidate }) },
+        credentials: [],
+        issue: candidate === undefined ? "当前项目没有 hypit.environment.json。" : "当前 Host 无法打开项目执行环境。",
+      };
+    }
+    const credentials = await environmentCredentials(environment);
+    const missing = credentials.filter((item) => !item.configured);
+    const actionable = missing.length > 0 && missing.every((item) => item.writable
+      && item.acquisition?.kind === "oauth2-pkce") && workbenchOptions.acquireOAuthCredential !== undefined;
+    return {
+      status: missing.length === 0 ? "ready" as const
+        : actionable ? "action-required" as const : "unavailable" as const,
+      environment: { selected: true, label: basename(environment.profile) },
+      credentials: credentials.map((item) => ({
+        endpoint: item.endpoint,
+        slot: item.slot,
+        label: item.label,
+        configured: item.configured,
+        writable: item.writable,
+        ...(item.acquisition?.kind === "oauth2-pkce" ? { acquisition: "oauth2-pkce" as const } : {}),
+      })),
+      ...(missing.length === 0 ? {} : {
+        issue: actionable ? "登录生成服务后即可运行节点。" : `${missing[0]?.label ?? "生成服务凭据"}尚未配置。`,
+      }),
+    };
+  };
+  const host = workbenchOptions.openEnvironmentHost === undefined ? undefined : {
+    observe,
+    connect: async () => {
+      const environment = await selectedEnvironmentHost();
+      assert(environment !== undefined, "Project Environment Profile hypit.environment.json is unavailable.");
+      const missing = (await environmentCredentials(environment)).find((item) => !item.configured);
+      if (missing !== undefined) {
+        assert(missing.writable, `${missing.label} is owned by a read-only credential source.`);
+        assert(missing.acquisition?.kind === "oauth2-pkce",
+          `${missing.label} cannot be acquired through browser login.`);
+        assert(workbenchOptions.acquireOAuthCredential !== undefined,
+          "Browser credential acquisition is unavailable in this Workbench.");
+        const secret = await workbenchOptions.acquireOAuthCredential(missing.acquisition);
+        const control = await environment.host.openCredentials(missing.endpoint);
+        try {
+          await control.putCredential(missing.endpoint, missing.slot, secret);
+        } finally {
+          await control.close();
+        }
+      }
+      return await observe();
+    },
+  } satisfies WorkbenchEnvironmentHost | undefined;
+  return { host, observe, selectedRuntimeHost, close };
+}
 
 type WorkbenchSurface = "nle" | "scene" | "canvas";
 
@@ -257,11 +420,12 @@ async function documentProjectRoot(documentFile: string, fallbackRoot: string): 
   return local ? fallbackRoot : dirname(documentFile);
 }
 
-async function startNleProjectWorkbench(
+export async function startNleProjectWorkbench(
   documentFile: string,
   projectRoot: string,
   port: number,
-  workbenchOptions: WorkbenchCliOptions,
+  workbenchOptions: WorkbenchCliOptions = {},
+  media?: NodeProjectMediaService,
 ) {
   const opened = await readNleProjectFile(documentFile);
   const packages = await loadNodePackageSelection({
@@ -282,7 +446,8 @@ async function startNleProjectWorkbench(
     nleInspectorPresentationPackagesFromFacets(facets),
     authoring,
   );
-  return await startWorkbenchServer({
+  const environment = openProjectWorkbenchEnvironment(projectRoot, workbenchOptions);
+  const server = await startWorkbenchServer({
     projectRoot,
     projectFile: documentFile,
     port,
@@ -290,22 +455,35 @@ async function startNleProjectWorkbench(
     inspectors,
     authoring,
     facets,
+    ...(media === undefined ? {} : { media }),
+    ...(environment.host === undefined ? {} : { environment: environment.host }),
     ...(workbenchOptions.distributionPackageRoot === undefined
       ? {} : { distributionPackageRoot: workbenchOptions.distributionPackageRoot }),
+  }).catch(async (error: unknown) => {
+    await environment.close();
+    throw error;
   });
+  return {
+    ...server,
+    async close() {
+      await server.close();
+      await environment.close();
+    },
+  };
 }
 
-async function startCanvasProjectWorkbench(
+export async function startCanvasProjectWorkbench(
   documentFile: string,
   projectRoot: string,
   port: number,
-  workbenchOptions: WorkbenchCliOptions,
+  workbenchOptions: WorkbenchCliOptions = {},
+  media?: NodeProjectMediaService,
 ) {
   const workspace = await readGenerationWorkspaceFile(documentFile);
   const graph = await readGenerationGraphProjectFile(resolve(dirname(documentFile), workspace.graph.path));
   const logical = [...new Map(graph.nodes.map((node) => {
     const name = moduleKey(node.using.module);
-    return [name, { abi: modulePackageAbi, name }];
+    return [name, { kind: moduleFacetKind, name }];
   })).values()];
   const packages = await loadNodePackageSelection({ selected: workspace.packages, logical }, projectRoot, {
     ...(workbenchOptions.distributionPackageRoot === undefined
@@ -336,115 +514,9 @@ async function startCanvasProjectWorkbench(
     },
   });
   const results = await workbenchOptions.openProjectResults?.(projectRoot);
-  const runtimeCandidate = resolve(projectRoot, "hypit.runtime.json");
-  let openedRuntime: {
-    readonly profile: string;
-    readonly host: WorkbenchRuntimeHost;
-    readonly control: WorkbenchRuntimeControl;
-  } | undefined;
-  const closeOpenedRuntime = async () => {
-    await openedRuntime?.control.close();
-    openedRuntime = undefined;
-  };
-  const selectedRuntimeHost = async () => {
-    const selected = await workbenchOptions.resolveProjectRuntime?.(projectRoot);
-    if (selected === undefined || workbenchOptions.openRuntimeHost === undefined) {
-      await closeOpenedRuntime();
-      return undefined;
-    }
-    if (openedRuntime?.profile === selected.profile) return openedRuntime;
-    await closeOpenedRuntime();
-    const host = await workbenchOptions.openRuntimeHost(selected.profile, {
-      packageRoot: projectRoot,
-      ...(workbenchOptions.distributionPackageRoot === undefined
-        ? {}
-        : { distributionPackageRoot: workbenchOptions.distributionPackageRoot }),
-    });
-    openedRuntime = { profile: selected.profile, host, control: await host.openControl({ readOnly: true }) };
-    return openedRuntime;
-  };
-  const profileEndpoints = async (profile: string): Promise<readonly string[]> => {
-    const value = JSON.parse(await readFile(profile, "utf8")) as { readonly endpoints?: unknown };
-    return value.endpoints !== null && typeof value.endpoints === "object" && !Array.isArray(value.endpoints)
-      ? Object.keys(value.endpoints) : [];
-  };
-  const runtimeCredentials = async (runtime: NonNullable<Awaited<ReturnType<typeof selectedRuntimeHost>>>) => {
-    const values: WorkbenchCredentialStatus[] = [];
-    for (const endpoint of await profileEndpoints(runtime.profile)) {
-      const control = await runtime.host.openCredentials(endpoint);
-      try {
-        values.push(...await control.credentials(endpoint));
-      } finally {
-        await control.close();
-      }
-    }
-    return values;
-  };
-  const environmentView = async () => {
-    const candidate = await stat(runtimeCandidate).then((value) => value.isFile(), () => false)
-      ? basename(runtimeCandidate) : undefined;
-    const runtime = await selectedRuntimeHost();
-    if (runtime === undefined) {
-      const actionable = candidate !== undefined && workbenchOptions.selectProjectRuntime !== undefined;
-      return {
-        status: actionable ? "action-required" as const : "unavailable" as const,
-        runtime: { selected: false, ...(candidate === undefined ? {} : { candidate }) },
-        credentials: [],
-        issue: actionable ? "连接生成服务以启用当前项目的 Runtime。" : "当前项目没有可选择的 Runtime。",
-      };
-    }
-    const credentials = await runtimeCredentials(runtime);
-    const missing = credentials.filter((item) => !item.configured);
-    const actionable = missing.length > 0 && missing.every((item) => item.writable
-      && item.acquisition?.kind === "oauth2-pkce") && workbenchOptions.acquireOAuthCredential !== undefined;
-    return {
-      status: missing.length === 0 ? "ready" as const
-        : actionable ? "action-required" as const : "unavailable" as const,
-      runtime: { selected: true, label: basename(runtime.profile) },
-      credentials: credentials.map((item) => ({
-        endpoint: item.endpoint,
-        slot: item.slot,
-        label: item.label,
-        configured: item.configured,
-        writable: item.writable,
-        ...(item.acquisition?.kind === "oauth2-pkce" ? { acquisition: "oauth2-pkce" as const } : {}),
-      })),
-      ...(missing.length === 0 ? {} : {
-        issue: actionable ? "登录生成服务后即可运行节点。" : `${missing[0]?.label ?? "生成服务凭据"}尚未配置。`,
-      }),
-    };
-  };
-  const environment = workbenchOptions.resolveProjectRuntime === undefined ? undefined : {
-    observe: environmentView,
-    connect: async () => {
-      let runtime = await selectedRuntimeHost();
-      if (runtime === undefined) {
-        assert(workbenchOptions.selectProjectRuntime !== undefined,
-          "This Workbench cannot select a project Runtime.");
-        assert(await stat(runtimeCandidate).then((value) => value.isFile(), () => false),
-          "Project Runtime Profile hypit.runtime.json is unavailable.");
-        await workbenchOptions.selectProjectRuntime(projectRoot, runtimeCandidate);
-        runtime = await selectedRuntimeHost();
-        assert(runtime !== undefined, "Selected Runtime could not be opened.");
-      }
-      const missing = (await runtimeCredentials(runtime)).find((item) => !item.configured);
-      if (missing !== undefined) {
-        assert(missing.writable, `${missing.label} is owned by a read-only credential source.`);
-        assert(missing.acquisition?.kind === "oauth2-pkce",
-          `${missing.label} cannot be acquired through browser login.`);
-        assert(workbenchOptions.acquireOAuthCredential !== undefined,
-          "Browser credential acquisition is unavailable in this Workbench.");
-        const secret = await workbenchOptions.acquireOAuthCredential(missing.acquisition);
-        const control = await runtime.host.openCredentials(missing.endpoint);
-        try {
-          await control.putCredential(missing.endpoint, missing.slot, secret);
-        } finally {
-          await control.close();
-        }
-      }
-      return await environmentView();
-    },
-  };
+  const environment = openProjectWorkbenchEnvironment(projectRoot, workbenchOptions);
+  const selectedRuntimeHost = environment.selectedRuntimeHost;
+  const environmentView = environment.observe;
   const resultsHost = results === undefined ? undefined : {
     products: results.products,
     observations: {
@@ -455,8 +527,11 @@ async function startCanvasProjectWorkbench(
   const execution = results === undefined || workbenchOptions.openRuntimeHost === undefined ? undefined : {
     status: async () => {
       const view = await environmentView();
-      return view.status === "ready" ? { available: true }
-        : view.issue === undefined ? { available: false } : { available: false, issue: view.issue };
+      if (view.status !== "ready") {
+        return view.issue === undefined ? { available: false } : { available: false, issue: view.issue };
+      }
+      return await selectedRuntimeHost() !== undefined ? { available: true }
+        : { available: false, issue: "Generation Runtime is not selected." };
     },
     prepare: async (input: {
       readonly graph: typeof graph;
@@ -505,12 +580,13 @@ async function startCanvasProjectWorkbench(
     port,
     presentations,
     graphHost: graphHost.lowering,
+    ...(media === undefined ? {} : { media }),
     ...(resultsHost === undefined ? {} : { results: resultsHost }),
     ...(execution === undefined ? {} : { execution }),
-    ...(environment === undefined ? {} : { environment }),
+    ...(environment.host === undefined ? {} : { environment: environment.host }),
     ...(materialization === undefined ? {} : { materialization }),
   }).catch(async (error: unknown) => {
-    await closeOpenedRuntime();
+    await environment.close();
     await results?.close();
     throw error;
   });
@@ -518,7 +594,7 @@ async function startCanvasProjectWorkbench(
     ...server,
     async close() {
       await server.close();
-      await closeOpenedRuntime();
+      await environment.close();
       await results?.close();
     },
   };
@@ -561,46 +637,72 @@ export async function runWorkbenchCli(
     "workbench accepts at most one document for each surface");
   const selectedPort = portValue(port);
   if (documentFiles.length > 1) {
+    const mediaPool = createNodeProjectMediaServicePool();
+    const mediaLeases = new Map<string, ReturnType<typeof mediaPool.acquire>>();
     const opened: Array<{
       readonly surface: WorkbenchSurface;
       readonly origin: string;
       readonly file: string;
+      readonly projectRoot: string;
       close(): Promise<void>;
     }> = [];
     let suite: Awaited<ReturnType<typeof startWorkbenchSuiteServer>> | undefined;
+    let mediaServer: Awaited<ReturnType<typeof startNodeProjectMediaHttpServer>> | undefined;
     try {
       for (let index = 0; index < documentFiles.length; index += 1) {
         const file = documentFiles[index]!;
         const surface = surfaces[index]!;
         const root = await documentProjectRoot(file, projectRoot);
+        let mediaLease = mediaLeases.get(root);
+        if (mediaLease === undefined) {
+          mediaLease = mediaPool.acquire(root);
+          mediaLeases.set(root, mediaLease);
+        }
         if (surface === "scene") {
           const server = await startSceneProjectWorkbench(file, root, 0, workbenchOptions);
-          opened.push({ surface, origin: server.origin, file, close: async () => await server.close() });
+          opened.push({ surface, origin: server.origin, file, projectRoot: root,
+            close: async () => await server.close() });
         } else if (surface === "canvas") {
-          const server = await startCanvasProjectWorkbench(file, root, 0, workbenchOptions);
-          opened.push({ surface, origin: server.origin, file, close: async () => await server.close() });
+          const server = await startCanvasProjectWorkbench(file, root, 0, workbenchOptions, mediaLease.service);
+          opened.push({ surface, origin: server.origin, file, projectRoot: root,
+            close: async () => await server.close() });
         } else {
-          const server = await startNleProjectWorkbench(file, root, 0, workbenchOptions);
-          opened.push({ surface, origin: server.origin, file, close: async () => await server.close() });
+          const server = await startNleProjectWorkbench(file, root, 0, workbenchOptions, mediaLease.service);
+          opened.push({ surface, origin: server.origin, file, projectRoot: root,
+            close: async () => await server.close() });
         }
+      }
+      const roots = new Set(opened.map((item) => item.projectRoot));
+      if (roots.size === 1) {
+        const root = opened[0]!.projectRoot;
+        mediaServer = await startNodeProjectMediaHttpServer({
+          projectRoot: root,
+          media: mediaLeases.get(root)!.service,
+        });
       }
       suite = await startWorkbenchSuiteServer({
         targets: Object.fromEntries(opened.map((item) => [item.surface, item.origin])),
+        ...(mediaServer === undefined ? {} : { projectTarget: mediaServer.origin }),
         defaultSurface: surfaces[0]!,
         port: selectedPort,
       });
       const documents = Object.fromEntries(opened.map((item) => [item.surface, item.file]));
       if (json) {
         io.write(`${JSON.stringify({ format: "hypit.workbench@1", origin: suite.origin,
-          ...suite.urls, documents })}\n`);
+          ...suite.urls, ...(suite.mediaUrl === undefined ? {} : { media: suite.mediaUrl }), documents })}\n`);
       } else {
         io.write(`Hypit Workbench\n${Object.entries(suite.urls)
-          .map(([surface, url]) => `  ${surface}: ${url}`).join("\n")}\n\nPress Ctrl+C to stop.\n`);
+          .map(([surface, url]) => `  ${surface}: ${url}`).join("\n")}`
+          + `${suite.mediaUrl === undefined ? "" : `\n  media: ${suite.mediaUrl}`}`
+          + "\n\nPress Ctrl+C to stop.\n");
       }
       await waitForStop();
     } finally {
       await suite?.close();
+      await mediaServer?.close();
       for (const surface of opened.reverse()) await surface.close();
+      for (const lease of mediaLeases.values()) await lease.release();
+      await mediaPool.close();
     }
     return;
   }

@@ -1,7 +1,9 @@
 import { blobDependency, blobTypes } from "@hypit/blob";
-import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
+import type { CapabilityRef, TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
 import { temporalDependency, temporalTypes } from "@hypit/temporal-graph";
-export const mediaModuleRef = { name: "@hypit/media", version: "1" } as const;
+export const mediaModuleRef = { name: "@hypit/media" } as const;
 export const mediaTypes = {
   inspection: { module: mediaModuleRef, name: "MediaInspection" },
   selectionRequest: { module: mediaModuleRef, name: "MediaSelectionRequest" },
@@ -38,8 +40,8 @@ export const mediaProducers = {
   visualDelivery: { module: mediaModuleRef, name: "project-visual-delivery" },
 } satisfies Record<string, ProducerRef>;
 
-export const mediaManifest: ModuleManifest = {
-  format: "hypit.module@1", name: mediaModuleRef.name, version: mediaModuleRef.version, dependencies: [blobDependency, temporalDependency],
+export const mediaManifest: GenerationModuleDefinition = {
+  name: mediaModuleRef.name, dependencies: [blobDependency, temporalDependency],
   types: [
     mediaTypes.inspection.name,
     mediaTypes.selectionRequest.name,

@@ -1,5 +1,5 @@
-import { EndpointRegistry } from "@hypit/executor";
-import type { EndpointRegistration } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
+import type { EndpointRegistration } from "@hypit/endpoint";
 import type { ImmediateEndpointHandler } from "@hypit/endpoint";
 import { installEndpoint } from "@hypit/endpoint";
 import {
@@ -9,7 +9,7 @@ import {
 } from "@hypit/html-program";
 import { mediaTypes, sealOutputPictureSpec, sealVisualDeliverySpec } from "@hypit/media";
 import type { FrameOutputPictureSpec, VisualDeliverySpec } from "@hypit/media";
-import type { Need } from "@hypit/protocol";
+import type { Need } from "@hypit/generation-build";
 
 import { createLocalChromiumHtmlProvider } from "../src/index.js";
 

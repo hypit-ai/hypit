@@ -8,7 +8,8 @@ import type {
 } from "@hypit/result";
 import type { ProductExporter, ProductHistory } from "@hypit/product";
 import { buildResultOutput } from "@hypit/result";
-import { isBlobRef, sameType } from "@hypit/protocol";
+import { isBlobRef } from "@hypit/protocol";
+import { sameType } from "@hypit/module";
 
 export type BuildResultExport = {
   readonly build: string;

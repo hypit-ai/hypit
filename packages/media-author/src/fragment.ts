@@ -1,4 +1,4 @@
-import { sealGraphFragment } from "@hypit/author";
+import { sealGraphFragment } from "@hypit/generation-authoring/author";
 import { blobTypes } from "@hypit/blob";
 import { temporalTypes } from "@hypit/temporal-graph";
 
@@ -9,7 +9,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 /**
  * One Media author object exposes its Resource and derives prepared facets lazily.
- * Kernel target closure omits inspect/select/prepare when only `resource` is demanded.
+ * Generation Build target closure omits inspect/select/prepare when only `resource` is demanded.
  */
 export const mediaSourceFragment = sealGraphFragment({
   inputs: [

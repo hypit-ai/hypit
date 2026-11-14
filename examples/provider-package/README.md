@@ -6,8 +6,8 @@ usually differs on:
 
 | Package | Model | Request | Lifecycle |
 | --- | --- | --- | --- |
-| `packages/provider-images` | `@hypit/gpt-image@1#gpt-image-2` | one image, optional references | asynchronous |
-| `packages/provider-videos` | `@hypit/seedance@1#seedance-2-mini` | one video, references and frames | asynchronous |
+| `packages/provider-images` | `@hypit/gpt-image#gpt-image-2` | one image, optional references | asynchronous |
+| `packages/provider-videos` | `@hypit/seedance#seedance-2-mini` | one video, references and frames | asynchronous |
 
 Both service protocols are **illustrative**, not live vendor APIs. Replace the mapping and transport
 with the selected service's documented operations. The lifecycle tests exercise the examples without
@@ -21,7 +21,7 @@ the shape the official Distribution cannot supply for a service it does not know
 
 ## Follow one request
 
-The existing GPT Image 2 Model produces `@hypit/gpt-image@1#gpt-image-2` with a generated image-set
+The existing GPT Image 2 Model produces `@hypit/gpt-image#gpt-image-2` with a generated image-set
 result. This Provider supports 1K at three ratios, with optional reference images. It reports its
 smaller support range without changing the Model. The Profile selects this implementation; the
 Source's prompt, references and model remain ordinary generation inputs.
@@ -61,7 +61,7 @@ future media duration. Rates and credentials do not supply spending permission.
 
 ## Follow a video request
 
-A Seedance request reaches `@hypit/seedance@1#seedance-2-mini` and returns a generated video-set.
+A Seedance request reaches `@hypit/seedance#seedance-2-mini` and returns a generated video-set.
 The Model declares the request; this Provider decides how the service receives it. Four things
 differ from the image example, and each is the reason the video example exists.
 
@@ -139,11 +139,11 @@ cd ../..
 npm install ./packages/provider-videos
 ```
 
-The package ships JavaScript. Its `hypit.activation` exports a Profile-selected Runtime facet;
+The package ships JavaScript. Its `hypit.activation` exports an Environment-selected Host Facet;
 installation alone activates nothing. The active Distribution resolves public SDK imports when
 loading project packages. Keep the chosen package version and lockfile with the project.
 
-Merge the endpoint, credential store and binding from `hypit.runtime.json` into the project's
+Merge the endpoint, credential store and binding from `hypit.environment.json` into the project's
 chosen Profile. Preserve its other services and resolve bindings explicitly. Once the user chooses
 that account, `hypit auth login videos.personal` securely enters the key into its declared store.
 `plan` checks the requested parameters; `pricing` supplies the service's rates. Submitting a real

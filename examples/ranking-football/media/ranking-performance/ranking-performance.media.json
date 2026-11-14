@@ -1,0 +1,196 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "ranking-performance",
+  "media": {
+    "file": {
+      "path": "ranking-performance.mp4",
+      "mediaType": "video/mp4"
+    },
+    "interpretation": {
+      "audio": {
+        "map": {
+          "stages": [
+            {
+              "pieces": [
+                {
+                  "rate": {
+                    "denominator": 1,
+                    "numerator": 1
+                  },
+                  "sourceAtStart": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "target": {
+                    "end": {
+                      "ticks": "301",
+                      "timeBase": {
+                        "denominator": 15,
+                        "numerator": 1
+                      }
+                    },
+                    "start": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "denominator": 1,
+                        "numerator": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "source": {
+                "duration": {
+                  "ticks": "10037",
+                  "timeBase": {
+                    "denominator": 500,
+                    "numerator": 1
+                  }
+                },
+                "id": "ranking-performance:media:audio-source"
+              },
+              "target": {
+                "duration": {
+                  "ticks": "301",
+                  "timeBase": {
+                    "denominator": 15,
+                    "numerator": 1
+                  }
+                },
+                "id": "ranking-performance:media"
+              }
+            }
+          ]
+        },
+        "presentationStart": {
+          "ticks": "0",
+          "timeBase": {
+            "denominator": 48000,
+            "numerator": 1
+          }
+        },
+        "sourceDomain": {
+          "duration": {
+            "ticks": "10037",
+            "timeBase": {
+              "denominator": 500,
+              "numerator": 1
+            }
+          },
+          "id": "ranking-performance:media:audio-source"
+        },
+        "streamIndex": 1
+      },
+      "domain": {
+        "duration": {
+          "ticks": "301",
+          "timeBase": {
+            "denominator": 15,
+            "numerator": 1
+          }
+        },
+        "id": "ranking-performance:media"
+      },
+      "id": "ranking-performance:media",
+      "picture": {
+        "interpretation": {
+          "codedHeight": 704,
+          "codedWidth": 720,
+          "picture": {
+            "alphaMode": "opaque",
+            "bitDepth": 8,
+            "colorMatrix": "bt709",
+            "colorPrimaries": "bt709",
+            "colorRange": "limited",
+            "colorTransfer": "bt709"
+          },
+          "rotationDegrees": 0,
+          "sampleAspectRatio": {
+            "denominator": 1,
+            "numerator": 1
+          }
+        },
+        "kind": "signal",
+        "map": {
+          "stages": [
+            {
+              "pieces": [
+                {
+                  "rate": {
+                    "denominator": 1,
+                    "numerator": 1
+                  },
+                  "sourceAtStart": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "target": {
+                    "end": {
+                      "ticks": "301",
+                      "timeBase": {
+                        "denominator": 15,
+                        "numerator": 1
+                      }
+                    },
+                    "start": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "denominator": 1,
+                        "numerator": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "source": {
+                "duration": {
+                  "ticks": "301",
+                  "timeBase": {
+                    "denominator": 15,
+                    "numerator": 1
+                  }
+                },
+                "id": "ranking-performance:media:picture-source"
+              },
+              "target": {
+                "duration": {
+                  "ticks": "301",
+                  "timeBase": {
+                    "denominator": 15,
+                    "numerator": 1
+                  }
+                },
+                "id": "ranking-performance:media"
+              }
+            }
+          ]
+        },
+        "presentationStart": {
+          "ticks": "0",
+          "timeBase": {
+            "denominator": 15360,
+            "numerator": 1
+          }
+        },
+        "sourceDomain": {
+          "duration": {
+            "ticks": "301",
+            "timeBase": {
+              "denominator": 15,
+              "numerator": 1
+            }
+          },
+          "id": "ranking-performance:media:picture-source"
+        },
+        "streamIndex": 0
+      }
+    }
+  },
+  "representations": []
+}

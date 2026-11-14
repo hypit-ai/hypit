@@ -1,0 +1,15 @@
+{
+  "name": "@hypit/media-service",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node/index.ts"
+  },
+  "dependencies": {
+    "@hypit/media-asset": "workspace:^0.1.0",
+    "@hypit/project": "workspace:^0.0.0-dev"
+  }
+}

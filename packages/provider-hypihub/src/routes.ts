@@ -1,15 +1,11 @@
-import { capabilityKey } from "@hypit/hypit/protocol";
-import {
-  generationTypes,
-  sealGeneratedAudioSet,
-  sealGeneratedImageSet,
-  sealGeneratedVideoSet,
-} from "@hypit/generation";
-import type { ProviderFieldRequest } from "@hypit/generation/provider";
-import { materializeWireRequest, planWireRequest, selectWireModelForRequest } from "@hypit/generation/provider";
-import type { GenerationArtifactUrlResolver, GenerationWireMapping } from "@hypit/generation/provider";
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, CapabilityRef, CanonicalValue, Value, TypeRef } from "@hypit/hypit/protocol";
+import { capabilityKey } from "@hypit/hypit/module";
+import { generationTypes, sealGeneratedAudioSet, sealGeneratedImageSet, sealGeneratedVideoSet, } from "@hypit/generation-model";
+import type { ProviderFieldRequest } from "@hypit/generation-model/provider";
+import { materializeWireRequest, planWireRequest, selectWireModelForRequest } from "@hypit/generation-model/provider";
+import type { GenerationArtifactUrlResolver, GenerationWireMapping } from "@hypit/generation-model/provider";
+import { canonicalize } from "@hypit/hypit/value";
+import type { CapabilityRef, TypeRef } from "@hypit/hypit/module";
+import type { BlobRef, CanonicalValue, Value } from "@hypit/hypit/value";
 import type { EndpointRequest, EndpointSupport } from "@hypit/hypit/endpoint";
 import { hypiHubMappings } from "./mapping.js";
 import type { HypiHubGenerationMapping } from "./mapping.js";

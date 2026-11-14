@@ -1,5 +1,5 @@
 import type { Facet } from "@hypit/facet";
-import { moduleKey, type ModuleRef } from "@hypit/protocol";
+import { moduleKey, type ModuleRef } from "@hypit/module";
 
 export type MarkupDeclarationSyntax = {
   readonly name: string;
@@ -24,14 +24,14 @@ function key(module: ModuleRef, declaration: string): string {
   return `${moduleKey(module)}#${declaration}`;
 }
 
-/** Frontend-owned spelling only; semantic compilation belongs to @hypit/author. */
+/** Frontend-owned spelling only; semantic compilation belongs to @hypit/hypit/generation/author. */
 export class MarkupDeclarationRegistry implements MarkupDeclarationRegistryLike {
   readonly #values = new Map<string, RegisteredMarkupDeclaration>();
   readonly #byModule = new Map<string, RegisteredMarkupDeclaration[]>();
   readonly #tags = new Set<string>();
 
   register(value: RegisteredMarkupDeclaration): void {
-    if (value.module.name.trim().length === 0 || value.module.version.trim().length === 0) {
+    if (value.module.name.trim().length === 0) {
       throw new Error("Markup declaration module is invalid.");
     }
     if (value.declaration.trim().length === 0) throw new Error("Markup declaration name is empty.");
@@ -60,14 +60,14 @@ export class MarkupDeclarationRegistry implements MarkupDeclarationRegistryLike 
   }
 }
 
-export const markupDeclarationFacetAbi = "hypit.markup-declaration@1";
+export const markupDeclarationFacetKind = "hypit.markup-declaration";
 
 export function createMarkupDeclarationFacet(options: {
   readonly module: ModuleRef;
   readonly declaration: MarkupDeclarationSyntax;
 }): Facet {
   return {
-    abi: markupDeclarationFacetAbi,
+    kind: markupDeclarationFacetKind,
     implementation: {
       module: options.module,
       declaration: options.declaration.name,
@@ -82,7 +82,7 @@ export function installMarkupDeclarationFacets(
   registry: Pick<MarkupDeclarationRegistry, "register">,
 ): void {
   for (const facet of facets) {
-    if (facet.abi !== markupDeclarationFacetAbi) continue;
+    if (facet.kind !== markupDeclarationFacetKind) continue;
     registry.register(facet.implementation as RegisteredMarkupDeclaration);
   }
 }

@@ -39,7 +39,7 @@ function productDependencyValue(product: ResolvedProduct) {
 export async function prepareGenerationWorkspaceNode(input: {
   readonly graph: GenerationGraphProject;
   readonly workspace: GenerationWorkspace;
-  readonly program: import("@hypit/protocol").LinkedProgram;
+  readonly program: import("@hypit/generation-build").LinkedProgram;
   readonly host: GenerationGraphLoweringHost;
   readonly products: ProductHistory;
   readonly node: string;

@@ -4,7 +4,7 @@ import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { credentialRef } from "@hypit/runtime";
+import { credentialRef } from "@hypit/execution-environment";
 import { FileCredentialStore } from "../../src/file.js";
 
 test("a refused replacement preserves the old credential, cleans its temporary and reports the I/O error", { skip: process.platform === "win32" }, async t => {

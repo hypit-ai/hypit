@@ -37,7 +37,7 @@ Asset Core.
 optional Representation document and dense resource cold. Resolution is an explicit Host action, not a persistent
 `prepared/unprepared` state.
 
-Packages contribute readers through the `hypit.media-representation@1` facet. The process-local Host dispatches
+Packages contribute readers through the `hypit.media-representation` facet. The process-local Host dispatches
 by exact `TypeRef`, rejects duplicate owners and supplies only the selected asset, Representation and a byte-read
 capability. This is the backend assembly seam for format packages; it is not a Studio UI contract and it does not
 run analysis.
@@ -52,20 +52,25 @@ Dense masks, depth and camera motion can follow the same facet as separately typ
 anchors every declaration to the manifest directory and hands each absolute file to a Host callback. It does not
 select a ResourceStore or retain another copy of the asset.
 
+The Node port also contributes `createMediaProjectObjectOwnerFacet()` for an application-selected Production
+Context. It discovers only manifests under the selected Project's `media/` namespace, validates each document
+through this package's reader and projects its object references. It does not create `media-library.json`, retain a
+second index or know which NLE, Generation, Scene or Media Bench may consume or present the asset.
+
 The Node port also exposes `importMediaAssetFile()`. It accepts package-owned inspection and selection callbacks,
 reports cancellable task progress, optionally copies bytes, and atomically publishes a new manifest without
 overwriting an existing file. It deliberately owns no queue, FFmpeg policy or Studio pending state.
 
 For long-running operation graphs, `@hypit/media-asset-generation` contributes two value nodes.
-`@hypit/media-asset-generation@1#media` projects the interpreted media as `PreparedMedia`;
-`@hypit/media-asset-generation@1#resource` projects the primary file as an ordinary
+`@hypit/media-asset-generation#media` projects the interpreted media as `PreparedMedia`;
+`@hypit/media-asset-generation#resource` projects the primary file as an ordinary
 `Blob` for image, video or audio model ports. The saved graph keeps only a portable Media Asset reference:
 
 ```json
 {
   "id": "interview",
   "using": {
-    "module": { "name": "@hypit/media-asset", "version": "1" },
+    "module": { "name": "@hypit/media-asset" },
     "name": "media"
   },
   "inputs": {

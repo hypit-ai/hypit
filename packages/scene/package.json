@@ -8,9 +8,15 @@
     ".": "./src/index.ts",
     "./node": "./src/node/index.ts"
   },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
     "@hypit/atomic-file": "workspace:^0.0.0-dev",
     "@hypit/facet": "workspace:^0.0.0-dev",
+    "@hypit/module": "workspace:^0.0.0-dev",
+    "@hypit/production-context": "workspace:^0.0.0-dev",
+    "@hypit/project": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/temporal": "workspace:^0.1.1"
   },

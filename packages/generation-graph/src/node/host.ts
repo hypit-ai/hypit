@@ -1,4 +1,5 @@
-import { createResolvedClosure, link } from "@hypit/kernel";
+import { modulesFromFacets } from "@hypit/module";
+import { createResolvedClosure, generationModulesFromFacets, link } from "@hypit/generation-build";
 import {
   verifyPackageContributions,
   type LoadedPackage,
@@ -23,7 +24,7 @@ import {
 } from "./store.js";
 
 export type NodeGenerationGraphProjectHost = {
-  readonly program: import("@hypit/protocol").LinkedProgram;
+  readonly program: import("@hypit/generation-build").LinkedProgram;
   readonly lowering: GenerationGraphInspectionHost;
   prepare(
     project: GenerationGraphProject,
@@ -38,8 +39,15 @@ export function createNodeGenerationGraphProjectHost(input: {
 }): NodeGenerationGraphProjectHost {
   verifyPackageContributions(input.packages.map((item) => item.contribution));
   const manifests = input.packages.flatMap((item) =>
-    (item.contribution.modules ?? []).map((module) => module.manifest));
-  const program = link(createResolvedClosure(manifests), []);
+    modulesFromFacets(item.contribution.facets ?? []));
+  const generation = new Map(input.packages.flatMap((item) =>
+    generationModulesFromFacets(item.contribution.facets ?? []))
+    .map((declaration) => [declaration.module.name, declaration] as const));
+  const program = link(createResolvedClosure(manifests.map((manifest) => ({
+    ...manifest,
+    capabilities: generation.get(manifest.name)?.capabilities ?? [],
+    producers: generation.get(manifest.name)?.producers ?? [],
+  }))), []);
   const installed: InstalledGenerationNodePackage[] = input.packages.flatMap((item) =>
     generationNodePackagesFromFacets(item.contribution.facets ?? []).map((implementation) => ({
       specifier: item.specifier,
@@ -63,12 +71,12 @@ export type GenerationGraphPublicationStoreLocation = {
 
 export type GenerationGraphRuntimeRequest = {
   readonly id: string;
-  readonly definition: import("@hypit/protocol").BuildDefinition;
+  readonly definition: import("@hypit/generation-build").BuildDefinition;
   readonly executionPackages: readonly string[];
   readonly authoring: {
     readonly sourcePath: string;
     readonly targets: readonly string[];
-    readonly publication: import("@hypit/protocol").PublicationIntent;
+    readonly publication: import("@hypit/generation-build").PublicationIntent;
   };
   readonly attachments: readonly import("../types.js").GenerationGraphResourceAttachment[];
   readonly publicationStores: GenerationGraphPublicationStoreLocation;

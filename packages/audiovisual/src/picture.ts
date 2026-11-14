@@ -1,6 +1,6 @@
 import { assertExactTemporalValue, compareExactTemporalValues } from "@hypit/temporal/algebra";
 import type { LocalTemporalDomain, TemporalRange } from "@hypit/temporal/algebra";
-import { sameType, typeKey } from "@hypit/protocol";
+import { sameType, typeKey } from "@hypit/module";
 import {
   assertSpatialMap,
   assertSpatialRegion,
@@ -150,6 +150,18 @@ export function assertPictureGraph(value: PictureGraph, program: AudiovisualProg
   visit(value.root);
   assert(visited.size === entries.length, `Programme ${program.id} Picture graph contains unreachable nodes.`);
 
+  const domains = pictureNodeSpatialDomains(value, program);
+  const programmeDomain = program.pictureDomain!;
+  const rootDomain = domains.get(value.root)!;
+  assert(sameSpatialDomain(rootDomain, programmeDomain),
+    `Programme ${program.id} Picture root closes in ${rootDomain.id}, not ${programmeDomain.id}.`);
+}
+
+/** Resolve the exact spatial domain carried by every Picture graph node. */
+export function pictureNodeSpatialDomains(
+  value: PictureGraph,
+  program: AudiovisualProgram,
+): ReadonlyMap<PictureNodeId, LocalSpatialDomain> {
   const programmeDomain = program.pictureDomain;
   assert(programmeDomain !== undefined, `Audiovisual Programme ${program.id} Picture has no output spatial domain.`);
   const domains = new Map<PictureNodeId, LocalSpatialDomain>();
@@ -193,9 +205,8 @@ export function assertPictureGraph(value: PictureGraph, program: AudiovisualProg
     domains.set(id, domain);
     return domain;
   };
-  const rootDomain = domainOf(value.root);
-  assert(sameSpatialDomain(rootDomain, programmeDomain),
-    `Programme ${program.id} Picture root closes in ${rootDomain.id}, not ${programmeDomain.id}.`);
+  for (const id of Object.keys(value.nodes)) domainOf(id);
+  return domains;
 }
 
 export function pictureGraphUses(value: PictureGraph): readonly { readonly occurrence: string; readonly output: string }[] {

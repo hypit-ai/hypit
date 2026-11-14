@@ -1,4 +1,4 @@
-import type { SourceRange } from "@hypit/source";
+import type { SourceRange } from "@hypit/generation-authoring/source";
 
 /** Decoder-local Markup text; Source identity and closure ownership stay outside the parser. */
 export type MarkupSource = {

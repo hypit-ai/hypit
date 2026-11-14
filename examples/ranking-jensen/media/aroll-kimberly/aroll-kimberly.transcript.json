@@ -1,0 +1,244 @@
+{
+  "language": "en",
+  "segments": [
+    {
+      "start": 0.292,
+      "end": 11.001,
+      "text": "Kimberly is C tier. VP of healthcare. Well, she did give me hands-on healthcare. Side effects were losing my wife and my job.",
+      "words": [
+        {
+          "word": "Kimberly",
+          "start": 0.292,
+          "end": 0.794
+        },
+        {
+          "word": "is",
+          "start": 0.875,
+          "end": 0.975
+        },
+        {
+          "word": "C",
+          "start": 1.156,
+          "end": 1.268625
+        },
+        {
+          "word": "tier",
+          "start": 1.268625,
+          "end": 1.719
+        },
+        {
+          "word": "VP",
+          "start": 2.583,
+          "end": 2.964
+        },
+        {
+          "word": "of",
+          "start": 3.004,
+          "end": 3.065
+        },
+        {
+          "word": "healthcare",
+          "start": 3.125,
+          "end": 3.647
+        },
+        {
+          "word": "Well",
+          "start": 4.33,
+          "end": 4.592
+        },
+        {
+          "word": "she",
+          "start": 4.893,
+          "end": 5.034
+        },
+        {
+          "word": "did",
+          "start": 5.054,
+          "end": 5.235
+        },
+        {
+          "word": "give",
+          "start": 5.255,
+          "end": 5.415
+        },
+        {
+          "word": "me",
+          "start": 5.435,
+          "end": 5.576
+        },
+        {
+          "word": "hands-on",
+          "start": 6.3045625,
+          "end": 6.701
+        },
+        {
+          "word": "healthcare",
+          "start": 6.781,
+          "end": 7.284
+        },
+        {
+          "word": "Side",
+          "start": 8.047,
+          "end": 8.268
+        },
+        {
+          "word": "effects",
+          "start": 8.288,
+          "end": 8.63
+        },
+        {
+          "word": "were",
+          "start": 8.791,
+          "end": 8.971
+        },
+        {
+          "word": "losing",
+          "start": 9.012,
+          "end": 9.293
+        },
+        {
+          "word": "my",
+          "start": 9.353,
+          "end": 9.474
+        },
+        {
+          "word": "wife",
+          "start": 9.554,
+          "end": 9.835
+        },
+        {
+          "word": "and",
+          "start": 10.237,
+          "end": 10.358
+        },
+        {
+          "word": "my",
+          "start": 10.418,
+          "end": 10.559
+        },
+        {
+          "word": "job",
+          "start": 10.639,
+          "end": 11.001
+        }
+      ]
+    }
+  ],
+  "word_segments": [
+    {
+      "word": "Kimberly",
+      "start": 0.292,
+      "end": 0.794
+    },
+    {
+      "word": "is",
+      "start": 0.875,
+      "end": 0.975
+    },
+    {
+      "word": "C",
+      "start": 1.156,
+      "end": 1.268625
+    },
+    {
+      "word": "tier",
+      "start": 1.268625,
+      "end": 1.719
+    },
+    {
+      "word": "VP",
+      "start": 2.583,
+      "end": 2.964
+    },
+    {
+      "word": "of",
+      "start": 3.004,
+      "end": 3.065
+    },
+    {
+      "word": "healthcare",
+      "start": 3.125,
+      "end": 3.647
+    },
+    {
+      "word": "Well",
+      "start": 4.33,
+      "end": 4.592
+    },
+    {
+      "word": "she",
+      "start": 4.893,
+      "end": 5.034
+    },
+    {
+      "word": "did",
+      "start": 5.054,
+      "end": 5.235
+    },
+    {
+      "word": "give",
+      "start": 5.255,
+      "end": 5.415
+    },
+    {
+      "word": "me",
+      "start": 5.435,
+      "end": 5.576
+    },
+    {
+      "word": "hands-on",
+      "start": 6.3045625,
+      "end": 6.701
+    },
+    {
+      "word": "healthcare",
+      "start": 6.781,
+      "end": 7.284
+    },
+    {
+      "word": "Side",
+      "start": 8.047,
+      "end": 8.268
+    },
+    {
+      "word": "effects",
+      "start": 8.288,
+      "end": 8.63
+    },
+    {
+      "word": "were",
+      "start": 8.791,
+      "end": 8.971
+    },
+    {
+      "word": "losing",
+      "start": 9.012,
+      "end": 9.293
+    },
+    {
+      "word": "my",
+      "start": 9.353,
+      "end": 9.474
+    },
+    {
+      "word": "wife",
+      "start": 9.554,
+      "end": 9.835
+    },
+    {
+      "word": "and",
+      "start": 10.237,
+      "end": 10.358
+    },
+    {
+      "word": "my",
+      "start": 10.418,
+      "end": 10.559
+    },
+    {
+      "word": "job",
+      "start": 10.639,
+      "end": 11.001
+    }
+  ]
+}

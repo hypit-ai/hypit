@@ -1,0 +1,188 @@
+import type {
+  CommandId,
+  LogicalOutputId,
+  NeedId,
+  OperationId,
+  RecordId,
+  StepId,
+} from "./identity.js";
+import type { ProducerRef } from "@hypit/module";
+import type { ResolvedModuleClosure } from "./module.js";
+import type { Value } from "@hypit/protocol";
+import type { CapabilityRef, TypeRef } from "@hypit/module";
+
+/** One typed value in the graph; semantic validation belongs to its installed Type owner. */
+export type TypedRecord = {
+  readonly id: RecordId;
+  readonly type: TypeRef;
+  readonly value: Value;
+};
+
+export type Need = {
+  readonly id: NeedId;
+  readonly capability: CapabilityRef;
+  readonly returns: TypeRef;
+  readonly constraints: Value;
+  readonly result: RecordId;
+};
+
+export type RecordRef = {
+  readonly kind: "record";
+  readonly id: RecordId;
+};
+
+export type LogicalOutputRef = {
+  readonly kind: "logical-output";
+  readonly id: LogicalOutputId;
+};
+
+export type OperationResultRef = {
+  readonly kind: "operation-result";
+  readonly operation: OperationId;
+};
+
+export type GraphValueRef = RecordRef | LogicalOutputRef | OperationResultRef;
+
+/** A public graph value may be generated now or close over an already-established Record. */
+export type GraphValueRoot = RecordRef | OperationResultRef;
+
+export type LogicalOutput = {
+  readonly id: LogicalOutputId;
+  readonly type: TypeRef;
+  /** The fixed value root for this graph revision. A Record root naturally truncates execution. */
+  readonly result: GraphValueRoot;
+};
+
+export type OperationResult =
+  | {
+      readonly kind: "output";
+      readonly name: string;
+      readonly record: RecordId;
+    }
+  | {
+      readonly kind: "need";
+      readonly name: string;
+      readonly id: NeedId;
+      readonly record: RecordId;
+    };
+
+export type OperationNode = {
+  readonly id: OperationId;
+  readonly producer: ProducerRef;
+  readonly inputs: Readonly<Record<string, GraphValueRef>>;
+  readonly result: OperationResult;
+};
+
+export type AuthorGraph = {
+  readonly format: "hypit.graph@1";
+  readonly outputs: readonly LogicalOutput[];
+  readonly operations: readonly OperationNode[];
+};
+
+export type ProducerStep = {
+  readonly id: StepId;
+  readonly producer: ProducerRef;
+  readonly inputs: Readonly<Record<string, RecordId>>;
+  readonly result: OperationResult;
+};
+
+export type BuildPlan = {
+  readonly format: "hypit.plan@1";
+  readonly steps: readonly ProducerStep[];
+  /** Unique Record identities whose existence completes this finite execution. */
+  readonly goals: readonly RecordId[];
+};
+
+export type LinkedProgram = {
+  readonly closure: ResolvedModuleClosure;
+  readonly records: readonly TypedRecord[];
+};
+
+export type StepState = {
+  readonly id: StepId;
+  readonly status: "pending" | "complete";
+};
+
+export type InvokeProducerCommand = {
+  readonly kind: "invoke-producer";
+  readonly id: CommandId;
+  readonly step: StepId;
+  readonly producer: ProducerRef;
+  readonly inputs: Readonly<Record<string, RecordId>>;
+};
+
+export type FulfillNeedCommand = {
+  readonly kind: "fulfill-need";
+  readonly id: CommandId;
+  readonly need: Need;
+};
+
+export type BuildCommand = InvokeProducerCommand | FulfillNeedCommand;
+
+export type ProducerCompletedEvent = {
+  readonly kind: "producer-completed";
+  readonly command: CommandId;
+  readonly result:
+    | { readonly kind: "output"; readonly value: Value }
+    | { readonly kind: "need"; readonly constraints: Value };
+};
+
+export type NeedFulfilledEvent = {
+  readonly kind: "need-fulfilled";
+  readonly command: CommandId;
+  readonly value: Value;
+};
+
+export type CommandFailedEvent = {
+  readonly kind: "command-failed";
+  readonly command: CommandId;
+  readonly code: string;
+  readonly message: string;
+};
+
+/** One execution result offered to Core. */
+export type CommandResult = ProducerCompletedEvent | NeedFulfilledEvent | CommandFailedEvent;
+
+export type BuildDiagnostic = {
+  readonly code: string;
+  readonly message: string;
+  readonly subject?: string;
+};
+
+/** Immutable finite program selected from one Author Graph for one Build. */
+export type BuildDefinition = {
+  readonly format: "hypit.build-definition@1";
+  /** Complete sealed execution program, including every already-established starting Record. */
+  readonly program: LinkedProgram;
+  readonly plan: BuildPlan;
+};
+
+type BuildFactBase = {
+  readonly format: "hypit.build-fact@1";
+  readonly command: CommandId;
+};
+
+/** One Producer result accepted by Core. Every added value is stored exactly once. */
+export type ProducerAppliedFact = BuildFactBase & {
+  readonly kind: "producer-applied";
+  readonly step: StepId;
+  readonly result:
+    | { readonly kind: "output"; readonly record: TypedRecord }
+    | { readonly kind: "need"; readonly need: Need };
+};
+
+/** One external Need result accepted by Core. */
+export type NeedAppliedFact = BuildFactBase & {
+  readonly kind: "need-applied";
+  readonly need: NeedId;
+  readonly record: TypedRecord;
+};
+
+/** One terminal command failure accepted by Core. */
+export type CommandFailedFact = BuildFactBase & {
+  readonly kind: "command-failed";
+  readonly diagnostic: BuildDiagnostic;
+};
+
+/** Fixed Core facts, not an extensible event or patch system. */
+export type BuildFact = ProducerAppliedFact | NeedAppliedFact | CommandFailedFact;

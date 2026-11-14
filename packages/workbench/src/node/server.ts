@@ -19,67 +19,53 @@ import {
 } from "@hypit/feedback";
 import { createFeedbackStore, FeedbackConflict } from "@hypit/feedback/node";
 import {
-  canRedoNleEdit,
-  canUndoNleEdit,
-  commitNleEdit,
-  completeNleProjectSave,
-  isNleEditSessionDirty,
-  prepareNleProjectSave,
-  redoNleEdit,
-  undoNleEdit,
-  createNleAuthoringHost,
-  createMediaAssetMaterialization,
-  findNleItem,
-  findNlePictureLayout,
-  NleRevisionConflict,
   type NlePictureLayout,
   type NleAuthoringHost,
-  type NleEditSession,
 } from "@hypit/nle";
-import { readNleProjectFile, writeNleProjectFile } from "@hypit/nle/node";
 import {
-  exportLocalNleProject,
+  exportPreparedNleProgramme,
+  reviewPreparedNleProgramme,
   type LocalNleExportProgress,
   type LocalNleExportRequest,
   type LocalNleExportResult,
+  type LocalNleReviewRequest,
+  type LocalNleReviewResult,
 } from "@hypit/nle-local";
 import {
-  applyNleTimelineViewTransaction,
-  assertNleTimelineViewAllowsTransaction,
-  createNleTimelineView,
-  createNleInspectorPresentationHost,
-  mergeNleTimelineItemObservations,
-  projectNleTimeline,
-  projectNleCanvas,
-  reconcileNleTimelineView,
   type NleTimelinePresentationHost,
   type NleTimelinePresentationResource,
   type NleInspectorPresentationHost,
-  type NleTimelineView,
 } from "@hypit/nle-view";
-import { readNleTimelineViewFile, writeNleTimelineViewFile } from "@hypit/nle-view/node";
 import { isResourceId } from "@hypit/protocol";
+import {
+  createNodeProjectMediaService,
+  type NodeProjectMediaService,
+} from "@hypit/media-service/node";
+import { projectMember } from "@hypit/project/node";
+import { openNleService, type NleProgrammeResource } from "@hypit/nle-service/node";
 
 import type {
-  NleWorkbenchSnapshot,
+  NleWorkbenchComponentMediaInputEditRequest,
   NleWorkbenchParameterEditRequest,
   NleWorkbenchMediaPlacementRequest,
-  NleWorkbenchMediaPlacementResponse,
+  NleWorkbenchSaveRequest,
   NleWorkbenchExportRequest,
   NleWorkbenchExportProgress,
-  NleWorkbenchExportState,
+  NleWorkbenchReviewRequest,
   NleWorkbenchSpatialEditRequest,
+  NleWorkbenchSpatialCommandRequest,
   NleWorkbenchTransactionRequest,
   NleWorkbenchViewTransactionRequest,
   WorkbenchErrorView,
 } from "../protocol.js";
-import { NleMediaLibrary } from "./media-library.js";
-import { NlePreviewCache } from "./preview-cache.js";
-import { NleMediaInspector } from "./media-inspector.js";
-import { NleProgrammePreview, type NleProgrammeResource } from "./programme-preview.js";
-import { projectMember } from "./project-path.js";
+import {
+  connectWorkbenchEnvironment,
+  observeWorkbenchEnvironment,
+  type WorkbenchEnvironmentHost,
+} from "./environment.js";
 
 const clientDirectory = fileURLToPath(new URL("../client/", import.meta.url));
+
 const clientAssets = new Map([
   ["/assets/app.js", { path: "app.js", type: "text/javascript; charset=utf-8" }],
   ["/assets/style.css", { path: "style.css", type: "text/css; charset=utf-8" }],
@@ -104,6 +90,7 @@ const threeAssets = new Map([
 export type WorkbenchServer = {
   readonly origin: string;
   readonly nleUrl: string;
+  readonly commentsUrl: string;
   readonly projectFile: string;
   readonly viewFile: string;
   readonly feedbackFile: string;
@@ -121,9 +108,27 @@ function json(response: ServerResponse, status: number, value: unknown): void {
 
 function errorView(error: unknown): WorkbenchErrorView {
   const source = error instanceof Error ? error : new Error(String(error));
+  const revision = source as Error & {
+    readonly expected?: unknown;
+    readonly actual?: unknown;
+    readonly owner?: unknown;
+  };
+  const owner = source.name === "NleRevisionConflict" ? "project" as const
+    : source.name === "NleTimelineViewRevisionConflict" ? "view" as const
+      : source.name === "FeedbackConflict" ? "feedback" as const
+        : source.name === "NleExternalFileConflict"
+          && (revision.owner === "project" || revision.owner === "view") ? revision.owner : undefined;
   return {
     format: "hypit.workbench-error@1",
-    error: { name: source.name, message: source.message },
+    error: {
+      name: source.name,
+      message: source.message,
+      ...(owner === undefined ? {} : { owner }),
+      ...(typeof revision.expected === "number" ? { expectedRevision: revision.expected } : {}),
+      ...(typeof revision.actual === "number" ? { actualRevision: revision.actual } : {}),
+      ...(owner === "project" || owner === "view" ? { observe: "/api/nle" }
+        : owner === "feedback" ? { observe: "/api/nle/feedback" } : {}),
+    },
   };
 }
 
@@ -291,6 +296,19 @@ function transactionRequest(value: unknown): NleWorkbenchTransactionRequest {
   return candidate as NleWorkbenchTransactionRequest;
 }
 
+function saveRequest(value: unknown): NleWorkbenchSaveRequest {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("NLE save request must be an object.");
+  }
+  const candidate = value as Partial<NleWorkbenchSaveRequest>;
+  if (Object.keys(candidate).some((key) => key !== "projectRevision" && key !== "viewRevision")
+    || !Number.isSafeInteger(candidate.projectRevision) || (candidate.projectRevision ?? -1) < 0
+    || !Number.isSafeInteger(candidate.viewRevision) || (candidate.viewRevision ?? -1) < 0) {
+    throw new Error("NLE save request revisions are invalid.");
+  }
+  return candidate as NleWorkbenchSaveRequest;
+}
+
 function exportRequest(value: unknown): NleWorkbenchExportRequest {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error("NLE export request must be an object.");
@@ -308,6 +326,9 @@ function exportRequest(value: unknown): NleWorkbenchExportRequest {
   if (candidate.quality !== "draft" && candidate.quality !== "standard" && candidate.quality !== "high") {
     throw new Error("NLE export quality must be draft, standard or high.");
   }
+  if (candidate.pictureTarget !== "html" && candidate.pictureTarget !== "gpu-composition") {
+    throw new Error("NLE export Picture target must be html or gpu-composition.");
+  }
   const rate = candidate.frameRate;
   if (rate === undefined || !Number.isSafeInteger(rate.numerator) || rate.numerator <= 0
     || !Number.isSafeInteger(rate.denominator) || rate.denominator <= 0) {
@@ -319,6 +340,51 @@ function exportRequest(value: unknown): NleWorkbenchExportRequest {
     throw new Error("NLE export resolution must contain positive safe integers.");
   }
   return candidate as NleWorkbenchExportRequest;
+}
+
+function reviewRequest(value: unknown): NleWorkbenchReviewRequest {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("NLE review request must be an object.");
+  }
+  const candidate = value as Partial<NleWorkbenchReviewRequest>;
+  if (!Number.isSafeInteger(candidate.revision) || (candidate.revision ?? -1) < 0) {
+    throw new Error("NLE review revision must be a non-negative safe integer.");
+  }
+  if (typeof candidate.directoryName !== "string" || candidate.directoryName.length === 0
+    || candidate.directoryName.length > 192 || candidate.directoryName.includes("/")
+    || candidate.directoryName.includes("\\") || candidate.directoryName === "."
+    || candidate.directoryName === "..") {
+    throw new Error("NLE review directoryName must be one local directory name.");
+  }
+  const range = candidate.range;
+  if (range === undefined || !Number.isSafeInteger(range.startFrame) || range.startFrame < 0
+    || !Number.isSafeInteger(range.endFrameExclusive)
+    || range.endFrameExclusive <= range.startFrame) {
+    throw new Error("NLE review range must satisfy 0 <= startFrame < endFrameExclusive.");
+  }
+  if (!Array.isArray(candidate.frames) || candidate.frames.length === 0
+    || !candidate.frames.every((frame, index) => Number.isSafeInteger(frame)
+      && frame >= range.startFrame && frame < range.endFrameExclusive
+      && (index === 0 || frame > candidate.frames![index - 1]!))) {
+    throw new Error("NLE review frames must be strictly increasing integers inside range.");
+  }
+  if (candidate.quality !== "draft" && candidate.quality !== "standard" && candidate.quality !== "high") {
+    throw new Error("NLE review quality must be draft, standard or high.");
+  }
+  if (candidate.pictureTarget !== "html" && candidate.pictureTarget !== "gpu-composition") {
+    throw new Error("NLE review Picture target must be html or gpu-composition.");
+  }
+  const rate = candidate.frameRate;
+  if (rate === undefined || !Number.isSafeInteger(rate.numerator) || rate.numerator <= 0
+    || !Number.isSafeInteger(rate.denominator) || rate.denominator <= 0) {
+    throw new Error("NLE review frame rate must contain positive safe integers.");
+  }
+  const resolution = candidate.resolution;
+  if (resolution === undefined || !Number.isSafeInteger(resolution.width) || resolution.width <= 0
+    || !Number.isSafeInteger(resolution.height) || resolution.height <= 0) {
+    throw new Error("NLE review resolution must contain positive safe integers.");
+  }
+  return candidate as NleWorkbenchReviewRequest;
 }
 
 function workbenchExportProgress(progress: LocalNleExportProgress): NleWorkbenchExportProgress | undefined {
@@ -357,6 +423,20 @@ function parameterEditRequest(value: unknown): NleWorkbenchParameterEditRequest 
   return candidate as NleWorkbenchParameterEditRequest;
 }
 
+function componentMediaInputEditRequest(value: unknown): NleWorkbenchComponentMediaInputEditRequest {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("NLE Component Media input edit request must be an object.");
+  }
+  const candidate = value as Partial<NleWorkbenchComponentMediaInputEditRequest>;
+  if (!Number.isSafeInteger(candidate.revision)
+    || typeof candidate.item !== "string" || candidate.item.length === 0
+    || typeof candidate.input !== "string" || candidate.input.length === 0
+    || !(candidate.media === null || typeof candidate.media === "string" && candidate.media.length > 0)) {
+    throw new Error("NLE Component Media input edit request is invalid.");
+  }
+  return candidate as NleWorkbenchComponentMediaInputEditRequest;
+}
+
 function spatialEditRequest(value: unknown): NleWorkbenchSpatialEditRequest {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error("NLE spatial edit request must be an object.");
@@ -375,6 +455,24 @@ function spatialEditRequest(value: unknown): NleWorkbenchSpatialEditRequest {
   return candidate as NleWorkbenchSpatialEditRequest;
 }
 
+function spatialCommandRequest(value: unknown): NleWorkbenchSpatialCommandRequest {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("NLE spatial command request must be an object.");
+  }
+  const candidate = value as Partial<NleWorkbenchSpatialCommandRequest>;
+  if (!Number.isSafeInteger(candidate.revision)
+    || typeof candidate.item !== "string" || candidate.item.length === 0
+    || typeof candidate.edit !== "object" || candidate.edit === null || Array.isArray(candidate.edit)) {
+    throw new Error("NLE spatial command request is invalid.");
+  }
+  const kind = (candidate.edit as { readonly kind?: unknown }).kind;
+  if (!["layout.replace", "frame.translate", "frame.resize", "fit.set", "focus.set",
+    "layout.share", "layout.link", "layout.unlink"].includes(String(kind))) {
+    throw new Error("NLE spatial command kind is invalid.");
+  }
+  return candidate as NleWorkbenchSpatialCommandRequest;
+}
+
 function mediaPlacementRequest(value: unknown): NleWorkbenchMediaPlacementRequest {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error("NLE Media placement request must be an object.");
@@ -388,61 +486,6 @@ function mediaPlacementRequest(value: unknown): NleWorkbenchMediaPlacementReques
     throw new Error("NLE Media placement request is invalid.");
   }
   return candidate as NleWorkbenchMediaPlacementRequest;
-}
-
-function nextMediaItemId(project: NleEditSession["current"], assetId: string): string {
-  const occupied = new Set<string>([
-    project.id,
-    ...project.componentValues.map((value) => value.id),
-    ...project.pictureLayouts.map((value) => value.id),
-    ...project.tracks.map((track) => track.id),
-    ...project.tracks.flatMap((track) => track.items.map((item) => item.id)),
-    ...project.transitions.map((transition) => transition.id),
-    ...project.mattes.map((matte) => matte.id),
-  ]);
-  const base = `${assetId}-use`.slice(0, 192);
-  let id = base;
-  let suffix = 2;
-  while (occupied.has(id)) {
-    const ending = `-${suffix}`;
-    id = `${base.slice(0, 192 - ending.length)}${ending}`;
-    suffix += 1;
-  }
-  return id;
-}
-
-async function snapshot(
-  session: NleEditSession,
-  view: NleTimelineView,
-  projectFile: string,
-  viewFile: string,
-  viewDirty: boolean,
-  previews: NlePreviewCache,
-  mediaLibrary: NleMediaLibrary,
-  presentations?: NleTimelinePresentationHost,
-): Promise<NleWorkbenchSnapshot> {
-  const undo = session.cursor > 0 ? session.history[session.cursor - 1] : undefined;
-  const redo = session.cursor < session.history.length ? session.history[session.cursor] : undefined;
-  const observations = mergeNleTimelineItemObservations([
-    ...(presentations?.observations(session.current, (resource) =>
-      `/api/nle/presentation-resource/${encodeURIComponent(resource)}?revision=${session.current.revision}`) ?? []),
-    ...await previews.observations(session.current),
-  ]);
-  return {
-    format: "hypit.workbench-nle@1",
-    project: session.current,
-    view,
-    scene: projectNleTimeline(session.current, view, observations),
-    canvasScene: projectNleCanvas(session.current, view, observations),
-    mediaLibrary: await mediaLibrary.view(session.current),
-    projectFile,
-    viewFile,
-    dirty: isNleEditSessionDirty(session) || viewDirty,
-    canUndo: canUndoNleEdit(session),
-    canRedo: canRedoNleEdit(session),
-    ...(undo === undefined ? {} : { undoLabel: undo.label }),
-    ...(redo === undefined ? {} : { redoLabel: redo.label }),
-  };
 }
 
 function loopbackOrigin(host: string, port: number): string {
@@ -464,65 +507,121 @@ export async function startWorkbenchServer(options: {
   readonly authoring?: NleAuthoringHost;
   readonly facets?: readonly Facet[];
   readonly distributionPackageRoot?: string;
+  readonly environment?: WorkbenchEnvironmentHost;
+  /** Project Host-owned service. Omit only when this surface owns its isolated session. */
+  readonly media?: NodeProjectMediaService;
   /** Embedding/test seam; normal Workbench Hosts use the local MP4 exporter. */
   readonly exportProject?: (request: LocalNleExportRequest) => Promise<LocalNleExportResult>;
+  /** Embedding/test seam; normal Workbench Hosts use the local focused-review executor. */
+  readonly reviewProject?: (request: LocalNleReviewRequest) => Promise<LocalNleReviewResult>;
 }): Promise<WorkbenchServer> {
   const projectRoot = resolve(options.projectRoot);
-  const projectFile = projectMember(projectRoot, options.projectFile, "NLE Project");
-  const defaultViewFile = projectFile.endsWith(".nle.json")
-    ? `${projectFile.slice(0, -".nle.json".length)}.nle-view.json`
-    : `${projectFile}.view.json`;
-  const viewFile = projectMember(projectRoot, options.viewFile ?? defaultViewFile, "NLE Timeline View");
-  const projectPathFromView = relative(dirname(viewFile), projectFile).split(sep).join("/");
+  const mediaService = options.media ?? createNodeProjectMediaService(projectRoot);
+  const ownsMediaService = options.media === undefined;
+  const runExport = options.exportProject;
+  const runReview = options.reviewProject;
+  const nle = await openNleService({
+    projectRoot,
+    projectFile: options.projectFile,
+    ...(options.viewFile === undefined ? {} : { viewFile: options.viewFile }),
+    media: mediaService,
+    ...(options.presentations === undefined ? {} : { presentations: options.presentations }),
+    ...(options.inspectors === undefined ? {} : { inspectors: options.inspectors }),
+    ...(options.authoring === undefined ? {} : { authoring: options.authoring }),
+    facets: options.facets ?? [],
+    autosave: { delayMs: 650 },
+    export: async (execution) => await (runExport === undefined
+      ? exportPreparedNleProgramme(await execution.prepareProgramme(), {
+          outputFile: execution.outputFile,
+          quality: execution.quality,
+          pictureTarget: execution.pictureTarget,
+          frameRate: execution.frameRate,
+          resolution: execution.resolution,
+          signal: execution.signal,
+          onProgress(progress) {
+            const projected = workbenchExportProgress(progress);
+            if (projected !== undefined) execution.onProgress(projected);
+          },
+        })
+      : runExport({
+          projectRoot: execution.projectRoot,
+          projectFile: execution.projectFile,
+          project: execution.project,
+          outputFile: execution.outputFile,
+          packageRoot: execution.projectRoot,
+          ...(options.distributionPackageRoot === undefined
+            ? {} : { distributionPackageRoot: options.distributionPackageRoot }),
+          quality: execution.quality,
+          pictureTarget: execution.pictureTarget,
+          frameRate: execution.frameRate,
+          resolution: execution.resolution,
+          signal: execution.signal,
+          onProgress(progress) {
+            const projected = workbenchExportProgress(progress);
+            if (projected !== undefined) execution.onProgress(projected);
+          },
+        })),
+    review: async (execution) => await (runReview === undefined
+      ? reviewPreparedNleProgramme(await execution.prepareProgramme(), {
+          toDirectory: execution.toDirectory,
+          range: execution.range,
+          frames: execution.frames,
+          quality: execution.quality,
+          pictureTarget: execution.pictureTarget,
+          frameRate: execution.frameRate,
+          resolution: execution.resolution,
+          signal: execution.signal,
+          onProgress(progress) {
+            const projected = workbenchExportProgress(progress);
+            if (projected !== undefined) execution.onProgress(projected);
+          },
+        })
+      : runReview({
+          projectRoot: execution.projectRoot,
+          projectFile: execution.projectFile,
+          project: execution.project,
+          toDirectory: execution.toDirectory,
+          packageRoot: execution.projectRoot,
+          ...(options.distributionPackageRoot === undefined
+            ? {} : { distributionPackageRoot: options.distributionPackageRoot }),
+          range: execution.range,
+          frames: execution.frames,
+          quality: execution.quality,
+          pictureTarget: execution.pictureTarget,
+          frameRate: execution.frameRate,
+          resolution: execution.resolution,
+          signal: execution.signal,
+          onProgress(progress) {
+            const projected = workbenchExportProgress(progress);
+            if (projected !== undefined) execution.onProgress(projected);
+          },
+        })),
+    resources: {
+      media: (id, generation) =>
+        `/api/nle/media-resource/${encodeURIComponent(id)}?generation=${generation}`,
+      presentation: (id, revision) =>
+        `/api/nle/presentation-resource/${encodeURIComponent(id)}?revision=${revision}`,
+      programme: (id, generation) =>
+        `/api/nle/programme-resource/${encodeURIComponent(id)}?generation=${generation}`,
+      itemPreview: (item, generation, kind) =>
+        `/api/nle/item-preview/${encodeURIComponent(item)}?generation=${generation}&kind=${kind}`,
+    },
+  });
+  const projectFile = nle.projectFile;
+  const viewFile = nle.viewFile;
   const feedbackContext = relative(projectRoot, projectFile).split(sep).join("/");
   const host = options.host ?? "127.0.0.1";
   const port = options.port ?? 0;
   if (!Number.isSafeInteger(port) || port < 0 || port > 65_535) {
     throw new Error("Workbench port must be an integer from 0 through 65535.");
   }
-  let session = await readNleProjectFile(projectFile);
-  let viewExists = true;
-  const openedView = await readNleTimelineViewFile(viewFile).catch((error: unknown) => {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    viewExists = false;
-    return createNleTimelineView({
-      id: `${session.current.id}-main`,
-      name: `${session.current.name} Timeline`,
-      project: { path: projectPathFromView },
-      tracks: session.current.tracks.map((track) => track.id),
-    });
-  });
-  if (resolve(dirname(viewFile), openedView.project.path) !== projectFile) {
-    throw new Error(`NLE Timeline View ${viewFile} refers to a different Project.`);
-  }
-  let view = reconcileNleTimelineView(openedView, session.current);
-  let viewDirty = !viewExists || view.revision !== openedView.revision;
-  const previews = new NlePreviewCache(projectRoot, projectFile);
-  const mediaLibrary = new NleMediaLibrary(projectRoot, projectFile);
-  const programme = new NleProgrammePreview(projectRoot, projectFile, options.facets ?? []);
-  const mediaInspector = new NleMediaInspector(projectRoot, projectFile);
   const feedback = createFeedbackStore(projectRoot);
   const feedbackUploadDirectory = await mkdtemp(join(tmpdir(), "hypit-feedback-upload-"));
   const stagedFeedbackUploads = new Map<string, {
     readonly file: string;
     readonly attachment: FeedbackAttachment;
   }>();
-  const inspectors = options.inspectors ?? createNleInspectorPresentationHost([]);
-  const authoring = options.authoring ?? createNleAuthoringHost([]);
-  const runExport = options.exportProject ?? exportLocalNleProject;
-  let exportSequence = 0;
-  let exportState: NleWorkbenchExportState = {
-    format: "hypit.workbench-nle-export@1", id: 0, state: "idle",
-  };
-  let exportController: AbortController | undefined;
-  let exportTask: Promise<void> | undefined;
-  let mutation = Promise.resolve();
-  const mutate = async (operation: () => Promise<void> | void): Promise<void> => {
-    const next = mutation.then(operation, operation);
-    mutation = next.then(() => undefined, () => undefined);
-    await next;
-  };
-
+  const eventResponses = new Set<ServerResponse>();
   const server = createServer(async (request, response) => {
     try {
       const url = new URL(request.url ?? "/", "http://workbench.local");
@@ -531,8 +630,8 @@ export async function startWorkbenchServer(options: {
         response.end();
         return;
       }
-      if (request.method === "GET" && ["/nle", "/canvas", "/3d", "/comments"].includes(url.pathname)) {
-        const html = await readFile(new URL(url.pathname === "/3d" ? "../client/3d.html" : "../client/index.html", import.meta.url));
+      if (request.method === "GET" && ["/nle", "/comments"].includes(url.pathname)) {
+        const html = await readFile(new URL("../client/index.html", import.meta.url));
         response.writeHead(200, {
           "cache-control": "no-store",
           "content-security-policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; base-uri 'none'; frame-ancestors 'self'",
@@ -540,6 +639,14 @@ export async function startWorkbenchServer(options: {
           "x-content-type-options": "nosniff",
         });
         response.end(html);
+        return;
+      }
+      if (request.method === "GET" && url.pathname === "/api/workbench/environment") {
+        json(response, 200, await observeWorkbenchEnvironment(options.environment));
+        return;
+      }
+      if (request.method === "POST" && url.pathname === "/api/workbench/environment") {
+        json(response, 200, await connectWorkbenchEnvironment(options.environment));
         return;
       }
       const asset = clientAssets.get(url.pathname);
@@ -564,8 +671,60 @@ export async function startWorkbenchServer(options: {
         return;
       }
       if (request.method === "GET" && url.pathname === "/api/nle") {
-        json(response, 200, await snapshot(session, view, projectFile, viewFile, viewDirty, previews,
-          mediaLibrary, options.presentations));
+        json(response, 200, (await nle.observe({ kind: "snapshot" })).value);
+        return;
+      }
+      if (request.method === "GET" && url.pathname === "/api/nle/timeline") {
+        json(response, 200, (await nle.observe({ kind: "timeline" })).value);
+        return;
+      }
+      if (request.method === "GET" && url.pathname === "/api/nle/canvas") {
+        json(response, 200, (await nle.observe({ kind: "canvas" })).value);
+        return;
+      }
+      if (request.method === "GET" && url.pathname === "/api/nle/spatial-authoring") {
+        json(response, 200, (await nle.observe({ kind: "spatial-authoring" })).value);
+        return;
+      }
+      if (request.method === "GET" && url.pathname === "/api/nle/events") {
+        response.writeHead(200, {
+          "cache-control": "no-cache, no-store",
+          connection: "keep-alive",
+          "content-type": "text/event-stream; charset=utf-8",
+          "x-accel-buffering": "no",
+          "x-content-type-options": "nosniff",
+        });
+        eventResponses.add(response);
+        let blocked = false;
+        let pending: ReturnType<typeof nle.applicationState> | undefined;
+        const send = (state: ReturnType<typeof nle.applicationState>) => {
+          if (blocked) {
+            pending = state;
+            return;
+          }
+          blocked = !response.write(`event: state\ndata: ${JSON.stringify(state)}\n\n`);
+          if (blocked) response.once("drain", () => {
+            blocked = false;
+            const next = pending;
+            pending = undefined;
+            if (next !== undefined) send(next);
+          });
+        };
+        const unsubscribe = nle.subscribe((state) => {
+          send(state);
+        });
+        response.once("close", () => {
+          eventResponses.delete(response);
+          unsubscribe();
+        });
+        return;
+      }
+      if (request.method === "GET" && url.pathname === "/api/nle/file-status") {
+        json(response, 200, (await nle.observe({ kind: "file-status" })).value);
+        return;
+      }
+      if (request.method === "POST" && url.pathname === "/api/nle/reload") {
+        json(response, 200, (await nle.command({ kind: "document.reload" })).value);
         return;
       }
       if (request.method === "GET" && url.pathname === "/api/nle/feedback") {
@@ -666,96 +825,40 @@ export async function startWorkbenchServer(options: {
         return;
       }
       if (request.method === "GET" && url.pathname === "/api/nle/export") {
-        json(response, 200, exportState);
+        json(response, 200, (await nle.observe({ kind: "export-state" })).value);
         return;
       }
       if (request.method === "POST" && url.pathname === "/api/nle/export") {
-        if (exportTask !== undefined) throw new Error("An NLE export is already running.");
         const input = exportRequest(await requestJson(request));
-        if (input.revision !== session.current.revision) {
-          throw new NleRevisionConflict(input.revision, session.current.revision);
-        }
-        if (BigInt(input.resolution.width) * BigInt(session.current.canvas.height)
-          !== BigInt(input.resolution.height) * BigInt(session.current.canvas.width)) {
-          throw new Error(`NLE export resolution ${input.resolution.width}x${input.resolution.height}`
-            + ` changes Project aspect ${session.current.canvas.width}x${session.current.canvas.height}.`);
-        }
-        const id = ++exportSequence;
-        const outputFile = projectMember(projectRoot, resolve(projectRoot, "exports", input.fileName), "NLE export");
-        const project = structuredClone(session.current);
-        const controller = new AbortController();
-        exportController = controller;
-        exportState = {
-          format: "hypit.workbench-nle-export@1",
-          id,
-          state: "running",
-          progress: { phase: "open", state: "start" },
-        };
-        exportTask = runExport({
-          projectRoot,
-          projectFile,
-          project,
-          outputFile,
-          packageRoot: projectRoot,
-          ...(options.distributionPackageRoot === undefined
-            ? {} : { distributionPackageRoot: options.distributionPackageRoot }),
-          quality: input.quality,
-          frameRate: input.frameRate,
-          resolution: input.resolution,
-          signal: controller.signal,
-          onProgress(progress) {
-            if (exportState.id !== id) return;
-            const projected = workbenchExportProgress(progress);
-            if (projected !== undefined) exportState = { ...exportState, progress: projected };
-          },
-        }).then((result) => {
-          if (exportState.id !== id) return;
-          exportState = {
-            format: "hypit.workbench-nle-export@1",
-            id,
-            state: "complete",
-            output: {
-              path: relative(projectRoot, result.outputFile).split(sep).join("/"),
-              frameRate: structuredClone(result.frameRate),
-              frameCount: result.frameCount,
-              canvas: structuredClone(result.canvas),
-            },
-          };
-        }, (error: unknown) => {
-          if (exportState.id !== id) return;
-          exportState = controller.signal.aborted
-            ? { format: "hypit.workbench-nle-export@1", id, state: "cancelled" }
-            : {
-                format: "hypit.workbench-nle-export@1",
-                id,
-                state: "failed",
-                error: error instanceof Error ? error.message : String(error),
-              };
-        }).finally(() => {
-          if (exportState.id === id) exportController = undefined;
-          exportTask = undefined;
-        });
-        json(response, 202, exportState);
+        json(response, 202, (await nle.action({ kind: "export.start", input })).value);
         return;
       }
       if (request.method === "DELETE" && url.pathname === "/api/nle/export") {
-        if (exportTask !== undefined && exportController !== undefined) {
-          exportController.abort(new Error("NLE export was cancelled."));
-          exportState = {
-            format: "hypit.workbench-nle-export@1", id: exportState.id, state: "cancelled",
-          };
-        }
-        json(response, 200, exportState);
+        json(response, 200, (await nle.action({ kind: "export.cancel" })).value);
+        return;
+      }
+      if (request.method === "GET" && url.pathname === "/api/nle/review") {
+        json(response, 200, (await nle.observe({ kind: "review-state" })).value);
+        return;
+      }
+      if (request.method === "POST" && url.pathname === "/api/nle/review") {
+        const input = reviewRequest(await requestJson(request));
+        json(response, 202, (await nle.action({ kind: "review.start", input })).value);
+        return;
+      }
+      if (request.method === "DELETE" && url.pathname === "/api/nle/review") {
+        json(response, 200, (await nle.action({ kind: "review.cancel" })).value);
         return;
       }
       if ((request.method === "GET" || request.method === "HEAD")
         && url.pathname.startsWith("/api/nle/media-resource/")) {
         const requestedGeneration = Number(url.searchParams.get("generation"));
-        if (!Number.isSafeInteger(requestedGeneration) || requestedGeneration !== mediaLibrary.generation) {
-          throw new Error("NLE Media Library projection is stale.");
+        if (!Number.isSafeInteger(requestedGeneration) || requestedGeneration < 1
+          || nle.mediaGeneration === undefined || requestedGeneration > nle.mediaGeneration) {
+          throw new Error("NLE Media Library projection generation is invalid.");
         }
         const id = decodeURIComponent(url.pathname.slice("/api/nle/media-resource/".length));
-        const resource = mediaLibrary.resource(id);
+        const resource = nle.mediaResource(id);
         if (resource === undefined) throw new Error(`NLE Media ${id} is unavailable.`);
         await serveProgrammeResource(request, response, resource);
         return;
@@ -763,24 +866,22 @@ export async function startWorkbenchServer(options: {
       if ((request.method === "GET" || request.method === "HEAD")
         && url.pathname.startsWith("/api/nle/presentation-resource/")) {
         const requestedRevision = Number(url.searchParams.get("revision"));
-        if (!Number.isSafeInteger(requestedRevision) || requestedRevision !== session.current.revision) {
+        if (!Number.isSafeInteger(requestedRevision) || requestedRevision !== nle.project.revision) {
           throw new Error("NLE Timeline presentation projection is stale.");
         }
         const id = decodeURIComponent(url.pathname.slice("/api/nle/presentation-resource/".length));
-        const resource = options.presentations?.resource(id);
+        const resource = nle.presentationResource(id);
         if (resource === undefined) throw new Error(`NLE Timeline presentation resource ${id} is unavailable.`);
         await serveTimelinePresentationResource(request, response, resource);
         return;
       }
       if (request.method === "GET" && url.pathname === "/api/nle/programme") {
-        const requestedRevision = Number(url.searchParams.get("revision"));
-        const requestedViewRevision = Number(url.searchParams.get("viewRevision"));
-        if (!Number.isSafeInteger(requestedRevision) || requestedRevision !== session.current.revision
-          || !Number.isSafeInteger(requestedViewRevision) || requestedViewRevision !== view.revision) {
-          throw new Error("NLE Programme preview revision is stale.");
+        const requestedGeneration = Number(url.searchParams.get("generation"));
+        if (!Number.isSafeInteger(requestedGeneration) || requestedGeneration !== nle.programmeGeneration) {
+          throw new Error("NLE Programme preview generation is stale.");
         }
         try {
-          const rendered = await programme.document(session.current, view.editRate);
+          const rendered = await nle.programmeDocument(requestedGeneration);
           response.writeHead(200, {
             "cache-control": "no-store",
             "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'self'",
@@ -802,46 +903,52 @@ export async function startWorkbenchServer(options: {
       }
       if ((request.method === "GET" || request.method === "HEAD")
         && url.pathname.startsWith("/api/nle/programme-resource/")) {
-        const requestedRevision = Number(url.searchParams.get("revision"));
-        if (!Number.isSafeInteger(requestedRevision) || requestedRevision !== session.current.revision) {
-          throw new Error(`NLE Programme resource revision ${url.searchParams.get("revision") ?? "<missing>"} is stale.`);
+        const requestedGeneration = Number(url.searchParams.get("generation"));
+        if (!Number.isSafeInteger(requestedGeneration) || requestedGeneration < 0
+          || requestedGeneration > nle.programmeGeneration) {
+          throw new Error(`NLE Programme resource generation ${url.searchParams.get("generation") ?? "<missing>"} is invalid.`);
         }
         const id = decodeURIComponent(url.pathname.slice("/api/nle/programme-resource/".length));
         if (!isResourceId(id)) throw new Error("NLE Programme resource id is invalid.");
-        const resource = programme.resource(id);
+        const resource = nle.programmeResource(id);
         if (resource === undefined) throw new Error(`NLE Programme resource ${id} is unavailable.`);
         await serveProgrammeResource(request, response, resource);
         return;
       }
       if (request.method === "GET" && url.pathname.startsWith("/api/nle/item-inspector/")) {
         const requestedRevision = Number(url.searchParams.get("revision"));
-        if (!Number.isSafeInteger(requestedRevision) || requestedRevision !== session.current.revision) {
+        if (!Number.isSafeInteger(requestedRevision) || requestedRevision !== nle.project.revision) {
           throw new Error(`NLE Item inspector revision ${url.searchParams.get("revision") ?? "<missing>"} is stale.`);
         }
         const item = decodeURIComponent(url.pathname.slice("/api/nle/item-inspector/".length));
-        const observation = await mediaInspector.observation(session.current, item);
-        const presentation = options.presentations?.observations(session.current)
-          .find((candidate) => candidate.item === item);
-        json(response, 200, inspectors.scene(session.current, view, item, [
-          ...(presentation?.title === undefined ? [] : [{ item, title: presentation.title, sections: [] }]),
-          ...(observation === undefined ? [] : [observation]),
-        ]));
+        json(response, 200, (await nle.observe({ kind: "inspector", item })).value);
         return;
       }
-      if (request.method === "GET" && url.pathname.startsWith("/api/nle/item-preview/")) {
+      if (request.method === "GET" && url.pathname.startsWith("/api/nle/component-media-inputs/")) {
         const requestedRevision = Number(url.searchParams.get("revision"));
-        if (!Number.isSafeInteger(requestedRevision) || requestedRevision !== session.current.revision) {
-          throw new Error(`NLE Item preview revision ${url.searchParams.get("revision") ?? "<missing>"} is stale.`);
+        if (!Number.isSafeInteger(requestedRevision) || requestedRevision !== nle.project.revision) {
+          throw new Error(`NLE Component Media input revision ${url.searchParams.get("revision") ?? "<missing>"} is stale.`);
         }
+        const item = decodeURIComponent(url.pathname.slice("/api/nle/component-media-inputs/".length));
+        json(response, 200, (await nle.observe({ kind: "component-media-inputs", item })).value);
+        return;
+      }
+      if ((request.method === "GET" || request.method === "HEAD")
+        && url.pathname.startsWith("/api/nle/item-preview/")) {
         const item = decodeURIComponent(url.pathname.slice("/api/nle/item-preview/".length));
+        const requestedGeneration = Number(url.searchParams.get("generation"));
+        if (!Number.isSafeInteger(requestedGeneration) || requestedGeneration !== nle.previewGeneration(item)) {
+          throw new Error(`NLE Item ${item} preview generation ${url.searchParams.get("generation") ?? "<missing>"} is stale.`);
+        }
         const kind = url.searchParams.get("kind");
         if (kind !== "image" && kind !== "storyboard" && kind !== "waveform") {
           throw new Error(`NLE Item preview kind ${kind ?? "<missing>"} is invalid.`);
         }
-        const preview = await previews.read(session.current, item, kind);
+        const preview = await nle.itemPreview(item, kind, requestedGeneration);
         response.writeHead(200, {
           "cache-control": "no-store",
           "content-type": preview.mediaType,
+          "content-length": preview.bytes.byteLength,
           "x-content-type-options": "nosniff",
           ...(preview.storyboard === undefined ? {} : {
             "x-hypit-storyboard-count": String(preview.storyboard.count),
@@ -852,165 +959,62 @@ export async function startWorkbenchServer(options: {
             "x-hypit-storyboard-sample-fps": String(preview.storyboard.sampleFps),
           }),
         });
-        response.end(preview.bytes);
+        response.end(request.method === "HEAD" ? undefined : preview.bytes);
         return;
       }
       if (request.method === "POST" && url.pathname === "/api/nle/transaction") {
         const input = transactionRequest(await requestJson(request));
-        await mutate(() => {
-          assertNleTimelineViewAllowsTransaction(view, session.current, input.transaction);
-          session = commitNleEdit(session, input);
-          previews.invalidate();
-          programme.invalidate();
-          const reconciled = reconcileNleTimelineView(view, session.current);
-          viewDirty ||= reconciled.revision !== view.revision;
-          view = reconciled;
-        });
-        json(response, 200, await snapshot(session, view, projectFile, viewFile, viewDirty, previews,
-          mediaLibrary, options.presentations));
+        json(response, 200, (await nle.command({ kind: "project.transaction", input })).value);
         return;
       }
       if (request.method === "POST" && url.pathname === "/api/nle/place-media") {
         const input = mediaPlacementRequest(await requestJson(request));
-        let item = "";
-        await mutate(async () => {
-          const projected = mediaLibrary.materialization(input.media);
-          if (projected === undefined) throw new Error(`NLE Media ${input.media} is unavailable.`);
-          const document = projected.document;
-          item = nextMediaItemId(session.current, document.id);
-          const transaction = createMediaAssetMaterialization(session.current, {
-            itemId: item,
-            asset: { path: projected.asset },
-            interpretation: document.media.interpretation,
-            track: input.track,
-            at: input.at,
-            ...(input.duration === undefined ? {} : { duration: input.duration }),
-          });
-          const revisioned = { ...transaction, revision: input.revision };
-          assertNleTimelineViewAllowsTransaction(view, session.current, revisioned);
-          session = commitNleEdit(session, { label: `添加素材 ${document.id}`, transaction: revisioned });
-          previews.invalidate();
-          programme.invalidate();
-          const reconciled = reconcileNleTimelineView(view, session.current);
-          viewDirty ||= reconciled.revision !== view.revision;
-          view = reconciled;
-        });
-        const value: NleWorkbenchMediaPlacementResponse = {
-          snapshot: await snapshot(session, view, projectFile, viewFile, viewDirty, previews,
-            mediaLibrary, options.presentations),
-          item,
-        };
-        json(response, 200, value);
+        json(response, 200, (await nle.command({ kind: "media.place", input })).value);
         return;
       }
       if (request.method === "POST" && url.pathname === "/api/nle/media-library/refresh") {
-        await mediaLibrary.refresh();
-        json(response, 200, await snapshot(session, view, projectFile, viewFile, viewDirty, previews,
-          mediaLibrary, options.presentations));
+        json(response, 200, (await nle.command({ kind: "media.refresh" })).value);
         return;
       }
       if (request.method === "POST" && url.pathname === "/api/nle/item-parameter") {
         const input = parameterEditRequest(await requestJson(request));
-        await mutate(() => {
-          const edit = inspectors.packageEdit(
-            session.current, input.item, input.section, input.field, input.value,
-          );
-          const planned = edit.kind === "component"
-            ? authoring.planComponentParameterEdit(session.current, input.item, edit.operation)
-            : edit.kind === "adjustment"
-              ? authoring.planAdjustmentParameterEdit(session.current, input.item, edit.operation)
-              : authoring.planComponentValueEdit(session.current, edit.value, edit.operation);
-          session = commitNleEdit(session, {
-            label: `编辑 ${input.item} · ${input.field}`,
-            transaction: { ...planned, revision: input.revision },
-          });
-          previews.invalidate();
-          programme.invalidate();
-          const reconciled = reconcileNleTimelineView(view, session.current);
-          viewDirty ||= reconciled.revision !== view.revision;
-          view = reconciled;
-        });
-        json(response, 200, await snapshot(session, view, projectFile, viewFile, viewDirty, previews,
-          mediaLibrary, options.presentations));
+        json(response, 200, (await nle.command({ kind: "parameter.edit", input })).value);
+        return;
+      }
+      if (request.method === "POST" && url.pathname === "/api/nle/component-media-input") {
+        const input = componentMediaInputEditRequest(await requestJson(request));
+        json(response, 200, (await nle.command({ kind: "component-media-input.edit", input })).value);
         return;
       }
       if (request.method === "POST" && url.pathname === "/api/nle/spatial-edit") {
         const input = spatialEditRequest(await requestJson(request));
-        await mutate(() => {
-          const { item } = findNleItem(session.current, input.item);
-          if (item.kind !== "present" || item.picture === undefined) {
-            throw new Error(`NLE Item ${input.item} has no Picture layout.`);
-          }
-          const command = "ref" in item.picture.layout ? (() => {
-            const current = findNlePictureLayout(session.current, item.picture.layout.ref);
-            return { kind: "picture-layout.replace" as const, value: {
-              ...structuredClone(current), layout: structuredClone(input.layout),
-            } };
-          })() : { kind: "item.replace" as const, item: {
-            ...structuredClone(item), picture: {
-              ...structuredClone(item.picture), layout: structuredClone(input.layout),
-            },
-          } };
-          const transaction = { revision: input.revision, commands: [command] };
-          assertNleTimelineViewAllowsTransaction(view, session.current, transaction);
-          session = commitNleEdit(session, { label: `调整 ${input.item} 画面布局`, transaction });
-          previews.invalidate();
-          programme.invalidate();
-          const reconciled = reconcileNleTimelineView(view, session.current);
-          viewDirty ||= reconciled.revision !== view.revision;
-          view = reconciled;
-        });
-        json(response, 200, await snapshot(session, view, projectFile, viewFile, viewDirty, previews,
-          mediaLibrary, options.presentations));
+        json(response, 200, (await nle.command({
+          kind: "spatial.edit",
+          input: { revision: input.revision, item: input.item, edit: { kind: "layout.replace", layout: input.layout } },
+        })).value);
+        return;
+      }
+      if (request.method === "POST" && url.pathname === "/api/nle/spatial-command") {
+        const input = spatialCommandRequest(await requestJson(request));
+        json(response, 200, (await nle.command({ kind: "spatial.edit", input })).value);
         return;
       }
       if (request.method === "POST" && url.pathname === "/api/nle/view-transaction") {
         const input = viewTransactionRequest(await requestJson(request));
-        await mutate(() => {
-          view = applyNleTimelineViewTransaction(view, session.current, input.transaction);
-          viewDirty = true;
-          programme.invalidate();
-        });
-        json(response, 200, await snapshot(session, view, projectFile, viewFile, viewDirty, previews,
-          mediaLibrary, options.presentations));
+        json(response, 200, (await nle.command({ kind: "view.transaction", input })).value);
         return;
       }
       if (request.method === "POST" && url.pathname === "/api/nle/undo") {
-        await mutate(() => {
-          session = undoNleEdit(session);
-          previews.invalidate();
-          programme.invalidate();
-          const reconciled = reconcileNleTimelineView(view, session.current);
-          viewDirty ||= reconciled.revision !== view.revision;
-          view = reconciled;
-        });
-        json(response, 200, await snapshot(session, view, projectFile, viewFile, viewDirty, previews,
-          mediaLibrary, options.presentations));
+        json(response, 200, (await nle.command({ kind: "history.undo" })).value);
         return;
       }
       if (request.method === "POST" && url.pathname === "/api/nle/redo") {
-        await mutate(() => {
-          session = redoNleEdit(session);
-          previews.invalidate();
-          programme.invalidate();
-          const reconciled = reconcileNleTimelineView(view, session.current);
-          viewDirty ||= reconciled.revision !== view.revision;
-          view = reconciled;
-        });
-        json(response, 200, await snapshot(session, view, projectFile, viewFile, viewDirty, previews,
-          mediaLibrary, options.presentations));
+        json(response, 200, (await nle.command({ kind: "history.redo" })).value);
         return;
       }
       if (request.method === "POST" && url.pathname === "/api/nle/save") {
-        await mutate(async () => {
-          const ticket = prepareNleProjectSave(session);
-          await writeNleProjectFile(projectFile, ticket);
-          await writeNleTimelineViewFile(viewFile, view);
-          session = completeNleProjectSave(session, ticket);
-          viewDirty = false;
-        });
-        json(response, 200, await snapshot(session, view, projectFile, viewFile, viewDirty, previews,
-          mediaLibrary, options.presentations));
+        const input = saveRequest(await requestJson(request));
+        json(response, 200, (await nle.command({ kind: "document.save", input })).value);
         return;
       }
       json(response, 404, errorView(new Error(`Unknown Workbench route: ${url.pathname}`)));
@@ -1021,7 +1025,7 @@ export async function startWorkbenchServer(options: {
       }
       const conflict = error instanceof Error
         && (error.name === "NleRevisionConflict" || error.name === "NleTimelineViewRevisionConflict"
-          || error instanceof FeedbackConflict);
+          || error.name === "NleExternalFileConflict" || error instanceof FeedbackConflict);
       json(response, conflict ? 409 : 400, errorView(error));
     }
   });
@@ -1042,14 +1046,15 @@ export async function startWorkbenchServer(options: {
   return {
     origin,
     nleUrl: `${origin}/nle`,
+    commentsUrl: `${origin}/comments`,
     projectFile,
     viewFile,
     feedbackFile: feedback.path,
     async close() {
-      exportController?.abort(new Error("Workbench closed during NLE export."));
-      await exportTask;
+      for (const response of eventResponses) response.end();
       await new Promise<void>((fulfill, reject) => server.close((error) => error === undefined ? fulfill() : reject(error)));
-      await programme.close();
+      await nle.close();
+      if (ownsMediaService) await mediaService.close();
       await rm(feedbackUploadDirectory, { recursive: true, force: true });
     },
   };

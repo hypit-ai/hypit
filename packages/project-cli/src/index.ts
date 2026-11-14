@@ -1,8 +1,8 @@
 import { mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 
-import type { CliCommandModule, CliIo } from "@hypit/cli";
-import { findProjectRoot } from "@hypit/project";
+import type { CliCommandModule, CliIo } from "@hypit/cli/public";
+import { findProjectRoot } from "@hypit/project/node";
 
 type JsonObject = Record<string, unknown>;
 
@@ -150,7 +150,6 @@ async function runProjectCli(argv: readonly string[], io: CliIo, cwd: string): P
 
 export function createProjectCliCommandModules(): readonly CliCommandModule[] {
   return [{
-    format: "hypit.cli-command@1",
     id: "@hypit/project-cli",
     commands: ["project"],
     writeRootHelp(io) {

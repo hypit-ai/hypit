@@ -2,12 +2,12 @@ import {
   sealModelFieldRequest,
   sealModelFieldBuilder,
   defineModelFields,
-} from "@hypit/generation/model-fields";
-import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
-import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+} from "@hypit/generation-model/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation-model/model-fields";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation-model/model-fields";
 import { promptTypes } from "@hypit/hypit/prompt";
 
-export const gptImageModuleRef = { name: "@hypit/gpt-image", version: "1" } as const;
+export const gptImageModuleRef = { name: "@hypit/gpt-image" } as const;
 
 export const gptImage2Fields: ModelFieldTable = defineModelFields({
   model: "gpt-image-2",

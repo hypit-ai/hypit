@@ -42,14 +42,14 @@ test("check compiles a data-only package Source export without a project copy", 
       type: "module",
       exports: { "./ugc-v1": "./kits/ugc-v1.svml" },
     }), "utf8");
-    await writeFile(join(kitRoot, "kits", "ugc-v1.svml"), `module prompt from "@hypit/prompt@1"
+    await writeFile(join(kitRoot, "kits", "ugc-v1.svml"), `module prompt from "@hypit/prompt"
 
 prompt.Template "ugc-v1" {
   slot "direction" { required: true }
 }
 `, "utf8");
     const source = join(root, "main.svml");
-    await writeFile(source, `module prompt from "@hypit/prompt@1"
+    await writeFile(source, `module prompt from "@hypit/prompt"
 source kit from "@acme/image-kits/ugc-v1"
 
 prompt.Render "prompt" {
@@ -73,8 +73,8 @@ test("pricing sends complete requests to the Provider without copying parameters
   const root = await mkdtemp(join(tmpdir(), "hypit-pricing-"));
   try {
     const ids = Array.from({ length: 25 }, (_, index) => `portrait-${index}`);
-    await writeFile(join(root, "main.svml"), `module prompt from "@hypit/prompt@1"
-module gpt from "@hypit/gpt-image@1"
+    await writeFile(join(root, "main.svml"), `module prompt from "@hypit/prompt"
+module gpt from "@hypit/gpt-image"
 
 ${ids.map((id) => `prompt.Prompt "${id}-prompt" { text: "An original ${id}." }
 gpt.image {
@@ -85,6 +85,7 @@ gpt.image {
 }`).join("\n\n")}
 `);
     await writeFile(join(root, "runtime.json"), JSON.stringify(toolchainServices.localRuntime.initialRuntimeProfile));
+    await writeFile(join(root, "hypit.environment.json"), JSON.stringify(toolchainServices.localRuntime.initialEnvironmentProfile));
     const source = join(root, "main.svml");
     let queried = 0;
     let output = "";
@@ -121,14 +122,6 @@ gpt.image {
             createRuntime: async () => { throw new Error("pricing cannot execute a Build"); },
             close() {},
           };
-        },
-        pricing: async (queries) => {
-          queried = queries.length;
-          return queries.map((query) => ({
-            need: query.need, capability: query.capability, status: "resolved" as const, support: "supported" as const,
-            endpoint: "test.vendor", use: "test.provider",
-            pricingDocuments: [{ source: "https://vendor.example/rates", data: { creditsPerImage: 2 } }],
-          }));
         },
         createRuntime: async () => { throw new Error("pricing cannot execute a Build"); },
       }),

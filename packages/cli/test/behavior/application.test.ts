@@ -11,7 +11,6 @@ test("application dispatches one explicitly assembled command module", async () 
   const calls: string[][] = [];
   let receivedContext: Parameters<CliCommandModule["run"]>[2] | undefined;
   const module: CliCommandModule = {
-    format: "hypit.cli-command@1",
     id: "test.tools",
     commands: ["probe", "inspect-tool"],
     writeHelp(argv, io) { io.write(`help:${argv.join(" ")}`); },
@@ -27,7 +26,6 @@ test("application dispatches one explicitly assembled command module", async () 
 
 test("application composes root and topic help without teaching generic CLI the module", async () => {
   const module: CliCommandModule = {
-    format: "hypit.cli-command@1",
     id: "test.frames",
     commands: ["frames"],
     writeRootHelp(io) { io.write("\nFrames\n  frames <source>\n"); },
@@ -57,7 +55,6 @@ test("the generic Host has no second package installation command", async () => 
 test("arguments after passthrough do not become application help", async () => {
   let ran = false;
   const module: CliCommandModule = {
-    format: "hypit.cli-command@1",
     id: "test.capture",
     commands: ["capture"],
     writeHelp() { throw new Error("script --help must remain script input"); },
@@ -69,7 +66,6 @@ test("arguments after passthrough do not become application help", async () => {
 
 test("application rejects command shadowing instead of silently choosing an owner", async () => {
   const command = (id: string, name: string): CliCommandModule => ({
-    format: "hypit.cli-command@1",
     id,
     commands: [name],
     writeHelp() {},

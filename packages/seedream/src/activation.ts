@@ -1,10 +1,13 @@
-import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
+import { createModuleFacet } from "@hypit/hypit/module";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/generation/author";
+import { createRefinementPackageFacet } from "@hypit/hypit/generation/refinement";
+import { createProducerPackageFacet } from "@hypit/hypit/generation/producer";
 import { seedreamComponent, seedreamManifest } from "./index.js";
 import { seedreamAuthorDeclarations } from "./declaration.js";
 import { seedreamGenerationFacets } from "./generation.js";
-export const hypitPackage = { format: "hypit.package@1" as const, modules: [{ manifest: seedreamManifest }], facets: [
+export const hypitPackage = { facets: [
+    createModuleFacet(seedreamManifest), createGenerationModuleFacet(seedreamManifest),
   createProducerPackageFacet(seedreamComponent.producers ?? []),
   createRefinementPackageFacet(seedreamComponent.refinements ?? []),
   ...seedreamAuthorDeclarations.map(createAuthorDeclarationFacet),

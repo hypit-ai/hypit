@@ -3,12 +3,12 @@ import { tmpdir } from "node:os";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import type { ResourceIOOptions } from "@hypit/resource-store";
-import { EndpointRegistry } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
 import { MemoryResourceStore } from "@hypit/resource-store";
 import { rasterizeChromiumHtmlProgram, resolveExecutionOptions } from "@hypit/html-chromium-local";
 import { hypitPackage } from "../src/activation.js";
-import { runtimeEndpointAdapterFacetAbi } from "@hypit/runtime-local/extension";
-import type { RuntimeEndpointAdapterImplementation } from "@hypit/runtime-local/extension";
+import { executionEnvironmentEndpointAdapterFacetKind } from "@hypit/execution-environment-local/extension";
+import type { ExecutionEnvironmentEndpointAdapterImplementation } from "@hypit/execution-environment-local/extension";
 import { endpointResourceClaims, installEndpoint } from "@hypit/endpoint";
 import { htmlProgramCapabilities } from "@hypit/html-program";
 import { mediaTypes } from "@hypit/media";
@@ -134,9 +134,9 @@ test("HTML claims actual browser count including a range shorter than workers", 
   const document = htmlRangeDocument({ kind: "blob", resource: "res_range_source", size: 1, mediaType: "video/mp4" });
   const request = { id: "visual", capability: htmlProgramCapabilities.rasterizeVisual,
     returns: mediaTypes.renderedVisual, constraints: canonicalize({ program: document, delivery: htmlProviderDelivery() }), result: "visual-result" };
-  const facet = hypitPackage.facets.find((item) => item.abi === runtimeEndpointAdapterFacetAbi);
+  const facet = hypitPackage.facets.find((item) => item.kind === executionEnvironmentEndpointAdapterFacetKind);
   assert.ok(facet);
-  const adapter = facet.implementation as RuntimeEndpointAdapterImplementation;
+  const adapter = facet.implementation as ExecutionEnvironmentEndpointAdapterImplementation;
   for (const [workers, browserCapacity, expectedUnits] of [[4, 6, 4], [128, 128, 18]] as const) {
     const registry = new EndpointRegistry();
     const activation = await adapter.activate({

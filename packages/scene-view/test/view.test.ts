@@ -18,7 +18,7 @@ import {
 const actor: SceneObject = {
   id: "actor",
   name: "Actor",
-  using: { module: { name: "@project/character", version: "1" }, name: "actor" },
+  using: { module: { name: "@project/character" }, name: "actor" },
   transform: {
     position: { x: 0, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -33,7 +33,7 @@ function project() {
     id: "stage",
     name: "Stage",
     environment: {
-      using: { module: { name: "@test/environment", version: "1" }, name: "environment" },
+      using: { module: { name: "@test/environment" }, name: "environment" },
       parameters: {},
     },
     objects: [actor],

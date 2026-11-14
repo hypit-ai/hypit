@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sealModelFieldBuilder } from "@hypit/generation/model-fields";
-import type { ModelFieldRequest } from "@hypit/generation/model-fields";
+import { sealModelFieldBuilder } from "@hypit/generation-model/model-fields";
+import type { ModelFieldRequest } from "@hypit/generation-model/model-fields";
 import { canonicalize } from "@hypit/protocol";
-import type { BlobRef, ProducerRef, Value } from "@hypit/protocol";
+import type { BlobRef, Value } from "@hypit/protocol";
+import type { ProducerRef } from "@hypit/module";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import {
   seedanceComponent, seedanceDefinition, seedanceEndpointsByModel, sealSeedanceRequest,

@@ -5,6 +5,7 @@ export type WorkbenchSuiteSurface = "nle" | "scene" | "canvas";
 export type WorkbenchSuiteServer = {
   readonly origin: string;
   readonly urls: Partial<Record<WorkbenchSuiteSurface, string>>;
+  readonly mediaUrl?: string;
   close(): Promise<void>;
 };
 
@@ -20,7 +21,7 @@ function surfacePath(surface: WorkbenchSuiteSurface): string {
   return "/canvas";
 }
 
-function routeSurface(pathname: string): WorkbenchSuiteSurface | "shared" | undefined {
+function routeSurface(pathname: string): WorkbenchSuiteSurface | "shared" | "project" | undefined {
   if (pathname === "/nle" || pathname === "/comments" || pathname.startsWith("/api/nle")) return "nle";
   if (pathname === "/3d" || pathname.startsWith("/api/scene")) return "scene";
   if (pathname === "/canvas" || pathname.startsWith("/api/canvas")) return "canvas";
@@ -30,6 +31,8 @@ function routeSurface(pathname: string): WorkbenchSuiteSurface | "shared" | unde
     || pathname === "/assets/TransformControls.js" || pathname === "/assets/GLTFLoader.js"
     || pathname === "/assets/BufferGeometryUtils.js") return "scene";
   if (pathname.startsWith("/assets/canvas")) return "canvas";
+  if (pathname === "/api/workbench/environment") return "shared";
+  if (pathname === "/api/project/media" || pathname.startsWith("/api/project/media/")) return "project";
   if (pathname === "/assets/topbar.js" || pathname === "/assets/topbar.css") return "shared";
   return undefined;
 }
@@ -69,10 +72,13 @@ function proxy(
  * Publishes independent Workbench surface Hosts through one loopback origin.
  *
  * Each surface keeps its own document, package selection and domain Host. This
- * process-local router only gives their already-disjoint URLs one shared shell.
+ * process-local router gives their already-disjoint URLs one shared shell and
+ * may expose a separately owned Project application adapter on the same origin.
  */
 export async function startWorkbenchSuiteServer(options: {
   readonly targets: SurfaceTargets;
+  /** Project-scoped application adapter shared by otherwise independent surfaces. */
+  readonly projectTarget?: string;
   readonly defaultSurface: WorkbenchSuiteSurface;
   readonly host?: "127.0.0.1" | "::1";
   readonly port?: number;
@@ -95,23 +101,10 @@ export async function startWorkbenchSuiteServer(options: {
       outgoing.end();
       return;
     }
-    if ((incoming.method === "GET" || incoming.method === "POST")
-      && url.pathname === "/api/workbench/environment" && options.targets.canvas !== undefined) {
-      const path = incoming.method === "POST" ? "/api/canvas/environment/connect" : "/api/canvas";
-      const response = await fetch(new URL(path, options.targets.canvas), { method: incoming.method });
-      const snapshot = await response.json() as { readonly environment?: unknown };
-      outgoing.writeHead(response.status, {
-        "cache-control": "no-store",
-        "content-type": "application/json; charset=utf-8",
-        "x-content-type-options": "nosniff",
-      });
-      outgoing.end(`${JSON.stringify(snapshot.environment ?? {
-        status: "unavailable", credentials: [], issue: "当前画布没有生成环境。",
-      })}\n`);
-      return;
-    }
     const routed = routeSurface(url.pathname);
-    const target = routed === "shared" ? sharedTarget : routed === undefined ? undefined : options.targets[routed];
+    const target = routed === "shared" ? sharedTarget
+      : routed === "project" ? options.projectTarget
+        : routed === undefined ? undefined : options.targets[routed];
     if (target !== undefined) {
       proxy(incoming, outgoing, target);
       return;
@@ -146,6 +139,7 @@ export async function startWorkbenchSuiteServer(options: {
       key,
       `${base}${surfacePath(key as WorkbenchSuiteSurface)}`,
     ])) as Partial<Record<WorkbenchSuiteSurface, string>>,
+    ...(options.projectTarget === undefined ? {} : { mediaUrl: `${base}/api/project/media` }),
     async close() {
       await new Promise<void>((fulfill, reject) => server.close((error) => error === undefined ? fulfill() : reject(error)));
     },

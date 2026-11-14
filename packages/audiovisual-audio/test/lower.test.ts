@@ -32,6 +32,7 @@ import {
   audiovisualAudioComponent,
   audiovisualAudioProducers,
   createAudiovisualAudioSourceSet,
+  lowerAudiovisualAudioRenderNeed,
   lowerAudiovisualAudioProgram,
   preparedMediaAudioSource,
   sealAudiovisualAudioSource,
@@ -113,6 +114,22 @@ test("the complete AVIR Audio DAG lowers continuously with restrict and named po
   assert.equal(process?.program.format, "project:sidechain@1");
   assert.deepEqual(process?.temporalSupport,
     pointwiseOperatorTemporalSupport(["programme", "detector"]));
+});
+
+test("an Audio range remains a continuous terminal need instead of becoming video-frame evaluations", () => {
+  const input = {
+    program: programme,
+    sampling: { sampleRate: 48_000 },
+    sources: appendAudiovisualAudioSource(
+      createAudiovisualAudioSourceSet(),
+      preparedMediaAudioSource(media, { sampleRate: 48_000 }),
+    ),
+  };
+  const range = { start: at(1, 4), end: at(3, 4) };
+  const need = lowerAudiovisualAudioRenderNeed(input, { range });
+  assert.deepEqual(need.range, range);
+  assert.deepEqual(need.program.domain, programDomain);
+  assert.doesNotThrow(() => verifyAudioProgram(need.program));
 });
 
 test("Audio Source implementation cannot own AVIR Occurrence placement", () => {

@@ -1,5 +1,5 @@
 import type { CanonicalValue } from "@hypit/protocol";
-import type { SourceRange } from "@hypit/source";
+import type { SourceRange } from "@hypit/generation-authoring/source";
 
 export type Recipe = {
   readonly path: string;

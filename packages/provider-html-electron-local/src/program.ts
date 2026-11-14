@@ -1,4 +1,4 @@
-import type { ManagedProgram } from "@hypit/runtime-local/extension";
+import type { ManagedProgram } from "@hypit/execution-environment-local/extension";
 import {
   probeHtmlMediaTools,
 } from "@hypit/html-render-local";

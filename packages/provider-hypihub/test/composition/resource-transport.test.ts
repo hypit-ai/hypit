@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { encodeOAuth2Credential } from "@hypit/runtime";
+import { encodeOAuth2Credential } from "@hypit/execution-environment";
 
-import { EndpointRegistry } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
 import { MemoryResourceStore } from "@hypit/resource-store";
 import { defineEndpoint, installEndpoint } from "@hypit/endpoint";
-import type { CanonicalValue, Need } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
+import type { Need } from "@hypit/generation-build";
 import { mimoSpeechEndpoints, sealMimoSpeechRequest } from "@hypit/mimo-speech";
 import { fishAudioSpeechEndpoints, sealFishAudioSpeechRequest } from "@hypit/fishaudio-speech";
 import { elevenLabsSpeechEndpoints, sealElevenLabsSpeechRequest } from "@hypit/elevenlabs-speech";
-import { generationTypes } from "@hypit/generation";
+import { generationTypes } from "@hypit/generation-model";
 import { gptImageEndpoints, sealGptImage2Request } from "@hypit/gpt-image";
 import { sealSeedanceRequest, seedanceEndpoints } from "@hypit/seedance";
 import { sealSpeechEvidenceAudio } from "@hypit/speech-evidence";

@@ -1,0 +1,25 @@
+{
+  "name": "@hypit-example/ranking-football-components",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@fontsource-variable/montserrat": "5.3.0",
+    "@hypit/audiovisual": "workspace:*",
+    "@hypit/audiovisual-html": "workspace:*",
+    "@hypit/html-program": "workspace:*",
+    "@hypit/hypit": "workspace:*",
+    "@hypit/media": "workspace:*",
+    "@hypit/nle": "workspace:*",
+    "@hypit/nle-audiovisual": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/spatial": "workspace:*",
+    "@hypit/temporal": "workspace:*"
+  }
+}

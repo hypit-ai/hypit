@@ -4,6 +4,7 @@ import type {
   SceneLibraryEntry,
   SceneLibraryReference,
 } from "./types.js";
+import { sceneLibraryFormat } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -26,19 +27,18 @@ function text(value: unknown, label: string): asserts value is string {
   assert(typeof value === "string" && value.trim().length > 0, `${label} is empty.`);
 }
 
-function portablePath(value: unknown, label: string): asserts value is string {
+function portableReferencePath(value: unknown, label: string): asserts value is string {
   assert(typeof value === "string" && value.length > 0, `${label} must be a non-empty relative path.`);
   assert(!value.includes("\\") && !value.startsWith("/") && !/^[A-Za-z]:/u.test(value),
     `${label} must use a portable relative path.`);
-  const relative = value.startsWith("./") ? value.slice(2) : value;
-  assert(relative.length > 0 && relative.split("/").every((part) => part.length > 0 && part !== "." && part !== ".."),
-    `${label} must name a file without current or parent segments.`);
+  assert(value.split("/").every((part) => part.length > 0 && part !== "."),
+    `${label} must not contain empty or current segments.`);
 }
 
 export function assertSceneLibraryReference(value: unknown): asserts value is SceneLibraryReference {
   object(value, "SceneLibraryReference");
   exactFields(value, ["path"], "SceneLibraryReference");
-  portablePath(value.path, "SceneLibraryReference.path");
+  portableReferencePath(value.path, "SceneLibraryReference.path");
   assert(value.path.endsWith(".scene-library.json"),
     "SceneLibraryReference.path must name a .scene-library.json document.");
 }
@@ -63,7 +63,7 @@ function entry(value: unknown, collections: ReadonlySet<string>, label: string):
   if (value.description !== undefined) text(value.description, `${label}.description`);
   object(value.asset, `${label}.asset`);
   exactFields(value.asset, ["path"], `${label}.asset`);
-  portablePath(value.asset.path, `${label}.asset.path`);
+  portableReferencePath(value.asset.path, `${label}.asset.path`);
   assert(value.asset.path.endsWith(".scene-asset.json"), `${label}.asset.path must name a .scene-asset.json document.`);
   assert(Array.isArray(value.collections) && value.collections.length > 0, `${label}.collections must not be empty.`);
   const memberships = new Set<string>();
@@ -85,7 +85,7 @@ function entry(value: unknown, collections: ReadonlySet<string>, label: string):
 export function assertSceneLibraryDocument(value: unknown): asserts value is SceneLibraryDocument {
   object(value, "SceneLibraryDocument");
   exactFields(value, ["format", "id", "name", "collections", "entries"], "SceneLibraryDocument");
-  assert(value.format === "hypit.scene-library@1", "Unsupported Scene Library document format.");
+  assert(value.format === sceneLibraryFormat, "Unsupported Scene Library document format.");
   identity(value.id, "SceneLibraryDocument.id");
   text(value.name, "SceneLibraryDocument.name");
   assert(Array.isArray(value.collections), "SceneLibraryDocument.collections must be an array.");

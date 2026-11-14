@@ -1,4 +1,4 @@
-import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalize } from "@hypit/hypit/value";
 import {
   assertLocalSpatialDomain,
   assertSpatialMap,

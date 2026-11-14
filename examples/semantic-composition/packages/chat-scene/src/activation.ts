@@ -1,12 +1,16 @@
-import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
-import { canonicalize, sameType } from "@hypit/hypit/protocol";
-import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/author";
-import type { AuthorDeclarationChild, AuthorDeclarationCompiler, AuthorResolvedReference, FragmentOperation } from "@hypit/hypit/author";
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import type { ProducerPackage } from "@hypit/hypit/producer";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
-import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { ModuleManifest, TypeRef, TypedRecord } from "@hypit/hypit/protocol";
+import { sameType } from "@hypit/hypit/module";
+import { createModuleFacet } from "@hypit/hypit/module";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/generation/markup";
+import { canonicalize } from "@hypit/hypit/value";
+import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/generation/author";
+import type { AuthorDeclarationChild, AuthorDeclarationCompiler, AuthorResolvedReference, FragmentOperation } from "@hypit/hypit/generation/author";
+import { createProducerPackageFacet } from "@hypit/hypit/generation/producer";
+import type { ProducerPackage } from "@hypit/hypit/generation/producer";
+import { createRefinementPackageFacet } from "@hypit/hypit/generation/refinement";
+import type { RefinementPackage } from "@hypit/hypit/generation/refinement";
+import type { TypeRef } from "@hypit/hypit/module";
+import type { GenerationModuleDefinition, TypedRecord } from "@hypit/hypit/generation/build";
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
 import type { FontStackRef } from "@hypit/media";
@@ -20,10 +24,10 @@ import type { TemporalInstant, TemporalWindow } from "@hypit/timeline";
 import { renderChat } from "./render.js";
 import type { ChatOptions, Message } from "./render.js";
 
-const module = { name: "@example/chat-scene", version: "1" } as const;
+const module = { name: "@example/chat-scene" } as const;
 const types = Object.fromEntries(["Options", "Message", "Messages"].map(name => [name, { module, name }])) as Record<"Options" | "Message" | "Messages", TypeRef>;
 const producers = Object.fromEntries(["empty", "append", "render"].map(name => [name, { module, name }])) as Record<"empty" | "append" | "render", { module: typeof module; name: string }>;
-export const manifest: ModuleManifest = { format: "hypit.module@1", ...module,
+export const manifest: GenerationModuleDefinition = { ...module,
   dependencies: [compositionTypes.visualTrack, mediaTypes.fontStack, timelineTypes.timeline, spatialTypes.frame, timelineTypes.instant].map(type => type.module),
   types: Object.values(types).map(type => type.name), capabilities: [], producers: [
     { name: "empty", inputs: [], result: { kind: "output" as const, name: "messages", type: types.Messages } },
@@ -109,7 +113,7 @@ const authorDeclaration: AuthorDeclarationCompiler = {
     const records = [{ id: `${id}.options`, type: types.Options, value: value(options), range: declaration.range }];
     const fragmentInputs = [{ name: "timeline", type: timelineTypes.timeline }, { name: "within", type: spatialTypes.frame },
       { name: "font", type: mediaTypes.fontStack }, { name: "window", type: timelineTypes.window }, { name: "options", type: types.Options }];
-    const bindings: Record<string, import("@hypit/hypit/author").AuthorValueRef> = {
+    const bindings: Record<string, import("@hypit/hypit/generation/author").AuthorValueRef> = {
       timeline: timeline.ref, within: within.ref, font: font.ref, window: window.ref, options: { kind: "record", id: `${id}.options` },
     };
     const input = (name: string) => ({ kind: "fragment-input" as const, name });
@@ -145,7 +149,7 @@ const authorDeclaration: AuthorDeclarationCompiler = {
   },
 };
 const markupDeclaration = { name: "scene", tag: "Scene" } as const;
-export const hypitPackage = { format: "hypit.package@1" as const, modules: [{ manifest }],
-  facets: [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? []),
+export const hypitPackage = { facets: [
+    createModuleFacet(manifest), createGenerationModuleFacet(manifest),createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? []),
     createAuthorDeclarationFacet(authorDeclaration), createMarkupDeclarationFacet({ module, declaration: markupDeclaration })] };
 export default hypitPackage;

@@ -1,12 +1,10 @@
-import type { GraphFragment } from "@hypit/author";
-import type {
-  BlobRef,
-  CanonicalValue,
-  LinkedProgram,
-  ModuleRef,
-  TypeRef,
-} from "@hypit/protocol";
-import type { SourceAssetRequest } from "@hypit/source";
+import type { GraphFragment } from "@hypit/generation-authoring/author";
+import type { BlobRef, CanonicalValue } from "@hypit/protocol";
+import type { ModuleRef, TypeRef } from "@hypit/module";
+import type { LinkedProgram } from "@hypit/generation-build";
+import type { SourceAssetRequest } from "@hypit/generation-authoring/source";
+
+export const generationGraphFormat = "hypit.generation-graph@1";
 
 export type Awaitable<T> = T | Promise<T>;
 
@@ -27,7 +25,7 @@ export type GenerationGraphNode = {
 };
 
 export type GenerationGraphProject = {
-  readonly format: "hypit.generation-graph@1";
+  readonly format: typeof generationGraphFormat;
   readonly id: string;
   readonly name: string;
   readonly revision: number;
@@ -132,7 +130,7 @@ export type GenerationGraphNodeReport =
 
 export type LoweredGenerationGraph = {
   readonly program: LinkedProgram;
-  readonly graph: import("@hypit/protocol").AuthorGraph;
+  readonly graph: import("@hypit/generation-build").AuthorGraph;
   readonly attachments: readonly GenerationGraphResourceAttachment[];
   readonly executionPackages: readonly string[];
 };

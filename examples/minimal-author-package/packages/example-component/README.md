@@ -1,12 +1,12 @@
 # Example component fixture
 
 A small complete package for learning Manifest, Declaration, Fragment, Producer and activation wiring. Framework-facing imports come from
-the narrow `@hypit/hypit/author`, `producer`, `refinement` and `markup` subpaths; video-domain imports
+the narrow `@hypit/hypit/generation/author`, `producer`, `refinement` and `markup` subpaths; video-domain imports
 use their owning packages, such as `@hypit/composition` and `@hypit/temporal`. Declare these libraries
 as ordinary dependencies and the language Host as a compatible peer. TypeScript and Node types are
 build tooling. Dependencies are installed by the package manager, not bundled into the tarball.
 
-It contains a Module Manifest with nominal Types, deterministic Producers and refinements, Markup
+It contains a generic Module Definition plus a Generation Module Definition with deterministic Producers, alongside refinements and Markup
 declarations that describe the Source syntax, Author declaration compilers that emit records and
 components, and sealed Fragments with literal `fragment-input`, `fragment-operation` and `output`
 references. Declaration fields resolve exact public Types before they are connected to graph inputs.

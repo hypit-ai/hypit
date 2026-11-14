@@ -8,12 +8,19 @@
     ".": "./src/index.ts",
     "./node": "./src/node/index.ts"
   },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
     "@hypit/atomic-file": "workspace:^0.0.0-dev",
     "@hypit/audiovisual": "workspace:^0.1.0",
-    "@hypit/media-avir": "workspace:^0.1.0",
     "@hypit/facet": "workspace:^0.0.0-dev",
     "@hypit/media": "workspace:^0.2.0",
+    "@hypit/media-asset": "workspace:^0.1.0",
+    "@hypit/media-avir": "workspace:^0.1.0",
+    "@hypit/module": "workspace:^0.0.0-dev",
+    "@hypit/production-context": "workspace:^0.0.0-dev",
+    "@hypit/project": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/spatial": "workspace:^0.1.1",
     "@hypit/temporal": "workspace:^0.1.1"

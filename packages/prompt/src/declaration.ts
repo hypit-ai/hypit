@@ -1,16 +1,9 @@
-import {
-  declarationField,
-} from "@hypit/hypit/author";
+import { declarationField, } from "@hypit/hypit/generation/author";
 import type {
-  AuthorDeclaration,
-  AuthorDeclarationBinding,
-  AuthorDeclarationChild,
-  AuthorDeclarationCompiler,
-  AuthorDeclarationFieldValue,
-  AuthorResolvedReference,
-} from "@hypit/author";
-import { sameType } from "@hypit/hypit/protocol";
-import type { CanonicalValue, TypeRef } from "@hypit/protocol";
+  AuthorDeclaration, AuthorDeclarationBinding, AuthorDeclarationChild, AuthorDeclarationCompiler, AuthorDeclarationFieldValue, AuthorResolvedReference, } from "@hypit/generation-authoring/author";
+import { sameType } from "@hypit/hypit/module";
+import type { CanonicalValue } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
 import { sealText, textTypes } from "@hypit/hypit/text";
 
 import { createPromptRenderFragment } from "./fragment.js";
@@ -237,7 +230,7 @@ export const promptRenderAuthorDeclaration: AuthorDeclarationCompiler = {
       id: `${id}.bindings`, type: promptTypes.bindings,
       value: sealPromptBindings(choices) as unknown as CanonicalValue, range: declaration.range,
     }];
-    const inputs: Record<string, import("@hypit/author").AuthorValueRef> = {
+    const inputs: Record<string, import("@hypit/generation-authoring/author").AuthorValueRef> = {
       template: templateReference.ref,
       bindings: { kind: "record", id: `${id}.bindings` },
     };

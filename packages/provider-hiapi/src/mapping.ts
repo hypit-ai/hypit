@@ -1,4 +1,4 @@
-import type { GenerationWireMapping } from "@hypit/generation/provider";
+import type { GenerationWireMapping } from "@hypit/generation-model/provider";
 import { gptImageModuleRef } from "@hypit/gpt-image";
 import { grokImagineModuleRef } from "@hypit/grok-imagine";
 import { minimaxH3ModuleRef } from "@hypit/minimax-h3";

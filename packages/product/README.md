@@ -26,6 +26,6 @@ resource opener; it contains no filesystem, Runtime, model or Result implementat
 The corresponding decoders live here as well, so repositories may contain Product documents without
 acquiring a second interpretation of their format.
 
-Structured Type owners may contribute a `hypit.product-exporter@1` facet that projects one Product
+Structured Type owners may contribute a `hypit.product-exporter` facet that projects one Product
 into an author-facing file. Product resolves that decentralized capability by exact Type; it does not
 maintain an exporter registry or a switch over known media and evidence kinds.

@@ -108,7 +108,8 @@ try {
   assert.ok(loaded.some((item) => item.specifier === "@hypit/provider-hypihub"
     && item.contribution.facets?.length === 1));
   assert.ok(loaded.some((item) => item.specifier === "@hypit/whisperx"
-    && item.contribution.modules?.[0]?.manifest.name === "@hypit/whisperx"));
+    && item.contribution.facets?.some((facet) => facet.kind === "hypit.module"
+      && facet.address === "@hypit/whisperx")));
 
   const lock = await readFile(join(consumer, "package-lock.json"), "utf8");
   for (const tarball of [provider, whisperx, mediaLocal, narrativeSpeechAlignment]) {

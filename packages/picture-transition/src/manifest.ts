@@ -1,8 +1,11 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
 import { temporalDependency, temporalTypes } from "@hypit/temporal-graph";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import type { ValueSchema } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
 
-export const pictureTransitionModuleRef = { name: "@hypit/picture-transition", version: "1" } as const;
+export const pictureTransitionModuleRef = { name: "@hypit/picture-transition" } as const;
 export const pictureTransitionTypes = {
   operatorSpec: { module: pictureTransitionModuleRef, name: "PictureTransitionOperatorSpec" },
 } satisfies Record<string, TypeRef>;
@@ -24,10 +27,8 @@ export const pictureTransitionOperatorSpecSchema: ValueSchema = { kind: "oneOf",
   object({ kind: { schema: { kind: "literal", value: "blur-dissolve" } }, radius: { schema: { kind: "number", minimum: 0, maximum: 200 } }, easing: { schema: easing } }),
 ] };
 
-export const pictureTransitionManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const pictureTransitionManifest: GenerationModuleDefinition = {
   name: pictureTransitionModuleRef.name,
-  version: pictureTransitionModuleRef.version,
   dependencies: [audiovisualDependency, temporalDependency],
   types: [pictureTransitionTypes.operatorSpec.name],
   capabilities: [],

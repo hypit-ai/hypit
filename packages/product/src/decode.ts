@@ -1,5 +1,6 @@
-import { createModuleRef, createTypeRef } from "@hypit/protocol";
-import type { CanonicalValue, TypeRef } from "@hypit/protocol";
+import { createModuleRef, createTypeRef } from "@hypit/module";
+import type { CanonicalValue } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
 import type { ProductFileRef, ProductValueDocument, ProductValuePath, StoredProduct } from "./materialize.js";
 import type { StoredProductPublication } from "./publication.js";
 import type { Product } from "./history.js";
@@ -18,6 +19,12 @@ function text(value: unknown, subject: string): string {
   return value;
 }
 
+function exactKeys(value: Readonly<Record<string, unknown>>, allowed: readonly string[], subject: string): void {
+  const permitted = new Set(allowed);
+  const unexpected = Object.keys(value).find((name) => !permitted.has(name));
+  if (unexpected !== undefined) throw new Error(`${subject} has unexpected field ${unexpected}`);
+}
+
 function canonicalValue(value: unknown, subject: string): CanonicalValue {
   if (value === null || typeof value === "boolean" || typeof value === "string") return value;
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -28,11 +35,13 @@ function canonicalValue(value: unknown, subject: string): CanonicalValue {
 
 function typeRef(value: unknown, subject: string): TypeRef {
   const item = object(value, subject);
+  exactKeys(item, ["module", "name"], subject);
   const module = object(item.module, `${subject}.module`);
-  return createTypeRef(createModuleRef(
-    text(module.name, `${subject}.module.name`),
-    text(module.version, `${subject}.module.version`),
-  ), text(item.name, `${subject}.name`));
+  exactKeys(module, ["name"], `${subject}.module`);
+  return createTypeRef(
+    createModuleRef(text(module.name, `${subject}.module.name`)),
+    text(item.name, `${subject}.name`),
+  );
 }
 
 function fileRef(value: unknown, subject: string): ProductFileRef {

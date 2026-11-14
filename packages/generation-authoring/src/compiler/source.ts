@@ -1,0 +1,483 @@
+import { link, verifyRecordStructure } from "@hypit/generation-build";
+import { compareCodeUnits, isResourceId } from "@hypit/protocol";
+import { sameType, typeKey } from "@hypit/module";
+import type { BlobRef } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { ResolvedModuleClosure } from "@hypit/generation-build";
+import type { GraphValueRef, TypedRecord } from "@hypit/generation-build";
+import type {
+  ResolvedSource,
+  SourceAssetResolver,
+  SourceAssetReader,
+  SourceResolver,
+  SourceUnit,
+} from "@hypit/generation-authoring/source";
+import { elaborateAuthorGraph } from "@hypit/generation-authoring/author";
+import type {
+  AuthorComponent,
+  AuthorElementProvenance,
+  AuthorFrontend,
+  AuthorFrontendRegistryLike,
+  AuthorRecordRefiner,
+  AuthorSourceDiscovery,
+  AuthorSourceExport,
+  AuthorPublishedOutput,
+  AuthorSourceUnit,
+  AuthorValueRef,
+  CompiledSourceClosure,
+  ProjectedCompiledSourceClosure,
+  DecodedAuthorSource,
+  ResolvedAuthorSourceImport,
+  SourceClosure,
+  SourceClosureUnit,
+} from "@hypit/generation-authoring/author";
+
+type Awaitable<T> = T | Promise<T>;
+
+/** Host-owned acceptance limits for one finite Source compilation. */
+export type SourceCompilationLimits = {
+  readonly maxSources: number;
+  readonly maxImportEdges: number;
+  readonly maxImportDepth: number;
+  readonly maxRecords: number;
+  readonly maxComponents: number;
+  readonly maxReadableAssetBytes: number;
+};
+
+export const defaultSourceCompilationLimits: SourceCompilationLimits = Object.freeze({
+  maxSources: 4_096,
+  maxImportEdges: 16_384,
+  maxImportDepth: 128,
+  maxRecords: 100_000,
+  maxComponents: 100_000,
+  maxReadableAssetBytes: 256 * 1024 * 1024,
+});
+
+export function sourceCompilationLimits(value: SourceCompilationLimits | undefined): SourceCompilationLimits {
+  const limits = value ?? defaultSourceCompilationLimits;
+  for (const [name, limit] of Object.entries(limits)) {
+    if (!Number.isSafeInteger(limit) || limit <= 0) {
+      throw new SourceClosureError("INVALID_SOURCE_COMPILATION_LIMIT", `${name} must be a positive safe integer`);
+    }
+  }
+  return Object.freeze({ ...limits });
+}
+
+export type CompileSourceClosureRequest = {
+  readonly entry: ResolvedSource;
+  readonly closure: ResolvedModuleClosure;
+  readonly frontends: AuthorFrontendRegistryLike;
+  /**
+   * Optional Host-frozen discovery result. A Host that used discovery to construct `closure`
+   * should pass that exact result back instead of executing Frontend discovery a second time.
+   */
+  readonly discover?: (
+    source: SourceUnit,
+    frontend: AuthorFrontend,
+  ) => Awaitable<AuthorSourceDiscovery>;
+  readonly resolveSource: SourceResolver;
+  readonly resolveAsset?: SourceAssetResolver;
+  readonly readAsset?: SourceAssetReader;
+  readonly refineRecord?: AuthorRecordRefiner;
+  /** Execution policy supplied by the compiling Host; never enters Source or Build facts. */
+  readonly limits?: SourceCompilationLimits;
+  /** Produce source-range provenance only for an authoring tool that explicitly consumes it. */
+  readonly authorProjection?: boolean;
+};
+
+export class SourceClosureError extends Error {
+  readonly code: string;
+  readonly subject: string | undefined;
+
+  constructor(code: string, message: string, subject?: string) {
+    super(message);
+    this.name = "SourceClosureError";
+    this.code = code;
+    this.subject = subject;
+  }
+}
+
+function assert(
+  condition: unknown,
+  code: string,
+  message: string,
+  subject?: string,
+): asserts condition {
+  if (!condition) throw new SourceClosureError(code, message, subject);
+}
+
+function typeName(type: TypeRef): string {
+  return typeKey(type);
+}
+
+function sourceKey(source: AuthorSourceUnit, frontend: string): string {
+  return JSON.stringify([source.id, frontend]);
+}
+
+type HygienicSource = {
+  readonly unit: SourceClosureUnit;
+  readonly records: readonly TypedRecord[];
+  readonly components: readonly AuthorComponent[];
+  readonly exports: readonly AuthorSourceExport[];
+  readonly publications: readonly AuthorPublishedOutput[];
+  readonly provenance: readonly AuthorElementProvenance[];
+};
+
+function hygienicId(kind: string, unit: string, local: string): string {
+  return `source:${JSON.stringify([unit, kind, local])}`;
+}
+
+function hygienizeSource(
+  source: SourceUnit,
+  frontend: AuthorFrontend,
+  decoded: DecodedAuthorSource,
+  imports: readonly ResolvedAuthorSourceImport[],
+  authorProjection: boolean,
+): HygienicSource {
+  const unitId = `source:${JSON.stringify([source.id, frontend.id])}`;
+  const recordsById = new Map(decoded.records.map((record) => [record.id, record]));
+  const componentsById = new Map(decoded.components.map((component) => [component.id, component]));
+  const exportNames = new Set<string>();
+  for (const item of decoded.exports) {
+    assert(item.name.length > 0, "EMPTY_SOURCE_EXPORT", `${source.name} returned an empty export`);
+    assert(!exportNames.has(item.name), "DUPLICATE_SOURCE_EXPORT", `${source.name} repeats export ${item.name}`, item.name);
+    exportNames.add(item.name);
+    const ref = item.ref;
+    if (ref.kind === "record") {
+      const record = recordsById.get(ref.id);
+      assert(record !== undefined, "UNKNOWN_SOURCE_EXPORT", `${source.name}.${item.name} references unknown Record ${ref.id}`);
+      assert(
+        sameType(record.type, item.type),
+        "SOURCE_EXPORT_TYPE_MISMATCH",
+        `${source.name}.${item.name} declares ${typeName(item.type)} but exports ${typeName(record.type)}`,
+      );
+    } else {
+      const component = componentsById.get(ref.component);
+      assert(component !== undefined, "UNKNOWN_SOURCE_EXPORT", `${source.name}.${item.name} references unknown component ${ref.component}`);
+      const declaration = component.fragment.exports.find((output) => output.name === ref.output);
+      assert(declaration !== undefined, "UNKNOWN_SOURCE_EXPORT", `${source.name}.${item.name} references unknown output ${ref.output}`);
+      assert(
+        sameType(declaration.type, item.type),
+        "SOURCE_EXPORT_TYPE_MISMATCH",
+        `${source.name}.${item.name} declares ${typeName(item.type)} but exports ${typeName(declaration.type)}`,
+      );
+    }
+  }
+
+  const recordIds = new Map(decoded.records.map((record) => [
+    record.id,
+    hygienicId("record", unitId, record.id),
+  ]));
+  const componentIds = new Map(decoded.components.map((component) => [
+    component.id,
+    hygienicId("component", unitId, component.id),
+  ]));
+  const outputIds = new Map<string, string>();
+  for (const component of decoded.components) {
+    for (const output of Object.values(component.outputs)) {
+      outputIds.set(output, hygienicId("output", unitId, output));
+    }
+  }
+  const mapRef = (ref: AuthorValueRef): AuthorValueRef => {
+    if (ref.kind === "record") {
+      return { kind: "record", id: recordIds.get(ref.id) ?? ref.id };
+    }
+    return {
+      kind: "component-output",
+      component: componentIds.get(ref.component) ?? ref.component,
+      output: ref.output,
+    };
+  };
+  const records = decoded.records.map((record) => ({
+    ...record,
+    id: recordIds.get(record.id) as string,
+  }));
+  const components = decoded.components.map((component) => ({
+    id: componentIds.get(component.id) as string,
+    fragment: component.fragment,
+    inputs: Object.fromEntries(Object.entries(component.inputs).map(([name, ref]) => [name, mapRef(ref)])),
+    outputs: Object.fromEntries(Object.entries(component.outputs).map(([name, id]) => [
+      name,
+      outputIds.get(id) as string,
+    ])),
+  }));
+  const exports = decoded.exports.map((item) => ({ ...item, ref: mapRef(item.ref) }));
+  const publications = (decoded.publications ?? []).map((item) => ({ ...item, ref: mapRef(item.ref) }));
+  const unitContent = {
+    id: unitId,
+    name: source.name,
+    frontend: frontend.id,
+    imports: imports
+      .map((item) => ({
+        alias: item.request.alias,
+        source: item.source,
+      }))
+      .sort((left, right) => compareCodeUnits(left.alias, right.alias)),
+  };
+  return {
+    unit: unitContent,
+    records,
+    components,
+    exports,
+    publications,
+    provenance: authorProjection ? (decoded.provenance ?? []).map((element) => ({
+      id: hygienicId("element", unitId, `${element.range.start}:${element.range.end}`),
+      source: source.id,
+      sourceName: source.name,
+      range: { ...element.range },
+      records: element.records.map((id) => ({ local: id, id: recordIds.get(id) ?? id })),
+      outputs: element.outputs.map((output) => ({
+        component: componentIds.get(output.component) ?? output.component,
+        name: output.name,
+        local: output.id,
+        id: outputIds.get(output.id) ?? output.id,
+      })),
+      inputs: element.inputs.map((input) => ({
+        id: hygienicId("endpoint", unitId, `${element.range.start}:${input.name}`),
+        name: input.name,
+        ...(input.ref === undefined ? {} : { ref: mapRef(input.ref) }),
+      })),
+    })) : [],
+  };
+}
+
+function graphRefForExport(
+  item: AuthorSourceExport,
+  components: ReadonlyMap<string, AuthorComponent>,
+): GraphValueRef {
+  if (item.ref.kind === "record") return item.ref;
+  const component = components.get(item.ref.component);
+  assert(component !== undefined, "UNKNOWN_SOURCE_EXPORT", `export ${item.name} references ${item.ref.component}`);
+  const output = Object.hasOwn(component.outputs, item.ref.output) ? component.outputs[item.ref.output] : undefined;
+  assert(output !== undefined, "UNKNOWN_SOURCE_EXPORT", `export ${item.name} references ${item.ref.component}.${item.ref.output}`);
+  return { kind: "logical-output", id: output };
+}
+
+function sourcePaths(entry: HygienicSource, units: readonly HygienicSource[]): ReadonlyMap<string, ReadonlySet<string>> {
+  const byId = new Map(units.map((unit) => [unit.unit.id, unit]));
+  const paths = new Map<string, Set<string>>([[entry.unit.id, new Set([""])]]);
+  const pending = [{ source: entry.unit.id, path: "" }];
+  while (pending.length > 0) {
+    const current = pending.shift()!;
+    const parent = byId.get(current.source);
+    if (parent === undefined) continue;
+    for (const imported of parent.unit.imports) {
+      const candidate = current.path.length === 0 ? imported.alias : `${current.path}/${imported.alias}`;
+      const known = paths.get(imported.source) ?? new Set<string>();
+      // Two distinct paths prove ambiguity; retaining more would only multiply diamond-import work.
+      if (known.has(candidate) || known.size >= 2) continue;
+      known.add(candidate);
+      paths.set(imported.source, known);
+      pending.push({ source: imported.source, path: candidate });
+    }
+  }
+  return paths;
+}
+
+export function compileSourceClosure(
+  request: CompileSourceClosureRequest & { readonly authorProjection: true },
+): Promise<ProjectedCompiledSourceClosure>;
+export function compileSourceClosure(
+  request: CompileSourceClosureRequest,
+): Promise<CompiledSourceClosure>;
+export async function compileSourceClosure(
+  request: CompileSourceClosureRequest,
+): Promise<CompiledSourceClosure | ProjectedCompiledSourceClosure> {
+  const limits = sourceCompilationLimits(request.limits);
+  const cache = new Map<string, HygienicSource>();
+  const visiting: string[] = [];
+  const visitingAt = new Map<string, number>();
+  const ordered: HygienicSource[] = [];
+  let acceptedSources = 0;
+  let importEdges = 0;
+  let recordCount = 0;
+  let componentCount = 0;
+  let readableAssetBytes = 0;
+
+  const compile = async (resolvedSource: ResolvedSource, depth: number): Promise<HygienicSource> => {
+    assert(depth <= limits.maxImportDepth, "SOURCE_IMPORT_DEPTH_LIMIT",
+      `Source import depth exceeds Host limit ${limits.maxImportDepth}`, resolvedSource.unit.id);
+    const rawSource = resolvedSource.unit;
+    assert(rawSource.id.length > 0, "EMPTY_SOURCE_ID", "SourceUnit id is empty");
+    const source = rawSource;
+    const frontendId = resolvedSource.frontend;
+    const key = sourceKey(rawSource, frontendId);
+    const cached = cache.get(key);
+    if (cached !== undefined) return cached;
+    const cycle = visitingAt.get(key) ?? -1;
+    assert(
+      cycle === -1,
+      "SOURCE_IMPORT_CYCLE",
+      `Source imports cycle through ${[...visiting.slice(cycle), key].join(" -> ")}`,
+      rawSource.id,
+    );
+    acceptedSources += 1;
+    assert(acceptedSources <= limits.maxSources, "SOURCE_COUNT_LIMIT",
+      `Source closure exceeds Host limit ${limits.maxSources}`, rawSource.id);
+    const frontend = request.frontends.resolve(frontendId);
+    assert(frontend !== undefined, "UNKNOWN_FRONTEND", `Frontend ${frontendId} is not registered`, frontendId);
+    visitingAt.set(key, visiting.length);
+    visiting.push(key);
+    const discovery = await (request.discover === undefined
+      ? frontend.discover(source)
+      : request.discover(source, frontend));
+    const aliases = new Set<string>();
+    const imports: ResolvedAuthorSourceImport[] = [];
+    for (const dependency of discovery.sources) {
+      importEdges += 1;
+      assert(importEdges <= limits.maxImportEdges, "SOURCE_IMPORT_EDGE_LIMIT",
+        `Source imports exceed Host limit ${limits.maxImportEdges}`, source.id);
+      assert(dependency.alias.length > 0, "EMPTY_SOURCE_ALIAS", `${source.name} has an empty source alias`);
+      assert(!aliases.has(dependency.alias), "DUPLICATE_SOURCE_ALIAS", `${source.name} repeats alias ${dependency.alias}`);
+      aliases.add(dependency.alias);
+      const child = await request.resolveSource(rawSource, dependency);
+      const compiled = await compile(child, depth + 1);
+      const publicRecordIds = new Set(compiled.exports
+        .filter((item) => item.ref.kind === "record")
+        .map((item) => item.ref.kind === "record" ? item.ref.id : ""));
+      imports.push({
+        request: dependency,
+        source: compiled.unit.id,
+        exports: compiled.exports,
+        records: compiled.records.filter((record) => publicRecordIds.has(record.id)),
+      });
+    }
+    const assets = new Map<string, BlobRef>();
+    const readAssets = new Map<string, Uint8Array>();
+    const rawDecoded = await frontend.decode(source, {
+      closure: request.closure,
+      imports: structuredClone(imports),
+      async resolveAsset(assetRequest) {
+        assert(assetRequest.from.trim().length > 0, "EMPTY_SOURCE_ASSET", `${source.name} requested an empty asset`);
+        assert(assetRequest.mediaType.trim().length > 0, "EMPTY_SOURCE_ASSET_MEDIA_TYPE", `${source.name} requested an asset without a media type`);
+        const existing = assets.get(assetRequest.from);
+        if (existing !== undefined) {
+          assert(
+            existing.mediaType === assetRequest.mediaType,
+            "SOURCE_ASSET_MEDIA_TYPE_CONFLICT",
+            `${source.name} assigns conflicting media types to ${assetRequest.from}`,
+            assetRequest.from,
+          );
+          return existing;
+        }
+        assert(
+          request.resolveAsset !== undefined,
+          "SOURCE_ASSET_RESOLVER_MISSING",
+          `${source.name} requires source asset ${assetRequest.from}, but the Host has no asset resolver`,
+          assetRequest.from,
+        );
+        const blob = await request.resolveAsset(rawSource, assetRequest);
+        assert(blob.kind === "blob", "INVALID_SOURCE_ASSET", `${assetRequest.from} did not resolve to a BlobRef`);
+        assert(isResourceId(blob.resource), "INVALID_SOURCE_ASSET_RESOURCE", `${assetRequest.from} has an invalid Resource identity`);
+        assert(Number.isSafeInteger(blob.size) && blob.size >= 0, "INVALID_SOURCE_ASSET_SIZE", `${assetRequest.from} has an invalid size`);
+        assert(
+          blob.mediaType === assetRequest.mediaType,
+          "SOURCE_ASSET_MEDIA_TYPE_MISMATCH",
+          `${assetRequest.from} resolved as ${blob.mediaType}, expected ${assetRequest.mediaType}`,
+          assetRequest.from,
+        );
+        assets.set(assetRequest.from, blob);
+        return blob;
+      },
+      async readAsset(assetRequest) {
+        assert(assetRequest.from.trim().length > 0, "EMPTY_SOURCE_ASSET", `${source.name} requested an empty readable asset`);
+        assert(assetRequest.mediaType.trim().length > 0, "EMPTY_SOURCE_ASSET_MEDIA_TYPE", `${source.name} requested readable input without a media type`);
+        const key = `${assetRequest.from}\u0000${assetRequest.mediaType}`;
+        const existing = readAssets.get(key);
+        if (existing !== undefined) return Uint8Array.from(existing);
+        assert(
+          request.readAsset !== undefined,
+          "SOURCE_ASSET_READER_MISSING",
+          `${source.name} requires readable author input ${assetRequest.from}, but the Host has no asset reader`,
+          assetRequest.from,
+        );
+        const bytes = Uint8Array.from(await request.readAsset(rawSource, assetRequest));
+        assert(bytes.byteLength <= limits.maxReadableAssetBytes - readableAssetBytes,
+          "SOURCE_READABLE_ASSET_BYTES_LIMIT",
+          `Readable Source assets exceed Host limit ${limits.maxReadableAssetBytes} bytes`, assetRequest.from);
+        readableAssetBytes += bytes.byteLength;
+        readAssets.set(key, bytes);
+        return Uint8Array.from(bytes);
+      },
+    });
+    assert(rawDecoded.records.length <= limits.maxRecords - recordCount, "SOURCE_RECORD_COUNT_LIMIT",
+      `Source Records exceed Host limit ${limits.maxRecords}`, source.id);
+    recordCount += rawDecoded.records.length;
+    assert(rawDecoded.components.length <= limits.maxComponents - componentCount, "SOURCE_COMPONENT_COUNT_LIMIT",
+      `Source Components exceed Host limit ${limits.maxComponents}`, source.id);
+    componentCount += rawDecoded.components.length;
+    const validatedRecords: TypedRecord[] = [];
+    for (const record of rawDecoded.records) {
+      verifyRecordStructure(request.closure, record);
+      await request.refineRecord?.(record);
+      validatedRecords.push(record);
+    }
+    const decoded: DecodedAuthorSource = {
+      ...rawDecoded,
+      records: validatedRecords,
+    };
+    const result = hygienizeSource(source, frontend, decoded, imports, request.authorProjection === true);
+    visiting.pop();
+    visitingAt.delete(key);
+    cache.set(key, result);
+    ordered.push(result);
+    return result;
+  };
+
+  const entry = await compile(request.entry, 1);
+  const records = ordered.flatMap((unit) => unit.records);
+  const recordIds = new Set<string>();
+  for (const record of records) {
+    assert(!recordIds.has(record.id), "SOURCE_RECORD_COLLISION", `Source closure repeats Record ${record.id}`, record.id);
+    recordIds.add(record.id);
+  }
+  const components = ordered.flatMap((unit) => unit.components);
+  const program = link(request.closure, records);
+  const graph = elaborateAuthorGraph(program, components);
+  const units = ordered.map((unit) => unit.unit).sort((left, right) => compareCodeUnits(left.id, right.id));
+  const sourceClosure: SourceClosure = {
+    entry: entry.unit.id,
+    units,
+  };
+  const componentsById = new Map(components.map((component) => [component.id, component]));
+  const paths = sourcePaths(entry, ordered);
+  const publicationNames = new Set<string>();
+  const publications = ordered.flatMap((unit) => {
+    const importPaths = paths.get(unit.unit.id);
+    if (importPaths === undefined) return [];
+    assert(unit.publications.length === 0 || importPaths.size === 1,
+      "AMBIGUOUS_PUBLICATION_PATH",
+      `${unit.unit.name} has published Outputs but is reachable through multiple import paths: ${[...importPaths].sort(compareCodeUnits).join(", ")}`,
+      unit.unit.name);
+    const prefix = importPaths.values().next().value as string;
+    return unit.publications.map((item) => {
+      const ref = graphRefForExport(item, componentsById);
+      assert(ref.kind === "logical-output", "INVALID_PUBLICATION", `${item.name} is not a Component output`);
+      const name = prefix.length === 0 ? item.name : `${prefix}/${item.name}`;
+      assert(!publicationNames.has(name), "DUPLICATE_PUBLICATION", `published Output ${name} is repeated`, name);
+      publicationNames.add(name);
+      return { name, type: item.type, ref, publication: item.publication };
+    });
+  }).sort((left, right) => compareCodeUnits(left.name, right.name));
+  const compiled: CompiledSourceClosure = {
+    closure: sourceClosure,
+    program,
+    graph,
+    publications,
+    exports: entry.exports
+      .map((item) => ({
+        name: item.name,
+        type: item.type,
+        ref: graphRefForExport(item, componentsById),
+      }))
+      .sort((left, right) => compareCodeUnits(left.name, right.name)),
+  };
+  if (request.authorProjection !== true) return compiled;
+  return {
+    ...compiled,
+    provenance: {
+      format: "hypit.author-provenance@1",
+      elements: ordered.flatMap((unit) => unit.provenance),
+    },
+  };
+}

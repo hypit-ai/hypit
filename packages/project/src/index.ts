@@ -1,1 +1,6 @@
-export { findProjectRoot, resolveProjectRoot } from "./project-context.js";
+export {
+  assertProjectObjectRef,
+  projectObjectRef,
+  projectObjectRefKey,
+} from "./object.js";
+export type { ProjectObjectRef } from "./object.js";

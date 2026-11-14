@@ -1,6 +1,7 @@
-import type { CapabilityRef, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
+import type { CapabilityRef, TypeRef } from "@hypit/hypit/module";
+import type { ProducerRef } from "@hypit/hypit/module";
 
-export const speechEvidenceModuleRef = { name: "@hypit/speech-evidence", version: "1" } as const;
+export const speechEvidenceModuleRef = { name: "@hypit/speech-evidence" } as const;
 
 export const speechEvidenceTypes = {
   audio: { module: speechEvidenceModuleRef, name: "SpeechEvidenceAudio" },

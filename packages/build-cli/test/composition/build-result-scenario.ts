@@ -1,18 +1,19 @@
 import { join } from "node:path";
 
-import { FileBuildFinalization, FileBuildFinalizationStore } from "../../../runtime-local/src/result-storage/index.js";
+import { FileBuildFinalization, FileBuildFinalizationStore } from "../../../generation-runtime-local/src/result-storage/index.js";
 import { FileBuildResultHistory } from "@hypit/result/node";
 import { FileProductHistory } from "@hypit/product/node";
 import type { ProductExporter } from "@hypit/product";
-import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
-import { sameType } from "@hypit/protocol";
+import type { CapabilityRef, TypeRef } from "@hypit/module";
+import type { TypedRecord } from "@hypit/generation-build";
+import { sameType } from "@hypit/module";
 
 import type { BuildOperationsCliServices } from "@hypit/build-operations-cli";
 import { runBuildOperationsCli as runCli } from "@hypit/build-operations-cli";
 import { buildCliServices } from "../services-scenario.js";
 
 export const valueType: TypeRef = {
-  module: { name: "example.result", version: "1" },
+  module: { name: "example.result" },
   name: "Value",
 };
 
@@ -36,8 +37,8 @@ export function completedRecords(): readonly TypedRecord[] {
 
 export async function fixture(root: string, id = "bld_20260902T110000000Z_0000000001", source = "main.svml"): Promise<void> {
   const result = await FileBuildFinalization.create(
-    join(root, ".hypit", "results"),
-    join(root, ".hypit", "products"),
+    join(root, ".hypit", "generation", "results"),
+    join(root, ".hypit", "generation", "products"),
     {
     id,
     sourcePath: source,
@@ -55,22 +56,22 @@ export function resultDistribution(): BuildOperationsCliServices {
   return buildCliServices({
     async openProjectResults(projectRoot: string) {
       const finalization = new FileBuildFinalizationStore(
-        join(projectRoot, ".hypit", "results"),
-        join(projectRoot, ".hypit", "products"),
+        join(projectRoot, ".hypit", "generation", "results"),
+        join(projectRoot, ".hypit", "generation", "products"),
       );
       return {
         location: {
           root: projectRoot,
-          historyPath: ".hypit/results",
-          productsPath: ".hypit/products",
+          historyPath: ".hypit/generation/results",
+          productsPath: ".hypit/generation/products",
         },
-        history: new FileBuildResultHistory(join(projectRoot, ".hypit", "results")),
-        products: new FileProductHistory(join(projectRoot, ".hypit", "products")),
+        history: new FileBuildResultHistory(join(projectRoot, ".hypit", "generation", "results")),
+        products: new FileProductHistory(join(projectRoot, ".hypit", "generation", "products")),
         close() {},
       };
     },
     async resolveProductExporter(type: TypeRef): Promise<ProductExporter | undefined> {
-      if (!sameType(type, { module: { name: "example.speech", version: "1" }, name: "StructuredValue" })) {
+      if (!sameType(type, { module: { name: "example.speech" }, name: "StructuredValue" })) {
         return undefined;
       }
       return {

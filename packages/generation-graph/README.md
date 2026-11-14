@@ -14,7 +14,7 @@ The project owns reusable generation recipes, not attempts or generated media:
     {
       "id": "hero",
       "using": {
-        "module": { "name": "@studio/image", "version": "1" },
+        "module": { "name": "@studio/image" },
         "name": "generate"
       },
       "inputs": {
@@ -30,7 +30,11 @@ There is no node-local Product history, `selected` Product or `generate` state. 
 creates two independent Builds and two Product publications without changing the project revision. A Build is
 an instantiation of the recipe, never an edit to it.
 
-Node behavior is contributed through `hypit.generation-node-package@1`. The same installed package may contribute
+The package owns discovery and observation of freely placed `*.graph.json` Project Objects. That owner
+reports the Graph's human label and no UI; Canvas is a separate Bench projection supplied by the
+Workbench package.
+
+Node behavior is contributed through `hypit.generation-node-package`. The same installed package may contribute
 the authoring Facet, deterministic Producer Facets and execution Facets it owns. The project names a logical
 Module component; the embedding application selects exact installed packages and passes their `LoadedPackage`
 values to `createNodeGenerationGraphProjectHost`. Missing and duplicate owners fail exactly. The library does not
@@ -60,8 +64,8 @@ for affordances, while the package resolver remains the final authority for ever
 Value-node parameters must be authored literal values. Package code interprets them and may use only the Host's
 explicit `readAsset` and `resolveAsset` capabilities. It receives no filesystem path, Runtime, Endpoint or Result
 repository. Media Asset contributes two concrete projections of one portable `.media.json` reference:
-`@hypit/media-asset-generation@1#media` becomes `PreparedMedia`, while
-`@hypit/media-asset-generation@1#resource` becomes the primary
+`@hypit/media-asset-generation#media` becomes `PreparedMedia`, while
+`@hypit/media-asset-generation#resource` becomes the primary
 file `Blob` for model inputs. Runtime receives only the selected closed Record and media bytes.
 
 An operation component describes what happens and its typed ports; it does not select who executes a Need.
@@ -71,7 +75,7 @@ not add a node kind, result kind or vendor branch to Generation Graph Core.
 
 `lowerGenerationGraph` is filesystem-free. Operation literals become ordinary Records, operation dependencies
 become component-output references, and value dependencies become Record references. Target preparation visits
-only the reachable recipe branch and lowers it to the existing AuthorGraph and Kernel planner. A surrounding Host
+only the reachable recipe branch and lowers it to the existing AuthorGraph and Generation Build planner. A surrounding Host
 may resolve value nodes first and then hand lowering the resulting values and attachments.
 
 `prepareGenerationGraphTargets` produces one finite Build and a `PublicationIntent`. Every demanded operation node

@@ -304,6 +304,8 @@ export const electronStagedCaptureBackend: StagedCaptureBackend = {
   mode: "encoded-stream",
   label: "Electron shared GPU texture",
   async prepare(canvas, picture) {
+    assert(picture.alpha.mode === "opaque",
+      "Electron encoded capture requires an opaque output matte");
     const pages = await gpuCapturePages(canvas, picture.alpha.matte);
     return { state: pages, virtualPages: new Map([
       [pages.shell, pages.html],

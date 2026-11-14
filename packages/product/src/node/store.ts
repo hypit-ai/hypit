@@ -3,7 +3,7 @@ import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep, join } from "node:path";
 
-import { assertOrderedBuildId, buildIdCreatedAt } from "@hypit/protocol";
+import { assertOrderedBuildId, buildIdCreatedAt } from "@hypit/generation-build";
 import type { BlobRef, CanonicalValue, Value, ValuePath } from "@hypit/protocol";
 import { productAddress } from "../address.js";
 import { decodeProductValueDocument, decodeStoredProductPublication } from "../decode.js";

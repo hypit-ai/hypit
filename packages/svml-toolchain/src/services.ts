@@ -22,6 +22,7 @@ export function createSvmlToolchainApplicationServices(
       ? {}
       : { resolveProjectRuntime: common.resolveProjectRuntime }),
     openRuntimeHost: common.openRuntimeHost,
+    openEnvironmentHost: common.openEnvironmentHost,
     openProjectResults: common.openProjectResults,
   };
 }

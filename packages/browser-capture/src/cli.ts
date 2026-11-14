@@ -189,7 +189,6 @@ export async function runCaptureCli(argv: readonly string[], io: CliIo, cwd = pr
 }
 
 export const cliCommandModules = [{
-  format: "hypit.cli-command@1",
   id: "@hypit/browser-capture",
   commands: ["capture"],
   writeRootHelp(io) {

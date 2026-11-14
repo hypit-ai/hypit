@@ -2,6 +2,7 @@ export {
   rankingBoardComponentSymbol,
   rankingBoardHtmlResolver,
   rankingBoardNleAuthoring,
+  rankingBoardNleMediaAuthoring,
   rankingBoardNleResolver,
   rankingDebateComponentsManifest,
   verdictBurstComponentSymbol,

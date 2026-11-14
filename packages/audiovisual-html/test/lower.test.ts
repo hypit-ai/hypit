@@ -21,7 +21,13 @@ import {
   htmlVisual,
   selectHtmlVideoSources,
 } from "@hypit/html-program";
-import { prepareMedia } from "@hypit/media";
+import { prepareMedia, preparedPictureSampling } from "@hypit/media";
+import {
+  bindAudiovisualExecutionProducts,
+  executeAudiovisualIslands,
+  partitionAudiovisualExecution,
+  planAudiovisualDemand,
+} from "@hypit/audiovisual-execution";
 import {
   exactTemporalValue,
   identityTemporalMap,
@@ -45,10 +51,12 @@ import {
   audiovisualHtmlProducers,
   audiovisualProgramHtmlSource,
   compileAudiovisualHtmlProgram,
+  createAudiovisualHtmlTerminalExecutor,
   preparedMediaHtmlSource,
   lowerAudiovisualPictureProgramToHtmlProgram,
   visualProgramHtmlSource,
 } from "../src/index.js";
+import { preparedPictureSamplingRepresentation } from "@hypit/media";
 
 const seconds = (value: number): ExactTemporalValue => exactTemporalValue({
   numerator: BigInt(value), denominator: 1n,
@@ -215,6 +223,155 @@ test("one AVIR Programme lowers through crop, remap, over and apply into HtmlPro
   assert.match(document.html, /filter:grayscale\(1\)/u);
   assert.ok(document.html.indexOf("data-av-source=\"red\"")
     < document.html.indexOf("data-av-source=\"blue\""));
+});
+
+test("HTML lowering renders only the explicitly demanded Programme range", () => {
+  const document = lowerAudiovisualPictureProgramToHtmlProgram({
+    program: pictureProgram(),
+    output: htmlOutput("html-range"),
+    sources: htmlSources("red", "blue"),
+    demand: {
+      range: { start: seconds(1), end: seconds(2) },
+    },
+  });
+  assert.equal(document.frameCount, 1);
+  assert.match(document.html, /data-av-source="red"/u);
+  assert.match(document.html, /data-av-source="blue"/u);
+});
+
+test("the HTML compositor consumes a foreign sequential Picture Product without creating a Media Asset", async () => {
+  const program = pictureProgram();
+  const demand = { range: { start: seconds(0), end: seconds(2) } };
+  const planned = planAudiovisualDemand(program, { picture: {
+    ...demand,
+    samples: [
+      { position: seconds(0), side: "after" },
+      { position: seconds(1), side: "after" },
+    ],
+  } });
+  const red = planned.sourceTasks.find((task) => task.source === "red")!;
+  const blue = planned.sourceTasks.find((task) => task.source === "blue")!;
+  const plan = partitionAudiovisualExecution(planned, [
+    ...planned.nodes.map((node) => ({ node: node.id, terminal: "html-compositor" })),
+    { node: red.id, terminal: "sequential-picture", sourceAccess: {
+      kind: "sequential" as const, origin: seconds(0),
+    } },
+    { node: blue.id, terminal: "html-compositor", sourceAccess: { kind: "point" as const } },
+  ]);
+  assert.equal(plan.products.length, 1);
+  const product = plan.products[0]!;
+  const bound = bindAudiovisualExecutionProducts(plan, [{
+    product: product.id,
+    representation: preparedPictureSamplingRepresentation,
+  }]);
+  const redSource = program.occurrences["red-use"]!.source;
+  const transient = preparedPictureSampling(preparedPicture(redSource));
+  const executed = await executeAudiovisualIslands(bound, [{
+    terminal: "sequential-picture",
+    async execute(request) {
+      assert.equal(request.sources[0]?.acquisition.kind, "sequential");
+      assert.deepEqual(request.sources[0]?.samples?.map((sample) => sample.position.ticks), ["0", "1"]);
+      assert.equal(request.products[0]?.binding.representation,
+        preparedPictureSamplingRepresentation);
+      return { products: [{ product: request.products[0]!.requirement.id, value: transient }] };
+    },
+  }, createAudiovisualHtmlTerminalExecutor({
+    terminal: "html-compositor",
+    program,
+    sources: htmlSources("blue"),
+    output: htmlOutput("foreign-picture-product"),
+    demand,
+  })]);
+
+  const document = executed.outputs.picture;
+  assert(document !== undefined);
+  assert.doesNotThrow(() => assertHtmlProgram(document));
+  assert.equal(selectHtmlVideoSources(document).length, 1);
+  assert.equal(selectHtmlVideoSources(document)[0]?.source.source.resource, transient.source.source.resource);
+  assert.match(document.html, /data-av-source="blue"/u);
+  assert.match(document.html, /filter:grayscale\(1\)/u);
+});
+
+test("an Operator island publishes a transient Product that a second island composes", async () => {
+  const program = pictureProgram();
+  const demand = { range: { start: seconds(0), end: seconds(2) } };
+  const planned = planAudiovisualDemand(program, { picture: {
+    ...demand,
+    samples: [
+      { position: seconds(0), side: "after" },
+      { position: seconds(1), side: "after" },
+    ],
+  } });
+  const upstream = new Set([
+    "picture:blue",
+    "picture:blueMotion",
+    "picture:blueCrop",
+    "picture:graded",
+  ]);
+  const plan = partitionAudiovisualExecution(planned, [
+    ...planned.nodes.map((node) => ({
+      node: node.id,
+      terminal: upstream.has(node.id) ? "html-effect" : "html-root",
+    })),
+    ...planned.sourceTasks.map((source) => ({
+      node: source.id,
+      terminal: source.source === "blue" ? "html-effect" : "html-root",
+      sourceAccess: { kind: "point" as const },
+    })),
+  ]);
+  assert.equal(plan.products.length, 1);
+  assert.equal(plan.products[0]?.node, "picture:graded");
+  const bound = bindAudiovisualExecutionProducts(plan, plan.products.map((product) => ({
+    product: product.id,
+    representation: preparedPictureSamplingRepresentation,
+  })));
+  const blue = program.occurrences["blue-use"]!.source;
+  const rendered = preparedPictureSampling(preparedPicture(blue));
+  const transient = {
+    source: structuredClone(rendered.source),
+    sampling: sealTemporalMap({ stages: [{
+      target: structuredClone(program.domain),
+      source: structuredClone(rendered.source.sourceDomain),
+      pieces: [{
+        target: { start: seconds(0), end: seconds(2) },
+        sourceAtStart: seconds(0),
+        rate: { numerator: 1, denominator: 1 },
+      }],
+    }] }),
+  };
+  let publications = 0;
+  const executed = await executeAudiovisualIslands(bound, [
+    createAudiovisualHtmlTerminalExecutor({
+      terminal: "html-effect",
+      program,
+      sources: htmlSources("blue"),
+      output: htmlOutput("operator-island"),
+      demand,
+      async publishPictureProduct(request) {
+        publications += 1;
+        assert.equal(request.requirement.node, "picture:graded");
+        assert.match(request.program.html, /data-av-source="blue"/u);
+        assert.match(request.program.html, /filter:grayscale\(1\)/u);
+        assert.doesNotMatch(request.program.html, /data-av-source="red"/u);
+        return transient;
+      },
+    }),
+    createAudiovisualHtmlTerminalExecutor({
+      terminal: "html-root",
+      program,
+      sources: htmlSources("red"),
+      output: htmlOutput("operator-island"),
+      demand,
+    }),
+  ]);
+  assert.equal(publications, 1);
+  const document = executed.outputs.picture;
+  assert(document !== undefined);
+  assert.match(document.html, /data-av-source="red"/u);
+  assert.doesNotMatch(document.html, /data-av-source="blue"/u);
+  assert.equal(selectHtmlVideoSources(document).length, 1);
+  assert.equal(selectHtmlVideoSources(document)[0]?.source.source.resource,
+    transient.source.source.resource);
 });
 
 test("the complete AVIR Output sampling keeps one stable DOM instance per graph path", () => {

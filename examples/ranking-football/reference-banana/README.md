@@ -12,4 +12,4 @@ npx hypit check reference-banana.svml
 ```
 
 The project installs `@hypit/ranking` from npm. Review its Runtime Profile and
-`npx hypit plan reference-banana.svml --target final.video --runtime ./hypit.runtime.json` before paid execution.
+`npx hypit plan reference-banana.svml --target final.video --runtime ./hypit.generation-runtime.json` before paid execution.

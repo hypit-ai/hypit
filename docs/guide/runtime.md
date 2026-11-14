@@ -9,9 +9,10 @@ the selected services, and the project keeps accepted material as ordinary autho
 
 | Part | What it contains |
 | --- | --- |
-| Project | Sources, assets, component packages and the selected Runtime Profile |
+| Project | Sources, assets, component packages and the selected Generation Runtime Profile |
 | Hypit installation | Commands and installed packages |
-| Runtime Profile | Provider Endpoints, credential references, bindings and shared capacity |
+| Generation Runtime Profile | Worker and Build execution policy plus an Environment reference |
+| Environment Profile | Provider Endpoints, credential references, bindings and shared capacity |
 | Build | One execution attempt using the selected work and configuration |
 | Result repository | Targets, outcome, retained Outputs and execution evidence |
 
@@ -26,9 +27,10 @@ hypit paths
 hypit runtime init
 ```
 
-`runtime init` writes an editable starter `hypit.runtime.json` and selects it through the project's
-`.hypit/runtime` file. It preserves an existing Profile and performs no installation, login or execution.
-The starter offers HypiHub for hosted generation and WhisperX, with local media processing and rendering.
+`runtime init` writes `hypit.generation-runtime.json` and its referenced `hypit.environment.json`, then selects
+the Generation Runtime Profile through the project's `.hypit/generation/runtime-profile` file. It preserves
+existing files and performs no installation, login or execution. The starter offers HypiHub for hosted
+capabilities, with local media processing and rendering.
 Choose the services that fit the work before preparing them. Local inference and project Providers can
 use the same setup, including alongside HypiHub.
 
@@ -36,14 +38,23 @@ Use `hypit runtime use <profile>` to select an existing Profile. An explicit `--
 overrides it for one invocation. Commands read only the selected project's pointer; they do not inherit
 another project's selection. Relative command-line paths are relative to the current directory.
 
-## Runtime Profile
+## Generation Runtime and Environment Profiles
 
-A small local-processing Profile looks like this:
+Generation execution state and deployment selection have different owners. The Generation Runtime
+Profile references the Environment Profile:
 
 ```json
 {
-  "format": "hypit.runtime-local@1",
-  "dataRoot": ".hypit/runtimes/local",
+  "format": "hypit.generation-runtime-local@1",
+  "dataRoot": ".hypit/generation/runtime/local",
+  "environment": "./hypit.environment.json"
+}
+```
+
+```json
+{
+  "format": "hypit.execution-environment-local@1",
+  "dataRoot": ".hypit/environment/local",
   "credentials": {},
   "endpoints": {
     "media.local": { "use": "@hypit/provider-media-local" }
@@ -52,16 +63,17 @@ A small local-processing Profile looks like this:
 }
 ```
 
-`dataRoot` locates active execution data and working files, separately from the `.hypit/runtime`
-selection file. Each `endpoints` entry selects an installed Provider and its configuration. Credentials
-use references into a selected store; secret values stay outside the Profile and Sources.
+The first `dataRoot` locates active Generation execution data. The Environment `dataRoot` belongs to
+credentials and managed Programs. Each `endpoints` entry selects an installed Provider and its
+configuration. Credentials use references into a selected store; secret values stay outside both
+Profiles and Sources.
 
 A single compatible Endpoint can serve a capability without a binding. When several offer it, a
 binding states which instance to use. For example, with an explicitly configured local WhisperX:
 
 ```json
 "bindings": {
-  "@hypit/whisperx@1#whisperx-transcription": "whisperx.local"
+  "@hypit/whisperx#whisperx-transcription": "whisperx.local"
 }
 ```
 
@@ -79,8 +91,8 @@ hypit runtime status
 ```
 
 To prepare resources without starting a helper or Worker, use
-`hypit programs prepare --endpoint media.local`. Inspect their readiness with
-`hypit programs status --endpoint media.local`; use `hypit doctor --endpoint media.local` when
+`hypit programs prepare --environment ./hypit.environment.json --endpoint media.local`. Inspect their readiness with
+`hypit programs status --environment ./hypit.environment.json --endpoint media.local`; use `hypit doctor --environment ./hypit.environment.json --endpoint media.local` when
 checking a configuration or diagnosing a failure. These are available tools, not a required sequence.
 
 Local media processing declares no credentials. For a chosen service that declares credential slots,
@@ -88,13 +100,26 @@ inspect those separately with `hypit auth status <endpoint>`. For example, after
 use `hypit auth status hypihub.default` and connect the account with `hypit auth login hypihub.default`
 when needed.
 
+Authentication and Environment diagnosis do not require Generation execution. Address the
+Environment Profile directly when using these capabilities outside a Build:
+
+```bash
+hypit doctor --environment ./hypit.environment.json
+hypit auth status hypihub.default --environment ./hypit.environment.json
+hypit auth login hypihub.default --environment ./hypit.environment.json
+```
+
+Using `--runtime ./hypit.generation-runtime.json` remains an indirect convenience: it follows that
+Runtime Profile's Environment reference. It does not make the credentials part of Generation Runtime.
+
 Use the actual Endpoint names from the Profile; repeat `--endpoint` for several. Omission covers the
 whole Profile. `doctor` reads configuration and performs the selected Providers' diagnostics without
 submitting generation. Read warnings as well as errors: a stored credential or reachable catalogue
-is not proof that every request will succeed. With no Runtime selected, doctor checks project Results only.
+is not proof that every request will succeed. With neither Environment nor Runtime selected, doctor
+checks project Results only.
 
 `runtime up` prepares the selected local dependencies and Managed Programs, then starts the Worker.
-It does not log into or start hosted services. `programs prepare|up|status|down` manages those local resources and helpers
+It does not log into or start hosted services. `programs prepare|up|status|down --environment <profile>` manages those local resources and helpers
 separately. Initial inference setup can require substantial downloads; compare that effort with hosted
 execution and choose the route before starting preparation.
 
@@ -143,7 +168,7 @@ of files a component reads later.
 
 ## Keep products with the project
 
-Results live with the project in `.hypit/results` on the machine running Hypit. A local workstation,
+Results live with the project in `.hypit/generation/results` on the machine running Hypit. A local workstation,
 an SSH Linux host and the official WebUI backend use the same rule: the whole Runtime moves to that
 host instead of splitting its queue, working files and Result storage across services. Archive or
 migrate completed Results explicitly after a Build when needed.
@@ -157,4 +182,4 @@ retained Output.
 `builds`, `history`, `inspect` and `result export` read project Results without requiring the original Runtime.
 For exact storage and execution interfaces, see the
 [Result package](https://github.com/hypit-ai/hypit/blob/main/packages/result/README.md) and
-[local Runtime package](https://github.com/hypit-ai/hypit/blob/main/packages/runtime-local/README.md).
+[local Generation Runtime package](https://github.com/hypit-ai/hypit/blob/main/packages/generation-runtime-local/README.md).

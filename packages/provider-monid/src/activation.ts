@@ -1,21 +1,21 @@
 import {
-  createRuntimeEndpointAdapterFacet,
-  runtimeConfigCredentialRef,
-  runtimeConfigActionLimits,
-  runtimeConfigExact,
-  runtimeConfigObject,
-  runtimeConfigPositiveInteger,
-  runtimeConfigString,
-} from "@hypit/runtime-local/extension";
+  createExecutionEnvironmentEndpointAdapterFacet,
+  executionEnvironmentConfigCredentialRef,
+  executionEnvironmentConfigActionLimits,
+  executionEnvironmentConfigExact,
+  executionEnvironmentConfigObject,
+  executionEnvironmentConfigPositiveInteger,
+  executionEnvironmentConfigString,
+} from "@hypit/execution-environment-local/extension";
 
 import { createMonidProvider } from "./provider.js";
 
-const adapter = createRuntimeEndpointAdapterFacet({
+const adapter = createExecutionEnvironmentEndpointAdapterFacet({
   use: "@hypit/provider-monid",
   activate(context) {
     if (context.pool === undefined) throw new Error("Monid Provider Pool is required");
-    const config = runtimeConfigObject(context.config, "Monid");
-    runtimeConfigExact(config, [
+    const config = executionEnvironmentConfigObject(context.config, "Monid");
+    executionEnvironmentConfigExact(config, [
       "baseUrl",
       "apiKey",
       "defaultConcurrency",
@@ -24,20 +24,20 @@ const adapter = createRuntimeEndpointAdapterFacet({
       "requestTimeoutMs",
       "operationTimeoutMs",
     ], "Monid");
-    const baseUrl = runtimeConfigString(config.baseUrl, "Monid baseUrl");
+    const baseUrl = executionEnvironmentConfigString(config.baseUrl, "Monid baseUrl");
     if (baseUrl !== undefined) {
       const url = new URL(baseUrl);
       if (url.protocol !== "https:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
         throw new Error("Monid baseUrl must use HTTPS or loopback");
       }
     }
-    const apiKey = runtimeConfigCredentialRef(config.apiKey, "Monid apiKey");
+    const apiKey = executionEnvironmentConfigCredentialRef(config.apiKey, "Monid apiKey");
     if (apiKey === undefined) throw new Error("Monid apiKey CredentialRef is required");
-    const actionLimits = runtimeConfigActionLimits(config.actionLimits);
-    const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "Monid defaultConcurrency");
-    const pollIntervalMs = runtimeConfigPositiveInteger(config.pollIntervalMs, "Monid pollIntervalMs");
-    const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "Monid requestTimeoutMs");
-    const operationTimeoutMs = runtimeConfigPositiveInteger(config.operationTimeoutMs, "Monid operationTimeoutMs");
+    const actionLimits = executionEnvironmentConfigActionLimits(config.actionLimits);
+    const defaultConcurrency = executionEnvironmentConfigPositiveInteger(config.defaultConcurrency, "Monid defaultConcurrency");
+    const pollIntervalMs = executionEnvironmentConfigPositiveInteger(config.pollIntervalMs, "Monid pollIntervalMs");
+    const requestTimeoutMs = executionEnvironmentConfigPositiveInteger(config.requestTimeoutMs, "Monid requestTimeoutMs");
+    const operationTimeoutMs = executionEnvironmentConfigPositiveInteger(config.operationTimeoutMs, "Monid operationTimeoutMs");
     return {
       endpoint: createMonidProvider({
         instance: context.instance,
@@ -55,7 +55,6 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
   facets: [adapter],
 };
 

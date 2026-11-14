@@ -1,0 +1,438 @@
+{
+  "format": "hypit.nle@1",
+  "id": "terminal-mix-film",
+  "name": "Media + HTML + Manim + Blender",
+  "revision": 0,
+  "canvas": {
+    "width": 640,
+    "height": 360,
+    "clearColor": "#070b16"
+  },
+  "componentValues": [],
+  "pictureLayouts": [],
+  "tracks": [
+    {
+      "id": "backdrop-track",
+      "name": "Backdrop",
+      "kind": "picture",
+      "muted": false,
+      "items": [
+        {
+          "id": "backdrop-item",
+          "kind": "present",
+          "source": "media",
+          "asset": {
+            "path": "media/backdrop/backdrop.media.json"
+          },
+          "start": {
+            "ticks": "0",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "duration": {
+            "ticks": "2",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "2",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "picture": {
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 640,
+              "height": 360,
+              "fit": "fill"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "blender-track",
+      "name": "Blender",
+      "kind": "picture",
+      "muted": false,
+      "items": [
+        {
+          "id": "blender-object-item",
+          "kind": "present",
+          "source": "component",
+          "component": {
+            "module": {
+              "name": "@example/terminal-mix"
+            },
+            "name": "blender-object"
+          },
+          "parameters": {},
+          "start": {
+            "ticks": "0",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "duration": {
+            "ticks": "2",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "2",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "picture": {
+            "layout": {
+              "x": 382,
+              "y": 185,
+              "width": 236,
+              "height": 150,
+              "fit": "fill"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "manim-track",
+      "name": "Manim",
+      "kind": "picture",
+      "muted": false,
+      "items": [
+        {
+          "id": "manim-orbit-item",
+          "kind": "present",
+          "source": "component",
+          "component": {
+            "module": {
+              "name": "@example/terminal-mix"
+            },
+            "name": "manim-orbit"
+          },
+          "parameters": {},
+          "start": {
+            "ticks": "0",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "duration": {
+            "ticks": "2",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "2",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "picture": {
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 640,
+              "height": 360,
+              "fit": "fill"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "label-track",
+      "name": "HTML Label",
+      "kind": "picture",
+      "muted": false,
+      "items": [
+        {
+          "id": "html-label-item",
+          "kind": "present",
+          "source": "component",
+          "component": {
+            "module": {
+              "name": "@example/terminal-mix"
+            },
+            "name": "html-label"
+          },
+          "parameters": {
+            "title": "Four owners. One frame.",
+            "subtitle": "Media · HTML · Manim · Blender"
+          },
+          "start": {
+            "ticks": "0",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "duration": {
+            "ticks": "2",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "2",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "picture": {
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 640,
+              "height": 360,
+              "fit": "fill"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "finish-track",
+      "name": "Finish",
+      "kind": "picture",
+      "muted": false,
+      "items": [
+        {
+          "id": "finish-filter-item",
+          "kind": "adjustment",
+          "operator": {
+            "module": {
+              "name": "@hypit/picture-filter"
+            },
+            "name": "filter"
+          },
+          "parameters": {
+            "kind": "keyframes",
+            "keyframes": [
+              {
+                "at": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "state": {
+                  "opacity": 1,
+                  "blurRadius": 0,
+                  "brightness": 0.82,
+                  "contrast": 1.08,
+                  "saturation": 0.35,
+                  "hue": 0,
+                  "grayscale": 0.2,
+                  "sepia": 0,
+                  "invert": 0
+                }
+              },
+              {
+                "at": {
+                  "ticks": "7",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 10
+                  }
+                },
+                "state": {
+                  "opacity": 1,
+                  "blurRadius": 0,
+                  "brightness": 1,
+                  "contrast": 1,
+                  "saturation": 1,
+                  "hue": 0,
+                  "grayscale": 0,
+                  "sepia": 0,
+                  "invert": 0
+                }
+              }
+            ],
+            "interpolation": {
+              "kind": "ease-out"
+            }
+          },
+          "start": {
+            "ticks": "0",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "duration": {
+            "ticks": "2",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "controlTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "2",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true
+        }
+      ]
+    }
+  ],
+  "transitions": [],
+  "mattes": []
+}

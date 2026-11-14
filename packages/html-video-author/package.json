@@ -4,16 +4,25 @@
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "hypit": { "activation": "./src/activation.ts" },
-  "files": ["dist", "README.md"],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "dependencies": {
+    "@hypit/generation-build": "workspace:*",
     "@hypit/audio-program": "workspace:^0.1.0",
-    "@hypit/author": "workspace:^0.0.0-dev",
     "@hypit/blob": "workspace:^0.0.0-dev",
+    "@hypit/generation-authoring": "workspace:*",
     "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-delivery": "workspace:^0.1.0",
+    "@hypit/module": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/temporal-graph": "workspace:^0.1.0"
   }

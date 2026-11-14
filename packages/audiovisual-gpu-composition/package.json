@@ -1,0 +1,26 @@
+{
+  "name": "@hypit/audiovisual-gpu-composition",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@hypit/audiovisual": "workspace:^0.1.0",
+    "@hypit/audiovisual-execution": "workspace:^0.1.0",
+    "@hypit/gpu-composition-program": "workspace:^0.1.0",
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/spatial": "workspace:^0.1.1",
+    "@hypit/temporal": "workspace:^0.1.1"
+  },
+  "devDependencies": {
+    "@hypit/gpu-composition-webgpu-html": "workspace:*",
+    "@hypit/html-program": "workspace:*"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

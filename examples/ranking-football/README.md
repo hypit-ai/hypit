@@ -1,9 +1,24 @@
 # Football ranking
 
+The current NLE projection is [film.nle.json](film.nle.json). It preserves the eleven supplied player
+portraits as project Media Assets and binds them by named roles to the project-owned Tier Board Component.
+The Component ports the original board geometry and reveal behavior. Independent Title and Caption tracks
+restore the reference headline and source-aligned karaoke treatment. The accepted composite supplies the
+presenter picture and audio because the two clean historical takes are no longer present; comedy B-roll still
+belongs to the legacy Source and is not invented by this projection.
+
+```bash
+pnpm render:nle
+```
+
+## Legacy generation source
+
 [reference.svml](reference.svml) generates a goth football commentator and all eight comedy B-roll
 images, then makes two independent speaking clips from the same presenter image and designed voice.
 A tier board preserves its state while the argument, Caption and overlapping image inserts unfold.
-Build `reference.svml` with `--target final.video` without earlier Results or replacement files.
+It records the earlier 0.4 authoring route; its generated Result media and former `@hypit/ranking` package are
+not part of the current project installation. Keep it as production evidence until those missing Results are
+accepted into `media/`, rather than pretending that its generated outputs already exist in the NLE.
 
 ## What is generated and what is supplied
 
@@ -23,30 +38,15 @@ The speaker Kit requests natural edited delivery; it does not perform a postproc
 The B-roll uses its own visual language: theatrical tragedy, product comedy, sports photography or
 parody UI. It does not automatically inherit the host's iPhone capture paragraph.
 
-## Work with the example
+## Historical generation notes
 
 The example Profiles use local media/rendering and HypiHub for hosted capabilities. They illustrate
 execution choices; connect the intended account or select project Providers before paid work.
 Existing production projects can retain their own Providers independently of these example defaults.
 
-Run `npm install` once in this directory to install the selected Hypit 0.4 release, fonts and
-[`@hypit/ranking`](https://www.npmjs.com/package/@hypit/ranking) dependencies from npm.
-Review and commit the resulting lockfile; subsequent installs use `npm ci`. The nested banana projects
-have their own dependency manifests and lockfiles and can be installed independently.
-With a configured Runtime, run from the chosen project directory:
-
-```bash
-npm install
-npx hypit check reference.svml
-npx hypit estimate reference.svml --segment ronaldo --language en --pace fast --rounding ceil
-npx hypit estimate reference.svml --segment messi --language en --pace fast --rounding ceil
-npx hypit plan reference.svml --target final.video --runtime ./hypit.runtime.json
-```
-
-Both passages estimate to nine seconds at that delivery policy; the authored ten-second requests
-allow room for expression. Read the plan and its Endpoint/pricing information before authorizing paid
-work. Under that authorization, `npx hypit build reference.svml --target final.video --runtime ./hypit.runtime.json --follow`
-produces the final video. Watch the actual result and reuse its media outputs when refining graphics.
+The two passages were authored as ten-second requests and previously estimated to about nine seconds each.
+Re-execution is generation work, not part of this NLE migration: it requires choosing the current Provider and
+package route, accepting the resulting takes, and importing those accepted files into the project Media library.
 
 When changing the ranked subjects, use supplied photographs or search for recognizable real
 photographs, official logos or product assets. Record source pages and any relevant attribution with

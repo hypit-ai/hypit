@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   applyNleTransaction,
   createNleProject,
-  nleLinearSourceTime,
+  nleLinearTimeMapping,
   type NleComponentItem,
 } from "@hypit/nle";
 
@@ -18,7 +18,7 @@ import {
 } from "../src/index.js";
 
 const second = (value: number) => ({ ticks: String(value), timeBase: { numerator: 1, denominator: 1 } });
-const component = { module: { name: "@example/title", version: "1" }, name: "default" } as const;
+const component = { module: { name: "@example/title" }, name: "default" } as const;
 
 function project() {
   const item: NleComponentItem = {
@@ -29,7 +29,7 @@ function project() {
     parameters: { text: "Package-owned title" },
     start: second(0),
     duration: second(2),
-    sourceTime: nleLinearSourceTime(second(2)),
+    sourceTime: nleLinearTimeMapping(second(2)),
     enabled: true,
     picture: { layout: { x: 0, y: 0, width: 100, height: 100, fit: "contain" } },
   };
@@ -99,7 +99,7 @@ test("package posters become cached Host resources and finite preview layers", a
     preview: {
       kind: "image",
       state: "ready",
-      resource: "/poster/component%3A%40example%2Ftitle%401%23default",
+      resource: "/poster/component%3A%40example%2Ftitle%23default",
     },
     layout: "repeat-x",
   });
@@ -132,7 +132,7 @@ test("packages can project Item-specific posters without owning browser URLs", a
     ? observations[0].layers[0].preview.resource : "", /item%3Atitle$/u);
   assert.deepEqual(observations[0]?.layers?.[1],
     { kind: "text", role: "content", text: "title" });
-  const resource = host.resource("component:@example/title@1#default:item:title");
+  const resource = host.resource("component:@example/title#default:item:title");
   assert.deepEqual(await resource?.read(), bytes);
 });
 

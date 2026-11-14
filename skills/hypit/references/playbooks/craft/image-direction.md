@@ -74,7 +74,7 @@ For a phone-video frame, `@hypit/gpt-image-kits/phone-ugc-v1` preserves the test
 The Kit assembles `person`, `shot` and `setting` after the fixed paragraph:
 
 ```svml
-<import as="text" from="@hypit/text@1"/>
+<import as="text" from="@hypit/text"/>
 <import as="ugc" source="@hypit/gpt-image-kits/phone-ugc-v1"/>
 
 <text:Render id="portrait-prompt" template={ugc.phone-ugc-v1}>

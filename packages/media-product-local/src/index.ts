@@ -13,10 +13,8 @@ import {
   type LocalMediaAssetImportRequest,
 } from "@hypit/media-local";
 import type { ProductHistory } from "@hypit/product";
-import {
-  isBlobRef,
-  sameType,
-} from "@hypit/protocol";
+import { isBlobRef } from "@hypit/protocol";
+import { sameType } from "@hypit/module";
 import type { ProductAddress } from "@hypit/product";
 
 export type LocalMediaProductMaterializationRequest = Omit<

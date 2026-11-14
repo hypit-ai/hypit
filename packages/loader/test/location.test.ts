@@ -82,7 +82,7 @@ test("package Source resolution reads one public export without activating packa
       hypit: { activation: "./activation-that-must-not-run.mjs" },
     }, {
       "activation-that-must-not-run.mjs": "throw new Error('activation ran');\n",
-      "kits/phone-ugc-v1.svs": "<?svml using=\"@hypit/recipe@1\"?>\n<sheet version=\"1\"/>\n",
+      "kits/phone-ugc-v1.svs": "<?svml using=\"@hypit/recipe\"?>\n<sheet version=\"1\"/>\n",
     });
     const options = { from: join(project, "main.svml") } as const;
     assert.deepEqual(resolveNodePackageSource("@acme/image-kits/phone-ugc-v1", options), {

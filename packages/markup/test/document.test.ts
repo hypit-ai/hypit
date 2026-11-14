@@ -6,7 +6,7 @@ import {
   declarationBody,
   declarationField,
   type AuthorDeclarationCompiler,
-} from "@hypit/author";
+} from "@hypit/generation-authoring/author";
 import {
   MarkupDeclarationRegistry,
   createMarkupDeclarationAuthorFrontend,
@@ -15,10 +15,10 @@ import {
   parseMarkupDocument,
   printMarkupDocument,
 } from "@hypit/markup";
-import type { TypeRef } from "@hypit/protocol";
-import { createResolvedClosure } from "@hypit/kernel";
+import type { TypeRef } from "@hypit/module";
+import { createResolvedClosure } from "@hypit/generation-build";
 
-const laboratory = { name: "example.document", version: "1" } as const;
+const laboratory = { name: "example.document" } as const;
 const textType = { module: laboratory, name: "Text" } satisfies TypeRef;
 
 const syntax = new MarkupDeclarationRegistry();
@@ -40,7 +40,7 @@ const options = {
 
 const sourceText = `<svml>
   <!-- package spelling stays authored -->
-  <import from="example.document@1" as="lab"/>
+  <import from="example.document" as="lab"/>
 
   <!-- this comment belongs to the value declaration -->
   <lab:Value id='original' value="kept"/>
@@ -89,7 +89,7 @@ test("opaque declaration spelling preserves package text exactly", async () => {
       };
     },
   });
-  const text = `<svml><import from="example.document@1" as="lab"/><lab:Evidence id="raw"><HOST> &amp; exact</lab:Evidence></svml>`;
+  const text = `<svml><import from="example.document" as="lab"/><lab:Evidence id="raw"><HOST> &amp; exact</lab:Evidence></svml>`;
   const decoded = await decodeMarkupDeclarations({ name: "opaque.svml", text }, {
     resolveModule: () => laboratory,
     syntax: opaqueSyntax,
@@ -111,13 +111,13 @@ test("opaque declaration spelling preserves package text exactly", async () => {
   }]);
   assert.equal(
     new TextDecoder().decode(edited.bytes),
-    `<svml><import from="example.document@1" as="lab"/><lab:Evidence id="raw">{"tag":"<x>"}</lab:Evidence></svml>`,
+    `<svml><import from="example.document" as="lab"/><lab:Evidence id="raw">{"tag":"<x>"}</lab:Evidence></svml>`,
   );
 
   const empty = await frontend.openDocument({
     id: "empty-opaque.svml",
     name: "empty-opaque.svml",
-    bytes: new TextEncoder().encode(`<svml><import from="example.document@1" as="lab"/></svml>`),
+    bytes: new TextEncoder().encode(`<svml><import from="example.document" as="lab"/></svml>`),
   });
   const inserted = await frontend.applyDocumentOperations(empty, [{
     kind: "insert-declaration",
@@ -132,7 +132,7 @@ test("opaque declaration spelling preserves package text exactly", async () => {
   }]);
   assert.equal(
     new TextDecoder().decode(inserted.bytes),
-    `<svml><import from="example.document@1" as="lab"/>
+    `<svml><import from="example.document" as="lab"/>
 <lab:Evidence id="inserted">{"tag":"<y>"}</lab:Evidence></svml>`,
   );
 });
@@ -147,7 +147,7 @@ test("Markup Document applies field and structural operations without reprinting
   const document = await frontend.openDocument(source);
   const [value, copy] = document.declarations;
   assert(value !== undefined && copy !== undefined);
-  assert.deepEqual(document.imports, [{ kind: "module", from: "example.document@1", alias: "lab" }]);
+  assert.deepEqual(document.imports, [{ kind: "module", from: "example.document", alias: "lab" }]);
 
   const edited = await frontend.applyDocumentOperations(document, [
     {
@@ -174,7 +174,7 @@ test("Author Document field operations distinguish addition from replacement", a
   const document = await frontend.openDocument({
     id: "fields.svml",
     name: "fields.svml",
-    bytes: new TextEncoder().encode(`<svml><import from="example.document@1" as="lab"/><lab:Value id="note"/></svml>`),
+    bytes: new TextEncoder().encode(`<svml><import from="example.document" as="lab"/><lab:Value id="note"/></svml>`),
   });
   const declaration = document.declarations[0];
   assert(declaration !== undefined);
@@ -196,7 +196,7 @@ test("Author Document field operations distinguish addition from replacement", a
   }]);
   assert.equal(
     new TextDecoder().decode(edited.bytes),
-    `<svml><import from="example.document@1" as="lab"/><lab:Value id="note" value="added"/></svml>`,
+    `<svml><import from="example.document" as="lab"/><lab:Value id="note" value="added"/></svml>`,
   );
   await assert.rejects(
     frontend.applyDocumentOperations(document, [{
@@ -210,14 +210,14 @@ test("Author Document field operations distinguish addition from replacement", a
 });
 
 test("Markup rejects ambiguous declaration spellings instead of choosing by import order", async () => {
-  const other = { name: "example.other", version: "1" } as const;
+  const other = { name: "example.other" } as const;
   const colliding = new MarkupDeclarationRegistry();
   colliding.register({ module: laboratory, declaration: "value", tag: "Value" });
   colliding.register({ module: other, declaration: "other-value", tag: "Value" });
   const frontend = createMarkupDocumentFrontend({
     declarations: colliding,
     resolveModule(request) {
-      return request.from === "example.other@1" ? other : laboratory;
+      return request.from === "example.other" ? other : laboratory;
     },
   });
   const unit = (text: string) => ({
@@ -227,14 +227,14 @@ test("Markup rejects ambiguous declaration spellings instead of choosing by impo
   });
 
   await assert.rejects(frontend.openDocument(unit(`<svml>
-    <import from="example.document@1"/>
-    <import from="example.other@1"/>
+    <import from="example.document"/>
+    <import from="example.other"/>
     <Value id="value"/>
   </svml>`)), (error: unknown) => error instanceof Error
     && error.message.includes("<Value> is declared by both"));
   await assert.rejects(frontend.openDocument(unit(`<svml>
-    <import from="example.document@1" as="a"/>
-    <import from="example.document@1" as="b"/>
+    <import from="example.document" as="a"/>
+    <import from="example.document" as="b"/>
   </svml>`)), (error: unknown) => error instanceof Error
     && error.message.includes("is imported more than once"));
 });
@@ -248,7 +248,7 @@ test("Markup Document can add an import and insert a declaration in one source-n
     bytes: new TextEncoder().encode(emptyText),
   });
   const edited = await frontend.applyDocumentOperations(document, [
-    { kind: "add-import", value: { kind: "module", from: "example.document@1", alias: "lab" } },
+    { kind: "add-import", value: { kind: "module", from: "example.document", alias: "lab" } },
     {
       kind: "insert-declaration",
       container: document.root.node,
@@ -264,7 +264,7 @@ test("Markup Document can add an import and insert a declaration in one source-n
     },
   ]);
   assert.equal(new TextDecoder().decode(edited.bytes), `<svml>\n
-  <import from="example.document@1" as="lab"/>
+  <import from="example.document" as="lab"/>
   <lab:Value id="new" value="hello"/></svml>\n`);
 });
 
@@ -279,7 +279,7 @@ test("Markup Document deletes declaration-owned trivia and removes one exact imp
   assert(value !== undefined);
   const edited = await frontend.applyDocumentOperations(document, [
     { kind: "delete-declaration", declaration: value.node },
-    { kind: "remove-import", value: { kind: "module", from: "example.document@1", alias: "lab" } },
+    { kind: "remove-import", value: { kind: "module", from: "example.document", alias: "lab" } },
   ]);
   const text = new TextDecoder().decode(edited.bytes);
   assert.equal(text.includes("<lab:Value"), false);
@@ -289,7 +289,7 @@ test("Markup Document deletes declaration-owned trivia and removes one exact imp
 });
 
 test("Markup Document removes optional fields and edits structured text locally", async () => {
-  const text = `<svml><import from="example.document@1" as="lab"/><lab:Value id="note" value="optional">Old &amp; text</lab:Value></svml>`;
+  const text = `<svml><import from="example.document" as="lab"/><lab:Value id="note" value="optional">Old &amp; text</lab:Value></svml>`;
   const frontend = createMarkupDocumentFrontend(options);
   const document = await frontend.openDocument({
     id: "text.svml",
@@ -305,7 +305,7 @@ test("Markup Document removes optional fields and edits structured text locally"
   ]);
   assert.equal(
     new TextDecoder().decode(edited.bytes),
-    `<svml><import from="example.document@1" as="lab"/><lab:Value id="note" >New &lt;text&gt;</lab:Value></svml>`,
+    `<svml><import from="example.document" as="lab"/><lab:Value id="note" >New &lt;text&gt;</lab:Value></svml>`,
   );
 });
 
@@ -363,7 +363,7 @@ test("Markup declarations lower through the syntax-neutral two-phase compiler", 
   declarations.register(copyCompiler);
 
   const decoded = await decodeMarkupDeclarations({ name: "forward.svml", text: `<svml>
-    <import from="example.document@1" as="lab"/>
+    <import from="example.document" as="lab"/>
     <lab:Copy id="copy" source={original}/>
     <lab:Value id="original" value="kept"/>
   </svml>` }, { resolveModule: options.resolveModule, syntax, compilers: declarations });
@@ -411,7 +411,7 @@ test("structured declarations preserve text and child order without exposing Mar
   });
 
   const decoded = await decodeMarkupDeclarations({ name: "rich.svml", text: `<svml>
-    <import from="example.document@1" as="lab"/>
+    <import from="example.document" as="lab"/>
     <lab:Rich id="line"><lab:P>before <!-- spelling only --><lab:Span>inside</lab:Span> after</lab:P></lab:Rich>
   </svml>` }, { resolveModule: options.resolveModule, syntax: richSyntax, compilers: declarations });
 
@@ -448,15 +448,13 @@ test("the declaration-only Markup Frontend discovers and decodes a complete Sour
     syntax,
     compilers: declarations,
   });
-  const text = `<svml><import from="example.document@1" as="lab"/><lab:Value id="answer" value="42"/></svml>`;
+  const text = `<svml><import from="example.document" as="lab"/><lab:Value id="answer" value="42"/></svml>`;
   const unit = { id: "/project/main.svml", name: "main.svml", bytes: new TextEncoder().encode(text) };
 
-  assert.deepEqual(await frontend.discover(unit), { modules: ["example.document@1"], sources: [] });
+  assert.deepEqual(await frontend.discover(unit), { modules: ["example.document"], sources: [] });
   const decoded = await frontend.decode(unit, {
     closure: createResolvedClosure([{
-      format: "hypit.module@1",
       name: laboratory.name,
-      version: laboratory.version,
       dependencies: [],
       types: [textType.name],
       capabilities: [],

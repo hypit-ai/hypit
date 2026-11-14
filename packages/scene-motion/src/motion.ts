@@ -11,7 +11,7 @@ import { exactTemporalZero, type Rational } from "@hypit/temporal/algebra";
 
 import { cameraPathBehavior, objectPathBehavior } from "./path.js";
 
-export const sceneMotionModuleRef = { name: "@hypit/scene-motion", version: "1" } as const;
+export const sceneMotionModuleRef = { name: "@hypit/scene-motion" } as const;
 export const cameraMotionSymbol = { module: sceneMotionModuleRef, name: "camera-motion" } as const;
 
 type DollyParameters = {

@@ -11,12 +11,11 @@ export type NleEdit = {
 
 export type NleHistoryEntry = {
   readonly label: string;
-  /** The originally accepted edit. Redo restores `after`; it does not replay this stale revision. */
+  /** The originally accepted edit. Redo replays it against the exact restored logical position. */
   readonly transaction: NleTransaction;
   readonly beforePosition: number;
   readonly afterPosition: number;
   readonly before: NleProject;
-  readonly after: NleProject;
 };
 
 /**
@@ -141,7 +140,6 @@ export function commitNleEdit(session: NleEditSession, edit: NleEdit): NleEditSe
     beforePosition: session.position,
     afterPosition,
     before,
-    after: sealNleProject(after),
   };
   return {
     session: session.session,
@@ -182,9 +180,11 @@ export function redoNleEdit(session: NleEditSession): NleEditSession {
   if (session.cursor >= session.history.length) throw new NleHistoryBoundary("redo");
   const entry = session.history[session.cursor];
   if (entry === undefined) throw new NleHistoryBoundary("redo");
+  const transaction = structuredClone(entry.transaction) as { revision: number } & NleTransaction;
+  transaction.revision = session.current.revision;
   return {
     ...session,
-    current: restoreAtRevision(entry.after, incrementRevision(session.current.revision)),
+    current: applyNleTransaction(session.current, transaction),
     cursor: session.cursor + 1,
     position: entry.afterPosition,
   };

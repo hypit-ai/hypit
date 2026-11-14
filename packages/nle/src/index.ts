@@ -11,7 +11,7 @@ export {
   nleProjectComposition,
   nleProjectDuration,
   parseNleProject,
-  resolveNleComponentBinding,
+  resolveNleComponentSharedValue,
   resolveNlePictureAppearance,
   resolveNlePictureLayout,
   sealNleComposition,
@@ -44,38 +44,47 @@ export {
   prepareNleProjectSave,
 } from "./store.js";
 export type { NleProjectSaveTicket } from "./store.js";
+export { indexNleComposition } from "./indexing.js";
+export type { NleCompositionIndex, NleIndexedItem } from "./indexing.js";
 export {
-  assertNleSourceTime,
-  nleLinearSourceTime,
-  nleSourceTimeRequiredDuration,
-  shiftNleSourceTime,
-  sliceNleSourceTime,
+  assertNleTimeMapping,
+  nleLinearTimeMapping,
+  nleTimeMappingRequiredDuration,
+  shiftNleTimeMapping,
+  sliceNleTimeMapping,
 } from "./source-time.js";
 export { snapNleTime } from "./snap.js";
 export type { NleSnapGuide, NleSnapResult } from "./snap.js";
 export {
+  containNlePictureLayout,
+  fitNlePictureContent,
+} from "./picture.js";
+export type { NlePictureExtent, NlePictureRect } from "./picture.js";
+export { planNleSpatialEdit } from "./spatial-authoring.js";
+export type { NlePictureFrame, NleSpatialEdit } from "./spatial-authoring.js";
+export {
   lowerNleCompositionToAudiovisual,
   lowerNleProjectToAudiovisual,
-  nlePointwiseAudioAdjustment,
-  nlePointwisePictureAdjustment,
+  nlePointwiseAudioOperator,
+  nlePointwisePictureOperator,
 } from "./lower.js";
 export type { NleLoweringObserver } from "./lower.js";
 export {
   createNleLoweringHost,
   createNleLoweringHostFromFacets,
   createNlePackageFacet,
-  nlePackageFacetAbi,
+  nlePackageFacetKind,
   nlePackageSymbolKey,
   nlePackagesFromFacets,
 } from "./package.js";
 export type {
-  NleAudioAdjustmentResolver,
+  NleAudioOperatorResolver,
   NleComponentResolver,
   NleMatteResolver,
   NleMediaResolver,
   NlePackage,
   NlePackageFacet,
-  NlePictureAdjustmentResolver,
+  NlePictureOperatorResolver,
   NleSignalReconstructionResolver,
   NleTransitionResolver,
 } from "./package.js";
@@ -83,7 +92,7 @@ export {
   createNleAuthoringFacet,
   createNleAuthoringHost,
   createNleAuthoringHostFromFacets,
-  nleAuthoringFacetAbi,
+  nleAuthoringFacetKind,
   nleAuthoringPackagesFromFacets,
 } from "./authoring.js";
 export type {
@@ -92,10 +101,17 @@ export type {
   NleAuthoringPackage,
   NleComponentParameterAuthoring,
   NleComponentParameterAuthoringContext,
+  NleComponentMediaAuthoring,
+  NleComponentMediaInput,
+  NleComponentMediaInputState,
   NleComponentValueAuthoring,
   NleComponentValueAuthoringContext,
-  NleAdjustmentParameterAuthoring,
-  NleAdjustmentParameterAuthoringContext,
+  NleOperatorApplicationAddress,
+  NleOperatorParameterAuthoring,
+  NleOperatorParameterAuthoringContext,
+  NleOperatorOccurrenceAuthoring,
+  NleComponentOccurrenceAuthoring,
+  NleOccurrenceTemporalSupport,
   NleMatteParameterAuthoring,
   NleMatteParameterAuthoringContext,
   NleTransitionParameterAuthoring,
@@ -107,3 +123,4 @@ export {
   createMediaAssetMaterialization,
 } from "./materialize.js";
 export type * from "./types.js";
+export { nleProjectFormat } from "./types.js";

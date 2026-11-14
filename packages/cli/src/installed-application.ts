@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { resolveNodePackageModule } from "@hypit/loader/node";
-import { findProjectRoot, resolveProjectRoot } from "@hypit/project";
+import { findProjectRoot, resolveProjectRoot } from "@hypit/project/node";
 
 import { indexCliCommandModules, runCliApplication } from "./application.js";
 import type { CliApplication, CliCommandModule } from "./application.js";
@@ -104,12 +104,11 @@ function commandModules(value: unknown, subject: string): readonly CliCommandMod
   if (modules.length === 0) throw new Error(`${subject}.cliCommandModules cannot be empty`);
   for (const [index, module] of modules.entries()) {
     const candidate = object(module, `${subject}.cliCommandModules[${index}]`);
-    if (candidate.format !== "hypit.cli-command@1" || typeof candidate.id !== "string"
-      || !Array.isArray(candidate.commands)
+    if (typeof candidate.id !== "string" || !Array.isArray(candidate.commands)
       || candidate.commands.some(command => typeof command !== "string")
       || typeof candidate.writeHelp !== "function"
       || typeof candidate.run !== "function") {
-      throw new Error(`${subject}.cliCommandModules[${index}] is not a hypit.cli-command@1 module`);
+      throw new Error(`${subject}.cliCommandModules[${index}] is not a CLI command module`);
     }
   }
   return modules as unknown as readonly CliCommandModule[];

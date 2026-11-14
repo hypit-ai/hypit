@@ -90,9 +90,9 @@ A Role with no `Follow` keeps ordinary Style placement. Select `missing="hide"` 
 For example, this is a three-frame data-shape illustration, not a ready timeline for a real video:
 
 ```svml
-<?svml using="@hypit/markup@1"?>
+<?svml using="@hypit/markup"?>
 <svml>
-  <import as="sequence" from="@hypit/spatial-sequence@1"/>
+  <import as="sequence" from="@hypit/spatial-sequence"/>
   <sequence:Regions id="heads">
 {"clock":{"frameRate":{"numerator":30,"denominator":1}},"frameCount":3,"series":[{"id":"guest-head","regions":[[0.12,0.09,0.20,0.26],null,[0.13,0.10,0.20,0.26]]}]}
   </sequence:Regions>

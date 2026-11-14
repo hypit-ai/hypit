@@ -1,7 +1,7 @@
-import type { AuthorFrontend, AuthorSourceExport } from "@hypit/author";
-import { moduleKey } from "@hypit/protocol";
-import type { TypedRecord } from "@hypit/protocol";
-import { decodeSourceText } from "@hypit/source";
+import type { AuthorFrontend, AuthorSourceExport } from "@hypit/generation-authoring/author";
+import { moduleKey } from "@hypit/module";
+import type { TypedRecord } from "@hypit/generation-build";
+import { decodeSourceText } from "@hypit/generation-authoring/source";
 
 import { recipeFrontendId, recipeModuleRef, recipeType } from "./manifest.js";
 import { parseRecipe } from "./parser.js";

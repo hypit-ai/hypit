@@ -1,5 +1,5 @@
-import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { Value } from "@hypit/hypit/protocol";
+import type { RefinementPackage } from "@hypit/hypit/generation/refinement";
+import type { Value } from "@hypit/hypit/value";
 
 import { timedTranscriptTypes } from "./contract.js";
 import { assertTimedTranscript } from "./document.js";

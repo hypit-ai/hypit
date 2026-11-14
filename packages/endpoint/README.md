@@ -2,6 +2,10 @@
 
 SDK for packages that fulfill exact external capabilities.
 
+This package also owns `EndpointRegistry`: the Environment-side registry that installs Endpoint
+instances, applies explicit capability bindings and performs capacity-aware selection. The generic
+Executor consumes that registry; it does not own Endpoint discovery or configuration.
+
 External Provider packages import this public subpath from the `@hypit/hypit` Distribution. Use `@hypit/hypit` as
 a development dependency, compile the Provider to JavaScript, and ship its code plus any ordinary
 runtime dependencies. The active Distribution supplies this API when loading the package.
@@ -10,8 +14,8 @@ No Hypit checkout is needed to develop or install the extension.
 ```ts
 import { defineEndpoint } from "@hypit/hypit/endpoint";
 import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "@hypit/hypit/endpoint";
-import { generationTypes, sealGeneratedImageSet } from "@hypit/generation";
-import { materializeWireRequest, planWireRequest } from "@hypit/generation/provider";
+import { generationTypes, sealGeneratedImageSet } from "@hypit/generation-model";
+import { materializeWireRequest, planWireRequest } from "@hypit/generation-model/provider";
 ```
 
 The shipped [project Provider example](../../examples/provider-package/README.md) follows an image
@@ -24,7 +28,7 @@ selected store but neither Endpoint nor Runtime owns its interface or adapter.
 
 For an existing model, name its exact versioned Capability and expected result Type. Map its request
 ports into the service's wire format; the Provider need not import the model's implementation.
-`@hypit/generation` supplies the common generated-media values and optional wire-mapping helpers.
+`@hypit/generation-model` supplies the common generated-media values and optional wire-mapping helpers.
 One Provider can implement multiple capabilities, and another Provider can implement those same
 capabilities. The Profile selects the implementation used by a project.
 
@@ -129,7 +133,7 @@ determines what can be cached together.
 Four facts remain separate at this boundary:
 
 - the `EndpointDemand` declares a capability and return Type that need a deployment;
-- the `EndpointRequest` describes the work selected by the current Build;
+- the `CapabilityInvocationRequest` describes the work, whether a direct domain Action or a Build selected it;
 - an `EndpointPricingDocument` describes prices published by that Provider;
 - spending authority belongs to the user's decision about the described work and cost.
 

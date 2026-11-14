@@ -6,12 +6,13 @@ import test from "node:test";
 import { installEndpoint } from "@hypit/hypit/endpoint";
 
 import { blobTypes } from "@hypit/blob";
-import { EndpointRegistry } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
 import { MemoryResourceStore } from "@hypit/resource-store";
 import { rasterCompositionCapabilities } from "@hypit/raster-composition";
 import { createLocalOpenCvImageProvider } from "@hypit/provider-image-opencv-local";
 import { assertBlobRef, canonicalize } from "@hypit/protocol";
-import type { BlobRef, Need } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
+import type { Need } from "@hypit/generation-build";
 
 const runtime = fileURLToPath(new URL("../../runtime/", import.meta.url));
 const managedPython = process.platform === "win32"

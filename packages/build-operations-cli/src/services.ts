@@ -1,7 +1,7 @@
 import type { ProductExporter, ProductHistory } from "@hypit/product";
 import type { BuildResultHistory } from "@hypit/result";
-import type { TypeRef } from "@hypit/protocol";
-import type { CliDiagnostic, CliPublicationStoreLocation, CliRuntimeHost } from "./runtime-port.js";
+import type { TypeRef } from "@hypit/module";
+import type { CliDiagnostic, CliEnvironmentHost, CliPublicationStoreLocation, CliRuntimeHost } from "./runtime-port.js";
 
 /** Project and Runtime access genuinely shared by authoring and accepted-Build operations. */
 export type BuildCliContextServices = {
@@ -14,6 +14,11 @@ export type BuildCliContextServices = {
     readonly packageRoot: string;
     readonly distributionPackageRoot?: string;
   }): Promise<CliRuntimeHost>;
+  /** Open an Environment directly, without constructing a Generation Runtime. */
+  openEnvironmentHost(path: string, options: {
+    readonly packageRoot: string;
+    readonly distributionPackageRoot?: string;
+  }): Promise<CliEnvironmentHost>;
   /** Open project-owned Result history even when no Runtime Profile is selected. */
   openProjectResults(projectRoot: string, options: {
     readonly packageRoot: string;

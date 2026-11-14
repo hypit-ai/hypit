@@ -2,8 +2,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 
-import type { CredentialAcquisition } from "@hypit/runtime";
-import { encodeOAuth2Credential } from "@hypit/runtime";
+import type { CredentialAcquisition } from "@hypit/execution-environment";
+import { encodeOAuth2Credential } from "@hypit/execution-environment";
 
 const CALLBACK_MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true"><path d="M7.6 3.8H14.6L12.6 7.2H5.6L7.6 3.8Z" fill="currentColor"/><path d="M4.1 10.4H16.6L18.7 7H30.4L27.9 11.1H16.1L14.1 14.2H1.8L4.1 10.4Z" fill="currentColor"/><path d="M19.1 14.1H23.1L19.3 20.7H15.4L19.1 14.1Z" fill="currentColor"/></svg>`;
 

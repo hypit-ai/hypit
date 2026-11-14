@@ -10,6 +10,7 @@ import type {
   GenerationGraphTransaction,
 } from "@hypit/generation-graph";
 import type { WorkbenchProjectMediaView } from "./protocol.js";
+import type { WorkbenchCredential, WorkbenchEnvironment } from "./environment-protocol.js";
 
 export type GenerationCanvasWorkbenchSnapshot = {
   readonly format: "hypit.workbench-generation-canvas@1";
@@ -29,26 +30,8 @@ export type GenerationCanvasWorkbenchSnapshot = {
   readonly graphFile: string;
 };
 
-export type GenerationCanvasWorkbenchCredential = {
-  readonly endpoint: string;
-  readonly slot: string;
-  readonly label: string;
-  readonly configured: boolean;
-  readonly writable: boolean;
-  readonly acquisition?: "oauth2-pkce";
-};
-
-/** Transient Host environment state. It never becomes part of Graph or Canvas authoring data. */
-export type GenerationCanvasWorkbenchEnvironment = {
-  readonly status: "ready" | "action-required" | "unavailable";
-  readonly runtime: {
-    readonly selected: boolean;
-    readonly label?: string;
-    readonly candidate?: string;
-  };
-  readonly credentials: readonly GenerationCanvasWorkbenchCredential[];
-  readonly issue?: string;
-};
+export type GenerationCanvasWorkbenchCredential = WorkbenchCredential;
+export type GenerationCanvasWorkbenchEnvironment = WorkbenchEnvironment;
 
 /** One user request to regenerate a target using selected upstream Products as reuse boundaries. */
 export type GenerationCanvasWorkbenchBuildRequest = {

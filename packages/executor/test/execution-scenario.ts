@@ -3,20 +3,14 @@ import {
   defineBuild,
   link,
   materializeBuild,
-} from "@hypit/kernel";
-import type {
-  BuildDefinition,
-  CapabilityRef,
-  CommandResult,
-  InvokeProducerCommand,
-  ModuleManifest,
-  ProducerRef,
-  ProducerStep,
-  TypeRef,
-} from "@hypit/protocol";
-import type { BuildView } from "@hypit/kernel";
+} from "@hypit/generation-build";
+import type { CapabilityRef, TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
+import type { BuildDefinition, CommandResult, InvokeProducerCommand, ProducerStep } from "@hypit/generation-build";
+import type { BuildView } from "@hypit/generation-build";
 
-const moduleRef = { name: "example.executor-scenario", version: "0.0.0" } as const;
+const moduleRef = { name: "example.executor-scenario" } as const;
 
 export const types = {
   intent: { module: moduleRef, name: "GreetingIntent" },
@@ -36,10 +30,8 @@ export const producers = {
   assemble: { module: moduleRef, name: "assemble" },
 } satisfies Record<string, ProducerRef>;
 
-const manifest: ModuleManifest = {
-  format: "hypit.module@1",
+const manifest: GenerationModuleDefinition = {
   name: moduleRef.name,
-  version: moduleRef.version,
   dependencies: [],
   types: Object.values(types).map((type) => type.name),
   capabilities: [{ name: capabilities.generation.name, returns: types.generated }],
@@ -144,13 +136,11 @@ export function createParallelGreetingBuild(generationCount = 2): BuildView {
   }), []);
 }
 
-const chainModule = { name: "example.executor-chain", version: "0.0.0" } as const;
+const chainModule = { name: "example.executor-chain" } as const;
 const chainType: TypeRef = { module: chainModule, name: "Value" };
 const advanceProducer: ProducerRef = { module: chainModule, name: "advance" };
-const chainManifest: ModuleManifest = {
-  format: "hypit.module@1",
+const chainManifest: GenerationModuleDefinition = {
   name: chainModule.name,
-  version: chainModule.version,
   dependencies: [],
   types: [chainType.name],
   capabilities: [],

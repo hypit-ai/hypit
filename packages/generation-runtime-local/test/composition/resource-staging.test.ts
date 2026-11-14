@@ -1,0 +1,173 @@
+import { fileExecutionLogs } from "../../src/log.js";
+import { readExecutionLog } from "@hypit/generation-runtime";
+import assert from "node:assert/strict";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  realpath,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import test from "node:test";
+
+import { FileResourceStore } from "@hypit/resource-store/node";
+import { FileProductHistory } from "@hypit/product/node";
+import { isBlobRef } from "@hypit/protocol";
+import { EnvironmentCredentialStore } from "./environment-credential-store.js";
+import { defineEndpoint } from "@hypit/endpoint";
+import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
+import { createProducerPackageFacet } from "@hypit/producer";
+import type { ProducerPackage } from "@hypit/producer";
+import { createRefinementPackageFacet } from "@hypit/refinement";
+import type { RefinementPackage } from "@hypit/refinement";
+import { createLocalRuntime } from "@hypit/generation-runtime-local";
+import { resolveProjectRoot } from "@hypit/project/node";
+import { NodeFilesystemWorkspace } from "@hypit/generation-authoring/workspace/node";
+import { defineBuild, link } from "@hypit/generation-build";
+import { loadNodePackageSelection } from "@hypit/loader/node";
+import { credentialRef } from "@hypit/execution-environment";
+import { buildExecutionActivity } from "@hypit/generation-runtime-local";
+import type { BuildCompletion } from "@hypit/generation-runtime-local";
+import type { CredentialValue, WritableCredentialStore } from "@hypit/execution-environment";
+import { SqliteRuntimeState } from "../../src/sqlite-state.js";
+
+import {
+  capabilities,
+  createGreetingBuild,
+  createParallelGreetingBuild,
+  manifest as greetingManifest,
+  producers,
+  types,
+} from "../execution-scenario.js";
+
+import {
+  definition,
+  durableBuildRequest,
+  finishClaimedBuild,
+  projectRuntimeFixture,
+  publicationStoreLocation,
+  runFixture,
+} from "./local-scenario.js";
+
+test("a selected file is staged once and remains referenced in the structured Product", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-bld_20260902T120000009Z_0000000001-"));
+  const initial = createGreetingBuild();
+  const bytes = new Uint8Array([4, 3, 2, 1]);
+  const authoredAsset = {
+    kind: "blob" as const,
+    resource: "res_authored_input" as const,
+    size: bytes.byteLength,
+    mediaType: "image/png",
+  };
+  const program = {
+    ...initial.program,
+    records: initial.program.records.filter((record) => record.id !== "intent:root"),
+  };
+  const intent = initial.records.find((record) => record.id === "intent:root")!;
+  const buildDefinition = defineBuild({
+    program: link(program.closure, [...program.records, { ...intent, value: authoredAsset }]),
+    plan: initial.plan,
+  });
+  let attachmentOpens = 0;
+  let endpointCalls = 0;
+  const components: { producers: ProducerPackage; refinements?: RefinementPackage } = {
+    producers: [{
+      producer: producers.makePrompt,
+      handler: ({ inputs }) => ({ kind: "output", value: inputs.intent!.value }),
+    }, {
+      producer: producers.requestText,
+      handler: ({ inputs }) => ({ kind: "need", constraints: { source: inputs.prompt!.value } }),
+    }, {
+      producer: producers.assemble,
+      handler: ({ inputs }) => ({ kind: "output", value: ({ layers: [{ content: inputs.generated!.value }] }) }),
+    }],
+  };
+  const endpoint = defineEndpoint({
+    instance: "generation.bld_20260902T120000009Z_0000000001",
+    pool: "generation.bld_20260902T120000009Z_0000000001",
+    capabilities: [{
+      lifecycle: "immediate",
+      capability: capabilities.generation,
+      returns: types.generated,
+      handler: async ({ request, resources }) => {
+        endpointCalls += 1;
+        const source = (request.constraints as { readonly source: typeof authoredAsset }).source;
+        assert.equal(await resources.has(source.resource), true);
+        assert.deepEqual(await resources.get(source.resource), bytes);
+        return { image: source };
+      },
+    }],
+  });
+  try {
+    const runtime = await createLocalRuntime({
+      ...projectRuntimeFixture(directory),
+      producers: components.producers,
+      endpoints: [endpoint],
+    });
+    await runtime.build({
+      id: "bld_20260902T120000009Z_0000000001",
+      definition: buildDefinition,
+      authoring: {
+        sourcePath: join(directory, "main.svml"),
+        targets: ["final.document"],
+        publication: { outputs: [{ name: "final.document",
+          record: "document:root", publisher: "example.test-product@1" }] },
+      },
+      attachments: [{
+        blob: authoredAsset,
+        async open() {
+          attachmentOpens += 1;
+          return (async function* () { yield bytes; })();
+        },
+      }],
+      publicationStores: publicationStoreLocation(directory),
+    });
+    assert.equal(attachmentOpens, 1);
+    const work = new FileResourceStore(join(directory, ".hypit", "work", "bld_20260902T120000009Z_0000000001"));
+    assert.equal(await work.has(authoredAsset.resource), true);
+
+    const completed = await runtime.workOnce();
+    assert(completed !== undefined && "outcome" in completed);
+    assert.equal(completed.outcome, "complete");
+    assert.equal(endpointCalls, 1);
+    assert.equal(attachmentOpens, 1);
+    assert.equal(await work.has(authoredAsset.resource), false);
+    const products = new FileProductHistory(join(directory, ".hypit", "generation", "products"));
+    const resolved = (await products.resolveProduct({
+      publication: "bld_20260902T120000009Z_0000000001",
+      name: "final.document",
+    }))!;
+    const content = (resolved.value as {
+      readonly layers: readonly [{ readonly content: { readonly image: unknown } }];
+    }).layers[0].content.image;
+    assert.ok(isBlobRef(content));
+    if (!isBlobRef(content)) throw new Error("expected published nested Blob");
+    assert.equal(content.size, bytes.length);
+    assert.equal(content.mediaType, authoredAsset.mediaType);
+    const opened = await resolved.openResource(content);
+    assert.notEqual(opened, undefined);
+    const published: number[] = [];
+    for await (const chunk of opened!) published.push(...chunk);
+    assert.deepEqual(Uint8Array.from(published), bytes);
+    const resultDirectory = join(directory, "results", "2026-09-02", "bld_20260902T120000009Z_0000000001");
+    assert.deepEqual((await readdir(resultDirectory)).sort(), ["execution.jsonl", "result.json"]);
+    const productDirectory = join(
+      directory,
+      ".hypit",
+      "generation",
+      "products",
+      "2026-09-02",
+      "bld_20260902T120000009Z_0000000001",
+    );
+    assert.deepEqual(await readFile(join(productDirectory, "files", "file-0001.png")), Buffer.from(bytes));
+    await runtime.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

@@ -7,6 +7,7 @@ export {
 } from "./manifest.js";
 export {
   pictureFrameNleAuthoring,
+  pictureFrameNleOccurrence,
   pictureFrameNleResolver,
   pictureFrameNleSymbol,
 } from "./nle.js";

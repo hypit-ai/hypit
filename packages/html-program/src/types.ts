@@ -1,7 +1,7 @@
 
 import type { BlobRef } from "@hypit/protocol";
-import type { PictureInterpretation, PreparedSignalPictureSource } from "@hypit/media";
-import type { FrameSpan, TemporalMap, TemporalSamplingGrid } from "@hypit/temporal";
+import type { PictureInterpretation, PreparedPictureSampling } from "@hypit/media";
+import type { FrameSpan, TemporalSamplingGrid } from "@hypit/temporal";
 import type { HtmlPictureReconstruction } from "./picture-reconstruction.js";
 
 export type HtmlFrameDomain = TemporalSamplingGrid & {
@@ -43,7 +43,7 @@ export type HtmlArtifact = HtmlArtifactBase & (
     }
 );
 
-export type HtmlVideoSource = FrameSpan & {
+export type HtmlVideoSource = FrameSpan & PreparedPictureSampling & {
   /** Programme-local identity of this exact source occurrence. */
   readonly id: string;
   /** Compiler-owned stable media display plane inside the document. */
@@ -51,9 +51,7 @@ export type HtmlVideoSource = FrameSpan & {
   /** Exact absolute frames where this occurrence can contribute pixels. */
   readonly usage: HtmlArtifactUsage;
   readonly kind: "media";
-  readonly source: PreparedSignalPictureSource;
-  /** Exact occurrence-local target-to-source relation. */
-  readonly sampling: TemporalMap;
+  /** `sampling` is the exact occurrence-local target-to-source relation. */
   readonly reconstruction?: HtmlPictureReconstruction;
 };
 

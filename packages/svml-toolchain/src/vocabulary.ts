@@ -1,17 +1,21 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-import type { CliIo } from "@hypit/cli";
-import { authorDeclarationFacetAbi } from "@hypit/author";
+import type { CliIo } from "@hypit/cli/public";
+import { authorDeclarationFacetKind } from "@hypit/generation-authoring/author";
 import type {
   AuthorDeclarationCompiler,
   AuthorDeclarationFieldShape,
-} from "@hypit/author";
+} from "@hypit/generation-authoring/author";
 import { loadNodePackageSelection, locateNodePackage, distributionPackageRoots } from "@hypit/loader/node";
 import type { NodePackageLoadOptions } from "@hypit/loader/node";
-import { compareCodeUnits, moduleKey, typeKey } from "@hypit/protocol";
-import type { ModuleManifest, ValueSchema } from "@hypit/protocol";
-import { findProjectRoot } from "@hypit/project";
+import { compareCodeUnits } from "@hypit/protocol";
+import { moduleKey, typeKey } from "@hypit/module";
+import type { ValueSchema } from "@hypit/protocol";
+import { modulesFromFacets } from "@hypit/module";
+import { generationModulesFromFacets } from "@hypit/generation-build";
+import type { GenerationModuleDeclaration } from "@hypit/generation-build";
+import { findProjectRoot } from "@hypit/project/node";
 
 /**
  * What a Source may write: installed packages, their Module Capabilities and author Declarations.
@@ -39,9 +43,9 @@ export type CapabilityListing = {
   readonly returns: string;
 };
 
-function manifestCapabilities(manifest: ModuleManifest): readonly CapabilityListing[] {
+function manifestCapabilities(manifest: GenerationModuleDeclaration): readonly CapabilityListing[] {
   return manifest.capabilities.map((capability) => ({
-    module: moduleKey(manifest),
+    module: moduleKey(manifest.module),
     name: capability.name,
     returns: typeKey(capability.returns),
   }));
@@ -97,8 +101,10 @@ export async function listPackages(projectRoot: string, distributionRoot?: strin
     try {
       for (const pack of await loadNodePackageSelection([name], projectRoot, loading(distributionRoot))) {
         if (pack.specifier !== name) continue;
-        for (const module of pack.contribution.modules ?? []) capabilities.push(...manifestCapabilities(module.manifest));
-        for (const facet of pack.contribution.facets ?? []) if (facet.abi === authorDeclarationFacetAbi) {
+        for (const manifest of generationModulesFromFacets(pack.contribution.facets ?? [])) {
+          capabilities.push(...manifestCapabilities(manifest));
+        }
+        for (const facet of pack.contribution.facets ?? []) if (facet.kind === authorDeclarationFacetKind) {
           declarations.push((facet.implementation as AuthorDeclarationCompiler).declaration);
         }
       }
@@ -154,7 +160,7 @@ export async function listDeclarations(
     if (!named.has(pack.specifier)) continue;
     const facets = pack.contribution.facets ?? [];
     const compilers = facets
-      .filter((facet) => facet.abi === authorDeclarationFacetAbi)
+      .filter((facet) => facet.kind === authorDeclarationFacetKind)
       .map((facet) => facet.implementation as AuthorDeclarationCompiler);
     for (const compiler of compilers) {
       if (wanted !== undefined && !wanted.has(compiler.declaration)) continue;
@@ -219,7 +225,7 @@ function fieldLine(field: AuthorDeclarationFieldShape): string {
 }
 
 function moduleSpecifier(declaration: DeclarationListing): string {
-  return `${declaration.module.name}@${declaration.module.version}`;
+  return declaration.module.name;
 }
 
 function declarationText(declaration: DeclarationListing): string {
@@ -238,7 +244,7 @@ function declarationText(declaration: DeclarationListing): string {
     }
   }
   if (declaration.outputs.length > 0) lines.push("    outputs", ...declaration.outputs.map((type) =>
-    `      ${type.name} (${type.module.name}@${type.module.version})`));
+    `      ${type.name} (${type.module.name})`));
   if (declaration.readme !== undefined) lines.push(`    README ${declaration.readme}`);
   return lines.join("\n");
 }

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { blobTypes } from "@hypit/hypit/blob";
-import type { AuthorDeclarationCompiler, AuthorResolvedReference } from "@hypit/hypit/author";
+import { blobTypes } from "@hypit/hypit/generation/blob";
+import type { AuthorDeclarationCompiler, AuthorResolvedReference } from "@hypit/hypit/generation/author";
 import { promptTypes } from "@hypit/hypit/prompt";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import { compileSvmlDeclaration } from "../../../test/compile-svml-declaration.js";

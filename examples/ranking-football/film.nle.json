@@ -1,0 +1,3989 @@
+{
+  "format": "hypit.nle@1",
+  "id": "ranking-football",
+  "name": "Football ranking",
+  "revision": 2,
+  "canvas": {
+    "width": 720,
+    "height": 1280,
+    "clearColor": "#090a0f"
+  },
+  "componentValues": [
+    {
+      "id": "reference-caption-style",
+      "name": "reference-caption-style",
+      "component": {
+        "module": {
+          "name": "@hypit/caption-fine"
+        },
+        "name": "fine"
+      },
+      "slot": "style",
+      "value": {
+        "activeBox": {
+          "background": "#008fc7",
+          "borderColor": "#00000000",
+          "borderRadius": 5,
+          "borderWidth": 0,
+          "continuity": "isolated",
+          "mode": "current",
+          "paddingX": 9,
+          "paddingY": 4,
+          "transitionFrames": 2
+        },
+        "activePaint": {
+          "color": "#ffffff"
+        },
+        "activeResponse": {
+          "frames": 3,
+          "kind": "pop",
+          "scale": 1.04
+        },
+        "blockAlign": "center",
+        "color": "#ffffff",
+        "cueBox": {
+          "background": "#00000000",
+          "borderColor": "#00000000",
+          "borderRadius": 0,
+          "borderWidth": 0,
+          "continuity": "isolated",
+          "paddingX": 0,
+          "paddingY": 0
+        },
+        "entry": {
+          "frames": 2,
+          "kind": "fade"
+        },
+        "exit": {
+          "frames": 2,
+          "kind": "fade"
+        },
+        "fonts": {
+          "faces": [
+            {
+              "sources": [
+                {
+                  "artifact": {
+                    "kind": "blob",
+                    "mediaType": "font/woff2",
+                    "resource": "res_ranking_football_montserrat_latin",
+                    "size": 37956
+                  },
+                  "unicodeRange": "U+0000-024F"
+                }
+              ],
+              "style": "normal",
+              "weight": 900
+            }
+          ]
+        },
+        "fontFamily": "Montserrat, Arial Black, Arial, sans-serif",
+        "fontSize": 44,
+        "fontWeight": 900,
+        "inlineSize": "hug",
+        "karaoke": {
+          "activeColor": "#ffffff",
+          "mode": "current",
+          "transition": "step"
+        },
+        "letterSpacing": -0.8,
+        "lineHeight": 1.28,
+        "maxLines": 2,
+        "maxWordsPerLine": 4,
+        "outlineColor": "#090a0f",
+        "outlineWidth": 2,
+        "overflow": "visible",
+        "shadowBlur": 7,
+        "shadowColor": "#000000b8",
+        "shadowOffsetX": 0,
+        "shadowOffsetY": 3,
+        "textAlign": "center",
+        "wrap": "word"
+      }
+    }
+  ],
+  "pictureLayouts": [],
+  "tracks": [
+    {
+      "id": "performance",
+      "name": "Accepted host and captions",
+      "kind": "picture",
+      "muted": false,
+      "items": [
+        {
+          "id": "ranking-performance-use",
+          "name": "Accepted ranking performance",
+          "kind": "present",
+          "source": "media",
+          "asset": {
+            "path": "media/ranking-performance/ranking-performance.media.json"
+          },
+          "start": {
+            "ticks": "0",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "duration": {
+            "ticks": "301",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 15
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "301",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 15
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "picture": {
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 720,
+              "height": 704,
+              "fit": "fill"
+            }
+          },
+          "audio": {}
+        }
+      ]
+    },
+    {
+      "id": "ranking",
+      "name": "Football tier board",
+      "kind": "picture",
+      "muted": false,
+      "items": [
+        {
+          "id": "football-tier-board",
+          "name": "Football tier list",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "0",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "duration": {
+            "ticks": "301",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 15
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "301",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 15
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit-example/ranking-football-components"
+            },
+            "name": "tier-board"
+          },
+          "media": {
+            "player.yamal": {
+              "path": "media/yamal/yamal.media.json"
+            },
+            "player.haaland": {
+              "path": "media/haaland/haaland.media.json"
+            },
+            "player.de-bruyne": {
+              "path": "media/de-bruyne/de-bruyne.media.json"
+            },
+            "player.bellingham": {
+              "path": "media/bellingham/bellingham.media.json"
+            },
+            "player.kane": {
+              "path": "media/kane/kane.media.json"
+            },
+            "player.modric": {
+              "path": "media/modric/modric.media.json"
+            },
+            "player.mbappe": {
+              "path": "media/mbappe/mbappe.media.json"
+            },
+            "player.neymar": {
+              "path": "media/neymar/neymar.media.json"
+            },
+            "player.benzema": {
+              "path": "media/benzema/benzema.media.json"
+            },
+            "player.ronaldo": {
+              "path": "media/ronaldo/ronaldo.media.json"
+            },
+            "player.messi": {
+              "path": "media/messi/messi.media.json"
+            }
+          },
+          "parameters": {
+            "rows": [
+              {
+                "id": "s",
+                "label": "S",
+                "color": "#ee5f52"
+              },
+              {
+                "id": "a",
+                "label": "A",
+                "color": "#f0a04c"
+              },
+              {
+                "id": "b",
+                "label": "B",
+                "color": "#f0c84d"
+              },
+              {
+                "id": "c",
+                "label": "C",
+                "color": "#ede356"
+              },
+              {
+                "id": "d",
+                "label": "D",
+                "color": "#a6da7b"
+              }
+            ],
+            "entries": [
+              {
+                "id": "yamal",
+                "label": "Yamal",
+                "tier": "s",
+                "input": "player.yamal",
+                "preset": true
+              },
+              {
+                "id": "haaland",
+                "label": "Haaland",
+                "tier": "a",
+                "input": "player.haaland",
+                "preset": true
+              },
+              {
+                "id": "de-bruyne",
+                "label": "De Bruyne",
+                "tier": "b",
+                "input": "player.de-bruyne",
+                "preset": true
+              },
+              {
+                "id": "bellingham",
+                "label": "Bellingham",
+                "tier": "b",
+                "input": "player.bellingham",
+                "preset": true
+              },
+              {
+                "id": "kane",
+                "label": "Kane",
+                "tier": "c",
+                "input": "player.kane",
+                "preset": true
+              },
+              {
+                "id": "modric",
+                "label": "Modric",
+                "tier": "c",
+                "input": "player.modric",
+                "preset": true
+              },
+              {
+                "id": "mbappe",
+                "label": "Mbappe",
+                "tier": "d",
+                "input": "player.mbappe",
+                "preset": true
+              },
+              {
+                "id": "neymar",
+                "label": "Neymar",
+                "tier": "d",
+                "input": "player.neymar",
+                "preset": true
+              },
+              {
+                "id": "benzema",
+                "label": "Benzema",
+                "tier": "d",
+                "input": "player.benzema",
+                "preset": true
+              },
+              {
+                "id": "ronaldo",
+                "label": "Ronaldo",
+                "tier": "d",
+                "input": "player.ronaldo",
+                "preset": false,
+                "window": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "301",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 30
+                    }
+                  }
+                }
+              },
+              {
+                "id": "messi",
+                "label": "Messi",
+                "tier": "s",
+                "input": "player.messi",
+                "preset": false,
+                "window": {
+                  "start": {
+                    "ticks": "301",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 30
+                    }
+                  },
+                  "end": {
+                    "ticks": "301",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 15
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "picture": {
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 720,
+              "height": 1280,
+              "fit": "fill"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "title",
+      "name": "Reference title",
+      "kind": "picture",
+      "muted": false,
+      "items": [
+        {
+          "id": "reference-title",
+          "name": "Ranking the best footballers",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "0",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          },
+          "duration": {
+            "ticks": "301",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 15
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "301",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 15
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit-example/ranking-football-components"
+            },
+            "name": "reference-title"
+          },
+          "parameters": {
+            "first": "RANKING THE BEST",
+            "second": "FOOTBALLERS ⚽🔥"
+          },
+          "picture": {
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 720,
+              "height": 1280,
+              "fit": "fill"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "captions",
+      "name": "Captions",
+      "kind": "picture",
+      "muted": false,
+      "items": [
+        {
+          "id": "reference-captions:ronaldo-01",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "133",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "duration": {
+            "ticks": "973",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 750
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "973",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 750
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "ronaldo-01",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "763",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-01:unit:1",
+                  "start": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 15,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-01:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "973",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-01:unit:2",
+                  "start": {
+                    "ticks": "853",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-01:unit:2:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "2789",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-01:unit:3",
+                  "start": {
+                    "ticks": "1063",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-01:unit:3:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "923",
+                    "timeBase": {
+                      "denominator": 750,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-01:unit:4",
+                  "start": {
+                    "ticks": "2909",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-01:unit:4:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ronaldo-01:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "Ronaldo",
+                  "unitId": "ronaldo-01:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-01:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "is",
+                  "unitId": "ronaldo-01:unit:2"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-01:unit:3:word",
+                  "separatorBefore": " ",
+                  "text": "D",
+                  "unitId": "ronaldo-01:unit:3"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-01:unit:4:word",
+                  "separatorBefore": " ",
+                  "text": "tier.",
+                  "unitId": "ronaldo-01:unit:4"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:ronaldo-02",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "1087",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 750
+            }
+          },
+          "duration": {
+            "ticks": "973",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1500
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "973",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1500
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "ronaldo-02",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "803",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-02:unit:1",
+                  "start": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 15,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-02:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1223",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-02:unit:2",
+                  "start": {
+                    "ticks": "863",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-02:unit:2:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "913",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-02:unit:3",
+                  "start": {
+                    "ticks": "1403",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-02:unit:3:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ronaldo-02:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "Bro",
+                  "unitId": "ronaldo-02:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-02:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "has",
+                  "unitId": "ronaldo-02:unit:2"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-02:unit:3:word",
+                  "separatorBefore": " ",
+                  "text": "more",
+                  "unitId": "ronaldo-02:unit:3"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:ronaldo-03",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "1049",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 500
+            }
+          },
+          "duration": {
+            "ticks": "271",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 250
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "271",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 250
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "ronaldo-03",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "181",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-03:unit:1",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-03:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "401",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-03:unit:2",
+                  "start": {
+                    "ticks": "221",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-03:unit:2:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "281",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-03:unit:3",
+                  "start": {
+                    "ticks": "421",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-03:unit:3:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1023",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-03:unit:4",
+                  "start": {
+                    "ticks": "311",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-03:unit:4:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ronaldo-03:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "hair",
+                  "unitId": "ronaldo-03:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-03:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "gel",
+                  "unitId": "ronaldo-03:unit:2"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-03:unit:3:word",
+                  "separatorBefore": " ",
+                  "text": "than",
+                  "unitId": "ronaldo-03:unit:3"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-03:unit:4:word",
+                  "separatorBefore": " ",
+                  "text": "trophies",
+                  "unitId": "ronaldo-03:unit:4"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:ronaldo-04",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "1591",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 500
+            }
+          },
+          "duration": {
+            "ticks": "1823",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "1823",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 3000
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "ronaldo-04",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "3",
+                    "timeBase": {
+                      "denominator": 50,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-04:unit:1",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-04:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "6",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-04:unit:2",
+                  "start": {
+                    "ticks": "2",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-04:unit:2:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "541",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-04:unit:3",
+                  "start": {
+                    "ticks": "301",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-04:unit:3:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ronaldo-04:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "at",
+                  "unitId": "ronaldo-04:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-04:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "this",
+                  "unitId": "ronaldo-04:unit:2"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-04:unit:3:word",
+                  "separatorBefore": " ",
+                  "text": "point.",
+                  "unitId": "ronaldo-04:unit:3"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:ronaldo-05",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "2893",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 750
+            }
+          },
+          "duration": {
+            "ticks": "733",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1500
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "733",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1500
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "ronaldo-05",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "863",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-05:unit:1",
+                  "start": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 15,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-05:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1343",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-05:unit:2",
+                  "start": {
+                    "ticks": "923",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-05:unit:2:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ronaldo-05:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "Built",
+                  "unitId": "ronaldo-05:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-05:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "like",
+                  "unitId": "ronaldo-05:unit:2"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:ronaldo-06",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "2173",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 500
+            }
+          },
+          "duration": {
+            "ticks": "1063",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1500
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "1063",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1500
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "ronaldo-06",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 50,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-06:unit:1",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-06:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "281",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-06:unit:2",
+                  "start": {
+                    "ticks": "3",
+                    "timeBase": {
+                      "denominator": 50,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-06:unit:2:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "321",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-06:unit:3",
+                  "start": {
+                    "ticks": "321",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-06:unit:3:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ronaldo-06:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "a",
+                  "unitId": "ronaldo-06:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-06:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "Greek",
+                  "unitId": "ronaldo-06:unit:2"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-06:unit:3:word",
+                  "separatorBefore": " ",
+                  "text": "god,",
+                  "unitId": "ronaldo-06:unit:3"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:ronaldo-07",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "3811",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 750
+            }
+          },
+          "duration": {
+            "ticks": "883",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1500
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "883",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1500
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "ronaldo-07",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "923",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-07:unit:1",
+                  "start": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 15,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-07:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "793",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-07:unit:2",
+                  "start": {
+                    "ticks": "1043",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-07:unit:2:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ronaldo-07:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "plays",
+                  "unitId": "ronaldo-07:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-07:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "like",
+                  "unitId": "ronaldo-07:unit:2"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:ronaldo-08",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "567",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 100
+            }
+          },
+          "duration": {
+            "ticks": "2789",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "2789",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 3000
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "ronaldo-08",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 50,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-08:unit:1",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-08:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "321",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-08:unit:2",
+                  "start": {
+                    "ticks": "2",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-08:unit:2:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "863",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-08:unit:3",
+                  "start": {
+                    "ticks": "361",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-08:unit:3:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ronaldo-08:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "a",
+                  "unitId": "ronaldo-08:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-08:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "Greek",
+                  "unitId": "ronaldo-08:unit:2"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-08:unit:3:word",
+                  "separatorBefore": " ",
+                  "text": "tragedy.",
+                  "unitId": "ronaldo-08:unit:3"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:ronaldo-09",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "4277",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 600
+            }
+          },
+          "duration": {
+            "ticks": "1483",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "1483",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 3000
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "ronaldo-09",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "503",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-09:unit:1",
+                  "start": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 15,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-09:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1283",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-09:unit:2",
+                  "start": {
+                    "ticks": "623",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-09:unit:2:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ronaldo-09:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "But",
+                  "unitId": "ronaldo-09:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-09:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "hey,",
+                  "unitId": "ronaldo-09:unit:2"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:ronaldo-10",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "23311",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "duration": {
+            "ticks": "973",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1500
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "973",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1500
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "ronaldo-10",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "383",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-10:unit:1",
+                  "start": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 15,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-10:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "983",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-10:unit:2",
+                  "start": {
+                    "ticks": "503",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-10:unit:2:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "733",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-10:unit:3",
+                  "start": {
+                    "ticks": "1043",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-10:unit:3:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "943",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-10:unit:4",
+                  "start": {
+                    "ticks": "763",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-10:unit:4:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ronaldo-10:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "at",
+                  "unitId": "ronaldo-10:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-10:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "least",
+                  "unitId": "ronaldo-10:unit:2"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-10:unit:3:word",
+                  "separatorBefore": " ",
+                  "text": "he's",
+                  "unitId": "ronaldo-10:unit:3"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-10:unit:4:word",
+                  "separatorBefore": " ",
+                  "text": "got",
+                  "unitId": "ronaldo-10:unit:4"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:ronaldo-11",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "8419",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1000
+            }
+          },
+          "duration": {
+            "ticks": "923",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1000
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "923",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1000
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "ronaldo-11",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "81",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-11:unit:1",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-11:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "181",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-11:unit:2",
+                  "start": {
+                    "ticks": "161",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-11:unit:2:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "863",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-11:unit:3",
+                  "start": {
+                    "ticks": "221",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-11:unit:3:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ronaldo-11:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "the",
+                  "unitId": "ronaldo-11:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-11:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "most",
+                  "unitId": "ronaldo-11:unit:2"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-11:unit:3:word",
+                  "separatorBefore": " ",
+                  "text": "followers",
+                  "unitId": "ronaldo-11:unit:3"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:ronaldo-12",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "4671",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 500
+            }
+          },
+          "duration": {
+            "ticks": "2309",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "2309",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 3000
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "ronaldo-12",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "81",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-12:unit:1",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-12:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "703",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "ronaldo-12:unit:2",
+                  "start": {
+                    "ticks": "141",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "ronaldo-12:unit:2:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "ronaldo-12:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "on",
+                  "unitId": "ronaldo-12:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "ronaldo-12:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "Instagram.",
+                  "unitId": "ronaldo-12:unit:2"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:messi-01",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "6067",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 600
+            }
+          },
+          "duration": {
+            "ticks": "501",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1000
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "501",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1000
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "messi-01",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "1303",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-01:unit:1",
+                  "start": {
+                    "ticks": "97",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-01:unit:1:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "messi-01:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "Messi?",
+                  "unitId": "messi-01:unit:1"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:messi-02",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "32761",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "duration": {
+            "ticks": "803",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 750
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "803",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 750
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "messi-02",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "803",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-02:unit:1",
+                  "start": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 15,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-02:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1403",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-02:unit:2",
+                  "start": {
+                    "ticks": "923",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-02:unit:2:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "763",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-02:unit:3",
+                  "start": {
+                    "ticks": "733",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-02:unit:3:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "3089",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-02:unit:4",
+                  "start": {
+                    "ticks": "823",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-02:unit:4:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "messi-02:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "Man",
+                  "unitId": "messi-02:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "messi-02:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "won",
+                  "unitId": "messi-02:unit:2"
+                },
+                {
+                  "attributes": [],
+                  "id": "messi-02:unit:3:word",
+                  "separatorBefore": " ",
+                  "text": "a",
+                  "unitId": "messi-02:unit:3"
+                },
+                {
+                  "attributes": [],
+                  "id": "messi-02:unit:4:word",
+                  "separatorBefore": " ",
+                  "text": "World Cup",
+                  "unitId": "messi-02:unit:4"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:messi-03",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "11991",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1000
+            }
+          },
+          "duration": {
+            "ticks": "411",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 500
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "411",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 500
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "messi-03",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "6",
+                    "timeBase": {
+                      "denominator": 25,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-03:unit:1",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-03:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "381",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-03:unit:2",
+                  "start": {
+                    "ticks": "13",
+                    "timeBase": {
+                      "denominator": 50,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-03:unit:2:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "391",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-03:unit:3",
+                  "start": {
+                    "ticks": "421",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-03:unit:3:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "messi-03:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "looking",
+                  "unitId": "messi-03:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "messi-03:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "like",
+                  "unitId": "messi-03:unit:2"
+                },
+                {
+                  "attributes": [],
+                  "id": "messi-03:unit:3:word",
+                  "separatorBefore": " ",
+                  "text": "somebody's",
+                  "unitId": "messi-03:unit:3"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:messi-04",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "12813",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1000
+            }
+          },
+          "duration": {
+            "ticks": "2729",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "2729",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 3000
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "messi-04",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "191",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-04:unit:1",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-04:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "843",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-04:unit:2",
+                  "start": {
+                    "ticks": "211",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-04:unit:2:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "messi-04:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "tired",
+                  "unitId": "messi-04:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "messi-04:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "dad.",
+                  "unitId": "messi-04:unit:2"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:messi-05",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "21077",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1500
+            }
+          },
+          "duration": {
+            "ticks": "1003",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1500
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "1003",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1500
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "messi-05",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "983",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-05:unit:1",
+                  "start": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 15,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-05:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "943",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-05:unit:2",
+                  "start": {
+                    "ticks": "1103",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-05:unit:2:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "messi-05:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "Walks",
+                  "unitId": "messi-05:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "messi-05:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "around",
+                  "unitId": "messi-05:unit:2"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:messi-06",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "368",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 25
+            }
+          },
+          "duration": {
+            "ticks": "3029",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "3029",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 3000
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "messi-06",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "361",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-06:unit:1",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-06:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "311",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-06:unit:2",
+                  "start": {
+                    "ticks": "501",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-06:unit:2:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "943",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-06:unit:3",
+                  "start": {
+                    "ticks": "321",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-06:unit:3:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "messi-06:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "for",
+                  "unitId": "messi-06:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "messi-06:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "89",
+                  "unitId": "messi-06:unit:2"
+                },
+                {
+                  "attributes": [],
+                  "id": "messi-06:unit:3:word",
+                  "separatorBefore": " ",
+                  "text": "minutes,",
+                  "unitId": "messi-06:unit:3"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:messi-07",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "5939",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 375
+            }
+          },
+          "duration": {
+            "ticks": "1183",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1500
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "1183",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1500
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "messi-07",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "1103",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-07:unit:1",
+                  "start": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 15,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-07:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1463",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-07:unit:2",
+                  "start": {
+                    "ticks": "1283",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-07:unit:2:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1123",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-07:unit:3",
+                  "start": {
+                    "ticks": "1583",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-07:unit:3:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "messi-07:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "touches",
+                  "unitId": "messi-07:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "messi-07:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "the",
+                  "unitId": "messi-07:unit:2"
+                },
+                {
+                  "attributes": [],
+                  "id": "messi-07:unit:3:word",
+                  "separatorBefore": " ",
+                  "text": "ball",
+                  "unitId": "messi-07:unit:3"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:messi-08",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "8313",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 500
+            }
+          },
+          "duration": {
+            "ticks": "1093",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1500
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "1093",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1500
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "messi-08",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "221",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-08:unit:1",
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-08:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "331",
+                    "timeBase": {
+                      "denominator": 500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-08:unit:2",
+                  "start": {
+                    "ticks": "281",
+                    "timeBase": {
+                      "denominator": 1000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-08:unit:2:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "messi-08:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "three",
+                  "unitId": "messi-08:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "messi-08:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "times.",
+                  "unitId": "messi-08:unit:2"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:messi-09",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "211",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 12
+            }
+          },
+          "duration": {
+            "ticks": "1103",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1500
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "1103",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1500
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "messi-09",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "23",
+                    "timeBase": {
+                      "denominator": 75,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-09:unit:1",
+                  "start": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 15,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-09:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "1003",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-09:unit:2",
+                  "start": {
+                    "ticks": "1103",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-09:unit:2:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "messi-09:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "Hat",
+                  "unitId": "messi-09:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "messi-09:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "trick.",
+                  "unitId": "messi-09:unit:2"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        },
+        {
+          "id": "reference-captions:messi-10",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "56179",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 3000
+            }
+          },
+          "duration": {
+            "ticks": "883",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 750
+            }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "end": {
+                    "ticks": "883",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 750
+                    }
+                  }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                },
+                "rate": {
+                  "numerator": 1,
+                  "denominator": 1
+                }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": {
+              "name": "@hypit/caption-fine"
+            },
+            "name": "fine"
+          },
+          "sharedValues": [
+            {
+              "slot": "style",
+              "ref": "reference-caption-style"
+            }
+          ],
+          "parameters": {
+            "caption": {
+              "cueId": "messi-10",
+              "documentId": "ranking-football-caption",
+              "role": "HOST",
+              "units": [
+                {
+                  "end": {
+                    "ticks": "793",
+                    "timeBase": {
+                      "denominator": 1500,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-10:unit:1",
+                  "start": {
+                    "ticks": "1",
+                    "timeBase": {
+                      "denominator": 15,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-10:unit:1:word"
+                  ]
+                },
+                {
+                  "end": {
+                    "ticks": "833",
+                    "timeBase": {
+                      "denominator": 750,
+                      "numerator": 1
+                    }
+                  },
+                  "id": "messi-10:unit:2",
+                  "start": {
+                    "ticks": "2249",
+                    "timeBase": {
+                      "denominator": 3000,
+                      "numerator": 1
+                    }
+                  },
+                  "wordIds": [
+                    "messi-10:unit:2:word"
+                  ]
+                }
+              ],
+              "words": [
+                {
+                  "attributes": [],
+                  "id": "messi-10:unit:1:word",
+                  "separatorBefore": "",
+                  "text": "Definitely",
+                  "unitId": "messi-10:unit:1"
+                },
+                {
+                  "attributes": [],
+                  "id": "messi-10:unit:2:word",
+                  "separatorBefore": " ",
+                  "text": "S tier.",
+                  "unitId": "messi-10:unit:2"
+                }
+              ]
+            }
+          },
+          "picture": {
+            "layout": {
+              "x": 43,
+              "y": 589,
+              "width": 634,
+              "height": 230,
+              "fit": "fill"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "transitions": [],
+  "mattes": []
+}

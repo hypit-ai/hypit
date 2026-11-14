@@ -10,6 +10,8 @@ type RenderWindow = Window & {
   __hypitCaptureRoots?: readonly Element[];
   __hypitPrepareImages(): Promise<void>;
   __hypitDrawVideoSources?(sources: readonly SourceFrameUpdate[]): Promise<void>;
+  /** Programme-owned composition step after selected source frames are resident. */
+  __hypitAfterSourceFrames?(): Promise<void>;
 };
 
 export type SourceFrameUpdate = {
@@ -321,6 +323,7 @@ export async function createFramePreparer(page: FramePreparationPage) {
         if (image.src !== source.url) image.src = source.url;
         await image.decode();
       }));
+      if (w.__hypitAfterSourceFrames !== undefined) await w.__hypitAfterSourceFrames();
       const sourceMs = performance.now() - sourceStarted;
       const readinessStarted = performance.now();
       await w.__hypitPrepareImages();

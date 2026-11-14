@@ -239,7 +239,7 @@ merge this fragment into the Profile, retaining the other services the productio
     }
   },
   "bindings": {
-    "@hypit/whisperx@1#whisperx-transcription": "whisperx.local"
+    "@hypit/whisperx#whisperx-transcription": "whisperx.local"
   }
 }
 ```

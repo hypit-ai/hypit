@@ -1,0 +1,24 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "side-close",
+  "name": "侧面近景",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets"
+    },
+    "name": "camera-preset"
+  },
+  "resources": {},
+  "parameters": {
+    "cameraPreset": {
+      "targetMode": "subject",
+      "yawDeg": 90,
+      "elevationDeg": 2,
+      "rollDeg": 0,
+      "framing": "close",
+      "distanceScale": 0.82,
+      "focusY": 0.74,
+      "fov": 36
+    }
+  }
+}

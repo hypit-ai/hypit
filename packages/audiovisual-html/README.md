@@ -4,10 +4,13 @@ One-way terminal lowering from a resolved `@hypit/audiovisual` Picture Programme
 `@hypit/html-program` renderer contract.
 
 The package is intentionally downstream. `@hypit/audiovisual` remains renderer-independent; this adapter
-selects HTML terminal facts only after exact temporal relations and an Output sampling policy are both available.
+selects HTML terminal facts only after exact temporal relations and the renderer-neutral
+`AudiovisualPictureOutput` sampling policy are both available.
 
-`lowerAudiovisualPictureProgramToHtmlProgram()` accepts one Programme, its terminal Source set and one
-typed Output policy. It evaluates exact relations at the requested output positions, but lowers every
+`lowerAudiovisualPictureProgramToHtmlProgram()` accepts one Programme, its terminal Source set, one
+typed Output policy and an optional explicit range Demand. A compatibility caller that omits Demand requests the complete
+Programme. The adapter first validates the request through `@hypit/audiovisual-execution`, then evaluates exact relations
+only at positions inside that range. It lowers every
 graph path to one stable terminal element rather than copying the DOM tree once per frame. It lowers:
 
 - `transparent` to an empty terminal box;
@@ -23,7 +26,8 @@ zero-origin Canvas, while the source must match the Programme root Space. Output
 not rewrite or have to equal the authored Programme Space.
 
 Source packages publish terminal values independently from `ProgramSource`. A value binds one nominal Source
-output to either a package-owned opaque visual programme, a PreparedMedia Picture implementation, or a nested
+output to either a package-owned opaque visual programme, a PreparedMedia Picture implementation, a transient
+`PreparedPictureSampling` received from another Terminal island, or a nested
 AudiovisualProgram plus its own terminal Source set. These are HTML execution forms, not AVIR Source kinds.
 Operator packages publish their named-port programme as part of the typed `PictureOperator`; the adapter does
 not call a resolver or recover parameters by id. It has no package scan or Operator registry. Unsupported
@@ -36,6 +40,23 @@ output-to-source `TemporalMap`, including hold, loop, fractional speed and rever
 evaluates a child Programme without materializing it. The official
 Cross Dissolve package publishes its complete Picture Operator and the adapter closes its inputs through
 the declared named slots. The vertical proof uses two PreparedMedia video sources and that typed Operator.
+
+`createAudiovisualHtmlTerminalExecutor()` is a real multi-Terminal consumer. It projects an incoming Source-task or
+Operator-island Product into a transient typed AVIR Source, adapts its shared `PreparedPictureSampling` into the existing
+stable video plane, and continues ordinary crop, remap, over and pointwise Operator lowering. The Product's `TemporalMap`
+carries nominal Programme or Source-local time into the temporary stream domain, so rendering a requested subrange from
+stream time zero requires no clock-name assumption. The executor does not create `PreparedMedia`, a Media Asset, project
+metadata or a cache entry.
+
+When an HTML island itself publishes an intermediate Product, the executor compiles exactly that projected subgraph into
+an `HtmlProgram` and delegates materialization to an explicitly injected Host publisher. Chromium, Artifact storage,
+alpha-capable encoding and cache policy remain Host concerns. The published value is still a transient execution edge and
+is never written back to AVIR.
+
+`createAudiovisualHtmlTerminalCapability()` is the matching finite capability offer. It verifies Picture structure,
+pointwise HTML Operator programmes, Source implementations and required Source access before partitioning. It declares
+`PreparedPictureSampling` input support and advertises the same output only when the Host has explicitly installed an
+alpha-capable Product publisher. It performs no Terminal selection.
 
 A package-owned Picture `SignalReconstruction` is read only at the terminal boundary. The portable HTML
 reconstruction format currently executes exact nearest-frame selection and remains attached to the stable media
@@ -57,5 +78,6 @@ declare an explicit `progress` Control domain; their normalized progress is ther
 of a bound coordinate, not an implicit Track duration or terminal-local animation clock.
 
 Every Operator also carries its general temporal-support contract. The current HTML executor implements the
-pointwise subset and rejects look-around, sequential pre-roll, latency or tail requirements at this capability
-boundary; it does not infer support from an effect id.
+pointwise subset and rejects look-around or tail requirements at this capability boundary; execution state,
+pre-roll and latency are Terminal facts rather than AVIR Operator fields. It does not infer support from an
+effect id.

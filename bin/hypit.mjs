@@ -36,8 +36,8 @@ const {
 } = await import("@hypit/build-cli");
 const { acquireOAuthCredential, createBuildOperationsCliCommandModules } = await import("@hypit/build-operations-cli");
 const { createGenerationGraphCliCommandModules } = await import("@hypit/generation-graph-cli");
-const { createLocalRuntimeCliCommandModules } = await import("@hypit/runtime-local/cli");
-const { selectRuntimeProfile } = await import("@hypit/runtime-local");
+const { createLocalExecutionEnvironmentCliCommandModules } = await import("@hypit/execution-environment-local/cli");
+const { createLocalRuntimeCliCommandModules } = await import("@hypit/generation-runtime-local/cli");
 const { createLocalMediaCliCommandModules } = await import("@hypit/media-file-local/cli");
 const { createLocalNleCliCommandModules } = await import("@hypit/nle-local/cli");
 const { createWorkbenchCliCommandModules } = await import("@hypit/workbench/cli");
@@ -58,9 +58,9 @@ await runNodeCli(args, async (argv, io) => await runInstalledCliApplication(argv
     ...createLocalNleCliCommandModules({ distributionPackageRoot: distributionRoot }),
     ...createWorkbenchCliCommandModules({
       distributionPackageRoot: distributionRoot,
+      openEnvironmentHost: toolchainServices.buildOperations.openEnvironmentHost,
       resolveProjectRuntime: toolchainServices.generation.resolveProjectRuntime,
       openRuntimeHost: toolchainServices.localRuntime.openLocalRuntimeHost,
-      selectProjectRuntime: async (projectRoot, profile) => { await selectRuntimeProfile(projectRoot, profile); },
       acquireOAuthCredential,
       materializeMediaProduct: toolchainServices.generation.materializeMediaProduct,
       openProjectResults: async (projectRoot) =>
@@ -71,6 +71,10 @@ await runNodeCli(args, async (argv, io) => await runInstalledCliApplication(argv
     }),
     ...createSourceBuildCliCommandModules(svmlServices),
     ...createBuildOperationsCliCommandModules(toolchainServices.buildOperations),
+    ...createLocalExecutionEnvironmentCliCommandModules({
+      packageRoot: distributionRoot,
+      distributionPackageRoot: distributionRoot,
+    }),
     ...createLocalRuntimeCliCommandModules(toolchainServices.localRuntime),
     ...createSvmlToolchainCliCommandModules({ distributionPackageRoot: distributionRoot }),
     ...createSpeechEstimateCliCommandModules(),

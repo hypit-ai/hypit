@@ -4,12 +4,12 @@ Exact Seedance author model module. It owns the request schema, three legacy aut
 Generation Graph nodes;
 it does not contain service credentials, HTTP code, queues, runtime routing or usage-specific Prompt assembly.
 
-Its implementation uses the public Hypit author APIs and the `@hypit/generation` model APIs. The repository keeps
+Its implementation uses the public Hypit author APIs and the `@hypit/generation-model` model APIs. The repository keeps
 TypeScript source entry points for joint development; `npm run pack:independent -- packages/seedance`
 builds the owner package into a temporary release directory whose exports and activation point at compiled
 JavaScript. The resulting tarball contains no private Hypit workspace dependency or second copy of the Host.
 The npm version selects those package bytes; Source continues to address the logical Module as
-`@hypit/seedance@1`.
+`@hypit/seedance`.
 
 The official Hypit Distribution currently declares this package as a default npm dependency rather
 than embedding its source. A project may explicitly install another compatible version; the ordinary
@@ -44,7 +44,7 @@ duplicate Seedance rules. A frame-guided recipe can stay concise:
 {
   "id": "motion",
   "using": {
-    "module": { "name": "@hypit/seedance", "version": "1" },
+    "module": { "name": "@hypit/seedance" },
     "name": "seedance-2.5.video"
   },
   "inputs": {
@@ -90,7 +90,7 @@ edited while preserving the relationships the prompt does not ask to change. For
 source-edit relationship, author `duration="-1"` and `aspect-ratio="adaptive"`:
 
 ```svml
-module seedance from "@hypit/seedance@1"
+module seedance from "@hypit/seedance"
 
 seedance.reference-video {
   id: edit

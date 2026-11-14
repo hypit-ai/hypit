@@ -14,11 +14,11 @@ import type {
   AuthorDocumentImport,
   AuthorDocumentOperation,
   AuthorFrontend,
-} from "@hypit/author";
-import { compileAuthorDeclarations } from "@hypit/author";
+} from "@hypit/generation-authoring/author";
+import { compileAuthorDeclarations } from "@hypit/generation-authoring/author";
 import type { BlobRef } from "@hypit/protocol";
-import { moduleKey, type ModuleRef } from "@hypit/protocol";
-import { decodeSourceText, type SourceRange, type SourceUnit } from "@hypit/source";
+import { moduleKey, type ModuleRef } from "@hypit/module";
+import { decodeSourceText, type SourceRange, type SourceUnit } from "@hypit/generation-authoring/source";
 
 import { MarkupFrontendError } from "./error.js";
 import type {
@@ -345,7 +345,7 @@ function childFromElement(document: MarkupDocument, element: MarkupDocumentEleme
 export function declarationsFromMarkupDocument(
   document: MarkupDocument,
   options: Pick<MarkupDocumentFrontendOptions, "resolveModule" | "declarations">,
-): readonly import("@hypit/author").AuthorDeclaration[] {
+): readonly import("@hypit/generation-authoring/author").AuthorDeclaration[] {
   const scope = declarationScope(document, options);
   return document.declarations.map((element) => {
     const bound = scope.get(element.name);
@@ -439,7 +439,7 @@ export type MarkupDeclarationAuthorFrontendOptions = {
   readonly compilers: AuthorDeclarationRegistryLike;
 };
 
-export const markupDeclarationAuthorFrontendId = "@hypit/markup@1";
+export const markupDeclarationAuthorFrontendId = "@hypit/markup";
 
 /** Complete Markup Frontend backed by declaration syntax and compilers. */
 export function createMarkupDeclarationAuthorFrontend(

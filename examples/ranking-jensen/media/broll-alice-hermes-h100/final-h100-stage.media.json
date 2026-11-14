@@ -1,0 +1,35 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "ranking-jensen-broll-h100",
+  "media": {
+    "file": {
+      "path": "final-h100-stage.png",
+      "mediaType": "image/png"
+    },
+    "interpretation": {
+      "id": "ranking-jensen-broll-h100:media",
+      "picture": {
+        "interpretation": {
+          "codedHeight": 1200,
+          "codedWidth": 1200,
+          "picture": {
+            "alphaMode": "straight",
+            "bitDepth": 8,
+            "colorMatrix": "rgb",
+            "colorPrimaries": "bt709",
+            "colorRange": "full",
+            "colorTransfer": "srgb"
+          },
+          "rotationDegrees": 0,
+          "sampleAspectRatio": {
+            "denominator": 1,
+            "numerator": 1
+          }
+        },
+        "kind": "constant",
+        "streamIndex": 0
+      }
+    }
+  },
+  "representations": []
+}

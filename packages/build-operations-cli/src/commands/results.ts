@@ -2,7 +2,7 @@ import { realpath } from "node:fs/promises";
 
 import type { ProductExporter, ProductHistory } from "@hypit/product";
 import type { BuildResultHistory } from "@hypit/result";
-import type { TypeRef } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
 
 import type { CliCommand, ProjectResultCommand } from "../command.js";
 import { exportBuildResultOutput } from "../result-export.js";
@@ -15,7 +15,7 @@ import {
   projectPath,
 } from "../view.js";
 import type { OperationalWriter } from "./types.js";
-import { commandHint } from "@hypit/cli";
+import { commandHint } from "@hypit/cli/public";
 
 export function isProjectResultCommand(args: CliCommand): args is ProjectResultCommand {
   return args.command === "builds" || args.command === "history" || args.command === "inspect"

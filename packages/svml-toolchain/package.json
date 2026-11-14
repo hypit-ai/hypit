@@ -8,22 +8,27 @@
     ".": "./src/index.ts",
     "./cli": "./src/commands.ts"
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "dependencies": {
-    "@hypit/author": "workspace:^0.0.0-dev",
-    "@hypit/audiovisual-media": "workspace:^0.1.0",
-    "@hypit/build-operations-cli": "workspace:^0.1.0",
+    "@hypit/generation-build": "workspace:*",
     "@hypit/build-cli": "workspace:^0.1.0",
+    "@hypit/build-operations-cli": "workspace:^0.1.0",
     "@hypit/cli": "workspace:^0.0.0-dev",
-    "@hypit/compiler": "workspace:^0.0.0-dev",
     "@hypit/document": "workspace:^0.1.0",
+    "@hypit/generation-authoring": "workspace:*",
     "@hypit/html-video-author": "workspace:^0.1.0",
     "@hypit/loader": "workspace:^0.0.0-dev",
     "@hypit/media-author": "workspace:^0.1.0",
+    "@hypit/media-avir-author": "workspace:^0.1.0",
+    "@hypit/module": "workspace:^0.0.0-dev",
+    "@hypit/project": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/recipe": "workspace:^0.1.0",
     "@hypit/refinement": "workspace:^0.0.0-dev",
-    "@hypit/svml": "workspace:^0.1.0",
-    "@hypit/workspace": "workspace:^0.0.0-dev"
+    "@hypit/svml": "workspace:^0.1.0"
   },
   "devDependencies": {
     "@hypit/toolchain": "workspace:*"

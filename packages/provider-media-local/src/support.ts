@@ -1,5 +1,5 @@
 import type { EndpointSupport } from "@hypit/hypit/endpoint";
-import type { CanonicalValue } from "@hypit/hypit/protocol";
+import type { CanonicalValue } from "@hypit/hypit/value";
 import { assertLocalAudioProgramSupported } from "@hypit/media-local";
 import { verifyPreparedAudioSource } from "@hypit/media";
 import { assertTemporalMap, isAffineTemporalMapPiece } from "@hypit/temporal";

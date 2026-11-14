@@ -1,11 +1,12 @@
-import { createAuthorFrontendFacet } from "@hypit/author";
+import { createModuleFacet } from "@hypit/module";
+import { createGenerationModuleFacet } from "@hypit/generation-build";
+import { createAuthorFrontendFacet } from "@hypit/generation-authoring/author";
 
 import { recipeFrontend, recipeManifest } from "./index.js";
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [{ manifest: recipeManifest }],
-  facets: [createAuthorFrontendFacet(recipeFrontend)],
+  facets: [
+    createModuleFacet(recipeManifest), createGenerationModuleFacet(recipeManifest),createAuthorFrontendFacet(recipeFrontend)],
 };
 
 export default hypitPackage;

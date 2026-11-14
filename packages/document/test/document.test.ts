@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { resolveSelfDescribedTextSource } from "@hypit/source/text";
+import { resolveSelfDescribedTextSource } from "@hypit/generation-authoring/source/text";
 
 import {
   documentFrontend,
@@ -77,7 +77,7 @@ test("one component-free SVML file projects to document blocks and an empty Auth
   const resolved = resolveSelfDescribedTextSource({
     id: "/project/notes.svml",
     name: "notes.svml",
-    text: `<?svml using="@hypit/document@1"?>\n${completeMarkdown}`,
+    text: `<?svml using="@hypit/document"?>\n${completeMarkdown}`,
   });
   assert.equal(resolved.frontend, documentFrontend.id);
   const frontend = documentFrontend.document;
@@ -95,7 +95,7 @@ test("block edits change only addressed Markdown ranges", async () => {
   const resolved = resolveSelfDescribedTextSource({
     id: "/project/edit.svml",
     name: "edit.svml",
-    text: `<?svml using="@hypit/document@1"?>\n# Original\n\nKeep **this spelling**.\n`,
+    text: `<?svml using="@hypit/document"?>\n# Original\n\nKeep **this spelling**.\n`,
   });
   const frontend = documentFrontend.document;
   assert(frontend !== undefined);

@@ -2,7 +2,7 @@ import { temporalTypes } from "@hypit/temporal-graph";
 import { blobTypes } from "@hypit/blob";
 
 import { mediaProducers, mediaTypes } from "@hypit/media";
-import { sealGraphFragment } from "@hypit/author";
+import { sealGraphFragment } from "@hypit/generation-authoring/author";
 import { htmlProgramProducers, htmlProgramTypes } from "@hypit/html-program";
 import { audioProgramProducers, audioProgramTypes } from "@hypit/audio-program";
 import { mediaDeliveryProducers } from "@hypit/media-delivery";

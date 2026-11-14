@@ -1,9 +1,9 @@
-import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
-import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
-import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+import { sealModelFieldRequest, defineModelFields } from "@hypit/generation-model/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation-model/model-fields";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation-model/model-fields";
 import { promptTypes } from "@hypit/hypit/prompt";
 
-export const grokImagineModuleRef = { name: "@hypit/grok-imagine", version: "1" } as const;
+export const grokImagineModuleRef = { name: "@hypit/grok-imagine" } as const;
 export const grokImagineModels = ["grok-imagine-video", "grok-imagine-video-1.5-preview"] as const;
 export type GrokImagineModel = typeof grokImagineModels[number];
 

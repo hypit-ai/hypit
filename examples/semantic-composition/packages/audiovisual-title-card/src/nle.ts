@@ -5,9 +5,9 @@ import type {
   NleLoweringContext,
   NlePackageSymbol,
 } from "@hypit/nle";
-import { nleSourceTimeRequiredDuration } from "@hypit/nle";
-import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
-import { canonicalize } from "@hypit/protocol";
+import { nleTimeMappingRequiredDuration } from "@hypit/nle";
+import type { NleAudiovisualComponentResolver } from "@hypit/nle-audiovisual";
+import { canonicalize } from "@hypit/hypit/value";
 import { compareExactTemporalValues } from "@hypit/temporal/algebra";
 
 import { titleCardModuleRef } from "./identity.js";
@@ -95,7 +95,7 @@ export function editTitleCardNleParameters(
 function resolveTitleCard(item: NleComponentItem, { project }: NleLoweringContext) {
   const parameters = item.parameters as unknown;
   assertTitleCardNleParameters(parameters);
-  const required = nleSourceTimeRequiredDuration(item.sourceTime);
+  const required = nleTimeMappingRequiredDuration(item.sourceTime);
   const spec: TitleCardSpec = {
     id: `${item.id}:source`,
     duration: compareExactTemporalValues(required, item.duration) > 0 ? required : item.duration,
@@ -121,7 +121,7 @@ export const titleCardNleResolver: NleComponentResolver = {
   },
 };
 
-export const titleCardNleHtmlVideoResolver: NleHtmlVideoComponentResolver = {
+export const titleCardNleAudiovisualResolver: NleAudiovisualComponentResolver = {
   component: titleCardNleSymbol,
   resolve: (item, context) => ({ html: resolveTitleCard(item, context).html }),
 };

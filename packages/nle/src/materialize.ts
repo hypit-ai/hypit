@@ -1,18 +1,20 @@
-import { verifyPreparedMedia } from "@hypit/media";
+import { preparedPictureExtent, verifyPreparedMedia } from "@hypit/media";
 import type { CanonicalValue } from "@hypit/protocol";
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 
 import { assertNleProject, findNleTrack } from "./project.js";
-import { nleLinearSourceTime } from "./source-time.js";
+import { nleLinearTimeMapping } from "./source-time.js";
+import { containNlePictureLayout } from "./picture.js";
 import type { NleTransaction } from "./transaction.js";
 import type {
   NleAudioAppearance,
   NleAdjustmentItem,
+  NleComponentSharedValueReference,
   NlePackageSymbol,
   NlePictureAppearance,
   NlePictureLayout,
   NleProject,
-  NleSourceTime,
+  NleTimeMapping,
   NleMediaAssetReference,
   NleMediaInterpretation,
 } from "./types.js";
@@ -40,7 +42,7 @@ export function createMediaAssetMaterialization(project: NleProject, input: {
   readonly picture?: Partial<NlePictureAppearance> & { readonly layout?: NlePictureLayout };
 }): NleTransaction {
   assertNleProject(project);
-  verifyPreparedMedia({
+  const prepared = {
     ...input.interpretation,
     source: {
       kind: "blob",
@@ -48,7 +50,8 @@ export function createMediaAssetMaterialization(project: NleProject, input: {
       size: 0,
       mediaType: "application/octet-stream",
     },
-  });
+  } as const;
+  verifyPreparedMedia(prepared);
   const track = findNleTrack(project, input.track);
   const duration = input.duration ?? (input.interpretation.domain === undefined
     ? undefined
@@ -74,11 +77,17 @@ export function createMediaAssetMaterialization(project: NleProject, input: {
         asset: structuredClone(input.asset),
         start: structuredClone(input.at),
         duration: structuredClone(duration),
-        sourceTime: nleLinearSourceTime(duration),
+        sourceTime: nleLinearTimeMapping(duration),
         enabled: true,
         ...(includeAudio ? { audio: structuredClone(input.audio ?? {}) } : {}),
         ...(track.kind === "audio" ? {} : { picture: {
-          layout: structuredClone(input.picture?.layout ?? fullCanvas(project)),
+          layout: structuredClone(input.picture?.layout ?? containNlePictureLayout(
+            project.canvas,
+            (() => {
+              const extent = preparedPictureExtent(prepared);
+              return { width: extent.widthPx, height: extent.heightPx };
+            })(),
+          )),
         } }),
       },
     }],
@@ -91,9 +100,11 @@ export function createComponentMaterialization(project: NleProject, input: {
   readonly track: string;
   readonly component: NlePackageSymbol;
   readonly parameters: CanonicalValue;
+  readonly sharedValues?: readonly NleComponentSharedValueReference[];
+  readonly media?: Readonly<Record<string, NleMediaAssetReference>>;
   readonly at: ExactTemporalValue;
   readonly duration: ExactTemporalValue;
-  readonly sourceTime?: NleSourceTime;
+  readonly sourceTime?: NleTimeMapping;
   readonly layout?: NlePictureLayout;
   readonly audio?: Partial<NleAudioAppearance>;
 }): NleTransaction {
@@ -105,9 +116,11 @@ export function createComponentMaterialization(project: NleProject, input: {
     source: "component" as const,
     component: structuredClone(input.component),
     parameters: structuredClone(input.parameters),
+    ...(input.sharedValues === undefined ? {} : { sharedValues: structuredClone(input.sharedValues) }),
+    ...(input.media === undefined ? {} : { media: structuredClone(input.media) }),
     start: structuredClone(input.at),
     duration: structuredClone(input.duration),
-    sourceTime: structuredClone(input.sourceTime ?? nleLinearSourceTime(input.duration)),
+    sourceTime: structuredClone(input.sourceTime ?? nleLinearTimeMapping(input.duration)),
     enabled: true,
     ...(input.audio === undefined ? {} : { audio: structuredClone(input.audio) }),
     ...(track.kind === "audio" ? {} : { picture: {
@@ -119,26 +132,26 @@ export function createComponentMaterialization(project: NleProject, input: {
   return { revision: project.revision, commands: [{ kind: "item.add", track: track.id, item }] };
 }
 
-/** Materialize one independently timed Adjustment Component. */
+/** Materialize one independently timed Programme-scoped Operator Application. */
 export function createAdjustmentMaterialization(project: NleProject, input: {
   readonly id: string;
   readonly track: string;
-  readonly component: NlePackageSymbol;
+  readonly operator: NlePackageSymbol;
   readonly parameters: CanonicalValue;
   readonly at: ExactTemporalValue;
   readonly duration: ExactTemporalValue;
-  readonly sourceTime?: NleSourceTime;
+  readonly controlTime?: NleTimeMapping;
 }): NleTransaction {
   assertNleProject(project);
   findNleTrack(project, input.track);
   const item: NleAdjustmentItem = {
     id: input.id,
     kind: "adjustment",
-    component: structuredClone(input.component),
+    operator: structuredClone(input.operator),
     parameters: structuredClone(input.parameters),
     start: structuredClone(input.at),
     duration: structuredClone(input.duration),
-    sourceTime: structuredClone(input.sourceTime ?? nleLinearSourceTime(input.duration)),
+    controlTime: structuredClone(input.controlTime ?? nleLinearTimeMapping(input.duration)),
     enabled: true,
   };
   return { revision: project.revision, commands: [{ kind: "item.add", track: input.track, item }] };

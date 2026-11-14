@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { AuthorDeclarationRegistry } from "@hypit/author";
+import { AuthorDeclarationRegistry } from "@hypit/generation-authoring/author";
 import {
   promptTemplateAuthorDeclaration,
   renderPrompt,

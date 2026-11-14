@@ -1,4 +1,4 @@
-import { decodeSourceText, type SourceRange, type SourceUnit } from "@hypit/source";
+import { decodeSourceText, type SourceRange, type SourceUnit } from "@hypit/generation-authoring/source";
 
 import { SvmlFrontendError } from "./error.js";
 import type {

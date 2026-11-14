@@ -13,9 +13,9 @@ import type {
   AuthorStructureOperation,
   AuthorStructureRecordEntryDraft,
   AuthorStructureValueDraft,
-} from "@hypit/author";
-import type { ModuleRef } from "@hypit/protocol";
-import { decodeSourceText, type SourceRange, type SourceUnit } from "@hypit/source";
+} from "@hypit/generation-authoring/author";
+import { createModuleRef, type ModuleRef } from "@hypit/module";
+import { decodeSourceText, type SourceRange, type SourceUnit } from "@hypit/generation-authoring/source";
 
 import { SvmlFrontendError } from "./error.js";
 import { parseSvmlDocument } from "./parser.js";
@@ -63,25 +63,16 @@ type SvmlStructureRepresentation = {
 };
 
 function moduleRef(from: string, source: SourceUnit, offset: number): ModuleRef {
-  const separator = from.lastIndexOf("@");
-  if (separator <= 0 || separator === from.length - 1) {
+  try {
+    return createModuleRef(from);
+  } catch {
     throw new SvmlFrontendError(
-      "SVML_MODULE_VERSION",
-      `Module import ${JSON.stringify(from)} must include an explicit @1 ABI version.`,
+      "SVML_MODULE_NAME",
+      `Module import ${JSON.stringify(from)} must be an unversioned logical package name.`,
       source.name,
       offset,
     );
   }
-  const version = from.slice(separator + 1);
-  if (version !== "1") {
-    throw new SvmlFrontendError(
-      "SVML_MODULE_ABI",
-      `Module import ${JSON.stringify(from)} uses unsupported ABI @${version}; author Sources use @1.`,
-      source.name,
-      offset,
-    );
-  }
-  return { name: from.slice(0, separator), version };
 }
 
 function lineIndent(text: string, offset: number): string {
@@ -317,9 +308,9 @@ function printValue(value: AuthorStructureValueDraft, indent: string): string {
 
 function moduleAlias(representation: SvmlStructureRepresentation, module: ModuleRef): string {
   for (const [alias, candidate] of representation.aliases) {
-    if (candidate.name === module.name && candidate.version === module.version) return alias;
+    if (candidate.name === module.name) return alias;
   }
-  throw new Error(`Module ${module.name}@${module.version} is not imported by this SVML Source.`);
+  throw new Error(`Module ${module.name} is not imported by this SVML Source.`);
 }
 
 function printDeclaration(

@@ -11,6 +11,5 @@ export type {
 } from "./planning.js";
 export {
   ProducerRegistry,
-  EndpointRegistry,
 } from "./registry.js";
 export type * from "./types.js";

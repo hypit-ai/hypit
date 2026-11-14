@@ -1,12 +1,10 @@
 import { mediaDependency, mediaTypes } from "@hypit/media";
-import type { ModuleManifest } from "@hypit/hypit/protocol";
+import type { GenerationModuleDefinition } from "@hypit/hypit/generation/build";
 
-export const fontsourceModuleRef = { name: "@hypit/fontsource", version: "1" } as const;
+export const fontsourceModuleRef = { name: "@hypit/fontsource" } as const;
 
-export const fontsourceManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const fontsourceManifest: GenerationModuleDefinition = {
   name: fontsourceModuleRef.name,
-  version: fontsourceModuleRef.version,
   dependencies: [mediaDependency],
   types: [],
   capabilities: [],

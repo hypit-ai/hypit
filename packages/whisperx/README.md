@@ -5,7 +5,7 @@ binds the request to a concrete hosted or local Endpoint; this package contains 
 Python environment or queue.
 
 The command projects an audio or video file to invocation-local `SpeechEvidenceAudio`, calls the
-selected Endpoint, and writes one editable `@hypit/timed-transcript@1#TimedTranscript` JSON file:
+selected Endpoint, and writes one editable `@hypit/timed-transcript#TimedTranscript` JSON file:
 
 ```bash
 hypit transcribe reference.mp4 --language en --to notes/reference.transcript.json
@@ -17,7 +17,7 @@ used whether detected wording is accepted directly or later corrected through de
 alignment. No Author Graph, Build, Result or SVML declaration is created.
 
 For long-running composition, this package also contributes the logical Generation Graph operation
-`@hypit/whisperx@1#transcribe`. It accepts `SpeechEvidenceAudio` plus a language and publishes one
+`@hypit/whisperx#transcribe`. It accepts `SpeechEvidenceAudio` plus a language and publishes one
 typed `TimedTranscript`. The node names no Endpoint or Provider: the active Runtime profile binds the
 existing `whisperx-transcription` Capability. The preceding media-to-evidence operation belongs to
 `@hypit/speech-evidence`, and transcript export or media attachment belongs to
@@ -29,7 +29,7 @@ how that document is measured with this model family.
 
 ## Local deployment
 
-`@hypit/provider-hypihub` is the normal hosted adapter. A local deployment may bind the same Need:
+`@hypit/provider-hypihub` is the normal hosted adapter. A local deployment may bind the same Capability:
 
 ```json
 {
@@ -40,7 +40,7 @@ how that document is measured with this model family.
     }
   },
   "bindings": {
-    "@hypit/whisperx@1#whisperx-transcription": "whisperx.local"
+    "@hypit/whisperx#whisperx-transcription": "whisperx.local"
   }
 }
 ```

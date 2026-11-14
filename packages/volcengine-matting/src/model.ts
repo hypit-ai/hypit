@@ -1,8 +1,8 @@
-import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
-import type { ModelFieldValue } from "@hypit/generation/model-fields";
-import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+import { sealModelFieldRequest, defineModelFields } from "@hypit/generation-model/model-fields";
+import type { ModelFieldValue } from "@hypit/generation-model/model-fields";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation-model/model-fields";
 
-export const volcengineMattingModuleRef = { name: "@hypit/volcengine-matting", version: "1" } as const;
+export const volcengineMattingModuleRef = { name: "@hypit/volcengine-matting" } as const;
 
 export const portraitMattingFields = defineModelFields({
   model: "matte-portrait-video",

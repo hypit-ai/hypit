@@ -1,6 +1,6 @@
-import type { Compiler } from "@hypit/compiler";
+import type { Compiler } from "@hypit/generation-authoring/compiler";
 import type { LoadedPackage, LogicalPackageAddress, PackageContribution } from "@hypit/loader";
-import type { Workspace } from "@hypit/workspace";
+import type { Workspace } from "@hypit/generation-authoring/workspace";
 import type { BuildCliContextServices, BuildOperationsCliServices } from "@hypit/build-operations-cli";
 
 export type BuildCliCompilerOptions = {

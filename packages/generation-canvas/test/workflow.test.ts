@@ -15,7 +15,7 @@ test("accepted outputs attach and become the producing nodes' selected reuse bou
     createGenerationGraphProject({ id: "images", name: "Images" }),
     { revision: 0, commands: [{ kind: "node.add", node: {
       id: "hero",
-      using: { module: { name: "@example/image", version: "1" }, name: "image" },
+      using: { module: { name: "@example/image" }, name: "image" },
       inputs: { prompt: { value: "A glass city" } },
     } }] },
   );
@@ -37,7 +37,7 @@ test("accepted outputs attach and become the producing nodes' selected reuse bou
         finishedAt: 1,
         outputs: { hero: {
           address: { publication: build, name: "hero" },
-          type: { module: { name: "@example/image", version: "1" }, name: "Image" },
+          type: { module: { name: "@example/image" }, name: "Image" },
           publisher: "hypit.product@1",
           representation: "file",
           mediaType: "image/png",

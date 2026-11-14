@@ -1,4 +1,4 @@
-import type { ModelFieldRequest } from "@hypit/generation/model-fields";
+import type { ModelFieldRequest } from "@hypit/generation-model/model-fields";
 import type { PixverseModel } from "./index.js";
 
 /**

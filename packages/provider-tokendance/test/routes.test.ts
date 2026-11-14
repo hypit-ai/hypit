@@ -10,8 +10,8 @@ import { tokenDanceRouteForCapability } from "../src/routes.js";
 
 const image: BlobRef = { kind: "blob", resource: "res_td_1", size: 3, mediaType: "image/png" };
 const resolve = async () => "data:image/png;base64,AQID";
-const SEEDANCE = { name: "@hypit/seedance", version: "1" };
-const route = (module: { name: string; version: string }, name: string) => tokenDanceRouteForCapability({ module, name })!;
+const SEEDANCE = { name: "@hypit/seedance" };
+const route = (module: { name: string }, name: string) => tokenDanceRouteForCapability({ module, name })!;
 
 test("Seedance frame requests become Ark content items with roles", async () => {
   const request = sealSeedanceRequest("seedance-2-mini", {
@@ -33,7 +33,7 @@ test("Seedream quality and ratio select the Ark pixel size", async () => {
   const request = sealSeedreamRequest({
     prompt: ["a cup"], aspectRatio: ["9:16"], quality: ["ultra"], outputFormat: ["png"], nsfwCheck: [true],
   });
-  const body = await route({ name: "@hypit/seedream", version: "1" }, "seedream-5-lite").prepare(request as unknown as CanonicalValue).compile(resolve);
+  const body = await route({ name: "@hypit/seedream" }, "seedream-5-lite").prepare(request as unknown as CanonicalValue).compile(resolve);
   assert.deepEqual(body, {
     model: "seedream-5.0-lite", prompt: "a cup", size: "3040x5504", output_format: "png", response_format: "url", watermark: false,
   });
@@ -42,14 +42,14 @@ test("Seedream quality and ratio select the Ark pixel size", async () => {
 test("MiniMax text-to-video without an aspect ratio is reported unsupported", () => {
   const request = sealMinimaxH3Request({ prompt: ["a kite"], duration: [5] });
   assert.deepEqual(request.fields.resolution, ["2K"]);
-  const minimax = route({ name: "@hypit/minimax-h3", version: "1" }, "minimax-h3");
+  const minimax = route({ name: "@hypit/minimax-h3" }, "minimax-h3");
   const support = minimax.supports({ capability: minimax.capability, returns: minimax.returns, constraints: request as unknown as CanonicalValue });
   assert.equal(support.status, "unsupported");
 });
 
 test("MiniMax's Model-owned resolution default reaches TokenDance explicitly", async () => {
   const request = sealMinimaxH3Request({ prompt: ["a kite"], duration: [5], aspectRatio: ["16:9"] });
-  const minimax = route({ name: "@hypit/minimax-h3", version: "1" }, "minimax-h3");
+  const minimax = route({ name: "@hypit/minimax-h3" }, "minimax-h3");
   assert.deepEqual(await minimax.prepare(request as unknown as CanonicalValue).compile(resolve), {
     model: "minimax-h3",
     content: [{ type: "text", text: "a kite" }],

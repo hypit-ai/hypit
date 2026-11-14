@@ -13,8 +13,8 @@ same composition can therefore be rendered in part for review or rendered as a w
 With the named inputs already declared:
 
 ```svml
-<import as="film" from="@hypit/film@1"/>
-<import as="html" from="@hypit/html-video@1"/>
+<import as="film" from="@hypit/film"/>
+<import as="html" from="@hypit/html-video"/>
 
 <film:Film id="main" canvas={canvas.canvas} timeline={speech.timeline}
   appearance={look.film.main}>
@@ -57,7 +57,7 @@ Process. The effect names the relation and its interpretation; each Input remain
 Film scope:
 
 ```svml
-<import as="matte" from="@hypit/visual-matte@1"/>
+<import as="matte" from="@hypit/visual-matte"/>
 <matte:Effect id="subject-alpha" channel="alpha" invert="false"/>
 
 <film:Process id="cutout" effect={subject-alpha}>
@@ -92,7 +92,7 @@ context in which Tracks resolve Script references. For a pure MG piece, author a
 explicit end and pass it to the components, Film and HTML Video:
 
 ```svml
-<import as="time" from="@hypit/timeline-author@1"/>
+<import as="time" from="@hypit/timeline-author"/>
 <time:Clock id="animation-clock" frame-rate="30"/>
 <time:Timeline id="animation" clock={animation-clock} end="8s">
   <time:Instant id="question" at="0.5s"/>

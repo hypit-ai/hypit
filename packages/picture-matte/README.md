@@ -22,5 +22,5 @@ two independently formed Pictures through explicit graph edges; it has no Track 
 HTML programme evaluates its named inputs as request-private Picture surfaces. Those surfaces are not
 Results, authored media or reusable metadata.
 
-The package also contributes an `hypit.nle-package@1` matte resolver. A persistent NLE stores the direct
+The package also contributes an `hypit.nle-package` matte resolver. A persistent NLE stores the direct
 content/matte Item relation plus `{ channel, invert }`; the package owns conversion to this two-input Operator.

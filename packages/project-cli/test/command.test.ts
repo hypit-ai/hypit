@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { runCliApplication } from "@hypit/cli";
-import { findProjectRoot } from "@hypit/project";
+import { findProjectRoot } from "@hypit/project/node";
 
 import { createProjectCliCommandModules, initializeHypitProject } from "../src/index.js";
 

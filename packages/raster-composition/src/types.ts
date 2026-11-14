@@ -1,4 +1,4 @@
-import type { BlobRef } from "@hypit/hypit/protocol";
+import type { BlobRef } from "@hypit/hypit/value";
 import type { LocalSpatialDomain, SpatialMap } from "@hypit/spatial/algebra";
 
 export type RasterInterpolation = "nearest" | "linear" | "cubic" | "area" | "lanczos";

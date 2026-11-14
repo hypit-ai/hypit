@@ -1,24 +1,20 @@
-import type {
-  GenerationGraphInput,
-  GenerationGraphNode,
-  GenerationOperationNodeDeclaration,
-} from "@hypit/hypit/generation-graph";
-import type { GenerationNodeAuthoringShape } from "@hypit/hypit/generation-graph";
+import type { GenerationGraphInput, GenerationGraphNode, GenerationOperationNodeDeclaration, } from "@hypit/hypit/generation/graph";
+import type { GenerationNodeAuthoringShape } from "@hypit/hypit/generation/graph";
 import type { GenerationCanvasNodePresentation } from "@hypit/generation-canvas";
-import { blobTypes } from "@hypit/hypit/blob";
-import { canonicalize, type CanonicalValue } from "@hypit/hypit/protocol";
+import { blobTypes } from "@hypit/hypit/generation/blob";
+import { canonicalize, type CanonicalValue } from "@hypit/hypit/value";
 import { sealText } from "@hypit/hypit/text";
 import {
   fieldModelGraphOperation,
   type FieldModelGraphArtifactInput,
-} from "@hypit/generation/model-fields/graph";
+} from "@hypit/generation-model/model-fields/graph";
 import {
   modelAuthoringControl,
   modelAuthoringMediaSlot,
   verifyModelFields,
   type FieldModelOperation,
   type ModelFieldValue,
-} from "@hypit/generation/model-fields";
+} from "@hypit/generation-model/model-fields";
 
 import {
   mimoSpeechEndpoints,

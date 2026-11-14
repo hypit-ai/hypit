@@ -9,6 +9,7 @@
     "./node": "./src/node/index.ts"
   },
   "dependencies": {
+    "@hypit/generation-build": "workspace:*",
     "@hypit/product": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev"
   }

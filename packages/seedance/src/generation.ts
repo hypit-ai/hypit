@@ -1,27 +1,12 @@
-import type {
-  GenerationGraphInput,
-  GenerationGraphNode,
-  GenerationOperationNodeDeclaration,
-} from "@hypit/hypit/generation-graph";
-import type { GenerationNodeAuthoringShape } from "@hypit/hypit/generation-graph";
+import type { GenerationGraphInput, GenerationGraphNode, GenerationOperationNodeDeclaration, } from "@hypit/hypit/generation/graph";
+import type { GenerationNodeAuthoringShape } from "@hypit/hypit/generation/graph";
 import type { GenerationCanvasNodePresentation } from "@hypit/generation-canvas";
-import { blobTypes } from "@hypit/hypit/blob";
+import { blobTypes } from "@hypit/hypit/generation/blob";
 import {
-  modelAuthoringControl,
-  modelAuthoringMediaList,
-  modelAuthoringMediaSlot,
-  sealModelFieldBuilder,
-  type FieldModelOperation,
-  type ModelFieldBuilder,
-  type ModelFieldValue,
-  verifyModelFields,
-} from "@hypit/generation/model-fields";
+  modelAuthoringControl, modelAuthoringMediaList, modelAuthoringMediaSlot, sealModelFieldBuilder, type FieldModelOperation, type ModelFieldBuilder, type ModelFieldValue, verifyModelFields, } from "@hypit/generation-model/model-fields";
 import {
-  collectIndexedFieldModelArtifacts,
-  fieldModelGraphOperation,
-  type FieldModelGraphArtifactInput,
-} from "@hypit/generation/model-fields/graph";
-import { canonicalize, type CanonicalValue } from "@hypit/hypit/protocol";
+  collectIndexedFieldModelArtifacts, fieldModelGraphOperation, type FieldModelGraphArtifactInput, } from "@hypit/generation-model/model-fields/graph";
+import { canonicalize, type CanonicalValue } from "@hypit/hypit/value";
 import { sealPrompt } from "@hypit/hypit/prompt";
 
 import {

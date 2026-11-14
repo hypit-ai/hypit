@@ -12,7 +12,7 @@ const image: BlobRef = { kind: "blob", resource: "res_monid_1", size: 3, mediaTy
 const resolve = async () => "https://sfs.monid.ai/signed";
 
 test("Seedance requests become the ModelArk input Monid relays", async () => {
-  const route = monidRouteForCapability({ module: { name: "@hypit/seedance", version: "1" }, name: "seedance-2-mini" })!;
+  const route = monidRouteForCapability({ module: { name: "@hypit/seedance" }, name: "seedance-2-mini" })!;
   const request = sealSeedanceRequest("seedance-2-mini", {
     prompt: ["turn"], referenceImage: [{ role: "image", artifact: image, fields: { personReference: true } }],
     resolution: ["720p"], aspectRatio: ["9:16"], duration: [6], generateAudio: [true], webSearch: [false],
@@ -29,7 +29,7 @@ test("Seedance requests become the ModelArk input Monid relays", async () => {
 });
 
 test("Monid applies its narrower Wan output quota after model validation", () => {
-  const route = monidRouteForCapability({ module: { name: "@hypit/wan", version: "1" }, name: "wan-2.7-image" })!;
+  const route = monidRouteForCapability({ module: { name: "@hypit/wan" }, name: "wan-2.7-image" })!;
   const request = sealWanRequest("wan-2.7-image", { prompt: ["variations"], count: [12] });
   assert.equal(request.fields.count?.[0], 12);
   assert.deepEqual(route.supports({ capability: route.capability, returns: route.returns,
@@ -43,7 +43,7 @@ test("Monid applies its narrower Wan output quota after model validation", () =>
 });
 
 test("MiniMax's Model-owned resolution default reaches Monid explicitly", async () => {
-  const route = monidRouteForCapability({ module: { name: "@hypit/minimax-h3", version: "1" }, name: "minimax-h3" })!;
+  const route = monidRouteForCapability({ module: { name: "@hypit/minimax-h3" }, name: "minimax-h3" })!;
   const request = sealMinimaxH3Request({ prompt: ["a kite"], duration: [5], aspectRatio: ["16:9"] });
   assert.deepEqual(await route.prepare(request as unknown as CanonicalValue).compile(resolve), {
     model: "MiniMax-H3",

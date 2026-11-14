@@ -6,7 +6,7 @@ import {
   link,
   materializeBuild,
   planBuild,
-} from "@hypit/kernel";
+} from "@hypit/generation-build";
 import {
   AuthorDeclarationRegistry,
   AuthorFrontendRegistry,
@@ -14,16 +14,14 @@ import {
   resolveCompiledSourceExport,
   sealGraphFragment,
   type AuthorDeclarationCompiler,
-} from "@hypit/author";
-import { SourceClosureError, compileSourceClosure } from "@hypit/compiler";
-import type { ResolvedSource } from "@hypit/source";
-import { resolveSelfDescribedTextSource } from "@hypit/source/text";
-import type {
-  ModuleManifest,
-  ProducerRef,
-  TypeRef,
-  TypedRecord,
-} from "@hypit/protocol";
+} from "@hypit/generation-authoring/author";
+import { SourceClosureError, compileSourceClosure } from "@hypit/generation-authoring/compiler";
+import type { ResolvedSource } from "@hypit/generation-authoring/source";
+import { resolveSelfDescribedTextSource } from "@hypit/generation-authoring/source/text";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
+import type { TypedRecord } from "@hypit/generation-build";
 import {
   formatRecipeValue,
   RecipeSyntaxError,
@@ -50,16 +48,14 @@ function buildState(
   }), []);
 }
 
-const laboratory = { name: "example.recipe-card", version: "1" } as const;
+const laboratory = { name: "example.recipe-card" } as const;
 const cardType = { module: laboratory, name: "Card" } satisfies TypeRef;
 const cardAppearanceType = { module: laboratory, name: "CardAppearance" } satisfies TypeRef;
 const renderProducer = { module: laboratory, name: "render-card" } satisfies ProducerRef;
 
-const manifest: ModuleManifest = {
-  format: "hypit.module@1",
+const manifest: GenerationModuleDefinition = {
   name: laboratory.name,
-  version: laboratory.version,
-  dependencies: [{ name: recipeManifest.name, version: recipeManifest.version }],
+  dependencies: [{ name: recipeManifest.name }],
   types: [
     cardType.name,
     cardAppearanceType.name,
@@ -173,7 +169,7 @@ function declarationFrontend() {
 const closure = createResolvedClosure([recipeManifest, manifest]);
 
 function unit(id: string, text: string, frontend?: string): ResolvedSource {
-  const selected = frontend ?? (id.endsWith(".svs") ? "@hypit/recipe@1" : "@hypit/markup@1");
+  const selected = frontend ?? (id.endsWith(".svs") ? "@hypit/recipe" : "@hypit/markup");
   return resolveSelfDescribedTextSource({
     id,
     name: id.split("/").at(-1) ?? id,
@@ -193,7 +189,7 @@ async function compileMain(alias: string, root = "/project", styles = styleText)
   frontends.register(declarationFrontend());
   frontends.register(recipeFrontend);
   const entry = unit(`${root}/main.svml`, `<svml>
-    <import as="lab" from="example.recipe-card@1"/>
+    <import as="lab" from="example.recipe-card"/>
     <import as="${alias}" source="./recipes.svs"/>
     <lab:Card id="answer" appearance={${alias}.card.answer}/>
   </svml>`);
@@ -284,7 +280,7 @@ test("Source Closure rejects duplicate aliases and unknown Frontends before deco
     (error: unknown) => error instanceof SourceClosureError && error.code === "DUPLICATE_SOURCE_ALIAS",
   );
 
-  const unknown = unit("/project/unknown.svml", `<svml/>`, "example.unknown@1");
+  const unknown = unit("/project/unknown.svml", `<svml/>`, "example.unknown");
   await assert.rejects(
     compileSourceClosure({
       entry: unknown,

@@ -12,12 +12,12 @@ and stores the returned files in the current Build.
 
 | Capability | TokenDance model | Protocol |
 | --- | --- | --- |
-| `@hypit/seedance@1#seedance-2` | `seedance-2.0` | Ark `POST /ark/v3/generations/tasks`, polled at `GET /ark/v3/generations/tasks/{id}` |
-| `@hypit/seedance@1#seedance-2-fast` | `seedance-2.0-fast` | same |
-| `@hypit/seedance@1#seedance-2-mini` | `seedance-2.0-mini` | same |
-| `@hypit/seedance@1#seedance-2.5` | `seedance-2.5` | same |
-| `@hypit/seedream@1#seedream-5-lite` | `seedream-5.0-lite` | Ark `POST /ark/v3/images/generations`, synchronous |
-| `@hypit/minimax-h3@1#minimax-h3` | `minimax-h3` | MiniMax `POST /minimax/v2/video_generation`, polled at `GET /minimax/v2/query/video_generation/{id}` |
+| `@hypit/seedance#seedance-2` | `seedance-2.0` | Ark `POST /ark/v3/generations/tasks`, polled at `GET /ark/v3/generations/tasks/{id}` |
+| `@hypit/seedance#seedance-2-fast` | `seedance-2.0-fast` | same |
+| `@hypit/seedance#seedance-2-mini` | `seedance-2.0-mini` | same |
+| `@hypit/seedance#seedance-2.5` | `seedance-2.5` | same |
+| `@hypit/seedream#seedream-5-lite` | `seedream-5.0-lite` | Ark `POST /ark/v3/images/generations`, synchronous |
+| `@hypit/minimax-h3#minimax-h3` | `minimax-h3` | MiniMax `POST /minimax/v2/video_generation`, polled at `GET /minimax/v2/query/video_generation/{id}` |
 
 The TokenDance catalogue at `GET /gateway/v1/models` lists further models; this Provider maps only
 the models the Distribution already describes.
@@ -52,8 +52,8 @@ Runtime Profile example:
 
 ```json
 {
-  "format": "hypit.runtime-local@1",
-  "dataRoot": ".hypit/runtimes/local",
+  "format": "hypit.execution-environment-local@1",
+  "dataRoot": ".hypit/environment/local",
   "credentials": {
     "local": {
       "use": "@hypit/credential-store-local"
@@ -75,7 +75,7 @@ Runtime Profile example:
 ```
 
 `baseUrl` defaults to `https://tokendance.space/gateway`. Store the API key with
-`hypit auth login tokendance.default --runtime hypit.runtime.json`. Optional `requestTimeoutMs`,
+`hypit auth login tokendance.default --runtime hypit.generation-runtime.json`. Optional `requestTimeoutMs`,
 `operationTimeoutMs` and `actionLimits` bound single HTTP calls, the whole remote task and action
 concurrency. Task and HTTP failures keep TokenDance's `error.code` and message, with any signed URL
 in the message redacted.

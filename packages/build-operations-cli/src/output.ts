@@ -3,8 +3,8 @@ import { relative, resolve, sep } from "node:path";
 import { compareCodeUnits } from "@hypit/protocol";
 import type { CanonicalValue } from "@hypit/protocol";
 
-import { CliUsageError } from "@hypit/cli";
-import type { CliColorMode, CliIo, CliMachineView, CliOutputOptions } from "@hypit/cli";
+import { CliUsageError } from "@hypit/cli/public";
+import type { CliColorMode, CliIo, CliMachineView, CliOutputOptions } from "@hypit/cli/public";
 
 export type CliDiagnostic = {
   readonly severity: "error" | "warning" | "info";
@@ -18,6 +18,7 @@ export type DoctorOutput = {
   readonly ok: boolean;
   readonly project: string;
   readonly profile?: string;
+  readonly profileKind?: "environment" | "runtime";
   readonly profileSource?: "argument" | "project" | "none";
   readonly selectionFile?: string;
   readonly diagnosticCount: number;
@@ -249,17 +250,25 @@ function heading(status: "success" | "warning" | "error" | "info", text: string,
 
 function renderDoctor(view: Extract<CliPresentation, { kind: "doctor" }>, io: CliIo, colors: Palette): string {
   const lines = [colors.accent(colors.strong("Hypit Doctor")), ""];
+  const profileLabel = view.machine.profileKind === "environment"
+    ? "Environment Profile"
+    : view.machine.profileKind === "runtime" ? "Runtime Profile" : "Execution Profile";
+  const scope = view.machine.profile === undefined
+    ? "project Results only"
+    : view.machine.profileKind === "runtime"
+      ? "Runtime-referenced Environment and project Results"
+      : "selected Environment and project Results";
   lines.push(...facts([
     ["Project", shortPath(view.machine.project)],
-    ["Runtime Profile", view.machine.profile === undefined ? "not selected" : shortPath(view.machine.profile)],
+    [profileLabel, view.machine.profile === undefined ? "not selected" : shortPath(view.machine.profile)],
     ...(view.machine.profileSource === "argument"
-      ? [["Runtime selection", "command argument (this command only)"] as const]
+      ? [["Profile selection", "command argument (this command only)"] as const]
       : view.machine.selectionFile === undefined ? [] : [["Runtime selection", shortPath(view.machine.selectionFile)] as const]),
-    ["Scope", view.machine.profile === undefined ? "project Results only" : "selected Runtime and project Results"],
+    ["Scope", scope],
   ], colors));
   lines.push("");
   if (view.machine.profile === undefined) {
-    lines.push("Select an existing Profile with hypit runtime use <profile>, or pass --runtime <profile> to check it.", "");
+    lines.push("Pass --environment <profile>, or select/pass a Runtime that references one, to check an execution environment.", "");
   }
   if (view.machine.diagnostics.length === 0) {
     lines.push(heading("success", "No problems found", io, colors));
@@ -717,12 +726,14 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
     ],
     doctor: [
       colors.accent(colors.strong("hypit doctor")),
-      colors.dim("Diagnose project Results and, when selected or supplied, one Buildtime Profile."),
+      colors.dim("Diagnose project Results and, when selected or supplied, one Execution Environment."),
       "",
+      "  hypit doctor [--environment <profile>] [--project <project>] [--endpoint <instance>]",
       "  hypit doctor [--runtime <profile>] [--project <project>] [--endpoint <instance>]",
-      "  A positional Profile is also accepted in place of --runtime.",
+      "  A positional Runtime Profile is also accepted in place of --runtime.",
       "  Repeat --endpoint <instance> to limit the operation to chosen services; omission covers the Profile.",
-      "  Without a Runtime Profile, checks only project Result storage.",
+      "  --runtime resolves the Environment referenced by that Generation Runtime Profile.",
+      "  Without either Profile, checks only project Result storage.",
     ],
     plan: [
       colors.accent(colors.strong("hypit plan")),
@@ -825,9 +836,10 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("hypit auth")),
       colors.dim("Manage credentials required by one declared Endpoint instance."),
       "",
-      "  hypit auth status <endpoint-instance> [--runtime <profile>] [--slot <name>]",
-      "  hypit auth login <endpoint-instance> [--runtime <profile>] [--slot <name>] [--from <secret-file>]",
-      "  hypit auth logout <endpoint-instance> [--runtime <profile>] [--slot <name>]",
+      "  hypit auth status <endpoint-instance> --environment <profile> [--slot <name>]",
+      "  hypit auth login <endpoint-instance> --environment <profile> [--slot <name>] [--from <secret-file>]",
+      "  hypit auth logout <endpoint-instance> --environment <profile> [--slot <name>]",
+      "  --runtime <profile> may be used instead to follow that Generation Runtime's Environment reference.",
       "  All auth actions accept --project <project> to use that project's selection.",
       "  status shows credential presence and the Provider's declared browser login, if any.",
       "  login opens that browser flow or securely prompts for the secret; --from imports a secret instead.",

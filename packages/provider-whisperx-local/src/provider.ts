@@ -6,8 +6,8 @@ import { Readable } from "node:stream";
 import { sealTimedTranscript, timedTranscriptTypes } from "@hypit/timed-transcript";
 import type { TimedTranscript } from "@hypit/timed-transcript";
 import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { CanonicalValue } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/hypit/value";
+import type { CanonicalValue } from "@hypit/hypit/value";
 import { defineEndpoint } from "@hypit/hypit/endpoint";
 import {
   assertWhisperXEvidenceWav,
@@ -19,7 +19,6 @@ import type { WhisperXTranscriptResponse } from "@hypit/whisperx";
 
 export const localWhisperXProviderModuleRef = {
   name: "@hypit/provider-whisperx-local",
-  version: "1",
 } as const;
 export const localWhisperXDefaults = {
   baseUrl: "http://127.0.0.1:8765",

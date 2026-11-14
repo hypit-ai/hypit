@@ -11,8 +11,8 @@ the wording, placement and lifetime. Changing one of these can preserve the othe
 ## Select a face or a fallback stack
 
 ```svml
-<import as="fonts" from="@hypit/fontsource@1"/>
-<import as="media" from="@hypit/media-author@1"/>
+<import as="fonts" from="@hypit/fontsource"/>
+<import as="media" from="@hypit/media-author"/>
 
 <fonts:Face id="headline-font" package="@fontsource/archivo-black" weight="400" style="normal"/>
 <fonts:Face id="body-latin" package="@fontsource-variable/inter" weight="700" style="normal"/>
@@ -45,7 +45,7 @@ so the chosen face travels with the build instead of depending on a family name 
 machine. For example, a project can use a local brand face alongside an explicit Chinese fallback:
 
 ```svml
-<import as="asset" from="@hypit/media-author@1"/>
+<import as="asset" from="@hypit/media-author"/>
 <asset:Font id="brand-font" src="./assets/fonts/brand-semibold.woff2" weight="600" style="normal"/>
 <fonts:Face id="chinese-font" package="@fontsource-variable/noto-sans-sc" weight="600" style="normal"/>
 
@@ -92,8 +92,8 @@ Script Caption remains appropriate when the displayed wording follows the perfor
 The following excerpt assumes the named Fonts, layout Frames, Timeline and Recipes exist:
 
 ```svml
-<import as="copy" from="@hypit/text@1"/>
-<import as="typo" from="@hypit/text-fine@1"/>
+<import as="copy" from="@hypit/text"/>
+<import as="typo" from="@hypit/text-fine"/>
 
 <typo:Style id="headline-style" recipe={look.text.title} font={headline-font}>
   <typo:Fill color="#F1E7D8"/>

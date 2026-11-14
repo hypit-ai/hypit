@@ -1,46 +1,33 @@
-import { resolveProducer } from "@hypit/kernel";
-import type { BuildView } from "@hypit/kernel";
+import { resolveProducer } from "@hypit/generation-build";
+import type { BuildView } from "@hypit/generation-build";
 import type { ProducerExecutionLimits, ProducerHandlerResult } from "@hypit/producer";
-import type { EndpointCredential, EndpointOutcome } from "@hypit/endpoint";
-import { endpointResourceClaims } from "@hypit/endpoint";
-import type {
-  CommandResult,
-  BuildCommand,
-  FulfillNeedCommand,
-  InvokeProducerCommand,
-  TypedRecord,
-  Value,
-} from "@hypit/protocol";
-import { capabilityKey, producerKey, typeKey } from "@hypit/protocol";
+import type { EndpointCredential, EndpointOutcome, EndpointRegistration } from "@hypit/endpoint";
+import { EndpointRegistry, endpointResourceClaims } from "@hypit/endpoint";
+import type { Value } from "@hypit/protocol";
+import type { CommandResult, BuildCommand, FulfillNeedCommand, InvokeProducerCommand, TypedRecord } from "@hypit/generation-build";
+import { capabilityKey, typeKey } from "@hypit/module";
+import { producerKey } from "@hypit/module";
 import {
   RefinementRegistry,
   refineValue,
 } from "@hypit/refinement";
 import type { RefinementRegistryLike } from "@hypit/refinement";
+import type { CredentialStore, CredentialValue, OperationProgress } from "@hypit/execution-environment";
 import type {
-  CredentialStore,
-  CredentialValue,
   OperationSnapshot,
-  OperationProgress,
   OperationStore,
   RuntimeBuildExecution,
   RuntimeExecutionContext,
   RuntimeExecutionResult,
   RuntimePreparation,
   RuntimeRunnableCommand,
-} from "@hypit/runtime";
-import { writableCredentialStore } from "@hypit/runtime";
+} from "@hypit/generation-runtime";
+import { writableCredentialStore } from "@hypit/execution-environment";
 import { MemoryResourceStore } from "@hypit/resource-store";
 import type { ResourceStore } from "@hypit/resource-store";
 
-import {
-  ProducerRegistry,
-  EndpointRegistry,
-} from "./registry.js";
-import type {
-  BlockedCommand,
-  EndpointRegistration,
-} from "./types.js";
+import { ProducerRegistry } from "./registry.js";
+import type { BlockedCommand } from "./types.js";
 
 export type ExecutorOptions = {
   readonly producers?: ProducerRegistry;
@@ -51,7 +38,7 @@ export type ExecutorOptions = {
   readonly operations?: OperationStore;
   readonly credentials?: CredentialStore;
   readonly refinements?: RefinementRegistryLike;
-  readonly actions?: import("@hypit/runtime").RuntimeActionExecutor;
+  readonly actions?: import("@hypit/generation-runtime").RuntimeActionExecutor;
   /** Host policy for one pure Producer invocation. */
   readonly producerExecutionLimits?: ProducerExecutionLimits;
 };
@@ -80,13 +67,13 @@ function assertProducerInlineValue(value: Value, limits: ProducerExecutionLimits
 type Executable =
   | {
       readonly command: InvokeProducerCommand;
-      readonly resources: readonly import("@hypit/runtime").RuntimeResourceClaim[];
+      readonly resources: readonly import("@hypit/generation-runtime").RuntimeResourceClaim[];
       readonly run: () => Promise<ProducerHandlerResult>;
     }
   | {
       readonly command: FulfillNeedCommand;
       readonly endpointId: string;
-      readonly resources: readonly import("@hypit/runtime").RuntimeResourceClaim[];
+      readonly resources: readonly import("@hypit/generation-runtime").RuntimeResourceClaim[];
       readonly registration: EndpointRegistration;
     };
 
@@ -128,7 +115,7 @@ export class Executor {
   readonly operations: OperationStore | undefined;
   readonly credentials: CredentialStore | undefined;
   readonly refinements: RefinementRegistryLike;
-  readonly #actions: import("@hypit/runtime").RuntimeActionExecutor | undefined;
+  readonly #actions: import("@hypit/generation-runtime").RuntimeActionExecutor | undefined;
   readonly #producerExecutionLimits: ProducerExecutionLimits;
   readonly #credentialReads = new Map<string, Promise<CredentialValue | undefined>>();
 
@@ -428,7 +415,7 @@ export class Executor {
         }
       },
       ...(context?.recordExecution === undefined ? {} : {
-        reportDiagnostic: (diagnostic: import("@hypit/runtime").ExecutionDiagnostic) =>
+        reportDiagnostic: (diagnostic: import("@hypit/execution-environment").ExecutionDiagnostic) =>
           context.recordExecution!({ endpoint, kind: "diagnostic", ...diagnostic }),
       }),
     };
@@ -676,7 +663,7 @@ export class Executor {
     const current = await operations.read(operation.id) ?? operation;
     if (current.status === "received" || current.status === "completed"
       || current.status === "failed" || current.status === "cancelled") return current;
-    let cancellation: import("@hypit/runtime").OperationCancellation = { outcome: "unsupported" };
+    let cancellation: import("@hypit/execution-environment").OperationCancellation = { outcome: "unsupported" };
     if (current.status === "running") {
       try {
         const selected = this.endpoints.select(current.need);

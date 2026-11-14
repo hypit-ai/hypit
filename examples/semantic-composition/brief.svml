@@ -1,4 +1,4 @@
-module prompt from "@hypit/prompt@1"
+module prompt from "@hypit/prompt"
 
 prompt.Prompt "prompt" {
   text: "A calm presenter demonstrates the product in a bright studio, speaking directly to camera."

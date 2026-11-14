@@ -9,6 +9,38 @@ The Workbench is independent of Hypit Desktop. A local Host may bind an OS-assig
 port and open the same URL in an ordinary browser or a Desktop content tab. Ports and URLs are
 Host transport details and never become project identity.
 
+The loopback HTTP server is the current Web Surface adapter, not the domain model and not an
+instruction for browser controls to execute CLI commands. Product operations first identify their
+authority and lifecycle, then call the same application services used by other adapters. See
+[Product operations and Host API](../../design/product-operations-and-host-api.md) for the shared
+Observation, Command, Action, and Interaction model.
+The exact NLE application boundary, operation inventory and invalidation rules belong to
+[`@hypit/nle-service`](../nle-service/API.md). That document also distinguishes open/reload snapshots, ordinary operation
+receipts and the remaining finer-grained projection-patch work.
+
+The package contributes four independently selectable `hypit.project-bench` providers:
+
+| Project Object format | Bench |
+| --- | --- |
+| `hypit.nle@1` | `Timeline` and `Comments` |
+| `hypit.scene@1` | `Scene` |
+| `hypit.generation-workspace@1` | `Canvas` |
+
+Opening a Bench starts one invocation-local server and returns its Web Surface URL. The caller owns
+the returned session and closes it; no route, port, active tab or open-session list enters the Project.
+Timeline and Comments are two projections of the same NLE object, not two mutually aware pages.
+The default providers open the repository Workbench implementations. An embedding Host may supply
+package-aware openers while retaining the same Bench identities and lifecycle.
+
+Every standalone Bench serves the same application-owned `/api/workbench/environment` boundary.
+NLE, Comments and Scene no longer need a mounted Canvas or a Generation Runtime to observe the selected
+Execution Environment or connect HypiHub. The application injects `WorkbenchEnvironmentHost`; Environment
+Profile, Endpoint and Credential Store remain the authorities, while the top bar only presents their
+transient status and action. Generation Runtime selection is consulted separately and only when Canvas
+submits a Build.
+OAuth acquisition continues through the Endpoint-declared PKCE flow. A Desktop or Agent Host can
+provide its own browser opener; the default CLI uses the operating system browser.
+
 ```bash
 hypit workbench edit.nle.json
 hypit workbench generation.workspace.json
@@ -16,17 +48,25 @@ hypit workbench shot.scene.json
 hypit workbench edit.nle.json generation.workspace.json shot.scene.json
 ```
 
-Passing several documents mounts their independent Hosts at one origin. Comments use the NLE Host's
+The compatibility CLI can still pass several documents through a process-local suite router. That
+does not define the product shell or the Bench ABI. Comments use the NLE Host's
 programme and identify the reviewed document in the project Feedback file. Each Host resolves the
-project root of its own document. Sharing an origin therefore does not establish that the Canvas
-and the timeline use the same media directory. The top bar currently offers all four tabs even when
-the invocation opened only one document. See the [suite router](src/node/suite-server.ts) and
-[navigation](src/client/topbar.js).
+project root of its own document. When every mounted document belongs to the same Project Boundary,
+the suite leases one Project Media Service for NLE and Canvas and exposes its separate
+`/api/project/media` adapter on the shared origin. Documents from different projects remain isolated and
+do not receive one ambiguous project-level Media route. The common top bar carries only project identity,
+environment connection, language and appearance. It does not make Scene, Canvas, Timeline or
+Comments know about one another. A suite Host may still mount several explicit documents at one
+origin, but choosing and opening those surfaces belongs to the caller rather than in-page navigation.
+See the [suite router](src/node/suite-server.ts) and [common chrome](src/client/topbar.js).
 
-The local NLE Host opens the Project as an `NleEditSession` and opens or creates the sibling
+The transport-independent `NleService` from `@hypit/nle-service` opens the Project as an `NleEditSession` and opens or creates the sibling
 `*.nle-view.json` Timeline View. Composition edits are ordinary revisioned `@hypit/nle` transactions;
 the editor grid, Track locks and Groups use independent `@hypit/nle-view` transactions. Undo and redo remain
-Project session state, while Save publishes both documents. The Host projects Project, View and transient observations into an
+Project session state. The service is the single writer for both owners and serializes transactions, owner-scoped autosave,
+external-file watching, export/review Actions and projection invalidation. Project and View publish independently: a successful owner
+stays clean when the other owner fails, rather than pretending that two files form one atomic write. The HTTP server is only its current Web adapter;
+Desktop IPC and Agent tools can call `openNleService` without opening a port. The service projects Project, View and transient observations into an
 `NleTimelineScene`; the browser renders that finite scene and owns only Session interaction. It does not contain an Electron
 bridge, Runtime, Provider, Result repository or legacy Studio/SVML recovery path.
 
@@ -40,7 +80,14 @@ stored under `feedback/attachments/` and referenced by the comment; they never e
 `media/` library merely because they were used in review.
 
 Current NLE presentation exposes the real Project, the shared project `media/` asset bin, Tracks, Items, selection inspector,
-single-frame Item nudging, Track mute/lock, undo, redo and save. File-backed Media Items receive
+direct move/trim/spatial gestures, Track mute/lock, undo, redo and revision-aware autosave. A completed user gesture
+creates one edit before the application service schedules autosave; the browser observes Project/View persistence states rather
+than issuing the file write itself. Saving returns a light receipt rather than rebuilding the
+browser snapshot. Ordinary edits return stable-id patches: collection order plus only the affected Project Tracks,
+Timeline Tracks and Canvas Layers. A Host watcher records external changes to either owner even while the surface is inactive.
+A transport-independent application subscription publishes persistence, external-change and export/review Action state; the Web adapter
+projects it as SSE, so the browser does not poll autosave or render progress. `file-status` remains an explicit recovery observation.
+A clean session can reload an Agent's external edit, while a dirty owner reports a conflict instead of overwriting either side. File-backed Media Items receive
 invocation-local image, source-time-sampled storyboard or waveform observations through an in-memory
 Workbench cache; neither the bytes nor their routes enter the Project or Timeline View. The monitor derives
 the exact HTML and audio programmes from the current Project using the installed packages' terminal facets,
@@ -50,7 +97,7 @@ programme once as an invocation-local WAV. Derived programmes, documents and cac
 Project or Timeline View. Installed packages also contribute their own finite parameter-editor declarations.
 
 For Component and Adjustment Items, the CLI loads only installed packages named by exact NLE Module symbols and
-collects their optional `hypit.nle-timeline-presentation@1` facets. Packages may describe factual title/text,
+collects their optional `hypit.nle-timeline-presentation` facets. Packages may describe factual title/text,
 static or Item-specific poster bytes, and finite tone/chrome tokens; Workbench still owns resource URLs, caching,
 DOM and CSS. A missing optional package presentation falls back to
 the generic Item projection, while an installed malformed package remains an error instead of being silently hidden.

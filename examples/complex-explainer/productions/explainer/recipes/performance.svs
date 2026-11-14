@@ -1,4 +1,4 @@
-<?svml using="@hypit/recipe@1"?>
+<?svml using="@hypit/recipe"?>
 <sheet version="1">
   speaker.host {
     composition-stability: soft-locked;

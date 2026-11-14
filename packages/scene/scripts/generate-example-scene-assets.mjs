@@ -2,7 +2,7 @@ import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const assetRoot = fileURLToPath(new URL("../examples/assets/scene/", import.meta.url));
+const assetRoot = fileURLToPath(new URL("../examples/scenes/assets/", import.meta.url));
 const humanBaseRoot = fileURLToPath(new URL("../source-assets/human-bases/", import.meta.url));
 
 const palette = {
@@ -1425,7 +1425,7 @@ for (const asset of assets) {
     format: "hypit.scene-asset@1",
     id: asset.id,
     name: asset.label,
-    using: { module: { name: moduleName, version: "1" }, name: asset.using },
+    using: { module: { name: moduleName }, name: asset.using },
     ...(preview === undefined ? {} : { preview }),
     resources: model === undefined ? {} : { model },
     parameters: asset.parameters,

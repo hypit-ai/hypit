@@ -1,5 +1,6 @@
-import { canonicalize, sameType } from "@hypit/hypit/protocol";
-import { declarationField, sealGraphFragment } from "@hypit/hypit/author";
+import { sameType } from "@hypit/hypit/module";
+import { canonicalize } from "@hypit/hypit/value";
+import { declarationField, sealGraphFragment } from "@hypit/hypit/generation/author";
 import { compositionTypes, sealPresentVisualTrack } from "@hypit/composition";
 import { mediaTypes, verifyPreparedMedia } from "@hypit/media";
 import { spatialTypes } from "@hypit/spatial";

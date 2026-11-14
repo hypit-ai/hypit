@@ -5,7 +5,7 @@ import {
   applyNleTransaction,
   createNleAuthoringHost,
   createNleProject,
-  nleLinearSourceTime,
+  nleLinearTimeMapping,
   type NleComponentItem,
 } from "@hypit/nle";
 
@@ -18,15 +18,24 @@ import {
 } from "../src/index.js";
 
 const second = (value: number) => ({ ticks: String(value), timeBase: { numerator: 1, denominator: 1 } });
-const component = { module: { name: "@example/title", version: "1" }, name: "default" } as const;
+const component = { module: { name: "@example/title" }, name: "default" } as const;
+const filter = { module: { name: "@example/filter" }, name: "default" } as const;
 
 function project() {
   const item = (id: string, start: number): NleComponentItem => ({
     id, kind: "present", source: "component", component,
-    bindings: [{ slot: "style", ref: "style-main" }],
+    sharedValues: [{ slot: "style", ref: "style-main" }],
     parameters: { text: id }, start: second(start), duration: second(2),
-    sourceTime: nleLinearSourceTime(second(2)), enabled: true,
-    picture: { layout: { ref: "layout-main" } },
+    sourceTime: nleLinearTimeMapping(second(2)), enabled: true,
+    picture: {
+      layout: { ref: "layout-main" },
+      ...(id === "title-a" ? { operators: [{
+        id: "local-filter",
+        operator: filter,
+        parameters: { amount: 0.4 },
+        controlTime: nleLinearTimeMapping(second(2)),
+      }] } : {}),
+    },
   });
   return applyNleTransaction(createNleProject({
     id: "film", name: "Film", canvas: { width: 1920, height: 1080, clearColor: "black" },
@@ -115,6 +124,50 @@ test("Inspector Scene keeps NLE occurrence, shared resources and package semanti
   ] });
   assert.equal(host.scene(document, locked, "title-a").sections
     .find((section) => section.id === "nle-occurrence")?.fields[0]?.editable, undefined);
+  assert.equal(host.scene(document, locked, "title-a").sections
+    .find((section) => section.id === "component-value:style-main:title-style")?.fields[0]?.editable, undefined);
+  assert.equal(host.scene(document, locked, "title-a").sections
+    .find((section) => section.id === "nle-picture-layout")?.fields[0]?.editable, undefined);
+});
+
+test("Inspector projects and edits occurrence-local Operator Applications by stable address", () => {
+  const facet = createNleInspectorPresentationFacet({ operators: [{
+    operator: filter,
+    project: ({ application }) => [{
+      id: "filter-state", label: "Filter", domain: "how", fields: [{
+        id: "amount", label: "Amount", control: "number",
+        value: Number((application.parameters as Readonly<Record<string, unknown>>).amount),
+        edit: (amount) => ({ kind: "set-amount", amount }),
+      }],
+    }],
+  }] });
+  const authoring = createNleAuthoringHost([{ operatorParameters: [{
+    operator: filter,
+    inspect: ({ application }) => application.parameters,
+    edit: (operation) => {
+      const value = operation as Readonly<Record<string, unknown>>;
+      if (typeof value.amount !== "number") throw new Error("Amount is invalid.");
+      return { amount: value.amount };
+    },
+  }] }]);
+  const host = createNleInspectorPresentationHost(
+    nleInspectorPresentationPackagesFromFacets([facet]), authoring,
+  );
+  const document = project();
+  const view = createNleTimelineView({
+    id: "main", name: "Main", project: { path: "film.nle.json" }, tracks: ["picture"],
+  });
+  const section = host.scene(document, view, "title-a").sections
+    .find((candidate) => candidate.id === "operator:picture:local-filter:filter-state");
+  assert.equal(section?.fields[0]?.value, 0.4);
+  assert.equal(section?.fields[0]?.editable, true);
+  assert.deepEqual(host.packageEdit(
+    document, "title-a", "operator:picture:local-filter:filter-state", "amount", 0.7,
+  ), {
+    kind: "operator",
+    address: { kind: "occurrence", item: "title-a", medium: "picture", application: "local-filter" },
+    operation: { kind: "set-amount", amount: 0.7 },
+  });
 });
 
 test("Inspector package boundary rejects duplicate owners and arbitrary controls", () => {

@@ -1,0 +1,26 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "cone",
+  "name": "圆锥体",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets"
+    },
+    "name": "prop"
+  },
+  "resources": {
+    "model": {
+      "path": "model.gltf",
+      "mediaType": "model/gltf+json"
+    }
+  },
+  "parameters": {
+    "primitive": {
+      "kind": "cone",
+      "dimensionsM": {
+        "diameter": 1,
+        "height": 1
+      }
+    }
+  }
+}

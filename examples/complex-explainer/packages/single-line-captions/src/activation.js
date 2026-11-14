@@ -1,7 +1,9 @@
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
-import { createAuthorDeclarationFacet, sealGraphFragment } from "@hypit/hypit/author";
-import { canonicalize } from "@hypit/hypit/protocol";
+import { createProducerPackageFacet } from "@hypit/hypit/generation/producer";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
+import { createModuleFacet } from "@hypit/hypit/module";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/generation/markup";
+import { createAuthorDeclarationFacet, sealGraphFragment } from "@hypit/hypit/generation/author";
+import { canonicalize } from "@hypit/hypit/value";
 import {
   captionFineManifest,
   captionFineModuleRef,
@@ -11,10 +13,9 @@ import {
   scheduleFineCaption,
   assertFineCaptionSchedule,
 } from "@hypit/caption-fine";
-const module = { name: "@explainer/single-line-captions", version: "1" },
+const module = { name: "@explainer/single-line-captions" },
   producer = { module, name: "schedule" };
 const manifest = {
-  format: "hypit.module@1",
   ...module,
   dependencies: [
     ...captionFineManifest.dependencies,
@@ -107,9 +108,9 @@ const producers = [
         },
       ];
 export const hypitPackage = {
-  format: "hypit.package@1",
-  modules: [{ manifest }],
   facets: [
+    createModuleFacet(manifest),
+    createGenerationModuleFacet(manifest),
     createProducerPackageFacet(producers),
     createAuthorDeclarationFacet(declaration),
     createMarkupDeclarationFacet({

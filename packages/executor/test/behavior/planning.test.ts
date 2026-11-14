@@ -4,8 +4,8 @@ import test from "node:test";
 // Executor owns Command classification and its observable reasons.
 
 import { evaluateProducerPlan, ProducerRegistry } from "@hypit/executor";
-import type { BuildDefinition } from "@hypit/protocol";
-import type { BuildView } from "@hypit/kernel";
+import type { BuildDefinition } from "@hypit/generation-build";
+import type { BuildView } from "@hypit/generation-build";
 
 import {
   createGreetingBuild,

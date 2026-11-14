@@ -1,5 +1,5 @@
 import { once } from "node:events";
-import { credentialRef } from "@hypit/runtime";
+import { credentialRef } from "@hypit/execution-environment";
 import { FileCredentialStore } from "../src/file.js";
 
 const [directory, key, secret] = process.argv.slice(2);

@@ -98,9 +98,14 @@ available.
 
 Runtime-aware build commands use an explicit `--runtime` for that command, or ask the selected
 Distribution for exactly the resolved project's Runtime selection. The official Local Runtime module
-owns the `.hypit/runtime` pointer and its `runtime use` command; the build module does not know its
+owns the `.hypit/generation/runtime-profile` pointer and its `runtime use` command; the build module does not know its
 filesystem representation, Worker process or managed Programs. Project selection remains available on
 generic diagnosis/execution/auth commands and on the Local Runtime module's commands.
+
+Environment-only commands do not require a Generation Runtime. `doctor` and `auth` accept
+`--environment <profile>` and open the Execution Environment Host directly. They also accept
+`--runtime <profile>` as an indirect selector for the Environment referenced by that Generation
+Runtime Profile; the two options are mutually exclusive.
 
 `auth status <endpoint>` reports credential presence, write access, and the Provider's declared
 OAuth authorization endpoint when present. This describes how a subsequent `auth login` acquires a
@@ -111,9 +116,9 @@ instead. Credential entry operates on an already declared Endpoint and changes n
 `paths` shows the effective locations and whether the Profile came from a command argument, a project
 selection or neither. Its JSON fields `profileSource` and `selectionFile` expose that distinction; the
 selection-file location is shown even when no selection exists. `doctor` states whether it checked
-only project Results or also a selected Runtime. An unselected Runtime is not a completed environment
-diagnosis. Project-owned Result history and project-package resolution remain available without
-opening a Runtime.
+only project Results, a directly selected Environment, or the Environment referenced by a Runtime.
+An absent Environment is not a completed environment diagnosis. Project-owned Result history and
+project-package resolution remain available without opening a Runtime.
 
 For a command invoked outside the project, name both the project and its input explicitly:
 
@@ -159,7 +164,7 @@ The implementation follows those same boundaries: `command.ts` defines the gener
 union, while argument parsing and option ownership live in `arguments.ts`; project Result
 browsing/export lives under `commands/results.ts`; generic diagnosis and credentials live under
 `commands/environment.ts`; active Build observation is read-only code in `observation.ts`; and human
-rendering is separate from the explicit machine-view union. `@hypit/runtime-local/cli` owns local Profile
+rendering is separate from the explicit machine-view union. `@hypit/generation-runtime-local/cli` owns local Profile
 selection, paths, Programs and Worker lifecycle. `main.ts` consumes only `CliRuntimeHost`; it never
 imports the Local Runtime implementation. Result commands do not consult or construct a Runtime;
 the build CLI opens the resolved project's Result history and cannot silently choose a
@@ -169,7 +174,8 @@ Runtime-aware planning opens one command-scoped inspection through that Host por
 request-sensitive `pricing`, selected-deployment `preflight`, execution startup/status and Build Runtime
 creation consume the same frozen Profile and Endpoint declarations. This prevents one command from
 selecting with one Profile revision and submitting through another, without creating cross-command
-state. The query and observation shapes themselves are owned by `@hypit/runtime`; the CLI only
+state. Endpoint query and observation shapes are owned by `@hypit/execution-environment`; Build and execution-log
+shapes are owned by `@hypit/generation-runtime`. The CLI only
 projects them into its human and machine views.
 
 ## Execution logs
@@ -190,7 +196,8 @@ paths. A deleted or moved Source is not reconstructed; browse Result entries and
 paths instead. This is local argument handling, with no saved alias inventory.
 CLI, Studio and creation tools call that same package; the CLI is not another environment owner.
 
-`doctor`, `programs prepare|up|status|down`, and `runtime up` accept repeated `--endpoint <instance>` values.
+`doctor --environment <profile>`, `programs prepare|up|status|down --environment <profile>`, and
+`runtime up` accept repeated `--endpoint <instance>` values.
 The same Endpoint scope reaches Program operations. Omission means the whole Profile. Build preflight
 instead uses the Endpoints selected for every structural Need in that Build, including blocked requests.
 An unrelated offered capability does not add another credential or Program requirement.

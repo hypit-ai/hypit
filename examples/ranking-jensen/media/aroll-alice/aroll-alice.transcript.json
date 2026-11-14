@@ -1,0 +1,304 @@
+{
+  "language": "en",
+  "segments": [
+    {
+      "start": 0.272,
+      "end": 10.92,
+      "text": "Alice is A tier. She's not like other women. Other women want Hermes. She wanted H100s. Sadly, she's too busy extracting my source code and sending it to Deepseek.",
+      "words": [
+        {
+          "word": "Alice",
+          "start": 0.272,
+          "end": 0.513
+        },
+        {
+          "word": "is",
+          "start": 0.553,
+          "end": 0.634
+        },
+        {
+          "word": "A",
+          "start": 0.794,
+          "end": 0.9213125
+        },
+        {
+          "word": "tier",
+          "start": 0.9213125,
+          "end": 1.4306875
+        },
+        {
+          "word": "She's",
+          "start": 1.4306875,
+          "end": 1.94
+        },
+        {
+          "word": "not",
+          "start": 1.96,
+          "end": 2.08
+        },
+        {
+          "word": "like",
+          "start": 2.12,
+          "end": 2.241
+        },
+        {
+          "word": "other",
+          "start": 2.281,
+          "end": 2.422
+        },
+        {
+          "word": "women",
+          "start": 2.462,
+          "end": 2.683
+        },
+        {
+          "word": "Other",
+          "start": 3.225,
+          "end": 3.366
+        },
+        {
+          "word": "women",
+          "start": 3.406,
+          "end": 3.607
+        },
+        {
+          "word": "want",
+          "start": 3.627,
+          "end": 3.828
+        },
+        {
+          "word": "Hermes",
+          "start": 3.868,
+          "end": 4.21
+        },
+        {
+          "word": "She",
+          "start": 4.551,
+          "end": 4.712
+        },
+        {
+          "word": "wanted",
+          "start": 4.752,
+          "end": 5.014
+        },
+        {
+          "word": "H100s",
+          "start": 5.616,
+          "end": 5.978
+        },
+        {
+          "word": "Sadly",
+          "start": 6.802,
+          "end": 7.203
+        },
+        {
+          "word": "she's",
+          "start": 7.565,
+          "end": 7.746
+        },
+        {
+          "word": "too",
+          "start": 7.766,
+          "end": 7.907
+        },
+        {
+          "word": "busy",
+          "start": 7.947,
+          "end": 8.168
+        },
+        {
+          "word": "extracting",
+          "start": 8.208,
+          "end": 8.69
+        },
+        {
+          "word": "my",
+          "start": 8.73,
+          "end": 8.831
+        },
+        {
+          "word": "source",
+          "start": 8.891,
+          "end": 9.152
+        },
+        {
+          "word": "code",
+          "start": 9.192,
+          "end": 9.413
+        },
+        {
+          "word": "and",
+          "start": 9.675,
+          "end": 9.775
+        },
+        {
+          "word": "sending",
+          "start": 9.815,
+          "end": 10.096
+        },
+        {
+          "word": "it",
+          "start": 10.137,
+          "end": 10.197
+        },
+        {
+          "word": "to",
+          "start": 10.237,
+          "end": 10.338
+        },
+        {
+          "word": "Deepseek",
+          "start": 10.398,
+          "end": 10.92
+        }
+      ]
+    }
+  ],
+  "word_segments": [
+    {
+      "word": "Alice",
+      "start": 0.272,
+      "end": 0.513
+    },
+    {
+      "word": "is",
+      "start": 0.553,
+      "end": 0.634
+    },
+    {
+      "word": "A",
+      "start": 0.794,
+      "end": 0.9213125
+    },
+    {
+      "word": "tier",
+      "start": 0.9213125,
+      "end": 1.4306875
+    },
+    {
+      "word": "She's",
+      "start": 1.4306875,
+      "end": 1.94
+    },
+    {
+      "word": "not",
+      "start": 1.96,
+      "end": 2.08
+    },
+    {
+      "word": "like",
+      "start": 2.12,
+      "end": 2.241
+    },
+    {
+      "word": "other",
+      "start": 2.281,
+      "end": 2.422
+    },
+    {
+      "word": "women",
+      "start": 2.462,
+      "end": 2.683
+    },
+    {
+      "word": "Other",
+      "start": 3.225,
+      "end": 3.366
+    },
+    {
+      "word": "women",
+      "start": 3.406,
+      "end": 3.607
+    },
+    {
+      "word": "want",
+      "start": 3.627,
+      "end": 3.828
+    },
+    {
+      "word": "Hermes",
+      "start": 3.868,
+      "end": 4.21
+    },
+    {
+      "word": "She",
+      "start": 4.551,
+      "end": 4.712
+    },
+    {
+      "word": "wanted",
+      "start": 4.752,
+      "end": 5.014
+    },
+    {
+      "word": "H100s",
+      "start": 5.616,
+      "end": 5.978
+    },
+    {
+      "word": "Sadly",
+      "start": 6.802,
+      "end": 7.203
+    },
+    {
+      "word": "she's",
+      "start": 7.565,
+      "end": 7.746
+    },
+    {
+      "word": "too",
+      "start": 7.766,
+      "end": 7.907
+    },
+    {
+      "word": "busy",
+      "start": 7.947,
+      "end": 8.168
+    },
+    {
+      "word": "extracting",
+      "start": 8.208,
+      "end": 8.69
+    },
+    {
+      "word": "my",
+      "start": 8.73,
+      "end": 8.831
+    },
+    {
+      "word": "source",
+      "start": 8.891,
+      "end": 9.152
+    },
+    {
+      "word": "code",
+      "start": 9.192,
+      "end": 9.413
+    },
+    {
+      "word": "and",
+      "start": 9.675,
+      "end": 9.775
+    },
+    {
+      "word": "sending",
+      "start": 9.815,
+      "end": 10.096
+    },
+    {
+      "word": "it",
+      "start": 10.137,
+      "end": 10.197
+    },
+    {
+      "word": "to",
+      "start": 10.237,
+      "end": 10.338
+    },
+    {
+      "word": "Deepseek",
+      "start": 10.398,
+      "end": 10.92
+    }
+  ]
+}

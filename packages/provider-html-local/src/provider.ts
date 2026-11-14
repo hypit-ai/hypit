@@ -14,7 +14,7 @@ import { rasterizeChromiumHtmlProgram, rasterizeHtmlFrames, resolveExecutionOpti
 import type { BrowserOptions } from "@hypit/html-chromium-local";
 
 export type { HtmlBrowserGpu, HtmlWorkers } from "@hypit/html-render-local";
-export const localHtmlProviderModuleRef = { name: "@hypit/provider-html-local", version: "1" } as const;
+export const localHtmlProviderModuleRef = { name: "@hypit/provider-html-local" } as const;
 type LocalHtmlProviderOptions = HtmlExecutionOptions & BrowserOptions & {
   readonly instance?: string;
   readonly pool?: string;

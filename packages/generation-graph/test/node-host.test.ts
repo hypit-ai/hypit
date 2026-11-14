@@ -1,12 +1,14 @@
+import { createModuleFacet } from "@hypit/module";
+import { createGenerationModuleFacet } from "@hypit/generation-build";
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { sealGraphFragment } from "@hypit/author";
+import { sealGraphFragment } from "@hypit/generation-authoring/author";
 import type { LoadedPackage } from "@hypit/loader";
-import type { ModuleManifest } from "@hypit/protocol";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
 
 import {
   createGenerationGraphProject,
@@ -21,13 +23,11 @@ import {
   type GenerationGraphRuntimeRequest,
 } from "../src/node/index.js";
 
-const moduleRef = { name: "@example/image", version: "1" } as const;
+const moduleRef = { name: "@example/image" } as const;
 const imageType = { module: moduleRef, name: "Image" } as const;
 const using = { module: moduleRef, name: "generate" } as const;
-const manifest: ModuleManifest = {
-  format: "hypit.module@1",
+const manifest: GenerationModuleDefinition = {
   name: moduleRef.name,
-  version: moduleRef.version,
   dependencies: [],
   types: [imageType.name],
   capabilities: [],
@@ -46,9 +46,11 @@ const fragment = sealGraphFragment({
 const loaded: LoadedPackage = {
   specifier: "@example/image",
   contribution: {
-    format: "hypit.package@1",
-    modules: [{ manifest }],
-    facets: [createGenerationNodePackageFacet({ nodes: [{ kind: "operation", using, fragment }] })],
+    facets: [
+    createModuleFacet(manifest),
+    createGenerationModuleFacet(manifest),
+    createGenerationNodePackageFacet({ nodes: [{ kind: "operation", using, fragment }] }),
+    ],
   },
 };
 

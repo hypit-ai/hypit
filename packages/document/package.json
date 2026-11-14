@@ -15,8 +15,7 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/author": "workspace:^0.0.0-dev",
-    "@hypit/source": "workspace:^0.0.0-dev",
+    "@hypit/generation-authoring": "workspace:*",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-gfm": "^3.1.0",
     "mdast-util-math": "^3.0.0",

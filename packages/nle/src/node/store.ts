@@ -14,7 +14,7 @@ async function replaceFile(from: string, to: string): Promise<void> {
     return;
   }
   // Keep package resolution lazy so a source checkout can run POSIX tests even when an unrelated
-  // broken workspace prevents pnpm from refreshing local links. The peer Distribution supplies this ABI.
+  // broken workspace prevents pnpm from refreshing local links. The peer Distribution supplies this surface.
   const moduleName = "@hypit/atomic-file";
   const atomicFile = await import(moduleName) as { readonly replaceFile: (from: string, to: string) => Promise<void> };
   await atomicFile.replaceFile(from, to);

@@ -6,7 +6,7 @@ import {
   type LocalCaptionTiming,
 } from "@hypit/caption";
 import type { NlePictureAppearance, NleProject, NleTransaction } from "@hypit/nle";
-import { assertNleProject, findNleItem, findNleTrack, nleLinearSourceTime } from "@hypit/nle";
+import { assertNleProject, findNleItem, findNleTrack, nleLinearTimeMapping } from "@hypit/nle";
 import { canonicalStringify } from "@hypit/protocol";
 import {
   addExactTemporalValues,
@@ -221,10 +221,10 @@ function materializeCaptionProjection<Family extends string>(
         source: "component",
         start,
         duration,
-        sourceTime: nleLinearSourceTime(duration),
+        sourceTime: nleLinearTimeMapping(duration),
         enabled: occurrence.cue.presentation.kind !== "hidden",
         component: structuredClone(input.family.component),
-        bindings: [{ slot: input.family.styleSlot, ref: styleRef }],
+        sharedValues: [{ slot: input.family.styleSlot, ref: styleRef }],
         parameters: input.family.parameters(caption),
         picture: structuredClone(input.picture),
       },

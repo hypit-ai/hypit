@@ -1,0 +1,24 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "arch",
+  "name": "拱门",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets"
+    },
+    "name": "prop"
+  },
+  "resources": {
+    "model": {
+      "path": "model.gltf",
+      "mediaType": "model/gltf+json"
+    }
+  },
+  "parameters": {
+    "boundsM": {
+      "width": 2.2,
+      "depth": 0.42,
+      "height": 2.6
+    }
+  }
+}

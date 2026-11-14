@@ -1,15 +1,17 @@
 import { readFile, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 
-import { authorFrontendsFromFacets } from "@hypit/author";
-import type { AuthorFrontend } from "@hypit/author";
+import { authorFrontendsFromFacets } from "@hypit/generation-authoring/author";
+import type { AuthorFrontend } from "@hypit/generation-authoring/author";
 import { physicalPackageName, resolveNodePackageSource } from "@hypit/loader/node";
 import { logicalPackageAddressKey } from "@hypit/loader";
 import type { LogicalPackageAddress, LoadedPackage } from "@hypit/loader";
-import { compareCodeUnits, moduleKey, modulePackageAbi } from "@hypit/protocol";
-import { sourceFrontendPackageAbi } from "@hypit/source";
-import type { ResolvedSource, SourceUnit } from "@hypit/source";
-import { resolveSelfDescribedTextSource } from "@hypit/source/text";
+import { compareCodeUnits } from "@hypit/protocol";
+import { moduleKey } from "@hypit/module";
+import { moduleFacetKind, modulesFromFacets } from "@hypit/module";
+import { sourceFrontendFacetKind } from "@hypit/generation-authoring/source";
+import type { ResolvedSource, SourceUnit } from "@hypit/generation-authoring/source";
+import { resolveSelfDescribedTextSource } from "@hypit/generation-authoring/source/text";
 
 function isWithin(root: string, path: string): boolean {
   const relation = relative(root, path);
@@ -17,8 +19,6 @@ function isWithin(root: string, path: string): boolean {
 }
 
 function selectedPackage(request: string): string {
-  const version = request.lastIndexOf("@");
-  if (version <= 0) throw new Error(`Package request ${request} must end in @version`);
   return physicalPackageName(request);
 }
 
@@ -55,17 +55,26 @@ export async function discoverSourcePackages(
   const logical = new Map<string, LogicalPackageAddress>();
   const visited = new Set<string>();
   const moduleOwners = new Map<string, string>();
+  const moduleDependencies = new Map<string, readonly string[]>();
   for (const item of packages) {
-    for (const module of item.contribution.modules ?? []) {
-      for (const request of [moduleKey(module.manifest), ...(module.specifiers ?? [])]) {
-        moduleOwners.set(request, item.specifier);
-      }
+    for (const manifest of modulesFromFacets(item.contribution.facets ?? [])) {
+      const request = moduleKey(manifest);
+      moduleOwners.set(request, item.specifier);
+      moduleDependencies.set(request, manifest.dependencies.map(moduleKey));
     }
   }
 
   const requireLogical = (address: LogicalPackageAddress, physical: string | undefined): void => {
     logical.set(logicalPackageAddressKey(address), address);
     selected.add(physical ?? selectedPackage(address.name));
+  };
+  const requireGenerationModule = (request: string, seen = new Set<string>()): void => {
+    if (seen.has(request)) return;
+    seen.add(request);
+    requireLogical({ kind: moduleFacetKind, name: request }, moduleOwners.get(request));
+    for (const dependency of moduleDependencies.get(request) ?? []) {
+      requireGenerationModule(dependency, seen);
+    }
   };
   const resolveImportedSource = (
     importer: string,
@@ -100,16 +109,16 @@ export async function discoverSourcePackages(
     const authors = authorFrontends.filter((item) => item.frontend.id === resolved.frontend);
     if (authors.length > 1) throw new Error(`Source Frontend ${resolved.frontend} is ambiguously provided`);
     if (authors.length === 0) {
-      requireLogical({ abi: sourceFrontendPackageAbi, name: resolved.frontend }, undefined);
+      requireLogical({ kind: sourceFrontendFacetKind, name: resolved.frontend }, undefined);
       return;
     }
     const owner = authors[0]!;
     if (owner.physical !== undefined) {
-      requireLogical({ abi: sourceFrontendPackageAbi, name: owner.frontend.id }, owner.physical);
+      requireLogical({ kind: sourceFrontendFacetKind, name: owner.frontend.id }, owner.physical);
     }
     const discovery = await owner.frontend.discover(resolved.unit);
     for (const request of discovery.modules) {
-      requireLogical({ abi: modulePackageAbi, name: request }, moduleOwners.get(request));
+      requireGenerationModule(request);
     }
     for (const child of discovery.sources) {
       const imported = resolveImportedSource(canonical, canonicalRoot, child.from);

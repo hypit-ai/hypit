@@ -1,11 +1,12 @@
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
+import { createModuleFacet } from "@hypit/hypit/module";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
+import { createProducerPackageFacet } from "@hypit/hypit/generation/producer";
+import { createRefinementPackageFacet } from "@hypit/hypit/generation/refinement";
 import { rasterCompositionComponent, rasterCompositionManifest } from "./index.js";
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [{ manifest: rasterCompositionManifest }],
   facets: [
+    createModuleFacet(rasterCompositionManifest), createGenerationModuleFacet(rasterCompositionManifest),
     createProducerPackageFacet(rasterCompositionComponent.producers),
     createRefinementPackageFacet(rasterCompositionComponent.refinements),
   ],

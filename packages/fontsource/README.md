@@ -4,7 +4,7 @@ This package adapts font packages already selected by an authored project's ordi
 `package.json` and lockfile into Hypit's generic `FontArtifactRef` value.
 
 ```svml
-module fontsource from "@hypit/fontsource@1"
+module fontsource from "@hypit/fontsource"
 
 fontsource.face {
   id: inter
@@ -19,4 +19,4 @@ A custom Distribution can depend on it the same way. Install only the font famil
 actually uses in that project's `package.json`; its lockfile owns their versions. The adapter contains
 no font catalog and no bundled family dependencies. It reads `metadata.json`, CSS and font files from
 installed packages without executing their code. Other npm font packages and project-owned files can
-be declared directly through `@hypit/media-author@1` `Font` and `FontStack` declarations.
+be declared directly through `@hypit/media-author` `Font` and `FontStack` declarations.

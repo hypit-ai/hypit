@@ -1,6 +1,6 @@
 # `@hypit/provider-html-electron-local`
 
-This Runtime Adapter contributes the local Electron shared-texture HTML Endpoint. It produces encoded
+This Environment Adapter contributes the local Electron shared-texture HTML Endpoint. It produces encoded
 visual output only and requires an explicit user-managed `electronPath` in the Runtime Profile.
 
 Electron is a separate Endpoint package rather than a `renderer` mode of
@@ -8,7 +8,7 @@ Electron is a separate Endpoint package rather than a `renderer` mode of
 falls back between them. The portable Chromium Endpoint remains in `@hypit/provider-html-local` and
 also supplies PNG-frame capture.
 
-This package owns the Electron executable probe, Runtime Adapter, Endpoint, Program, shared-texture
+This package owns the Electron executable probe, Environment Adapter, Endpoint, Program, shared-texture
 capture backend, child worker, browser-side decoder/encoder runtime and pinned Mediabunny source.
 `@hypit/html-render-local` contributes the renderer-neutral staging, request limits, progress and
 worker supervision used by both local Providers. Electron does not depend on the Chromium Provider,

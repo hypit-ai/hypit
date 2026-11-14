@@ -3,9 +3,9 @@ import { resolve } from "node:path";
 
 import type { CliCommand, EnvironmentCommand } from "../command.js";
 import { acquireOAuthCredential } from "../oauth.js";
-import type { CliIo } from "@hypit/cli";
+import type { CliIo } from "@hypit/cli/public";
 import { writeCliOutput } from "../output.js";
-import type { CliDiagnostic, CliPublicationStoreLocation, CliRuntimeHost } from "../runtime-port.js";
+import type { CliDiagnostic, CliEnvironmentHost, CliPublicationStoreLocation, CliRuntimeHost } from "../runtime-port.js";
 import type { OperationalWriter } from "./types.js";
 
 export function isEnvironmentCommand(args: CliCommand): args is EnvironmentCommand {
@@ -16,6 +16,7 @@ export async function runEnvironmentCommand(input: {
   readonly args: EnvironmentCommand;
   readonly runtimeProfile: string | undefined;
   readonly runtimeFromProject: boolean;
+  readonly environmentProfile: string | undefined;
   readonly io: CliIo;
   readonly projectRoot: string;
   readonly diagnoseProjectResults: () => Promise<{
@@ -23,21 +24,26 @@ export async function runEnvironmentCommand(input: {
     readonly diagnostics: readonly CliDiagnostic[];
   }>;
   readonly runtimeHost: (profile: string, packageRoot?: string) => Promise<CliRuntimeHost>;
+  readonly environmentHost: (profile: string, packageRoot?: string) => Promise<CliEnvironmentHost>;
   readonly write: OperationalWriter;
 }): Promise<void> {
   const {
-    args, runtimeProfile, runtimeFromProject, io, projectRoot, diagnoseProjectResults, runtimeHost, write,
+    args, runtimeProfile, runtimeFromProject, environmentProfile, io, projectRoot,
+    diagnoseProjectResults, runtimeHost, environmentHost, write,
   } = input;
-  const profileSource: "none" | "argument" | "project" = runtimeProfile === undefined
-    ? "none" : runtimeFromProject ? "project" : "argument";
+  const profileSource: "none" | "argument" | "project" = environmentProfile !== undefined
+    ? "argument" : runtimeProfile === undefined ? "none" : runtimeFromProject ? "project" : "argument";
+  const openEnvironment = async (): Promise<CliEnvironmentHost | undefined> => environmentProfile !== undefined
+    ? await environmentHost(environmentProfile)
+    : runtimeProfile === undefined ? undefined : (await runtimeHost(runtimeProfile)).environment;
   const reportCredentialProgress = args.presentation.json
     ? io.writeProgress
     : io.writeProgress ?? io.write;
 
   if (args.command === "doctor") {
-    const profile = runtimeProfile === undefined ? undefined : resolve(runtimeProfile);
+    const profile = environmentProfile ?? runtimeProfile;
     const [runtimeResult, projectResult] = await Promise.all([
-      profile === undefined ? undefined : (await runtimeHost(profile)).doctor(args.endpoints === undefined ? {} : { endpoints: args.endpoints }),
+      profile === undefined ? undefined : (await openEnvironment())?.doctor(args.endpoints === undefined ? {} : { endpoints: args.endpoints }),
       diagnoseProjectResults(),
     ]);
     const diagnostics = [...(runtimeResult?.diagnostics ?? []), ...projectResult.diagnostics];
@@ -46,7 +52,10 @@ export async function runEnvironmentCommand(input: {
       ok: !diagnostics.some((item) => item.severity === "error"),
       project: projectRoot,
       profileSource,
-      ...(profile === undefined ? {} : { profile }),
+      ...(profile === undefined ? {} : {
+        profileKind: environmentProfile === undefined ? "runtime" as const : "environment" as const,
+      }),
+      ...(profile === undefined ? {} : { profile: resolve(profile) }),
       diagnosticCount: diagnostics.length,
       diagnostics,
     };
@@ -55,10 +64,11 @@ export async function runEnvironmentCommand(input: {
     return;
   }
 
-  if (runtimeProfile === undefined) {
-    throw new Error("auth requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>");
+  const selectedEnvironment = await openEnvironment();
+  if (selectedEnvironment === undefined) {
+    throw new Error("auth requires an Environment; pass --environment <profile>, or select/pass a Runtime that references one");
   }
-  const credentialsControl = await (await runtimeHost(runtimeProfile)).openCredentials(args.endpoint);
+  const credentialsControl = await selectedEnvironment.openCredentials(args.endpoint);
   try {
     if (args.action === "status") {
       let credentials = await credentialsControl.credentials(args.endpoint);
@@ -104,7 +114,7 @@ export async function runEnvironmentCommand(input: {
       if (!item.writable) {
         const source = item.ref.store === "env"
           ? `set ${item.ref.key} in the environment`
-          : "select a writable credential source in the Runtime Profile";
+          : "select a writable credential source in the Environment Profile";
         throw new Error(`${item.label} cannot be written by this command; ${source}`);
       }
       const raw = item.acquisition !== undefined && args.credentialFile === undefined

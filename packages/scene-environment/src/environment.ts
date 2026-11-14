@@ -1,7 +1,7 @@
 import type { CanonicalValue } from "@hypit/protocol";
 import type { SceneEnvironmentParameterAuthoring } from "@hypit/scene";
 
-export const sceneEnvironmentModuleRef = { name: "@hypit/scene-environment", version: "1" } as const;
+export const sceneEnvironmentModuleRef = { name: "@hypit/scene-environment" } as const;
 export const worldEnvironmentSymbol = { module: sceneEnvironmentModuleRef, name: "world-environment" } as const;
 
 type World = {

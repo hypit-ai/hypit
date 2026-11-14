@@ -21,7 +21,7 @@ test("the Node store persists only author recipes", async () => {
       createGenerationGraphProject({ id: "images", name: "Images" }),
       { revision: 0, commands: [{ kind: "node.add", node: {
         id: "hero",
-        using: { module: { name: "@example/image", version: "1" }, name: "generate" },
+        using: { module: { name: "@example/image" }, name: "generate" },
         inputs: { prompt: { value: "hero" } },
       } }] },
     );

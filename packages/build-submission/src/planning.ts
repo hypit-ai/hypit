@@ -1,18 +1,24 @@
 import { evaluateProducerPlan, ProducerRegistry } from "@hypit/executor";
 import type { EvaluatedProducerStep } from "@hypit/executor";
-import { plannedNeeds } from "@hypit/kernel";
-import type { BuildView } from "@hypit/kernel";
+import { plannedNeeds } from "@hypit/generation-build";
+import type { BuildView } from "@hypit/generation-build";
 import type { PackageContribution } from "@hypit/loader";
 import { producerPackagesFromFacets, registerProducerFacets } from "@hypit/producer";
 import type { ProducerExecutionLimits } from "@hypit/producer";
-import { capabilityIdentity, capabilityKey, compareCodeUnits } from "@hypit/protocol";
-import type { BuildDefinition, CanonicalValue, CapabilityRef } from "@hypit/protocol";
+import { compareCodeUnits } from "@hypit/protocol";
+import { capabilityIdentity, capabilityKey } from "@hypit/module";
+import type { CanonicalValue } from "@hypit/protocol";
+import type { CapabilityRef } from "@hypit/module";
+import type { BuildDefinition } from "@hypit/generation-build";
 import {
   refinementPackagesFromFacets,
   registerTypeRefinements,
   RefinementRegistry,
 } from "@hypit/refinement";
-import type { RuntimeEndpointObservation, RuntimeEndpointQuery } from "@hypit/runtime";
+import type {
+  ExecutionEnvironmentEndpointObservation,
+  ExecutionEnvironmentEndpointQuery,
+} from "@hypit/execution-environment";
 
 export type SubmissionDiagnostic = {
   readonly severity: "error" | "warning" | "info";
@@ -112,8 +118,8 @@ export async function evaluatePlanNeeds(
 export function plannedEndpointQueries(
   state: BuildView,
   evaluated: EvaluatedPlan,
-): readonly RuntimeEndpointQuery[] {
-  return plannedNeeds(state).map((item): RuntimeEndpointQuery => {
+): readonly ExecutionEnvironmentEndpointQuery[] {
+  return plannedNeeds(state).map((item): ExecutionEnvironmentEndpointQuery => {
     const plannedRequest = evaluated.needs.get(item.need);
     if (plannedRequest === undefined) throw new Error(`planned request ${item.need} has no evaluation result`);
     const base = { need: item.need, capability: item.capability, returns: item.returns };
@@ -127,7 +133,7 @@ export function plannedEndpointQueries(
 
 /** Resolve every planned request independently; concrete constraints exercise Endpoint `supports`. */
 export async function describePlanEndpoints(
-  inspection: { endpoints(): Promise<readonly RuntimeEndpointObservation[]> },
+  inspection: { endpoints(): Promise<readonly ExecutionEnvironmentEndpointObservation[]> },
 ): Promise<readonly PlanEndpointView[]> {
   return (await inspection.endpoints()).map((item) => ({
     need: item.need,

@@ -40,6 +40,7 @@ export type { TemporalControl, TemporalControlSegment } from "@hypit/temporal/al
 export { createAudiovisualProgramEvaluator, evaluateAudiovisualProgramAt } from "./evaluation.js";
 export {
   assertPictureGraph,
+  pictureNodeSpatialDomains,
   pictureGraphUses,
 } from "./picture.js";
 export { assertAudioGraph, audioGraphUses } from "./audio.js";

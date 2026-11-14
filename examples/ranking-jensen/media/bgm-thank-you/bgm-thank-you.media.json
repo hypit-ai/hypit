@@ -1,0 +1,101 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "bgm-thank-you",
+  "media": {
+    "file": {
+      "path": "THANK YOU - Instrumental - Tyler The Creator.mp3",
+      "mediaType": "audio/mpeg"
+    },
+    "interpretation": {
+      "audio": {
+        "map": {
+          "stages": [
+            {
+              "pieces": [
+                {
+                  "rate": {
+                    "denominator": 1,
+                    "numerator": 1
+                  },
+                  "sourceAtStart": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "denominator": 1,
+                      "numerator": 1
+                    }
+                  },
+                  "target": {
+                    "end": {
+                      "ticks": "4756933",
+                      "timeBase": {
+                        "denominator": 48000,
+                        "numerator": 1
+                      }
+                    },
+                    "start": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "denominator": 1,
+                        "numerator": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "source": {
+                "duration": {
+                  "ticks": "4756933",
+                  "timeBase": {
+                    "denominator": 48000,
+                    "numerator": 1
+                  }
+                },
+                "id": "bgm-thank-you:media:audio-source"
+              },
+              "target": {
+                "duration": {
+                  "ticks": "4756933",
+                  "timeBase": {
+                    "denominator": 48000,
+                    "numerator": 1
+                  }
+                },
+                "id": "bgm-thank-you:media"
+              }
+            }
+          ]
+        },
+        "presentationStart": {
+          "ticks": "324870",
+          "timeBase": {
+            "denominator": 14112000,
+            "numerator": 1
+          }
+        },
+        "sourceDomain": {
+          "duration": {
+            "ticks": "4756933",
+            "timeBase": {
+              "denominator": 48000,
+              "numerator": 1
+            }
+          },
+          "id": "bgm-thank-you:media:audio-source"
+        },
+        "streamIndex": 0
+      },
+      "domain": {
+        "duration": {
+          "ticks": "4756933",
+          "timeBase": {
+            "denominator": 48000,
+            "numerator": 1
+          }
+        },
+        "id": "bgm-thank-you:media"
+      },
+      "id": "bgm-thank-you:media"
+    }
+  },
+  "representations": []
+}

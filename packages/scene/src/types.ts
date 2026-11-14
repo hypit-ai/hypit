@@ -1,5 +1,10 @@
-import type { CanonicalValue, ModuleRef } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
+import type { ModuleRef } from "@hypit/module";
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
+
+export const sceneProjectFormat = "hypit.scene@1";
+export const sceneAssetFormat = "hypit.scene-asset@1";
+export const sceneLibraryFormat = "hypit.scene-library@1";
 
 export type SceneVector3 = {
   readonly x: number;
@@ -49,7 +54,7 @@ export type SceneLibraryReference = {
  * meanings to meshes, rigs, materials, motions, environments or camera presets.
  */
 export type SceneAssetDocument = {
-  readonly format: "hypit.scene-asset@1";
+  readonly format: typeof sceneAssetFormat;
   readonly id: string;
   readonly name: string;
   readonly using: ScenePackageSymbol;
@@ -77,7 +82,7 @@ export type SceneLibraryEntry = {
 
 /** One explicit, local presentation of Scene Assets. It is not an asset registry. */
 export type SceneLibraryDocument = {
-  readonly format: "hypit.scene-library@1";
+  readonly format: typeof sceneLibraryFormat;
   readonly id: string;
   readonly name: string;
   readonly collections: readonly SceneLibraryCollection[];
@@ -166,7 +171,7 @@ export type SceneSubjectState = SceneObjectState | SceneCameraState;
 
 /** Persistent output-authoritative scene and local performance document. */
 export type SceneProject = {
-  readonly format: "hypit.scene@1";
+  readonly format: typeof sceneProjectFormat;
   readonly id: string;
   readonly name: string;
   readonly revision: number;

@@ -1,0 +1,14 @@
+{
+  "name": "hypit-terminal-mix-example",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "hypit": {
+    "project": true
+  },
+  "dependencies": {
+    "@example/terminal-mix": "workspace:*",
+    "@hypit/hypit": "workspace:*",
+    "@hypit/picture-filter": "workspace:*"
+  }
+}

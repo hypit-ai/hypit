@@ -13,7 +13,7 @@ export type { VersionEnvironment } from "./version.js";
 export { runInstalledCliApplication, writeCliCompositionHelp } from "./installed-application.js";
 export type { InstalledCliApplicationOptions, LoadedCliCommandSelection } from "./installed-application.js";
 export { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
-export { resolveProjectRoot } from "@hypit/project";
+export { resolveProjectRoot } from "@hypit/project/node";
 export { renderCliError, writeCliHelp, writeCliOutput } from "./output.js";
 export type {
   CliColorMode,

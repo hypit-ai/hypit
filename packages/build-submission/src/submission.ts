@@ -1,10 +1,13 @@
 import { randomBytes } from "node:crypto";
 
 import type { PackageContribution } from "@hypit/loader";
-import { orderedBuildId } from "@hypit/protocol";
-import type { BuildDefinition } from "@hypit/protocol";
+import { orderedBuildId } from "@hypit/generation-build";
+import type { BuildDefinition } from "@hypit/generation-build";
 import type { ProducerExecutionLimits } from "@hypit/producer";
-import type { RuntimeEndpointObservation, RuntimeEndpointQuery } from "@hypit/runtime";
+import type {
+  ExecutionEnvironmentEndpointObservation,
+  ExecutionEnvironmentEndpointQuery,
+} from "@hypit/execution-environment";
 
 import {
   assertPlannedRequests,
@@ -24,7 +27,7 @@ export type BuildSubmissionRuntime<Request, Submission extends { readonly id: st
 };
 
 export type BuildSubmissionInspection<Runtime> = {
-  endpoints(): Promise<readonly RuntimeEndpointObservation[]>;
+  endpoints(): Promise<readonly ExecutionEnvironmentEndpointObservation[]>;
   preflight(): Promise<{ readonly diagnostics: readonly SubmissionDiagnostic[] }>;
   ensureExecution(options?: { readonly maxWaitMs?: number }): Promise<{ readonly state: "running" | "stopped" }>;
   createRuntime(): Promise<Runtime>;
@@ -33,7 +36,7 @@ export type BuildSubmissionInspection<Runtime> = {
 
 export type BuildSubmissionHost<Inspection> = {
   planningPolicy?(): Promise<{ readonly producerExecutionLimits?: ProducerExecutionLimits }>;
-  openInspection(queries: readonly RuntimeEndpointQuery[]): Promise<Inspection>;
+  openInspection(queries: readonly ExecutionEnvironmentEndpointQuery[]): Promise<Inspection>;
 };
 
 export type LongBuildSession<Submission, Runtime, Inspection> = {

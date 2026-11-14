@@ -1,0 +1,27 @@
+{
+  "format": "hypit.execution-environment-local@1",
+  "dataRoot": ".hypit/environment/local",
+  "credentials": {
+    "local": {
+      "use": "@hypit/credential-store-local"
+    }
+  },
+  "endpoints": {
+    "hypihub.default": {
+      "use": "@hypit/provider-hypihub",
+      "config": {
+        "baseUrl": "https://hypit.ai",
+        "apiKey": {
+          "store": "local",
+          "key": "hypihub.oauth"
+        }
+      }
+    },
+    "media.local": {
+      "use": "@hypit/provider-media-local"
+    },
+    "html.local": {
+      "use": "@hypit/provider-html-local"
+    }
+  }
+}

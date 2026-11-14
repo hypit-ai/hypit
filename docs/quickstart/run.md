@@ -10,7 +10,7 @@ credentials, Provider Endpoints and services available to execute the resulting 
 Select the project Runtime once:
 
 ```bash
-hypit runtime use hypit.runtime.json
+hypit runtime use hypit.generation-runtime.json
 ```
 
 Ordinary work then follows the short path:
@@ -42,7 +42,8 @@ my-video/
   kits/                     optional project-authored Recipe Kits
   packages/                 project-local Author packages when the work introduces them
   output/                   explicit exports for people and other tools
-  hypit.runtime.json        execution environment
+  hypit.generation-runtime.json  Generation execution policy
+  hypit.environment.json         Endpoint and credential deployment
   .hypit/                   generated local Runtime and Result data
 ```
 
@@ -51,7 +52,7 @@ may keep several `.svml` and `.svs` files flat at its root, and another project 
 them differently. Hypit uses only the paths written in Source imports and CLI
 arguments and `result export --to`; it does not require these names or recognize `authors/`, `recipes/`,
 `assets/` or `output/` specially. An Author Source closure may explicitly import multiple Author or Recipe Sources. The managed Result repository
-remains separate under `.hypit/results` by default.
+remains separate under `.hypit/generation/results` by default.
 
 Target selection and Runtime Profile do not silently rewrite the video. Creative model choices remain in
 the Author Source or in packages that it explicitly imports.
@@ -95,25 +96,26 @@ Camera footage, a download, a CLI-produced file and a generated Result enter thr
 boundary. To generate another take, target `opening-generation.video`; adopting it is a separate explicit
 NLE edit.
 
-## Runtime Profile
+## Generation Runtime and Environment Profiles
 
-The official Toolchain Distribution has already chosen the Local Runtime. Its Profile names the
-Credential Stores and Endpoints that local execution may use, together with deployment settings such
-as Endpoint capacity. It never selects the Runtime Host or defines the Source Workspace, Author
-packages or project Result repository.
+The official Toolchain Distribution has already chosen the local implementations. The Generation
+Runtime Profile owns Worker and Build execution policy; its referenced Environment Profile names the
+Credential Stores and Endpoints that local execution may use. Neither selects a Host implementation
+or defines the Source Workspace, Author packages or project Result repository.
 
 ```bash
 hypit runtime init
 hypit paths
 ```
 
-`runtime init` writes the Toolchain Distribution's starter `hypit.runtime.json` and selects it. It refuses
-to overwrite an existing file, installs nothing, contacts no service and starts no Worker. For an
+`runtime init` writes the Toolchain Distribution's starter `hypit.generation-runtime.json` and
+`hypit.environment.json`, then selects the former. It refuses to overwrite either file, installs
+nothing, contacts no service and starts no Worker. For an
 existing intentional Profile, use `hypit runtime use <profile>`; that command writes only
-`.hypit/runtime`. See [Runtime](../guide/runtime.md) for the Profile schema and boundaries.
+`.hypit/generation/runtime-profile`. See [Runtime](../guide/runtime.md) for the Profile schema and boundaries.
 The CLI resolves the project first: `--project` is an explicit boundary; otherwise it searches upward
 for a `package.json` whose `hypit.project` field is `true`. A component package or arbitrary current
-directory never silently becomes a project. It then reads only that project's `.hypit/runtime`. It never discovers
+directory never silently becomes a project. It then reads only that project's `.hypit/generation/runtime-profile`. It never discovers
 a Profile from a conventional filename or inherits another project's selection from a parent directory.
 
 ## Configure selected credentials
@@ -201,7 +203,7 @@ that reuses packages installed under `/opt/hypit`:
 ```bash
 cd /work/my-film
 
-hypit runtime use hypit.runtime.json
+hypit runtime use hypit.generation-runtime.json
 hypit plan main.svml --target final.video
 ```
 
@@ -216,7 +218,7 @@ An external project should normally commit this `.gitignore`:
 output/
 ```
 
-The authoritative result of every Build lives in the project Result repository under `.hypit/results`.
+The authoritative result of every Build lives in the project Result repository under `.hypit/generation/results`.
 It records the outcome and Targets, execution evidence and the retained Outputs that actually completed.
 Its physical file layout is repository-private.
 
@@ -239,18 +241,18 @@ hypit plan /work/my-film/main.svml --target final.video --asset-root /work/share
 `.svml`/`.svs` Source from there. That Host option does not enter author or Build identity; what
 actually enters the graph are the explicit Resource values formed from those files.
 
-A Runtime Profile only selects the Credential Store, Endpoints and their closed configuration. The
+An Environment Profile selects Credential Stores, Endpoints and their closed configuration. The
 full structure is maintained in [Runtime](../guide/runtime.md), not duplicated in this Quickstart.
 
 ### 1. Select a Runtime
 
 ```bash
 cd examples/podcast
-hypit runtime use hypit.runtime.json
+hypit runtime use hypit.generation-runtime.json
 ```
 
-Author Sources select their packages through imports. The Local Runtime Profile selects
-Credential Store and Endpoint packages through `use`; the project separately owns its Result
+Author Sources select their packages through imports. The Environment Profile selects Credential
+Store and Endpoint packages through `use`; the project separately owns its Result
 repository. The installed package manager owns their versions.
 
 ### 2. Diagnose the environment
@@ -259,8 +261,8 @@ repository. The installed package manager owns their versions.
 hypit doctor
 ```
 
-Doctor always validates the project's Result repository. When a Runtime Profile is selected or
-passed explicitly, it also validates every selected Runtime role, Endpoint configuration, credential
+Doctor always validates the project's Result repository. When an Environment is selected directly or
+through a Runtime Profile, it also validates every selected Endpoint configuration, credential
 presence and bounded environment probe. It never starts the Worker or performs a paid request.
 
 With a Profile, Doctor checks the whole Profile unless scoped with repeated `--endpoint <instance>`
@@ -295,7 +297,7 @@ repeats only the cheap read-only preflight
 and refuses before submission when a required package or Program is missing; it never provisions
 dependencies. When the deployment is already prepared and only its Worker is stopped, `build`
 starts that Worker before durable submission. `runtime status` observes
-the deployment, while `programs up|status|down` is the narrower lifecycle view for long-lived
+the deployment, while `programs up|status|down --environment <profile>` is the narrower lifecycle view for long-lived
 processes declared by Endpoints.
 
 ### 4. Submit the Build

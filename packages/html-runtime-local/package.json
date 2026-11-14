@@ -16,9 +16,9 @@
     "@hypit/html-render-local": "workspace:^0.1.0"
   },
   "peerDependencies": {
-    "@hypit/runtime-local": "workspace:^0.2.0"
+    "@hypit/execution-environment-local": "workspace:^0.2.0"
   },
   "devDependencies": {
-    "@hypit/runtime-local": "workspace:*"
+    "@hypit/execution-environment-local": "workspace:*"
   }
 }

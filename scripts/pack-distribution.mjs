@@ -46,6 +46,12 @@ function exportRuntimeTargets(value, runtimeTarget) {
   ]));
 }
 
+function exportTargets(value) {
+  if (typeof value === "string") return [value];
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return [];
+  return Object.values(value).flatMap(exportTargets);
+}
+
 async function bridgeIndependentPublicExports(stage, manifest) {
   const dependencies = { ...(manifest.dependencies ?? {}) };
   for (const [exportName, value] of Object.entries(manifest.exports ?? {})) {
@@ -57,11 +63,14 @@ async function bridgeIndependentPublicExports(stage, manifest) {
     if (match === null || embeddedPackageDirectories.has(match[1])) continue;
 
     const owner = JSON.parse(await readFile(resolve(root, "packages", match[1], "package.json"), "utf8"));
-    const suffix = exportName.slice(`./${match[1]}`.length);
-    const ownerExport = suffix === "" ? "." : `.${suffix}`;
-    if (owner.exports?.[ownerExport] === undefined && !(ownerExport === "." && typeof owner.exports === "string")) {
-      throw new Error(`${exportName} has no matching ${owner.name} export ${ownerExport}`);
+    const localTarget = `.${source.slice(`./packages/${match[1]}`.length)}`;
+    const ownerExport = Object.entries(
+      typeof owner.exports === "string" ? { ".": owner.exports } : owner.exports ?? {},
+    ).find(([, declared]) => exportTargets(declared).includes(localTarget))?.[0];
+    if (ownerExport === undefined) {
+      throw new Error(`${exportName} targets ${localTarget}, which ${owner.name} does not export`);
     }
+    const suffix = ownerExport === "." ? "" : ownerExport.slice(1);
     const specifier = `${owner.name}${suffix}`;
     const bridge = `./dist/public/runtime-${exportName.slice(2).replaceAll("/", "-")}.js`;
     const bridgePath = resolve(stage, bridge);

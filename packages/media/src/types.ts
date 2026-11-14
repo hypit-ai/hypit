@@ -205,6 +205,12 @@ export type PreparedSignalPictureSource = {
   readonly source: BlobRef;
 } & Omit<PreparedSignalPictureMember, "map">;
 
+/** One explicit target-to-stream sampling relation for a decodable Picture signal. */
+export type PreparedPictureSampling = {
+  readonly source: PreparedSignalPictureSource;
+  readonly sampling: TemporalMap;
+};
+
 export type PreparedPictureSource = PreparedConstantPictureSource | PreparedSignalPictureSource;
 
 /** Signal-specific terminal facts projected from PreparedMedia for audio execution. */
@@ -233,23 +239,30 @@ export type PreparedMedia = {
 export type MediaDomainSpec = { readonly id: string };
 
 /** Stable picture requirements shared by encoded video and authored frame capture. */
-type OutputPictureBase = {
-  readonly bitDepth: 8;
-  readonly alpha: {
-    readonly mode: "opaque";
-    /** Final background used when the composed picture still contains transparency. */
-    readonly matte: string;
-  };
+type OpaqueOutputAlpha = {
+  readonly mode: "opaque";
+  /** Final background used when the composed picture still contains transparency. */
+  readonly matte: string;
 };
 
-export type VideoOutputPictureSpec = OutputPictureBase & {
+type StraightOutputAlpha = {
+  /** Preserve unassociated alpha in an image-sequence Product. */
+  readonly mode: "straight";
+};
+
+type OutputPictureBase<Alpha extends OpaqueOutputAlpha | StraightOutputAlpha> = {
+  readonly bitDepth: 8;
+  readonly alpha: Alpha;
+};
+
+export type VideoOutputPictureSpec = OutputPictureBase<OpaqueOutputAlpha> & {
   readonly colorPrimaries: "bt709";
   readonly colorTransfer: "bt709";
   readonly colorMatrix: "bt709";
   readonly colorRange: "limited";
 };
 
-export type FrameOutputPictureSpec = OutputPictureBase & {
+export type FrameOutputPictureSpec = OutputPictureBase<OpaqueOutputAlpha | StraightOutputAlpha> & {
   readonly colorPrimaries: "bt709";
   readonly colorTransfer: "srgb";
   readonly colorMatrix: "rgb";

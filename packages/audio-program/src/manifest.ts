@@ -1,9 +1,12 @@
 import { audiovisualDependency, signalOperatorProgramSchema } from "@hypit/audiovisual";
 import { mediaDependency, mediaTypes, preparedAudioSourceSchema } from "@hypit/media";
 import { exactTemporalValueSchema, temporalMapSchema } from "@hypit/temporal-graph";
-import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import type { ValueSchema } from "@hypit/protocol";
+import type { CapabilityRef, TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
 
-export const audioProgramModuleRef = { name: "@hypit/audio-program", version: "1" } as const;
+export const audioProgramModuleRef = { name: "@hypit/audio-program" } as const;
 export const audioProgramTypes = {
   program: { module: audioProgramModuleRef, name: "AudioProgram" },
   renderRange: { module: audioProgramModuleRef, name: "AudioRenderRange" },
@@ -99,8 +102,7 @@ export const audioRenderRangeSchema: ValueSchema = {
   },
 };
 
-export const audioProgramManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const audioProgramManifest: GenerationModuleDefinition = {
   ...audioProgramModuleRef,
   dependencies: [audiovisualDependency, mediaDependency],
   types: Object.values(audioProgramTypes).map((type) => type.name),

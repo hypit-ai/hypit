@@ -1,18 +1,23 @@
+import { createModuleFacet } from "@hypit/hypit/module";
 import { createNleAuthoringFacet, createNlePackageFacet } from "@hypit/nle";
-import { createNleHtmlVideoPackageFacet } from "@hypit/html-video";
+import { createNleAudiovisualPackageFacet } from "@hypit/nle-audiovisual";
 
+import { titleCardModuleRef } from "./identity.js";
 import {
   titleCardNleAuthoring,
-  titleCardNleHtmlVideoResolver,
+  titleCardNleAudiovisualResolver,
   titleCardNleResolver,
 } from "./nle.js";
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [],
   facets: [
+    createModuleFacet({
+      ...titleCardModuleRef,
+      dependencies: [],
+      types: [],
+    }),
     createNlePackageFacet({ components: [titleCardNleResolver] }),
-    createNleHtmlVideoPackageFacet({ components: [titleCardNleHtmlVideoResolver] }),
+    createNleAudiovisualPackageFacet({ components: [titleCardNleAudiovisualResolver] }),
     createNleAuthoringFacet({ componentParameters: [titleCardNleAuthoring] }),
   ],
 };

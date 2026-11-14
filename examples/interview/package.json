@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "hypit": { "project": true },
+  "hypit": {
+    "project": true
+  },
   "dependencies": {
     "@fontsource-variable/league-spartan": "5.3.0",
     "@hypit/hypit": "^0.4.0",

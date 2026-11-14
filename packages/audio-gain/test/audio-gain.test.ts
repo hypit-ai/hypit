@@ -21,7 +21,7 @@ import {
   createNleLoweringHostFromFacets,
   createNleProject,
   findNleItem,
-  nleLinearSourceTime,
+  nleLinearTimeMapping,
   type NleComponentItem,
 } from "@hypit/nle";
 import hypitPackage from "../src/activation.js";
@@ -81,21 +81,21 @@ test("Audio Gain owns temporal automation instead of adding fade semantics to AV
   assert.deepEqual(result.value, operator);
 });
 
-test("Audio Gain owns NLE Audio Adjustment parameters, lowering and authoring", () => {
-  const symbol = { module: { name: "@example/synth", version: "1" }, name: "tone" } as const;
+test("Audio Gain owns NLE Audio Operator parameters, lowering and authoring", () => {
+  const symbol = { module: { name: "@example/synth" }, name: "tone" } as const;
   const item: NleComponentItem = {
     id: "tone", kind: "present", source: "component", component: symbol, parameters: {},
-    start: at(0), duration: at(1), sourceTime: nleLinearSourceTime(at(1)), enabled: true,
+    start: at(0), duration: at(1), sourceTime: nleLinearTimeMapping(at(1)), enabled: true,
     audio: {},
   };
   const adjustment = {
     id: "fade", kind: "adjustment" as const,
-    component: { module: { name: "@hypit/audio-gain", version: "1" }, name: "gain" },
+    operator: { module: { name: "@hypit/audio-gain" }, name: "gain" },
     parameters: {
       kind: "keyframes", keyframes: [{ at: at(0), gain: 0 }, { at: at(1, 2), gain: 1 }],
       interpolation: { kind: "linear" },
     },
-    start: at(0), duration: at(1), sourceTime: nleLinearSourceTime(at(1)), enabled: true,
+    start: at(0), duration: at(1), controlTime: nleLinearTimeMapping(at(1)), enabled: true,
   };
   const base = createNleProject({ id: "audio-edit", name: "Audio edit" });
   const project = applyNleTransaction(base, { revision: 0, commands: [{
@@ -104,11 +104,17 @@ test("Audio Gain owns NLE Audio Adjustment parameters, lowering and authoring", 
     },
   }] });
   const lowering = createNleLoweringHostFromFacets(hypitPackage.facets)
-    .resolveAudioAdjustment(adjustment, { project, track: project.tracks[0]! });
+    .resolveAudioOperator(adjustment, {
+      project,
+      track: project.tracks[0]!,
+      application: adjustment,
+      scope: { kind: "adjustment", item: adjustment },
+      controlDuration: at(1),
+    });
   assert.deepEqual(Object.keys(lowering.operator.temporalControls), ["gain"]);
 
   const authoring = createNleAuthoringHostFromFacets(hypitPackage.facets);
-  const transaction = authoring.planAdjustmentParameterEdit(project, "fade", {
+  const transaction = authoring.planOperatorParameterEdit(project, { kind: "adjustment", item: "fade" }, {
     kind: "set-keyframe-gain", at: at(1, 2), gain: 0.5,
   });
   const edited = applyNleTransaction(project, transaction);

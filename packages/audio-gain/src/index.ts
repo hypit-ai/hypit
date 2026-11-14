@@ -23,6 +23,7 @@ export {
   assertAudioGainNleParameters,
   audioGainControlFromNleParameters,
   audioGainNleAuthoring,
+  audioGainNleOccurrence,
   audioGainNleResolver,
   audioGainNleSymbol,
   editAudioGainNleParameters,

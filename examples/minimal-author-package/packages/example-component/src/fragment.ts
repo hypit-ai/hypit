@@ -1,6 +1,6 @@
 import { compositionTypes } from "@hypit/composition";
-import { blobTypes } from "@hypit/hypit/blob";
-import { sealGraphFragment } from "@hypit/hypit/author";
+import { blobTypes } from "@hypit/hypit/generation/blob";
+import { sealGraphFragment } from "@hypit/hypit/generation/author";
 import { timelineTypes } from "@hypit/timeline";
 import { spatialTypes } from "@hypit/spatial";
 import { exampleProducers } from "./manifest.js";

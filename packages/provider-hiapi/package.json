@@ -15,25 +15,24 @@
     "activation": "./src/activation.ts"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0",
-    "@hypit/runtime-local": "workspace:^0.2.0"
+    "@hypit/execution-environment-local": "workspace:^0.2.0",
+    "@hypit/hypit": "workspace:^0.4.0"
   },
   "devDependencies": {
     "@hypit/endpoint": "workspace:*",
-    "@hypit/generation": "workspace:*",
-    "@hypit/hypit": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/runtime": "workspace:*",
-    "@hypit/runtime-local": "workspace:*",
+    "@hypit/execution-environment-local": "workspace:*",
+    "@hypit/generation-model": "workspace:*",
     "@hypit/gpt-image": "workspace:*",
     "@hypit/grok-imagine": "workspace:*",
+    "@hypit/hypit": "workspace:*",
     "@hypit/minimax-h3": "workspace:*",
     "@hypit/nano-banana": "workspace:*",
+    "@hypit/protocol": "workspace:*",
     "@hypit/seedance": "workspace:*",
     "@hypit/seedream": "workspace:*"
   },
   "dependencies": {
-    "@hypit/generation": "workspace:^0.2.0",
+    "@hypit/generation-model": "workspace:*",
     "@hypit/gpt-image": "workspace:^0.3.0",
     "@hypit/grok-imagine": "workspace:^0.3.0",
     "@hypit/minimax-h3": "workspace:^0.3.0",

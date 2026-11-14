@@ -20,10 +20,10 @@
   "dependencies": {
     "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/audiovisual-html": "workspace:^0.1.0",
+    "@hypit/hypit": "workspace:*",
     "@hypit/html-program": "workspace:^0.2.0",
-    "@hypit/html-video": "workspace:^0.2.1",
+    "@hypit/nle-audiovisual": "workspace:^0.1.0",
     "@hypit/nle": "workspace:^0.1.0",
-    "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/spatial": "workspace:^0.1.1",
     "@hypit/temporal": "workspace:^0.1.1"
   },

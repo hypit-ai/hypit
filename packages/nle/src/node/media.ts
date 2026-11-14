@@ -5,7 +5,7 @@ import { verifyPreparedMedia } from "@hypit/media";
 import { assertNleComposition, assertNleProject } from "../project.js";
 import type {
   NleComposition,
-  NleMediaItem,
+  NleMediaLoweringContext,
   NleMediaResolver,
   NleProject,
   NleResolvedMedia,
@@ -13,10 +13,7 @@ import type {
 
 export type NodeNleMediaOpener = (
   path: string,
-  context: {
-    readonly project: NleComposition;
-    readonly item: NleMediaItem;
-  },
+  context: NleMediaLoweringContext,
 ) => NleResolvedMedia | Promise<NleResolvedMedia>;
 
 /**
@@ -48,23 +45,36 @@ export async function createNodeNleMediaResolver(
       byAsset = new Map();
       resolved.set(current, byAsset);
     }
-    const mediaItems = current.tracks.flatMap((track) => track.items.filter((item): item is NleMediaItem =>
-      item.kind === "present" && item.source === "media"));
-    await Promise.all(mediaItems.map(async (item) => {
-      const target = resolve(base, item.asset.path);
+    const uses = current.tracks.flatMap((track) => track.items.flatMap((item): readonly {
+      readonly asset: import("../index.js").NleMediaAssetReference;
+      readonly context: NleMediaLoweringContext;
+    }[] => {
+      if (item.kind !== "present") return [];
+      if (item.source === "media") return [{
+        asset: item.asset,
+        context: { kind: "item", project: current, track, item },
+      }];
+      if (item.source !== "component") return [];
+      return Object.entries(item.media ?? {}).map(([input, asset]) => ({
+        asset,
+        context: { kind: "component-input", project: current, track, item, input },
+      }));
+    }));
+    await Promise.all(uses.map(async ({ asset, context }) => {
+      const target = resolve(base, asset.path);
       const local = relative(root, target);
       if (local === "" || local === ".." || local.startsWith(`..${sep}`)
         || isAbsolute(local) || resolve(root, local) !== target) {
-        throw new Error(`NLE Media Asset ${item.asset.path} leaves the application Project Root.`);
+        throw new Error(`NLE Media Asset ${asset.path} leaves the application Project Root.`);
       }
       let pending = paths.get(target);
       if (pending === undefined) {
-        pending = Promise.resolve(open(target, { project: current, item }));
+        pending = Promise.resolve(open(target, context));
         paths.set(target, pending);
       }
       const value = await pending;
       verifyPreparedMedia(value);
-      byAsset!.set(item.asset.path, structuredClone(value));
+      byAsset!.set(asset.path, structuredClone(value));
     }));
     await Promise.all(current.tracks.flatMap((track) => track.items
       .filter((item) => item.kind === "present" && item.source === "composition")

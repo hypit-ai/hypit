@@ -8,8 +8,8 @@ There is no separate SVS or generic Text-template frontend. Import the Source, r
 Template through `@hypit/prompt`, and pass the resulting `Prompt` to GPT Image:
 
 ```svml
-module prompt from "@hypit/prompt@1"
-module gpt from "@hypit/gpt-image@1"
+module prompt from "@hypit/prompt"
+module gpt from "@hypit/gpt-image"
 source ugc from "@hypit/gpt-image-kits/phone-ugc-v1"
 
 prompt.Render "portrait-prompt" {

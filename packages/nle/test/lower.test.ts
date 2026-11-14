@@ -9,12 +9,12 @@ import {
 } from "@hypit/audiovisual";
 import { sealAudioProgram, verifyAudioProgram, type AudioOutputSampling } from "@hypit/audio-program";
 import {
-  createNleScaledHtmlOutput,
-  createNleTerminalLinkHost,
-  linkNleProjectTerminals,
+  createNleScaledPictureOutput,
+  createNleAudiovisualLinkHost,
+  linkNleProjectAudiovisual,
   lowerNleProjectToAudioProgram,
   lowerNleProjectToHtmlProgram,
-} from "../../html-video/src/index.js";
+} from "../../nle-audiovisual/src/index.js";
 import { visualProgramHtmlSource } from "@hypit/audiovisual-html";
 import { assertHtmlProgram, htmlVisual, selectHtmlVideoSources } from "@hypit/html-program";
 import { prepareMedia } from "@hypit/media";
@@ -25,12 +25,14 @@ import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
   applyNleTransaction,
+  createNleLoweringHost,
   createNleProject,
   lowerNleProjectToAudiovisual,
-  nleLinearSourceTime,
-  nlePointwisePictureAdjustment,
+  nleLinearTimeMapping,
+  nlePointwisePictureOperator,
   nleProjectComposition,
   serializeNleProject,
+  indexNleComposition,
   type NleComponentItem,
   type NlePictureAppearance,
   type NleProject,
@@ -107,17 +109,17 @@ function audioComponentSource(id: string) {
   };
 }
 
-const captionRenderer = { module: { name: "@example/caption", version: "1" }, name: "default" };
-const componentRenderer = { module: { name: "@example/title", version: "1" }, name: "card" };
-const audioComponentRenderer = { module: { name: "@example/synth", version: "1" }, name: "tone" };
-const effectRenderer = { module: { name: "@example/effects", version: "1" }, name: "monochrome" };
-const audioEffectRenderer = { module: { name: "@example/audio", version: "1" }, name: "gain" };
+const captionRenderer = { module: { name: "@example/caption" }, name: "default" };
+const componentRenderer = { module: { name: "@example/title" }, name: "card" };
+const audioComponentRenderer = { module: { name: "@example/synth" }, name: "tone" };
+const effectRenderer = { module: { name: "@example/effects" }, name: "monochrome" };
+const audioEffectRenderer = { module: { name: "@example/audio" }, name: "gain" };
 const audioReconstructionRenderer = {
-  module: { name: "@example/audio", version: "1" },
+  module: { name: "@example/audio" },
   name: "preserve-pitch",
 };
-const transitionRenderer = { module: { name: "@example/transition", version: "1" }, name: "dissolve" };
-const matteRenderer = { module: { name: "@example/matte", version: "1" }, name: "alpha" };
+const transitionRenderer = { module: { name: "@example/transition" }, name: "dissolve" };
+const matteRenderer = { module: { name: "@example/matte" }, name: "alpha" };
 const coreVisualSource = (id: string, marker: string) => {
   const { source, pictureOutput } = visualSource(id, marker);
   return { source, pictureOutput };
@@ -126,22 +128,22 @@ const coreAudioSource = (id: string) => {
   const { source, audioOutput } = audioComponentSource(id);
   return { source, audioOutput };
 };
-const host = createNleTerminalLinkHost([{
+const host = createNleAudiovisualLinkHost([{
   components: [{ component: captionRenderer,
     resolve: (item) => coreVisualSource(`${item.id}:source`, "caption") }, { component: componentRenderer,
     resolve: (item) => coreVisualSource(`${item.id}:source`, "component") }, {
     component: audioComponentRenderer,
     resolve: (item) => coreAudioSource(`${item.id}:source`),
   }],
-  pictureAdjustments: [{ component: effectRenderer, resolve: (item) => ({
-    operator: nlePointwisePictureAdjustment(`adjustment:${item.id}`, htmlVisual({
+  pictureOperators: [{ operator: effectRenderer, resolve: (application) => ({
+    operator: nlePointwisePictureOperator(`operator:${application.id}`, htmlVisual({
       html: '<div data-nle-effect="mono">{{picture}}</div>',
       css: ":scope>[data-nle-effect]{position:absolute;inset:0;filter:grayscale(1)}",
     })),
   }) }],
-  audioAdjustments: [{ component: audioEffectRenderer, resolve: (item) => ({
+  audioOperators: [{ operator: audioEffectRenderer, resolve: (application) => ({
     operator: {
-      id: `audio-effect:${item.id}`,
+      id: `audio-operator:${application.id}`,
       inputs: ["signal"],
       temporalControls: {},
       temporalSupport: pointwiseOperatorTemporalSupport(["signal"]),
@@ -194,7 +196,7 @@ function project(): NleProject {
   });
   const caption: NleComponentItem = {
     id: "subtitle-one", kind: "present", source: "component", start: frame(1), duration: frame(2),
-    sourceTime: nleLinearSourceTime(frame(2)),
+    sourceTime: nleLinearTimeMapping(frame(2)),
     enabled: true,
     component: captionRenderer,
     parameters: { text: "A direct caption block", color: "white" },
@@ -202,7 +204,7 @@ function project(): NleProject {
   };
   const component: NleComponentItem = {
     id: "title", kind: "present", source: "component", start: frame(0), duration: frame(4),
-    sourceTime: nleLinearSourceTime(frame(4)),
+    sourceTime: nleLinearTimeMapping(frame(4)),
     enabled: true,
     component: componentRenderer,
     parameters: { title: "HTML component" }, picture: full,
@@ -213,22 +215,27 @@ function project(): NleProject {
     { kind: "item.add", track: "main", item: {
       id: "camera-use", kind: "present", source: "media",
       asset: { path: "./media/camera.media.json" }, start: frame(0), duration: frame(4),
-      sourceTime: nleLinearSourceTime(frame(4)), enabled: true, audio: {
+      sourceTime: nleLinearTimeMapping(frame(4)), enabled: true, audio: {
         reconstruction: { using: audioReconstructionRenderer, parameters: {} },
       },
       picture: {
         ...full,
-        effects: [{ id: "item-mono", component: effectRenderer, parameters: { amount: 0.5 } }],
+        operators: [{
+          id: "item-mono",
+          operator: effectRenderer,
+          parameters: { amount: 0.5 },
+          controlTime: nleLinearTimeMapping(frame(4)),
+        }],
       },
     } },
     { kind: "item.add", track: "main", item: {
-      id: "mono", kind: "adjustment", component: effectRenderer, parameters: { amount: 1 },
-      start: frame(0), duration: frame(4), sourceTime: nleLinearSourceTime(frame(4)), enabled: true,
+      id: "mono", kind: "adjustment", operator: effectRenderer, parameters: { amount: 1 },
+      start: frame(0), duration: frame(4), controlTime: nleLinearTimeMapping(frame(4)), enabled: true,
     } },
     { kind: "item.add", track: "main", item: caption },
     { kind: "item.add", track: "main", item: {
-      id: "caption-treatment", kind: "adjustment", component: effectRenderer, parameters: { amount: 1 },
-      start: frame(1), duration: frame(2), sourceTime: nleLinearSourceTime(frame(2)), enabled: true,
+      id: "caption-treatment", kind: "adjustment", operator: effectRenderer, parameters: { amount: 1 },
+      start: frame(1), duration: frame(2), controlTime: nleLinearTimeMapping(frame(2)), enabled: true,
     } },
     { kind: "item.add", track: "main", item: component },
   ] });
@@ -239,20 +246,20 @@ test("Media, Present Components and Adjustments lower into one audiovisual Progr
   const program = lowerNleProjectToAudiovisual(document, host);
 
   assert.deepEqual(Object.keys(program.occurrences), ["camera-use", "subtitle-one", "title"]);
-  const itemEffect = program.picture?.nodes["camera-use:effect:item-mono:picture-adjustment"];
+  const itemEffect = program.picture?.nodes["camera-use:picture-operator:item-mono"];
   assert.equal(itemEffect?.kind, "apply");
   if (itemEffect?.kind !== "apply") throw new Error("Item-local Picture effect did not lower.");
   assert.equal(itemEffect.inputs.picture, "camera-use:fitted");
   const cameraPlaced = program.picture?.nodes["camera-use:placed"];
   assert.equal(cameraPlaced?.kind, "remap");
   if (cameraPlaced?.kind !== "remap") throw new Error("Camera did not lower through Canvas placement.");
-  assert.equal(cameraPlaced.input, "camera-use:effect:item-mono:picture-adjustment");
-  assert.equal(program.picture?.nodes["mono:picture-adjustment"]?.kind, "apply");
+  assert.equal(cameraPlaced.input, "camera-use:picture-operator:item-mono");
+  assert.equal(program.picture?.nodes["mono:picture-operator:mono"]?.kind, "apply");
   const captionFitted = program.picture?.nodes["subtitle-one:fitted"];
   assert.equal(captionFitted?.kind, "remap");
   if (captionFitted?.kind !== "remap") throw new Error("Caption did not lower through Item-local fitting.");
   assert.deepEqual(captionFitted.mapping.target.region, { x: 0, y: 0, width: 80, height: 20 });
-  const captionEffect = program.picture?.nodes["caption-treatment:picture-adjustment"];
+  const captionEffect = program.picture?.nodes["caption-treatment:picture-operator:caption-treatment"];
   assert.equal(captionEffect?.kind, "apply");
   const captionPlaced = program.picture?.nodes["subtitle-one:placed"];
   assert.equal(captionPlaced?.kind, "remap");
@@ -267,7 +274,7 @@ test("Media, Present Components and Adjustments lower into one audiovisual Progr
   assert.equal(audioSelection?.kind, "signal");
   if (audioSelection?.kind !== "signal") throw new Error("Camera Audio did not lower as a signal.");
   assert.equal(audioSelection.reconstruction?.program.format, "hypit.test-preserve-pitch@1");
-  assert.deepEqual(linkNleProjectTerminals(document, host).htmlSources.sources.map((source) => source.source),
+  assert.deepEqual(linkNleProjectAudiovisual(document, host).htmlSources.sources.map((source) => source.source),
     ["camera-prepared", "subtitle-one:source", "title:source"]);
 });
 
@@ -309,7 +316,7 @@ test("NLE source-time pieces close as one resolved AVIR TemporalMap", () => {
 
   const invalid = structuredClone(document);
   const item = invalid.tracks[0]!.items[0]!;
-  (item as { sourceTime: unknown }).sourceTime = nleLinearSourceTime(frame(8), frame(8));
+  (item as { sourceTime: unknown }).sourceTime = nleLinearTimeMapping(frame(8), frame(8));
   assert.doesNotThrow(() => serializeNleProject(invalid));
   assert.throws(() => lowerNleProjectToAudiovisual(invalid, host), /source domain/u);
 });
@@ -324,7 +331,7 @@ test("cover fitting aligns an explicit source focal point", () => {
       items: [{
         id: "focal", kind: "present", source: "media",
         asset: { path: "./media/camera.media.json" }, start: frame(0), duration: frame(4),
-        sourceTime: nleLinearSourceTime(frame(4)), enabled: true,
+        sourceTime: nleLinearTimeMapping(frame(4)), enabled: true,
         picture: { layout: { x: 0, y: 0, width: 50, height: 100, fit: "cover", contentX: 0.75 } },
       }] } },
   ] });
@@ -340,7 +347,7 @@ test("cover fitting aligns an explicit source focal point", () => {
 test("the same project lowers directly to a browser HtmlProgram without Build execution", () => {
   const document = project();
   const html = lowerNleProjectToHtmlProgram(document, host,
-    createNleScaledHtmlOutput(document, outputRate));
+    createNleScaledPictureOutput(document, outputRate));
 
   assert.doesNotThrow(() => assertHtmlProgram(html));
   assert.equal(html.frameCount, 4);
@@ -361,7 +368,7 @@ test("Transition and matte remain direct NLE relations", () => {
   const component = (id: string, startFrame: number, durationFrames: number): NleComponentItem => ({
     id, kind: "present", source: "component", component: componentRenderer, parameters: { title: id },
     start: frame(startFrame), duration: frame(durationFrames),
-    sourceTime: nleLinearSourceTime(frame(durationFrames)), enabled: true, picture: full,
+    sourceTime: nleLinearTimeMapping(frame(durationFrames)), enabled: true, picture: full,
   });
   const document = applyNleTransaction(empty, { revision: 0, commands: [{
     kind: "track.add", track: { id: "main", name: "Main", kind: "picture",
@@ -384,7 +391,7 @@ test("Transition and matte remain direct NLE relations", () => {
   assert.equal(program.picture?.nodes["join:apply"]?.kind, "apply");
   assert.equal(program.picture?.nodes["content:matte:content-alpha"]?.kind, "apply");
   const html = lowerNleProjectToHtmlProgram(document, host,
-    createNleScaledHtmlOutput(document, outputRate));
+    createNleScaledPictureOutput(document, outputRate));
   assert.match(html.html, /data-nle-transition/u);
   assert.match(html.html, /data-nle-matte/u);
   assert.throws(() => applyNleTransaction(document, { revision: document.revision, commands: [{
@@ -411,17 +418,24 @@ test("an Audio-only package Component closes through the same NLE and terminal c
     kind: "track.add", track: {
       id: "audio", name: "Audio", kind: "audio", muted: false, items: [{
         id: "tone", kind: "present", source: "component", component: audioComponentRenderer, parameters: { frequency: 440 },
-        start: frame(0), duration: frame(4), sourceTime: nleLinearSourceTime(frame(4)), enabled: true,
-        audio: {},
+        start: frame(0), duration: frame(4), sourceTime: nleLinearTimeMapping(frame(4)), enabled: true,
+        audio: { operators: [{
+          id: "local-gain",
+          operator: audioEffectRenderer,
+          parameters: { gain: 0.75 },
+          controlTime: nleLinearTimeMapping(frame(4)),
+        }] },
       }, {
-        id: "quiet", kind: "adjustment", component: audioEffectRenderer, parameters: { gain: 0.5 },
-        start: frame(0), duration: frame(4), sourceTime: nleLinearSourceTime(frame(4)), enabled: true,
+        id: "quiet", kind: "adjustment", operator: audioEffectRenderer, parameters: { gain: 0.5 },
+        start: frame(0), duration: frame(4), controlTime: nleLinearTimeMapping(frame(4)), enabled: true,
       }],
     },
   }] });
   const program = lowerNleProjectToAudiovisual(document, host);
   assert.equal(program.picture, undefined);
-  assert.equal(program.audio?.nodes["quiet:audio-adjustment"]?.kind, "apply");
+  assert.equal(program.audio?.nodes["tone:audio-operator:local-gain"]?.kind, "apply");
+  assert.equal(program.audio?.nodes["tone:audio-range"]?.kind, "restrict");
+  assert.equal(program.audio?.nodes["quiet:audio-operator:quiet"]?.kind, "apply");
   const audio = lowerNleProjectToAudioProgram(document, host, { sampleRate: 48_000 });
   assert.doesNotThrow(() => verifyAudioProgram(audio));
   assert.ok(audio.graph.nodes.some((node) => node.kind === "process"));
@@ -437,7 +451,7 @@ test("a composition-source Present closes one child NLE Composition as an ordina
       muted: false, items: [{
         id: "child-camera", kind: "present", source: "media",
         asset: { path: "./media/camera.media.json" }, start: frame(0), duration: frame(4),
-        sourceTime: nleLinearSourceTime(frame(4)), enabled: true, picture: full, audio: { },
+        sourceTime: nleLinearTimeMapping(frame(4)), enabled: true, picture: full, audio: { },
       }] } },
   ] });
   const parentBase = createNleProject({
@@ -448,7 +462,7 @@ test("a composition-source Present closes one child NLE Composition as an ordina
     kind: "track.add", track: { id: "parent-main", name: "Parent main", kind: "picture",
       muted: false, items: [{
         id: "nested", kind: "present", source: "composition", composition: nleProjectComposition(child), start: frame(0), duration: frame(4),
-        sourceTime: nleLinearSourceTime(frame(4)), enabled: true, picture: full, audio: { },
+        sourceTime: nleLinearTimeMapping(frame(4)), enabled: true, picture: full, audio: { },
       }] },
   }] });
   const nested = parent.tracks[0]?.items[0];
@@ -461,9 +475,49 @@ test("a composition-source Present closes one child NLE Composition as an ordina
   const program = lowerNleProjectToAudiovisual(parent, host);
   assert.equal(program.occurrences.nested?.source.id, "child");
   const html = lowerNleProjectToHtmlProgram(parent, host,
-    createNleScaledHtmlOutput(parent, outputRate));
+    createNleScaledPictureOutput(parent, outputRate));
   assert.equal(selectHtmlVideoSources(html).length, 1);
   const audio = lowerNleProjectToAudioProgram(parent, host, { sampleRate: 48_000 });
   assert.doesNotThrow(() => verifyAudioProgram(audio));
   assert.ok(audio.graph.nodes.some((node) => node.kind === "program"));
+});
+
+test("a Component receives named project Media as prepared values without becoming an NLE graph node", () => {
+  const base = createNleProject({
+    id: "component-media", name: "Component Media",
+    canvas: { width: 100, height: 100, clearColor: "#000000" },
+  });
+  const document = applyNleTransaction(base, { revision: 0, commands: [{
+    kind: "track.add",
+    track: { id: "main", name: "Main", kind: "picture", muted: false, items: [{
+      id: "ranking", kind: "present", source: "component", component: componentRenderer,
+      parameters: { players: [{ id: "messi", portrait: "portrait:messi" }] },
+      media: { "portrait:messi": { path: "../media/messi.media.json" } },
+      start: frame(0), duration: frame(4), sourceTime: nleLinearTimeMapping(frame(4)), enabled: true,
+      picture: full,
+    }] },
+  }] });
+  const selected = prepared();
+  let resolutionKind: string | undefined;
+  const loweringHost = createNleLoweringHost([{
+    components: [{
+      component: componentRenderer,
+      resolve: (item, context) => {
+        assert.equal(item.id, "ranking");
+        assert.equal(context.media["portrait:messi"]?.id, selected.id);
+        return coreVisualSource(`${item.id}:source`, "ranking");
+      },
+    }],
+  }], (asset, context) => {
+    assert.equal(asset.path, "../media/messi.media.json");
+    resolutionKind = context.kind;
+    assert.equal(context.kind === "component-input" ? context.input : undefined, "portrait:messi");
+    return selected;
+  });
+
+  const program = lowerNleProjectToAudiovisual(document, loweringHost);
+  assert.equal(resolutionKind, "component-input");
+  assert.equal(program.occurrences.ranking?.source.id, "ranking:source");
+  assert.deepEqual(indexNleComposition(document).mediaAssetUsers("../media/messi.media.json")
+    .map(({ item }) => item.id), ["ranking"]);
 });

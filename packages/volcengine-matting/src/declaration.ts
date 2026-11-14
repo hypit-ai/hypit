@@ -1,17 +1,13 @@
-import {
-  declarationField,
-  type AuthorDeclaration,
-  type AuthorDeclarationCompiler,
-  type AuthorResolvedReference,
-} from "@hypit/hypit/author";
-import { blobTypes } from "@hypit/hypit/blob";
-import { sameType, type TypeRef } from "@hypit/hypit/protocol";
-import { productPublication } from "@hypit/hypit/product";
+import { type TypeRef } from "@hypit/hypit/module";
+import { declarationField, type AuthorDeclaration, type AuthorDeclarationCompiler, type AuthorResolvedReference, } from "@hypit/hypit/generation/author";
+import { blobTypes } from "@hypit/hypit/generation/blob";
+import { sameType } from "@hypit/hypit/module";
+import { productPublication } from "@hypit/hypit/generation/product";
 import {
   createFieldModelPrimaryFragment,
   sealModelFieldBuilder,
-} from "@hypit/generation/model-fields";
-import { fieldModelAuthorComponent } from "@hypit/generation/model-fields/author";
+} from "@hypit/generation-model/model-fields";
+import { fieldModelAuthorComponent } from "@hypit/generation-model/model-fields/author";
 
 import { portraitMattingEndpoint, volcengineMattingModuleRef } from "./model.js";
 

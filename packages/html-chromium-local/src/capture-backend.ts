@@ -6,7 +6,7 @@ import type {
   StagedCaptureSession,
   StagedCaptureWorker,
 } from "@hypit/html-render-local";
-import { createOpaqueFrameCapture } from "./opaque-capture.js";
+import { createFrameCapture } from "./opaque-capture.js";
 
 export function chromiumCaptureBackend(executablePath: string): StagedCaptureBackend {
   return {
@@ -34,6 +34,7 @@ export function chromiumCaptureBackend(executablePath: string): StagedCaptureBac
             defaultViewport: { width: input.document.canvas.width, height: input.document.canvas.height, deviceScaleFactor: 1 },
             args: ["--no-sandbox", "--disable-dev-shm-usage",
               ...(input.config.browserGpu === "software" ? ["--disable-gpu"] : []),
+              ...(input.config.webGpu === "required" ? ["--enable-unsafe-webgpu"] : []),
             ] });
           sessions.add(browser);
           controller.signal.throwIfAborted();
@@ -51,7 +52,7 @@ export function chromiumCaptureBackend(executablePath: string): StagedCaptureBac
             await program.prepare(frameSelection);
           }, input.frameSelection);
           const picture = input.frames === undefined ? input.delivery.picture : input.picture;
-          const capturePng = await createOpaqueFrameCapture(page, input.document.canvas, picture.alpha.matte);
+          const capturePng = await createFrameCapture(page, input.document.canvas, picture.alpha);
           return {
             browserPid: browser.process()?.pid,
             async capture(frame, sources, _ordinal, prepared) {

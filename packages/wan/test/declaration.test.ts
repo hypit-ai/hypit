@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { AuthorResolvedReference } from "@hypit/author";
+import type { AuthorResolvedReference } from "@hypit/generation-authoring/author";
 import { promptTypes } from "@hypit/prompt";
 import { compileSvmlDeclaration } from "../../../test/compile-svml-declaration.js";
 
@@ -26,7 +26,7 @@ test("Wan publishes the complete generated set and an explicit primary image", a
     image: "story.image",
   });
   assert.deepEqual(decoded.components[0]?.fragment.exports.map((item) => ({ name: item.name, type: item.type })), [
-    { name: "image", type: { module: { name: "@hypit/blob", version: "1" }, name: "Blob" } },
+    { name: "image", type: { module: { name: "@hypit/blob" }, name: "Blob" } },
     { name: "images", type: wanEndpoints.image!.returns },
   ]);
   assert.deepEqual(decoded.components[0]?.fragment.operations.map((item) => item.id), [

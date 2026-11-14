@@ -6,11 +6,8 @@ import type {
   AudiovisualProgram,
   SignalOperatorProgram,
 } from "@hypit/audiovisual";
-import { verifyPreparedMedia } from "@hypit/media";
-import type { PreparedMedia } from "@hypit/media";
-import { assertSpatialMap } from "@hypit/spatial/algebra";
-import type { SpatialMap } from "@hypit/spatial/algebra";
-import type { TemporalSamplingGrid } from "@hypit/temporal";
+import { verifyPreparedMedia, verifyPreparedPictureSampling } from "@hypit/media";
+import type { PreparedMedia, PreparedPictureSampling } from "@hypit/media";
 
 export type AudiovisualHtmlSourceImplementation =
   | {
@@ -20,6 +17,11 @@ export type AudiovisualHtmlSourceImplementation =
   | {
       readonly kind: "prepared-media";
       readonly media: PreparedMedia;
+    }
+  | {
+      /** Execution-owned Picture signal received from another Terminal island. */
+      readonly kind: "picture-product";
+      readonly product: PreparedPictureSampling;
     }
   | {
       readonly kind: "audiovisual";
@@ -37,43 +39,12 @@ export type AudiovisualHtmlSourceSet = {
   readonly sources: readonly AudiovisualHtmlSource[];
 };
 
-export type AudiovisualHtmlOutput = {
-  readonly id: string;
-  readonly sampling: TemporalSamplingGrid;
-  readonly canvas: {
-    readonly width: number;
-    readonly height: number;
-    readonly clearColor: string;
-  };
-  /** Exact output-viewport to Programme-picture sampling relation. */
-  readonly pictureMapping: SpatialMap;
-};
-
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
 function identity(value: string, label: string): void {
   assert(/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(value), `${label} is invalid.`);
-}
-
-export function assertAudiovisualHtmlOutput(value: AudiovisualHtmlOutput): void {
-  identity(value.id, "Audiovisual HTML output identity");
-  assert(Number.isSafeInteger(value.sampling.frameRate.numerator)
-    && value.sampling.frameRate.numerator > 0,
-  "Audiovisual HTML frame-rate numerator must be a positive safe integer.");
-  assert(Number.isSafeInteger(value.sampling.frameRate.denominator)
-    && value.sampling.frameRate.denominator > 0,
-  "Audiovisual HTML frame-rate denominator must be a positive safe integer.");
-  assert(Number.isSafeInteger(value.canvas.width) && value.canvas.width > 0
-    && Number.isSafeInteger(value.canvas.height) && value.canvas.height > 0,
-  "Audiovisual HTML Canvas must have positive integer dimensions.");
-  assert(value.canvas.clearColor.length > 0, "Audiovisual HTML Canvas clear color is empty.");
-  assertSpatialMap(value.pictureMapping);
-  assert(value.pictureMapping.target.region.x === 0 && value.pictureMapping.target.region.y === 0
-    && value.pictureMapping.target.region.width === value.canvas.width
-    && value.pictureMapping.target.region.height === value.canvas.height,
-  "Audiovisual HTML Picture Mapping target must be the selected Canvas viewport.");
 }
 
 export function sealAudiovisualHtmlSource(value: AudiovisualHtmlSource): AudiovisualHtmlSource {
@@ -88,6 +59,10 @@ export function sealAudiovisualHtmlSource(value: AudiovisualHtmlSource): Audiovi
       verifyPreparedMedia(value.implementation.media);
       assert(value.implementation.media.picture !== undefined,
         `Prepared Media ${value.implementation.media.id} has no selected Picture member.`);
+      break;
+    }
+    case "picture-product": {
+      verifyPreparedPictureSampling(value.implementation.product);
       break;
     }
     case "audiovisual": {
@@ -156,6 +131,19 @@ export function preparedMediaHtmlSource(media: PreparedMedia): AudiovisualHtmlSo
     source: media.id,
     output: "picture",
     implementation: { kind: "prepared-media", media },
+  });
+}
+
+/** Adapt one transient cross-island Picture signal without creating a Media Asset. */
+export function pictureProductHtmlSource(
+  source: string,
+  output: string,
+  product: PreparedPictureSampling,
+): AudiovisualHtmlSource {
+  return sealAudiovisualHtmlSource({
+    source,
+    output,
+    implementation: { kind: "picture-product", product },
   });
 }
 

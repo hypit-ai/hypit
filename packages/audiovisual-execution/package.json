@@ -1,0 +1,26 @@
+{
+  "name": "@hypit/audiovisual-execution",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@hypit/generation-build": "workspace:*",
+    "@hypit/audiovisual": "workspace:^0.1.0",
+    "@hypit/module": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/refinement": "workspace:^0.0.0-dev",
+    "@hypit/spatial": "workspace:^0.1.1",
+    "@hypit/temporal": "workspace:^0.1.1"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

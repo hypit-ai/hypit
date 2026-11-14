@@ -8,8 +8,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@hypit/author": "workspace:^0.1.0",
-    "@hypit/protocol": "workspace:^0.1.0",
-    "@hypit/source": "workspace:^0.1.0"
+    "@hypit/generation-authoring": "workspace:*",
+    "@hypit/module": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.1.0"
   }
 }

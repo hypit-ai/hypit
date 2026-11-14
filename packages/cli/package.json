@@ -5,7 +5,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./public": "./src/public.ts"
   },
   "dependencies": {
     "@hypit/host-paths": "workspace:^0.1.0",

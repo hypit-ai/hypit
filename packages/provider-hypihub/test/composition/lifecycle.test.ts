@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { encodeOAuth2Credential } from "@hypit/runtime";
+import { encodeOAuth2Credential } from "@hypit/execution-environment";
 
-import { EndpointRegistry } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
 import { MemoryResourceStore } from "@hypit/resource-store";
 import { defineEndpoint, installEndpoint } from "@hypit/endpoint";
-import type { CanonicalValue, Need } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
+import type { Need } from "@hypit/generation-build";
 import { mimoSpeechEndpoints, sealMimoSpeechRequest } from "@hypit/mimo-speech";
 import { fishAudioSpeechEndpoints, sealFishAudioSpeechRequest } from "@hypit/fishaudio-speech";
 import { elevenLabsSpeechEndpoints, sealElevenLabsSpeechRequest } from "@hypit/elevenlabs-speech";
-import { generationTypes } from "@hypit/generation";
+import { generationTypes } from "@hypit/generation-model";
 import { gptImageEndpoints, sealGptImage2Request } from "@hypit/gpt-image";
 import { sealSeedanceRequest, seedanceEndpoints } from "@hypit/seedance";
 import { sealSpeechEvidenceAudio } from "@hypit/speech-evidence";
@@ -57,7 +58,7 @@ test("HypiHub operation deadlines fail while polling transport errors keep the j
   const common = {
     request: request, resources: new MemoryResourceStore(), credentials: { apiKey: { secret: "test" } }, operation: "op:test",
     handle: { contract: "hypit.hypihub-operation@1", jobId: "test",
-      route: `${request.capability.module.name}@${request.capability.module.version}#${request.capability.name}`, startedAt: 0 } };
+      route: `${request.capability.module.name}#${request.capability.name}`, startedAt: 0 } };
   const timedOut = await endpoint.poll(common);
   assert.equal(timedOut.status, "failed");
   assert.equal(timedOut.status === "failed" && timedOut.failure.code, "HYPIHUB_OPERATION_TIMEOUT");
@@ -284,7 +285,7 @@ test("terminal jobs preserve service error codes and receipts on both submission
     };
     const outcome = phase === "start" ? await endpoint.start(context) : await endpoint.poll({ ...context,
       handle: { contract: "hypit.hypihub-operation@1", jobId: "job-rejected", startedAt: Date.now(),
-        route: `${request.capability.module.name}@${request.capability.module.version}#${request.capability.name}` },
+        route: `${request.capability.module.name}#${request.capability.name}` },
     });
     assert.equal(outcome.status, "failed");
     if (outcome.status !== "failed") continue;

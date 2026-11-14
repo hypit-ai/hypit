@@ -17,8 +17,8 @@ hard-edged collage can need exactly that operation.
 Declare the Canvas and every rectangular destination explicitly:
 
 ```svml
-<import as="space" from="@hypit/spatial@1"/>
-<import as="image" from="@hypit/image-operations@1"/>
+<import as="space" from="@hypit/spatial"/>
+<import as="image" from="@hypit/image-operations"/>
 
 <space:Canvas id="comparison-canvas" width="2048" height="1024"/>
 <space:Frame id="before-panel" within={comparison-canvas.bounds}
@@ -47,7 +47,7 @@ must remain independently timed, clipped, moved or revised in the video, keep th
 Image Transform separates the ordered correction choices from the image they act on:
 
 ```svml
-<import as="image" from="@hypit/image-operations@1"/>
+<import as="image" from="@hypit/image-operations"/>
 
 <image:Program id="delivery-crop">
   <image:Crop x="0" y="0" width="1080" height="1920" unit="pixel"/>

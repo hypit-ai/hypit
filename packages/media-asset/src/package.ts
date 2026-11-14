@@ -1,12 +1,12 @@
 import type { Facet } from "@hypit/facet";
-import { isTypeRef, typeIdentity } from "@hypit/protocol";
+import { isTypeRef, typeIdentity } from "@hypit/module";
 
 import type {
   ResolvedMediaAsset,
   ResolvedMediaRepresentation,
 } from "./types.js";
 
-export const mediaRepresentationFacetAbi = "hypit.media-representation@1";
+export const mediaRepresentationFacetKind = "hypit.media-representation";
 
 export type MediaRepresentationOpenContext = {
   readonly asset: ResolvedMediaAsset;
@@ -16,7 +16,7 @@ export type MediaRepresentationOpenContext = {
 };
 
 export type MediaRepresentationOwner = {
-  readonly type: import("@hypit/protocol").TypeRef;
+  readonly type: import("@hypit/module").TypeRef;
   readonly open: (context: MediaRepresentationOpenContext) => unknown | Promise<unknown>;
 };
 
@@ -25,7 +25,7 @@ export type MediaRepresentationPackage = {
 };
 
 export type MediaRepresentationFacet = Facet & {
-  readonly abi: typeof mediaRepresentationFacetAbi;
+  readonly kind: typeof mediaRepresentationFacetKind;
   readonly implementation: MediaRepresentationPackage;
 };
 
@@ -64,13 +64,13 @@ export function createMediaRepresentationFacet(
   value: MediaRepresentationPackage,
 ): MediaRepresentationFacet {
   assertPackage(value);
-  return { abi: mediaRepresentationFacetAbi, implementation: value };
+  return { kind: mediaRepresentationFacetKind, implementation: value };
 }
 
 export function mediaRepresentationPackagesFromFacets(
   facets: readonly Facet[],
 ): readonly MediaRepresentationPackage[] {
-  return facets.flatMap((facet) => facet.abi === mediaRepresentationFacetAbi
+  return facets.flatMap((facet) => facet.kind === mediaRepresentationFacetKind
     ? [(facet as MediaRepresentationFacet).implementation]
     : []);
 }

@@ -1,0 +1,20 @@
+{
+  "format": "hypit.execution-environment-local@1",
+  "dataRoot": ".hypit/environment/local",
+  "credentials": {},
+  "endpoints": {
+    "media.local": {
+      "use": "@hypit/provider-media-local",
+      "config": {
+        "defaultConcurrency": 2
+      }
+    },
+    "html.local": {
+      "use": "@hypit/provider-html-local",
+      "config": {
+        "workers": 2,
+        "defaultConcurrency": 1
+      }
+    }
+  }
+}

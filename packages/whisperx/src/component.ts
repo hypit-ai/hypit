@@ -1,7 +1,7 @@
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { CanonicalValue, Value } from "@hypit/hypit/protocol";
-import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { RefinementPackage } from "@hypit/hypit/refinement";
+import { canonicalize } from "@hypit/hypit/value";
+import type { CanonicalValue, Value } from "@hypit/hypit/value";
+import type { ProducerPackage } from "@hypit/hypit/generation/producer";
+import type { RefinementPackage } from "@hypit/hypit/generation/refinement";
 import type { SpeechEvidenceAudio } from "@hypit/speech-evidence";
 
 import { whisperXRequestForEvidenceAudio } from "./evidence.js";

@@ -1,24 +1,24 @@
-<?svml using="@hypit/markup@1"?>
+<?svml using="@hypit/markup"?>
 
 <!-- A complete catalogue Source. Studio can open it once required project media is authored, and a
      normal Build of the same Invocation can regenerate the catalogue frame. -->
 <svml>
 
-  <import as="media" from="@hypit/media-author@1"/>
-  <import as="visual" from="@hypit/visual-track@1"/>
-  <import as="audio" from="@hypit/audio-track@1"/>
-  <import from="@hypit/script@1"/>
-  <import as="wording" from="@hypit/text@1"/>
-  <import as="seedance" from="@hypit/seedance@1"/>
-  <import as="mediaop" from="@hypit/media-operations@1"/>
-  <import as="time" from="@hypit/timeline-author@1"/>
-  <import as="whisperx" from="@hypit/whisperx@1"/>
-  <import as="speechalign" from="@hypit/narrative-speech-alignment@1"/>
-  <import as="semantic" from="@hypit/narrative-temporal@1"/>
-  <import as="space" from="@hypit/spatial@1"/>
-  <import as="film" from="@hypit/film@1"/>
-  <import as="html" from="@hypit/html-video-author@1"/>
-  <import as="example" from="@example/example-component@1"/>
+  <import as="media" from="@hypit/media-author"/>
+  <import as="visual" from="@hypit/visual-track"/>
+  <import as="audio" from="@hypit/audio-track"/>
+  <import from="@hypit/script"/>
+  <import as="wording" from="@hypit/text"/>
+  <import as="seedance" from="@hypit/seedance"/>
+  <import as="mediaop" from="@hypit/media-operations"/>
+  <import as="time" from="@hypit/timeline-author"/>
+  <import as="whisperx" from="@hypit/whisperx"/>
+  <import as="speechalign" from="@hypit/narrative-speech-alignment"/>
+  <import as="semantic" from="@hypit/narrative-temporal"/>
+  <import as="space" from="@hypit/spatial"/>
+  <import as="film" from="@hypit/film"/>
+  <import as="html" from="@hypit/html-video-author"/>
+  <import as="example" from="@example/example-component"/>
   <import as="recipes" source="./recipes.svs"/>
 
   <script id="story">

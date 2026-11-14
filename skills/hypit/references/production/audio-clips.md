@@ -42,7 +42,7 @@ either local domain should participate.
 
 The default local renderer evaluates affine, reverse, hold, wrap, gap, cubic and multi-stage Maps
 under ordinary point sampling. When a constant-speed occurrence must retain pitch, declare
-`<stretch:PreservePitch id="natural"/>` from `@hypit/audio-stretch@1` and pass
+`<stretch:PreservePitch id="natural"/>` from `@hypit/audio-stretch` and pass
 `reconstruction={natural}` to the Clip. Keep the speed only in `audio:Map`; the reconstruction value
 does not repeat it. The local renderer currently accepts PreservePitch for one complete positive,
 non-looping affine relation and rejects other shapes instead of approximating them.

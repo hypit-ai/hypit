@@ -1,0 +1,73 @@
+{
+  "format": "hypit.nle@1",
+  "id": "title-card-project",
+  "name": "Title Card Project",
+  "revision": 0,
+  "canvas": {
+    "width": 540,
+    "height": 960,
+    "clearColor": "#000000"
+  },
+  "componentValues": [],
+  "pictureLayouts": [],
+  "tracks": [
+    {
+      "id": "picture-main",
+      "name": "Picture",
+      "kind": "picture",
+      "muted": false,
+      "items": [
+        {
+          "id": "opening-title",
+          "kind": "present",
+          "source": "component",
+          "start": {
+            "ticks": "0",
+            "timeBase": { "numerator": 1, "denominator": 1 }
+          },
+          "duration": {
+            "ticks": "2",
+            "timeBase": { "numerator": 1, "denominator": 1 }
+          },
+          "sourceTime": {
+            "pieces": [
+              {
+                "target": {
+                  "start": { "ticks": "0", "timeBase": { "numerator": 1, "denominator": 1 } },
+                  "end": { "ticks": "2", "timeBase": { "numerator": 1, "denominator": 1 } }
+                },
+                "sourceAtStart": {
+                  "ticks": "0",
+                  "timeBase": { "numerator": 1, "denominator": 1 }
+                },
+                "rate": { "numerator": 1, "denominator": 1 }
+              }
+            ]
+          },
+          "enabled": true,
+          "component": {
+            "module": { "name": "@example/audiovisual-title-card" },
+            "name": "title-card"
+          },
+          "parameters": {
+            "title": "Project packages own behavior",
+            "subtitle": "NLE stores the editable instance",
+            "background": "#101820",
+            "foreground": "#f2f2f2"
+          },
+          "picture": {
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 540,
+              "height": 960,
+              "fit": "fill"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "transitions": [],
+  "mattes": []
+}

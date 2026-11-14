@@ -1,8 +1,8 @@
 /** Terminal presentation for the local NLE file exporter owned by this package. */
 import { resolve } from "node:path";
 
-import type { CliIo } from "@hypit/cli";
-import { exportLocalNleProject } from "./index.js";
+import type { CliIo } from "@hypit/cli/public";
+import { captureLocalNleFrames, exportLocalNleProject, reviewLocalNleProject } from "./index.js";
 import type { LocalNleExportProgress } from "./index.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -10,13 +10,22 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 export function writeNleHelp(io: Pick<CliIo, "write">): void {
-  io.write("Usage: hypit nle export <project.nle.json> --to <output.mp4> [options]\n\n"
-    + "Export one complete NLE project through AVIR, HTML/Audio programmes and local MP4 delivery.\n\n"
+  io.write("Usage:\n"
+    + "  hypit nle export <project.nle.json> --to <output.mp4> [options]\n"
+    + "  hypit nle frames <project.nle.json> --at-frame <n[,n,…]> --to <directory> [options]\n"
+    + "  hypit nle frames <project.nle.json> --start-frame <n> --end-frame-exclusive <n> [--step-frames <n>] --to <directory> [options]\n"
+    + "  hypit nle review <project.nle.json> --start-frame <n> --end-frame-exclusive <n> --at-frame <n[,n,…]> --to <directory> [options]\n\n"
+    + "Deliver a complete or focused MP4, capture sparse absolute Programme frames, or derive both from one focused Programme.\n\n"
     + "Options:\n"
-    + "  --to <file>             New .mp4 file to create (required; never overwrites)\n"
+    + "  --to <path>             New .mp4 file or output directory (required; never overwrites)\n"
     + "  --quality <quality>     draft | standard | high (default: standard)\n"
+    + "  --picture-target <name> html | gpu-composition (default: html)\n"
     + "  --frame-rate <rate>     Output fps, e.g. 60 or 30000/1001 (default: 30)\n"
     + "  --resolution <WxH>      Same-aspect output pixels, e.g. 1920x1080 (default: project extent)\n"
+    + "  --start-frame <n>       First absolute output frame in a focused interval\n"
+    + "  --end-frame-exclusive <n>  Exclusive last frame in a focused interval\n"
+    + "  --at-frame <n[,n,…]>   Absolute Programme frames to capture\n"
+    + "  --step-frames <n>      Frame capture interval for a selected range (default: 1)\n"
     + "  --package-root <path>   Resolve project component packages here (default: Project Root)\n"
     + "  --chrome-path <path>    Use this installed Chrome/Chromium executable\n"
     + "  --ffmpeg-path <path>    Use this FFmpeg executable\n"
@@ -83,7 +92,9 @@ export async function runNleCli(
     writeNleHelp(io);
     return;
   }
-  assert(argv[1] === "export", `Unknown nle command ${argv[1] ?? "<missing>"}`);
+  const command = argv[1];
+  assert(command === "export" || command === "frames" || command === "review",
+    `Unknown nle command ${command ?? "<missing>"}`);
   const positionals: string[] = [];
   const options = new Map<string, string>();
   let json = false;
@@ -93,37 +104,85 @@ export async function runNleCli(
     if (["--debug", "--verbose", "--no-color"].includes(item)) continue;
     if (item === "--color") { index += 1; continue; }
     if (!item.startsWith("--")) { positionals.push(item); continue; }
-    assert(["--to", "--quality", "--frame-rate", "--resolution", "--package-root", "--chrome-path", "--ffmpeg-path",
-      "--ffprobe-path", "--workers"].includes(item), `Unknown option ${item}`);
+    assert(["--to", "--quality", "--picture-target", "--frame-rate", "--resolution", "--start-frame",
+      "--end-frame-exclusive", "--at-frame", "--step-frames", "--package-root", "--chrome-path",
+      "--ffmpeg-path", "--ffprobe-path", "--workers"].includes(item), `Unknown option ${item}`);
     assert(!options.has(item), `${item} cannot be repeated`);
     const value = argv[index + 1];
     assert(value !== undefined && !value.startsWith("--"), `${item} requires a value`);
     options.set(item, value);
     index += 1;
   }
-  assert(positionals.length === 1, "nle export requires exactly one .nle.json project file");
+  assert(positionals.length === 1, `nle ${command} requires exactly one .nle.json project file`);
   const to = options.get("--to");
-  assert(to !== undefined, "--to is required: name the new .mp4 output file");
+  assert(to !== undefined, "--to is required");
   const quality = options.get("--quality") ?? "standard";
   assert(["draft", "standard", "high"].includes(quality), "--quality must be draft, standard or high");
+  const pictureTarget = options.get("--picture-target") ?? "html";
+  assert(pictureTarget === "html" || pictureTarget === "gpu-composition",
+    "--picture-target must be html or gpu-composition");
 
   const projectFile = resolve(cwd, positionals[0]!);
-  const outputFile = resolve(cwd, to);
+  const destination = resolve(cwd, to);
   const packageRoot = resolve(cwd, options.get("--package-root") ?? projectRoot);
   const renderWorkers = workers(options.get("--workers"));
   const outputFrameRate = frameRate(options.get("--frame-rate"));
   const outputResolution = resolution(options.get("--resolution"));
+  const startFrame = options.get("--start-frame");
+  const endFrameExclusive = options.get("--end-frame-exclusive");
+  assert((startFrame === undefined) === (endFrameExclusive === undefined),
+    "--start-frame and --end-frame-exclusive must be supplied together");
+  const range = startFrame === undefined ? undefined : {
+    startFrame: Number(startFrame),
+    endFrameExclusive: Number(endFrameExclusive),
+  };
+  if (range !== undefined) {
+    assert(/^\d+$/u.test(startFrame!) && /^\d+$/u.test(endFrameExclusive!)
+      && Number.isSafeInteger(range.startFrame) && Number.isSafeInteger(range.endFrameExclusive)
+      && range.endFrameExclusive > range.startFrame,
+    "frame range must satisfy 0 <= start-frame < end-frame-exclusive");
+  }
+  const explicitFrames = options.get("--at-frame");
+  assert(command !== "export" || (explicitFrames === undefined && options.get("--step-frames") === undefined),
+    "--at-frame and --step-frames do not belong to nle export");
+  assert(command !== "review" || options.get("--step-frames") === undefined,
+    "nle review requires explicit --at-frame evidence; --step-frames belongs to nle frames");
+  let frames: number[] | undefined;
+  if (command === "frames" || command === "review") {
+    if (command === "review") {
+      assert(explicitFrames !== undefined && range !== undefined,
+        "nle review requires --start-frame, --end-frame-exclusive and --at-frame");
+    }
+    if (command === "frames") {
+      assert((explicitFrames === undefined) !== (range === undefined),
+        "nle frames requires either --at-frame or a start/end frame range");
+    }
+    if (explicitFrames !== undefined) {
+      assert(options.get("--step-frames") === undefined,
+        "--step-frames cannot be combined with --at-frame");
+      frames = explicitFrames.split(",").map(value => Number(value));
+      assert(frames.length > 0 && frames.every((value, index) => /^\d+$/u.test(explicitFrames.split(",")[index]!)
+        && Number.isSafeInteger(value) && value >= 0 && (index === 0 || value > frames![index - 1]!)),
+      "--at-frame must contain strictly increasing non-negative integers");
+    } else {
+      const step = Number(options.get("--step-frames") ?? "1");
+      assert(/^\d+$/u.test(options.get("--step-frames") ?? "1") && Number.isSafeInteger(step) && step > 0,
+        "--step-frames must be a positive integer");
+      frames = Array.from({ length: Math.ceil((range!.endFrameExclusive - range!.startFrame) / step) },
+        (_, index) => range!.startFrame + index * step);
+    }
+  }
   const controller = new AbortController();
   const abort = (): void => controller.abort(new Error("NLE export was interrupted."));
   process.once("SIGINT", abort);
   try {
-    const result = await exportLocalNleProject({
+    const common = {
       projectRoot,
       projectFile,
-      outputFile,
       packageRoot,
       ...(distributionPackageRoot === undefined ? {} : { distributionPackageRoot }),
       quality: quality as "draft" | "standard" | "high",
+      pictureTarget,
       ...(outputFrameRate === undefined ? {} : { frameRate: outputFrameRate }),
       ...(outputResolution === undefined ? {} : { resolution: outputResolution }),
       signal: controller.signal,
@@ -141,11 +200,33 @@ export async function runNleCli(
           ffprobePath: resolve(cwd, options.get("--ffprobe-path")!),
         }),
       },
-      onProgress(progress) {
+      onProgress(progress: LocalNleExportProgress) {
         if (json) return;
         const line = progressLine(progress);
         if (line !== undefined) io.writeProgress?.(`${line}\n`);
       },
+    } as const;
+    if (command === "frames") {
+      const result = await captureLocalNleFrames({ ...common, frames: frames!, toDirectory: destination });
+      if (json) io.write(`${JSON.stringify({ format: "hypit.nle-frames@1", ok: true, ...result })}\n`);
+      else io.write(`Captured ${result.frames.length} PNGs to ${destination}\n`);
+      return;
+    }
+    if (command === "review") {
+      const result = await reviewLocalNleProject({
+        ...common,
+        range: range!,
+        frames: frames!,
+        toDirectory: destination,
+      });
+      if (json) io.write(`${JSON.stringify({ format: "hypit.nle-review@1", ok: true, ...result })}\n`);
+      else io.write(`Prepared ${result.reviewFrameCount} review frames and ${result.frames.length} PNGs in ${destination}\n`);
+      return;
+    }
+    const result = await exportLocalNleProject({
+      ...common,
+      outputFile: destination,
+      ...(range === undefined ? {} : { range }),
     });
     if (json) {
       io.write(`${JSON.stringify({ format: "hypit.nle-export@1", ok: true, ...result })}\n`);

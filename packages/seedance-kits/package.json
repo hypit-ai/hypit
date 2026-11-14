@@ -18,7 +18,7 @@
     "README.md"
   ],
   "devDependencies": {
-    "@hypit/author": "workspace:*",
+    "@hypit/generation-authoring": "workspace:*",
     "@hypit/prompt": "workspace:*",
     "@hypit/svml": "workspace:*"
   }

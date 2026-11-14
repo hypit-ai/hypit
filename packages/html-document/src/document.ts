@@ -105,6 +105,13 @@ export function materializeHtmlDocument(
     playing = false; generation++; cancelAnimationFrame(request);
     return ready.then(async () => { await window.__hypitSeekFrame(frame); report(true); });
   }
+  async function seekFrame(value) {
+    if (!Number.isSafeInteger(value) || value < 0 || value >= count) {
+      throw new RangeError('Frame outside HTML document');
+    }
+    playing = false; generation++; cancelAnimationFrame(request);
+    await ready; frame = value; await window.__hypitSeekFrame(frame); report(true);
+  }
   async function play() {
     await ready;
     if (playing) return;
@@ -129,33 +136,52 @@ export function materializeHtmlDocument(
     request = requestAnimationFrame(tick);
   }
   window.__hypitDocument = {
-    ready, play, pause,
+    ready, play, pause, seekFrame,
     get frame() { return frame; }, get playing() { return playing; },
-    async seekFrame(value) {
-      if (!Number.isSafeInteger(value) || value < 0 || value >= count) {
-        throw new RangeError('Frame outside HTML document');
-      }
-      await pause(); frame = value; await window.__hypitSeekFrame(frame); report(true);
-    },
     async setMuted(value) { await ready; await window.__hypitSetMuted(value); }
   };
-  let commands = Promise.resolve();
+  let pendingCommand, drainingCommands = false;
+  async function drainCommands() {
+    if (drainingCommands) return;
+    drainingCommands = true;
+    try {
+      while (pendingCommand !== undefined) {
+        const command = pendingCommand; pendingCommand = undefined;
+        await ready;
+        if (command.muted !== undefined) await window.__hypitDocument.setMuted(command.muted);
+        if (command.frame !== undefined) await seekFrame(command.frame);
+        else if (command.playing === false) await pause();
+        if (command.playing === true) await play();
+        if (Number.isSafeInteger(command.commandId) && command.commandId > commandId) commandId = command.commandId;
+        report(true);
+      }
+    } catch (error) {
+      window.parent.postMessage({type:'hypit.html-document.error@1', message:String(error)}, '*');
+    } finally {
+      drainingCommands = false;
+      if (pendingCommand !== undefined) void drainCommands();
+    }
+  }
   window.addEventListener('message', event => {
     if (event.source !== window.parent || window.parent === window
       || event.data?.type !== 'hypit.html-document.command@1') return;
     const {action,frame:target,muted,commandId:requestedCommandId} = event.data;
-    commands = commands.then(async () => {
-      await ready;
-      if (action === 'play') await play();
-      else if (action === 'pause') await pause();
-      else if (action === 'seek') await window.__hypitDocument.seekFrame(target);
-      else if (action === 'mute') await window.__hypitDocument.setMuted(muted);
-      else if (action !== 'state') throw new Error('Unknown HTML document command ' + action + '.');
-      if (Number.isSafeInteger(requestedCommandId) && requestedCommandId > commandId) commandId = requestedCommandId;
-      report(true);
-    }).catch(error => window.parent.postMessage({
-      type:'hypit.html-document.error@1', message:String(error)
-    }, '*'));
+    const command = pendingCommand ?? {};
+    if (action === 'play') command.playing = true;
+    else if (action === 'pause') command.playing = false;
+    else if (action === 'seek') { command.frame = target; command.playing = false; }
+    else if (action === 'mute') command.muted = muted;
+    else if (action !== 'state') {
+      window.parent.postMessage({type:'hypit.html-document.error@1',
+        message:'Unknown HTML document command ' + action}, '*');
+      return;
+    }
+    if (Number.isSafeInteger(requestedCommandId)
+      && (!Number.isSafeInteger(command.commandId) || requestedCommandId > command.commandId)) {
+      command.commandId = requestedCommandId;
+    }
+    pendingCommand = command;
+    void drainCommands();
   });
   window.addEventListener('load', async () => {
     try {

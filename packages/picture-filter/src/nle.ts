@@ -1,8 +1,10 @@
 import type {
-  NleAdjustmentParameterAuthoring,
-  NlePictureAdjustmentResolver,
+  NleOperatorParameterAuthoring,
+  NleOperatorOccurrenceAuthoring,
+  NlePictureOperatorResolver,
   NlePackageSymbol,
 } from "@hypit/nle";
+import { nleTimeMappingRequiredDuration } from "@hypit/nle";
 import { canonicalize } from "@hypit/protocol";
 import {
   assertExactTemporalValue,
@@ -167,35 +169,45 @@ export function editPictureFilterNleParameters(
 }
 
 /** NLE instance parameters and their interpolation remain package-owned. */
-export const pictureFilterNleResolver: NlePictureAdjustmentResolver = {
-  component: pictureFilterNleSymbol,
-  resolve: (item) => {
-    const parameters = item.parameters as unknown;
-    assertPictureFilterNleParameters(parameters, item.duration);
+export const pictureFilterNleResolver: NlePictureOperatorResolver = {
+  operator: pictureFilterNleSymbol,
+  resolve: (application, context) => {
+    const parameters = application.parameters as unknown;
+    assertPictureFilterNleParameters(parameters, context.controlDuration);
     if (parameters.kind === "constant") {
       return { operator: pictureFilterOperator(parameters.state) };
     }
     return { operator: pictureFilterControlOperator(pictureFilterControlFromNleParameters(parameters, {
-      itemId: item.id,
-      duration: item.duration,
+      itemId: application.id,
+      duration: context.controlDuration,
     })) };
   },
 };
 
-export const pictureFilterNleAuthoring: NleAdjustmentParameterAuthoring = {
-  component: pictureFilterNleSymbol,
-  inspect: ({ item }) => {
-    const parameters = item.parameters as unknown;
-    assertPictureFilterNleParameters(parameters, item.duration);
+export const pictureFilterNleAuthoring: NleOperatorParameterAuthoring = {
+  operator: pictureFilterNleSymbol,
+  inspect: ({ application }) => {
+    const parameters = application.parameters as unknown;
+    assertPictureFilterNleParameters(parameters, nleTimeMappingRequiredDuration(application.controlTime));
     return canonicalize(parameters);
   },
-  edit: (operation, { item }) => {
-    const parameters = item.parameters as unknown;
-    assertPictureFilterNleParameters(parameters, item.duration);
+  edit: (operation, { application }) => {
+    const parameters = application.parameters as unknown;
+    const duration = nleTimeMappingRequiredDuration(application.controlTime);
+    assertPictureFilterNleParameters(parameters, duration);
     return canonicalize(editPictureFilterNleParameters(
       parameters,
       operation as unknown as PictureFilterNleEdit,
-      item.duration,
+      duration,
     ));
+  },
+};
+
+export const pictureFilterNleOccurrence: NleOperatorOccurrenceAuthoring = {
+  operator: pictureFilterNleSymbol,
+  temporalSupport: ({ application }) => {
+    const parameters = application.parameters as unknown;
+    assertPictureFilterNleParameters(parameters, nleTimeMappingRequiredDuration(application.controlTime));
+    return { timeWindow: parameters.kind === "constant" };
   },
 };

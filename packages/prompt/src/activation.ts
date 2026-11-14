@@ -1,13 +1,14 @@
-import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
+import { createModuleFacet } from "@hypit/hypit/module";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/generation/author";
+import { createProducerPackageFacet } from "@hypit/hypit/generation/producer";
+import { createRefinementPackageFacet } from "@hypit/hypit/generation/refinement";
 
 import { promptAuthorDeclarations, promptComponent, promptManifest } from "./index.js";
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [{ manifest: promptManifest }],
   facets: [
+    createModuleFacet(promptManifest), createGenerationModuleFacet(promptManifest),
     createProducerPackageFacet(promptComponent.producers ?? []),
     createRefinementPackageFacet(promptComponent.refinements ?? []),
     ...promptAuthorDeclarations.map((declaration) => createAuthorDeclarationFacet(declaration)),

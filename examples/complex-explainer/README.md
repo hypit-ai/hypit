@@ -40,7 +40,7 @@ After extraction, `.hypit/media.tar.gz` can be removed to reclaim the archive's 
 ```sh
 cd productions/explainer
 hypit check authors/main.svml
-hypit plan authors/main.svml --target complete-film.video --runtime ../../hypit.runtime.json
+hypit plan authors/main.svml --target complete-film.video --runtime ../../hypit.generation-runtime.json
 ```
 
 Open the printed **Comments** URL (`#comments`) to review the composition before export and leave

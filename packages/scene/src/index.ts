@@ -30,7 +30,7 @@ export {
   createSceneLoweringHost,
   createSceneLoweringHostFromFacets,
   createScenePackageFacet,
-  scenePackageFacetAbi,
+  scenePackageFacetKind,
   scenePackageSymbolKey,
   scenePackagesFromFacets,
 } from "./package.js";
@@ -43,7 +43,7 @@ export {
   createSceneAuthoringFacet,
   createSceneAuthoringHost,
   createSceneAuthoringHostFromFacets,
-  sceneAuthoringFacetAbi,
+  sceneAuthoringFacetKind,
   sceneAuthoringPackagesFromFacets,
 } from "./authoring.js";
 export type {
@@ -95,3 +95,4 @@ export {
   serializeSceneLibraryDocument,
 } from "./library.js";
 export type * from "./types.js";
+export { sceneAssetFormat, sceneLibraryFormat, sceneProjectFormat } from "./types.js";

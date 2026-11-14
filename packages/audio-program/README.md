@@ -19,7 +19,7 @@ therefore a leaf source, not the universal representation of every signal. Proce
 their programme format. Process nodes also carry complete Programme-to-Control temporal Maps; value meaning
 and interpolation remain owned by the package that owns the process programme. A concrete Renderer may
 support a narrower subset and must reject unsupported ports or programmes at its capability boundary. Process
-nodes additionally preserve the AVIR Operator's per-input before/after support, state/pre-roll, latency and tail;
+nodes additionally preserve the AVIR Operator's per-input before/after support and tail;
 the current local media engine executes only pointwise Gain and rejects non-pointwise contracts accurately.
 
 The local renderer traverses nested Programme nodes recursively, discovers only the media leaves demanded by

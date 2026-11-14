@@ -16,14 +16,14 @@
     "build": "tsc -p tsconfig.json"
   },
   "devDependencies": {
+    "@hypit/execution-environment-local": "workspace:*",
+    "@hypit/executor": "workspace:*",
+    "@hypit/gpt-image": "workspace:*",
     "@hypit/hypit": "workspace:*",
     "@hypit/resource-store": "workspace:*",
-    "@hypit/runtime-local": "workspace:*",
-    "typescript": "5.9.3",
-    "@hypit/executor": "workspace:*",
-    "@hypit/gpt-image": "workspace:*"
+    "typescript": "5.9.3"
   },
   "dependencies": {
-    "@hypit/generation": "workspace:^0.1.0"
+    "@hypit/generation-model": "workspace:*"
   }
 }

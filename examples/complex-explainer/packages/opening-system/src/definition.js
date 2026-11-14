@@ -1,4 +1,4 @@
-export const module = { name: "@explainer/opening-system", version: "1" };
+export const module = { name: "@explainer/opening-system" };
 export const defaults = {
   Veil: {
     pattern: "mesh",

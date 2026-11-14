@@ -3,8 +3,8 @@
 Endpoint and Runtime adapter for the direct Chromium implementation in
 `@hypit/html-chromium-local`:
 
-- `@hypit/html-program@1#rasterize-visual` → `RenderedVisual`;
-- `@hypit/html-program@1#rasterize-frames` → self-describing sRGB PNG frame images.
+- `@hypit/html-program#rasterize-visual` → `RenderedVisual`;
+- `@hypit/html-program#rasterize-frames` → self-describing sRGB PNG frame images.
 
 The Provider consumes a typed `HtmlProgram`. The direct renderer stages only the Artifacts selected by the request,
 extracts exact source samples through FFmpeg, applies absolute integer frames through
@@ -55,7 +55,7 @@ Managed Chrome uses the package's exact recommended version and is installed onl
 preparation:
 
 ```sh
-hypit programs prepare --runtime ./hypit.runtime.json --endpoint html.local
+hypit programs prepare --environment ./hypit.environment.json --endpoint html.local
 ```
 
 Inspection and execution never search environment browser hints or silently substitute a different

@@ -59,10 +59,13 @@ export function resolveLocalHtmlExecutionOptions(options: HtmlExecutionOptions) 
     "workers must be auto or a positive safe integer");
   const browserGpu = options.browserGpu ?? "hardware";
   assert(["auto", "software", "hardware"].includes(browserGpu), "HTML renderer browserGpu is invalid");
+  assert(options.webGpu === undefined || options.webGpu === "required",
+    "HTML renderer webGpu requirement is invalid");
   return {
     workers,
     maxWorkers: workers === "auto" ? positiveInteger(options.maxWorkers ?? autoWorkerLimit(), "maxWorkers") : workers,
     browserGpu,
+    ...(options.webGpu === undefined ? {} : { webGpu: options.webGpu }),
     ffmpegPath: options.ffmpegPath ?? "ffmpeg",
     ffprobePath: options.ffprobePath ?? "ffprobe",
     initializationTimeoutMs: options.initializationTimeoutMs === undefined
@@ -146,6 +149,7 @@ export async function rasterizeHtmlWithBackend(
       `Capture ${frameCount} frames; workers ${config.workers} (limit ${renderWorkerLimit(config, frameCount,
         document.frameRate.numerator / document.frameRate.denominator, encodedCapture && document.videoSources.length > 0)}); `
       + `${backend.label}; GPU ${config.browserGpu}; executable ${backend.executablePath}`
+      + (config.webGpu === "required" ? "; WebGPU required" : "")
       + `; artifact staging concurrency ${config.artifactStagingConcurrency}`
       + `; decoded source budget ${config.maxDecodedSourceBytes} bytes`
       + (frames === undefined

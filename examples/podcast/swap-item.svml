@@ -1,26 +1,26 @@
-<?svml using="@hypit/markup@1"?>
+<?svml using="@hypit/markup"?>
 
 <svml>
-  <import from="@hypit/script@1"/>
-  <import as="audio" from="@hypit/audio-track@1"/>
-  <import as="asset" from="@hypit/media-author@1"/>
-  <import as="text" from="@hypit/text@1"/>
-  <import as="gpt" from="@hypit/gpt-image@1"/>
-  <import as="seedance" from="@hypit/seedance@1"/>
-  <import as="mediaop" from="@hypit/media-operations@1"/>
-  <import as="whisperx" from="@hypit/whisperx@1"/>
-  <import as="speechalign" from="@hypit/narrative-speech-alignment@1"/>
-  <import as="semantic" from="@hypit/narrative-temporal@1"/>
-  <import as="narrative-caption" from="@hypit/narrative-caption@1"/>
-  <import as="time" from="@hypit/timeline-author@1"/>
-  <import as="audio-track" from="@hypit/audio-track@1"/>
-  <import as="caption" from="@hypit/caption@1"/>
-  <import as="caption-fine" from="@hypit/caption-fine@1"/>
-  <import as="fonts" from="@hypit/fontsource@1"/>
-  <import as="visual" from="@hypit/visual-track@1"/>
-  <import as="space" from="@hypit/spatial@1"/>
-  <import as="film" from="@hypit/film@1"/>
-  <import as="html" from="@hypit/html-video-author@1"/>
+  <import from="@hypit/script"/>
+  <import as="audio" from="@hypit/audio-track"/>
+  <import as="asset" from="@hypit/media-author"/>
+  <import as="text" from="@hypit/text"/>
+  <import as="gpt" from="@hypit/gpt-image"/>
+  <import as="seedance" from="@hypit/seedance"/>
+  <import as="mediaop" from="@hypit/media-operations"/>
+  <import as="whisperx" from="@hypit/whisperx"/>
+  <import as="speechalign" from="@hypit/narrative-speech-alignment"/>
+  <import as="semantic" from="@hypit/narrative-temporal"/>
+  <import as="narrative-caption" from="@hypit/narrative-caption"/>
+  <import as="time" from="@hypit/timeline-author"/>
+  <import as="audio-track" from="@hypit/audio-track"/>
+  <import as="caption" from="@hypit/caption"/>
+  <import as="caption-fine" from="@hypit/caption-fine"/>
+  <import as="fonts" from="@hypit/fontsource"/>
+  <import as="visual" from="@hypit/visual-track"/>
+  <import as="space" from="@hypit/spatial"/>
+  <import as="film" from="@hypit/film"/>
+  <import as="html" from="@hypit/html-video-author"/>
   <import as="recipes" source="./recipes.svs"/>
   <import as="broll-kit" source="@hypit/seedance-kits/broll"/>
   <import as="podcast-kit" source="@hypit/seedance-kits/podcast"/>

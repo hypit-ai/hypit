@@ -1,21 +1,21 @@
 import {
-  createRuntimeEndpointAdapterFacet,
-  runtimeConfigCredentialRef,
-  runtimeConfigActionLimits,
-  runtimeConfigExact,
-  runtimeConfigObject,
-  runtimeConfigPositiveInteger,
-  runtimeConfigString,
-} from "@hypit/runtime-local/extension";
+  createExecutionEnvironmentEndpointAdapterFacet,
+  executionEnvironmentConfigCredentialRef,
+  executionEnvironmentConfigActionLimits,
+  executionEnvironmentConfigExact,
+  executionEnvironmentConfigObject,
+  executionEnvironmentConfigPositiveInteger,
+  executionEnvironmentConfigString,
+} from "@hypit/execution-environment-local/extension";
 
 import { createTokenDanceProvider } from "./provider.js";
 
-const adapter = createRuntimeEndpointAdapterFacet({
+const adapter = createExecutionEnvironmentEndpointAdapterFacet({
   use: "@hypit/provider-tokendance",
   activate(context) {
     if (context.pool === undefined) throw new Error("TokenDance Provider Pool is required");
-    const config = runtimeConfigObject(context.config, "TokenDance");
-    runtimeConfigExact(config, [
+    const config = executionEnvironmentConfigObject(context.config, "TokenDance");
+    executionEnvironmentConfigExact(config, [
       "baseUrl",
       "apiKey",
       "defaultConcurrency",
@@ -24,20 +24,20 @@ const adapter = createRuntimeEndpointAdapterFacet({
       "requestTimeoutMs",
       "operationTimeoutMs",
     ], "TokenDance");
-    const baseUrl = runtimeConfigString(config.baseUrl, "TokenDance baseUrl");
+    const baseUrl = executionEnvironmentConfigString(config.baseUrl, "TokenDance baseUrl");
     if (baseUrl !== undefined) {
       const url = new URL(baseUrl);
       if (url.protocol !== "https:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
         throw new Error("TokenDance baseUrl must use HTTPS or loopback");
       }
     }
-    const apiKey = runtimeConfigCredentialRef(config.apiKey, "TokenDance apiKey");
+    const apiKey = executionEnvironmentConfigCredentialRef(config.apiKey, "TokenDance apiKey");
     if (apiKey === undefined) throw new Error("TokenDance apiKey CredentialRef is required");
-    const actionLimits = runtimeConfigActionLimits(config.actionLimits);
-    const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "TokenDance defaultConcurrency");
-    const pollIntervalMs = runtimeConfigPositiveInteger(config.pollIntervalMs, "TokenDance pollIntervalMs");
-    const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "TokenDance requestTimeoutMs");
-    const operationTimeoutMs = runtimeConfigPositiveInteger(config.operationTimeoutMs, "TokenDance operationTimeoutMs");
+    const actionLimits = executionEnvironmentConfigActionLimits(config.actionLimits);
+    const defaultConcurrency = executionEnvironmentConfigPositiveInteger(config.defaultConcurrency, "TokenDance defaultConcurrency");
+    const pollIntervalMs = executionEnvironmentConfigPositiveInteger(config.pollIntervalMs, "TokenDance pollIntervalMs");
+    const requestTimeoutMs = executionEnvironmentConfigPositiveInteger(config.requestTimeoutMs, "TokenDance requestTimeoutMs");
+    const operationTimeoutMs = executionEnvironmentConfigPositiveInteger(config.operationTimeoutMs, "TokenDance operationTimeoutMs");
     return {
       endpoint: createTokenDanceProvider({
         instance: context.instance,
@@ -55,7 +55,6 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
   facets: [adapter],
 };
 

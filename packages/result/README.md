@@ -62,7 +62,7 @@ when their bytes happen to match; publication performs no content hashing or his
 
 An explicit `hypit result export` materializes one published Output at an author-selected destination.
 Blob bytes and inline scalars have universal representations. A structured Type is exported through
-the `hypit.product-exporter@1` facet supplied by the package that owns that Type. Product owns this
+the `hypit.product-exporter` facet supplied by the package that owns that Type. Product owns this
 author-facing projection; Result neither exposes the private Value Document layout nor maintains a
 central Type switch.
 

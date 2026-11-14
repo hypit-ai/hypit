@@ -1,23 +1,18 @@
-import type { BlobAttachment } from "@hypit/workspace";
-import type { ExecutorOptions, ProducerRegistry } from "@hypit/executor";
+import type { BlobAttachment } from "@hypit/generation-authoring/workspace";
+import type { CapabilityInvocationRequest } from "@hypit/endpoint";
+import type { ExecutorOptions } from "@hypit/executor";
+import type { Value } from "@hypit/protocol";
+import type { CapabilityRef } from "@hypit/module";
+import type { BuildDefinition, PublicationIntent } from "@hypit/generation-build";
+import type { BuildView } from "@hypit/generation-build";
 import type {
-  BuildDefinition,
-  CapabilityRef,
-  Need,
-  PublicationIntent,
-  Value,
-} from "@hypit/protocol";
-import type { BuildView } from "@hypit/kernel";
-import type {
-  CapacityReservation,
   CredentialAcquisition,
   CredentialRef,
-  OperationSnapshot,
-  RuntimeEndpointObservation,
-  RuntimeEndpointPricingObservation,
-  RuntimeEndpointQuery,
-  ScheduledBuildResult,
-} from "@hypit/runtime";
+  ExecutionEnvironmentEndpointObservation,
+  ExecutionEnvironmentEndpointPricingObservation,
+  ExecutionEnvironmentEndpointQuery,
+} from "@hypit/execution-environment";
+import type { CapacityReservation, OperationSnapshot } from "@hypit/generation-runtime";
 import type { ResourceStore } from "@hypit/resource-store";
 import type { Product } from "@hypit/product";
 
@@ -51,7 +46,7 @@ export type CliBuildView = {
   readonly targets: readonly string[];
   readonly requests?: { readonly total: number; readonly completed: number };
   readonly operations: readonly ({
-    readonly receipt?: import("@hypit/runtime").OperationReceipt;
+    readonly receipt?: import("@hypit/execution-environment").OperationReceipt;
     readonly endpoint: string;
     readonly progress?: OperationSnapshot["progress"];
   } & (
@@ -87,7 +82,7 @@ export type CliCredentialStatus = {
 };
 
 export type CliRuntimeControl = {
-  logs?(build: string, lines: number): Promise<import("@hypit/runtime").ExecutionLogView | undefined>;
+  logs?(build: string, lines: number): Promise<import("@hypit/generation-runtime").ExecutionLogView | undefined>;
   inspect(build: string): Promise<CliBuildView | undefined>;
   activity(): Promise<{ readonly builds: readonly CliBuildView[]; readonly capacity: readonly CapacityReservation[] }>;
   cancel(build: string, reason?: string): Promise<CliBuildView | undefined>;
@@ -102,7 +97,7 @@ export type CliCredentialControl = {
   close(): void | Promise<void>;
 };
 
-export type CliRuntime = CliRuntimeControl & CliCredentialControl & {
+export type CliRuntime = CliRuntimeControl & {
   build(request: {
     readonly id: string;
     readonly definition: BuildDefinition;
@@ -120,19 +115,9 @@ export type CliRuntime = CliRuntimeControl & CliCredentialControl & {
 
 export type CliRuntimeDoctorResult = { readonly dataRoot: string; readonly diagnostics: readonly CliDiagnostic[] };
 
-export type CliTransientExecution = {
-  evaluate(input: {
-    readonly state: BuildView;
-    readonly producers: ProducerRegistry;
-    readonly refinements: NonNullable<ExecutorOptions["refinements"]>;
-    readonly resources: ResourceStore;
-  }): Promise<ScheduledBuildResult>;
-  close(): void | Promise<void>;
-};
-
-export type CliEndpointObservation = RuntimeEndpointObservation;
-export type CliEndpointPricing = RuntimeEndpointPricingObservation;
-export type CliEndpointQuery = RuntimeEndpointQuery;
+export type CliEndpointObservation = ExecutionEnvironmentEndpointObservation;
+export type CliEndpointPricing = ExecutionEnvironmentEndpointPricingObservation;
+export type CliEndpointQuery = ExecutionEnvironmentEndpointQuery;
 
 /** One command-scoped Runtime snapshot; it owns no state beyond its lifetime. */
 export type CliRuntimeInspection = {
@@ -147,13 +132,26 @@ export type CliRuntimeInspection = {
 };
 
 export type CliInvocationObservation = {
-  readonly reportProgress?: (progress: import("@hypit/runtime").OperationProgress) => Promise<void>;
-  readonly reportDiagnostic?: (diagnostic: import("@hypit/runtime").ExecutionDiagnostic) => Promise<void>;
+  readonly reportProgress?: (progress: import("@hypit/execution-environment").OperationProgress) => Promise<void>;
+  readonly reportDiagnostic?: (diagnostic: import("@hypit/execution-environment").ExecutionDiagnostic) => Promise<void>;
+};
+
+/** Environment services shared by every host projection; no Build or Worker is implied. */
+export type CliEnvironmentHost = {
+  readonly profile: string;
+  readonly dataRoot: string;
+  openCredentials(endpoint: string): Promise<CliCredentialControl>;
+  preflight(options?: { readonly capabilities?: readonly CapabilityRef[]; readonly endpoints?: readonly string[] }): Promise<CliRuntimeDoctorResult>;
+  doctor(options?: { readonly capabilities?: readonly CapabilityRef[]; readonly endpoints?: readonly string[] }): Promise<CliRuntimeDoctorResult>;
+  endpoints(queries: readonly CliEndpointQuery[]): Promise<readonly CliEndpointObservation[]>;
+  pricing(queries: readonly CliEndpointQuery[]): Promise<readonly CliEndpointPricing[]>;
+  invoke(request: CapabilityInvocationRequest, resources: ResourceStore, observation?: CliInvocationObservation): Promise<Value>;
 };
 
 /** Runtime services consumed by the generic long-compilation command engine. */
 export type CliRuntimeHost = {
   readonly profile: string;
+  readonly environment: CliEnvironmentHost;
   /** Host execution policy used before submission. Omission selects Executor defaults. */
   planningPolicy?(): Promise<{
     readonly producerExecutionLimits?: NonNullable<ExecutorOptions["producerExecutionLimits"]>;
@@ -164,12 +162,5 @@ export type CliRuntimeHost = {
   ensureExecution(options?: { readonly maxWaitMs?: number }): Promise<{ readonly state: "running" | "stopped" }>;
   createRuntime(options?: { readonly endpoints?: readonly string[] }): Promise<CliRuntime>;
   openControl(options?: { readonly readOnly?: boolean }): Promise<CliRuntimeControl>;
-  openCredentials(endpoint: string): Promise<CliCredentialControl>;
-  preflight(options?: { readonly capabilities?: readonly CapabilityRef[]; readonly endpoints?: readonly string[] }): Promise<CliRuntimeDoctorResult>;
-  doctor(options?: { readonly capabilities?: readonly CapabilityRef[]; readonly endpoints?: readonly string[] }): Promise<CliRuntimeDoctorResult>;
   openInspection(queries: readonly CliEndpointQuery[]): Promise<CliRuntimeInspection>;
-  endpoints(queries: readonly CliEndpointQuery[]): Promise<readonly CliEndpointObservation[]>;
-  pricing(queries: readonly CliEndpointQuery[]): Promise<readonly CliEndpointPricing[]>;
-  invoke(need: Need, resources: ResourceStore, observation?: CliInvocationObservation): Promise<Value>;
-  openTransientExecution(): Promise<CliTransientExecution>;
 };

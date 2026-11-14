@@ -1,3 +1,5 @@
+import { createModuleFacet } from "@hypit/module";
+import { createGenerationModuleFacet } from "@hypit/generation-build";
 import { createGenerationNodePackageFacet } from "@hypit/generation-graph";
 import { createGenerationCanvasPresentationFacet } from "@hypit/generation-canvas";
 
@@ -9,9 +11,8 @@ import {
 } from "./index.js";
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [{ manifest: mediaAssetGenerationManifest }],
   facets: [
+    createModuleFacet(mediaAssetGenerationManifest), createGenerationModuleFacet(mediaAssetGenerationManifest),
     createGenerationNodePackageFacet({
       nodes: [mediaAssetGenerationNode, ...Object.values(mediaAssetResourceGenerationNodes)],
     }),

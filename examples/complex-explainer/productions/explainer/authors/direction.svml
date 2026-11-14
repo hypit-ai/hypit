@@ -1,7 +1,7 @@
-<?svml using="@hypit/markup@1"?>
+<?svml using="@hypit/markup"?>
 <svml>
   <import as="copy" source="./script.svml"/>
-  <import as="text" from="@hypit/text@1"/>
+  <import as="text" from="@hypit/text"/>
   <import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
   <import as="settings" source="../recipes/performance.svs"/>
 

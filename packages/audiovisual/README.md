@@ -23,6 +23,9 @@ The algebra exposes validation, evaluation and factual projections only. An edit
 trim, slip, roll, explicit-scope ripple-trim and split policy and lowers a fresh AVIR value after an accepted edit.
 It also owns direct Item-local source-time pieces and retime replacement; AVIR receives the complete Map only after
 the concrete Source domain is resolved. AVIR is a closed, disposable result rather than a second editable document.
+An editing Host may keep one derived Programme generation alive while the next generation is prepared, but that
+generation is a downstream cache identity, not an AVIR revision or serialized field. Metadata-only NLE edits and
+NLE View edits therefore need not reconstruct AVIR at all; output-relevant edits simply lower a fresh disposable value.
 
 This package accepts only resolved, positive finite domains wherever time exists. `constant` is a tagged absence
 of a time dimension, not an unknown or nullable Domain. Future graph values remain ordinary typed
@@ -52,9 +55,10 @@ infers speed; the selected Mapping remains authoritative.
 
 Picture and Audio Operator values carry their package-owned id, ordered named ports, named temporal Control
 domains, a general temporal-support contract and one opaque execution programme (`format / payload / artifacts`).
-Support is declared per input as exact before/after distances, plus independent or sequential state, finite
-pre-roll, execution latency and tail. These fields describe signal dependency rather than motion-blur, denoise,
-reverb or another effect name. Every `apply` binds each declared Control exactly once with a closed
+Support is declared per input as exact before/after distances plus output tail. These fields describe signal
+dependency rather than renderer state, execution latency, motion-blur, denoise, reverb or another effect name.
+Implementation access, pre-roll and checkpoint policy belong to the selected Terminal. Every `apply` binds each
+declared Control exactly once with a closed
 Programme-to-Control `TemporalMap`. AVIR validates ports, Maps and the envelope but never switches on a format
 or effect name. A terminal either supports that programme format or rejects it at its capability boundary. Keeping the
 programme on the typed Operator removes the old hidden resolver lookup and lets parameters such as transition
@@ -93,7 +97,7 @@ NLE Track/Item membership and rectangle layout belong to persistent `NleComposit
 `hypit.nle-view@1` file owns editor locks, Groups and other durable timeline organization. Neither enters AVIR.
 This package publishes no workspace projection, index or frontend timeline that must be synchronized with Programme facts.
 
-`evaluateAudiovisualProgramAt()` is the first execution-facing seam. Given one exact Programme-local position,
+`evaluateAudiovisualProgramAt()` is a factual point projection helper, not the Programme execution ABI. Given one exact Programme-local position,
 it preserves the Picture and Audio DAGs, including crop and remap nodes. Each active signal `use` resolves through
 Placement and its output's Temporal Map to a source-local position; each active constant `use` remains a timeless
 Source selection. Inactive uses and signal Mapping gaps become `transparent` or `silence`.
@@ -102,12 +106,18 @@ recover a Canvas or inspect author structure to interpret its coordinates.
 It selects no frame rate, sample rate, Canvas, DOM or renderer: an Output policy chooses the exact positions to
 evaluate later. The legacy HTML Programme is therefore not the new author ABI.
 
-Frame sampling belongs to the terminal. `@hypit/audiovisual-html` accepts an exact rational sampling grid,
-derives the frame count needed to cover the Programme duration and maps each frame index to an exact
-Programme-local position before calling the same evaluator. Rendering at another frame rate is a new output
-choice, not an AVIR migration.
+Range demand and terminal partitioning belong to the downstream `@hypit/audiovisual-execution` package. It projects
+one requested Programme interval through restrict, Occurrence placement, Temporal Maps and Operator temporal support,
+retains each Programme-local use, and unions uses of the same Source output into one Source-local execution task before
+partitioning demanded nodes under explicit Terminal bindings. Cross-terminal edges are transient derived render
+products, never AVIR nodes or Media Assets. Frame sampling remains terminal policy: HTML maps only the requested range
+onto its rational output grid, while Audio preserves a continuous Programme and carries the requested range separately.
+An explicitly bound nested Programme can be recursively expanded before partitioning, so its internal terminal islands
+remain live AVIR relations instead of forcing the complete child through its parent's terminal.
+Every cross-island edge must then receive one explicit terminal representation binding. The resulting in-memory value is
+passed only between the selected producer and consumer terminals and remains neither an AVIR node nor a Media Asset.
 
-`@hypit/audiovisual-html` is the first downstream terminal adapter. It accepts a complete Output frame sequence,
+`@hypit/audiovisual-html` is the first downstream terminal adapter. It accepts an explicit range Demand and Output sampling policy,
 consumes an explicit fold of typed terminal Source implementations,
 lowers crop, static remap and ordered over, and places each package-owned Operator programme behind its named
 slots before compiling a valid
@@ -133,7 +143,7 @@ and spatial domains. It does not prepare media or apply occurrence edits. A Prog
 a media Picture domain into its own Picture domain; matching pixel dimensions do not make two named spaces
 identical.
 
-The optional `@hypit/audiovisual-media` package wraps that projection in an Author declaration and Producer;
+The optional `@hypit/media-avir-author` package wraps that projection in an Author declaration and Producer;
 NLE lowering depends only on `@hypit/media-avir`.
 
 An image is ordinary PreparedMedia whose selected Picture is `constant`; its AVIR projection therefore has no

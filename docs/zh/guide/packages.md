@@ -11,9 +11,9 @@ Hypit 项目把可复用组件、生成模型和服务作为普通包安装，�
 | --- | --- | --- |
 | 作者组件 | 将作者输入转成素材请求、视觉行为或其他输出 | Source 导入 |
 | Model | 定义明确的生成请求与输出 | Source 导入 |
-| Provider Endpoint | 通过 API 或本地工具执行支持的请求 | Runtime Profile |
-| 凭据存储 | 为 Endpoint 解析具名凭据 | Runtime Profile |
-| Results | 保留项目的 Build 记录与产物文件 | 项目的 `.hypit/results` |
+| Provider Endpoint | 通过 API 或本地工具执行支持的请求 | Environment Profile |
+| 凭据存储 | 为 Endpoint 解析具名凭据 | Environment Profile |
+| Results | 保留项目的 Build 记录与产物文件 | 项目的 `.hypit/generation/results` |
 | Hypit 安装 | 提供命令与随附包 | 安装的 `hypit` 版本 |
 
 例如，Model 描述要生成的视频，Provider 将请求映射到服务；Ranking 组件描述榜单的行为，渲染器将其绘制到最终编排。两者都使用明确的输入与输出。
@@ -34,7 +34,7 @@ Hypit 项目把可复用组件、生成模型和服务作为普通包安装，�
 
 Skill、Hypit 安装和视频项目分别安装与更新。项目组件是普通项目依赖；所选本地服务可以通过 `hypit runtime up` 准备文件与进程。
 
-Source 使用 `@your-studio/scoreboard@1` 这样的组件地址。项目包管理器选择安装版本，并把它记录在 lockfile 中；缺包时会报告需要安装的包名。
+Source 使用 `@your-studio/scoreboard` 这样的组件地址。项目包管理器选择安装版本，并把它记录在 lockfile 中；缺包时会报告需要安装的包名。
 
 ## 编写与分享扩展
 

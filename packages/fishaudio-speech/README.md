@@ -13,7 +13,7 @@ Runtime Endpoint such as `@hypit/provider-hypihub`. Both models return the share
 `GeneratedAudioSet`; the author declarations expose its primary member as an ordinary audio Resource.
 
 ```xml
-<import as="fish" from="@hypit/fishaudio-speech@1"/>
+<import as="fish" from="@hypit/fishaudio-speech"/>
 
 <fish:VoiceDesign id="host" speech={story.segment.voiceSample.speech}>
   A clear young woman with a grounded, confident conversational delivery.

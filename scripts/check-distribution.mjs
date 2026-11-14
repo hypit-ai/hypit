@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -48,11 +48,14 @@ function run(command, args, capture = false, expectedCode = 0) {
 const npm = (...args) => run(process.execPath, [npmCli, ...args]);
 const distribution = join(project, "node_modules", "@hypit", "hypit");
 const hypit = (args, capture = false, expectedCode = 0) => run(process.execPath, [join(distribution, "bin", "hypit.mjs"), ...args], capture, expectedCode);
-const scope = ["--project", project, "--runtime", join(project, "hypit.runtime.json")];
-let runtimeStarted = false;
 let passed = false;
 try {
-  await writeFile(join(project, "package.json"), JSON.stringify({ name: "distribution-example", private: true, type: "module" }));
+  await writeFile(join(project, "package.json"), JSON.stringify({
+    name: "distribution-example",
+    private: true,
+    type: "module",
+    hypit: { project: true },
+  }));
   await npm("install", tarball, ...defaultPackages, "--no-audit", "--no-fund");
   const installedDistribution = JSON.parse(await readFile(join(distribution, "package.json"), "utf8"));
   const selectedPackages = new Set(Object.keys(installedDistribution.dependencies ?? {})
@@ -87,11 +90,9 @@ try {
   await hypit(["--version"]);
 
   const example = join(distribution, "examples", "semantic-composition");
-  for (const name of ["chat.svml", "chat.svs", "hypit.runtime.json"]) {
-    await cp(join(example, name), join(project, name));
-  }
-  const component = join(project, "packages", "chat-scene");
-  await cp(join(example, "packages", "chat-scene"), component, { recursive: true });
+  await cp(join(example, "title-card.nle.json"), join(project, "title-card.nle.json"));
+  const component = join(project, "packages", "audiovisual-title-card");
+  await cp(join(example, "packages", "audiovisual-title-card"), component, { recursive: true });
   const installed = installedDistribution;
   const componentPackage = JSON.parse(await readFile(join(component, "package.json"), "utf8"));
   for (const field of ["dependencies", "peerDependencies", "devDependencies"]) {
@@ -103,22 +104,16 @@ try {
   }
   await writeFile(join(component, "package.json"), JSON.stringify(componentPackage, null, 2));
   const projectPackage = JSON.parse(await readFile(join(project, "package.json"), "utf8"));
-  projectPackage.workspaces = ["packages/chat-scene"];
+  projectPackage.workspaces = ["packages/audiovisual-title-card"];
+  projectPackage.dependencies = {
+    ...(projectPackage.dependencies ?? {}),
+    "@example/audiovisual-title-card": "file:packages/audiovisual-title-card",
+  };
   await writeFile(join(project, "package.json"), JSON.stringify(projectPackage, null, 2));
   await npm("install", "--no-audit", "--no-fund");
-  await npm("run", "build", "--workspace", "@example/chat-scene");
-
-  const profilePath = join(project, "hypit.runtime.json");
-  const profile = JSON.parse(await readFile(profilePath, "utf8"));
-  profile.endpoints["html.local"].config.browserGpu = "software";
-  profile.endpoints["html.local"].config.browserCacheDirectory = join(root, "render-browser");
-  await writeFile(profilePath, JSON.stringify(profile, null, 2));
-  // The Distribution supplies the generic Fontsource adapter. The authored project owns the exact
-  // font families it selected, through its ordinary package.json and lockfile.
-  await npm("install", "--save-exact", "@fontsource-variable/inter@5.3.0", "--no-audit", "--no-fund");
-  await hypit(["check", "chat.svml", "--project", project]);
-  await writeFile(join(project, "gpt-image.svml"), `module prompt from "@hypit/prompt@1"
-module gpt from "@hypit/gpt-image@1"
+  await npm("run", "build", "--workspace", "@example/audiovisual-title-card");
+  await writeFile(join(project, "gpt-image.svml"), `module prompt from "@hypit/prompt"
+module gpt from "@hypit/gpt-image"
 source ugc from "@hypit/gpt-image-kits/phone-ugc-v1"
 
 prompt.Render "portrait-prompt" {
@@ -134,13 +129,13 @@ gpt.image {
 }
 `);
   await hypit(["check", "gpt-image.svml", "--project", project]);
-  await writeFile(join(project, "default-models.svml"), `module prompt from "@hypit/prompt@1"
-module h3 from "@hypit/minimax-h3@1"
-module nano from "@hypit/nano-banana@1"
-module seedream from "@hypit/seedream@1"
-module grok from "@hypit/grok-imagine@1"
-module pix from "@hypit/pixverse@1"
-module wan from "@hypit/wan@1"
+  await writeFile(join(project, "default-models.svml"), `module prompt from "@hypit/prompt"
+module h3 from "@hypit/minimax-h3"
+module nano from "@hypit/nano-banana"
+module seedream from "@hypit/seedream"
+module grok from "@hypit/grok-imagine"
+module pix from "@hypit/pixverse"
+module wan from "@hypit/wan"
 
 prompt.Prompt "video-prompt" { text: "A paper boat crossing a rain puddle in one continuous shot." }
 prompt.Prompt "image-prompt" { text: "A small red chair against a quiet blue wall." }
@@ -153,36 +148,19 @@ pix.video { id: boat-alt model: v6 prompt: @video-prompt duration: 5 quality: 72
 wan.image { id: chair-alt prompt: @image-prompt resolution: 2K }
 `);
   await hypit(["check", "default-models.svml", "--project", project]);
-  const missingBrowser = await hypit(["doctor", ...scope, "--json"], true, 1);
-  assert.match(missingBrowser, /HTML browser is unavailable/u);
-  runtimeStarted = true;
-  await hypit(["runtime", "up", ...scope]);
-  assert.deepEqual(await readdir(env.PUPPETEER_CACHE_DIR).catch(error => {
-    if (error.code === "ENOENT") return []; throw error;
-  }), [], "npm dependencies must not download an unselected Puppeteer browser");
-  await hypit(["doctor", ...scope]);
-  const result = JSON.parse(await hypit([
-    "build", "chat.svml", "--target", "final.video", ...scope,
-    "--follow", "--max-wait-ms", "180000", "--json",
-  ], true));
-  assert.equal(result.build.work.outcome, "complete", JSON.stringify(result));
-  const output = join(project, "chat.mp4");
-  await hypit(["result", "export", result.build.id, "--project", project, "--output", "final.video", "--to", output]);
+  const output = join(project, "title-card.mp4");
+  await hypit(["nle", "export", "title-card.nle.json", "--to", output, "--workers", "1"]);
   const probe = JSON.parse(await run("ffprobe", ["-v", "error", "-show_streams", "-of", "json", output], true));
   const video = probe.streams.find((stream) => stream.codec_type === "video");
   assert.ok(video, "the exported file must contain video");
   assert.equal(video.width, 540);
   assert.equal(video.height, 960);
   assert.equal(video.avg_frame_rate, "30/1");
-  assert.equal(Number(video.nb_frames), 240);
+  assert.equal(Number(video.nb_frames), 60);
   await run("ffmpeg", ["-v", "error", "-xerror", "-i", output, "-f", "null", "-"]);
   passed = true;
-  console.log(`Installed @hypit/hypit@${installed.version}: component build, font, render and export passed.`);
+  console.log(`Installed @hypit/hypit@${installed.version}: package build, NLE render and export passed.`);
 } finally {
-  if (runtimeStarted) {
-    try { await hypit(["runtime", "down", ...scope]); }
-    catch (error) { passed = false; console.error(error); process.exitCode = 1; }
-  }
   if (passed) await rm(root, { recursive: true, force: true });
   else console.error(`Distribution execution files retained at ${root}`);
 }

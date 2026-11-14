@@ -3,7 +3,7 @@ export {
   editTextFineNleParameters,
   textFineNleAuthoring,
   textFineNleComponentSymbol,
-  textFineNleHtmlVideoResolver,
+  textFineNleAudiovisualResolver,
   textFineNleManifest,
   textFineNleResolver,
 } from "./nle-package.js";

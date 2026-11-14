@@ -5,14 +5,16 @@ import type { GenerationGraphCliServices } from "@hypit/generation-graph-cli";
 import { materializeLocalMediaProduct } from "@hypit/media-product-local";
 import { productExporterForType, productExportersFromFacets } from "@hypit/product";
 import { loadNodePackageSelection } from "@hypit/loader/node";
-import { moduleKey, modulePackageAbi } from "@hypit/protocol";
+import { moduleKey } from "@hypit/module";
+import { moduleFacetKind } from "@hypit/module";
 import {
   doctorProjectPublicationStores,
   findRuntimeProfile,
   openLocalRuntimeHost,
   openProjectPublicationStores,
-} from "@hypit/runtime-local";
-import type { LocalRuntimeCliServices } from "@hypit/runtime-local/cli";
+} from "@hypit/generation-runtime-local";
+import { openLocalExecutionEnvironmentHost } from "@hypit/execution-environment-local/host";
+import type { LocalRuntimeCliServices } from "@hypit/generation-runtime-local/cli";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
@@ -51,8 +53,13 @@ export function createToolchainApplicationServices(
     },
   });
   const initialRuntimeProfile = {
-    format: "hypit.runtime-local@1" as const,
-    dataRoot: ".hypit/runtimes/local",
+    format: "hypit.generation-runtime-local@1" as const,
+    dataRoot: ".hypit/generation/runtime/local",
+    environment: "./hypit.environment.json",
+  };
+  const initialEnvironmentProfile = {
+    format: "hypit.execution-environment-local@1" as const,
+    dataRoot: ".hypit/environment/local",
     // The starter selects the portable Store, so the Profile it writes is openable and writable on
     // Linux as well: macOS and Windows keep the platform locker, and a Linux host uses an
     // owner-private file. An explicit file backend remains available inside the same local Store.
@@ -81,6 +88,7 @@ export function createToolchainApplicationServices(
   const localRuntime: LocalRuntimeCliServices = {
     packageRoot,
     initialRuntimeProfile,
+    initialEnvironmentProfile,
     openLocalRuntimeHost: openToolchainLocalRuntime,
   };
   const resolveToolchainProjectRuntime = async (projectRoot: string) => {
@@ -100,11 +108,17 @@ export function createToolchainApplicationServices(
     packageRoot,
     resolveProjectRuntime: resolveToolchainProjectRuntime,
     openRuntimeHost: openToolchainLocalRuntime,
+    openEnvironmentHost: async (path, environmentOptions) => await openLocalExecutionEnvironmentHost(path, {
+      packageRoot: environmentOptions.packageRoot,
+      ...(environmentOptions.distributionPackageRoot === undefined
+        ? {}
+        : { distributionPackageRoot: environmentOptions.distributionPackageRoot }),
+    }),
     openProjectResults: openToolchainProjectResults,
     resolveProductExporter: async (type, resolverOptions) => {
       const packages = await loadNodePackageSelection({
         selected: [],
-        logical: [{ abi: modulePackageAbi, name: moduleKey(type.module) }],
+        logical: [{ kind: moduleFacetKind, name: moduleKey(type.module) }],
       }, resolverOptions.packageRoot, {
         ...(resolverOptions.distributionPackageRoot === undefined
           ? {}

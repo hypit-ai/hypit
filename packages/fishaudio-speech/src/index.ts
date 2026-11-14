@@ -1,8 +1,8 @@
-import { sealModelFieldRequest, sealModelFieldBuilder, defineModelFields } from "@hypit/generation/model-fields";
-import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
-import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+import { sealModelFieldRequest, sealModelFieldBuilder, defineModelFields } from "@hypit/generation-model/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation-model/model-fields";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation-model/model-fields";
 
-export const fishAudioSpeechModuleRef = { name: "@hypit/fishaudio-speech", version: "1" } as const;
+export const fishAudioSpeechModuleRef = { name: "@hypit/fishaudio-speech" } as const;
 export const fishAudioSpeechModels = [
   "voice-design-1",
   "voice-clone",

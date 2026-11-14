@@ -44,6 +44,8 @@ test("HTML Text closes exact fonts, authored spacing and ordered glyph Paint int
       { kind: "text", id: "word-two", text: " world", style: {
         typography: { fontFamily: "Georgia, serif", fontStyle: "italic" },
       } },
+      { kind: "text", id: "authored-gap", text: " ", style: { paints: [], inlineAdvancePx: 13 } },
+      { kind: "text", id: "word-three", text: "again" },
     ] }],
   });
 
@@ -54,6 +56,7 @@ test("HTML Text closes exact fonts, authored spacing and ordered glyph Paint int
   assert.match(fragment.html, /lang="zh"/u);
   assert.match(fragment.html, /你好/u);
   assert.match(fragment.html, / world/u);
+  assert.match(fragment.html, /width:13px/u);
   assert.ok(fragment.html.indexOf('data-hypit-text-paint="long-shadow"')
     < fragment.html.indexOf('data-hypit-text-paint="glow"'));
   assert.ok(fragment.html.indexOf('data-hypit-text-paint="glow"')
@@ -65,7 +68,12 @@ test("HTML Text closes exact fonts, authored spacing and ordered glyph Paint int
   assert.match(fragment.html, /-webkit-text-stroke:4px #000000/u);
   assert.match(fragment.html, /text-decoration-line:underline/u);
   assert.match(fragment.html, /text-underline-offset:5px/u);
-  assert.match(fragment.html, /text-shadow:/u);
+  assert.match(fragment.html, /feGaussianBlur/u);
+  assert.match(fragment.html, /stdDeviation="4"/u);
+  assert.match(fragment.html, /filter:url\(#hypit-text-filter-/u);
+  assert.equal(fragment.html.match(/<filter id=/gu)?.length, 2,
+    "equal shadow and glow Paint must be defined once per fragment, not once per word");
+  assert.doesNotMatch(fragment.html, /<defs><svg/u);
   assert.doesNotThrow(() => htmlVisual({ html: fragment.html, dependencies: fragment.dependencies }));
 });
 

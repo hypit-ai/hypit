@@ -13,7 +13,7 @@ Endpoint implementing the selected speech capability. Both models return the sha
 the author declarations expose its primary member as an ordinary audio Resource.
 
 ```xml
-<import as="mimo" from="@hypit/mimo-speech@1"/>
+<import as="mimo" from="@hypit/mimo-speech"/>
 
 <mimo:VoiceDesign id="host" speech={story.segment.voiceSample.speech}>
   A clear young woman with a grounded, confident conversational delivery.

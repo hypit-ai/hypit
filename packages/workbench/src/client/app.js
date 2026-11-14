@@ -66,7 +66,7 @@ if (location.pathname === "/nle") {
   const selected = location.pathname === "/canvas" ? "canvas" : location.pathname === "/comments" ? "comments" : "scene";
   const surface = selected === "canvas" ? "Canvas" : selected === "comments" ? "Comments" : "Scene";
   app.className = "surface-placeholder";
-  app.innerHTML = `${workbenchTopbar({ projectName: surface, active: selected })}<div>${icon(selected === "canvas" ? "component" : selected === "comments" ? "captions" : "image", 24)}<strong>${surface}</strong><span>这个工作面尚未安装。</span></div>`;
+  app.innerHTML = `${workbenchTopbar({ projectName: surface })}<div>${icon(selected === "canvas" ? "component" : selected === "comments" ? "captions" : "image", 24)}<strong>${surface}</strong><span>这个工作面尚未安装。</span></div>`;
   bindWorkbenchTopbar(app);
   app.dataset.loading = "false";
 }
@@ -215,30 +215,26 @@ function positiveHeader(response, name) {
 }
 
 async function loadFilmstrip(resource) {
-  const response = await fetch(resource);
+  const response = await fetch(resource, { method: "HEAD" });
   if (!response.ok) return undefined;
   const count = positiveHeader(response, "x-hypit-storyboard-count");
   const columns = positiveHeader(response, "x-hypit-storyboard-columns");
   const rows = positiveHeader(response, "x-hypit-storyboard-rows");
   const tileWidth = positiveHeader(response, "x-hypit-storyboard-tile-width");
   const tileHeight = positiveHeader(response, "x-hypit-storyboard-tile-height");
-  const blob = await response.blob();
-  const imageUrl = URL.createObjectURL(blob);
   if ([count, columns, rows, tileWidth, tileHeight].some(value => value === undefined)) {
     const image = new Image();
-    image.src = imageUrl;
+    image.src = resource;
     try {
       await image.decode();
     } catch {
-      URL.revokeObjectURL(imageUrl);
       return undefined;
     }
     if (image.naturalWidth < 1 || image.naturalHeight < 1) {
-      URL.revokeObjectURL(imageUrl);
       return undefined;
     }
     return {
-      imageUrl,
+      imageUrl: resource,
       count: 1,
       columns: 1,
       rows: 1,
@@ -247,7 +243,7 @@ async function loadFilmstrip(resource) {
     };
   }
   return {
-    imageUrl,
+    imageUrl: resource,
     count: Math.floor(count),
     columns: Math.floor(columns),
     rows: Math.floor(rows),
@@ -261,6 +257,7 @@ function filmstripFor(resource) {
   if (held) return held;
   const pending = loadFilmstrip(resource).catch(() => undefined);
   filmstripRequests.set(resource, pending);
+  while (filmstripRequests.size > 64) filmstripRequests.delete(filmstripRequests.keys().next().value);
   return pending;
 }
 
@@ -314,7 +311,7 @@ function itemEnd(item, rate) {
 
 function itemLabel(item, media) {
   if (item.name) return item.name;
-  if (item.kind === "adjustment") return item.component.name;
+  if (item.kind === "adjustment") return item.operator.name;
   if (item.source === "media") return media.find(value => value.asset === item.asset.path)?.name
     ?? item.asset.path.split("/").at(-1).replace(/\.media\.json$/, "");
   if (item.source === "component") return item.component.name;
@@ -402,10 +399,13 @@ function startComments() {
     previewCommandFrame: undefined,
     previewCommandId: 0,
     previewScrubbing: false,
+    autosaveTimer: undefined,
+    autosaveInFlight: false,
+    externalCheckInFlight: false,
   };
 
   app.className = "comments-editor";
-  app.innerHTML = `${workbenchTopbar({ projectName: "正在打开工程…", active: "comments", mode: "timeline" })}
+  app.innerHTML = `${workbenchTopbar({ projectName: "正在打开工程…", mode: "timeline" })}
     <main class="comments-shell">
       <section class="comments-preview-pane">
         <header class="comments-pane-heading"><div>${icon("preview", 14)}<strong>预览</strong></div></header>
@@ -572,14 +572,13 @@ function startComments() {
 
   function renderCommentsPreview() {
     if (!state.snapshot) return;
-    const project = state.snapshot.project;
-    const key = `${project.revision}:${state.snapshot.view.revision}`;
+    const key = String(state.snapshot.programmeGeneration);
     if (state.previewKey !== key) {
       state.previewKey = key;
       state.previewCommandFrame = undefined;
       frameNode.classList.add("fallback");
       frameFallback.querySelector("strong").textContent = "正在准备 Programme 预览";
-      programmeFrame.src = `/api/nle/programme?revision=${project.revision}&viewRevision=${state.snapshot.view.revision}`;
+      programmeFrame.src = `/api/nle/programme?generation=${state.snapshot.programmeGeneration}`;
       return;
     }
     if (!state.playing) seekPreview();
@@ -1014,17 +1013,22 @@ function startNle() {
     bin: "media",
     mediaFilter: "all",
     renameEdit: undefined,
-    tool: "select",
     zoomWindow: { start: 0, end: 1 },
     timelineScrollRatio: .5,
     timelineVerticalReady: false,
     animation: undefined,
     previewKey: undefined,
+    previewPendingKey: undefined,
     previewCommandFrame: undefined,
     previewCommandId: 0,
     layersOpen: false,
     spatialDraft: undefined,
     previewScrubbing: false,
+    persistenceError: undefined,
+    externalCheckInFlight: false,
+    applicationSequence: -1,
+    applicationEvents: undefined,
+    exportState: { format: "hypit.nle-service-export@1", id: 0, state: "idle" },
   };
 
   app.className = "nle-editor properties-open";
@@ -1078,15 +1082,8 @@ function startNle() {
     <div class="nle-pane-handle row" data-resize-pane="timeline" role="separator" aria-orientation="horizontal" tabindex="0"></div>
     <section class="nle-timeline">
       <header class="nle-timeline-toolbar">
-        <button class="icon-button" type="button" data-action="tool-select" title="选择工具" aria-label="选择工具">${icon("select")}</button>
         <button class="icon-button" type="button" data-action="undo" title="撤销">${icon("undo")}</button>
         <button class="icon-button" type="button" data-action="redo" title="重做">${icon("redo")}</button>
-        <span class="toolbar-separator"></span>
-        <button class="icon-button" type="button" data-action="tool-cut" title="切割工具">${icon("cut")}</button>
-        <button class="icon-button" type="button" data-action="trim-start" title="将左边沿裁到播放头">${icon("trimStart")}</button>
-        <button class="icon-button" type="button" data-action="split" title="在播放头分割">${icon("split")}</button>
-        <button class="icon-button" type="button" data-action="trim-end" title="将右边沿裁到播放头">${icon("trimEnd")}</button>
-        <button class="icon-button" type="button" data-action="remove" title="删除">${icon("trash")}</button>
         <output id="timeline-timecode" class="timeline-timecode">00:00:00:00</output>
         <div class="toolbar-space"></div>
         <div class="nle-zoom">
@@ -1113,6 +1110,7 @@ function startNle() {
           <label><span>文件名</span><input id="export-file-name" name="fileName" type="text" maxlength="192" required></label>
           <fieldset><legend>输出尺寸</legend><label><span>宽度</span><input id="export-width" name="width" type="number" min="1" step="1" required></label><b>×</b><label><span>高度</span><input id="export-height" name="height" type="number" min="1" step="1" required></label></fieldset>
           <label><span>帧率</span><select id="export-frame-rate" name="frameRate"></select></label>
+          <label><span>画面引擎</span><select id="export-picture-target" name="pictureTarget"><option value="html" selected>HTML / Chromium</option><option value="gpu-composition">WebGPU / Dawn</option></select></label>
           <label><span>质量</span><select id="export-quality" name="quality"><option value="draft">草稿</option><option value="standard" selected>标准</option><option value="high">高</option></select></label>
         </div>
         <section id="export-status" class="nle-export-status" hidden><div><span id="export-status-label"></span><strong id="export-status-value"></strong></div><progress id="export-progress"></progress><p id="export-output"></p></section>
@@ -1123,10 +1121,58 @@ function startNle() {
 
   app.querySelector(".nle-library-toolbar.topbar").outerHTML = workbenchTopbar({
     projectName: "正在打开工程…",
-    active: "timeline",
     mode: "timeline",
   });
   bindWorkbenchTopbar(app);
+
+  const mergeOrderedObjects = (current, order, changed, label) => {
+    const values = new Map(current.map(value => [value.id, value]));
+    for (const value of changed) values.set(value.id, value);
+    return order.map(id => {
+      const value = values.get(id);
+      if (!value) throw new Error(`${label} patch omitted ${id}.`);
+      return value;
+    });
+  };
+
+  const acceptOperation = value => {
+    if (value?.format !== "hypit.nle-service-operation-response@1") return value;
+    const { project: projectPatch, view, timeline, canvas } = value.patch;
+    const { trackOrder: projectTrackOrder, tracks: projectTracks, ...projectRoot } = projectPatch;
+    const project = {
+      ...state.snapshot.project,
+      ...projectRoot,
+      tracks: mergeOrderedObjects(
+        state.snapshot.project.tracks, projectTrackOrder, projectTracks, "NLE Project Track",
+      ),
+    };
+    const scene = {
+      maximumFrame: timeline.maximumFrame,
+      tracks: mergeOrderedObjects(
+        state.snapshot.scene.tracks, timeline.trackOrder, timeline.tracks, "Timeline Track",
+      ),
+    };
+    const canvasScene = {
+      canvas: canvas.canvas,
+      layers: mergeOrderedObjects(
+        state.snapshot.canvasScene.layers, canvas.layerOrder, canvas.layers, "Canvas Layer",
+      ),
+    };
+    return {
+      ...state.snapshot,
+      project,
+      view,
+      scene,
+      canvasScene,
+      programmeGeneration: value.programmeGeneration,
+      dirty: value.dirty,
+      persistence: value.persistence,
+      canUndo: value.canUndo,
+      canRedo: value.canRedo,
+      ...(value.undoLabel === undefined ? { undoLabel: undefined } : { undoLabel: value.undoLabel }),
+      ...(value.redoLabel === undefined ? { redoLabel: undefined } : { redoLabel: value.redoLabel }),
+    };
+  };
 
   const libraryPreviews = new IntersectionObserver(entries => {
     for (const entry of entries) {
@@ -1218,7 +1264,6 @@ function startNle() {
 
   const exportDialog = app.querySelector("#nle-export-dialog");
   const exportForm = app.querySelector("#nle-export-form");
-  let exportPollTimer;
   const greatestCommonDivisor = (left, right) => {
     let a = Math.abs(left);
     let b = Math.abs(right);
@@ -1276,18 +1321,7 @@ function startNle() {
     value.textContent = "";
     output.textContent = job.error ?? "";
   };
-  const pollExportState = async () => {
-    clearTimeout(exportPollTimer);
-    if (!exportDialog.open) return;
-    try {
-      const job = await request("/api/nle/export");
-      renderExportState(job);
-      if (job.state === "running") exportPollTimer = setTimeout(() => { void pollExportState(); }, 350);
-    } catch (error) {
-      notify(error instanceof Error ? error.message : String(error), true);
-    }
-  };
-  const openExportDialog = async () => {
+  const openExportDialog = () => {
     const project = currentProject();
     const divisor = greatestCommonDivisor(project.canvas.width, project.canvas.height);
     exportDialog.dataset.aspectWidth = String(project.canvas.width / divisor);
@@ -1308,7 +1342,7 @@ function startNle() {
       return option;
     }));
     exportDialog.showModal();
-    await pollExportState();
+    renderExportState(state.exportState);
   };
   const snapExportResolution = source => {
     const aspectWidth = Number(exportDialog.dataset.aspectWidth);
@@ -1323,11 +1357,9 @@ function startNle() {
   };
   app.querySelector("#export-width").addEventListener("change", event => snapExportResolution(event.currentTarget));
   app.querySelector("#export-height").addEventListener("change", event => snapExportResolution(event.currentTarget));
-  for (const close of app.querySelectorAll("[data-export-close]")) close.addEventListener("click", () => {
-    clearTimeout(exportPollTimer);
-    exportDialog.close();
-  });
-  exportDialog.addEventListener("cancel", () => clearTimeout(exportPollTimer));
+  for (const close of app.querySelectorAll("[data-export-close]")) {
+    close.addEventListener("click", () => exportDialog.close());
+  }
   exportForm.addEventListener("submit", async event => {
     event.preventDefault();
     snapExportResolution(app.querySelector("#export-width"));
@@ -1336,6 +1368,7 @@ function startNle() {
       const job = await request("/api/nle/export", {
         revision: currentProject().revision,
         fileName: app.querySelector("#export-file-name").value.trim(),
+        pictureTarget: app.querySelector("#export-picture-target").value,
         quality: app.querySelector("#export-quality").value,
         frameRate: { numerator, denominator },
         resolution: {
@@ -1343,8 +1376,8 @@ function startNle() {
           height: Number(app.querySelector("#export-height").value),
         },
       });
+      state.exportState = job;
       renderExportState(job);
-      exportPollTimer = setTimeout(() => { void pollExportState(); }, 250);
     } catch (error) {
       renderExportState({ state: "failed", error: error instanceof Error ? error.message : String(error) });
     }
@@ -1353,6 +1386,7 @@ function startNle() {
     const response = await fetch("/api/nle/export", { method: "DELETE" });
     const job = await response.json();
     if (!response.ok) throw new Error(job.error?.message ?? "取消导出失败");
+    state.exportState = job;
     renderExportState(job);
   });
 
@@ -1370,7 +1404,7 @@ function startNle() {
     Math.max(0, maximumFrame() - 1),
   ));
   const previewCommand = (action, detail = {}) => {
-    const iframe = app.querySelector("#programme iframe");
+    const iframe = app.querySelector("#programme iframe.programme-frame-active");
     const target = iframe?.contentWindow;
     if (!iframe || !target) return;
     const request = action === "mute" ? undefined : ++state.previewCommandId;
@@ -1413,31 +1447,131 @@ function startNle() {
     && state.frame >= layer.startFrame && state.frame < layer.startFrame + layer.durationFrames;
   const activeCanvasLayers = () => state.snapshot?.canvasScene.layers.filter(canvasLayerActive) ?? [];
 
-  const update = async (path, body, success) => {
+  const inspectorItemsForCommands = commands => {
+    const ids = new Set();
+    const add = values => values.forEach(value => ids.add(value));
+    for (const command of commands) {
+      if (command.kind === "item.add") ids.add(command.item.id);
+      else if (["item.update", "item.trim", "item.slip", "item.retime", "item.split", "item.detach-audio"].includes(command.kind)) ids.add(command.id);
+      else if (command.kind === "item.ripple-trim") add([command.id, ...(command.scope ?? [])]);
+      else if (command.kind === "item.move" || command.kind === "item.remove") add(command.ids);
+      else if (command.kind === "item.replace") ids.add(command.item.id);
+      else if (command.kind === "item.roll") add([command.left, command.right]);
+      else if (command.kind === "track.replace") add(command.track.items.map(item => item.id));
+      else if (command.kind === "track.remove") add(currentProject().tracks.find(track => track.id === command.id)?.items.map(item => item.id) ?? []);
+      else if (command.kind === "component-value.replace") add(currentProject().tracks.flatMap(track => track.items.flatMap(item =>
+        item.kind === "present" && item.source === "component"
+          && item.sharedValues?.some(reference => reference.ref === command.value.id) ? [item.id] : [])));
+      else if (command.kind === "picture-layout.replace") add(currentProject().tracks.flatMap(track => track.items.flatMap(item =>
+        item.kind === "present" && item.picture && "ref" in item.picture.layout
+          && item.picture.layout.ref === command.value.id ? [item.id] : [])));
+    }
+    return [...ids];
+  };
+
+  const invalidateInspectors = items => {
+    if (items === "all") {
+      state.inspectorCache.clear();
+      state.inspector = undefined;
+      return;
+    }
+    for (const item of items) state.inspectorCache.delete(item);
+    if (state.inspector && items.includes(state.inspector.item)) state.inspector = undefined;
+  };
+
+  async function checkExternalFiles() {
+    if (state.externalCheckInFlight || state.busy || !state.snapshot) return;
+    state.externalCheckInFlight = true;
+    try {
+      const status = await request("/api/nle/file-status");
+      if (!status.changed) return;
+      if (state.snapshot.dirty || status.dirty) {
+        notify("工程文件已被外部修改；当前还有未保存编辑，请先决定保留哪一侧。", true);
+        return;
+      }
+      const previous = state.snapshot;
+      state.snapshot = await request("/api/nle/reload", {});
+      invalidateInspectors("all");
+      renderAfterSnapshot(previous);
+      notify("已载入 Agent 对工程文件的修改");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : String(error), true);
+    } finally {
+      state.externalCheckInFlight = false;
+    }
+  }
+
+  const acceptApplicationState = observation => {
+    if (observation?.format !== "hypit.nle-service-application-state@1"
+      || observation.sequence <= state.applicationSequence) return;
+    state.applicationSequence = observation.sequence;
+    state.exportState = observation.export;
+    if (exportDialog.open) renderExportState(observation.export);
+    if (state.snapshot && state.snapshot.project.revision === observation.projectRevision
+      && state.snapshot.view.revision === observation.viewRevision) {
+      state.snapshot = {
+        ...state.snapshot,
+        dirty: observation.dirty,
+        persistence: observation.persistence,
+      };
+      renderChrome();
+    }
+    const problem = [observation.persistence.project, observation.persistence.view]
+      .find(owner => owner.state === "conflict" || owner.state === "failed");
+    if (problem?.error && problem.error !== state.persistenceError) {
+      state.persistenceError = problem.error;
+      notify(`自动保存失败：${problem.error}`, true);
+    } else if (!problem) state.persistenceError = undefined;
+    if ((observation.external.project || observation.external.view) && !observation.dirty) {
+      void checkExternalFiles();
+    }
+  };
+
+  const connectApplicationEvents = () => {
+    state.applicationEvents?.close();
+    const events = new EventSource("/api/nle/events");
+    state.applicationEvents = events;
+    events.addEventListener("state", event => {
+      try {
+        acceptApplicationState(JSON.parse(event.data));
+      } catch (error) {
+        notify(error instanceof Error ? error.message : String(error), true);
+      }
+    });
+  };
+
+  const update = async (path, body, success, invalidatedInspectors = []) => {
     if (state.busy) return;
+    const previous = state.snapshot;
     state.busy = true;
     renderChrome();
     try {
-      state.snapshot = await request(path, body);
+      const result = await request(path, body);
+      state.snapshot = acceptOperation(result);
+      const changedInspectors = result?.receipt?.invalidated?.includes("inspector")
+        ? result.receipt.changed.items : [];
+      invalidateInspectors(invalidatedInspectors === "all"
+        ? "all" : [...new Set([...invalidatedInspectors, ...changedInspectors])]);
       if (success) notify(success);
     } catch (error) {
       notify(error instanceof Error ? error.message : String(error), true);
     } finally {
       state.busy = false;
-      render();
+      renderAfterSnapshot(previous);
     }
   };
 
   const transact = async (label, commands, success) => await update("/api/nle/transaction", {
     label,
     transaction: { revision: currentProject().revision, commands },
-  }, success);
+  }, success, inspectorItemsForCommands(commands));
   const transactView = async (commands, success) => await update("/api/nle/view-transaction", {
     transaction: { revision: state.snapshot.view.revision, commands },
   }, success);
 
   const placeProjectMedia = async (entry, track, frame) => {
     if (state.busy) return;
+    const previous = state.snapshot;
     state.busy = true;
     renderChrome();
     try {
@@ -1451,7 +1585,7 @@ function startNle() {
           duration: frameValue(Math.max(1, Math.round(5 * rate.numerator / rate.denominator)), rate),
         } : {}),
       });
-      state.snapshot = response.snapshot;
+      state.snapshot = acceptOperation(response.operation);
       state.selection = { type: "item", id: response.item };
       state.frame = frame;
       notify("素材已放入时间线");
@@ -1459,20 +1593,22 @@ function startNle() {
       notify(error instanceof Error ? error.message : String(error), true);
     } finally {
       state.busy = false;
-      render();
+      renderAfterSnapshot(previous);
     }
   };
 
   const updateSpatialLayout = async (item, layout, success = "画面布局已更新") => {
     if (state.busy) return;
+    const previous = state.snapshot;
     state.busy = true;
     renderChrome();
     try {
-      state.snapshot = await request("/api/nle/spatial-edit", {
+      state.snapshot = acceptOperation(await request("/api/nle/spatial-edit", {
         revision: currentProject().revision,
         item,
         layout,
-      });
+      }));
+      invalidateInspectors([item]);
       state.spatialDraft = undefined;
       notify(success);
     } catch (error) {
@@ -1480,7 +1616,7 @@ function startNle() {
       notify(error instanceof Error ? error.message : String(error), true);
     } finally {
       state.busy = false;
-      render();
+      renderAfterSnapshot(previous);
     }
   };
 
@@ -1745,18 +1881,6 @@ function startNle() {
     const redo = app.querySelector('[data-action="redo"]');
     redo.disabled = state.busy || !state.snapshot.canRedo;
     redo.title = state.snapshot.redoLabel ? `重做：${state.snapshot.redoLabel}` : "没有可重做的操作";
-    app.querySelector('[data-action="tool-cut"]').classList.toggle("active", state.tool === "cut");
-    const selected = selectedItem();
-    const selectedScene = selectedTimelineSceneItem();
-    const selectedLocked = selected !== undefined && trackLocked(selected.track.id);
-    const playheadInside = selected !== undefined
-      && state.frame > frames(selected.item.start, state.snapshot.view.editRate)
-      && state.frame < itemEnd(selected.item, state.snapshot.view.editRate);
-    const split = app.querySelector('[data-action="split"]');
-    split.disabled = state.busy || selectedLocked || !playheadInside || !selectedScene?.editing.split;
-    app.querySelector('[data-action="trim-start"]').disabled = state.busy || selectedLocked || !playheadInside || !selectedScene?.editing.trimStart;
-    app.querySelector('[data-action="trim-end"]').disabled = state.busy || selectedLocked || !playheadInside || !selectedScene?.editing.trimEnd;
-    app.querySelector('[data-action="remove"]').disabled = state.busy || selected === undefined || selectedLocked;
     const play = app.querySelector('[data-action="play"]');
     const playIcon = state.playing ? "pause" : "play";
     if (play.dataset.icon !== playIcon) {
@@ -1951,22 +2075,49 @@ function startNle() {
     canvas.style.aspectRatio = `${project.canvas.width} / ${project.canvas.height}`;
     canvas.style.setProperty("--ratio", String(project.canvas.width / project.canvas.height));
     canvas.style.backgroundColor = project.canvas.clearColor;
-    const key = `${project.revision}:${state.snapshot.view.revision}`;
-    if (state.previewKey !== key) {
-      state.previewKey = key;
-      state.previewCommandFrame = undefined;
-      const frame = element("iframe", "programme-frame");
+    const key = String(state.snapshot.programmeGeneration);
+    if (state.previewKey !== key && state.previewPendingKey !== key) {
+      state.previewPendingKey = key;
+      const generation = state.snapshot.programmeGeneration;
+      const frame = element("iframe", "programme-frame programme-frame-pending");
       frame.title = "Programme preview";
       frame.setAttribute("sandbox", "allow-scripts allow-same-origin");
       frame.setAttribute("allow", "autoplay");
-      frame.src = `/api/nle/programme?revision=${project.revision}&viewRevision=${state.snapshot.view.revision}`;
-      const loading = element("div", "programme-loading", "正在准备画面…");
-      frame.addEventListener("load", () => {
-        previewCommand("mute", { muted: state.muted });
-        seekProgramme(true);
-        if (state.playing) previewCommand("play");
+      frame.dataset.programmeKey = key;
+      frame.src = `/api/nle/programme?generation=${generation}`;
+      let loading = canvas.querySelector(".programme-loading");
+      if (!loading) {
+        loading = element("div", "programme-loading", "正在准备画面…");
+        canvas.append(loading);
+      }
+      loading.classList.toggle("programme-loading-overlay", !canvas.querySelector(".programme-frame-active"));
+      frame.addEventListener("load", async () => {
+        const target = frame.contentWindow;
+        try {
+          await target?.__hypitDocument?.ready;
+          if (state.previewPendingKey !== key || frame.contentWindow !== target || !frame.isConnected) return;
+          await target.__hypitSetMuted?.(state.muted);
+          await target.__hypitSeekFrame?.(programmeFrame(state.frame));
+          if (state.previewPendingKey !== key || frame.contentWindow !== target || !frame.isConnected) return;
+          const previous = canvas.querySelector(".programme-frame-active");
+          frame.classList.remove("programme-frame-pending");
+          frame.classList.add("programme-frame-active");
+          previous?.remove();
+          state.previewKey = key;
+          state.previewPendingKey = undefined;
+          state.previewCommandFrame = programmeFrame(state.frame);
+          loading.remove();
+          if (state.playing) await target.__hypitPlayFrame?.(programmeFrame(state.frame));
+        } catch (error) {
+          if (state.previewPendingKey !== key) return;
+          state.previewPendingKey = undefined;
+          frame.remove();
+          loading.remove();
+          notify(error instanceof Error ? error.message : String(error), true);
+        }
       });
-      canvas.replaceChildren(frame, loading, element("div", "canvas-edit-overlay"));
+      canvas.querySelector(".programme-frame-pending")?.remove();
+      canvas.prepend(frame);
     }
     if (!canvas.querySelector(".canvas-edit-overlay")) canvas.append(element("div", "canvas-edit-overlay"));
     if (!state.playing) seekProgramme();
@@ -1992,14 +2143,23 @@ function startNle() {
     for (const layer of active) {
       if (!layer.layout) continue;
       const selected = state.selection?.type === "item" && state.selection.id === layer.id;
-      const box = element("div", `canvas-layer-box${selected ? " selected" : ""}${layer.editing.transform ? "" : " locked"}`);
+      const transformable = layer.affordances.translate || layer.affordances.resize !== false;
+      const box = element("div", `canvas-layer-box${selected ? " selected" : ""}${transformable ? "" : " locked"}`);
       box.dataset.canvasLayer = layer.id;
       box.setAttribute("aria-label", layer.title);
       const layout = state.spatialDraft?.item === layer.id ? state.spatialDraft.layout : layer.layout;
       placeCanvasLayerBox(box, layout);
       if (selected) {
-        if (layer.editing.transform) {
-          for (const handle of ["nw", "ne", "se", "sw"]) {
+        if (layer.content) {
+          const content = element("i", "canvas-layer-content");
+          content.style.left = `${(layer.content.x - layer.layout.x) / layer.layout.width * 100}%`;
+          content.style.top = `${(layer.content.y - layer.layout.y) / layer.layout.height * 100}%`;
+          content.style.width = `${layer.content.width / layer.layout.width * 100}%`;
+          content.style.height = `${layer.content.height / layer.layout.height * 100}%`;
+          box.append(content);
+        }
+        if (layer.affordances.resize !== false) {
+          for (const handle of layer.affordances.resize.handles) {
             const grip = element("i", `canvas-layer-handle handle-${handle}`);
             grip.dataset.canvasHandle = handle;
             box.append(grip);
@@ -2207,10 +2367,10 @@ function startNle() {
     return { id: active, sections: visible, navigation };
   }
 
-  const inspectorKey = (item, revision) => `${revision}:${item}`;
+  const inspectorKey = item => item;
 
   function itemInspectorScene(item, revision) {
-    const key = inspectorKey(item, revision);
+    const key = inspectorKey(item);
     const cached = state.inspectorCache.get(key);
     if (cached !== undefined) return Promise.resolve(cached);
     const loading = state.inspectorLoads.get(key);
@@ -2226,7 +2386,7 @@ function startNle() {
   }
 
   async function loadItemInspector(item, revision) {
-    const key = inspectorKey(item, revision);
+    const key = inspectorKey(item);
     const token = ++state.inspectorRequest;
     try {
       const scene = await itemInspectorScene(item, revision);
@@ -2251,9 +2411,9 @@ function startNle() {
     const track = selectedTrack();
     const selectedMedia = state.selection?.type === "media"
       ? state.snapshot.mediaLibrary.assets.find(media => media.id === state.selection.id) : undefined;
-    const selectedKey = selected === undefined ? undefined : inspectorKey(selected.item.id, project.revision);
+    const selectedKey = selected === undefined ? undefined : inspectorKey(selected.item.id);
     const matchingInspector = selected !== undefined
-      && state.inspector?.item === selected.item.id && state.inspector.revision === project.revision
+      && state.inspector?.item === selected.item.id
       ? state.inspector : undefined;
     const loadedInspector = selectedKey === undefined ? undefined
       : state.inspectorCache.get(selectedKey) ?? matchingInspector?.scene;
@@ -2282,8 +2442,7 @@ function startNle() {
           inspectorField("类型", selectedMedia.mediaType ?? selectedMedia.kind),
           ...(selectedMedia.durationSeconds === undefined ? [] : [inspectorField("时长", formatLibraryDuration(selectedMedia.durationSeconds))]),
           ...(selectedMedia.width === undefined ? [] : [inspectorField("画面", `${selectedMedia.width} × ${selectedMedia.height}`)]),
-          inspectorField("音频", selectedMedia.hasAudio ? "有" : "无"),
-          inspectorField("使用次数", String(selectedMedia.usedBy))),
+          inspectorField("音频", selectedMedia.hasAudio ? "有" : "无")),
         inspectorGroup("来源",
           inspectorField("Media Asset", selectedMedia.asset),
           inspectorField("素材 ID", selectedMedia.id),
@@ -2360,6 +2519,67 @@ function startNle() {
     return button;
   }
 
+  function renderTimelineItemLayers(target, item, track) {
+    target.replaceChildren();
+    for (const [index, layer] of item.display.layers.entries()) {
+      const layerNode = element("span", `timeline-item-layer timeline-item-layer-${layer.kind} timeline-item-layer-role-${layer.role}`);
+      layerNode.style.zIndex = String(index + 1);
+      if (layer.kind === "text") {
+        layerNode.textContent = layer.text;
+      } else {
+        layerNode.classList.add(`timeline-item-layer-layout-${layer.layout}`, `timeline-item-preview-${layer.preview.kind}`, `state-${layer.preview.state}`);
+        if (layer.direction && layer.layout !== "filmstrip") {
+          layerNode.classList.add(`timeline-item-layer-direction-${layer.direction}`);
+        }
+        if (layer.preview.state === "ready") {
+          if (layer.layout === "filmstrip") mountFilmstrip(layerNode, layer.preview.resource, layer.direction);
+          else layerNode.style.backgroundImage = `url(${JSON.stringify(layer.preview.resource)})`;
+        }
+      }
+      target.append(layerNode);
+    }
+    target.dataset.signature = JSON.stringify(item.display.layers);
+    target.dataset.trackKind = track.kind;
+  }
+
+  function updateTimelineClip(clip, item, track) {
+    const start = item.startFrame;
+    const duration = item.durationFrames;
+    const from = placeFrame(start);
+    const to = placeFrame(start + duration);
+    const selected = state.selection?.type === "item" && state.selection.id === item.id;
+    const editable = item.affordances.move || item.affordances.trimStart || item.affordances.trimEnd;
+    clip.className = `timeline-item timeline-item-tone-${item.presentation.tone} timeline-item-chrome-${item.presentation.chrome}${editable ? " timeline-item-editable" : ""}${item.affordances.split ? " timeline-item-splittable" : ""}${item.enabled ? "" : " disabled"}${selected ? " selected" : ""}`;
+    clip.dataset.item = item.id;
+    clip.style.left = `${from * 100}%`;
+    clip.style.width = `max(2px, ${(to - from) * 100}%)`;
+    clip.title = `${item.display.title} · ${formatNumber(start)}–${formatNumber(start + duration)} 帧`;
+    if (!clip.querySelector(".timeline-item-head")) {
+      clip.innerHTML = `<span class="timeline-item-head"><span class="timeline-item-name"></span><span class="timeline-item-meta"></span></span><span class="timeline-item-body"><span class="timeline-item-layers" aria-hidden="true"></span></span><span class="timeline-item-boundary" aria-hidden="true"></span><span class="timeline-item-selection" aria-hidden="true"></span>`;
+    }
+    clip.querySelector(".timeline-item-name").textContent = item.display.title;
+    const fps = state.snapshot.view.editRate.numerator / state.snapshot.view.editRate.denominator;
+    clip.querySelector(".timeline-item-meta").textContent = `${(duration / fps).toFixed(2)}s`;
+    const layers = clip.querySelector(".timeline-item-layers");
+    const signature = JSON.stringify(item.display.layers);
+    if (layers.dataset.signature !== signature || layers.dataset.trackKind !== track.kind) {
+      renderTimelineItemLayers(layers, item, track);
+    }
+    for (const handle of clip.querySelectorAll(".timeline-item-trim-handle")) handle.remove();
+    if (item.affordances.trimStart) {
+      const handle = element("i", "timeline-item-trim-handle start");
+      handle.dataset.timelineTrim = "start";
+      handle.setAttribute("aria-hidden", "true");
+      clip.append(handle);
+    }
+    if (item.affordances.trimEnd) {
+      const handle = element("i", "timeline-item-trim-handle end");
+      handle.dataset.timelineTrim = "end";
+      handle.setAttribute("aria-hidden", "true");
+      clip.append(handle);
+    }
+  }
+
   function renderTimeline() {
     if (!state.snapshot) return;
     syncZoomChrome();
@@ -2371,7 +2591,6 @@ function startNle() {
       if (range > 0) state.timelineScrollRatio = scroll.scrollTop / range;
     }
     tracks.replaceChildren();
-    tracks.classList.toggle("cut-mode", state.tool === "cut");
     const ruler = element("div", "nle-ruler");
     ruler.append(element("div", "nle-ruler-label"));
     const scale = element("div", "nle-ruler-scale");
@@ -2414,51 +2633,9 @@ function startNle() {
         const from = placeFrame(start);
         const to = placeFrame(start + duration);
         if (to <= 0 || from >= 1) continue;
-        const selected = state.selection?.type === "item" && state.selection.id === item.id;
-        const editable = item.editing.move || item.editing.trimStart || item.editing.trimEnd;
-        const clip = element("button", `timeline-item timeline-item-tone-${item.presentation.tone} timeline-item-chrome-${item.presentation.chrome}${editable ? " timeline-item-editable" : ""}${item.editing.split ? " timeline-item-splittable" : ""}${item.enabled ? "" : " disabled"}${selected ? " selected" : ""}`);
+        const clip = element("button", "timeline-item");
         clip.type = "button";
-        clip.dataset.item = item.id;
-        clip.style.left = `${from * 100}%`;
-        clip.style.width = `max(2px, ${(to - from) * 100}%)`;
-        clip.title = `${item.display.title} · ${formatNumber(start)}–${formatNumber(start + duration)} 帧`;
-        clip.innerHTML = `<span class="timeline-item-head"><span class="timeline-item-name"></span><span class="timeline-item-meta"></span></span><span class="timeline-item-body"><span class="timeline-item-layers" aria-hidden="true"></span></span><span class="timeline-item-boundary" aria-hidden="true"></span><span class="timeline-item-selection" aria-hidden="true"></span>`;
-        if (item.editing.trimStart) {
-          const handle = element("i", "timeline-item-trim-handle start");
-          handle.dataset.timelineTrim = "start";
-          handle.setAttribute("aria-hidden", "true");
-          clip.append(handle);
-        }
-        if (item.editing.trimEnd) {
-          const handle = element("i", "timeline-item-trim-handle end");
-          handle.dataset.timelineTrim = "end";
-          handle.setAttribute("aria-hidden", "true");
-          clip.append(handle);
-        }
-        clip.querySelector(".timeline-item-name").textContent = item.display.title;
-        const fps = state.snapshot.view.editRate.numerator / state.snapshot.view.editRate.denominator;
-        clip.querySelector(".timeline-item-meta").textContent = `${(duration / fps).toFixed(2)}s`;
-        const layers = clip.querySelector(".timeline-item-layers");
-        for (const [index, layer] of item.display.layers.entries()) {
-          const layerNode = element("span", `timeline-item-layer timeline-item-layer-${layer.kind} timeline-item-layer-role-${layer.role}`);
-          layerNode.style.zIndex = String(index + 1);
-          if (layer.kind === "text") {
-            layerNode.textContent = layer.text;
-          } else {
-            layerNode.classList.add(`timeline-item-layer-layout-${layer.layout}`, `timeline-item-preview-${layer.preview.kind}`, `state-${layer.preview.state}`);
-            if (layer.direction && layer.layout !== "filmstrip") {
-              layerNode.classList.add(`timeline-item-layer-direction-${layer.direction}`);
-            }
-            if (layer.preview.state === "ready") {
-              if (layer.layout === "filmstrip") {
-                mountFilmstrip(layerNode, layer.preview.resource, layer.direction);
-              } else {
-                layerNode.style.backgroundImage = `url(${JSON.stringify(layer.preview.resource)})`;
-              }
-            }
-          }
-          layers.append(layerNode);
-        }
+        updateTimelineClip(clip, item, track);
         lane.append(clip);
       }
       const resize = element("div", "nle-track-resize");
@@ -2500,6 +2677,83 @@ function startNle() {
     paintTimeline();
   }
 
+  function patchTimeline() {
+    if (!state.snapshot) return false;
+    const scene = state.snapshot.scene;
+    const scroll = app.querySelector("#timeline-scroll");
+    const tracks = app.querySelector("#tracks");
+    const stack = tracks.querySelector(":scope > .nle-track-stack");
+    const scale = tracks.querySelector(".nle-ruler-scale");
+    if (!stack || !scale) return false;
+    const rows = [...stack.querySelectorAll(":scope > .nle-track")];
+    if (rows.length !== scene.tracks.length
+      || rows.some((row, index) => row.dataset.trackRow !== scene.tracks[index]?.id)) return false;
+    syncZoomChrome();
+    drawTimelineRuler(scale);
+    for (const [index, track] of scene.tracks.entries()) {
+      const row = rows[index];
+      row.classList.toggle("selected", state.selection?.type === "track" && state.selection.id === track.id);
+      row.style.height = `${track.heightPx}px`;
+      row.style.flexBasis = `${track.heightPx}px`;
+      const trackButton = row.querySelector(".track-kind");
+      trackButton.dataset.track = track.id;
+      trackButton.title = `${track.name} · ${track.kind === "audio" ? "音频轨道" : "画面轨道"}`;
+      trackButton.setAttribute("aria-label", trackButton.title);
+      trackButton.innerHTML = icon(track.kind === "audio" ? "audio" : "image", 14);
+      const mute = row.querySelector("[data-track-mute]");
+      mute.dataset.trackMute = track.id;
+      mute.classList.toggle("active", track.muted);
+      mute.title = trackMuteLabel(track);
+      mute.setAttribute("aria-label", mute.title);
+      mute.innerHTML = icon(track.kind !== "audio" ? (track.muted ? "hidden" : "eye") : (track.muted ? "mute" : "volume"), 14);
+      const lock = row.querySelector("[data-track-lock]");
+      lock.dataset.trackLock = track.id;
+      lock.classList.toggle("active", trackLocked(track.id));
+      lock.title = trackLocked(track.id) ? "解锁" : "锁定";
+      lock.innerHTML = icon(trackLocked(track.id) ? "lock" : "unlock", 14);
+      const lane = row.querySelector("[data-lane]");
+      lane.className = `nle-track-content track-tone-${track.tone}`;
+      lane.style.setProperty("--lane-height", `${track.heightPx}px`);
+      lane.dataset.lane = track.id;
+      const visibleItems = track.items.filter(item => {
+        const from = placeFrame(item.startFrame);
+        const to = placeFrame(item.startFrame + item.durationFrames);
+        return to > 0 && from < 1;
+      });
+      const clips = [...lane.querySelectorAll(":scope > .timeline-item")];
+      const clipsByItem = new Map(clips.map(clip => [clip.dataset.item, clip]));
+      if (clips.length !== visibleItems.length || visibleItems.some(item => !clipsByItem.has(item.id))) return false;
+      for (const item of visibleItems) {
+        const clip = clipsByItem.get(item.id);
+        updateTimelineClip(clip, item, track);
+        lane.append(clip);
+      }
+      const resize = row.querySelector("[data-track-resize]");
+      resize.dataset.trackResize = track.id;
+      resize.setAttribute("aria-valuenow", String(track.heightPx));
+    }
+    const ruler = tracks.querySelector(".nle-ruler");
+    const availableHeight = Math.max(0, scroll.clientHeight - (ruler?.offsetHeight ?? 0));
+    const trackHeight = scene.tracks.reduce((total, track) => total + track.heightPx, 0);
+    const edgeRoom = Math.min(12, Math.max(8, (scene.tracks[0]?.heightPx ?? 54) / 6));
+    tracks.style.setProperty("--timeline-track-area-height", `${availableHeight}px`);
+    tracks.style.setProperty("--timeline-track-edge-room", `${edgeRoom}px`);
+    stack.classList.toggle("scrollable", trackHeight + edgeRoom * 2 > availableHeight);
+    paintTimeline();
+    return true;
+  }
+
+  function renderAfterSnapshot(previous) {
+    if (!state.snapshot) return;
+    document.title = `${currentProject().name} · Hypit NLE`;
+    renderChrome();
+    if (!previous || previous.mediaLibrary.generation !== state.snapshot.mediaLibrary.generation) renderBin();
+    renderMonitor();
+    renderInspector();
+    if (!patchTimeline()) renderTimeline();
+    app.dataset.loading = "false";
+  }
+
   function render() {
     if (!state.snapshot) return;
     document.title = `${currentProject().name} · Hypit NLE`;
@@ -2509,49 +2763,6 @@ function startNle() {
     renderInspector();
     renderTimeline();
     app.dataset.loading = "false";
-  }
-
-  async function splitSelected() {
-    const selected = selectedItem();
-    if (!selected || trackLocked(selected.track.id)) return;
-    if (!selectedTimelineSceneItem()?.editing.split) {
-      notify("当前项目不支持分割", true);
-      return;
-    }
-    const project = currentProject();
-    const start = frames(selected.item.start, state.snapshot.view.editRate);
-    const end = itemEnd(selected.item, state.snapshot.view.editRate);
-    if (state.frame <= start || state.frame >= end) {
-      notify("播放头需要位于所选片段内部", true);
-      return;
-    }
-    const rightId = `${selected.item.id}-part-${crypto.randomUUID().slice(0, 8)}`;
-    await transact(`分割 ${itemLabel(selected.item, state.snapshot.mediaLibrary.assets)}`, [{ kind: "item.split", id: selected.item.id, at: frameValue(Math.round(state.frame), state.snapshot.view.editRate), rightId }], "已分割");
-    state.selection = { type: "item", id: rightId };
-  }
-
-  async function trimSelected(edge) {
-    const selected = selectedItem();
-    if (!selected || trackLocked(selected.track.id)) return;
-    const editing = selectedTimelineSceneItem()?.editing;
-    if (edge === "start" ? !editing?.trimStart : !editing?.trimEnd) {
-      notify("当前项目不支持裁边", true);
-      return;
-    }
-    const at = Math.round(state.frame);
-    const start = frames(selected.item.start, state.snapshot.view.editRate);
-    const end = itemEnd(selected.item, state.snapshot.view.editRate);
-    if (at <= start || at >= end) {
-      notify("播放头需要位于所选片段内部", true);
-      return;
-    }
-    const side = edge === "start" ? "左边沿" : "右边沿";
-    await transact(`裁剪 ${itemLabel(selected.item, state.snapshot.mediaLibrary.assets)} ${side}`, [{
-      kind: "item.trim",
-      id: selected.item.id,
-      edge,
-      at: frameValue(at, state.snapshot.view.editRate),
-    }], `已裁剪${side}`);
   }
 
   async function removeSelected() {
@@ -2591,9 +2802,6 @@ function startNle() {
       renderMonitor();
       renderInspector();
       paintTimeline();
-      if (state.tool === "cut") {
-        if (timelineSceneItem(item.id)?.editing.split) void splitSelected();
-      }
       return;
     }
     if (target.dataset.track) { select({ type: "track", id: target.dataset.track }); return; }
@@ -2624,8 +2832,8 @@ function startNle() {
     }
     const action = target.dataset.action;
     if (!action) return;
-    if (action === "undo") void update("/api/nle/undo", {}, "已撤销");
-    if (action === "redo") void update("/api/nle/redo", {}, "已重做");
+    if (action === "undo") void update("/api/nle/undo", {}, "已撤销", "all");
+    if (action === "redo") void update("/api/nle/redo", {}, "已重做", "all");
     if (action === "refresh-media") void update("/api/nle/media-library/refresh", {}, "项目素材已刷新");
     if (action === "export") void openExportDialog();
     if (action === "canvas-layers") {
@@ -2633,8 +2841,6 @@ function startNle() {
       renderChrome();
       renderCanvasScene();
     }
-    if (action === "tool-select") { state.tool = "select"; renderChrome(); renderTimeline(); }
-    if (action === "tool-cut") { state.tool = state.tool === "cut" ? "select" : "cut"; renderChrome(); renderTimeline(); }
     if (action === "previous") { stopPlayback(); seek(state.frame - 1); }
     if (action === "next") { stopPlayback(); seek(state.frame + 1); }
     if (action === "play") togglePlayback();
@@ -2646,10 +2852,6 @@ function startNle() {
     if (action === "zoom-out") pinchZoom(playheadFraction(), 1.25);
     if (action === "zoom-in") pinchZoom(playheadFraction(), .8);
     if (action === "zoom-fit") settleZoom(0, 1);
-    if (action === "split") void splitSelected();
-    if (action === "trim-start") void trimSelected("start");
-    if (action === "trim-end") void trimSelected("end");
-    if (action === "remove") void removeSelected();
     const selected = selectedItem();
     const track = selectedTrack();
     if (action === "move-earlier" && selected) void transact(`提前 ${itemLabel(selected.item, state.snapshot.mediaLibrary.assets)}`, [{ kind: "item.move", ids: [selected.item.id], delta: frameValue(-1, state.snapshot.view.editRate) }]);
@@ -2668,33 +2870,13 @@ function startNle() {
       renderInspector();
       return;
     }
-    if (control.dataset.inspectorSection === "nle-picture-layout") {
-      const layer = canvasLayer(state.selection.id);
-      if (!layer?.layout) {
-        notify("所选项目没有画面布局", true);
-        renderInspector();
-        return;
-      }
-      const field = control.dataset.inspectorField;
-      const layout = { ...layer.layout, [field]: value };
-      void updateSpatialLayout(layer.id, layout);
-      return;
-    }
-    if (control.dataset.inspectorSection === "nle-occurrence"
-      && control.dataset.inspectorField === "name") {
-      const name = String(value).trim();
-      void transact(name.length === 0 ? `恢复 ${state.selection.id} 默认名称` : `重命名 ${state.selection.id}`,
-        [{ kind: "item.update", id: state.selection.id, name: name.length === 0 ? null : name }],
-        name.length === 0 ? "已恢复默认名称" : "名称已更新");
-      return;
-    }
     void update("/api/nle/item-parameter", {
       revision: currentProject().revision,
       item: state.selection.id,
       section: control.dataset.inspectorSection,
       field: control.dataset.inspectorField,
       value,
-    }, "参数已更新");
+    }, "参数已更新", [state.selection.id]);
   });
   const transportScrubber = app.querySelector("#transport-scrubber");
   const beginTransportScrub = () => {
@@ -2726,7 +2908,7 @@ function startNle() {
       y: (event.clientY - rectangle.top) / Math.max(1, rectangle.height) * canvas.height,
     };
   };
-  const canvasDragLayout = (drag, point) => {
+  const canvasDragLayout = (drag, point, freeAspect = false) => {
     const dx = Math.round(point.x - drag.point.x);
     const dy = Math.round(point.y - drag.point.y);
     const original = drag.layout;
@@ -2739,10 +2921,22 @@ function startNle() {
     const bottom = original.y + original.height;
     const west = drag.handle.includes("w");
     const north = drag.handle.includes("n");
-    const x = west ? Math.min(right - 1, original.x + dx) : original.x;
-    const y = north ? Math.min(bottom - 1, original.y + dy) : original.y;
-    const nextRight = west ? right : Math.max(original.x + 1, right + dx);
-    const nextBottom = north ? bottom : Math.max(original.y + 1, bottom + dy);
+    let x = west ? Math.min(right - 1, original.x + dx) : original.x;
+    let y = north ? Math.min(bottom - 1, original.y + dy) : original.y;
+    let nextRight = west ? right : Math.max(original.x + 1, right + dx);
+    let nextBottom = north ? bottom : Math.max(original.y + 1, bottom + dy);
+    if (!freeAspect) {
+      const widthScale = (nextRight - x) / original.width;
+      const heightScale = (nextBottom - y) / original.height;
+      const wanted = Math.abs(widthScale - 1) >= Math.abs(heightScale - 1) ? widthScale : heightScale;
+      const scale = Math.max(wanted, drag.minimumWidth / original.width, drag.minimumHeight / original.height);
+      const width = original.width * scale;
+      const height = original.height * scale;
+      if (west) x = right - width;
+      else nextRight = original.x + width;
+      if (north) y = bottom - height;
+      else nextBottom = original.y + height;
+    }
     return { ...original, x, y, width: nextRight - x, height: nextBottom - y };
   };
 
@@ -2767,16 +2961,20 @@ function startNle() {
       return;
     }
     event.preventDefault();
-    if (!layer.editing.transform) {
+    const handle = event.target.closest("[data-canvas-handle]")?.dataset.canvasHandle ?? "move";
+    const mode = handle === "move" ? "move" : "resize";
+    if (mode === "move" ? !layer.affordances.translate : layer.affordances.resize === false) {
       renderCanvasScene();
       return;
     }
     canvasPointer = {
       pointerId: event.pointerId,
       item: layer.id,
-      handle: event.target.closest("[data-canvas-handle]")?.dataset.canvasHandle ?? "move",
+      handle,
       point: canvasPoint(event),
       layout: structuredClone(layer.layout),
+      minimumWidth: layer.affordances.resize === false ? 1 : layer.affordances.resize.minimumWidth,
+      minimumHeight: layer.affordances.resize === false ? 1 : layer.affordances.resize.minimumHeight,
       node: box,
       moved: false,
     };
@@ -2785,7 +2983,7 @@ function startNle() {
 
   addEventListener("pointermove", event => {
     if (!canvasPointer || canvasPointer.pointerId !== event.pointerId || event.buttons !== 1) return;
-    const layout = canvasDragLayout(canvasPointer, canvasPoint(event));
+    const layout = canvasDragLayout(canvasPointer, canvasPoint(event), event.shiftKey);
     canvasPointer.moved ||= layout.x !== canvasPointer.layout.x || layout.y !== canvasPointer.layout.y
       || layout.width !== canvasPointer.layout.width || layout.height !== canvasPointer.layout.height;
     state.spatialDraft = { item: canvasPointer.item, layout };
@@ -3111,10 +3309,10 @@ function startNle() {
     const node = event.target.closest(".timeline-item");
     const entry = node === null ? undefined : timelineSceneEntry(node.dataset.item);
     const trim = event.target.closest("[data-timeline-trim]")?.dataset.timelineTrim;
-    const gesture = state.tool !== "select" || entry === undefined ? undefined
-      : trim === "start" && entry.item.editing.trimStart ? "trim-start"
-        : trim === "end" && entry.item.editing.trimEnd ? "trim-end"
-          : entry.item.editing.move ? "move" : undefined;
+    const gesture = entry === undefined ? undefined
+      : trim === "start" && entry.item.affordances.trimStart ? "trim-start"
+        : trim === "end" && entry.item.affordances.trimEnd ? "trim-end"
+          : entry.item.affordances.move ? "move" : undefined;
     if (node && entry && gesture) {
       if (state.busy) return;
       if (state.selection?.type !== "item" || state.selection.id !== entry.item.id) {
@@ -3400,14 +3598,21 @@ function startNle() {
     if (event.key === "ArrowRight") { event.preventDefault(); stopPlayback(); seek(state.frame + 1); }
     if (event.key === "Delete" || event.key === "Backspace") { event.preventDefault(); void removeSelected(); }
     if (event.key === "Escape" && state.selection) { select(undefined); }
-    if (event.key.toLowerCase() === "v") { state.tool = "select"; renderChrome(); renderTimeline(); }
-    if (event.key.toLowerCase() === "c") { state.tool = "cut"; renderChrome(); renderTimeline(); }
   });
 
   addEventListener("message", event => {
-    const frame = app.querySelector("#programme iframe");
-    if (event.origin !== location.origin || event.source !== frame?.contentWindow) return;
+    const frame = [...app.querySelectorAll("#programme iframe")]
+      .find(candidate => event.source === candidate.contentWindow);
+    if (event.origin !== location.origin || !frame) return;
     if (event.data?.type === "hypit.html-document.error@1") {
+      const pending = frame.classList.contains("programme-frame-pending");
+      if (pending) {
+        if (state.previewPendingKey === frame.dataset.programmeKey) state.previewPendingKey = undefined;
+        frame.remove();
+        if (app.querySelector("#programme .programme-frame-active")) app.querySelector(".programme-loading")?.remove();
+        notify(String(event.data.message ?? "画面预览失败"), true);
+        return;
+      }
       state.playing = false;
       if (state.animation !== undefined) cancelAnimationFrame(state.animation);
       state.animation = undefined;
@@ -3416,13 +3621,23 @@ function startNle() {
       notify(String(event.data.message ?? "画面预览失败"), true);
       return;
     }
-    if (event.data?.type === "hypit.html-document.state@1") {
+    if (event.data?.type === "hypit.html-document.state@1"
+      && frame.classList.contains("programme-frame-active")
+      && state.previewPendingKey === undefined) {
       app.querySelector(".programme-loading")?.remove();
     }
   });
 
   addEventListener("beforeunload", event => { if (state.snapshot?.dirty) event.preventDefault(); });
-  request("/api/nle").then(value => { state.snapshot = value; render(); }).catch(error => {
+  addEventListener("focus", () => { void checkExternalFiles(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void checkExternalFiles();
+  });
+  request("/api/nle").then(value => {
+    state.snapshot = value;
+    render();
+    connectApplicationEvents();
+  }).catch(error => {
     app.dataset.loading = "false";
     notify(error instanceof Error ? error.message : String(error), true);
   });

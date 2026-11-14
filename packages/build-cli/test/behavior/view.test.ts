@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { BuildResult } from "@hypit/result";
-import type { TypeRef } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
 import type { CliBuildView as BuildView } from "@hypit/build-operations-cli";
 import { buildResultView, buildStatusView } from "@hypit/build-operations-cli";
 
 const valueType: TypeRef = {
-  module: { name: "example", version: "1" },
+  module: { name: "example" },
   name: "Value",
 };
 

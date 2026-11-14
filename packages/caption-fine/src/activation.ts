@@ -1,9 +1,11 @@
-import { createNleHtmlVideoPackageFacet } from "@hypit/html-video";
+import { createModuleFacet } from "@hypit/module";
+import { createGenerationModuleFacet } from "@hypit/generation-build";
+import { createNleAudiovisualPackageFacet } from "@hypit/nle-audiovisual";
 import { createNleAuthoringFacet, createNlePackageFacet } from "@hypit/nle";
 import { createNleInspectorPresentationFacet, createNleTimelinePresentationFacet } from "@hypit/nle-view";
 
 import {
-  captionFineNleHtmlVideoResolver,
+  captionFineNleAudiovisualResolver,
   captionFineNleAuthoring,
   captionFineNleManifest,
   captionFineNleResolver,
@@ -13,11 +15,10 @@ import { captionFineNleInspector } from "./nle-inspector.js";
 import { captionFineStyleNleAuthoring, captionFineStyleNleInspector } from "./nle-style.js";
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [{ manifest: captionFineNleManifest }],
   facets: [
+    createModuleFacet(captionFineNleManifest), createGenerationModuleFacet(captionFineNleManifest),
     createNlePackageFacet({ components: [captionFineNleResolver] }),
-    createNleHtmlVideoPackageFacet({ components: [captionFineNleHtmlVideoResolver] }),
+    createNleAudiovisualPackageFacet({ components: [captionFineNleAudiovisualResolver] }),
     createNleAuthoringFacet({
       componentParameters: [captionFineNleAuthoring],
       componentValues: [captionFineStyleNleAuthoring],

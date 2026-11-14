@@ -29,8 +29,12 @@ function portablePath(value: unknown, label: string): asserts value is string {
   assert(!value.includes("\\") && !value.startsWith("/") && !/^[A-Za-z]:/u.test(value),
     `${label} must be a portable relative path.`);
   const relative = value.startsWith("./") ? value.slice(2) : value;
-  assert(relative.length > 0 && relative.split("/").every((part) => part.length > 0 && part !== "." && part !== ".."),
-    `${label} must not contain empty, current or parent segments.`);
+  const parts = relative.split("/");
+  assert(relative.length > 0 && parts.every((part) => part.length > 0 && part !== "."),
+    `${label} must not contain empty or current segments.`);
+  const firstOwned = parts.findIndex((part) => part !== "..");
+  assert(firstOwned >= 0 && parts.slice(firstOwned).every((part) => part !== ".."),
+    `${label} may contain parent segments only before its owned path.`);
 }
 
 function assertRate(value: TemporalRate): void {

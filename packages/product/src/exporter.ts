@@ -1,5 +1,6 @@
 import type { Facet } from "@hypit/facet";
-import { sameType, type BlobRef, type TypeRef, type Value } from "@hypit/protocol";
+import { type BlobRef, type Value } from "@hypit/protocol";
+import { sameType, type TypeRef } from "@hypit/module";
 
 export type ProductExportBytes = Uint8Array | AsyncIterable<Uint8Array>;
 
@@ -20,19 +21,19 @@ export type ProductExporter = {
   export(context: ProductExportContext): ProductExport | Promise<ProductExport>;
 };
 
-export const productExporterFacetAbi = "hypit.product-exporter@1";
+export const productExporterFacetKind = "hypit.product-exporter";
 
 export type ProductExporterFacet = Facet & {
-  readonly abi: typeof productExporterFacetAbi;
+  readonly kind: typeof productExporterFacetKind;
   readonly implementation: ProductExporter;
 };
 
 export function createProductExporterFacet(exporter: ProductExporter): ProductExporterFacet {
-  return { abi: productExporterFacetAbi, implementation: exporter };
+  return { kind: productExporterFacetKind, implementation: exporter };
 }
 
 export function productExportersFromFacets(facets: readonly Facet[]): readonly ProductExporter[] {
-  return facets.flatMap((facet) => facet.abi === productExporterFacetAbi
+  return facets.flatMap((facet) => facet.kind === productExporterFacetKind
     ? [(facet as ProductExporterFacet).implementation]
     : []);
 }

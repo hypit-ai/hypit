@@ -1,0 +1,35 @@
+{
+  "format": "hypit.media-asset@1",
+  "id": "icon-alice",
+  "media": {
+    "file": {
+      "path": "icon-alice.png",
+      "mediaType": "image/png"
+    },
+    "interpretation": {
+      "id": "icon-alice:media",
+      "picture": {
+        "interpretation": {
+          "codedHeight": 512,
+          "codedWidth": 512,
+          "picture": {
+            "alphaMode": "straight",
+            "bitDepth": 8,
+            "colorMatrix": "rgb",
+            "colorPrimaries": "bt709",
+            "colorRange": "full",
+            "colorTransfer": "srgb"
+          },
+          "rotationDegrees": 0,
+          "sampleAspectRatio": {
+            "denominator": 1,
+            "numerator": 1
+          }
+        },
+        "kind": "constant",
+        "streamIndex": 0
+      }
+    }
+  },
+  "representations": []
+}

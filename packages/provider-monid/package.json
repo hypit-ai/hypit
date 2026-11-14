@@ -15,22 +15,21 @@
     "activation": "./src/activation.ts"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0",
-    "@hypit/runtime-local": "workspace:^0.2.0"
+    "@hypit/execution-environment-local": "workspace:^0.2.0",
+    "@hypit/hypit": "workspace:^0.4.0"
   },
   "devDependencies": {
     "@hypit/endpoint": "workspace:*",
-    "@hypit/generation": "workspace:*",
+    "@hypit/execution-environment-local": "workspace:*",
+    "@hypit/generation-model": "workspace:*",
     "@hypit/hypit": "workspace:*",
     "@hypit/minimax-h3": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/runtime": "workspace:*",
-    "@hypit/runtime-local": "workspace:*",
-    "@hypit/wan": "workspace:*",
-    "@hypit/seedance": "workspace:*"
+    "@hypit/seedance": "workspace:*",
+    "@hypit/wan": "workspace:*"
   },
   "dependencies": {
-    "@hypit/generation": "workspace:^0.2.0",
+    "@hypit/generation-model": "workspace:*",
     "@hypit/minimax-h3": "workspace:^0.3.0",
     "@hypit/resource-store": "workspace:^0.1.0",
     "@hypit/seedance": "workspace:^0.3.0",

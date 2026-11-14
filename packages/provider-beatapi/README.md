@@ -13,15 +13,15 @@ current Build.
 
 | Capability | BeatAPI model | Task path |
 | --- | --- | --- |
-| `@hypit/seedance@1#seedance-2` | `seedance-2` | `/v1/videos/tasks` |
-| `@hypit/seedance@1#seedance-2-fast` | `seedance-2-fast` | `/v1/videos/tasks` |
-| `@hypit/seedance@1#seedance-2-mini` | `seedance-2-mini` | `/v1/videos/tasks` |
-| `@hypit/seedance@1#seedance-2.5` | `seedance-2.5` | `/v1/videos/tasks` |
-| `@hypit/minimax-h3@1#minimax-h3` | `minimax-h3` | `/v1/videos/tasks` |
-| `@hypit/grok-imagine@1#grok-imagine-video-1.5-preview` | `grok-imagine-video-1.5` | `/v1/videos/tasks` |
-| `@hypit/gpt-image@1#gpt-image-2` | `gpt-image-2` | `/v1/images/tasks` |
-| `@hypit/nano-banana@1#nano-banana-2` | `nano-banana-2` | `/v1/images/tasks` |
-| `@hypit/nano-banana@1#nano-banana-pro` | `nano-banana-pro` | `/v1/images/tasks` |
+| `@hypit/seedance#seedance-2` | `seedance-2` | `/v1/videos/tasks` |
+| `@hypit/seedance#seedance-2-fast` | `seedance-2-fast` | `/v1/videos/tasks` |
+| `@hypit/seedance#seedance-2-mini` | `seedance-2-mini` | `/v1/videos/tasks` |
+| `@hypit/seedance#seedance-2.5` | `seedance-2.5` | `/v1/videos/tasks` |
+| `@hypit/minimax-h3#minimax-h3` | `minimax-h3` | `/v1/videos/tasks` |
+| `@hypit/grok-imagine#grok-imagine-video-1.5-preview` | `grok-imagine-video-1.5` | `/v1/videos/tasks` |
+| `@hypit/gpt-image#gpt-image-2` | `gpt-image-2` | `/v1/images/tasks` |
+| `@hypit/nano-banana#nano-banana-2` | `nano-banana-2` | `/v1/images/tasks` |
+| `@hypit/nano-banana#nano-banana-pro` | `nano-banana-pro` | `/v1/images/tasks` |
 
 BeatAPI documents further models, including Veo, Kling, Wan 3.0 and HappyHorse; this Provider maps
 only the models the Distribution already describes.
@@ -53,12 +53,12 @@ sizes is reported before submission. One Resource is uploaded once per Runtime o
 callers may replace that transport with `publicAssetUrl(artifact, resources, fields)`, which must
 return a URL BeatAPI can fetch.
 
-Runtime Profile example:
+Environment Profile example:
 
 ```json
 {
-  "format": "hypit.runtime-local@1",
-  "dataRoot": ".hypit/runtimes/local",
+  "format": "hypit.execution-environment-local@1",
+  "dataRoot": ".hypit/environment/local",
   "credentials": {
     "local": {
       "use": "@hypit/credential-store-local"
@@ -80,7 +80,7 @@ Runtime Profile example:
 ```
 
 `baseUrl` defaults to `https://api.beatapi.io`. Store the API key with
-`hypit auth login beatapi.default --runtime hypit.runtime.json`. Optional `requestTimeoutMs`,
+`hypit auth login beatapi.default --runtime hypit.generation-runtime.json`. Optional `requestTimeoutMs`,
 `operationTimeoutMs` and `actionLimits` bound single HTTP calls, the whole remote task and action
 concurrency. Each submission sends the Runtime operation as its `Idempotency-Key`, so a retried
 submission of the same body resolves to the same task.

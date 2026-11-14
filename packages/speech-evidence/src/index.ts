@@ -1,6 +1,7 @@
-import { assertBlobRef } from "@hypit/hypit/protocol";
+import { assertBlobRef } from "@hypit/hypit/value";
 import { mediaDependency, mediaTypes } from "@hypit/media";
-import type { BlobRef, ModuleManifest } from "@hypit/hypit/protocol";
+import type { BlobRef } from "@hypit/hypit/value";
+import type { GenerationModuleDefinition } from "@hypit/hypit/generation/build";
 import type { PreparedAudioSource } from "@hypit/media";
 import { assertLocalTemporalDomain } from "@hypit/temporal/algebra";
 import { resolveTemporalBoundary } from "@hypit/temporal/sampling";
@@ -35,10 +36,8 @@ export type SpeechEvidenceAudio = {
   readonly sampleFrames: number;
 };
 
-export const speechEvidenceManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const speechEvidenceManifest: GenerationModuleDefinition = {
   name: speechEvidenceModuleRef.name,
-  version: speechEvidenceModuleRef.version,
   dependencies: [mediaDependency],
   types: [speechEvidenceTypes.audio.name],
   capabilities: [{ name: speechEvidenceCapabilities.projectAudio.name, returns: speechEvidenceTypes.audio }],

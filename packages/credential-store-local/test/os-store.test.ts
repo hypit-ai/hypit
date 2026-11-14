@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { credentialRef } from "@hypit/runtime";
+import { credentialRef } from "@hypit/execution-environment";
 import { OsCredentialStore } from "@hypit/credential-store-local";
 
 function memoryStore(entries: Readonly<Record<string, string>> = {}) {

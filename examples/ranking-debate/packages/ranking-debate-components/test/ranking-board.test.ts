@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { readHtmlVisual } from "@hypit/html-program";
-import { nleLinearSourceTime, type NleComponentItem } from "@hypit/nle";
+import { nleLinearTimeMapping, type NleComponentItem } from "@hypit/nle";
 import { canonicalize } from "@hypit/protocol";
 import { exactTemporalValue } from "@hypit/temporal/algebra";
 
 import {
   rankingBoardHtmlResolver,
   rankingBoardNleAuthoring,
+  rankingBoardNleMediaAuthoring,
   rankingBoardNleResolver,
   rankingBoardComponentSymbol,
 } from "../src/index.js";
@@ -21,7 +22,7 @@ const item: NleComponentItem = {
   component: rankingBoardComponentSymbol,
   start: at(0),
   duration: at(12),
-  sourceTime: nleLinearSourceTime(at(12)),
+  sourceTime: nleLinearTimeMapping(at(12)),
   enabled: true,
   parameters: canonicalize({
     title: "Capability ranking",
@@ -66,4 +67,52 @@ test("project Ranking Board authors a direct entry tier edit", () => {
     { item } as never);
   const entries = (edited as Record<string, unknown>).entries as readonly Record<string, unknown>[];
   assert.equal(entries[0]?.tier, "A");
+});
+
+test("project Ranking Board consumes a project Media input instead of serializing picture bytes in parameters", () => {
+  const mediaItem: NleComponentItem = {
+    ...item,
+    parameters: canonicalize({
+      ...(item.parameters as Readonly<Record<string, unknown>>),
+      entries: [{
+        id: "editable", label: "Editable", tier: "S",
+        visual: { kind: "media", input: "portrait:editable" },
+        revealAt: at(3), entry: "drop", preset: false,
+      }],
+    }),
+    media: { "portrait:editable": { path: "../../media/editable.media.json" } },
+  };
+  const portrait = {
+    id: "editable-portrait",
+    source: { kind: "blob" as const, resource: "res_ranking_editable_portrait" as const,
+      size: 1, mediaType: "image/png" },
+    picture: {
+      kind: "constant" as const,
+      streamIndex: 0,
+      interpretation: {
+        codedWidth: 256,
+        codedHeight: 256,
+        sampleAspectRatio: { numerator: 1, denominator: 1 },
+        rotationDegrees: 0 as const,
+        picture: {
+          colorPrimaries: "bt709" as const,
+          colorTransfer: "srgb" as const,
+          colorMatrix: "rgb" as const,
+          colorRange: "full" as const,
+          bitDepth: 8 as const,
+          alphaMode: "opaque" as const,
+        },
+      },
+    },
+  };
+  const context = { project: {} as never, media: { "portrait:editable": portrait } };
+  const resolved = rankingBoardNleResolver.resolve(mediaItem, context);
+  const terminal = rankingBoardHtmlResolver.resolve(mediaItem, context, resolved);
+  if (terminal.html?.implementation.kind !== "program") throw new Error("Ranking Board is not a Program.");
+  const visual = readHtmlVisual(terminal.html.implementation.program);
+  assert.equal(visual.dependencies[0]?.artifact.resource, portrait.source.resource);
+  assert.match(visual.html, /hypit-artifact:\/\/res_ranking_editable_portrait/u);
+  assert.deepEqual(rankingBoardNleMediaAuthoring.inputs({ item: mediaItem } as never), [{
+    key: "portrait:editable", label: "Editable image", requires: ["picture"], required: true,
+  }]);
 });

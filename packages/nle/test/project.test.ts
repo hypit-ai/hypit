@@ -15,10 +15,11 @@ import {
   findNleComponentValue,
   findNleItem,
   findNlePictureLayout,
-  nleLinearSourceTime,
+  nleLinearTimeMapping,
   nleProjectDuration,
   parseNleProject,
-  resolveNleComponentBinding,
+  planNleSpatialEdit,
+  resolveNleComponentSharedValue,
   resolveNlePictureLayout,
   serializeNleProject,
   type NleComponentItem,
@@ -37,9 +38,9 @@ const frame = (value: number) => exactTemporalValueFromFrames(value, {
 const third = (ticks: number) => ({ ticks: String(ticks), timeBase: { numerator: 1, denominator: 3 } });
 const exactSecond = { ticks: "1", timeBase: { numerator: 1, denominator: 1 } } as const;
 const linear = (duration: ReturnType<typeof frame>, sourceAtStart = frame(0)) =>
-  nleLinearSourceTime(duration, sourceAtStart);
+  nleLinearTimeMapping(duration, sourceAtStart);
 
-function prepared() {
+function prepared(width = 100, height = 100) {
   const timestamp = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } });
   return prepareMedia({
     id: "interview-prepared",
@@ -48,7 +49,7 @@ function prepared() {
       kind: "video", index: 0, codecName: "h264",
       disposition: { default: true, attachedPicture: false },
       startPts: timestamp("0"), endPts: timestamp("4"), decodedUnitCount: 8,
-      width: 100, height: 100, sampleAspectRatio: { numerator: 1, denominator: 1 },
+      width, height, sampleAspectRatio: { numerator: 1, denominator: 1 },
       rotationDegrees: 0,
       picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
         colorRange: "limited", bitDepth: 8, alphaMode: "opaque" },
@@ -84,7 +85,7 @@ const captionItem: NleComponentItem = {
   duration: frame(2),
   sourceTime: linear(frame(2)),
   enabled: true,
-  component: { module: { name: "@example/caption", version: "1" }, name: "default" },
+  component: { module: { name: "@example/caption" }, name: "default" },
   parameters: { text: "Hello NLE", color: "white" },
   picture: {
     layout: { x: 10, y: 70, width: 80, height: 20, fit: "contain" },
@@ -98,7 +99,7 @@ const componentItem: NleComponentItem = {
   duration: frame(4),
   sourceTime: linear(frame(4)),
   enabled: true,
-  component: { module: { name: "@example/title", version: "1" }, name: "card" },
+  component: { module: { name: "@example/title" }, name: "card" },
   parameters: { title: "Direct project state" },
   picture: fullPicture,
 };
@@ -130,11 +131,46 @@ test("one revision stores Media and Component Presents directly", () => {
   assert.deepEqual(reopened, edited);
 });
 
+test("spatial intentions plan ordinary inline and shared Layout transactions", () => {
+  let project = applyNleTransaction(createNleProject({
+    id: "spatial",
+    name: "Spatial",
+    canvas: { width: 100, height: 100, clearColor: "black" },
+  }), { revision: 0, commands: [{
+    kind: "track.add",
+    track: { id: "picture", name: "Picture", kind: "picture", muted: false, items: [captionItem] },
+  }] });
+
+  project = applyNleTransaction(project, planNleSpatialEdit(project, "caption-one", {
+    kind: "frame.translate", deltaX: 5, deltaY: -10,
+  }));
+  assert.deepEqual(resolveNlePictureLayout(project,
+    (findNleItem(project, "caption-one").item as NleComponentItem).picture!.layout),
+  { x: 15, y: 60, width: 80, height: 20, fit: "contain" });
+
+  project = applyNleTransaction(project, planNleSpatialEdit(project, "caption-one", {
+    kind: "layout.share", id: "caption-layout", name: "Caption layout",
+  }));
+  assert.deepEqual((findNleItem(project, "caption-one").item as NleComponentItem).picture!.layout,
+    { ref: "caption-layout" });
+
+  project = applyNleTransaction(project, planNleSpatialEdit(project, "caption-one", {
+    kind: "focus.set", contentX: 0.25, contentY: 0.75,
+  }));
+  assert.deepEqual(findNlePictureLayout(project, "caption-layout").layout,
+    { x: 15, y: 60, width: 80, height: 20, fit: "contain", contentX: 0.25, contentY: 0.75 });
+
+  project = applyNleTransaction(project, planNleSpatialEdit(project, "caption-one", {
+    kind: "layout.unlink",
+  }));
+  assert.equal("ref" in (findNleItem(project, "caption-one").item as NleComponentItem).picture!.layout, false);
+});
+
 test("Component slots and picture layouts link ordinary Items to explicit shared project values", () => {
   const symbol = componentItem.component;
   const linkedItem: NleComponentItem = {
     ...componentItem,
-    bindings: [{ slot: "appearance", ref: "shared-appearance" }],
+    sharedValues: [{ slot: "appearance", ref: "shared-appearance" }],
     picture: { layout: { ref: "lower-third" } },
   };
   const secondLinkedItem: NleComponentItem = {
@@ -160,7 +196,7 @@ test("Component slots and picture layouts link ordinary Items to explicit shared
     } },
   ] });
 
-  assert.deepEqual(resolveNleComponentBinding(base, linkedItem, "appearance").value,
+  assert.deepEqual(resolveNleComponentSharedValue(base, linkedItem, "appearance").value,
     { color: "white", weight: 700 });
   assert.deepEqual(resolveNlePictureLayout(base, linkedItem.picture!.layout),
     { x: 10, y: 70, width: 80, height: 20, fit: "contain" });
@@ -177,14 +213,14 @@ test("Component slots and picture layouts link ordinary Items to explicit shared
     } },
   ] });
   const persistedItem = findNleItem(edited, "title-card").item as NleComponentItem;
-  assert.deepEqual(persistedItem.bindings, linkedItem.bindings);
+  assert.deepEqual(persistedItem.sharedValues, linkedItem.sharedValues);
   assert.deepEqual(persistedItem.picture, linkedItem.picture);
-  assert.deepEqual(resolveNleComponentBinding(edited, persistedItem, "appearance").value,
+  assert.deepEqual(resolveNleComponentSharedValue(edited, persistedItem, "appearance").value,
     { color: "yellow", weight: 900 });
   assert.deepEqual(resolveNlePictureLayout(edited, persistedItem.picture!.layout),
     { x: 5, y: 60, width: 90, height: 30, fit: "contain" });
   const secondPersistedItem = findNleItem(edited, "title-card-two").item as NleComponentItem;
-  assert.deepEqual(resolveNleComponentBinding(edited, secondPersistedItem, "appearance").value,
+  assert.deepEqual(resolveNleComponentSharedValue(edited, secondPersistedItem, "appearance").value,
     { color: "yellow", weight: 900 });
   assert.deepEqual(resolveNlePictureLayout(edited, secondPersistedItem.picture!.layout),
     { x: 5, y: 60, width: 90, height: 30, fit: "contain" });
@@ -192,7 +228,7 @@ test("Component slots and picture layouts link ordinary Items to explicit shared
   assert.throws(() => applyNleTransaction(edited, { revision: 2, commands: [{
     kind: "component-value.replace",
     value: { ...findNleComponentValue(edited, "shared-appearance"), slot: "another-slot" },
-  }] }), /binding appearance references Component Value slot another-slot/u);
+  }] }), /shared value appearance references Component Value slot another-slot/u);
   assert.throws(() => applyNleTransaction(edited, { revision: 2, commands: [{
     kind: "component-value.remove", id: "shared-appearance",
   }] }), /still used by Items: title-card, title-card-two/u);
@@ -215,7 +251,7 @@ test("exact project time is independent of any editor grid", () => {
         ...componentItem,
         start: third(1),
         duration: third(2),
-        sourceTime: nleLinearSourceTime(third(2), third(0)),
+        sourceTime: nleLinearTimeMapping(third(2), third(0)),
       }],
     },
   }] });
@@ -319,7 +355,7 @@ test("an Item occurrence name can override and restore its inferred author-facin
   }] }), /Item interview-use name is empty/u);
 });
 
-test("split exactly subdivides a cubic source-time curve", () => {
+test("split exactly subdivides Source and occurrence-local Operator clocks", () => {
   const at = (ticks: number, denominator = 1) => ({
     ticks: String(ticks), timeBase: { numerator: 1, denominator },
   });
@@ -331,6 +367,18 @@ test("split exactly subdivides a cubic source-time curve", () => {
       target: { start: at(0), end: at(4) },
       sourceAtStart: at(0), sourceControl1: at(1), sourceControl2: at(3), sourceAtEnd: at(4),
     }] },
+    picture: {
+      ...fullPicture,
+      operators: [{
+        id: "fade",
+        operator: { module: { name: "@example/filter" }, name: "fade" },
+        parameters: {},
+        controlTime: { pieces: [{
+          target: { start: at(0), end: at(4) },
+          sourceAtStart: at(0), sourceControl1: at(1), sourceControl2: at(3), sourceAtEnd: at(4),
+        }] },
+      }],
+    },
   };
   const base = applyNleTransaction(createNleProject({
     id: "cubic-split", name: "Cubic split",
@@ -343,14 +391,19 @@ test("split exactly subdivides a cubic source-time curve", () => {
     kind: "item.split", id: "curved", at: at(2), rightId: "curved-right",
   }] });
 
-  assert.deepEqual(findNleItem(edited, "curved").item.sourceTime, { pieces: [{
+  const left = findNleItem(edited, "curved").item;
+  const right = findNleItem(edited, "curved-right").item;
+  if (left.kind !== "present" || right.kind !== "present") throw new Error("Split changed Present Items into Adjustments.");
+  assert.deepEqual(left.sourceTime, { pieces: [{
     target: { start: at(0), end: at(2) },
     sourceAtStart: at(0), sourceControl1: at(1, 2), sourceControl2: at(5, 4), sourceAtEnd: at(2),
   }] });
-  assert.deepEqual(findNleItem(edited, "curved-right").item.sourceTime, { pieces: [{
+  assert.deepEqual(right.sourceTime, { pieces: [{
     target: { start: at(0), end: at(2) },
     sourceAtStart: at(2), sourceControl1: at(11, 4), sourceControl2: at(7, 2), sourceAtEnd: at(4),
   }] });
+  assert.deepEqual(left.picture?.operators?.[0]?.controlTime, left.sourceTime);
+  assert.deepEqual(right.picture?.operators?.[0]?.controlTime, right.sourceTime);
 });
 
 test("retime replaces direct source-time facts and slip shifts every source coordinate", () => {
@@ -369,18 +422,67 @@ test("retime replaces direct source-time facts and slip shifts every source coor
       muted: false, items: [componentItem] },
   }] });
   const retimed = applyNleTransaction(base, { revision: 1, commands: [{
-    kind: "item.retime", id: "title-card", sourceTime,
+    kind: "item.retime", id: "title-card", time: sourceTime,
   }] });
-  assert.deepEqual(findNleItem(retimed, "title-card").item.sourceTime, sourceTime);
+  const retimedItem = findNleItem(retimed, "title-card").item;
+  if (retimedItem.kind !== "present") throw new Error("Retime target changed into an Adjustment.");
+  assert.deepEqual(retimedItem.sourceTime, sourceTime);
 
   const slipped = applyNleTransaction(retimed, { revision: 2, commands: [{
     kind: "item.slip", id: "title-card", delta: frame(1),
   }] });
-  assert.deepEqual(findNleItem(slipped, "title-card").item.sourceTime, { pieces: [{
+  const slippedItem = findNleItem(slipped, "title-card").item;
+  if (slippedItem.kind !== "present") throw new Error("Slip target changed into an Adjustment.");
+  assert.deepEqual(slippedItem.sourceTime, { pieces: [{
     ...sourceTime.pieces[0], sourceAtStart: frame(5),
   }, {
     ...sourceTime.pieces[1], sourceAtStart: frame(2),
   }] });
+});
+
+test("Operator Applications have direct ordered and revisioned edit commands", () => {
+  const base = applyNleTransaction(createNleProject({
+    id: "operator-edits", name: "Operator edits",
+    canvas: { width: 100, height: 100, clearColor: "black" },
+  }), { revision: 0, commands: [{
+    kind: "track.add",
+    track: { id: "picture", name: "Picture", kind: "picture", muted: false, items: [componentItem] },
+  }] });
+  const symbol = (name: string) => ({ module: { name: `@example/${name}` }, name });
+  const fade = {
+    id: "fade", operator: symbol("fade"), parameters: { amount: 1 },
+    controlTime: nleLinearTimeMapping(frame(4)),
+  };
+  const frameApplication = {
+    id: "frame", operator: symbol("frame"), parameters: { width: 2 },
+    controlTime: nleLinearTimeMapping(frame(4)),
+  };
+  const added = applyNleTransaction(base, { revision: 1, commands: [{
+    kind: "operator-application.add", item: "title-card", medium: "picture", application: fade,
+  }, {
+    kind: "operator-application.add", item: "title-card", medium: "picture",
+    application: frameApplication, before: "fade",
+  }, {
+    kind: "operator-application.retime", item: "title-card", medium: "picture", id: "fade",
+    controlTime: nleLinearTimeMapping(frame(4), frame(1)),
+  }] });
+  const addedItem = findNleItem(added, "title-card").item;
+  if (addedItem.kind !== "present") throw new Error("Operator edit target changed kind.");
+  assert.deepEqual(addedItem.picture?.operators?.map((application) => application.id), ["frame", "fade"]);
+  assert.deepEqual(addedItem.picture?.operators?.[1]?.controlTime,
+    nleLinearTimeMapping(frame(4), frame(1)));
+
+  const edited = applyNleTransaction(added, { revision: 2, commands: [{
+    kind: "operator-application.move", item: "title-card", medium: "picture", id: "fade", before: "frame",
+  }, {
+    kind: "operator-application.replace", item: "title-card", medium: "picture",
+    application: { ...fade, parameters: { amount: 0.5 } },
+  }, {
+    kind: "operator-application.remove", item: "title-card", medium: "picture", id: "frame",
+  }] });
+  const editedItem = findNleItem(edited, "title-card").item;
+  if (editedItem.kind !== "present") throw new Error("Operator edit target changed kind.");
+  assert.deepEqual(editedItem.picture?.operators, [{ ...fade, parameters: { amount: 0.5 } }]);
 });
 
 test("project, Media Item and Track facts remain directly editable", () => {
@@ -509,7 +611,7 @@ test("ripple-trim moves only the caller's explicit scope", () => {
 });
 
 test("Transition and matte remain direct composition relations", () => {
-  const operator = { module: { name: "@example/relations", version: "1" }, name: "default" } as const;
+  const operator = { module: { name: "@example/relations" }, name: "default" } as const;
   const item = (id: string, start: number, duration: number): NleComponentItem => ({
     ...componentItem, id, start: frame(start), duration: frame(duration),
   });
@@ -557,30 +659,60 @@ test("Media Assets, Present Components and Adjustments materialize as inspectabl
     start: frame(2), duration: frame(8),
     sourceTime: linear(frame(8)), enabled: true, audio: { }, picture: fullPicture,
   });
+  const { source: _wideSource, ...wideInterpretation } = prepared(160, 90);
+  const wideTransaction = createMediaAssetMaterialization(withMedia, {
+    itemId: "wide-use",
+    asset: interviewAsset,
+    interpretation: wideInterpretation,
+    track: "main",
+    at: frame(0),
+  });
+  const withWideMedia = applyNleTransaction(withMedia, wideTransaction);
+  const wideItem = findNleItem(withWideMedia, "wide-use").item;
+  assert(wideItem.kind === "present");
+  assert.deepEqual(wideItem.picture, {
+    layout: { x: 0, y: 21.875, width: 100, height: 56.25, fit: "contain" },
+  });
 
-  const componentTransaction = createComponentMaterialization(withMedia, {
+  const componentTransaction = createComponentMaterialization(withWideMedia, {
     id: "title", track: "main", at: frame(1), duration: frame(4),
-    component: { module: { name: "@example/title", version: "1" }, name: "card" },
+    component: { module: { name: "@example/title" }, name: "card" },
     parameters: { title: "Already materialized" }, layout: fullPicture.layout,
   });
-  const finished = applyNleTransaction(withMedia, componentTransaction);
+  const finished = applyNleTransaction(withWideMedia, componentTransaction);
   assert.deepEqual(findNleItem(finished, "title").item, {
     id: "title", kind: "present", source: "component", start: frame(1), duration: frame(4), sourceTime: linear(frame(4)),
     enabled: true,
-    component: { module: { name: "@example/title", version: "1" }, name: "card" },
+    component: { module: { name: "@example/title" }, name: "card" },
     parameters: { title: "Already materialized" }, picture: fullPicture,
   });
 
   const adjustmentTransaction = createAdjustmentMaterialization(finished, {
     id: "grade", track: "main", at: frame(1), duration: frame(4),
-    component: { module: { name: "@example/color", version: "1" }, name: "grade" },
+    operator: { module: { name: "@example/color" }, name: "grade" },
     parameters: { contrast: 1.2 },
   });
   const adjusted = applyNleTransaction(finished, adjustmentTransaction);
   assert.deepEqual(findNleItem(adjusted, "grade").item, {
-    id: "grade", kind: "adjustment", start: frame(1), duration: frame(4), sourceTime: linear(frame(4)),
+    id: "grade", kind: "adjustment", start: frame(1), duration: frame(4), controlTime: linear(frame(4)),
     enabled: true,
-    component: { module: { name: "@example/color", version: "1" }, name: "grade" },
+    operator: { module: { name: "@example/color" }, name: "grade" },
     parameters: { contrast: 1.2 },
   });
+});
+
+test("Project parsing rejects unknown fields instead of preserving ghost state", () => {
+  const project = createNleProject({ id: "strict-project", name: "Strict Project" });
+  assert.throws(() => parseNleProject(JSON.stringify({ ...project, obsoleteState: true })),
+    /unknown fields: obsoleteState/u);
+
+  const withTrack = applyNleTransaction(project, { revision: 0, commands: [{
+    kind: "track.add",
+    track: { id: "picture", name: "Picture", kind: "picture", muted: false, items: [componentItem] },
+  }] });
+  const invalid = structuredClone(withTrack) as unknown as {
+    tracks: Array<{ items: Array<Record<string, unknown>> }>;
+  };
+  invalid.tracks[0]!.items[0]!.obsoleteState = true;
+  assert.throws(() => parseNleProject(JSON.stringify(invalid)), /unknown fields: obsoleteState/u);
 });

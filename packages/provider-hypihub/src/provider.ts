@@ -1,14 +1,15 @@
-import { capabilityKey } from "@hypit/hypit/protocol";
+import { capabilityKey } from "@hypit/hypit/module";
 import { readFileSync } from "node:fs";
-import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-local/extension";
+import type { ExecutionEnvironmentDoctorDiagnostic } from "@hypit/execution-environment-local/extension";
 import type { AsyncEndpoint, CredentialRef, EndpointCredential, EndpointInvocationContext, EndpointPollContext, EndpointPricingReader, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler } from "@hypit/hypit/endpoint";
 import type { ResourceStore } from "@hypit/resource-store";
 import { credentialRef, EndpointServiceError, defineEndpoint, wakeAfter } from "@hypit/hypit/endpoint";
 import { EndpointHttpError, EndpointResponseError, EndpointTransportError, withRequestDeadline } from "@hypit/hypit/endpoint/http";
-import { selectWireModelForRequest } from "@hypit/generation/provider";
-import type { ProviderFieldRequest } from "@hypit/generation/provider";
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, CanonicalValue, CapabilityRef, Value } from "@hypit/hypit/protocol";
+import { selectWireModelForRequest } from "@hypit/generation-model/provider";
+import type { ProviderFieldRequest } from "@hypit/generation-model/provider";
+import { canonicalize } from "@hypit/hypit/value";
+import type { CapabilityRef } from "@hypit/hypit/module";
+import type { BlobRef, CanonicalValue, Value } from "@hypit/hypit/value";
 import { timedTranscriptTypes } from "@hypit/timed-transcript";
 import {
   assertWhisperXEvidenceWav,
@@ -47,7 +48,7 @@ const identifiedFetch = (fetcher: typeof globalThis.fetch): typeof globalThis.fe
     return await fetcher(input, { ...init, headers });
   };
 
-export const hypiHubProviderModuleRef = { name: "@hypit/provider-hypihub", version: "1" } as const;
+export const hypiHubProviderModuleRef = { name: "@hypit/provider-hypihub" } as const;
 
 export type CreateHypiHubProviderOptions = {
   readonly instance?: string;
@@ -367,7 +368,7 @@ export async function diagnoseHypiHubProvider(
     readonly credentials: Readonly<Record<string, { readonly secret: string }>>;
     readonly capabilities?: readonly CapabilityRef[];
   },
-): Promise<readonly RuntimeDoctorDiagnostic[]> {
+): Promise<readonly ExecutionEnvironmentDoctorDiagnostic[]> {
   const apiKey = context.credentials.apiKey?.secret;
   assert(typeof apiKey === "string" && apiKey.length > 0, "HypiHub credential is unavailable");
   if (hypiHubCredentialNeedsRefresh(apiKey)) return [{
@@ -404,7 +405,7 @@ export async function diagnoseHypiHubProvider(
     if (!cards.has(alias)) cards.set(alias, card);
   }
   const transcriptionModel = options.transcriptionModel?.trim() || "victor-upmeet/whisperx";
-  const diagnostics: RuntimeDoctorDiagnostic[] = [];
+  const diagnostics: ExecutionEnvironmentDoctorDiagnostic[] = [];
   for (const capability of context.capabilities ?? []) {
     let available = false;
     if (capabilityKey(capability) === capabilityKey(whisperXCapabilities.transcription)) {

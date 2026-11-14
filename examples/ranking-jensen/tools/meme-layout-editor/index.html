@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Jensen Meme Layout</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #111215; color: #f4f4f5; }
+    header { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 22px; border-bottom: 1px solid #2a2b31; background: rgba(17,18,21,.94); backdrop-filter: blur(16px); }
+    h1 { margin: 0; font-size: 17px; font-weight: 650; }
+    .sub { margin-top: 4px; color: #92949c; font-size: 12px; }
+    button { border: 0; border-radius: 7px; padding: 8px 12px; color: #e8e8eb; background: #292a30; cursor: pointer; font: inherit; }
+    button:hover { background: #35363d; }
+    button.primary { color: white; background: #e24b5d; font-weight: 650; }
+    button.primary:hover { background: #ef596b; }
+    button.active { color: white; background: #4a4c55; box-shadow: inset 0 0 0 1px #6d707b; }
+    .status { min-width: 84px; color: #8f929b; font-size: 12px; text-align: right; }
+    .actions { display: flex; align-items: center; gap: 10px; }
+    main { display: grid; grid-template-columns: repeat(2, minmax(360px, 1fr)); gap: 18px; padding: 18px; max-width: 1480px; margin: 0 auto; }
+    .card { min-width: 0; overflow: hidden; border: 1px solid #2a2b31; border-radius: 12px; background: #191a1f; }
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid #28292f; }
+    .card-title { font-size: 14px; font-weight: 650; }
+    .source-switch { display: flex; gap: 6px; }
+    .source-switch button { padding: 5px 8px; font-size: 11px; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 190px; min-height: 360px; }
+    .stage-shell { display: grid; place-items: center; min-width: 0; padding: 14px; background: #0b0c0e; }
+    canvas { display: block; max-width: 100%; max-height: 520px; border-radius: 4px; box-shadow: 0 8px 30px rgba(0,0,0,.35); cursor: grab; touch-action: none; }
+    canvas.dragging { cursor: grabbing; }
+    .controls { padding: 12px; border-left: 1px solid #28292f; background: #17181c; }
+    .control-title { margin-bottom: 9px; color: #92949c; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+    .item-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    .item-list button { padding: 6px 8px; font-family: Impact, sans-serif; font-size: 13px; }
+    label { display: block; margin: 12px 0 6px; color: #a7a9b1; font-size: 12px; }
+    input[type="range"] { width: 100%; accent-color: #e24b5d; }
+    .value { display: flex; justify-content: space-between; color: #e8e8eb; font-variant-numeric: tabular-nums; font-size: 12px; }
+    .hint { margin-top: 18px; color: #747780; font-size: 11px; line-height: 1.55; }
+    .empty { padding: 40px; color: #9a9ca5; }
+    @media (max-width: 1050px) { main { grid-template-columns: 1fr; } }
+    @media (max-width: 680px) { .workspace { grid-template-columns: 1fr; } .controls { border-top: 1px solid #28292f; border-left: 0; } header { align-items: flex-start; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Jensen Meme Layout</h1>
+      <div class="sub">文字固定。直接拖动位置，选中文字后调整字号；保存后由 Agent 输出成图。</div>
+    </div>
+    <div class="actions"><span class="status" id="status">正在读取…</span><button id="reset">恢复初始值</button><button class="primary" id="save">保存所有布局</button></div>
+  </header>
+  <main id="grid"><div class="empty">加载中…</div></main>
+  <script>
+    const grid = document.querySelector('#grid');
+    const status = document.querySelector('#status');
+    let layouts;
+    let initial;
+    const editors = new Map();
+
+    const deepCopy = (value) => JSON.parse(JSON.stringify(value));
+    const imageCache = new Map();
+    function loadImage(source) {
+      if (!imageCache.has(source)) {
+        const promise = new Promise((resolve, reject) => {
+          const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = source;
+        });
+        imageCache.set(source, promise);
+      }
+      return imageCache.get(source);
+    }
+
+    function cardFor(sceneId, scene) {
+      const card = document.createElement('section');
+      card.className = 'card';
+      card.innerHTML = `<div class="card-head"><div class="card-title"></div><div class="source-switch"></div></div><div class="workspace"><div class="stage-shell"><canvas></canvas></div><aside class="controls"><div class="control-title">选中文字</div><div class="item-list"></div><label>字号</label><input class="size" type="range" min="18" max="220" step="1"><div class="value"><span class="size-value"></span><span class="position"></span></div><div class="hint">在画面里直接拖动文字。<br>方向键每次移动 1 px；按住 Shift 移动 10 px。</div></aside></div>`;
+      card.querySelector('.card-title').textContent = scene.name;
+      const canvas = card.querySelector('canvas');
+      canvas.width = scene.width; canvas.height = scene.height;
+      canvas.style.aspectRatio = `${scene.width} / ${scene.height}`;
+      const context = canvas.getContext('2d');
+      let source = scene.source;
+      let selected = scene.items[0];
+      let dragging = false;
+      let dragOffset = { x: 0, y: 0 };
+
+      const list = card.querySelector('.item-list');
+      const size = card.querySelector('.size');
+      const sizeValue = card.querySelector('.size-value');
+      const position = card.querySelector('.position');
+
+      for (const item of scene.items) {
+        const button = document.createElement('button');
+        button.textContent = item.text;
+        button.onclick = () => { selected = item; syncControls(); draw(); };
+        list.append(button);
+      }
+
+      if (scene.alternateSource) {
+        const switcher = card.querySelector('.source-switch');
+        for (const [label, value] of [['未按', scene.source], ['同时按下', scene.alternateSource]]) {
+          const button = document.createElement('button');
+          button.textContent = label;
+          button.onclick = () => { source = value; syncSourceButtons(); draw(); };
+          button.dataset.source = value;
+          switcher.append(button);
+        }
+      }
+
+      function syncSourceButtons() {
+        card.querySelectorAll('[data-source]').forEach((button) => button.classList.toggle('active', button.dataset.source === source));
+      }
+      function syncControls() {
+        [...list.children].forEach((button, index) => button.classList.toggle('active', scene.items[index] === selected));
+        size.value = selected.fontSize;
+        sizeValue.textContent = `${selected.fontSize}px`;
+        position.textContent = `x ${Math.round(selected.x)} · y ${Math.round(selected.y)}`;
+      }
+      function textBox(item) {
+        context.font = `${item.fontSize}px Impact, Haettenschweiler, Arial Black, sans-serif`;
+        const lines = item.text.split('\n');
+        const width = Math.max(...lines.map((line) => context.measureText(line).width));
+        const height = item.fontSize * .86 * lines.length;
+        return { left: item.x - width / 2 - 18, right: item.x + width / 2 + 18, top: item.y - height / 2 - 18, bottom: item.y + height / 2 + 18 };
+      }
+      function point(event) {
+        const rect = canvas.getBoundingClientRect();
+        return { x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height };
+      }
+      async function draw() {
+        const image = await loadImage(source);
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        context.textAlign = 'center'; context.textBaseline = 'middle'; context.lineJoin = 'round';
+        for (const item of scene.items) {
+          context.save();
+          context.translate(item.x, item.y);
+          context.rotate((item.angle ?? 0) * Math.PI / 180);
+          context.font = `${item.fontSize}px Impact, Haettenschweiler, Arial Black, sans-serif`;
+          context.lineWidth = item.stroke ?? Math.max(2, item.fontSize * .07);
+          context.strokeStyle = 'black'; context.fillStyle = sceneId === 'buttons' ? '#111' : 'white';
+          const lines = item.text.split('\n');
+          const lineHeight = item.fontSize * .86;
+          lines.forEach((line, index) => {
+            const y = (index - (lines.length - 1) / 2) * lineHeight;
+            if (sceneId !== 'buttons') context.strokeText(line, 0, y);
+            context.fillText(line, 0, y);
+          });
+          context.restore();
+        }
+        if (selected) {
+          const box = textBox(selected);
+          context.save(); context.strokeStyle = '#ff6074'; context.lineWidth = Math.max(2, canvas.width / 600); context.setLineDash([10, 7]);
+          context.strokeRect(box.left, box.top, box.right - box.left, box.bottom - box.top); context.restore();
+        }
+      }
+      canvas.addEventListener('pointerdown', (event) => {
+        const p = point(event);
+        const hit = [...scene.items].reverse().find((item) => { const box = textBox(item); return p.x >= box.left && p.x <= box.right && p.y >= box.top && p.y <= box.bottom; });
+        if (!hit) return;
+        selected = hit; dragging = true; dragOffset = { x: p.x - hit.x, y: p.y - hit.y };
+        canvas.setPointerCapture(event.pointerId); canvas.classList.add('dragging'); syncControls(); draw();
+      });
+      canvas.addEventListener('pointermove', (event) => {
+        if (!dragging) return;
+        const p = point(event); selected.x = Math.round(p.x - dragOffset.x); selected.y = Math.round(p.y - dragOffset.y);
+        syncControls(); draw(); status.textContent = '未保存';
+      });
+      const stopDrag = () => { dragging = false; canvas.classList.remove('dragging'); };
+      canvas.addEventListener('pointerup', stopDrag); canvas.addEventListener('pointercancel', stopDrag);
+      size.addEventListener('input', () => { selected.fontSize = Number(size.value); syncControls(); draw(); status.textContent = '未保存'; });
+      card.addEventListener('keydown', (event) => {
+        if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
+        const step = event.shiftKey ? 10 : 1;
+        if (event.key === 'ArrowLeft') selected.x -= step;
+        if (event.key === 'ArrowRight') selected.x += step;
+        if (event.key === 'ArrowUp') selected.y -= step;
+        if (event.key === 'ArrowDown') selected.y += step;
+        event.preventDefault(); syncControls(); draw(); status.textContent = '未保存';
+      });
+      card.tabIndex = 0;
+      syncSourceButtons(); syncControls(); draw();
+      editors.set(sceneId, { redraw: draw, sync: syncControls });
+      return card;
+    }
+
+    async function boot() {
+      layouts = await fetch('/api/layouts').then((response) => response.json());
+      initial = deepCopy(layouts);
+      grid.replaceChildren(...Object.entries(layouts.scenes).map(([id, scene]) => cardFor(id, scene)));
+      status.textContent = '已读取';
+    }
+    document.querySelector('#save').onclick = async () => {
+      status.textContent = '保存中…';
+      const response = await fetch('/api/layouts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(layouts) });
+      if (!response.ok) { status.textContent = '保存失败'; return; }
+      layouts = (await response.json()).layouts; initial = deepCopy(layouts); status.textContent = '已保存';
+    };
+    document.querySelector('#reset').onclick = () => {
+      layouts = deepCopy(initial); editors.clear(); grid.replaceChildren(...Object.entries(layouts.scenes).map(([id, scene]) => cardFor(id, scene))); status.textContent = '已恢复';
+    };
+    boot().catch((error) => { grid.innerHTML = `<div class="empty">${error.message}</div>`; status.textContent = '加载失败'; });
+  </script>
+</body>
+</html>

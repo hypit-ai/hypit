@@ -1,4 +1,5 @@
-import { canonicalize, isModuleRef } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import { isModuleRef } from "@hypit/module";
 import {
   addExactTemporalValues,
   assertExactTemporalValue,

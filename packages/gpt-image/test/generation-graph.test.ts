@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { GenerationGraphProject } from "@hypit/hypit/generation-graph";
-import { createNodeGenerationGraphProjectHost } from "@hypit/hypit/generation-graph/node";
-import { generationProducers } from "@hypit/generation";
+import type { GenerationGraphProject } from "@hypit/hypit/generation/graph";
+import { createNodeGenerationGraphProjectHost } from "@hypit/hypit/generation/graph/node";
+import { generationProducers } from "@hypit/generation-model";
 
 import blobPackage from "../../blob/src/activation.js";
-import generationPackage from "../../generation/src/activation.js";
+import generationPackage from "../../generation-model/src/activation.js";
 import promptPackage from "../../prompt/src/activation.js";
 import seedancePackage from "../../seedance/src/activation.js";
 import { seedanceGenerationNodes } from "../../seedance/src/generation.js";
@@ -22,7 +22,7 @@ import { gptImageEndpoints } from "../src/index.js";
 function installedPackages() {
   return [
     { specifier: "@hypit/blob", contribution: blobPackage },
-    { specifier: "@hypit/generation", contribution: generationPackage },
+    { specifier: "@hypit/generation-model", contribution: generationPackage },
     { specifier: "@hypit/text", contribution: textPackage },
     { specifier: "@hypit/prompt", contribution: promptPackage },
     { specifier: "@hypit/gpt-image", contribution: gptImagePackage },
@@ -32,7 +32,7 @@ function installedPackages() {
 
 test("GPT Image contributes its exact model node from its own package", () => {
   const nodes = gptImagePackage.facets.flatMap((facet) =>
-    facet.abi === "hypit.generation-node-package@1"
+    facet.kind === "hypit.generation-node-package"
       ? (facet as { implementation: { nodes: readonly unknown[] } }).implementation.nodes
       : []);
   assert.deepEqual(nodes, [gptImageGenerationNode]);

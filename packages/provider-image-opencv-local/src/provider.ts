@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { blobTypes } from "@hypit/hypit/blob";
+import { blobTypes } from "@hypit/hypit/generation/blob";
 import { defineEndpoint } from "@hypit/hypit/endpoint";
 import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
-import type { CanonicalValue, Value } from "@hypit/hypit/protocol";
+import type { CanonicalValue, Value } from "@hypit/hypit/value";
 import {
   assertRasterComposition,
   rasterCompositionCapabilities,
@@ -17,7 +17,6 @@ import type { RasterComposition } from "@hypit/raster-composition";
 
 export const localOpenCvImageProviderModuleRef = {
   name: "@hypit/provider-image-opencv-local",
-  version: "1",
 } as const;
 
 export type CreateLocalOpenCvImageProviderOptions = {

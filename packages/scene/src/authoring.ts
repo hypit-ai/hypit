@@ -14,7 +14,7 @@ import type {
   SceneProject,
 } from "./types.js";
 
-export const sceneAuthoringFacetAbi = "hypit.scene-authoring@1";
+export const sceneAuthoringFacetKind = "hypit.scene-authoring";
 
 export type SceneObjectParameterAuthoringContext = {
   readonly project: SceneProject;
@@ -70,7 +70,7 @@ export type SceneAuthoringPackage = {
 };
 
 export type SceneAuthoringFacet = Facet & {
-  readonly abi: typeof sceneAuthoringFacetAbi;
+  readonly kind: typeof sceneAuthoringFacetKind;
   readonly implementation: SceneAuthoringPackage;
 };
 
@@ -151,11 +151,11 @@ function behaviorContext(
 
 export function createSceneAuthoringFacet(value: SceneAuthoringPackage): SceneAuthoringFacet {
   assertPackage(value);
-  return { abi: sceneAuthoringFacetAbi, implementation: value };
+  return { kind: sceneAuthoringFacetKind, implementation: value };
 }
 
 export function sceneAuthoringPackagesFromFacets(facets: readonly Facet[]): readonly SceneAuthoringPackage[] {
-  return facets.flatMap((facet) => facet.abi === sceneAuthoringFacetAbi
+  return facets.flatMap((facet) => facet.kind === sceneAuthoringFacetKind
     ? [(facet as SceneAuthoringFacet).implementation]
     : []);
 }

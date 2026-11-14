@@ -43,12 +43,15 @@ import {
 import { createMediaAssetGenerationGraphNode } from "@hypit/media-asset-generation";
 import type { MediaAssetDocument } from "@hypit/media-asset";
 import { importLocalMediaAsset, mediaAssetIdFromFile } from "@hypit/media-local";
+import {
+  createNodeProjectMediaService,
+  type NodeProjectMediaService,
+} from "@hypit/media-service/node";
 
 import type {
   GenerationCanvasWorkbenchSnapshot,
   GenerationCanvasWorkbenchBuildRequest,
   GenerationCanvasWorkbenchBuildResponse,
-  GenerationCanvasWorkbenchEnvironment,
   GenerationCanvasWorkbenchImportResponse,
   GenerationCanvasWorkbenchMaterializeRequest,
   GenerationCanvasWorkbenchMaterializeResponse,
@@ -59,8 +62,13 @@ import type {
   GenerationCanvasWorkbenchTransactionRequest,
 } from "../canvas-protocol.js";
 import type { WorkbenchErrorView } from "../protocol.js";
-import { ProjectMediaLibrary, type ProjectMediaLibraryResource } from "./media-library.js";
-import { portableRelative, projectMember } from "./project-path.js";
+import { ProjectMediaLibrary, type ProjectMediaLibraryResource } from "@hypit/media-service/node";
+import { portableRelative, projectMember } from "@hypit/project/node";
+import {
+  connectWorkbenchEnvironment,
+  observeWorkbenchEnvironment,
+  type WorkbenchEnvironmentHost,
+} from "./environment.js";
 
 const clientDirectory = fileURLToPath(new URL("../client/", import.meta.url));
 const clientAssets = new Map([
@@ -99,11 +107,7 @@ export type GenerationCanvasWorkbenchExecutionHost = {
   }): Promise<{ readonly id: string }>;
 };
 
-/** Application-owned Runtime and credential actions shared by browser UI and agents. */
-export type GenerationCanvasWorkbenchEnvironmentHost = {
-  observe(): Promise<GenerationCanvasWorkbenchEnvironment>;
-  connect(): Promise<GenerationCanvasWorkbenchEnvironment>;
-};
+export type GenerationCanvasWorkbenchEnvironmentHost = WorkbenchEnvironmentHost;
 
 export type GenerationCanvasWorkbenchResultsHost = {
   readonly products: ProductHistory;
@@ -432,18 +436,22 @@ export async function startGenerationCanvasWorkbenchServer(options: {
   readonly results?: GenerationCanvasWorkbenchResultsHost;
   readonly execution?: GenerationCanvasWorkbenchExecutionHost;
   readonly environment?: GenerationCanvasWorkbenchEnvironmentHost;
+  /** Project Host-owned service. Omit only when this surface owns its isolated session. */
+  readonly media?: NodeProjectMediaService;
   readonly materialization?: GenerationCanvasWorkbenchMaterializationHost;
   /** Injectable only so the HTTP boundary can be tested without invoking a media toolchain. */
   readonly importMediaAsset?: typeof importLocalMediaAsset;
 }): Promise<GenerationCanvasWorkbenchServer> {
   const projectRoot = resolve(options.projectRoot);
+  const mediaService = options.media ?? createNodeProjectMediaService(projectRoot);
+  const ownsMediaService = options.media === undefined;
   const workspaceFile = projectMember(projectRoot, options.workspaceFile, "Generation Workspace");
   let workspace = await readGenerationWorkspaceFile(workspaceFile);
   const graphFile = projectMember(
     projectRoot, resolve(dirname(workspaceFile), workspace.graph.path), "Generation Graph",
   );
   let graph = await readGenerationGraphProjectFile(graphFile);
-  const mediaLibrary = new ProjectMediaLibrary(projectRoot, graphFile, "/api/canvas/media-resource");
+  const mediaLibrary = new ProjectMediaLibrary(mediaService, graphFile, "/api/canvas/media-resource");
   const host = options.host ?? "127.0.0.1";
   const port = options.port ?? 0;
   const importMediaAsset = options.importMediaAsset ?? importLocalMediaAsset;
@@ -465,7 +473,7 @@ export async function startGenerationCanvasWorkbenchServer(options: {
         response.end();
         return;
       }
-      if (request.method === "GET" && ["/canvas", "/nle", "/3d", "/comments"].includes(url.pathname)) {
+      if (request.method === "GET" && url.pathname === "/canvas") {
         const html = await readFile(new URL("../client/canvas.html", import.meta.url));
         response.writeHead(200, {
           "cache-control": "no-store",
@@ -492,6 +500,14 @@ export async function startGenerationCanvasWorkbenchServer(options: {
           options.materialization));
         return;
       }
+      if (request.method === "GET" && url.pathname === "/api/workbench/environment") {
+        json(response, 200, await observeWorkbenchEnvironment(options.environment));
+        return;
+      }
+      if (request.method === "POST" && url.pathname === "/api/workbench/environment") {
+        json(response, 200, await connectWorkbenchEnvironment(options.environment));
+        return;
+      }
       if (request.method === "POST" && url.pathname === "/api/canvas/environment/connect") {
         assert(options.environment !== undefined, "Workbench environment actions are unavailable.");
         await options.environment.connect();
@@ -503,8 +519,9 @@ export async function startGenerationCanvasWorkbenchServer(options: {
       if ((request.method === "GET" || request.method === "HEAD")
         && url.pathname.startsWith("/api/canvas/media-resource/")) {
         const requestedGeneration = Number(url.searchParams.get("generation"));
-        if (!Number.isSafeInteger(requestedGeneration) || requestedGeneration !== mediaLibrary.generation) {
-          throw new Error("Canvas Media Library projection is stale.");
+        if (!Number.isSafeInteger(requestedGeneration) || requestedGeneration < 1
+          || mediaLibrary.generation === undefined || requestedGeneration > mediaLibrary.generation) {
+          throw new Error("Canvas Media Library projection generation is invalid.");
         }
         const id = decodeURIComponent(url.pathname.slice("/api/canvas/media-resource/".length));
         const resource = mediaLibrary.resource(id);
@@ -883,6 +900,7 @@ export async function startGenerationCanvasWorkbenchServer(options: {
     graphFile,
     async close() {
       await new Promise<void>((fulfill, reject) => server.close((error) => error === undefined ? fulfill() : reject(error)));
+      if (ownsMediaService) await mediaService.close();
     },
   };
 }

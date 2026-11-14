@@ -1,0 +1,359 @@
+import type {
+  BuildPlan,
+  AuthorGraph,
+  GraphValueRef,
+  LinkedProgram,
+  OperationNode,
+  ProducerStep,
+} from "./types.js";
+import type { NeedId, RecordId, StepId } from "./identity.js";
+import type { CapabilityRef, TypeRef } from "@hypit/module";
+import { compareCodeUnits } from "@hypit/protocol";
+import { sameType, typeKey } from "@hypit/module";
+
+import { invariant } from "./error.js";
+import {
+  operationResultRecord,
+  resolveLogicalOutput,
+  resolveOperation,
+  verifyAuthorGraph,
+} from "./graph.js";
+import type { BuildView } from "./view.js";
+import { resolveCapability, resolveProducer } from "./link.js";
+
+function exactKeys(
+  actual: Readonly<Record<string, unknown>>,
+  expected: readonly string[],
+  subject: string,
+): void {
+  const actualKeys = Object.keys(actual).sort();
+  const expectedKeys = [...expected].sort();
+  invariant(
+    JSON.stringify(actualKeys) === JSON.stringify(expectedKeys),
+    "PORT_BINDING_MISMATCH",
+    `${subject} binds [${actualKeys.join(", ")}] but declares [${expectedKeys.join(", ")}]`,
+    subject,
+  );
+}
+
+type ResolvedSource = {
+  readonly record: RecordId;
+  readonly type: TypeRef;
+};
+
+type DemandedOperation = {
+  readonly operation: OperationNode;
+  readonly inputs: Readonly<Record<string, RecordId>>;
+};
+
+type ProducedRecord = {
+  readonly type: TypeRef;
+  readonly step?: string;
+};
+
+/** One external request the exact finite BuildPlan will make: which step asks, through which port. */
+export type PlannedNeed = {
+  readonly step: StepId;
+  readonly port: string;
+  readonly need: NeedId;
+  readonly result: RecordId;
+  readonly capability: CapabilityRef;
+  readonly returns: TypeRef;
+};
+
+const planStepIndexes = new WeakMap<BuildPlan, ReadonlyMap<string, ProducerStep>>();
+
+/** Every external requirement of the BuildPlan, one entry per request, in step order. */
+export function plannedNeeds(state: BuildView): readonly PlannedNeed[] {
+  const found: PlannedNeed[] = [];
+  for (const step of state.plan.steps) {
+    if (step.result.kind !== "need") continue;
+    const producer = resolveProducer(state.program.closure, step.producer);
+    const need = producer.result;
+    invariant(need.kind === "need" && need.name === step.result.name, "STEP_RESULT_MISMATCH",
+      `${step.id} does not request Need ${step.result.name}`, step.id);
+    const returns = resolveCapability(state.program.closure, need.capability).returns;
+    found.push({
+      step: step.id,
+      port: need.name,
+      need: step.result.id,
+      result: step.result.record,
+      capability: need.capability,
+      returns,
+    });
+  }
+  return structuredClone(found);
+}
+
+function planContent(
+  steps: readonly ProducerStep[],
+  goals: BuildPlan["goals"],
+): BuildPlan {
+  return {
+    format: "hypit.plan@1",
+    steps,
+    goals,
+  };
+}
+
+type ResolvedOutput = {
+  readonly output: string;
+  readonly record: string;
+};
+
+export type PlannedExecution = {
+  readonly plan: BuildPlan;
+  readonly outputs: readonly ResolvedOutput[];
+};
+
+function compilePlanning(
+  program: LinkedProgram,
+  graph: AuthorGraph,
+  targets: readonly string[],
+): PlannedExecution {
+  verifyAuthorGraph(program, graph);
+  const targetIds = new Set<string>();
+  for (const target of targets) {
+    resolveLogicalOutput(graph, target);
+    invariant(!targetIds.has(target), "DUPLICATE_BUILD_TARGET", `${target} is targeted twice`);
+    targetIds.add(target);
+  }
+
+  const authored = new Map(program.records.map((record) => [record.id, record]));
+  const demandedOperations = new Map<string, OperationNode>();
+  const resolvedOutputs = new Map<string, ResolvedSource>();
+  const outputs = new Map<string, ResolvedOutput>();
+
+  const operationSource = (id: string): ResolvedSource => {
+    const operation = resolveOperation(graph, id);
+    const producer = resolveProducer(program.closure, operation.producer);
+    const result = producer.result;
+    const type = operation.result.kind === "output" && result.kind === "output"
+      && result.name === operation.result.name
+      ? result.type
+      : operation.result.kind === "need" && result.kind === "need"
+        && result.name === operation.result.name
+        ? resolveCapability(program.closure, result.capability).returns
+        : undefined;
+    invariant(type !== undefined, "OPERATION_RESULT_MISMATCH", `${id} result is not declared`, id);
+    return { record: operationResultRecord(operation), type };
+  };
+
+  const pending: GraphValueRef[] = targets.map((target) => ({
+    kind: "logical-output",
+    id: target,
+  }));
+  while (pending.length > 0) {
+    const ref = pending.pop() as GraphValueRef;
+    if (ref.kind === "record") {
+      invariant(authored.has(ref.id), "UNKNOWN_RECORD", `unknown authored record ${ref.id}`, ref.id);
+      continue;
+    }
+    if (ref.kind === "operation-result") {
+      if (demandedOperations.has(ref.operation)) continue;
+      const operation = resolveOperation(graph, ref.operation);
+      demandedOperations.set(operation.id, operation);
+      pending.push(...Object.values(operation.inputs));
+      continue;
+    }
+    if (resolvedOutputs.has(ref.id)) continue;
+    const output = resolveLogicalOutput(graph, ref.id);
+    let resolved: ResolvedSource;
+    if (output.result.kind === "record") {
+      const record = authored.get(output.result.id);
+      invariant(record !== undefined, "UNKNOWN_RECORD", `unknown authored record ${output.result.id}`, output.result.id);
+      resolved = { record: record.id, type: record.type };
+    } else {
+      resolved = operationSource(output.result.operation);
+    }
+    pending.push(output.result);
+    invariant(
+      sameType(resolved.type, output.type),
+      "OUTPUT_RESULT_TYPE_MISMATCH",
+      `${output.id} returns ${typeKey(resolved.type)}, not ${typeKey(output.type)}`,
+      output.id,
+    );
+    resolvedOutputs.set(output.id, resolved);
+    outputs.set(output.id, { output: output.id, record: resolved.record });
+  }
+
+  const resolveRef = (ref: GraphValueRef): ResolvedSource => {
+    if (ref.kind === "record") {
+      const record = authored.get(ref.id);
+      invariant(record !== undefined, "UNKNOWN_RECORD", `unknown authored record ${ref.id}`, ref.id);
+      return { record: record.id, type: record.type };
+    }
+    if (ref.kind === "logical-output") {
+      const resolved = resolvedOutputs.get(ref.id);
+      invariant(resolved !== undefined, "UNKNOWN_LOGICAL_OUTPUT", `unresolved logical output ${ref.id}`, ref.id);
+      return resolved;
+    }
+    invariant(demandedOperations.has(ref.operation), "UNKNOWN_OPERATION", `undemanded Operation ${ref.operation}`, ref.operation);
+    return operationSource(ref.operation);
+  };
+
+  const demanded = [...demandedOperations.values()].map((operation): DemandedOperation => ({
+    operation,
+    inputs: Object.fromEntries(
+      Object.entries(operation.inputs).map(([name, ref]) => [name, resolveRef(ref).record]),
+    ),
+  }));
+  const targetSources = targets.map((target) => ({
+    target,
+    source: resolvedOutputs.get(target) as ResolvedSource,
+  }));
+
+  const steps: ProducerStep[] = demanded
+    .sort((a, b) => compareCodeUnits(a.operation.id, b.operation.id))
+    .map(({ operation, inputs }) => ({
+      id: operation.id,
+      producer: operation.producer,
+      inputs,
+      result: operation.result,
+    }));
+
+  const goals = [...new Set(targetSources.map(({ source }) => source.record))].sort();
+  const sortedOutputs = [...outputs.values()].sort((a, b) => compareCodeUnits(a.output, b.output));
+  const plan = planContent(steps, goals);
+  verifyBuildPlan(program, plan);
+  return { plan, outputs: sortedOutputs };
+}
+
+/** Plan one Author Graph for an explicit finite target set. */
+export function planBuild(
+  program: LinkedProgram,
+  authorGraph: AuthorGraph,
+  targets: readonly string[],
+): PlannedExecution {
+  return compilePlanning(program, authorGraph, targets);
+}
+
+export function verifyBuildPlan(
+  program: LinkedProgram,
+  plan: BuildPlan,
+): void {
+  invariant(plan.format === "hypit.plan@1", "UNSUPPORTED_PLAN", "unsupported build plan format");
+
+  const records = new Map<RecordId, ProducedRecord>();
+  for (const record of program.records) records.set(record.id, { type: record.type });
+
+  const stepIds = new Set<string>();
+  const needIds = new Set<string>();
+  for (const step of plan.steps) {
+    invariant(!stepIds.has(step.id), "DUPLICATE_STEP", `duplicate step ${step.id}`, step.id);
+    stepIds.add(step.id);
+    const producer = resolveProducer(program.closure, step.producer);
+    exactKeys(step.inputs, producer.inputs.map((port) => port.name), `${step.id}.inputs`);
+    if (step.result.kind === "output") {
+      const port = producer.result;
+      invariant(port.kind === "output" && port.name === step.result.name, "STEP_RESULT_MISMATCH",
+        `${step.id} does not produce output ${step.result.name}`, step.id);
+      invariant(!records.has(step.result.record), "DUPLICATE_RECORD",
+        `record ${step.result.record} has multiple producers`, step.result.record);
+      records.set(step.result.record, { type: port.type, step: step.id });
+    } else {
+      const port = producer.result;
+      invariant(port.kind === "need" && port.name === step.result.name, "STEP_RESULT_MISMATCH",
+        `${step.id} does not request Need ${step.result.name}`, step.id);
+      invariant(!needIds.has(step.result.id), "DUPLICATE_NEED", `need ${step.result.id} has multiple producers`);
+      needIds.add(step.result.id);
+      invariant(!records.has(step.result.record), "DUPLICATE_RECORD", `${step.result.record} has multiple producers`);
+      records.set(step.result.record, {
+        type: resolveCapability(program.closure, port.capability).returns,
+        step: step.id,
+      });
+    }
+  }
+
+  for (const step of plan.steps) {
+    const producer = resolveProducer(program.closure, step.producer);
+    for (const port of producer.inputs) {
+      const id = step.inputs[port.name];
+      const supplied = records.get(id as string);
+      invariant(supplied !== undefined, "UNKNOWN_RECORD", `${step.id}.${port.name} references ${id}`, id);
+      invariant(
+        sameType(supplied.type, port.type),
+        "INPUT_TYPE_MISMATCH",
+        `${step.id}.${port.name} wants ${typeKey(port.type)} but ${String(id)} is ${typeKey(supplied.type)}`,
+        id,
+      );
+    }
+  }
+
+  const goals = new Set<string>();
+  for (const goal of plan.goals) {
+    invariant(!goals.has(goal), "DUPLICATE_GOAL", `goal references ${goal} more than once`, goal);
+    goals.add(goal);
+    invariant(records.has(goal), "UNKNOWN_GOAL", `goal references ${goal}`, goal);
+  }
+  assertAcyclic(plan, records);
+  assertAllStepsReachGoal(plan, records);
+}
+
+function assertAcyclic(plan: BuildPlan, records: ReadonlyMap<RecordId, ProducedRecord>): void {
+  const remaining = new Map<string, number>();
+  const dependents = new Map<string, string[]>();
+  for (const step of plan.steps) {
+    remaining.set(step.id, 0);
+    dependents.set(step.id, []);
+  }
+  for (const step of plan.steps) {
+    const dependencies = new Set<string>();
+    for (const input of Object.values(step.inputs)) {
+      const producer = records.get(input)?.step;
+      if (producer !== undefined) dependencies.add(producer);
+    }
+    remaining.set(step.id, dependencies.size);
+    for (const dependency of dependencies) {
+      (dependents.get(dependency) as string[]).push(step.id);
+    }
+  }
+  const ready = [...remaining].filter(([, count]) => count === 0).map(([id]) => id);
+  let visited = 0;
+  for (let cursor = 0; cursor < ready.length; cursor += 1) {
+    const id = ready[cursor] as string;
+    visited += 1;
+    for (const dependent of dependents.get(id) as string[]) {
+      const count = (remaining.get(dependent) as number) - 1;
+      remaining.set(dependent, count);
+      if (count === 0) ready.push(dependent);
+    }
+  }
+  invariant(visited === plan.steps.length, "PLAN_CYCLE", "build plan contains a producer cycle");
+}
+
+function assertAllStepsReachGoal(
+  plan: BuildPlan,
+  records: ReadonlyMap<RecordId, ProducedRecord>,
+): void {
+  const steps = new Map(plan.steps.map((step) => [step.id, step]));
+  const required = new Set<string>();
+  const queue = plan.goals
+    .map((goal) => records.get(goal)?.step)
+    .filter((step): step is string => step !== undefined);
+  while (queue.length > 0) {
+    const id = queue.pop() as string;
+    if (required.has(id)) continue;
+    required.add(id);
+    const step = steps.get(id);
+    invariant(step !== undefined, "UNKNOWN_STEP", `unknown step ${id}`, id);
+    for (const input of Object.values(step.inputs)) {
+      const dependency = records.get(input)?.step;
+      if (dependency !== undefined) queue.push(dependency);
+    }
+  }
+  for (const step of plan.steps) {
+    invariant(required.has(step.id), "UNREACHABLE_STEP", `${step.id} does not contribute to any goal`, step.id);
+  }
+}
+
+export function producerStep(plan: BuildPlan, id: string): ProducerStep {
+  let index = planStepIndexes.get(plan);
+  if (index === undefined) {
+    index = new Map(plan.steps.map((item) => [item.id, item]));
+    planStepIndexes.set(plan, index);
+  }
+  const step = index.get(id);
+  invariant(step !== undefined, "UNKNOWN_STEP", `unknown step ${id}`, id);
+  return step;
+}

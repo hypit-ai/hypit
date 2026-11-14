@@ -2,14 +2,13 @@
   "format": "hypit.generation-graph@1",
   "id": "launch-variation",
   "name": "Launch variation",
-  "revision": 18,
+  "revision": 19,
   "nodes": [
     {
       "id": "node_mwagew9j_cqnows",
       "using": {
         "module": {
-          "name": "@hypit/seedance",
-          "version": "1"
+          "name": "@hypit/seedance"
         },
         "name": "seedance-2.5.video"
       },
@@ -28,6 +27,26 @@
         },
         "generateAudio": {
           "value": false
+        }
+      }
+    },
+    {
+      "id": "node_mwbt6qc6_n4ny21",
+      "using": {
+        "module": {
+          "name": "@hypit/grok-imagine"
+        },
+        "name": "grok-imagine-video-1.5-preview.video"
+      },
+      "inputs": {
+        "aspectRatio": {
+          "value": "auto"
+        },
+        "resolution": {
+          "value": "480p"
+        },
+        "duration": {
+          "value": 1
         }
       }
     }

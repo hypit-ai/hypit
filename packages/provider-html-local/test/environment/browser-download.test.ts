@@ -9,8 +9,8 @@ import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { canonicalize } from "@hypit/protocol";
-import { runtimeEndpointAdapterFacetAbi } from "@hypit/runtime-local/extension";
-import type { RuntimeEndpointAdapterImplementation } from "@hypit/runtime-local/extension";
+import { executionEnvironmentEndpointAdapterFacetKind } from "@hypit/execution-environment-local/extension";
+import type { ExecutionEnvironmentEndpointAdapterImplementation } from "@hypit/execution-environment-local/extension";
 import { hypitPackage } from "../../src/activation.js";
 import { browserDownloadUrl, browserExecutablePath, installHtmlBrowser, recommendedBrowserVersion, requireBrowserExecutable } from "@hypit/html-chromium-local";
 
@@ -41,9 +41,9 @@ test("Profile mirror reaches the real preparation command and installs its archi
   t.after(() => new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())));
   const address = server.address() as import("node:net").AddressInfo;
   const baseUrl = `http://127.0.0.1:${address.port}/chrome`;
-  const facet = hypitPackage.facets.find((item) => item.abi === runtimeEndpointAdapterFacetAbi);
+  const facet = hypitPackage.facets.find((item) => item.kind === executionEnvironmentEndpointAdapterFacetKind);
   assert.ok(facet);
-  const adapter = facet.implementation as RuntimeEndpointAdapterImplementation;
+  const adapter = facet.implementation as ExecutionEnvironmentEndpointAdapterImplementation;
   const activation = await adapter.activate({
     hostStateRoot: directory, dataRoot: directory, instance: "render", pool: "machine",
     config: canonicalize({ browserCacheDirectory: "cache", browserDownloadBaseUrl: `${baseUrl}/` }),

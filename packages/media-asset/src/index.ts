@@ -1,5 +1,8 @@
 export {
+  attachMediaRepresentation,
+  detachMediaRepresentation,
   parseMediaAssetDocument,
+  replaceMediaRepresentation,
   resolveMediaAssetMedia,
   resolveMediaAssetDocument,
   sealMediaAssetDocument,
@@ -12,7 +15,7 @@ export {
   createMediaRepresentationFacet,
   createMediaRepresentationHost,
   createMediaRepresentationHostFromFacets,
-  mediaRepresentationFacetAbi,
+  mediaRepresentationFacetKind,
   mediaRepresentationPackagesFromFacets,
 } from "./package.js";
 export type {
@@ -23,3 +26,4 @@ export type {
   MediaRepresentationPackage,
 } from "./package.js";
 export type * from "./types.js";
+export { mediaAssetDocumentFormat } from "./types.js";

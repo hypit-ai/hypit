@@ -1,6 +1,6 @@
 import { createGenerationCanvasPresentationFacet, type GenerationCanvasNodePresentation } from "@hypit/generation-canvas";
-import { createFieldModelGenerationNode } from "@hypit/generation/model-fields/graph";
-import { createGenerationNodePackageFacet } from "@hypit/hypit/generation-graph";
+import { createFieldModelGenerationNode } from "@hypit/generation-model/model-fields/graph";
+import { createGenerationNodePackageFacet } from "@hypit/hypit/generation/graph";
 import { seedreamEndpoints, seedreamModuleRef } from "./index.js";
 
 const using = { module: seedreamModuleRef, name: "seedream-5-lite.image" } as const;

@@ -15,3 +15,7 @@ export {
   readGenerationGraphProjectFile,
   writeGenerationGraphProjectFile,
 } from "./store.js";
+export {
+  createGenerationGraphProjectObjectOwner,
+  createGenerationGraphProjectObjectOwnerFacet,
+} from "./project-object.js";

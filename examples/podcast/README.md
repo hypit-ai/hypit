@@ -59,11 +59,11 @@ hypit check reference.svml
 hypit estimate reference.svml --segment opening-question --language en --pace fast --rounding ceil
 hypit estimate reference.svml --segment daily-creatine --language en --pace fast --rounding ceil
 hypit estimate reference.svml --segment arms-are-asking --language en --pace fast --rounding ceil
-hypit plan reference.svml --target final.video --runtime ./hypit.runtime.json
+hypit plan reference.svml --target final.video --runtime ./hypit.generation-runtime.json
 ```
 
 The estimates are five, eight and six seconds. Inspect the selected Endpoints and pricing before
-paid execution. With spending authorization, use `hypit build reference.svml --target final.video --runtime ./hypit.runtime.json --follow`.
+paid execution. With spending authorization, use `hypit build reference.svml --target final.video --runtime ./hypit.generation-runtime.json --follow`.
 Review the actual conversation, product continuity and B-roll handover; reuse produced media for
 subsequent Caption or composition changes.
 

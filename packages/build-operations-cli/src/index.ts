@@ -1,4 +1,4 @@
-import type { CliCommandModule } from "@hypit/cli";
+import type { CliCommandModule } from "@hypit/cli/public";
 
 import { runBuildOperationsCli } from "./main.js";
 import { writeBuildOperationsCliRootHelp, writeCliHelp } from "./output.js";
@@ -12,7 +12,6 @@ export function createBuildOperationsCliCommandModules(
   services: BuildOperationsCliServices,
 ): readonly CliCommandModule[] {
   return [{
-    format: "hypit.cli-command@1",
     id: "@hypit/build-operations-cli",
     commands: buildOperationsCliCommandNames,
     writeRootHelp: writeBuildOperationsCliRootHelp,

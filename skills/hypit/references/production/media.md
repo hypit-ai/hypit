@@ -35,7 +35,7 @@ the local domain with an equal-length Timeline Window. Neither operation changes
 File declarations publish a **Blob**, a reference to the file's bytes, under their own id:
 
 ```svml
-<import as="asset" from="@hypit/media-author@1"/>
+<import as="asset" from="@hypit/media-author"/>
 
 <asset:Image id="product" src="./assets/product.png"/>
 <asset:Video id="performance" src="./assets/performance.mp4"/>
@@ -85,7 +85,7 @@ leaves the Film clock to the consumer.
 The following excerpt prepares a performance and an independent soundtrack:
 
 ```svml
-<import as="media" from="@hypit/media-author@1"/>
+<import as="media" from="@hypit/media-author"/>
 
 <media:Video id="performance-media" source={performance}
    picture="source" audio="default" />
@@ -95,7 +95,7 @@ The following excerpt prepares a performance and an independent soundtrack:
 
 Use `src` for a project asset and `source` for a Blob produced by generation, a media operation or an
 imported Source. The Media's default binding and `.resource` publish the original Blob. `.source`,
-`.domain` and `.extent` publish its prepared facets. If a Build consumes only the Resource, Kernel
+`.domain` and `.extent` publish its prepared facets. If a Build consumes only the Resource, Generation Build
 target closure does not run inspection; requesting a prepared facet waits for the actual Resource and
 then observes its real duration.
 
@@ -144,8 +144,8 @@ picture changes, sound events or another consumer needs their actual positions, 
 them on the accepted media's local domain:
 
 ```svml
-<import as="whisperx" from="@hypit/whisperx@1"/>
-<import as="speechalign" from="@hypit/narrative-speech-alignment@1"/>
+<import as="whisperx" from="@hypit/whisperx"/>
+<import as="speechalign" from="@hypit/narrative-speech-alignment"/>
 
 <whisperx:Transcription id="opening-transcription"
   media={performance-media.source} language="en"/>

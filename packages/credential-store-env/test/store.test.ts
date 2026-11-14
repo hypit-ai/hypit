@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
-import { credentialRef } from "@hypit/runtime";
+import { credentialRef } from "@hypit/execution-environment";
 
 test("environment credentials resolve only the explicitly requested key", async () => {
   const store = new EnvironmentCredentialStore({

@@ -4,15 +4,15 @@
   "name": "Character Stage",
   "revision": 0,
   "libraries": [
-    { "path": "assets/scene/library.scene-library.json" }
+    { "path": "scenes/assets/library.scene-library.json" }
   ],
   "environment": {
     "using": {
-      "module": { "name": "@hypit/scene-environment", "version": "1" },
+      "module": { "name": "@hypit/scene-environment" },
       "name": "world-environment"
     },
     "parameters": {
-      "preset": { "path": "assets/scene/environments/world-neutral/world-neutral.scene-asset.json" },
+      "preset": { "path": "scenes/assets/environments/world-neutral/world-neutral.scene-asset.json" },
       "world": {
         "sky": { "top": "#151820", "horizon": "#303640" },
         "ground": { "visible": true, "color": "#25282e", "opacity": 1 },
@@ -32,7 +32,7 @@
       "id": "actor-main",
       "name": "男性 · 标准",
       "using": {
-        "module": { "name": "@project/characters", "version": "1" },
+        "module": { "name": "@project/characters" },
         "name": "actor"
       },
       "transform": {
@@ -42,7 +42,7 @@
       },
       "enabled": true,
       "parameters": {
-        "asset": { "path": "assets/scene/characters/standard-male/standard-male.scene-asset.json" },
+        "asset": { "path": "scenes/assets/characters/standard-male/standard-male.scene-asset.json" },
         "pose": "neutral"
       }
     },
@@ -50,7 +50,7 @@
       "id": "actor-secondary",
       "name": "女性 · 标准",
       "using": {
-        "module": { "name": "@project/characters", "version": "1" },
+        "module": { "name": "@project/characters" },
         "name": "actor"
       },
       "transform": {
@@ -60,7 +60,7 @@
       },
       "enabled": true,
       "parameters": {
-        "asset": { "path": "assets/scene/characters/standard-female/standard-female.scene-asset.json" },
+        "asset": { "path": "scenes/assets/characters/standard-female/standard-female.scene-asset.json" },
         "pose": "neutral"
       }
     },
@@ -68,7 +68,7 @@
       "id": "table-main",
       "name": "圆桌",
       "using": {
-        "module": { "name": "@project/scene-components", "version": "1" },
+        "module": { "name": "@project/scene-components" },
         "name": "prop"
       },
       "transform": {
@@ -78,14 +78,14 @@
       },
       "enabled": true,
       "parameters": {
-        "asset": { "path": "assets/scene/props/round-table/round-table.scene-asset.json" }
+        "asset": { "path": "scenes/assets/props/round-table/round-table.scene-asset.json" }
       }
     },
     {
       "id": "chair-left",
       "name": "单椅",
       "using": {
-        "module": { "name": "@project/scene-components", "version": "1" },
+        "module": { "name": "@project/scene-components" },
         "name": "prop"
       },
       "transform": {
@@ -95,14 +95,14 @@
       },
       "enabled": true,
       "parameters": {
-        "asset": { "path": "assets/scene/props/lounge-chair/lounge-chair.scene-asset.json" }
+        "asset": { "path": "scenes/assets/props/lounge-chair/lounge-chair.scene-asset.json" }
       }
     },
     {
       "id": "pedestal-right",
       "name": "展示台",
       "using": {
-        "module": { "name": "@project/scene-components", "version": "1" },
+        "module": { "name": "@project/scene-components" },
         "name": "prop"
       },
       "transform": {
@@ -112,7 +112,7 @@
       },
       "enabled": true,
       "parameters": {
-        "asset": { "path": "assets/scene/props/display-pedestal/display-pedestal.scene-asset.json" }
+        "asset": { "path": "scenes/assets/props/display-pedestal/display-pedestal.scene-asset.json" }
       }
     }
   ],
@@ -153,7 +153,7 @@
               "duration": { "ticks": "120", "timeBase": { "numerator": 1, "denominator": 24 } },
               "enabled": true,
               "using": {
-                "module": { "name": "@hypit/scene-motion", "version": "1" },
+                "module": { "name": "@hypit/scene-motion" },
                 "name": "camera-motion"
               },
               "parameters": {

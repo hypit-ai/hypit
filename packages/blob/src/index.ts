@@ -1,18 +1,14 @@
-import type {
-  ModuleManifest,
-  TypeRef,
-} from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
 
-export const blobModuleRef = { name: "@hypit/blob", version: "1" } as const;
+export const blobModuleRef = { name: "@hypit/blob" } as const;
 
 export const blobTypes = {
   blob: { module: blobModuleRef, name: "Blob" },
 } satisfies Record<string, TypeRef>;
 
-export const blobManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const blobManifest: GenerationModuleDefinition = {
   name: blobModuleRef.name,
-  version: blobModuleRef.version,
   dependencies: [],
   types: [blobTypes.blob.name],
   capabilities: [],

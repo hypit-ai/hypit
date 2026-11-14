@@ -77,7 +77,7 @@ Keep the boundary useful:
 Start from the installed project-component example and follow its README for the selected release's
 TypeScript imports, package metadata and dependencies. Give the new package its own identity under the
 project owner's scope. Source imports use the address published by that package, such as
-`@your-scope/score-strip@1`.
+`@your-scope/score-strip`.
 
 Describe the declaration's role, fields and outputs with a small valid example so a future author
 can select it. A visual preview makes its appearance recognizable; the production Source records

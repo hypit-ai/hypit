@@ -22,7 +22,7 @@ import {
   type CliApplicationContext,
   type CliCommandModule,
   type CliIo,
-} from "@hypit/cli";
+} from "@hypit/cli/public";
 import {
   inspectGenerationGraphProject,
   lowerGenerationGraph,
@@ -38,10 +38,11 @@ import type {
   NodePackageLoadOptions,
   NodePackageSelectionRequest,
 } from "@hypit/loader/node";
-import { moduleKey, modulePackageAbi } from "@hypit/protocol";
+import { moduleKey } from "@hypit/module";
+import { moduleFacetKind } from "@hypit/module";
 import type { ProductAddress, ProductHistory } from "@hypit/product";
 import type { BuildResultHistory } from "@hypit/result";
-import { NodeFilesystemWorkspace } from "@hypit/workspace/node";
+import { NodeFilesystemWorkspace } from "@hypit/generation-authoring/workspace/node";
 
 export type GenerationMediaProductMaterializationRequest = {
   readonly product: ProductAddress;
@@ -229,7 +230,7 @@ async function resolveFuturePath(path: string): Promise<string> {
 function packageRequest(project: Awaited<ReturnType<typeof readGenerationGraphProjectFile>>): NodePackageSelectionRequest {
   const logical = new Map<string, LogicalPackageAddress>(project.nodes.map((node) => {
     const name = moduleKey(node.using.module);
-    return [name, { abi: modulePackageAbi, name }];
+    return [name, { kind: moduleFacetKind, name }];
   }));
   return { selected: [], logical: [...logical.values()] };
 }
@@ -530,7 +531,6 @@ export function createGenerationGraphCliCommandModules(
   services: GenerationGraphCliServices,
 ): readonly CliCommandModule[] {
   return [{
-    format: "hypit.cli-command@1",
     id: "@hypit/generation-graph-cli",
     commands: ["generation"],
     writeRootHelp(io) {

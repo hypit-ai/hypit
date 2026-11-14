@@ -1,0 +1,20 @@
+{
+  "format": "hypit.scene-asset@1",
+  "id": "softbox",
+  "name": "柔光箱",
+  "using": {
+    "module": {
+      "name": "@project/scene-assets"
+    },
+    "name": "light-prop"
+  },
+  "resources": {
+    "model": {
+      "path": "model.gltf",
+      "mediaType": "model/gltf+json"
+    }
+  },
+  "parameters": {
+    "lightType": "area"
+  }
+}

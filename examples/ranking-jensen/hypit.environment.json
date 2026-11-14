@@ -1,0 +1,29 @@
+{
+  "format": "hypit.execution-environment-local@1",
+  "dataRoot": ".hypit/environment/local",
+  "credentials": {},
+  "endpoints": {
+    "media.local": {
+      "use": "@hypit/provider-media-local",
+      "config": {
+        "defaultConcurrency": 2
+      }
+    },
+    "whisperx.football-ranking": {
+      "use": "@hypit/provider-whisperx-local",
+      "config": {
+        "defaultConcurrency": 1
+      }
+    },
+    "html.local": {
+      "use": "@hypit/provider-html-local",
+      "config": {
+        "workers": 4,
+        "defaultConcurrency": 1
+      }
+    }
+  },
+  "bindings": {
+    "@hypit/whisperx#whisperx-transcription": "whisperx.football-ranking"
+  }
+}

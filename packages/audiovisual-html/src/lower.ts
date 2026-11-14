@@ -2,11 +2,20 @@ import {
   assertAudiovisualProgram,
   createAudiovisualProgramEvaluator,
   isPointwiseOperatorTemporalSupport,
+  pictureNodeSpatialDomains,
   type AudiovisualProgram,
   type EvaluatedPictureGraph,
   type EvaluatedPictureNode,
   type PictureGraph,
 } from "@hypit/audiovisual";
+import {
+  assertAudiovisualPictureOutput,
+  createAudiovisualPictureDemand,
+  outputFrameCount,
+  outputFramePosition,
+  type AudiovisualPictureDemand,
+  type AudiovisualPictureOutput,
+} from "@hypit/audiovisual-execution";
 import {
   assertHtmlProgram,
   compileHtmlPictureProgram,
@@ -15,21 +24,27 @@ import {
   type HtmlPictureElement,
   type HtmlProgram,
 } from "@hypit/html-program";
-import { preparedPictureExtent, preparedSignalPictureSource, verifyPreparedMedia } from "@hypit/media";
+import {
+  preparedPictureExtent,
+  preparedSignalPictureSource,
+  verifyPreparedMedia,
+  verifyPreparedSignalPictureSource,
+  type PreparedSignalPictureSource,
+} from "@hypit/media";
 import {
   assertLocalSpatialDomain,
-  assertSpatialRegion,
   invertSpatialMap,
   sameSpatialDomain,
   type LocalSpatialDomain,
   type SpatialMap,
-  type SpatialRegion,
 } from "@hypit/spatial/algebra";
 import {
+  addExactTemporalValues,
   composeTemporalMaps,
   exactTemporalValueFromFrames,
   sealLocalTemporalDomain,
   sealTemporalMap,
+  subtractExactTemporalValues,
   temporalValueInFrames,
   type ExactTemporalValue,
   type FrameSpan,
@@ -37,16 +52,19 @@ import {
   type TemporalMap,
   type TemporalSamplingGrid,
 } from "@hypit/temporal";
-import type { Rational } from "@hypit/temporal/algebra";
+import { compareExactTemporalValues, compareTemporalMapPoints } from "@hypit/temporal/algebra";
+import type { Rational, TemporalMapRegionSet } from "@hypit/temporal/algebra";
 
-import { assertAudiovisualHtmlOutput, resolveAudiovisualHtmlSource } from "./source.js";
-import type { AudiovisualHtmlOutput, AudiovisualHtmlSourceSet } from "./source.js";
-import { outputFrameCount, outputFramePosition } from "./sampling.js";
+import { resolveAudiovisualHtmlSource } from "./source.js";
+import type { AudiovisualHtmlSourceSet } from "./source.js";
+import { planAudiovisualHtmlExecution } from "./execution.js";
 
 export type AudiovisualHtmlLowering = {
   readonly program: AudiovisualProgram;
-  readonly output: AudiovisualHtmlOutput;
+  readonly output: AudiovisualPictureOutput;
   readonly sources: AudiovisualHtmlSourceSet;
+  /** Omitted only by callers intentionally rendering the complete Programme. */
+  readonly demand?: AudiovisualPictureDemand;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -57,64 +75,6 @@ function pixelDomain(value: LocalSpatialDomain, label: string): void {
   assertLocalSpatialDomain(value);
   assert(value.region.x === 0 && value.region.y === 0,
     `${label} ${value.id} must have a zero origin for HTML lowering.`);
-}
-
-function regionInside(region: SpatialRegion, domain: LocalSpatialDomain): boolean {
-  return region.x >= domain.region.x
-    && region.y >= domain.region.y
-    && region.x + region.width <= domain.region.x + domain.region.width
-    && region.y + region.height <= domain.region.y + domain.region.height;
-}
-
-function commonDomain(domains: readonly LocalSpatialDomain[], label: string): LocalSpatialDomain {
-  const [first, ...rest] = domains;
-  assert(first !== undefined, `${label} has no Picture inputs.`);
-  for (const domain of rest) assert(sameSpatialDomain(first, domain),
-    `${label} mixes spatial domains ${first.id} and ${domain.id}.`);
-  return first;
-}
-
-function pictureNodeDomains(graph: PictureGraph, program: AudiovisualProgram): ReadonlyMap<string, LocalSpatialDomain> {
-  const rootDomain = program.pictureDomain!;
-  pixelDomain(rootDomain, "Picture root domain");
-  const cache = new Map<string, LocalSpatialDomain>();
-  const domainOf = (id: string): LocalSpatialDomain => {
-    const cached = cache.get(id);
-    if (cached !== undefined) return cached;
-    const node = graph.nodes[id]!;
-    let domain: LocalSpatialDomain;
-    switch (node.kind) {
-      case "transparent": domain = rootDomain; break;
-      case "use": domain = program.occurrences[node.occurrence]!.source.outputs[node.output]!.spatialDomain!; break;
-      case "restrict": domain = domainOf(node.input); break;
-      case "crop": {
-        domain = domainOf(node.input);
-        assertSpatialRegion(node.region, `Picture crop ${id}`);
-        assert(regionInside(node.region, domain), `Picture crop ${id} lies outside domain ${domain.id}.`);
-        break;
-      }
-      case "remap": {
-        const input = domainOf(node.input);
-        assert(sameSpatialDomain(input, node.mapping.source),
-          `Picture remap ${id} reads ${input.id}, not ${node.mapping.source.id}.`);
-        domain = node.mapping.target;
-        break;
-      }
-      case "remap-control": {
-        domainOf(node.input);
-        domain = node.control.segments[0]!.from.target;
-        break;
-      }
-      case "over": domain = commonDomain(node.inputs.map(domainOf), `Picture over ${id}`); break;
-      case "apply": domain = commonDomain(node.operator.inputs.map((name) => domainOf(node.inputs[name]!)),
-        `Picture apply ${id}`); break;
-    }
-    pixelDomain(domain, `Picture node ${id} domain`);
-    cache.set(id, domain);
-    return domain;
-  };
-  assert(sameSpatialDomain(domainOf(graph.root), rootDomain), "Picture graph does not close its output Space.");
-  return cache;
 }
 
 function cssNumber(value: number): string {
@@ -169,6 +129,14 @@ function rationalNumber(value: Rational): number {
   return Number(value.numerator) / Number(value.denominator);
 }
 
+function pictureSourceExtent(value: PreparedSignalPictureSource): { width: number; height: number } {
+  const picture = value.interpretation;
+  let width = picture.codedWidth * picture.sampleAspectRatio.numerator / picture.sampleAspectRatio.denominator;
+  let height = picture.codedHeight;
+  if (picture.rotationDegrees === 90 || picture.rotationDegrees === 270) [width, height] = [height, width];
+  return { width, height };
+}
+
 function sampledTemporalMap(
   id: string,
   flags: readonly boolean[],
@@ -217,14 +185,21 @@ function collectPictureNodeSequence(
   graph: PictureGraph,
   frameCount: number,
   evaluate: (frame: number) => EvaluatedPictureGraph | undefined,
+  demanded: (node: string, frame: number) => boolean = () => true,
 ): PictureNodeSequence {
   const sequence = new Map<string, (EvaluatedPictureNode | undefined)[]>();
   for (const id of Object.keys(graph.nodes)) sequence.set(id, []);
   for (let frame = 0; frame < frameCount; frame += 1) {
     const value = evaluate(frame);
-    for (const [id, nodes] of sequence) nodes.push(value?.nodes[id]);
+    for (const [id, nodes] of sequence) nodes.push(demanded(id, frame) ? value?.nodes[id] : undefined);
   }
   return sequence;
+}
+
+function regionSetContains(value: TemporalMapRegionSet, at: ExactTemporalValue): boolean {
+  const point = { position: at, side: "after" as const };
+  return value.regions.some((region) => compareTemporalMapPoints(region.start, point) <= 0
+    && compareTemporalMapPoints(point, region.end) <= 0);
 }
 
 function lowerGraph(
@@ -236,7 +211,8 @@ function lowerGraph(
   prefix: string,
   available: readonly boolean[],
 ): HtmlPictureElement {
-  const domains = pictureNodeDomains(graph, program);
+  const domains = pictureNodeSpatialDomains(graph, program);
+  for (const [id, domain] of domains) pixelDomain(domain, `Picture node ${id} domain`);
   const nodesAt = (id: string) => sequence.get(id)!;
   const lower = (nodeId: string, path: readonly string[], mask: readonly boolean[]): HtmlPictureElement => {
     const node = graph.nodes[nodeId]!;
@@ -299,6 +275,27 @@ function lowerGraph(
               media.picture.map,
             ) };
         }
+        if (source.implementation.kind === "picture-product") {
+          const product = source.implementation.product;
+          verifyPreparedSignalPictureSource(product.source);
+          const nominal = program.occurrences[node.occurrence]!.source.outputs[node.output]!;
+          assert(nominal.kind === "signal",
+            `Picture Product cannot implement constant Source ${source.source}.${source.output}.`);
+          const target = product.sampling.stages[0]!.target;
+          assert(target.id === nominal.domain.id
+            && compareExactTemporalValues(target.duration, nominal.domain.duration) === 0,
+          `Picture Product for ${source.source}.${source.output} has another temporal domain.`);
+          const extent = pictureSourceExtent(product.source);
+          assert(extent.width === domain.region.width && extent.height === domain.region.height,
+            `Picture Product extent does not match Source Space ${domain.id}.`);
+          const positions = samples.map((sample) => sample?.temporal.kind === "signal"
+            ? sample.temporal.at : undefined);
+          return { ...common, kind: "video", source: structuredClone(product.source), muted: true,
+            ...(reconstruction === undefined ? {} : { reconstruction }),
+            sampling: composeTemporalMaps(sampledTemporalMap(
+              `${source.source}:${source.output}:product`, active, positions, sampling, nominal.domain,
+            ), product.sampling) };
+        }
         const child = source.implementation.program;
         assert(reconstruction === undefined,
           `Picture reconstruction on nested Programme ${child.id} is unsupported by the HTML terminal.`);
@@ -350,7 +347,7 @@ function lowerGraph(
         }) };
       case "apply": {
         assert(isPointwiseOperatorTemporalSupport(node.operator.temporalSupport),
-          `HTML Picture Operator ${node.operator.id} requires non-pointwise temporal support.`);
+          `HTML Picture Operator ${node.operator.id} cannot execute non-pointwise temporal support.`);
         const extent = bounds(active);
         const positions = Object.fromEntries(Object.keys(node.operator.temporalControls).map((name) => [name,
           extent === undefined ? [] : evaluated.slice(extent.start, extent.end).map((value) =>
@@ -371,15 +368,31 @@ function lowerGraph(
 /** Lower one resolved finite AVIR Picture Programme into one stable HTML Picture Programme. */
 export function lowerAudiovisualPictureProgramToHtmlProgram(input: AudiovisualHtmlLowering): HtmlProgram {
   assertAudiovisualProgram(input.program);
-  assertAudiovisualHtmlOutput(input.output);
+  assertAudiovisualPictureOutput(input.output);
   const graph = input.program.picture;
   assert(graph !== undefined, `Audiovisual Programme ${input.program.id} has no Picture output.`);
   assert(sameSpatialDomain(input.output.pictureMapping.source, input.program.pictureDomain!),
     `Audiovisual HTML Picture Mapping does not read Programme Space ${input.program.pictureDomain!.id}.`);
-  const frameCount = outputFrameCount(input.program.domain.duration, input.output.sampling);
+  const demand = input.demand ?? createAudiovisualPictureDemand(input.program, input.output);
+  const duration = subtractExactTemporalValues(demand.range.end, demand.range.start);
+  const frameCount = outputFrameCount(duration, input.output.sampling);
+  const positions = Array.from({ length: frameCount }, (_, frame) => addExactTemporalValues(
+    demand.range.start,
+    outputFramePosition(frame, input.output.sampling),
+  ));
+  const execution = planAudiovisualHtmlExecution(input.program, input.sources, {
+    ...demand,
+    samples: positions.map((position) => ({ position, side: "after" as const })),
+  });
+  const demandedNodes = new Map(execution.demand.nodes
+    .filter((node) => node.signal === "picture")
+    .map((node) => [node.node, node.temporal]));
   const evaluate = createAudiovisualProgramEvaluator(input.program);
   const sequence = collectPictureNodeSequence(graph, frameCount, (frame) =>
-    evaluate(outputFramePosition(frame, input.output.sampling)).picture);
+    evaluate(positions[frame]!).picture, (node, frame) => {
+      const nodeDemand = demandedNodes.get(node);
+      return nodeDemand !== undefined && regionSetContains(nodeDemand, positions[frame]!);
+    });
   const picture = lowerGraph(input.program, graph, sequence, input.output.sampling, input.sources,
     input.output.id, Array.from({ length: frameCount }, () => true));
   const full = [{ startFrame: 0, endFrameExclusive: frameCount }];

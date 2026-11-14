@@ -3,16 +3,14 @@ import {
   defineBuild,
   link,
   materializeBuild,
-} from "@hypit/kernel";
-import type {
-  ModuleManifest,
-  ProducerRef,
-  ProducerStep,
-  TypeRef,
-} from "@hypit/protocol";
-import type { BuildView } from "@hypit/kernel";
+} from "@hypit/generation-build";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
+import type { ProducerStep } from "@hypit/generation-build";
+import type { BuildView } from "@hypit/generation-build";
 
-const moduleRef = { name: "example.greeting", version: "0.0.0" } as const;
+const moduleRef = { name: "example.greeting" } as const;
 const types = {
   intent: { module: moduleRef, name: "GreetingIntent" },
   prompt: { module: moduleRef, name: "TextPrompt" },
@@ -27,10 +25,8 @@ export const producers = {
   assemble: { module: moduleRef, name: "assemble" },
 } satisfies Record<string, ProducerRef>;
 
-const manifest: ModuleManifest = {
-  format: "hypit.module@1",
+const manifest: GenerationModuleDefinition = {
   name: moduleRef.name,
-  version: moduleRef.version,
   dependencies: [],
   types: Object.values(types).map((type) => type.name),
   capabilities: [{ name: capability.name, returns: types.generated }],

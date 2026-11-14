@@ -9,8 +9,9 @@ import test from "node:test";
 import {
   FileBuildFinalization,
   FileBuildFinalizationStore,
-} from "../../../runtime-local/src/result-storage/index.js";
-import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
+} from "../../../generation-runtime-local/src/result-storage/index.js";
+import type { CapabilityRef, TypeRef } from "@hypit/module";
+import type { TypedRecord } from "@hypit/generation-build";
 
 import { buildCliServices } from "../services-scenario.js";
 import { runBuildOperationsCli as runCli } from "@hypit/build-operations-cli";
@@ -29,7 +30,7 @@ test("builds, history, inspect and result export read project Build Results with
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-results-"));
   try {
     await fixture(root);
-    await writeFile(join(root, ".hypit", "runtime"), "missing-runtime.json\n", "utf8");
+    await writeFile(join(root, ".hypit", "generation", "runtime-profile"), "missing-runtime.json\n", "utf8");
     const builds = await jsonCommand(["builds"], root) as {
       readonly builds: readonly {
         readonly id: string;
@@ -74,7 +75,7 @@ test("builds, history, inspect and result export read project Build Results with
       format: "hypit.cli-result-export@1",
       build: "bld_20260902T110000000Z_0000000001",
       output: "stage.value",
-      type: "example.result@1#Value",
+      type: "example.result#Value",
       representation: "inline",
       path: destination,
     });
@@ -101,8 +102,8 @@ test("history scans older pages for matches and compares project-relative source
     await writeFile(join(root, "main.svml"), "source", "utf8");
     await fixture(root);
     const finalization = new FileBuildFinalizationStore(
-      join(root, ".hypit", "results"),
-      join(root, ".hypit", "products"),
+      join(root, ".hypit", "generation", "results"),
+      join(root, ".hypit", "generation", "products"),
     );
     for (const id of [
       "bld_20260902T110000001Z_0000000001",
@@ -133,8 +134,8 @@ test("history scans older pages for matches and compares project-relative source
 test("result export writes Blob bytes and uses the Type owner's structured author format", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-result-export-"));
   const build = "bld_20260902T110000010Z_0000000001";
-  const videoType = { module: { name: "example.media", version: "1" }, name: "Video" } satisfies TypeRef;
-  const structuredType = { module: { name: "example.speech", version: "1" }, name: "StructuredValue" } satisfies TypeRef;
+  const videoType = { module: { name: "example.media" }, name: "Video" } satisfies TypeRef;
+  const structuredType = { module: { name: "example.speech" }, name: "StructuredValue" } satisfies TypeRef;
   const bytes = new TextEncoder().encode("video bytes");
   const video = {
     kind: "blob",
@@ -144,8 +145,8 @@ test("result export writes Blob bytes and uses the Type owner's structured autho
   } as const;
   try {
     const result = await FileBuildFinalization.create(
-      join(root, ".hypit", "results"),
-      join(root, ".hypit", "products"),
+      join(root, ".hypit", "generation", "results"),
+      join(root, ".hypit", "generation", "products"),
       {
       id: build,
       sourcePath: join(root, "main.svml"),

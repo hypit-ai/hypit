@@ -13,7 +13,7 @@
     "@hypit/audiovisual": "workspace:*",
     "@hypit/audiovisual-html": "workspace:*",
     "@hypit/html-program": "workspace:*",
-    "@hypit/html-video": "workspace:*",
+    "@hypit/nle-audiovisual": "workspace:*",
     "@hypit/media": "workspace:*",
     "@hypit/nle": "workspace:*",
     "@hypit/nle-view": "workspace:*",

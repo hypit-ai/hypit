@@ -1,6 +1,8 @@
+import { createModuleFacet } from "@hypit/hypit/module";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
 import { createMediaRepresentationFacet } from "@hypit/media-asset";
-import { createProductExporterFacet } from "@hypit/hypit/product";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
+import { createProductExporterFacet } from "@hypit/hypit/generation/product";
+import { createRefinementPackageFacet } from "@hypit/hypit/generation/refinement";
 
 import { timedTranscriptComponent } from "./component.js";
 import { timedTranscriptManifest, timedTranscriptTypes } from "./contract.js";
@@ -9,9 +11,8 @@ import type { TimedTranscript } from "./document.js";
 import { timedTranscriptMediaRepresentationPackage } from "./representation.js";
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [{ manifest: timedTranscriptManifest }],
   facets: [
+    createModuleFacet(timedTranscriptManifest), createGenerationModuleFacet(timedTranscriptManifest),
     createRefinementPackageFacet(timedTranscriptComponent.refinements ?? []),
     createProductExporterFacet({
       type: timedTranscriptTypes.transcript,

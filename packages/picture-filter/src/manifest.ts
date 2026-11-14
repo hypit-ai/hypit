@@ -1,7 +1,10 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import type { ValueSchema } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
 
-export const pictureFilterModuleRef = { name: "@hypit/picture-filter", version: "1" } as const;
+export const pictureFilterModuleRef = { name: "@hypit/picture-filter" } as const;
 export const pictureFilterTypes = {
   state: { module: pictureFilterModuleRef, name: "PictureFilterState" },
   control: { module: pictureFilterModuleRef, name: "PictureFilterControl" },
@@ -26,10 +29,8 @@ export const pictureFilterStateSchema: ValueSchema = { kind: "object", fields: {
   invert: field(0, 1),
 } };
 
-export const pictureFilterManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const pictureFilterManifest: GenerationModuleDefinition = {
   name: pictureFilterModuleRef.name,
-  version: pictureFilterModuleRef.version,
   dependencies: [audiovisualDependency],
   types: Object.values(pictureFilterTypes).map((type) => type.name),
   capabilities: [],

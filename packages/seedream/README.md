@@ -9,7 +9,7 @@ retry and queue behavior belong to a selected Runtime Endpoint selected in the R
 The modes stay explicit in the source:
 
 ```svml
-module seedream from "@hypit/seedream@1"
+module seedream from "@hypit/seedream"
 
 seedream.text-image {
   id: scene prompt: @prompt aspect-ratio: 9:16

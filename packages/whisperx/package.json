@@ -20,13 +20,13 @@
   },
   "dependencies": {
     "@hypit/cli": "workspace:^0.0.0-dev",
-    "@hypit/generation-graph": "workspace:^0.0.0-dev",
+    "@hypit/execution-environment": "workspace:^0.0.0-dev",
     "@hypit/generation-canvas": "workspace:^0.0.0-dev",
+    "@hypit/generation-graph": "workspace:^0.0.0-dev",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-file-local": "workspace:^0.1.0",
     "@hypit/media-local": "workspace:^0.3.0",
     "@hypit/resource-store": "workspace:^0.1.0",
-    "@hypit/runtime": "workspace:^0.0.0-dev",
     "@hypit/speech-evidence": "workspace:^0.2.0",
     "@hypit/timed-transcript": "workspace:^0.1.0"
   },
@@ -42,6 +42,7 @@
     "@hypit/timed-transcript": "workspace:*",
     "@hypit/temporal": "workspace:*",
     "@hypit/temporal-graph": "workspace:*",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "@hypit/module": "workspace:^0.0.0-dev"
   }
 }

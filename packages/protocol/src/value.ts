@@ -1,5 +1,5 @@
 import { isResourceId } from "./canonical.js";
-import type { ResourceId } from "./identity.js";
+import type { ResourceId } from "./resource-id.js";
 import { compareCodeUnits } from "./order.js";
 
 export type CanonicalValue =

@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { EndpointRegistry } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
 import type { AsyncEndpoint } from "@hypit/endpoint";
 import { installEndpoint } from "@hypit/endpoint";
-import type { CanonicalValue, Need } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
+import type { Need } from "@hypit/generation-build";
 import { seedanceEndpoints } from "@hypit/seedance";
 
 import { createHypiHubProvider } from "../src/provider.js";

@@ -4,24 +4,25 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { compareCodeUnits, modulePackageAbi } from "@hypit/protocol";
-import { createAuthorFrontendFacet } from "@hypit/author";
-import { sourceFrontendPackageAbi } from "@hypit/source";
+import { compareCodeUnits } from "@hypit/protocol";
+import { createModuleFacet, moduleFacetKind } from "@hypit/module";
+import { createAuthorFrontendFacet } from "@hypit/generation-authoring/author";
+import { sourceFrontendFacetKind } from "@hypit/generation-authoring/source";
 
 import { discoverSourcePackages } from "../../src/source-discovery.js";
 
-test("third-party Frontends discover same-named ABI requirements through physical package bindings", async () => {
+test("third-party Frontends discover same-named Facet requirements through physical package bindings", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-third-party-discovery-"));
   try {
-    await writeFile(join(root, "main.story"), `<?svml using="@logical/story@1"?>\nstory`, "utf8");
-    await writeFile(join(root, "child.svml"), `<?svml using="@unknown/child@1"?>\nchild`, "utf8");
+    await writeFile(join(root, "main.story"), `<?svml using="@logical/story"?>\nstory`, "utf8");
+    await writeFile(join(root, "child.svml"), `<?svml using="@unknown/child"?>\nchild`, "utf8");
     const packages = [
       {
         specifier: "@physical/story-suite",
-        contribution: { format: "hypit.package@1" as const, facets: [createAuthorFrontendFacet({
-          id: "@logical/story@1",
+        contribution: { facets: [createAuthorFrontendFacet({
+          id: "@logical/story",
           discover: () => ({
-            modules: ["@logical/shared@1"],
+            modules: ["@logical/shared"],
             sources: [{ from: "./child.svml", alias: "child" }],
           }),
           decode: () => { throw new Error("discovery must not decode Author Source"); },
@@ -29,15 +30,18 @@ test("third-party Frontends discover same-named ABI requirements through physica
       },
       {
         specifier: "@physical/module-suite",
-        contribution: { format: "hypit.package@1" as const, modules: [{
-          manifest: {
-            format: "hypit.module@1" as const,
+        contribution: { facets: [createModuleFacet({
             name: "@logical/shared",
-            version: "1",
-            dependencies: [], types: [], capabilities: [], producers: [],
-          },
-          specifiers: ["@logical/shared@1"],
-        }] },
+            dependencies: [{ name: "@logical/base" }],
+            types: [],
+        })] },
+      },
+      {
+        specifier: "@physical/base-suite",
+        contribution: { facets: [createModuleFacet({
+          name: "@logical/base",
+          dependencies: [], types: [],
+        })] },
       },
     ];
     const discovered = await discoverSourcePackages(join(root, "main.story"), {
@@ -45,17 +49,19 @@ test("third-party Frontends discover same-named ABI requirements through physica
       packages,
     });
     assert.deepEqual(discovered.selected, [
+      "@physical/base-suite",
       "@physical/module-suite",
       "@physical/story-suite",
       "@unknown/child",
     ]);
     assert.deepEqual(discovered.logical, [
-      { abi: modulePackageAbi, name: "@logical/shared@1" },
-      { abi: sourceFrontendPackageAbi, name: "@logical/story@1" },
-      { abi: sourceFrontendPackageAbi, name: "@unknown/child@1" },
+      { kind: moduleFacetKind, name: "@logical/base" },
+      { kind: moduleFacetKind, name: "@logical/shared" },
+      { kind: sourceFrontendFacetKind, name: "@logical/story" },
+      { kind: sourceFrontendFacetKind, name: "@unknown/child" },
     ].sort((left, right) => compareCodeUnits(
-      JSON.stringify([left.abi, left.name]),
-      JSON.stringify([right.abi, right.name]),
+      JSON.stringify([left.kind, left.name]),
+      JSON.stringify([right.kind, right.name]),
     )));
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -66,10 +72,10 @@ test("an in-root Source whose basename starts with .. is still inside the worksp
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-dotdot-name-"));
   try {
     const source = join(root, "..keep.svml");
-    await writeFile(source, `<?svml using="@logical/author@1"?>\nauthor`, "utf8");
+    await writeFile(source, `<?svml using="@logical/author"?>\nauthor`, "utf8");
     const discovered = await discoverSourcePackages(source, { workspaceRoot: root, packages: [] });
     assert.deepEqual(discovered.logical, [
-      { abi: sourceFrontendPackageAbi, name: "@logical/author@1" },
+      { kind: sourceFrontendFacetKind, name: "@logical/author" },
     ]);
   } finally {
     await rm(root, { recursive: true, force: true });

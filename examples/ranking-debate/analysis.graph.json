@@ -7,7 +7,7 @@
     {
       "id": "alice-video-1-media",
       "using": {
-        "module": { "name": "@hypit/media-asset", "version": "1" },
+        "module": { "name": "@hypit/media-asset" },
         "name": "media"
       },
       "inputs": {
@@ -17,7 +17,7 @@
     {
       "id": "alice-video-1-evidence",
       "using": {
-        "module": { "name": "@hypit/speech-evidence", "version": "1" },
+        "module": { "name": "@hypit/speech-evidence" },
         "name": "project-audio"
       },
       "inputs": { "media": { "node": "alice-video-1-media" } }
@@ -25,7 +25,7 @@
     {
       "id": "alice-video-1-transcript",
       "using": {
-        "module": { "name": "@hypit/whisperx", "version": "1" },
+        "module": { "name": "@hypit/whisperx" },
         "name": "transcribe"
       },
       "inputs": {
@@ -36,7 +36,7 @@
     {
       "id": "bob-video-1-media",
       "using": {
-        "module": { "name": "@hypit/media-asset", "version": "1" },
+        "module": { "name": "@hypit/media-asset" },
         "name": "media"
       },
       "inputs": {
@@ -46,7 +46,7 @@
     {
       "id": "bob-video-1-evidence",
       "using": {
-        "module": { "name": "@hypit/speech-evidence", "version": "1" },
+        "module": { "name": "@hypit/speech-evidence" },
         "name": "project-audio"
       },
       "inputs": { "media": { "node": "bob-video-1-media" } }
@@ -54,7 +54,7 @@
     {
       "id": "bob-video-1-transcript",
       "using": {
-        "module": { "name": "@hypit/whisperx", "version": "1" },
+        "module": { "name": "@hypit/whisperx" },
         "name": "transcribe"
       },
       "inputs": {
@@ -65,7 +65,7 @@
     {
       "id": "alice-video-2-media",
       "using": {
-        "module": { "name": "@hypit/media-asset", "version": "1" },
+        "module": { "name": "@hypit/media-asset" },
         "name": "media"
       },
       "inputs": {
@@ -75,7 +75,7 @@
     {
       "id": "alice-video-2-evidence",
       "using": {
-        "module": { "name": "@hypit/speech-evidence", "version": "1" },
+        "module": { "name": "@hypit/speech-evidence" },
         "name": "project-audio"
       },
       "inputs": { "media": { "node": "alice-video-2-media" } }
@@ -83,7 +83,7 @@
     {
       "id": "alice-video-2-transcript",
       "using": {
-        "module": { "name": "@hypit/whisperx", "version": "1" },
+        "module": { "name": "@hypit/whisperx" },
         "name": "transcribe"
       },
       "inputs": {
@@ -94,7 +94,7 @@
     {
       "id": "bob-video-2-media",
       "using": {
-        "module": { "name": "@hypit/media-asset", "version": "1" },
+        "module": { "name": "@hypit/media-asset" },
         "name": "media"
       },
       "inputs": {
@@ -104,7 +104,7 @@
     {
       "id": "bob-video-2-evidence",
       "using": {
-        "module": { "name": "@hypit/speech-evidence", "version": "1" },
+        "module": { "name": "@hypit/speech-evidence" },
         "name": "project-audio"
       },
       "inputs": { "media": { "node": "bob-video-2-media" } }
@@ -112,7 +112,7 @@
     {
       "id": "bob-video-2-transcript",
       "using": {
-        "module": { "name": "@hypit/whisperx", "version": "1" },
+        "module": { "name": "@hypit/whisperx" },
         "name": "transcribe"
       },
       "inputs": {

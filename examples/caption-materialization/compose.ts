@@ -25,7 +25,7 @@ import { createNarrativeLocalTiming } from "@hypit/narrative-temporal";
 import {
   applyNleTransaction,
   createNleProject,
-  nleLinearSourceTime,
+  nleLinearTimeMapping,
   serializeNleProject,
   type NleProject,
 } from "@hypit/nle";
@@ -158,7 +158,7 @@ export async function buildCaptionMaterializationExample(): Promise<{
         asset: { path: `media/${parsedSegment.id}.media.json` },
         start: programmeAt,
         duration,
-        sourceTime: nleLinearSourceTime(duration),
+        sourceTime: nleLinearTimeMapping(duration),
         enabled: true,
         picture: { layout: { x: 0, y: 0, width: 1920, height: 1080, fit: "cover" } },
       },

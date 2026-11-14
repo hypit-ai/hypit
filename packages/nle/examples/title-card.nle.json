@@ -42,8 +42,7 @@
           "enabled": true,
           "component": {
             "module": {
-              "name": "@example/audiovisual-title-card",
-              "version": "1"
+              "name": "@example/audiovisual-title-card"
             },
             "name": "title-card"
           },
@@ -74,7 +73,7 @@
             "ticks": "3",
             "timeBase": { "numerator": 1, "denominator": 1 }
           },
-          "sourceTime": {
+          "controlTime": {
             "pieces": [{
               "target": {
                 "start": { "ticks": "0", "timeBase": { "numerator": 1, "denominator": 1 } },
@@ -85,10 +84,9 @@
             }]
           },
           "enabled": true,
-          "component": {
+          "operator": {
             "module": {
-              "name": "@hypit/picture-filter",
-              "version": "1"
+              "name": "@hypit/picture-filter"
             },
             "name": "filter"
           },

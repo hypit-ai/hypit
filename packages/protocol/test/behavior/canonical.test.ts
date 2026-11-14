@@ -1,28 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-// Protocol owns canonical identity, references and recursive Value shape.
+// The Value boundary owns canonical representation and recursive Blob leaves.
 
-import {
-  assertBlobRef,
-  assertBuildId,
-  assertOrderedBuildId,
-  blobRefSchema,
-  buildIdCreatedAt,
-  canonicalize,
-  canonicalStringify,
-  isResourceId,
-  mapValueBlobs,
-  normalizeValue,
-  orderedBuildId,
-  valueBlobRefs,
-} from "@hypit/protocol";
+import { assertBlobRef, blobRefSchema, canonicalize, canonicalStringify, isResourceId, mapValueBlobs, normalizeValue, valueBlobRefs } from "@hypit/protocol";
 
 test("canonical values have stable key order and preserve array order", () => {
   assert.equal(canonicalStringify({ b: 1, a: 2 }), '{"a":2,"b":1}');
   assert.notEqual(canonicalStringify([1, 2]), canonicalStringify([2, 1]));
 });
-
 test("canonical values preserve every own object key as data", () => {
   const input = Object.fromEntries([["__proto__", { kept: true }], ["constructor", "value"]]);
   const canonical = canonicalize(input) as Record<string, unknown>;
@@ -52,7 +38,7 @@ test("Resource ids retain their narrow execution-reference syntax", () => {
   assert.equal(isResourceId("res_has space"), false);
 });
 
-test("BlobRef keeps one opaque structural schema and one Protocol runtime assertion", () => {
+test("BlobRef keeps one opaque structural schema and one Value-boundary assertion", () => {
   assert.deepEqual(blobRefSchema(), { kind: "blob" });
   assert.deepEqual(blobRefSchema(["image/png"]), { kind: "blob", mediaTypes: ["image/png"] });
   assert.doesNotThrow(() => assertBlobRef({ kind: "blob", resource: "res_a", size: 0, mediaType: "image/png" }));
@@ -95,21 +81,4 @@ test("the reserved blob tag is validated by the same Value boundary at every dep
   }), /BlobRef/u);
   assert.throws(() => normalizeValue({ value: Number.NaN }), /finite/u);
   assert.throws(() => normalizeValue({ value: undefined }), /undefined/u);
-});
-
-test("Build ids are non-empty opaque Host identities", () => {
-  assert.doesNotThrow(() => assertBuildId("build-19"));
-  for (const value of ["", " ", " padded "]) {
-    assert.throws(() => assertBuildId(value), /Build id/u);
-  }
-});
-
-test("public Build ids carry sortable UTC submission time without content semantics", () => {
-  const earlier = orderedBuildId(Date.parse("2026-09-02T10:20:30.123Z"), "0000000001");
-  const later = orderedBuildId(Date.parse("2026-09-02T10:20:30.124Z"), "0000000000");
-  assert.equal(earlier, "bld_20260902T102030123Z_0000000001");
-  assert.equal(buildIdCreatedAt(earlier), Date.parse("2026-09-02T10:20:30.123Z"));
-  assert.ok(earlier < later);
-  assert.doesNotThrow(() => assertOrderedBuildId(earlier));
-  assert.throws(() => assertOrderedBuildId("build-19"), /UTC submission time/u);
 });

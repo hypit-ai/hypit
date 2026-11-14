@@ -25,8 +25,7 @@
 }
 
 .workbench-topbar-left,
-.workbench-topbar-right,
-.workbench-view-tabs {
+.workbench-topbar-right {
   display: flex;
   align-items: center;
 }
@@ -102,7 +101,7 @@
 @keyframes workbench-environment-pulse { 50% { opacity: .55; scale: .88; } }
 
 .workbench-environment-popover {
-  position: fixed; inset: 40px 266px auto auto; width: 248px; margin: 0; padding: 10px;
+  position: fixed; inset: 40px 76px auto auto; width: 248px; margin: 0; padding: 10px;
   border: 1px solid color-mix(in srgb, var(--text-3, #6f737c) 24%, transparent);
   border-radius: 12px; opacity: 0; color: var(--text, #e7e8eb); background: rgba(25,26,30,.96);
   box-shadow: 0 18px 50px rgba(0,0,0,.46), 0 0 0 1px rgba(0,0,0,.24);
@@ -131,50 +130,11 @@
 .workbench-environment-connect:hover:not(:disabled) { background: #c74b69; }
 .workbench-environment-connect:disabled { color: #777b84; background: rgba(255,255,255,.055); cursor: default; }
 
-.workbench-topbar-divider {
-  width: 1px;
-  height: 14px;
-  margin: 0 10px 0 8px;
-  background: color-mix(in srgb, var(--text-3, #6f737c) 42%, transparent);
-}
-
-.workbench-view-tabs { gap: 4px; white-space: nowrap; }
-
-.workbench-view-tabs a {
-  position: relative;
-  display: flex;
-  align-items: center;
-  height: 30px;
-  padding: 0 9px;
-  border-radius: 4px;
-  color: var(--text-3, #6f737c);
-  font-size: 12px;
-  font-weight: 500;
-  text-decoration: none;
-  text-shadow: none;
-}
-
-.workbench-topbar--floating .workbench-view-tabs a,
 .workbench-topbar--floating .workbench-chrome-button {
   text-shadow: 0 1px 5px rgba(0, 0, 0, .72);
 }
 
-.workbench-view-tabs a:hover { color: var(--text-2, #a4a7ae); }
-.workbench-view-tabs a[aria-current="page"] { color: var(--text, #e7e8eb); }
-
-.workbench-view-tabs a[aria-current="page"]::after {
-  position: absolute;
-  right: 9px;
-  bottom: 2px;
-  left: 9px;
-  height: 1px;
-  background: currentColor;
-  content: "";
-  opacity: .72;
-}
-
 .workbench-chrome-button:focus-visible,
-.workbench-view-tabs a:focus-visible,
 .workbench-brand:focus-visible {
   outline: 1px solid var(--brand-500, #e3406a);
   outline-offset: -1px;
@@ -183,9 +143,6 @@
 @media (max-width: 760px) {
   .workbench-topbar { padding-inline: 10px; }
   .workbench-project-name { display: none; }
-  .workbench-view-tabs { gap: 0; }
-  .workbench-view-tabs a { padding-inline: 6px; font-size: 11px; }
-  .workbench-topbar-divider { margin-inline: 5px; }
   .workbench-environment-popover { right: 10px; }
 }
 

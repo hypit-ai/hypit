@@ -8,10 +8,10 @@ import {
   type HtmlTextPaintLayer,
   type HtmlTextTypography,
 } from "@hypit/html-program";
-import type { NleHtmlVideoComponentResolver } from "@hypit/html-video";
+import type { NleAudiovisualComponentResolver } from "@hypit/nle-audiovisual";
 import { assertFontStackRef } from "@hypit/media";
 import {
-  resolveNleComponentBinding,
+  resolveNleComponentSharedValue,
   resolveNlePictureLayout,
   type NleComponentItem,
   type NleComponentParameterAuthoring,
@@ -19,7 +19,8 @@ import {
   type NlePackageSymbol,
   type NleComposition,
 } from "@hypit/nle";
-import { canonicalize, type ModuleManifest } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import { type GenerationModuleDefinition } from "@hypit/generation-build";
 import { sealLocalSpatialDomain } from "@hypit/spatial/algebra";
 import { sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 
@@ -33,6 +34,7 @@ import {
   type CaptionNleComponentEdit,
   type CaptionNleComponentParameters,
 } from "@hypit/caption-nle";
+import { captionFineHtmlRuntime } from "./html-runtime.js";
 import type {
   CaptionFineActiveBoxParameters,
   CaptionFineActiveUnderlineParameters,
@@ -50,15 +52,13 @@ const oneShotMotions = [
 ] as const satisfies readonly CaptionFineOneShotMotion[];
 
 export const captionFineNleComponentSymbol: NlePackageSymbol = {
-  module: { name: "@hypit/caption-fine", version: "1" },
+  module: { name: "@hypit/caption-fine" },
   name: "fine",
 };
 
 /** Package identity used by ordinary NLE package selection; behavior remains in the NLE facets. */
-export const captionFineNleManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const captionFineNleManifest: GenerationModuleDefinition = {
   name: captionFineNleComponentSymbol.module.name,
-  version: captionFineNleComponentSymbol.module.version,
   dependencies: [],
   types: [],
   capabilities: [],
@@ -163,18 +163,18 @@ function box(value: unknown, active: boolean): NormalizedBox | NormalizedActiveB
       "Fine Caption activeBox mode"),
     enter: optionalChoice(input.enter, "none", oneShotMotions, "Fine Caption activeBox enter"),
     exit: optionalChoice(input.exit, "none", oneShotMotions, "Fine Caption activeBox exit"),
-    transitionFrames: optionalInteger(input.transitionFrames, 4,
+    transitionFrames: optionalInteger(input.transitionFrames, 0,
       "Fine Caption activeBox transitionFrames", 0, 120) } : {}),
     continuity: optionalChoice(input.continuity, "isolated", ["isolated", "joined"] as const,
       "Fine Caption box continuity"),
-    background: optionalColor(input.background, active ? "#ffd54a44" : "#00000000",
+    background: optionalColor(input.background, active ? "#ffd54a" : "#00000000",
       active ? "Fine Caption activeBox background" : "Fine Caption cueBox background"),
     borderColor: optionalColor(input.borderColor, "#00000000",
       active ? "Fine Caption activeBox borderColor" : "Fine Caption cueBox borderColor"),
     borderWidth: optionalNumber(input.borderWidth, 0, "Fine Caption box borderWidth", 0, 40),
-    borderRadius: optionalNumber(input.borderRadius, active ? 8 : 12, "Fine Caption box borderRadius", 0, 200),
-    paddingX: optionalNumber(input.paddingX, active ? 5 : 14, "Fine Caption box paddingX", 0, 200),
-    paddingY: optionalNumber(input.paddingY, active ? 2 : 10, "Fine Caption box paddingY", 0, 200),
+    borderRadius: optionalNumber(input.borderRadius, active ? 8 : 0, "Fine Caption box borderRadius", 0, 200),
+    paddingX: optionalNumber(input.paddingX, 0, "Fine Caption box paddingX", 0, 200),
+    paddingY: optionalNumber(input.paddingY, 0, "Fine Caption box paddingY", 0, 200),
     shadow: {
       color: optionalColor(shadowInput.color, "#000000", "Fine Caption box shadow color"),
       opacity: optionalNumber(shadowInput.opacity, 0, "Fine Caption box shadow opacity", 0, 1),
@@ -201,7 +201,7 @@ function underline(
       ? optionalChoice(input.mode, "off", ["off", "current", "trail"] as const, `${label} mode`)
       : optionalChoice(input.mode, "off", ["off", "always"] as const, `${label} mode`),
     color: optionalColor(input.color, fallbackColor, `${label} color`),
-    thickness: optionalNumber(input.thickness, 3, `${label} thickness`, 0, 40),
+    thickness: optionalNumber(input.thickness, active ? 3 : 2, `${label} thickness`, 0, 40),
     offset: optionalNumber(input.offset, 4, `${label} offset`, -100, 100),
     style: optionalChoice(input.style, "solid", ["solid", "double", "dotted", "dashed", "wavy"] as const,
       `${label} style`),
@@ -252,9 +252,19 @@ function captionTextNodes(
   payload: CaptionCuePayload,
   faces: readonly CaptionFineAttributeFace[],
   maxWordsPerLine: number | undefined,
+  wordGap: number,
 ): readonly HtmlTextNode[] {
   const words = new Map(payload.words.map((word) => [word.id, word] as const));
   const nodes: HtmlTextNode[] = [];
+  const gap = (id: string): HtmlTextNode => ({
+    kind: "text",
+    id,
+    text: " ",
+    style: {
+      inlineAdvancePx: wordGap,
+      paints: [],
+    },
+  });
   let wordsOnLine = 0;
   for (const [unitIndex, unit] of payload.units.entries()) {
     const startsLine = maxWordsPerLine !== undefined && wordsOnLine > 0
@@ -263,18 +273,29 @@ function captionTextNodes(
       nodes.push({ kind: "break", id: `caption-row-${unitIndex}` });
       wordsOnLine = 0;
     }
+    const firstWord = words.get(unit.wordIds[0]!)!;
+    if (!startsLine && unitIndex > 0 && firstWord.separatorBefore === " ") {
+      // A Cue boundary owns its spacing. Keep that spacing outside the Unit so
+      // an isolated active box encloses glyphs, not the preceding gap. This is
+      // the same flow boundary used by the original Fine renderer.
+      nodes.push(gap(`caption-gap-${unitIndex}`));
+    }
     nodes.push({
       kind: "group",
       id: unit.id,
-      children: unit.wordIds.map((wordId, wordIndex) => {
+      children: unit.wordIds.flatMap((wordId, wordIndex): readonly HtmlTextNode[] => {
         const word = words.get(wordId)!;
         const typography = wordTypography(word, faces);
-        return {
+        return [
+          ...(wordIndex > 0 && word.separatorBefore === " "
+            ? [gap(`caption-gap-${unitIndex}-${wordIndex}`)] : []),
+          {
           kind: "text",
           id: word.id,
-          text: `${startsLine && wordIndex === 0 ? "" : word.separatorBefore}${word.text}`,
+          text: word.text,
           ...(typography === undefined ? {} : { style: { typography } }),
-        };
+          } satisfies HtmlTextNode,
+        ];
       }),
     });
     wordsOnLine += unit.wordIds.length;
@@ -302,7 +323,7 @@ function resolveCaptionFine(item: NleComponentItem, context: { readonly project:
   assertCaptionNleComponentParameters(item.parameters, item.duration);
   const parameters = item.parameters;
   const caption = parameters.caption;
-  const linkedStyle = resolveNleComponentBinding(context.project, item, "style");
+  const linkedStyle = resolveNleComponentSharedValue(context.project, item, "style");
   const style = record(linkedStyle.value, `NLE Fine Caption ${item.id} style`) as CaptionFineStyleParameters;
   const pictureLayout = resolveNlePictureLayout(context.project, item.picture.layout);
   exactKeys(style as Readonly<Record<string, unknown>>, [
@@ -324,13 +345,15 @@ function resolveCaptionFine(item: NleComponentItem, context: { readonly project:
   const fontWeight = optionalInteger(style.fontWeight, 800, "Fine Caption fontWeight", 100, 900);
   const lineHeight = optionalNumber(style.lineHeight, 1.05, "Fine Caption lineHeight", 0.5, 4);
   const letterSpacing = optionalNumber(style.letterSpacing, 0, "Fine Caption letterSpacing", -20, 100);
-  const wordGap = optionalNumber(style.wordGap, 0, "Fine Caption wordGap", 0, 100);
+  // Fine has always treated authored word gap as a physical replacement for a normal space.
+  // Its omitted value scales with the type size instead of collapsing words together.
+  const wordGap = optionalNumber(style.wordGap, fontSize * 0.25, "Fine Caption wordGap", 0, 100);
   const language = style.language;
   if (language !== undefined) {
     assert(typeof language === "string" && /^[A-Za-z0-9]{1,8}(?:-[A-Za-z0-9]{1,8})*$/u.test(language),
       "Fine Caption language is invalid.");
   }
-  const direction = optionalChoice(style.direction, "auto", ["auto", "ltr", "rtl"] as const,
+  const direction = optionalChoice(style.direction, "ltr", ["auto", "ltr", "rtl"] as const,
     "Fine Caption direction");
   const writingMode = optionalChoice(style.writingMode, "horizontal-tb",
     ["horizontal-tb", "vertical-rl", "vertical-lr"] as const, "Fine Caption writingMode");
@@ -366,11 +389,11 @@ function resolveCaptionFine(item: NleComponentItem, context: { readonly project:
   assert(maxLines === undefined || structuralLines <= maxLines,
     `Fine Caption constructs ${structuralLines} structural lines but maxLines is ${maxLines}.`);
   const outlineColor = optionalColor(style.outlineColor, "#000000", "Fine Caption outlineColor");
-  const outlineWidth = optionalNumber(style.outlineWidth, 3, "Fine Caption outlineWidth", 0, 40);
-  const shadowColor = optionalColor(style.shadowColor, "#00000099", "Fine Caption shadowColor");
+  const outlineWidth = optionalNumber(style.outlineWidth, 0, "Fine Caption outlineWidth", 0, 40);
+  const shadowColor = optionalColor(style.shadowColor, "#00000000", "Fine Caption shadowColor");
   const shadowBlur = optionalNumber(style.shadowBlur, 0, "Fine Caption shadowBlur", 0, 100);
-  const shadowOffsetX = optionalNumber(style.shadowOffsetX, 4, "Fine Caption shadowOffsetX", -100, 100);
-  const shadowOffsetY = optionalNumber(style.shadowOffsetY, 5, "Fine Caption shadowOffsetY", -100, 100);
+  const shadowOffsetX = optionalNumber(style.shadowOffsetX, 0, "Fine Caption shadowOffsetX", -100, 100);
+  const shadowOffsetY = optionalNumber(style.shadowOffsetY, 0, "Fine Caption shadowOffsetY", -100, 100);
   const shadowSpread = optionalNumber(style.shadowSpread, 0, "Fine Caption shadowSpread", 0, 100);
   const gradientInput = style.gradient === undefined ? undefined : record(style.gradient, "Fine Caption gradient");
   if (gradientInput !== undefined) exactKeys(gradientInput, ["angleDeg", "from", "to"], "Fine Caption gradient");
@@ -409,7 +432,6 @@ function resolveCaptionFine(item: NleComponentItem, context: { readonly project:
       "Fine Caption karaoke transition"),
     activeColor: optionalColor(karaokeInput.activeColor, "#ffd54a", "Fine Caption activeColor"),
   };
-  const activePaintDeclared = style.activePaint !== undefined;
   const activePaintInput = style.activePaint === undefined
     ? {} : record(style.activePaint, "Fine Caption activePaint");
   exactKeys(activePaintInput, [
@@ -417,12 +439,11 @@ function resolveCaptionFine(item: NleComponentItem, context: { readonly project:
     "shadowBlur", "shadowColor", "shadowOffsetX", "shadowOffsetY", "shadowSpread",
   ], "Fine Caption activePaint");
   const activeColor = optionalColor(activePaintInput.color,
-    activePaintDeclared ? color : karaoke.activeColor, "Fine Caption activePaint.color");
+    karaoke.activeColor, "Fine Caption activePaint.color");
   const activeOpacity = optionalNumber(activePaintInput.opacity, opacity,
     "Fine Caption activePaint.opacity", 0, 1);
-  const activeGradientInput = activePaintInput.gradient === undefined
-    ? (activePaintDeclared ? gradient : undefined)
-    : activePaintInput.gradient === null ? undefined
+  const activeGradientInput = activePaintInput.gradient === undefined || activePaintInput.gradient === null
+    ? undefined
       : record(activePaintInput.gradient, "Fine Caption activePaint.gradient");
   if (activeGradientInput !== undefined) {
     exactKeys(activeGradientInput, ["angleDeg", "from", "to"], "Fine Caption activePaint.gradient");
@@ -483,9 +504,9 @@ function resolveCaptionFine(item: NleComponentItem, context: { readonly project:
   const entryInput = style.entry === undefined ? {} : record(style.entry, "Fine Caption entry");
   exactKeys(entryInput, ["kind", "frames", "startScale"], "Fine Caption entry");
   const entry = {
-    kind: optionalChoice(entryInput.kind, "pop", oneShotMotions,
+    kind: optionalChoice(entryInput.kind, "none", oneShotMotions,
       "Fine Caption entry kind"),
-    frames: optionalInteger(entryInput.frames, 5, "Fine Caption entry frames", 0, 120),
+    frames: optionalInteger(entryInput.frames, 0, "Fine Caption entry frames", 0, 120),
     ...(entryInput.startScale === undefined ? {} : { startScale: optionalNumber(entryInput.startScale, 1,
       "Fine Caption entry startScale", 0.01, 10) }),
   };
@@ -493,15 +514,15 @@ function resolveCaptionFine(item: NleComponentItem, context: { readonly project:
   exactKeys(exitInput, ["kind", "frames"], "Fine Caption exit");
   const exit = {
     kind: optionalChoice(exitInput.kind, "none", oneShotMotions, "Fine Caption exit kind"),
-    frames: optionalInteger(exitInput.frames, 5, "Fine Caption exit frames", 0, 120),
+    frames: optionalInteger(exitInput.frames, 0, "Fine Caption exit frames", 0, 120),
   };
   const atomInput = style.atom === undefined ? {} : record(style.atom, "Fine Caption atom");
   exactKeys(atomInput, ["enter", "enterFrames", "exit", "exitFrames", "reveal"], "Fine Caption atom");
   const atom = {
     enter: optionalChoice(atomInput.enter, "none", oneShotMotions, "Fine Caption atom.enter"),
-    enterFrames: optionalInteger(atomInput.enterFrames, 4, "Fine Caption atom.enterFrames", 0, 120),
+    enterFrames: optionalInteger(atomInput.enterFrames, 0, "Fine Caption atom.enterFrames", 0, 120),
     exit: optionalChoice(atomInput.exit, "none", oneShotMotions, "Fine Caption atom.exit"),
-    exitFrames: optionalInteger(atomInput.exitFrames, 4, "Fine Caption atom.exitFrames", 0, 120),
+    exitFrames: optionalInteger(atomInput.exitFrames, 0, "Fine Caption atom.exitFrames", 0, 120),
     reveal: optionalChoice(atomInput.reveal, "all", ["all", "on-start", "typewriter"] as const,
       "Fine Caption atom.reveal"),
   };
@@ -510,8 +531,8 @@ function resolveCaptionFine(item: NleComponentItem, context: { readonly project:
   exactKeys(responseInput, ["frames", "kind", "scale"], "Fine Caption activeResponse");
   const activeResponse = {
     kind: optionalChoice(responseInput.kind, "none", oneShotMotions, "Fine Caption activeResponse.kind"),
-    frames: optionalInteger(responseInput.frames, 4, "Fine Caption activeResponse.frames", 0, 120),
-    scale: optionalNumber(responseInput.scale, 1, "Fine Caption activeResponse.scale", 0.01, 10),
+    frames: optionalInteger(responseInput.frames, 6, "Fine Caption activeResponse.frames", 0, 120),
+    scale: optionalNumber(responseInput.scale, 1.08, "Fine Caption activeResponse.scale", 0.01, 10),
   };
   const loopInput = style.loop === undefined ? {} : record(style.loop, "Fine Caption loop");
   exactKeys(loopInput, ["intensity", "kind", "periodFrames", "target"], "Fine Caption loop");
@@ -521,81 +542,108 @@ function resolveCaptionFine(item: NleComponentItem, context: { readonly project:
       "Fine Caption loop.kind"),
     target: optionalChoice(loopInput.target, "cue", ["cue", "active-atom"] as const,
       "Fine Caption loop.target"),
-    periodFrames: optionalInteger(loopInput.periodFrames, 24, "Fine Caption loop.periodFrames", 1, 600),
+    periodFrames: optionalInteger(loopInput.periodFrames, 12, "Fine Caption loop.periodFrames", 1, 600),
     intensity: optionalNumber(loopInput.intensity, 1, "Fine Caption loop.intensity", 0, 100),
   };
-  const slideDistance = optionalNumber(style.slideDistance, 32, "Fine Caption slideDistance", 0, 1000);
+  const slideDistance = optionalNumber(style.slideDistance, 24, "Fine Caption slideDistance", 0, 1000);
   const attributeFaces = attributes(style.attributeFaces);
   const baseUnderline = underline(style.underline, false, color);
   const activeUnderline = underline(style.activeUnderline, true, karaoke.activeColor);
-  const paints: HtmlTextPaintLayer[] = [];
-  if ((longShadow.opacity > 0 && longShadow.distance > 0)
-    || (activeLongShadow.opacity > 0 && activeLongShadow.distance > 0)) {
-    paints.push({
-      kind: "long-shadow",
-      color: alphaHex(longShadow.color, longShadow.opacity),
-      distancePx: longShadow.distance,
-      angleDeg: longShadow.angleDeg,
-      steps: longShadow.steps,
-    });
-  }
-  if ((glow.opacity > 0 && (glow.blur > 0 || glow.spread > 0))
-    || (activeGlow.opacity > 0 && (activeGlow.blur > 0 || activeGlow.spread > 0))) {
-    paints.push({
-      kind: "glow",
-      color: alphaHex(glow.color, glow.opacity),
-      blurPx: glow.blur,
-      spreadPx: glow.spread,
-    });
-  }
-  if ((shadowColor !== "#00000000"
-      && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0 || shadowSpread > 0))
-    || (activeShadowColor !== "#00000000"
-      && (activeShadowBlur > 0 || activeShadowOffsetX !== 0
-        || activeShadowOffsetY !== 0 || activeShadowSpread > 0))) {
-    paints.push({
-      kind: "shadow",
-      color: shadowColor,
-      offsetX: shadowOffsetX,
-      offsetY: shadowOffsetY,
-      blurPx: shadowBlur,
-      spreadPx: shadowSpread,
-    });
-  }
-  if (outlineWidth > 0 || activeOutlineWidth > 0) {
-    paints.push({
-      kind: "stroke",
-      paint: { kind: "solid", color: outlineColor },
-      widthPx: outlineWidth,
-      placement: "outside",
-    });
-  }
-  paints.push({ kind: "fill", paint: gradient === undefined
-    ? { kind: "solid", color: alphaHex(color, opacity) }
-    : { kind: "linear-gradient", angleDeg: gradient.angleDeg, stops: [
-        { offset: 0, color: gradient.from, opacity },
-        { offset: 1, color: gradient.to, opacity },
-      ] } });
+  const paintLayers = (value: {
+    readonly color: string;
+    readonly opacity: number;
+    readonly gradient?: { readonly from: string; readonly to: string; readonly angleDeg: number };
+    readonly outline: { readonly color: string; readonly width: number };
+    readonly shadow: { readonly color: string; readonly blur: number; readonly offsetX: number;
+      readonly offsetY: number; readonly spread: number };
+    readonly glow: { readonly color: string; readonly opacity: number; readonly blur: number; readonly spread: number };
+    readonly longShadow: { readonly color: string; readonly opacity: number; readonly distance: number;
+      readonly angleDeg: number; readonly steps: number };
+  }): readonly HtmlTextPaintLayer[] => [
+    ...(value.longShadow.opacity > 0 && value.longShadow.distance > 0 ? [{
+      kind: "long-shadow" as const,
+      color: alphaHex(value.longShadow.color, value.longShadow.opacity),
+      distancePx: value.longShadow.distance,
+      angleDeg: value.longShadow.angleDeg,
+      steps: value.longShadow.steps,
+    }] : []),
+    ...(value.glow.opacity > 0 && (value.glow.blur > 0 || value.glow.spread > 0) ? [{
+      kind: "glow" as const,
+      color: alphaHex(value.glow.color, value.glow.opacity),
+      blurPx: value.glow.blur,
+      spreadPx: value.glow.spread,
+    }] : []),
+    ...(value.shadow.color !== "#00000000"
+      && (value.shadow.blur > 0 || value.shadow.offsetX !== 0
+        || value.shadow.offsetY !== 0 || value.shadow.spread > 0) ? [{
+      kind: "shadow" as const,
+      color: value.shadow.color,
+      offsetX: value.shadow.offsetX,
+      offsetY: value.shadow.offsetY,
+      blurPx: value.shadow.blur,
+      spreadPx: value.shadow.spread,
+    }] : []),
+    ...(value.outline.width > 0 ? [{
+      kind: "stroke" as const,
+      paint: { kind: "solid" as const, color: value.outline.color },
+      widthPx: value.outline.width,
+      placement: "outside" as const,
+    }] : []),
+    { kind: "fill" as const, paint: value.gradient === undefined
+      ? { kind: "solid" as const, color: alphaHex(value.color, 1) }
+      : { kind: "linear-gradient" as const, angleDeg: value.gradient.angleDeg, stops: [
+          { offset: 0, color: value.gradient.from, opacity: 1 },
+          { offset: 1, color: value.gradient.to, opacity: 1 },
+        ] } },
+  ];
+  const basePaints = paintLayers({
+    color, opacity, ...(gradient === undefined ? {} : { gradient }),
+    outline: { color: outlineColor, width: outlineWidth },
+    shadow: { color: shadowColor, blur: shadowBlur, offsetX: shadowOffsetX,
+      offsetY: shadowOffsetY, spread: shadowSpread },
+    glow, longShadow,
+  });
+  const activePaints = paintLayers({
+    color: activeColor, opacity: activeOpacity,
+    ...(activeGradient === undefined ? {} : { gradient: activeGradient }),
+    outline: { color: activeOutlineColor, width: activeOutlineWidth },
+    shadow: { color: activeShadowColor, blur: activeShadowBlur, offsetX: activeShadowOffsetX,
+      offsetY: activeShadowOffsetY, spread: activeShadowSpread },
+    glow: activeGlow, longShadow: activeLongShadow,
+  });
+  const typography: HtmlTextTypography = {
+    ...(fonts === undefined ? {} : { fonts }),
+    fontFamily,
+    fontSizePx: fontSize,
+    fontWeight,
+    fontStyle: "normal",
+    lineHeight,
+    letterSpacingPx: letterSpacing,
+    ...(language === undefined ? {} : { language }),
+    direction,
+    writingMode,
+    textTransform,
+    variantCaps,
+    kerning,
+  };
+  const textNodes = captionTextNodes(caption, attributeFaces, maxWordsPerLine, wordGap);
+  const decoration = (value: NormalizedUnderline | NormalizedActiveUnderline) => value.mode === "off"
+    ? undefined : { line: "underline" as const, color: value.color, thicknessPx: value.thickness,
+      offsetPx: value.offset, style: value.style };
+  const baseDecoration = decoration(baseUnderline);
   const text = htmlTextFragment({
-    id: `${item.id}-text`,
-    typography: {
-      ...(fonts === undefined ? {} : { fonts }),
-      fontFamily,
-      fontSizePx: fontSize,
-      fontWeight,
-      fontStyle: "normal",
-      lineHeight,
-      letterSpacingPx: letterSpacing,
-      wordSpacingPx: wordGap,
-      ...(language === undefined ? {} : { language }),
-      direction,
-      writingMode,
-      textTransform,
-      variantCaps,
-      kerning,
-    },
-    paints,
-    children: captionTextNodes(caption, attributeFaces, maxWordsPerLine),
+    id: `${item.id}-text-base`, typography, paints: basePaints,
+    ...(baseDecoration === undefined ? {} : { decoration: baseDecoration }),
+    children: textNodes,
+  });
+  const activeText = karaoke.mode === "off" ? undefined : htmlTextFragment({
+    id: `${item.id}-text-active`, typography, paints: activePaints, children: textNodes,
+  });
+  const activeUnderlineText = activeUnderline.mode === "off" ? undefined : htmlTextFragment({
+    id: `${item.id}-text-active-underline`, typography,
+    paints: [{ kind: "fill", paint: { kind: "solid", color: "#00000000" } }],
+    decoration: decoration(activeUnderline)!,
+    children: textNodes,
   });
   const sourceId = `${item.id}:caption-source`;
   const spatialDomain = sealLocalSpatialDomain({
@@ -616,386 +664,19 @@ function resolveCaptionFine(item: NleComponentItem, context: { readonly project:
     pictureOutput: "picture",
     html: visualProgramHtmlSource(sourceId, "picture", htmlVisual({
       dependencies: text.dependencies,
-      data: { caption, color: alphaHex(color, opacity), karaoke, cueBox, activeBox, entry, exit, atom,
-        activeResponse, loop, slideDistance,
-        activePaint: {
-          color: alphaHex(activeColor, activeOpacity),
-          ...(activeGradient === undefined ? {} : { gradient: {
-            from: alphaHex(activeGradient.from, activeOpacity),
-            to: alphaHex(activeGradient.to, activeOpacity),
-            angleDeg: activeGradient.angleDeg,
-          } }),
-          outline: { color: activeOutlineColor, width: activeOutlineWidth },
-          shadow: {
-            color: activeShadowColor, blur: activeShadowBlur,
-            offsetX: activeShadowOffsetX, offsetY: activeShadowOffsetY, spread: activeShadowSpread,
-          },
-          glow: { color: alphaHex(activeGlow.color, activeGlow.opacity),
-            blur: activeGlow.blur, spread: activeGlow.spread },
-          longShadow: { color: alphaHex(activeLongShadow.color, activeLongShadow.opacity),
-            distance: activeLongShadow.distance, angleDeg: activeLongShadow.angleDeg,
-            steps: activeLongShadow.steps },
+      data: { caption, karaoke, cueBox, activeBox, entry, exit, atom,
+        activeResponse, loop, slideDistance, direction,
+        loopPaint: {
+          base: { fill: color, glow: { color: glow.color, opacity: glow.opacity, blur: glow.blur } },
+          active: { fill: activeColor, glow: {
+            color: activeGlow.color, opacity: activeGlow.opacity, blur: activeGlow.blur,
+          } },
         },
         layout: { overflow, minimumScale: minimumScale ?? 1 },
         underline: baseUnderline, activeUnderline },
-      html: `<div data-hypit-caption-fine><span data-caption-layout><span data-caption-cue><svg data-caption-cue-union aria-hidden="true"><path></path></svg><svg data-caption-active-union aria-hidden="true"><path></path></svg><span data-caption-text-layer>${text.html}</span></span></span></div>`,
-      css: `:scope>[data-hypit-caption-fine]{position:absolute;inset:0;display:flex;align-items:${blockAlign === "start" ? "flex-start" : blockAlign === "center" ? "center" : "flex-end"};justify-content:${textAlign === "left" ? "flex-start" : textAlign === "center" ? "center" : "flex-end"};text-align:${textAlign};${overflow === "visible" ? "" : "overflow:hidden;"}}:scope [data-caption-layout]{display:inline-block;${inlineSize === "fixed" ? "width:100%;" : "width:max-content;max-width:100%;"}}:scope [data-caption-cue]{position:relative;display:inline-block;${inlineSize === "fixed" ? "width:100%;" : "max-width:100%;"}box-sizing:border-box;${cueBox.continuity === "isolated" ? `padding:${cueBox.paddingY}px ${cueBox.paddingX}px;background:${cueBox.background};border:${cueBox.borderWidth}px solid ${cueBox.borderColor};border-radius:${cueBox.borderRadius}px;box-shadow:${boxShadowCss(cueBox)};` : ""}white-space:${wrap === "none" ? "nowrap" : "pre-wrap"};overflow-wrap:${wrap === "word" ? "anywhere" : "normal"};word-break:${wrap === "grapheme" ? "break-all" : "normal"};${overflow === "visible" ? "" : "overflow:hidden;"}}:scope [data-caption-cue-union],:scope [data-caption-active-union]{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}:scope [data-caption-cue-union]{z-index:0}:scope [data-caption-active-union]{z-index:1}:scope [data-caption-text-layer]{position:relative;z-index:2;${overflow === "ellipsis" ? `display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:${maxLines};overflow:hidden;` : ""}}`,
-      setup: `
-        ${htmlLineUnionRuntime}
-        const layout = root.querySelector('[data-caption-layout]');
-        const cue = root.querySelector('[data-caption-cue]');
-        const cueUnion = root.querySelector('[data-caption-cue-union] path');
-        const activeUnion = root.querySelector('[data-caption-active-union] path');
-        if (layout === null || cue === null || cueUnion === null || activeUnion === null) {
-          throw new Error('Fine Caption HTML structure is incomplete.');
-        }
-        const units = new Map([...root.querySelectorAll('[data-hypit-text-kind="group"]')]
-          .map(element => [element.getAttribute('data-hypit-text-node'), element]));
-        const isolatedBoxes = new Map([...units].map(([id, element]) => {
-          const layer = document.createElement('span');
-          layer.setAttribute('data-caption-active-box', 'isolated');
-          layer.style.position = 'absolute';
-          layer.style.pointerEvents = 'none';
-          layer.style.transformOrigin = 'center';
-          layer.style.zIndex = '-1';
-          element.style.position = 'relative';
-          element.style.isolation = 'isolate';
-          element.prepend(layer);
-          return [id, layer];
-        }));
-        const allWords = [...root.querySelectorAll('[data-hypit-text-kind="text"]')];
-        const seconds = value => Number(value.ticks) * value.timeBase.numerator / value.timeBase.denominator;
-        const fps = context.frameRate.numerator / context.frameRate.denominator;
-        const basePaintStyles = new Map([...root.querySelectorAll('[data-hypit-text-paint]')]
-          .map(layer => [layer, {
-            color: layer.style.color,
-            backgroundImage: layer.style.backgroundImage,
-            backgroundClip: layer.style.backgroundClip,
-            webkitBackgroundClip: layer.style.webkitBackgroundClip,
-            webkitTextFillColor: layer.style.webkitTextFillColor,
-            webkitTextStroke: layer.style.webkitTextStroke,
-            textShadow: layer.style.textShadow,
-          }]));
-        const restorePaint = element => {
-          for (const layer of element.querySelectorAll('[data-hypit-text-paint]')) {
-            const base = basePaintStyles.get(layer);
-            layer.style.color = base.color;
-            layer.style.backgroundImage = base.backgroundImage;
-            layer.style.backgroundClip = base.backgroundClip;
-            layer.style.webkitBackgroundClip = base.webkitBackgroundClip;
-            layer.style.webkitTextFillColor = base.webkitTextFillColor;
-            layer.style.webkitTextStroke = base.webkitTextStroke;
-            layer.style.textShadow = base.textShadow;
-          }
-        };
-        const spreadShadows = (offsetX, offsetY, blur, spread, color) => {
-          const positions = spread <= 0 ? [[offsetX, offsetY]] : [[offsetX, offsetY],
-            ...Array.from({ length: 16 }, (_, index) => {
-              const angle = index * Math.PI / 8;
-              return [offsetX + Math.cos(angle) * spread, offsetY + Math.sin(angle) * spread];
-            })];
-          return positions.map(position => position[0] + 'px ' + position[1] + 'px '
-            + blur + 'px ' + color).join(',');
-        };
-        const translucent = (color, opacity) => {
-          const red = Number.parseInt(color.slice(1, 3), 16);
-          const green = Number.parseInt(color.slice(3, 5), 16);
-          const blue = Number.parseInt(color.slice(5, 7), 16);
-          const authored = color.length === 9 ? Number.parseInt(color.slice(7, 9), 16) / 255 : 1;
-          return 'rgba(' + red + ',' + green + ',' + blue + ',' + (authored * opacity) + ')';
-        };
-        const boxFilter = shadow => {
-          if (shadow.opacity <= 0) return '';
-          const positions = shadow.spread <= 0 ? [[shadow.offsetX, shadow.offsetY]]
-            : Array.from({ length: 12 }, (_, index) => {
-              const angle = index * Math.PI / 6;
-              return [shadow.offsetX + Math.cos(angle) * shadow.spread,
-                shadow.offsetY + Math.sin(angle) * shadow.spread];
-            });
-          const color = translucent(shadow.color, shadow.opacity);
-          return positions.map(position => 'drop-shadow(' + position[0] + 'px ' + position[1]
-            + 'px ' + shadow.blur + 'px ' + color + ')').join(' ');
-        };
-        cueUnion.style.filter = boxFilter(data.cueBox.shadow);
-        activeUnion.style.filter = boxFilter(data.activeBox.shadow);
-        const paintText = (element, progress, active) => {
-          restorePaint(element);
-          if (data.karaoke.mode === 'off' || !active) return;
-          const fills = element.querySelectorAll('[data-hypit-text-paint="fill"]');
-          const paintSolid = selected => {
-            for (const fill of fills) {
-              fill.style.color = selected;
-              fill.style.backgroundImage = '';
-              fill.style.webkitBackgroundClip = '';
-              fill.style.webkitTextFillColor = selected;
-            }
-          };
-          for (const layer of element.querySelectorAll('[data-hypit-text-paint]')) {
-            const kind = layer.getAttribute('data-hypit-text-paint');
-            if (kind === 'fill') continue;
-            if (kind === 'stroke') {
-              layer.style.color = data.activePaint.outline.color;
-              layer.style.webkitTextFillColor = data.activePaint.outline.color;
-              layer.style.webkitTextStroke = (data.activePaint.outline.width * 2) + 'px '
-                + data.activePaint.outline.color;
-            } else if (kind === 'shadow') {
-              layer.style.color = data.activePaint.shadow.color;
-              layer.style.webkitTextFillColor = data.activePaint.shadow.color;
-              layer.style.textShadow = spreadShadows(data.activePaint.shadow.offsetX,
-                data.activePaint.shadow.offsetY, data.activePaint.shadow.blur,
-                data.activePaint.shadow.spread, data.activePaint.shadow.color);
-            } else if (kind === 'glow') {
-              layer.style.color = data.activePaint.glow.color;
-              layer.style.webkitTextFillColor = data.activePaint.glow.color;
-              layer.style.textShadow = spreadShadows(0, 0, data.activePaint.glow.blur,
-                data.activePaint.glow.spread, data.activePaint.glow.color);
-            } else if (kind === 'long-shadow') {
-              layer.style.color = data.activePaint.longShadow.color;
-              layer.style.webkitTextFillColor = data.activePaint.longShadow.color;
-              const radians = data.activePaint.longShadow.angleDeg * Math.PI / 180;
-              layer.style.textShadow = Array.from({ length: data.activePaint.longShadow.steps }, (_, index) => {
-                const distance = data.activePaint.longShadow.distance * (index + 1)
-                  / data.activePaint.longShadow.steps;
-                return (Math.cos(radians) * distance) + 'px ' + (Math.sin(radians) * distance)
-                  + 'px 0 ' + data.activePaint.longShadow.color;
-              }).join(',');
-            }
-          }
-          if (data.karaoke.transition === 'step' || progress >= 1) {
-            if (data.activePaint.gradient === undefined) paintSolid(data.activePaint.color);
-            else for (const fill of fills) {
-              fill.style.color = 'transparent';
-              fill.style.backgroundImage = 'linear-gradient(' + data.activePaint.gradient.angleDeg + 'deg,'
-                + data.activePaint.gradient.from + ' 0%,' + data.activePaint.gradient.to + ' 100%)';
-              fill.style.backgroundClip = 'text';
-              fill.style.webkitBackgroundClip = 'text';
-              fill.style.webkitTextFillColor = 'transparent';
-            }
-            return;
-          }
-          const percentage = Math.max(0, Math.min(100, progress * 100));
-          for (const fill of fills) {
-            fill.style.color = 'transparent';
-            fill.style.backgroundImage = 'linear-gradient(90deg,' + data.activePaint.color + ' 0%,'
-              + data.activePaint.color + ' ' + percentage + '%,' + data.color + ' ' + percentage + '%,'
-              + data.color + ' 100%)';
-            fill.style.backgroundClip = 'text';
-            fill.style.webkitBackgroundClip = 'text';
-            fill.style.webkitTextFillColor = 'transparent';
-          }
-        };
-        const paintBox = (unitId, active, motion) => {
-          const layer = isolatedBoxes.get(unitId);
-          if (layer === undefined) return;
-          if (data.activeBox.continuity === 'joined' || !active || data.activeBox.mode === 'off') {
-            layer.style.display = 'none';
-            return;
-          }
-          layer.style.display = 'block';
-          layer.style.inset = (-data.activeBox.paddingY) + 'px '
-            + (-data.activeBox.paddingX) + 'px';
-          layer.style.background = data.activeBox.background;
-          layer.style.border = data.activeBox.borderWidth + 'px solid ' + data.activeBox.borderColor;
-          layer.style.borderRadius = data.activeBox.borderRadius + 'px';
-          layer.style.boxShadow = spreadShadows(data.activeBox.shadow.offsetX,
-            data.activeBox.shadow.offsetY, data.activeBox.shadow.blur, data.activeBox.shadow.spread,
-            translucent(data.activeBox.shadow.color, data.activeBox.shadow.opacity));
-          applyMotion(layer, [motion]);
-        };
-        const paintUnderline = (element, selected) => {
-          for (const word of element.querySelectorAll('[data-hypit-text-kind="text"]')) {
-            if (selected.mode === 'off') {
-              word.style.textDecorationLine = 'none';
-              word.style.textDecorationColor = '';
-              word.style.textDecorationThickness = '';
-              word.style.textUnderlineOffset = '';
-              word.style.textDecorationStyle = '';
-            } else {
-              word.style.textDecorationLine = 'underline';
-              word.style.textDecorationColor = selected.color;
-              word.style.textDecorationThickness = selected.thickness + 'px';
-              word.style.textUnderlineOffset = selected.offset + 'px';
-              word.style.textDecorationStyle = selected.style;
-            }
-          }
-        };
-        const clamp = value => Math.max(0, Math.min(1, value));
-        const easeOut = value => 1 - Math.pow(1 - value, 3);
-        const easeOutBack = value => {
-          const c1 = 1.3, c3 = c1 + 1;
-          return 1 + c3 * Math.pow(value - 1, 3) + c1 * Math.pow(value - 1, 2);
-        };
-        const easeOutBounce = value => {
-          let x = value; const n1 = 7.5625, d1 = 2.75;
-          if (x < 1 / d1) return n1 * x * x;
-          if (x < 2 / d1) return n1 * (x -= 1.5 / d1) * x + 0.75;
-          if (x < 2.5 / d1) return n1 * (x -= 2.25 / d1) * x + 0.9375;
-          return n1 * (x -= 2.625 / d1) * x + 0.984375;
-        };
-        const easeOutElastic = value => value === 0 || value === 1 ? value
-          : Math.pow(2, -10 * value) * Math.sin((value * 10 - 0.75) * (2 * Math.PI / 3)) + 1;
-        const neutral = { opacity: 1, transform: '', filter: '', clipPath: '' };
-        const oneShot = (kind, progress, startScale) => {
-          const value = clamp(progress), eased = easeOut(value), distance = data.slideDistance;
-          const state = (opacity, transform, filter, clipPath) => ({
-            opacity,
-            transform: transform || '',
-            filter: filter || '',
-            clipPath: clipPath || '',
-          });
-          const scale = (fallback, position) => {
-            const from = startScale === undefined ? fallback : startScale;
-            return 'scale(' + (from + (1 - from) * position) + ')';
-          };
-          const optionalScale = position => startScale === undefined ? '' : ' ' + scale(1, position);
-          if (kind === 'none') return neutral;
-          if (kind === 'fade') return state(eased, optionalScale(eased));
-          if (kind === 'blur-in') return state(eased, scale(0.96, eased), 'blur(' + ((1 - eased) * 16) + 'px)');
-          if (kind === 'pop') return state(eased, scale(0.6, easeOutBack(value)));
-          if (kind === 'scale') return state(eased, scale(0.2, eased));
-          if (kind === 'spring') return state(eased, scale(0.72,
-            value >= 1 ? 1 : 1 - Math.exp(-5 * value) * Math.cos(10 * value)));
-          if (kind === 'bounce') return state(eased, scale(0, easeOutBounce(value)));
-          if (kind === 'elastic') return state(eased, scale(0, easeOutElastic(value)));
-          if (kind === 'stamp') return state(eased, scale(1.35, easeOutBack(value)));
-          if (kind === 'tilt') return state(eased,
-            'rotate(' + ((1 - eased) * -8) + 'deg) ' + scale(0.94, eased));
-          if (kind === 'zoom-blur') return state(eased, scale(1.18, eased),
-            'blur(' + ((1 - eased) * 18) + 'px)');
-          if (kind === 'flip-x') return state(eased,
-            'perspective(600px) rotateX(' + ((1 - eased) * 88) + 'deg) ' + scale(0.92, eased));
-          if (kind === 'flip-y') return state(eased,
-            'perspective(600px) rotateY(' + ((1 - eased) * -88) + 'deg) ' + scale(0.92, eased));
-          if (kind === 'spin') return state(eased,
-            'rotate(' + ((1 - eased) * -180) + 'deg) ' + scale(0.55, eased));
-          if (kind === 'squash') return state(eased,
-            'scaleX(' + (1.28 - 0.28 * easeOutBack(value)) + ') scaleY('
-              + (0.48 + 0.52 * easeOutBack(value)) + ')' + optionalScale(eased));
-          if (kind === 'stretch') return state(eased,
-            'scaleX(' + (0.5 + 0.5 * easeOutBack(value)) + ') scaleY('
-              + (1.35 - 0.35 * easeOutBack(value)) + ')' + optionalScale(eased));
-          const hidden = (1 - eased) * 100;
-          if (kind === 'wipe-left') return state(1, optionalScale(eased), '', 'inset(0 0 0 ' + hidden + '%)');
-          if (kind === 'wipe-right') return state(1, optionalScale(eased), '', 'inset(0 ' + hidden + '% 0 0)');
-          if (kind === 'wipe-up') return state(1, optionalScale(eased), '', 'inset(0 0 ' + hidden + '% 0)');
-          if (kind === 'wipe-down') return state(1, optionalScale(eased), '', 'inset(' + hidden + '% 0 0 0)');
-          const remaining = (1 - eased) * distance;
-          if (kind === 'slide-left') return state(eased, 'translateX(' + -remaining + 'px)' + optionalScale(eased));
-          if (kind === 'slide-right') return state(eased, 'translateX(' + remaining + 'px)' + optionalScale(eased));
-          if (kind === 'slide-up') return state(eased, 'translateY(' + -remaining + 'px)' + optionalScale(eased));
-          return state(eased, 'translateY(' + remaining + 'px)' + optionalScale(eased));
-        };
-        const loopAt = localFrame => {
-          if (data.loop.kind === 'none') return neutral;
-          const phase = localFrame / data.loop.periodFrames * Math.PI * 2;
-          const wave = Math.sin(phase), intensity = data.loop.intensity;
-          if (data.loop.kind === 'shake') return { ...neutral, transform: 'translateX(' + (wave * intensity) + 'px)' };
-          if (data.loop.kind === 'wobble') return { ...neutral, transform: 'rotate(' + (wave * intensity) + 'deg)' };
-          if (data.loop.kind === 'breathe') return { ...neutral, transform: 'scale(' + (1 + wave * 0.02 * intensity) + ')' };
-          if (data.loop.kind === 'float') return { ...neutral, transform: 'translateY(' + (wave * intensity) + 'px)' };
-          if (data.loop.kind === 'pulse') return { ...neutral, transform: 'scale(' + (1 + Math.abs(wave) * 0.04 * intensity) + ')' };
-          if (data.loop.kind === 'flicker') return { ...neutral, opacity: 1 - Math.max(0, wave) * 0.15 * intensity };
-          return { ...neutral, filter: 'drop-shadow(0 0 ' + ((0.5 + 0.5 * wave) * intensity * 4) + 'px currentColor)' };
-        };
-        const applyMotion = (element, states) => {
-          element.style.opacity = String(states.reduce((amount, state) => amount * state.opacity, 1));
-          element.style.transform = states.map(state => state.transform).filter(Boolean).join(' ');
-          element.style.filter = states.map(state => state.filter).filter(Boolean).join(' ');
-          const clipped = [...states].reverse().find(state => state.clipPath);
-          element.style.clipPath = clipped?.clipPath || '';
-          element.style.transformOrigin = 'center';
-        };
-        const activeBoxAt = (localFrame, startFrame, endFrame) => {
-          const logicalEnd = data.activeBox.mode === 'trail' ? context.durationFrames : endFrame;
-          if (data.activeBox.mode === 'off' || localFrame < startFrame || localFrame >= logicalEnd) {
-            return { active: false, motion: neutral };
-          }
-          const frames = data.activeBox.transitionFrames;
-          const sinceStart = localFrame - startFrame;
-          const untilEnd = logicalEnd - localFrame;
-          if (data.activeBox.enter !== 'none' && frames > 0 && sinceStart < frames) {
-            return { active: true, motion: oneShot(data.activeBox.enter, sinceStart / frames) };
-          }
-          if (data.activeBox.exit !== 'none' && frames > 0 && untilEnd <= frames) {
-            return { active: true, motion: oneShot(data.activeBox.exit, untilEnd / frames) };
-          }
-          return { active: true, motion: neutral };
-        };
-        const fitLayout = () => {
-          if (data.layout.overflow !== 'shrink') return;
-          layout.style.transform = '';
-          layout.style.transformOrigin = 'center';
-          const frame = root.querySelector('[data-hypit-caption-fine]');
-          if (frame === null) throw new Error('Fine Caption layout frame is missing.');
-          const scale = Math.max(data.layout.minimumScale,
-            Math.min(1, frame.clientWidth / Math.max(1, layout.scrollWidth),
-              frame.clientHeight / Math.max(1, layout.scrollHeight)));
-          layout.style.transform = 'scale(' + scale + ')';
-        };
-        return localFrame => {
-          fitLayout();
-          const time = localFrame / fps;
-          const entryProgress = data.entry.frames <= 0 ? 1 : clamp(localFrame / data.entry.frames);
-          const remainingFrames = Math.max(0, context.durationFrames - 1 - localFrame);
-          const exitProgress = data.exit.frames <= 0 ? 1 : clamp(remainingFrames / data.exit.frames);
-          const cueLifecycle = entryProgress < 1 ? oneShot(data.entry.kind, entryProgress, data.entry.startScale)
-            : exitProgress < 1 ? oneShot(data.exit.kind, exitProgress) : neutral;
-          applyMotion(cue, [cueLifecycle, data.loop.target === 'cue' ? loopAt(localFrame) : neutral]);
-          const activeBoxWords = [];
-          let joinedBoxMotion = neutral;
-          for (const unit of data.caption.units) {
-            const element = units.get(unit.id);
-            const start = seconds(unit.start);
-            const end = seconds(unit.end);
-            const current = time >= start && time < end;
-            const passed = time >= end;
-            const textActive = data.karaoke.mode === 'trail' ? time >= start : current;
-            const underlineActive = data.activeUnderline.mode === 'trail' ? time >= start : current;
-            const progress = passed ? 1 : current ? (time - start) / Math.max(end - start, 1 / fps) : 0;
-            paintText(element, progress, textActive);
-            const startFrame = start * fps, endFrame = end * fps;
-            const box = activeBoxAt(localFrame, startFrame, endFrame);
-            paintBox(unit.id, box.active, box.motion);
-            paintUnderline(element, data.activeUnderline.mode !== 'off' && underlineActive
-              ? data.activeUnderline : data.underline);
-            if (data.activeBox.continuity === 'joined' && box.active) {
-              activeBoxWords.push(...element.querySelectorAll('[data-hypit-text-kind="text"]'));
-              joinedBoxMotion = box.motion;
-            }
-            const sinceStart = localFrame - startFrame, untilEnd = endFrame - localFrame;
-            let lifecycle = neutral;
-            const waits = data.atom.reveal !== 'all' || data.atom.enter !== 'none';
-            if (sinceStart < 0 && waits) lifecycle = { ...neutral, opacity: 0 };
-            else if (sinceStart >= 0 && sinceStart < data.atom.enterFrames && data.atom.enter !== 'none') {
-              lifecycle = oneShot(data.atom.enter, data.atom.enterFrames <= 0 ? 1 : sinceStart / data.atom.enterFrames);
-            } else if (untilEnd <= 0 && data.atom.exit !== 'none') lifecycle = oneShot(data.atom.exit, 0);
-            else if (untilEnd > 0 && untilEnd < data.atom.exitFrames && data.atom.exit !== 'none') {
-              lifecycle = oneShot(data.atom.exit, data.atom.exitFrames <= 0 ? 1 : untilEnd / data.atom.exitFrames);
-            }
-            if (data.atom.reveal === 'typewriter' && sinceStart >= 0 && untilEnd > 0) {
-              lifecycle = { ...lifecycle, opacity: 1,
-                clipPath: 'inset(0 ' + ((1 - clamp((time - start) / Math.max(end - start, 1 / fps))) * 100) + '% 0 0)' };
-            }
-            let response = neutral;
-            if (current && data.activeResponse.kind !== 'none') {
-              response = oneShot(data.activeResponse.kind,
-                data.activeResponse.frames <= 0 ? 1 : clamp(sinceStart / data.activeResponse.frames));
-            }
-            if (current && data.activeResponse.scale !== 1) {
-              response = { ...response, transform: response.transform + ' scale(' + data.activeResponse.scale + ')' };
-            }
-            applyMotion(element, [lifecycle, response,
-              data.loop.target === 'active-atom' && current ? loopAt(localFrame) : neutral]);
-          }
-          if (data.cueBox.continuity === 'joined') {
-            hypitPaintLineUnion(cueUnion, cue, allWords, data.cueBox);
-          } else cueUnion.setAttribute('d', '');
-          if (data.activeBox.continuity === 'joined' && data.activeBox.mode !== 'off') {
-            hypitPaintLineUnion(activeUnion, cue, activeBoxWords, data.activeBox);
-            applyMotion(activeUnion, [joinedBoxMotion]);
-          } else activeUnion.setAttribute('d', '');
-        };
-      `,
+      html: `<div data-hypit-caption-fine><span data-caption-layout><span data-caption-cue><svg data-caption-cue-union aria-hidden="true"><path></path></svg><svg data-caption-active-union aria-hidden="true"><path></path></svg><span data-caption-text-stack><span data-caption-text-layer="base" style="opacity:${opacity}">${text.html}</span>${activeText === undefined ? "" : `<span data-caption-text-layer="active" style="opacity:${activeOpacity}">${activeText.html}</span>`}${activeUnderlineText === undefined ? "" : `<span data-caption-text-layer="active-underline">${activeUnderlineText.html}</span>`}</span></span></span></div>`,
+      css: `:scope>[data-hypit-caption-fine]{position:absolute;inset:0;display:flex;align-items:${blockAlign === "start" ? "flex-start" : blockAlign === "center" ? "center" : "flex-end"};justify-content:${textAlign === "left" ? "flex-start" : textAlign === "center" ? "center" : "flex-end"};text-align:${textAlign};${overflow === "visible" ? "" : "overflow:hidden;"}}:scope [data-caption-layout]{display:inline-block;${inlineSize === "fixed" ? "width:100%;" : "width:max-content;max-width:100%;"}}:scope [data-caption-cue]{position:relative;display:inline-block;${inlineSize === "fixed" ? "width:100%;" : "max-width:100%;"}box-sizing:border-box;${cueBox.continuity === "isolated" ? `padding:${cueBox.paddingY}px ${cueBox.paddingX}px;background:${cueBox.background};border:${cueBox.borderWidth}px solid ${cueBox.borderColor};border-radius:${cueBox.borderRadius}px;box-shadow:${boxShadowCss(cueBox)};` : ""}white-space:${wrap === "none" ? "nowrap" : "pre-wrap"};overflow-wrap:${wrap === "word" ? "anywhere" : "normal"};word-break:${wrap === "grapheme" ? "break-all" : "normal"};${overflow === "visible" ? "" : "overflow:hidden;"}}:scope [data-caption-cue-union],:scope [data-caption-active-union]{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}:scope [data-caption-cue-union]{z-index:0}:scope [data-caption-active-union]{z-index:1}:scope [data-caption-text-stack]{position:relative;z-index:2;display:inline-block;${overflow === "ellipsis" ? `display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:${maxLines};overflow:hidden;` : ""}}:scope [data-caption-text-layer="base"]{position:relative;z-index:2}:scope [data-caption-text-layer="active"],:scope [data-caption-text-layer="active-underline"]{position:absolute;inset:0;z-index:3;pointer-events:none}:scope [data-caption-text-layer="active-underline"]{z-index:4}:scope [data-hypit-text-kind="group"]{display:inline-flex;min-width:0;position:relative}:scope [data-caption-text-layer="active"] [data-hypit-text-kind="group"],:scope [data-caption-text-layer="active-underline"] [data-hypit-text-kind="group"]{opacity:0}`,
+      setup: `${htmlLineUnionRuntime}\n${captionFineHtmlRuntime}`,
     })),
   };
 }
@@ -1027,7 +708,7 @@ export const captionFineNleAuthoring: NleComponentParameterAuthoring = {
   },
 };
 
-export const captionFineNleHtmlVideoResolver: NleHtmlVideoComponentResolver = {
+export const captionFineNleAudiovisualResolver: NleAudiovisualComponentResolver = {
   component: captionFineNleComponentSymbol,
   resolve: (item, context) => ({ html: resolveCaptionFine(item, context).html }),
 };

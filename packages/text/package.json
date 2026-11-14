@@ -11,6 +11,8 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
+    "@hypit/generation-build": "workspace:*",
+    "@hypit/module": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:*",
     "@hypit/refinement": "workspace:*"
   }

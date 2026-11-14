@@ -1,4 +1,5 @@
-import type { BlobRef, CanonicalValue, TypeRef, Value } from "@hypit/protocol";
+import type { BlobRef, CanonicalValue, Value } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
 import type { ProductAddress } from "./address.js";
 import type { StoredProduct } from "./materialize.js";
 

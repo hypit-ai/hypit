@@ -1,4 +1,6 @@
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
+import { createModuleFacet } from "@hypit/hypit/module";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
+import { createProducerPackageFacet } from "@hypit/hypit/generation/producer";
 import { createGenerationNodePackageFacet } from "@hypit/generation-graph";
 import { createGenerationCanvasPresentationFacet } from "@hypit/generation-canvas";
 import {
@@ -9,9 +11,8 @@ import {
 } from "./index.js";
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [{ manifest: whisperXManifest }],
   facets: [
+    createModuleFacet(whisperXManifest), createGenerationModuleFacet(whisperXManifest),
     createProducerPackageFacet(whisperXComponent.producers),
     createGenerationNodePackageFacet({
       nodes: [{

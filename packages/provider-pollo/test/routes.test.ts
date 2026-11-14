@@ -10,7 +10,7 @@ import { polloRouteForCapability } from "../src/routes.js";
 const image: BlobRef = { kind: "blob", resource: "res_pollo_1", size: 3, mediaType: "image/png" };
 const audio: BlobRef = { kind: "blob", resource: "res_pollo_2", size: 3, mediaType: "audio/wav" };
 const resolve = async (artifact: { resource: string }) => `https://example.test/${artifact.resource}`;
-const route = (module: string, name: string) => polloRouteForCapability({ module: { name: module, version: "1" }, name })!;
+const route = (module: string, name: string) => polloRouteForCapability({ module: { name: module }, name })!;
 const constraints = (request: unknown) => request as CanonicalValue;
 
 test("MiniMax H3 references become Pollo typed refs", async () => {

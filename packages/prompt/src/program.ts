@@ -1,4 +1,4 @@
-import { canonicalize } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/hypit/value";
 import { verifyText } from "@hypit/hypit/text";
 import type { Text } from "@hypit/text";
 

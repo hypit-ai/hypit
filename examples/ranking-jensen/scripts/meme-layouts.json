@@ -1,0 +1,86 @@
+{
+  "format": "hypit.ranking-jensen-meme-layouts@1",
+  "scenes": {
+    "lawyer": {
+      "name": "Lori's lawyer",
+      "width": 680,
+      "height": 848,
+      "source": "/media/broll-wife-divorce-lawyer/source.jpg",
+      "items": [
+        {
+          "id": "lawyer",
+          "text": "LORI'S LAWYER",
+          "x": 337,
+          "y": 657,
+          "fontSize": 90,
+          "stroke": 6
+        }
+      ]
+    },
+    "money": {
+      "name": "Lori after divorce",
+      "width": 1100,
+      "height": 620,
+      "source": "/media/broll-wife-huell-money/source.jpg",
+      "items": [
+        {
+          "id": "money",
+          "text": "LORI AFTER DIVORCE",
+          "x": 548,
+          "y": 474,
+          "fontSize": 125,
+          "stroke": 7
+        }
+      ]
+    },
+    "spiderman": {
+      "name": "Spider-Man pointing",
+      "width": 1600,
+      "height": 1200,
+      "source": "/media/broll-trump-pointing/source.png",
+      "items": [
+        {
+          "id": "jensen",
+          "text": "JENSEN",
+          "x": 468,
+          "y": 620,
+          "fontSize": 160,
+          "stroke": 9
+        },
+        {
+          "id": "trump",
+          "text": "TRUMP",
+          "x": 1150,
+          "y": 698,
+          "fontSize": 160,
+          "stroke": 9
+        }
+      ]
+    },
+    "buttons": {
+      "name": "Two buttons",
+      "width": 600,
+      "height": 908,
+      "source": "/media/broll-kimberly-side-effects/two-buttons.jpg",
+      "alternateSource": "/media/broll-kimberly-wife-lost/source.png",
+      "items": [
+        {
+          "id": "no-wife",
+          "text": "NO\nWIFE",
+          "x": 157,
+          "y": 136,
+          "fontSize": 60,
+          "angle": 0
+        },
+        {
+          "id": "no-job",
+          "text": "NO\nJOB",
+          "x": 348,
+          "y": 108,
+          "fontSize": 59,
+          "angle": 0
+        }
+      ]
+    }
+  }
+}

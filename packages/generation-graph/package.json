@@ -8,15 +8,20 @@
     ".": "./src/index.ts",
     "./node": "./src/node/index.ts"
   },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
     "@hypit/atomic-file": "workspace:^0.0.0-dev",
-    "@hypit/author": "workspace:*",
     "@hypit/facet": "workspace:^0.0.0-dev",
-    "@hypit/kernel": "workspace:^0.0.0-dev",
+    "@hypit/generation-authoring": "workspace:*",
+    "@hypit/generation-build": "workspace:^0.0.0-dev",
     "@hypit/loader": "workspace:^0.0.0-dev",
+    "@hypit/module": "workspace:^0.0.0-dev",
     "@hypit/product": "workspace:^0.0.0-dev",
-    "@hypit/protocol": "workspace:^0.0.0-dev",
-    "@hypit/source": "workspace:^0.0.0-dev"
+    "@hypit/production-context": "workspace:^0.0.0-dev",
+    "@hypit/project": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev"
   },
   "files": [
     "dist",

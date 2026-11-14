@@ -1,4 +1,4 @@
-module prompt from "@hypit/prompt@1"
+module prompt from "@hypit/prompt"
 
 prompt.Template "broll-v1" {
   separator: paragraph

@@ -1,9 +1,5 @@
-import type {
-  CredentialRef,
-  CredentialStore,
-  CredentialValue,
-} from "@hypit/runtime";
-import { verifyCredentialRef } from "@hypit/runtime";
+import type { CredentialRef, CredentialStore, CredentialValue } from "@hypit/execution-environment";
+import { verifyCredentialRef } from "@hypit/execution-environment";
 
 /** Resolves only explicitly requested environment variables and never snapshots or enumerates env. */
 export class EnvironmentCredentialStore implements CredentialStore {

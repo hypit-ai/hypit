@@ -15,9 +15,9 @@ Script is no longer declared or imported through this language. A small Author S
 ordinary Text values without making a media request:
 
 ```svml
-<?svml using="@hypit/markup@1"?>
+<?svml using="@hypit/markup"?>
 <svml>
-  <import as="copy" from="@hypit/text@1"/>
+  <import as="copy" from="@hypit/text"/>
   <import as="kit" source="./direction.svs"/>
 
   <copy:Value id="direction">She leans in slightly, amused by her own observation.</copy:Value>
@@ -31,7 +31,7 @@ Package imports expose vocabulary under a local alias. Source imports expose a d
 values: `<import as="look" source="./look.svs"/>`. A data package can expose the same kind of Source,
 for example `<import as="ugc" source="@hypit/gpt-image-kits/phone-ugc-v1"/>`; its own relative imports
 and assets stay inside that package. Put imports in the leading prologue, before body declarations.
-Use a package's Source address, such as `@hypit/text@1`, in `from`; installed package versions belong
+Use a package's Source address, such as `@hypit/text`, in `from`; installed package versions belong
 to ordinary package management. A Source data import reads the package's declared Source content.
 
 A project program reads standalone Script and supplies its identity when calling `projectScript()`;
@@ -77,7 +77,7 @@ inside its raw body, as described in [Script syntax](script-syntax.md).
 ## Recipes are named values
 
 ```svs
-<?svml using="@hypit/recipe@1"?>
+<?svml using="@hypit/recipe"?>
 <sheet version="1">
   media.cover {
     fit: cover;
@@ -116,7 +116,7 @@ The `direction.svs` used above selects Text's own Recipe Frontend to produce a T
 than ordinary Recipes. This is the same file-extension convention with a different explicit Header:
 
 ```svs
-<?svml using="@hypit/text/svs@1"?>
+<?svml using="@hypit/text/svs"?>
 <sheet version="1" id="performance">
   text-template.performance { separator: paragraph; }
   text-template.performance.block.dialogue {

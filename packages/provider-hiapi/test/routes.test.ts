@@ -11,7 +11,7 @@ import { hiApiRouteForCapability } from "../src/routes.js";
 const image: BlobRef = { kind: "blob", resource: "res_hiapi_1", size: 3, mediaType: "image/png" };
 const video: BlobRef = { kind: "blob", resource: "res_hiapi_2", size: 3, mediaType: "video/mp4" };
 const resolve = async () => "https://example.test/reference";
-const route = (module: string, name: string) => hiApiRouteForCapability({ module: { name: module, version: "1" }, name })!;
+const route = (module: string, name: string) => hiApiRouteForCapability({ module: { name: module }, name })!;
 const constraints = (request: unknown) => request as CanonicalValue;
 
 test("Seedance 2.5 selects the HiAPI model from the request shape", async () => {

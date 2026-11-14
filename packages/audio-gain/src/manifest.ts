@@ -1,7 +1,10 @@
 import { audiovisualDependency, audiovisualTypes } from "@hypit/audiovisual";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import type { ValueSchema } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
 
-export const audioGainModuleRef = { name: "@hypit/audio-gain", version: "1" } as const;
+export const audioGainModuleRef = { name: "@hypit/audio-gain" } as const;
 export const audioGainTypes = {
   gainOperatorSpec: { module: audioGainModuleRef, name: "AudioGainOperatorSpec" },
   gainControl: { module: audioGainModuleRef, name: "AudioGainControl" },
@@ -13,8 +16,8 @@ export const audioGainProducers = {
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema }>>): ValueSchema => ({ kind: "object", fields });
 export const audioGainOperatorSpecSchema = object({ gain: { schema: { kind: "number", minimum: 0 } } });
 
-export const audioGainManifest: ModuleManifest = {
-  format: "hypit.module@1", name: audioGainModuleRef.name, version: audioGainModuleRef.version,
+export const audioGainManifest: GenerationModuleDefinition = {
+  name: audioGainModuleRef.name,
   dependencies: [audiovisualDependency],
   types: Object.values(audioGainTypes).map((type) => type.name),
   capabilities: [],

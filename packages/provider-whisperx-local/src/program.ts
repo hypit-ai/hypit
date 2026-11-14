@@ -7,8 +7,8 @@ import type {
   ManagedProgram,
   ManagedProgramCommand,
   ManagedProgramState,
-} from "@hypit/runtime-local/extension";
-import { pythonEnvironmentCommand } from "@hypit/runtime-local/node";
+} from "@hypit/execution-environment-local/extension";
+import { pythonEnvironmentCommand } from "@hypit/execution-environment-local/node";
 
 /**
  * WhisperX loads multi-gigabyte weights before it can answer, so it is a warm

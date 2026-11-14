@@ -3,18 +3,21 @@ import test from "node:test";
 
 // This suite verifies the Runtime scheduler and Executor boundary.
 
-import {
-  ProducerRegistry,
-  Executor,
-  EndpointRegistry,
-} from "@hypit/executor";
+import { ProducerRegistry, Executor } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
 import type { AsyncEndpoint } from "@hypit/endpoint";
-import {
-  applyOperationUpdate,
-  InProcessBuildScheduler,
-} from "@hypit/runtime";
-import type { BuildStore, OperationSnapshot, OperationStore, OperationUpdate, RuntimeCommandExecutor, RuntimeExecutionContext, ScheduledBuild, ScheduledBuildResult } from "@hypit/runtime";
-import type { BuildView } from "@hypit/kernel";
+import { applyOperationUpdate, InProcessBuildScheduler } from "@hypit/generation-runtime";
+import type {
+  BuildStore,
+  OperationSnapshot,
+  OperationStore,
+  OperationUpdate,
+  RuntimeCommandExecutor,
+  RuntimeExecutionContext,
+  ScheduledBuild,
+  ScheduledBuildResult,
+} from "@hypit/generation-runtime";
+import type { BuildView } from "@hypit/generation-build";
 import { capabilities, createGreetingBuild, createParallelGreetingBuild, producers as greetingProducers, types } from "../execution-scenario.js";
 import { completeChainStep, createChainDefinition } from "../execution-scenario.js";
 

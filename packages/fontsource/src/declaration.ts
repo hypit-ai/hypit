@@ -1,9 +1,5 @@
-import {
-  declarationField,
-  type AuthorDeclaration,
-  type AuthorDeclarationCompiler,
-} from "@hypit/hypit/author";
-import type { CanonicalValue } from "@hypit/hypit/protocol";
+import { declarationField, type AuthorDeclaration, type AuthorDeclarationCompiler, } from "@hypit/hypit/generation/author";
+import type { CanonicalValue } from "@hypit/hypit/value";
 import { assertFontArtifactRef, mediaTypes, type FontArtifactRef } from "@hypit/media";
 
 import { fontsourceModuleRef } from "./manifest.js";

@@ -1,7 +1,8 @@
 import type {
-  NleAdjustmentParameterAuthoring,
+  NleOperatorParameterAuthoring,
+  NleOperatorOccurrenceAuthoring,
   NlePackageSymbol,
-  NlePictureAdjustmentResolver,
+  NlePictureOperatorResolver,
 } from "@hypit/nle";
 import { canonicalize } from "@hypit/protocol";
 
@@ -21,24 +22,24 @@ function assertParameters(value: unknown): asserts value is PictureFrameNleParam
   assertPictureFrameTreatment(value.treatment as PictureFrameTreatment, "NLE Picture Frame treatment");
 }
 
-export const pictureFrameNleResolver: NlePictureAdjustmentResolver = {
-  component: pictureFrameNleSymbol,
-  resolve: (item) => {
-    const parameters = item.parameters as unknown;
+export const pictureFrameNleResolver: NlePictureOperatorResolver = {
+  operator: pictureFrameNleSymbol,
+  resolve: (application) => {
+    const parameters = application.parameters as unknown;
     assertParameters(parameters);
     return { operator: pictureFrameOperator(parameters.treatment) };
   },
 };
 
-export const pictureFrameNleAuthoring: NleAdjustmentParameterAuthoring = {
-  component: pictureFrameNleSymbol,
-  inspect: ({ item }) => {
-    const parameters = item.parameters as unknown;
+export const pictureFrameNleAuthoring: NleOperatorParameterAuthoring = {
+  operator: pictureFrameNleSymbol,
+  inspect: ({ application }) => {
+    const parameters = application.parameters as unknown;
     assertParameters(parameters);
     return canonicalize(parameters);
   },
-  edit: (operation, { item }) => {
-    const parameters = item.parameters as unknown;
+  edit: (operation, { application }) => {
+    const parameters = application.parameters as unknown;
     assertParameters(parameters);
     if (operation === null || typeof operation !== "object" || Array.isArray(operation)
       || Object.keys(operation).sort().join("\u0000") !== ["kind", "treatment"].sort().join("\u0000")
@@ -47,5 +48,14 @@ export const pictureFrameNleAuthoring: NleAdjustmentParameterAuthoring = {
     }
     assertPictureFrameTreatment(operation.treatment as PictureFrameTreatment, "NLE Picture Frame edit.treatment");
     return canonicalize({ treatment: operation.treatment as PictureFrameTreatment });
+  },
+};
+
+export const pictureFrameNleOccurrence: NleOperatorOccurrenceAuthoring = {
+  operator: pictureFrameNleSymbol,
+  temporalSupport: ({ application, medium }) => {
+    if (medium !== "picture") throw new Error("Picture Frame must be a Picture Operator Application.");
+    assertParameters(application.parameters);
+    return { timeWindow: true };
   },
 };

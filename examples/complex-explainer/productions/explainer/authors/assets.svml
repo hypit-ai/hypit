@@ -1,8 +1,8 @@
-<?svml using="@hypit/markup@1"?>
+<?svml using="@hypit/markup"?>
 <svml>
-  <import as="asset" from="@hypit/media-author@1"/>
-  <import as="time" from="@hypit/timeline-author@1"/>
-  <import as="spatial" from="@hypit/spatial@1"/>
+  <import as="asset" from="@hypit/media-author"/>
+  <import as="time" from="@hypit/timeline-author"/>
+  <import as="spatial" from="@hypit/spatial"/>
   <asset:Image id="road-logo" src="../assets/brand/hypit-logo-ink.png"/>
   <asset:Image id="gallery-ranking" src="../assets/editor-gallery/ranking.jpg"/>
   <asset:Image id="gallery-podcast" src="../assets/editor-gallery/podcast.jpg"/>

@@ -4,7 +4,7 @@ import test from "node:test";
 import type {
   AuthorStructureDeclarationNode,
   AuthorStructureFieldNode,
-} from "@hypit/author";
+} from "@hypit/generation-authoring/author";
 
 import {
   declarationsFromSvmlDocument,
@@ -17,8 +17,8 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 const sourceText = `// Packages stay independent of the SVML grammar.
-module media from "@hypit/media-author@1"
-module image from "@example/image@1"
+module media from "@hypit/media-author"
+module image from "@example/image"
 
 media.Asset "product" {
   from: "./product.png"
@@ -54,9 +54,12 @@ test("SVML Block parses without package grammar and prints untouched bytes exact
   const authored = declarationsFromSvmlDocument(parsed);
   assert.equal(authored[1]?.module.name, "@example/image");
   assert.equal(authored[1]?.label, "hero");
+  assert.throws(() => declarationsFromSvmlDocument(
+    parseSvmlDocument(source('module old from "@example/image@1"\n')),
+  ), /unversioned logical package name/u);
 });
 test("raw literal replacement remains parseable and locally indented", async () => {
-  const text = `module note from "@example/note@1"
+  const text = `module note from "@example/note"
 
 note.Text "brief" {
   value: <<PROMPT

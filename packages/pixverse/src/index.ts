@@ -1,15 +1,15 @@
-import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
+import { sealModelFieldRequest, defineModelFields } from "@hypit/generation-model/model-fields";
 import type {
   ModelField,
   ModelFieldRequirement,
   ModelFieldTable,
   ModelFieldValue,
   ModelFieldRequest,
-} from "@hypit/generation/model-fields";
-import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
+} from "@hypit/generation-model/model-fields";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation-model/model-fields";
 import { promptTypes } from "@hypit/hypit/prompt";
 
-export const pixverseModuleRef = { name: "@hypit/pixverse", version: "1" } as const;
+export const pixverseModuleRef = { name: "@hypit/pixverse" } as const;
 export const pixverseModels = ["pixverse-v6", "pixverse-c1"] as const;
 export type PixverseModel = typeof pixverseModels[number];
 

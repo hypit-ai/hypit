@@ -1,14 +1,17 @@
+import { sameType } from "@hypit/hypit/module";
 import { renderComponentWorkshop } from "./scenes/components/index.js";
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
-import { createProducerPackageFacet } from "@hypit/hypit/producer";
+import { createRefinementPackageFacet } from "@hypit/hypit/generation/refinement";
+import { createProducerPackageFacet } from "@hypit/hypit/generation/producer";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
+import { createModuleFacet } from "@hypit/hypit/module";
 import { renderSemanticWorkshop } from "./scenes/semantic-time/index.js";
 import { renderDeliveryWorkshop } from "./scenes/delivery/index.js";
 import { renderCodeJourney } from "./scenes/code-route/index.js";
 import { renderOutro } from "./scenes/outro/index.js";
 import { renderRoad } from "./scenes/editor-route/index.js";
-import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
-import { canonicalize, sameType } from "@hypit/hypit/protocol";
-import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/generation/markup";
+import { canonicalize } from "@hypit/hypit/value";
+import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/generation/author";
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
 import { timelineTypes, assertTemporalInstantFor } from "@hypit/timeline";
@@ -18,7 +21,7 @@ import { temporalTypes } from "@hypit/temporal";
 import { resolveTimelineReference, resolveWindowReference, resolveInstantReference,
   timelineContextFieldShape, timelineWindowFieldShape, timelineInstantFieldShape } from "@hypit/timeline-author/reference";
 import { renderIntro, renderComparison } from "./render.js";
-const module = { name: "@explainer/web-scenes", version: "1" },
+const module = { name: "@explainer/web-scenes" },
   type = (name) => ({ module, name }),
   producer = (name) => ({ module, name }),
   port = (name, type) => ({ name, type });
@@ -165,7 +168,6 @@ const assetType = (n) => (images.has(n) ? mediaTypes.blobArtifact : mediaTypes.p
 const authoredAssetType = (n) => (images.has(n) ? mediaTypes.blobArtifact : mediaTypes.prepared);
 const ins = (tag) => [...common, ...tags[tag].assets.map((n) => port(n, assetType(n)))];
 export const manifest = {
-  format: "hypit.module@1",
   ...module,
   dependencies: [
     ...new Map(
@@ -392,9 +394,9 @@ function compiler(tag) {
 }
 const declarations = Object.keys(tags).map((tag) => compiler(tag));
 export const hypitPackage = {
-  format: "hypit.package@1",
-  modules: [{ manifest }],
   facets: [
+    createModuleFacet(manifest),
+    createGenerationModuleFacet(manifest),
     createProducerPackageFacet(component.producers ?? []),
     createRefinementPackageFacet(component.refinements ?? []),
     ...declarations.map((declaration) => createAuthorDeclarationFacet(declaration)),

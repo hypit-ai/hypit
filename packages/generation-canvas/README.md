@@ -69,7 +69,12 @@ The original operation result remains attached as history; adoption does not mut
 Recipe edges are derived from the Graph. The Node Host follows the Workspace's portable Graph path and
 persists each Workspace transaction atomically; Graph and Workspace retain independent revisions.
 
-Packages may additionally contribute a `hypit.generation-canvas-presentation@1` Facet for their exact
+The package also owns the `hypit.generation-workspace@1` Project Object projection. Discovery finds
+freely placed `*.workspace.json` documents; observing one exposes its explicit Graph reference as a
+`hypit.generation-graph@1` Project Object. This projection neither opens a Canvas nor stores a central
+project index.
+
+Packages may additionally contribute a `hypit.generation-canvas-presentation` Facet for their exact
 Generation Node symbols. Each entry supplies a node-type `displayName`, one finite semantic role
 (`text`, `image`, `video`, `audio`, `transcript`, `asset` or `generic`) and, when useful, the exact
 authored `summaryInput`. Field labels and layout hints may name ids from the node owner's

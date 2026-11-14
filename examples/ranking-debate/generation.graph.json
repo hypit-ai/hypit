@@ -7,7 +7,7 @@
     {
       "id": "alice-portrait",
       "using": {
-        "module": { "name": "@hypit/gpt-image", "version": "1" },
+        "module": { "name": "@hypit/gpt-image" },
         "name": "gpt-image-2.image"
       },
       "inputs": {
@@ -21,7 +21,7 @@
     {
       "id": "bob-portrait",
       "using": {
-        "module": { "name": "@hypit/gpt-image", "version": "1" },
+        "module": { "name": "@hypit/gpt-image" },
         "name": "gpt-image-2.image"
       },
       "inputs": {
@@ -35,7 +35,7 @@
     {
       "id": "alice-voice-1",
       "using": {
-        "module": { "name": "@hypit/mimo-speech", "version": "1" },
+        "module": { "name": "@hypit/mimo-speech" },
         "name": "mimo-v2.5-tts-voicedesign.audio"
       },
       "inputs": {
@@ -48,7 +48,7 @@
     {
       "id": "bob-voice-1",
       "using": {
-        "module": { "name": "@hypit/mimo-speech", "version": "1" },
+        "module": { "name": "@hypit/mimo-speech" },
         "name": "mimo-v2.5-tts-voicedesign.audio"
       },
       "inputs": {
@@ -61,7 +61,7 @@
     {
       "id": "alice-voice-2",
       "using": {
-        "module": { "name": "@hypit/mimo-speech", "version": "1" },
+        "module": { "name": "@hypit/mimo-speech" },
         "name": "mimo-v2.5-tts-voiceclone.audio"
       },
       "inputs": {
@@ -73,7 +73,7 @@
     {
       "id": "bob-voice-2",
       "using": {
-        "module": { "name": "@hypit/mimo-speech", "version": "1" },
+        "module": { "name": "@hypit/mimo-speech" },
         "name": "mimo-v2.5-tts-voiceclone.audio"
       },
       "inputs": {
@@ -85,7 +85,7 @@
     {
       "id": "alice-video-1",
       "using": {
-        "module": { "name": "@hypit/seedance", "version": "1" },
+        "module": { "name": "@hypit/seedance" },
         "name": "seedance-2-mini.video"
       },
       "inputs": {
@@ -105,7 +105,7 @@
     {
       "id": "bob-video-1",
       "using": {
-        "module": { "name": "@hypit/seedance", "version": "1" },
+        "module": { "name": "@hypit/seedance" },
         "name": "seedance-2-mini.video"
       },
       "inputs": {
@@ -125,7 +125,7 @@
     {
       "id": "alice-video-2",
       "using": {
-        "module": { "name": "@hypit/seedance", "version": "1" },
+        "module": { "name": "@hypit/seedance" },
         "name": "seedance-2-mini.video"
       },
       "inputs": {
@@ -145,7 +145,7 @@
     {
       "id": "bob-video-2",
       "using": {
-        "module": { "name": "@hypit/seedance", "version": "1" },
+        "module": { "name": "@hypit/seedance" },
         "name": "seedance-2-mini.video"
       },
       "inputs": {

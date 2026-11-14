@@ -11,6 +11,7 @@ export {
   editPictureTransformNleParameters,
   pictureTransformControlFromNleParameters,
   pictureTransformNleAuthoring,
+  pictureTransformNleOccurrence,
   pictureTransformNleResolver,
   pictureTransformNleSymbol,
 } from "./nle.js";

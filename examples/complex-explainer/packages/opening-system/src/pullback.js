@@ -1,6 +1,6 @@
 import { placedVisualMedia } from "./placed-visual-media.js";
-import { canonicalize } from "@hypit/hypit/protocol";
-import { declarationField, sealGraphFragment } from "@hypit/hypit/author";
+import { canonicalize } from "@hypit/hypit/value";
+import { declarationField, sealGraphFragment } from "@hypit/hypit/generation/author";
 import { presenterStyle, presenterTypes } from "./presenter.js";
 import { sealPresentVisualTrack, compositionTypes } from "@hypit/composition";
 import { timelineTypes } from "@hypit/timeline";

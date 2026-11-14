@@ -5,7 +5,7 @@ import type {
   TemporalMap,
   TemporalRange,
 } from "@hypit/temporal/algebra";
-import type { TypeRef } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
 import type { BlobRef, CanonicalValue } from "@hypit/protocol";
 import type { LocalSpatialDomain, SpatialMap, SpatialRegion } from "@hypit/spatial/algebra";
 
@@ -89,17 +89,11 @@ export type OperatorInputTemporalSupport = {
 };
 
 /**
- * Time dependency of one Operator, independent of any concrete effect.
- * Durations are exact and non-negative. A sequential state declares the
- * finite pre-roll needed before an independently requested output range.
+ * Exact signal dependency of one Operator, independent of any implementation.
+ * Durations are exact and non-negative.
  */
 export type OperatorTemporalSupport = {
   readonly inputs: Readonly<Record<string, OperatorInputTemporalSupport>>;
-  readonly state:
-    | { readonly kind: "independent" }
-    | { readonly kind: "sequential"; readonly preRoll: ExactTemporalValue };
-  /** Execution availability delay; it does not shift Programme time. */
-  readonly latency: ExactTemporalValue;
   /** Possible output after the last non-empty input sample. */
   readonly tail: ExactTemporalValue;
 };

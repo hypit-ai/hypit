@@ -1,10 +1,12 @@
+import { createModuleFacet } from "@hypit/module";
+import { createGenerationModuleFacet } from "@hypit/generation-build";
 import assert from "node:assert/strict";
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { sealGraphFragment } from "@hypit/author";
+import { sealGraphFragment } from "@hypit/generation-authoring/author";
 import { runCliApplication } from "@hypit/cli";
 import {
   applyGenerationGraphTransaction,
@@ -16,21 +18,19 @@ import {
   writeGenerationGraphProjectFile,
 } from "@hypit/generation-graph/node";
 import type { LoadedPackage } from "@hypit/loader";
-import type { ModuleManifest } from "@hypit/protocol";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
 
 import {
   createGenerationGraphCliCommandModules,
   type GenerationGraphCliServices,
 } from "../src/index.js";
 
-const moduleRef = { name: "@example/image", version: "1" } as const;
+const moduleRef = { name: "@example/image" } as const;
 const imageType = { module: moduleRef, name: "Image" } as const;
 const using = { module: moduleRef, name: "generate" } as const;
 const producer = { module: moduleRef, name: "generate" } as const;
-const manifest: ModuleManifest = {
-  format: "hypit.module@1",
+const manifest: GenerationModuleDefinition = {
   name: moduleRef.name,
-  version: moduleRef.version,
   dependencies: [],
   types: [imageType.name],
   capabilities: [],
@@ -49,12 +49,12 @@ const fragment = sealGraphFragment({
 const loaded: LoadedPackage = {
   specifier: "@example/image",
   contribution: {
-    format: "hypit.package@1",
-    modules: [{ manifest }],
     facets: [
+    createModuleFacet(manifest),
+      createGenerationModuleFacet(manifest),
       createGenerationNodePackageFacet({ nodes: [{ kind: "operation", using, fragment }] }),
       {
-        abi: "hypit.producer-package@1",
+        kind: "hypit.producer-package",
         implementation: [{ producer, handler: () => ({ kind: "output", value: "finished image" }) }],
       },
     ],
@@ -114,9 +114,9 @@ test("generation run submits a fresh Build every time without rewriting the reci
     let runtimeOpens = 0;
     const services: GenerationGraphCliServices = {
       packageRoot: directory,
-      resolveProjectRuntime: async () => ({ profile: join(directory, "hypit.runtime.json") }),
+      resolveProjectRuntime: async () => ({ profile: join(directory, "hypit.generation-runtime.json") }),
       async loadPackages(request) {
-        assert.deepEqual(request.logical, [{ abi: "hypit.module@1", name: "@example/image@1" }]);
+        assert.deepEqual(request.logical, [{ kind: "hypit.module", name: "@example/image" }]);
         return [loaded];
       },
       async openRuntimeHost() {
@@ -127,8 +127,8 @@ test("generation run submits a fresh Build every time without rewriting the reci
         return {
           location: {
             root: directory,
-            historyPath: ".hypit/results",
-            productsPath: ".hypit/products",
+            historyPath: ".hypit/generation/results",
+            productsPath: ".hypit/generation/products",
           },
           history: {
             read: async () => undefined,
@@ -247,7 +247,7 @@ test("generation materialize hands one exact Product to the application media se
       async openProjectResults() {
         calls.push("results.open");
         return {
-          location: { root: directory, historyPath: ".hypit/results", productsPath: ".hypit/products" },
+          location: { root: directory, historyPath: ".hypit/generation/results", productsPath: ".hypit/generation/products" },
           history: {
             read: async () => undefined,
             browse: async () => ({ results: [] }),

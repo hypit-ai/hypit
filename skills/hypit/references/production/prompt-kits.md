@@ -44,7 +44,7 @@ one fixed capture direction, requires the current shot and direction, offers a r
 and includes a screen note only when the render selects it:
 
 ```svs
-<?svml using="@hypit/text/svs@1"?>
+<?svml using="@hypit/text/svs"?>
 
 <sheet version="1" id="phone-shot">
   text-template.phone-shot {
@@ -117,9 +117,9 @@ produced elsewhere remains a graph edge rather than being copied into a scalar b
 ## Render it in an Author Source
 
 ```svml
-<?svml using="@hypit/markup@1"?>
+<?svml using="@hypit/markup"?>
 <svml>
-  <import as="text" from="@hypit/text@1"/>
+  <import as="text" from="@hypit/text"/>
   <import as="kit" source="./phone-shot.svs"/>
   <import as="recipes" source="./look.svs"/>
 
@@ -140,7 +140,7 @@ produced elsewhere remains a graph edge rather than being copied into a scalar b
 Save the template above as `phone-shot.svs`. For this example, `look.svs` can be:
 
 ```svs
-<?svml using="@hypit/recipe@1"?>
+<?svml using="@hypit/recipe"?>
 <sheet version="1">
   prompt.main { camera: handheld; }
 </sheet>

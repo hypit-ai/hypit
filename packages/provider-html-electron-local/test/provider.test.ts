@@ -4,11 +4,11 @@ import test from "node:test";
 import { endpointOffers } from "@hypit/hypit/endpoint";
 import { htmlProgramCapabilities, htmlRasterRequest } from "@hypit/html-program";
 import { mediaTypes } from "@hypit/media";
-import { canonicalize } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/hypit/value";
 import {
-  runtimeEndpointAdapterFacetAbi,
-} from "@hypit/runtime-local/extension";
-import type { RuntimeEndpointAdapterImplementation } from "@hypit/runtime-local/extension";
+  executionEnvironmentEndpointAdapterFacetKind,
+} from "@hypit/execution-environment-local/extension";
+import type { ExecutionEnvironmentEndpointAdapterImplementation } from "@hypit/execution-environment-local/extension";
 
 import { hypitPackage } from "../src/activation.js";
 import { createLocalElectronHtmlProvider } from "../src/provider.js";
@@ -44,10 +44,10 @@ test("Electron remains a user-managed Program", () => {
   assert.equal(program.installation, undefined);
 });
 
-test("Runtime Profile activates Electron without constructing a managed Chrome Program", async () => {
-  const facet = hypitPackage.facets.find(item => item.abi === runtimeEndpointAdapterFacetAbi);
+test("Environment Profile activates Electron without constructing a managed Chrome Program", async () => {
+  const facet = hypitPackage.facets.find(item => item.kind === executionEnvironmentEndpointAdapterFacetKind);
   assert.ok(facet);
-  const adapter = facet.implementation as RuntimeEndpointAdapterImplementation;
+  const adapter = facet.implementation as ExecutionEnvironmentEndpointAdapterImplementation;
   const activation = await adapter.activate({
     hostStateRoot: tmpdir(), dataRoot: tmpdir(), instance: "html.gpu", pool: "machine",
     config: canonicalize({ electronPath: "Electron" }),

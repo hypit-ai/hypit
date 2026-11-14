@@ -21,7 +21,7 @@ test("one Script materializes complete editable Karaoke Caption Items over three
     assertCaptionCuePayload(parameters.caption, item.duration);
     assert(parameters.caption.words.length > 0);
     assert(parameters.caption.units.length > 0);
-    const styleRef = item.bindings?.find((binding) => binding.slot === "style")?.ref;
+    const styleRef = item.sharedValues?.find((reference) => reference.slot === "style")?.ref;
     assert.equal(typeof styleRef, "string");
     const style = project.componentValues.find((value) => value.id === styleRef);
     assert.notEqual(style, undefined);

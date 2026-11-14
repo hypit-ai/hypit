@@ -11,6 +11,7 @@ import {
   exactTemporalValueFromFrames,
   frameSampleBoundary,
   frameSpanSamples,
+  imageTemporalMapRegions,
   identityTemporalMap,
   integrateTemporalRateProfile,
   moduloExactTemporalValue,
@@ -27,6 +28,7 @@ import {
   temporalExtentFromDomain,
   temporalMapMayContain,
   temporalMapPointRegionSet,
+  temporalRangeRegionSet,
   uniqueTemporalMapRegionSetPoint,
 } from "../src/index.js";
 
@@ -434,6 +436,28 @@ test("Temporal Map preimage returns every exact loop solution without sampling t
     [value("1"), value("3")].map((position) => ({
       start: { position, side: "after" }, end: { position, side: "after" },
     })));
+});
+
+test("Temporal Map image carries a range through reverse and wrap without frame sampling", () => {
+  const value = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } } as const);
+  const target = { id: "image-occurrence", duration: value("6") };
+  const source = { id: "image-source", duration: value("2") };
+  const map = sealTemporalMap({ stages: [{ target, source, pieces: [{
+    target: { start: value("0"), end: target.duration },
+    sourceAtStart: source.duration,
+    rate: { numerator: -1, denominator: 1 },
+    wrap: { start: value("0"), end: source.duration },
+  }] }] });
+  assert.deepEqual(imageTemporalMapRegions(
+    map,
+    temporalRangeRegionSet(target, { start: value("1"), end: value("5") }),
+  ), {
+    domain: source,
+    regions: [{
+      start: { position: value("0"), side: "after" },
+      end: { position: value("2"), side: "before" },
+    }],
+  });
 });
 
 test("Temporal Map preimage maps an exact source region back through rational rate", () => {

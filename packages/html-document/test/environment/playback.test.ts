@@ -37,16 +37,28 @@ test("standalone HTML Document prepares once across ready, seek, play and pause"
     const page = await browser.newPage();
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error instanceof Error ? error.message : String(error)));
-    await page.setContent(html, { waitUntil: "load" });
+    await page.setContent('<iframe id="preview"></iframe>', { waitUntil: "load" });
+    await page.evaluate((source) => {
+      const iframe = document.querySelector<HTMLIFrameElement>("#preview");
+      if (iframe === null) throw new Error("Preview iframe is missing");
+      iframe.srcdoc = source;
+    }, html);
+    await page.waitForFunction(() => {
+      const preview = document.querySelector<HTMLIFrameElement>("#preview")?.contentWindow as
+        (Window & { readonly __hypitDocument?: unknown }) | undefined;
+      return preview?.__hypitDocument !== undefined;
+    });
     const state = await page.evaluate(async () => {
-      const documentPlayer = (window as unknown as { __hypitDocument: {
+      const preview = document.querySelector<HTMLIFrameElement>("#preview")?.contentWindow as unknown as {
+        __hypitDocument: {
         readonly ready: Promise<void>;
         readonly frame: number;
         readonly playing: boolean;
         seekFrame(frame: number): Promise<void>;
         play(): Promise<void>;
         pause(): Promise<void>;
-      } }).__hypitDocument;
+      } };
+      const documentPlayer = preview.__hypitDocument;
       await documentPlayer.ready;
       await documentPlayer.seekFrame(1);
       await documentPlayer.play();
@@ -54,6 +66,32 @@ test("standalone HTML Document prepares once across ready, seek, play and pause"
       return { frame: documentPlayer.frame, playing: documentPlayer.playing };
     });
     assert.deepEqual(state, { frame: 1, playing: false });
+
+    const scrub = await page.evaluate(`(async () => {
+      const preview = document.querySelector('#preview').contentWindow;
+      await preview.__hypitDocument.ready;
+      const seek = preview.__hypitSeekFrame;
+      let evaluated = 0;
+      preview.__hypitSeekFrame = async frame => {
+        evaluated += 1;
+        await new Promise(resolve => setTimeout(resolve, 8));
+        await seek(frame);
+      };
+      const finalCommand = 40;
+      for (let commandId = 1; commandId <= finalCommand; commandId += 1) {
+        preview.postMessage({
+          type: 'hypit.html-document.command@1',
+          action: 'seek',
+          frame: commandId % 2,
+          commandId,
+        }, '*');
+      }
+      await new Promise(resolve => setTimeout(resolve, 250));
+      return { frame: preview.__hypitDocument.frame,
+        playing: preview.__hypitDocument.playing, evaluated };
+    })()`) as { readonly frame: number; readonly playing: boolean; readonly evaluated: number };
+    assert.deepEqual({ frame: scrub.frame, playing: scrub.playing }, { frame: 0, playing: false });
+    assert.ok(scrub.evaluated <= 2, `Expected coalesced scrubbing, evaluated ${scrub.evaluated} frames`);
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();

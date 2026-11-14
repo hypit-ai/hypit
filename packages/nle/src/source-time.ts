@@ -16,7 +16,7 @@ import {
   type TemporalRate,
 } from "@hypit/temporal/algebra";
 
-import type { NleSourceTime } from "./types.js";
+import type { NleTimeMapping } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -28,8 +28,8 @@ function domain(duration: ExactTemporalValue) {
   return sealLocalTemporalDomain({ id: "nle-source-time", duration: structuredClone(duration) });
 }
 
-export function assertNleSourceTime(
-  value: NleSourceTime,
+export function assertNleTimeMapping(
+  value: NleTimeMapping,
   duration: ExactTemporalValue,
   label = "NLE source time",
 ): void {
@@ -38,13 +38,13 @@ export function assertNleSourceTime(
   assertTemporalMapPieces(value.pieces, domain(duration));
 }
 
-export function nleLinearSourceTime(
+export function nleLinearTimeMapping(
   duration: ExactTemporalValue,
   sourceAtStart: ExactTemporalValue = exactTemporalZero(),
   rate: TemporalRate = unitRate,
   wrap?: TemporalRange,
-): NleSourceTime {
-  const value: NleSourceTime = {
+): NleTimeMapping {
+  const value: NleTimeMapping = {
     pieces: [{
       target: { start: exactTemporalZero(), end: structuredClone(duration) },
       sourceAtStart: structuredClone(sourceAtStart),
@@ -52,7 +52,7 @@ export function nleLinearSourceTime(
       ...(wrap === undefined ? {} : { wrap: structuredClone(wrap) }),
     }],
   };
-  assertNleSourceTime(value, duration);
+  assertNleTimeMapping(value, duration);
   return value;
 }
 
@@ -61,7 +61,7 @@ function maximum(left: ExactTemporalValue, right: ExactTemporalValue): ExactTemp
 }
 
 /** Minimum resolved Source duration required to contain every persisted source coordinate. */
-export function nleSourceTimeRequiredDuration(value: NleSourceTime): ExactTemporalValue {
+export function nleTimeMappingRequiredDuration(value: NleTimeMapping): ExactTemporalValue {
   let result = exactTemporalZero();
   for (const piece of value.pieces) {
     if (isAffineTemporalMapPiece(piece)) {
@@ -100,13 +100,13 @@ function shiftPiece(piece: TemporalMapPiece, delta: ExactTemporalValue): Tempora
   };
 }
 
-export function shiftNleSourceTime(
-  value: NleSourceTime,
+export function shiftNleTimeMapping(
+  value: NleTimeMapping,
   duration: ExactTemporalValue,
   delta: ExactTemporalValue,
-): NleSourceTime {
+): NleTimeMapping {
   const shifted = { pieces: value.pieces.map((piece) => shiftPiece(piece, delta)) };
-  assertNleSourceTime(shifted, duration);
+  assertNleTimeMapping(shifted, duration);
   return shifted;
 }
 
@@ -138,11 +138,11 @@ function extension(
 }
 
 /** Select an Item-local range, exactly subdividing pieces and rebasing its start to zero. */
-export function sliceNleSourceTime(
-  value: NleSourceTime,
+export function sliceNleTimeMapping(
+  value: NleTimeMapping,
   oldDuration: ExactTemporalValue,
   range: TemporalRange,
-): NleSourceTime {
+): NleTimeMapping {
   assert(compareExactTemporalValues(range.start, range.end) < 0, "NLE source-time slice must be positive.");
   const zero = exactTemporalZero();
   const pieces: TemporalMapPiece[] = [];
@@ -161,6 +161,6 @@ export function sliceNleSourceTime(
   }
   const duration = subtractExactTemporalValues(range.end, range.start);
   const sliced = { pieces: coalesceTemporalMapPieces(pieces) };
-  assertNleSourceTime(sliced, duration);
+  assertNleTimeMapping(sliced, duration);
   return sliced;
 }

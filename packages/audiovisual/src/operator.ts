@@ -1,4 +1,5 @@
-import { assertBlobRef, canonicalStringify, isTypeRef } from "@hypit/protocol";
+import { assertBlobRef, canonicalStringify } from "@hypit/protocol";
+import { isTypeRef } from "@hypit/module";
 import {
   assertExactTemporalValue,
   assertLocalTemporalDomain,
@@ -55,8 +56,6 @@ export function pointwiseOperatorTemporalSupport(inputs: readonly string[]): Ope
       before: structuredClone(zero),
       after: structuredClone(zero),
     }])),
-    state: { kind: "independent" },
-    latency: structuredClone(zero),
     tail: structuredClone(zero),
   };
 }
@@ -77,19 +76,13 @@ export function assertOperatorTemporalSupport(
     assertDuration(support.before, `${label}.${name}.before`);
     assertDuration(support.after, `${label}.${name}.after`);
   }
-  assertDuration(value.latency, `${label}.latency`);
   assertDuration(value.tail, `${label}.tail`);
-  assert(value.state?.kind === "independent" || value.state?.kind === "sequential",
-    `${label}.state is invalid.`);
-  if (value.state.kind === "sequential") assertDuration(value.state.preRoll, `${label}.state.preRoll`);
 }
 
 export function isPointwiseOperatorTemporalSupport(value: OperatorTemporalSupport): boolean {
   assertOperatorTemporalSupport(value, Object.keys(value.inputs));
   const zero = exactTemporalZero();
-  return value.state.kind === "independent"
-    && compareExactTemporalValues(value.latency, zero) === 0
-    && compareExactTemporalValues(value.tail, zero) === 0
+  return compareExactTemporalValues(value.tail, zero) === 0
     && Object.values(value.inputs).every((support) =>
       compareExactTemporalValues(support.before, zero) === 0
       && compareExactTemporalValues(support.after, zero) === 0);

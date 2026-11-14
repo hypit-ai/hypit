@@ -1,0 +1,23 @@
+{
+  "name": "@hypit/generation-authoring",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./source": "./src/source/index.ts",
+    "./source/text": "./src/source/header.ts",
+    "./workspace": "./src/workspace/index.ts",
+    "./workspace/node": "./src/workspace/node/index.ts",
+    "./author": "./src/author/index.ts",
+    "./compiler": "./src/compiler/index.ts"
+  },
+  "dependencies": {
+    "@hypit/facet": "workspace:*",
+    "@hypit/generation-build": "workspace:*",
+    "@hypit/module": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/refinement": "workspace:*"
+  }
+}

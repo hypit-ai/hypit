@@ -37,7 +37,7 @@ export {
   createProductExporterFacet,
   productExporterForType,
   productExportersFromFacets,
-  productExporterFacetAbi,
+  productExporterFacetKind,
 } from "./exporter.js";
 export { decodeProduct, decodeProductValueDocument, decodeStoredProduct } from "./decode.js";
 export { decodeStoredProductPublication } from "./decode.js";

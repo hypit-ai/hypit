@@ -21,10 +21,10 @@ import type {
   ImmediateEndpointHandler,
   AsyncEndpoint,
 } from "@hypit/endpoint";
-import type { CapabilityRef, TypeRef } from "@hypit/protocol";
-import { credentialRef } from "@hypit/runtime";
+import type { CapabilityRef, TypeRef } from "@hypit/module";
+import { credentialRef } from "@hypit/execution-environment";
 
-const endpointModule = { name: "example.endpoint", version: "1" } as const;
+const endpointModule = { name: "example.endpoint" } as const;
 const capabilities = {
   generation: { module: endpointModule, name: "generate" },
 } satisfies Record<string, CapabilityRef>;

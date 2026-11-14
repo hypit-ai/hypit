@@ -1,5 +1,6 @@
 import { verifyPreparedMedia } from "@hypit/media";
-import { assertBlobRef, isTypeRef } from "@hypit/protocol";
+import { assertBlobRef } from "@hypit/protocol";
+import { isTypeRef } from "@hypit/module";
 import {
   assertTemporalMap,
   compareExactTemporalValues,
@@ -190,6 +191,52 @@ export function parseMediaAssetDocument(text: string): MediaAssetDocument {
 export function serializeMediaAssetDocument(value: MediaAssetDocument): string {
   verifyMediaAssetDocument(value);
   return `${JSON.stringify(value, undefined, 2)}\n`;
+}
+
+/** Add one already accepted Representation. Analysis and candidate production stay outside Media Asset Core. */
+export function attachMediaRepresentation(
+  value: MediaAssetDocument,
+  representation: MediaRepresentationDeclaration,
+): MediaAssetDocument {
+  const document = sealMediaAssetDocument(value);
+  assert(!document.representations.some((candidate) => candidate.id === representation.id),
+    `Media Asset ${document.id} already has Representation ${representation.id}.`);
+  return sealMediaAssetDocument({
+    ...document,
+    representations: [...document.representations, structuredClone(representation)],
+  });
+}
+
+/** Replace the one Representation identified by its asset-local id; no version or history is retained. */
+export function replaceMediaRepresentation(
+  value: MediaAssetDocument,
+  id: string,
+  representation: MediaRepresentationDeclaration,
+): MediaAssetDocument {
+  const document = sealMediaAssetDocument(value);
+  const index = document.representations.findIndex((candidate) => candidate.id === id);
+  assert(index >= 0, `Media Asset ${document.id} has no Representation ${id}.`);
+  assert(representation.id === id,
+    `Replacement Representation ${representation.id} must keep asset-local identity ${id}.`);
+  return sealMediaAssetDocument({
+    ...document,
+    representations: document.representations.map((candidate, candidateIndex) =>
+      candidateIndex === index ? structuredClone(representation) : candidate),
+  });
+}
+
+/** Remove one Representation binding. File cleanup remains an explicit Host operation. */
+export function detachMediaRepresentation(
+  value: MediaAssetDocument,
+  id: string,
+): MediaAssetDocument {
+  const document = sealMediaAssetDocument(value);
+  const index = document.representations.findIndex((candidate) => candidate.id === id);
+  assert(index >= 0, `Media Asset ${document.id} has no Representation ${id}.`);
+  return sealMediaAssetDocument({
+    ...document,
+    representations: document.representations.filter((_candidate, candidateIndex) => candidateIndex !== index),
+  });
 }
 
 async function resolveFile(

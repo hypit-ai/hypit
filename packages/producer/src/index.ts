@@ -1,10 +1,6 @@
-import type {
-  CanonicalValue,
-  InvokeProducerCommand,
-  ProducerRef,
-  Value,
-  TypedRecord,
-} from "@hypit/protocol";
+import type { CanonicalValue, Value } from "@hypit/protocol";
+import type { ProducerRef } from "@hypit/module";
+import type { InvokeProducerCommand, TypedRecord } from "@hypit/generation-build";
 import type { Facet } from "@hypit/facet";
 
 export type Awaitable<T> = T | Promise<T>;
@@ -63,10 +59,10 @@ export function registerProducerFacets(
 /** Producer-owned deterministic implementations; it selects no Provider or Runtime infrastructure. */
 export type ProducerPackage = readonly ProducerFacet[];
 
-export const producerPackageFacetAbi = "hypit.producer-package@1";
+export const producerPackageFacetKind = "hypit.producer-package";
 
 export type ProducerPackageFacet = Facet & {
-  readonly abi: typeof producerPackageFacetAbi;
+  readonly kind: typeof producerPackageFacetKind;
   readonly implementation: ProducerPackage;
 };
 
@@ -74,14 +70,14 @@ export type ProducerPackageFacet = Facet & {
 export function createProducerPackageFacet(producers: ProducerPackage): ProducerPackageFacet {
   if (!Array.isArray(producers)) throw new Error("Producer package must be an array of Producer facets");
   return {
-    abi: producerPackageFacetAbi,
+    kind: producerPackageFacetKind,
     implementation: producers,
   };
 }
 
 /** Select only Producer facets; package loading itself never interprets their implementation. */
 export function producerPackagesFromFacets(facets: readonly Facet[]): readonly ProducerPackage[] {
-  return facets.flatMap((facet) => facet.abi === producerPackageFacetAbi
+  return facets.flatMap((facet) => facet.kind === producerPackageFacetKind
     ? [(facet as ProducerPackageFacet).implementation]
     : []);
 }

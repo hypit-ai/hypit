@@ -1,5 +1,8 @@
 import { blobRefSchema } from "@hypit/protocol";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import type { ValueSchema } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
+import type { ProducerRef } from "@hypit/module";
 
 import { audioType, audiovisualModuleRef, pictureType } from "./identity.js";
 
@@ -27,10 +30,8 @@ export const signalOperatorProgramSchema: ValueSchema = {
   },
 };
 
-export const audiovisualManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const audiovisualManifest: GenerationModuleDefinition = {
   name: audiovisualModuleRef.name,
-  version: audiovisualModuleRef.version,
   dependencies: [],
   types: Object.values(audiovisualTypes).map((type) => type.name),
   capabilities: [],

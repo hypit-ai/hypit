@@ -1,4 +1,5 @@
 import type { AudiovisualProgram } from "@hypit/audiovisual";
+import type { AudiovisualPictureOutput } from "@hypit/audiovisual-execution";
 import { canonicalize } from "@hypit/protocol";
 import type { Value } from "@hypit/protocol";
 import type { ProducerPackage } from "@hypit/producer";
@@ -9,18 +10,13 @@ import { compileAudiovisualHtmlProgram } from "./compile.js";
 import { audiovisualHtmlProducers, audiovisualHtmlTypes } from "./manifest.js";
 import {
   appendAudiovisualHtmlSource,
-  assertAudiovisualHtmlOutput,
   assertAudiovisualHtmlSourceSet,
   audiovisualProgramHtmlSource,
   createAudiovisualHtmlSourceSet,
   preparedMediaHtmlSource,
   sealAudiovisualHtmlSource,
 } from "./source.js";
-import type {
-  AudiovisualHtmlOutput,
-  AudiovisualHtmlSource,
-  AudiovisualHtmlSourceSet,
-} from "./source.js";
+import type { AudiovisualHtmlSource, AudiovisualHtmlSourceSet } from "./source.js";
 
 function valueOf<T>(value: Value | undefined, label: string): T {
   if (value === undefined) throw new Error(`${label} is missing.`);
@@ -58,7 +54,7 @@ export const audiovisualHtmlComponent = {
       handler: ({ inputs }) => ({ kind: "output", value: canonicalize(compileAudiovisualHtmlProgram(
         valueOf<AudiovisualProgram>(inputs.program?.value, "AudiovisualProgram"),
         valueOf<AudiovisualHtmlSourceSet>(inputs.sources?.value, "AudiovisualHtmlSourceSet"),
-        valueOf<AudiovisualHtmlOutput>(inputs.output?.value, "AudiovisualHtmlOutput"),
+        valueOf<AudiovisualPictureOutput>(inputs.output?.value, "AudiovisualPictureOutput"),
       )) }),
     },
   ],
@@ -70,10 +66,6 @@ export const audiovisualHtmlComponent = {
     {
       type: audiovisualHtmlTypes.sourceSet,
       handler: ({ value }) => { assertAudiovisualHtmlSourceSet(valueOf(value, "AudiovisualHtmlSourceSet")); },
-    },
-    {
-      type: audiovisualHtmlTypes.output,
-      handler: ({ value }) => { assertAudiovisualHtmlOutput(valueOf(value, "AudiovisualHtmlOutput")); },
     },
   ],
 } satisfies { producers: ProducerPackage; refinements: RefinementPackage };

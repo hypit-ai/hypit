@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { encodeOAuth2Credential } from "@hypit/runtime";
+import { encodeOAuth2Credential } from "@hypit/execution-environment";
 
-import { EndpointRegistry } from "@hypit/executor";
+import { EndpointRegistry } from "@hypit/endpoint";
 import { MemoryResourceStore } from "@hypit/resource-store";
 import { defineEndpoint, endpointOffers, installEndpoint } from "@hypit/endpoint";
-import type { CanonicalValue, Need } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
+import type { Need } from "@hypit/generation-build";
 import { mimoSpeechEndpoints, sealMimoSpeechRequest } from "@hypit/mimo-speech";
 import { fishAudioSpeechEndpoints, sealFishAudioSpeechRequest } from "@hypit/fishaudio-speech";
 import { elevenLabsSpeechEndpoints, sealElevenLabsSpeechRequest } from "@hypit/elevenlabs-speech";
-import { generationTypes } from "@hypit/generation";
+import { generationTypes } from "@hypit/generation-model";
 import { gptImageEndpoints, sealGptImage2Request } from "@hypit/gpt-image";
 import { sealSeedanceRequest, seedanceEndpoints } from "@hypit/seedance";
 import { sealSpeechEvidenceAudio, speechEvidenceTypes } from "@hypit/speech-evidence";
@@ -108,7 +109,7 @@ test("HypiHub reads model pricing for a concrete canonical request", async () =>
     },
   });
   const request = {
-    capability: { module: { name: "@hypit/gpt-image", version: "1" }, name: "gpt-image-2" },
+    capability: { module: { name: "@hypit/gpt-image" }, name: "gpt-image-2" },
     returns: generationTypes.imageSet,
     constraints: {
       fields: { prompt: ["A portrait."], aspectRatio: ["9:16"], resolution: ["1K"] },
@@ -159,12 +160,12 @@ test("HypiHub doctor recognizes the canonical cards returned by the service", as
     { id: "seedance-2-mini", endpoints: ["videos"] },
   ];
   const capabilities = [
-    { module: { name: "@hypit/gpt-image", version: "1" }, name: "gpt-image-2" },
-    { module: { name: "@hypit/seedream", version: "1" }, name: "seedream-5-lite" },
-    { module: { name: "@hypit/minimax-h3", version: "1" }, name: "minimax-h3" },
-    { module: { name: "@hypit/grok-imagine", version: "1" }, name: "grok-imagine-video" },
+    { module: { name: "@hypit/gpt-image" }, name: "gpt-image-2" },
+    { module: { name: "@hypit/seedream" }, name: "seedream-5-lite" },
+    { module: { name: "@hypit/minimax-h3" }, name: "minimax-h3" },
+    { module: { name: "@hypit/grok-imagine" }, name: "grok-imagine-video" },
     seedanceEndpoints.mini!.capability,
-    { module: { name: "@hypit/grok-imagine", version: "1" }, name: "grok-imagine-video-1.5-preview" },
+    { module: { name: "@hypit/grok-imagine" }, name: "grok-imagine-video-1.5-preview" },
   ];
   const diagnostics = await diagnoseHypiHubProvider({
     fetch: async () => Response.json({ data: cards }),

@@ -53,8 +53,7 @@ test("loads an explicitly selected installed package", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-package-loader-"));
   try {
     await installedPackage(root, "example-cards", `{
-      format: "hypit.package@1",
-      facets: [{ abi: "example.cards@1", address: "cards" }]
+      facets: [{ kind: "example.cards", address: "cards" }]
     }`);
     const loaded = await loadNodePackageSelection(["example-cards"], root);
     assert.deepEqual(loaded.map((item) => item.specifier), ["example-cards"]);
@@ -66,7 +65,7 @@ test("loads an explicitly selected installed package", async () => {
 test("an independently installed package must own its missing @hypit dependencies", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-package-owner-"));
   try {
-    await installedPackage(root, "example-cards", `{ format: "hypit.package@1" }`, {
+    await installedPackage(root, "example-cards", `{ }`, {
       "@hypit/missing-extension": "1.0.0",
     });
     await assert.rejects(
@@ -83,8 +82,7 @@ test("an embedded Distribution package resolves a dependency installed with its 
   const distribution = await mkdtemp(join(tmpdir(), "hypit-cli-only-distribution-"));
   try {
     await projectPackage(distribution, "@hypit/provider-example", `{
-      format: "hypit.package@1",
-      facets: [{ abi: "example.provider@1", address: "example" }]
+      facets: [{ kind: "example.provider", address: "example" }]
     }`, { "cli-only": "1.2.3" });
     const cli = join(distribution, "node_modules", "cli-only");
     await mkdir(join(cli, "bin"), { recursive: true });
@@ -109,12 +107,11 @@ test("resolves a logical request to its conventional installed package", async (
   const root = await mkdtemp(join(tmpdir(), "hypit-package-selection-"));
   try {
     await installedPackage(root, "example-provider", `{
-      format: "hypit.package@1",
-      facets: [{ abi: "example.endpoint@1", address: "example-provider" }]
+      facets: [{ kind: "example.endpoint", address: "example-provider" }]
     }`);
     const loaded = await loadNodePackageSelection({
       selected: [],
-      logical: [{ abi: "example.endpoint@1", name: "example-provider" }],
+      logical: [{ kind: "example.endpoint", name: "example-provider" }],
     }, root);
     assert.deepEqual(loaded.map((item) => item.specifier), ["example-provider"]);
   } finally {
@@ -126,8 +123,7 @@ test("loads an explicit project package without linking it into the Distribution
   const root = await mkdtemp(join(tmpdir(), "hypit-project-package-"));
   try {
     await projectPackage(root, "@acme/cards", `{
-      format: "hypit.package@1",
-      facets: [{ abi: "example.cards@1", address: "cards" }]
+      facets: [{ kind: "example.cards", address: "cards" }]
     }`);
     const loaded = await loadNodePackageSelection(["@acme/cards"], root);
     assert.deepEqual(loaded.map((item) => item.specifier), ["@acme/cards"]);
@@ -141,8 +137,7 @@ test("falls back to an explicit read-only Distribution root", async () => {
   const distribution = await mkdtemp(join(tmpdir(), "hypit-distribution-root-"));
   try {
     await installedPackage(distribution, "@hypit/cards", `{
-      format: "hypit.package@1",
-      facets: [{ abi: "example.cards@1", address: "cards" }]
+      facets: [{ kind: "example.cards", address: "cards" }]
     }`);
     const loaded = await loadNodePackageSelection(["@hypit/cards"], project, {
       fallbackRoots: [distribution],
@@ -159,12 +154,10 @@ test("a project-installed official extension wins over the Distribution fallback
   const distribution = await mkdtemp(join(tmpdir(), "hypit-distribution-root-"));
   try {
     await installedPackage(project, "@hypit/cards", `{
-      format: "hypit.package@1",
-      facets: [{ abi: "example.cards@1", address: "project-shadow" }]
+      facets: [{ kind: "example.cards", address: "project-shadow" }]
     }`);
     await installedPackage(distribution, "@hypit/cards", `{
-      format: "hypit.package@1",
-      facets: [{ abi: "example.cards@1", address: "distribution" }]
+      facets: [{ kind: "example.cards", address: "distribution" }]
     }`);
     const loaded = await loadNodePackageSelection(["@hypit/cards"], project, {
       fallbackRoots: [distribution],
@@ -182,12 +175,10 @@ test("an exact package embedded by the active Distribution cannot be shadowed", 
   const distribution = await mkdtemp(join(tmpdir(), "hypit-distribution-root-"));
   try {
     await installedPackage(project, "example-cards", `{
-      format: "hypit.package@1",
-      facets: [{ abi: "example.cards@1", address: "project-shadow" }]
+      facets: [{ kind: "example.cards", address: "project-shadow" }]
     }`);
     await projectPackage(distribution, "example-cards", `{
-      format: "hypit.package@1",
-      facets: [{ abi: "example.cards@1", address: "embedded-host" }]
+      facets: [{ kind: "example.cards", address: "embedded-host" }]
     }`);
     await exposeEmbeddedPackage(distribution, "example-cards");
     const loaded = await loadNodePackageSelection(["example-cards"], project, {
@@ -204,8 +195,8 @@ test("official extensions use the Build module scope while embedded host package
   const project = await mkdtemp(join(tmpdir(), "hypit-project-root-"));
   const distribution = await mkdtemp(join(tmpdir(), "hypit-distribution-root-"));
   try {
-    await installedPackage(distribution, "@hypit/cards", `{ format: "hypit.package@1" }`);
-    await projectPackage(distribution, "@hypit/facet-cards", `{ format: "hypit.package@1" }`);
+    await installedPackage(distribution, "@hypit/cards", `{ }`);
+    await projectPackage(distribution, "@hypit/facet-cards", `{ }`);
     await exposeEmbeddedPackage(distribution, "@hypit/facet-cards");
     const scoped: string[] = [];
     const importModule = async (url: string): Promise<unknown> => {
@@ -234,15 +225,15 @@ test("explicit default owners resolve nested capabilities without node_modules h
       name: "test-distribution", dependencies: { "video-defaults": "1.0.0" },
       hypit: { packageSources: ["video-defaults"] },
     }));
-    await installedPackage(distribution, "video-defaults", `{ format: "hypit.package@1" }`, { "example-cards": "1.0.0" });
+    await installedPackage(distribution, "video-defaults", `{ }`, { "example-cards": "1.0.0" });
     const owner = join(distribution, "node_modules", "video-defaults");
     await installedPackage(owner, "example-cards", `{
-      format: "hypit.package@1", facets: [{ abi: "cards@1", address: "default" }]
+      facets: [{ kind: "cards", address: "default" }]
     }`);
     const options = { fallbackRoots: [distribution] };
     assert.equal((await loadNodePackageSelection(["example-cards"], project, options))[0]!.contribution.facets?.[0]?.address, "default");
     await installedPackage(project, "example-cards", `{
-      format: "hypit.package@1", facets: [{ abi: "cards@1", address: "project" }]
+      facets: [{ kind: "cards", address: "project" }]
     }`);
     assert.equal((await loadNodePackageSelection(["example-cards"], project, options))[0]!.contribution.facets?.[0]?.address, "project");
   } finally {

@@ -19,7 +19,7 @@ import {
 } from "@hypit/audiovisual";
 import { programSourceFromPreparedMedia } from "@hypit/media-avir";
 import { verifyPreparedMedia } from "@hypit/media";
-import { sameType } from "@hypit/protocol";
+import { sameType } from "@hypit/module";
 import {
   addExactTemporalValues,
   compareExactTemporalValues,
@@ -43,12 +43,15 @@ import {
   nleProjectDuration,
   resolveNlePictureAppearance,
 } from "./project.js";
+import { fitNlePictureContent } from "./picture.js";
+import { nleTimeMappingRequiredDuration } from "./source-time.js";
 import type {
-  NleAdjustmentItem,
   NleComposition,
+  NleComponentLoweringContext,
   NleItem,
-  NleLoweringContext,
   NleLoweringHost,
+  NleOperatorApplication,
+  NleOperatorLoweringContext,
   NleProject,
   NleResolvedPictureAppearance,
   NleResolvedItemSource,
@@ -69,20 +72,24 @@ function assert(condition: unknown, message: string): asserts condition {
  * NLE automation is already materialized in exact Item-local time. Lowering closes that local clock to
  * one factual Programme mapping; package resolvers never publish a named occurrence/source lookup.
  */
-function itemControlMapping(
-  item: NleItem,
+function operatorControlMapping(
+  application: NleOperatorApplication,
+  start: ExactTemporalValue,
   parent: AudiovisualProgram["domain"],
   control: import("@hypit/temporal/algebra").LocalTemporalDomain,
   label: string,
 ): import("@hypit/temporal/algebra").TemporalMap {
+  const required = nleTimeMappingRequiredDuration(application.controlTime);
+  assert(compareExactTemporalValues(control.duration, required) === 0,
+    `${label} Control ${control.id} has another duration.`);
   return sealTemporalMap({ stages: [{
     target: parent,
     source: control,
-    pieces: item.sourceTime.pieces.map((piece) => ({
+    pieces: application.controlTime.pieces.map((piece) => ({
       ...structuredClone(piece),
       target: {
-        start: addExactTemporalValues(item.start, piece.target.start),
-        end: addExactTemporalValues(item.start, piece.target.end),
+        start: addExactTemporalValues(start, piece.target.start),
+        end: addExactTemporalValues(start, piece.target.end),
       },
     })),
   }] });
@@ -110,17 +117,11 @@ function fitMap(
   const layout = appearance.layout;
   const sourceWidth = source.region.width;
   const sourceHeight = source.region.height;
-  let width = layout.width;
-  let height = layout.height;
-  if (layout.fit !== "fill") {
-    const scale = layout.fit === "contain"
-      ? Math.min(layout.width / sourceWidth, layout.height / sourceHeight)
-      : Math.max(layout.width / sourceWidth, layout.height / sourceHeight);
-    width = sourceWidth * scale;
-    height = sourceHeight * scale;
-  }
-  const x = (layout.width - width) * (layout.contentX ?? 0.5);
-  const y = (layout.height - height) * (layout.contentY ?? 0.5);
+  const content = fitNlePictureContent({ ...layout, x: 0, y: 0 }, {
+    width: sourceWidth,
+    height: sourceHeight,
+  });
+  const { x, y, width, height } = content;
   const xx = sourceWidth / width;
   const yy = sourceHeight / height;
   return sealSpatialMap({
@@ -176,7 +177,19 @@ function sourceForItem(
   observer?: NleLoweringObserver,
 ): NleResolvedItemSource {
   if (item.source === "component") {
-    const value = host.resolveComponent(item, { project, track });
+    const media: Record<string, import("./types.js").NleResolvedMedia> = {};
+    for (const [input, asset] of Object.entries(item.media ?? {})) {
+      media[input] = host.resolveMedia(asset, {
+        kind: "component-input",
+        project,
+        track,
+        item,
+        input,
+      });
+      verifyPreparedMedia(media[input]);
+    }
+    const context: NleComponentLoweringContext = { project, track, media };
+    const value = host.resolveComponent(item, context);
     validateResolvedSource(value, item);
     return value;
   }
@@ -189,7 +202,7 @@ function sourceForItem(
       ...(child.audio === undefined ? {} : { audioOutput: "audio" }),
     };
   }
-  const media = host.resolveMedia(item.asset, { project, track, item });
+  const media = host.resolveMedia(item.asset, { kind: "item", project, track, item });
   verifyPreparedMedia(media);
   const source = programSourceFromPreparedMedia(media);
   const pictureOutput = source.outputs.picture === undefined ? undefined : "picture";
@@ -200,25 +213,25 @@ function sourceForItem(
   };
 }
 
-function audioAdjustmentNode(
+function audioOperatorNode(
   nodes: Record<string, AudioNode>,
   input: string,
-  item: NleAdjustmentItem,
-  context: NleLoweringContext,
+  application: NleOperatorApplication,
+  context: NleOperatorLoweringContext,
   host: NleLoweringHost,
   parent: AudiovisualProgram["domain"],
 ): string {
-  const resolved = host.resolveAudioAdjustment(item, context);
+  const resolved = host.resolveAudioOperator(application, context);
   assertAudioOperator(resolved.operator);
   assert(resolved.operator.inputs.length === 1,
-    `NLE Audio Adjustment ${item.id} must expose exactly one Audio input.`);
+    `NLE Audio Operator Application ${application.id} must expose exactly one Audio input.`);
   const port = resolved.operator.inputs[0]!;
   const mappings: Record<string, import("@hypit/temporal/algebra").TemporalMap> = {};
   for (const [name, control] of Object.entries(resolved.operator.temporalControls)) {
-    mappings[name] = itemControlMapping(item, parent, control,
-      `NLE Audio Adjustment ${item.id}`);
+    mappings[name] = operatorControlMapping(application, context.scope.item.start, parent, control,
+      `NLE Audio Operator Application ${application.id}`);
   }
-  const id = `${item.id}:audio-adjustment`;
+  const id = `${context.scope.item.id}:audio-operator:${application.id}`;
   nodes[id] = {
     kind: "apply",
     operator: resolved.operator,
@@ -269,25 +282,25 @@ function occurrence(
   });
 }
 
-function pictureAdjustmentNode(
+function pictureOperatorNode(
   nodes: Record<string, PictureNode>,
   input: string,
-  item: NleAdjustmentItem,
-  context: NleLoweringContext,
+  application: NleOperatorApplication,
+  context: NleOperatorLoweringContext,
   host: NleLoweringHost,
   parent: AudiovisualProgram["domain"],
 ): string {
-  const resolved = host.resolvePictureAdjustment(item, context);
+  const resolved = host.resolvePictureOperator(application, context);
   assertPictureOperator(resolved.operator);
   assert(resolved.operator.inputs.length === 1,
-    `NLE Picture Adjustment ${item.id} must expose exactly one Picture input.`);
+    `NLE Picture Operator Application ${application.id} must expose exactly one Picture input.`);
   const port = resolved.operator.inputs[0]!;
   const mappings: Record<string, import("@hypit/temporal/algebra").TemporalMap> = {};
   for (const [name, control] of Object.entries(resolved.operator.temporalControls)) {
-    mappings[name] = itemControlMapping(item, parent, control,
-      `NLE Picture Adjustment ${item.id}`);
+    mappings[name] = operatorControlMapping(application, context.scope.item.start, parent, control,
+      `NLE Picture Operator Application ${application.id}`);
   }
-  const id = `${item.id}:picture-adjustment`;
+  const id = `${context.scope.item.id}:picture-operator:${application.id}`;
   nodes[id] = {
     kind: "apply",
     operator: resolved.operator,
@@ -295,26 +308,6 @@ function pictureAdjustmentNode(
     controlMappings: mappings,
   };
   return id;
-}
-
-function localPictureEffectItem(
-  item: NlePresentItem,
-  effect: NonNullable<NleResolvedPictureAppearance["effects"]>[number],
-): NleAdjustmentItem {
-  return {
-    id: `${item.id}:effect:${effect.id}`,
-    kind: "adjustment",
-    component: structuredClone(effect.component),
-    parameters: structuredClone(effect.parameters),
-    start: structuredClone(item.start),
-    duration: structuredClone(item.duration),
-    sourceTime: { pieces: [{
-      target: { start: exactTemporalZero(), end: structuredClone(item.duration) },
-      sourceAtStart: exactTemporalZero(),
-      rate: { numerator: 1, denominator: 1 },
-    }] },
-    enabled: true,
-  };
 }
 
 function lowerNleComposition(
@@ -413,12 +406,17 @@ function lowerNleComposition(
         mapping: fitMap(localPicture, resolved.source.outputs[pictureOutput]!.spatialDomain!, appearance),
       };
       let localRoot = fitted;
-      for (const effect of appearance.effects ?? []) {
-        localRoot = pictureAdjustmentNode(
+      for (const application of appearance.operators ?? []) {
+        localRoot = pictureOperatorNode(
           pictureNodes,
           localRoot,
-          localPictureEffectItem(item, effect),
-          context,
+          application,
+          {
+            ...context,
+            application,
+            scope: { kind: "occurrence", item },
+            controlDuration: nleTimeMappingRequiredDuration(application.controlTime),
+          },
           host,
           domain,
         );
@@ -428,13 +426,47 @@ function lowerNleComposition(
         input: localRoot,
         mapping: placementMap(pictureDomain, localPicture, appearance),
       };
-      itemRoots.set(id, placed);
+      const range = `${item.id}:range`;
+      pictureNodes[range] = {
+        kind: "restrict",
+        input: placed,
+        range: {
+          start: structuredClone(item.start),
+          end: addExactTemporalValues(item.start, item.duration),
+        },
+      };
+      itemRoots.set(id, range);
     }
     if (needsAudio) {
       const audioOutput = resolved.audioOutput!;
       const audioId = `${item.id}:audio`;
       audioNodes[audioId] = { kind: "use", occurrence: item.id, output: audioOutput };
-      audioItemRoots.set(id, audioId);
+      let localRoot = audioId;
+      for (const application of item.audio?.operators ?? []) {
+        localRoot = audioOperatorNode(
+          audioNodes,
+          localRoot,
+          application,
+          {
+            ...context,
+            application,
+            scope: { kind: "occurrence", item },
+            controlDuration: nleTimeMappingRequiredDuration(application.controlTime),
+          },
+          host,
+          domain,
+        );
+      }
+      const range = `${item.id}:audio-range`;
+      audioNodes[range] = {
+        kind: "restrict",
+        input: localRoot,
+        range: {
+          start: structuredClone(item.start),
+          end: addExactTemporalValues(item.start, item.duration),
+        },
+      };
+      audioItemRoots.set(id, range);
     }
   }
 
@@ -466,8 +498,20 @@ function lowerNleComposition(
     `NLE Matte ${matte.id} operator must expose content and matte Picture inputs.`);
     const mappings: Record<string, import("@hypit/temporal/algebra").TemporalMap> = {};
     for (const [name, control] of Object.entries(resolved.operator.temporalControls)) {
-      mappings[name] = itemControlMapping(content.item, domain, control,
-        `NLE Matte ${matte.id}`);
+      assert(compareExactTemporalValues(control.duration, content.item.duration) === 0,
+        `NLE Matte ${matte.id} Control ${name} has another duration.`);
+      mappings[name] = sealTemporalMap({ stages: [{
+        target: domain,
+        source: control,
+        pieces: [{
+          target: {
+            start: structuredClone(content.item.start),
+            end: addExactTemporalValues(content.item.start, content.item.duration),
+          },
+          sourceAtStart: exactTemporalZero(),
+          rate: { numerator: 1, denominator: 1 },
+        }],
+      }] });
     }
     const node = `${matte.content}:matte:${matte.id}`;
     pictureNodes[node] = {
@@ -610,7 +654,13 @@ function lowerNleComposition(
     }
     const input = pictureRoot ?? `${project.id}:transparent`;
     if (pictureRoot === undefined) pictureNodes[input] = { kind: "transparent" };
-    const applied = pictureAdjustmentNode(pictureNodes, input, item, { project, track }, host, domain);
+    const applied = pictureOperatorNode(pictureNodes, input, item, {
+      project,
+      track,
+      application: item,
+      scope: { kind: "adjustment", item },
+      controlDuration: nleTimeMappingRequiredDuration(item.controlTime),
+    }, host, domain);
     const start = structuredClone(item.start);
     const end = addExactTemporalValues(item.start, item.duration);
     if (compareExactTemporalValues(start, exactTemporalZero()) === 0
@@ -647,7 +697,13 @@ function lowerNleComposition(
     }
     const input = audioRoot ?? `${project.id}:silence`;
     if (audioRoot === undefined) audioNodes[input] = { kind: "silence" };
-    const applied = audioAdjustmentNode(audioNodes, input, item, { project, track }, host, domain);
+    const applied = audioOperatorNode(audioNodes, input, item, {
+      project,
+      track,
+      application: item,
+      scope: { kind: "adjustment", item },
+      controlDuration: nleTimeMappingRequiredDuration(item.controlTime),
+    }, host, domain);
     const start = structuredClone(item.start);
     const end = addExactTemporalValues(item.start, item.duration);
     if (compareExactTemporalValues(start, exactTemporalZero()) === 0
@@ -704,8 +760,8 @@ export function lowerNleProjectToAudiovisual(
   return lowerNleComposition(project, host, observer, true);
 }
 
-/** Useful for simple package resolvers and tests that need a pointwise unary Picture Adjustment. */
-export function nlePointwisePictureAdjustment(
+/** Useful for simple package resolvers and tests that need a pointwise unary Picture Operator. */
+export function nlePointwisePictureOperator(
   id: string,
   program: PictureOperator["program"],
 ): PictureOperator {
@@ -718,8 +774,8 @@ export function nlePointwisePictureAdjustment(
   };
 }
 
-/** Useful for simple package resolvers that need a pointwise unary Audio Adjustment. */
-export function nlePointwiseAudioAdjustment(
+/** Useful for simple package resolvers that need a pointwise unary Audio Operator. */
+export function nlePointwiseAudioOperator(
   id: string,
   program: AudioOperator["program"],
 ): AudioOperator {

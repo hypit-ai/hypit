@@ -7,17 +7,22 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "dependencies": {
     "@hypit/cli": "workspace:^0.0.0-dev",
+    "@hypit/execution-environment": "workspace:^0.0.0-dev",
     "@hypit/executor": "workspace:^0.0.0-dev",
-    "@hypit/kernel": "workspace:^0.0.0-dev",
+    "@hypit/generation-authoring": "workspace:*",
+    "@hypit/generation-build": "workspace:^0.0.0-dev",
+    "@hypit/generation-runtime": "workspace:^0.0.0-dev",
+    "@hypit/module": "workspace:^0.0.0-dev",
     "@hypit/product": "workspace:^0.0.0-dev",
     "@hypit/project": "workspace:^0.0.0-dev",
     "@hypit/protocol": "workspace:^0.0.0-dev",
     "@hypit/resource-store": "workspace:^0.1.0",
-    "@hypit/result": "workspace:^0.0.0-dev",
-    "@hypit/runtime": "workspace:^0.0.0-dev",
-    "@hypit/workspace": "workspace:^0.0.0-dev"
+    "@hypit/result": "workspace:^0.0.0-dev"
   }
 }

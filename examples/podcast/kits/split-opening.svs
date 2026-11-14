@@ -1,4 +1,4 @@
-<?svml using="@hypit/text/svs@1"?>
+<?svml using="@hypit/text/svs"?>
 <sheet version="1" id="split-opening">
   text-template.split-opening { separator: paragraph; }
   text-template.split-opening.block.view {

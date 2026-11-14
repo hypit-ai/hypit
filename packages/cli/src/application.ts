@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 
-import { resolveProjectRoot as resolveMarkedProjectRoot } from "@hypit/project";
+import { resolveProjectRoot as resolveMarkedProjectRoot } from "@hypit/project/node";
 
 import { writeCliHelp } from "./output.js";
 import type { CliIo } from "./output.js";
@@ -13,7 +13,6 @@ import { CliUsageError } from "./usage-error.js";
  * packages never acquire CLI authority merely by being installed or imported.
  */
 export type CliCommandModule = {
-  readonly format: "hypit.cli-command@1";
   readonly id: string;
   /** Root commands owned by this module. A root has exactly one owner. */
   readonly commands: readonly string[];
@@ -50,9 +49,6 @@ export function indexCliCommandModules(
   const reserved = new Set<string>(["help"]);
   const result = new Map<string, CliCommandModule>();
   for (const module of modules) {
-    if (module.format !== "hypit.cli-command@1") {
-      throw new Error(`CLI command module ${module.id || "<unknown>"} must use hypit.cli-command@1`);
-    }
     if (module.id.trim().length === 0) throw new Error("CLI command module id cannot be empty");
     if (module.commands.length === 0) throw new Error(`CLI command module ${module.id} owns no commands`);
     for (const command of module.commands) {

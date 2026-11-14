@@ -1,6 +1,8 @@
-export { lowerAudiovisualAudioProgram } from "./lower.js";
+export { lowerAudiovisualAudioProgram, lowerAudiovisualAudioRenderNeed } from "./lower.js";
+export { planAudiovisualAudioExecution } from "./execution.js";
 export { preparedMediaAudioSource } from "./prepared-media.js";
 export type { AudiovisualAudioLowering } from "./lower.js";
+export type { AudiovisualAudioDemand } from "./execution.js";
 export {
   appendAudiovisualAudioSource,
   assertAudiovisualAudioOutput,

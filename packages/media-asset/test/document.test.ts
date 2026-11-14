@@ -9,7 +9,10 @@ import { identityTemporalMap, sealLocalTemporalDomain } from "@hypit/temporal/al
 import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
+  attachMediaRepresentation,
+  detachMediaRepresentation,
   parseMediaAssetDocument,
+  replaceMediaRepresentation,
   resolveMediaAssetMedia,
   resolveMediaAssetDocument,
   serializeMediaAssetDocument,
@@ -59,7 +62,7 @@ function document(): MediaAssetDocument {
     },
     representations: [{
       id: "speech.zh",
-      type: { module: { name: "@example/speech", version: "1" }, name: "Transcript" },
+      type: { module: { name: "@example/speech" }, name: "Transcript" },
       document: { path: "./speech/transcript.json", mediaType: "application/json" },
       resources: {},
       binding: {
@@ -73,7 +76,7 @@ function document(): MediaAssetDocument {
       },
     }, {
       id: "objects",
-      type: { module: { name: "@example/object-tracks", version: "1" }, name: "TrackedObjects" },
+      type: { module: { name: "@example/object-tracks" }, name: "TrackedObjects" },
       document: { path: "./objects/objects.json", mediaType: "application/json" },
       resources: {
         masks: { path: "./objects/masks.mkv", mediaType: "video/x-matroska" },
@@ -94,6 +97,27 @@ test("one file manifest carries independently typed time and object representati
   assert.equal(text.includes("WhisperX"), false);
   assert.equal(text.includes("SAM"), false);
   assert.equal(text.toLowerCase().includes("prepared"), false);
+});
+
+test("Representation identity supports direct attach, replace and detach without versions", () => {
+  const initial = document();
+  const speech = initial.representations[0]!;
+  const withoutSpeech = detachMediaRepresentation(initial, speech.id);
+  assert.deepEqual(withoutSpeech.representations.map((value) => value.id), ["objects"]);
+
+  const attached = attachMediaRepresentation(withoutSpeech, speech);
+  assert.deepEqual(attached.representations.map((value) => value.id), ["objects", "speech.zh"]);
+  assert.throws(() => attachMediaRepresentation(attached, speech), /already has Representation speech\.zh/u);
+
+  const replacement = {
+    ...speech,
+    document: { ...speech.document, path: "./speech/corrected.json" },
+  };
+  const replaced = replaceMediaRepresentation(attached, "speech.zh", replacement);
+  assert.equal(replaced.representations.find((value) => value.id === "speech.zh")?.document.path,
+    "./speech/corrected.json");
+  assert.throws(() => replaceMediaRepresentation(attached, "missing", replacement),
+    /has no Representation missing/u);
 });
 
 test("file resolution creates ephemeral BlobRefs without opening package documents", async () => {

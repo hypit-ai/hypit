@@ -1,4 +1,4 @@
-import type { CliCommandModule } from "@hypit/cli";
+import type { CliCommandModule } from "@hypit/cli/public";
 import { writeCliHelp, writeSourceBuildCliRootHelp } from "@hypit/build-operations-cli";
 
 import { runSourceBuildCli } from "./main.js";
@@ -11,7 +11,6 @@ export function createSourceBuildCliCommandModules(
   services: SourceBuildCliServices,
 ): readonly CliCommandModule[] {
   return [{
-    format: "hypit.cli-command@1",
     id: "@hypit/build-cli/source",
     commands: sourceBuildCliCommandNames,
     writeRootHelp: writeSourceBuildCliRootHelp,

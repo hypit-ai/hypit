@@ -10,7 +10,7 @@ last frame; `pix.reference-video` generates from the image and video subjects it
 children carry.
 
 ```svml
-module pix from "@hypit/pixverse@1"
+module pix from "@hypit/pixverse"
 
 pix.video {
   id: opening model: v6 prompt: @line duration: 5 quality: 720p

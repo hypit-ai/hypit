@@ -90,7 +90,7 @@ Immediate Endpoint exceptions keep the same evidence in their message. A `401` a
 choose OAuth over API-key configuration or establish that another login will fix the account.
 
 For moving portraits, [Volcengine Matting](../volcengine-matting/README.md) maps
-`@hypit/volcengine-matting@1#matte-portrait-video` to `POST /v1/videos` with
+`@hypit/volcengine-matting#matte-portrait-video` to `POST /v1/videos` with
 `model: "matte-portrait-video"`, `ref_video_url` and `format` (`WEBM` by default, or `MOV`).
 Both formats carry transparency. The source video uses the same upload transport as other video
 references; the returned job uses the same polling and asset collection lifecycle. The selected
@@ -102,8 +102,8 @@ Runtime Profile example:
 
 ```json
 {
-  "format": "hypit.runtime-local@1",
-  "dataRoot": ".hypit/runtimes/local",
+  "format": "hypit.execution-environment-local@1",
+  "dataRoot": ".hypit/environment/local",
   "credentials": {
     "platform": {
       "use": "@hypit/credential-store-local"
@@ -127,7 +127,7 @@ Runtime Profile example:
 
 Remote transcription exposes the same `@hypit/whisperx` transcription capability implemented by the local
 WhisperX Provider. The Runtime Profile selects which Endpoint serves it. Run
-`hypit auth login hypihub.default --runtime hypit.runtime.json` to sign in with HypiHub OAuth when
+`hypit auth login hypihub.default --runtime hypit.generation-runtime.json` to sign in with HypiHub OAuth when
 choosing HypiHub. A Profile may set `baseUrl`
 to the selected deployment's origin or an existing `/v1`/`/v1beta` base. The Runtime Provider
 normalizes it to `/v1`; missing or insufficient user

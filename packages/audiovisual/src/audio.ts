@@ -1,6 +1,6 @@
 import { assertExactTemporalValue, compareExactTemporalValues } from "@hypit/temporal/algebra";
 import type { LocalTemporalDomain, TemporalRange } from "@hypit/temporal/algebra";
-import { sameType, typeKey } from "@hypit/protocol";
+import { sameType, typeKey } from "@hypit/module";
 
 import { audioType } from "./identity.js";
 import { assertTemporalControlMapping } from "./control.js";

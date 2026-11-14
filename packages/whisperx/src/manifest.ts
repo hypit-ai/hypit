@@ -1,9 +1,12 @@
+import type { TypeRef } from "@hypit/hypit/module";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import { speechEvidenceDependency, speechEvidenceTypes } from "@hypit/speech-evidence";
 import { timedTranscriptDependency, timedTranscriptTypes } from "@hypit/timed-transcript";
-import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
+import type { CapabilityRef } from "@hypit/hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/hypit/generation/build";
+import type { ProducerRef } from "@hypit/hypit/module";
 
-export const whisperXModuleRef = { name: "@hypit/whisperx", version: "1" } as const;
+export const whisperXModuleRef = { name: "@hypit/whisperx" } as const;
 export const whisperXTypes = {
   language: { module: whisperXModuleRef, name: "WhisperXLanguage" },
 } satisfies Record<string, TypeRef>;
@@ -15,10 +18,8 @@ export const whisperXProducers = {
 } satisfies Record<string, ProducerRef>;
 
 
-export const whisperXManifest: ModuleManifest = {
-  format: "hypit.module@1",
+export const whisperXManifest: GenerationModuleDefinition = {
   name: whisperXModuleRef.name,
-  version: whisperXModuleRef.version,
   dependencies: [speechEvidenceDependency, timedTranscriptDependency, mediaDependency],
   types: [whisperXTypes.language.name],
   capabilities: [{

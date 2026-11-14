@@ -13,20 +13,15 @@
   ],
   "dependencies": {
     "@hypit/audio-program": "workspace:^0.1.0",
-    "@hypit/audiovisual": "workspace:^0.1.0",
-    "@hypit/audiovisual-audio": "workspace:^0.1.0",
-    "@hypit/audiovisual-html": "workspace:^0.1.0",
-    "@hypit/facet": "workspace:^0.0.0-dev",
     "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-delivery": "workspace:^0.1.0",
     "@hypit/nle": "workspace:^0.1.0",
-    "@hypit/spatial": "workspace:^0.1.1",
+    "@hypit/nle-audiovisual": "workspace:^0.1.0",
     "@hypit/temporal": "workspace:^0.1.1"
   },
   "devDependencies": {
-    "@hypit/html-program": "workspace:*",
-    "@hypit/media": "workspace:*",
-    "@hypit/temporal": "workspace:*"
+    "@hypit/audiovisual-execution": "workspace:*",
+    "@hypit/audiovisual-html": "workspace:*"
   }
 }

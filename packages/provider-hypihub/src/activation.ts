@@ -1,21 +1,21 @@
 import {
-  createRuntimeEndpointAdapterFacet,
-  runtimeConfigCredentialRef,
-  runtimeConfigActionLimits,
-  runtimeConfigExact,
-  runtimeConfigObject,
-  runtimeConfigPositiveInteger,
-  runtimeConfigString,
-} from "@hypit/runtime-local/extension";
+  createExecutionEnvironmentEndpointAdapterFacet,
+  executionEnvironmentConfigCredentialRef,
+  executionEnvironmentConfigActionLimits,
+  executionEnvironmentConfigExact,
+  executionEnvironmentConfigObject,
+  executionEnvironmentConfigPositiveInteger,
+  executionEnvironmentConfigString,
+} from "@hypit/execution-environment-local/extension";
 
 import { createHypiHubProvider, diagnoseHypiHubProvider } from "./provider.js";
 
-const adapter = createRuntimeEndpointAdapterFacet({
+const adapter = createExecutionEnvironmentEndpointAdapterFacet({
   use: "@hypit/provider-hypihub",
   activate(context) {
     if (context.pool === undefined) throw new Error("HypiHub Provider Pool is required");
-    const config = runtimeConfigObject(context.config, "HypiHub");
-    runtimeConfigExact(config, [
+    const config = executionEnvironmentConfigObject(context.config, "HypiHub");
+    executionEnvironmentConfigExact(config, [
       "baseUrl",
       "apiKey",
       "defaultConcurrency",
@@ -32,30 +32,30 @@ const adapter = createRuntimeEndpointAdapterFacet({
       "downloadAttempts",
       "transcriptionModel",
     ], "HypiHub");
-    const baseUrl = runtimeConfigString(config.baseUrl, "HypiHub baseUrl");
+    const baseUrl = executionEnvironmentConfigString(config.baseUrl, "HypiHub baseUrl");
     if (baseUrl !== undefined) {
       const url = new URL(baseUrl);
       if (url.protocol !== "https:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
         throw new Error("HypiHub baseUrl must use HTTPS or loopback");
       }
     }
-    const apiKey = runtimeConfigCredentialRef(config.apiKey, "HypiHub apiKey");
+    const apiKey = executionEnvironmentConfigCredentialRef(config.apiKey, "HypiHub apiKey");
     if (apiKey === undefined) throw new Error("HypiHub apiKey CredentialRef is required");
-    const actionLimits = runtimeConfigActionLimits(config.actionLimits);
-    const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "HypiHub defaultConcurrency");
-    const pollIntervalMs = runtimeConfigPositiveInteger(config.pollIntervalMs, "HypiHub pollIntervalMs");
-    const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "HypiHub requestTimeoutMs");
-    const oauthRequestTimeoutMs = runtimeConfigPositiveInteger(config.oauthRequestTimeoutMs, "HypiHub oauthRequestTimeoutMs");
-    const pricingRequestTimeoutMs = runtimeConfigPositiveInteger(config.pricingRequestTimeoutMs, "HypiHub pricingRequestTimeoutMs");
-    const operationTimeoutMs = runtimeConfigPositiveInteger(config.operationTimeoutMs, "HypiHub operationTimeoutMs");
-    const uploadConcurrency = runtimeConfigPositiveInteger(config.uploadConcurrency, "HypiHub uploadConcurrency");
-    const uploadPartTimeoutMs = runtimeConfigPositiveInteger(config.uploadPartTimeoutMs, "HypiHub uploadPartTimeoutMs");
-    const uploadPartAttempts = runtimeConfigPositiveInteger(config.uploadPartAttempts, "HypiHub uploadPartAttempts");
-    const downloadAttempts = runtimeConfigPositiveInteger(config.downloadAttempts, "HypiHub downloadAttempts");
-    const transcriptionModel = runtimeConfigString(config.transcriptionModel, "HypiHub transcriptionModel");
+    const actionLimits = executionEnvironmentConfigActionLimits(config.actionLimits);
+    const defaultConcurrency = executionEnvironmentConfigPositiveInteger(config.defaultConcurrency, "HypiHub defaultConcurrency");
+    const pollIntervalMs = executionEnvironmentConfigPositiveInteger(config.pollIntervalMs, "HypiHub pollIntervalMs");
+    const requestTimeoutMs = executionEnvironmentConfigPositiveInteger(config.requestTimeoutMs, "HypiHub requestTimeoutMs");
+    const oauthRequestTimeoutMs = executionEnvironmentConfigPositiveInteger(config.oauthRequestTimeoutMs, "HypiHub oauthRequestTimeoutMs");
+    const pricingRequestTimeoutMs = executionEnvironmentConfigPositiveInteger(config.pricingRequestTimeoutMs, "HypiHub pricingRequestTimeoutMs");
+    const operationTimeoutMs = executionEnvironmentConfigPositiveInteger(config.operationTimeoutMs, "HypiHub operationTimeoutMs");
+    const uploadConcurrency = executionEnvironmentConfigPositiveInteger(config.uploadConcurrency, "HypiHub uploadConcurrency");
+    const uploadPartTimeoutMs = executionEnvironmentConfigPositiveInteger(config.uploadPartTimeoutMs, "HypiHub uploadPartTimeoutMs");
+    const uploadPartAttempts = executionEnvironmentConfigPositiveInteger(config.uploadPartAttempts, "HypiHub uploadPartAttempts");
+    const downloadAttempts = executionEnvironmentConfigPositiveInteger(config.downloadAttempts, "HypiHub downloadAttempts");
+    const transcriptionModel = executionEnvironmentConfigString(config.transcriptionModel, "HypiHub transcriptionModel");
     const capabilityConcurrency = config.capabilityConcurrency === undefined ? undefined : Object.fromEntries(
-      Object.entries(runtimeConfigObject(config.capabilityConcurrency, "HypiHub capabilityConcurrency"))
-        .map(([name, value]) => [name, runtimeConfigPositiveInteger(value, `HypiHub ${name} capacity`)!]),
+      Object.entries(executionEnvironmentConfigObject(config.capabilityConcurrency, "HypiHub capabilityConcurrency"))
+        .map(([name, value]) => [name, executionEnvironmentConfigPositiveInteger(value, `HypiHub ${name} capacity`)!]),
     );
     const options = {
         instance: context.instance,
@@ -84,7 +84,6 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
   facets: [adapter],
 };
 

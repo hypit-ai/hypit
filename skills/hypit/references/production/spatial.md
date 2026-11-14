@@ -21,7 +21,7 @@ full-screen, its intended final aspect can guide source direction; later insets 
 visual placement choices. Translate required source framing into visible camera facts before generation.
 
 ```svml
-<import as="space" from="@hypit/spatial@1"/>
+<import as="space" from="@hypit/spatial"/>
 
 <space:Canvas id="canvas" width="1080" height="1920"/>
 <space:Extent id="photo-size" width="1600" height="1200"/>

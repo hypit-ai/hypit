@@ -1,19 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { sealGraphFragment } from "@hypit/author";
-import { createResolvedClosure, link } from "@hypit/kernel";
+import { sealGraphFragment } from "@hypit/generation-authoring/author";
+import { createResolvedClosure, link } from "@hypit/generation-build";
 import type { ProductHistory } from "@hypit/product";
-import type { ModuleManifest, TypeRef } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/module";
+import type { GenerationModuleDefinition } from "@hypit/generation-build";
 import { createGenerationWorkspace, prepareGenerationWorkspaceNode } from "../src/index.js";
 import type { GenerationGraphProject } from "@hypit/generation-graph";
 
-const moduleRef = { name: "@example/generator", version: "1" } as const;
+const moduleRef = { name: "@example/generator" } as const;
 const artifactType = { module: moduleRef, name: "Artifact" } satisfies TypeRef;
-const manifest: ModuleManifest = {
-  format: "hypit.module@1",
+const manifest: GenerationModuleDefinition = {
   name: moduleRef.name,
-  version: moduleRef.version,
   dependencies: [],
   types: [artifactType.name],
   capabilities: [],

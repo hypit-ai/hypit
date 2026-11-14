@@ -9,8 +9,8 @@ one production, while each subsystem keeps its own file and semantics:
 - `film.nle.json` is the directly editable media-and-effects timeline.
 - `packages/` is where production-specific components belong.
 - `scripts/` is for explicit one-way materialization or batch editing helpers.
-- `hypit.runtime.json` selects a local deployment; credentials and execution state stay outside the
-  authored files.
+- `hypit.generation-runtime.json` selects Generation execution and references `hypit.environment.json`;
+  credentials and execution state stay outside the authored files.
 
 The project root is marked by `hypit.project: true` in `package.json`. Install dependencies with the
 ordinary package manager and commit its lockfile in a real production. `.hypit/` is disposable local

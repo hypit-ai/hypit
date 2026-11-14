@@ -2,8 +2,8 @@ import {
   assertNleProject,
 } from "./project.js";
 import {
-  shiftNleSourceTime,
-  sliceNleSourceTime,
+  shiftNleTimeMapping,
+  sliceNleTimeMapping,
 } from "./source-time.js";
 import {
   addExactTemporalValues,
@@ -18,9 +18,11 @@ import type {
   NleComponentValue,
   NleItem,
   NleMatte,
+  NleOperatorApplication,
   NlePictureLayoutValue,
+  NlePresentItem,
   NleProject,
-  NleSourceTime,
+  NleTimeMapping,
   NleTrack,
   NleTransition,
 } from "./types.js";
@@ -57,7 +59,7 @@ export type NleCommand =
     }
   | { readonly kind: "item.trim"; readonly id: string; readonly edge: "start" | "end"; readonly at: ExactTemporalValue }
   | { readonly kind: "item.slip"; readonly id: string; readonly delta: ExactTemporalValue }
-  | { readonly kind: "item.retime"; readonly id: string; readonly sourceTime: NleSourceTime }
+  | { readonly kind: "item.retime"; readonly id: string; readonly time: NleTimeMapping }
   | {
       readonly kind: "item.roll";
       readonly left: string;
@@ -81,6 +83,39 @@ export type NleCommand =
     }
   | { readonly kind: "item.replace"; readonly item: NleItem }
   | { readonly kind: "item.remove"; readonly ids: readonly string[] }
+  | {
+      readonly kind: "operator-application.add";
+      readonly item: string;
+      readonly medium: "picture" | "audio";
+      readonly application: NleOperatorApplication;
+      readonly before?: string;
+    }
+  | {
+      readonly kind: "operator-application.move";
+      readonly item: string;
+      readonly medium: "picture" | "audio";
+      readonly id: string;
+      readonly before?: string;
+    }
+  | {
+      readonly kind: "operator-application.replace";
+      readonly item: string;
+      readonly medium: "picture" | "audio";
+      readonly application: NleOperatorApplication;
+    }
+  | {
+      readonly kind: "operator-application.retime";
+      readonly item: string;
+      readonly medium: "picture" | "audio";
+      readonly id: string;
+      readonly controlTime: NleTimeMapping;
+    }
+  | {
+      readonly kind: "operator-application.remove";
+      readonly item: string;
+      readonly medium: "picture" | "audio";
+      readonly id: string;
+    }
   | { readonly kind: "transition.add"; readonly transition: NleTransition }
   | { readonly kind: "transition.replace"; readonly transition: NleTransition }
   | { readonly kind: "transition.remove"; readonly id: string }
@@ -131,10 +166,24 @@ function mutableItem(project: MutableProject, id: string): { track: MutableTrack
   throw new Error(`Unknown NLE Item: ${id}`);
 }
 
+function mutableOperatorApplications(
+  project: MutableProject,
+  itemId: string,
+  medium: "picture" | "audio",
+): NleOperatorApplication[] {
+  const { item } = mutableItem(project, itemId);
+  if (item.kind !== "present") throw new Error(`NLE Item ${itemId} is not a Present.`);
+  const appearance = medium === "picture" ? item.picture : item.audio;
+  if (appearance === undefined) throw new Error(`NLE Present Item ${itemId} has no ${medium} appearance.`);
+  const mutable = appearance as { operators?: NleOperatorApplication[] };
+  mutable.operators ??= [];
+  return mutable.operators;
+}
+
 function componentValueUsers(project: MutableProject, id: string): string[] {
   return project.tracks.flatMap((track) => track.items.flatMap((item) =>
     item.kind === "present" && item.source === "component"
-      && item.bindings?.some((binding) => binding.ref === id) ? [item.id] : []));
+      && item.sharedValues?.some((reference) => reference.ref === id) ? [item.id] : []));
 }
 
 function pictureLayoutUsers(project: MutableProject, id: string): string[] {
@@ -147,26 +196,59 @@ function itemEnd(item: NleItem): ExactTemporalValue {
   return addExactTemporalValues(item.start, item.duration);
 }
 
+function itemTime(item: NleItem): NleTimeMapping {
+  return item.kind === "present" ? item.sourceTime : item.controlTime;
+}
+
+function setItemTime(item: NleItem, time: NleTimeMapping): void {
+  if (item.kind === "present") (item as { sourceTime: NleTimeMapping }).sourceTime = time;
+  else (item as { controlTime: NleTimeMapping }).controlTime = time;
+}
+
+function sliceOccurrenceOperators(
+  item: NlePresentItem,
+  oldDuration: ExactTemporalValue,
+  range: { readonly start: ExactTemporalValue; readonly end: ExactTemporalValue },
+): void {
+  for (const application of [
+    ...(item.picture?.operators ?? []),
+    ...(item.audio?.operators ?? []),
+  ]) {
+    (application as { controlTime: NleTimeMapping }).controlTime = sliceNleTimeMapping(
+      application.controlTime,
+      oldDuration,
+      range,
+    );
+  }
+}
+
+function sliceItemTime(
+  item: NleItem,
+  oldDuration: ExactTemporalValue,
+  range: { readonly start: ExactTemporalValue; readonly end: ExactTemporalValue },
+): void {
+  setItemTime(item, sliceNleTimeMapping(itemTime(item), oldDuration, range));
+  if (item.kind === "present") sliceOccurrenceOperators(item, oldDuration, range);
+}
+
 function trimItem(item: NleItem, edge: "start" | "end", at: ExactTemporalValue): void {
   const oldDuration = structuredClone(item.duration);
   if (edge === "start") {
     const delta = subtractExactTemporalValues(at, item.start);
     const duration = subtractExactTemporalValues(oldDuration, delta);
-    const sourceTime = sliceNleSourceTime(item.sourceTime, oldDuration, {
+    sliceItemTime(item, oldDuration, {
       start: delta,
       end: oldDuration,
     });
     (item as { start: ExactTemporalValue }).start = structuredClone(at);
     (item as { duration: ExactTemporalValue }).duration = duration;
-    (item as { sourceTime: NleSourceTime }).sourceTime = sourceTime;
   } else {
     const duration = subtractExactTemporalValues(at, item.start);
-    const sourceTime = sliceNleSourceTime(item.sourceTime, oldDuration, {
+    sliceItemTime(item, oldDuration, {
       start: exactTemporalZero(),
       end: duration,
     });
     (item as { duration: ExactTemporalValue }).duration = duration;
-    (item as { sourceTime: NleSourceTime }).sourceTime = sourceTime;
   }
 }
 
@@ -289,16 +371,16 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       case "item.slip": {
         const { track, item } = mutableItem(next, command.id);
         assertExactTemporalValue(command.delta, "NLE Item slip delta");
-        (item as { sourceTime: NleSourceTime }).sourceTime = shiftNleSourceTime(
-          item.sourceTime,
+        setItemTime(item, shiftNleTimeMapping(
+          itemTime(item),
           item.duration,
           command.delta,
-        );
+        ));
         break;
       }
       case "item.retime": {
         const { track, item } = mutableItem(next, command.id);
-        (item as { sourceTime: NleSourceTime }).sourceTime = structuredClone(command.sourceTime);
+        setItemTime(item, structuredClone(command.time));
         break;
       }
       case "item.roll": {
@@ -324,19 +406,19 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
           left.item.start,
         );
         const rightDuration = subtractExactTemporalValues(rightEnd, command.at);
-        const leftSourceTime = sliceNleSourceTime(left.item.sourceTime, left.item.duration, {
+        const leftOldDuration = structuredClone(left.item.duration);
+        const rightOldDuration = structuredClone(right.item.duration);
+        sliceItemTime(left.item, leftOldDuration, {
           start: exactTemporalZero(),
           end: leftDuration,
         });
-        const rightSourceTime = sliceNleSourceTime(right.item.sourceTime, right.item.duration, {
+        sliceItemTime(right.item, rightOldDuration, {
           start: delta,
-          end: right.item.duration,
+          end: rightOldDuration,
         });
         (left.item as { duration: ExactTemporalValue }).duration = leftDuration;
-        (left.item as { sourceTime: NleSourceTime }).sourceTime = leftSourceTime;
         (right.item as { start: ExactTemporalValue }).start = structuredClone(command.at);
         (right.item as { duration: ExactTemporalValue }).duration = rightDuration;
-        (right.item as { sourceTime: NleSourceTime }).sourceTime = rightSourceTime;
         break;
       }
       case "item.ripple-trim": {
@@ -371,16 +453,8 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         (right as { id: string }).id = command.rightId;
         (right as { start: ExactTemporalValue }).start = structuredClone(command.at);
         (right as { duration: ExactTemporalValue }).duration = subtractExactTemporalValues(oldDuration, offset);
-        (right as { sourceTime: NleSourceTime }).sourceTime = sliceNleSourceTime(
-          item.sourceTime,
-          oldDuration,
-          { start: offset, end: oldDuration },
-        );
-        (item as { sourceTime: NleSourceTime }).sourceTime = sliceNleSourceTime(
-          item.sourceTime,
-          oldDuration,
-          { start: exactTemporalZero(), end: offset },
-        );
+        sliceItemTime(right, oldDuration, { start: offset, end: oldDuration });
+        sliceItemTime(item, oldDuration, { start: exactTemporalZero(), end: offset });
         (item as { duration: ExactTemporalValue }).duration = offset;
         const index = track.items.indexOf(item);
         track.items.splice(index + 1, 0, right);
@@ -416,6 +490,42 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
           track.items = track.items.filter((candidate) => candidate !== item);
         }
         break;
+      case "operator-application.add": {
+        const applications = mutableOperatorApplications(next, command.item, command.medium);
+        const added = insert(applications, structuredClone(command.application), command.before);
+        applications.splice(0, applications.length, ...added);
+        break;
+      }
+      case "operator-application.move": {
+        const applications = mutableOperatorApplications(next, command.item, command.medium);
+        const application = applications.find((candidate) => candidate.id === command.id);
+        if (application === undefined) throw new Error(`Unknown NLE Operator Application: ${command.id}`);
+        const remaining = applications.filter((candidate) => candidate.id !== command.id);
+        const moved = insert(remaining, application, command.before);
+        applications.splice(0, applications.length, ...moved);
+        break;
+      }
+      case "operator-application.replace": {
+        const applications = mutableOperatorApplications(next, command.item, command.medium);
+        const index = applications.findIndex((candidate) => candidate.id === command.application.id);
+        if (index < 0) throw new Error(`Unknown NLE Operator Application: ${command.application.id}`);
+        applications.splice(index, 1, structuredClone(command.application));
+        break;
+      }
+      case "operator-application.retime": {
+        const applications = mutableOperatorApplications(next, command.item, command.medium);
+        const application = applications.find((candidate) => candidate.id === command.id);
+        if (application === undefined) throw new Error(`Unknown NLE Operator Application: ${command.id}`);
+        (application as { controlTime: NleTimeMapping }).controlTime = structuredClone(command.controlTime);
+        break;
+      }
+      case "operator-application.remove": {
+        const applications = mutableOperatorApplications(next, command.item, command.medium);
+        const index = applications.findIndex((candidate) => candidate.id === command.id);
+        if (index < 0) throw new Error(`Unknown NLE Operator Application: ${command.id}`);
+        applications.splice(index, 1);
+        break;
+      }
       case "transition.add":
         next.transitions.push(structuredClone(command.transition));
         break;

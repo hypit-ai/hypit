@@ -1,9 +1,12 @@
-import { createNleHtmlVideoPackageFacet } from "@hypit/html-video";
+import { createModuleFacet } from "@hypit/hypit/module";
+import { createGenerationModuleFacet } from "@hypit/hypit/generation/build";
+import { createNleAudiovisualPackageFacet } from "@hypit/nle-audiovisual";
 import { createNleAuthoringFacet, createNlePackageFacet } from "@hypit/nle";
 import { createNleInspectorPresentationFacet, createNleTimelinePresentationFacet } from "@hypit/nle-view";
 
 import {
   rankingBoardHtmlResolver,
+  rankingBoardNleMediaAuthoring,
   rankingBoardNleAuthoring,
   rankingBoardNleResolver,
   rankingDebateComponentsManifest,
@@ -17,12 +20,14 @@ import {
 import { rankingBoardNleInspector, verdictBurstNleInspector } from "./nle-inspector.js";
 
 export const hypitPackage = {
-  format: "hypit.package@1" as const,
-  modules: [{ manifest: rankingDebateComponentsManifest }],
   facets: [
+    createModuleFacet(rankingDebateComponentsManifest), createGenerationModuleFacet(rankingDebateComponentsManifest),
     createNlePackageFacet({ components: [rankingBoardNleResolver, verdictBurstNleResolver] }),
-    createNleHtmlVideoPackageFacet({ components: [rankingBoardHtmlResolver, verdictBurstHtmlResolver] }),
-    createNleAuthoringFacet({ componentParameters: [rankingBoardNleAuthoring] }),
+    createNleAudiovisualPackageFacet({ components: [rankingBoardHtmlResolver, verdictBurstHtmlResolver] }),
+    createNleAuthoringFacet({
+      componentParameters: [rankingBoardNleAuthoring],
+      componentMedia: [rankingBoardNleMediaAuthoring],
+    }),
     createNleTimelinePresentationFacet({
       components: [rankingBoardNlePresentation, verdictBurstNlePresentation],
     }),

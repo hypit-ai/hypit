@@ -6,7 +6,7 @@ description: Choose an account, connect a service or add a model without changin
 A **Model** defines what you ask to generate: its inputs, supported parameters and output type.
 A **Provider** knows how to fulfill that request through a particular service. An **Endpoint** is a
 configured instance of that Provider, with its service address, credential reference and capacity.
-The Runtime Profile binds the requested capability to an Endpoint.
+The Environment Profile binds the requested capability to an Endpoint.
 
 The starter Profile includes local services and HypiHub. Other services connect through a Provider
 package installed by the video project. Tell the Agent which service you want and provide its API
@@ -69,7 +69,7 @@ belong to the Provider.
 Create a project Provider package to connect a selected Model to an API or local service. Implement
 the request forms and limits that service actually supports, install the package with the project,
 then configure it under `endpoints` and select it through `bindings` in the
-[Runtime Profile](./runtime.md). The [Endpoint package README](https://github.com/hypit-ai/hypit/blob/main/packages/endpoint/README.md)
+[Environment Profile](./runtime.md). The [Endpoint package README](https://github.com/hypit-ai/hypit/blob/main/packages/endpoint/README.md)
 owns the exact TypeScript API and package fields.
 
 The [complete project Provider example](https://github.com/hypit-ai/hypit/tree/main/examples/provider-package)
