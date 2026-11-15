@@ -252,7 +252,8 @@ const treatmentRecipeProperties = [
 
 export const visualTrackMarkupSurfaces: readonly (StructuredSurfaceDeclaration & { readonly vocabulary: SurfaceVocabulary })[] = [{
     name: "track", tag: "Track", mode: "structured",
-    outputs: [spatialTypes.fit, visualTrackTypes.header, visualTrackTypes.paintLayerSpec, visualTrackTypes.sampleLayerSpec,
+    outputs: [spatialTypes.fit, visualTrackTypes.header, visualTrackTypes.motion, visualTrackTypes.paintLayerSpec,
+      visualTrackTypes.sampleLayerSpec,
       visualTrackTypes.layerSet, visualTrackTypes.clipSpec, visualTrackTypes.set,
       visualTrackTypes.program,
       compositionTypes.visualTrack],

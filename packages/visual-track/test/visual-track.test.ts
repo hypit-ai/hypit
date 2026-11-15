@@ -719,4 +719,11 @@ test("the Visual author Surface emits explicit graph edges for layers, absolute 
   const clipSpecs = result.records.filter((entry) => entry.type.name === "VisualClipSpec");
   assert.equal(clipSpecs.length, 6);
   assert.ok(visualTrackMarkupSurfaces.some((surface) => surface.name === "track"));
+  const declaration = visualTrackMarkupSurfaces.find((surface) => surface.name === "track")!;
+  const motions = result.records.filter((entry) => entry.type.name === "VisualClipMotion");
+  assert.deepEqual(motions.map((entry) => entry.id), ["editorial.clip.0004.motion"]);
+  for (const record of result.records) {
+    assert.ok(declaration.outputs.some((output) => output.module.name === record.type.module.name
+      && output.name === record.type.name), `track Surface did not declare output ${record.type.name}`);
+  }
 });
