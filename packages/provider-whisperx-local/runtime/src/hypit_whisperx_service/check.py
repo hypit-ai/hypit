@@ -11,8 +11,8 @@ from .resources import assert_punkt_tab
 
 
 def main() -> None:
-    if not ((3, 10) <= sys.version_info[:2] < (3, 14)):
-        raise RuntimeError(f"WhisperX service requires Python >=3.10,<3.14; got {sys.version.split()[0]}")
+    if not ((3, 11) <= sys.version_info[:2] < (3, 14)):
+        raise RuntimeError(f"WhisperX service requires Python >=3.11,<3.14; got {sys.version.split()[0]}")
     parser = argparse.ArgumentParser()
     parser.add_argument("--models", action="store_true", help="Check selected cached models without downloading")
     arguments = parser.parse_args()
