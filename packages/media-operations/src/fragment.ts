@@ -90,6 +90,31 @@ export const transformMediaFragment = sealGraphFragment({
   }],
 });
 
+/**
+ * Composite a subject over a rendered layer. Both operands are Blobs, so no inspection or domain
+ * Record stands between them: the executor probes what it needs and the under layer decides the
+ * frame size and duration.
+ */
+export const compositeMediaFragment = sealGraphFragment({
+  inputs: [
+    { name: "under", type: blobTypes.blob },
+    { name: "over", type: blobTypes.blob },
+  ],
+  operations: [
+    {
+      id: "composite",
+      producer: mediaOperationsProducers.composite,
+      inputs: { under: input("under"), over: input("over") },
+      result: { kind: "need", name: "video" },
+    },
+  ],
+  exports: [{
+    name: "video",
+    type: blobTypes.blob,
+    root: operation("composite"),
+  }],
+});
+
 export const extractAudioFragment = sealGraphFragment({
   inputs: [
     { name: "source", type: blobTypes.blob },

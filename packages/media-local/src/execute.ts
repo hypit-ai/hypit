@@ -17,6 +17,7 @@ import {
   type ExtractAudioNeed,
   type ExtractFrameNeed,
   type InspectMediaNeed,
+  type CompositeMediaNeed,
   type MuxMediaNeed,
   type NormalizeMediaNeed,
   type RenderAudioNeed,
@@ -1057,6 +1058,107 @@ export async function executeExtractAudio(
       maxProbeOutputBytes: env.maxProbeOutputBytes,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
+    return artifactResult(artifact);
+  } finally {
+    await rm(work, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+function compositeMediaNeed(value: CanonicalValue): CompositeMediaNeed {
+  const item = object(value, "CompositeMediaNeed") as unknown as CompositeMediaNeed;
+  assert(item.under?.kind === "blob" && item.over?.kind === "blob", "CompositeMediaNeed is invalid");
+  return item;
+}
+
+/** Codec of the first video stream; VP9 alpha needs libvpx's decoder, not ffmpeg's native one. */
+async function videoStreamCodec(
+  env: MediaExecutionEnvironment,
+  path: string,
+): Promise<string | undefined> {
+  const bytes = await runProcess({
+    executable: env.ffprobePath,
+    argv: ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name",
+      "-of", "default=nw=1:nk=1", path],
+    timeoutMs: env.processTimeoutMs,
+    maxStdoutBytes: 16 * 1024,
+    ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+  });
+  const codec = Buffer.from(bytes).toString("utf8").trim();
+  return codec.length === 0 ? undefined : codec;
+}
+
+/** Frame size of the first video stream, which the subject is scaled onto. */
+async function videoFrameSize(
+  env: MediaExecutionEnvironment,
+  path: string,
+): Promise<{ readonly width: number; readonly height: number }> {
+  const bytes = await runProcess({
+    executable: env.ffprobePath,
+    argv: [
+      "-v", "error", "-select_streams", "v:0",
+      "-show_entries", "stream=width,height", "-of", "csv=p=0", path,
+    ],
+    timeoutMs: env.processTimeoutMs,
+    maxStdoutBytes: 64 * 1024,
+    ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+  });
+  const [width, height] = Buffer.from(bytes).toString("utf8").trim().split(",").map(Number);
+  assert(Number.isInteger(width) && Number.isInteger(height) && (width as number) > 0 && (height as number) > 0,
+    "Composite under layer has no readable video stream");
+  return { width: width as number, height: height as number };
+}
+
+/**
+ * Draw the subject over the under layer using the subject's own alpha.
+ *
+ * The under layer decides frame size and duration; the subject is scaled onto it and stops covering
+ * the picture when its stream ends (`eof_action=pass`), so a mask that ends early never freezes.
+ * Audio is not carried: this is a visual layer composite.
+ */
+export async function executeCompositeMedia(
+  env: MediaExecutionEnvironment,
+  constraints: CanonicalValue,
+): Promise<MediaOperationResult> {
+  const need = compositeMediaNeed(constraints);
+  const work = await mkdtemp(join(tmpdir(), "hypit-media-composite-"));
+  try {
+    const underPath = join(work, "under.bin");
+    const overPath = join(work, "over.bin");
+    const output = join(work, "composite.mp4");
+    await stageArtifact(env, need.under, underPath);
+    await stageArtifact(env, need.over, overPath);
+    const size = await videoFrameSize(env, underPath);
+    // ffmpeg's native VP9 decoder drops the alpha stream; libvpx's decoder keeps it.
+    const overCodec = await videoStreamCodec(env, overPath);
+    const overDecoder = overCodec === "vp9" ? ["-c:v", "libvpx-vp9"] : [];
+    await runProcess({
+      executable: env.ffmpegPath,
+      argv: [
+        "-y", "-i", underPath, ...overDecoder, "-i", overPath,
+        "-filter_complex",
+        `[1:v]scale=${size.width}:${size.height}:flags=bicubic,setsar=1[subject];`
+          + "[0:v][subject]overlay=0:0:eof_action=pass:format=auto,format=yuv420p[v]",
+        "-map", "[v]", "-an",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
+        output,
+      ],
+      timeoutMs: env.processTimeoutMs,
+      maxStdoutBytes: 64 * 1024,
+      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+    });
+    const bytes = await readFile(output);
+    assert(bytes.byteLength > 0, "Composite produced no video");
+    const inspected = await outputInspection({
+      path: output,
+      mediaType: "video/mp4",
+      ffprobePath: env.ffprobePath,
+      timeoutMs: env.processTimeoutMs,
+      maxProbeOutputBytes: env.maxProbeOutputBytes,
+      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+    });
+    const v = inspected.streams.filter((item) => item.kind === "video");
+    assert(v.length === 1, "Composite output must carry exactly one video stream");
+    const artifact = await env.artifacts.put(bytes, "video/mp4");
     return artifactResult(artifact);
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});

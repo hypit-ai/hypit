@@ -391,20 +391,20 @@ importers:
     dependencies:
       '@hypit/composition':
         specifier: ^0.1.0
-        version: link:../../../../packages/composition
+        version: 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
       '@hypit/spatial':
         specifier: ^0.1.0
-        version: link:../../../../packages/spatial
+        version: 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
       '@hypit/temporal':
         specifier: ^0.1.0
-        version: link:../../../../packages/temporal
+        version: 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
       '@hypit/timeline':
         specifier: ^0.1.0
-        version: link:../../../../packages/timeline
+        version: 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
     devDependencies:
       '@hypit/hypit':
         specifier: ^0.3.1
-        version: link:../../../..
+        version: 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
 
   examples/minimal-author-package/packages/example-component:
     dependencies:
@@ -2388,6 +2388,25 @@ importers:
         specifier: workspace:*
         version: link:../workspace
 
+  packages/sam-cutout:
+    dependencies:
+      '@hypit/generation':
+        specifier: workspace:^0.1.0
+        version: link:../generation
+    devDependencies:
+      '@hypit/blob':
+        specifier: workspace:*
+        version: link:../blob
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/script:
     dependencies:
       '@hypit/caption':
@@ -3529,6 +3548,306 @@ packages:
 
   '@fontsource/archivo-black@5.3.0':
     resolution: {integrity: sha512-7EsTIQ+Blf96ktpzTUpI7msi+u9/AJxM/GZxOSkEubVd1jSTrFSTNxMgfpX/8rQsjZ+19a+qvRbtcTEp5J/72g==}
+
+  '@hypit/audio-track@0.2.0':
+    resolution: {integrity: sha512-AwOcFAPsPjjSpkWoIv6Xsmn4LHIp7Jbi1tOF63bNDZb3gqK/M9p9ur8gJLu+sR6HgHkNKGLRtWtg5H3xVCSwlw==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/studio-companion': ^0.1.1
+
+  '@hypit/bach@0.1.0':
+    resolution: {integrity: sha512-egvFdpQKQjXHQ+rl5Ex72VCiBVavUXamOktbN6WXHHmABIptCD/d71cpB2cRmRylQMFOMtVT9qqZBMLXtg/Ffg==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/browser-capture@0.2.0':
+    resolution: {integrity: sha512-kR6AMZJfj3V+/S6mYDUVAWCHonOVdAAo4dSDeyJ39AOO6ceMZWiT05rX9tr4N+UiKEyKYN7cpUoF7/dIA3Fd2A==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/caption-fine@0.2.0':
+    resolution: {integrity: sha512-JJNfAOvBba8EW+VFn0EYaAvdQ6sV5cw8Muj/8/3020AAjK6KIWM4utk1xZ06fBo5j+Qw5jOTTl5xZj15nz6phw==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/studio-companion': ^0.1.1
+
+  '@hypit/caption@0.1.0':
+    resolution: {integrity: sha512-oBWEhtUNtSYEsmGpcxTqGfWd60ANPFmRBinqGsi6hYgU4kCaDD2B3A55hZQd/mBs6AtcZL18GAHVYI6FjULVFw==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/composition@0.1.0':
+    resolution: {integrity: sha512-kwfsu9874+A24PobKavoU6UwigerHVc76CEPZREBv8hZWHcuAUnA8yUex8UMOmTYxlPniF44Ykuyf5Skh/VRZg==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/credential-store-env@0.1.1':
+    resolution: {integrity: sha512-hWyGoGFNlZ7rUxVhVuI6sHlsH7MqwDH2NSyexVj5jnoIdsTtrpkSssnie08v9ggE6p43jQ29t1LecnPgTizLLQ==}
+    peerDependencies:
+      '@hypit/runtime-local': ^0.1.1
+
+  '@hypit/credential-store-local@0.1.1':
+    resolution: {integrity: sha512-IAOmHVg6aOx3Vu7dP5nbWdL0KnleoCtbMkBrz44kJ2QhBevp8gy3M4MydkMKTZK5xlDiYGKM917WGqTS+DV5DA==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.0
+      '@hypit/runtime-local': ^0.1.1
+
+  '@hypit/elevenlabs-speech@0.2.0':
+    resolution: {integrity: sha512-pT3Elq+MasXUu5Pdb3/gGd1I0DP2z7hmh9C+ocLDgfdK3bPYgSW2BPUaKnl8tjGfEpquRWtlRjqdt5UmQK5/yA==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/film@0.2.0':
+    resolution: {integrity: sha512-dys6OPnFZRDumVPc1C4VDZifB5FvvN3tDwFATZOG3JvX4VozDkbIANkTnbvfrIqAfnrMJG8TlLpUewa/VFiPZA==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/studio-companion': ^0.1.1
+
+  '@hypit/fishaudio-speech@0.2.0':
+    resolution: {integrity: sha512-Fi46R5VKBtlB1rO3IJw1cxsMOALXbh5Vgc41fyUf+Bt2ZFlgqLH2+j7lT9y77DKaPM/AbwPaZF+/J/hc7xGVlQ==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/fontsource@0.2.0':
+    resolution: {integrity: sha512-DTDPN1BolIzzFVBRXVXJtoflCSl+YmIlN2h/8QY4LtdOOQeq8lHLUYE/LYuFk7PW2Ed8u/o1bRmMHBLgJ5aR+g==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/studio-companion': ^0.1.1
+
+  '@hypit/generation@0.1.0':
+    resolution: {integrity: sha512-KIWatwZlSyBT4jgeJVTplEsFUOZoVGSWlfr5whZ7BYUbWCU9Gbf+kHKj9xZqqAoWKTFBZoqb9vRHKra2IxyKzQ==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/gpt-image-kits@0.1.1':
+    resolution: {integrity: sha512-NpuQ/G7sVd+4hqcoDSosAzOyqtAusjJJ1UHR47L08yXXAIoKTTz/E58sLtH1SCq9PG7uFu2vd73vF5dhkj+gnQ==}
+
+  '@hypit/gpt-image@0.2.0':
+    resolution: {integrity: sha512-1SSnbueHNbPjAKJIxbjdIH6GNBP+zEc3scjDaSQlcl4TsDyRsIWIUI95924gddWhNs+s7hnXhjquKPk5Fnk9CQ==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/grok-imagine@0.2.0':
+    resolution: {integrity: sha512-Ltje0YMiZ6P2JvCcCTXna4NnM6ZxBDvMT21ekuneri7BfR4QN4j+gDT5qWfbzG1M6MzZ33Jd0jTxkw2YyOyGng==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/html-document@0.1.0':
+    resolution: {integrity: sha512-ZTFj6ESjqNqdxUxZ4TY4Lt50zhR/8enQ61p44mzR23qpbuwrvhkiw2WVoKY8aVcjpTh5AFpTucUrK5ENLKlKfQ==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/html-program@0.1.1':
+    resolution: {integrity: sha512-YTstPm7bpP6kx/zaXNRnBgkcz/DmHNRhfMDIkwHxwjMvUfBXEXZgzzCRdO5CLW0lZlpN9HSC0yuOlQhlCSPHnQ==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/html-video@0.2.0':
+    resolution: {integrity: sha512-EHoKyVOYFOZbLJ+mpWlHwrYlzNGFP2V/pStkU/ivGf55WkhqPzDnhiRVh1Dv9j1Qzgq73qphBoryEkWW/kcV9Q==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/hypit@0.3.2':
+    resolution: {integrity: sha512-b3MgVZQdZVPZQyRDtJMEI9TNIx1xfzC1zuU+n0hEieRoaYYN9bLlAc4SJfIQMOoCjLDR995cCsKkl+3WAVw1xQ==}
+    engines: {node: '>=22.15.0'}
+    hasBin: true
+
+  '@hypit/image-operations@0.2.0':
+    resolution: {integrity: sha512-tVYxCxCGQREYp9TpnC/2+hOKOOkrHwLMUka1Z/g/9RDSX+AxLDRx6pxOU8jANfq4AHSgKHEaZIxIJGF319ccGA==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/media-local@0.2.1':
+    resolution: {integrity: sha512-J2di0ZhEICbPhugMj+No5Xo/cA88C76KwhVLVW5qHl3WjsQbJAcOG8S2Pu2yuukH+Qf7HYbLlM0z/dSaFvx+aA==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/runtime-local': ^0.1.1
+
+  '@hypit/media-operations@0.2.0':
+    resolution: {integrity: sha512-2aVTB7H8Jk/MOVznKo5zvnqOQo5eoIseoPHuwOYomDhph26BKTIt+wfbMixY/SNuP+XyifuK7ibloSI919rCFQ==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/media@0.1.0':
+    resolution: {integrity: sha512-SMR8seXPmypa5zYQHo+KUiBvMza4UJovlSxbMjsFE370SyDEDTOrOvArVK1xejVBCKTEdY6uZnaeD5KoGikDaA==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/mimo-speech@0.2.0':
+    resolution: {integrity: sha512-A5a8MtXBBzlhzsbPltd4OnbdI7roMO9C0qBbz347QAwADejTuerSQAdBVSgjLN6mbJLQIA12lQqm/+BspPm6UA==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/minimax-h3@0.2.0':
+    resolution: {integrity: sha512-vrxTN48sAL74gH9w/+xSEsZcbEL6J4c5Eq6GeImoUoozJ3RmsHAy9455xJXsS1NO7pnxCNrizSBB52CvtYZxnQ==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/nano-banana@0.2.0':
+    resolution: {integrity: sha512-ThtKwJKNK9etdwvmgccfMc1oNxGZJwGY5zLZ3jTSb9SMpwyO5Hq29UxO+PTiWQOjKgUD/7XO/Bgngf6OMlDo9Q==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/narrative-caption@0.1.0':
+    resolution: {integrity: sha512-B2cXUNRcUfNzICM4AKsgnLmccD/FrCcIBBo87/EDR1qYqn0NRcfAh7A07VOrcabhOKxbZ7YhacchR/AfqpfHHw==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/narrative-speech-alignment@0.2.0':
+    resolution: {integrity: sha512-SEmEkCb56lFGANd/TDjZPDI07tWp5jLJSjS61Bmq0UJ76ezNmxmZ0iLNTt6d4qIcEPz+JwoWmVi+nynz1pdYag==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/narrative-temporal@0.1.0':
+    resolution: {integrity: sha512-OS6mQTTMYwXRZ3qoP1x7yH0H73kG1DEdgRPCvMlA9+UxlgMN3lEwEkMY+HC6wLdY78eyO1lQehXSU+tMChbmcw==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/studio-companion': ^0.1.1
+
+  '@hypit/narrative@0.1.0':
+    resolution: {integrity: sha512-oOWDxKVjETGDu+nF2ymCqe4tP8BGP+l87/qBK+d3R5Xuhrr7u8+sST9eV04qp9T19oG9qA4hEZhWkXfw2cYqBA==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/pixverse@0.2.1':
+    resolution: {integrity: sha512-TBbdL474v6hGXWiV5jJy3jr5qYAisbYC379OuJCnxWNJ0NdbfV17bodc9RJpNjJyu5pR7PunZAvZjJRfR8wrRg==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/provider-html-local@0.2.0':
+    resolution: {integrity: sha512-Bc0ek1M6wh6kmiALnm1YU1Csy0xDIJ9ccXvO4/SdjVmvtXtWUw7538ou/kV7Eum0rQH6f6o4vVv9/2j6X/sB6A==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/runtime-local': ^0.1.1
+
+  '@hypit/provider-hypihub@0.2.1':
+    resolution: {integrity: sha512-08RD7WGX1vYhVITKVnpwgP09xXPYXBQEn5K6oOAI7YjzPCeOwfjXvAm1fbiBR8kN+w18FJEA39EOdTmNRJVeyw==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/runtime-local': ^0.1.1
+      '@hypit/whisperx': ^0.2.0
+
+  '@hypit/provider-image-opencv-local@0.2.0':
+    resolution: {integrity: sha512-JLD5O9JEf0O0zZQAbCGUxrnuSmdLOohkog9a9wO63qMA+mEiJImQGlSK3y1LDxX1Lo26elW1FHQhKyE1wz37nQ==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/image-operations': ^0.2.0
+      '@hypit/runtime-local': ^0.1.1
+
+  '@hypit/provider-whisperx-local@0.2.0':
+    resolution: {integrity: sha512-//xeU/6iVd3rWhLAo4IWC3EqF8qsj3W0M9wpD5g9lePSDRJSLZQwDLbK0ylvwZJ+VI2RBo4puKFWfFIyjw0aFA==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/runtime-local': ^0.1.1
+      '@hypit/whisperx': ^0.2.0
+
+  '@hypit/region-evidence@0.1.0':
+    resolution: {integrity: sha512-hCbRYcIjzPM0Lofnv+Lgy2aqgG1Zx52OoKHyp3K82+vEV9c0W6v053SeT25sYAyzBmJXGBqGuCvuSMfOjYEluw==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/runtime-local@0.1.1':
+    resolution: {integrity: sha512-MkDEBeMVkYHnL66fmhrRuCt97cLQ2GGpWcuS7zjx45YNtnJEjOpgWDqdLSuSE4Hv51mIYdASh21MhHMSsYqklg==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.0
+
+  '@hypit/script@0.2.0':
+    resolution: {integrity: sha512-aOcow59FUs1TegIwjTcq7SnYIEGHRn56Kv5DOHFPADKpXmueRoLmKnkPkNYClsaPnon70LBO9HEfmrojZ1lGEw==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/studio-companion': ^0.1.1
+
+  '@hypit/seedance-kits@0.1.1':
+    resolution: {integrity: sha512-5JviCogEqDxV2yLcTKjbZa4r2FsSjSK7TaZaK7tPzGlJFgIg4+DK/kBMkzlV3gcxnHBL5/JD3Tq11L0VjHtVrw==}
+
+  '@hypit/seedance@0.2.0':
+    resolution: {integrity: sha512-RARrn4AwAEEwEgBdJ4rAeYEYrJYj4FOem9+ayQ43/vAc19gSvBgv8tm4yAD05exqLIwaXMn9gdtKfQkJ+F3erQ==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/seedream@0.2.0':
+    resolution: {integrity: sha512-ySM9V+kJbiHRr9SmCq7LPLT+JRM9+HrSKYPxVdem0+YhVdjNJ9Cg5V00f3m2nDNvm54aG3rCoWoE80XVns3EVg==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/spatial@0.1.0':
+    resolution: {integrity: sha512-s44mBcgL2IuB53sqRsuRLswdFJEeNbHzwZTcRa2FxD+xOKVR8Ro/wk1VcqqGortj1g7fDIw3pWxYTuxYVEAgvA==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/speech-estimate@0.1.1':
+    resolution: {integrity: sha512-rNhTCBTTlqO8kVSkhqtqpPh4zx7CKWZmHohVZtBzZUXH3UoU+BuTuuT64QvEa5qm3yTLrZtRHMbW+o7U7jXgiQ==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.0
+
+  '@hypit/speech-evidence@0.1.0':
+    resolution: {integrity: sha512-YTqAbBIPJRFk5ACA60Rvi9090KgpJXirH6uMaA7ity84hbd877inYOMBYsfWBEb5OGbCW7jDSytegoHQEOgPWA==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/studio-companion@0.1.2':
+    resolution: {integrity: sha512-eqa8Ai35J62T8MwcppcnPECkE9jyR/3EBpIT3N/VdZelfZTMpsw4ssPLUOqcoIOy7tsGYadO2Ckja8zakKMAdA==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.0
+
+  '@hypit/studio@0.2.1':
+    resolution: {integrity: sha512-9n75DGZEVjLOe8YImAp/v718Qlne3SyLER8v4TQWvWPtwsrgA2LHBUg9IbhzEC829n5WOWfJ9a6cku2F0Qdhpg==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/temporal@0.1.0':
+    resolution: {integrity: sha512-ryhyFq49A/6vWL9pwuRsNqsMoJWYg5uCBN3NmPekae0qPGJVMA5zV2YUuVlnkYcFdZkKP5c8vJXSWLR5vTBd+g==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/studio-companion': ^0.1.1
+
+  '@hypit/text-fine@0.2.0':
+    resolution: {integrity: sha512-bxEFuD/J2AOdWvwT9UUDBQum0jBkGZIGCHqrbHx098uXhwaU23Rlqt/wFO1o6v2hycxx33ki7kIkL2utCIhHKQ==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/studio-companion': ^0.1.1
+
+  '@hypit/timeline-author@0.2.0':
+    resolution: {integrity: sha512-hVXY1768+aJW/HTOM2E14hEngnh0wI8HEE41YXCfPKC4f7laq0p2xD4PzsllaIPzARlM2todh4siHFf7audKdQ==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/studio-companion': ^0.1.1
+
+  '@hypit/timeline@0.1.0':
+    resolution: {integrity: sha512-RE3jBm/gawWV7lqa0ZNBb9ztVxE3AIaqNkTnMEgbu2mXUEJip7ora15p5xFWN5ZsxBmMX0s1g1jvW4SqPJa/Rw==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/video@0.2.1':
+    resolution: {integrity: sha512-xmFVNIGni6VD5uSsbWIM6kMkBeOZmegkwQuui+fBH1YRFx3ZJxc2xyxnC6YFaFOeqbxuD6nIjyoRlBI8IjdNjg==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/visual-track@0.2.0':
+    resolution: {integrity: sha512-g3xX9qQt9mlRB/SNEKWZ+j8UU9V20h6zZvrAX556gPtMvX7YCUfODr6G77sbUEG8d0fALU1t7Fs/RCrmurX57g==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+      '@hypit/studio-companion': ^0.1.1
+
+  '@hypit/volcengine-matting@0.2.0':
+    resolution: {integrity: sha512-FjFoFVMVKhJzahQYwu5pHTUSh86LvwELNe163eevKRFfFtLyJ2iO8lDlgC4VyoRLqYgs4831HPafDnLo/XLvgw==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/wan@0.2.0':
+    resolution: {integrity: sha512-see5xe9WuoCA4QEIsLZll1JXLgFpm8uizyBIATWukNZ5RGeMxwIBVFOPed9KJA1FwaAH8+1VdzPnHIj+Ln/EjA==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/whisperx@0.2.0':
+    resolution: {integrity: sha512-FBfPLIBi3EpJH8whLpsSNR0n8DF25fYaDSlhViNEZf2pcW9NS8hl+n3Ml9JnKlhEt0k+fw+C4WHzfmtaTNMoPw==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
+
+  '@hypit/yt-dlp@0.2.0':
+    resolution: {integrity: sha512-YiX8CAaVvu8wtCpW+X/d8gt2de1moS+YQw9bnb6XUZWBL1NhiZ0l8PlY+1pVGeE0g/nlcNCQqM0qYhRMbuzkRg==}
+    peerDependencies:
+      '@hypit/hypit': ^0.3.1
 
   '@iconify-json/simple-icons@1.2.93':
     resolution: {integrity: sha512-/XhANjfGYOuqvSR3TmUnkQkINvQ4GVjVuukvymRbxtVFBvIq/yiXJqCDycKcQPT401OYT9H2vIY6ihAlz1QIAw==}
@@ -5150,6 +5469,580 @@ snapshots:
   '@fontsource-variable/noto-sans-sc@5.3.0': {}
 
   '@fontsource/archivo-black@5.3.0': {}
+
+  '@hypit/audio-track@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/composition': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/studio-companion': link:packages/studio-companion
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/bach@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/browser-capture@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1)':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media-local': 0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1)
+      '@puppeteer/browsers': 3.2.2
+      puppeteer-core: 25.10.0
+      sharp: 0.35.4(@types/node@24.10.1)
+    transitivePeerDependencies:
+      - '@hypit/runtime-local'
+      - '@hypit/studio-companion'
+      - '@types/node'
+      - bufferutil
+      - proxy-agent
+      - utf-8-validate
+      - yauzl
+
+  '@hypit/caption-fine@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/caption': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/composition': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/html-program': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/region-evidence': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/spatial': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/studio-companion': link:packages/studio-companion
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/caption@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/composition@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/composition@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/credential-store-env@0.1.1(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))':
+    dependencies:
+      '@hypit/runtime-local': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/credential-store-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/runtime-local': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/elevenlabs-speech@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/film@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/composition': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/spatial': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/studio-companion': link:packages/studio-companion
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/fishaudio-speech@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/fontsource@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/studio-companion': link:packages/studio-companion
+
+  '@hypit/generation@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/gpt-image-kits@0.1.1': {}
+
+  '@hypit/gpt-image@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/image-operations': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/grok-imagine@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/html-document@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/composition': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/html-program': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media-operations': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      linkedom: 0.18.13
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+      - canvas
+
+  '@hypit/html-program@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))':
+    dependencies:
+      '@hypit/composition': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/html-program@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/composition': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/html-video@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/composition': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/html-program': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/media-operations': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)':
+    dependencies:
+      '@hypit/bach': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/browser-capture': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1)
+      '@hypit/media-local': 0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1)
+      '@hypit/runtime-local': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/speech-estimate': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/studio': 0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@types/node@24.10.1)(esbuild@0.27.7)(tsx@4.21.0)
+      '@hypit/video': 0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)(@hypit/whisperx@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1))
+      '@hypit/whisperx': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1)
+      '@hypit/yt-dlp': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1)
+      '@types/node': 24.10.1
+      cjs-module-lexer: 2.2.1
+      koffi: 3.2.1
+      tsx: 4.21.0
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+      - '@vitejs/devtools'
+      - bufferutil
+      - canvas
+      - esbuild
+      - jiti
+      - less
+      - proxy-agent
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - terser
+      - utf-8-validate
+      - yaml
+      - yauzl
+
+  '@hypit/image-operations@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/spatial': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/media-local@0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@types/node@24.10.1)':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/media-operations': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/runtime-local': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/speech-evidence': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      sharp: 0.35.4(@types/node@24.10.1)
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+      - '@types/node'
+
+  '@hypit/media-local@0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1)':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/media-operations': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/runtime-local': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/speech-evidence': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      sharp: 0.35.4(@types/node@24.10.1)
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+      - '@types/node'
+
+  '@hypit/media-operations@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))':
+    dependencies:
+      '@hypit/composition': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/media-operations@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/composition': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/media@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/media@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/mimo-speech@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/minimax-h3@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/nano-banana@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/narrative-caption@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/caption': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/narrative': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/narrative-temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/narrative-speech-alignment@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/narrative': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/narrative-temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/speech-evidence': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/narrative-temporal@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/narrative': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/studio-companion': link:packages/studio-companion
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/narrative@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/pixverse@0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/provider-html-local@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/html-program': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/runtime-local': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@puppeteer/browsers': 3.2.2
+      puppeteer-core: 25.10.0
+      tsx: 4.21.0
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+      - bufferutil
+      - proxy-agent
+      - utf-8-validate
+      - yauzl
+
+  '@hypit/provider-hypihub@0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@hypit/whisperx@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1))':
+    dependencies:
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/runtime-local': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/speech-evidence': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/whisperx': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1)
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/provider-image-opencv-local@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/image-operations@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/image-operations': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/runtime-local': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/provider-whisperx-local@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@hypit/whisperx@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/runtime-local': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/speech-evidence': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/whisperx': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1)
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/region-evidence@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/spatial': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      koffi: 3.2.1
+
+  '@hypit/script@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/caption': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/narrative': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/narrative-caption': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/narrative-temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/studio-companion': link:packages/studio-companion
+
+  '@hypit/seedance-kits@0.1.1': {}
+
+  '@hypit/seedance@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/seedream@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/spatial@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/speech-estimate@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      cmu-pronouncing-dictionary: 3.0.0
+
+  '@hypit/speech-evidence@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/speech-evidence@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+
+  '@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/studio@0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@types/node@24.10.1)(esbuild@0.27.7)(tsx@4.21.0)':
+    dependencies:
+      '@hypit/composition': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/html-program': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media-local': 0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@types/node@24.10.1)
+      '@hypit/media-operations': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/studio-companion': 0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      vite: 8.2.2(@types/node@24.10.1)(esbuild@0.27.7)(tsx@4.21.0)
+    transitivePeerDependencies:
+      - '@hypit/runtime-local'
+      - '@types/node'
+      - '@vitejs/devtools'
+      - esbuild
+      - jiti
+      - less
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - terser
+      - tsx
+      - yaml
+
+  '@hypit/temporal@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/studio-companion': 0.1.2(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/temporal@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/studio-companion': link:packages/studio-companion
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/text-fine@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/composition': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/spatial': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/studio-companion': link:packages/studio-companion
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/timeline-author@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/studio-companion': link:packages/studio-companion
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/timeline@0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/video@0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)(@hypit/whisperx@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1))':
+    dependencies:
+      '@hypit/audio-track': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/bach': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/caption': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/caption-fine': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/composition': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/credential-store-env': 0.1.1(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/credential-store-local': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/elevenlabs-speech': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/film': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/fishaudio-speech': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/fontsource': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/gpt-image': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/gpt-image-kits': 0.1.1
+      '@hypit/grok-imagine': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/html-document': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/html-program': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/html-video': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/image-operations': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/media-operations': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/mimo-speech': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/minimax-h3': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/nano-banana': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/narrative': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/narrative-caption': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/narrative-temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/pixverse': 0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/provider-html-local': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/provider-hypihub': 0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@hypit/whisperx@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1))
+      '@hypit/provider-image-opencv-local': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/image-operations@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))
+      '@hypit/provider-whisperx-local': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@hypit/whisperx@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1))
+      '@hypit/region-evidence': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/runtime-local': 0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/script': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/seedance': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/seedance-kits': 0.1.1
+      '@hypit/seedream': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/spatial': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/speech-evidence': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/text-fine': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/timeline-author': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/visual-track': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/volcengine-matting': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/wan': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+    transitivePeerDependencies:
+      - '@hypit/studio-companion'
+      - '@hypit/whisperx'
+      - bufferutil
+      - canvas
+      - proxy-agent
+      - utf-8-validate
+      - yauzl
+
+  '@hypit/visual-track@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)':
+    dependencies:
+      '@hypit/composition': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/spatial': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/studio-companion': link:packages/studio-companion
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/timeline': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+
+  '@hypit/volcengine-matting@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/wan@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))':
+    dependencies:
+      '@hypit/generation': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+
+  '@hypit/whisperx@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1)':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/media-local': 0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1)
+      '@hypit/narrative': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))
+      '@hypit/narrative-speech-alignment': 0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/narrative-temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/speech-evidence': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+      '@hypit/temporal': 0.1.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/studio-companion@packages+studio-companion)
+    transitivePeerDependencies:
+      - '@hypit/runtime-local'
+      - '@hypit/studio-companion'
+      - '@types/node'
+
+  '@hypit/yt-dlp@0.2.0(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1)':
+    dependencies:
+      '@hypit/hypit': 0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)
+      '@hypit/media-local': 0.2.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7))(@hypit/runtime-local@0.1.1(@hypit/hypit@0.3.2(@hypit/studio-companion@packages+studio-companion)(esbuild@0.27.7)))(@hypit/studio-companion@packages+studio-companion)(@types/node@24.10.1)
+    transitivePeerDependencies:
+      - '@hypit/runtime-local'
+      - '@hypit/studio-companion'
+      - '@types/node'
 
   '@iconify-json/simple-icons@1.2.93':
     dependencies:
