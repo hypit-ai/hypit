@@ -1,7 +1,7 @@
 import { fileReferenceIdentity } from "@hypit/result/node";
 import { randomUUID } from "node:crypto";
 import { lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
-import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import type {
   BuildResultFileRef,
@@ -35,7 +35,9 @@ async function pathExists(path: string): Promise<boolean> {
 function containedPath(root: string, path: string): string {
   const target = resolve(root, path);
   const relation = relative(root, target);
-  assert(relation.length > 0 && relation !== ".." && !relation.startsWith(`..${sep}`),
+  // A cross-drive or UNC target makes relative() return an absolute path on Windows,
+  // which cannot start with ".." — reject it the same way as an escaping one.
+  assert(relation.length > 0 && relation !== ".." && !relation.startsWith(`..${sep}`) && !isAbsolute(relation),
     `Result file ${path} leaves export directory ${root}`);
   return target;
 }
