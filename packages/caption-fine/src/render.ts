@@ -525,7 +525,11 @@ function loopAnimation(
   const start = activeWindow?.start ?? 0;
   const end = activeWindow?.end ?? durationFrames;
   const offsets: number[] = [...stepOffsets(start, end)];
-  for (let frame = start; frame <= end; frame += Math.max(1, Math.round(period / 4))) offsets.push(frame);
+  // Sample each loop at quarter periods of its own wave. Shake and flicker oscillate 2 and 5 times
+  // per period, so quarter periods of the loop itself land on their zeros or alias.
+  const harmonic = parameters.motion.loop === "flicker" ? 5 : parameters.motion.loop === "shake" ? 2 : 1;
+  const step = Math.max(1, Math.round(period / (4 * harmonic)));
+  for (let frame = start; frame <= end; frame += step) offsets.push(frame);
   return animationFrom(durationFrames, offsets, (frame) => {
     const active = frame >= start && (frame < end || (end === durationFrames && frame === durationFrames));
     if (!active) return parameters.motion.loop === "glow-pulse"
