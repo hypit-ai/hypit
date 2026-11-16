@@ -69,6 +69,7 @@ test("download resolves its locked runtime from an installed package outside the
     assert.match(command, /yt-dlp/u);
     assert.ok(args.includes("--no-remote-components"));
     assert.ok(args.includes("--ignore-config"));
+    assert.equal(args.at(-2), "--", "the link must sit behind the end-of-options separator");
     assert.equal(args.at(-1), "https://example.test/video");
     const output = args[args.indexOf("--output") + 1]!.replace("%(ext)s", "mp4");
     writeFileSync(output, "downloaded bytes");
@@ -81,6 +82,17 @@ test("download resolves its locked runtime from an installed package outside the
   await module.downloadVideo("https://example.test/video", target);
   assert.equal(await readFile(target, "utf8"), "downloaded bytes");
   assert.equal(calls, 3);
+});
+
+test("download refuses option-shaped links before touching the environment", async () => {
+  await assert.rejects(
+    downloadVideo("--plugin-dirs=/tmp/evil", join(tmpdir(), "never.mp4")),
+    /http or https URL/u,
+  );
+  await assert.rejects(
+    downloadVideo("file:///etc/passwd", join(tmpdir(), "never.mp4")),
+    /http or https URL/u,
+  );
 });
 
 test("the pinned yt-dlp project belongs to its behavior package", () => {
