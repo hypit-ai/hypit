@@ -237,7 +237,8 @@ test("a Clip keeps ordered Paint/sample layers, two-frame fit and frame treatmen
     { name: "left", value: 0 },
     { name: "position", value: "absolute" },
     { name: "top", value: 0 },
-    { name: "transform-origin", value: "200px 150px" },
+    // Layers sit inside the frame's 2px border, so their local origin is the padding edge.
+    { name: "transform-origin", value: "198px 148px" },
     { name: "width", value: "100%" },
   ]);
   const mapping = elements.find((element) => element.id === "content:mapping");
@@ -246,7 +247,7 @@ test("a Clip keeps ordered Paint/sample layers, two-frame fit and frame treatmen
     { name: "left", value: 0 },
     { name: "position", value: "absolute" },
     { name: "top", value: 0 },
-    { name: "transform", value: "matrix(0.345,0,0,0.345,62,12)" },
+    { name: "transform", value: "matrix(0.345,0,0,0.345,60,10)" },
     { name: "transform-origin", value: "0 0" },
     { name: "width", value: "800px" },
   ]);
