@@ -1,0 +1,22 @@
+{
+  "name": "@example/provider-meta-images",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Hypit project Provider for Meta Model API Muse Image (muse-image-1.0): text-to-image and reference edits.",
+  "hypit": {
+    "activation": "./src/activation.mjs"
+  },
+  "exports": {
+    ".": "./src/provider.mjs",
+    "./meta-api": "./src/meta-api.mjs"
+  },
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "@hypit/hypit": "0.3.2",
+    "@hypit/generation": "^0.1.0",
+    "@hypit/runtime-local": "^0.1.1"
+  }
+}
