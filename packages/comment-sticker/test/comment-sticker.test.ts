@@ -59,16 +59,16 @@ function item(id: string) {
   });
 }
 
-function content(meta?: string) {
+function content(meta?: string, author = "@viewer") {
   let value = createCommentStickerContent(sealText("This part finally made the idea click."));
-  value = setCommentStickerContentText(value, "author", sealText("@viewer"));
+  value = setCommentStickerContentText(value, "author", sealText(author));
   if (meta !== undefined) value = setCommentStickerContentText(value, "meta", sealText(meta));
   return value;
 }
 
-function track(meta?: string) {
+function track(meta?: string, author?: string) {
   const spec = item("opening");
-  const set = appendProjectedCommentSticker(createCommentStickerSet(), header, space, frame, style, spec, content(meta), projectProgramWindow({
+  const set = appendProjectedCommentSticker(createCommentStickerSet(), header, space, frame, style, spec, content(meta, author), projectProgramWindow({
     itemId: spec.id, semantic, projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } },
   }));
   return renderCommentSticker(space, finalizeCommentSticker(set, header));
@@ -83,6 +83,19 @@ test("Comment Sticker is one deterministic self-contained peer VisualTrack", () 
   assert.equal(JSON.stringify(first).includes("37 replies"), false);
   assert.ok(first.presents[0]?.elements.some((element) => element.id === "avatar-initial"));
   for (const element of first.presents[0]!.elements) assert.equal(element.attributes, undefined);
+});
+
+test("the avatar initial is the author's first whole character", () => {
+  const initialOf = (author: string) => {
+    const element = track(undefined, author).presents[0]?.elements.find((candidate) => candidate.id === "avatar-initial");
+    const inline = element?.kind === "text-flow" ? element.document.paragraphs[0]?.inlines[0] : undefined;
+    return inline?.kind === "text" ? inline.text : undefined;
+  };
+  assert.equal(initialOf("@viewer"), "V");
+  assert.equal(initialOf("👍🏽fan"), "👍🏽");
+  assert.equal(initialOf("🇯🇵traveler"), "🇯🇵");
+  assert.equal(initialOf("👩‍💻dev"), "👩‍💻");
+  assert.equal(initialOf("e\u0301lodie"), "E\u0301");
 });
 
 test("explicit metadata is rendered and the terminal compiler accepts the Track unchanged", () => {
