@@ -42,6 +42,44 @@ function json(response: import("node:http").ServerResponse, status: number, valu
   response.end(`${JSON.stringify(value)}\n`);
 }
 
+/**
+ * Material, Results and previews are project bytes, not Studio pages. An SVG
+ * (or any other active format) opened directly in a tab would otherwise run in
+ * the Studio origin and pass the same-origin mutation guard. A sandboxed CSP
+ * leaves <img>, <video> and <audio> use unchanged.
+ */
+function inertMedia(response: import("node:http").ServerResponse): void {
+  // `allow-downloads` keeps native video/audio controls able to save the file;
+  // without `allow-scripts` the document still runs no script.
+  response.setHeader("content-security-policy", "sandbox allow-downloads");
+  response.setHeader("x-content-type-options", "nosniff");
+}
+
+/**
+ * Vite's `/@fs/<absolute path>` (and `/@id/<absolute path>`) serve any file
+ * under `server.fs.allow`, which includes the author workspace. Treat project
+ * files reached that way as the same inert bytes as `/__studio/material`, so a
+ * workspace SVG or HTML file cannot run in the Studio origin. Dependencies
+ * under `node_modules` keep Vite's ordinary module serving.
+ */
+export function inertWorkspaceFile(workspaceRoot: string, requestUrl: string | undefined): boolean {
+  let path = (requestUrl ?? "/").split(/[?#]/u, 1)[0]!;
+  if (path.startsWith("/@id/")) path = path.slice("/@id".length).replace(/^\/__x00__/u, "/");
+  if (path.startsWith("/@fs/")) path = path.slice("/@fs".length);
+  else if (!(requestUrl ?? "").startsWith("/@id/")) return false;
+  try {
+    path = decodeURIComponent(path);
+  } catch {
+    return true;
+  }
+  // `/@fs/C:/...` on Windows.
+  if (/^\/[a-zA-Z]:[\\/]/u.test(path)) path = path.slice(1);
+  if (!isAbsolute(path)) return false;
+  const rel = relative(resolve(workspaceRoot), resolve(path));
+  if (rel === "" || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) return false;
+  return !rel.split(/[\\/]/u).includes("node_modules");
+}
+
 function requestedByteRange(value: string | undefined, size: number): BuildResultFileRange | undefined {
   if (value === undefined) return undefined;
   const match = /^bytes=(\d*)-(\d*)$/u.exec(value.trim());
@@ -459,6 +497,12 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     configureServer(value) {
       server = value;
       sourceWatch.replace([resolve(options.runPath), resolve(currentSource)]);
+      // Registered directly in configureServer, so it runs before Vite's own
+      // `/@fs` and transform middlewares.
+      value.middlewares.use((request, response, next) => {
+        if (inertWorkspaceFile(options.workspaceRoot, request.url)) inertMedia(response);
+        next();
+      });
       value.middlewares.use((request, response, next) => {
         const url = new URL(request.url ?? "/", "http://studio.hypit.local");
         if (request.method === "PUT" && url.pathname === "/__studio/source") {
@@ -661,6 +705,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             const bytes = await preview.open();
             response.statusCode = 200;
             response.setHeader("content-type", preview.mediaType);
+            inertMedia(response);
             response.setHeader("cache-control", "no-store");
             if (request.method === "HEAD") response.end();
             else response.end(Buffer.from(bytes));
@@ -687,6 +732,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
               const storyboard = await pending;
               response.statusCode = 200;
               response.setHeader("content-type", "image/png");
+              inertMedia(response);
               response.setHeader("cache-control", "public, max-age=31536000, immutable");
               response.setHeader("x-hypit-storyboard-count", String(storyboard.count));
               response.setHeader("x-hypit-storyboard-columns", String(storyboard.columns));
@@ -724,6 +770,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           }
           response.statusCode = range === undefined ? 200 : 206;
           response.setHeader("content-type", file.mediaType);
+          inertMedia(response);
           response.setHeader("content-length", String(range === undefined ? size : range.endExclusive - range.start));
           response.setHeader("cache-control", "no-store");
           response.setHeader("accept-ranges", "bytes");
@@ -761,6 +808,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             }
             response.statusCode = range === undefined ? 200 : 206;
             response.setHeader("content-type", artifact.mediaType);
+            inertMedia(response);
             response.setHeader("content-length", String(range === undefined
               ? artifact.size
               : range.endExclusive - range.start));
