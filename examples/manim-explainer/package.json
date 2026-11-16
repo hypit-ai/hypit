@@ -1,0 +1,35 @@
+{
+  "name": "hypit-manim-showcase",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "render:manim": "bash scripts/render-manim.sh"
+  },
+  "hypit": {
+    "project": true,
+    "buildInputs": [
+      {
+        "id": "manim-renders",
+        "command": "bash scripts/render-manim.sh",
+        "inputs": [
+          "manim-scenes/**/*.py",
+          "scripts/render-manim.sh",
+          "manim.cfg",
+          ".python-version",
+          "pyproject.toml",
+          "uv.lock"
+        ],
+        "outputs": [
+          "manim-renders/math_block.mp4",
+          "manim-renders/ml_block.mp4",
+          "manim-renders/physics_block.mp4"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "@project/manim-showcase": "file:packages/manim-showcase",
+    "@project/provider-vectrust-seedance": "file:packages/provider-vectrust-seedance"
+  }
+}

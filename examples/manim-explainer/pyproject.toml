@@ -1,0 +1,11 @@
+[project]
+name = "hypit-manim-showcase"
+version = "0.0.0"
+description = "Project-local Manim scenes for the Hypit Manim showcase"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "manim==0.21.0",
+]
+
+[tool.uv]
+package = false
