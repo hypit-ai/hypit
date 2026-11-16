@@ -216,6 +216,12 @@ export function assertVisualStyleV1(
   if (/!important|[\u0000-\u001f\u007f]/iu.test(value)) {
     throw new Error(`${label} contains an unsafe style value.`);
   }
+  // `<` terminates the raw-text <style> element these declarations are serialized into, and
+  // a backslash opens a CSS escape that the browser resolves before recognizing functions:
+  // `u\72 l(...)` reaches the renderer as `url(...)` while evading the checks above.
+  if (/[<\\]/u.test(value)) {
+    throw new Error(`${label} contains an unsafe style value.`);
+  }
   if (/(?:var|env|attr)\s*\(/iu.test(value)) {
     throw new Error(`${label} contains an environment-dependent style value.`);
   }
