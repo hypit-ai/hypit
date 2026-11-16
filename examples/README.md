@@ -9,14 +9,16 @@ Adapt those relationships to a new work; its scene list and styling are choices 
 | [Football ranking](ranking-football/README.md) | Independent speaking clips, a persistent tier board and timed reveals | Generate from `reference.svrun` |
 | [Podcast](podcast/README.md) | Related host views, product references, motivated cuts and a lifestyle montage | Generate from `reference.svrun` |
 | [Street interview](interview/README.md) | A shared encounter, derived close views, coordinated Moments and Caption tracking | Generate from `reference.svrun` |
-| [Complex spoken explainer](complex-explainer/README.md) | Coordinated project scenes, moving presenter framing, independent Caption, semantic graphic events and graphics-only intervals | Download its accepted media/Result bundle; render locally |
+| [Complex spoken explainer](complex-explainer/README.md) | Coordinated project scenes, moving presenter framing, independent Caption, semantic graphic events and graphics-only intervals | Finished film; archived media/Results require the pinned legacy checkout |
 
 The three generation entries use `reference.svml` and an adjacent `reference.svrun`. They generate
 their main images, recurring voice references and generated clips, then normalize media, align the
 Script where needed, and compose the video. They need no earlier Build Result or manually supplied
-presenter, host or scene image. The explainer instead opens a complete 137-second production with 17
-accepted performance clips, recorded demonstrations, pixel graphics and sound; its default Run reuses
-the supplied material.
+presenter, host or scene image. The explainer instead documents a complete 137-second production with
+17 accepted performance clips, recorded demonstrations, pixel graphics and sound. Its default Run
+reuses supplied material, but the hosted archive predates 0.3. Follow its
+[compatibility instructions](complex-explainer/README.md#archive-compatibility) rather than opening
+those Results with the current CLI.
 
 Self-contained here means a project directory: SVML, its imported SVS/Kits and the selected local
 assets. Hypit supplies the base video capabilities; each project's `package.json` declares any
