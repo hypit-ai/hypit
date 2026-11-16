@@ -4,3 +4,6 @@ packages:
   # Shipped examples are repository fixtures. Real authored projects always live outside this
   # tool checkout and resolve their own project-local packages through the Host's project root.
   - examples/*/packages/*
+onlyBuiltDependencies:
+  - esbuild
+  - koffi
