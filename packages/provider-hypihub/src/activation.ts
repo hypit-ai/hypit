@@ -30,6 +30,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
       "uploadPartTimeoutMs",
       "uploadPartAttempts",
       "downloadAttempts",
+      "assetHosts",
       "transcriptionModel",
     ], "HypiHub");
     const baseUrl = runtimeConfigString(config.baseUrl, "HypiHub baseUrl");
@@ -52,6 +53,10 @@ const adapter = createRuntimeEndpointAdapterFacet({
     const uploadPartTimeoutMs = runtimeConfigPositiveInteger(config.uploadPartTimeoutMs, "HypiHub uploadPartTimeoutMs");
     const uploadPartAttempts = runtimeConfigPositiveInteger(config.uploadPartAttempts, "HypiHub uploadPartAttempts");
     const downloadAttempts = runtimeConfigPositiveInteger(config.downloadAttempts, "HypiHub downloadAttempts");
+    const assetHosts = config.assetHosts === undefined ? undefined : (() => {
+      if (!Array.isArray(config.assetHosts)) throw new Error("HypiHub assetHosts must be an array of non-empty strings");
+      return config.assetHosts.map((value, index) => runtimeConfigString(value, `HypiHub assetHosts[${index}]`)!);
+    })();
     const transcriptionModel = runtimeConfigString(config.transcriptionModel, "HypiHub transcriptionModel");
     const capabilityConcurrency = config.capabilityConcurrency === undefined ? undefined : Object.fromEntries(
       Object.entries(runtimeConfigObject(config.capabilityConcurrency, "HypiHub capabilityConcurrency"))
@@ -74,6 +79,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
         ...(uploadPartTimeoutMs === undefined ? {} : { uploadPartTimeoutMs }),
         ...(uploadPartAttempts === undefined ? {} : { uploadPartAttempts }),
         ...(downloadAttempts === undefined ? {} : { downloadAttempts }),
+        ...(assetHosts === undefined ? {} : { assetHosts }),
         ...(transcriptionModel === undefined ? {} : { transcriptionModel }),
       };
     return {
