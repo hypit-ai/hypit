@@ -1,7 +1,0 @@
-<?svml using="@hypit/recipe"?>
-
-<sheet version="1">
-  film.vertical { background: #09090B; }
-  speech.normal { language: en; pace: normal; rounding: round; }
-  media.aroll { video: primary-moving; audio: default; span-authority: video; }
-</sheet>

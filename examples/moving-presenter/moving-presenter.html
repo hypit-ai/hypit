@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Moving Presenter — direct HTML evaluation</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #171315; color: #fff7fa; }
+    main { width: min(1120px, 96vw); padding: 28px 0; }
+    .stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      background: #fce5ee;
+      box-shadow: 0 28px 80px rgb(0 0 0 / .38);
+    }
+    .viewport { position: absolute; z-index: 2; overflow: hidden; opacity: 1; }
+    .inner { position: absolute; inset: 0; transform-origin: 50% 50%; }
+    .inner video, .fallback {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 50% 50%;
+    }
+    .inner video { visibility: hidden; }
+    .fallback { display: none; }
+    .viewer-status {
+      width: max-content;
+      margin-top: 12px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgb(35 31 32 / .78);
+      font: 600 12px/1 ui-monospace, monospace;
+    }
+    .controls { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; margin-top: 16px; }
+    button { border: 0; border-radius: 999px; padding: 10px 18px; background: #fa81b8; color: #231f20; font-weight: 800; cursor: pointer; }
+    input { width: 100%; accent-color: #fa81b8; }
+    output { min-width: 76px; font: 600 13px/1 ui-monospace, monospace; text-align: right; }
+    .legend { margin: 12px 0 0; color: #cdbfc5; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="stage" id="stage">
+      <div class="viewport" id="viewport">
+        <div class="inner" id="inner">
+          <img class="fallback" id="fallback" alt="Presenter fallback">
+        </div>
+      </div>
+    </div>
+    <div class="viewer-status" id="status"></div>
+    <div class="controls">
+      <button id="play" type="button">播放</button>
+      <input id="time" type="range" min="0" max="20000" step="1" value="0" aria-label="Programme time">
+      <output id="readout">0.000 s</output>
+    </div>
+    <p class="legend">拖动时间轴可直接求任意时刻；后声明的 use 覆盖先声明的 use，媒体时钟始终从各自 window 起点以 1:1 前进。</p>
+  </main>
+  <script>
+    const mediaRoot = "../../../hypit-moving-presenter/productions/explainer";
+    const fallbackImage = `${mediaRoot}/assets/presenter-a464d354ce0d.png`;
+    const sources = [
+      { id: "opening", file: `${mediaRoot}/output/aroll/01-opening.mp4`, window: [0, 4096] },
+      { id: "two-roads", file: `${mediaRoot}/output/aroll/04-two-roads.mp4`, window: [4096, 8192] },
+      { id: "water-break", file: `${mediaRoot}/output/aroll/10-water-break.mp4`, window: [8192, 12288] },
+      { id: "closing", file: `${mediaRoot}/output/aroll/17-closing.mp4`, window: [12288, 19392] },
+    ];
+    const frames = {
+      full: { x: 0, y: 0, width: 1920, height: 1080 },
+      upper: { x: 0, y: 0, width: 1920, height: 518.4 },
+      inset: { x: 1456, y: 146, width: 330, height: 330 },
+    };
+    const portraitRim = {
+      inner: "#231f20", innerWidthPx: 4, outer: "#fa81b8", outerWidthPx: 5, shadow: [7, 9],
+    };
+    const styles = {
+      hidden: { kind: "hidden" },
+      full: { kind: "frame", frame: "full", objectPosition: [.5, .5] },
+      upper: { kind: "frame", frame: "upper", objectPosition: [.5, .3] },
+      inset: { kind: "portrait-inset", frame: "inset", innerScale: 1.23, objectPosition: [.5, .28], rim: portraitRim },
+      pullback: { kind: "pullback", frame: "full", fromScale: 1.5, toScale: 1, origin: [.5, .35], easing: "quartic-out" },
+      reframe: { kind: "reframe", from: "full", to: "upper", easing: "smoothstep" },
+      "portrait-transition": {
+        kind: "portrait-transition", from: "full", to: "inset", innerScale: [1, 1.23],
+        objectPositionY: [.5, .28], rim: portraitRim, easing: "smootherstep",
+      },
+      fade: { kind: "fade-out", frame: "full", easing: "smoothstep" },
+    };
+    const uses = [
+      { id: "baseline-inset", style: "inset", window: [4096, 20000] },
+      { id: "opening-full", style: "full", window: [0, 4096] },
+      { id: "opening-pullback", style: "pullback", window: [0, 1500] },
+      { id: "roads-full", style: "full", window: [4096, 8192] },
+      { id: "roads-pullback", style: "pullback", window: [4096, 5596] },
+      { id: "roads-upper", style: "upper", window: [5596, 7096] },
+      { id: "roads-reframe", style: "reframe", window: [5596, 6296] },
+      { id: "roads-inset", style: "inset", window: [7096, 8192] },
+      { id: "water-full", style: "full", window: [8192, 12288] },
+      { id: "water-inset", style: "inset", window: [10240, 12288] },
+      { id: "water-transition", style: "portrait-transition", window: [10240, 11040] },
+      { id: "closing-full", style: "full", window: [12288, 19392] },
+      { id: "closing-pullback", style: "pullback", window: [12288, 13788] },
+      { id: "closing-hidden-beat", style: "hidden", window: [15000, 16000] },
+      { id: "closing-inset", style: "inset", window: [16500, 18000] },
+      { id: "closing-fade", style: "fade", window: [18000, 19392] },
+      { id: "after-sources", style: "hidden", window: [19392, 20000] },
+    ];
+
+    const stage = document.querySelector("#stage");
+    const viewport = document.querySelector("#viewport");
+    const inner = document.querySelector("#inner");
+    const fallback = document.querySelector("#fallback");
+    const status = document.querySelector("#status");
+    const slider = document.querySelector("#time");
+    const readout = document.querySelector("#readout");
+    const playButton = document.querySelector("#play");
+    fallback.src = fallbackImage;
+
+    for (const source of sources) {
+      const video = document.createElement("video");
+      video.src = source.file;
+      video.preload = "auto";
+      video.muted = true;
+      video.playsInline = true;
+      video.dataset.source = source.id;
+      video.addEventListener("error", () => { video.dataset.failed = "true"; });
+      source.video = video;
+      inner.insertBefore(video, fallback);
+    }
+    const mediaElements = [...inner.querySelectorAll("video"), fallback];
+
+    const clamp01 = value => Math.max(0, Math.min(1, value));
+    const smoothstep = value => { const p = clamp01(value); return p * p * (3 - 2 * p); };
+    const smootherstep = value => { const p = clamp01(value); return p * p * p * (p * (p * 6 - 15) + 10); };
+    const mix = (a, b, amount) => a + (b - a) * amount;
+    const easings = {
+      "quartic-out": value => 1 - Math.pow(1 - clamp01(value), 4),
+      smoothstep,
+      smootherstep,
+    };
+    const activeIn = (time, window) => time >= window[0] && time < window[1];
+    const activeSource = time => sources.find(source => activeIn(time, source.window));
+    const activeUse = time => uses.reduce((selected, use) => activeIn(time, use.window) ? use : selected, undefined);
+
+    function localProgress(time, window) {
+      return clamp01((time - window[0]) / (window[1] - window[0]));
+    }
+
+    function resetTreatment() {
+      Object.assign(viewport.style, {
+        visibility: "visible", opacity: "1", borderRadius: "0", border: "0 solid #231f20", boxShadow: "none",
+      });
+      Object.assign(inner.style, { transform: "scale(1)", transformOrigin: "50% 50%" });
+      mediaElements.forEach(media => { media.style.objectPosition = "50% 50%"; });
+    }
+
+    function setObjectPosition(position) {
+      mediaElements.forEach(media => {
+        media.style.objectPosition = `${position[0] * 100}% ${position[1] * 100}%`;
+      });
+    }
+
+    function placeFrame(frame) {
+      const width = stage.clientWidth;
+      const height = stage.clientHeight;
+      Object.assign(viewport.style, {
+        left: `${frame.x / 1920 * width}px`, top: `${frame.y / 1080 * height}px`,
+        width: `${frame.width / 1920 * width}px`, height: `${frame.height / 1080 * height}px`,
+      });
+    }
+
+    function placeBetween(from, to, amount) {
+      placeFrame({
+        x: mix(from.x, to.x, amount), y: mix(from.y, to.y, amount),
+        width: mix(from.width, to.width, amount), height: mix(from.height, to.height, amount),
+      });
+    }
+
+    function applyPortraitRim(amount, rim) {
+      viewport.style.borderRadius = `${50 * amount}%`;
+      viewport.style.borderColor = rim.inner;
+      viewport.style.borderWidth = `${rim.innerWidthPx * amount}px`;
+      viewport.style.boxShadow = amount === 0 ? "none" :
+        `0 0 0 ${rim.outerWidthPx * amount}px ${rim.outer}, ${rim.shadow[0] * amount}px ${rim.shadow[1] * amount}px 0 ${rim.outerWidthPx * amount}px ${rim.inner}`;
+    }
+
+    function applyStyle(use, time) {
+      resetTreatment();
+      const style = use ? styles[use.style] : styles.hidden;
+      const progress = use ? localProgress(time, use.window) : 0;
+      if (style.kind === "hidden") {
+        placeFrame(frames.full);
+        viewport.style.visibility = "hidden";
+      } else if (style.kind === "frame") {
+        placeFrame(frames[style.frame]);
+        setObjectPosition(style.objectPosition);
+      } else if (style.kind === "portrait-inset") {
+        placeFrame(frames[style.frame]);
+        applyPortraitRim(1, style.rim);
+        inner.style.transform = `scale(${style.innerScale})`;
+        inner.style.transformOrigin = `${style.objectPosition[0] * 100}% ${style.objectPosition[1] * 100}%`;
+        setObjectPosition(style.objectPosition);
+      } else if (style.kind === "pullback") {
+        placeFrame(frames[style.frame]);
+        const scale = mix(style.fromScale, style.toScale, easings[style.easing](progress));
+        inner.style.transform = `scale(${scale})`;
+        inner.style.transformOrigin = `${style.origin[0] * 100}% ${style.origin[1] * 100}%`;
+      } else if (style.kind === "reframe") {
+        placeBetween(frames[style.from], frames[style.to], easings[style.easing](progress));
+        setObjectPosition(styles.upper.objectPosition);
+      } else if (style.kind === "portrait-transition") {
+        const amount = easings[style.easing](progress);
+        placeBetween(frames[style.from], frames[style.to], amount);
+        applyPortraitRim(amount, style.rim);
+        inner.style.transform = `scale(${mix(style.innerScale[0], style.innerScale[1], amount)})`;
+        inner.style.transformOrigin = `50% ${mix(style.objectPositionY[0], style.objectPositionY[1], amount) * 100}%`;
+        setObjectPosition([.5, mix(style.objectPositionY[0], style.objectPositionY[1], amount)]);
+      } else if (style.kind === "fade-out") {
+        placeFrame(frames[style.frame]);
+        viewport.style.opacity = String(1 - easings[style.easing](progress));
+      }
+    }
+
+    let playing = false;
+    let programmeTime = 0;
+    let startedAt = 0;
+    let startedFrom = 0;
+    let animationFrame;
+
+    function renderAt(time, playback = false) {
+      programmeTime = Math.max(0, Math.min(20000, time));
+      const source = activeSource(programmeTime);
+      const use = activeUse(programmeTime);
+      let sourceFailed = false;
+      for (const item of sources) {
+        const active = item === source;
+        item.video.style.visibility = active ? "visible" : "hidden";
+        if (!active) { item.video.pause(); continue; }
+        sourceFailed = item.video.dataset.failed === "true";
+        const sourceTime = (programmeTime - item.window[0]) / 1000;
+        if (Math.abs(item.video.currentTime - sourceTime) > (playback ? .08 : .016)) item.video.currentTime = sourceTime;
+        if (playback && !sourceFailed) item.video.play().catch(() => {}); else item.video.pause();
+      }
+      fallback.style.display = !source || sourceFailed ? "block" : "none";
+      applyStyle(use, programmeTime);
+      slider.value = String(Math.round(programmeTime));
+      readout.value = `${(programmeTime / 1000).toFixed(3)} s`;
+      status.textContent = `${source?.id ?? "no source"} · ${use?.style ?? "transparent"}`;
+    }
+
+    function tick(now) {
+      if (!playing) return;
+      const next = startedFrom + now - startedAt;
+      if (next >= 20000) { playing = false; playButton.textContent = "播放"; renderAt(20000); return; }
+      renderAt(next, true);
+      animationFrame = requestAnimationFrame(tick);
+    }
+
+    playButton.addEventListener("click", () => {
+      playing = !playing;
+      playButton.textContent = playing ? "暂停" : "播放";
+      if (playing) {
+        if (programmeTime >= 20000) programmeTime = 0;
+        startedFrom = programmeTime;
+        startedAt = performance.now();
+        animationFrame = requestAnimationFrame(tick);
+      } else {
+        cancelAnimationFrame(animationFrame);
+        sources.forEach(source => source.video.pause());
+      }
+    });
+    slider.addEventListener("input", event => {
+      playing = false;
+      playButton.textContent = "播放";
+      cancelAnimationFrame(animationFrame);
+      renderAt(Number(event.target.value));
+    });
+    new ResizeObserver(() => renderAt(programmeTime, playing)).observe(stage);
+    renderAt(0);
+  </script>
+</body>
+</html>

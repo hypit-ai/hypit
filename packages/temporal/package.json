@@ -1,16 +1,23 @@
 {
   "name": "@hypit/temporal",
-  "version": "0.1.1",
+  "version": "0.1.0",
+  "description": "Exact clock-free temporal values and relations for Hypit owners",
   "license": "SEE LICENSE IN LICENSE",
-  "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./algebra": "./src/algebra.ts",
-    "./sampling": "./src/sampling.ts"
+    ".": {
+      "hypit-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./algebra": {
+      "hypit-source": "./src/algebra.ts",
+      "types": "./dist/algebra.d.ts",
+      "import": "./dist/algebra.js"
+    }
   },
-  "files": [
-    "dist",
-    "README.md"
-  ]
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  }
 }

@@ -4,42 +4,30 @@ import {
   assertLocalTemporalDomain,
   assertTemporalMap,
   compareExactTemporalValues,
+  exactTemporalZero,
   subtractExactTemporalValues,
+  type ExactTemporalValue,
+  type LocalTemporalDomain,
+  type TemporalRange,
 } from "@hypit/temporal/algebra";
-import type {
-  ExactTemporalValue,
-  LocalTemporalDomain,
-  TemporalRange,
-} from "@hypit/temporal/algebra";
-import { isTypeRef, sameType } from "@hypit/module";
-import { assertLocalSpatialDomain } from "@hypit/spatial/algebra";
-
-import { pictureType } from "./identity.js";
-import { assertSignalReconstruction } from "./operator.js";
-
-import type {
-  Occurrence,
-  OccurrencePlacement,
-  ProgramSource,
-} from "./types.js";
+import { assertImplementationBinding, assertIdentity } from "./implementation.js";
+import { assertSignalReconstruction } from "./reconstruction.js";
+import { assertLocalSpatialDomain } from "./spatial.js";
+import type { Occurrence, OccurrencePlacement, ProgramSource } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
-function assertIdentity(value: string, label: string): void {
-  assert(/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(value), `${label} is invalid.`);
-}
 
 function sameDomain(left: LocalTemporalDomain, right: LocalTemporalDomain): boolean {
-  return left.id === right.id
-    && compareExactTemporalValues(left.duration, right.duration) === 0;
+  return left.id === right.id && compareExactTemporalValues(left.duration, right.duration) === 0;
 }
 
 function assertRange(range: TemporalRange, domain: LocalTemporalDomain, label: string): void {
   assertExactTemporalValue(range.start, `${label}.start`);
   assertExactTemporalValue(range.end, `${label}.end`);
   assert(compareExactTemporalValues(range.start, range.end) < 0, `${label} must be non-empty.`);
-  assert(compareExactTemporalValues(range.start, { ticks: "0", timeBase: { numerator: 1, denominator: 1 } }) >= 0
+  assert(compareExactTemporalValues(range.start, exactTemporalZero()) >= 0
     && compareExactTemporalValues(range.end, domain.duration) <= 0,
   `${label} lies outside domain ${domain.id}.`);
 }
@@ -50,19 +38,15 @@ function rangeDuration(range: TemporalRange): ExactTemporalValue {
 
 export function assertProgramSource(value: ProgramSource): void {
   assertIdentity(value.id, "ProgramSource.id");
+  assertImplementationBinding(value, `ProgramSource ${value.id}`);
   const outputs = Object.entries(value.outputs);
   assert(outputs.length > 0, `ProgramSource ${value.id} has no outputs.`);
   for (const [name, output] of outputs) {
     assertIdentity(name, `ProgramSource ${value.id} output`);
-    assert(isTypeRef(output.type), `ProgramSource ${value.id}.${name} Type is invalid.`);
-    assert(output.kind === "signal" || output.kind === "constant",
-      `ProgramSource ${value.id}.${name} kind is invalid.`);
+    if (output.signal === "picture") assertLocalSpatialDomain(output.spatialDomain);
     if (output.kind === "signal") assertLocalTemporalDomain(output.domain);
-    if (output.spatialDomain !== undefined) assertLocalSpatialDomain(output.spatialDomain);
-    if (sameType(output.type, pictureType)) {
-      assert(output.spatialDomain !== undefined,
-        `ProgramSource ${value.id}.${name} Picture has no spatial domain.`);
-    }
+    assert(output.signal === "picture" || output.kind === "signal",
+      `ProgramSource ${value.id}.${name} constant Audio is not defined.`);
   }
 }
 
@@ -76,16 +60,12 @@ export function occurrenceParentRange(value: Pick<Occurrence, "domain" | "placem
   };
 }
 
-export function assertOccurrencePlacement(
-  value: OccurrencePlacement,
-  occurrenceDomain: LocalTemporalDomain,
-): void {
+export function assertOccurrencePlacement(value: OccurrencePlacement, occurrenceDomain: LocalTemporalDomain): void {
   assertLocalTemporalDomain(value.parent);
   assertLocalTemporalDomain(occurrenceDomain);
   assertRange(value.active, occurrenceDomain, "OccurrencePlacement.active");
   const parentRange = occurrenceParentRange({ domain: occurrenceDomain, placement: value });
-  assert(compareExactTemporalValues(parentRange.start,
-    { ticks: "0", timeBase: { numerator: 1, denominator: 1 } }) >= 0
+  assert(compareExactTemporalValues(parentRange.start, exactTemporalZero()) >= 0
     && compareExactTemporalValues(parentRange.end, value.parent.duration) <= 0,
   `Occurrence placement lies outside parent domain ${value.parent.id}.`);
 }
@@ -103,7 +83,7 @@ export function assertOccurrence(value: Occurrence): void {
     assert(selection.kind === output.kind,
       `Occurrence ${value.id}.${name} selects ${selection.kind}, but Source output is ${output.kind}.`);
     if (selection.kind === "constant") continue;
-    assert(output.kind === "signal", `Occurrence ${value.id}.${name} signal has no Source Domain.`);
+    assert(output.kind === "signal", `Occurrence ${value.id}.${name} signal has no Source domain.`);
     assertTemporalMap(selection.mapping);
     const first = selection.mapping.stages[0];
     const last = selection.mapping.stages.at(-1);
@@ -114,8 +94,8 @@ export function assertOccurrence(value: Occurrence): void {
     if (selection.reconstruction !== undefined) {
       assertSignalReconstruction(selection.reconstruction,
         `Occurrence ${value.id}.${name} reconstruction`);
-      assert(sameType(selection.reconstruction.signal, output.type),
-        `Occurrence ${value.id}.${name} reconstruction targets another signal Type.`);
+      assert(selection.reconstruction.signal === output.signal,
+        `Occurrence ${value.id}.${name} reconstruction targets ${selection.reconstruction.signal}, not ${output.signal}.`);
     }
   }
 }

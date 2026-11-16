@@ -1,14 +1,18 @@
-export { mediaComponent } from "./component.js";
-export { projectVisualDeliverySpec, sameVisualDeliverySpec, sameOutputPictureSpec, sealMediaDeliverySpec, sealMediaInspection, sealMediaStreamSelection, sealMuxedMedia, sealPreparedMedia, sealRenderedVisual, sealRenderedAudio, sealVisualDeliverySpec, sealOutputPictureSpec, verifyMediaDeliverySpec, verifyMediaDomainSpec, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyPictureSignal, verifyPictureInterpretation, verifyPictureObservation, verifyPreparedAudioSource, verifyPreparedMedia, verifyPreparedPictureSource, verifyPreparedSignalPictureSource, verifyPreparedPictureSampling, verifyRenderedVisual, verifyRenderedAudio, verifyVisualDeliverySpec, verifyOutputPictureSpec } from "./identity.js";
-export { preparedPictureSamplingRepresentation } from "./prepared.js";
-export { prepareMedia, preparedAudioSource, preparedMediaExtent, preparedPictureExtent, preparedPictureMemberExtent, preparedPictureSource, preparedSignalPictureSource, preparedPictureSampling } from "./prepared.js";
-export { mediaCapabilities, mediaDependency, mediaManifest, mediaModuleRef, mediaProducers, mediaTypes } from "./manifest.js";
-export { namedPictureInterpretation, sealMediaSelectionRequest, selectAudioStream, selectMediaStreams, selectVideoStream, verifyMediaSelectionRequest } from "./selection.js";
-export { sealAudioExtractionRequest, sealFrameExtractionRequest, verifyAudioExtractionRequest, verifyFrameExtractionRequest } from "./extraction.js";
-export { mediaDeliveryProfile } from "./delivery.js";
-export type { MediaDeliveryProfile } from "./delivery.js";
-export { BT709_OPAQUE_PICTURE, SRGB_OPAQUE_PICTURE, SRGB_STRAIGHT_PICTURE, pictureSignal, pictureInterpretationProfile } from "./picture.js";
-export { fontArtifactSchema, fontStackSchema, mediaDeliverySpecSchema, mediaInspectionSchema, mediaSelectionRequestSchema, mediaStreamSelectionSchema, muxedMediaSchema, pictureInterpretationSchema, pictureObservationSchema, preparedAudioSourceSchema, preparedMediaSchema, preparedPictureSourceSchema, preparedSignalPictureSourceSchema, renderedVisualSchema, renderedAudioSchema, visualDeliverySpecSchema, outputPictureSpecSchema } from "./schema.js";
-export { assertFontArtifactRef, assertFontStackRef } from "./render.js";
-export type * from "./render.js";
-export type * from "./types.js";
+export * from "./types.js";
+export * from "./picture.js";
+export * from "./validation.js";
+export * from "./selection.js";
+export * from "./interpretation.js";
+
+import { verifyMediaInspection, verifyMediaInterpretation } from "./validation.js";
+import type { MediaInspection, MediaInterpretation } from "./types.js";
+
+export function sealMediaInspection(value: MediaInspection): MediaInspection {
+  verifyMediaInspection(value);
+  return structuredClone(value);
+}
+
+export function sealMediaInterpretation(value: MediaInterpretation): MediaInterpretation {
+  verifyMediaInterpretation(value);
+  return structuredClone(value);
+}

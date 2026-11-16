@@ -1,0 +1,417 @@
+# Project Boundary and Project Host
+
+> Status: current owner and Host design for opening one local Hypit project, selecting installed packages and
+> sharing project-scoped services among products.
+
+## Boundary
+
+A Hypit Project is an ordinary local directory. Its identity is the selected directory, not a generated database id.
+The directory contains one small Project manifest, the normal package-manager environment, accepted Media and any
+number of independently owned documents.
+
+The Project manifest owns only boundary-wide author choices:
+
+- the display name of the project;
+- the npm packages explicitly activated for this project;
+- the package-owned catalog offerings that products may present as author creation choices.
+
+Media Assets, NLE documents, Canvas documents and exports remain ordinary owner files and stable owner collections.
+Open tabs remain Product Session state. `package.json` and the lockfile select installed package versions.
+
+`ProjectHost` is the one open runtime for this boundary inside one Application Host. It opens the manifest and package
+environment, owns the shared Project Media Service lifetime, reuses owner Services for documents opened by several
+callers and supplies one project context to Product Sessions. Media, NLE, Canvas and other owners retain the meaning
+and operations of their facts.
+
+## Default project layout
+
+```text
+documentary/
+├─ hypit.project.json
+├─ package.json
+├─ pnpm-lock.yaml
+├─ pnpm-workspace.yaml
+├─ media/
+│  └─ interview/
+│     ├─ interview.media.json
+│     └─ interview.mp4
+├─ edits/
+│  ├─ full-version.svml
+│  ├─ trailer.svml
+│  └─ trailer.nle-view.json
+├─ generation/
+├─ scenes/
+├─ scripts/
+├─ packages/
+│  └─ documentary-titles/
+│     ├─ package.json
+│     └─ src/
+├─ exports/
+└─ .hypit/
+   ├─ cache/
+   └─ recovery/
+```
+
+`hypit.project.json`, `package.json` and the package-manager lockfile are required bootstrap files. The workspace file
+joins the package environment when the project contains local packages. The remaining locations are conventions owned
+by their domains:
+
+- `media/` is the stable Media Asset collection opened by the Project Media Service;
+- `edits/`, `generation/` and `scenes/` may contain any number of owner documents;
+- `packages/` contains project-authored ordinary workspace packages;
+- `scripts/` contains explicit project programs;
+- `exports/` contains delivery outputs and does not imply Media adoption;
+- `.hypit/` contains rebuildable cache and explicitly selected recovery state, never the only copy of author facts.
+
+An owner document may live elsewhere in the boundary when its references remain portable. Folder names do not select
+an owner; the owner Reader and explicit caller do.
+
+## Project manifest
+
+The first manifest shape is deliberately finite:
+
+```json
+{
+  "format": "hypit.project",
+  "name": "Documentary",
+  "packages": [
+    {
+      "name": "@hypit/captions",
+      "catalog": [
+        "caption.clean",
+        "caption.yellow-outline"
+      ]
+    },
+    {
+      "name": "@documentary/titles",
+      "catalog": [
+        "title.chapter"
+      ]
+    }
+  ]
+}
+```
+
+The Project Reader accepts exactly the current fields. Package names are unversioned npm package names. Package-local
+catalog ids are stable opaque names declared by that package. An empty `catalog` activates the package's technical
+contributions without adding an author-facing creation choice.
+
+The two selections have different meanings:
+
+1. `packages[].name` explicitly permits the Host to load that installed package's Hypit entry;
+2. `packages[].catalog` selects the package-owned offerings shown by creation surfaces.
+
+Catalog selection does not determine whether an existing owner reference remains meaningful. For example, hiding a
+caption preset from an add menu does not invalidate an NLE Item already using the package's Component symbol. Package
+activation, package symbol resolution and author-facing catalog selection remain distinct.
+
+The manifest contains no wildcard meaning “all installed packages” or “all future offerings”. A project template may
+write a useful initial explicit selection. Updating a package does not silently publish newly added author choices into
+an existing project's catalog.
+
+## Package environment
+
+The Project Package Environment combines three authorities without merging them:
+
+```text
+package.json                requested npm dependencies and workspace links
+package-manager lockfile    exact installed implementation selection
+hypit.project.json          explicitly activated packages and visible offerings
+```
+
+The Host never scans `node_modules` and activates arbitrary code. For every activated package it resolves one
+conventional exported Hypit module from the project package environment, imports it and verifies that the module
+declares the selected npm package name.
+
+A Hypit package module may publish many technical contributions and many catalog offerings:
+
+```ts
+type HypitPackageModule = {
+  readonly package: string;
+  readonly contributions: readonly {
+    readonly kind: string;
+    readonly value: unknown;
+  }[];
+  readonly catalog: readonly {
+    readonly id: string;
+    readonly kind: string;
+    readonly title: string;
+    readonly value: unknown;
+  }[];
+};
+```
+
+`kind` is owned and validated by the consuming owner or product contract. The Project package layer does not define a
+central union of NLE Components, Operators, caption styles, filters, transitions, Media Representation Readers or
+future capabilities. It provides exact package selection, module provenance and duplicate detection; typed owner
+registries interpret selected contributions.
+
+One author-facing offering may assemble several technical facets. A caption offering may use one Component Source,
+one parameter authoring contribution, one Inspector projection, one Timeline presentation and package resources.
+Those facets do not need separate installation records. Conversely, one package can expose caption offerings,
+Operators and transitions without being split merely for taxonomy.
+
+Project-authored packages under `packages/` participate through ordinary workspace dependencies. They are selected in
+the manifest exactly like registry packages. Official packages distributed with a Hypit application are project
+template defaults, not invisible global implementations: creating a project writes their dependencies, lockfile
+selection and manifest activation. The package manager may deduplicate bytes in its store; every project still owns
+its reproducible dependency selection.
+
+Installing, updating or removing package dependencies is an explicit package-manager Action. Opening a Project never
+installs missing packages. A missing activation reports the exact package and referring owner object. An installation
+workflow first completes the package-manager operation and validates the Hypit module, then atomically records the
+manifest activation. Catalog edits are direct Project manifest commands and do not rewrite owner documents.
+
+## Host hierarchy and lifetimes
+
+```text
+Application Host                         application/process lifetime
+├─ project registry and project picker
+├─ window/tab and Product Session registry
+└─ ProjectHost                           one per open Project Boundary
+   ├─ Project manifest Service
+   ├─ Project Package Environment
+   ├─ Project Media Service              one shared collection
+   ├─ Open Owner Service Registry
+   │  ├─ NLE Project Service             one per open .svml document
+   │  ├─ NLE View Service                one per open View document
+   │  └─ future owner Services
+   ├─ selected Executor clients
+   ├─ Host resource gateway
+   └─ Product Sessions
+      ├─ NLE Product Session
+      ├─ another NLE Product Session
+      └─ Canvas Product Session
+```
+
+The Application Host is the application-level control plane. It chooses or creates Project Boundaries, reuses one
+ProjectHost per canonical boundary in that application lifetime, and owns shell navigation. Each independent
+application process has its own ProjectHost registry.
+
+The ProjectHost is the project-scoped composition root. It closes all project-scoped resources together, but its
+child Services retain their owner-specific APIs and revisions.
+
+A product adapter supplies one product's transport and frontend composition. An NLE session backend opens or leases
+an NLE Project Service and optional View Service, combines them through the NLE Editing Surface, and receives the same
+Project Media Service and Package Environment used by other products.
+
+A Product Session is one browser page, tab or window connection. Several sessions may lease the same open owner
+Service. Selection, playhead, hover, viewport and pointer drafts remain session state; closing one page does not close
+the shared Service while another lease remains.
+
+## Lifecycle scopes
+
+The interactive application follows four nested scopes, with execution beside them:
+
+```text
+ApplicationHost                              application scope
+├─ ExecutionHost / Execution Directory       shared deployment scope
+│  └─ Invocation                             Action lifetime
+└─ ProjectHost                               project scope
+   ├─ ProjectMediaService                    owner collection scope
+   ├─ PackageEnvironment                     project package scope
+   ├─ NleProjectService and other Services   owner document scope
+   └─ ProductSession                         interface session scope
+```
+
+Application scope owns project discovery, shared execution access, shell navigation and Product Session registration.
+Project scope owns one open Project Boundary and its shared project resources. Collection and document scopes give
+owner facts real open lifetimes. Interface scope owns current selection, playhead, zoom, hover, panel and pointer state.
+
+A Product Session leases one or more typed owner Services. Several Product Sessions may lease the same document
+Service. An ExecutionHost may serve several ProjectHosts, and an Invocation may continue after its initiating Product
+Session or ProjectHost has closed. Reopening a project reconnects to that Invocation through its durable address.
+
+## Execution Environments
+
+Provider accounts, model queues, GPU slots, rate limits, durable Provider receipts and recovery belong to an
+application, account, worker or remote-deployment lifetime. ProjectHost receives scoped clients to those Execution
+Environments.
+
+```text
+ApplicationHost
+├─ Execution Directory
+│  ├─ cloud Environment
+│  │  ├─ Seedance Endpoint Adapter
+│  │  └─ another Provider Endpoint Adapter
+│  └─ local GPU Environment
+│     └─ local model Endpoint Adapter
+└─ ProjectHost
+   ├─ Generation owner Services
+   └─ scoped Execution clients
+```
+
+The ApplicationHost explicitly registers selected Environments. An Environment publishes a finite capability
+projection. The ProjectHost receives clients permitted for that project, and a user, Agent or project program
+explicitly starts each Invocation against a selected compatible Environment.
+
+Four selections remain separate:
+
+1. an Ability package defines the typed semantic request and outputs;
+2. a Provider Endpoint adapter implements one Provider/model wire protocol and supported request subset;
+3. an Execution Environment supplies credentials, capacity, scheduling and recoverable Invocation storage;
+4. the Invocation caller selects the concrete available Environment for one Action.
+
+A Seedance adapter initially may run in the same Node process as the ApplicationHost while retaining this contract.
+Deployment, recovery, credential isolation and shared-capacity requirements may place that Environment in a separate
+worker or remote service while preserving the same Generation Graph, ProjectHost and Invocation/Publication seams.
+
+Application configuration owns Provider credentials, account-wide capacity and usable Environments. Project packages
+select Ability definitions and authoring contributions. A project document may retain explicit Invocation and
+Publication references, while the selected Environment retains private Provider recovery state.
+
+## Shared Media
+
+The Project Media Service is unique for:
+
+```text
+Application Host lifetime + Project Boundary
+```
+
+More concretely, it is constructed and closed by the corresponding ProjectHost. NLE, Canvas, Scene, Agent and Media
+surfaces in that project observe the same catalog instance.
+
+The shared Media identity is the portable project-relative Media Asset manifest path, for example
+`media/interview/interview.media.json`. Byte equality does not participate in that identity. Two NLE documents use the
+same accepted media by storing the same explicit Media Asset Reference. Their frontends offer the same project media panel;
+dragging one catalog entry into either Timeline creates an occurrence referencing that manifest path.
+
+Different Hypit Project Boundaries do not share a Media identity. Moving material across them is an explicit adoption
+or materialization Action into the target Project Media Service. Physical storage deduplication, if ever supplied by a
+storage implementation, cannot decide author identity.
+
+The ProjectHost does not duplicate a Media list in the Project manifest. The Media Catalog is reconstructed from the
+owner manifests in `media/`. Media bins, tags or durable library arrangements, when required, are Media-owned
+documents rather than ProjectHost fields.
+
+## Open owner documents
+
+Owner Providers give the ProjectHost the platform adapter required to create, read, save and reopen one owner kind.
+The Host's Open Service Registry keys a live Service by:
+
+```text
+owner kind + canonical project-relative document path
+```
+
+Opening the same NLE document from two tabs returns leases on one `NleProjectService`; opening two `.svml` files opens
+two Services. An NLE View remains an independent owner document and Service even when one Product Session composes it
+with an NLE Project.
+
+The generic registry owns identity, lease count and close behavior. The NLE session backend calls
+`NleProjectService`, the Media adapter calls `ProjectMediaService`, and future owners preserve their own typed
+contracts.
+
+Saving remains explicit. An Owner Provider serializes the selected Service snapshot, atomically writes its file and
+advances that Service's savepoint. Direct external file edits remain valid author actions and enter an open Service
+through explicit reload or reopen.
+
+## Transport-neutral API shape
+
+The independent package should be `@hypit/project`. Its root entry contains Project manifest values and Readers,
+package contribution contracts, typed project context and lifecycle registries. Its `node` entry contains local path,
+file, npm resolution and atomic persistence adapters.
+
+The intended public composition is:
+
+```ts
+const project = await openNodeProjectHost({
+  root,
+  ownerProviders,
+  productProviders,
+  executorClients,
+});
+
+project.boundary;                  // canonical root and current manifest observation
+project.packages.contributions();  // exact activated package provenance
+project.packages.catalog();        // selected author-facing offerings
+project.media;                     // the shared ProjectMediaService
+project.documents;                 // typed provider + path Service leases
+project.resources;                 // invocation-local Host resource addresses
+project.products;                  // Product Session launch and close
+
+await project.close();
+```
+
+The document registry preserves provider typing instead of returning an untyped universal service:
+
+```ts
+const lease = await project.documents.open(nleProjectProvider, "edits/trailer.svml");
+lease.service.transact({ expectedRevision, commands });
+lease.close();
+```
+
+An NLE product launch is application coordination rather than an NLE command:
+
+```ts
+const session = await project.products.launch("hypit.nle", {
+  document: "edits/trailer.svml",
+  view: { persistence: "session" },
+});
+```
+
+Creating a blank NLE first asks the NLE Owner Provider to create a new `.svml` document at an explicit project path,
+then launches a Product Session over that document. ProjectHost supplies the context but does not manufacture SVML.
+
+## Backend and frontend boundary
+
+The first complete local application may use one Node process and one loopback HTTP server. Host boundaries do not
+imply process boundaries:
+
+```text
+Browser shell
+  project picker · tabs · windows
+        │
+Loopback Application adapter
+  ApplicationHost
+        │
+  ProjectHost registry
+        │
+  owner/product HTTP adapters
+```
+
+The shell calls Application operations to create/open a project and launch a product. It receives an opaque Product
+Session address and opens it in a tab or window. Shell navigation switches directly among Canvas, NLE and other
+Product Sessions.
+
+The browser receives finite projections and submits typed product operations. Absolute filesystem paths, imported
+package functions and raw Service instances remain behind the loopback adapter. Host resource URLs are
+session-scoped projections for Media thumbnails, package posters and preview frames; they are not persistent owner
+references.
+
+The ProjectHost package does not own browser chrome or a universal JSON command protocol. Application HTTP, Desktop
+IPC, CLI and Agent tools remain adapters over the same typed Host and owner contracts.
+
+## Release shape
+
+The justified release graph becomes:
+
+```text
+@hypit/media-asset  -> Project Media Service modules
+@hypit/project      -> Project manifest, package environment and ProjectHost
+@hypit/nle          -> NLE owner facts and Services
+@hypit/nle-studio   -> NLE product adapter and browser client
+@hypit/hypit        -> ApplicationHost composition and distribution defaults
+```
+
+`@hypit/project` does not depend on NLE, Canvas or future owner implementations. Owner Providers and Product Providers
+depend on its context contract. It may depend on the Media Asset release because every ProjectHost constructs the one
+stable Project Media Service for its boundary. Platform package-manager execution remains a selected Executor or Node
+adapter, not part of the manifest Reader.
+
+ApplicationHost remains root distribution composition until another application independently consumes it or its
+deployment lifecycle justifies extraction. Product UIs remain with their product adapter packages.
+
+## First implementation slice
+
+The first implementation should close one actual shared-project path:
+
+1. read `hypit.project.json`, `package.json` and the existing lockfile;
+2. resolve only explicitly activated package modules and assemble typed NLE contributions;
+3. open one Project Media Service and reconstruct its Catalog from `media/`;
+4. open two NLE documents through one Open Service Registry;
+5. expose the same Media Catalog to both NLE Product Sessions;
+6. drag one catalog entry into each document so both store the same Media Asset manifest path;
+7. save, close the ProjectHost, reopen the directory and reconstruct the same owner facts;
+8. report a precise package diagnostic when a referenced package is not activated or installed.
+
+Type checking, release builds and this direct production path are the evidence.

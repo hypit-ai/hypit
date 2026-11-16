@@ -1,14 +1,2 @@
 packages:
   - packages/*
-  - services/*
-  # Only examples that use the current public package surface participate in this workspace.
-  # Historical productions remain readable fixtures but do not claim installable compatibility.
-  - examples/provider-package/packages/*
-  - examples/semantic-composition/packages/audiovisual-title-card
-  - examples/ranking-debate
-  - examples/ranking-debate/packages/*
-  - examples/ranking-football
-  - examples/ranking-football/packages/*
-  - examples/ranking-jensen
-  - examples/terminal-mix
-  - examples/terminal-mix/packages/*

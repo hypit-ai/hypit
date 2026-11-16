@@ -1,47 +1,18 @@
-import { assertBlobRef, canonicalStringify } from "@hypit/protocol";
-import { isTypeRef } from "@hypit/module";
 import {
   assertExactTemporalValue,
   assertLocalTemporalDomain,
   compareExactTemporalValues,
   exactTemporalZero,
 } from "@hypit/temporal/algebra";
-
+import { assertIdentity, assertImplementationBinding } from "./implementation.js";
 import type {
   AudioOperator,
-  PictureOperator,
   OperatorTemporalSupport,
-  SignalOperatorProgram,
-  SignalReconstruction,
+  PictureOperator,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
-}
-
-function assertIdentity(value: string, label: string): void {
-  assert(/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(value), `${label} is invalid.`);
-}
-
-export function assertSignalOperatorProgram(value: SignalOperatorProgram, label: string): void {
-  assert(value !== null && typeof value === "object" && !Array.isArray(value), `${label} is invalid.`);
-  assert(typeof value.format === "string" && value.format.length > 0, `${label}.format is empty.`);
-  assert(value.payload !== null && typeof value.payload === "object" && !Array.isArray(value.payload),
-    `${label}.payload must be an object.`);
-  canonicalStringify(value.payload);
-  assert(Array.isArray(value.artifacts), `${label}.artifacts must be an array.`);
-  for (const [index, artifact] of value.artifacts.entries()) {
-    assertBlobRef(artifact, `${label}.artifacts.${index}`);
-  }
-}
-
-export function assertSignalReconstruction(
-  value: SignalReconstruction,
-  label = "SignalReconstruction",
-): void {
-  assert(value !== null && typeof value === "object" && !Array.isArray(value), `${label} is invalid.`);
-  assert(isTypeRef(value.signal), `${label}.signal Type is invalid.`);
-  assertSignalOperatorProgram(value.program, `${label}.program`);
 }
 
 function assertDuration(value: import("@hypit/temporal/algebra").ExactTemporalValue, label: string): void {
@@ -53,8 +24,7 @@ export function pointwiseOperatorTemporalSupport(inputs: readonly string[]): Ope
   const zero = exactTemporalZero();
   return {
     inputs: Object.fromEntries(inputs.map((name) => [name, {
-      before: structuredClone(zero),
-      after: structuredClone(zero),
+      before: structuredClone(zero), after: structuredClone(zero),
     }])),
     tail: structuredClone(zero),
   };
@@ -66,8 +36,6 @@ export function assertOperatorTemporalSupport(
   label = "Operator temporal support",
 ): void {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), `${label} is invalid.`);
-  assert(value.inputs !== null && typeof value.inputs === "object" && !Array.isArray(value.inputs),
-    `${label}.inputs is invalid.`);
   const expected = new Set(inputs);
   for (const name of Object.keys(value.inputs)) assert(expected.has(name), `${label} has unknown input ${name}.`);
   for (const name of inputs) {
@@ -88,35 +56,27 @@ export function isPointwiseOperatorTemporalSupport(value: OperatorTemporalSuppor
       && compareExactTemporalValues(support.after, zero) === 0);
 }
 
-function assertOperator(
-  value: PictureOperator | AudioOperator,
-  kind: "Picture" | "Audio",
-  label: string,
-): void {
-  assert(value !== null && typeof value === "object" && !Array.isArray(value), `${label} is invalid.`);
+function assertOperator(value: PictureOperator | AudioOperator, label: string): void {
   assertIdentity(value.id, `${label}.id`);
-  assert(Array.isArray(value.inputs) && value.inputs.length > 0,
-    `${label} must declare at least one named ${kind} input.`);
+  assertImplementationBinding(value, label);
+  assert(Array.isArray(value.inputs) && value.inputs.length > 0, `${label} must declare at least one input.`);
   const names = new Set<string>();
   for (const name of value.inputs) {
     assertIdentity(name, `${label} input`);
     assert(!names.has(name), `${label} repeats input ${name}.`);
     names.add(name);
   }
-  assert(value.temporalControls !== null && typeof value.temporalControls === "object"
-    && !Array.isArray(value.temporalControls), `${label}.temporalControls is invalid.`);
   for (const [name, domain] of Object.entries(value.temporalControls)) {
     assertIdentity(name, `${label} temporal Control`);
     assertLocalTemporalDomain(domain);
   }
   assertOperatorTemporalSupport(value.temporalSupport, value.inputs, `${label}.temporalSupport`);
-  assertSignalOperatorProgram(value.program, `${label}.program`);
 }
 
 export function assertPictureOperator(value: PictureOperator, label = "PictureOperator"): void {
-  assertOperator(value, "Picture", label);
+  assertOperator(value, label);
 }
 
 export function assertAudioOperator(value: AudioOperator, label = "AudioOperator"): void {
-  assertOperator(value, "Audio", label);
+  assertOperator(value, label);
 }

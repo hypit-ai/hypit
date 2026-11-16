@@ -5,111 +5,99 @@ import type {
   TemporalMap,
   TemporalRange,
 } from "@hypit/temporal/algebra";
-import type { TypeRef } from "@hypit/module";
-import type { BlobRef, CanonicalValue } from "@hypit/protocol";
-import type { LocalSpatialDomain, SpatialMap, SpatialRegion } from "@hypit/spatial/algebra";
+import type { LocalSpatialDomain, SpatialMap, SpatialRegion } from "./spatial.js";
 
-type ProgramSourceOutputBase = {
-  readonly type: TypeRef;
-  /** Required when this output is a Picture signal. */
-  readonly spatialDomain?: LocalSpatialDomain;
+/** npm selects the implementation version; `symbol` is stable inside that package. */
+export type PackageSymbol = {
+  readonly package: string;
+  readonly symbol: string;
 };
-/** A finite time-varying signal whose factual local Domain belongs to the Source. */
-export type ProgramSignalOutput = ProgramSourceOutputBase & {
+
+/** Closed package-owned parameters. The defining package validates their domain meaning. */
+export type ImplementationBinding = {
+  readonly implementation: PackageSymbol;
+  readonly parameters: Readonly<Record<string, unknown>>;
+};
+
+export type ProgramPictureOutput = {
+  readonly signal: "picture";
+  readonly spatialDomain: LocalSpatialDomain;
+} & (
+  | { readonly kind: "signal"; readonly domain: LocalTemporalDomain }
+  | { readonly kind: "constant" }
+);
+
+export type ProgramAudioOutput = {
+  readonly signal: "audio";
   readonly kind: "signal";
   readonly domain: LocalTemporalDomain;
 };
 
-/** A timeless value. Its use duration belongs only to an Occurrence, never to the Source. */
-export type ProgramConstantOutput = ProgramSourceOutputBase & {
-  readonly kind: "constant";
-};
+export type ProgramSourceOutput = ProgramPictureOutput | ProgramAudioOutput;
 
-export type ProgramSourceOutput = ProgramSignalOutput | ProgramConstantOutput;
-
-/** One already-resolved multi-output Source that can be used by a Program. */
-export type ProgramSource = {
+/** One resolved Source implementation used by a closed Programme. */
+export type ProgramSource = ImplementationBinding & {
   readonly id: string;
   readonly outputs: Readonly<Record<string, ProgramSourceOutput>>;
 };
 
-/**
- * Placement of one active occurrence-local range in a finite parent domain.
- * `start` is the parent position corresponding to `active.start`.
- */
 export type OccurrencePlacement = {
   readonly parent: LocalTemporalDomain;
   readonly start: ExactTemporalValue;
   readonly active: TemporalRange;
 };
 
-/**
- * One stable use of a Source. Its local domain remains stable across trims;
- * placement selects the active part and Mapping reads the Source domain.
- */
+export type OccurrenceOutputSelection =
+  | {
+      readonly kind: "signal";
+      readonly mapping: TemporalMap;
+      /** Package-owned interpretation of this exact mapped read, not of the Source itself. */
+      readonly reconstruction?: SignalReconstruction;
+    }
+  | { readonly kind: "constant" };
+
+/** One stable use of a Source. Trimming changes placement, not Source identity. */
 export type Occurrence = {
   readonly id: string;
   readonly source: ProgramSource;
   readonly domain: LocalTemporalDomain;
   readonly placement: OccurrencePlacement;
-  /** Selected outputs. Only a time-varying signal owns an occurrence-to-source Mapping. */
   readonly selections: Readonly<Record<string, OccurrenceOutputSelection>>;
 };
 
-export type OccurrenceOutputSelection =
-  | {
-      readonly kind: "signal";
-      readonly mapping: TemporalMap;
-      /** Package-owned reconstruction of this target-to-source signal read. */
-      readonly reconstruction?: SignalReconstruction;
-    }
-  | { readonly kind: "constant" };
-
-/** First value-owned interpolation policy; it linearly interpolates affine coefficients. */
 export type SpatialMapInterpolation = { readonly kind: "affine-linear" };
 export type SpatialMapControl = TemporalControl<SpatialMap, SpatialMapInterpolation>;
 
-/** Opaque package-owned execution programme; consumers support formats, not effect names. */
-export type SignalOperatorProgram = {
-  readonly format: string;
-  readonly payload: { readonly [key: string]: CanonicalValue };
-  readonly artifacts: readonly BlobRef[];
-};
-
-/** Package-owned policy for reconstructing one signal through a temporal Mapping. */
-export type SignalReconstruction = {
-  readonly signal: TypeRef;
-  readonly program: SignalOperatorProgram;
-};
-
-/** Relative input positions required to produce one output position. */
 export type OperatorInputTemporalSupport = {
   readonly before: ExactTemporalValue;
   readonly after: ExactTemporalValue;
 };
 
-/**
- * Exact signal dependency of one Operator, independent of any implementation.
- * Durations are exact and non-negative.
- */
 export type OperatorTemporalSupport = {
   readonly inputs: Readonly<Record<string, OperatorInputTemporalSupport>>;
-  /** Possible output after the last non-empty input sample. */
   readonly tail: ExactTemporalValue;
 };
 
-export type PictureNodeId = string;
-
-/** Package-owned Picture transform. Port names, not child order, define its inputs. */
-export type PictureOperator = {
-  readonly id: string;
-  readonly inputs: readonly string[];
-  /** Package-owned temporal Controls expose only their named coordinate domains to AVIR. */
-  readonly temporalControls: Readonly<Record<string, LocalTemporalDomain>>;
-  readonly temporalSupport: OperatorTemporalSupport;
-  readonly program: SignalOperatorProgram;
+/** Explicit non-default reconstruction of one mapped Picture or Audio read. */
+export type SignalReconstruction = ImplementationBinding & {
+  readonly signal: "picture" | "audio";
 };
 
+export type PictureOperator = ImplementationBinding & {
+  readonly id: string;
+  readonly inputs: readonly string[];
+  readonly temporalControls: Readonly<Record<string, LocalTemporalDomain>>;
+  readonly temporalSupport: OperatorTemporalSupport;
+};
+
+export type AudioOperator = ImplementationBinding & {
+  readonly id: string;
+  readonly inputs: readonly string[];
+  readonly temporalControls: Readonly<Record<string, LocalTemporalDomain>>;
+  readonly temporalSupport: OperatorTemporalSupport;
+};
+
+export type PictureNodeId = string;
 export type PictureNode =
   | { readonly kind: "transparent" }
   | { readonly kind: "use"; readonly occurrence: string; readonly output: string }
@@ -120,7 +108,6 @@ export type PictureNode =
       readonly kind: "remap-control";
       readonly input: PictureNodeId;
       readonly control: SpatialMapControl;
-      /** Closed Programme-to-Control coordinate relation. */
       readonly controlMapping: TemporalMap;
     }
   | { readonly kind: "over"; readonly inputs: readonly PictureNodeId[] }
@@ -137,17 +124,6 @@ export type PictureGraph = {
 };
 
 export type AudioNodeId = string;
-
-/** Package-owned Audio transform. Named ports express effect and sidechain roles. */
-export type AudioOperator = {
-  readonly id: string;
-  readonly inputs: readonly string[];
-  /** Package-owned temporal Controls expose only their named coordinate domains to AVIR. */
-  readonly temporalControls: Readonly<Record<string, LocalTemporalDomain>>;
-  readonly temporalSupport: OperatorTemporalSupport;
-  readonly program: SignalOperatorProgram;
-};
-
 export type AudioNode =
   | { readonly kind: "silence" }
   | { readonly kind: "use"; readonly occurrence: string; readonly output: string }
@@ -165,11 +141,10 @@ export type AudioGraph = {
   readonly root: AudioNodeId;
 };
 
-/** One closed multi-output audiovisual Programme on a shared finite parent domain. */
+/** Closed invocation-local audiovisual Programme. */
 export type AudiovisualProgram = {
   readonly id: string;
   readonly domain: LocalTemporalDomain;
-  /** Finite output Space required exactly when the Programme produces Picture. */
   readonly pictureDomain?: LocalSpatialDomain;
   readonly occurrences: Readonly<Record<string, Occurrence>>;
   readonly picture?: PictureGraph;
@@ -180,6 +155,7 @@ export type EvaluatedSourceSample = {
   readonly occurrence: string;
   readonly output: string;
   readonly source: string;
+  readonly implementation: PackageSymbol;
   readonly reconstruction?: SignalReconstruction;
   readonly temporal:
     | {
@@ -228,7 +204,7 @@ export type EvaluatedAudioGraph = {
   readonly root: AudioNodeId;
 };
 
-/** Exact clock-free evaluation. An Output policy chooses which `at` values to request. */
+/** Exact point evaluation. Output policy decides which positions to request. */
 export type AudiovisualEvaluation = {
   readonly program: string;
   readonly at: ExactTemporalValue;

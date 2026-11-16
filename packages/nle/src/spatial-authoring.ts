@@ -1,18 +1,10 @@
-import {
-  assertNleProject,
-  findNleItem,
-  findNlePictureLayout,
-  resolveNlePictureLayout,
-} from "./project.js";
-import type { NlePictureLayout, NlePresentItem, NleProject } from "./types.js";
+import { assertNleProject, findNlePictureLayoutSharedValue, resolveNlePictureLayout } from "./project.js";
 import type { NleTransaction } from "./transaction.js";
+import type { NlePictureLayout, NlePresentItem, NleProject } from "./types.js";
 
 export type NlePictureFrame = Pick<NlePictureLayout, "x" | "y" | "width" | "height">;
 
-/**
- * Transport-independent spatial intentions over the placement facts owned by NLE.
- * Source crop and package-internal objects deliberately do not enter this vocabulary.
- */
+/** Direct spatial intentions over inline placement facts owned by NLE. */
 export type NleSpatialEdit =
   | { readonly kind: "layout.replace"; readonly layout: NlePictureLayout }
   | { readonly kind: "frame.translate"; readonly deltaX: number; readonly deltaY: number }
@@ -45,23 +37,30 @@ function assertFocus(value: number, label: string): void {
 function pictureItem(project: NleProject, itemId: string): NlePresentItem & {
   readonly picture: NonNullable<NlePresentItem["picture"]>;
 } {
-  const { item } = findNleItem(project, itemId);
-  if (item.kind !== "present" || item.picture === undefined) {
-    throw new Error(`NLE Item ${itemId} has no Picture layout.`);
+  for (const composition of project.compositions) {
+    for (const track of composition.tracks) {
+      const item = track.items.find((candidate) => candidate.id === itemId);
+      if (item === undefined) continue;
+      if (item.kind !== "present" || item.picture === undefined) {
+        throw new Error(`NLE Item ${itemId} has no Picture layout.`);
+      }
+      return item as NlePresentItem & { readonly picture: NonNullable<NlePresentItem["picture"]> };
+    }
   }
-  return item as NlePresentItem & { readonly picture: NonNullable<NlePresentItem["picture"]> };
+  throw new Error(`Unknown NLE Item: ${itemId}.`);
 }
 
-function replaceItemLayout(item: NlePresentItem & {
-  readonly picture: NonNullable<NlePresentItem["picture"]>;
-}, layout: NlePictureLayout | { readonly ref: string }) {
+function replaceLayout(
+  item: NlePresentItem & { readonly picture: NonNullable<NlePresentItem["picture"]> },
+  layout: NlePictureLayout | { readonly ref: string },
+) {
   return {
-    kind: "item.replace" as const,
+    kind: "item.replace",
     item: {
       ...structuredClone(item),
       picture: { ...structuredClone(item.picture), layout: structuredClone(layout) },
     },
-  };
+  } as const;
 }
 
 function replaceOwnedLayout(
@@ -70,16 +69,14 @@ function replaceOwnedLayout(
   layout: NlePictureLayout,
 ) {
   if ("ref" in item.picture.layout) {
-    const resource = findNlePictureLayout(project, item.picture.layout.ref);
-    return {
-      kind: "picture-layout.replace" as const,
-      value: { ...structuredClone(resource), layout: structuredClone(layout) },
-    };
+    const resource = findNlePictureLayoutSharedValue(project, item.picture.layout.ref);
+    return { kind: "shared-value.replace" as const,
+      value: { ...structuredClone(resource), value: structuredClone(layout) } };
   }
-  return replaceItemLayout(item, layout);
+  return replaceLayout(item, layout);
 }
 
-/** Plan one spatial user or Agent intention as an ordinary revisioned NLE transaction. */
+/** Plan one spatial user or Agent intention as an ordinary pure NLE transaction. */
 export function planNleSpatialEdit(
   project: NleProject,
   itemId: string,
@@ -88,65 +85,59 @@ export function planNleSpatialEdit(
   assertNleProject(project);
   const item = pictureItem(project, itemId);
   const current = resolveNlePictureLayout(project, item.picture.layout);
-
   switch (edit.kind) {
     case "layout.replace":
       assertFrame(edit.layout);
       assertFocus(edit.layout.contentX ?? 0.5, "NLE Picture contentX");
       assertFocus(edit.layout.contentY ?? 0.5, "NLE Picture contentY");
-      return { revision: project.revision, commands: [replaceOwnedLayout(project, item, edit.layout)] };
+      return { commands: [replaceOwnedLayout(project, item, edit.layout)] };
     case "frame.translate":
       assertFinite(edit.deltaX, "NLE Picture translation x");
       assertFinite(edit.deltaY, "NLE Picture translation y");
-      return { revision: project.revision, commands: [replaceOwnedLayout(project, item, {
-        ...current,
-        x: current.x + edit.deltaX,
-        y: current.y + edit.deltaY,
-      })] };
+      return { commands: [replaceOwnedLayout(project, item,
+        { ...current, x: current.x + edit.deltaX, y: current.y + edit.deltaY })] };
     case "frame.resize":
       assertFrame(edit.frame);
-      return { revision: project.revision, commands: [replaceOwnedLayout(project, item, {
-        ...current,
-        ...structuredClone(edit.frame),
-      })] };
+      return { commands: [replaceOwnedLayout(project, item, { ...current, ...structuredClone(edit.frame) })] };
     case "fit.set":
-      if (!["fill", "contain", "cover"].includes(edit.fit)) {
+      if (edit.fit !== "fill" && edit.fit !== "contain" && edit.fit !== "cover") {
         throw new Error(`Unknown NLE Picture fit: ${String(edit.fit)}.`);
       }
-      return { revision: project.revision, commands: [replaceOwnedLayout(project, item, {
-        ...current,
-        fit: edit.fit,
-      })] };
+      return { commands: [replaceOwnedLayout(project, item, { ...current, fit: edit.fit })] };
     case "focus.set":
       assertFocus(edit.contentX, "NLE Picture contentX");
       assertFocus(edit.contentY, "NLE Picture contentY");
-      return { revision: project.revision, commands: [replaceOwnedLayout(project, item, {
-        ...current,
-        contentX: edit.contentX,
-        contentY: edit.contentY,
-      })] };
-    case "layout.share": {
+      return { commands: [replaceOwnedLayout(project, item,
+        { ...current, contentX: edit.contentX, contentY: edit.contentY })] };
+    case "layout.share":
       if (edit.id.trim().length === 0 || edit.name.trim().length === 0) {
         throw new Error("NLE shared Picture Layout requires an id and name.");
       }
-      if (project.pictureLayouts.some((candidate) => candidate.id === edit.id)) {
-        throw new Error(`NLE Picture Layout ${edit.id} already exists.`);
+      if (project.sharedValues.some((candidate) => candidate.id === edit.id)) {
+        throw new Error(`NLE Shared Value ${edit.id} already exists.`);
       }
       if ("ref" in item.picture.layout) {
         throw new Error(`NLE Item ${itemId} already uses shared Picture Layout ${item.picture.layout.ref}.`);
       }
-      return { revision: project.revision, commands: [
-        { kind: "picture-layout.add", value: { id: edit.id, name: edit.name, layout: current } },
-        replaceItemLayout(item, { ref: edit.id }),
+      return { commands: [
+        {
+          kind: "shared-value.add",
+          value: {
+            id: edit.id,
+            name: edit.name,
+            declaration: { kind: "nle", slot: "picture.layout" },
+            value: current,
+          },
+        },
+        replaceLayout(item, { ref: edit.id }),
       ] };
-    }
     case "layout.link":
-      findNlePictureLayout(project, edit.ref);
-      return { revision: project.revision, commands: [replaceItemLayout(item, { ref: edit.ref })] };
+      findNlePictureLayoutSharedValue(project, edit.ref);
+      return { commands: [replaceLayout(item, { ref: edit.ref })] };
     case "layout.unlink":
       if (!("ref" in item.picture.layout)) {
         throw new Error(`NLE Item ${itemId} already owns its Picture Layout.`);
       }
-      return { revision: project.revision, commands: [replaceItemLayout(item, current)] };
+      return { commands: [replaceLayout(item, current)] };
   }
 }

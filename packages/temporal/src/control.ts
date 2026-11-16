@@ -7,7 +7,6 @@ import {
 } from "./exact.js";
 import { assertLocalTemporalDomain } from "./domain.js";
 import { assertTemporalMap, evaluateTemporalMap } from "./map.js";
-
 import type {
   ExactTemporalValue,
   LocalTemporalDomain,

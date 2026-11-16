@@ -1,0 +1,193 @@
+{
+  "id": "moving-presenter-comparison",
+  "domain": {
+    "id": "moving-presenter-program-time",
+    "duration": { "ticks": "20000", "timeBase": { "numerator": 1, "denominator": 1000 } }
+  },
+  "pictureDomain": {
+    "id": "moving-presenter-picture",
+    "region": { "x": 0, "y": 0, "width": 1920, "height": 1080 }
+  },
+  "occurrences": {
+    "presenter": {
+      "id": "presenter",
+      "source": {
+        "id": "presenter-role",
+        "implementation": {
+          "package": "@explainer/moving-presenter",
+          "symbol": "presenter"
+        },
+        "parameters": {
+          "canvas": { "width": 1920, "height": 1080, "background": "#fce5ee" },
+          "sourceSelection": {
+            "clock": "source-window-offset",
+            "outsideSources": "transparent"
+          },
+          "styleSelection": {
+            "precedence": "later-use-wins",
+            "outsideUses": "transparent"
+          },
+          "fallbackImage": "../../../hypit-moving-presenter/productions/explainer/assets/presenter-a464d354ce0d.png",
+          "sources": [
+            {
+              "id": "opening",
+              "resource": "../../../hypit-moving-presenter/productions/explainer/output/aroll/01-opening.mp4",
+              "windowMs": [0, 4096]
+            },
+            {
+              "id": "two-roads",
+              "resource": "../../../hypit-moving-presenter/productions/explainer/output/aroll/04-two-roads.mp4",
+              "windowMs": [4096, 8192]
+            },
+            {
+              "id": "water-break",
+              "resource": "../../../hypit-moving-presenter/productions/explainer/output/aroll/10-water-break.mp4",
+              "windowMs": [8192, 12288]
+            },
+            {
+              "id": "closing",
+              "resource": "../../../hypit-moving-presenter/productions/explainer/output/aroll/17-closing.mp4",
+              "windowMs": [12288, 19392]
+            }
+          ],
+          "frames": {
+            "full": { "x": 0, "y": 0, "width": 1920, "height": 1080 },
+            "upper": { "x": 0, "y": 0, "width": 1920, "height": 518.4 },
+            "inset": { "x": 1456, "y": 146, "width": 330, "height": 330 }
+          },
+          "styles": {
+            "hidden": { "kind": "hidden" },
+            "full": { "kind": "frame", "frame": "full", "objectPosition": [0.5, 0.5] },
+            "upper": { "kind": "frame", "frame": "upper", "objectPosition": [0.5, 0.3] },
+            "inset": {
+              "kind": "portrait-inset",
+              "frame": "inset",
+              "innerScale": 1.23,
+              "objectPosition": [0.5, 0.28],
+              "rim": {
+                "inner": "#231f20",
+                "innerWidthPx": 4,
+                "outer": "#fa81b8",
+                "outerWidthPx": 5,
+                "shadow": [7, 9]
+              }
+            },
+            "pullback": {
+              "kind": "pullback",
+              "frame": "full",
+              "fromScale": 1.5,
+              "toScale": 1,
+              "origin": [0.5, 0.35],
+              "easing": "quartic-out"
+            },
+            "reframe": {
+              "kind": "reframe",
+              "from": "full",
+              "to": "upper",
+              "easing": "smoothstep"
+            },
+            "portrait-transition": {
+              "kind": "portrait-transition",
+              "from": "full",
+              "to": "inset",
+              "innerScale": [1, 1.23],
+              "objectPositionY": [0.5, 0.28],
+              "rim": {
+                "inner": "#231f20",
+                "innerWidthPx": 4,
+                "outer": "#fa81b8",
+                "outerWidthPx": 5,
+                "shadow": [7, 9]
+              },
+              "easing": "smootherstep"
+            },
+            "fade": { "kind": "fade-out", "frame": "full", "easing": "smoothstep" }
+          },
+          "uses": [
+            { "id": "baseline-inset", "style": "inset", "windowMs": [4096, 20000] },
+            { "id": "opening-full", "style": "full", "windowMs": [0, 4096] },
+            { "id": "opening-pullback", "style": "pullback", "windowMs": [0, 1500] },
+            { "id": "roads-full", "style": "full", "windowMs": [4096, 8192] },
+            { "id": "roads-pullback", "style": "pullback", "windowMs": [4096, 5596] },
+            { "id": "roads-upper", "style": "upper", "windowMs": [5596, 7096] },
+            { "id": "roads-reframe", "style": "reframe", "windowMs": [5596, 6296] },
+            { "id": "roads-inset", "style": "inset", "windowMs": [7096, 8192] },
+            { "id": "water-full", "style": "full", "windowMs": [8192, 12288] },
+            { "id": "water-inset", "style": "inset", "windowMs": [10240, 12288] },
+            { "id": "water-transition", "style": "portrait-transition", "windowMs": [10240, 11040] },
+            { "id": "closing-full", "style": "full", "windowMs": [12288, 19392] },
+            { "id": "closing-pullback", "style": "pullback", "windowMs": [12288, 13788] },
+            { "id": "closing-hidden-beat", "style": "hidden", "windowMs": [15000, 16000] },
+            { "id": "closing-inset", "style": "inset", "windowMs": [16500, 18000] },
+            { "id": "closing-fade", "style": "fade", "windowMs": [18000, 19392] },
+            { "id": "after-sources", "style": "hidden", "windowMs": [19392, 20000] }
+          ]
+        },
+        "outputs": {
+          "picture": {
+            "signal": "picture",
+            "kind": "signal",
+            "domain": {
+              "id": "presenter-source-time",
+              "duration": { "ticks": "20000", "timeBase": { "numerator": 1, "denominator": 1000 } }
+            },
+            "spatialDomain": {
+              "id": "moving-presenter-picture",
+              "region": { "x": 0, "y": 0, "width": 1920, "height": 1080 }
+            }
+          }
+        }
+      },
+      "domain": {
+        "id": "presenter-occurrence-time",
+        "duration": { "ticks": "20000", "timeBase": { "numerator": 1, "denominator": 1000 } }
+      },
+      "placement": {
+        "parent": {
+          "id": "moving-presenter-program-time",
+          "duration": { "ticks": "20000", "timeBase": { "numerator": 1, "denominator": 1000 } }
+        },
+        "start": { "ticks": "0", "timeBase": { "numerator": 1, "denominator": 1 } },
+        "active": {
+          "start": { "ticks": "0", "timeBase": { "numerator": 1, "denominator": 1 } },
+          "end": { "ticks": "20", "timeBase": { "numerator": 1, "denominator": 1 } }
+        }
+      },
+      "selections": {
+        "picture": {
+          "kind": "signal",
+          "mapping": {
+            "stages": [
+              {
+                "target": {
+                  "id": "presenter-occurrence-time",
+                  "duration": { "ticks": "20", "timeBase": { "numerator": 1, "denominator": 1 } }
+                },
+                "source": {
+                  "id": "presenter-source-time",
+                  "duration": { "ticks": "20", "timeBase": { "numerator": 1, "denominator": 1 } }
+                },
+                "pieces": [
+                  {
+                    "target": {
+                      "start": { "ticks": "0", "timeBase": { "numerator": 1, "denominator": 1 } },
+                      "end": { "ticks": "20", "timeBase": { "numerator": 1, "denominator": 1 } }
+                    },
+                    "sourceAtStart": { "ticks": "0", "timeBase": { "numerator": 1, "denominator": 1 } },
+                    "rate": { "numerator": 1, "denominator": 1 }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "picture": {
+    "nodes": {
+      "presenter": { "kind": "use", "occurrence": "presenter", "output": "picture" }
+    },
+    "root": "presenter"
+  }
+}

@@ -1,14 +1,1 @@
-export * from "./domain.js";
-export * from "./exact.js";
-export * from "./sampling.js";
-export * from "./extent.js";
-export * from "./map.js";
-export * from "./control.js";
-export * from "./exact-relation.js";
-export { parseTemporalDuration } from "./literal.js";
-export * from "./relation-literal.js";
-export * from "./rate-profile.js";
-export * from "./relation.js";
-export * from "./sample.js";
-export * from "./validation.js";
-export type * from "./types.js";
+export * from "./algebra.js";

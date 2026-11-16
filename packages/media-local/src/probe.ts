@@ -1,5 +1,5 @@
 import { sealMediaInspection } from "@hypit/media";
-import type { MediaAudioStream, MediaInspection, MediaOtherStream, MediaRational, MediaStream, MediaTimestamp, MediaVideoStream, PictureObservation } from "@hypit/media";
+import type { MediaAudioStream, MediaInspection, MediaOtherStream, MediaPictureStream, MediaRational, MediaStream, MediaTimestamp, PictureObservation } from "@hypit/media";
 import { ffprobeDisplayRotation } from "./ffprobe-display.js";
 
 type JsonObject = Record<string, unknown>;
@@ -285,7 +285,7 @@ export function createMediaInspectionCollector(
       const height = positiveInteger(stream.height);
       if (width === undefined || height === undefined) throw new Error(`video stream ${index} dimensions are invalid`);
       return {
-        kind: "video",
+        kind: "picture",
         index,
         codecName,
         disposition,

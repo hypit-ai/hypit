@@ -1,0 +1,23 @@
+#studio { width: 100%; height: 100%; overflow: hidden; }
+.nle-workspace > .nle-editor { padding-top: 0; }
+.nle-titlebar small { color: var(--muted); font-size: var(--font-size-caption); }
+.nle-titlebar .icon-button { width: 28px; min-width: 28px; height: 28px; }
+.studio-error { margin: 0 0 8px; padding: 7px 12px; border-radius: 6px; color: var(--error); background: var(--error-soft); font-size: var(--font-size-caption); }
+
+/* Current Surface canvas contents; the surrounding player and transform chrome are the transplanted NLE frontend. */
+.nle-editable-preview { position: relative; flex: none; width: min(100cqw, calc(100cqh * var(--canvas-ratio))); aspect-ratio: var(--canvas-ratio); }
+.studio-canvas { position: absolute; inset: 0; overflow: hidden; background: #050506; box-shadow: 0 12px 36px #0008; }
+.studio-preview-frame { width: 100%; height: 100%; object-fit: contain; }
+.studio-canvas-layer { position: absolute; overflow: hidden; border: 1px solid #ffffff45; color: #eee; background: #ffffff08; }
+.studio-canvas-layer:hover, .studio-canvas-layer.selected { border-color: var(--pink); box-shadow: 0 0 0 1px var(--pink); }
+.studio-canvas-layer span { position: absolute; left: 4px; top: 4px; max-width: calc(100% - 8px); padding: 2px 5px; overflow: hidden; color: #eee; background: #111c; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.studio-preview-state { position: absolute; left: 8px; bottom: 6px; color: #77777d; }
+
+/* Finite Surface Inspector fields inside the transplanted property panel. */
+.nle-properties .nle-row output { color: var(--text); font-size: var(--font-size-caption); text-align: right; }
+.nle-properties .nle-row select, .nle-properties .nle-row > input { min-width: 0; width: 100%; height: 24px; padding: 0 6px; border: 1px solid transparent; border-radius: 4px; background: var(--nle-field); color: var(--text); font-size: var(--font-size-caption); }
+
+/* Host projections placed into the original library and preset DOM. */
+.studio-library-thumbnail { color: var(--muted); }
+.studio-preset { display: flex; width: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: var(--text); }
+.studio-preset small { max-width: 90%; overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }

@@ -1,5 +1,0 @@
-{
-  "format": "hypit.generation-runtime-local@1",
-  "dataRoot": ".hypit/generation/runtime/local",
-  "environment": "./hypit.environment.json"
-}

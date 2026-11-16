@@ -17,12 +17,7 @@ function assertExtent(value: NlePictureExtent, label: string): void {
   }
 }
 
-/**
- * Resolve the visible Source rectangle inside one authored Item frame.
- *
- * The returned rectangle uses the same coordinates as `layout`: `contain` may leave
- * unused frame space, `cover` may extend beyond the frame, and `fill` coincides with it.
- */
+/** Resolve the Source rectangle in one authored Item frame. */
 export function fitNlePictureContent(
   layout: NlePictureLayout,
   source: NlePictureExtent,
@@ -46,9 +41,9 @@ export function fitNlePictureContent(
   };
 }
 
-/** Create a centred Item frame that preserves the Source aspect inside the Project canvas. */
+/** Create a centred frame preserving Source aspect inside the Project canvas. */
 export function containNlePictureLayout(
-  canvas: Pick<NleCanvas, "width" | "height">,
+  canvas: NleCanvas,
   source: NlePictureExtent,
 ): NlePictureLayout {
   const content = fitNlePictureContent({

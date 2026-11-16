@@ -1,20 +1,19 @@
-import { verifyPreparedMedia } from "@hypit/media";
-import { assertBlobRef } from "@hypit/protocol";
-import { isTypeRef } from "@hypit/module";
 import {
-  assertTemporalMap,
-  compareExactTemporalValues,
-} from "@hypit/temporal/algebra";
-
+  interpretMedia,
+  resolveMedia,
+  selectMediaStreams,
+  verifyMediaInterpretation,
+} from "@hypit/media";
+import { assertTemporalMap, compareExactTemporalValues } from "@hypit/temporal/algebra";
 import type {
   MediaAssetDocument,
   MediaAssetFile,
   MediaAssetFileResolver,
+  MediaAssetInterpretationInput,
   MediaAssetReference,
-  MediaInterpretation,
   MediaRepresentationBinding,
   MediaRepresentationDeclaration,
-  ResolvedMedia,
+  MediaRepresentationType,
   ResolvedMediaAsset,
 } from "./types.js";
 
@@ -28,49 +27,33 @@ function object(value: unknown, subject: string): Record<string, unknown> {
 }
 
 function exactFields(value: Record<string, unknown>, allowed: readonly string[], subject: string): void {
-  const names = new Set(allowed);
-  for (const name of Object.keys(value)) {
-    assert(names.has(name), `${subject} contains unknown field ${name}.`);
-  }
+  const fields = new Set(allowed);
+  for (const name of Object.keys(value)) assert(fields.has(name), `${subject} contains unknown field ${name}.`);
 }
 
 function identity(value: unknown, subject: string): asserts value is string {
-  assert(typeof value === "string" && /^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(value),
-    `${subject} is invalid.`);
+  assert(typeof value === "string" && /^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(value), `${subject} is invalid.`);
 }
 
 function mediaType(value: unknown, subject: string): asserts value is string {
-  assert(typeof value === "string"
-    && /^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+$/u.test(value), `${subject} is invalid.`);
+  assert(typeof value === "string" && /^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+$/u.test(value),
+    `${subject} is invalid.`);
 }
 
 function portablePath(value: unknown, subject: string): asserts value is string {
   assert(typeof value === "string" && value.length > 0, `${subject} must be a non-empty relative path.`);
   assert(!value.includes("\\") && !value.startsWith("/") && !/^[A-Za-z]:/u.test(value),
     `${subject} must use a portable relative path.`);
-  const relative = value.startsWith("./") ? value.slice(2) : value;
-  assert(relative.length > 0, `${subject} must name a file.`);
-  assert(relative.split("/").every((part) => part.length > 0 && part !== "." && part !== ".."),
+  const normalized = value.startsWith("./") ? value.slice(2) : value;
+  assert(normalized.length > 0 && normalized.split("/").every((part) => part.length > 0 && part !== "." && part !== ".."),
     `${subject} must not contain empty, current or parent segments.`);
 }
 
-function portableReferencePath(value: unknown, subject: string): asserts value is string {
-  assert(typeof value === "string" && value.length > 0, `${subject} must be a non-empty relative path.`);
-  assert(!value.includes("\\") && !value.startsWith("/") && !/^[A-Za-z]:/u.test(value),
-    `${subject} must use a portable relative path.`);
-  const relative = value.startsWith("./") ? value.slice(2) : value;
-  const parts = relative.split("/");
-  assert(relative.length > 0 && parts.every((part) => part.length > 0 && part !== "."),
-    `${subject} must not contain empty or current segments.`);
-  const firstOwned = parts.findIndex((part) => part !== "..");
-  assert(firstOwned >= 0 && parts.slice(firstOwned).every((part) => part !== ".."),
-    `${subject} may contain parent segments only before its owned path.`);
-}
-
 export function verifyMediaAssetReference(value: unknown): asserts value is MediaAssetReference {
-  const reference = object(value, "MediaAssetReference");
-  exactFields(reference, ["path"], "MediaAssetReference");
-  portableReferencePath(reference.path, "MediaAssetReference.path");
+  const item = object(value, "MediaAssetReference");
+  exactFields(item, ["path"], "MediaAssetReference");
+  portablePath(item.path, "MediaAssetReference.path");
+  assert((item.path as string).endsWith(".media.json"), "MediaAssetReference.path must name a .media.json manifest.");
 }
 
 function verifyFile(value: unknown, subject: string): asserts value is MediaAssetFile {
@@ -80,35 +63,20 @@ function verifyFile(value: unknown, subject: string): asserts value is MediaAsse
   mediaType(item.mediaType, `${subject}.mediaType`);
 }
 
-function verifyType(value: unknown, subject: string): void {
-  assert(isTypeRef(value), `${subject} must be a TypeRef.`);
+function verifyRepresentationType(value: unknown, subject: string): asserts value is MediaRepresentationType {
   const item = object(value, subject);
-  exactFields(item, ["module", "name"], subject);
-  exactFields(object(item.module, `${subject}.module`), ["name", "version"], `${subject}.module`);
+  exactFields(item, ["package", "name"], subject);
+  assert(typeof item.package === "string" && /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/u.test(item.package),
+    `${subject}.package is invalid.`);
+  identity(item.name, `${subject}.name`);
 }
 
-function interpretationWithValidationSource(value: MediaInterpretation) {
-  return {
-    ...value,
-    source: {
-      kind: "blob" as const,
-      resource: "res_media-asset-validation" as const,
-      size: 0,
-      mediaType: "application/octet-stream",
-    },
-  };
-}
-
-function verifyBinding(
-  value: unknown,
-  interpretation: MediaInterpretation,
-  subject: string,
-): asserts value is MediaRepresentationBinding {
+function verifyBinding(value: unknown, interpretation: MediaAssetDocument["media"]["interpretation"], subject: string):
+asserts value is MediaRepresentationBinding {
   const item = object(value, subject);
   exactFields(item, ["temporal", "picture", "audio"], subject);
   assert(item.temporal !== undefined || item.picture !== undefined || item.audio !== undefined,
     `${subject} must bind at least one media domain.`);
-
   if (item.temporal !== undefined) {
     const temporal = object(item.temporal, `${subject}.temporal`);
     exactFields(temporal, ["mapToMedia"], `${subject}.temporal`);
@@ -117,34 +85,31 @@ function verifyBinding(
     const source = (temporal.mapToMedia as import("@hypit/temporal/algebra").TemporalMap).stages.at(-1)!.source;
     assert(source.id === interpretation.domain.id
       && compareExactTemporalValues(source.duration, interpretation.domain.duration) === 0,
-    `${subject}.temporal must end in media domain ${interpretation.domain.id}.`);
+    `${subject}.temporal must end in the Media Asset domain.`);
   }
-
   if (item.picture !== undefined) {
     const picture = object(item.picture, `${subject}.picture`);
     exactFields(picture, ["member", "space"], `${subject}.picture`);
-    assert(picture.member === "picture" && picture.space === "media-display-normalized",
-      `${subject}.picture is invalid.`);
-    assert(interpretation.picture !== undefined, `${subject}.picture requires a media picture member.`);
+    assert(picture.member === "picture" && picture.space === "media-display-normalized", `${subject}.picture is invalid.`);
+    assert(interpretation.picture !== undefined, `${subject}.picture requires a picture member.`);
   }
-
   if (item.audio !== undefined) {
     const audio = object(item.audio, `${subject}.audio`);
     exactFields(audio, ["member"], `${subject}.audio`);
     assert(audio.member === "audio", `${subject}.audio is invalid.`);
-    assert(interpretation.audio !== undefined, `${subject}.audio requires a media audio member.`);
+    assert(interpretation.audio !== undefined, `${subject}.audio requires an audio member.`);
   }
 }
 
 function verifyRepresentation(
   value: unknown,
-  interpretation: MediaInterpretation,
+  interpretation: MediaAssetDocument["media"]["interpretation"],
   subject: string,
 ): asserts value is MediaRepresentationDeclaration {
   const item = object(value, subject);
   exactFields(item, ["id", "type", "document", "resources", "binding"], subject);
   identity(item.id, `${subject}.id`);
-  verifyType(item.type, `${subject}.type`);
+  verifyRepresentationType(item.type, `${subject}.type`);
   verifyFile(item.document, `${subject}.document`);
   const resources = object(item.resources, `${subject}.resources`);
   for (const [name, file] of Object.entries(resources)) {
@@ -156,26 +121,19 @@ function verifyRepresentation(
 
 export function verifyMediaAssetDocument(value: unknown): asserts value is MediaAssetDocument {
   const document = object(value, "MediaAssetDocument");
-  exactFields(document, ["format", "id", "media", "representations"], "MediaAssetDocument");
-  assert(document.format === "hypit.media-asset@1", "Unsupported Media Asset document format.");
-  identity(document.id, "MediaAssetDocument.id");
-
+  exactFields(document, ["format", "media", "representations"], "MediaAssetDocument");
+  assert(document.format === "hypit.media-asset", "Unsupported Media Asset document format.");
   const media = object(document.media, "MediaAssetDocument.media");
   exactFields(media, ["file", "interpretation"], "MediaAssetDocument.media");
   verifyFile(media.file, "MediaAssetDocument.media.file");
-  const interpretation = object(media.interpretation,
-    "MediaAssetDocument.media.interpretation") as MediaInterpretation;
-  assert(!("source" in interpretation),
-    "MediaAssetDocument.media.interpretation must not contain an execution BlobRef.");
-  verifyPreparedMedia(interpretationWithValidationSource(interpretation));
-
+  verifyMediaInterpretation(media.interpretation);
   assert(Array.isArray(document.representations), "MediaAssetDocument.representations must be an array.");
-  const representationIds = new Set<string>();
+  const ids = new Set<string>();
   document.representations.forEach((representation, index) => {
-    verifyRepresentation(representation, interpretation, `MediaAssetDocument.representations[${index}]`);
-    assert(!representationIds.has(representation.id),
-      `MediaAssetDocument repeats representation ${representation.id}.`);
-    representationIds.add(representation.id);
+    verifyRepresentation(representation, media.interpretation as MediaAssetDocument["media"]["interpretation"],
+      `MediaAssetDocument.representations[${index}]`);
+    assert(!ids.has(representation.id), `MediaAssetDocument repeats Representation ${representation.id}.`);
+    ids.add(representation.id);
   });
 }
 
@@ -193,49 +151,49 @@ export function serializeMediaAssetDocument(value: MediaAssetDocument): string {
   return `${JSON.stringify(value, undefined, 2)}\n`;
 }
 
-/** Add one already accepted Representation. Analysis and candidate production stay outside Media Asset Core. */
+export function createMediaAssetDocumentFromInspection(input: MediaAssetInterpretationInput): MediaAssetDocument {
+  const selection = selectMediaStreams(input.inspection, input.selection);
+  return sealMediaAssetDocument({
+    format: "hypit.media-asset",
+    media: {
+      file: structuredClone(input.file),
+      interpretation: interpretMedia({ mediaType: input.file.mediaType, inspection: input.inspection, selection }),
+    },
+    representations: [],
+  });
+}
+
 export function attachMediaRepresentation(
   value: MediaAssetDocument,
   representation: MediaRepresentationDeclaration,
 ): MediaAssetDocument {
   const document = sealMediaAssetDocument(value);
   assert(!document.representations.some((candidate) => candidate.id === representation.id),
-    `Media Asset ${document.id} already has Representation ${representation.id}.`);
-  return sealMediaAssetDocument({
-    ...document,
-    representations: [...document.representations, structuredClone(representation)],
-  });
+    `Media Asset already has Representation ${representation.id}.`);
+  return sealMediaAssetDocument({ ...document, representations: [...document.representations, structuredClone(representation)] });
 }
 
-/** Replace the one Representation identified by its asset-local id; no version or history is retained. */
 export function replaceMediaRepresentation(
   value: MediaAssetDocument,
   id: string,
   representation: MediaRepresentationDeclaration,
 ): MediaAssetDocument {
   const document = sealMediaAssetDocument(value);
-  const index = document.representations.findIndex((candidate) => candidate.id === id);
-  assert(index >= 0, `Media Asset ${document.id} has no Representation ${id}.`);
-  assert(representation.id === id,
-    `Replacement Representation ${representation.id} must keep asset-local identity ${id}.`);
+  assert(representation.id === id, `Replacement Representation must keep local identity ${id}.`);
+  assert(document.representations.some((candidate) => candidate.id === id), `Media Asset has no Representation ${id}.`);
   return sealMediaAssetDocument({
     ...document,
-    representations: document.representations.map((candidate, candidateIndex) =>
-      candidateIndex === index ? structuredClone(representation) : candidate),
+    representations: document.representations.map((candidate) => candidate.id === id
+      ? structuredClone(representation) : candidate),
   });
 }
 
-/** Remove one Representation binding. File cleanup remains an explicit Host operation. */
-export function detachMediaRepresentation(
-  value: MediaAssetDocument,
-  id: string,
-): MediaAssetDocument {
+export function detachMediaRepresentation(value: MediaAssetDocument, id: string): MediaAssetDocument {
   const document = sealMediaAssetDocument(value);
-  const index = document.representations.findIndex((candidate) => candidate.id === id);
-  assert(index >= 0, `Media Asset ${document.id} has no Representation ${id}.`);
+  assert(document.representations.some((candidate) => candidate.id === id), `Media Asset has no Representation ${id}.`);
   return sealMediaAssetDocument({
     ...document,
-    representations: document.representations.filter((_candidate, candidateIndex) => candidateIndex !== index),
+    representations: document.representations.filter((candidate) => candidate.id !== id),
   });
 }
 
@@ -243,65 +201,38 @@ async function resolveFile(
   file: MediaAssetFile,
   resolver: MediaAssetFileResolver,
   resolution: Parameters<MediaAssetFileResolver>[1],
-): Promise<import("@hypit/protocol").BlobRef> {
-  const blob = await resolver(structuredClone(file), resolution);
-  assertBlobRef(blob, `${resolution.kind} file ${file.path}`);
-  assert(blob.mediaType === file.mediaType,
-    `${resolution.kind} file ${file.path} resolved as ${blob.mediaType}, expected ${file.mediaType}.`);
-  return structuredClone(blob);
+) {
+  const resource = await resolver(structuredClone(file), resolution);
+  assert(typeof resource.address === "string" && resource.address.length > 0, `${resolution.kind} resource address is empty.`);
+  assert(resource.mediaType === file.mediaType,
+    `${resolution.kind} file ${file.path} resolved as ${resource.mediaType}, expected ${file.mediaType}.`);
+  return structuredClone(resource);
 }
 
-/** Resolve only explicit files; representation contents stay owned by their packages. */
+export async function resolveMediaAssetMedia(value: MediaAssetDocument, resolver: MediaAssetFileResolver) {
+  const document = sealMediaAssetDocument(value);
+  const resource = await resolveFile(document.media.file, resolver, { kind: "media" });
+  return resolveMedia(resource, document.media.interpretation);
+}
+
 export async function resolveMediaAssetDocument(
   value: MediaAssetDocument,
   resolver: MediaAssetFileResolver,
 ): Promise<ResolvedMediaAsset> {
   const document = sealMediaAssetDocument(value);
-  const [source, representations] = await Promise.all([
-    resolveFile(document.media.file, resolver, { kind: "media" }),
+  const [media, representations] = await Promise.all([
+    resolveMediaAssetMedia(document, resolver),
     Promise.all(document.representations.map(async (representation) => {
       const [representationDocument, resources] = await Promise.all([
         resolveFile(representation.document, resolver, {
-          kind: "representation",
-          representation: representation.id,
-          type: representation.type,
+          kind: "representation", representation: representation.id, type: representation.type,
         }),
-        Promise.all(Object.entries(representation.resources).map(async ([name, file]) => [
-          name,
-          await resolveFile(file, resolver, {
-            kind: "representation-resource",
-            representation: representation.id,
-            type: representation.type,
-            resource: name,
-          }),
-        ] as const)),
+        Promise.all(Object.entries(representation.resources).map(async ([name, file]) => [name, await resolveFile(file, resolver, {
+          kind: "representation-resource", representation: representation.id, type: representation.type, resource: name,
+        })] as const)),
       ]);
-      return {
-        id: representation.id,
-        type: representation.type,
-        document: representationDocument,
-        resources: Object.fromEntries(resources),
-        binding: representation.binding,
-      };
+      return { ...representation, document: representationDocument, resources: Object.fromEntries(resources) };
     })),
   ]);
-  const media = { ...document.media.interpretation, source } as ResolvedMedia;
-  verifyPreparedMedia(media);
-  return {
-    id: document.id,
-    media: structuredClone(media),
-    representations: structuredClone(representations),
-  };
-}
-
-/** Resolve only the primary media file. Optional representations remain unopened. */
-export async function resolveMediaAssetMedia(
-  value: MediaAssetDocument,
-  resolver: MediaAssetFileResolver,
-): Promise<ResolvedMedia> {
-  const document = sealMediaAssetDocument(value);
-  const source = await resolveFile(document.media.file, resolver, { kind: "media" });
-  const media = { ...document.media.interpretation, source } as ResolvedMedia;
-  verifyPreparedMedia(media);
-  return structuredClone(media);
+  return structuredClone({ media, representations });
 }

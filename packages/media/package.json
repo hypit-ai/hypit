@@ -1,28 +1,21 @@
 {
   "name": "@hypit/media",
-  "version": "0.2.0",
+  "version": "0.1.0",
+  "description": "Execution-independent media inspection, selection and interpretation",
   "license": "SEE LICENSE IN LICENSE",
-  "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "hypit-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
-  "hypit": {
-    "activation": "./src/activation.ts"
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@hypit/generation-build": "workspace:*",
-    "@hypit/blob": "workspace:^0.0.0-dev",
-    "@hypit/module": "workspace:^0.0.0-dev",
-    "@hypit/producer": "workspace:^0.0.0-dev",
-    "@hypit/protocol": "workspace:^0.0.0-dev",
-    "@hypit/refinement": "workspace:^0.0.0-dev",
-    "@hypit/temporal": "workspace:^0.1.1",
-    "@hypit/temporal-graph": "workspace:^0.1.0"
-  },
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "devDependencies": {}
+    "@hypit/temporal": "workspace:^0.1.0"
+  }
 }

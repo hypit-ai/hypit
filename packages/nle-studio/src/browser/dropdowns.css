@@ -1,0 +1,173 @@
+:root {
+  --dropdown-inset: var(--control-inset);
+  --dropdown-gap: 12px;
+}
+
+.select-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dropdown-gap);
+  min-width: 0;
+  max-width: 100%;
+  height: var(--control-height);
+  padding: 0 var(--dropdown-inset);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-faint);
+  border-radius: 7px;
+  text-align: left;
+}
+.select-trigger:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--hover);
+}
+.select-trigger[data-popup-open],
+.select-trigger:focus-visible {
+  border-color: var(--pink);
+  outline: 2px solid var(--pink-soft);
+  outline-offset: 1px;
+}
+.select-trigger[data-placeholder] {
+  color: var(--muted);
+}
+.select-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dropdown-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--muted);
+  pointer-events: none;
+  transition: transform 0.16s, color 0.16s;
+}
+.dropdown-trigger[aria-expanded="true"] .dropdown-chevron,
+.suggest-trigger[aria-expanded="true"] .dropdown-chevron {
+  transform: rotate(180deg);
+  color: var(--pink);
+}
+.agent-controls-trigger.dropdown-trigger {
+  padding-inline: var(--dropdown-inset);
+  gap: var(--dropdown-gap);
+}
+.dropdown-positioner {
+  z-index: 160;
+  max-width: calc(100vw - 24px);
+  -webkit-app-region: no-drag;
+}
+.dropdown-content {
+  min-width: var(--anchor-width);
+  max-width: min(440px, var(--available-width), calc(100vw - 24px));
+  max-height: var(--available-height);
+  padding: 5px;
+  border: 1px solid var(--border-faint);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+  transform-origin: var(--transform-origin);
+  outline: none;
+  transition: opacity 0.14s, transform 0.14s;
+}
+.dropdown-content[data-starting-style],
+.dropdown-content[data-ending-style] {
+  opacity: 0;
+  transform: translateY(-3px);
+}
+.dropdown-content[data-side="top"][data-starting-style],
+.dropdown-content[data-side="top"][data-ending-style] {
+  transform: translateY(3px);
+}
+.dropdown-list,
+.dropdown-menu {
+  max-height: min(320px, calc(var(--available-height) - 12px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.dropdown-menu {
+  min-width: max(200px, var(--anchor-width));
+}
+.dropdown-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--control-height);
+  padding: 5px 34px 5px 10px;
+  border-radius: 4px;
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.12s, color 0.12s;
+}
+.dropdown-item[data-selected],
+.dropdown-item[aria-current="true"] {
+  color: var(--pink);
+}
+.dropdown-item[data-highlighted] {
+  background: var(--hover);
+}
+.dropdown-item[data-selected],
+.dropdown-item[aria-current="true"] {
+  background: var(--selected);
+}
+.dropdown-item[data-disabled] {
+  color: var(--muted);
+  opacity: 0.5;
+  cursor: default;
+}
+.dropdown-item-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dropdown-item-check {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  display: flex;
+  color: var(--pink);
+  transform: translateY(-50%);
+}
+.dropdown-item .connection-dot {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.dropdown-separator {
+  height: 1px;
+  background: var(--border);
+  margin: 5px 4px;
+}
+.dropdown-empty {
+  padding: 10px;
+  color: var(--muted);
+}
+.suggest-input {
+  position: relative;
+  min-width: 0;
+}
+.suggest-input input {
+  width: 100%;
+}
+.suggest-input:has(.suggest-trigger) input {
+  padding-right: 44px;
+}
+.suggest-trigger {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0 7px 7px 0;
+}
+.dropdown-item.danger { color: var(--error); }

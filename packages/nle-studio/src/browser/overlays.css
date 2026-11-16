@@ -1,0 +1,51 @@
+/* Popovers and dialogs. Menus and pickers grow from half size out of their trigger over 200ms;
+   dialogs grow from half size over 400ms with a springy curve while their mask fades in. */
+:root {
+  --overlay-ease: cubic-bezier(.4,0,.2,1);
+  --overlay-hover: color-mix(in srgb, var(--text) 8%, transparent);
+  --overlay-pressed: color-mix(in srgb, var(--text) 12%, transparent);
+  --overlay-shadow: 0 8px 56px #0000003d;
+  /* One row of any menu or picker list, and the space between rows. */
+  --menu-item-height: 28px;
+  --menu-item-gap: 0px;
+}
+
+.dropdown-content {
+  padding: 4px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border-faint), var(--overlay-shadow);
+  font-size: 13px;
+  line-height: 22px;
+  transform-origin: var(--transform-origin, 50% 0%);
+  transition: opacity .2s var(--overlay-ease), scale .2s var(--overlay-ease);
+}
+.dropdown-content.dropdown-list, .dropdown-content:has(> .dropdown-list) { border-radius: 16px; }
+.dropdown-content[data-starting-style],
+.dropdown-content[data-ending-style] {
+  opacity: 0;
+  transform: none;
+  scale: .5;
+}
+.dropdown-list, .dropdown-menu { display: flex; flex-direction: column; gap: var(--menu-item-gap); }
+.dropdown-item {
+  gap: 8px;
+  min-height: var(--menu-item-height);
+  padding: 3px 34px 3px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 22px;
+  transition: background-color .1s var(--overlay-ease), color .1s var(--overlay-ease);
+}
+.dropdown-item[data-highlighted] { background: var(--overlay-hover); }
+.dropdown-item:active:not([data-disabled]) { background: var(--overlay-pressed); }
+.dropdown-item[data-selected], .dropdown-item[aria-current="true"] { background: var(--overlay-hover); }
+.dropdown-item[data-disabled] { color: color-mix(in srgb, var(--text) 20%, transparent); opacity: 1; }
+.dropdown-separator { height: 1px; margin: 1.5px 12px; background: var(--border-faint); }
+.dropdown-empty { padding: 8px 12px 4px; color: var(--muted); font-size: 12px; line-height: 20px; }
+
+.modal-backdrop { background: #00000099; }
+.modal { border: 0; border-radius: 16px; box-shadow: inset 0 0 0 1px var(--border-faint), var(--overlay-shadow); }
+
+@media (prefers-reduced-motion: reduce) { .dropdown-content, .dropdown-item { transition: none; } }

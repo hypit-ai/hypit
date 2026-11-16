@@ -1,26 +1,27 @@
 {
   "name": "@hypit/audiovisual",
   "version": "0.1.0",
+  "description": "Renderer-independent audiovisual Programme semantics and exact evaluation",
   "license": "SEE LICENSE IN LICENSE",
-  "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "hypit-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./spatial": {
+      "hypit-source": "./src/spatial.ts",
+      "types": "./dist/spatial.d.ts",
+      "import": "./dist/spatial.js"
+    }
   },
-  "hypit": {
-    "activation": "./src/activation.ts"
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@hypit/generation-build": "workspace:*",
-    "@hypit/module": "workspace:^0.0.0-dev",
-    "@hypit/producer": "workspace:^0.0.0-dev",
-    "@hypit/protocol": "workspace:^0.0.0-dev",
-    "@hypit/refinement": "workspace:^0.0.0-dev",
-    "@hypit/spatial": "workspace:^0.1.1",
-    "@hypit/temporal": "workspace:^0.1.1"
-  },
-  "files": [
-    "dist",
-    "README.md"
-  ]
+    "@hypit/media": "workspace:^0.1.0",
+    "@hypit/temporal": "workspace:^0.1.0"
+  }
 }

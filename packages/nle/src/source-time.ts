@@ -15,7 +15,6 @@ import {
   type TemporalRange,
   type TemporalRate,
 } from "@hypit/temporal/algebra";
-
 import type { NleTimeMapping } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
