@@ -11,7 +11,10 @@ import type {
 
 const NAME = /^[A-Za-z_][A-Za-z0-9_.:-]*/u;
 const ALIAS = /^[a-z][a-z0-9_-]{0,63}$/u;
-const REFERENCE = /^[A-Za-z_][A-Za-z0-9_.:-]*(?:\.[A-Za-z_][A-Za-z0-9_.:-]*)*$/u;
+// Strictly segmented: `.` separates segments and can never appear inside one. An inner
+// character class that also accepts `.` lets a rejecting input partition its dots between
+// two quantified parts, which is exponential backtracking on a synchronous parse thread.
+const REFERENCE = /^[A-Za-z_][A-Za-z0-9_:-]*(?:\.[A-Za-z_][A-Za-z0-9_:-]*)*$/u;
 
 type OpeningTag = {
   readonly name: string;
