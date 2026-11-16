@@ -4,7 +4,7 @@ import { textTypes } from "@hypit/hypit/text";
 import { sealGenerationPortTable } from "@hypit/generation";
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
 import { defineExactModelModule } from "@hypit/generation/model";
-import { validateBachFrameResolution, validateBachInputs } from "./validation.js";
+import { validateBachInputs } from "./validation.js";
 
 export const bachModuleRef = { name: "@hypit/bach", version: "1" } as const;
 
@@ -19,7 +19,7 @@ export const bachPorts: GenerationPortTable = sealGenerationPortTable({
   ports: [
     { name: "prompt", value: { kind: "text", maxChars: 6_500 }, minItems: 1, maxItems: 1 },
     { name: "duration", value: { kind: "number", minimum: 5, maximum: 16 }, minItems: 0, maxItems: 1 },
-    { name: "resolution", value: { kind: "enum", values: ["1080p", "4k"] }, minItems: 0, maxItems: 1 },
+    { name: "resolution", value: { kind: "enum", values: ["1080p"] }, minItems: 0, maxItems: 1 },
     { name: "aspectRatio", value: { kind: "enum", values: ASPECT_RATIOS }, minItems: 0, maxItems: 1 },
     { name: "generateAudio", value: { kind: "boolean" }, minItems: 0, maxItems: 1 },
     { name: "seed", value: { kind: "number", integer: true, minimum: 1, maximum: 100_000 }, minItems: 0, maxItems: 1 },
@@ -30,6 +30,7 @@ export const bachPorts: GenerationPortTable = sealGenerationPortTable({
     { name: "referenceAudio", value: { kind: "media", accepts: ["audio"], itemFields: REFERENCE_FIELDS }, minItems: 0, maxItems: 3 },
   ],
   requires: [
+    { kind: "requiresPresent", port: "lastFrame", needs: ["firstFrame"] },
     { kind: "atMostOneOf", ports: ["firstFrame", "referenceImage"] },
     { kind: "atMostOneOf", ports: ["firstFrame", "referenceVideo"] },
     { kind: "atMostOneOf", ports: ["firstFrame", "referenceAudio"] },
@@ -49,9 +50,6 @@ export const bachDefinition = defineExactModelModule({
     producerName: "request-bach-1.0-pro",
     ports: bachPorts,
     validateInputs: validateBachInputs,
-    validateRequest: ({ ports }) => validateBachFrameResolution(
-      Boolean(ports.firstFrame?.length), Boolean(ports.lastFrame?.length), ports.resolution?.[0],
-    ),
   }],
 });
 
@@ -83,7 +81,7 @@ const commonAttributes: readonly SurfaceAttributeVocabulary[] = [
   { name: "id", kind: "identifier", required: true, summary: "Names the generated video Artifact." },
   { name: "prompt", kind: "reference", required: true, accepts: [textTypes.text], summary: "Selects the Text describing the video." },
   { name: "duration", kind: "literal", required: false, summary: "Sets the output duration from 5 to 16 seconds, including decimals; defaults to 5." },
-  { name: "resolution", kind: "literal", required: false, values: ["1080p", "4k"], summary: "Sets the output resolution; defaults to 1080p." },
+  { name: "resolution", kind: "literal", required: false, values: ["1080p"], summary: "Sets the output resolution; defaults to 1080p." },
   { name: "generate-audio", kind: "literal", required: false, values: ["true", "false"], summary: "Includes an audio track; defaults to true." },
   { name: "seed", kind: "literal", required: false, summary: "Sets an integer sampling seed from 1 to 100000." },
 ];
@@ -106,16 +104,16 @@ export const bachMarkupSurfaces = [
     notes: [promptNote, durationNote, "The element is empty."],
   }),
   declaration("frame-video", "FrameVideo", ["firstFrame", "lastFrame"], {
-    summary: "Generates a video from a first frame, a last frame, or both with Bach 1.0 Pro.",
+    summary: "Generates a video from a first frame and an optional last frame with Bach 1.0 Pro.",
     attributes: [
       ...commonAttributes,
       { name: "aspect-ratio", kind: "literal", required: false, summary: "Uses auto for frame-guided generation, regardless of the supplied value." },
-      { name: "first-frame", kind: "reference", required: false, accepts: [blobTypes.blob], summary: "Selects the opening image Artifact." },
+      { name: "first-frame", kind: "reference", required: true, accepts: [blobTypes.blob], summary: "Selects the opening image Artifact." },
       { name: "last-frame", kind: "reference", required: false, accepts: [blobTypes.blob], summary: "Selects the closing image Artifact." },
     ],
     ports: videoPorts,
     example: '<bach:FrameVideo id="transition" prompt={prompt} first-frame={opening.image} last-frame={ending.image}/>',
-    notes: [promptNote, durationNote, "At least one frame is required. Generation with only a last frame requires resolution `4k`; `1080p` requires a first frame. The output aspect ratio is always `auto`; any supplied `aspect-ratio` is treated as `auto`.", "Each frame must be 10 MB or smaller.", "The element is empty."],
+    notes: [promptNote, durationNote, "A first frame is required. The output aspect ratio is always `auto`. Any supplied `aspect-ratio` is treated as `auto`.", "Each frame must be 10 MB or smaller.", "The element is empty."],
   }),
   declaration("reference-video", "ReferenceVideo", ["referenceImage", "referenceVideo", "referenceAudio"], {
     summary: "Generates a video from a Text prompt and image, video or audio references with Bach 1.0 Pro.",
@@ -132,7 +130,7 @@ export const bachMarkupSurfaces = [
     }],
     ports: videoPorts,
     example: [
-      '<bach:ReferenceVideo id="scene" prompt={prompt} duration="8" resolution="4k">',
+      '<bach:ReferenceVideo id="scene" prompt={prompt} duration="8" resolution="1080p">',
       '  <bach:Reference image={subject.image}/>',
       '  <bach:Reference video={motion.video} start-time="1.5"/>',
       '  <bach:Reference audio={sound.audio}/>',

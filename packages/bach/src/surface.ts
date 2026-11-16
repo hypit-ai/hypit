@@ -7,7 +7,7 @@ import type { CanonicalValue, TypeRef } from "@hypit/hypit/protocol";
 import type { MarkupAttributeValue, StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/hypit/markup";
 import { textTypes, verifyText } from "@hypit/hypit/text";
 import { bachEndpoints } from "./index.js";
-import { validateBachFrameResolution, validateBachMedia } from "./validation.js";
+import { validateBachMedia } from "./validation.js";
 
 type Media = {
   readonly port: "referenceImage" | "referenceVideo" | "referenceAudio" | "firstFrame" | "lastFrame";
@@ -135,17 +135,13 @@ export const decodeBachTextVideoSurface: StructuredSurfaceHandler = ({ element, 
 };
 
 export const decodeBachFrameVideoSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exact(element, ["id", "prompt", "duration", "resolution", "first-frame", "last-frame", "aspect-ratio", "generate-audio", "seed"], ["id", "prompt"]);
+  exact(element, ["id", "prompt", "duration", "resolution", "first-frame", "last-frame", "aspect-ratio", "generate-audio", "seed"], ["id", "prompt", "first-frame"]);
   empty(element);
-  assert(element.attributes["first-frame"] !== undefined || element.attributes["last-frame"] !== undefined, `${element.name} requires first-frame, last-frame or both`);
   const { prompt, ports } = common(element, resolveReference);
-  validateBachFrameResolution(
-    element.attributes["first-frame"] !== undefined, element.attributes["last-frame"] !== undefined, ports.resolution?.[0],
-  );
   ports.aspectRatio = ["auto"];
-  const media: Media[] = [];
-  if (element.attributes["first-frame"] !== undefined)
-    media.push({ port: "firstFrame", role: "image", source: mediaRef(element, "first-frame", "image", resolveReference) });
+  const media: Media[] = [
+    { port: "firstFrame", role: "image", source: mediaRef(element, "first-frame", "image", resolveReference) },
+  ];
   if (element.attributes["last-frame"] !== undefined)
     media.push({ port: "lastFrame", role: "image", source: mediaRef(element, "last-frame", "image", resolveReference) });
   return output(element, prompt, ports, media);

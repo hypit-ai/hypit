@@ -42,6 +42,10 @@ function hypiHubGenerationRejection(
   pendingPorts: readonly string[] = [],
 ): string | undefined {
   if (mapping.capability.module.name === "@hypit/bach") {
+    const resolution = scalar(request, "resolution");
+    if (resolution !== undefined && resolution !== "1080p") {
+      return "HypiHub Bach requires resolution 1080p";
+    }
     try { selectWireModelForRequest(mapping, request, pendingPorts); }
     catch (error) { return error instanceof Error ? error.message : String(error); }
     return undefined;
