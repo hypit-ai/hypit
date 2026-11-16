@@ -19,6 +19,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Dispatch documentation sync
         env:
