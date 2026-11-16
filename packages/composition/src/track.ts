@@ -580,6 +580,12 @@ function assertAttributes(attributes: readonly VisualAttribute[] | undefined, la
     if (!/^(?:data-[a-z0-9-]+|aria-[a-z0-9-]+|role|title|lang|dir)$/u.test(attribute.name)) {
       throw new Error(`${label} contains unsafe attribute ${attribute.name}.`);
     }
+    // `data-hypit-*` attributes carry compiler-owned semantics (deferred resources, sampling
+    // state, element identity). Authored attributes serialize first and duplicate names keep
+    // the authored value, so an author could otherwise choose what the runtime promotes.
+    if (attribute.name.startsWith("data-hypit-")) {
+      throw new Error(`${label} contains reserved attribute ${attribute.name}.`);
+    }
     if (attribute.name === "lang" && !/^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/u.test(attribute.value)) {
       throw new Error(`${label} contains invalid lang ${attribute.value}.`);
     }
