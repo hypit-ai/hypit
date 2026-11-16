@@ -217,6 +217,12 @@ test("one same-Build resource backs a public video and a CompositeValue payload"
       repository.updatePresentation("bld_20260902T100000000Z_0000000001", { highlightedOutputs: ["missing.output"] }),
       /has no Output missing\.output/u,
     );
+    // Output names are data: names inherited from Object.prototype are not Outputs.
+    await assert.rejects(
+      repository.updatePresentation("bld_20260902T100000000Z_0000000001", { highlightedOutputs: ["constructor"] }),
+      /has no Output constructor/u,
+    );
+    assert.equal(await repository.resolve("bld_20260902T100000000Z_0000000001", "toString"), undefined);
     const cleared = await repository.updatePresentation("bld_20260902T100000000Z_0000000001", {
       outputDisplayNames: { "shot.video": null },
       title: null,
