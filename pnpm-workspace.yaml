@@ -4,3 +4,7 @@ packages:
   # Shipped examples are repository fixtures. Real authored projects always live outside this
   # tool checkout and resolve their own project-local packages through the Host's project root.
   - examples/*/packages/*
+  # Reference Providers that ship with the repository are workspace members too: they depend on
+  # workspace packages (@hypit/hypit, @hypit/generation, @hypit/runtime-local) and on npm packages,
+  # so leaving them outside the workspace made their documented activation impossible to run.
+  - contrib/*/*/packages/*
