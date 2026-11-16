@@ -30,6 +30,21 @@ test("Text Templates keep sheet closing text inside authored prompt text", () =>
   assert.equal(renderText(template, sealTextBindings({})).value, prompt);
 });
 
+test("Text Templates reject choices that belong to no choice block", () => {
+  const template = (extra: string) => textTemplateFromRecipes(parseRecipe("template.svs", `<sheet version="1">
+    text-template.demo {}
+    text-template.demo.block.camera { kind: axis; order: 0; parameter: camera; }
+    text-template.demo.choice.camera.handheld { text: "Handheld."; }
+    text-template.demo.block.intro { kind: fixed; order: 1; text: "Intro"; }
+    ${extra}
+  </sheet>`).recipes.map((recipe) => recipe.value), "demo");
+  assert.equal(renderText(template(""), sealTextBindings({ camera: "handheld" })).value, "Handheld.\n\nIntro");
+  assert.throws(() => template('text-template.demo.choice.camra.drone { text: "Drone."; }'),
+    /Unrecognized Text Template Recipe text-template\.demo\.choice\.camra\.drone/u);
+  assert.throws(() => template('text-template.demo.choice.intro.extra { text: "Unused."; }'),
+    /Unrecognized Text Template Recipe text-template\.demo\.choice\.intro\.extra/u);
+});
+
 test("text programs compose nested templates, choices, lists and transforms", () => {
   const template = sealTextTemplate({
 
