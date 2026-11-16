@@ -183,9 +183,24 @@ async function startDetached(start: ManagedProgramCommand, root: string, logFd: 
   });
 }
 
-/** A PowerShell single-quoted literal, which escapes by doubling the quote and nothing else. */
-function powershellLiteral(value: string): string {
-  return `'${value.replaceAll("'", "''")}'`;
+/**
+ * A PowerShell single-quoted literal, which escapes by doubling the quote and nothing else.
+ * Windows PowerShell accepts U+2018–U+201B as quote delimiters beside the ASCII quote, so an
+ * unescaped typographic quote would end the literal early and reopen script parsing.
+ */
+export function powershellLiteral(value: string): string {
+  return `'${value.replace(/['\u2018-\u201B]/gu, (quote) => quote + quote)}'`;
+}
+
+/**
+ * The OS copy of Windows PowerShell. Resolved through SystemRoot because a bare name lets
+ * CreateProcess search the current directory first, where a planted powershell.exe would run.
+ */
+function windowsPowerShell(): string {
+  const systemRoot = process.env.SystemRoot;
+  return systemRoot === undefined
+    ? "powershell.exe"
+    : join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
 }
 
 /**
@@ -238,7 +253,12 @@ export async function startWithOwnConsole(
 ): Promise<{ readonly pid?: number; readonly detail?: string }> {
   const errorPath = processErrorLogPath(logPath);
   const environment = Object.entries(start.env ?? {})
-    .map(([name, value]) => `$env:${name} = ${powershellLiteral(String(value))}`).join("\n");
+    .map(([name, value]) => {
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/u.test(name)) {
+        throw new Error(`Program environment name ${name} must be a portable variable name`);
+      }
+      return `$env:${name} = ${powershellLiteral(String(value))}`;
+    }).join("\n");
   const argumentList = start.args.length === 0
     ? ""
     : ` -ArgumentList ${powershellLiteral(windowsCommandLine(start.args))}`;
@@ -255,7 +275,7 @@ export async function startWithOwnConsole(
 
   const shell = await new Promise<{ readonly out: string; readonly err: string }>((settle) => {
     const encoded = Buffer.from(script, "utf16le").toString("base64");
-    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-EncodedCommand", encoded], {
+    const child = spawn(windowsPowerShell(), ["-NoProfile", "-NonInteractive", "-EncodedCommand", encoded], {
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
