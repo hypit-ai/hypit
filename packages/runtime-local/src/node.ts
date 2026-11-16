@@ -13,10 +13,17 @@ export function resolveRuntimeExecutable(root: string, value: string): string {
   return pathLike(value) && !isAbsolute(value) ? resolve(root, value) : value;
 }
 
+/** True when the last path segment has an extension: a `.` followed by at least one character. */
+export function hasExtension(value: string): boolean {
+  const segment = value.slice(Math.max(value.lastIndexOf("/"), value.lastIndexOf("\\")) + 1);
+  const dot = segment.indexOf(".");
+  return dot !== -1 && dot < segment.length - 1;
+}
+
 async function executableExists(value: string): Promise<boolean> {
   const unavailable = (error: unknown) => error instanceof Error && "code" in error
     && ["ENOENT", "ENOTDIR", "EACCES"].includes(String(error.code));
-  const extensions = process.platform === "win32" && !/\.[^\\/]+$/u.test(value)
+  const extensions = process.platform === "win32" && !hasExtension(value)
     ? (process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean)
     : [];
   const candidates = (base: string, suffixes: readonly string[]) =>

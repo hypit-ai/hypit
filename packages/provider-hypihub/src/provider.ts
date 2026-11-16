@@ -17,7 +17,7 @@ import {
 import type { WhisperXTranscriptResponse } from "@hypit/whisperx";
 import { hypiHubRouteForCapability, hypiHubRoutes } from "./routes.js";
 import type { HypiHubModelOperation } from "./routes.js";
-import { HypiHubUploader } from "./upload.js";
+import { HypiHubUploader, trimTrailingSlashes } from "./upload.js";
 import { createHypiHubAuth, hypiHubCredentialNeedsRefresh } from "./oauth.js";
 import type { HypiHubAuth } from "./oauth.js";
 import { HypiHubHttpError, HypiHubServiceError, hypiHubJobFailure } from "./errors.js";
@@ -81,7 +81,7 @@ function object(value: unknown, subject: string): Record<string, unknown> {
 }
 function capabilityKey(capability: CapabilityRef): string { return `${capability.module.name}@${capability.module.version}#${capability.name}`; }
 function apiBaseUrl(value: string): string {
-  const trimmed = value.trim().replace(/\/+$/u, "");
+  const trimmed = trimTrailingSlashes(value.trim());
   assert(trimmed.length > 0, "HypiHub base URL is empty");
   const origin = trimmed.replace(/\/(?:v1beta|v1)$/iu, "");
   return `${origin}/v1`;
