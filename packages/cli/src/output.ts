@@ -1015,6 +1015,8 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
 
 export function renderCliError(error: unknown, options: {
   readonly json: boolean;
+  /** One-line JSON for a JSONL stream. */
+  readonly compact?: boolean;
   readonly color: boolean;
   readonly unicode: boolean;
   readonly debug: boolean;
@@ -1035,7 +1037,7 @@ export function renderCliError(error: unknown, options: {
         ...(source instanceof CliUsageError ? { help: source.help } : {}),
         ...(options.debug && trace !== undefined && trace.length > 0 ? { trace } : {}),
       },
-    }, null, 2)}\n`;
+    }, null, options.compact === true ? undefined : 2)}\n`;
   }
   const colors = palette(options.color);
   const mark = options.unicode ? "×" : "x";
