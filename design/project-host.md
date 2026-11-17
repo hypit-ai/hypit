@@ -175,7 +175,7 @@ ApplicationHost                         local/deployment service lifetime
 ├─ caller connections                   Desktop · Agent · CLI · browser
 ├─ ProjectHost registry
 ├─ Product Provider and Session registry
-├─ Execution Directory
+├─ AIGC Execution Directory
 └─ ProjectHost                           one per open Project Boundary
    ├─ Project manifest Service
    ├─ Project Package Environment
@@ -184,7 +184,7 @@ ApplicationHost                         local/deployment service lifetime
    │  ├─ NLE Project Service             one per open .svml document
    │  ├─ NLE View Service                one per open View document
    │  └─ future owner Services
-   ├─ selected Executor clients
+   ├─ selected AIGC Environment clients
    ├─ Host resource gateway
    └─ Product Sessions
       ├─ NLE Product Session
@@ -210,13 +210,13 @@ state; the shared Service remains open while any lease exists.
 
 ## Lifecycle scopes
 
-The interactive backend follows four nested scopes, with execution beside them:
+The interactive backend follows four nested scopes, with recoverable AIGC execution beside them:
 
 ```text
 ApplicationHost                              local/deployment service scope
-├─ Execution Directory                       shared execution access
-│  └─ selected Execution Environment          execution deployment scope
-│     └─ Invocation                           Action lifetime
+├─ AIGC Execution Directory                  shared Capability Invocation access
+│  └─ selected Execution Environment          Provider/model deployment scope
+│     └─ Capability Invocation                recoverable execution lifetime
 └─ ProjectHost                               project scope
    ├─ ProjectMediaService                    owner collection scope
    ├─ PackageEnvironment                     project package scope
@@ -224,25 +224,25 @@ ApplicationHost                              local/deployment service scope
    └─ ProductSession                         interface session scope
 ```
 
-ApplicationHost scope owns project discovery, the ProjectHost registry, shared execution access and Product Session
+ApplicationHost scope owns project discovery, the ProjectHost registry, shared AIGC execution access and Product Session
 registration. Project scope owns one open Project Boundary and its shared project resources. Collection and document
 scopes give owner facts real open lifetimes. Interface scope owns current selection, playhead, zoom, hover, panel and
 pointer state. Caller adapters own their windows, tabs, conversations and command presentation.
 
 A Product Session leases one or more typed owner Services. Several Product Sessions and caller adapters may lease the
-same document Service. An ExecutionHost may serve several ProjectHosts, and an Invocation may continue after its
+same document Service. An AIGC ExecutionHost may serve several ProjectHosts, and a Capability Invocation may continue after its
 initiating caller, Product Session or ProjectHost has closed. Reopening a project reconnects to that Invocation through
 its durable address.
 
 ## Execution Environments
 
 Provider accounts, model queues, GPU slots, rate limits, durable Provider receipts and recovery belong to an account,
-worker or execution-deployment lifetime. The ApplicationHost exposes selected Environments through its Execution
+worker or execution-deployment lifetime. The ApplicationHost exposes selected Environments through its AIGC Execution
 Directory, and each ProjectHost receives scoped clients to them.
 
 ```text
 ApplicationHost
-├─ Execution Directory
+├─ AIGC Execution Directory
 │  ├─ cloud Environment
 │  │  ├─ Seedance Endpoint Adapter
 │  │  └─ another Provider Endpoint Adapter
@@ -414,7 +414,7 @@ The justified release graph becomes:
 ```text
 @hypit/media-asset  -> Project Media Service modules
 @hypit/project      -> Project manifest, package environment and ProjectHost
-@hypit/application  -> ProjectHost registry, Product Sessions and Execution Directory
+@hypit/application  -> ProjectHost registry, Product Sessions and AIGC Execution Directory
 @hypit/nle          -> NLE owner facts and Services
 @hypit/nle-studio   -> NLE product adapter and browser client
 @hypit/hypit        -> ApplicationHost composition and distribution defaults

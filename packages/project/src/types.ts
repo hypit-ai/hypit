@@ -35,6 +35,7 @@ export type ProjectBoundary = {
 };
 
 export type ProjectExecutorClient = {
+  /** A project-scoped client of one selected AIGC Execution Environment. */
   readonly kind: string;
   readonly client: unknown;
   close(): void | Promise<void>;

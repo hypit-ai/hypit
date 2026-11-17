@@ -1,0 +1,10 @@
+{
+  "name": "@hypit/caption-fine",
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@fontsource-variable/montserrat": "5.3.0",
+    "@hypit/html-program": "link:../../../../packages/html-program"
+  },
+  "exports": { "./hypit": "./hypit.js" }
+}

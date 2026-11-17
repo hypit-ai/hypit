@@ -2,6 +2,8 @@ import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import type {
   NleStudioAdjustMaterializeRequest,
   NleStudioComponentMaterializeRequest,
+  NleStudioDeliveryObservation,
+  NleStudioDeliveryStartRequest,
   NleStudioInspectorResponse,
   NleStudioMediaPlaceRequest,
   NleStudioSession,
@@ -56,6 +58,24 @@ export function materializeTransition(value: NleStudioTransitionMaterializeReque
 
 export function readInspector(item: string): Promise<NleStudioInspectorResponse> {
   return request("api/inspector", { item });
+}
+
+export function startDelivery(value: NleStudioDeliveryStartRequest): Promise<NleStudioDeliveryObservation> {
+  return request("api/deliveries", value);
+}
+
+export async function readDelivery(handle: string): Promise<NleStudioDeliveryObservation> {
+  const response = await fetch(`api/deliveries/${encodeURIComponent(handle)}`);
+  const value = await response.json() as NleStudioDeliveryObservation & { error?: string };
+  if (!response.ok) throw new Error(value.error ?? `NLE Studio Delivery read failed with ${response.status}.`);
+  return value;
+}
+
+export async function cancelDelivery(handle: string): Promise<NleStudioDeliveryObservation> {
+  const response = await fetch(`api/deliveries/${encodeURIComponent(handle)}`, { method: "DELETE" });
+  const value = await response.json() as NleStudioDeliveryObservation & { error?: string };
+  if (!response.ok) throw new Error(value.error ?? `NLE Studio Delivery cancellation failed with ${response.status}.`);
+  return value;
 }
 
 export function saveSession(): Promise<NleStudioSession> {

@@ -217,18 +217,148 @@ function rate(value: string, label: string): { readonly numerator: number; reado
   return { numerator: integer(match[1]!, `${label} numerator`), denominator: integer(match[2]!, `${label} denominator`) };
 }
 
+class ClosedJsonReader {
+  private offset = 0;
+
+  public constructor(
+    private readonly source: string,
+    private readonly label: string,
+  ) {}
+
+  public readObject(): Readonly<Record<string, unknown>> {
+    this.skipWhitespace();
+    const result = this.value();
+    this.skipWhitespace();
+    if (this.offset !== this.source.length) this.invalid("contains content after its JSON value");
+    if (result === null || typeof result !== "object" || Array.isArray(result)) {
+      this.invalid("must contain a JSON object", 0);
+    }
+    return result as Readonly<Record<string, unknown>>;
+  }
+
+  private invalid(message: string, offset = this.offset): never {
+    return fail(`${this.label} ${message} at character ${offset}.`);
+  }
+
+  private skipWhitespace(): void {
+    while (this.source[this.offset] === " " || this.source[this.offset] === "\t"
+      || this.source[this.offset] === "\n" || this.source[this.offset] === "\r") this.offset += 1;
+  }
+
+  private value(): unknown {
+    this.skipWhitespace();
+    const character = this.source[this.offset];
+    if (character === "{") return this.object();
+    if (character === "[") return this.array();
+    if (character === '"') return this.string();
+    if (character === "t") return this.keyword("true", true);
+    if (character === "f") return this.keyword("false", false);
+    if (character === "n") return this.keyword("null", null);
+    return this.number();
+  }
+
+  private keyword(token: string, value: boolean | null): boolean | null {
+    if (!this.source.startsWith(token, this.offset)) this.invalid(`contains invalid token`);
+    this.offset += token.length;
+    return value;
+  }
+
+  private string(): string {
+    const start = this.offset;
+    this.offset += 1;
+    for (;;) {
+      const character = this.source[this.offset];
+      if (character === undefined) this.invalid("contains an unclosed JSON string", start);
+      if (character === '"') {
+        this.offset += 1;
+        try {
+          return JSON.parse(this.source.slice(start, this.offset)) as string;
+        } catch {
+          this.invalid("contains an invalid JSON string", start);
+        }
+      }
+      if (character.charCodeAt(0) < 0x20) this.invalid("contains a control character in a JSON string");
+      this.offset += 1;
+      if (character !== "\\") continue;
+      const escape = this.source[this.offset];
+      if (escape === undefined || !'"\\/bfnrtu'.includes(escape)) this.invalid("contains an invalid JSON escape");
+      this.offset += 1;
+      if (escape !== "u") continue;
+      const digits = this.source.slice(this.offset, this.offset + 4);
+      if (!/^[0-9A-Fa-f]{4}$/u.test(digits)) this.invalid("contains an invalid JSON Unicode escape");
+      this.offset += 4;
+    }
+  }
+
+  private number(): number {
+    const match = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/u.exec(this.source.slice(this.offset));
+    if (match === null) this.invalid("expects a JSON value");
+    this.offset += match[0].length;
+    const result = Number(match[0]);
+    if (!Number.isFinite(result)) this.invalid("contains a non-finite JSON number", this.offset - match[0].length);
+    return result;
+  }
+
+  private array(): readonly unknown[] {
+    this.offset += 1;
+    const result: unknown[] = [];
+    this.skipWhitespace();
+    if (this.source[this.offset] === "]") {
+      this.offset += 1;
+      return result;
+    }
+    for (;;) {
+      result.push(this.value());
+      this.skipWhitespace();
+      if (this.source[this.offset] === "]") {
+        this.offset += 1;
+        return result;
+      }
+      if (this.source[this.offset] !== ",") this.invalid("expects a comma between JSON array values");
+      this.offset += 1;
+    }
+  }
+
+  private object(): Readonly<Record<string, unknown>> {
+    this.offset += 1;
+    const result: Record<string, unknown> = {};
+    const names = new Set<string>();
+    this.skipWhitespace();
+    if (this.source[this.offset] === "}") {
+      this.offset += 1;
+      return result;
+    }
+    for (;;) {
+      this.skipWhitespace();
+      if (this.source[this.offset] !== '"') this.invalid("expects a quoted JSON object name");
+      const nameOffset = this.offset;
+      const name = this.string();
+      if (names.has(name)) this.invalid(`repeats JSON object name ${JSON.stringify(name)}`, nameOffset);
+      names.add(name);
+      this.skipWhitespace();
+      if (this.source[this.offset] !== ":") this.invalid("expects a colon after a JSON object name");
+      this.offset += 1;
+      const member = this.value();
+      Object.defineProperty(result, name, {
+        configurable: true,
+        enumerable: true,
+        value: member,
+        writable: true,
+      });
+      this.skipWhitespace();
+      if (this.source[this.offset] === "}") {
+        this.offset += 1;
+        return result;
+      }
+      if (this.source[this.offset] !== ",") this.invalid("expects a comma between JSON object members");
+      this.offset += 1;
+    }
+  }
+}
+
 function jsonObject(value: XmlElement): Readonly<Record<string, unknown>> {
   if (value.children.length > 0) fail(`<${value.name}> accepts JSON text only.`);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value.text);
-  } catch (error) {
-    fail(`<${value.name}> contains invalid JSON: ${error instanceof Error ? error.message : String(error)}.`);
-  }
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    fail(`<${value.name}> must contain a JSON object.`);
-  }
-  return parsed as Readonly<Record<string, unknown>>;
+  return new ClosedJsonReader(value.text, `<${value.name}>`).readObject();
 }
 
 function onlyChild(value: XmlElement, name: string): XmlElement {
@@ -352,7 +482,7 @@ function readPicture(value: XmlElement): NlePictureAppearance {
       reconstruction: readReconstruction(optionalChild(value, "reconstruction")!),
     }),
     ...(value.children.some((child) => child.name === "process") ? {
-      operators: value.children.filter((child) => child.name === "process").map(readProcess),
+      processes: value.children.filter((child) => child.name === "process").map(readProcess),
     } : {}),
   };
 }
@@ -365,7 +495,7 @@ function readAudio(value: XmlElement): NleAudioAppearance {
       reconstruction: readReconstruction(optionalChild(value, "reconstruction")!),
     }),
     ...(value.children.some((child) => child.name === "process") ? {
-      operators: value.children.filter((child) => child.name === "process").map(readProcess),
+      processes: value.children.filter((child) => child.name === "process").map(readProcess),
     } : {}),
   };
 }
@@ -373,7 +503,7 @@ function readAudio(value: XmlElement): NleAudioAppearance {
 function readPresent(value: XmlElement): NlePresentItem {
   attributes(value, ["id", "source", "start", "duration", "enabled"], ["name"]);
   assertChildren(value, [
-    "source-time", "media", "component", "composition", "parameters", "shared", "media-input", "picture", "audio",
+    "source-time", "media", "component", "composition", "parameters", "value", "media-input", "picture", "audio",
   ]);
   const base = {
     id: attr(value, "id"),
@@ -395,26 +525,36 @@ function readPresent(value: XmlElement): NlePresentItem {
     return { ...base, source, asset: { path: attr(media, "path") } };
   }
   if (source === "component") {
-    assertChildren(value, ["source-time", "component", "parameters", "shared", "media-input", "picture", "audio"]);
+    assertChildren(value, ["source-time", "component", "parameters", "value", "media-input", "picture", "audio"]);
     const component = onlyChild(value, "component");
     attributes(component, ["package", "symbol"]);
     assertChildren(component, []);
-    const bindings = value.children.filter((child) => child.name === "shared").map((binding) => {
-      attributes(binding, ["slot", "ref"]);
-      assertChildren(binding, []);
-      return { slot: attr(binding, "slot"), ref: attr(binding, "ref") };
+    const bindings = value.children.filter((child) => child.name === "value").map((binding) => {
+      attributes(binding, ["slot"], ["ref"]);
+      const ref = optionalAttr(binding, "ref");
+      return ref === undefined
+        ? { slot: attr(binding, "slot"), kind: "inline" as const, value: jsonObject(binding) }
+        : (() => {
+            assertChildren(binding, []);
+            return { slot: attr(binding, "slot"), kind: "shared" as const, ref };
+          })();
     });
     const media = value.children.filter((child) => child.name === "media-input").map((input) => {
       attributes(input, ["name", "path"]);
       assertChildren(input, []);
       return [attr(input, "name"), { path: attr(input, "path") }] as const;
     });
+    const mediaNames = new Set<string>();
+    for (const [name] of media) {
+      if (mediaNames.has(name)) fail(`<present> repeats Media input ${name}.`);
+      mediaNames.add(name);
+    }
     return {
       ...base,
       source,
       component: packageSymbol(component),
       parameters: jsonObject(onlyChild(value, "parameters")),
-      ...(bindings.length === 0 ? {} : { sharedValueBindings: bindings }),
+      ...(bindings.length === 0 ? {} : { valueBindings: bindings }),
       ...(media.length === 0 ? {} : { media: Object.fromEntries(media) }),
     };
   }
@@ -636,8 +776,10 @@ function present(value: NlePresentItem, depth: number): string {
   else if (value.source === "component") {
     result += `${indent}  <component${a("package", value.component.package)}${a("symbol", value.component.symbol)} />\n`;
     result += json(value.parameters, depth + 1);
-    for (const binding of value.sharedValueBindings ?? []) {
-      result += `${indent}  <shared${a("slot", binding.slot)}${a("ref", binding.ref)} />\n`;
+    for (const binding of value.valueBindings ?? []) {
+      result += binding.kind === "shared"
+        ? `${indent}  <value${a("slot", binding.slot)}${a("ref", binding.ref)} />\n`
+        : `${indent}  <value${a("slot", binding.slot)}>${escapeText(JSON.stringify(binding.value))}</value>\n`;
     }
     for (const [name, media] of Object.entries(value.media ?? {})) {
       result += `${indent}  <media-input${a("name", name)}${a("path", media.path)} />\n`;

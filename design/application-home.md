@@ -6,7 +6,7 @@
 ## Boundary
 
 Application Home is the browser Surface of the Application Lifetime. It observes one ApplicationHost and presents its
-registered products, active ProjectHosts, Product Sessions and Execution Environments. It is the default content of an
+registered products, active ProjectHosts, Product Sessions and selected AIGC Execution Environments. It is the default content of an
 application-level tab in a browser or Desktop shell.
 
 ```text
@@ -18,7 +18,7 @@ ApplicationHost
 ├─ Product Providers
 ├─ ProjectHost registry
 ├─ Product Session registry
-└─ Execution Directory
+└─ AIGC Execution Directory
 ```
 
 Opening a product begins with an explicit Project Boundary selected by the caller. Application Home obtains a temporary

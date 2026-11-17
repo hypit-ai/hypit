@@ -6,8 +6,13 @@ AVIR does not parse TSX, NLE documents, AIGC recipes or semantic queries. TSX is
 this package receives a closed Programme projection.
 
 The package owns one live evaluation constitution. Picture implementations must support independent exact
-positions; Audio implementations consume explicit finite ranges. Output clocks, browser processes,
-encoding, caches and delivery belong to an audiovisual Executor.
+positions; Audio implementations consume explicit finite ranges. Invocation-local linking closes Picture as an
+`HtmlProgram` and Audio as an `AudioProgram`. Output clocks, browser processes, encoding, caches and delivery belong
+to terminal execution packages.
+
+An invocation can close a finite Picture range and rational frame grid into exact observations. Pure demand planning
+projects those observations through graph relations and Temporal Maps into Source-local ranges and samples. It does
+not select an execution Terminal; the complete Picture Programme closes into one terminal programme.
 
 Sources and Operators name an installed npm package plus a package-owned symbol. The project lockfile owns
 implementation versions. AVIR contains no package source text or automatic Media materialization.

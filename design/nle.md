@@ -26,6 +26,8 @@ ordinary References, Publications, Media adoption or explicit materialization.
 
 The durable NLE Project is serialized as **SVML**, an XML-like markup representation owned by NLE. The NLE Reader and
 serializer enforce the current Project schema, and AVIR lowering consumes the resulting NLE Project snapshot.
+The complete current element, attribute and closed-value contract lives beside the owner implementation in
+[`packages/nle/SVML.md`](../packages/nle/SVML.md).
 
 The initial SVML surface is deliberately small:
 
@@ -67,6 +69,17 @@ The current SVML shape includes:
 </svml>
 ```
 
+SVML has a closed structural vocabulary and open package-owned values. It fixes Composition, Track, Item, exact time,
+layout, Process and relationship structure. A Component, Operator or Reconstruction is selected by one unversioned
+npm package symbol and carries one closed JSON object owned by that package. Nested objects and arrays are allowed,
+while functions, expressions, runtime handles and non-finite values are not. NLE preserves these values, package
+contributions validate and edit them, and npm plus the project lockfile select their implementation.
+
+This boundary lets new Components, filters, transforms, caption styles and audio treatments enter without adding a
+central NLE field or SVML element. Static values, keyframes and interpolation remain inside the exact package-owned
+parameter value. NLE owns only the common temporal placement, Control mapping, ordered application and explicit
+sharing of that value.
+
 The Reader owns the exact complete schema. A Component Present may remain opaque or point at a materialized local
 Composition; either way its parent occurrence is one Item and its internal ordering is local to that Composition.
 
@@ -76,15 +89,21 @@ there is no global `z` field. A nested Composition starts a new local ordering a
 Present. The minimal syntax therefore does not need a generic stack or scope language. Lowering may build private
 evaluation structures, but those are not NLE author facts.
 
-For the first CapCut-style editing surface, ordinary Picture Present intervals on one Track are disjoint. If a
-gesture would overlap an existing Item, the editing surface plans another compatible Track or creates one. That
-planning is a projection concern, but the NLE Service is authoritative: it revalidates the complete command against
-the current Project revision and rejects invalid Picture-track overlap atomically. The one explicit exception is the
-canonical overlap named by a Transition. Audio Track intervals may overlap and mix.
+Picture Present intervals may overlap on one Track. Track Item order is their direct back-to-front paint order, so a
+group of independently timed pictures can remain one editable layer without manufacturing a Track per picture. A
+Transition gives one overlap an additional two-input audiovisual meaning; it is not permission for the overlap to
+exist. Editing surfaces may still plan another Track when that better represents the author's layer intent. Audio
+Track intervals may overlap and mix.
 
 A Present-local Process uses exact Item-local Control time. Splitting a Present slices and rebases that Control time
 with the Source relation. Processing that covers several Presents uses a timed Adjust Item on a real Track; wrapping
 the Presents in a nested Composition and applying an outer Process remains another explicit authoring choice.
+
+Picture layout is deliberately the small NLE-owned spatial substrate: every Picture occurrence needs a frame, fit and
+focal alignment before a package can process it. Post-layout translation, scale, rotation, opacity, colour treatment,
+frame decoration and animated variants are package Operators. Audio gain, fades, envelopes and similar treatments are
+Audio Operators. A product may install standard packages and present their fields as ordinary editing controls without
+giving those fields central SVML meaning.
 
 ## Project, View, Session and Projection
 
@@ -110,6 +129,45 @@ lower(project, host) == lower(project, host)
 
 There is deliberately no View argument whose value could change the Programme.
 
+## Bounded decentralized editability
+
+SVML is the narrow durable waist between author-time programs and execution-time audiovisual programs. An author
+program or package may compute initial facts, but SVML stores only the accepted Composition structure, exact time,
+explicit references and closed values. In the other direction, SVML does not attempt to spell every renderer
+operation: package Components and Operators lower their owned closed values into AVIR. Variables, expressions,
+functions and renderer graphs therefore belong on opposite sides of the Project document rather than becoming its
+syntax.
+
+Editable package behavior is decentralized by the exact unversioned `(package, symbol)` already present in the
+Project. The Project manifest and lockfile select the installed module; the Host indexes only that module's bounded
+facets for symbols it owns. That selected module is the lookup authority for editing and lowering facets. A package
+may contribute independently:
+
+- lowering and terminal behavior for the real audiovisual result;
+- finite Timeline title, factual text and artwork plus product-owned presentation tokens;
+- finite Inspector sections for Component parameters, exact inline/shared Component value slots and Operator parameters;
+- pure authoring reducers that turn semantic operations into replacement closed values;
+- a conservative declaration that ordinary NLE time-window slicing preserves one Component or Operator's meaning.
+
+These facets never grant Project authority. They cannot inject product markup, create Tracks, persist View or Session
+state, choose transaction boundaries or mutate the Project directly. The Host recreates a facet from the current
+snapshot, checks revisions and View guards, asks the owning package to reduce only its closed value, wraps the result
+in an ordinary NLE transaction and submits it to the Project Service.
+
+The three product surfaces retain different authority:
+
+| Surface | NLE-owned edit | Package-owned contribution | Never an SVML fact |
+| --- | --- | --- | --- |
+| Canvas | Picture frame, fit, focus and occurrence selection | actual rendered pixels; a future proven need may add bounded semantic handles | selection outlines, guides and preview resource addresses |
+| Inspector | occurrence, layout, source and relationship structure | Component, Shared Value, Process and Reconstruction fields plus semantic reducers | control chrome and open/closed panel state |
+| Timeline | placement, Track structure and the fixed move/trim/split vocabulary | factual labels/artwork and whether generic trim/split preserve meaning | tone, chrome, thumbnails, waveform, playhead and pointer drafts |
+
+A package does not receive an arbitrary Timeline command surface. Moving an unlocked occurrence is always NLE
+placement. Generic trim and split are exposed only when the Source and every occurrence-local Process explicitly
+declare that slicing their existing Source/Control relations preserves meaning; absence is read-only. If a later
+package needs edge-relative or otherwise rewriting behavior, that concrete behavior must establish a semantic
+operation before the time-window contract grows.
+
 ## First Project document
 
 The first document format is the SVML representation of the NLE Project. npm and the project lockfile select its
@@ -132,7 +190,7 @@ entry. A Composition owns:
 - exact Item-local Control time for Processes and Adjusts;
 - explicit Picture Transition and Matte relations between Present Items;
 - portable Media Asset document references;
-- installed component package symbols, occurrence-local closed parameters, reusable Shared Value bindings and
+- installed component package symbols, occurrence-local closed parameters, inline/shared Component value bindings and
   package-defined Media input references;
 - optional package-owned Picture and Audio reconstruction selections for exact mapped reads.
 
@@ -170,6 +228,11 @@ Media resources before resolving the component Source; runtime addresses and byt
 selects installed package code and resolves one AVIR ProgramSource with explicit Picture and Audio output names.
 Missing packages, Media inputs and outputs fail with the exact Item and requested material.
 
+Package authoring may derive a finite, potentially dynamic list of Media input roles from one Component occurrence's
+closed parameters. The Project still stores a flat explicit name-to-Media-reference map. The package validates how
+those names correspond to its internal rows or roles; NLE validates identity and portability without learning the
+package's parameter structure.
+
 ## Shared Values
 
 A Project owns one top-level registry of typed reusable Shared Values. Each value has one local id, author-facing
@@ -185,11 +248,18 @@ document paths. Only an explicit owner-defined parameter position may reference 
 that position. A referenced value can be removed only after its users are explicitly rebound, unbound or removed,
 including atomically in the same Project transaction.
 
-For a Component declaration, a Component Present explicitly binds the exact slot by id. Occurrence-local `parameters`
-and reusable slot bindings remain separate facts; NLE never merges their JSON objects or interprets package fields.
-Duplicate slots, missing references, non-Component values and cross-Component bindings are invalid. The Component
-package owns the slot's meaning, editing operation and lowering interpretation. An installed authoring contribution
-may project and edit it through its exact `(Component, slot)` pair.
+For a Component declaration, a Component Present stores each exact package slot as either an inline closed value or a
+reference to one compatible Project Shared Value. Occurrence-local `parameters` and value slots remain separate facts;
+NLE never merges their JSON objects or interprets package fields. Duplicate slots, missing references, non-Component
+values and cross-Component bindings are invalid. Inline and shared ownership use the same package projector, reducer
+and lowering meaning selected by the exact `(Component, slot)` pair.
+
+Sharing an inline Component value creates one declared Project value and replaces that occurrence's binding with a
+reference. Linking selects another compatible value. Unlinking copies the currently resolved value back inline, so
+the audiovisual result does not change merely because sharing ended. Removing a slot is a lower-level structural
+command, not the generic unlink operation; a package-specific materializer or operation must first establish that an
+absent slot is meaningful. Editing inline ownership changes one Item; editing shared ownership changes the Project
+value and guards every current user's Track.
 
 `picture.layout` is the first NLE declaration because frame, fit and focal alignment are NLE meanings. A Picture
 appearance stores either one inline layout or one reference to a compatible Shared Value. Spatial authoring can
@@ -287,10 +357,9 @@ detach-audio/replace/remove. Ripple scope is always an explicit Item set supplie
 not infer a hidden selection, Track suffix or magnetic Timeline policy. Processes have direct ordered
 add/move/replace/retime/remove commands rather than generic graph mutation. Transitions and Mattes each have direct
 add/replace/remove commands; edits that invalidate their referenced Items reject the complete transaction.
-Shared Values have one direct add/replace/remove command family. Component Items retain explicit slot-binding
-set/remove commands, while Item replacement owns the inline/reference choice produced by Picture share, link and
-unlink planning. Complete-result validation permits one atomic rebind-and-remove gesture without exposing an invalid
-state.
+Shared Values have one direct add/replace/remove command family. Component Items retain explicit value-binding
+set/remove commands, while pure Component-value, Process-parameter and Picture-layout planners own share, link and
+unlink. Complete-result validation permits one atomic rebind-and-remove gesture without exposing an invalid state.
 
 The same package exposes the pure Project transaction underneath the Service so explicit programs can
 transform a value without inventing an open lifetime. That pure function has no revision: concurrency is meaningful
@@ -308,8 +377,9 @@ one direct Picture cut into its explicit overlap and relation; no invalid interm
 Project snapshot. The planners perform no file access, package evaluation or Service mutation. A direct spatial
 planner similarly translates frame, fit and focal-alignment plus explicit
 share/link/unlink intentions into Item or Shared Value transactions; editor pointer drafts and snapping remain View
-or Host Session behavior. A Process parameter planner likewise translates explicit share, link and unlink intentions
-into ordinary Process and Shared Value commands.
+or Host Session behavior. Component-value and Process-parameter planners likewise translate explicit share, link and
+unlink intentions into ordinary binding, Item and Shared Value commands. All three unlink operations preserve the
+resolved value by copying it inline.
 
 An author-program materializer is another explicit caller of these planners. It evaluates a finite TSX author program
 at author time, assigns stable ids and emits ordinary Project transactions. It may leave a Component Present opaque or
@@ -336,11 +406,13 @@ Picture fitting first maps the Source domain into the Item-local frame; placemen
 that frame. AVIR retains the two maps as ordinary renderer-neutral relations. Audio uses the same Occurrence and
 source-time selection when a Present exposes both signals. Nested definitions are expanded and namespaced into this
 same Programme.
-Before resolving a Component Source, lowering resolves its value bindings into a separate slot-indexed map. The Host
-receives occurrence-local parameters on the Item and shared values in the lowering context; neither side is silently
-copied into or merged with the other.
+Before resolving a Component Source, lowering resolves inline and shared value bindings into one slot-indexed map of
+closed values. The Host receives occurrence-local parameters on the Item and resolved slot values in the lowering
+context; neither side is silently copied into or merged with the other, and Component execution cannot distinguish
+whether a value was inline or shared.
 
-Output sampling, browser processes, decoding, caches, encoding and delivery remain audiovisual Executor concerns.
+Terminal linking, output sampling, browser processes, decoding, caches, encoding and delivery remain outside the NLE
+owner. NLE delivery consumes one accepted snapshot and submits closed `HtmlProgram` and `AudioProgram` plans.
 
 ## Current implementation boundary
 
@@ -374,8 +446,9 @@ The implementation preserves these invariants:
 - component Media inputs resolve at the Host seam and reconstruction remains attached to the selected mapped read;
 - Project Shared Values use one typed registry and lifecycle while exact Component, Operator and NLE declarations validate every
   binding, derive cross-Composition users and retain their own lowering meaning;
-- package Component values lower separately from local parameters, while `picture.layout` preserves NLE-owned
-  geometry, explicit linking, View guards and resolved Canvas, Inspector and lowering behavior;
+- package Component values lower separately from local parameters, with symmetric inline/shared ownership, explicit
+  linking, View guards and one Inspector/lowering meaning; `picture.layout` preserves the same ownership behavior for
+  NLE-owned geometry;
 - materialization and direct spatial planners produce ordinary atomic Project transactions;
 - disposable indexes derive reverse references from canonical Project facts;
 - one Project owns a Root plus reusable acyclic Composition definitions, whose occurrences expand into one flat AVIR

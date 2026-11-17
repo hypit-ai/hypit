@@ -30,8 +30,8 @@ View from the Project's root Composition. `--port` selects the loopback listener
 for an available port. The service always binds to `127.0.0.1`.
 
 Current production behavior opens and projects Project/View state, renders the finite Timeline, Canvas and Inspector,
-accepts guarded commands, explicitly saves or reloads owner documents, imports local browser files and projects the
-shared Media catalog.
+accepts guarded commands, explicitly saves or reloads owner documents, imports local browser files, projects the
+shared Media catalog and exposes delivery Actions when an `HtmlVideoExecutor` is injected by the distribution.
 Audiovisual preview remains unavailable until a preview Executor port is supplied.
 
 Available entries in the browser Media bin can be placed at the current playhead. The client chooses a compatible
@@ -45,6 +45,18 @@ Component, Adjust and Transition offerings rather than mining already-created It
 guarded materialization request; subsequent Component and Operator parameter edits use the package's Inspector and
 authoring contributions.
 
+Inspector contributions may project stable finite collections as well as scalar fields. The Studio renders their
+rows but still sends only the projected section/field identity and scalar value; package operation functions remain
+in the backend and reduce the current closed value there. The Jensen caption package uses this for word text and
+exact unit timing, while the ranking package uses it for tier rows and entries. Shared caption style edits address
+the one Project Shared Value and therefore update all current users through one guarded transaction.
+
+For every existing Component value slot, the Inspector also projects one Host-owned ownership selector. Selecting
+“This item” copies a currently shared value inline; selecting a compatible named Project value links or rebinds the
+occurrence. Both choices use the same package projector and reducer, while the Surface retains revision and Track
+guard authority. A caller may additionally use the typed `component-value.edit` command to atomically share an inline
+value under a new Project identity. Generic unlink never removes a required slot.
+
 Under the Product Session URL, the backend exposes `POST api/media/place` for one explicit catalog-to-NLE
 materialization. It converts the session's frame coordinates into exact NLE time, calls the NLE Media planner and
 submits the resulting ordinary revisioned transaction. Media bytes are exposed only through session-owned
@@ -55,6 +67,13 @@ the route supports `GET`, `HEAD` and single byte ranges without exposing absolut
 serialized Project Media adoption Action available to CLI and native callers, and deletes the staging file. The
 accepted bytes and Media Asset manifest are copied below the project's `media/` collection. Import and NLE placement
 are independent operations.
+
+`POST api/deliveries` starts one export of the document already opened by the Product Session. `GET
+api/deliveries/:handle` observes its project-local Action and `DELETE api/deliveries/:handle` cancels it. The default
+Node distributions inject one shared local HTML Video Executor; these routes call the NLE Delivery Service directly
+and do not register FFmpeg, Chromium or the Action in the AIGC Execution Directory. The standalone server accepts
+`HYPIT_FFMPEG_PATH`, `HYPIT_FFPROBE_PATH`, `HYPIT_CHROME_PATH` and `HYPIT_ELECTRON_PATH` for explicit executable
+selection and otherwise uses the local implementations' ordinary defaults.
 
 `POST api/catalog/components/materialize` materializes one Project-selected Component offering. Timeline
 `POST api/catalog/adjusts/materialize` creates one timed effect, and

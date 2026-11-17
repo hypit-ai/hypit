@@ -1,0 +1,55 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@hypit-example/ranking-football-components':
+        specifier: workspace:*
+        version: link:packages/ranking-football-components
+      '@hypit/audio-effects':
+        specifier: workspace:*
+        version: link:packages/audio-effects
+      '@hypit/caption-fine':
+        specifier: workspace:*
+        version: link:packages/caption-fine
+      '@hypit/html-video-local':
+        specifier: link:../../packages/html-video-local
+        version: link:../../packages/html-video-local
+      '@hypit/nle-delivery':
+        specifier: link:../../packages/nle-delivery
+        version: link:../../packages/nle-delivery
+      '@hypit/picture-effects':
+        specifier: workspace:*
+        version: link:packages/picture-effects
+      '@hypit/project':
+        specifier: link:../../packages/project
+        version: link:../../packages/project
+
+  packages/audio-effects: {}
+
+  packages/caption-fine:
+    dependencies:
+      '@fontsource-variable/montserrat':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@hypit/html-program':
+        specifier: link:../../../../packages/html-program
+        version: link:../../../../packages/html-program
+
+  packages/picture-effects: {}
+
+  packages/ranking-football-components: {}
+
+packages:
+
+  '@fontsource-variable/montserrat@5.3.0':
+    resolution: {integrity: sha512-7PaZoxaxrWLAyrhO46v65An9LhUhfkTExWLhfbywYZCnZEgg/W1rEHnlNmZKjNZ3nJTVYyicqxlJt10z/26yTA==}
+
+snapshots:
+
+  '@fontsource-variable/montserrat@5.3.0': {}

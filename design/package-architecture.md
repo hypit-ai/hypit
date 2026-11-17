@@ -5,7 +5,7 @@
 
 ## Representation boundaries
 
-Hypit has four representations with distinct authorities and lifetimes.
+Hypit has five representations with distinct authorities and lifetimes.
 
 ```text
 Author Program
@@ -17,17 +17,20 @@ NLE Project
 AVIR Programme
   closed invocation-local audiovisual semantics
 
+Terminal Programs
+  resource-complete HtmlProgram and AudioProgram
+
 Executor plan
   private renderer/process/cache/encoding implementation
 ```
 
 Only the NLE Project is the durable authority for the current edit. The Author Program is source/module input to an
-explicit materialization operation. AVIR is disposable execution state. An Executor plan is private and must never
-become a Project or AVIR fact.
+explicit materialization operation. AVIR and terminal programs are disposable invocation state. An Executor plan is
+private and must never become a Project, AVIR or terminal-program fact.
 
-## Proposed release shape
+## Current release shape
 
-The first package graph should remain small:
+The package graph remains small while separating platform execution from owner semantics:
 
 ```text
 @hypit/temporal
@@ -40,10 +43,18 @@ The first package graph should remain small:
 project component packages -> @hypit/authoring
 @hypit/project    -> @hypit/media-asset
 @hypit/nle       -> @hypit/audiovisual
+@hypit/audiovisual-html -> @hypit/audiovisual + @hypit/html-program
+@hypit/audiovisual-audio -> @hypit/audiovisual + @hypit/audio-program
+@hypit/html-render-local -> @hypit/html-program
+@hypit/html-chromium-local -> @hypit/html-render-local
+@hypit/html-electron-local -> @hypit/html-render-local
+@hypit/html-video -> @hypit/html-program + @hypit/audio-program
+@hypit/html-video-local -> @hypit/html-video + local HTML/Audio execution
+@hypit/nle-delivery -> @hypit/nle + both audiovisual terminal lowerings + @hypit/html-video + @hypit/project
 @hypit/application -> @hypit/project
 @hypit/application-home -> @hypit/application
 @hypit/nle-studio -> @hypit/application + @hypit/project + @hypit/nle
-@hypit/hypit     -> @hypit/application + @hypit/application-home + selected Product Providers
+@hypit/hypit     -> Application + Home + selected Products + selected AIGC Execution Environments
 ```
 
 The arrows describe source dependencies, not authority. `@hypit/temporal` supplies exact values and mappings. Media
@@ -89,9 +100,22 @@ selection, Service revision, AVIR Programme or Executor plan.
 
 ### `@hypit/audiovisual`
 
-Owns AVIR Programme types, validation, exact point/range evaluation contracts, Source and Operator symbols,
-Picture and Audio relations, spatial maps and signal reconstruction selections. It accepts a closed NLE lowering
-result and does not parse TSX, NLE files or AIGC graphs.
+Owns AVIR Programme types, validation, exact point/range evaluation contracts, finite output-demand propagation,
+Source and Operator symbols, Picture and Audio relations, spatial maps and signal reconstruction selections. Demand
+planning projects an invocation range to graph-node and Source-local demand without selecting a Terminal. The package
+accepts a closed NLE lowering result and does not parse TSX, NLE files or AIGC graphs.
+
+### `@hypit/html-program` and `@hypit/audio-program`
+
+`@hypit/html-program` owns a portable, resource-complete HTML document with finite frame count, canvas, frame rate and
+the `prepare/applyFrame` page ABI. It does not own NLE facts, AVIR nodes, package lookup, browser processes or encoding.
+
+`@hypit/audio-program` owns the renderer-facing continuous audio graph after package implementations and Media have
+been resolved. It does not own NLE placement or AVIR package selection.
+
+`@hypit/audiovisual-html` and `@hypit/audiovisual-audio` are one-way compiler/linker boundaries. They consume closed
+AVIR plus invocation-selected package contributions and produce terminal programs. Terminal programs never become
+durable Project facts.
 
 ### Executors and product adapters
 
@@ -99,13 +123,25 @@ Preview, review and delivery executors own output clocks, decoding, browser or n
 encoding, progress, cancellation and recovery. Hosts select installed component packages and executor capabilities;
 they do not add those facts to NLE or AVIR.
 
+`@hypit/html-video` owns the platform-neutral delivery plan and Executor contract. `@hypit/html-render-local`
+owns request-local staging, HTTP serving, worker supervision, ordered frame joining and the `HtmlCaptureBackend`
+contract. `@hypit/html-chromium-local` captures frame buffers; `@hypit/html-electron-local` transfers committed shared
+GPU textures into WebCodecs. `@hypit/media-local` closes and inspects the selected local FFmpeg/FFprobe toolchain,
+executes the closed Audio graph and muxes terminal outputs.
+`@hypit/html-video-local` composes these operating-system capabilities as a local `HtmlVideoExecutor`.
+
+`@hypit/nle-delivery` is the Project-scoped orchestration seam: it resolves one accepted SVML snapshot, Project Media
+and selected package contributions, closes AVIR and both terminal programs, then runs a `HtmlVideoDeliveryPlan` on its
+injected Executor. Its Service owns Action handles, observation, cancellation and Project destination validation; it
+owns neither the document nor the exported resource.
+
 `@hypit/nle-studio` supplies the NLE Product Provider and browser artifact registered by ApplicationHost. Its product
 lifecycle and visual consumer justify a release boundary outside headless `@hypit/nle`. It composes Project and View
 Services through the NLE Editing Surface, and accepts Project Media Service and preview Executor ports without
 absorbing their facts or execution state.
 
 `@hypit/application` owns the generic ApplicationHost lifecycle, ProjectHost and Product Session registries,
-Execution Directory and Node loopback adapter. It knows Product Providers by stable product identity and opaque
+AIGC Execution Environment registry and Node loopback adapter. It knows Product Providers by stable product identity and opaque
 session interface only. Product-specific protocols and browser artifacts remain in their product packages.
 
 `@hypit/application-home` owns the application-level browser Surface and its Node static adapter. It consumes the
@@ -113,8 +149,9 @@ finite Application projection, temporarily leases a selected project while launc
 Product Session capabilities. Product Providers retain their launch-input meaning and validation.
 
 `@hypit/hypit` composes the long-lived ApplicationHost distribution. It registers ProjectHost, selected Product
-Providers, Application Home, the Execution Directory and local adapters. Its Node distribution publishes the live
-loopback endpoint used by Desktop, Agent and CLI callers. Installed Execution Environment packages retain their own
+Providers, Application Home, selected AIGC Execution Environments, specialized Executor dependencies and local adapters.
+Its Node distribution publishes the live loopback endpoint used by Desktop, Agent and CLI callers. Installed AIGC
+Execution Environment packages retain their own
 deployment and recovery boundaries.
 
 `@hypit/project` owns the Project manifest Reader, explicit installed-package activation, package contribution and
@@ -152,17 +189,17 @@ materialize an NLE-compatible author result or publish an implementation that ob
    nodes by implication.
 7. Executor-private plans, caches and process handles never enter any durable owner document.
 
-## First implementation order
+## Established vertical slice
 
-Implementation proceeds as one vertical slice:
+The Jensen ranking Project establishes the current vertical slice:
 
 1. keep the current exact temporal foundation and AVIR/NLE owner schemas;
-2. define a small authoring source module with `Timeline`, `Track`, `Present`, `TimeMap`, Present-local `Process`,
-   `Transition` and `Matte` materialization;
-3. materialize a TSX-like program into one NLE Project value with stable ids;
-4. edit and serialize that Project without re-running the author program;
-5. lower the edited snapshot to AVIR and reach one preview or delivery Executor;
-6. extract `@hypit/authoring` only when a second project component or product consumes it independently;
-7. split renderer or platform executors only when their deployment and process lifecycles justify it.
+2. accept a 99-Item SVML Project containing Media, Components, Picture and Audio Processes and Transitions;
+3. resolve 41 Project Media Assets and four selected project packages;
+4. lower the snapshot to a closed 99-Occurrence AVIR Programme;
+5. start one Project-scoped 720×1280, 24 fps Delivery Action with a local HTML Video Executor;
+6. close one `HtmlProgram` and one `AudioProgram`, then execute 1397 Picture frames and the Audio graph into
+   H.264/AAC MP4;
+7. keep the completed resource outside Project Media until a caller explicitly adopts it.
 
 The production path establishes each durable seam before it becomes an independent release boundary.

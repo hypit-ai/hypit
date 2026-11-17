@@ -1,4 +1,5 @@
 import type { NleSpatialEdit } from "../spatial-authoring.js";
+import type { NleComponentValueEdit } from "../component-value-authoring.js";
 import type { NleCommand, NleTransaction } from "../transaction.js";
 import type { NleServiceSnapshot } from "../service.js";
 import type {
@@ -75,6 +76,11 @@ export type NleEditingSurfaceCommand =
       readonly kind: "spatial.edit";
       readonly item: string;
       readonly edit: NleSpatialEdit;
+    })
+  | (ProjectAndViewRevision & {
+      readonly kind: "component-value.edit";
+      readonly item: string;
+      readonly edit: NleComponentValueEdit;
     })
   | { readonly kind: "project.undo" | "project.redo"; readonly expectedProjectRevision: number }
   | { readonly kind: "view.undo" | "view.redo"; readonly expectedViewRevision: number }

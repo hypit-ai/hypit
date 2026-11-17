@@ -1,9 +1,11 @@
 import type { PackageSymbol } from "@hypit/audiovisual";
 import { exactTemporalRational } from "@hypit/temporal/algebra";
+import { planNleComponentValueEdit } from "../component-value-authoring.js";
 import { planNleSpatialEdit } from "../spatial-authoring.js";
 import { indexNleProject } from "../indexing.js";
 import {
   findNleOperatorSharedValue,
+  findNleComponentSharedValue,
   findNlePictureLayoutSharedValue,
   resolveNleOperatorParameters,
   resolveNlePictureLayout,
@@ -13,11 +15,11 @@ import type { NleTransaction } from "../transaction.js";
 import type {
   NleAuthoringHost,
   NleComponentTemporalAuthoringContext,
-  NleComponentSharedValueAuthoringContext,
+  NleComponentValueAuthoringContext,
   NleProcessAddress,
   NleProcessAuthoringContext,
 } from "./authoring.js";
-import { createNleComponentSharedValueAuthoringContext } from "./authoring.js";
+import { createNleComponentValueAuthoringContext } from "./authoring.js";
 import { assertContributionOwner, packageSymbolKey } from "./symbol.js";
 import type {
   NleInspectorFieldDraft,
@@ -41,17 +43,17 @@ export type NleInspectorOperatorPresentation = {
   readonly project: (context: NleProcessAuthoringContext) => readonly NleInspectorSectionDraft[];
 };
 
-export type NleInspectorComponentSharedValuePresentation = {
+export type NleInspectorComponentValuePresentation = {
   readonly component: PackageSymbol;
   readonly slot: string;
-  readonly project: (context: NleComponentSharedValueAuthoringContext) => readonly NleInspectorSectionDraft[];
+  readonly project: (context: NleComponentValueAuthoringContext) => readonly NleInspectorSectionDraft[];
 };
 
 export type NleInspectorPresentationContribution = {
   readonly kind: typeof nleInspectorPresentationContributionKind;
   readonly package: string;
   readonly components: readonly NleInspectorComponentPresentation[];
-  readonly componentSharedValues: readonly NleInspectorComponentSharedValuePresentation[];
+  readonly componentValues: readonly NleInspectorComponentValuePresentation[];
   readonly operators: readonly NleInspectorOperatorPresentation[];
 };
 
@@ -114,23 +116,55 @@ function assertDraft(value: NleInspectorSectionDraft, label: string): void {
   assert(typeof value.id === "string" && value.id.length > 0, `${label}.id is invalid.`);
   assert(typeof value.label === "string" && value.label.length > 0, `${label}.label is invalid.`);
   assert(domains.has(value.domain), `${label}.domain is invalid.`);
-  assert(Array.isArray(value.fields) && value.fields.length > 0, `${label}.fields must not be empty.`);
+  assert(Array.isArray(value.fields), `${label}.fields must be an array.`);
+  assert(value.collections === undefined || Array.isArray(value.collections), `${label}.collections must be an array.`);
+  assert(value.fields.length > 0 || (value.collections?.length ?? 0) > 0,
+    `${label} must contain fields or collections.`);
   const fields = new Set<string>();
-  for (const [index, field] of value.fields.entries()) {
-    assertField(field, `${label}.fields[${index}]`);
+  const validateField = (field: NleInspectorFieldDraft, fieldLabel: string): void => {
+    assertField(field, fieldLabel);
     assert(!fields.has(field.id), `${label} repeats field ${field.id}.`);
     fields.add(field.id);
+  };
+  for (const [index, field] of value.fields.entries()) {
+    validateField(field, `${label}.fields[${index}]`);
+  }
+  const collections = new Set<string>();
+  for (const [collectionIndex, collection] of (value.collections ?? []).entries()) {
+    const collectionLabel = `${label}.collections[${collectionIndex}]`;
+    assert(collection !== null && typeof collection === "object" && !Array.isArray(collection),
+      `${collectionLabel} must be an object.`);
+    assert(typeof collection.id === "string" && collection.id.length > 0, `${collectionLabel}.id is invalid.`);
+    assert(typeof collection.label === "string" && collection.label.length > 0,
+      `${collectionLabel}.label is invalid.`);
+    assert(!collections.has(collection.id), `${label} repeats collection ${collection.id}.`);
+    collections.add(collection.id);
+    assert(Array.isArray(collection.rows), `${collectionLabel}.rows must be an array.`);
+    const rows = new Set<string>();
+    for (const [rowIndex, row] of collection.rows.entries()) {
+      const rowLabel = `${collectionLabel}.rows[${rowIndex}]`;
+      assert(row !== null && typeof row === "object" && !Array.isArray(row), `${rowLabel} must be an object.`);
+      assert(typeof row.id === "string" && row.id.length > 0, `${rowLabel}.id is invalid.`);
+      assert(row.label === undefined || typeof row.label === "string" && row.label.length > 0,
+        `${rowLabel}.label is invalid.`);
+      assert(!rows.has(row.id), `${collectionLabel} repeats row ${row.id}.`);
+      rows.add(row.id);
+      assert(Array.isArray(row.fields) && row.fields.length > 0, `${rowLabel}.fields must not be empty.`);
+      for (const [fieldIndex, field] of row.fields.entries()) {
+        validateField(field, `${rowLabel}.fields[${fieldIndex}]`);
+      }
+    }
   }
 }
 
 function assertContribution(value: NleInspectorPresentationContribution): void {
   assert(value !== null && typeof value === "object", "NLE Inspector contribution must be an object.");
-  assert(Array.isArray(value.components) && Array.isArray(value.componentSharedValues)
+  assert(Array.isArray(value.components) && Array.isArray(value.componentValues)
     && Array.isArray(value.operators),
     "NLE Inspector contribution declarations must be arrays.");
   assertContributionOwner(value.package, [
     ...value.components.map((entry) => entry.component),
-    ...value.componentSharedValues.map((entry) => entry.component),
+    ...value.componentValues.map((entry) => entry.component),
     ...value.operators.map((entry) => entry.operator),
   ], "NLE Inspector contribution");
   const keys = new Set<string>();
@@ -146,10 +180,10 @@ function assertContribution(value: NleInspectorPresentationContribution): void {
     keys.add(key);
     assert(typeof entry.project === "function", `NLE Inspector ${key} projector is not callable.`);
   }
-  for (const entry of value.componentSharedValues) {
+  for (const entry of value.componentValues) {
     assert(/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(entry.slot),
-      "NLE Inspector Component Shared Value slot is invalid.");
-    const key = `component-shared-value:${componentSharedValueKey(entry.component, entry.slot)}`;
+      "NLE Inspector Component value slot is invalid.");
+    const key = `component-value:${componentValueKey(entry.component, entry.slot)}`;
     assert(!keys.has(key), `NLE Inspector contribution repeats ${key}.`);
     keys.add(key);
     assert(typeof entry.project === "function", `NLE Inspector ${key} projector is not callable.`);
@@ -159,14 +193,14 @@ function assertContribution(value: NleInspectorPresentationContribution): void {
 export function createNleInspectorPresentationContribution(value: {
   readonly package: string;
   readonly components?: readonly NleInspectorComponentPresentation[];
-  readonly componentSharedValues?: readonly NleInspectorComponentSharedValuePresentation[];
+  readonly componentValues?: readonly NleInspectorComponentValuePresentation[];
   readonly operators?: readonly NleInspectorOperatorPresentation[];
 }): NleInspectorPresentationContribution {
   const contribution: NleInspectorPresentationContribution = {
     kind: nleInspectorPresentationContributionKind,
     package: value.package,
     components: [...(value.components ?? [])],
-    componentSharedValues: [...(value.componentSharedValues ?? [])],
+    componentValues: [...(value.componentValues ?? [])],
     operators: [...(value.operators ?? [])],
   };
   assertContribution(contribution);
@@ -221,14 +255,14 @@ type ProjectedPackageSection = {
   readonly section: NleInspectorSection;
   readonly draft: NleInspectorSectionDraft;
   readonly context: NleComponentTemporalAuthoringContext
-    | NleComponentSharedValueAuthoringContext
+    | NleComponentValueAuthoringContext
     | NleProcessAuthoringContext;
-  readonly componentSharedValue?: true;
+  readonly componentValue?: true;
   readonly address?: NleProcessAddress;
   readonly editable: boolean;
 };
 
-function componentSharedValueKey(component: PackageSymbol, slot: string): string {
+function componentValueKey(component: PackageSymbol, slot: string): string {
   return `${packageSymbolKey(component)}:${slot}`;
 }
 
@@ -286,6 +320,20 @@ function sceneSection(
       ...structuredClone(field),
       ...(operation !== undefined && editable ? { editable: true as const } : {}),
     })),
+    ...(draft.collections === undefined ? {} : {
+      collections: draft.collections.map((collection) => ({
+        id: collection.id,
+        label: collection.label,
+        rows: collection.rows.map((row) => ({
+          id: row.id,
+          ...(row.label === undefined ? {} : { label: row.label }),
+          fields: row.fields.map(({ operation, ...field }) => ({
+            ...structuredClone(field),
+            ...(operation !== undefined && editable ? { editable: true as const } : {}),
+          })),
+        })),
+      })),
+    }),
   };
 }
 
@@ -294,7 +342,7 @@ export function createNleInspectorPresentationHost(
   authoring?: NleAuthoringHost,
 ): NleInspectorPresentationHost {
   const components = new Map<string, NleInspectorComponentPresentation>();
-  const componentSharedValues = new Map<string, NleInspectorComponentSharedValuePresentation>();
+  const componentValues = new Map<string, NleInspectorComponentValuePresentation>();
   const operators = new Map<string, NleInspectorOperatorPresentation>();
   for (const contribution of contributions) {
     assertContribution(contribution);
@@ -308,11 +356,11 @@ export function createNleInspectorPresentationHost(
       assert(!operators.has(key), `NLE Inspector has multiple Operator presentations for ${key}.`);
       operators.set(key, entry);
     }
-    for (const entry of contribution.componentSharedValues) {
-      const key = componentSharedValueKey(entry.component, entry.slot);
-      assert(!componentSharedValues.has(key),
-        `NLE Inspector has multiple Component Shared Value presentations for ${key}.`);
-      componentSharedValues.set(key, entry);
+    for (const entry of contribution.componentValues) {
+      const key = componentValueKey(entry.component, entry.slot);
+      assert(!componentValues.has(key),
+        `NLE Inspector has multiple Component value presentations for ${key}.`);
+      componentValues.set(key, entry);
     }
   }
 
@@ -339,28 +387,31 @@ export function createNleInspectorPresentationHost(
           });
         }
       }
-      for (const binding of item.sharedValueBindings ?? []) {
-        const context = createNleComponentSharedValueAuthoringContext(project, binding.ref);
-        const { component, slot } = context.value.declaration;
-        const presentation = componentSharedValues.get(componentSharedValueKey(component, slot));
+      for (const binding of item.valueBindings ?? []) {
+        const context = createNleComponentValueAuthoringContext(project, item.id, binding.slot);
+        const component = item.component;
+        const presentation = componentValues.get(componentValueKey(component, binding.slot));
         if (presentation === undefined) continue;
         const allWritable = context.users.every((user) =>
           !nleViewTrackLocked(view, user.composition.id, user.track.id));
         const editable = allWritable
-          && authoring?.hasComponentSharedValueAuthoring(component, slot) === true;
+          && authoring?.hasComponentValueAuthoring(component, binding.slot) === true;
         for (const draft of presentation.project(context)) {
-          const id = `shared-value:${context.value.id}:${draft.id}`;
+          const id = `component-value:${binding.slot}:${draft.id}`;
+          const owner = context.sharedValue === undefined
+            ? { kind: "package" as const, symbol: item.component }
+            : {
+                kind: "shared-value" as const,
+                ref: context.sharedValue.id,
+                name: context.sharedValue.name,
+                declaration: context.sharedValue.declaration,
+                sharedBy: context.users.map((user) => user.item.id),
+              };
           sections.push({
-            section: sceneSection(id, draft, {
-              kind: "shared-value",
-              ref: context.value.id,
-              name: context.value.name,
-              declaration: context.value.declaration,
-              sharedBy: context.users.map((user) => user.item.id),
-            }, editable),
+            section: sceneSection(id, draft, owner, editable),
             draft,
             context,
-            componentSharedValue: true,
+            componentValue: true,
             editable,
           });
         }
@@ -471,6 +522,43 @@ export function createNleInspectorPresentationHost(
           ],
         });
       }
+      if (item.kind === "present" && item.source === "component") {
+        const compatibleValues = (slot: string) => project.sharedValues.filter((value) =>
+          value.declaration.kind === "component"
+          && value.declaration.slot === slot
+          && value.declaration.component.package === item.component.package
+          && value.declaration.component.symbol === item.component.symbol);
+        for (const binding of item.valueBindings ?? []) {
+          const shared = binding.kind === "shared" ? findNleComponentSharedValue(project, binding.ref) : undefined;
+          const users = shared === undefined ? [] : indexNleProject(project).sharedValueUsers(shared.id);
+          sections.push({
+            id: `nle-component-value-binding:${binding.slot}`,
+            label: `${binding.slot} ownership`,
+            domain: "how",
+            owner: shared === undefined ? { kind: "package", symbol: item.component } : {
+              kind: "shared-value",
+              ref: shared.id,
+              name: shared.name,
+              declaration: shared.declaration,
+              sharedBy: users.map((user) => user.item.id),
+            },
+            fields: [{
+              id: "binding",
+              label: "Value",
+              control: "select",
+              value: shared === undefined ? "inline" : `shared:${shared.id}`,
+              options: [
+                { value: "inline", label: "This item" },
+                ...compatibleValues(binding.slot).map((value) => ({
+                  value: `shared:${value.id}`,
+                  label: value.name,
+                })),
+              ],
+              ...(writable ? { editable: true as const } : {}),
+            }],
+          });
+        }
+      }
       sections.push(...packageSections(project, view, id).map((entry) => entry.section));
       return { item: id, title: displayedTitle, sections };
     },
@@ -523,19 +611,34 @@ export function createNleInspectorPresentationHost(
         }
         throw new Error(`Unknown NLE Inspector Picture field: ${fieldId}.`);
       }
+      const componentValuePrefix = "nle-component-value-binding:";
+      if (sectionId.startsWith(componentValuePrefix)) {
+        assert(item.kind === "present" && item.source === "component",
+          `NLE Item ${id} is not a Component Present.`);
+        assert(fieldId === "binding" && typeof value === "string",
+          `NLE Inspector field ${sectionId}.${fieldId} is invalid.`);
+        const slot = sectionId.slice(componentValuePrefix.length);
+        return value === "inline"
+          ? planNleComponentValueEdit(project, id, { kind: "unlink", slot })
+          : value.startsWith("shared:")
+            ? planNleComponentValueEdit(project, id, { kind: "link", slot, ref: value.slice("shared:".length) })
+            : (() => { throw new Error(`NLE Inspector Component value selection ${value} is invalid.`); })();
+      }
       const packageSection = packageSections(project, view, id)
         .find((entry) => entry.section.id === sectionId);
       assert(packageSection !== undefined, `Unknown NLE Inspector section: ${sectionId}.`);
-      const field = packageSection.draft.fields.find((candidate) => candidate.id === fieldId);
+      const field = packageSection.draft.fields.find((candidate) => candidate.id === fieldId)
+        ?? packageSection.draft.collections?.flatMap((collection) => collection.rows)
+          .flatMap((row) => row.fields).find((candidate) => candidate.id === fieldId);
       assert(field !== undefined && field.operation !== undefined,
         `NLE Inspector field ${sectionId}.${fieldId} is read-only.`);
       assert(packageSection.editable, `NLE Inspector section ${sectionId} is not editable in this View.`);
       validateEdit(field, value);
       const operation = field.operation(value);
       assert(authoring !== undefined, "NLE Inspector package authoring is not installed.");
-      if (packageSection.componentSharedValue === true) {
-        return authoring.planComponentSharedValueEdit(
-          packageSection.context as NleComponentSharedValueAuthoringContext,
+      if (packageSection.componentValue === true) {
+        return authoring.planComponentValueEdit(
+          packageSection.context as NleComponentValueAuthoringContext,
           operation,
         );
       }

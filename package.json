@@ -22,6 +22,21 @@
       "types": "./dist/audiovisual.d.ts",
       "import": "./dist/audiovisual.js"
     },
+    "./audio/program": {
+      "hypit-source": "./src/audio-program.ts",
+      "types": "./dist/audio-program.d.ts",
+      "import": "./dist/audio-program.js"
+    },
+    "./audiovisual/audio": {
+      "hypit-source": "./src/audiovisual-audio.ts",
+      "types": "./dist/audiovisual-audio.d.ts",
+      "import": "./dist/audiovisual-audio.js"
+    },
+    "./audiovisual/html": {
+      "hypit-source": "./src/audiovisual-html.ts",
+      "types": "./dist/audiovisual-html.d.ts",
+      "import": "./dist/audiovisual-html.js"
+    },
     "./application": {
       "hypit-source": "./src/application.ts",
       "types": "./dist/application.d.ts",
@@ -62,6 +77,36 @@
       "types": "./dist/media-local.d.ts",
       "import": "./dist/media-local.js"
     },
+    "./html/program": {
+      "hypit-source": "./src/html-program.ts",
+      "types": "./dist/html-program.d.ts",
+      "import": "./dist/html-program.js"
+    },
+    "./html/render/local": {
+      "hypit-source": "./src/html-render-local.ts",
+      "types": "./dist/html-render-local.d.ts",
+      "import": "./dist/html-render-local.js"
+    },
+    "./html/render/chromium": {
+      "hypit-source": "./src/html-chromium-local.ts",
+      "types": "./dist/html-chromium-local.d.ts",
+      "import": "./dist/html-chromium-local.js"
+    },
+    "./html/render/electron": {
+      "hypit-source": "./src/html-electron-local.ts",
+      "types": "./dist/html-electron-local.d.ts",
+      "import": "./dist/html-electron-local.js"
+    },
+    "./html/video": {
+      "hypit-source": "./src/html-video.ts",
+      "types": "./dist/html-video.d.ts",
+      "import": "./dist/html-video.js"
+    },
+    "./html/video/local": {
+      "hypit-source": "./src/html-video-local.ts",
+      "types": "./dist/html-video-local.d.ts",
+      "import": "./dist/html-video-local.js"
+    },
     "./nle": {
       "hypit-source": "./src/nle.ts",
       "types": "./dist/nle.d.ts",
@@ -76,6 +121,11 @@
       "hypit-source": "./src/nle-surface.ts",
       "types": "./dist/nle-surface.d.ts",
       "import": "./dist/nle-surface.js"
+    },
+    "./nle/delivery": {
+      "hypit-source": "./src/nle-delivery.ts",
+      "types": "./dist/nle-delivery.d.ts",
+      "import": "./dist/nle-delivery.js"
     },
     "./project": {
       "hypit-source": "./src/project.ts",
@@ -94,7 +144,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm --filter @hypit/temporal build && pnpm --filter @hypit/media build && pnpm --filter @hypit/media-asset build && pnpm --filter @hypit/media-local build && pnpm --filter @hypit/audiovisual build && pnpm --filter @hypit/nle build && pnpm --filter @hypit/project build && pnpm --filter @hypit/application build && pnpm --filter @hypit/application-home build && pnpm --filter @hypit/nle-studio build && pnpm run build:root",
+    "build": "pnpm --filter @hypit/temporal build && pnpm --filter @hypit/media build && pnpm --filter @hypit/media-asset build && pnpm --filter @hypit/html-program build && pnpm --filter @hypit/audio-program build && pnpm --filter @hypit/media-local build && pnpm --filter @hypit/audiovisual build && pnpm --filter @hypit/audiovisual-html build && pnpm --filter @hypit/audiovisual-audio build && pnpm --filter @hypit/nle build && pnpm --filter @hypit/html-video build && pnpm --filter @hypit/project build && pnpm --filter @hypit/application build && pnpm --filter @hypit/html-render-local build && pnpm --filter @hypit/html-chromium-local build && pnpm --filter @hypit/html-electron-local build && pnpm --filter @hypit/html-video-local build && pnpm --filter @hypit/nle-delivery build && pnpm --filter @hypit/application-home build && pnpm --filter @hypit/nle-studio build && pnpm run build:root",
     "build:root": "tsc -p tsconfig.build.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "application": "node dist/application-server.js",
@@ -102,13 +152,23 @@
     "prepack": "pnpm build"
   },
   "dependencies": {
+    "@hypit/audio-program": "workspace:^0.1.0",
     "@hypit/application": "workspace:^0.1.0",
     "@hypit/application-home": "workspace:^0.1.0",
     "@hypit/audiovisual": "workspace:^0.1.0",
+    "@hypit/audiovisual-audio": "workspace:^0.1.0",
+    "@hypit/audiovisual-html": "workspace:^0.1.0",
+    "@hypit/html-chromium-local": "workspace:^0.1.0",
+    "@hypit/html-electron-local": "workspace:^0.1.0",
+    "@hypit/html-program": "workspace:^0.1.0",
+    "@hypit/html-render-local": "workspace:^0.1.0",
+    "@hypit/html-video": "workspace:^0.1.0",
+    "@hypit/html-video-local": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.1.0",
     "@hypit/media-asset": "workspace:^0.1.0",
     "@hypit/media-local": "workspace:^0.1.0",
     "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/nle-delivery": "workspace:^0.1.0",
     "@hypit/nle-studio": "workspace:^0.1.0",
     "@hypit/project": "workspace:^0.1.0"
   },

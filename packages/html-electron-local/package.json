@@ -1,0 +1,24 @@
+{
+  "name": "@hypit/html-electron-local",
+  "version": "0.1.0",
+  "description": "Electron shared-texture execution for HtmlProgram",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    ".": {
+      "hypit-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "runtime", "README.md", "LICENSE"],
+  "scripts": { "build": "tsc -p tsconfig.build.json" },
+  "dependencies": {
+    "@hypit/html-program": "workspace:^0.1.0",
+    "@hypit/html-render-local": "workspace:^0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "electron": "45.0.0"
+  }
+}

@@ -72,7 +72,7 @@ The Surface does not own:
 - HTTP, IPC, CLI or browser resource URLs;
 - Media catalogs or package discovery.
 
-A local Host may connect persistence adapters and audiovisual Executor clients beside this Surface. Those adapters
+A local Host may connect persistence adapters and HTML video Executor clients beside this Surface. Those adapters
 call owner savepoints only after their own writes complete and retain their own conflict and Action lifecycles.
 
 ## Package and evidence

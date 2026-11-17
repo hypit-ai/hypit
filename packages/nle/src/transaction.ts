@@ -11,7 +11,7 @@ import { shiftNleTimeMapping, sliceNleTimeMapping } from "./source-time.js";
 import type {
   NleCanvas,
   NleComponentItem,
-  NleComponentSharedValueBinding,
+  NleComponentValueBinding,
   NleComposition,
   NleItem,
   NleMatte,
@@ -30,11 +30,11 @@ export type NleCommand =
   | { readonly kind: "shared-value.replace"; readonly value: NleSharedValue }
   | { readonly kind: "shared-value.remove"; readonly id: string }
   | {
-      readonly kind: "component-shared-value-binding.set";
+      readonly kind: "component-value-binding.set";
       readonly item: string;
-      readonly binding: NleComponentSharedValueBinding;
+      readonly binding: NleComponentValueBinding;
     }
-  | { readonly kind: "component-shared-value-binding.remove"; readonly item: string; readonly slot: string }
+  | { readonly kind: "component-value-binding.remove"; readonly item: string; readonly slot: string }
   | { readonly kind: "composition.add"; readonly composition: NleComposition; readonly before?: string }
   | {
       readonly kind: "composition.update";
@@ -210,13 +210,13 @@ function mutableItem(project: MutableProject, id: string): {
 }
 
 function mutableComponentItem(project: MutableProject, id: string): NleComponentItem & {
-  sharedValueBindings?: NleComponentSharedValueBinding[];
+  valueBindings?: NleComponentValueBinding[];
 } {
   const item = mutableItem(project, id).item;
   if (item.kind !== "present" || item.source !== "component") {
     throw new Error(`NLE Item ${id} is not a Component Present.`);
   }
-  return item as NleComponentItem & { sharedValueBindings?: NleComponentSharedValueBinding[] };
+  return item as NleComponentItem & { valueBindings?: NleComponentValueBinding[] };
 }
 
 function insert<T extends { readonly id: string }>(values: readonly T[], value: T, before?: string): T[] {
@@ -323,23 +323,23 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         next.sharedValues.splice(index, 1);
         break;
       }
-      case "component-shared-value-binding.set": {
+      case "component-value-binding.set": {
         const item = mutableComponentItem(next, command.item);
-        const bindings = [...(item.sharedValueBindings ?? [])];
+        const bindings = [...(item.valueBindings ?? [])];
         const index = bindings.findIndex((binding) => binding.slot === command.binding.slot);
         if (index < 0) bindings.push(structuredClone(command.binding));
         else bindings.splice(index, 1, structuredClone(command.binding));
-        item.sharedValueBindings = bindings;
+        item.valueBindings = bindings;
         break;
       }
-      case "component-shared-value-binding.remove": {
+      case "component-value-binding.remove": {
         const item = mutableComponentItem(next, command.item);
-        const bindings = [...(item.sharedValueBindings ?? [])];
+        const bindings = [...(item.valueBindings ?? [])];
         const index = bindings.findIndex((binding) => binding.slot === command.slot);
-        if (index < 0) throw new Error(`NLE Item ${command.item} has no shared-value slot ${command.slot}.`);
+        if (index < 0) throw new Error(`NLE Item ${command.item} has no Component value slot ${command.slot}.`);
         bindings.splice(index, 1);
-        if (bindings.length === 0) delete item.sharedValueBindings;
-        else item.sharedValueBindings = bindings;
+        if (bindings.length === 0) delete item.valueBindings;
+        else item.valueBindings = bindings;
         break;
       }
       case "composition.add":

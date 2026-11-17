@@ -18,7 +18,7 @@ import type { NleTransaction } from "./transaction.js";
 import type {
   NleAdjustItem,
   NleAudioAppearance,
-  NleComponentSharedValueBinding,
+  NleComponentValueBinding,
   NleComposition,
   NleMediaInterpretation,
   NleMediaReference,
@@ -113,7 +113,7 @@ export function createComponentMaterialization(project: NleProject, input: {
   readonly track: string;
   readonly component: PackageSymbol;
   readonly parameters: Readonly<Record<string, unknown>>;
-  readonly sharedValueBindings?: readonly NleComponentSharedValueBinding[];
+  readonly valueBindings?: readonly NleComponentValueBinding[];
   readonly media?: Readonly<Record<string, NleMediaReference>>;
   readonly at: ExactTemporalValue;
   readonly duration: ExactTemporalValue;
@@ -135,8 +135,8 @@ export function createComponentMaterialization(project: NleProject, input: {
       source: "component",
       component: structuredClone(input.component),
       parameters: structuredClone(input.parameters),
-      ...(input.sharedValueBindings === undefined
-        ? {} : { sharedValueBindings: structuredClone(input.sharedValueBindings) }),
+      ...(input.valueBindings === undefined
+        ? {} : { valueBindings: structuredClone(input.valueBindings) }),
       ...(input.media === undefined ? {} : { media: structuredClone(input.media) }),
       start: structuredClone(input.at),
       duration: structuredClone(input.duration),

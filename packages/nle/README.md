@@ -18,11 +18,12 @@ slot, one exact package Operator's parameters or an NLE semantic slot such as `p
 deletion rule and Inspector owner serve the registry while each declaration retains its own validation, authoring and
 lowering meaning.
 
-Component Items bind package slots by explicit reference; occurrence-local `parameters` remain separate, and
-lowering passes resolved values as a slot map instead of merging them. Picture Items keep layout inline or reference a
-compatible Shared Value. Spatial authoring supports explicit share, link and unlink; editing changes the one resource,
-while unlink copies its resolved value back inline. View-backed edits guard every linked user's Track. Shared Values
-cannot form chains, contain expressions or target arbitrary document paths.
+Component Items store package slots through the common inline/shared value binding. Occurrence-local `parameters`
+remain separate, and lowering passes resolved values as a slot map without exposing their ownership. Component-value,
+Process-parameter and Picture-layout planners support explicit share, link and unlink; unlink copies the resolved
+value back inline. Editing inline ownership changes one occurrence, while editing shared ownership guards every linked
+user's Track and changes the one Project value. Shared Values cannot form chains, contain expressions or target
+arbitrary document paths.
 
 Processes use the same rule for package Operator parameters. A Process stores either one inline closed value or one
 reference to a Shared Value declared for its exact Operator symbol. The process-authoring planner performs explicit
@@ -54,11 +55,13 @@ process the signal accumulated below their Track position. Both retain exact Con
 inline or shared parameters, and lower to native AVIR Operator applications; package UI metadata and executor plans
 are not persisted.
 
-Picture Transitions and Mattes are explicit multi-Item Project relations. Transitions evaluate canonical overlap
+Picture Items may overlap directly and paint in their persistent Track order. Picture Transitions and Mattes are
+explicit multi-Item Project relations. Transitions evaluate canonical overlap
 chains; Mattes form acyclic dependencies whose source Items are sampled but not independently painted. Both lower to
 native multi-input AVIR Operators.
 
 The persistent root is `<svml>`. npm and the project lockfile select package implementation versions.
+The complete current element, attribute, closed-JSON and validation contract is documented in [SVML](SVML.md).
 
 ## View subpath
 
@@ -80,9 +83,22 @@ the View combines those declarations with Track locks and relation safety before
 Presentation remains separate: package Timeline contributions can provide finite text and Host-backed artwork, while
 Inspector contributions provide finite fields whose process-local operation projectors are stripped from the Scene.
 Only a separately installed authoring contribution can turn such an operation into an ordinary Project transaction.
-Component packages may independently contribute authoring and Inspector presentation for an exact shared-value slot.
-The Inspector reports the Project resource and all current users; an edit through one View requires every affected
-Track to be writable and replaces the one shared Project value.
+Component packages may independently contribute authoring and Inspector presentation for an exact value slot. The
+same contribution edits occurrence-inline and Project-shared ownership. The Inspector reports a shared resource and
+all current users only for shared ownership; an edit through one View then requires every affected Track to be
+writable and replaces the one Project value. `planNleComponentValueEdit` performs symmetric share, link and unlink;
+unlink copies the resolved value inline so output does not change.
+
+This is bounded decentralized editability rather than package-owned UI. The Project's `(package, symbol)` resolves
+facets only from explicitly selected installed packages. Timeline facets provide finite factual presentation and a
+conservative time-window declaration; Inspector facets provide finite controls whose operation functions never cross
+the transport boundary. An authoring reducer replaces only its owned closed value, after which the Host submits an
+ordinary guarded Project transaction. Packages cannot inject markup, invent Track commands or persist View/Session
+state.
+
+Inspector sections may also contain finite collections. Rows retain stable package-owned identities, while their
+finite fields reuse the same backend-projected operation and guarded transaction path as scalar fields. The browser
+never addresses a closed value by array index or arbitrary JSON path.
 
 `projectNleCanvas` exposes active-Composition Item frames and fitted Source rectangles without inspecting package
 render trees. Spatial handles follow View locks and a product affordance policy. Inspector and Canvas scenes remain

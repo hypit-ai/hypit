@@ -1,4 +1,5 @@
 import { planNleSpatialEdit } from "../spatial-authoring.js";
+import { planNleComponentValueEdit } from "../component-value-authoring.js";
 import { type NleProjectService } from "../service.js";
 import {
   allNleCanvasAffordances,
@@ -270,6 +271,19 @@ export class NleEditingSurface {
         const capabilities = resolveNleSpatialItemCapabilities(project, view);
         assertNleSpatialEditAllowed(capabilities, command.item, command.edit);
         const transaction = planNleSpatialEdit(project, command.item, command.edit);
+        assertNleViewAllowsProjectTransaction(view, project, transaction);
+        this.#projectService.transact({
+          expectedRevision: command.expectedProjectRevision,
+          commands: transaction.commands,
+        });
+        return this.#receipt({ project: true, view: false },
+          ["timeline", "canvas", "inspector", "programme"]);
+      }
+      case "component-value.edit": {
+        this.#requireRevisions(command.expectedProjectRevision, command.expectedViewRevision);
+        const project = this.#projectService.snapshot().project;
+        const view = this.#viewService.snapshot().view;
+        const transaction = planNleComponentValueEdit(project, command.item, command.edit);
         assertNleViewAllowsProjectTransaction(view, project, transaction);
         this.#projectService.transact({
           expectedRevision: command.expectedProjectRevision,

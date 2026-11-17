@@ -214,6 +214,27 @@ export type NleInspectorFieldDraft = Omit<NleInspectorField, "editable"> & {
   readonly operation?: (value: string | number | boolean) => unknown;
 };
 
+export type NleInspectorCollectionRow = {
+  /** Stable package-owned row identity, not an array index or document path. */
+  readonly id: string;
+  readonly label?: string;
+  readonly fields: readonly NleInspectorField[];
+};
+
+export type NleInspectorCollection = {
+  readonly id: string;
+  readonly label: string;
+  readonly rows: readonly NleInspectorCollectionRow[];
+};
+
+export type NleInspectorCollectionRowDraft = Omit<NleInspectorCollectionRow, "fields"> & {
+  readonly fields: readonly NleInspectorFieldDraft[];
+};
+
+export type NleInspectorCollectionDraft = Omit<NleInspectorCollection, "rows"> & {
+  readonly rows: readonly NleInspectorCollectionRowDraft[];
+};
+
 export type NleInspectorSection = {
   readonly id: string;
   readonly label: string;
@@ -230,10 +251,12 @@ export type NleInspectorSection = {
       }
     | { readonly kind: "host" };
   readonly fields: readonly NleInspectorField[];
+  readonly collections?: readonly NleInspectorCollection[];
 };
 
-export type NleInspectorSectionDraft = Omit<NleInspectorSection, "owner" | "fields"> & {
+export type NleInspectorSectionDraft = Omit<NleInspectorSection, "owner" | "fields" | "collections"> & {
   readonly fields: readonly NleInspectorFieldDraft[];
+  readonly collections?: readonly NleInspectorCollectionDraft[];
 };
 
 export type NleInspectorScene = {

@@ -16,6 +16,7 @@ import {
   type NleCanvas,
   type NleComponentItem,
   type NleComponentSharedValue,
+  type NleComponentValueBinding,
   type NleComposition,
   type NleItem,
   type NleProcess,
@@ -288,7 +289,7 @@ function assertItem(value: unknown, track: NleTrack, ids: Set<string>): asserts 
     onlyKeys(value, value.source === "media"
       ? [...present, "asset"]
       : value.source === "component"
-        ? [...present, "component", "sharedValueBindings", "parameters", "media"]
+        ? [...present, "component", "valueBindings", "parameters", "media"]
         : [...present, "composition"], label);
   }
   identity(value.id, `${label}.id`);
@@ -331,15 +332,26 @@ function assertItem(value: unknown, track: NleTrack, ids: Set<string>): asserts 
       implementation: value.component as NleComponentItem["component"],
       parameters: value.parameters,
     }, label);
-    if (value.sharedValueBindings !== undefined) {
-      assert(Array.isArray(value.sharedValueBindings), `${label}.sharedValueBindings must be an array.`);
+    if (value.valueBindings !== undefined) {
+      assert(Array.isArray(value.valueBindings), `${label}.valueBindings must be an array.`);
       const slots = new Set<string>();
-      for (const binding of value.sharedValueBindings) {
-        record(binding, `${label}.sharedValueBindings entry`);
-        onlyKeys(binding, ["slot", "ref"], `${label}.sharedValueBindings entry`);
-        identity(binding.slot, `${label}.sharedValueBindings slot`);
-        identity(binding.ref, `${label}.sharedValueBindings ${binding.slot}.ref`);
-        assert(!slots.has(binding.slot), `${label} repeats shared-value slot ${binding.slot}.`);
+      for (const binding of value.valueBindings) {
+        record(binding, `${label}.valueBindings entry`);
+        identity(binding.slot, `${label}.valueBindings slot`);
+        assert(binding.kind === "inline" || binding.kind === "shared",
+          `${label}.valueBindings ${binding.slot}.kind is invalid.`);
+        if (binding.kind === "inline") {
+          onlyKeys(binding, ["slot", "kind", "value"], `${label}.valueBindings entry`);
+          record(binding.value, `${label}.valueBindings ${binding.slot}.value`);
+          assertImplementationBinding({
+            implementation: value.component as NleComponentItem["component"],
+            parameters: binding.value,
+          }, `${label}.valueBindings ${binding.slot}`);
+        } else {
+          onlyKeys(binding, ["slot", "kind", "ref"], `${label}.valueBindings entry`);
+          identity(binding.ref, `${label}.valueBindings ${binding.slot}.ref`);
+        }
+        assert(!slots.has(binding.slot), `${label} repeats value slot ${binding.slot}.`);
         slots.add(binding.slot);
       }
     }
@@ -435,24 +447,6 @@ function assertRelations(composition: NleComposition, itemIds: Set<string>): voi
     assert(compareExactTemporalValues(nleItemEnd(beforeOutgoing), afterIncoming.start) <= 0,
       `NLE Transition chain leaves Item ${item} with overlapping transition ranges.`);
   }
-  for (const track of composition.tracks) {
-    if (track.kind !== "picture") continue;
-    const presents = track.items.filter((item): item is Extract<NleItem, { readonly kind: "present" }> =>
-      item.kind === "present" && item.enabled);
-    for (const [index, left] of presents.entries()) {
-      for (const right of presents.slice(index + 1)) {
-        const overlaps = compareExactTemporalValues(left.start, nleItemEnd(right)) < 0
-          && compareExactTemporalValues(right.start, nleItemEnd(left)) < 0;
-        if (!overlaps) continue;
-        const explicitTransition = composition.transitions.some((relation) =>
-          relation.outgoing === left.id && relation.incoming === right.id
-          || relation.outgoing === right.id && relation.incoming === left.id);
-        assert(explicitTransition,
-          `NLE Picture Track ${track.id} has overlapping Present Items ${left.id} and ${right.id} without a Transition.`);
-      }
-    }
-  }
-
   const matteByContent = new Map<string, string>();
   const matteSources = new Set<string>();
   for (const value of composition.mattes) {
@@ -538,7 +532,8 @@ export function assertNleProject(value: unknown): asserts value is NleProject {
     for (const track of composition.tracks) {
       for (const item of track.items) {
         if (item.kind !== "present" || item.source !== "component") continue;
-        for (const binding of item.sharedValueBindings ?? []) {
+        for (const binding of item.valueBindings ?? []) {
+          if (binding.kind === "inline") continue;
           const sharedValue = sharedValues.get(binding.ref);
           assert(sharedValue !== undefined,
             `NLE Item ${item.id} slot ${binding.slot} references missing Shared Value ${binding.ref}.`);
@@ -698,6 +693,21 @@ export function findNleComponentSharedValue(value: NleProject, id: string): NleC
   const sharedValue = findNleSharedValue(value, id);
   assert(sharedValue.declaration.kind === "component", `NLE Shared Value ${id} is not a Component value.`);
   return sharedValue as NleComponentSharedValue;
+}
+
+export function resolveNleComponentValue(
+  project: NleProject,
+  component: NleComponentItem["component"],
+  binding: NleComponentValueBinding,
+): Readonly<Record<string, unknown>> {
+  if (binding.kind === "inline") return structuredClone(binding.value);
+  const sharedValue = findNleComponentSharedValue(project, binding.ref);
+  assert(sharedValue.declaration.slot === binding.slot,
+    `NLE Component slot ${binding.slot} references Shared Value ${binding.ref} for slot ${sharedValue.declaration.slot}.`);
+  assert(sharedValue.declaration.component.package === component.package
+    && sharedValue.declaration.component.symbol === component.symbol,
+  `NLE Shared Value ${binding.ref} belongs to another Component.`);
+  return structuredClone(sharedValue.value);
 }
 
 export function findNlePictureLayoutSharedValue(value: NleProject, id: string): NlePictureLayoutSharedValue {

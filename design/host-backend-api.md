@@ -14,7 +14,7 @@ Desktop · Agent · CLI · browser                  caller lifetimes
 ApplicationHost                                  local/deployment service lifetime
 ├─ ProjectHost registry
 ├─ Product provider and Product Session registry
-├─ Execution Directory
+├─ AIGC Execution Directory
 │  ├─ local Execution Environment                in-process deployment
 │  └─ ExecutionHost client                       worker or remote deployment
 │     └─ selected Environment
@@ -46,14 +46,14 @@ A runtime service lives at the narrowest Host scope shared by every caller that 
 | Runtime identity | Unique key | Lifetime owner |
 | --- | --- | --- |
 | Application backend | local user or deployment endpoint | ApplicationHost |
-| Execution Directory | ApplicationHost instance | ApplicationHost |
+| AIGC Execution Directory | ApplicationHost instance | ApplicationHost |
 | Project runtime | canonical Project Boundary | ProjectHost registry |
 | Project Media collection | ProjectHost | ProjectHost |
 | open owner document | owner kind and project-relative path | ProjectHost document registry |
 | product Surface | Product Session handle | ApplicationHost session registry |
 | Invocation | Environment and Invocation address | selected Execution Environment |
 
-The Execution Directory is one shared registry per ApplicationHost. It may expose several local and remote Execution
+The AIGC Execution Directory is one shared registry per ApplicationHost. It may expose several local and remote Provider/model Execution
 Environments. ProjectHosts receive scoped clients to those Environments, so shared execution capacity stays above the
 project boundary while Invocation recovery and Publication resources stay with their selected Environment.
 
@@ -318,11 +318,15 @@ available Tracks, creates required Tracks, preserves multi-selection offsets and
 receipt returns the committed destinations, revisions and invalidated projections. The frontend owns the drag ghost
 and continuous pointer feedback, not the final allocation algorithm.
 
-## Execution Directory and Actions
+## Specialized Actions and the AIGC Execution Directory
 
-Preview, delivery, generation and Media-derived views are not synchronous owner commands. ApplicationHost exposes
-selected Execution Environments through an Execution Directory. Starting one operation returns an Action handle that
-can be observed after the initiating caller or Product Session disconnects.
+A Product or owner Service projects the Action handle of the specialized Executor it calls. Local audiovisual and
+media Executors use ordinary operating-system processes, files and structured concurrency and arrive as explicit
+Service or Product dependencies from the application distribution.
+
+The ApplicationHost Execution Directory exposes selected AIGC Provider/model Execution Environments and
+project-scoped Capability Invocation clients. A recoverable Invocation address remains observable after its initiating
+caller or Product Session disconnects.
 
 The first product-facing Action kinds are:
 
@@ -337,34 +341,35 @@ type ProductActionRequest =
   | NleExportRequest;
 ```
 
-Every Action publishes:
+Every specialized Action publishes through its owning Service or Executor:
 
-- an opaque handle and producing Environment;
+- an opaque owner-local handle;
 - queued, running, completed, failed or cancelled state;
 - finite progress and a direct diagnostic;
 - cancellation when the selected Executor supports it;
 - completed typed resources or a delivery result;
-- a lifetime independent from the caller connection that started it.
+- the lifetime promised by that Action owner.
 
 Thumbnail, storyboard and waveform caches are rebuildable Executor results. Preview and export consume the same
 closed NLE-to-AVIR meaning, while their clocks, buffering, encoding and process state remain Executor-private.
 
-The Execution Directory is application-scoped, while each selected Environment owns its own credentials, capacity,
-Invocation journal, Provider receipts and Publication resources. ApplicationHost routes and projects those authorities;
-ProjectHost receives scoped clients. A completed Publication enters Project Media or another owner only through an
-explicit Adoption or Materialization Action.
+The AIGC Execution Directory is application-scoped, while each selected Environment owns its own credentials,
+Provider/model capacity, Invocation journal, Provider receipts and Publication resources. ApplicationHost routes and
+projects those authorities; ProjectHost receives scoped Capability Invocation clients. A completed Publication enters
+Project Media or another owner only through an explicit Adoption or Materialization Action.
 
 Execution results have explicit ownership transitions:
 
 ```text
-Action / Invocation state              selected Execution Environment
-completed typed output                 Publication in that Environment
+Capability Invocation state            selected AIGC Execution Environment
+completed recoverable typed output     Publication in that Environment
 accepted audiovisual asset             Project Media Service after Adoption
 placed audiovisual occurrence          NLE Project after Materialization
 ```
 
-The ApplicationHost keeps these addresses reachable across caller connections. The selected Environment preserves
-recoverable execution state and Publication resources; the target owner preserves material accepted into the project.
+The selected AIGC Environment keeps Invocation addresses reachable across caller connections and preserves recoverable
+state plus Publication resources. Other Action owners preserve only the lifecycle they explicitly promise; the target
+owner preserves material accepted into the project.
 
 ## Observation, receipts and events
 
@@ -386,7 +391,7 @@ event delivery authoritative. A client that misses an event reads the current fi
 
 Event scopes are:
 
-- ApplicationHost: caller leases, project, Product Session and Execution Directory lifecycle;
+- ApplicationHost: caller leases, project, Product Session and AIGC Execution Directory lifecycle;
 - ProjectHost: Media Catalog generation, package observation and open-service inventory;
 - Product Session: owner revision changes and projection invalidation;
 - Action: state and progress.
@@ -422,6 +427,9 @@ uses the selected local transport.
 
 ## Capability audit
 
+逐项产品能力、Owner 边界和实现状态见
+[NLE 后端能力审计](nle-backend-capability-audit.md)。本节只保留跨 Owner 的结论和闭合顺序。
+
 ### Established foundations
 
 The current implementation already provides:
@@ -432,7 +440,7 @@ The current implementation already provides:
 - an application loopback adapter for project leases, Product Session launch and session-path routing;
 - an Application Home capability route and browser artifact for product launch and active-session projection;
 - permission-restricted local endpoint publication and live Application instance validation;
-- an application Execution Directory that opens project-scoped clients from selected Environments;
+- an application AIGC Execution Directory that opens project-scoped clients from selected Provider/model Environments;
 - Project Boundary manifest and package activation;
 - one ProjectHost with shared Media, package, document and resource services;
 - local Media inspection, atomic adoption, Catalog refresh and byte-range resource access;
@@ -450,7 +458,7 @@ The next backend capabilities are:
 2. compact command receipts and finite invalidation-driven observations;
 3. server-side Timeline drop, insertion, gap, clipboard and nested-Composition planners;
 4. Media thumbnail, storyboard, waveform and audio-preview Actions;
-5. audiovisual frame/playback preview and export Actions;
+5. audiovisual frame/playback preview Actions and unified observation of the existing export Action;
 6. application-routed Project observations and project resource capabilities.
 
 The planner and receipt work closes application-to-project-to-product editing. The Actions close the audiovisual
@@ -479,7 +487,7 @@ The backend continues along one production path in this order:
 2. make receipts and observation invalidation the normal mutation result;
 3. move final Timeline drop allocation into one NLE Studio planner;
 4. add remaining planners supported by current NLE facts;
-5. connect Media-derived views, preview and export through selected Executors;
+5. connect Media-derived views and preview through selected Executors, and project the existing export lifecycle through the same Action observation shape;
 6. extend owner facts before exposing animation, audio-envelope and caption-source operations.
 
 At that point a frontend can concentrate on layout, pointer feedback, accessibility and interaction feel. It consumes

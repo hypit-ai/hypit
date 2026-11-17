@@ -1,0 +1,22 @@
+{
+  "name": "@hypit/audiovisual-html",
+  "version": "0.1.0",
+  "description": "One-way AVIR Picture lowering to HtmlProgram",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    ".": {
+      "hypit-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": { "build": "tsc -p tsconfig.build.json" },
+  "dependencies": {
+    "@hypit/audiovisual": "workspace:^0.1.0",
+    "@hypit/html-program": "workspace:^0.1.0",
+    "@hypit/media": "workspace:^0.1.0",
+    "@hypit/temporal": "workspace:^0.1.0"
+  }
+}

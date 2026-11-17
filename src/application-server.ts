@@ -25,7 +25,13 @@ function cliOptions(argv: readonly string[]): CliOptions {
 }
 
 const options = cliOptions(process.argv.slice(2));
-const server = openNodeHypitApplicationServer({ port: options.port });
+const localHtmlVideo = {
+  ...(process.env.HYPIT_FFMPEG_PATH?.trim() ? { ffmpegPath: process.env.HYPIT_FFMPEG_PATH.trim() } : {}),
+  ...(process.env.HYPIT_FFPROBE_PATH?.trim() ? { ffprobePath: process.env.HYPIT_FFPROBE_PATH.trim() } : {}),
+  ...(process.env.HYPIT_CHROME_PATH?.trim() ? { chromePath: process.env.HYPIT_CHROME_PATH.trim() } : {}),
+  ...(process.env.HYPIT_ELECTRON_PATH?.trim() ? { electronPath: process.env.HYPIT_ELECTRON_PATH.trim() } : {}),
+};
+const server = openNodeHypitApplicationServer({ port: options.port, localHtmlVideo });
 const address = await server.listen();
 const endpoint = await publishNodeHypitApplicationEndpoint(address).catch(async (error: unknown) => {
   await server.close();

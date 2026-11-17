@@ -27,7 +27,7 @@ export const hypitPackage = {
       kind: "hypit.nle-authoring",
       package: packageName,
       components: [],
-      componentSharedValues: [],
+      componentValues: [],
       operators: [{ operator: colour, timeWindow: () => true, editParameters: editColour }],
     },
   }, {
@@ -50,7 +50,7 @@ export const hypitPackage = {
       kind: "hypit.nle-inspector-presentation",
       package: packageName,
       components: [],
-      componentSharedValues: [],
+      componentValues: [],
       operators: [{
         operator: colour,
         project: ({ parameters }) => [{

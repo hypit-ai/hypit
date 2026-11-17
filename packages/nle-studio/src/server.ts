@@ -6,11 +6,12 @@ import {
   openNodeApplicationServer,
 } from "@hypit/application/node";
 import {
+  createNleStudioProductProvider,
   nleStudioProduct,
-  nleStudioProductProvider,
   type NleStudioProductSession,
 } from "./host.js";
 import { nleStudioNodeProductAdapter } from "./node-adapter.js";
+import { createLocalHtmlVideoExecutor } from "@hypit/html-video-local";
 
 type CliOptions = {
   readonly root: string;
@@ -44,9 +45,18 @@ function cliOptions(argv: readonly string[]): CliOptions {
 }
 
 const options = cliOptions(process.argv.slice(2));
+const mediaTools = {
+  ...(process.env.HYPIT_FFMPEG_PATH?.trim() ? { ffmpegPath: process.env.HYPIT_FFMPEG_PATH.trim() } : {}),
+  ...(process.env.HYPIT_FFPROBE_PATH?.trim() ? { ffprobePath: process.env.HYPIT_FFPROBE_PATH.trim() } : {}),
+  ...(process.env.HYPIT_CHROME_PATH?.trim() ? { chromePath: process.env.HYPIT_CHROME_PATH.trim() } : {}),
+  ...(process.env.HYPIT_ELECTRON_PATH?.trim() ? { electronPath: process.env.HYPIT_ELECTRON_PATH.trim() } : {}),
+};
 const application = openApplicationHost({
   projects: createNodeApplicationProjectProvider(),
-  products: [nleStudioProductProvider],
+  products: [createNleStudioProductProvider({
+    deliveryExecutor: createLocalHtmlVideoExecutor(mediaTools),
+    mediaTools,
+  })],
 });
 const server = openNodeApplicationServer({
   application,

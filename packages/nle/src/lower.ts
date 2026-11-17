@@ -38,10 +38,10 @@ import {
 import { fitNlePictureContent } from "./picture.js";
 import {
   assertNleProject,
-  findNleComponentSharedValue,
   findNleComposition,
   nleCompositionDuration,
   resolveNleOperatorParameters,
+  resolveNleComponentValue,
   resolveNlePictureLayout,
   rootNleComposition,
 } from "./project.js";
@@ -168,9 +168,9 @@ function resolveItem(
     input,
     host.resolveMedia(asset, { ...context, kind: "component-input", item, input }),
   ]));
-  const values = Object.fromEntries((item.sharedValueBindings ?? []).map((binding) => [
+  const values = Object.fromEntries((item.valueBindings ?? []).map((binding) => [
     binding.slot,
-    structuredClone(findNleComponentSharedValue(project, binding.ref)),
+    resolveNleComponentValue(project, item.component, binding),
   ]));
   const resolved = host.resolveComponent(item, { ...context, item, media, values });
   validateResolvedSource(resolved, item);

@@ -1,0 +1,19 @@
+{
+  "name": "@hypit/html-video-local",
+  "version": "0.1.0",
+  "description": "Operating-system implementation of HtmlVideoExecutor",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": { ".": { "hypit-source": "./src/index.ts", "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": { "build": "tsc -p tsconfig.build.json" },
+  "dependencies": {
+    "@hypit/html-chromium-local": "workspace:^0.1.0",
+    "@hypit/html-electron-local": "workspace:^0.1.0",
+    "@hypit/html-render-local": "workspace:^0.1.0",
+    "@hypit/html-video": "workspace:^0.1.0",
+    "@hypit/media": "workspace:^0.1.0",
+    "@hypit/media-local": "workspace:^0.1.0"
+  },
+  "devDependencies": { "@types/node": "24.10.1" }
+}

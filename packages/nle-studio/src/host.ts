@@ -1,11 +1,19 @@
 import { dirname, posix, relative, resolve, sep } from "node:path";
 import type { ApplicationProductProvider } from "@hypit/application";
+import type { HtmlVideoExecutor } from "@hypit/html-video";
 import type { NodeProjectMediaService } from "@hypit/media-asset/service/node";
 import { defaultMediaSelection } from "@hypit/media";
 import {
   inspectMediaFileFromContainerIndex,
   mediaTypeFromFile,
+  type LocalMediaToolchainOptions,
 } from "@hypit/media-local";
+import {
+  openNleDeliveryService,
+  type NleDeliveryActionHandle,
+  type NleDeliveryActionObservation,
+  type NleDeliveryService,
+} from "@hypit/nle-delivery";
 import {
   createAdjustMaterialization,
   createComponentMaterialization,
@@ -41,6 +49,7 @@ import {
 import type {
   NleStudioAdjustMaterializeRequest,
   NleStudioComponentMaterializeRequest,
+  NleStudioDeliveryStartRequest,
   NleStudioInspectorResponse,
   NleStudioMediaProjection,
   NleStudioMediaPlaceRequest,
@@ -59,6 +68,7 @@ export type OpenNleStudioProductSessionOptions = {
   readonly viewDocument?: string;
   readonly preview?: NleStudioPreviewPort;
   readonly mediaImport?: NleStudioMediaImportPort;
+  readonly delivery?: NleDeliveryService;
 };
 
 export type NleStudioProductInput = {
@@ -137,6 +147,7 @@ export class NleStudioProductSession {
   readonly #packages: NleStudioPackageBridge;
   readonly #preview: NleStudioPreviewPort;
   readonly #mediaImport: NleStudioMediaImportPort | undefined;
+  readonly #delivery: NleDeliveryService | undefined;
   readonly #mediaResources = new Map<string, ProjectHostResource>();
   #mediaGeneration = -1;
   #closed = false;
@@ -153,6 +164,7 @@ export class NleStudioProductSession {
     packages: NleStudioPackageBridge;
     preview: NleStudioPreviewPort;
     mediaImport: NleStudioMediaImportPort | undefined;
+    delivery: NleDeliveryService | undefined;
   }) {
     this.#project = value.project;
     this.#context = value.context;
@@ -165,6 +177,7 @@ export class NleStudioProductSession {
     this.#packages = value.packages;
     this.#preview = value.preview;
     this.#mediaImport = value.mediaImport;
+    this.#delivery = value.delivery;
   }
 
   static async open(options: OpenNleStudioProductSessionOptions): Promise<NleStudioProductSession> {
@@ -200,6 +213,7 @@ export class NleStudioProductSession {
         packages,
         preview: options.preview ?? unavailablePreview,
         mediaImport: options.mediaImport,
+        delivery: options.delivery,
       });
     } catch (error) {
       viewLease?.close();
@@ -301,6 +315,7 @@ export class NleStudioProductSession {
         })),
       },
       preview,
+      delivery: { state: this.#delivery === undefined ? "unavailable" : "available" },
     };
   }
 
@@ -521,6 +536,25 @@ export class NleStudioProductSession {
     return { inspector: observation.value };
   }
 
+  async startDelivery(request: NleStudioDeliveryStartRequest): Promise<NleDeliveryActionObservation> {
+    this.#assertOpen();
+    if (this.#delivery === undefined) throw new Error("NLE Studio video delivery is unavailable.");
+    const handle = await this.#delivery.start({ ...request, document: this.#projectDocument });
+    return this.#delivery.observe(handle);
+  }
+
+  observeDelivery(handle: NleDeliveryActionHandle): NleDeliveryActionObservation {
+    this.#assertOpen();
+    if (this.#delivery === undefined) throw new Error("NLE Studio video delivery is unavailable.");
+    return this.#delivery.observe(handle);
+  }
+
+  cancelDelivery(handle: NleDeliveryActionHandle): NleDeliveryActionObservation {
+    this.#assertOpen();
+    if (this.#delivery === undefined) throw new Error("NLE Studio video delivery is unavailable.");
+    return this.#delivery.cancel(handle);
+  }
+
   async save(): Promise<NleStudioSession> {
     this.#assertOpen();
     await nleProjectOwnerProvider.save(this.#context, this.#projectDocument, this.#projectLease.service);
@@ -550,6 +584,7 @@ export class NleStudioProductSession {
     if (this.#closed) return;
     this.#closed = true;
     this.#surface.close();
+    this.#delivery?.close();
     this.#clearMediaResources();
     this.#viewLease?.close();
     this.#projectLease.close();
@@ -581,48 +616,71 @@ function productInput(value: unknown): NleStudioProductInput {
   };
 }
 
-export const nleStudioProductProvider: ApplicationProductProvider = {
-  product: nleStudioProduct,
-  title: "NLE Studio",
-  launchParameters: [
-    {
-      name: "document",
-      title: "NLE document",
-      required: true,
-      initial: "project.svml",
-      placeholder: "edits/main.svml",
-    },
-    {
-      name: "viewDocument",
-      title: "NLE View document",
-      required: false,
-      placeholder: "edits/main.nle-view.json",
-    },
-  ],
-  async open(project, value) {
-    const selected = productInput(value);
-    const media = project.media as Partial<NodeProjectMediaService>;
-    const mediaImport: NleStudioMediaImportPort | undefined = typeof media.adoptFile !== "function" ? undefined : {
-      async adopt(request) {
-        const mediaType = mediaTypeFromFile(request.sourceName);
-        await media.adoptFile!({ ...request, mediaType }, {
-          inspect: async (path, context) => await inspectMediaFileFromContainerIndex(path, {
-            ...(context.signal === undefined ? {} : { signal: context.signal }),
-            ...(mediaType.startsWith("image/") ? { constantPicture: true } : {}),
-          }),
-          select: (inspection) => defaultMediaSelection(inspection, mediaType),
-        });
-      },
-    };
-    return await openNleStudioProductSession({
-      project,
-      document: selected.document,
-      ...(selected.viewDocument === undefined ? {} : { viewDocument: selected.viewDocument }),
-      ...(selected.preview === undefined ? {} : { preview: selected.preview }),
-      ...(mediaImport === undefined ? {} : { mediaImport }),
-    });
-  },
+export type NleStudioProductProviderOptions = {
+  readonly deliveryExecutor?: HtmlVideoExecutor;
+  readonly mediaTools?: LocalMediaToolchainOptions;
 };
+
+/** Compose the Product Provider with its optional preview, delivery and local-media dependencies. */
+export function createNleStudioProductProvider(
+  options: NleStudioProductProviderOptions = {},
+): ApplicationProductProvider {
+  return {
+    product: nleStudioProduct,
+    title: "NLE Studio",
+    launchParameters: [
+      {
+        name: "document",
+        title: "NLE document",
+        required: true,
+        initial: "project.svml",
+        placeholder: "edits/main.svml",
+      },
+      {
+        name: "viewDocument",
+        title: "NLE View document",
+        required: false,
+        placeholder: "edits/main.nle-view.json",
+      },
+    ],
+    async open(project, value) {
+      const selected = productInput(value);
+      const media = project.media as Partial<NodeProjectMediaService>;
+      const mediaImport: NleStudioMediaImportPort | undefined = typeof media.adoptFile !== "function" ? undefined : {
+        async adopt(request) {
+          const mediaType = mediaTypeFromFile(request.sourceName);
+          await media.adoptFile!({ ...request, mediaType }, {
+            inspect: async (path, context) => await inspectMediaFileFromContainerIndex(path, {
+              ...(options.mediaTools?.ffprobePath === undefined ? {} : { ffprobePath: options.mediaTools.ffprobePath }),
+              ...(context.signal === undefined ? {} : { signal: context.signal }),
+              ...(mediaType.startsWith("image/") ? { constantPicture: true } : {}),
+            }),
+            select: (inspection) => defaultMediaSelection(inspection, mediaType),
+          });
+        },
+      };
+      const delivery = options.deliveryExecutor === undefined ? undefined : openNleDeliveryService({
+        host: project,
+        executor: options.deliveryExecutor,
+      });
+      try {
+        return await openNleStudioProductSession({
+          project,
+          document: selected.document,
+          ...(selected.viewDocument === undefined ? {} : { viewDocument: selected.viewDocument }),
+          ...(selected.preview === undefined ? {} : { preview: selected.preview }),
+          ...(mediaImport === undefined ? {} : { mediaImport }),
+          ...(delivery === undefined ? {} : { delivery }),
+        });
+      } catch (error) {
+        delivery?.close();
+        throw error;
+      }
+    },
+  };
+}
+
+export const nleStudioProductProvider = createNleStudioProductProvider();
 
 export {
   nleProjectOwnerProvider,

@@ -1,4 +1,5 @@
 import {
+  openApplicationExecutionDirectory,
   openApplicationHost,
   type ApplicationExecutionDirectory,
   type ApplicationHost,
@@ -12,9 +13,13 @@ import {
 } from "@hypit/application/node";
 import { applicationHomeNodeAdapter } from "@hypit/application-home/node";
 import {
-  nleStudioProductProvider,
+  createNleStudioProductProvider,
 } from "@hypit/nle-studio";
 import { nleStudioNodeProductAdapter } from "@hypit/nle-studio/node";
+import {
+  createLocalHtmlVideoExecutor,
+  type LocalHtmlVideoTools,
+} from "@hypit/html-video-local";
 
 export * from "@hypit/application/node";
 export {
@@ -28,6 +33,8 @@ export {
 
 export type OpenNodeHypitApplicationOptions = {
   readonly execution?: ApplicationExecutionDirectory;
+  /** Local audiovisual tools supplied to the default NLE Studio delivery dependency. */
+  readonly localHtmlVideo?: LocalHtmlVideoTools;
   readonly products?: readonly ApplicationProductProvider[];
 };
 
@@ -42,10 +49,14 @@ export type OpenNodeHypitApplicationServerOptions = OpenNodeHypitApplicationOpti
 export function openNodeHypitApplication(
   options: OpenNodeHypitApplicationOptions = {},
 ): ApplicationHost {
+  const video = createLocalHtmlVideoExecutor(options.localHtmlVideo ?? {});
   return openApplicationHost({
     projects: createNodeApplicationProjectProvider(),
-    products: [nleStudioProductProvider, ...(options.products ?? [])],
-    ...(options.execution === undefined ? {} : { execution: options.execution }),
+    products: [createNleStudioProductProvider({
+      deliveryExecutor: video,
+      ...(options.localHtmlVideo === undefined ? {} : { mediaTools: options.localHtmlVideo }),
+    }), ...(options.products ?? [])],
+    execution: options.execution ?? openApplicationExecutionDirectory([]),
   });
 }
 

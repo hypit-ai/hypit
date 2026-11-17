@@ -6,6 +6,7 @@ export type ApplicationExecutionEnvironmentProjection = {
   readonly title: string;
 };
 
+/** Selected AIGC Provider/model deployment available to project-scoped Capability Invocation clients. */
 export type ApplicationExecutionEnvironment = {
   readonly projection: ApplicationExecutionEnvironmentProjection;
   openProjectClient(boundary: ProjectBoundary): ProjectExecutorClient | undefined

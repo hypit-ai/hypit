@@ -39,3 +39,22 @@ export {
 } from "./program.js";
 export { createAudiovisualProgramEvaluator, evaluateAudiovisualProgramAt } from "./evaluation.js";
 export { resolvedMediaSource } from "./media.js";
+export {
+  assertAudiovisualFrameRate,
+  audiovisualFrameCount,
+  audiovisualFramePosition,
+  createAudiovisualPictureDemand,
+  type AudiovisualFrameRate,
+  type AudiovisualPictureDemand,
+} from "./output.js";
+export {
+  planAudiovisualDemand,
+  planAudiovisualRegionDemand,
+  type AudiovisualDemandPlan,
+  type AudiovisualNodeDemand,
+  type AudiovisualOutputDemand,
+  type AudiovisualRegionDemand,
+  type AudiovisualSignal,
+  type AudiovisualSourceDemand,
+  type AudiovisualSourceUseDemand,
+} from "./demand.js";

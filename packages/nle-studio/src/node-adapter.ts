@@ -12,6 +12,7 @@ import type {
   NleStudioAdjustMaterializeRequest,
   NleStudioCommandRequest,
   NleStudioComponentMaterializeRequest,
+  NleStudioDeliveryStartRequest,
   NleStudioInspectorRequest,
   NleStudioMediaPlaceRequest,
   NleStudioSession,
@@ -213,6 +214,21 @@ export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
         const body = await jsonBody(request) as NleStudioInspectorRequest;
         if (typeof body.item !== "string") throw new Error("NLE Studio Inspector requires an Item id.");
         sendJson(response, 200, studio.inspector(body.item));
+        return true;
+      }
+      if (request.method === "POST" && pathname === "/api/deliveries") {
+        sendJson(response, 202, await studio.startDelivery(
+          await jsonBody(request) as NleStudioDeliveryStartRequest,
+        ));
+        return true;
+      }
+      if ((request.method === "GET" || request.method === "DELETE")
+        && pathname.startsWith("/api/deliveries/")) {
+        const handle = decodeURIComponent(pathname.slice("/api/deliveries/".length));
+        if (handle.length === 0 || handle.includes("/")) throw new Error("NLE Studio Delivery handle is invalid.");
+        sendJson(response, 200, request.method === "DELETE"
+          ? studio.cancelDelivery(handle)
+          : studio.observeDelivery(handle));
         return true;
       }
       if (request.method === "POST" && pathname === "/api/save") {

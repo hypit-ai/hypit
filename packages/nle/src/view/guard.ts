@@ -59,8 +59,8 @@ function commandTracks(project: NleProject, command: NleCommand): readonly Locat
       return indexNleProject(project).sharedValueUsers(command.value.id);
     case "shared-value.remove":
       return indexNleProject(project).sharedValueUsers(command.id);
-    case "component-shared-value-binding.set":
-    case "component-shared-value-binding.remove":
+    case "component-value-binding.set":
+    case "component-value-binding.remove":
       return items([command.item]);
     case "composition.remove": {
       const composition = project.compositions.find((candidate) => candidate.id === command.id);

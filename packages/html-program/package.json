@@ -1,0 +1,20 @@
+{
+  "name": "@hypit/html-program",
+  "version": "0.1.0",
+  "description": "Portable frame-addressed HTML visual programmes",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    ".": {
+      "hypit-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": { "build": "tsc -p tsconfig.build.json" },
+  "dependencies": {
+    "@hypit/media": "workspace:^0.1.0",
+    "@hypit/temporal": "workspace:^0.1.0"
+  }
+}

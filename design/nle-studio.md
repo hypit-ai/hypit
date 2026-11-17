@@ -26,6 +26,8 @@ NLE Studio backend
   │    ├─ NLE View Service
   │    └─ selected package contributions
   ├─ audiovisual preview Executor port
+  ├─ NLE Delivery Service
+  │    └─ injected HtmlVideoExecutor
   └─ explicit Project/View file persistence
 ```
 
@@ -48,8 +50,13 @@ discard them without touching author facts. Timeline, Canvas and Inspector scene
 
 Media catalog entries come from the ProjectHost's one Project Media Service. NLE Media references do not become a
 second catalog, and another NLE or Canvas Product Session in the same project observes that same collection. Preview
-frames and generations come only from the audiovisual Executor port. A structural Canvas remains useful when no
-preview Executor has been selected, but it is not presented as rendered programme output.
+frames and generations come only from the selected preview Action port. A structural Canvas remains useful when no
+preview capability has been selected, but it is not presented as rendered programme output.
+
+Video export is a Project-local `NleDeliveryService` Action. The application distribution injects an ordinary
+`HtmlVideoExecutor` into the Product Provider; the Product Session opens the Service for its selected ProjectHost and
+projects start, observe and cancel operations. Closing the Product Session closes that Service and cancels its active
+delivery Actions. The Service owns its FFmpeg/browser process tree through the injected Executor.
 
 The browser's Media bin projects that shared catalog. Selecting an available entry explicitly places it at the current
 playhead on a compatible unlocked Track; when none exists, the browser first asks the NLE owner to create one. The
@@ -65,11 +72,28 @@ transition creation surfaces. Selecting an entry invokes the matching NLE materi
 the exact Component or Operator symbol, closed initial parameters and declared defaults; it does not return arbitrary
 Project commands.
 
+Inspector contributions may project finite scalar fields and stable row collections. Every field id remains unique
+within its section, so the browser submits only section, field and value; it never receives array indexes, JSON paths
+or package functions. The backend resolves that field against the selected package's exact symbol and asks its pure
+authoring reducer for replacement closed parameters. Package contributions cannot create Tracks, choose transaction
+boundaries or persist interface state. Timeline presentation is descriptive only, while generic trim and split are
+offered only when the selected package declares a conservative time-window operation.
+
+The Inspector separately projects NLE-owned ownership controls for existing Component value slots. An inline slot can
+be shared or linked; a shared slot can be rebound or unlinked by copying its resolved value inline. These operations
+change only explicit Item bindings and Project Shared Values and therefore use the same Surface revisions, View guards
+and invalidations as every other Project transaction. The package contributes the slot's value semantics, not the
+ownership transaction or its UI.
+
 ## Local protocol and persistence
 
 The loopback server serves the client and same-origin JSON operations for session observation, guarded Surface
 commands, Inspector projection, save and reload. The protocol is a product adapter and carries no persistent format
 marker or independent revision. Project and View revisions remain visible and separate.
+
+`POST api/deliveries` starts an export of the session's already selected NLE Project document through the injected
+Delivery Service. `GET api/deliveries/:handle` observes it and `DELETE api/deliveries/:handle` requests cancellation.
+The destination remains a portable Project path validated by that Service.
 
 Within the Product Session mount, `POST api/media/import?name=...` carries one raw browser `File` body. The adapter
 streams it to an invocation-local temporary file, calls the Node Project Media Service's adoption Action with bounded
@@ -105,5 +129,5 @@ intermediate state. Existing overlaps, gaps and incompatible selections are reje
 
 `@hypit/nle-studio` is an independent release because it has a browser artifact, Product Provider and product lifecycle
 distinct from headless `@hypit/nle`. It depends on public ProjectHost, NLE owner and Surface contracts. The Project
-Media Service comes from the ProjectHost; preview remains an Executor dependency whose platform implementation is
-separately selected.
+Media Service comes from the ProjectHost; preview and delivery remain explicit Executor dependencies whose platform
+implementations are selected by the application distribution.

@@ -1,0 +1,6 @@
+{
+  "name": "@hypit/picture-effects",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": { "./hypit": "./hypit.js" }
+}

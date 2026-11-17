@@ -71,7 +71,9 @@ export function indexNleComposition(composition: NleComposition): NleComposition
       if (item.source === "media") append(mediaAssets, item.asset.path, indexed);
       else if (item.source === "component") {
         append(components, symbolKey(item.component), indexed);
-        for (const binding of item.sharedValueBindings ?? []) append(sharedValues, binding.ref, indexed);
+        for (const binding of item.valueBindings ?? []) {
+          if (binding.kind === "shared") append(sharedValues, binding.ref, indexed);
+        }
         for (const asset of Object.values(item.media ?? {})) append(mediaAssets, asset.path, indexed);
       }
     }
@@ -124,7 +126,9 @@ export function indexNleProject(project: NleProject): NleProjectIndex {
         if (item.source === "media") append(mediaAssets, item.asset.path, indexed);
         else if (item.source === "component") {
           append(components, symbolKey(item.component), indexed);
-          for (const binding of item.sharedValueBindings ?? []) append(sharedValues, binding.ref, indexed);
+          for (const binding of item.valueBindings ?? []) {
+            if (binding.kind === "shared") append(sharedValues, binding.ref, indexed);
+          }
           for (const asset of Object.values(item.media ?? {})) append(mediaAssets, asset.path, indexed);
         } else append(compositionUsers, item.composition, indexed);
       }

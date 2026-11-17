@@ -162,6 +162,11 @@
 .nle-section-body { overflow: hidden; }
 .nle-section-content { display: grid; grid-template-columns: fit-content(40%) minmax(0,1fr); column-gap: 16px; row-gap: 14px; padding: 4px 0 10px; }
 .nle-section-content > :not(.nle-row) { grid-column: 1 / -1; }
+.nle-inspector-collection { display: grid; gap: 8px; }
+.nle-inspector-collection > h4 { margin: 0; color: var(--muted); font-size: var(--font-size-caption); font-weight: 600; }
+.nle-inspector-collection-row { display: grid; gap: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--nle-field); }
+.nle-inspector-collection-row > strong { overflow: hidden; color: var(--text); font-size: var(--font-size-caption); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.nle-inspector-collection-row > div { display: grid; grid-template-columns: fit-content(40%) minmax(0,1fr); gap: 10px 12px; }
 .nle-row { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; min-height: 24px; }
 .nle-row-label { min-width: 0; color: var(--text); font-size: var(--font-size-caption); overflow-wrap: anywhere; }
 .nle-row-content { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }

@@ -3,11 +3,13 @@ import { indexNleProject } from "../indexing.js";
 import {
   findNleComponentSharedValue,
   findNleOperatorSharedValue,
+  resolveNleComponentValue,
 } from "../project.js";
 import type {
   NleAdjustItem,
   NleComponentItem,
   NleComponentSharedValue,
+  NleComponentValueBinding,
   NleComposition,
   NleProcess,
   NlePresentItem,
@@ -38,10 +40,16 @@ export type NleProcessAuthoringContext = {
     | { readonly kind: "occurrence"; readonly medium: "picture" | "audio" };
 };
 
-export type NleComponentSharedValueAuthoringContext = {
+export type NleComponentValueAuthoringContext = {
   readonly project: NleProject;
-  readonly value: NleComponentSharedValue;
-  /** Current users derived from this exact Project snapshot. */
+  readonly composition: NleComposition;
+  readonly track: NleTrack;
+  readonly item: NleComponentItem;
+  readonly slot: string;
+  readonly binding: NleComponentValueBinding;
+  readonly value: Readonly<Record<string, unknown>>;
+  readonly sharedValue?: NleComponentSharedValue;
+  /** The occurrence for inline ownership, or all current users for shared ownership. */
   readonly users: readonly {
     readonly composition: NleComposition;
     readonly track: NleTrack;
@@ -51,7 +59,7 @@ export type NleComponentSharedValueAuthoringContext = {
 
 export type NleComponentTemporalAuthoring = {
   readonly component: PackageSymbol;
-  /** Whether ordinary trim and split operations preserve this occurrence's Source clock. */
+  /** Whether ordinary trim and split preserve this occurrence by slicing only its existing Source relation. */
   readonly timeWindow?: (context: NleComponentTemporalAuthoringContext) => boolean;
   /** Package-owned parameter operation. The returned closed parameters replace this occurrence's parameters. */
   readonly editParameters?: (
@@ -62,7 +70,7 @@ export type NleComponentTemporalAuthoring = {
 
 export type NleOperatorTemporalAuthoring = {
   readonly operator: PackageSymbol;
-  /** Whether slicing the containing Item preserves this exact Control/process meaning. */
+  /** Whether ordinary trim and split preserve this Process by slicing only its existing Control relation. */
   readonly timeWindow?: (context: NleProcessAuthoringContext) => boolean;
   readonly editParameters?: (
     operation: unknown,
@@ -71,12 +79,12 @@ export type NleOperatorTemporalAuthoring = {
 };
 
 /** Package-owned editing semantics for one exact reusable Component slot. */
-export type NleComponentSharedValueAuthoring = {
+export type NleComponentValueAuthoring = {
   readonly component: PackageSymbol;
   readonly slot: string;
   readonly editValue: (
     operation: unknown,
-    context: NleComponentSharedValueAuthoringContext,
+    context: NleComponentValueAuthoringContext,
   ) => Readonly<Record<string, unknown>>;
 };
 
@@ -94,7 +102,7 @@ export type NleAuthoringContribution = {
   readonly kind: typeof nleAuthoringContributionKind;
   readonly package: string;
   readonly components: readonly NleComponentTemporalAuthoring[];
-  readonly componentSharedValues: readonly NleComponentSharedValueAuthoring[];
+  readonly componentValues: readonly NleComponentValueAuthoring[];
   readonly operators: readonly NleOperatorTemporalAuthoring[];
 };
 
@@ -102,7 +110,7 @@ export type NleAuthoringHost = {
   readonly componentTimeWindow: (context: NleComponentTemporalAuthoringContext) => boolean | undefined;
   readonly operatorTimeWindow: (context: NleProcessAuthoringContext) => boolean | undefined;
   readonly hasComponentParameterAuthoring: (component: PackageSymbol) => boolean;
-  readonly hasComponentSharedValueAuthoring: (component: PackageSymbol, slot: string) => boolean;
+  readonly hasComponentValueAuthoring: (component: PackageSymbol, slot: string) => boolean;
   readonly hasOperatorParameterAuthoring: (operator: PackageSymbol) => boolean;
   readonly planComponentParameterEdit: (
     context: NleComponentTemporalAuthoringContext,
@@ -113,41 +121,58 @@ export type NleAuthoringHost = {
     address: NleProcessAddress,
     operation: unknown,
   ) => NleTransaction;
-  readonly planComponentSharedValueEdit: (
-    context: NleComponentSharedValueAuthoringContext,
+  readonly planComponentValueEdit: (
+    context: NleComponentValueAuthoringContext,
     operation: unknown,
   ) => NleTransaction;
 };
 
-function componentSharedValueKey(component: PackageSymbol, slot: string): string {
+function componentValueKey(component: PackageSymbol, slot: string): string {
   return `${packageSymbolKey(component)}:${slot}`;
 }
 
-export function createNleComponentSharedValueAuthoringContext(
+export function createNleComponentValueAuthoringContext(
   project: NleProject,
-  valueId: string,
-): NleComponentSharedValueAuthoringContext {
-  const value = findNleComponentSharedValue(project, valueId);
-  const users = indexNleProject(project).sharedValueUsers(valueId).map(({ composition, track, item }) => {
-    if (item.kind !== "present" || item.source !== "component") {
-      throw new Error(`NLE Component Shared Value ${valueId} has non-Component user ${item.id}.`);
+  itemId: string,
+  slot: string,
+): NleComponentValueAuthoringContext {
+  const index = indexNleProject(project);
+  const located = index.item(itemId);
+  if (located === undefined || located.item.kind !== "present" || located.item.source !== "component") {
+    throw new Error(`NLE Item ${itemId} is not a Component Present.`);
+  }
+  const { composition, track, item } = located;
+  const binding = item.valueBindings?.find((candidate) => candidate.slot === slot);
+  if (binding === undefined) throw new Error(`NLE Component ${itemId} has no value slot ${slot}.`);
+  const sharedValue = binding.kind === "shared" ? findNleComponentSharedValue(project, binding.ref) : undefined;
+  const users = (sharedValue === undefined
+    ? [{ composition, track, item }]
+    : index.sharedValueUsers(sharedValue.id)).map(({ composition: userComposition, track: userTrack, item: userItem }) => {
+    const candidate = userItem;
+    if (candidate.kind !== "present" || candidate.source !== "component") {
+      throw new Error(`NLE Component value ${slot} has non-Component user ${candidate.id}.`);
     }
-    return { composition, track, item };
+    return { composition: userComposition, track: userTrack, item: candidate };
   });
-  return { project, value, users };
+  return {
+    project, composition, track, item, slot, binding: structuredClone(binding),
+    value: resolveNleComponentValue(project, item.component, binding),
+    ...(sharedValue === undefined ? {} : { sharedValue }),
+    users,
+  };
 }
 
 function assertContribution(value: NleAuthoringContribution): void {
   if (value === null || typeof value !== "object") {
     throw new Error("NLE authoring contribution must be an object.");
   }
-  if (!Array.isArray(value.components) || !Array.isArray(value.componentSharedValues)
+  if (!Array.isArray(value.components) || !Array.isArray(value.componentValues)
     || !Array.isArray(value.operators)) {
     throw new Error("NLE authoring contribution declarations must be arrays.");
   }
   assertContributionOwner(value.package, [
     ...value.components.map((entry) => entry.component),
-    ...value.componentSharedValues.map((entry) => entry.component),
+    ...value.componentValues.map((entry) => entry.component),
     ...value.operators.map((entry) => entry.operator),
   ], "NLE authoring contribution");
   const keys = new Set<string>();
@@ -173,11 +198,11 @@ function assertContribution(value: NleAuthoringContribution): void {
       throw new Error(`NLE authoring contribution ${key} editParameters is not callable.`);
     }
   }
-  for (const entry of value.componentSharedValues) {
+  for (const entry of value.componentValues) {
     if (!/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(entry.slot)) {
-      throw new Error("NLE Component Shared Value authoring slot is invalid.");
+      throw new Error("NLE Component value authoring slot is invalid.");
     }
-    const key = `component-shared-value:${componentSharedValueKey(entry.component, entry.slot)}`;
+    const key = `component-value:${componentValueKey(entry.component, entry.slot)}`;
     if (keys.has(key)) throw new Error(`NLE authoring contribution repeats ${key}.`);
     keys.add(key);
     if (typeof entry.editValue !== "function") {
@@ -189,14 +214,14 @@ function assertContribution(value: NleAuthoringContribution): void {
 export function createNleAuthoringContribution(value: {
   readonly package: string;
   readonly components?: readonly NleComponentTemporalAuthoring[];
-  readonly componentSharedValues?: readonly NleComponentSharedValueAuthoring[];
+  readonly componentValues?: readonly NleComponentValueAuthoring[];
   readonly operators?: readonly NleOperatorTemporalAuthoring[];
 }): NleAuthoringContribution {
   const contribution: NleAuthoringContribution = {
     kind: nleAuthoringContributionKind,
     package: value.package,
     components: [...(value.components ?? [])],
-    componentSharedValues: [...(value.componentSharedValues ?? [])],
+    componentValues: [...(value.componentValues ?? [])],
     operators: [...(value.operators ?? [])],
   };
   assertContribution(contribution);
@@ -208,7 +233,7 @@ export function createNleAuthoringHost(
   contributions: readonly NleAuthoringContribution[],
 ): NleAuthoringHost {
   const components = new Map<string, NleComponentTemporalAuthoring>();
-  const componentSharedValues = new Map<string, NleComponentSharedValueAuthoring>();
+  const componentValues = new Map<string, NleComponentValueAuthoring>();
   const operators = new Map<string, NleOperatorTemporalAuthoring>();
   for (const contribution of contributions) {
     assertContribution(contribution);
@@ -222,12 +247,12 @@ export function createNleAuthoringHost(
       if (operators.has(key)) throw new Error(`NLE authoring Host has multiple Operator declarations for ${key}.`);
       operators.set(key, entry);
     }
-    for (const entry of contribution.componentSharedValues) {
-      const key = componentSharedValueKey(entry.component, entry.slot);
-      if (componentSharedValues.has(key)) {
-        throw new Error(`NLE authoring Host has multiple Component Shared Value declarations for ${key}.`);
+    for (const entry of contribution.componentValues) {
+      const key = componentValueKey(entry.component, entry.slot);
+      if (componentValues.has(key)) {
+        throw new Error(`NLE authoring Host has multiple Component value declarations for ${key}.`);
       }
-      componentSharedValues.set(key, entry);
+      componentValues.set(key, entry);
     }
   }
   return {
@@ -240,8 +265,8 @@ export function createNleAuthoringHost(
     hasComponentParameterAuthoring(component) {
       return components.get(packageSymbolKey(component))?.editParameters !== undefined;
     },
-    hasComponentSharedValueAuthoring(component, slot) {
-      return componentSharedValues.has(componentSharedValueKey(component, slot));
+    hasComponentValueAuthoring(component, slot) {
+      return componentValues.has(componentValueKey(component, slot));
     },
     hasOperatorParameterAuthoring(operator) {
       return operators.get(packageSymbolKey(operator))?.editParameters !== undefined;
@@ -290,21 +315,27 @@ export function createNleAuthoringHost(
         process: { ...structuredClone(context.process), parameters: binding },
       }] };
     },
-    planComponentSharedValueEdit(context, operation) {
-      const current = createNleComponentSharedValueAuthoringContext(context.project, context.value.id);
-      const { component, slot } = current.value.declaration;
-      const key = componentSharedValueKey(component, slot);
-      const edit = componentSharedValues.get(key)?.editValue;
-      if (edit === undefined) throw new Error(`NLE Component Shared Value authoring ${key} is not installed.`);
+    planComponentValueEdit(context, operation) {
+      const current = createNleComponentValueAuthoringContext(context.project, context.item.id, context.slot);
+      const component = current.item.component;
+      const key = componentValueKey(component, current.slot);
+      const edit = componentValues.get(key)?.editValue;
+      if (edit === undefined) throw new Error(`NLE Component value authoring ${key} is not installed.`);
       assertImplementationBinding({ implementation: component, parameters: { operation } },
-        `NLE Component Shared Value ${current.value.id} operation`);
+        `NLE Component ${current.item.id} value ${current.slot} operation`);
       const value = edit(structuredClone(operation), current);
       assertImplementationBinding({ implementation: component, parameters: value },
-        `NLE Component Shared Value ${current.value.id} edited value`);
-      return { commands: [{
-        kind: "shared-value.replace",
-        value: { ...structuredClone(current.value), value: structuredClone(value) },
-      }] };
+        `NLE Component ${current.item.id} value ${current.slot} edited value`);
+      return current.sharedValue === undefined
+        ? { commands: [{
+            kind: "component-value-binding.set",
+            item: current.item.id,
+            binding: { slot: current.slot, kind: "inline", value: structuredClone(value) },
+          }] }
+        : { commands: [{
+            kind: "shared-value.replace",
+            value: { ...structuredClone(current.sharedValue), value: structuredClone(value) },
+          }] };
     },
   };
 }

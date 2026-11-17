@@ -78,14 +78,28 @@ authoring contribution must accept an Inspector operation and plan an ordinary P
 possible. npm installation and the selected Host decide which contributions exist; a missing or duplicate symbol is
 observable.
 
-A Shared Value Inspector section projects one Project-owned resource, its typed declaration and its current Item users
-rather than presenting the value as local Item state. A package Component declaration delegates fields and edits to
-the exact installed `(Component, slot)` contribution. The NLE `picture.layout` declaration is projected directly by
-the Canvas and Inspector. Both use the same shared owner identity and reverse-user index.
+Presentation and authoring remain separate facets even when one package supplies both. A Timeline contribution may
+provide only factual title/text, Host-backed artwork and the product's finite tone, chrome and preferred-height
+tokens. It cannot add commands. An Inspector contribution may provide only the product's finite control vocabulary;
+its process-local operation projector is removed from the Scene before transport. The browser returns a stable
+section/field address and scalar value, then the Host recomputes the operation from the current snapshot. It never
+submits a package JSON path or executes package code.
+
+The Inspector vocabulary includes scalar fields and finite collections. A collection contains package-owned stable
+row ids and finite row fields; field ids are unique in their section and return through the same semantic edit port.
+Caption units and ranking entries use that shape without exposing array indexes, arbitrary JSON paths or package
+operation functions to the browser. Canvas remains Item-level until a selected package proves a need for bounded
+semantic handles. Renderer DOM and pixels alone never create editing authority.
+
+A Component value Inspector section uses the same exact installed `(Component, slot)` contribution for inline and
+shared ownership. Inline ownership projects the selected Item; shared ownership additionally projects the one
+Project-owned resource and its current Item users. The NLE `picture.layout` declaration is projected directly by the
+Canvas and Inspector. Shared ownership uses the same owner identity and reverse-user index in both cases.
 
 A View-backed shared-value edit is offered only when every affected user's Track is writable; the resulting command
-replaces the one Project Shared Value through the Project Service. Linking or unlinking one Item changes only that
-occurrence and checks only its own Track. No Shared Value or binding is copied into the View document.
+replaces the one Project Shared Value through the Project Service. Editing an inline value, linking or unlinking one
+Item changes only that occurrence and checks only its own Track. Unlinking copies the resolved value inline; no Shared
+Value or binding is copied into the View document.
 
 The Canvas projection exposes only Item-level Picture frames owned by NLE. It does not inspect a Component's private
 render tree merely because the renderer can expose pixels or DOM. Source extent is an invocation-local observation;
@@ -110,9 +124,9 @@ The implementation preserves these invariants:
   applies its smaller affordance policy;
 - installed packages contribute bounded Timeline and Inspector presentation without owning URLs, markup or Project
   mutation;
-- Canvas exposes only active-Composition Item frames; Inspector begins from one active-Composition Item and may also
-  expose the Project Shared Values explicitly bound by that Item. Inspector edits become explicit Project transactions
-  through declaration-specific authoring semantics;
-- package Component and NLE Picture-layout sections expose the same Shared Value owner shape and apply every affected
-  View Track guard while keeping link and unlink occurrence-local;
+- Canvas exposes only active-Composition Item frames; Inspector begins from one active-Composition Item, exposes
+  inline Component values locally and may also expose Project Shared Values explicitly bound by that Item. Inspector
+  edits become explicit Project transactions through declaration-specific authoring semantics;
+- package Component and NLE Picture-layout sections expose the same inline/shared ownership distinction and apply
+  every affected View Track guard while keeping link and unlink occurrence-local;
 - View changes cannot affect AVIR lowering.

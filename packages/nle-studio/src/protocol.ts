@@ -1,6 +1,8 @@
 import type { NleEditingSurfaceCommand, NleEditingSurfaceOpen } from "@hypit/nle/surface";
 import type { NleInspectorScene } from "@hypit/nle/view";
 import type { NlePictureLayout } from "@hypit/nle";
+import type { HtmlVideoDeliveryProfile, HtmlVideoRenderer } from "@hypit/html-video";
+import type { MediaResource } from "@hypit/media";
 
 export type NleStudioMediaEntry = {
   readonly id: string;
@@ -49,6 +51,8 @@ export type NleStudioPreviewProjection =
   | { readonly state: "pending"; readonly generation: string }
   | { readonly state: "ready"; readonly generation: string; readonly resource: string };
 
+export type NleStudioDeliveryProjection = { readonly state: "available" | "unavailable" };
+
 export type NleStudioSession = {
   readonly projectDocument: { readonly path: string };
   readonly viewDocument:
@@ -58,6 +62,7 @@ export type NleStudioSession = {
   readonly media: NleStudioMediaProjection;
   readonly catalog: NleStudioCatalogProjection;
   readonly preview: NleStudioPreviewProjection;
+  readonly delivery: NleStudioDeliveryProjection;
 };
 
 export type NleStudioCommandRequest = {
@@ -120,6 +125,20 @@ export type NleStudioInspectorRequest = {
 export type NleStudioInspectorResponse = {
   readonly inspector: NleInspectorScene;
 };
+
+/** One explicit export of the NLE document already opened by this Product Session. */
+export type NleStudioDeliveryStartRequest = {
+  readonly destination: string;
+  readonly profile: HtmlVideoDeliveryProfile;
+  readonly renderer?: HtmlVideoRenderer;
+};
+
+type NleStudioDeliveryObservationBase = { readonly handle: string; readonly progress: number };
+export type NleStudioDeliveryObservation =
+  | (NleStudioDeliveryObservationBase & { readonly state: "queued" | "running" })
+  | (NleStudioDeliveryObservationBase & { readonly state: "complete"; readonly result: MediaResource })
+  | (NleStudioDeliveryObservationBase & { readonly state: "failed"; readonly diagnostic: string })
+  | (NleStudioDeliveryObservationBase & { readonly state: "cancelled" });
 
 export type NleStudioErrorResponse = {
   readonly error: string;

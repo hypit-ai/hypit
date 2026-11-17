@@ -28,6 +28,8 @@ Read the current system from authority toward implementation.
   between author source and the durable edit.
 - [Audiovisual](audiovisual.md) — AVIR Programme facts, one live evaluation constitution, renderer selection and the
   Media/Scene boundary.
+- [HTML 视听执行与导出 API](html-video-delivery.md) — AVIR terminal lowering、HTML/Audio Program、视频
+  Delivery Action 与 npm 执行边界。
 - [NLE](nle.md) — direct audiovisual composition, the SVML Project document, per-document Service transactions and
   deterministic AVIR lowering.
 - [NLE View](nle-view.md) — durable editing arrangement, per-Composition guards, independent Service lifetime and the
@@ -40,6 +42,8 @@ Read the current system from authority toward implementation.
 - [NLE Editing Surface](nle-surface.md) — application composition over Project and View Services, guarded operations,
   finite observations and projection invalidation.
 - [NLE Studio](nle-studio.md) — NLE Product Provider, browser-session boundary, persistence and Media/preview ports.
+- [NLE 后端能力审计](nle-backend-capability-audit.md) — 把产品验收能力映射到当前 Owner 事实、Product Operation、
+  Executor Action 与实现缺口。
 
 ### 5. Distribution and implementation growth
 

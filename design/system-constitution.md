@@ -97,10 +97,12 @@ An ApplicationHost is the long-lived backend root for one local user or deployme
 browser products and project programs connect to that same Host through explicit adapters. A caller may start the
 ApplicationHost when none is available, but its connection does not define the Host's lifetime.
 
-The ApplicationHost owns the open-ProjectHost registry, Product Provider and Product Session registry, and Execution
-Directory. One ProjectHost opens each selected boundary, its explicit package environment, its shared Project Media
-Service, owner Services and selected Executor clients. A Product Session binds one product Surface to that project
-context. A caller may also use project and owner operations without opening a Product Session.
+The ApplicationHost owns the open-ProjectHost registry, Product Provider and Product Session registry, and the AIGC
+Execution Directory. One ProjectHost opens each selected boundary, its explicit package environment, its shared Project
+Media Service, owner Services and project-scoped AIGC Environment clients. Specialized audiovisual, Scene, analysis
+and other Executors are explicit dependencies of the Services or callers that use them. A Product Session binds one
+product Surface to that project context. A caller may also use project and owner operations without opening a Product
+Session.
 
 Host levels govern composition and lifetime rather than domain meaning. An owner Service retains its typed commands
 and revision even when several products share it. Several Services may share a process, and a heavy Executor may use a
@@ -108,9 +110,9 @@ dedicated process.
 
 The interactive backend has four nested scopes: ApplicationHost, Project Boundary, open owner document or collection,
 and Product Session. A Product Session leases the owner Services it presents, so several sessions may share one
-document Service and one session may compose several Services. Execution is an orthogonal deployment scope: the
+document Service and one session may compose several Services. AIGC execution is an orthogonal deployment scope: the
 ApplicationHost's Execution Directory exposes selected Environments, an ExecutionHost may serve several ProjectHosts,
-and an Invocation may outlive the caller connection, Product Session and ProjectHost that started it.
+and a recoverable Capability Invocation may outlive the caller connection, Product Session and ProjectHost that started it.
 
 An application operation has one of four forms:
 

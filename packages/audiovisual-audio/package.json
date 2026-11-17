@@ -1,0 +1,15 @@
+{
+  "name": "@hypit/audiovisual-audio",
+  "version": "0.1.0",
+  "description": "One-way AVIR Audio lowering to AudioProgram",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": { ".": { "hypit-source": "./src/index.ts", "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": { "build": "tsc -p tsconfig.build.json" },
+  "dependencies": {
+    "@hypit/audio-program": "workspace:^0.1.0",
+    "@hypit/audiovisual": "workspace:^0.1.0",
+    "@hypit/media": "workspace:^0.1.0"
+  }
+}

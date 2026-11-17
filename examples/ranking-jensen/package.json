@@ -1,0 +1,16 @@
+{
+  "name": "@hypit-example/ranking-jensen-project",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "dependencies": {
+    "@hypit/html-video-local": "link:../../packages/html-video-local",
+    "@hypit/audio-effects": "workspace:*",
+    "@hypit/caption-fine": "workspace:*",
+    "@hypit/picture-effects": "workspace:*",
+    "@hypit/nle-delivery": "link:../../packages/nle-delivery",
+    "@hypit/project": "link:../../packages/project",
+    "@hypit-example/ranking-football-components": "workspace:*"
+  }
+}

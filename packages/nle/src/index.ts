@@ -14,6 +14,7 @@ export {
   readNleProject,
   rootNleComposition,
   resolveNlePictureLayout,
+  resolveNleComponentValue,
   resolveNleOperatorParameters,
   sealNleProject,
   serializeNleProject,
@@ -47,6 +48,21 @@ export {
 } from "./service.js";
 export { lowerNleProjectToAudiovisual } from "./lower.js";
 export {
+  createNlePackageLoweringHost,
+  defineNleLoweringContribution,
+  nleLoweringContributionKind,
+} from "./package-lowering.js";
+export type {
+  CreateNlePackageLoweringHostOptions,
+  NleAudioProcessLoweringImplementation,
+  NleComponentLoweringImplementation,
+  NleLoweringContribution,
+  NleMatteLoweringImplementation,
+  NlePictureProcessLoweringImplementation,
+  NleReconstructionLoweringImplementation,
+  NleTransitionLoweringImplementation,
+} from "./package-lowering.js";
+export {
   indexNleComposition,
   indexNleProject,
   type NleCompositionIndex,
@@ -60,6 +76,10 @@ export {
   createMediaAssetMaterialization,
   createTransitionMaterialization,
 } from "./materialize.js";
+export {
+  planNleComponentValueEdit,
+  type NleComponentValueEdit,
+} from "./component-value-authoring.js";
 export {
   planNleSpatialEdit,
   type NlePictureFrame,

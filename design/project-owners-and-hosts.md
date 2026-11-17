@@ -75,24 +75,26 @@ transport data and applies the Host's permissions.
 ### Application and Project Hosts
 
 An ApplicationHost is the long-lived backend root shared by Desktop, Agent, CLI and browser adapters in one local or
-deployed Hypit instance. It owns ProjectHost leases, Product Providers, Product Sessions and the Execution Directory.
-One ProjectHost selects the installed package environment and shares project-scoped Services and Executor clients for
-one open Project Boundary. A Product Session presents one product Surface over that project context. Hosts govern
+deployed Hypit instance. It owns ProjectHost leases, Product Providers, Product Sessions and the AIGC Execution Directory.
+The Directory is specifically the registry of selected AIGC Provider/model Environments. One ProjectHost selects the
+installed package environment and shares project-scoped Services plus AIGC Environment clients for one open Project
+Boundary. Specialized Executors such as local audiovisual delivery are injected directly into the Service or Product
+that calls them. A Product Session presents one product Surface over that project context. Hosts govern
 application and project lifetimes rather than becoming new fact owners, and all of these layers may share one process.
 
 The resulting interactive hierarchy is:
 
 ```text
 ApplicationHost scope
-├─ Execution Directory
-│  └─ selected Execution Environments
+├─ AIGC Execution Directory
+│  └─ selected Provider/model Execution Environments
 └─ ProjectHost scope
    ├─ owner collection and document Service scopes
    └─ interface Product Session scopes
 ```
 
-An ExecutionHost is shared across ProjectHosts according to deployment and account policy. ProjectHosts receive scoped
-Execution clients. Product Sessions lease typed owner Services and retain only current interaction state. Desktop,
+An AIGC ExecutionHost is shared across ProjectHosts according to deployment and account policy. ProjectHosts receive
+scoped Capability Invocation clients. Product Sessions lease typed owner Services and retain only current interaction state. Desktop,
 Codex and other callers resolve projects and execution through the ApplicationHost's shared registries.
 
 ## Product operation forms
@@ -115,8 +117,9 @@ TSX author program + selected owner results
   -> explicit NLE materialization
   -> NLE Project + installed component packages
   -> NLE Project Service + NLE Editing Surface snapshot
-  -> audiovisual representation / Programme
-  -> selected audiovisual executor
+  -> closed AVIR Programme
+  -> HtmlProgram + AudioProgram
+  -> selected HTML video execution
   -> preview, review or delivery file
   -> optional explicit Media adoption
 ```

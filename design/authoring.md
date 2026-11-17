@@ -13,7 +13,8 @@ TSX author program
 NLE Project document
   -> deterministic lowering
 AVIR Programme
-  -> selected audiovisual Executor
+  -> HtmlProgram + AudioProgram
+  -> selected video delivery
 ```
 
 The TSX program is ordinary TypeScript with a small Hypit authoring vocabulary. It supplies functions, module
@@ -22,7 +23,8 @@ imports, conditions, loops, component composition and author-time data selection
 The NLE Project is the durable author document that says what the edit is now. Its current markup representation is
 SVML, an XML-like spelling interpreted by the NLE Reader and serializer. TSX evaluation materializes NLE facts.
 
-AVIR is the invocation-local, renderer-independent execution projection of an accepted NLE snapshot.
+AVIR is the invocation-local, renderer-independent semantic projection of an accepted NLE snapshot. Terminal linking
+closes its Picture and Audio as execution-facing programs.
 
 ## Three layers and their lifetimes
 
@@ -30,7 +32,8 @@ AVIR is the invocation-local, renderer-independent execution projection of an ac
 | --- | --- | --- |
 | TSX author program | What reusable program and initial author intent should be materialized? | Source/module lifetime; its package or project owns it |
 | NLE Project | What is this edit now? | Durable owner document; NLE Service edits it |
-| AVIR Programme | How does this accepted snapshot evaluate? | Invocation-local projection; audiovisual execution consumes it |
+| AVIR Programme | How does this accepted snapshot evaluate? | Invocation-local semantic projection |
+| Terminal Programs | What exact HTML Picture and Audio graph will execute? | Invocation-local closed execution input |
 
 The layers are connected by explicit actions:
 
@@ -39,8 +42,21 @@ module import       loads a component implementation
 materialize         turns an author program into NLE facts
 edit                mutates NLE Project facts
 lower               closes an NLE snapshot as AVIR
-evaluate            executes AVIR for preview, review or delivery
+link                closes AVIR as HtmlProgram and AudioProgram
+deliver             executes the closed terminal programs
 ```
+
+This separation is deliberately asymmetric. Above NLE, ordinary TypeScript, packages and callers may evaluate
+variables, expressions, conditions and loops, but materialization accepts only their closed result. Below NLE, AVIR
+and terminal programs may express the complete execution graph, while the Project keeps only the productive direct
+editing subset: occurrences, exact time, layout, ordered processing, relations and package-owned closed values. The
+NLE document is neither a stored program assignment language nor a universal renderer IR.
+
+After materialization, an installed package can make its own closed values editable without supplying product UI.
+The exact `(package, symbol)` in the Project selects bounded Timeline, Inspector, authoring and temporal facets from
+the package chosen by the project lockfile. A presentation facet produces a finite read model; a pure authoring
+reducer accepts one semantic operation and returns a replacement closed value. The Host alone turns that value into
+an NLE transaction and retains revision, View-guard and validation authority.
 
 ## Author programs
 
@@ -111,15 +127,18 @@ An opaque instance stores:
 - a stable package and symbol selection;
 - closed occurrence parameters;
 - explicit package-defined Media input references;
-- optional shared-value bindings;
+- optional package value slots with inline or Project-shared ownership;
 - declared Picture and Audio outputs.
 
-An expanded instance materializes a local NLE Composition with stable child ids. Expansion is explicit and must retain
-the component instance's provenance. A component can use ordinary functions, conditions and loops internally, but
-only a finite materialized result with stable identity is independently editable.
+An expanded result materializes a local NLE Composition with stable child ids. Acceptance is explicit, after which
+that Composition is ordinary NLE author material and does not retain a live dependency on the Component source or the
+author program. A component can use ordinary functions, conditions and loops internally, but only a finite
+materialized result with stable identity is independently editable.
 
-The component source remains the implementation authority for its reusable behavior. The NLE instance remains the
-authority for this project's placement, trim, local parameters and direct edit relations.
+An opaque Component source remains the implementation authority for its reusable behavior, while its NLE occurrence
+owns this project's placement, trim, local parameters and direct edit relations. A caller that materializes editable
+children chooses the target Composition and transaction; rerunning the author program later produces another explicit
+candidate transaction rather than rewriting accepted NLE facts.
 
 ## Authoring relations
 
@@ -157,7 +176,8 @@ Each peer result keeps its producing owner and enters NLE through the stated ado
 
 ## Syntax decision rules
 
-The eventual TSX and persistent document syntax must preserve these facts without exposing execution internals:
+The current persistent SVML syntax and the eventual TSX spelling must preserve these facts without exposing execution
+internals:
 
 1. every editable object has a stable id;
 2. programme start and duration are separate from source-time mapping;
@@ -165,7 +185,8 @@ The eventual TSX and persistent document syntax must preserve these facts withou
 4. transitions and Mattes are explicit references between objects, not ambiguous child nesting;
 5. every Process belongs to one Present and carries exact local Control time; every Adjust has its own Programme range;
 6. Picture and Audio may remain coordinated for one Present while receiving different reconstruction selections;
-7. component and Operator parameters are closed package-owned values;
+7. component and Operator parameters are closed package-owned JSON objects whose internal fields remain outside the
+   central syntax;
 8. controls are local to an item, Composition or relation and are pulled through nested mappings by lowering;
 9. output clock, renderer canvas, frame rate and process lifetime belong to the selected Executor;
 10. the persistent NLE document is the editable authority after materialization.

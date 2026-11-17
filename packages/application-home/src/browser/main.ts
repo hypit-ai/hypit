@@ -154,7 +154,7 @@ function runtimePanel(): HTMLElement {
   for (const [value, label] of [
     [projection.projects.length, "Projects"],
     [projection.sessions.length, "Sessions"],
-    [projection.execution.length, "Environments"],
+    [projection.execution.length, "AIGC Environments"],
   ] as const) {
     const metric = element("div", "metric");
     metric.append(element("strong", undefined, String(value)), element("span", undefined, label));

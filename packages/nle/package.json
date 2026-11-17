@@ -21,7 +21,7 @@
       "import": "./dist/surface/index.js"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": ["dist", "README.md", "SVML.md"],
   "scripts": {
     "build": "tsc -p tsconfig.build.json"
   },

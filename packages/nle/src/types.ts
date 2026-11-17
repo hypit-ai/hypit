@@ -49,10 +49,20 @@ export type NleComponentSharedValue = {
   readonly value: Readonly<Record<string, unknown>>;
 };
 
-/** One Component occurrence's explicit slot binding to a Project-owned value. */
-export type NleComponentSharedValueBinding = {
+/** One owner-defined value, held inline by an occurrence or linked to a compatible Project value. */
+export type NleValueBinding<T> =
+  | {
+      readonly kind: "inline";
+      readonly value: T;
+    }
+  | {
+      readonly kind: "shared";
+      readonly ref: string;
+    };
+
+/** One package-owned Component slot value using the common inline/shared ownership model. */
+export type NleComponentValueBinding = NleValueBinding<Readonly<Record<string, unknown>>> & {
   readonly slot: string;
-  readonly ref: string;
 };
 
 /** Package selection for a non-default interpretation of one exact mapped signal read. */
@@ -90,10 +100,8 @@ export type NleOperatorSharedValue = {
 /** One typed Project value shared by explicit Component or NLE parameter slots. */
 export type NleSharedValue = NleComponentSharedValue | NleOperatorSharedValue | NlePictureLayoutSharedValue;
 
-/** Package-owned parameters are either occurrence-local or explicitly linked to one Project value. */
-export type NleParameterBinding =
-  | { readonly kind: "inline"; readonly value: Readonly<Record<string, unknown>> }
-  | { readonly kind: "shared"; readonly ref: string };
+/** Package-owned parameters use the common inline/shared ownership model. */
+export type NleParameterBinding = NleValueBinding<Readonly<Record<string, unknown>>>;
 
 export type NlePictureLayoutReference = {
   readonly ref: string;
@@ -150,8 +158,8 @@ export type NleMediaItem = NlePresentBase & {
 export type NleComponentItem = NlePresentBase & {
   readonly source: "component";
   readonly component: PackageSymbol;
-  /** Reusable package-defined slots remain distinct from occurrence-local parameters. */
-  readonly sharedValueBindings?: readonly NleComponentSharedValueBinding[];
+  /** Package-defined values remain distinct from occurrence-local parameters and may be inline or shared. */
+  readonly valueBindings?: readonly NleComponentValueBinding[];
   readonly parameters: Readonly<Record<string, unknown>>;
   /** Package-defined input names mapped to portable project Media Asset references. */
   readonly media?: Readonly<Record<string, NleMediaReference>>;
@@ -244,8 +252,8 @@ export type NleComponentLoweringContext = NleLoweringContext & {
   readonly item: NleComponentItem;
   /** Invocation-local resources resolved by the Host from the Item's persistent Media references. */
   readonly media: Readonly<Record<string, ResolvedMedia>>;
-  /** Project values resolved by slot without merging them into occurrence-local parameters. */
-  readonly values: Readonly<Record<string, NleComponentSharedValue>>;
+  /** Inline and shared slot bindings resolved to the same closed package values. */
+  readonly values: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 };
 
 export type NleSignalReconstructionLoweringContext = NleLoweringContext & {

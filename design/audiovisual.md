@@ -1,10 +1,10 @@
-# Audiovisual Programme and execution
+# Audiovisual Programme and HTML lowering
 
-> Status: current owner design for AVIR and audiovisual execution.
+> Status: current owner design for AVIR and its terminal lowering seam.
 
 ## Purpose
 
-AVIR is Hypit's closed audiovisual Programme: the renderer-independent relation model produced from an
+AVIR is Hypit's closed audiovisual Programme: the terminal-independent relation model produced from an
 NLE snapshot, installed project components, accepted Media and explicitly opened Published Surfaces. It
 describes direct edit time, occurrence placement, signal reads, picture composition, audio mixing and
 package-owned processing without choosing an output clock or a platform renderer.
@@ -28,9 +28,10 @@ Every live AVIR implementation obeys one operational model:
 - output frame rate, audio sample rate, canvas, quality and encoding belong to the execution request;
 - evaluating one requested position does not require executing earlier Programme positions.
 
-“HTML-like” means this frame-addressable contract, not DOM ownership. HTML, Canvas, SVG, WebGL, WebGPU or
-a native renderer may implement the same Programme. A renderer may internally use passes, tiles, textures,
-caches, workers and demand propagation; those are executor-private implementation details.
+The live Picture terminal is `HtmlProgram`. AVIR remains independent of DOM and browser APIs; one-way lowering resolves
+installed Picture Source and Operator symbols and closes their HTML contributions into a resource-complete,
+frame-addressable document. Chromium frame-buffer capture and Electron shared-texture capture execute that same
+document. DOM, SVG, Canvas, WebGL and WebGPU may be implementation techniques inside the closed page.
 
 Live AVIR Sources implement exact position and finite-range evaluation according to this contract.
 
@@ -71,23 +72,24 @@ diagnostic before evaluation.
 NLE Project + component packages + Media / Published Surface references
   -> NLE snapshot and component lowering
   -> closed AVIR Programme                 (invocation-local projection)
-  -> selected audiovisual Executor
-  -> preview / review / delivery
+  -> HtmlProgram + AudioProgram            (invocation-local terminal plans)
+  -> selected HTML and Audio execution
+  -> preview / delivery
   -> optional explicit Media adoption
 ```
 
 The NLE Service owns author edits and produces a consistent snapshot. AVIR validation closes that snapshot
-for one evaluation. The audiovisual Executor owns process lifetime, cancellation, progress, temporary
+for one evaluation. Terminal lowering resolves the selected package implementations before long-running execution.
+The HTML video Executor owns process lifetime, cancellation, progress, temporary
 resources, caches and delivery. A delivery or preview cache is not a Media Asset until an explicit adoption
 Action accepts it.
 
-## Renderer selection
+## Terminal and renderer selection
 
-One audiovisual Action selects a complete Picture implementation and a complete Audio implementation for
-the Programme it executes. Picture and Audio may use different platform implementations because they are
-different signal domains. The executor may compile supported subgraphs and use private passes, caches or
-workers only when that does not change observable AVIR semantics. Otherwise capability validation fails before
-work begins.
+One linking invocation selects complete Picture Source/Operator contributions and Audio Operator contributions for the
+Programme. Picture closes as `HtmlProgram`; Audio closes as `AudioProgram`. A delivery Action then selects an HTML
+capture backend and local Audio execution. Chromium and Electron are backend alternatives for the same `HtmlProgram`
+ABI. Private passes, textures, caches or workers may vary without changing observable AVIR semantics.
 
 ## Media seam
 
@@ -102,11 +104,29 @@ Current resource resolution and Media interpretation come from the Media owner f
 A component package may:
 
 1. lower its author parameters entirely into core AVIR relations; or
-2. publish a Source or Operator implementation under a package-owned symbol that obeys the live AVIR ABI.
+2. publish a Source or Operator implementation under a package-owned symbol and terminal contribution kind.
 
-The second form extends the fixed evaluation model through an installed symbol. A renderer validates support for that
-symbol before evaluation. Parameters remain owned and validated by the component package; AVIR carries their closed
-JSON-compatible value for the invocation.
+The second form extends the fixed evaluation model through an installed symbol. Invocation-local linking requires one
+matching HTML or Audio implementation before it closes a terminal program. Parameters remain owned and validated by
+the component package; AVIR carries their closed JSON-compatible value for the invocation.
+
+### Operator temporal support
+
+An Operator's `temporalSupport` is a renderer-independent signal relation. For each named input,
+`before` and `after` state how far an output observation may read around that Programme position; `tail` states how
+long the Operator may continue contributing after its ordinary input extent. A blur, echo, motion estimator or
+look-ahead process can therefore declare the input interval it needs without creating another authored timeline or
+requiring sequential playback.
+
+Demand expansion is pure AVIR planning: an invocation-selected finite output range and exact Picture observations
+expand through each input support, Occurrence placement and Temporal Map into Source-local ranges and samples. This
+planning does not assign nodes to Terminals or define execution topology. The Picture Programme closes as one
+complete HTML Terminal Programme. Current production HTML components are pointwise; until a non-pointwise HTML
+execution ABI exists, linking reports such an Operator as unsupported instead of sampling only the current frame and
+silently changing the result.
+
+This is different from HTML frame readiness. `hypit-frame.waitUntil()` delays capture of one already selected output
+frame while its page resources settle; it does not request neighbouring AVIR input positions.
 
 ## External authoring and materialization
 
@@ -133,10 +153,11 @@ another target-owner materialization.
 
 ## Package and source shape
 
-The first release boundary is `@hypit/audiovisual`:
+`@hypit/audiovisual` owns:
 
 - pure Programme types and validation;
 - exact clock-free point evaluation;
+- exact finite output-demand propagation into graph-node and Source-local ranges and samples;
 - local spatial domains and sampling relations currently used only by AVIR;
 - Media-to-Source projection;
 - fixed package-symbol identities for Sources and Operators.
@@ -145,9 +166,10 @@ Authoring elements and the NLE document Reader do not belong to this package. Th
 Programme types through the NLE owner seam. A future authoring package may depend on NLE materialization APIs, but AVIR
 must remain independent of that source language.
 
-Spatial algebra remains a source module until another independent owner proves a second release consumer.
-Web lowering and local platform execution remain source concerns until browser/process weight or an
-independent consumer proves `@hypit/audiovisual-web` or `@hypit/audiovisual-local` as release boundaries.
+Spatial algebra remains a source module until another independent owner proves a second release consumer. Terminal
+lowering, portable programs and platform execution have separate release boundaries: `@hypit/audiovisual-html`,
+`@hypit/audiovisual-audio`, `@hypit/html-program`, `@hypit/audio-program`, `@hypit/html-render-local`, and the selected
+Chromium or Electron implementation.
 
 ## Required behavior
 
@@ -156,6 +178,7 @@ The implementation preserves these invariants:
 - an Occurrence preserves exact coordinated Picture and Audio mappings;
 - a constant Picture borrows duration only from its Occurrence;
 - point evaluation resolves exact Source positions without choosing a clock;
+- a selected finite output range closes an exact output grid and deterministic Source-local demand;
 - spatial remaps and animated controls remain renderer-neutral;
 - spatial maps compose and invert across affine and projective coordinate relations;
 - an explicit signal reconstruction survives exact evaluation on its selected mapped read;
@@ -163,6 +186,6 @@ The implementation preserves these invariants:
 - package-owned implementations are selected by package and symbol;
 - resolved Media projects into the corresponding AVIR Source outputs.
 
-The first production path must then demonstrate a TSX-like author program or direct NLE input, accepted Media plus one
-project component, materialization into one NLE snapshot, lowering into one Programme and reaching preview or delivery
-through one complete renderer.
+The current production path demonstrates direct NLE input, accepted Media and project components, lowering into one
+AVIR Programme, closing `HtmlProgram` and `AudioProgram`, and delivering one complete video through the Chromium
+backend. Electron consumes the same terminal program through its shared-texture backend.
