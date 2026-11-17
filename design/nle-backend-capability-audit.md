@@ -70,7 +70,7 @@ ApplicationHost
 | 变速和定格 | NLE source time、Reconstruction | 精确时间映射和定格表达已有；缺产品 planner 与标准 Audio Reconstruction |
 | 转场 | NLE Transition、package Operator | 关系、物化和降低已有；编辑维护 planner 不完整 |
 | 滤镜 | Present Process、Adjust、package Operator | 核心事实完整度高；片段效果 catalog 与产品操作不完整 |
-| 文字和字幕 | package Component、Shared Value、NLE materialization | 标量与稳定 collection Inspector、字幕内部时间和共享样式编辑已有；Media 输入绑定与字幕导入缺失 |
+| 文字和字幕 | package Component、Shared Value、NLE materialization | 标量与稳定 collection Inspector、字幕内部时间、共享样式编辑及 Component Media 绑定已有；字幕导入缺失 |
 | 声音 | NLE Audio Process、Reconstruction | 表达基础已有；缺标准处理 package、产品操作和执行路径 |
 | 播放和导出 | Audiovisual Executor | NLE 到 AVIR lowering 与 Export Action 已有；Preview Action 缺失 |
 | 保存和撤销 | NLE Project/View Services、Owner Providers | revision、事务、历史、显式保存、compact receipt 与变化事件已具备 |
@@ -196,7 +196,7 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | 从 catalog 创建文字或字幕 | Component offering + materialization | Studio 支持静态 parameters、duration 和 layout 的 Component offering | **已具备**最小路径 |
 | 参数显示和编辑 | package Inspector + authoring contribution | Host 执行 package projector，浏览器只收到有限标量或稳定 row collection；编辑重新规划为 Project transaction | **已具备**有限结构化路径 |
 | 时间线标题、文本和海报 | package Timeline presentation | Component 可贡献 title、tone、chrome、text layer 和资源 poster | **已具备** |
-| Component Media inputs | Component occurrence + package declaration | Item 已能保存 `media` map，lowering 可解析；`ranking` Inspector 可只读投影现有绑定 | **产品缺口**。仍缺声明、创建时校验以及 bind/unbind Operation |
+| Component Media inputs | Component occurrence + package declaration | Package 声明当前 slot 与信号要求，Studio 投影 Inspector、验证物化 seeds 并接受 bind/unbind；`ranking` 使用逐条目静态图片 slot | **已具备** |
 | Component value ownership | NLE Project + package slot owner | inline/shared binding、Project registry、反向用户索引、同一 Inspector/reducer、ownership selector、share/link/unlink planner 与 Surface command 已实现 | **已具备**；创建 offering 尚不能原子 seed 或选择绑定 |
 | 字幕逐词和内部时间 | caption Component parameters | `caption-fine` 以稳定 word/unit row collection 投影逐词内容和精确有理时间，并由 package reducer 替换闭合 parameters | **已具备** Jensen 编辑路径；在 package 证明切片语义前不开放通用 trim/split |
 | SRT 导入和多轨分配 | Caption materialization Operation | 当前无 SRT parser、字幕物化 planner 或重叠条目分轨 Operation | **产品缺口**，并依赖字幕源边界决策 |
@@ -211,14 +211,13 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | --- | --- |
 | `text-fine` | Component offering、标量 Inspector、Picture layout、Timeline presentation、AVIR preview |
 | `caption-fine` | 已证明稳定 word/unit collection、字幕内容与精确内部时间、inline/shared `style` 的同一 reducer 与 Project-wide 共享样式编辑；批量物化仍缺 |
-| `ranking` | 已证明稳定 row/entry collection、Component Media input 观察和条目级语义操作；输入绑定、package poster 与真实 preview 仍缺 |
+| `ranking` | 已具备稳定 row/entry collection、条目级语义操作、初始物化、Media input 观察与绑定；package poster 与真实 preview 仍缺 |
 
 这些切片下一步要求补充：
 
-- package-owned Component Media input declaration；
-- offering 物化时受限的 Media 与 Shared Value seeds；
-- media picker、Media bind/unbind 与 collection 行级 finite action；
-- offering seeds 与上述操作仍须由 Host 端重新投影并执行，浏览器继续不接收 package 函数或任意参数路径。
+- offering 物化时受限的 Shared Value seeds；
+- collection 行级 finite action；
+- package poster 与真实 preview。
 
 ## 11. 声音
 
@@ -357,7 +356,7 @@ POST       /api/reload
 ## 实现顺序
 
 1. 完成其余已有事实可支持的 Timeline、clipboard、Composition、Process 和 materialization Operations；
-2. 补 Component Media input bind/unbind、受限 Shared Value seeds 和 collection 行级有限操作；
+2. 补受限 Shared Value seeds 和 collection 行级有限操作；
 3. 接入 Media 派生视图与 NLE Preview，并统一观察这些 Action 与已有 Export Action；
 4. 建立标准 Picture Transform/Crop、Audio Gain/Envelope、preserve-pitch package，并开放对应 package authoring 与产品 Operations；完成 freeze 与 magnetic product planners；
 5. 补完 `text-fine`、`caption-fine` 和 `ranking` 尚缺的物化、Media 绑定、poster 与真实 preview 验收。

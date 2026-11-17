@@ -50,9 +50,14 @@ export async function readOpen(): Promise<NleStudioOpenProjection> {
 }
 
 export async function readInspector(item: string) {
-  const result = await observe({ kind: "inspector", item });
-  if (result.kind !== "inspector") throw new Error("NLE Studio returned another observation kind for Inspector.");
-  return result.value;
+  const [scene, component] = await Promise.all([
+    observe({ kind: "inspector", item }),
+    observe({ kind: "component-inputs", item }),
+  ]);
+  if (scene.kind !== "inspector" || component.kind !== "component-inputs") {
+    throw new Error("NLE Studio returned an unexpected Inspector observation.");
+  }
+  return { scene: scene.value, component: component.value };
 }
 
 export async function refreshOpen(
@@ -82,6 +87,7 @@ export async function refreshOpen(
       case "delivery": next = { ...next, delivery: observation.value }; break;
       case "status": next = { ...next, status: observation.value }; break;
       case "open":
+      case "component-inputs":
       case "inspector": throw new Error(`NLE Studio returned unexpected ${observation.kind} observation.`);
     }
   }

@@ -1,4 +1,5 @@
 import type { NleInspectorCollection, NleInspectorField, NleInspectorScene } from "@hypit/nle/view";
+import type { NleStudioComponentInputsProjection, NleStudioMediaEntry } from "../protocol.js";
 import { NumberField, Row, Section, Toggle } from "./controls.js";
 
 function Field({ section, field, disabled, onEdit }: {
@@ -44,15 +45,32 @@ function Collection({ section, collection, disabled, onEdit }: {
   </div>;
 }
 
-export function Inspector({ scene, disabled, onEdit }: {
+export function Inspector({ scene, component, media, disabled, onEdit, onMedia }: {
   readonly scene: NleInspectorScene | undefined;
+  readonly component: NleStudioComponentInputsProjection | undefined;
+  readonly media: readonly NleStudioMediaEntry[];
   readonly disabled: boolean;
   readonly onEdit: (section: string, field: string, value: string | number | boolean) => void;
+  readonly onMedia: (item: string, slot: string, media: string) => void;
 }) {
   if (scene === undefined) return <p className="nle-empty">选择一个时间线项目以检查属性</p>;
   return <>{scene.sections.map(section => <Section title={section.label} key={section.id}>
     {section.fields.map(field => <Field key={field.id} section={section.id} field={field} disabled={disabled} onEdit={onEdit}/>) }
     {section.collections?.map(collection => <Collection key={collection.id} section={section.id}
       collection={collection} disabled={disabled} onEdit={onEdit}/>) }
-  </Section>)}</>;
+  </Section>)}{component !== undefined && component.inputs.length > 0 && <Section title="媒体输入">
+    {component.inputs.map(input => {
+      const options = media.filter(entry => entry.state === "available" && (
+        input.picture === undefined || (entry.pictureKind !== undefined
+          && (input.picture === "any" || entry.pictureKind === input.picture))
+      ) && (input.audio !== true || entry.kind === "audio" || entry.kind === "audiovisual"));
+      return <Row key={input.slot} label={input.label}><select aria-label={input.label} disabled={disabled || !component.editable}
+        value={input.media ?? ""} onChange={event => onMedia(component.item, input.slot, event.target.value)}>
+        <option value="">{input.required ? "待绑定（必需）" : "未绑定"}</option>
+        {input.media !== undefined && !options.some(entry => entry.id === input.media)
+          && <option value={input.media}>{input.media}</option>}
+        {options.map(entry => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
+      </select></Row>;
+    })}
+  </Section>}</>;
 }

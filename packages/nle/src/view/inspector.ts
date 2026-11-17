@@ -14,7 +14,7 @@ import type { NleItem, NleProject, NleTrack } from "../types.js";
 import type { NleTransaction } from "../transaction.js";
 import type {
   NleAuthoringHost,
-  NleComponentTemporalAuthoringContext,
+  NleComponentAuthoringContext,
   NleComponentValueAuthoringContext,
   NleProcessAddress,
   NleProcessAuthoringContext,
@@ -35,7 +35,7 @@ export const nleInspectorPresentationContributionKind = "hypit.nle-inspector-pre
 
 export type NleInspectorComponentPresentation = {
   readonly component: PackageSymbol;
-  readonly project: (context: NleComponentTemporalAuthoringContext) => readonly NleInspectorSectionDraft[];
+  readonly project: (context: NleComponentAuthoringContext) => readonly NleInspectorSectionDraft[];
 };
 
 export type NleInspectorOperatorPresentation = {
@@ -254,7 +254,7 @@ function validateEdit(field: NleInspectorFieldDraft, value: string | number | bo
 type ProjectedPackageSection = {
   readonly section: NleInspectorSection;
   readonly draft: NleInspectorSectionDraft;
-  readonly context: NleComponentTemporalAuthoringContext
+  readonly context: NleComponentAuthoringContext
     | NleComponentValueAuthoringContext
     | NleProcessAuthoringContext;
   readonly componentValue?: true;
@@ -644,7 +644,7 @@ export function createNleInspectorPresentationHost(
       }
       if (packageSection.address === undefined) {
         return authoring.planComponentParameterEdit(
-          packageSection.context as NleComponentTemporalAuthoringContext,
+          packageSection.context as NleComponentAuthoringContext,
           operation,
         );
       }

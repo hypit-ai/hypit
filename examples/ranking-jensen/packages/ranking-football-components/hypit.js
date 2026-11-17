@@ -332,11 +332,6 @@ function boardInspector(context) {
           options: tierOptions,
           operation: next => ({ kind: "entry.tier.set", entry: entry.id, value: next }),
         }, {
-          id: `entry:${entry.id}:input`,
-          label: "Media input",
-          control: "readout",
-          value: context.item.media?.[entry.input]?.path ?? entry.input,
-        }, {
           id: `entry:${entry.id}:timing`,
           label: "Timing",
           control: "readout",
@@ -463,7 +458,12 @@ export const hypitPackage = {
         kind: "hypit.nle-authoring",
         package: packageName,
         components: [
-          { component: componentSymbol("tier-board"), editParameters: editComponentParameters },
+          {
+            component: componentSymbol("tier-board"),
+            editParameters: editComponentParameters,
+            mediaInputs: (context) => boardParameters(context.item.parameters, `Tier board ${context.item.id}`).entries
+              .map(entry => ({ slot: entry.input, label: entry.label, required: true, picture: "constant" })),
+          },
           { component: componentSymbol("reference-title"), editParameters: editComponentParameters },
           { component: componentSymbol("reveal-flash"), editParameters: editComponentParameters },
         ],
@@ -488,5 +488,21 @@ export const hypitPackage = {
       ] },
     },
   ],
-  catalog: [],
+  catalog: [{
+    id: "tier-board",
+    kind: "hypit.nle-component",
+    title: "Tier board",
+    value: {
+      category: "graphic",
+      component: componentSymbol("tier-board"),
+      duration: { ticks: "5", timeBase: { numerator: 1, denominator: 1 } },
+      parameters: {
+        rows: [
+          { id: "s", label: "S", color: "#ee5f52" },
+          { id: "a", label: "A", color: "#f0a04c" },
+        ],
+        entries: [{ id: "first", input: "subject.first", label: "First entry", tier: "s", preset: true }],
+      },
+    },
+  }],
 };

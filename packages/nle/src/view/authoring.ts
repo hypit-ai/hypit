@@ -11,6 +11,8 @@ import type {
   NleComponentSharedValue,
   NleComponentValueBinding,
   NleComposition,
+  NleMediaInterpretation,
+  NleMediaReference,
   NleProcess,
   NlePresentItem,
   NleProject,
@@ -21,12 +23,27 @@ import { assertContributionOwner, packageSymbolKey } from "./symbol.js";
 
 export const nleAuthoringContributionKind = "hypit.nle-authoring";
 
-export type NleComponentTemporalAuthoringContext = {
+export type NleComponentAuthoringContext = {
   readonly project: NleProject;
   readonly composition: NleComposition;
   readonly track: NleTrack;
   readonly item: NleComponentItem;
 };
+
+/** One package-owned Media role in the current Component occurrence. */
+export type NleComponentMediaInput = {
+  readonly slot: string;
+  readonly label: string;
+  readonly required: boolean;
+  readonly picture?: "any" | "constant" | "signal";
+  readonly audio?: true;
+};
+
+export function acceptsNleComponentMedia(input: NleComponentMediaInput, interpretation: NleMediaInterpretation): boolean {
+  return (input.picture === undefined
+    || (interpretation.picture !== undefined && (input.picture === "any" || input.picture === interpretation.picture.kind)))
+    && (input.audio !== true || interpretation.audio !== undefined);
+}
 
 export type NleProcessAuthoringContext = {
   readonly project: NleProject;
@@ -57,15 +74,16 @@ export type NleComponentValueAuthoringContext = {
   }[];
 };
 
-export type NleComponentTemporalAuthoring = {
+export type NleComponentAuthoring = {
   readonly component: PackageSymbol;
   /** Whether ordinary trim and split preserve this occurrence by slicing only its existing Source relation. */
-  readonly timeWindow?: (context: NleComponentTemporalAuthoringContext) => boolean;
+  readonly timeWindow?: (context: NleComponentAuthoringContext) => boolean;
   /** Package-owned parameter operation. The returned closed parameters replace this occurrence's parameters. */
   readonly editParameters?: (
     operation: unknown,
-    context: NleComponentTemporalAuthoringContext,
+    context: NleComponentAuthoringContext,
   ) => Readonly<Record<string, unknown>>;
+  readonly mediaInputs?: (context: NleComponentAuthoringContext) => readonly NleComponentMediaInput[];
 };
 
 export type NleOperatorTemporalAuthoring = {
@@ -101,19 +119,20 @@ export type NleProcessAddress =
 export type NleAuthoringContribution = {
   readonly kind: typeof nleAuthoringContributionKind;
   readonly package: string;
-  readonly components: readonly NleComponentTemporalAuthoring[];
+  readonly components: readonly NleComponentAuthoring[];
   readonly componentValues: readonly NleComponentValueAuthoring[];
   readonly operators: readonly NleOperatorTemporalAuthoring[];
 };
 
 export type NleAuthoringHost = {
-  readonly componentTimeWindow: (context: NleComponentTemporalAuthoringContext) => boolean | undefined;
+  readonly componentTimeWindow: (context: NleComponentAuthoringContext) => boolean | undefined;
+  readonly componentMediaInputs: (context: NleComponentAuthoringContext) => readonly NleComponentMediaInput[];
   readonly operatorTimeWindow: (context: NleProcessAuthoringContext) => boolean | undefined;
   readonly hasComponentParameterAuthoring: (component: PackageSymbol) => boolean;
   readonly hasComponentValueAuthoring: (component: PackageSymbol, slot: string) => boolean;
   readonly hasOperatorParameterAuthoring: (operator: PackageSymbol) => boolean;
   readonly planComponentParameterEdit: (
-    context: NleComponentTemporalAuthoringContext,
+    context: NleComponentAuthoringContext,
     operation: unknown,
   ) => NleTransaction;
   readonly planProcessParameterEdit: (
@@ -127,6 +146,37 @@ export type NleAuthoringHost = {
   ) => NleTransaction;
 };
 
+export function createNleComponentAuthoringContext(
+  project: NleProject,
+  itemId: string,
+): NleComponentAuthoringContext {
+  const located = indexNleProject(project).item(itemId);
+  if (located === undefined || located.item.kind !== "present" || located.item.source !== "component") {
+    throw new Error(`NLE Item ${itemId} is not a Component Present.`);
+  }
+  return { project, ...located, item: located.item };
+}
+
+export function planNleComponentMediaEdit(
+  authoring: NleAuthoringHost,
+  context: NleComponentAuthoringContext,
+  slot: string,
+  binding?: { readonly asset: NleMediaReference; readonly interpretation: NleMediaInterpretation },
+): NleTransaction {
+  const { item } = context;
+  const input = authoring.componentMediaInputs(context).find(entry => entry.slot === slot);
+  if (input === undefined) throw new Error(`NLE Component ${item.id} does not declare Media input ${slot}.`);
+  if (binding !== undefined && !acceptsNleComponentMedia(input, binding.interpretation)) {
+    throw new Error(`NLE Media ${binding.asset.path} does not satisfy Component ${item.id} input ${slot}.`);
+  }
+  if (item.media?.[slot]?.path === binding?.asset.path) return { commands: [] };
+  const { media: existing, ...occurrence } = structuredClone(item);
+  const media = { ...existing };
+  if (binding === undefined) delete media[slot];
+  else media[slot] = structuredClone(binding.asset);
+  return { commands: [{ kind: "item.replace", item: { ...occurrence, ...(Object.keys(media).length === 0 ? {} : { media }) } }] };
+}
+
 function componentValueKey(component: PackageSymbol, slot: string): string {
   return `${packageSymbolKey(component)}:${slot}`;
 }
@@ -137,11 +187,7 @@ export function createNleComponentValueAuthoringContext(
   slot: string,
 ): NleComponentValueAuthoringContext {
   const index = indexNleProject(project);
-  const located = index.item(itemId);
-  if (located === undefined || located.item.kind !== "present" || located.item.source !== "component") {
-    throw new Error(`NLE Item ${itemId} is not a Component Present.`);
-  }
-  const { composition, track, item } = located;
+  const { composition, track, item } = createNleComponentAuthoringContext(project, itemId);
   const binding = item.valueBindings?.find((candidate) => candidate.slot === slot);
   if (binding === undefined) throw new Error(`NLE Component ${itemId} has no value slot ${slot}.`);
   const sharedValue = binding.kind === "shared" ? findNleComponentSharedValue(project, binding.ref) : undefined;
@@ -186,6 +232,9 @@ function assertContribution(value: NleAuthoringContribution): void {
     if (entry.editParameters !== undefined && typeof entry.editParameters !== "function") {
       throw new Error(`NLE authoring contribution ${key} editParameters is not callable.`);
     }
+    if (entry.mediaInputs !== undefined && typeof entry.mediaInputs !== "function") {
+      throw new Error(`NLE authoring contribution ${key} mediaInputs is not callable.`);
+    }
   }
   for (const entry of value.operators) {
     const key = `operator:${packageSymbolKey(entry.operator)}`;
@@ -213,7 +262,7 @@ function assertContribution(value: NleAuthoringContribution): void {
 
 export function createNleAuthoringContribution(value: {
   readonly package: string;
-  readonly components?: readonly NleComponentTemporalAuthoring[];
+  readonly components?: readonly NleComponentAuthoring[];
   readonly componentValues?: readonly NleComponentValueAuthoring[];
   readonly operators?: readonly NleOperatorTemporalAuthoring[];
 }): NleAuthoringContribution {
@@ -232,7 +281,7 @@ export function createNleAuthoringContribution(value: {
 export function createNleAuthoringHost(
   contributions: readonly NleAuthoringContribution[],
 ): NleAuthoringHost {
-  const components = new Map<string, NleComponentTemporalAuthoring>();
+  const components = new Map<string, NleComponentAuthoring>();
   const componentValues = new Map<string, NleComponentValueAuthoring>();
   const operators = new Map<string, NleOperatorTemporalAuthoring>();
   for (const contribution of contributions) {
@@ -258,6 +307,27 @@ export function createNleAuthoringHost(
   return {
     componentTimeWindow(context) {
       return components.get(packageSymbolKey(context.item.component))?.timeWindow?.(context);
+    },
+    componentMediaInputs(context) {
+      const { item } = context;
+      const declare = components.get(packageSymbolKey(item.component))?.mediaInputs;
+      if (declare === undefined) return [];
+      const inputs = declare(context);
+      if (!Array.isArray(inputs)) throw new Error(`NLE Component ${item.id} Media inputs must be an array.`);
+      const slots = new Set<string>();
+      for (const input of inputs as readonly NleComponentMediaInput[]) {
+        if (input === null || typeof input !== "object" || Array.isArray(input)
+          || !Object.keys(input).every(key => ["slot", "label", "required", "picture", "audio"].includes(key))
+          || typeof input.slot !== "string" || !/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(input.slot)
+          || typeof input.label !== "string" || input.label.trim().length === 0 || typeof input.required !== "boolean"
+          || (input.picture !== undefined && !["any", "constant", "signal"].includes(input.picture))
+          || (input.audio !== undefined && input.audio !== true) || (input.picture === undefined && input.audio !== true)) {
+          throw new Error(`NLE Component ${item.id} has an invalid Media input declaration.`);
+        }
+        if (slots.has(input.slot)) throw new Error(`NLE Component ${item.id} repeats Media input ${input.slot}.`);
+        slots.add(input.slot);
+      }
+      return structuredClone(inputs);
     },
     operatorTimeWindow(context) {
       return operators.get(packageSymbolKey(context.process.operator))?.timeWindow?.(context);

@@ -1,6 +1,5 @@
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
-import type { NleInspectorScene } from "@hypit/nle/view";
 import { Blend, Captions, Images, Maximize2, Minimize2, Pause, Play, Redo2, Save, StepBack, StepForward, Type, Undo2, Volume2, VolumeX, Wand2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -52,7 +51,7 @@ export function Studio() {
   const [failure, setFailure] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [selection, setSelection] = useState<readonly string[]>([]);
-  const [inspector, setInspector] = useState<NleInspectorScene>();
+  const [inspector, setInspector] = useState<Awaited<ReturnType<typeof readInspector>>>();
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -280,7 +279,12 @@ export function Studio() {
           <div className="nle-transport"><span className="nle-transport-time"><span className="current">{timecode(frame, fps)}</span><span className="separator">/</span><span className="total">{timecode(scene.maximumFrame, fps)}</span></span><button className="nle-play" aria-label={playing ? "暂停" : "播放"} onClick={() => setPlaying(value => !value)}>{playing ? <Pause size={18}/> : <Play size={18}/>}</button><span className="nle-transport-actions"><IconButton label="上一帧" onClick={() => { setPlaying(false); setFrame(value => Math.max(0, value - 1)); }}><StepBack size={15}/></IconButton><IconButton label="下一帧" onClick={() => { setPlaying(false); setFrame(value => Math.min(scene.maximumFrame, value + 1)); }}><StepForward size={15}/></IconButton><IconButton label="静音" onClick={() => setMuted(value => !value)}>{muted ? <VolumeX size={15}/> : <Volume2 size={15}/>}</IconButton></span></div>
         </section>
         <PanelResizeHandle side="properties" label="调整属性面板宽度" width={panelWidths.properties} onResize={(width, save) => resizePanel("properties", width, save)}/>
-        <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist"><button role="tab" aria-selected="true">属性</button></div><div className="nle-panel-body"><Inspector scene={inspector} disabled={busy} onEdit={inspectorEdit}/></div></aside>
+        <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist"><button role="tab" aria-selected="true">属性</button></div><div className="nle-panel-body"><Inspector scene={inspector?.scene} component={inspector?.component} media={session.media.entries}
+          disabled={busy} onEdit={inspectorEdit} onMedia={(item, slot, media) => void perform(async () => {
+            await acceptReceipt(await operate(media === ""
+              ? { ...operationContext, kind: "component-media.unbind", item, slot }
+              : { ...operationContext, kind: "component-media.bind", item, slot, media }));
+          })}/></div></aside>
       </div>
       <Timeline session={session} frame={frame} selection={selection} busy={busy} onSeek={value => { setPlaying(false); setFrame(value); }} onSelect={select}
         onMove={intent => void perform(async () => acceptReceipt(await operate({

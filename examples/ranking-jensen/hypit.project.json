@@ -2,7 +2,7 @@
   "format": "hypit.project",
   "name": "Jensen ranking",
   "packages": [
-    { "name": "@hypit-example/ranking-football-components", "catalog": [] },
+    { "name": "@hypit-example/ranking-football-components", "catalog": ["tier-board"] },
     { "name": "@hypit/caption-fine", "catalog": [] },
     { "name": "@hypit/picture-effects", "catalog": [] },
     { "name": "@hypit/audio-effects", "catalog": [] }

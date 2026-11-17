@@ -83,6 +83,12 @@ sharing of that value.
 The Reader owns the exact complete schema. A Component Present may remain opaque or point at a materialized local
 Composition; either way its parent occurrence is one Item and its internal ordering is local to that Composition.
 
+A Component occurrence maps package-declared Media slot identities to document-relative Media references. Its
+installed authoring contribution can describe the current slots from the occurrence's closed parameters. Each slot
+declares the required Picture or Audio members, including the distinction between constant and sampled Picture.
+Editing a binding changes one occurrence. An unbound required slot is an editable draft and the Component
+reports the missing input when evaluated.
+
 SVML does not persist a second Display tree. The Host derives a frame-local display from the active Composition,
 Track order, active Items, Item-local Processes and explicit relations. Picture Track order is the local paint order;
 there is no global `z` field. A nested Composition starts a new local ordering and appears in its parent as one

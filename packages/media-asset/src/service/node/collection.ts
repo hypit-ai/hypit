@@ -60,7 +60,7 @@ async function catalogEntry(root: string, manifest: string): Promise<ProjectMedi
     const document = await readMediaAssetDocumentFile(manifest);
     const primary = resolve(dirname(manifest), document.media.file.path);
     const available = await stat(primary).then((value) => value.isFile(), () => false);
-    const picture = document.media.interpretation.picture?.interpretation;
+    const picture = document.media.interpretation.picture;
     return {
       state: available ? "available" : "missing",
       reference,
@@ -68,9 +68,10 @@ async function catalogEntry(root: string, manifest: string): Promise<ProjectMedi
       ...(duration(document) === undefined ? {} : { duration: structuredClone(duration(document)!) }),
       ...(picture === undefined ? {} : {
         picture: {
-          codedWidth: picture.codedWidth,
-          codedHeight: picture.codedHeight,
-          rotationDegrees: picture.rotationDegrees,
+          kind: picture.kind,
+          codedWidth: picture.interpretation.codedWidth,
+          codedHeight: picture.interpretation.codedHeight,
+          rotationDegrees: picture.interpretation.rotationDegrees,
         },
       }),
       audio: document.media.interpretation.audio !== undefined,

@@ -49,6 +49,10 @@ Component, Adjust and Transition offerings rather than mining already-created It
 guarded materialization request; subsequent Component and Operator parameter edits use the package's Inspector and
 authoring contributions.
 
+Component packages may declare Media inputs dynamically from occurrence parameters. The Inspector presents
+compatible Project Media for each slot and submits a guarded bind or unbind. A Component materialization caller
+can also supply accepted Media identities by slot in the initial operation.
+
 Inspector contributions may project stable finite collections as well as scalar fields. The Studio renders their
 rows but still sends only the projected section/field identity and scalar value; package operation functions remain
 in the backend and reduce the current closed value there. The Jensen caption package uses this for word text and

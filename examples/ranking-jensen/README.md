@@ -19,8 +19,10 @@ declarations selected through the package symbol.
 
 `@hypit/caption-fine` projects stable word and timing collections plus its inline/shared typography slot. Word text,
 exact rational unit edges and typography fields reduce to replacement closed values in the backend; the package does not
-yet declare generic trim/split safe, so those affordances remain unavailable. The ranking package projects its stable
-tier and entry collections, including read-only Media input observations, and accepts semantic label/tier edits.
+yet declare generic trim/split safe, so those affordances remain unavailable. The ranking package projects stable
+tier and entry collections and accepts semantic label and tier edits. Studio offers a starter Tier board and
+projects a required still-Picture slot for each entry. Bind an accepted still in the Inspector or supply
+`subject.first` as a Media seed when materializing the starter through the Product Session.
 
 Local delivery resolves `ffmpeg` and `ffprobe` from the Host `PATH`. Set `HYPIT_FFMPEG_PATH` and
 `HYPIT_FFPROBE_PATH` to select explicit executables; `HYPIT_ELECTRON_PATH` selects Electron instead of Chromium.

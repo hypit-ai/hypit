@@ -17,18 +17,24 @@ import {
 } from "@hypit/nle-delivery";
 import {
   createAdjustMaterialization,
+  applyNleTransaction,
   createComponentMaterialization,
   createCompositionMaterialization,
   createMediaAssetMaterialization,
   createTransitionMaterialization,
+  indexNleProject,
   nleCompositionDuration,
   type NleCommand,
   type NleProjectService,
 } from "@hypit/nle";
 import { compareExactTemporalValues } from "@hypit/temporal/algebra";
 import {
+  acceptsNleComponentMedia,
+  createNleComponentAuthoringContext,
   createNleView,
+  nleViewTrackLocked,
   openNleViewService,
+  planNleComponentMediaEdit,
   type NleViewService,
 } from "@hypit/nle/view";
 import {
@@ -56,6 +62,7 @@ import {
 import { allocateTimelinePlacement, planTimelineDrop, studioFrameTime } from "./timeline-planning.js";
 import type {
   NleStudioCatalogProjection,
+  NleStudioComponentInputsProjection,
   NleStudioDeliveryStartRequest,
   NleStudioEvent,
   NleStudioEventListener,
@@ -327,6 +334,7 @@ export class NleStudioProductSession {
         }
         const kind = entry.picture === undefined ? "audio" as const
           : entry.audio ? "audiovisual" as const : "picture" as const;
+        const picture = entry.picture === undefined ? {} : { pictureKind: entry.picture.kind };
         const projectedFrames = entry.duration === undefined ? undefined : Math.round(
           Number(entry.duration.ticks) * entry.duration.timeBase.numerator / entry.duration.timeBase.denominator
             * editRate.numerator / editRate.denominator,
@@ -334,13 +342,13 @@ export class NleStudioProductSession {
         const durationFrames = projectedFrames !== undefined && Number.isSafeInteger(projectedFrames)
           && projectedFrames > 0 ? projectedFrames : undefined;
         if (entry.state === "missing") {
-          return { id: entry.reference.path, name, kind, state: "missing" as const, mediaType: entry.mediaType,
+          return { id: entry.reference.path, name, kind, ...picture, state: "missing" as const, mediaType: entry.mediaType,
             ...(durationFrames === undefined ? {} : { durationFrames }),
             ...(entry.diagnostic === undefined ? {} : { diagnostic: entry.diagnostic }) };
         }
         try {
           const resource = await this.#openMediaResource(entry.reference.path);
-          return { id: entry.reference.path, name, kind, state: "available" as const, mediaType: entry.mediaType,
+          return { id: entry.reference.path, name, kind, ...picture, state: "available" as const, mediaType: entry.mediaType,
             ...(durationFrames === undefined ? {} : { durationFrames }),
             resource: `api/resources/${encodeURIComponent(resource.token)}` };
         } catch (error) {
@@ -386,19 +394,52 @@ export class NleStudioProductSession {
     if (observation.kind !== "timeline") throw new Error("NLE Studio received an invalid Timeline projection.");
     const project = this.#projectLease.service.snapshot().project;
     const composition = project.compositions.find((value) => value.id === observation.value.composition)!;
-    const root = this.#project.boundary.root;
-    const documentDirectory = dirname(resolve(root, this.#projectDocument));
     return {
       scene: observation.value,
       compositions: project.compositions.map((value) => ({ id: value.id, name: value.name })),
       itemMedia: composition.tracks.flatMap((track) => track.items.flatMap((item) => {
         if (item.kind !== "present" || item.source !== "media") return [];
-        const local = relative(root, resolve(documentDirectory, item.asset.path));
-        if (local === "" || local === ".." || local.startsWith(`..${sep}`)) {
-          throw new Error(`NLE Media Item ${item.id} leaves the Project Boundary.`);
-        }
-        return [{ item: item.id, media: local.split(sep).join("/") }];
+        return [{ item: item.id, media: this.#mediaIdentity(item.asset.path, item.id) }];
       })),
+    };
+  }
+
+  #mediaIdentity(path: string, item: string): string {
+    const root = this.#project.boundary.root;
+    const directory = dirname(resolve(root, this.#projectDocument));
+    const local = relative(root, resolve(directory, path));
+    if (local === "" || local === ".." || local.startsWith(`..${sep}`)) {
+      throw new Error(`NLE Item ${item} references Media outside the Project Boundary.`);
+    }
+    return local.split(sep).join("/");
+  }
+
+  async #resolveMediaBinding(media: string) {
+    const catalog = await this.#project.media.observe();
+    const entry = catalog.entries.find(candidate => candidate.reference.path === media);
+    if (entry?.state !== "available") throw new Error(`Project Media ${media} is unavailable.`);
+    const { media: { interpretation } } = await this.#project.media.open(entry.reference);
+    const root = this.#project.boundary.root;
+    const path = relative(dirname(resolve(root, this.#projectDocument)), resolve(root, media)).split(sep).join("/");
+    return { asset: { path }, interpretation };
+  }
+
+  #componentInputs(id: string): NleStudioComponentInputsProjection {
+    const { project } = this.#projectLease.service.snapshot();
+    const { view } = this.#viewService.snapshot();
+    const located = indexNleProject(project).item(id);
+    if (located === undefined || located.composition.id !== view.activeComposition
+      || located.item.kind !== "present" || located.item.source !== "component") {
+      return { item: id, editable: false, inputs: [] };
+    }
+    const { item, track, composition } = located;
+    return {
+      item: id,
+      editable: !nleViewTrackLocked(view, composition.id, track.id),
+      inputs: this.#packages.authoring.componentMediaInputs({ project, item, track, composition }).map(input => {
+        const reference = item.media?.[input.slot];
+        return { ...input, ...(reference === undefined ? {} : { media: this.#mediaIdentity(reference.path, item.id) }) };
+      }),
     };
   }
 
@@ -442,6 +483,7 @@ export class NleStudioProductSession {
         if (observation.kind !== "inspector") throw new Error("NLE Studio received an invalid Inspector projection.");
         return { kind: "inspector", value: observation.value };
       }
+      case "component-inputs": return { kind: "component-inputs", value: this.#componentInputs(request.item) };
       case "media": return { kind: "media", value: await this.#projectMedia() };
       case "catalog": return { kind: "catalog", value: this.#catalog() };
       case "preview": return { kind: "preview", value: await this.#preview.observe() };
@@ -550,12 +592,7 @@ export class NleStudioProductSession {
         return commit(plan.commands, { track: plan.anchorTrack });
       }
       case "media.materialize": {
-        const reference = { path: operation.media };
-        const { media: { interpretation } } = await this.#project.media.open(reference);
-        const mediaPath = relative(
-          dirname(resolve(this.#project.boundary.root, this.#projectDocument)),
-          resolve(this.#project.boundary.root, reference.path),
-        ).split(sep).join("/");
+        const { asset, interpretation } = await this.#resolveMediaBinding(operation.media);
         const at = frameTime(operation.atFrame);
         const length = duration ?? interpretation.domain?.duration
           ?? frameTime(Math.max(1, Math.round(5 * view.editRate.numerator / view.editRate.denominator)));
@@ -566,7 +603,7 @@ export class NleStudioProductSession {
         });
         const item = identity("media");
         const materialization = createMediaAssetMaterialization(placement.project, {
-          itemId: item, asset: { path: mediaPath }, interpretation, track: placement.track, at, duration: length,
+          itemId: item, asset, interpretation, track: placement.track, at, duration: length,
           ...(operation.includeAudio === undefined ? {} : { audio: operation.includeAudio ? {} : false }),
           ...(operation.layout === undefined ? {} : { picture: { layout: operation.layout } }),
         });
@@ -583,10 +620,25 @@ export class NleStudioProductSession {
           medium: "picture", track: operation.track, purpose: { kind: "present", start: at, duration: length },
         });
         const item = identity("component");
-        const materialization = createComponentMaterialization(placement.project, {
+        const creation = {
           id: item, track: placement.track, component: offering.value.component, parameters: offering.value.parameters,
           at, duration: length, ...(offering.value.layout === undefined ? {} : { layout: offering.value.layout }),
-        });
+        };
+        let materialization = createComponentMaterialization(placement.project, creation);
+        if (operation.media !== undefined && Object.keys(operation.media).length > 0) {
+          const draft = applyNleTransaction(placement.project, materialization);
+          const inputs = this.#packages.authoring.componentMediaInputs(createNleComponentAuthoringContext(draft, item));
+          const bindings = await Promise.all(Object.entries(operation.media).map(async ([slot, media]) => {
+            const input = inputs.find(candidate => candidate.slot === slot);
+            if (input === undefined) throw new Error(`NLE Component ${item} does not declare Media input ${slot}.`);
+            const binding = await this.#resolveMediaBinding(media);
+            if (!acceptsNleComponentMedia(input, binding.interpretation)) {
+              throw new Error(`Project Media ${media} does not satisfy Component ${item} input ${slot}.`);
+            }
+            return [slot, binding.asset] as const;
+          }));
+          materialization = createComponentMaterialization(placement.project, { ...creation, media: Object.fromEntries(bindings) });
+        }
         return commit([...placement.commands, ...materialization.commands], { item, track: placement.track });
       }
       case "adjust.materialize": {
@@ -649,6 +701,19 @@ export class NleStudioProductSession {
         return commit([...placement.commands, {
           kind: "item.detach-audio", id: source.id, track: placement.track, audioItemId: item,
         }], { item, track: placement.track });
+      }
+      case "component-media.bind":
+      case "component-media.unbind": {
+        const located = indexNleProject(project).item(operation.item);
+        if (located === undefined || located.composition.id !== composition.id
+          || located.item.kind !== "present" || located.item.source !== "component") {
+          throw new Error(`NLE Item ${operation.item} is not a Component Present in ${composition.id}.`);
+        }
+        const binding = operation.kind === "component-media.bind" ? await this.#resolveMediaBinding(operation.media) : undefined;
+        const planned = planNleComponentMediaEdit(
+          this.#packages.authoring, { project, composition, track: located.track, item: located.item }, operation.slot, binding,
+        );
+        return commit(planned.commands, { item: operation.item, slot: operation.slot });
       }
     }
   }

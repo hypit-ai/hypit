@@ -4,6 +4,7 @@ import type {
 } from "@hypit/nle/surface";
 import type {
   NleCanvasScene,
+  NleComponentMediaInput,
   NleInspectorScene,
   NleTimelineScene,
 } from "@hypit/nle/view";
@@ -17,9 +18,16 @@ export type NleStudioMediaEntry = {
   readonly kind: "picture" | "audio" | "audiovisual" | "unknown";
   readonly state: "available" | "missing" | "invalid";
   readonly mediaType?: string;
+  readonly pictureKind?: "constant" | "signal";
   readonly durationFrames?: number;
   readonly resource?: string;
   readonly diagnostic?: string;
+};
+
+export type NleStudioComponentInputsProjection = {
+  readonly item: string;
+  readonly editable: boolean;
+  readonly inputs: readonly (NleComponentMediaInput & { readonly media?: string })[];
 };
 
 export type NleStudioMediaProjection = {
@@ -89,6 +97,7 @@ export type NleStudioObservationRequest =
   | { readonly kind: "timeline" }
   | { readonly kind: "canvas" }
   | { readonly kind: "inspector"; readonly item: string }
+  | { readonly kind: "component-inputs"; readonly item: string }
   | { readonly kind: "media" }
   | { readonly kind: "catalog" }
   | { readonly kind: "preview" }
@@ -101,6 +110,7 @@ export type NleStudioObservation =
   | { readonly kind: "timeline"; readonly value: NleStudioTimelineProjection }
   | { readonly kind: "canvas"; readonly value: NleCanvasScene }
   | { readonly kind: "inspector"; readonly value: NleInspectorScene }
+  | { readonly kind: "component-inputs"; readonly value: NleStudioComponentInputsProjection }
   | { readonly kind: "media"; readonly value: NleStudioMediaProjection }
   | { readonly kind: "catalog"; readonly value: NleStudioCatalogProjection }
   | { readonly kind: "preview"; readonly value: NleStudioPreviewProjection }
@@ -174,7 +184,10 @@ export type NleStudioOperation =
       readonly includeAudio?: boolean;
       readonly layout?: NlePictureLayout;
     })
-  | (NleStudioTimedPlacement & NleStudioOfferingReference & { readonly kind: "component.materialize" })
+  | (NleStudioTimedPlacement & NleStudioOfferingReference & {
+      readonly kind: "component.materialize";
+      readonly media?: Readonly<Record<string, string>>;
+    })
   | (NleStudioTimedPlacement & NleStudioOfferingReference & { readonly kind: "adjust.materialize" })
   | (NleStudioCompositionOperation & NleStudioOfferingReference & {
       readonly kind: "transition.materialize";
@@ -185,7 +198,9 @@ export type NleStudioOperation =
       readonly kind: "composition.materialize";
       readonly source: string;
     })
-  | (NleStudioCompositionOperation & { readonly kind: "audio.detach"; readonly item: string; readonly track?: string });
+  | (NleStudioCompositionOperation & { readonly kind: "audio.detach"; readonly item: string; readonly track?: string })
+  | (NleStudioCompositionOperation & { readonly kind: "component-media.bind"; readonly item: string; readonly slot: string; readonly media: string })
+  | (NleStudioCompositionOperation & { readonly kind: "component-media.unbind"; readonly item: string; readonly slot: string });
 
 /** One explicit export of the NLE document already opened by this Product Session. */
 export type NleStudioDeliveryStartRequest = {

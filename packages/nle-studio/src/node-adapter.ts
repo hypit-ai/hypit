@@ -38,18 +38,18 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
   }
   const request = value as { readonly kind?: unknown; readonly item?: unknown };
   const keys = Object.keys(value);
-  if (request.kind === "inspector") {
+  if (request.kind === "inspector" || request.kind === "component-inputs") {
     if (keys.some((key) => key !== "kind" && key !== "item") || typeof request.item !== "string"
       || request.item.length === 0) {
-      throw new Error("NLE Studio Inspector observation requires one Item id.");
+      throw new Error(`NLE Studio ${request.kind} observation requires one Item id.`);
     }
-    return { kind: "inspector", item: request.item };
+    return { kind: request.kind, item: request.item };
   }
   const kinds = new Set(["open", "project", "status", "timeline", "canvas", "media", "catalog", "preview", "delivery"]);
   if (keys.length !== 1 || typeof request.kind !== "string" || !kinds.has(request.kind)) {
     throw new Error("NLE Studio observation kind is invalid.");
   }
-  return { kind: request.kind as Exclude<NleStudioObservationRequest["kind"], "inspector"> };
+  return { kind: request.kind as Exclude<NleStudioObservationRequest["kind"], "inspector" | "component-inputs"> };
 }
 
 function record(value: unknown, subject: string): Readonly<Record<string, unknown>> {
@@ -106,7 +106,12 @@ function operationRequest(value: unknown): NleStudioOperation {
         && identity(request.media) && (request.includeAudio === undefined || typeof request.includeAudio === "boolean")
         && (request.layout === undefined || validPictureLayout(request.layout));
       break;
-    case "component.materialize":
+    case "component.materialize": {
+      const media = request.media === undefined ? {} : record(request.media, "Component Media seeds");
+      valid = currentFields("package", "offering", "media", ...timedFields) && placement && duration && offering
+        && Object.values(media).every(identity);
+      break;
+    }
     case "adjust.materialize":
       valid = currentFields("package", "offering", ...timedFields) && placement && duration && offering;
       break;
@@ -119,6 +124,12 @@ function operationRequest(value: unknown): NleStudioOperation {
       break;
     case "audio.detach":
       valid = currentFields("item", "track") && track && identity(request.item);
+      break;
+    case "component-media.bind":
+      valid = currentFields("item", "slot", "media") && identity(request.item) && identity(request.slot) && identity(request.media);
+      break;
+    case "component-media.unbind":
+      valid = currentFields("item", "slot") && identity(request.item) && identity(request.slot);
       break;
     default:
       throw new Error("NLE Studio Operation kind is invalid.");

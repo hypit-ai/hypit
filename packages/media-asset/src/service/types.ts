@@ -9,6 +9,7 @@ export type ProjectMediaResourceResolver = (
 ) => MediaResource | Promise<MediaResource>;
 
 export type ProjectMediaCatalogPicture = {
+  readonly kind: "constant" | "signal";
   readonly codedWidth: number;
   readonly codedHeight: number;
   readonly rotationDegrees: 0 | 90 | 180 | 270;

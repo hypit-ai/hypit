@@ -141,6 +141,12 @@ the NLE planner validates their direct cut, moves the incoming Item and adds the
 uses one guarded transaction to resolve or add an Audio Track and create the Audio-only occurrence from the
 original Present. Media bytes and package Timeline artwork are served through Product or Project capabilities.
 
+`observe({ kind: "component-inputs", item })` projects the package-declared slots, their constraints, current
+Project Media identities and View editability. The Inspector offers compatible available assets. The
+`component-media.bind` and `component-media.unbind` operations validate the current declaration and route one
+occurrence edit through the guarded Surface. Component materialization accepts optional Media seeds keyed by slot.
+All supplied seeds are validated against accepted Project Media before the single creation transaction.
+
 ## Package
 
 `@hypit/nle-studio` is an independent release because it has a browser artifact, Product Provider and product lifecycle

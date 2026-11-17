@@ -130,6 +130,11 @@ An opaque instance stores:
 - optional package value slots with inline or Project-shared ownership;
 - declared Picture and Audio outputs.
 
+For a Component with editable Media inputs, its authoring contribution declares each current slot's identity,
+label, requiredness and accepted interpretation. The package may derive slots from stable collection entries.
+Studio supplies accepted Project Media references for the declared slots and validates their interpretations on bind
+or materialization. The Component remains responsible for evaluating its required inputs.
+
 An expanded result materializes a local NLE Composition with stable child ids. Acceptance is explicit, after which
 that Composition is ordinary NLE author material and does not retain a live dependency on the Component source or the
 author program. A component can use ordinary functions, conditions and loops internally, but only a finite
