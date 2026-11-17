@@ -221,11 +221,12 @@ export function windowsCommandLine(args: readonly string[]): string {
 /**
  * Windows: a console of its own, hidden, so the launching console's destruction does not take it.
  *
- * The script travels as one `-EncodedCommand` blob, so no quoting of ours crosses a shell boundary.
+ * The script travels as a `.ps1` file run with `-File`, so no quoting of ours crosses a shell boundary.
  * Feeding it on stdin instead looks equivalent and is not: `-Command -` parses what it reads a
  * statement at a time, so an argument holding a newline — `node -e` with a real script in it — ends
  * the statement early and PowerShell exits having run nothing, with no process id and nothing on
- * stderr to say why. Base64 has no line structure to trip over.
+ * stderr to say why. A file is parsed whole, so a newline inside an argument stays inside its string.
+ * `-EncodedCommand` is avoided: encoded launches were killed about 14 s after start in testing.
  *
  * `Start-Process` refuses to send both streams to one file, so the error stream gets its own beside
  * the log; `-PassThru` reports the new process, which is the pid everything after this waits on and
@@ -253,9 +254,10 @@ export async function startWithOwnConsole(
     "[Console]::Out.Write($p.Id)",
   ].filter((line) => line.length > 0).join("\n");
 
+  const scriptPath = `${logPath}.start.ps1`;
+  await writeFile(scriptPath, `\uFEFF${script}\n`, "utf8");
   const shell = await new Promise<{ readonly out: string; readonly err: string }>((settle) => {
-    const encoded = Buffer.from(script, "utf16le").toString("base64");
-    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-EncodedCommand", encoded], {
+    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-File", scriptPath], {
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -276,6 +278,7 @@ export async function startWithOwnConsole(
     child.on("exit", () => { setTimeout(done, 250).unref(); });
     child.on("close", done);
   });
+  await rm(scriptPath, { force: true });
   const pid = Number(shell.out);
   if (Number.isSafeInteger(pid) && pid > 0) return { pid };
   // `Start-Process` writes its refusal to the error stream and prints no id. Carrying it out is what
