@@ -140,6 +140,10 @@ rereads invalidated projections on live edits.
 `observe({ kind: "action", handle })` reads current state. `DELETE /api/actions/:handle` requests cancellation.
 A completed Action exposes a Session resource URL. Playback uses bounded MP4 intervals with programme audio. Studio
 requests the next interval when the current interval ends, so a rendering wait can occur at an interval boundary.
+
+The same endpoint starts `media.thumbnail`, `media.storyboard`, `media.waveform` and `media.audio-preview` against
+one accepted Asset identity and Catalog generation. These operations sample the Asset's Media clock. Studio retains
+a bounded set of results and revokes them when the Catalog changes or the Session closes.
 The destination remains a portable Project path validated by that Service.
 
 Within the Product Session mount, `POST api/media/import?name=...` carries one raw browser `File` body. The adapter

@@ -85,6 +85,7 @@ export function assertHtmlProgram(value: HtmlProgram): void {
       `HTML Programme Video Source ${source.id} Picture`);
     if (!Number.isSafeInteger(source.streamIndex) || source.streamIndex < 0
       || source.sourceFrames.length !== value.frameCount) throw new Error(`HTML Programme Video Source ${source.id} plan is invalid.`);
+    assertExactTemporalValue(source.presentationStart, `HTML Programme Video Source ${source.id} presentation start`);
     assertUsage(source.usage, value.frameCount, `HTML Programme Video Source ${source.id} usage`);
     if (source.reconstruction !== undefined) assertHtmlPictureReconstruction(source.reconstruction);
     for (const [frame, sample] of source.sourceFrames.entries()) {

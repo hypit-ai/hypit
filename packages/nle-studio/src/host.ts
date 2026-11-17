@@ -65,6 +65,7 @@ import {
 } from "./packages.js";
 import { allocateTimelinePlacement, planTimelineDrop, planTimelineEdit, studioFrameTime } from "./timeline-planning.js";
 import { NleStudioPreview } from "./preview.js";
+import { NleStudioMediaViews } from "./media-views.js";
 import type {
   NleStudioActionObservation,
   NleStudioActionRequest,
@@ -90,6 +91,7 @@ export type OpenNleStudioProductSessionOptions = {
   readonly viewDocument?: string;
   readonly frameExecutor?: HtmlFrameExecutor;
   readonly playbackExecutor?: HtmlVideoExecutor;
+  readonly mediaViews?: LocalMediaToolchainOptions;
   readonly mediaImport?: NleStudioMediaImportPort;
   readonly delivery?: NleDeliveryService;
 };
@@ -111,6 +113,13 @@ export type NleStudioMediaImportPort = {
 export const nleStudioProduct = "hypit.nle-studio";
 
 type NestedVisit = { readonly parent: string; readonly child: string; readonly frame: number };
+
+class NleStudioMediaRevisionConflict extends Error {
+  constructor(expected: number, actual: number) {
+    super(`Project Media Catalog changed: expected generation ${expected}, found ${actual}.`);
+    this.name = "NleStudioMediaRevisionConflict";
+  }
+}
 
 function context(project: ProjectHost): ProjectHostContext {
   return {
@@ -166,6 +175,7 @@ export class NleStudioProductSession {
   readonly #surface: NleEditingSurface;
   readonly #packages: NleStudioPackageBridge;
   readonly #preview: NleStudioPreview | undefined;
+  readonly #mediaViews: NleStudioMediaViews | undefined;
   readonly #mediaImport: NleStudioMediaImportPort | undefined;
   readonly #delivery: NleDeliveryService | undefined;
   readonly #mediaResources = new Map<string, Promise<ProjectHostResource>>();
@@ -197,6 +207,7 @@ export class NleStudioProductSession {
     packages: NleStudioPackageBridge;
     frameExecutor: HtmlFrameExecutor | undefined;
     playbackExecutor: HtmlVideoExecutor | undefined;
+    mediaViews: LocalMediaToolchainOptions | undefined;
     mediaImport: NleStudioMediaImportPort | undefined;
     delivery: NleDeliveryService | undefined;
   }) {
@@ -214,6 +225,8 @@ export class NleStudioProductSession {
       ...(value.playbackExecutor === undefined ? {} : { video: value.playbackExecutor }),
       publish: action => this.#publishAction(action),
     });
+    this.#mediaViews = value.mediaViews === undefined ? undefined
+      : new NleStudioMediaViews(value.project, value.mediaViews, action => this.#publishAction(action));
     this.#mediaImport = value.mediaImport;
     this.#delivery = value.delivery;
     this.#unsubscribeSurface = this.#surface.subscribe((change) => {
@@ -233,6 +246,7 @@ export class NleStudioProductSession {
     this.#unsubscribeMedia = this.#project.subscribe((event) => {
       if (event.kind !== "media.catalog") return;
       this.#preview?.invalidate();
+      this.#mediaViews?.invalidate();
       this.#emit({
         scope: "project",
         kind: "media.catalog",
@@ -276,6 +290,7 @@ export class NleStudioProductSession {
         packages,
         frameExecutor: options.frameExecutor,
         playbackExecutor: options.playbackExecutor,
+        mediaViews: options.mediaViews,
         mediaImport: options.mediaImport,
         delivery: options.delivery,
       });
@@ -344,6 +359,8 @@ export class NleStudioProductSession {
       this.#mediaGeneration = catalog.generation;
     }
     return {
+      generation: catalog.generation,
+      derivedViews: this.#mediaViews !== undefined,
       entries: await Promise.all(catalog.entries.map(async (entry) => {
         const name = mediaName(entry.reference.path);
         if (entry.state === "invalid") {
@@ -382,6 +399,8 @@ export class NleStudioProductSession {
     if (this.#mediaTokens.has(token)) return this.#project.resources.resolve(token);
     const preview = this.#preview?.resource(token);
     if (preview !== undefined) return preview;
+    const mediaView = this.#mediaViews?.resource(token);
+    if (mediaView !== undefined) return mediaView;
     if (this.#deliveryHandles.has(token)) {
       const delivery = this.#delivery!.observe(token);
       if (delivery.state === "complete") return delivery.result;
@@ -876,6 +895,18 @@ export class NleStudioProductSession {
 
   async startAction(request: NleStudioActionRequest): Promise<NleStudioActionObservation> {
     this.#assertOpen();
+    if ("expectedMediaGeneration" in request) {
+      if (this.#mediaViews === undefined) throw new Error("NLE Studio Media views are unavailable.");
+      const catalog = await this.#project.media.observe();
+      this.#assertOpen();
+      if (catalog.generation !== request.expectedMediaGeneration) {
+        throw new NleStudioMediaRevisionConflict(request.expectedMediaGeneration, catalog.generation);
+      }
+      if (!catalog.entries.some(entry => entry.reference.path === request.media && entry.state === "available")) {
+        throw new Error(`Project Media ${request.media} is unavailable.`);
+      }
+      return this.#mediaViews.start(request);
+    }
     const snapshot = this.#projectLease.service.snapshot();
     if (snapshot.revision !== request.expectedProjectRevision) {
       throw new NleEditingSurfaceRevisionConflict("project", request.expectedProjectRevision, snapshot.revision);
@@ -915,16 +946,16 @@ export class NleStudioProductSession {
   observeAction(handle: string): NleStudioActionObservation {
     this.#assertOpen();
     if (this.#deliveryHandles.has(handle)) return this.#deliveryObservation(this.#delivery!.observe(handle));
-    const preview = this.#preview?.observe(handle);
-    if (preview !== undefined) return preview;
+    const current = this.#preview?.observe(handle) ?? this.#mediaViews?.observe(handle);
+    if (current !== undefined) return current;
     throw new Error(`NLE Studio Action ${handle} is unavailable in this Session.`);
   }
 
   cancelAction(handle: string): NleStudioActionObservation {
     this.#assertOpen();
     if (this.#deliveryHandles.has(handle)) return this.#deliveryObservation(this.#delivery!.cancel(handle));
-    const preview = this.#preview?.cancel(handle);
-    if (preview !== undefined) return preview;
+    const current = this.#preview?.cancel(handle) ?? this.#mediaViews?.cancel(handle);
+    if (current !== undefined) return current;
     throw new Error(`NLE Studio Action ${handle} is unavailable in this Session.`);
   }
 
@@ -972,7 +1003,7 @@ export class NleStudioProductSession {
     this.#listeners.clear();
     this.#surface.close();
     this.#delivery?.close();
-    await this.#preview?.close();
+    await Promise.all([this.#preview?.close(), this.#mediaViews?.close()]);
     this.#clearMediaResources();
     this.#viewLease?.close();
     this.#projectLease.close();
@@ -1062,6 +1093,7 @@ export function createNleStudioProductProvider(
           ...(selected.viewDocument === undefined ? {} : { viewDocument: selected.viewDocument }),
           ...(options.frameExecutor === undefined ? {} : { frameExecutor: options.frameExecutor }),
           ...(options.deliveryExecutor === undefined ? {} : { playbackExecutor: options.deliveryExecutor }),
+          mediaViews: options.mediaTools ?? {},
           ...(mediaImport === undefined ? {} : { mediaImport }),
           ...(delivery === undefined ? {} : { delivery }),
         });

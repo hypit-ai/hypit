@@ -7,6 +7,7 @@ import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 import { serveApplicationEventStream, type NodeApplicationProductAdapter } from "@hypit/application/node";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
+import { assertExactTemporalValue } from "@hypit/temporal/algebra";
 import { NleStudioProductSession, nleStudioProduct } from "./host.js";
 import type {
   NleStudioActionRequest,
@@ -195,6 +196,49 @@ function actionRequest(value: unknown): NleStudioActionRequest {
   const integer = (entry: unknown, minimum = 0) =>
     typeof entry === "number" && Number.isSafeInteger(entry) && entry >= minimum;
   const renderer = (entry: unknown) => entry === undefined || entry === "chromium" || entry === "electron";
+  const exact = (entry: unknown) => {
+    const temporal = record(entry, "NLE Studio Media time");
+    const base = record(temporal.timeBase, "NLE Studio Media time base");
+    if (!fields(temporal, "ticks", "timeBase") || !fields(base, "numerator", "denominator")
+      || typeof temporal.ticks !== "string" || typeof base.numerator !== "number" || typeof base.denominator !== "number") {
+      throw new Error("NLE Studio Media time fields are invalid.");
+    }
+    assertExactTemporalValue({
+      ticks: temporal.ticks, timeBase: { numerator: base.numerator, denominator: base.denominator },
+    }, "NLE Studio Media time");
+  };
+  if (typeof request.kind === "string" && request.kind.startsWith("media.")) {
+    const common = ["kind", "media", "expectedMediaGeneration"];
+    if (!identity(request.media) || !integer(request.expectedMediaGeneration)) {
+      throw new Error("NLE Studio Media view requires a Media identity and Catalog generation.");
+    }
+    if (request.kind === "media.thumbnail") {
+      if (!fields(request, ...common, "at", "height") || (request.height !== undefined && !integer(request.height, 1))) {
+        throw new Error("NLE Studio thumbnail Action fields are invalid.");
+      }
+      if (request.at !== undefined) exact(request.at);
+    } else {
+      const range = record(request.range, "NLE Studio Media view range");
+      if (!fields(range, "start", "end")) throw new Error("NLE Studio Media view range fields are invalid.");
+      exact(range.start);
+      exact(range.end);
+      if (request.kind === "media.storyboard") {
+        if (!fields(request, ...common, "range", "frames", "height") || !integer(request.frames, 1)
+          || (request.height !== undefined && !integer(request.height, 1))) {
+          throw new Error("NLE Studio storyboard Action fields are invalid.");
+        }
+      } else if (request.kind === "media.waveform") {
+        if (!fields(request, ...common, "range", "width", "height")
+          || (request.width !== undefined && !integer(request.width, 1))
+          || (request.height !== undefined && !integer(request.height, 1))) {
+          throw new Error("NLE Studio waveform Action fields are invalid.");
+        }
+      } else if (request.kind !== "media.audio-preview" || !fields(request, ...common, "range")) {
+        throw new Error("NLE Studio Media Action fields are invalid.");
+      }
+    }
+    return request as NleStudioActionRequest;
+  }
   if (!integer(request.expectedProjectRevision)) throw new Error("NLE Studio Action requires a Project revision.");
   if (request.kind === "frame-preview" || request.kind === "playback-preview") {
     const common = ["kind", "expectedProjectRevision", "expectedViewRevision", "composition", "atFrame"];

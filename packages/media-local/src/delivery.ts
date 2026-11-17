@@ -7,6 +7,7 @@ import {
   compareExactTemporalValues, exactTemporalZero,
   type ExactTemporalValue, type TemporalMap, type TemporalRange,
 } from "@hypit/temporal/algebra";
+import { pcmSampleIndex } from "./pcm-clock.js";
 
 const seconds = (value: ExactTemporalValue): number => Number(BigInt(value.ticks))
   * value.timeBase.numerator / value.timeBase.denominator;
@@ -107,15 +108,8 @@ export async function renderAudioProgramLocally(input: {
   const { start, end } = input.range ?? { start: zero, end: duration };
   if (compareExactTemporalValues(start, zero) < 0 || compareExactTemporalValues(end, duration) > 0
     || compareExactTemporalValues(start, end) >= 0) throw new Error("Audio render range is outside the Programme.");
-  const sample = (value: ExactTemporalValue) => {
-    const numerator = BigInt(value.ticks) * BigInt(value.timeBase.numerator) * BigInt(input.program.sampleRate);
-    const denominator = BigInt(value.timeBase.denominator);
-    const index = Number((2n * numerator + denominator) / (2n * denominator));
-    if (!Number.isSafeInteger(index)) throw new Error("Audio render sample exceeds the supported range.");
-    return index;
-  };
-  const first = sample(start);
-  const last = sample(end);
+  const first = pcmSampleIndex(start, input.program.sampleRate);
+  const last = pcmSampleIndex(end, input.program.sampleRate);
   if (first >= last) throw new Error("Audio render interval has no samples.");
   const graph = audioGraph(input.program, first, last);
   await run(input.ffmpegPath ?? "ffmpeg", ["-hide_banner", "-loglevel", "error", "-y",

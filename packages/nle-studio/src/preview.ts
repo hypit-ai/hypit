@@ -11,7 +11,7 @@ import { compareExactTemporalValues, type TemporalRate } from "@hypit/temporal/a
 import type { NleStudioActionObservation, NleStudioActionRequest } from "./protocol.js";
 import { studioFrameTime } from "./timeline-planning.js";
 
-type PreviewRequest = Exclude<NleStudioActionRequest, { kind: "delivery" }>;
+type PreviewRequest = Extract<NleStudioActionRequest, { kind: "frame-preview" | "playback-preview" }>;
 type PreviewAction = {
   readonly handle: string;
   readonly kind: PreviewRequest["kind"];

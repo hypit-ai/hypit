@@ -90,6 +90,9 @@ ordinal 才启动最多 16 帧的顺序解码窗口；当前截图所需帧持�
 内的 LRU 驱逐。FFmpeg 只对该窗口执行 Picture conversion 与 PNG 编码。相同资源、stream 与 Picture
 interpretation 的多个 HTML Source 共享 probe、解码需求和驻留像素。
 
+`HtmlProgram` 携带所选流的 presentation start。执行层把 Source-local 精确位置换算成容器时间戳，
+与素材缩略图和 storyboard 共用 Media 的帧索引及 sided 选帧逻辑。
+
 Chromium 自动并发以 Host CPU/内存导出的 browser ceiling 为上限，先用较小 live count 开始。worker 只领取约
 一秒的连续输出批次；稳定批次的真实生产吞吐决定是否增加 worker，吞吐退化时在批次边界退休 worker。短片不
 创建无法摊销启动成本的 browser；调用者指定数值 `workers` 时保持固定并发。调节只属于本次 Action，不改变

@@ -86,9 +86,9 @@ ApplicationHost
 | 缺失素材保持作者结构 | Media observation + NLE reference | Catalog 可报告 missing；NLE Reader 不依赖打开媒体即可保留 Item 时间与引用 | **已具备**。面向当前打开文档的受影响 Item 投影仍需补充 |
 | 移除 Project Media | Project Media Service Action | 当前 Service 没有删除操作，也不维护跨 Owner 反向引用 | **产品缺口**。若增加移除，调用者必须显式给出作用边界并由相关 Owner 校验引用 |
 | 原媒体按需读取 | Project resource capability | Project Resource Gateway 与 Studio resource route 支持 capability token 和 byte range | **已具备**，但只是资源读取，不等于解码后的逐帧/同步播放 |
-| 缩略图与 storyboard | Media Action | NLE 的 source-time 能描述裁剪、倒放和变速后的采样位置 | **执行缺口**。需要可按可见范围请求的 Media thumbnail/storyboard Action |
-| 波形 | Media/NLE Action | 当前没有原始峰值或处理后波形 Action | **执行缺口**。原始波形由 Media 产生；处理后波形消费当前 AVIR Programme |
-| 音频试听 | Media/NLE playback Action | 当前只有资源字节读取和浏览器本地媒体元素 | **执行缺口**。需要按 occurrence source-time 与音频策略产生试听资源 |
+| 缩略图与 storyboard | Media Action | 以当前 Catalog generation、Media 时钟位置或范围取所选流；storyboard 提供样本到 atlas tile 的映射 | **已具备**后端；Timeline 可见 Item 范围尚未接入 |
+| 波形 | Media/NLE Action | 从所选 Media Audio member 生成峰值 PNG；处理后波形消费当前 AVIR Programme | **已具备**原始波形；处理后波形缺失 |
+| 音频试听 | Media/NLE playback Action | 素材可输出指定 Media 区间的 WAV；NLE 播放区间可包含混合音频 | **已具备**素材与节目试听；独立 occurrence 试听范围待定 |
 
 ## 2. 轨道和拖放
 
@@ -363,12 +363,13 @@ POST       /api/reload
 - 字幕源需要先确定引用和寿命，再开放导入和批量分轨。
 - 跨 NLE 文档或 OS 剪贴板需要明确 Media、Shared Value 和 Composition 引用的导入与重绑边界。
 - 多轨复合与任意解除复合需要明确跨轨混合、Adjust 作用域、外层处理和非线性时间关系如何转写为父级作者事实。
+- 独立 occurrence 试听需明确是否包含所在 Track 的 Adjust、上层混音与 Reconstruction。
 
 ## 实现顺序
 
 1. 完成其余已有事实可支持的 Timeline、Composition、Process 和 materialization Operations；
 2. 补受限 Shared Value seeds 和 collection 行级有限操作；
-3. 接入 Media 派生视图并投影到 Studio Action 观察；
+3. 为 Timeline 按可见范围接入已有 Media 派生视图，并补 Programme 波形；
 4. 建立标准 Picture Transform/Crop、Audio Gain/Envelope、preserve-pitch package，并开放对应 package authoring 与产品 Operations；完成 freeze 与 magnetic product planners；
 5. 补完 `text-fine`、`caption-fine` 和 `ranking` 尚缺的物化、Media 绑定、poster 与真实 preview 验收。
 

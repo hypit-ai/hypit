@@ -16,3 +16,4 @@ export function sealMediaInterpretation(value: MediaInterpretation): MediaInterp
   verifyMediaInterpretation(value);
   return structuredClone(value);
 }
+export type { MediaStoryboardAtlas, MediaViewRequest } from "./views.js";

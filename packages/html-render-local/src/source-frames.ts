@@ -1,13 +1,12 @@
-import { execFile, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { createReadStream } from "node:fs";
 import { mkdir, stat, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { promisify } from "node:util";
 import type { HtmlFrameSpan, HtmlProgram, HtmlVideoSource } from "@hypit/html-program";
+import { indexLocalVideoFrames, localVideoFrameOrdinal, type LocalVideoFrameIndex } from "@hypit/media-local";
 import { SourceFrameStore } from "./source-frame-store.js";
 import type { DecodedSourceFrame, SourceFrameWindow } from "./source-frame-store.js";
 
-const runFile = promisify(execFile);
 const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const preferredSourceFrames = 15;
 const preferredOutputSearch = 64;
@@ -16,18 +15,11 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-type SourceMetadata = {
-  readonly width: number;
-  readonly height: number;
-  readonly timestamps: readonly bigint[];
-  readonly timeBase: { readonly numerator: bigint; readonly denominator: bigint };
-};
-
 type PreparedDecoder = {
   readonly id: string;
   readonly source: HtmlVideoSource;
   readonly path: string;
-  readonly metadata: SourceMetadata;
+  readonly metadata: LocalVideoFrameIndex;
 };
 
 type PreparedSource = {
@@ -72,68 +64,6 @@ function selected(selection: readonly HtmlFrameSpan[], frame: number): boolean {
   return selection.some((span) => frame >= span.startFrame && frame < span.endFrameExclusive);
 }
 
-function sourceOrdinal(source: HtmlVideoSource, sample: NonNullable<HtmlVideoSource["sourceFrames"][number]>,
-  metadata: SourceMetadata): number {
-  const targetNumerator = BigInt(sample.position.ticks) * BigInt(sample.position.timeBase.numerator);
-  const targetDenominator = BigInt(sample.position.timeBase.denominator);
-  let low = 0;
-  let high = metadata.timestamps.length;
-  if (source.reconstruction?.kind === "nearest") {
-    while (low < high) {
-      const middle = Math.floor((low + high) / 2);
-      const sourceNumerator = metadata.timestamps[middle]! * metadata.timeBase.numerator;
-      const comparison = sourceNumerator * targetDenominator - targetNumerator * metadata.timeBase.denominator;
-      if (comparison < 0n) low = middle + 1;
-      else high = middle;
-    }
-    assert(metadata.timestamps.length > 0, `HTML Video Source ${source.id} contains no decoded frames.`);
-    const upper = Math.min(metadata.timestamps.length - 1, low);
-    const lower = Math.max(0, low - 1);
-    const distance = (ordinal: number): bigint => {
-      const sourceNumerator = metadata.timestamps[ordinal]! * metadata.timeBase.numerator;
-      const difference = sourceNumerator * targetDenominator - targetNumerator * metadata.timeBase.denominator;
-      return difference < 0n ? -difference : difference;
-    };
-    return distance(lower) <= distance(upper) ? lower : upper;
-  }
-  while (low < high) {
-    const middle = Math.floor((low + high) / 2);
-    const sourceNumerator = metadata.timestamps[middle]! * metadata.timeBase.numerator;
-    const comparison = sourceNumerator * targetDenominator - targetNumerator * metadata.timeBase.denominator;
-    if (sample.side === "before" ? comparison < 0n : comparison <= 0n) low = middle + 1;
-    else high = middle;
-  }
-  assert(metadata.timestamps.length > 0, `HTML Video Source ${source.id} contains no decoded frames.`);
-  return Math.max(0, Math.min(metadata.timestamps.length - 1, low - 1));
-}
-
-async function probeSource(ffprobePath: string, path: string, streamIndex: number): Promise<SourceMetadata> {
-  const { stdout } = await runFile(ffprobePath, [
-    "-v", "error", "-select_streams", String(streamIndex),
-    "-show_entries", "stream=index,width,height,time_base:frame=best_effort_timestamp",
-    "-of", "json", path,
-  ], { maxBuffer: 256 * 1024 * 1024 });
-  const data = JSON.parse(stdout) as {
-    readonly streams?: readonly { readonly index?: unknown; readonly width?: unknown; readonly height?: unknown;
-      readonly time_base?: unknown }[];
-    readonly frames?: readonly { readonly best_effort_timestamp?: unknown }[];
-  };
-  const stream = data.streams?.[0];
-  const match = typeof stream?.time_base === "string"
-    ? /^(?<numerator>[1-9][0-9]*)\/(?<denominator>[1-9][0-9]*)$/u.exec(stream.time_base)
-    : null;
-  const timestamps = (data.frames ?? []).map((frame) => frame.best_effort_timestamp);
-  assert(stream?.index === streamIndex && Number.isSafeInteger(stream.width) && Number(stream.width) > 0
-    && Number.isSafeInteger(stream.height) && Number(stream.height) > 0 && match?.groups !== undefined
-    && timestamps.length > 0 && timestamps.every((value) => typeof value === "number" || typeof value === "string")
-    && timestamps.every((value) => /^-?[0-9]+$/u.test(String(value))),
-  `HTML Video Source ${path} has no usable stream ${streamIndex}.`);
-  return {
-    width: Number(stream.width), height: Number(stream.height),
-    timestamps: timestamps.map((value) => BigInt(String(value))),
-    timeBase: { numerator: BigInt(match.groups.numerator!), denominator: BigInt(match.groups.denominator!) },
-  };
-}
 
 function decodeFilters(source: HtmlVideoSource): string {
   const picture = source.interpretation.picture;
@@ -228,7 +158,7 @@ export async function createPreparedSourceFrames(input: {
   const prepared = new Map<string, PreparedSource>();
   const decodersByKey = new Map<string, PreparedDecoder>();
   const decodersById = new Map<string, PreparedDecoder>();
-  const metadata = new Map<string, Promise<SourceMetadata>>();
+  const metadata = new Map<string, Promise<LocalVideoFrameIndex>>();
   await mkdir(input.directory, { recursive: true });
   for (const source of input.program.videoSources) {
     if (!source.sourceFrames.some((sample, frame) => sample !== null && selected(input.selection, frame))) continue;
@@ -237,7 +167,10 @@ export async function createPreparedSourceFrames(input: {
     const metadataKey = `${path}\u0000${source.streamIndex}`;
     let metadataRequest = metadata.get(metadataKey);
     if (metadataRequest === undefined) {
-      metadataRequest = probeSource(input.ffprobePath, path, source.streamIndex);
+      metadataRequest = indexLocalVideoFrames({
+        ffprobePath: input.ffprobePath, address: path, stream: source.streamIndex,
+        ...(input.signal === undefined ? {} : { signal: input.signal }),
+      });
       metadata.set(metadataKey, metadataRequest);
     }
     const sourceMetadata = await metadataRequest;
@@ -247,7 +180,9 @@ export async function createPreparedSourceFrames(input: {
     const outputOrdinals = new Map<number, number>();
     for (const [frame, sample] of source.sourceFrames.entries()) {
       if (sample === null || !selected(input.selection, frame)) continue;
-      outputOrdinals.set(frame, sourceOrdinal(source, sample, sourceMetadata));
+      outputOrdinals.set(frame, localVideoFrameOrdinal(
+        sourceMetadata, sample.position, sample.side, source.reconstruction?.kind, source.presentationStart,
+      ));
     }
     if (outputOrdinals.size === 0) continue;
     const decoderKey = `${metadataKey}\u0000${JSON.stringify(source.interpretation)}`;

@@ -41,6 +41,7 @@ export type HtmlVideoSource = {
   readonly elementId: string;
   readonly resource: MediaResource;
   readonly streamIndex: number;
+  readonly presentationStart: ExactTemporalValue;
   /** Closed display interpretation selected by the Media owner. */
   readonly interpretation: {
     readonly codedWidth: number;

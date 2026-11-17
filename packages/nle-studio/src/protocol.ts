@@ -10,6 +10,7 @@ import type {
 } from "@hypit/nle/view";
 import type { HtmlVideoDeliveryProfile, HtmlVideoRenderer } from "@hypit/html-video";
 import type { NlePictureLayout } from "@hypit/nle";
+import type { MediaStoryboardAtlas, MediaViewRequest } from "@hypit/media";
 
 export type NleStudioMediaEntry = {
   readonly id: string;
@@ -30,6 +31,8 @@ export type NleStudioComponentInputsProjection = {
 };
 
 export type NleStudioMediaProjection = {
+  readonly generation: number;
+  readonly derivedViews: boolean;
   readonly entries: readonly NleStudioMediaEntry[];
 };
 
@@ -229,7 +232,13 @@ export type NleStudioOperation =
   | (NleStudioCompositionOperation & { readonly kind: "component-media.bind"; readonly item: string; readonly slot: string; readonly media: string })
   | (NleStudioCompositionOperation & { readonly kind: "component-media.unbind"; readonly item: string; readonly slot: string });
 
+export type NleStudioMediaActionRequest = MediaViewRequest & {
+  readonly media: string;
+  readonly expectedMediaGeneration: number;
+};
+
 export type NleStudioActionRequest =
+  | NleStudioMediaActionRequest
   | (NleStudioCompositionOperation & { readonly kind: "frame-preview"; readonly atFrame: number })
   | (NleStudioCompositionOperation & { readonly kind: "playback-preview"; readonly atFrame: number; readonly durationFrames: number })
   | {
@@ -244,7 +253,12 @@ export type NleStudioActionKind = NleStudioActionRequest["kind"];
 type NleStudioActionBase = { readonly handle: string; readonly kind: NleStudioActionKind; readonly progress: number };
 export type NleStudioActionObservation = NleStudioActionBase & (
   | { readonly state: "queued" | "running" }
-  | { readonly state: "complete"; readonly result: { readonly resource: string; readonly mediaType: string; readonly frameCount?: number } }
+  | { readonly state: "complete"; readonly result: {
+      readonly resource: string;
+      readonly mediaType: string;
+      readonly frameCount?: number;
+      readonly atlas?: MediaStoryboardAtlas;
+    } }
   | { readonly state: "failed"; readonly diagnostic: string }
   | { readonly state: "cancelled" }
 );

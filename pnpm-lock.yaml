@@ -177,6 +177,9 @@ importers:
       '@hypit/html-program':
         specifier: workspace:^0.1.0
         version: link:../html-program
+      '@hypit/media-local':
+        specifier: workspace:^0.1.0
+        version: link:../media-local
     devDependencies:
       '@types/node':
         specifier: 24.10.1

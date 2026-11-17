@@ -146,6 +146,7 @@ export function lowerAudiovisualPictureToHtmlProgram(
       style: [...domainStyle(domain), { name: "object-fit", value: "fill" }],
       resource: media.resource,
       streamIndex: picture.streamIndex,
+      presentationStart: structuredClone(picture.presentationStart),
       interpretation: structuredClone(picture.interpretation),
       ...(reconstruction === undefined ? {} : { reconstruction: structuredClone(reconstruction) }),
       sourceFrames: evaluations.map((_evaluation, frame) => {

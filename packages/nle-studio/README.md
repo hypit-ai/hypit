@@ -90,5 +90,8 @@ results have Session-owned resource URLs. The standalone server accepts
 `HYPIT_FFMPEG_PATH`, `HYPIT_FFPROBE_PATH`, `HYPIT_CHROME_PATH` and `HYPIT_ELECTRON_PATH` for explicit executable
 selection and otherwise uses the local implementations' ordinary defaults.
 
+Media thumbnail, storyboard, waveform and audio audition use the same Action endpoints. Supply an Asset identity
+and the current Media Catalog generation. Timed views take positions on the Asset's Media clock.
+
 Timeline presentation resources use opaque `api/presentations/:resource` addresses and remain owned by the
 process-local package contribution.

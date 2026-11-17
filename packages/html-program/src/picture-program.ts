@@ -37,6 +37,7 @@ export type HtmlPictureElement =
       readonly kind: "video";
       readonly resource: MediaResource;
       readonly streamIndex: number;
+      readonly presentationStart: ExactTemporalValue;
       readonly interpretation: HtmlVideoSource["interpretation"];
       readonly sourceFrames: HtmlVideoSource["sourceFrames"];
       readonly reconstruction?: HtmlPictureReconstruction;
@@ -229,6 +230,7 @@ export function compileHtmlPictureProgram(input: HtmlPictureProgramInput): HtmlP
       elementId: domId,
       resource: structuredClone(element.resource),
       streamIndex: element.streamIndex,
+      presentationStart: structuredClone(element.presentationStart),
       interpretation: structuredClone(element.interpretation),
       usage: element.spans.length === 0 ? { kind: "never" } : { kind: "frames", spans: element.spans.map((span) => ({ ...span })) },
       sourceFrames: structuredClone(element.sourceFrames),

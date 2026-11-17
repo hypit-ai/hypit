@@ -278,9 +278,12 @@ Inspection has two separate operations:
 Failure of container-index inspection never silently invokes decoded-unit inspection. Generated or delivered
 output verification may directly select decoded-unit inspection without changing the author-import policy.
 
-Frame extraction, audio extraction and other tools join this Executor only when a production consumer requires
-them. Grids, waveforms, transcripts and analysis semantics do not become Media Executor responsibilities merely
-because they can read a media file.
+Derived Media views consume one resolved resource, its accepted interpretation and a request on the Media clock.
+Thumbnail and storyboard resolve Picture positions through the member mapping, then select exact decoded ordinals
+against the stream's container timestamps. A storyboard returns a PNG atlas and a mapping from requested Media
+samples to tiles. Waveform and short WAV audition consume the selected Audio member and preserve silence outside
+its active interval. The local executor limits output size, work time and range. Studio supplies Catalog identity,
+generation and temporary resource lifetime.
 
 ## Cross-owner seams
 

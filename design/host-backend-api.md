@@ -468,13 +468,14 @@ The current implementation already provides:
 - Application and Project observations, Studio finite observations and compact mutation receipts;
 - subscription and loopback events for Application, Project, Studio and audiovisual Actions;
 - exact-range frame and playback preview and Delivery through one Studio Action projection.
+- generation-scoped Media thumbnail, storyboard, waveform and audio audition through the same Action projection.
 
 ### Next backend capabilities
 
 The next backend capabilities are:
 
 1. semantic Product operations for Timeline insertion and occurrence Processes;
-2. Media thumbnail, storyboard, waveform and audio-preview Actions.
+2. programme-derived waveforms and Timeline wiring for Media view results.
 
 The planner and receipt work closes application-to-project-to-product editing. The Actions close the audiovisual
 feedback loop needed by a production NLE frontend.
