@@ -116,12 +116,12 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     new Set([...emptyDestinations, ...(drop?.track ? [drop.track] : [])])), [scene, session.open.view.view, primaryTrack, emptyDestinations, drop?.track]);
   const cancelTrim = useRef<() => void>(() => undefined);
   const draftRef = useRef<typeof draft>(undefined), gesture = useRef<Gesture | undefined>(undefined);
-  const seek = useTimelineSeek(scroller, pixels, labelWidth, frame, onSeek);
+  const endFrame = scene.maximumFrame + Math.ceil(fps * 5);
+  const seek = useTimelineSeek(scroller, pixels, labelWidth, frame, endFrame, onSeek);
   const marquee = useMarqueeSelection(scene, scroller, selection, onSelect, busy, pixels);
   const reorder = useTrackReorder(scroller, scene.tracks, rows, session.open.status.projectRevision, busy, onTrackMove);
   const itemGesture = useItemGesture({ scene, rows, scroller, pixels, frame, snap, busy, selection, onSelect, onMove });
-  const visibleWidth = Math.max(600, viewport.right - viewport.left);
-  const width = Math.max(scene.maximumFrame * pixels, frame * pixels, viewport.right) + visibleWidth;
+  const width = Math.max(viewport.right - viewport.left, endFrame * pixels + 12);
   const tracksHeight = rows.reduce((height, track) => height + rowSize(track), 0);
   const trackPadding = Math.max(rowHeight, (viewport.height - rulerHeight - tracksHeight) / 2);
   const selected = scene.tracks.flatMap(track => track.items).find(item => selection.includes(item.id));
@@ -134,7 +134,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const trimStartItems = selectionAtFrame(scene, selection, frame, "trimStart");
   const trimEndItems = selectionAtFrame(scene, selection, frame, "trimEnd");
   const stepFrames = Math.max(1, Math.round(([1, 2, 5, 10, 30, 60, 120, 300, 600].find(value => value * zoom >= 78) ?? 1200) * fps));
-  const ticks = useMemo(() => Array.from({ length: Math.ceil(width / (stepFrames * pixels)) + 1 }, (_, index) => index * stepFrames), [width, stepFrames, pixels]);
+  const ticks = useMemo(() => Array.from({ length: Math.floor(endFrame / stepFrames) + 1 }, (_, index) => index * stepFrames), [endFrame, stepFrames]);
   const zoomPosition = Math.log(zoom / minZoom) / Math.log(maxZoom / minZoom) * 100;
   const compositions = session.open.project.project.compositions;
 
