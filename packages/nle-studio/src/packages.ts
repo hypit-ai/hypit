@@ -31,6 +31,7 @@ export type NleStudioComponentOfferingValue = {
   readonly category: NleStudioComponentCategory;
   readonly component: PackageSymbol;
   readonly parameters: Readonly<Record<string, unknown>>;
+  readonly values?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
   readonly duration: ExactTemporalValue;
   readonly layout?: NlePictureLayout;
 };
@@ -136,7 +137,7 @@ function componentOffering(entry: ProjectPackageCatalogResolution): NleStudioCom
   assert(entry.value !== null && typeof entry.value === "object" && !Array.isArray(entry.value),
     `${label} value must be an object.`);
   const value = entry.value as Readonly<Record<string, unknown>>;
-  assert(Object.keys(value).every((field) => ["category", "component", "parameters", "duration", "layout"].includes(field))
+  assert(Object.keys(value).every((field) => ["category", "component", "parameters", "duration", "layout", "values"].includes(field))
     && ["category", "component", "parameters", "duration"].every((field) => Object.hasOwn(value, field)),
   `${label} fields are invalid.`);
   assert(value.category === "text" || value.category === "subtitle" || value.category === "graphic",
@@ -150,6 +151,16 @@ function componentOffering(entry: ProjectPackageCatalogResolution): NleStudioCom
   assert(compareExactTemporalValues(value.duration as ExactTemporalValue, exactTemporalZero()) > 0,
     `${label} duration must be positive.`);
   if (value.layout !== undefined) assertLayout(value.layout, `${label} layout`);
+  let values: NleStudioComponentOfferingValue["values"];
+  if (value.values !== undefined) {
+    assertClosedRecord(value.values, `${label} values`);
+    values = Object.fromEntries(Object.entries(value.values).map(([slot, seed]) => {
+      assert(slot.trim().length > 0, `${label} value slot must be named.`);
+      assertClosedRecord(seed, `${label} value ${slot}`);
+      assertImplementationBinding({ implementation: symbol, parameters: seed }, `${label} value ${slot}`);
+      return [slot, structuredClone(seed)];
+    }));
+  }
   return {
     package: entry.package,
     id: entry.id,
@@ -160,6 +171,7 @@ function componentOffering(entry: ProjectPackageCatalogResolution): NleStudioCom
       parameters: structuredClone(value.parameters),
       duration: structuredClone(value.duration as ExactTemporalValue),
       ...(value.layout === undefined ? {} : { layout: structuredClone(value.layout as NlePictureLayout) }),
+      ...(values === undefined ? {} : { values }),
     },
   };
 }

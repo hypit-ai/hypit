@@ -80,6 +80,10 @@ authoring reducer for replacement closed parameters. Package contributions canno
 boundaries or persist interface state. Timeline presentation is descriptive only, while generic trim and split are
 offered only when the selected package declares a conservative time-window operation.
 
+A collection row may also declare actions. The browser submits the Item, section, collection, row and action
+addresses with both revisions. The backend projects the current row again and runs the same guarded authoring
+reducer used by scalar edits.
+
 The Inspector separately projects NLE-owned ownership controls for existing Component value slots. An inline slot can
 be shared or linked; a shared slot can be rebound or unlinked by copying its resolved value inline. These operations
 change only explicit Item bindings and Project Shared Values and therefore use the same Surface revisions, View guards
@@ -185,6 +189,11 @@ signal, Operator and closed initial parameters. Studio adds the enabled Process 
 before an explicitly addressed Process. The initial Control relation is the Present's full local interval. Inspector
 observation projects the ordered chains with current enable and lock state. Enable, move and remove address a
 specific Process on a specific signal and use the same guarded Project edit path as parameter edits.
+
+A Component offering may supply closed defaults for named Component value slots. A placement uses those defaults
+inline. For each offered slot the caller can explicitly link a compatible Project Shared Value or create a named
+Project Shared Value from the offered default. The binding and new value are accepted in one Project transaction
+with the occurrence and initial Media inputs.
 
 Transition materialization takes two selected Present Items. Studio orders the endpoints by exact start time and
 the NLE planner validates their direct cut, moves the incoming Item and adds the relation atomically. Audio detach

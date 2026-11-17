@@ -73,6 +73,14 @@ export type NleEditingSurfaceCommand =
       readonly value: string | number | boolean;
     })
   | (ProjectAndViewRevision & {
+      readonly kind: "inspector.invoke";
+      readonly item: string;
+      readonly section: string;
+      readonly collection: string;
+      readonly row: string;
+      readonly action: string;
+    })
+  | (ProjectAndViewRevision & {
       readonly kind: "spatial.edit";
       readonly item: string;
       readonly edit: NleSpatialEdit;

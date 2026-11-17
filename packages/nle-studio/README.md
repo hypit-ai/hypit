@@ -67,17 +67,18 @@ Component packages may declare Media inputs dynamically from occurrence paramete
 compatible Project Media for each slot and submits a guarded bind or unbind. A Component materialization caller
 can also supply accepted Media identities by slot in the initial operation.
 
-Inspector contributions may project stable finite collections as well as scalar fields. The Studio renders their
-rows but still sends only the projected section/field identity and scalar value; package operation functions remain
-in the backend and reduce the current closed value there. The Jensen caption package uses this for word text and
-exact unit timing, while the ranking package uses it for tier rows and entries. Shared caption style edits address
-the one Project Shared Value and therefore update all current users through one guarded transaction.
+Inspector contributions may project stable finite collections, scalar fields and row actions. Studio addresses
+the projected field or action and the backend runs the package reducer on the current value. The Jensen caption
+package uses fields for word text and exact unit timing. The ranking package uses row actions to reorder tiers.
+Shared caption style edits update all current users through one guarded transaction.
 
 For every existing Component value slot, the Inspector also projects one Host-owned ownership selector. Selecting
 “This item” copies a currently shared value inline; selecting a compatible named Project value links or rebinds the
 occurrence. Both choices use the same package projector and reducer, while the Surface retains revision and Track
 guard authority. A caller may additionally use the typed `component-value.edit` command to atomically share an inline
 value under a new Project identity. Generic unlink never removes a required slot.
+During materialization, an offering's named values default to inline. Callers can use `values` to link a compatible
+Project Shared Value or share the offered default under a new name in the same transaction as placement.
 
 Under the Product Session URL, `POST /api/operate` handles Media, Component, Adjust, Transition and Composition
 materialization and audio detachment. Studio converts session frames into exact NLE time and submits one revisioned

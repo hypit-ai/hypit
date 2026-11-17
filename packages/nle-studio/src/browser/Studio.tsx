@@ -374,7 +374,11 @@ export function Studio() {
         </section>
         <PanelResizeHandle side="properties" label="调整属性面板宽度" width={panelWidths.properties} onResize={(width, save) => resizePanel("properties", width, save)}/>
         <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist"><button role="tab" aria-selected="true">属性</button></div><div className="nle-panel-body"><Inspector scene={inspector?.scene} component={inspector?.component} media={session.media.entries}
-          disabled={editingDisabled} onEdit={inspectorEdit} onMedia={(item, slot, media) => void perform(async () => {
+          disabled={editingDisabled} onEdit={inspectorEdit}
+          onInvoke={(item, section, collection, row, action) => command({
+            kind: "inspector.invoke", item, section, collection, row, action,
+            expectedProjectRevision: session.status.projectRevision, expectedViewRevision: session.status.viewRevision,
+          })} onMedia={(item, slot, media) => void perform(async () => {
             await acceptReceipt(await operate(media === ""
               ? { ...operationContext, kind: "component-media.unbind", item, slot }
               : { ...operationContext, kind: "component-media.bind", item, slot, media }));

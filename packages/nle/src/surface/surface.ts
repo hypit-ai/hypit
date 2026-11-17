@@ -260,13 +260,14 @@ export class NleEditingSurface {
           commands: command.commands,
         }, this.#projectService.snapshot().project);
         return this.#receipt({ project: false, view: true }, ["timeline", "canvas", "inspector"]);
-      case "inspector.edit": {
+      case "inspector.edit":
+      case "inspector.invoke": {
         this.#requireRevisions(command.expectedProjectRevision, command.expectedViewRevision);
         const project = this.#projectService.snapshot().project;
         const view = this.#viewService.snapshot().view;
-        const transaction = this.#inspector.planEdit(
-          project, view, command.item, command.section, command.field, command.value,
-        );
+        const transaction = command.kind === "inspector.edit"
+          ? this.#inspector.planEdit(project, view, command.item, command.section, command.field, command.value)
+          : this.#inspector.planRowAction(project, view, command.item, command);
         assertNleViewAllowsProjectTransaction(view, project, transaction);
         this.#projectService.transact({
           expectedRevision: command.expectedProjectRevision,

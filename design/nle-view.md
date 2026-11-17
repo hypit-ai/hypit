@@ -86,10 +86,10 @@ section/field address and scalar value, then the Host recomputes the operation f
 submits a package JSON path or executes package code.
 
 The Inspector vocabulary includes scalar fields and finite collections. A collection contains package-owned stable
-row ids and finite row fields; field ids are unique in their section and return through the same semantic edit port.
-Caption units and ranking entries use that shape without exposing array indexes, arbitrary JSON paths or package
-operation functions to the browser. Canvas remains Item-level until a selected package proves a need for bounded
-semantic handles. Renderer DOM and pixels alone never create editing authority.
+row ids, finite row fields and optional actions. Field ids are unique in their section. A row action is addressed
+by section, collection, row and action ids and is resolved from a fresh projection at the expected revisions. The
+browser receives data and action availability. The owner reducer replaces the current closed value. Canvas remains
+Item-level until a selected package proves a need for bounded semantic handles.
 
 A Component value Inspector section uses the same exact installed `(Component, slot)` contribution for inline and
 shared ownership. Inline ownership projects the selected Item; shared ownership additionally projects the one

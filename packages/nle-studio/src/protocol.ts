@@ -223,6 +223,8 @@ export type NleStudioOperation =
   | (NleStudioPresentPlacement & NleStudioOfferingReference & {
       readonly kind: "component.materialize";
       readonly media?: Readonly<Record<string, string>>;
+      readonly values?: Readonly<Record<string,
+        { readonly kind: "link"; readonly ref: string } | { readonly kind: "share"; readonly name: string }>>;
     })
   | (NleStudioTimedPlacement & NleStudioOfferingReference & { readonly kind: "adjust.materialize" })
   | (NleStudioCompositionOperation & NleStudioOfferingReference & {

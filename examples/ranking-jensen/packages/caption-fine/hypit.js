@@ -4,6 +4,7 @@ import { compileCaptionFine } from "./component.js";
 
 const packageName = "@hypit/caption-fine";
 const component = { package: packageName, symbol: "fine" };
+const captionDuration = { ticks: "2", timeBase: { numerator: 1, denominator: 1 } };
 
 function record(value, label) {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
@@ -315,5 +316,16 @@ export const hypitPackage = {
       }] },
     },
   ],
-  catalog: [],
+  catalog: [{ id: "caption", title: "Fine Caption", kind: "hypit.nle-component", value: {
+    category: "subtitle", component, duration: captionDuration,
+    parameters: { caption: {
+      cueId: "caption", documentId: "inline", role: "caption",
+      words: [{ id: "word", text: "Subtitle", separatorBefore: "", attributes: [], unitId: "unit" }],
+      units: [{ id: "unit", start: { ...captionDuration, ticks: "0" }, end: captionDuration, wordIds: ["word"] }],
+    } },
+    values: { style: {
+      fontFamily: "system-ui, sans-serif", fontSize: 58, fontWeight: 800, color: "#ffffff",
+      lineHeight: 1.05, letterSpacing: 0, maxWordsPerLine: 8, blockAlign: "end",
+    } },
+  } }],
 };

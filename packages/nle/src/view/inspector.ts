@@ -72,6 +72,12 @@ export type NleInspectorPresentationHost = {
     field: string,
     value: string | number | boolean,
   ) => NleTransaction;
+  readonly planRowAction: (
+    project: NleProject,
+    view: NleView,
+    item: string,
+    address: { readonly section: string; readonly collection: string; readonly row: string; readonly action: string },
+  ) => NleTransaction;
 };
 
 const domains = new Set(["where", "when", "how"]);
@@ -149,9 +155,19 @@ function assertDraft(value: NleInspectorSectionDraft, label: string): void {
         `${rowLabel}.label is invalid.`);
       assert(!rows.has(row.id), `${collectionLabel} repeats row ${row.id}.`);
       rows.add(row.id);
-      assert(Array.isArray(row.fields) && row.fields.length > 0, `${rowLabel}.fields must not be empty.`);
+      assert(Array.isArray(row.fields) && (row.actions === undefined || Array.isArray(row.actions)),
+        `${rowLabel} fields and actions must be arrays.`);
+      assert(row.fields.length > 0 || (row.actions?.length ?? 0) > 0, `${rowLabel} must contain fields or actions.`);
       for (const [fieldIndex, field] of row.fields.entries()) {
         validateField(field, `${rowLabel}.fields[${fieldIndex}]`);
+      }
+      const actions = new Set<string>();
+      for (const action of row.actions ?? []) {
+        assert(action !== null && typeof action === "object" && typeof action.id === "string" && action.id.length > 0
+          && typeof action.label === "string" && action.label.length > 0 && typeof action.operation === "function",
+        `${rowLabel} has an invalid action.`);
+        assert(!actions.has(action.id), `${rowLabel} repeats action ${action.id}.`);
+        actions.add(action.id);
       }
     }
   }
@@ -331,6 +347,9 @@ function sceneSection(
             ...structuredClone(field),
             ...(operation !== undefined && editable ? { editable: true as const } : {}),
           })),
+          ...(row.actions === undefined ? {} : {
+            actions: row.actions.map(({ id, label }) => ({ id, label, enabled: editable })),
+          }),
         })),
       })),
     }),
@@ -455,6 +474,17 @@ export function createNleInspectorPresentationHost(
       ids.add(entry.section.id);
     }
     return sections;
+  };
+
+  const planPackageEdit = (section: ProjectedPackageSection, operation: unknown) => {
+    assert(authoring !== undefined, "NLE Inspector package authoring is not installed.");
+    if (section.componentValue === true) {
+      return authoring.planComponentValueEdit(section.context as NleComponentValueAuthoringContext, operation);
+    }
+    if (section.address === undefined) {
+      return authoring.planComponentParameterEdit(section.context as NleComponentAuthoringContext, operation);
+    }
+    return authoring.planProcessParameterEdit(section.context as NleProcessAuthoringContext, section.address, operation);
   };
 
   return {
@@ -638,25 +668,19 @@ export function createNleInspectorPresentationHost(
         `NLE Inspector field ${sectionId}.${fieldId} is read-only.`);
       assert(packageSection.editable, `NLE Inspector section ${sectionId} is not editable in this View.`);
       validateEdit(field, value);
-      const operation = field.operation(value);
-      assert(authoring !== undefined, "NLE Inspector package authoring is not installed.");
-      if (packageSection.componentValue === true) {
-        return authoring.planComponentValueEdit(
-          packageSection.context as NleComponentValueAuthoringContext,
-          operation,
-        );
-      }
-      if (packageSection.address === undefined) {
-        return authoring.planComponentParameterEdit(
-          packageSection.context as NleComponentAuthoringContext,
-          operation,
-        );
-      }
-      return authoring.planProcessParameterEdit(
-        packageSection.context as NleProcessAuthoringContext,
-        packageSection.address,
-        operation,
-      );
+      return planPackageEdit(packageSection, field.operation(value));
+    },
+    planRowAction(project, view, id, address) {
+      assertNleViewForProject(view, project);
+      const { composition, track } = locatedItem(project, view, id);
+      assert(!nleViewTrackLocked(view, composition.id, track.id),
+        `NLE View Track ${track.id} in Composition ${composition.id} is locked.`);
+      const section = packageSections(project, view, id).find(entry => entry.section.id === address.section);
+      assert(section?.editable === true, `NLE Inspector section ${address.section} is not editable in this View.`);
+      const action = section.draft.collections?.find(collection => collection.id === address.collection)
+        ?.rows.find(row => row.id === address.row)?.actions?.find(action => action.id === address.action);
+      assert(action !== undefined, `Unknown NLE Inspector action ${address.action} on row ${address.row}.`);
+      return planPackageEdit(section, action.operation());
     },
   };
 }

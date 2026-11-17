@@ -26,6 +26,7 @@ import {
   nleCompositionDuration,
   nleItemEnd,
   nleLinearTimeMapping,
+  planNleComponentValueEdit,
   type NleCommand,
   type NleProjectService,
   type NleTrack,
@@ -789,26 +790,44 @@ export class NleStudioProductSession {
         const length = duration ?? offering.value.duration;
         const placement = placePresent(operation, "picture", at, length);
         const item = identity("component");
+        const valueBindings = Object.entries(offering.value.values ?? {}).map(([slot, value]) =>
+          ({ slot, kind: "inline" as const, value }));
         const creation = {
           id: item, track: placement.track, component: offering.value.component, parameters: offering.value.parameters,
           at, duration: length, ...(offering.value.layout === undefined ? {} : { layout: offering.value.layout }),
+          ...(valueBindings.length === 0 ? {} : { valueBindings }),
         };
         let materialization = createComponentMaterialization(placement.project, creation);
-        if (operation.media !== undefined && Object.keys(operation.media).length > 0) {
+        const selections = Object.entries(operation.values ?? {});
+        const seeds = Object.entries(operation.media ?? {});
+        const valueCommands: NleCommand[] = [];
+        if (selections.length > 0 || seeds.length > 0) {
           const draft = applyNleTransaction(placement.project, materialization);
-          const inputs = this.#packages.authoring.componentMediaInputs(createNleComponentAuthoringContext(draft, item));
-          const bindings = await Promise.all(Object.entries(operation.media).map(async ([slot, media]) => {
-            const input = inputs.find(candidate => candidate.slot === slot);
-            if (input === undefined) throw new Error(`NLE Component ${item} does not declare Media input ${slot}.`);
-            const binding = await this.#resolveMediaBinding(media);
-            if (!acceptsNleComponentMedia(input, binding.interpretation)) {
-              throw new Error(`Project Media ${media} does not satisfy Component ${item} input ${slot}.`);
+          for (const [slot, selection] of selections) {
+            if (!valueBindings.some(binding => binding.slot === slot)) {
+              throw new Error(`NLE Studio Component offering ${operation.offering} has no value slot ${slot}.`);
             }
-            return [slot, binding.asset] as const;
-          }));
-          materialization = createComponentMaterialization(placement.project, { ...creation, media: Object.fromEntries(bindings) });
+            valueCommands.push(...planNleComponentValueEdit(draft, item, selection.kind === "link"
+              ? { kind: "link", slot, ref: selection.ref }
+              : { kind: "share", slot, name: selection.name, id: identity("value") },
+            ).commands);
+          }
+          if (seeds.length > 0) {
+            const configured = valueCommands.length === 0 ? draft : applyNleTransaction(draft, { commands: valueCommands });
+            const inputs = this.#packages.authoring.componentMediaInputs(createNleComponentAuthoringContext(configured, item));
+            const bindings = await Promise.all(seeds.map(async ([slot, media]) => {
+              const input = inputs.find(candidate => candidate.slot === slot);
+              if (input === undefined) throw new Error(`NLE Component ${item} does not declare Media input ${slot}.`);
+              const binding = await this.#resolveMediaBinding(media);
+              if (!acceptsNleComponentMedia(input, binding.interpretation)) {
+                throw new Error(`Project Media ${media} does not satisfy Component ${item} input ${slot}.`);
+              }
+              return [slot, binding.asset] as const;
+            }));
+            materialization = createComponentMaterialization(placement.project, { ...creation, media: Object.fromEntries(bindings) });
+          }
         }
-        return commit([...placement.commands, ...materialization.commands], { item, track: placement.track });
+        return commit([...placement.commands, ...materialization.commands, ...valueCommands], { item, track: placement.track });
       }
       case "adjust.materialize": {
         const offering = this.#packages.adjust(operation.package, operation.offering);

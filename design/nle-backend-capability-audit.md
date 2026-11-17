@@ -193,11 +193,11 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
-| 从 catalog 创建文字或字幕 | Component offering + materialization | Studio 支持静态 parameters、duration 和 layout 的 Component offering | **已具备**最小路径 |
-| 参数显示和编辑 | package Inspector + authoring contribution | Host 执行 package projector，浏览器只收到有限标量或稳定 row collection；编辑重新规划为 Project transaction | **已具备**有限结构化路径 |
+| 从 catalog 创建文字或字幕 | Component offering + materialization | Jensen 选择 Reference title 和 Fine Caption，初始时长、布局与值由 offering 提供 | **已具备** |
+| 参数显示和编辑 | package Inspector + authoring contribution | Host 投影有限标量、稳定 row collection 和可用行操作，提交时重新解析地址并调用 reducer | **已具备**有限结构化路径 |
 | 时间线标题、文本和海报 | package Timeline presentation | Component 可贡献 title、tone、chrome、text layer 和资源 poster | **已具备** |
 | Component Media inputs | Component occurrence + package declaration | Package 声明当前 slot 与信号要求，Studio 投影 Inspector、验证物化 seeds 并接受 bind/unbind；`ranking` 使用逐条目静态图片 slot | **已具备** |
-| Component value ownership | NLE Project + package slot owner | inline/shared binding、Project registry、反向用户索引、同一 Inspector/reducer、ownership selector、share/link/unlink planner 与 Surface command 已实现 | **已具备**；创建 offering 尚不能原子 seed 或选择绑定 |
+| Component value ownership | NLE Project + package slot owner | 创建时可用 offering 默认值内联、选择兼容共享值或原子创建命名共享值；同一 Inspector、reducer 和反向用户索引用于后续编辑 | **已具备** |
 | 字幕逐词和内部时间 | caption Component parameters | `caption-fine` 以稳定 word/unit row collection 投影逐词内容和精确有理时间，并由 package reducer 替换闭合 parameters | **已具备** Jensen 编辑路径；在 package 证明切片语义前不开放通用 trim/split |
 | SRT 导入和多轨分配 | Caption materialization Operation | 当前无 SRT parser、字幕物化 planner 或重叠条目分轨 Operation | **产品缺口**，并依赖字幕源边界决策 |
 | 单条样式与共享样式 | inline Component value + Project Shared Value | 同一 package slot 可 inline 或 shared；Inspector 可选择本地或兼容共享值，unlink 复制解析值 inline，编辑分别守卫一个或全部用户 Track | **已具备**；命名新共享值的交互仍缺 |
@@ -209,15 +209,9 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 
 | 验收 package | 必须证明的通用能力 |
 | --- | --- |
-| `text-fine` | Component offering、标量 Inspector、Picture layout、Timeline presentation、AVIR preview |
-| `caption-fine` | 已证明稳定 word/unit collection、字幕内容与精确内部时间、inline/shared `style` 的同一 reducer 与 Project-wide 共享样式编辑；批量物化仍缺 |
-| `ranking` | 已具备稳定 row/entry collection、条目级语义操作、初始物化、Media input 观察与绑定；package poster 与真实 preview 仍缺 |
-
-这些切片下一步要求补充：
-
-- offering 物化时受限的 Shared Value seeds；
-- collection 行级 finite action；
-- package poster 与真实 preview。
+| Reference title | Jensen 实测 Component offering、标量 Inspector、Picture layout、Timeline 文本和真实帧预览 |
+| `caption-fine` | Jensen 实测 word/unit collection、精确内部时间、物化时选择 inline/shared `style`，以及真实帧预览；批量物化依赖字幕导入决策 |
+| Ranking Tier board | Jensen 实测稳定 collection、行级排序、物化时 Media 绑定、package PNG 海报和真实帧预览 |
 
 ## 11. 声音
 

@@ -157,8 +157,15 @@ function operationRequest(value: unknown): NleStudioOperation {
       break;
     case "component.materialize": {
       const media = request.media === undefined ? {} : record(request.media, "Component Media seeds");
-      valid = currentFields("package", "offering", "media", "insertTracks", ...timedFields) && placement && duration && offering && insertion
-        && Object.values(media).every(identity);
+      const values = request.values === undefined ? {} : record(request.values, "Component value selections");
+      const valueSelections = Object.values(values).every(value => {
+        const selection = record(value, "Component value selection");
+        return Object.keys(selection).length === 2 && (
+          (selection.kind === "share" && identity(selection.name)) || (selection.kind === "link" && identity(selection.ref))
+        );
+      });
+      valid = currentFields("package", "offering", "media", "values", "insertTracks", ...timedFields)
+        && placement && duration && offering && insertion && Object.values(media).every(identity) && valueSelections;
       break;
     }
     case "adjust.materialize":

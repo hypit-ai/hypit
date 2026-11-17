@@ -228,6 +228,13 @@ export type NleInspectorCollectionRow = {
   readonly id: string;
   readonly label?: string;
   readonly fields: readonly NleInspectorField[];
+  readonly actions?: readonly NleInspectorRowAction[];
+};
+
+export type NleInspectorRowAction = {
+  readonly id: string;
+  readonly label: string;
+  readonly enabled: boolean;
 };
 
 export type NleInspectorCollection = {
@@ -236,8 +243,9 @@ export type NleInspectorCollection = {
   readonly rows: readonly NleInspectorCollectionRow[];
 };
 
-export type NleInspectorCollectionRowDraft = Omit<NleInspectorCollectionRow, "fields"> & {
+export type NleInspectorCollectionRowDraft = Omit<NleInspectorCollectionRow, "fields" | "actions"> & {
   readonly fields: readonly NleInspectorFieldDraft[];
+  readonly actions?: readonly (Omit<NleInspectorRowAction, "enabled"> & { readonly operation: () => unknown })[];
 };
 
 export type NleInspectorCollectionDraft = Omit<NleInspectorCollection, "rows"> & {

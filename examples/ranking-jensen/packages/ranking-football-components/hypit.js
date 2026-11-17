@@ -1,5 +1,12 @@
+import { readFile } from "node:fs/promises";
+
 const packageName = "@hypit-example/ranking-football-components";
 const componentSymbol = symbol => ({ package: packageName, symbol });
+const tierPoster = {
+  mediaType: "image/png",
+  layout: "repeat-x",
+  open: () => readFile(new URL("./tier-board-poster.png", import.meta.url)),
+};
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -295,7 +302,7 @@ function boardInspector(context) {
     collections: [{
       id: "rows",
       label: "Tiers",
-      rows: value.rows.map(row => ({
+      rows: value.rows.map((row, index) => ({
         id: row.id,
         label: row.label,
         fields: [{
@@ -311,6 +318,14 @@ function boardInspector(context) {
           value: row.color,
           operation: next => ({ kind: "row.color.set", row: row.id, value: next }),
         }],
+        actions: [
+          ...(index === 0 ? [] : [{ id: "raise", label: "Move tier up", operation: () => ({
+            kind: "row.move", row: row.id, direction: -1,
+          }) }]),
+          ...(index === value.rows.length - 1 ? [] : [{ id: "lower", label: "Move tier down", operation: () => ({
+            kind: "row.move", row: row.id, direction: 1,
+          }) }]),
+        ],
       })),
     }, {
       id: "entries",
@@ -391,6 +406,12 @@ function editComponentParameters(operation, context) {
       const row = parameters.rows?.find(value => record(value, "Tier row").id === selected.row);
       if (row === undefined) throw new Error(`Tier board has no row ${selected.row}.`);
       row[selected.kind === "row.label.set" ? "label" : "color"] = selected.value;
+    } else if (selected.kind === "row.move") {
+      const row = parameters.rows.findIndex(value => record(value, "Tier row").id === selected.row);
+      const destination = row + selected.direction;
+      if (row < 0 || (selected.direction !== 1 && selected.direction !== -1) || destination < 0
+          || destination >= parameters.rows.length) throw new Error("Tier row cannot move in that direction.");
+      [parameters.rows[row], parameters.rows[destination]] = [parameters.rows[destination], parameters.rows[row]];
     } else if (selected.kind === "entry.label.set" || selected.kind === "entry.tier.set") {
       const entry = parameters.entries?.find(value => record(value, "Tier entry").id === selected.entry);
       if (entry === undefined) throw new Error(`Tier board has no entry ${selected.entry}.`);
@@ -429,7 +450,7 @@ export const hypitPackage = {
         package: packageName,
         components: [
           { component: componentSymbol("tier-board"), displayName: "Tier board", tone: "violet",
-            chrome: "group", heightPx: 72, project: boardTimeline },
+            chrome: "group", heightPx: 72, project: boardTimeline, poster: tierPoster },
           { component: componentSymbol("reference-title"), displayName: "Reference title", tone: "magenta",
             chrome: "standard", project: titleTimeline },
           { component: componentSymbol("reveal-flash"), displayName: "Reveal flash", tone: "orange",
@@ -489,6 +510,16 @@ export const hypitPackage = {
     },
   ],
   catalog: [{
+    id: "reference-title",
+    kind: "hypit.nle-component",
+    title: "Reference title",
+    value: {
+      category: "text",
+      component: componentSymbol("reference-title"),
+      duration: { ticks: "3", timeBase: { numerator: 1, denominator: 1 } },
+      parameters: { first: "Title", second: "Subtitle", top: 80 },
+    },
+  }, {
     id: "tier-board",
     kind: "hypit.nle-component",
     title: "Tier board",
