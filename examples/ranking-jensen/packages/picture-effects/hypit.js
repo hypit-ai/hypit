@@ -240,5 +240,18 @@ export const hypitPackage = {
       { symbol: "transition", compile: transitionVisual },
     ] } },
   ],
-  catalog: [],
+  catalog: [
+    { id: "transform", kind: "hypit.nle-process", title: "Transform", value: {
+      medium: "picture", operator: symbol("transform"),
+      parameters: { kind: "constant", state: {
+        translateX: 0, translateY: 0, scaleX: 1, scaleY: 1, rotationDegrees: 0, originX: 0.5, originY: 0.5,
+      } },
+    } },
+    { id: "filter", kind: "hypit.nle-process", title: "Filter", value: {
+      medium: "picture", operator: symbol("filter"),
+      parameters: { kind: "constant", state: {
+        opacity: 1, blurRadius: 0, brightness: 1, contrast: 1, saturation: 1, hue: 0, grayscale: 0, sepia: 0, invert: 0,
+      } },
+    } },
+  ],
 };

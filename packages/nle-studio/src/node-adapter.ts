@@ -96,6 +96,8 @@ function operationRequest(value: unknown): NleStudioOperation {
   const placement = track && integer(request.atFrame, 0);
   const duration = request.durationFrames === undefined || integer(request.durationFrames, 1);
   const offering = identity(request.package) && identity(request.offering);
+  const before = request.before === undefined || identity(request.before);
+  const process = identity(request.item) && identity(request.process) && (request.medium === "picture" || request.medium === "audio");
   const timedFields = ["atFrame", "durationFrames", "track"];
   let valid: boolean;
   switch (request.kind) {
@@ -148,6 +150,18 @@ function operationRequest(value: unknown): NleStudioOperation {
     }
     case "adjust.materialize":
       valid = currentFields("package", "offering", ...timedFields) && placement && duration && offering;
+      break;
+    case "process.materialize":
+      valid = currentFields("package", "offering", "item", "before") && offering && identity(request.item) && before;
+      break;
+    case "process.enable":
+      valid = currentFields("item", "medium", "process", "enabled") && process && typeof request.enabled === "boolean";
+      break;
+    case "process.move":
+      valid = currentFields("item", "medium", "process", "before") && process && before;
+      break;
+    case "process.remove":
+      valid = currentFields("item", "medium", "process") && process;
       break;
     case "transition.materialize":
       valid = currentFields("package", "offering", "items", "durationFrames") && duration && offering

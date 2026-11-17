@@ -54,9 +54,12 @@ resources in their Present Item layout.
 
 At session open, the backend assembles the selected packages' NLE authoring, Timeline presentation and Inspector
 presentation contributions into the existing Editing Surface contracts. The browser creation bin projects selected
-Component, Adjust and Transition offerings rather than mining already-created Items. Creating one sends an explicit
+Component, Process, Adjust and Transition offerings. Creating one sends an explicit
 guarded materialization request; subsequent Component and Operator parameter edits use the package's Inspector and
 authoring contributions.
+
+Process offerings attach to the compatible signal of a selected Present. The Inspector exposes each signal's order,
+enable state and available parameters. Callers can enable, move or remove an exact Process through `POST /api/operate`.
 
 Component packages may declare Media inputs dynamically from occurrence parameters. The Inspector presents
 compatible Project Media for each slot and submits a guarded bind or unbind. A Component materialization caller

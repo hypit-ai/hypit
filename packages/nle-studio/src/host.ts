@@ -24,6 +24,7 @@ import {
   createTransitionMaterialization,
   indexNleProject,
   nleCompositionDuration,
+  nleLinearTimeMapping,
   type NleCommand,
   type NleProjectService,
 } from "@hypit/nle";
@@ -422,6 +423,9 @@ export class NleStudioProductSession {
         title: entry.title,
         medium: entry.value.medium,
       })),
+      processes: this.#packages.processes.map(entry => ({
+        package: entry.package, offering: entry.id, title: entry.title, medium: entry.value.medium,
+      })),
       transitions: this.#packages.transitions.map((entry) => ({
         package: entry.package,
         offering: entry.id,
@@ -783,6 +787,44 @@ export class NleStudioProductSession {
         });
         return commit([...placement.commands, ...materialization.commands], { item, track: placement.track });
       }
+      case "process.materialize": {
+        const offering = this.#packages.process(operation.package, operation.offering);
+        if (offering === undefined) {
+          throw new Error(`NLE Studio Process offering ${operation.package}#${operation.offering} is not selected.`);
+        }
+        const item = currentItems().find(entry => entry.id === operation.item);
+        const { medium, operator, parameters } = offering.value;
+        if (item?.kind !== "present" || item[medium] === undefined) {
+          throw new Error(`NLE Studio Process ${operation.offering} requires a Present with ${medium} in ${composition.id}.`);
+        }
+        const process = identity("process");
+        return commit([{
+          kind: "process.add", item: item.id, medium, process: {
+            id: process, operator, parameters: { kind: "inline", value: parameters }, enabled: true,
+            controlTime: nleLinearTimeMapping(item.duration),
+          },
+          ...(operation.before === undefined ? {} : { before: operation.before }),
+        }], { item: item.id, process });
+      }
+      case "process.enable":
+      case "process.move":
+      case "process.remove": {
+        const item = currentItems().find(entry => entry.id === operation.item);
+        const process = item?.kind === "present" ? item[operation.medium]?.processes?.find(entry => entry.id === operation.process)
+          : undefined;
+        if (process === undefined) throw new Error(`NLE Item ${operation.item} has no ${operation.medium} Process ${operation.process}.`);
+        const address = { item: operation.item, medium: operation.medium };
+        const result = { item: operation.item, process: operation.process };
+        if (operation.kind === "process.enable") {
+          return commit(process.enabled === operation.enabled ? [] : [{
+            kind: "process.replace", ...address, process: { ...process, enabled: operation.enabled },
+          }], result);
+        }
+        if (operation.kind === "process.remove") return commit([{ kind: "process.remove", ...address, id: process.id }], result);
+        return commit(operation.before === process.id ? [] : [{
+          kind: "process.move", ...address, id: process.id, ...(operation.before === undefined ? {} : { before: operation.before }),
+        }], result);
+      }
       case "transition.materialize": {
         const offering = this.#packages.transition(operation.package, operation.offering);
         if (offering === undefined) {
@@ -1117,6 +1159,7 @@ export {
   createNleStudioPackageBridge,
   nleStudioAdjustOfferingKind,
   nleStudioComponentOfferingKind,
+  nleStudioProcessOfferingKind,
   nleStudioTransitionOfferingKind,
   type NleStudioAdjustOffering,
   type NleStudioAdjustOfferingValue,
@@ -1124,6 +1167,8 @@ export {
   type NleStudioComponentOffering,
   type NleStudioComponentOfferingValue,
   type NleStudioPackageBridge,
+  type NleStudioProcessOffering,
+  type NleStudioProcessOfferingValue,
   type NleStudioTransitionOffering,
   type NleStudioTransitionOfferingValue,
 } from "./packages.js";

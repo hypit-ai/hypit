@@ -145,9 +145,9 @@ ApplicationHost
 | --- | --- | --- | --- |
 | 位置和画框尺寸 | NLE Picture layout | layout 保存 x、y、width、height；Canvas 与 Inspector 有有限投影和 guarded spatial edit | **已具备** |
 | fit 与内容焦点 | NLE Picture layout | fit、contentX、contentY 已持久化并参与 lowering | **已具备** |
-| 旋转、透明度、镜像、单轴内容缩放 | Picture Process + package Operator | Process 已保存 package-owned closed parameters 与 Control time | **产品缺口**。需要标准 Transform package、offering 和 Inspector 操作 |
+| 旋转、透明度、镜像、单轴内容缩放 | Picture Process + package Operator | Jensen 的 Transform 和 Filter offering 提供旋转、单轴正向缩放和透明度的 Inspector | **已具备**旋转、缩放、透明度；镜像操作仍缺 |
 | 源画面裁剪 | Picture Process + package Operator | source crop 可由 Picture Operator 的 package value 表达 | **产品缺口**。需要标准 Crop/Transform package 与 Canvas 操作 |
-| 画面属性关键帧 | package Operator parameters | closed parameters 可保存精确关键帧与插值，SVML 不解释内部字段 | **产品缺口**。需要标准参数 schema 与结构化 Inspector |
+| 画面属性关键帧 | package Operator parameters | Jensen 的 Transform 和 Filter 通过 Inspector 编辑已有关键帧的值与插值方式 | **已具备**已有点值与插值；新增、移动和移除点仍缺 |
 | 关键帧移动、冲突和剪辑跟随 | package authoring + Process Control time | Process 的 local Control relation 会随 split、trim 和 roll 切片、重定时 | **产品缺口**。package authoring 负责点级操作，NLE 负责 occurrence 时间关系 |
 
 NLE 只拥有画面处理的放置、顺序、启用状态、Control time 和共享关系。具体属性、关键帧和插值由选中的
@@ -179,10 +179,10 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
-| occurrence-local 处理 | Present Process | Picture/Audio appearance、Reader、Serializer、validator 与 lowering 使用同一 `processes` 事实 | **已具备**底层语义；标准 package 与产品操作仍需补齐 |
+| occurrence-local 处理 | Present Process | Picture/Audio appearance、Reader、Serializer、validator 与 lowering 使用同一 `processes` 事实 | **已具备** |
 | Programme-scope 处理 | Adjust Item | Adjust 是独立 Timeline Item，对同层以下累计信号生效 | **已具备**事实和求值 |
-| 添加片段效果 | NLE Studio catalog + Operation | Core 有 `process.add`，Studio catalog 目前只公开 Component、Adjust 和 Transition | **产品缺口**。需要明确的 occurrence Process offering/materialization contract |
-| 启用、停用、排序、删除 | NLE Commands | `process.replace`、`process.move`、`process.remove` 已实现，Process 保存 enabled | **已具备**底层语义；前端有限操作未完整投影 |
+| 添加片段效果 | NLE Studio catalog + Operation | `hypit.nle-process` 物化到已有 Present 对应的信号处理链；Jensen 选择 Transform、Filter、Gain | **已具备** |
+| 启用、停用、排序、删除 | Studio Operations + NLE Commands | 有限 Inspector 投影各信号处理链；操作寻址当前 Process 并检查 Project、View revision 和轨道锁 | **已具备** |
 | 独立效果创建与长度编辑 | Adjust offering + Timeline edit | Adjust catalog/materialization 已实现；普通 move/trim 依赖 Operator `timeWindow` 声明 | **已具备**基础路径 |
 | 参数编辑与共享 | package authoring + Inspector + Shared Value | Operator authoring、Inspector 和 Project-owned Operator Shared Value 已实现 | **已具备**基础路径 |
 | 效果预览 | NLE Preview Action | 单帧和播放区间消费含 Process/Adjust 的同一 NLE Programme | **已具备** |
@@ -224,9 +224,9 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
 | Audio occurrence 与 reconstruction | NLE Audio appearance | Present 可有 Audio appearance，支持 package Signal Reconstruction 和 Audio Processes | **已具备**基础 |
-| 片段增益 | Audio Process + package Operator | Process 可保存 gain package value、启用状态与 Control time | **产品缺口**。需要标准 Gain package 和 Inspector 操作 |
+| 片段增益 | Audio Process + package Operator | Jensen 选择 Gain offering，通过 Inspector 编辑倍数，播放与交付消费同一 AudioProgram | **已具备** Jensen 路径 |
 | 淡入淡出 | Audio Process + package Operator | fade 是 Audio Operator 的时间化 closed value | **产品缺口**。需要标准 envelope package 与 Timeline 手势 |
-| 音量包络与关键点 | package Operator parameters | closed parameters 可保存点、曲线和插值；NLE 保存其 Process 与 Control relation | **产品缺口**。需要结构化 package authoring 与有限投影 |
+| 音量包络与关键点 | package Operator parameters | Gain 投影已有线性关键点的精确时间和可编辑增益；NLE 保存其 Process 与 Control relation | **已具备**已有点的增益编辑；创建、移动和移除点仍缺 |
 | Track 混音开关 | NLE Track | Track enabled 参与 lowering | **已具备** |
 | 混合播放、导出与波形一致性 | AudioProgram / Media Actions | 播放与交付共享 `AudioProgram`；处理后波形 Action 仍缺 | **已具备**播放与交付 |
 

@@ -9,6 +9,7 @@ import type {
   NleStudioOpenProjection,
   NleStudioOperation,
   NleStudioOperationReceipt,
+  NleStudioProcessCatalogEntry,
   NleStudioTransitionCatalogEntry,
 } from "../protocol.js";
 import {
@@ -313,6 +314,12 @@ export function Studio() {
   const materializeEffect = (entry: NleStudioAdjustCatalogEntry) => place({
     ...operationContext, kind: "adjust.materialize", package: entry.package, offering: entry.offering, atFrame: frame,
   });
+  const materializeProcess = (entry: NleStudioProcessCatalogEntry) => void perform(async () => {
+    if (selection.length !== 1 || selectedProjectItem?.role !== "present") return;
+    await acceptReceipt(await operate({
+      ...operationContext, kind: "process.materialize", package: entry.package, offering: entry.offering, item: selectedProjectItem.id,
+    }));
+  });
   const materializeSelectedTransition = (entry: NleStudioTransitionCatalogEntry) => void perform(async () => {
     if (selection.length !== 2) throw new Error("添加转场前需要选择两个直接相接的片段。");
     await acceptReceipt(await operate({
@@ -336,7 +343,11 @@ export function Studio() {
         onClick={() => command({ kind: "view.reconcile", expectedProjectRevision: session.status.projectRevision,
           expectedViewRevision: session.status.viewRevision })}>整理 View 引用</button></div>}
       <div className="nle-upper">
-        <aside className="nle-bin"><div className="nle-bin-tabs" role="tablist">{(Object.keys(icons) as BinTab[]).map(id => { const Icon = icons[id]; return <button type="button" role="tab" aria-selected={binTab === id} key={id} onClick={() => setBinTab(id)}><Icon size={18} strokeWidth={1.6}/><span>{tabNames[id]}</span></button>; })}</div><div className="nle-bin-body"><StudioBin tab={binTab} catalog={session.catalog} media={session.media} disabled={editingDisabled} onImportMedia={importProjectMedia} onPlaceMedia={placeProjectMedia} onMaterialize={materialize} onMaterializeAdjust={materializeEffect} onMaterializeTransition={materializeSelectedTransition}/></div></aside>
+        <aside className="nle-bin"><div className="nle-bin-tabs" role="tablist">{(Object.keys(icons) as BinTab[]).map(id => { const Icon = icons[id]; return <button type="button" role="tab" aria-selected={binTab === id} key={id} onClick={() => setBinTab(id)}><Icon size={18} strokeWidth={1.6}/><span>{tabNames[id]}</span></button>; })}</div><div className="nle-bin-body"><StudioBin tab={binTab} catalog={session.catalog} media={session.media} disabled={editingDisabled}
+          processSignals={selection.length === 1 && selectedProjectItem?.role === "present"
+            && scene.tracks.find(track => track.id === selectedProjectItem.track)?.locked === false ? selectedProjectItem.signals : undefined}
+          onImportMedia={importProjectMedia} onPlaceMedia={placeProjectMedia} onMaterialize={materialize}
+          onMaterializeAdjust={materializeEffect} onMaterializeProcess={materializeProcess} onMaterializeTransition={materializeSelectedTransition}/></div></aside>
         <PanelResizeHandle side="bin" label="调整素材面板宽度" width={panelWidths.bin} onResize={(width, save) => resizePanel("bin", width, save)}/>
         <section className="nle-monitor"><div className="nle-panel-header nle-monitor-title"><span>{projectName}</span><IconButton label={previewExpanded ? "恢复预览" : "放大预览"} onClick={() => setPreviewExpanded(value => !value)}>{previewExpanded ? <Minimize2 size={15}/> : <Maximize2 size={15}/>}</IconButton></div>
           <div className="nle-stage"><div className="nle-editable-preview" style={{ "--canvas-ratio": session.canvas.canvas.width / session.canvas.canvas.height } as React.CSSProperties}><div className="studio-canvas">
@@ -367,7 +378,7 @@ export function Studio() {
             await acceptReceipt(await operate(media === ""
               ? { ...operationContext, kind: "component-media.unbind", item, slot }
               : { ...operationContext, kind: "component-media.bind", item, slot, media }));
-          })}/></div></aside>
+          })} onProcessEdit={edit => void perform(async () => acceptReceipt(await operate({ ...operationContext, ...edit })))}/></div></aside>
       </div>
       <Timeline session={session} frame={frame} selection={selection} busy={editingDisabled} onSeek={value => { setPlaying(false); setFrame(value); }} onSelect={select}
         onMove={intent => void perform(async () => acceptReceipt(await operate({

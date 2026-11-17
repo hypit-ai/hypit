@@ -6,6 +6,7 @@ import type {
   NleStudioComponentCatalogEntry,
   NleStudioMediaEntry,
   NleStudioMediaProjection,
+  NleStudioProcessCatalogEntry,
   NleStudioTransitionCatalogEntry,
 } from "../protocol.js";
 import { IconButton } from "./common.js";
@@ -20,14 +21,14 @@ function Empty({ children }: { readonly children: React.ReactNode }) {
 
 function Browser({ heading, entries, empty, disabled, onSelect }: {
   readonly heading: string;
-  readonly entries: readonly { readonly id: string; readonly name: string; readonly detail?: string; readonly kind: "text" | "transition" | "effect" | "subtitle" }[];
+  readonly entries: readonly { readonly id: string; readonly name: string; readonly detail?: string; readonly disabled?: boolean; readonly kind: "text" | "transition" | "effect" | "subtitle" }[];
   readonly empty: string;
   readonly disabled: boolean;
   readonly onSelect: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const filtered = entries.filter(entry => entry.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
-  return <div className="nle-bin-split"><nav className="nle-bin-side"><button type="button" aria-pressed="true">{heading}</button></nav><div className="nle-bin-main"><div className="nle-bin-toolbar"><label className="nle-preset-search"><Search size={14}/><input value={query} placeholder="搜索" onChange={event => setQuery(event.target.value)}/></label></div><div className="nle-bin-label">{heading}</div>{filtered.length === 0 ? <Empty>{empty}</Empty> : <div className="nle-preset-grid">{filtered.map(entry => <article className="nle-preset" key={entry.id}><button type="button" className={`nle-preset-preview studio-preset ${entry.kind}`} disabled={disabled} onClick={() => onSelect(entry.id)}><span>{entry.kind === "text" ? <Type size={22}/> : entry.kind === "transition" ? <Blend size={22}/> : entry.kind === "subtitle" ? <Captions size={22}/> : <Wand2 size={22}/>}</span>{entry.detail && <small>{entry.detail}</small>}</button><IconButton className="nle-preset-add" label="添加到时间线" disabled={disabled} onClick={() => onSelect(entry.id)}><Plus size={14}/></IconButton><span className="nle-preset-name">{entry.name}</span></article>)}</div>}</div></div>;
+  return <div className="nle-bin-split"><nav className="nle-bin-side"><button type="button" aria-pressed="true">{heading}</button></nav><div className="nle-bin-main"><div className="nle-bin-toolbar"><label className="nle-preset-search"><Search size={14}/><input value={query} placeholder="搜索" onChange={event => setQuery(event.target.value)}/></label></div><div className="nle-bin-label">{heading}</div>{filtered.length === 0 ? <Empty>{empty}</Empty> : <div className="nle-preset-grid">{filtered.map(entry => <article className="nle-preset" key={entry.id}><button type="button" className={`nle-preset-preview studio-preset ${entry.kind}`} disabled={disabled || entry.disabled} onClick={() => onSelect(entry.id)}><span>{entry.kind === "text" ? <Type size={22}/> : entry.kind === "transition" ? <Blend size={22}/> : entry.kind === "subtitle" ? <Captions size={22}/> : <Wand2 size={22}/>}</span>{entry.detail && <small>{entry.detail}</small>}</button><IconButton className="nle-preset-add" label="添加" disabled={disabled || entry.disabled === true} onClick={() => onSelect(entry.id)}><Plus size={14}/></IconButton><span className="nle-preset-name">{entry.name}</span></article>)}</div>}</div></div>;
 }
 
 function Assets({ media, disabled, onImport, onPlace }: {
@@ -48,16 +49,19 @@ function Assets({ media, disabled, onImport, onPlace }: {
 }
 
 export function StudioBin({
-  tab, catalog, media, disabled, onImportMedia, onPlaceMedia, onMaterialize, onMaterializeAdjust, onMaterializeTransition,
+  tab, catalog, media, disabled, processSignals, onImportMedia, onPlaceMedia, onMaterialize, onMaterializeAdjust,
+  onMaterializeProcess, onMaterializeTransition,
 }: {
   readonly tab: BinTab;
   readonly catalog: NleStudioCatalogProjection;
   readonly media: NleStudioMediaProjection;
   readonly disabled: boolean;
+  readonly processSignals: { readonly picture: boolean; readonly audio: boolean } | undefined;
   readonly onImportMedia: (files: readonly File[]) => void;
   readonly onPlaceMedia: (entry: NleStudioMediaEntry) => void;
   readonly onMaterialize: (entry: NleStudioComponentCatalogEntry) => void;
   readonly onMaterializeAdjust: (entry: NleStudioAdjustCatalogEntry) => void;
+  readonly onMaterializeProcess: (entry: NleStudioProcessCatalogEntry) => void;
   readonly onMaterializeTransition: (entry: NleStudioTransitionCatalogEntry) => void;
 }) {
   const values = useMemo(() => {
@@ -65,12 +69,18 @@ export function StudioBin({
       .filter(entry => tab === "text" ? entry.category === "text" || entry.category === "graphic" : entry.category === "subtitle")
       .map(entry => ({ id: `${entry.package}\u0000${entry.offering}`, name: entry.title, detail: entry.package,
         kind: tab === "text" ? "text" as const : "subtitle" as const }));
-    if (tab === "effects") return catalog.adjusts.map(entry => ({
-      id: `${entry.package}\u0000${entry.offering}`,
-      name: entry.title,
-      detail: `${entry.package} · ${entry.medium}`,
-      kind: "effect" as const,
-    }));
+    if (tab === "effects") return [
+      ...catalog.processes.map(entry => ({
+        id: `${entry.package}\u0000${entry.offering}\u0000process`,
+        name: entry.title, detail: entry.medium === "audio" ? "音频片段" : "画面片段",
+        kind: "effect" as const, disabled: processSignals?.[entry.medium] !== true,
+      })),
+      ...catalog.adjusts.map(entry => ({
+        id: `${entry.package}\u0000${entry.offering}\u0000adjust`,
+        name: entry.title, detail: entry.medium === "audio" ? "音频轨道" : "画面轨道",
+        kind: "effect" as const,
+      })),
+    ];
     if (tab === "transitions") return catalog.transitions.map(entry => ({
       id: `${entry.package}\u0000${entry.offering}`,
       name: entry.title,
@@ -78,11 +88,16 @@ export function StudioBin({
       kind: "transition" as const,
     }));
     return [];
-  }, [catalog, tab]);
+  }, [catalog, processSignals, tab]);
   if (tab === "assets") return <Assets media={media} disabled={disabled} onImport={onImportMedia} onPlace={onPlaceMedia}/>;
   return <Browser heading={labels[tab]} entries={values} disabled={disabled} empty={tab === "text" ? "项目没有选择文本或图形组件" : tab === "subtitles" ? "项目没有选择字幕组件" : tab === "transitions" ? "项目没有选择转场" : "项目没有选择效果"} onSelect={id => {
-    const [packageName, offering] = id.split("\u0000");
+    const [packageName, offering, scope] = id.split("\u0000");
     if (tab === "effects") {
+      if (scope === "process") {
+        const entry = catalog.processes.find(candidate => candidate.package === packageName && candidate.offering === offering);
+        if (entry !== undefined) onMaterializeProcess(entry);
+        return;
+      }
       const entry = catalog.adjusts.find(candidate => candidate.package === packageName && candidate.offering === offering);
       if (entry !== undefined) onMaterializeAdjust(entry);
       return;

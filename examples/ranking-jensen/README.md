@@ -17,6 +17,10 @@ parameters through ordinary NLE transactions. All three declare that generic tri
 meaning by slicing the existing Control relation. Their product facets are finite projections, reducers and temporal
 declarations selected through the package symbol.
 
+Studio's Effects bin offers Transform and Filter for a selected Picture Present, and Gain for a selected Audio
+Present. The Inspector enables, reorders and removes occurrences of these effects. Gain exposes its constant value
+or the values of existing linear envelope points. Preview and Delivery consume the edited Process chain.
+
 `@hypit/caption-fine` projects stable word and timing collections plus its inline/shared typography slot. Word text,
 exact rational unit edges and typography fields reduce to replacement closed values in the backend; the package does not
 yet declare generic trim/split safe, so those affordances remain unavailable. The ranking package projects stable

@@ -50,6 +50,8 @@ export type NleStudioAdjustCatalogEntry = {
   readonly medium: "picture" | "audio";
 };
 
+export type NleStudioProcessCatalogEntry = NleStudioAdjustCatalogEntry;
+
 export type NleStudioTransitionCatalogEntry = {
   readonly package: string;
   readonly offering: string;
@@ -59,6 +61,7 @@ export type NleStudioTransitionCatalogEntry = {
 export type NleStudioCatalogProjection = {
   readonly components: readonly NleStudioComponentCatalogEntry[];
   readonly adjusts: readonly NleStudioAdjustCatalogEntry[];
+  readonly processes: readonly NleStudioProcessCatalogEntry[];
   readonly transitions: readonly NleStudioTransitionCatalogEntry[];
 };
 
@@ -215,6 +218,10 @@ export type NleStudioOperation =
     })
   | (NleStudioTimedPlacement & NleStudioOfferingReference & { readonly kind: "adjust.materialize" })
   | (NleStudioCompositionOperation & NleStudioOfferingReference & {
+      readonly kind: "process.materialize"; readonly item: string; readonly before?: string;
+    })
+  | (NleStudioCompositionOperation & NleStudioProcessEdit)
+  | (NleStudioCompositionOperation & NleStudioOfferingReference & {
       readonly kind: "transition.materialize";
       readonly items: readonly [string, string];
       readonly durationFrames?: number;
@@ -231,6 +238,16 @@ export type NleStudioOperation =
   | (NleStudioCompositionOperation & { readonly kind: "audio.detach"; readonly item: string; readonly track?: string })
   | (NleStudioCompositionOperation & { readonly kind: "component-media.bind"; readonly item: string; readonly slot: string; readonly media: string })
   | (NleStudioCompositionOperation & { readonly kind: "component-media.unbind"; readonly item: string; readonly slot: string });
+
+export type NleStudioProcessEdit = {
+  readonly item: string;
+  readonly medium: "picture" | "audio";
+  readonly process: string;
+} & (
+  | { readonly kind: "process.enable"; readonly enabled: boolean }
+  | { readonly kind: "process.move"; readonly before?: string }
+  | { readonly kind: "process.remove" }
+);
 
 export type NleStudioMediaActionRequest = MediaViewRequest & {
   readonly media: string;

@@ -560,7 +560,11 @@ export function createNleInspectorPresentationHost(
         }
       }
       sections.push(...packageSections(project, view, id).map((entry) => entry.section));
-      return { item: id, title: displayedTitle, sections };
+      const processes = item.kind !== "present" ? [] : (["picture", "audio"] as const).flatMap(medium =>
+        (item[medium]?.processes ?? []).map(process => ({
+          medium, id: process.id, label: process.operator.symbol, enabled: process.enabled, editable: writable,
+        })));
+      return { item: id, title: displayedTitle, sections, processes };
     },
     planEdit(project, view, id, sectionId, fieldId, value) {
       assertNleViewForProject(view, project);

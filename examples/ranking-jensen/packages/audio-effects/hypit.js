@@ -1,9 +1,11 @@
 const zero = { ticks: "0", timeBase: { numerator: 1, denominator: 1 } };
+const packageName = "@hypit/audio-effects";
+const gainSymbol = { package: packageName, symbol: "gain" };
 function gainOperator(process, context) {
   const controlled = context.parameters.kind === "keyframes";
   return {
     id: `${process.id}:operator`,
-    implementation: { package: "@hypit/audio-effects", symbol: "gain" },
+    implementation: gainSymbol,
     parameters: structuredClone(context.parameters),
     inputs: ["signal"],
     temporalControls: controlled ? { gain: { id: `${process.id}:gain`, duration: structuredClone(context.controlDuration) } } : {},
@@ -24,9 +26,53 @@ function gainExpression(parameters) {
   }
   return expression;
 }
+const timeKey = at => `${at.ticks} × ${at.timeBase.numerator}/${at.timeBase.denominator} s`;
+
+function gainInspector({ process, parameters }) {
+  const gainField = (id, value, operation) => ({
+    id, label: "Gain", control: "number", value, minimum: 0, step: 0.01, unit: "×", operation,
+  });
+  const fields = [{ id: "kind", label: "Mode", control: "readout", value: parameters.kind }];
+  if (parameters.kind === "constant") {
+    fields.push(gainField("gain", parameters.gain, value => ({ kind: "gain.set", value })));
+  }
+  const collections = parameters.kind === "keyframes" ? [{
+    id: "keyframes", label: "Keyframes",
+    rows: parameters.keyframes.map(({ at, gain }) => {
+      const id = timeKey(at);
+      return { id, label: id, fields: [
+        gainField(`gain:${id}`, gain, value => ({ kind: "gain.keyframe.set", at: id, value })),
+      ] };
+    }),
+  }] : [];
+  return [{ id: "parameters", label: `Gain · ${process.id}`, domain: "how", fields, collections }];
+}
+
+function editGain(operation, { parameters }) {
+  if (!Number.isFinite(operation.value) || operation.value < 0) throw new Error("Gain must be finite and nonnegative.");
+  if (operation.kind === "gain.set" && parameters.kind === "constant") return { ...parameters, gain: operation.value };
+  if (operation.kind === "gain.keyframe.set" && parameters.kind === "keyframes") {
+    const keyframes = [...parameters.keyframes];
+    const index = keyframes.findIndex(({ at }) => timeKey(at) === operation.at);
+    if (index >= 0) {
+      keyframes[index] = { ...keyframes[index], gain: operation.value };
+      return { ...parameters, keyframes };
+    }
+  }
+  throw new Error("Gain edit does not address a current value.");
+}
+
 export const hypitPackage = {
-  package: "@hypit/audio-effects",
+  package: packageName,
   contributions: [
+    { kind: "hypit.nle-authoring", value: {
+      kind: "hypit.nle-authoring", package: packageName, components: [], componentValues: [],
+      operators: [{ operator: gainSymbol, timeWindow: () => true, editParameters: editGain }],
+    } },
+    { kind: "hypit.nle-inspector-presentation", value: {
+      kind: "hypit.nle-inspector-presentation", package: packageName, components: [], componentValues: [],
+      operators: [{ operator: gainSymbol, project: gainInspector }],
+    } },
     { kind: "hypit.nle-lowering", value: { audioProcesses: [{ symbol: "gain", resolve: gainOperator }] } },
     { kind: "hypit.audiovisual-audio", value: { operators: [{
       symbol: "gain",
@@ -35,5 +81,7 @@ export const hypitPackage = {
       }),
     }] } },
   ],
-  catalog: [],
+  catalog: [{ id: "gain", kind: "hypit.nle-process", title: "Gain", value: {
+    medium: "audio", operator: gainSymbol, parameters: { kind: "constant", gain: 1 },
+  } }],
 };

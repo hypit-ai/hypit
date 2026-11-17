@@ -22,6 +22,7 @@ import type { ProjectPackageCatalogResolution, ProjectPackageEnvironment } from 
 
 export const nleStudioComponentOfferingKind = "hypit.nle-component";
 export const nleStudioAdjustOfferingKind = "hypit.nle-adjust";
+export const nleStudioProcessOfferingKind = "hypit.nle-process";
 export const nleStudioTransitionOfferingKind = "hypit.nle-transition";
 
 export type NleStudioComponentCategory = "text" | "subtitle" | "graphic";
@@ -41,11 +42,19 @@ export type NleStudioComponentOffering = {
   readonly value: NleStudioComponentOfferingValue;
 };
 
-export type NleStudioAdjustOfferingValue = {
+export type NleStudioProcessOfferingValue = {
   readonly medium: "picture" | "audio";
   readonly operator: PackageSymbol;
   readonly parameters: Readonly<Record<string, unknown>>;
-  readonly duration: ExactTemporalValue;
+};
+
+export type NleStudioAdjustOfferingValue = NleStudioProcessOfferingValue & { readonly duration: ExactTemporalValue };
+
+export type NleStudioProcessOffering = {
+  readonly package: string;
+  readonly id: string;
+  readonly title: string;
+  readonly value: NleStudioProcessOfferingValue;
 };
 
 export type NleStudioAdjustOffering = {
@@ -74,9 +83,11 @@ export type NleStudioPackageBridge = {
   readonly inspectorPresentations: readonly NleInspectorPresentationContribution[];
   readonly components: readonly NleStudioComponentOffering[];
   readonly adjusts: readonly NleStudioAdjustOffering[];
+  readonly processes: readonly NleStudioProcessOffering[];
   readonly transitions: readonly NleStudioTransitionOffering[];
   readonly component: (packageName: string, offering: string) => NleStudioComponentOffering | undefined;
   readonly adjust: (packageName: string, offering: string) => NleStudioAdjustOffering | undefined;
+  readonly process: (packageName: string, offering: string) => NleStudioProcessOffering | undefined;
   readonly transition: (packageName: string, offering: string) => NleStudioTransitionOffering | undefined;
 };
 
@@ -183,6 +194,24 @@ function adjustOffering(entry: ProjectPackageCatalogResolution): NleStudioAdjust
   };
 }
 
+function processOffering(entry: ProjectPackageCatalogResolution): NleStudioProcessOffering {
+  const label = `NLE Studio Process offering ${entry.package}#${entry.id}`;
+  assertClosedRecord(entry.value, label);
+  const value = entry.value;
+  assert(Object.keys(value).length === 3 && ["medium", "operator", "parameters"].every(key => Object.hasOwn(value, key)),
+    `${label} fields are invalid.`);
+  assert(value.medium === "picture" || value.medium === "audio", `${label} medium is invalid.`);
+  const operator = value.operator as PackageSymbol;
+  assertPackageSymbol(operator, `${label} Operator`);
+  assert(operator.package === entry.package, `${label} Operator must be owned by its package.`);
+  assertClosedRecord(value.parameters, `${label} parameters`);
+  assertImplementationBinding({ implementation: operator, parameters: value.parameters }, label);
+  return {
+    package: entry.package, id: entry.id, title: entry.title,
+    value: { medium: value.medium, operator: structuredClone(operator), parameters: structuredClone(value.parameters) },
+  };
+}
+
 function transitionOffering(entry: ProjectPackageCatalogResolution): NleStudioTransitionOffering {
   const label = `NLE Studio Transition offering ${entry.package}#${entry.id}`;
   assert(entry.value !== null && typeof entry.value === "object" && !Array.isArray(entry.value),
@@ -222,9 +251,10 @@ export function createNleStudioPackageBridge(packages: ProjectPackageEnvironment
   );
   const components = packages.catalog(nleStudioComponentOfferingKind).map(componentOffering);
   const adjusts = packages.catalog(nleStudioAdjustOfferingKind).map(adjustOffering);
+  const processes = packages.catalog(nleStudioProcessOfferingKind).map(processOffering);
   const transitions = packages.catalog(nleStudioTransitionOfferingKind).map(transitionOffering);
   const keys = new Set<string>();
-  for (const entry of [...components, ...adjusts, ...transitions]) {
+  for (const entry of [...components, ...adjusts, ...processes, ...transitions]) {
     const key = `${entry.package}#${entry.id}`;
     assert(!keys.has(key), `NLE Studio catalog repeats ${key}.`);
     keys.add(key);
@@ -235,12 +265,16 @@ export function createNleStudioPackageBridge(packages: ProjectPackageEnvironment
     inspectorPresentations,
     components,
     adjusts,
+    processes,
     transitions,
     component(packageName, offering) {
       return components.find((entry) => entry.package === packageName && entry.id === offering);
     },
     adjust(packageName, offering) {
       return adjusts.find((entry) => entry.package === packageName && entry.id === offering);
+    },
+    process(packageName, offering) {
+      return processes.find((entry) => entry.package === packageName && entry.id === offering);
     },
     transition(packageName, offering) {
       return transitions.find((entry) => entry.package === packageName && entry.id === offering);

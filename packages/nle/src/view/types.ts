@@ -272,4 +272,13 @@ export type NleInspectorScene = {
   readonly item: string;
   readonly title: string;
   readonly sections: readonly NleInspectorSection[];
+  readonly processes: readonly NleInspectorProcess[];
+};
+
+export type NleInspectorProcess = {
+  readonly medium: "picture" | "audio";
+  readonly id: string;
+  readonly label: string;
+  readonly enabled: boolean;
+  readonly editable: boolean;
 };

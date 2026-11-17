@@ -68,7 +68,7 @@ resource projection, not Component or Operator evaluation and not an audiovisual
 The session assembles NLE authoring, Timeline presentation and Inspector presentation contributions from the
 ProjectHost's already selected Package Environment. The NLE contracts validate and index those process-local
 capabilities; ProjectHost does not interpret them. NLE Studio additionally owns the finite `hypit.nle-component`,
-`hypit.nle-adjust` and `hypit.nle-transition` catalog contracts used by its text, subtitle, graphic, effect and
+`hypit.nle-process`, `hypit.nle-adjust` and `hypit.nle-transition` catalog contracts used by its text, subtitle, graphic, effect and
 transition creation surfaces. Selecting an entry invokes the matching NLE materialization planner. The package owns
 the exact Component or Operator symbol, closed initial parameters and declared defaults; it does not return arbitrary
 Project commands.
@@ -168,6 +168,12 @@ durations default to their offering. Automatic placement selects an enabled,
 unlocked Track of the required medium. Picture Presents use a free lane and timed Adjusts default to the end of
 their medium's authored track order. An explicit Track permits deliberate Picture stacking and is checked for
 medium and lock.
+
+Process materialization addresses an existing Present in the active Composition. The selected offering declares its
+signal, Operator and closed initial parameters. Studio adds the enabled Process at the end of its signal chain or
+before an explicitly addressed Process. The initial Control relation is the Present's full local interval. Inspector
+observation projects the ordered chains with current enable and lock state. Enable, move and remove address a
+specific Process on a specific signal and use the same guarded Project edit path as parameter edits.
 
 Transition materialization takes two selected Present Items. Studio orders the endpoints by exact start time and
 the NLE planner validates their direct cut, moves the incoming Item and adds the relation atomically. Audio detach

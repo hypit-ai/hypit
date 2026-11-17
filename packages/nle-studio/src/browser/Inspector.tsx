@@ -1,5 +1,7 @@
 import type { NleInspectorCollection, NleInspectorField, NleInspectorScene } from "@hypit/nle/view";
-import type { NleStudioComponentInputsProjection, NleStudioMediaEntry } from "../protocol.js";
+import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
+import type { NleStudioComponentInputsProjection, NleStudioMediaEntry, NleStudioProcessEdit } from "../protocol.js";
+import { IconButton } from "./common.js";
 import { NumberField, Row, Section, Toggle } from "./controls.js";
 
 function Field({ section, field, disabled, onEdit }: {
@@ -45,16 +47,37 @@ function Collection({ section, collection, disabled, onEdit }: {
   </div>;
 }
 
-export function Inspector({ scene, component, media, disabled, onEdit, onMedia }: {
+export function Inspector({ scene, component, media, disabled, onEdit, onMedia, onProcessEdit }: {
   readonly scene: NleInspectorScene | undefined;
   readonly component: NleStudioComponentInputsProjection | undefined;
   readonly media: readonly NleStudioMediaEntry[];
   readonly disabled: boolean;
   readonly onEdit: (section: string, field: string, value: string | number | boolean) => void;
   readonly onMedia: (item: string, slot: string, media: string) => void;
+  readonly onProcessEdit: (edit: NleStudioProcessEdit) => void;
 }) {
   if (scene === undefined) return <p className="nle-empty">选择一个时间线项目以检查属性</p>;
-  return <>{scene.sections.map(section => <Section title={section.label} key={section.id}>
+  return <>{(["picture", "audio"] as const).map(medium => {
+    const processes = scene.processes.filter(process => process.medium === medium);
+    if (processes.length === 0) return null;
+    return <Section key={medium} title={medium === "picture" ? "画面效果" : "音频效果"}>
+      {processes.map((process, index) => {
+        const address = { item: scene.item, medium, process: process.id };
+        const editable = !disabled && process.editable;
+        const before = processes[index + 2]?.id;
+        return <Row key={process.id} label={process.label}>
+          <Toggle disabled={!editable} label={`启用 ${process.label}`} checked={process.enabled}
+            onChange={enabled => onProcessEdit({ kind: "process.enable", ...address, enabled })}/>
+          <IconButton label={`向前移动 ${process.label}`} disabled={!editable || index === 0}
+            onClick={() => onProcessEdit({ kind: "process.move", ...address, before: processes[index - 1]!.id })}><ArrowUp size={14}/></IconButton>
+          <IconButton label={`向后移动 ${process.label}`} disabled={!editable || index === processes.length - 1}
+            onClick={() => onProcessEdit({ kind: "process.move", ...address, ...(before === undefined ? {} : { before }) })}><ArrowDown size={14}/></IconButton>
+          <IconButton label={`删除 ${process.label}`} disabled={!editable}
+            onClick={() => onProcessEdit({ kind: "process.remove", ...address })}><Trash2 size={14}/></IconButton>
+        </Row>;
+      })}
+    </Section>;
+  })}{scene.sections.map(section => <Section title={section.label} key={section.id}>
     {section.fields.map(field => <Field key={field.id} section={section.id} field={field} disabled={disabled} onEdit={onEdit}/>) }
     {section.collections?.map(collection => <Collection key={collection.id} section={section.id}
       collection={collection} disabled={disabled} onEdit={onEdit}/>) }
