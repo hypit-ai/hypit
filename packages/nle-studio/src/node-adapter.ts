@@ -9,15 +9,11 @@ import { serveApplicationEventStream, type NodeApplicationProductAdapter } from 
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import { NleStudioProductSession, nleStudioProduct } from "./host.js";
 import type {
-  NleStudioAdjustMaterializeRequest,
   NleStudioCommandRequest,
-  NleStudioComponentMaterializeRequest,
   NleStudioDeliveryStartRequest,
-  NleStudioMediaPlaceRequest,
   NleStudioObservationRequest,
   NleStudioOperation,
   NleStudioOperationReceipt,
-  NleStudioTransitionMaterializeRequest,
 } from "./protocol.js";
 
 async function jsonBody(request: IncomingMessage): Promise<unknown> {
@@ -56,10 +52,9 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
   return { kind: request.kind as Exclude<NleStudioObservationRequest["kind"], "inspector"> };
 }
 
-function record(value: unknown, fields: readonly string[], subject: string): Readonly<Record<string, unknown>> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)
-    || Object.keys(value).some(key => !fields.includes(key))) {
-    throw new Error(`${subject} must be an object with current fields.`);
+function record(value: unknown, subject: string): Readonly<Record<string, unknown>> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${subject} must be an object.`);
   }
   return value as Readonly<Record<string, unknown>>;
 }
@@ -68,21 +63,67 @@ function identity(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
 }
 
+function validPictureLayout(value: unknown): boolean {
+  const layout = record(value, "NLE Studio Picture layout");
+  const dimensions = ["x", "y", "width", "height"];
+  const alignment = ["contentX", "contentY"];
+  return Object.keys(layout).every(key => key === "fit" || dimensions.includes(key) || alignment.includes(key))
+    && dimensions.every(key => Number.isFinite(layout[key]))
+    && alignment.every(key => layout[key] === undefined || Number.isFinite(layout[key]))
+    && (layout.fit === "fill" || layout.fit === "contain" || layout.fit === "cover");
+}
+
 function operationRequest(value: unknown): NleStudioOperation {
-  const request = record(value, [
-    "kind", "expectedProjectRevision", "expectedViewRevision", "composition", "anchor", "items", "deltaFrames", "target",
-  ], "NLE Studio Operation");
-  if (request.kind !== "timeline.drop" || !Number.isSafeInteger(request.expectedProjectRevision)
-    || Number(request.expectedProjectRevision) < 0 || !Number.isSafeInteger(request.expectedViewRevision)
-    || Number(request.expectedViewRevision) < 0 || !identity(request.composition) || !identity(request.anchor)
-    || !Array.isArray(request.items) || !request.items.every(identity) || !Number.isSafeInteger(request.deltaFrames)) {
-    throw new Error("NLE Studio Timeline drop requires revisions, a Composition, selected Items, an anchor and a frame delta.");
+  const request = record(value, "NLE Studio Operation");
+  const integer = (entry: unknown, minimum: number) => typeof entry === "number" && Number.isSafeInteger(entry) && entry >= minimum;
+  if (!integer(request.expectedProjectRevision, 0) || !integer(request.expectedViewRevision, 0)
+    || !identity(request.composition)) {
+    throw new Error("NLE Studio Operation requires revisions and a Composition.");
   }
-  const target = record(request.target, ["kind", "track", "before"], "NLE Studio Timeline drop target");
-  if (!(target.kind === "track" && identity(target.track) && !Object.hasOwn(target, "before"))
-    && !(target.kind === "gap" && !Object.hasOwn(target, "track") && (!Object.hasOwn(target, "before") || identity(target.before)))) {
-    throw new Error("NLE Studio Timeline drop target requires a Track or a gap.");
+  const currentFields = (...fields: readonly string[]) => Object.keys(request).every(key =>
+    ["kind", "expectedProjectRevision", "expectedViewRevision", "composition", ...fields].includes(key));
+  const items = Array.isArray(request.items) && request.items.every(identity) ? request.items : undefined;
+  const track = request.track === undefined || identity(request.track);
+  const placement = track && integer(request.atFrame, 0);
+  const duration = request.durationFrames === undefined || integer(request.durationFrames, 1);
+  const offering = identity(request.package) && identity(request.offering);
+  const timedFields = ["atFrame", "durationFrames", "track"];
+  let valid: boolean;
+  switch (request.kind) {
+    case "timeline.drop": {
+      const target = record(request.target, "NLE Studio Timeline drop target");
+      const location = target.kind === "track"
+        ? identity(target.track) && Object.keys(target).length === 2
+        : target.kind === "gap" && (target.before === undefined || identity(target.before))
+          && Object.keys(target).every(key => key === "kind" || key === "before");
+      valid = currentFields("anchor", "items", "deltaFrames", "target")
+        && identity(request.anchor) && items?.includes(request.anchor) === true
+        && Number.isSafeInteger(request.deltaFrames) && location;
+      break;
+    }
+    case "media.materialize":
+      valid = currentFields("media", "includeAudio", "layout", ...timedFields) && placement && duration
+        && identity(request.media) && (request.includeAudio === undefined || typeof request.includeAudio === "boolean")
+        && (request.layout === undefined || validPictureLayout(request.layout));
+      break;
+    case "component.materialize":
+    case "adjust.materialize":
+      valid = currentFields("package", "offering", ...timedFields) && placement && duration && offering;
+      break;
+    case "transition.materialize":
+      valid = currentFields("package", "offering", "items", "durationFrames") && duration && offering
+        && items?.length === 2 && items[0] !== items[1];
+      break;
+    case "composition.materialize":
+      valid = currentFields("source", "atFrame", "track") && placement && identity(request.source);
+      break;
+    case "audio.detach":
+      valid = currentFields("item", "track") && track && identity(request.item);
+      break;
+    default:
+      throw new Error("NLE Studio Operation kind is invalid.");
   }
+  if (!valid) throw new Error(`NLE Studio ${request.kind} fields are invalid.`);
   return request as NleStudioOperation;
 }
 
@@ -243,30 +284,8 @@ export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
         sendJson(response, 200, await studio.operate(operationRequest(await jsonBody(request))));
         return true;
       }
-      if (request.method === "POST" && pathname === "/api/media/place") {
-        sendJson(response, 200, await studio.placeMedia(await jsonBody(request) as NleStudioMediaPlaceRequest));
-        return true;
-      }
       if (request.method === "POST" && pathname === "/api/media/import") {
         sendJson(response, 200, await receiveMediaFile(studio, request, url.searchParams.get("name") ?? ""));
-        return true;
-      }
-      if (request.method === "POST" && pathname === "/api/catalog/components/materialize") {
-        sendJson(response, 200, await studio.materializeComponent(
-          await jsonBody(request) as NleStudioComponentMaterializeRequest,
-        ));
-        return true;
-      }
-      if (request.method === "POST" && pathname === "/api/catalog/adjusts/materialize") {
-        sendJson(response, 200, await studio.materializeAdjust(
-          await jsonBody(request) as NleStudioAdjustMaterializeRequest,
-        ));
-        return true;
-      }
-      if (request.method === "POST" && pathname === "/api/catalog/transitions/materialize") {
-        sendJson(response, 200, await studio.materializeTransition(
-          await jsonBody(request) as NleStudioTransitionMaterializeRequest,
-        ));
         return true;
       }
       if (request.method === "POST" && pathname === "/api/deliveries") {

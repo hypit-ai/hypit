@@ -39,10 +39,9 @@ Timeline drops use `POST /api/operate`. Studio resolves the selected Items, comp
 and Track creation in one guarded edit.
 Audiovisual preview remains unavailable until a preview Executor port is supplied.
 
-Available entries in the browser Media bin can be placed at the current playhead. The client chooses a compatible
-unlocked Track or creates one, then submits the explicit media materialization request. Without a preview Executor,
-the structural Canvas can display accepted image and video resources in their Present Item layout; that source display
-does not claim to be composited programme output.
+Available entries in the browser Media bin can be placed at the current playhead. Studio chooses a compatible Track,
+creates one when needed, and returns the new Item identity. The structural Canvas displays accepted image and video
+resources in their Present Item layout.
 
 At session open, the backend assembles the selected packages' NLE authoring, Timeline presentation and Inspector
 presentation contributions into the existing Editing Surface contracts. The browser creation bin projects selected
@@ -62,11 +61,10 @@ occurrence. Both choices use the same package projector and reducer, while the S
 guard authority. A caller may additionally use the typed `component-value.edit` command to atomically share an inline
 value under a new Project identity. Generic unlink never removes a required slot.
 
-Under the Product Session URL, the backend exposes `POST api/media/place` for one explicit catalog-to-NLE
-materialization. It converts the session's frame coordinates into exact NLE time, calls the NLE Media planner and
-submits the resulting ordinary revisioned transaction. Media bytes are exposed only through session-owned
-`api/resources/:token` capability URLs;
-the route supports `GET`, `HEAD` and single byte ranges without exposing absolute paths to the browser.
+Under the Product Session URL, `POST /api/operate` handles Media, Component, Adjust, Transition and Composition
+materialization and audio detachment. Studio converts session frames into exact NLE time and submits one revisioned
+transaction per operation. Session-owned resource URLs at `api/resources/:token` support `GET`, `HEAD` and single
+byte ranges.
 
 `POST api/media/import?name=...` accepts one raw file body. The loopback adapter stages the upload, invokes the same
 serialized Project Media adoption Action available to CLI and native callers, and deletes the staging file. The
@@ -80,8 +78,5 @@ whose Action owns its FFmpeg and Chromium children. The standalone server accept
 `HYPIT_FFMPEG_PATH`, `HYPIT_FFPROBE_PATH`, `HYPIT_CHROME_PATH` and `HYPIT_ELECTRON_PATH` for explicit executable
 selection and otherwise uses the local implementations' ordinary defaults.
 
-`POST api/catalog/components/materialize` materializes one Project-selected Component offering. Timeline
-`POST api/catalog/adjusts/materialize` creates one timed effect, and
-`POST api/catalog/transitions/materialize` atomically turns one direct cut into a selected Transition. Timeline
-presentation resources use opaque `api/presentations/:resource` addresses and remain owned by the process-local
-package contribution.
+Timeline presentation resources use opaque `api/presentations/:resource` addresses and remain owned by the
+process-local package contribution.

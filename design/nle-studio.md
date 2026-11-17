@@ -125,23 +125,21 @@ and mark that exact Service revision saved only after the write succeeds. Reload
 operation that accepts current file bytes into the corresponding Service. The Host performs no content hashing or
 continuous integrity comparison.
 
-A Media placement operation carries one Project Media reference, destination Composition and Track, exact session
-revisions and frame-grid placement. The product adapter resolves the accepted Media interpretation, converts frames
-to exact NLE time, calls the NLE Media materialization planner and submits its ordinary Project transaction through
-the Editing Surface. Media resource routes accept only capability tokens owned by that Product Session and support
-byte ranges without publishing filesystem paths.
+The `operate` union also accepts Media, Component, Adjust, Transition and nested Composition materialization and
+audio detachment. A placement carries an active Composition, expected revisions, a frame and an optional explicit
+Track. Studio resolves the Media reference or selected package offering, computes exact time, generates identities
+and submits Track creation and materialization in one guarded Project transaction. Media follows the selected
+interpretation's timed duration unless the caller chooses a duration. Constant assets default to five seconds on the
+View frame grid. Media placement also accepts a Picture layout and an Audio inclusion choice. Component and Adjust
+durations default to their offering. Automatic placement selects an enabled,
+unlocked Track of the required medium. Picture Presents use a free lane and timed Adjusts default to the end of
+their medium's authored track order. An explicit Track permits deliberate Picture stacking and is checked for
+medium and lock.
 
-A Component materialization operation carries the selected package and offering id, destination, Item id, frame-grid
-placement and exact session revisions. The backend resolves only an offering selected by the Project manifest, calls
-the NLE Component materialization planner and submits the resulting transaction through the same Surface. Component
-offerings resolve through the ProjectHost's selected Package Environment. Package Timeline artwork, when present,
-stays process-local and is exposed through an opaque same-origin presentation resource route.
-
-An Adjust materialization resolves one selected effect offering and creates an independently timed Item on a
-compatible Picture or Audio Track. A Transition materialization resolves one selected transition offering and an
-explicit pair of Present Items at a direct Picture cut. Its one atomic Project transaction moves the incoming Item by
-the chosen transition duration and adds the relation in one transaction. Transition materialization requires a
-direct cut between compatible Items.
+Transition materialization takes two selected Present Items. Studio orders the endpoints by exact start time and
+the NLE planner validates their direct cut, moves the incoming Item and adds the relation atomically. Audio detach
+uses one guarded transaction to resolve or add an Audio Track and create the Audio-only occurrence from the
+original Present. Media bytes and package Timeline artwork are served through Product or Project capabilities.
 
 ## Package
 

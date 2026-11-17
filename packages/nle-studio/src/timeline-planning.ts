@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { nleItemEnd, type NleCommand, type NleComposition, type NleItem, type NleProject, type NleTrack } from "@hypit/nle";
+import { applyNleTransaction, nleItemEnd, type NleCommand, type NleComposition, type NleItem, type NleProject, type NleTrack } from "@hypit/nle";
 import { nleViewCompositionState, nleViewTrackLocked, type NleView } from "@hypit/nle/view";
 import {
   addExactTemporalValues,
@@ -37,6 +37,44 @@ function pictureCollision(item: NleItem, other: NleItem, delta: ExactTemporalVal
   return item.kind === "present" && other.kind === "present"
     && compareExactTemporalValues(addExactTemporalValues(item.start, delta), nleItemEnd(other)) < 0
     && compareExactTemporalValues(other.start, addExactTemporalValues(nleItemEnd(item), delta)) < 0;
+}
+
+type ActiveTimeline = { readonly project: NleProject; readonly composition: NleComposition; readonly view: NleView };
+
+export function allocateTimelinePlacement(context: ActiveTimeline, input: {
+  readonly medium: NleTrack["kind"];
+  readonly track: string | undefined;
+  readonly purpose:
+    | { readonly kind: "present"; readonly start: ExactTemporalValue; readonly duration: ExactTemporalValue }
+    | { readonly kind: "adjust" };
+}) {
+  const { project, composition, view } = context;
+  const { medium, purpose } = input;
+  const tracks = composition.tracks.filter(track => track.kind === medium);
+  const locked = (track: NleTrack) => nleViewTrackLocked(view, composition.id, track.id);
+  const available = (track: NleTrack) => track.enabled && !locked(track);
+  let selected: NleTrack | undefined;
+  if (input.track !== undefined) {
+    selected = tracks.find(track => track.id === input.track);
+    if (selected === undefined) throw new Error(`NLE Studio placement requires a ${medium} Track in ${composition.id}.`);
+    if (locked(selected)) throw new Error(`NLE Studio placement Track ${input.track} is locked.`);
+  } else if (purpose.kind === "adjust") {
+    const last = tracks.at(-1);
+    if (last !== undefined && available(last)) selected = last;
+  } else if (medium === "audio") {
+    selected = tracks.find(available);
+  } else {
+    const end = addExactTemporalValues(purpose.start, purpose.duration);
+    selected = tracks.reverse().find(track => available(track) && track.items.every(item =>
+      item.kind === "present" && (
+        compareExactTemporalValues(end, item.start) <= 0 || compareExactTemporalValues(nleItemEnd(item), purpose.start) <= 0
+      )));
+  }
+  if (selected !== undefined) return { project, track: selected.id, commands: [] as readonly NleCommand[] };
+  const track = { id: `track-${randomUUID()}`, name: medium === "picture" ? "视频轨道" : "音频轨道",
+    kind: medium, enabled: true, items: [] } as const;
+  const commands: readonly NleCommand[] = [{ kind: "track.add", composition: composition.id, track }];
+  return { project: applyNleTransaction(project, { commands }), track: track.id, commands };
 }
 
 /** Studio Timeline allocation policy over current Project and View facts. */

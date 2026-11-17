@@ -1,17 +1,13 @@
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import type {
-  NleStudioAdjustMaterializeRequest,
-  NleStudioComponentMaterializeRequest,
   NleStudioDeliveryObservation,
   NleStudioDeliveryStartRequest,
   NleStudioEvent,
-  NleStudioMediaPlaceRequest,
   NleStudioObservation,
   NleStudioObservationRequest,
   NleStudioOpenProjection,
   NleStudioOperation,
   NleStudioOperationReceipt,
-  NleStudioTransitionMaterializeRequest,
 } from "../protocol.js";
 
 export function connectStudioEvents(input: {
@@ -100,10 +96,6 @@ export function operate(value: NleStudioOperation): Promise<NleStudioOperationRe
   return request("api/operate", value);
 }
 
-export function placeMedia(value: NleStudioMediaPlaceRequest): Promise<NleStudioOperationReceipt> {
-  return request("api/media/place", value);
-}
-
 export async function importMedia(file: File): Promise<NleStudioOperationReceipt> {
   const response = await fetch(`api/media/import?name=${encodeURIComponent(file.name)}`, {
     method: "POST",
@@ -113,18 +105,6 @@ export async function importMedia(file: File): Promise<NleStudioOperationReceipt
   const value = await response.json() as NleStudioOperationReceipt & { error?: string };
   if (!response.ok) throw new Error(value.error ?? `NLE Studio Media import failed with ${response.status}.`);
   return value;
-}
-
-export function materializeComponent(value: NleStudioComponentMaterializeRequest): Promise<NleStudioOperationReceipt> {
-  return request("api/catalog/components/materialize", value);
-}
-
-export function materializeAdjust(value: NleStudioAdjustMaterializeRequest): Promise<NleStudioOperationReceipt> {
-  return request("api/catalog/adjusts/materialize", value);
-}
-
-export function materializeTransition(value: NleStudioTransitionMaterializeRequest): Promise<NleStudioOperationReceipt> {
-  return request("api/catalog/transitions/materialize", value);
 }
 
 export function startDelivery(value: NleStudioDeliveryStartRequest): Promise<NleStudioDeliveryObservation> {

@@ -53,7 +53,7 @@ ApplicationHost
 `open` 只包含首屏有限投影；Timeline observation 显式投影 Composition 导航、关系、信号存在性和 Product
 后端解析的 Item-to-Media identity。主要缺口是：
 
-- `operate(operation)` 已承接 Timeline drop，物化和其余组合操作仍待接入；
+- `operate(operation)` 已承接 Timeline drop、Media/Component/Adjust/Transition/Composition 物化和音频分离；
 - AIGC Execution Directory 已能注册 Provider/model Environment 并打开 Project client；影音与 Media Action
   由 Product/owner Service 投影各自注入的 specialized Executor。
 
@@ -99,9 +99,9 @@ ApplicationHost
 | 兼容轨道与锁 | NLE Studio planner + NLE View guard | 后端跳过锁定及异类目标，并拒绝从锁定源轨道移动 | **已具备** |
 | 落点冲突分配 | NLE Studio planner | 按 Studio 交互策略为新 Picture Present 冲突寻找邻轨或补轨，保留已移动成员间的画面关系和 Audio mix | **已具备** |
 | 多选保持相对布局 | NLE Studio planner | 同源轨道成员作为一个批次；View Group、Transition 和 Matte 端点闭包共享时间位移，保留轨道相对显示顺序 | **已具备** |
-| 默认时长 | Materialization planner | 时序媒体可采用 Interpretation duration；常量图片要求显式 occurrence duration；Component/Adjust offering 带默认 duration | **产品缺口**。图片默认时长应由产品 policy 在一次物化 Operation 中确定 |
+| 默认时长 | Materialization planner | Studio 采用 Interpretation 或 offering 的 duration，常量媒体采用 View 帧网格上的五秒默认时长 | **已具备** |
 | Track 层级排序 | NLE Command | `track.move` 修改 Composition 中 Track 顺序；lowering 按 Picture Track 后到前组合 | **已具备**，当前浏览器直接发底层命令 |
-| Track 类型兼容 | NLE fact + product planner | 拖动沿用源轨道的输出域，物化使用各 offering 或 Media 的输出域 | **已具备**拖动路径；物化操作仍待接入统一分配 |
+| Track 类型兼容 | NLE fact + product planner | 拖动沿用源轨道的输出域，物化使用各 offering 或 Media 的输出域 | **已具备** |
 | Track 锁定 | NLE View Command | `track-lock.set` 与 Surface guard 已实现 | **已具备**，但多成员 Operation 必须在后端一次检查所有触达 Track |
 | Track 启用与音频静音 | NLE Project Command | `track.update.enabled` 参与 lowering | **已具备**。当前是领域统一的 Track enablement，而非额外静音状态 |
 
@@ -124,8 +124,8 @@ ApplicationHost
 | 删除并保留空隙 | NLE Command | `item.remove` 支持原子删除多个 Item | **已具备**底层语义 |
 | 删除并闭合空隙 | NLE Studio Operation | remove 与后续 move 可进入一个事务 | **产品缺口** |
 | Picture/Audio 协调编辑 | NLE Present | 一个 Present 可同时拥有 Picture 与 Audio appearance，共享 occurrence 时间和 source-time | **已具备** |
-| 分离音频 | NLE Command | `item.detach-audio` 原子产生 Picture-only 和 Audio-only Item | **已具备**底层语义；目标轨选择仍需 Product Operation |
-| 编辑分组 | NLE View | View Group 持久表达同一 Composition 内的 linked-edit 意图 | **产品缺口**。当前浏览器展开 Group；后端 planner 尚未统一应用它 |
+| 分离音频 | NLE Studio Operation + NLE Command | `audio.detach` 分配目标轨后，和 `item.detach-audio` 一起原子提交 | **已具备** |
+| 编辑分组 | NLE View | View Group 持久表达同一 Composition 内的 linked-edit 意图；Timeline drop 在后端展开成员 | **已具备**分组移动，其他组合操作需各自确定作用范围 |
 
 ## 5. 复制和复合片段
 
@@ -168,7 +168,8 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
 | 添加 Transition | NLE relationship + package Operator | 显式 outgoing/incoming relation、canonical overlap、package parameters 和原子物化 planner 已实现 | **已具备**基础路径 |
-| 从选择和播放头选择连接 | NLE Studio Operation | 当前浏览器选择端点并调用物化 route | **产品缺口** |
+| 从选区添加 Transition | NLE Studio Operation | 两个选中 Item 由后端按精确时间排序并校验直切关系 | **已具备** |
+| 从播放头选择切点 | NLE Studio Operation | 多轨切点需要显式的轨道或目标选择 | **产品缺口** |
 | 修改类型、参数和时长 | NLE Studio Operation | `transition.replace` 存在；package Inspector 尚未投影 Transition relation | **产品缺口** |
 | 素材边界补帧 | source-time + Reconstruction + product policy | Project 已能选择 Reconstruction；Transition planner 可检查可用 source range | **产品缺口**。需要明确补帧 package/policy 与失败诊断 |
 | move、trim、split 后维护关系 | NLE Studio planners | Project 最终校验会拒绝失效 relation，但不会替调用者重新计算或删除关系 | **产品缺口** |

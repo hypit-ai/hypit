@@ -9,17 +9,14 @@ import type {
   NleStudioInvalidation,
   NleStudioMediaEntry,
   NleStudioOpenProjection,
+  NleStudioOperation,
   NleStudioOperationReceipt,
   NleStudioTransitionCatalogEntry,
 } from "../protocol.js";
 import {
   connectStudioEvents,
-  materializeAdjust,
-  materializeComponent,
-  materializeTransition,
   importMedia,
   operate,
-  placeMedia,
   readInspector,
   readOpen,
   refreshOpen,
@@ -228,105 +225,33 @@ export function Studio() {
     command({ kind: "inspector.edit", expectedProjectRevision: session.status.projectRevision,
       expectedViewRevision: session.status.viewRevision, item: selection[0], section, field, value });
   };
-  const materialize = (entry: NleStudioComponentCatalogEntry) => void perform(async () => {
-    const destination = scene.tracks.find(track => track.kind === "picture" && !track.locked);
-    if (destination === undefined) throw new Error("当前 Composition 没有可写的画面轨道。");
-    const item = `component-${crypto.randomUUID()}`;
-    const receipt = await materializeComponent({
-      expectedProjectRevision: session.status.projectRevision,
-      expectedViewRevision: session.status.viewRevision,
-      package: entry.package,
-      offering: entry.offering,
-      item,
-      composition: scene.composition,
-      track: destination.id,
-      atFrame: frame,
-    });
-    await acceptReceipt(receipt, item);
+  const operationContext = {
+    composition: scene.composition,
+    expectedProjectRevision: session.status.projectRevision,
+    expectedViewRevision: session.status.viewRevision,
+  };
+  const place = (operation: NleStudioOperation) => void perform(async () => {
+    const receipt = await operate(operation);
+    await acceptReceipt(receipt, typeof receipt.result?.item === "string" ? receipt.result.item : undefined);
   });
-  const placeProjectMedia = (entry: NleStudioMediaEntry) => void perform(async () => {
-    if (entry.state !== "available") throw new Error(entry.diagnostic ?? "这个项目媒体当前不可用。");
-    const trackKind = entry.kind === "audio" ? "audio" : "picture";
-    const durationFrames = entry.durationFrames ?? Math.max(1, Math.round(fps * 5));
-    const fits = (track: NleStudioOpenProjection["timeline"]["scene"]["tracks"][number]) => track.kind === trackKind
-      && !track.locked && track.items.every(item => item.role !== "adjust"
-        && (frame + durationFrames <= item.startFrame || frame >= item.startFrame + item.durationFrames));
-    let current = session;
-    let destination = scene.tracks.find(track => fits(track));
-    if (destination === undefined) {
-      const track = `track-${crypto.randomUUID().slice(0, 8)}`;
-      current = await refreshOpen(current, await sendCommand({
-        kind: "project.transact",
-        expectedProjectRevision: current.status.projectRevision,
-        expectedViewRevision: current.status.viewRevision,
-        commands: [{
-          kind: "track.add",
-          composition: scene.composition,
-          track: { id: track, name: trackKind === "audio" ? "音频轨道" : "视频轨道", kind: trackKind,
-            enabled: true, items: [] },
-          ...(trackKind === "picture" && scene.tracks.find(candidate => candidate.kind === "audio") !== undefined
-            ? { before: scene.tracks.find(candidate => candidate.kind === "audio")!.id } : {}),
-        }],
-      }));
-      destination = current.timeline.scene.tracks.find(candidate => candidate.id === track);
-      if (destination === undefined) throw new Error("新建的媒体轨道没有出现在当前时间线中。");
-    }
-    const item = `media-${crypto.randomUUID()}`;
-    const receipt = await placeMedia({
-      expectedProjectRevision: current.status.projectRevision,
-      expectedViewRevision: current.status.viewRevision,
-      item,
-      reference: { path: entry.id },
-      composition: scene.composition,
-      track: destination.id,
-      atFrame: frame,
-      durationFrames,
-      includeAudio: entry.kind === "audiovisual",
-    });
-    await acceptReceipt(receipt, item);
+  const materialize = (entry: NleStudioComponentCatalogEntry) => place({
+    ...operationContext, kind: "component.materialize", package: entry.package, offering: entry.offering, atFrame: frame,
+  });
+  const placeProjectMedia = (entry: NleStudioMediaEntry) => place({
+    ...operationContext, kind: "media.materialize", media: entry.id, atFrame: frame,
   });
   const importProjectMedia = (files: readonly File[]) => void perform(async () => {
-    for (const file of files) {
-      await acceptReceipt(await importMedia(file));
-    }
+    for (const file of files) await acceptReceipt(await importMedia(file));
   });
-  const materializeEffect = (entry: NleStudioAdjustCatalogEntry) => void perform(async () => {
-    const compatible = scene.tracks.filter(track => track.kind === entry.medium && !track.locked);
-    const destination = entry.medium === "picture" ? compatible.at(-1) : compatible[0];
-    if (destination === undefined) throw new Error(`当前 Composition 没有可写的${entry.medium === "picture" ? "画面" : "音频"}轨道。`);
-    const item = `adjust-${crypto.randomUUID()}`;
-    const receipt = await materializeAdjust({
-      expectedProjectRevision: session.status.projectRevision,
-      expectedViewRevision: session.status.viewRevision,
-      package: entry.package,
-      offering: entry.offering,
-      item,
-      composition: scene.composition,
-      track: destination.id,
-      atFrame: frame,
-    });
-    await acceptReceipt(receipt, item);
+  const materializeEffect = (entry: NleStudioAdjustCatalogEntry) => place({
+    ...operationContext, kind: "adjust.materialize", package: entry.package, offering: entry.offering, atFrame: frame,
   });
   const materializeSelectedTransition = (entry: NleStudioTransitionCatalogEntry) => void perform(async () => {
-    if (selection.length !== 2) throw new Error("添加转场前需要选择同一画面轨道上直接相接的两个片段。");
-    const items = scene.tracks.flatMap(track => track.items.map(item => ({ track, item })))
-      .filter(candidate => selection.includes(candidate.item.id));
-    if (items.length !== 2 || items[0]!.track.id !== items[1]!.track.id || items[0]!.track.kind !== "picture") {
-      throw new Error("转场需要同一画面轨道上的两个片段。");
-    }
-    const ordered = [...items].sort((left, right) => left.item.startFrame - right.item.startFrame);
-    const transition = `transition-${crypto.randomUUID()}`;
-    const receipt = await materializeTransition({
-      expectedProjectRevision: session.status.projectRevision,
-      expectedViewRevision: session.status.viewRevision,
-      package: entry.package,
-      offering: entry.offering,
-      transition,
-      composition: scene.composition,
-      outgoing: ordered[0]!.item.id,
-      incoming: ordered[1]!.item.id,
-    });
-    await acceptReceipt(receipt);
+    if (selection.length !== 2) throw new Error("添加转场前需要选择两个直接相接的片段。");
+    await acceptReceipt(await operate({
+      ...operationContext, kind: "transition.materialize", package: entry.package, offering: entry.offering,
+      items: [selection[0]!, selection[1]!],
+    }));
   });
 
   return <div className="nle-workspace nle-active"><div className={classes} style={{
@@ -359,8 +284,7 @@ export function Studio() {
       </div>
       <Timeline session={session} frame={frame} selection={selection} busy={busy} onSeek={value => { setPlaying(false); setFrame(value); }} onSelect={select}
         onMove={intent => void perform(async () => acceptReceipt(await operate({
-          kind: "timeline.drop", composition: scene.composition, ...intent,
-          expectedProjectRevision: session.status.projectRevision, expectedViewRevision: session.status.viewRevision,
+          ...operationContext, kind: "timeline.drop", ...intent,
         })))}
         onTrim={(item, edge, atFrame) => transact([{ kind: "item.trim", id: item.id, edge, at: exactFrame(atFrame, session) }])}
         onSplit={(item, atFrame) => transact([{ kind: "item.split", id: item.id, at: exactFrame(atFrame, session), rightId: `${item.id}-split-${crypto.randomUUID().slice(0, 8)}` }])}
@@ -382,17 +306,10 @@ export function Studio() {
             { kind: "group.add", composition: scene.composition, group: { id: `group-${crypto.randomUUID().slice(0, 8)}`, name: "组合", items: members } },
           ]);
         }}
-        canDetachAudio={canDetachAudio} onDetachAudio={() => {
+        canDetachAudio={canDetachAudio} onDetachAudio={() => void perform(async () => {
           if (!canDetachAudio || selectedProjectItem === undefined) return;
-          const existing = scene.tracks.find(track => track.kind === "audio" && !track.locked);
-          const track = existing?.id ?? `audio-${crypto.randomUUID().slice(0, 8)}`;
-          transact([
-            ...(existing === undefined ? [{ kind: "track.add" as const, composition: scene.composition,
-              track: { id: track, name: "音频轨道", kind: "audio" as const, enabled: true, items: [] } }] : []),
-            { kind: "item.detach-audio", id: selectedProjectItem.id,
-              audioItemId: `audio-item-${crypto.randomUUID().slice(0, 8)}`, track },
-          ]);
-        }}
+          await acceptReceipt(await operate({ ...operationContext, kind: "audio.detach", item: selectedProjectItem.id }));
+        })}
         onUndo={() => command({ kind: "project.undo", expectedProjectRevision: session.status.projectRevision })}
         onRedo={() => command({ kind: "project.redo", expectedProjectRevision: session.status.projectRevision })}/>
     </div></div>;

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { dirname, posix, relative, resolve, sep } from "node:path";
 import type { ApplicationProductProvider } from "@hypit/application";
 import type { HtmlVideoExecutor } from "@hypit/html-video";
@@ -17,10 +18,14 @@ import {
 import {
   createAdjustMaterialization,
   createComponentMaterialization,
+  createCompositionMaterialization,
   createMediaAssetMaterialization,
   createTransitionMaterialization,
+  nleCompositionDuration,
+  type NleCommand,
   type NleProjectService,
 } from "@hypit/nle";
+import { compareExactTemporalValues } from "@hypit/temporal/algebra";
 import {
   createNleView,
   openNleViewService,
@@ -48,17 +53,14 @@ import {
   createNleStudioPackageBridge,
   type NleStudioPackageBridge,
 } from "./packages.js";
-import { planTimelineDrop } from "./timeline-planning.js";
+import { allocateTimelinePlacement, planTimelineDrop, studioFrameTime } from "./timeline-planning.js";
 import type {
-  NleStudioAdjustMaterializeRequest,
   NleStudioCatalogProjection,
-  NleStudioComponentMaterializeRequest,
   NleStudioDeliveryStartRequest,
   NleStudioEvent,
   NleStudioEventListener,
   NleStudioInvalidation,
   NleStudioMediaProjection,
-  NleStudioMediaPlaceRequest,
   NleStudioObservation,
   NleStudioObservationRequest,
   NleStudioOpenProjection,
@@ -66,7 +68,6 @@ import type {
   NleStudioOperationReceipt,
   NleStudioPreviewProjection,
   NleStudioTimelineProjection,
-  NleStudioTransitionMaterializeRequest,
 } from "./protocol.js";
 
 export type NleStudioPreviewPort = {
@@ -506,209 +507,150 @@ export class NleStudioProductSession {
 
   async operate(operation: NleStudioOperation): Promise<NleStudioOperationReceipt> {
     this.#assertOpen();
-    const project = this.#projectLease.service.snapshot();
-    const view = this.#viewService.snapshot();
-    if (project.revision !== operation.expectedProjectRevision) {
-      throw new NleEditingSurfaceRevisionConflict("project", operation.expectedProjectRevision, project.revision);
-    }
-    if (view.revision !== operation.expectedViewRevision) {
-      throw new NleEditingSurfaceRevisionConflict("view", operation.expectedViewRevision, view.revision);
-    }
-    const plan = planTimelineDrop(project.project, view.view, operation);
-    const result = { track: plan.anchorTrack };
-    if (plan.commands.length === 0) return this.#observationReceipt(operation.kind, [], result);
-    return this.#receipt(operation.kind, this.#surface.command({
-      kind: "project.transact", expectedProjectRevision: project.revision, expectedViewRevision: view.revision,
-      commands: plan.commands,
-    }), result);
-  }
-
-  async placeMedia(request: NleStudioMediaPlaceRequest): Promise<NleStudioOperationReceipt> {
-    this.#assertOpen();
-    if (!Number.isSafeInteger(request.atFrame) || request.atFrame < 0) {
-      throw new Error("NLE Studio Media placement start frame must be a non-negative safe integer.");
-    }
-    if (request.durationFrames !== undefined
-      && (!Number.isSafeInteger(request.durationFrames) || request.durationFrames <= 0)) {
-      throw new Error("NLE Studio Media placement duration must be a positive safe integer.");
-    }
     const projectSnapshot = this.#projectLease.service.snapshot();
     const viewSnapshot = this.#viewService.snapshot();
-    if (viewSnapshot.view.activeComposition !== request.composition) {
-      throw new Error(`NLE Studio Media placement targets inactive Composition ${request.composition}.`);
+    if (projectSnapshot.revision !== operation.expectedProjectRevision) {
+      throw new NleEditingSurfaceRevisionConflict("project", operation.expectedProjectRevision, projectSnapshot.revision);
     }
-    const composition = projectSnapshot.project.compositions.find((entry) => entry.id === request.composition);
-    if (composition?.tracks.some((track) => track.id === request.track) !== true) {
-      throw new Error(`NLE Studio Media placement Track ${request.track} is outside Composition ${request.composition}.`);
+    if (viewSnapshot.revision !== operation.expectedViewRevision) {
+      throw new NleEditingSurfaceRevisionConflict("view", operation.expectedViewRevision, viewSnapshot.revision);
     }
-    const asset = await this.#project.media.open(request.reference);
-    const rate = viewSnapshot.view.editRate;
-    const frameTime = (frame: number) => {
-      const ticks = frame * rate.denominator;
-      if (!Number.isSafeInteger(ticks)) throw new Error("NLE Studio frame time exceeds the exact editing range.");
-      return { ticks: String(ticks), timeBase: { numerator: 1, denominator: rate.numerator } };
+    const { project } = projectSnapshot;
+    const { view } = viewSnapshot;
+    const composition = project.compositions.find(entry => entry.id === operation.composition);
+    if (composition === undefined || view.activeComposition !== composition.id) {
+      throw new Error(`NLE Studio Operation targets inactive Composition ${operation.composition}.`);
+    }
+    const commit = (commands: readonly NleCommand[], result: NleStudioOperationReceipt["result"]) => {
+      this.#assertOpen();
+      if (commands.length === 0) return this.#observationReceipt(operation.kind, [], result);
+      return this.#receipt(operation.kind, this.#surface.command({
+        kind: "project.transact",
+        expectedProjectRevision: projectSnapshot.revision,
+        expectedViewRevision: viewSnapshot.revision,
+        commands,
+      }), result);
     };
-    const mediaPath = relative(
-      dirname(resolve(this.#project.boundary.root, this.#projectDocument)),
-      resolve(this.#project.boundary.root, request.reference.path),
-    ).split(sep).join("/");
-    const transaction = createMediaAssetMaterialization(projectSnapshot.project, {
-      itemId: request.item,
-      asset: { path: mediaPath },
-      interpretation: asset.media.interpretation,
-      track: request.track,
-      at: frameTime(request.atFrame),
-      ...(request.durationFrames === undefined ? {} : { duration: frameTime(request.durationFrames) }),
-      ...(request.includeAudio === undefined ? {} : { audio: request.includeAudio ? {} : false }),
-      ...(request.layout === undefined ? {} : { picture: { layout: request.layout } }),
-    });
-    const receipt = this.#surface.command({
-      kind: "project.transact",
-      expectedProjectRevision: request.expectedProjectRevision,
-      expectedViewRevision: request.expectedViewRevision,
-      commands: transaction.commands,
-    });
-    return this.#receipt("media.materialize", receipt, { item: request.item });
-  }
+    const frameTime = (value: number) => studioFrameTime(value, view.editRate);
+    const durationOverride = "durationFrames" in operation ? operation.durationFrames : undefined;
+    if (durationOverride !== undefined && (!Number.isSafeInteger(durationOverride) || durationOverride <= 0)) {
+      throw new Error("NLE Studio occurrence duration must be a positive safe integer.");
+    }
+    if ("atFrame" in operation && (!Number.isSafeInteger(operation.atFrame) || operation.atFrame < 0)) {
+      throw new Error("NLE Studio placement frame must be a non-negative safe integer.");
+    }
+    const duration = durationOverride === undefined ? undefined : frameTime(durationOverride);
+    const context = { project, view, composition };
+    const currentItems = () => composition.tracks.flatMap(track => track.items);
+    const identity = (role: string) => `${role}-${randomUUID()}`;
 
-  async materializeComponent(request: NleStudioComponentMaterializeRequest): Promise<NleStudioOperationReceipt> {
-    this.#assertOpen();
-    if (!Number.isSafeInteger(request.atFrame) || request.atFrame < 0) {
-      throw new Error("NLE Studio Component placement start frame must be a non-negative safe integer.");
+    switch (operation.kind) {
+      case "timeline.drop": {
+        const plan = planTimelineDrop(project, view, operation);
+        return commit(plan.commands, { track: plan.anchorTrack });
+      }
+      case "media.materialize": {
+        const reference = { path: operation.media };
+        const { media: { interpretation } } = await this.#project.media.open(reference);
+        const mediaPath = relative(
+          dirname(resolve(this.#project.boundary.root, this.#projectDocument)),
+          resolve(this.#project.boundary.root, reference.path),
+        ).split(sep).join("/");
+        const at = frameTime(operation.atFrame);
+        const length = duration ?? interpretation.domain?.duration
+          ?? frameTime(Math.max(1, Math.round(5 * view.editRate.numerator / view.editRate.denominator)));
+        const requested = composition.tracks.find(track => track.id === operation.track);
+        const medium = interpretation.picture === undefined || requested?.kind === "audio" ? "audio" : "picture";
+        const placement = allocateTimelinePlacement(context, {
+          medium, track: operation.track, purpose: { kind: "present", start: at, duration: length },
+        });
+        const item = identity("media");
+        const materialization = createMediaAssetMaterialization(placement.project, {
+          itemId: item, asset: { path: mediaPath }, interpretation, track: placement.track, at, duration: length,
+          ...(operation.includeAudio === undefined ? {} : { audio: operation.includeAudio ? {} : false }),
+          ...(operation.layout === undefined ? {} : { picture: { layout: operation.layout } }),
+        });
+        return commit([...placement.commands, ...materialization.commands], { item, track: placement.track });
+      }
+      case "component.materialize": {
+        const offering = this.#packages.component(operation.package, operation.offering);
+        if (offering === undefined) {
+          throw new Error(`NLE Studio Component offering ${operation.package}#${operation.offering} is not selected.`);
+        }
+        const at = frameTime(operation.atFrame);
+        const length = duration ?? offering.value.duration;
+        const placement = allocateTimelinePlacement(context, {
+          medium: "picture", track: operation.track, purpose: { kind: "present", start: at, duration: length },
+        });
+        const item = identity("component");
+        const materialization = createComponentMaterialization(placement.project, {
+          id: item, track: placement.track, component: offering.value.component, parameters: offering.value.parameters,
+          at, duration: length, ...(offering.value.layout === undefined ? {} : { layout: offering.value.layout }),
+        });
+        return commit([...placement.commands, ...materialization.commands], { item, track: placement.track });
+      }
+      case "adjust.materialize": {
+        const offering = this.#packages.adjust(operation.package, operation.offering);
+        if (offering === undefined) {
+          throw new Error(`NLE Studio Adjust offering ${operation.package}#${operation.offering} is not selected.`);
+        }
+        const placement = allocateTimelinePlacement(context, {
+          medium: offering.value.medium, track: operation.track, purpose: { kind: "adjust" },
+        });
+        const item = identity("adjust");
+        const materialization = createAdjustMaterialization(placement.project, {
+          id: item, track: placement.track, operator: offering.value.operator,
+          parameters: { kind: "inline", value: offering.value.parameters },
+          at: frameTime(operation.atFrame), duration: duration ?? offering.value.duration,
+        });
+        return commit([...placement.commands, ...materialization.commands], { item, track: placement.track });
+      }
+      case "transition.materialize": {
+        const offering = this.#packages.transition(operation.package, operation.offering);
+        if (offering === undefined) {
+          throw new Error(`NLE Studio Transition offering ${operation.package}#${operation.offering} is not selected.`);
+        }
+        const items = currentItems().filter(item => operation.items.includes(item.id))
+          .sort((left, right) => compareExactTemporalValues(left.start, right.start));
+        if (items.length !== 2) throw new Error("NLE Studio Transition requires two Items in the active Composition.");
+        const transition = identity("transition");
+        const materialization = createTransitionMaterialization(project, {
+          id: transition, composition: composition.id, outgoing: items[0]!.id, incoming: items[1]!.id,
+          operator: offering.value.operator, parameters: offering.value.parameters,
+          duration: duration ?? offering.value.duration,
+        });
+        return commit(materialization.commands, { transition });
+      }
+      case "composition.materialize": {
+        const source = project.compositions.find(entry => entry.id === operation.source);
+        if (source === undefined) throw new Error(`Unknown NLE Composition ${operation.source}.`);
+        const at = frameTime(operation.atFrame);
+        const requested = composition.tracks.find(track => track.id === operation.track);
+        const picture = source.tracks.some(track => track.enabled && track.items.some(item =>
+          item.kind === "present" && item.enabled && item.picture !== undefined));
+        const placement = allocateTimelinePlacement(context, {
+          medium: picture && requested?.kind !== "audio" ? "picture" : "audio",
+          track: operation.track, purpose: { kind: "present", start: at, duration: nleCompositionDuration(source) },
+        });
+        const item = identity("composition");
+        const materialization = createCompositionMaterialization(placement.project, {
+          id: item, track: placement.track, composition: source.id, at,
+        });
+        return commit([...placement.commands, ...materialization.commands], { item, track: placement.track });
+      }
+      case "audio.detach": {
+        const source = currentItems().find(item => item.id === operation.item);
+        if (source === undefined) throw new Error(`Unknown NLE Item ${operation.item} in Composition ${composition.id}.`);
+        const placement = allocateTimelinePlacement(context, {
+          medium: "audio", track: operation.track,
+          purpose: { kind: "present", start: source.start, duration: source.duration },
+        });
+        const item = identity("audio");
+        return commit([...placement.commands, {
+          kind: "item.detach-audio", id: source.id, track: placement.track, audioItemId: item,
+        }], { item, track: placement.track });
+      }
     }
-    if (request.durationFrames !== undefined
-      && (!Number.isSafeInteger(request.durationFrames) || request.durationFrames <= 0)) {
-      throw new Error("NLE Studio Component placement duration must be a positive safe integer.");
-    }
-    const offering = this.#packages.component(request.package, request.offering);
-    if (offering === undefined) {
-      throw new Error(`NLE Studio Component offering ${request.package}#${request.offering} is not selected.`);
-    }
-    const projectSnapshot = this.#projectLease.service.snapshot();
-    const viewSnapshot = this.#viewService.snapshot();
-    if (viewSnapshot.view.activeComposition !== request.composition) {
-      throw new Error(`NLE Studio Component placement targets inactive Composition ${request.composition}.`);
-    }
-    const composition = projectSnapshot.project.compositions.find((entry) => entry.id === request.composition);
-    if (composition?.tracks.some((track) => track.id === request.track) !== true) {
-      throw new Error(
-        `NLE Studio Component placement Track ${request.track} is outside Composition ${request.composition}.`,
-      );
-    }
-    const rate = viewSnapshot.view.editRate;
-    const frameTime = (frame: number) => {
-      const ticks = frame * rate.denominator;
-      if (!Number.isSafeInteger(ticks)) throw new Error("NLE Studio frame time exceeds the exact editing range.");
-      return { ticks: String(ticks), timeBase: { numerator: 1, denominator: rate.numerator } };
-    };
-    const transaction = createComponentMaterialization(projectSnapshot.project, {
-      id: request.item,
-      track: request.track,
-      component: offering.value.component,
-      parameters: offering.value.parameters,
-      at: frameTime(request.atFrame),
-      duration: request.durationFrames === undefined
-        ? offering.value.duration
-        : frameTime(request.durationFrames),
-      ...(offering.value.layout === undefined ? {} : { layout: offering.value.layout }),
-    });
-    const receipt = this.#surface.command({
-      kind: "project.transact",
-      expectedProjectRevision: request.expectedProjectRevision,
-      expectedViewRevision: request.expectedViewRevision,
-      commands: transaction.commands,
-    });
-    return this.#receipt("component.materialize", receipt, { item: request.item });
-  }
-
-  async materializeAdjust(request: NleStudioAdjustMaterializeRequest): Promise<NleStudioOperationReceipt> {
-    this.#assertOpen();
-    if (!Number.isSafeInteger(request.atFrame) || request.atFrame < 0) {
-      throw new Error("NLE Studio Adjust placement start frame must be a non-negative safe integer.");
-    }
-    if (request.durationFrames !== undefined
-      && (!Number.isSafeInteger(request.durationFrames) || request.durationFrames <= 0)) {
-      throw new Error("NLE Studio Adjust placement duration must be a positive safe integer.");
-    }
-    const offering = this.#packages.adjust(request.package, request.offering);
-    if (offering === undefined) {
-      throw new Error(`NLE Studio Adjust offering ${request.package}#${request.offering} is not selected.`);
-    }
-    const projectSnapshot = this.#projectLease.service.snapshot();
-    const viewSnapshot = this.#viewService.snapshot();
-    if (viewSnapshot.view.activeComposition !== request.composition) {
-      throw new Error(`NLE Studio Adjust placement targets inactive Composition ${request.composition}.`);
-    }
-    const composition = projectSnapshot.project.compositions.find((entry) => entry.id === request.composition);
-    const track = composition?.tracks.find((entry) => entry.id === request.track);
-    if (track === undefined) {
-      throw new Error(`NLE Studio Adjust placement Track ${request.track} is outside Composition ${request.composition}.`);
-    }
-    if (track.kind !== offering.value.medium) {
-      throw new Error(`NLE Studio Adjust offering ${request.package}#${request.offering} requires a ${offering.value.medium} Track.`);
-    }
-    const rate = viewSnapshot.view.editRate;
-    const frameTime = (frame: number) => {
-      const ticks = frame * rate.denominator;
-      if (!Number.isSafeInteger(ticks)) throw new Error("NLE Studio frame time exceeds the exact editing range.");
-      return { ticks: String(ticks), timeBase: { numerator: 1, denominator: rate.numerator } };
-    };
-    const transaction = createAdjustMaterialization(projectSnapshot.project, {
-      id: request.item,
-      track: request.track,
-      operator: offering.value.operator,
-      parameters: { kind: "inline", value: offering.value.parameters },
-      at: frameTime(request.atFrame),
-      duration: request.durationFrames === undefined ? offering.value.duration : frameTime(request.durationFrames),
-    });
-    const receipt = this.#surface.command({
-      kind: "project.transact",
-      expectedProjectRevision: request.expectedProjectRevision,
-      expectedViewRevision: request.expectedViewRevision,
-      commands: transaction.commands,
-    });
-    return this.#receipt("adjust.materialize", receipt, { item: request.item });
-  }
-
-  async materializeTransition(request: NleStudioTransitionMaterializeRequest): Promise<NleStudioOperationReceipt> {
-    this.#assertOpen();
-    if (request.durationFrames !== undefined
-      && (!Number.isSafeInteger(request.durationFrames) || request.durationFrames <= 0)) {
-      throw new Error("NLE Studio Transition duration must be a positive safe integer.");
-    }
-    const offering = this.#packages.transition(request.package, request.offering);
-    if (offering === undefined) {
-      throw new Error(`NLE Studio Transition offering ${request.package}#${request.offering} is not selected.`);
-    }
-    const projectSnapshot = this.#projectLease.service.snapshot();
-    const viewSnapshot = this.#viewService.snapshot();
-    if (viewSnapshot.view.activeComposition !== request.composition) {
-      throw new Error(`NLE Studio Transition targets inactive Composition ${request.composition}.`);
-    }
-    const rate = viewSnapshot.view.editRate;
-    const frameTime = (frame: number) => {
-      const ticks = frame * rate.denominator;
-      if (!Number.isSafeInteger(ticks)) throw new Error("NLE Studio frame time exceeds the exact editing range.");
-      return { ticks: String(ticks), timeBase: { numerator: 1, denominator: rate.numerator } };
-    };
-    const transaction = createTransitionMaterialization(projectSnapshot.project, {
-      id: request.transition,
-      composition: request.composition,
-      outgoing: request.outgoing,
-      incoming: request.incoming,
-      operator: offering.value.operator,
-      parameters: offering.value.parameters,
-      duration: request.durationFrames === undefined
-        ? offering.value.duration
-        : frameTime(request.durationFrames),
-    });
-    const receipt = this.#surface.command({
-      kind: "project.transact",
-      expectedProjectRevision: request.expectedProjectRevision,
-      expectedViewRevision: request.expectedViewRevision,
-      commands: transaction.commands,
-    });
-    return this.#receipt("transition.materialize", receipt, { transition: request.transition });
   }
 
   async presentationResource(resource: string): Promise<{ readonly mediaType: string; readonly bytes: Uint8Array }> {

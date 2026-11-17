@@ -7,9 +7,9 @@ import type {
   NleInspectorScene,
   NleTimelineScene,
 } from "@hypit/nle/view";
-import type { NlePictureLayout } from "@hypit/nle";
 import type { HtmlVideoDeliveryProfile, HtmlVideoRenderer } from "@hypit/html-video";
 import type { MediaResource } from "@hypit/media";
+import type { NlePictureLayout } from "@hypit/nle";
 
 export type NleStudioMediaEntry = {
   readonly id: string;
@@ -149,56 +149,43 @@ export type NleStudioTimelineDrop = {
     | { readonly kind: "gap"; readonly before?: string };
 };
 
-export type NleStudioOperation = NleStudioTimelineDrop;
-
-export type NleStudioMediaPlaceRequest = {
+type NleStudioCompositionOperation = {
   readonly expectedProjectRevision: number;
   readonly expectedViewRevision: number;
-  readonly item: string;
-  readonly reference: { readonly path: string };
   readonly composition: string;
-  readonly track: string;
-  readonly atFrame: number;
-  readonly durationFrames?: number;
-  readonly includeAudio?: boolean;
-  readonly layout?: NlePictureLayout;
 };
 
-export type NleStudioComponentMaterializeRequest = {
-  readonly expectedProjectRevision: number;
-  readonly expectedViewRevision: number;
-  readonly package: string;
-  readonly offering: string;
-  readonly item: string;
-  readonly composition: string;
-  readonly track: string;
+type NleStudioTimedPlacement = NleStudioCompositionOperation & {
+  readonly track?: string;
   readonly atFrame: number;
   readonly durationFrames?: number;
 };
 
-export type NleStudioAdjustMaterializeRequest = {
-  readonly expectedProjectRevision: number;
-  readonly expectedViewRevision: number;
+type NleStudioOfferingReference = {
   readonly package: string;
   readonly offering: string;
-  readonly item: string;
-  readonly composition: string;
-  readonly track: string;
-  readonly atFrame: number;
-  readonly durationFrames?: number;
 };
 
-export type NleStudioTransitionMaterializeRequest = {
-  readonly expectedProjectRevision: number;
-  readonly expectedViewRevision: number;
-  readonly package: string;
-  readonly offering: string;
-  readonly transition: string;
-  readonly composition: string;
-  readonly outgoing: string;
-  readonly incoming: string;
-  readonly durationFrames?: number;
-};
+export type NleStudioOperation =
+  | NleStudioTimelineDrop
+  | (NleStudioTimedPlacement & {
+      readonly kind: "media.materialize";
+      readonly media: string;
+      readonly includeAudio?: boolean;
+      readonly layout?: NlePictureLayout;
+    })
+  | (NleStudioTimedPlacement & NleStudioOfferingReference & { readonly kind: "component.materialize" })
+  | (NleStudioTimedPlacement & NleStudioOfferingReference & { readonly kind: "adjust.materialize" })
+  | (NleStudioCompositionOperation & NleStudioOfferingReference & {
+      readonly kind: "transition.materialize";
+      readonly items: readonly [string, string];
+      readonly durationFrames?: number;
+    })
+  | (Omit<NleStudioTimedPlacement, "durationFrames"> & {
+      readonly kind: "composition.materialize";
+      readonly source: string;
+    })
+  | (NleStudioCompositionOperation & { readonly kind: "audio.detach"; readonly item: string; readonly track?: string });
 
 /** One explicit export of the NLE document already opened by this Product Session. */
 export type NleStudioDeliveryStartRequest = {
