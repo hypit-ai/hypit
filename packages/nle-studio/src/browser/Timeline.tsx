@@ -4,8 +4,11 @@ import {
   PanelLeftClose, PanelRightClose, Plus, Redo2, Scan, Scissors, Trash2, Type, Undo2, Unlock,
   Volume2, VolumeX,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { enterMotion, fadeMotion } from "./motion.js";
+import { useEffect, useMemo, useRef, useState, type Ref } from "react";
 import type { NleStudioMediaEntry, NleStudioSession } from "../protocol.js";
+import { ClipMenu } from "./ClipMenu.js";
 import { IconButton } from "./common.js";
 import { timecode } from "./timecode.js";
 import { labelWidth, maxZoom, minZoom, rowSize } from "./timelineGeometry.js";
@@ -38,7 +41,8 @@ function clipClass(item: NleTimelineSceneItem, track: NleTimelineSceneTrack): st
 
 export function Timeline({ session, frame, selection, busy, onSeek, onSelect, onMove, onTrim, onSplit, onRemove,
   onTrackEnabled, onTrackLocked, onTrackMove, onComposition, onAddTrack, onToggleGroup, canToggleGroup, grouped,
-  onDetachAudio, canDetachAudio, onUndo, onRedo, draggedMedia, mediaDrop: drop, onTrimSelection }: {
+  onDetachAudio, canDetachAudio, onUndo, onRedo, draggedMedia, mediaDrop: drop, onTrimSelection, ref }: {
+  readonly ref?: Ref<HTMLElement>;
   readonly session: NleStudioSession;
   readonly frame: number;
   readonly selection: readonly string[];
@@ -65,10 +69,11 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   readonly draggedMedia: NleStudioMediaEntry | undefined;
   readonly mediaDrop: MediaDrop | undefined;
 }) {
+  const reduced = useReducedMotion();
   const scene = session.open.timeline, fps = scene.editRate.numerator / scene.editRate.denominator;
   const scroller = useRef<HTMLDivElement>(null);
   const viewport = useTimelineViewport(scroller, labelWidth);
-  const { zoom, changeZoom } = useTimelineZoom(scroller, labelWidth, `${session.projectDocument.path}/${scene.composition}`);
+  const { zoom, changeZoom } = useTimelineZoom(scroller, labelWidth, `${session.open.project.project.id}/${session.projectDocument.path}/${scene.composition}`);
   const pixels = zoom / fps;
   const [snap, setSnap] = useState(true), [tool, setTool] = useState<TimelineTool>("select");
   const [draft, setDraft] = useState<{ readonly id: string; readonly start: number; readonly duration: number }>();
@@ -171,8 +176,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish);
   };
 
-  return <section className="nle-timeline">
-    <div className="nle-timeline-tabbar"><div className="nle-timeline-tabs" role="tablist">{compositions.map(composition => <div className={`nle-timeline-tab${composition.id === scene.composition ? " current" : ""}`} key={composition.id}><button type="button" role="tab" aria-selected={composition.id === scene.composition} title={composition.name} onClick={() => onComposition(composition.id)}>{composition.name}</button></div>)}</div></div>
+  return <motion.section ref={ref} className="nle-timeline" {...enterMotion(reduced)}>
+    <div className="nle-timeline-tabbar"><div className="nle-timeline-tabs" role="tablist"><AnimatePresence initial={false}>{compositions.map(composition => <motion.div {...fadeMotion(reduced)} className={`nle-timeline-tab${composition.id === scene.composition ? " current" : ""}`} key={composition.id}><button type="button" role="tab" aria-selected={composition.id === scene.composition} title={composition.name} onClick={() => onComposition(composition.id)}>{composition.name}</button></motion.div>)}</AnimatePresence></div></div>
     <div className="nle-timeline-toolbar">
       <ToolSelector value={tool} onChange={value => { cancelTrim.current(); itemGesture.cancel(); marquee.cancel(); setTool(value); setCutCursor(undefined); }}/>
       <IconButton label="新建轨道" disabled={busy} onClick={onAddTrack}><Plus size={18} strokeWidth={1.6}/></IconButton><span className="nle-toolbar-separator"/>
@@ -203,14 +208,14 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
             <IconButton label={track.locked ? "解锁轨道" : "锁定轨道"} className="nle-track-lock" disabled={busy} aria-pressed={track.locked} onClick={() => onTrackLocked(track.id, !track.locked)}>{track.locked ? <Lock size={14}/> : <Unlock size={14}/>}</IconButton>
             <IconButton label={track.enabled ? "停用轨道" : "启用轨道"} disabled={busy} onClick={() => onTrackEnabled(track.id, !track.enabled)}>{track.enabled ? <Volume2 size={14}/> : <VolumeX size={14}/>}</IconButton></span></div>
           <div className="nle-track-content" data-nle-drop={track.id} style={{ width }}>
-            {track.items.map(item => { const current = draft?.id === item.id ? draft : { start: item.startFrame, duration: item.durationFrames }; const kind = clipClass(item, track); const preview = item.display.layers.find(layer => layer.kind === "preview" && layer.state === "ready"); const text = item.display.layers.find(layer => layer.kind === "text"); const projectItem = composition.tracks.flatMap(track => track.items).find(candidate => candidate.id === item.id); return <div key={item.id} data-clip-id={item.id} role="button" tabIndex={0} aria-label={item.display.title} aria-pressed={selection.includes(item.id)} className={`nle-clip ${kind}${selection.includes(item.id) ? " selected" : ""}${itemGesture.gesture?.ids.includes(item.id) ? " drag-origin" : ""}`} style={{ left: current.start * pixels, width: Math.max(8, current.duration * pixels) }} onPointerDown={event => begin(event, item, "move", track)} onDoubleClick={() => { if (projectItem?.kind === "present" && projectItem.source === "composition") onComposition(projectItem.composition); }} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); onSelect(editableSelection(scene, [item.id])); } }} onPointerMove={event => {
+            {track.items.map(item => { const current = draft?.id === item.id ? draft : { start: item.startFrame, duration: item.durationFrames }; const kind = clipClass(item, track); const preview = item.display.layers.find(layer => layer.kind === "preview" && layer.state === "ready"); const text = item.display.layers.find(layer => layer.kind === "text"); const projectItem = composition.tracks.flatMap(track => track.items).find(candidate => candidate.id === item.id); const menuIds = editableSelection(scene, selection.includes(item.id) ? selection : [item.id]); const split = selectionAtFrame(scene, menuIds, frame, "split"), left = selectionAtFrame(scene, menuIds, frame, "trimStart"), right = selectionAtFrame(scene, menuIds, frame, "trimEnd"); return <ClipMenu key={item.id} disabled={busy || track.locked} canSplit={split.length > 0} canTrimStart={left.length > 0} canTrimEnd={right.length > 0} onSelect={() => onSelect(menuIds)} onSplit={() => onSplit(split, frame)} onTrimStart={() => onTrimSelection(left, "start", frame)} onTrimEnd={() => onTrimSelection(right, "end", frame)} onRemove={onRemove} {...(projectItem?.kind === "present" && projectItem.source === "composition" ? { onOpen: () => onComposition(projectItem.composition) } : {})}><div data-clip-id={item.id} role="button" tabIndex={0} aria-label={item.display.title} aria-pressed={selection.includes(item.id)} className={`nle-clip ${kind}${selection.includes(item.id) ? " selected" : ""}${itemGesture.gesture?.ids.includes(item.id) ? " drag-origin" : ""}`} style={{ left: current.start * pixels, width: Math.max(8, current.duration * pixels) }} onPointerDown={event => begin(event, item, "move", track)} onDoubleClick={() => { if (projectItem?.kind === "present" && projectItem.source === "composition") onComposition(projectItem.composition); }} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); onSelect(editableSelection(scene, [item.id])); } }} onPointerMove={event => {
               if (tool !== "cut" || busy || track.locked) return; const at = item.startFrame + Math.round((event.clientX - event.currentTarget.getBoundingClientRect().left) / pixels); setCutCursor(item.affordances.split && at > item.startFrame && at < item.startFrame + item.durationFrames ? { track: track.id, frame: at } : undefined);
             }} onPointerLeave={() => setCutCursor(undefined)}>
               <span className="nle-clip-title"><span className="nle-clip-chip">{item.group && <Group size={11}/>} {composition.mattes.some(matte => matte.content === item.id || matte.matte === item.id) && <Link2 size={11}/>} {item.source === "composition" && <Layers size={11}/>} {item.display.title}</span>{kind !== "text" && <span className="nle-clip-chip">{timecode(current.duration, fps)}</span>}</span>
               {preview?.kind === "preview" && preview.state === "ready" && <span className="nle-clip-thumbnails"><img src={preview.resource} style={{ left: 0, width: "100%" }}/></span>}
               {text?.kind === "text" && <span className="nle-clip-text">{text.text}</span>}
               {item.affordances.trimStart && <div className="nle-trim start" aria-label="裁剪开头" onPointerDown={event => begin(event, item, "trim-start", track)}/>} {item.affordances.trimEnd && <div className="nle-trim end" aria-label="裁剪结尾" onPointerDown={event => begin(event, item, "trim-end", track)}/>}<div className={`nle-cut-line${tool === "cut" && cutCursor?.track === track.id && cutCursor.frame >= item.startFrame && cutCursor.frame <= item.startFrame + item.durationFrames ? " visible" : ""}`} style={{ left: ((cutCursor?.frame ?? item.startFrame) - item.startFrame) * pixels }}/>
-            </div>; })}
+            </div></ClipMenu>; })}
             {composition.transitions.flatMap(transition => {
               const outgoing = sceneItems.get(transition.outgoing), incoming = sceneItems.get(transition.incoming);
               if (outgoing?.track !== track.id || incoming === undefined) return [];
@@ -229,5 +234,5 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
       </div>
     </div>
     {itemGesture.gesture?.floating.map(item => <div key={item.id} className="nle-floating-preview" style={{ position: "fixed", left: item.left, top: item.top, width: item.width, height: item.height, pointerEvents: "none" }}><div className={`nle-clip nle-clip-ghost ${item.kind}`} style={{ inset: 0, height: item.height }}><span className="nle-clip-title"><span className="nle-clip-chip">{item.title}</span></span></div></div>)}
-  </section>;
+  </motion.section>;
 }

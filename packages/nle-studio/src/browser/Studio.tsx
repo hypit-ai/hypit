@@ -35,7 +35,10 @@ import type { MediaDrop } from "./mediaDrag.js";
 import { copyItems, pasteItems, type ItemClipboard } from "./clipboard.js";
 import { useClipClipboard } from "./useClipClipboard.js";
 import { useAssetDrag } from "./useAssetDrag.js";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { ErrorNotice } from "./ErrorNotice.js";
+import { enterMotion } from "./motion.js";
+import { useEditorPosition } from "./useEditorPosition.js";
 
 function exactFrame(frame: number, session: NleStudioSession): ExactTemporalValue {
   const rate = session.open.timeline.editRate;
@@ -53,6 +56,7 @@ function readPanelWidths(): typeof defaultPanelWidths {
 }
 
 export function Studio() {
+  const reduced = useReducedMotion();
   const [session, setSession] = useState<NleStudioSession>();
   const [failure, setFailure] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -68,6 +72,7 @@ export function Studio() {
   const workspace = useRef<HTMLDivElement>(null);
   const placeFromDrag = useRef<(drop: MediaDrop) => void>(() => undefined);
   const assetDrag = useAssetDrag(session?.open.timeline, workspace, frame, busy, drop => placeFromDrag.current(drop), entry => { setPlaying(false); setSource(entry); });
+  useEditorPosition(session, { frame, selection, previewExpanded }, position => { setFrame(position.frame); setSelection(position.selection); setPreviewExpanded(position.previewExpanded); });
   const inflight = useRef(false);
   const clipboard = useRef(new Map<string, ItemClipboard>());
 
@@ -143,6 +148,17 @@ export function Studio() {
       expectedViewRevision: session.open.status.viewRevision, commands });
   }, [command, session]);
 
+  const groupSelection = useCallback((remove = false) => {
+    if (!session || busy) return;
+    const scene = session.open.timeline;
+    const ids = editableSelection(scene, selection);
+    const groups = scene.groups.filter(group => group.items.some(id => ids.includes(id)));
+    const commands: Extract<NleEditingSurfaceCommand, { kind: "view.transact" }>["commands"][number][] = groups.map(group => ({ kind: "group.remove", composition: scene.composition, id: group.id }));
+    if (!remove && ids.length > 1) commands.push({ kind: "group.add", composition: scene.composition,
+      group: { id: `group-${crypto.randomUUID()}`, name: "组合", items: [...new Set([...ids, ...groups.flatMap(group => group.items)])] } });
+    if (commands.length) viewTransact(commands);
+  }, [session, busy, selection, viewTransact]);
+
   useEffect(() => {
     if (!playing || session === undefined) return;
     const fps = session.open.timeline.editRate.numerator / session.open.timeline.editRate.denominator;
@@ -160,8 +176,10 @@ export function Studio() {
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       if (event.defaultPrevented || session === undefined || (event.target as Element | null)?.closest("input,textarea,select,[contenteditable=true]") || document.querySelector("[role=dialog],[role=menu]")) return;
+      if (source !== undefined) { if (event.key === "Escape") setSource(undefined); return; }
       if (event.metaKey || event.ctrlKey) {
         if (event.code === "KeyA") { event.preventDefault(); select(editableSelection(session.open.timeline, session.open.timeline.tracks.flatMap(track => track.items.map(item => item.id)))); }
+        if (event.code === "KeyG" && !busy) { event.preventDefault(); groupSelection(event.shiftKey); }
         if (event.code === "KeyB" && !busy) { event.preventDefault(); const items = selectionAtFrame(session.open.timeline, selection, frame, "split"); if (items.length) transact(items.map(item => ({ kind: "item.split", id: item.id, at: exactFrame(frame, session), rightId: `split-${crypto.randomUUID()}` }))); }
         if (event.code === "KeyZ" && !busy) {
           event.preventDefault();
@@ -173,6 +191,7 @@ export function Studio() {
       }
       if (event.code === "Space" && source === undefined) { event.preventDefault(); setPlaying(value => !value); }
       if (event.key === "Escape") { setSource(undefined); setPreviewExpanded(false); }
+      if (event.key === "Home" || event.key === "End") { event.preventDefault(); setPlaying(false); setFrame(event.key === "Home" ? 0 : Math.max(0, session.open.timeline.maximumFrame - 1)); }
       if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && source === undefined) {
         event.preventDefault(); setPlaying(false); const delta = (event.key === "ArrowLeft" ? -1 : 1) * (event.shiftKey ? 10 : 1);
         setFrame(value => Math.max(0, Math.min(session.open.timeline.maximumFrame, value + delta)));
@@ -183,13 +202,16 @@ export function Studio() {
       }
     };
     window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key);
-  }, [selection, select, transact, session, frame, busy, source, command, perform]);
+  }, [selection, select, transact, session, frame, busy, source, command, perform, groupSelection]);
 
   const activeItems = useMemo(() => new Set(session?.open.timeline.tracks.flatMap(track => track.items)
     .filter(item => frame >= item.startFrame && frame < item.startFrame + item.durationFrames && item.enabled)
     .map(item => item.id) ?? []), [frame, session]);
 
-  if (session === undefined) return <div className="nle-editor nle-loading">{failure ?? "正在打开 NLE Studio…"}</div>;
+  if (session === undefined) return <div className="nle-editor nle-loading">
+    {failure ? <button type="button" className="button" onClick={() => void perform(async () => setSession(await readSession()))}>重新打开</button> : <span role="status">正在打开 NLE Studio…</span>}
+    <ErrorNotice message={failure} onClose={() => undefined}/>
+  </div>;
   const scene = session.open.timeline;
   const fps = scene.editRate.numerator / scene.editRate.denominator;
   const activeComposition = session.open.project.project.compositions.find(composition => composition.id === scene.composition)!;
@@ -335,7 +357,9 @@ export function Studio() {
     setSession(next);
   });
 
-  return <div ref={workspace} className="nle-workspace nle-active"><div className={classes} style={{
+  return <motion.div ref={workspace} className="nle-workspace nle-active" {...enterMotion(reduced)}
+      onDragOver={event => { if (event.dataTransfer.types.includes("Files")) { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; } }}
+      onDrop={event => { if (!event.defaultPrevented && event.dataTransfer.files.length) { event.preventDefault(); event.stopPropagation(); importProjectMedia(Array.from(event.dataTransfer.files)); } }}><div className={classes} style={{
     "--nle-bin-preferred": `${panelWidths.bin}px`,
     "--nle-properties-preferred": `${panelWidths.properties}px`,
   } as React.CSSProperties}>
@@ -345,12 +369,12 @@ export function Studio() {
         <button className="button" disabled={busy} onClick={() => void perform(async () => { setSession(await reloadSession()); select([]); })}>重载</button>
         <button className="button primary" disabled={busy || !session.open.status.projectDirty && !session.open.status.viewDirty} onClick={() => void perform(async () => setSession(await saveSession()))}><Save size={14}/>保存</button>
       </div></div></div>
-      {failure !== undefined && <div className="studio-error">{failure}</div>}
+      <ErrorNotice message={failure} onClose={() => setFailure(undefined)}/>
       <div className="nle-upper">
-        <aside className="nle-bin"><div className="nle-bin-tabs" role="tablist">{(Object.keys(icons) as BinTab[]).map(id => { const Icon = icons[id]; return <button type="button" role="tab" aria-selected={binTab === id} key={id} onClick={() => setBinTab(id)}><Icon size={18} strokeWidth={1.6}/><span>{tabNames[id]}</span></button>; })}</div><div className="nle-bin-body"><StudioBin tab={binTab} catalog={session.catalog} media={session.media} disabled={busy} onImportMedia={importProjectMedia} onPlaceMedia={placeProjectMedia} selectedMedia={source?.id} onPreviewMedia={entry => { setPlaying(false); setSource(entry); }} onBeginMediaDrag={assetDrag.start} onMaterialize={materialize} onMaterializeAdjust={materializeEffect} onMaterializeTransition={materializeSelectedTransition}/></div></aside>
+        <aside className="nle-bin"><div className="nle-bin-tabs" role="tablist">{(Object.keys(icons) as BinTab[]).map(id => { const Icon = icons[id]; return <button type="button" role="tab" aria-selected={binTab === id} key={id} onClick={() => setBinTab(id)}><Icon size={18} strokeWidth={1.6}/><span>{tabNames[id]}</span></button>; })}</div><AnimatePresence mode="popLayout" initial={false}><motion.div key={binTab} className="nle-bin-body" {...enterMotion(reduced)}><StudioBin tab={binTab} catalog={session.catalog} media={session.media} disabled={busy} onImportMedia={importProjectMedia} onPlaceMedia={placeProjectMedia} selectedMedia={source?.id} onPreviewMedia={entry => { setPlaying(false); setSource(entry); }} onBeginMediaDrag={assetDrag.start} onMaterialize={materialize} onMaterializeAdjust={materializeEffect} onMaterializeTransition={materializeSelectedTransition}/></motion.div></AnimatePresence></aside>
         <PanelResizeHandle side="bin" label="调整素材面板宽度" width={panelWidths.bin} onResize={(width, save) => resizePanel("bin", width, save)}/>
         <section className="nle-monitor"><div className="nle-panel-header nle-monitor-title"><span>{projectName}</span><IconButton label={previewExpanded ? "恢复预览" : "放大预览"} onClick={() => setPreviewExpanded(value => !value)}>{previewExpanded ? <Minimize2 size={15}/> : <Maximize2 size={15}/>}</IconButton></div>
-          <div className="nle-stage"><SourcePreview entry={source} onClose={() => setSource(undefined)}/><div className="nle-editable-preview" style={{ "--canvas-ratio": session.open.canvas.canvas.width / session.open.canvas.canvas.height } as React.CSSProperties}><div className="studio-canvas">
+          <SourcePreview entry={source} fps={fps} muted={muted} onMute={() => setMuted(value => !value)} onClose={() => setSource(undefined)}/><div className="nle-stage"><div className="nle-editable-preview" style={{ "--canvas-ratio": session.open.canvas.canvas.width / session.open.canvas.canvas.height } as React.CSSProperties}><div className="studio-canvas">
             {session.preview.state === "ready" && <img className="studio-preview-frame" src={session.preview.resource}/>}
             {session.preview.state !== "ready" && session.open.canvas.layers.filter(layer => activeItems.has(layer.id) && layer.layout !== undefined).map(layer => { const layout = layer.layout!; const canvas = session.open.canvas.canvas; const media = mediaForItem(layer.id); return <button type="button" key={layer.id} className={`studio-canvas-layer${selection.includes(layer.id) ? " selected" : ""}`} onClick={() => select([layer.id])} style={{ left: `${layout.x / canvas.width * 100}%`, top: `${layout.y / canvas.height * 100}%`, width: `${layout.width / canvas.width * 100}%`, height: `${layout.height / canvas.height * 100}%` }}>{media?.resource && media.mediaType?.startsWith("image/") ? <img src={media.resource} style={{ objectFit: layout.fit }}/> : media?.resource && media.mediaType?.startsWith("video/") ? <video src={media.resource} muted playsInline style={{ objectFit: layout.fit }}/> : undefined}<span>{layer.title}</span></button>; })}
             {session.preview.state !== "ready" && <CanvasControls scene={session.open.canvas} active={activeItems} selection={selection} disabled={busy} onSelect={select}
@@ -361,9 +385,9 @@ export function Studio() {
           <div className="nle-transport"><span className="nle-transport-time"><span className="current">{timecode(frame, fps)}</span><span className="separator">/</span><span className="total">{timecode(scene.maximumFrame, fps)}</span></span><button className="nle-play" aria-label={playing ? "暂停" : "播放"} onClick={() => setPlaying(value => !value)}>{playing ? <Pause size={18}/> : <Play size={18}/>}</button><span className="nle-transport-actions"><IconButton label="上一帧" onClick={() => { setPlaying(false); setFrame(value => Math.max(0, value - 1)); }}><StepBack size={15}/></IconButton><IconButton label="下一帧" onClick={() => { setPlaying(false); setFrame(value => Math.min(scene.maximumFrame, value + 1)); }}><StepForward size={15}/></IconButton><IconButton label="静音" onClick={() => setMuted(value => !value)}>{muted ? <VolumeX size={15}/> : <Volume2 size={15}/>}</IconButton></span></div>
         </section>
         <PanelResizeHandle side="properties" label="调整属性面板宽度" width={panelWidths.properties} onResize={(width, save) => resizePanel("properties", width, save)}/>
-        <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist"><button role="tab" aria-selected="true">属性</button></div><div className="nle-panel-body"><Inspector scene={inspector} disabled={busy} onEdit={inspectorEdit}/></div></aside>
+        <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist"><button role="tab" aria-selected="true">属性</button></div><AnimatePresence mode="popLayout" initial={false}><motion.div key={inspector?.item ?? "empty"} className="nle-panel-body" {...enterMotion(reduced)}><Inspector scene={inspector} disabled={busy} onEdit={inspectorEdit}/></motion.div></AnimatePresence></aside>
       </div>
-      <Timeline key={`${session.projectDocument.path}/${scene.composition}`} session={session} frame={frame} selection={selection} busy={busy} onSeek={value => { setPlaying(false); setSource(undefined); setFrame(value); }} onSelect={select}
+      <AnimatePresence mode="popLayout" initial={false}><Timeline key={`${session.projectDocument.path}/${scene.composition}`} session={session} frame={frame} selection={selection} busy={busy} onSeek={value => { setPlaying(false); setSource(undefined); setFrame(value); }} onSelect={select}
         draggedMedia={assetDrag.drag?.entry} mediaDrop={assetDrag.drag?.drop}
         onMove={plan => transact([
           ...plan.additions.map(addition => ({ kind: "track.add" as const, composition: scene.composition,
@@ -381,18 +405,7 @@ export function Studio() {
         onTrackMove={(track, before) => transact([{ kind: "track.move", id: track, ...(before === undefined ? {} : { before }) }])}
         onComposition={composition => viewTransact([{ kind: "view.update", activeComposition: composition }])}
         onAddTrack={() => transact([{ kind: "track.add", composition: scene.composition, track: { id: `track-${crypto.randomUUID().slice(0, 8)}`, name: "新轨道", kind: "picture", enabled: true, items: [] } }])}
-        canToggleGroup={canToggleGroup} grouped={grouped} onToggleGroup={() => {
-          if (!canToggleGroup) return;
-          if (grouped) {
-            viewTransact([{ kind: "group.remove", composition: scene.composition, id: selectedGroups[0]!.id }]);
-            return;
-          }
-          const members = [...new Set([...selection, ...selectedGroups.flatMap(group => group.items)])];
-          viewTransact([
-            ...selectedGroups.map(group => ({ kind: "group.remove" as const, composition: scene.composition, id: group.id })),
-            { kind: "group.add", composition: scene.composition, group: { id: `group-${crypto.randomUUID().slice(0, 8)}`, name: "组合", items: members } },
-          ]);
-        }}
+        canToggleGroup={canToggleGroup} grouped={grouped} onToggleGroup={() => groupSelection(grouped)}
         canDetachAudio={canDetachAudio} onDetachAudio={() => {
           if (!canDetachAudio || selectedProjectItem === undefined) return;
           const existing = scene.tracks.find(track => track.kind === "audio" && !track.locked);
@@ -405,6 +418,6 @@ export function Studio() {
           ]);
         }}
         onUndo={() => command({ kind: "project.undo", expectedProjectRevision: session.open.status.projectRevision })}
-        onRedo={() => command({ kind: "project.redo", expectedProjectRevision: session.open.status.projectRevision })}/>
-    </div><AnimatePresence>{assetDrag.drag && <motion.div className="studio-asset-floating" initial={{ opacity: 0 }} animate={{ opacity: assetDrag.drag.drop ? 1 : .6 }} exit={{ opacity: 0 }} style={{ left: assetDrag.drag.x + 12, top: assetDrag.drag.y + 12 }}>{assetDrag.drag.entry.name}</motion.div>}</AnimatePresence></div>;
+        onRedo={() => command({ kind: "project.redo", expectedProjectRevision: session.open.status.projectRevision })}/></AnimatePresence>
+    </div><AnimatePresence>{assetDrag.drag && <motion.div className="studio-asset-floating" initial={{ opacity: 0 }} animate={{ opacity: assetDrag.drag.drop ? 1 : .6 }} exit={{ opacity: 0 }} style={{ left: assetDrag.drag.x + 12, top: assetDrag.drag.y + 12 }}>{assetDrag.drag.entry.name}</motion.div>}</AnimatePresence></motion.div>;
 }
