@@ -116,12 +116,12 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     new Set([...emptyDestinations, ...(drop?.track ? [drop.track] : [])])), [scene, session.open.view.view, primaryTrack, emptyDestinations, drop?.track]);
   const cancelTrim = useRef<() => void>(() => undefined);
   const draftRef = useRef<typeof draft>(undefined), gesture = useRef<Gesture | undefined>(undefined);
-  const endFrame = scene.maximumFrame + Math.ceil(fps * 5);
+  const width = Math.max(viewport.right - viewport.left, (scene.maximumFrame + Math.ceil(fps * 15)) * pixels + 12);
+  const endFrame = Math.floor((width - 12) / pixels);
   const seek = useTimelineSeek(scroller, pixels, labelWidth, frame, endFrame, onSeek);
   const marquee = useMarqueeSelection(scene, scroller, selection, onSelect, busy, pixels);
   const reorder = useTrackReorder(scroller, scene.tracks, rows, session.open.status.projectRevision, busy, onTrackMove);
   const itemGesture = useItemGesture({ scene, rows, scroller, pixels, frame, snap, busy, selection, onSelect, onMove });
-  const width = Math.max(viewport.right - viewport.left, endFrame * pixels + 12);
   const tracksHeight = rows.reduce((height, track) => height + rowSize(track), 0);
   const trackPadding = Math.max(rowHeight, (viewport.height - rulerHeight - tracksHeight) / 2);
   const selected = scene.tracks.flatMap(track => track.items).find(item => selection.includes(item.id));
