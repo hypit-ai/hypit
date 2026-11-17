@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { enterMotion, fadeMotion } from "./motion.js";
-import { useEffect, useMemo, useRef, useState, type Ref } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
 import type { NleStudioMediaEntry, NleStudioSession } from "../protocol.js";
 import { CompositionActions } from "./CompositionActions.js";
 import { CompoundMenu } from "./CompoundMenu.js";
@@ -15,7 +15,7 @@ import { frameOf, trackGaps } from "./editPlans.js";
 import { ClipMenu } from "./ClipMenu.js";
 import { IconButton } from "./common.js";
 import { timecode } from "./timecode.js";
-import { labelWidth, maxZoom, minZoom, rowSize } from "./timelineGeometry.js";
+import { labelWidth, maxZoom, minZoom, rowHeight, rowSize, rulerHeight, timelineRows } from "./timelineGeometry.js";
 import { ToolSelector, type TimelineTool } from "./ToolSelector.js";
 import { useTimelineSeek } from "./useTimelineSeek.js";
 import { useTimelineZoom } from "./useTimelineZoom.js";
@@ -100,15 +100,30 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const [snap, setSnap] = useState(true), [tool, setTool] = useState<TimelineTool>("select");
   const [draft, setDraft] = useState<{ readonly id: string; readonly start: number; readonly duration: number }>();
   const [cutCursor, setCutCursor] = useState<{ readonly track: string; readonly frame: number }>();
+  const knownTracks = useRef(new Set(scene.tracks.map(track => track.id)));
+  const [emptyDestinations, setEmptyDestinations] = useState<ReadonlySet<string>>(() => new Set());
+  useLayoutEffect(() => {
+    const currentEmpty = new Set(scene.tracks.filter(track => track.items.length === 0).map(track => track.id));
+    const added = [...currentEmpty].filter(id => !knownTracks.current.has(id));
+    knownTracks.current = new Set(scene.tracks.map(track => track.id));
+    setEmptyDestinations(previous => {
+      const next = new Set([...previous].filter(id => currentEmpty.has(id)));
+      for (const id of added) next.add(id);
+      return next.size === previous.size && [...next].every(id => previous.has(id)) ? previous : next;
+    });
+  }, [scene.tracks]);
+  const rows = useMemo(() => timelineRows(scene, session.open.view.view, primaryTrack,
+    new Set([...emptyDestinations, ...(drop?.track ? [drop.track] : [])])), [scene, session.open.view.view, primaryTrack, emptyDestinations, drop?.track]);
   const cancelTrim = useRef<() => void>(() => undefined);
   const draftRef = useRef<typeof draft>(undefined), gesture = useRef<Gesture | undefined>(undefined);
   const seek = useTimelineSeek(scroller, pixels, labelWidth, frame, onSeek);
   const marquee = useMarqueeSelection(scene, scroller, selection, onSelect, busy, pixels);
-  const reorder = useTrackReorder(scroller, scene.tracks, session.open.status.projectRevision, busy, onTrackMove);
-  const itemGesture = useItemGesture({ scene, scroller, pixels, frame, snap, busy, selection, onSelect, onMove });
+  const reorder = useTrackReorder(scroller, scene.tracks, rows, session.open.status.projectRevision, busy, onTrackMove);
+  const itemGesture = useItemGesture({ scene, rows, scroller, pixels, frame, snap, busy, selection, onSelect, onMove });
   const visibleWidth = Math.max(600, viewport.right - viewport.left);
   const width = Math.max(scene.maximumFrame * pixels, frame * pixels, viewport.right) + visibleWidth;
-  const trackPadding = Math.max(62, (viewport.height - 30 - scene.tracks.reduce((height, track) => height + rowSize(track), 0)) / 2);
+  const tracksHeight = rows.reduce((height, track) => height + rowSize(track), 0);
+  const trackPadding = Math.max(rowHeight, (viewport.height - rulerHeight - tracksHeight) / 2);
   const selected = scene.tracks.flatMap(track => track.items).find(item => selection.includes(item.id));
   const composition = session.open.project.project.compositions.find(value => value.id === scene.composition)!;
   const projectSelected = composition.tracks.flatMap(track => track.items).find(item => item.id === selected?.id);
@@ -222,10 +237,10 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
         const bounds = event.currentTarget.getBoundingClientRect(); onSelect(directionalSelection(scene, Math.max(0, Math.round((event.clientX - bounds.left - labelWidth + event.currentTarget.scrollLeft) / pixels)), tool));
       }
     }} onPointerLeave={() => setCutCursor(undefined)} data-frame-pixels={pixels} data-snap={snap}>
-      <div className="nle-tracks" style={{ width: labelWidth + width, minHeight: "100%", "--nle-track-padding": `${trackPadding}px` } as React.CSSProperties}>
+      <div className="nle-tracks" style={{ width: labelWidth + width, minHeight: Math.max(viewport.height, rulerHeight + tracksHeight + trackPadding * 2), "--nle-track-padding": `${trackPadding}px` } as React.CSSProperties}>
         <div className="nle-ruler"><div className="nle-ruler-label"/><div className="nle-ruler-scale" style={{ width }} onPointerDown={seek.start}>{ticks.map(value => <span key={value} style={{ left: value * pixels, "--minor": `${stepFrames * pixels / 2}px` } as React.CSSProperties}>{timecode(value, fps)}</span>)}<i className={`nle-ruler-frame${pixels >= 8 ? " visible" : ""}`} style={{ left: frame * pixels, width: pixels }}/></div></div>
         <div className="nle-track-top"><div className="nle-track-label empty"/><div className="nle-track-space" data-nle-drop="" style={{ width }}/></div>
-        <AnimatePresence initial={false}>{scene.tracks.map(track => <TrackMenu key={track.id} name={track.name} primary={primaryTrack === track.id} picture={track.kind === "picture"} onMagnet={() => onTrackMagnet(track.id)} disabled={busy || track.locked} pixels={pixels} gaps={trackGaps(composition.tracks.find(value => value.id === track.id)!).map(range => ({ start: frameOf(session, range.start), end: frameOf(session, range.end) }))} onCloseGaps={at => onCloseGaps(track.id, at)} onRename={name => onTrackRename(track.id, name)} onRemove={() => onTrackRemove(track.id)} onHeight={height => onTrackHeight(track.id, height)}><motion.div {...fadeMotion(reduced)} className={`nle-track${rowSize(track) <= 36 ? " compact" : ""}${track.locked ? " locked" : ""}`} data-track-id={track.id} key={track.id} style={{ height: rowSize(track) }}>
+        <AnimatePresence initial={false}>{rows.map(track => <TrackMenu key={track.id} name={track.name} primary={primaryTrack === track.id} picture={track.kind === "picture"} onMagnet={() => onTrackMagnet(track.id)} disabled={busy || track.locked} pixels={pixels} gaps={trackGaps(composition.tracks.find(value => value.id === track.id)!).map(range => ({ start: frameOf(session, range.start), end: frameOf(session, range.end) }))} onCloseGaps={at => onCloseGaps(track.id, at)} onRename={name => onTrackRename(track.id, name)} onRemove={() => onTrackRemove(track.id)} onHeight={height => onTrackHeight(track.id, height)}><motion.div {...fadeMotion(reduced)} className={`nle-track${rowSize(track) <= 36 ? " compact" : ""}${primaryTrack === track.id ? " main" : ""}${track.locked ? " locked" : ""}`} data-track-id={track.id} key={track.id} style={{ height: rowSize(track) }}>
           <div className={`nle-track-label${reorder.position?.trackId === track.id ? " reordering" : ""}`} data-reorderable={!track.locked && !busy} title={primaryTrack === track.id ? `${track.name} / 主轨道` : track.name} data-primary={primaryTrack === track.id || undefined} onPointerDown={event => reorder.start(event, track)}><span className="nle-track-icons"><span className="nle-track-kind">{primaryTrack === track.id ? <Magnet size={14}/> : track.items.every(item => item.role === "adjust") ? <Layers size={14}/> : track.kind === "audio" ? <AudioLines size={14}/> : track.items.some(item => item.display.layers.some(layer => layer.kind === "text")) ? <Type size={14}/> : <Film size={14}/>}</span>
             <IconButton label={track.locked ? "解锁轨道" : "锁定轨道"} className="nle-track-lock" disabled={busy} aria-pressed={track.locked} onClick={() => onTrackLocked(track.id, !track.locked)}>{track.locked ? <Lock size={14}/> : <Unlock size={14}/>}</IconButton>
             <IconButton label={track.enabled ? "停用轨道" : "启用轨道"} disabled={busy} onClick={() => onTrackEnabled(track.id, !track.enabled)}>{track.enabled ? <Volume2 size={14}/> : <VolumeX size={14}/>}</IconButton></span></div>
@@ -248,7 +263,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
           </div>
         </motion.div></TrackMenu>)}</AnimatePresence>
         <div className="nle-track-space-row"><div className="nle-track-label empty"/><div className="nle-track-space" data-nle-drop="" style={{ width }}/></div>
-        <div className={`nle-timeline-empty${scene.tracks.every(track => track.items.length === 0) ? " visible" : ""}`} style={{ left: labelWidth, width, height: trackPadding }}>从素材区拖入文件，开始剪辑</div>
+        <div className={`nle-timeline-empty${rows.length === 0 ? " visible" : ""}`} style={{ left: labelWidth, width, height: trackPadding }}>从素材区拖入文件，开始剪辑</div>
         <div className={`nle-marquee${marquee.box?.visible ? " visible" : ""}`} style={marquee.box ?? { width: 0, height: 0 }}/>
         <div className={`nle-track-insertion${reorder.position || itemGesture.gesture?.insertionTop !== undefined ? " visible" : ""}`} style={{ top: reorder.position?.top ?? itemGesture.gesture?.insertionTop ?? 0 }}/>
         {itemGesture.gesture?.snapFrame !== undefined && <div className="nle-snap-line" style={{ left: labelWidth + itemGesture.gesture.snapFrame * pixels }}/>}
