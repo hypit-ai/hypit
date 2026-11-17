@@ -306,6 +306,17 @@ commands and the repository layout.
     </td>
     <td><a href="https://www.sume.com">Sume</a> provides access to leading AI image and video models through a single API, at provider pricing with 0% markup.</td>
   </tr>
+  <tr>
+    <td width="220" align="center">
+      <a href="https://www.videorebirth.com/">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="./docs/public/video-rebirth-dark.svg">
+          <img alt="Video Rebirth" src="./docs/public/video-rebirth-light.svg" width="180">
+        </picture>
+      </a>
+    </td>
+    <td><a href="https://www.videorebirth.com/">Video Rebirth</a> builds BACH, an industrial-grade video model for production. BACH 1.0 Pro ranked No. 2 on Artificial Analysis's Image-to-Video leaderboard in September and October 2026. The company also open-sources the HyperFlow series; HyperFlow H3 Flash surpassed 320,000 downloads within six days of release.</td>
+  </tr>
 </table>
 
 ## ⭐ Star History

@@ -9,8 +9,7 @@ The package owns input validation and graph dependencies. A Runtime Endpoint sup
 
 <bach:TextVideo id="opening" prompt={prompt} duration="5.5" resolution="1080p" aspect-ratio="16:9"/>
 <bach:FrameVideo id="transition" prompt={prompt} first-frame={opening.image} last-frame={ending.image}/>
-<bach:FrameVideo id="ending" prompt={prompt} last-frame={ending.image} resolution="4k"/>
-<bach:ReferenceVideo id="scene" prompt={referencePrompt} duration="8" resolution="4k" generate-audio="true" seed="1101">
+<bach:ReferenceVideo id="scene" prompt={referencePrompt} duration="8" resolution="1080p" generate-audio="true" seed="1101">
   <bach:Reference image={subject.image}/>
   <bach:Reference video={motion.video} start-time="1.5"/>
   <bach:Reference audio={sound.audio}/>
@@ -19,12 +18,11 @@ The package owns input validation and graph dependencies. A Runtime Endpoint sup
 
 Each element produces `<id>.video`. Prompts reference Text Artifacts and must contain non-whitespace
 text, up to 6500 characters. Duration accepts decimals from 5 to 16 seconds and defaults to 5.
-Billing and reported usage round up to the next whole second. Resolution is `1080p` (default) or `4k`.
+Billing and reported usage round up to the next whole second. Output resolution is `1080p`.
 Audio generation defaults to `true`. An optional seed is an integer from 1 to 100000.
 
 `TextVideo` and `ReferenceVideo` accept `aspect-ratio`: `4:3`, `3:4`, `16:9`, `9:16`, `21:9`, `1:1`
-or `auto`, defaulting to `16:9`. `FrameVideo` requires a first frame, a last frame, or both.
-Generation with only a last frame requires resolution `4k`; `1080p` requires a first frame.
+or `auto`, defaulting to `16:9`. `FrameVideo` requires a first frame and accepts an optional last frame.
 `FrameVideo` always uses `auto` for its aspect ratio. Any supplied `aspect-ratio` is treated as `auto`.
 Each frame must be 10 MB or smaller.
 

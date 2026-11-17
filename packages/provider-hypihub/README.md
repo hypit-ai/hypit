@@ -30,7 +30,7 @@ remains in `reference_videos`; `ref_video_url` is reserved for a model's source-
 `@hypit/bach@1#bach-1.0-pro` maps to `bach/bach-1.0-pro` on `POST /v1/videos`.
 It accepts text prompts, first/last-frame images, and reference images with optional reference audio.
 `duration` maps to `seconds`, `generateAudio` to `generate_audio`, and `seed` is preserved.
-Resolution is `1080p` or `4k`; durations from 5 to 16 seconds retain their decimal value.
+Output resolution is `1080p`. Durations from 5 to 16 seconds retain their decimal value.
 The service's price card determines billed seconds. Frame requests use the service's `auto` aspect ratio.
 
 The HypiHub Bach Endpoint requires references without `startTime` offsets. Reference videos are
