@@ -169,6 +169,17 @@ unlocked Track of the required medium. Picture Presents use a free lane and time
 their medium's authored track order. An explicit Track permits deliberate Picture stacking and is checked for
 medium and lock.
 
+Media, Component and Composition placement can include `insertTracks` with an explicit destination Track in that
+scope. The playhead must fall at a boundary or in empty space on each selected Track. The planner moves Items
+starting at or after the playhead by the inserted duration, checks their View Group, Transition and Matte members,
+and places the new Present in the same transaction.
+
+`timeline.slip` moves a timed Media or Composition source window while preserving placement and Process Control
+time. `timeline.roll` moves one direct cut on one Track by trimming both endpoints. `timeline.ripple-trim` edits
+an Item's end edge and displaces subsequent Items in the selected Track scope by the exact duration change. Roll and
+ripple trim require the applicable package time-window affordances. The Studio checks timed Media bounds on slip or
+edge extension, and the Project checks Composition source bounds in the transaction.
+
 Process materialization addresses an existing Present in the active Composition. The selected offering declares its
 signal, Operator and closed initial parameters. Studio adds the enabled Process at the end of its signal chain or
 before an explicitly addressed Process. The initial Control relation is the Present's full local interval. Inspector

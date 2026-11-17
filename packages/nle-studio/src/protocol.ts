@@ -187,6 +187,11 @@ type NleStudioTimedPlacement = NleStudioCompositionOperation & {
   readonly durationFrames?: number;
 };
 
+type NleStudioPresentPlacement = NleStudioTimedPlacement & (
+  | { readonly insertTracks?: never }
+  | { readonly track: string; readonly insertTracks: readonly string[] }
+);
+
 type NleStudioOfferingReference = {
   readonly package: string;
   readonly offering: string;
@@ -194,6 +199,9 @@ type NleStudioOfferingReference = {
 
 export type NleStudioTimelineEdit = NleStudioCompositionOperation & (
   | { readonly kind: "timeline.trim"; readonly item: string; readonly edge: "start" | "end"; readonly atFrame: number }
+  | { readonly kind: "timeline.slip"; readonly item: string; readonly deltaFrames: number }
+  | { readonly kind: "timeline.roll"; readonly left: string; readonly right: string; readonly atFrame: number }
+  | { readonly kind: "timeline.ripple-trim"; readonly item: string; readonly tracks: readonly string[]; readonly atFrame: number }
   | { readonly kind: "timeline.split"; readonly items: readonly string[]; readonly atFrame: number }
   | { readonly kind: "timeline.remove"; readonly items: readonly string[] }
   | { readonly kind: "timeline.ripple-remove"; readonly items: readonly string[]; readonly tracks: readonly string[] }
@@ -206,13 +214,13 @@ export type NleStudioOperation =
   | (NleStudioCompositionOperation & { readonly kind: "clipboard.copy" | "clipboard.cut"; readonly items: readonly string[] })
   | (NleStudioCompositionOperation & { readonly kind: "clipboard.paste"; readonly atFrame: number })
   | (NleStudioCompositionOperation & { readonly kind: "clipboard.apply-groups" })
-  | (NleStudioTimedPlacement & {
+  | (NleStudioPresentPlacement & {
       readonly kind: "media.materialize";
       readonly media: string;
       readonly includeAudio?: boolean;
       readonly layout?: NlePictureLayout;
     })
-  | (NleStudioTimedPlacement & NleStudioOfferingReference & {
+  | (NleStudioPresentPlacement & NleStudioOfferingReference & {
       readonly kind: "component.materialize";
       readonly media?: Readonly<Record<string, string>>;
     })
@@ -226,9 +234,10 @@ export type NleStudioOperation =
       readonly items: readonly [string, string];
       readonly durationFrames?: number;
     })
-  | (Omit<NleStudioTimedPlacement, "durationFrames"> & {
+  | (NleStudioPresentPlacement & {
       readonly kind: "composition.materialize";
       readonly source: string;
+      readonly durationFrames?: never;
     })
   | (NleStudioCompositionOperation & { readonly kind: "composition.compound"; readonly items: readonly string[]; readonly name: string })
   | (NleStudioCompositionOperation & { readonly kind: "composition.make-unique" | "composition.explode"; readonly item: string })

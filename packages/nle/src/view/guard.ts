@@ -154,8 +154,12 @@ export function assertNleViewAllowsProjectTransaction(
   const completed = applyNleTransaction(project, transaction);
   for (const command of transaction.commands) {
     if (command.kind === "item.move") requireCapability(command.ids, "move");
-    else if (command.kind === "item.trim") {
+    else if (command.kind === "item.trim" || command.kind === "item.ripple-trim") {
       requireCapability([command.id], command.edge === "start" ? "trimStart" : "trimEnd");
+      if (command.kind === "item.ripple-trim") requireCapability(command.scope, "move");
+    } else if (command.kind === "item.roll") {
+      requireCapability([command.left], "trimEnd");
+      requireCapability([command.right], "trimStart");
     } else if (command.kind === "item.split") requireCapability([command.id], "split");
     const touched: LocatedTrack[] = [];
     for (const snapshot of [project, completed]) {

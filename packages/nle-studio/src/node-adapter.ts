@@ -94,6 +94,8 @@ function operationRequest(value: unknown): NleStudioOperation {
   const tracks = Array.isArray(request.tracks) && request.tracks.every(identity) ? request.tracks : undefined;
   const track = request.track === undefined || identity(request.track);
   const placement = track && integer(request.atFrame, 0);
+  const insertion = request.insertTracks === undefined
+    || (identity(request.track) && Array.isArray(request.insertTracks) && request.insertTracks.length > 0 && request.insertTracks.every(identity));
   const duration = request.durationFrames === undefined || integer(request.durationFrames, 1);
   const offering = identity(request.package) && identity(request.offering);
   const before = request.before === undefined || identity(request.before);
@@ -115,6 +117,17 @@ function operationRequest(value: unknown): NleStudioOperation {
     case "timeline.trim":
       valid = currentFields("item", "edge", "atFrame") && identity(request.item) && integer(request.atFrame, 0)
         && (request.edge === "start" || request.edge === "end");
+      break;
+    case "timeline.slip":
+      valid = currentFields("item", "deltaFrames") && identity(request.item) && Number.isSafeInteger(request.deltaFrames);
+      break;
+    case "timeline.roll":
+      valid = currentFields("left", "right", "atFrame") && identity(request.left) && identity(request.right)
+        && request.left !== request.right && integer(request.atFrame, 0);
+      break;
+    case "timeline.ripple-trim":
+      valid = currentFields("item", "tracks", "atFrame") && identity(request.item)
+        && tracks !== undefined && tracks.length > 0 && integer(request.atFrame, 0);
       break;
     case "timeline.split":
       valid = currentFields("items", "atFrame") && items !== undefined && items.length > 0 && integer(request.atFrame, 0);
@@ -138,13 +151,13 @@ function operationRequest(value: unknown): NleStudioOperation {
       valid = currentFields();
       break;
     case "media.materialize":
-      valid = currentFields("media", "includeAudio", "layout", ...timedFields) && placement && duration
+      valid = currentFields("media", "includeAudio", "layout", "insertTracks", ...timedFields) && placement && duration && insertion
         && identity(request.media) && (request.includeAudio === undefined || typeof request.includeAudio === "boolean")
         && (request.layout === undefined || validPictureLayout(request.layout));
       break;
     case "component.materialize": {
       const media = request.media === undefined ? {} : record(request.media, "Component Media seeds");
-      valid = currentFields("package", "offering", "media", ...timedFields) && placement && duration && offering
+      valid = currentFields("package", "offering", "media", "insertTracks", ...timedFields) && placement && duration && offering && insertion
         && Object.values(media).every(identity);
       break;
     }
@@ -168,7 +181,7 @@ function operationRequest(value: unknown): NleStudioOperation {
         && items?.length === 2 && items[0] !== items[1];
       break;
     case "composition.materialize":
-      valid = currentFields("source", "atFrame", "track") && placement && identity(request.source);
+      valid = currentFields("source", "atFrame", "track", "insertTracks") && placement && insertion && identity(request.source);
       break;
     case "composition.compound":
       valid = currentFields("items", "name") && items !== undefined && items.length > 0

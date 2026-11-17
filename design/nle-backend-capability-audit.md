@@ -109,8 +109,8 @@ ApplicationHost
 
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
-| 在播放头插入并后移范围 | NLE Studio Operation | `item.move`、`track.add` 和物化 planners 可组成一个原子事务 | **产品缺口**。缺少明确插入 scope、轨道选择和失败 receipt |
-| 关联成员随插入移动 | NLE Studio planner | Present 可协调 Picture/Audio；View Group 和 Nested Composition 分别表达编辑关系与内容关系 | **产品缺口**。planner 必须显式闭包所触达成员并统一检查锁与冲突 |
+| 在播放头插入并后移范围 | NLE Studio Operation | Media、Component 和 Composition 物化接受显式目标 Track 和 `insertTracks`，后移和插入一次提交 | **已具备**边界与空隙内的插入 |
+| 关联成员随插入移动 | NLE Studio planner | 后移验证 View Group、Transition、Matte 成员均在同一受影响范围，提交守卫所有触达轨道 | **已具备**显式范围 |
 | 连续主轨和自动磁吸 | Product Session policy | 当前产品 planner 没有稳定的主轨选择、插入和闭合策略 | **产品缺口**。只有用户明确保存一种编辑安排时才进入 View，不进入视听 Project |
 | 关闭空隙 | NLE Studio Operation | `timeline.close-gap` 从播放头及指定 Tracks 求精确空隙边，整体位移后段，并守卫关系范围 | **已具备**单个显式空隙 |
 
@@ -118,7 +118,7 @@ ApplicationHost
 
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
-| move、trim、slip、roll、ripple trim | NLE Commands | 精确 source-time slicing、shift 与 Project 校验已经实现 | **已具备**底层语义；复杂 scope 和用户意图仍需 Product Operation |
+| move、trim、slip、roll、ripple trim | NLE Studio Operations | 精确移动、裁剪、移动素材窗口、双侧调整直切、显式范围内的尾部连动；边缘延长检查当前素材边界 | **已具备**后端路径 |
 | split | NLE Studio Operation + NLE Command | `timeline.split` 对选区内跨越播放头的 Items 一次提交，各自切分 source/control time | **已具备** |
 | 删除播放头一侧 | NLE Studio Operation | `timeline.trim` 按精确帧位置修改指定 edge | **已具备** |
 | 删除并保留空隙 | NLE Studio Operation + NLE Command | `timeline.remove` 原子删除显式选区及关联 Transition/Matte，保留其它 Item 的时间 | **已具备** |
@@ -359,6 +359,7 @@ POST       /api/reload
 ## 待讨论的产品策略
 
 - 自动磁吸和连续主轨需要明确主轨归属、何时联动侧轨，以及锁轨冲突时的结果。
+- 穿过已有 Item 的插入需要确定切分时 Transition、Matte 和 View Group 的处理。头部 ripple trim 需要确定移动的侧和保留的基准边。
 - 一次压缩多个不相交空隙需要明确各段的联动范围和处理顺序。当前单空隙操作使用调用者提供的 Tracks。
 - 字幕源需要先确定引用和寿命，再开放导入和批量分轨。
 - 跨 NLE 文档或 OS 剪贴板需要明确 Media、Shared Value 和 Composition 引用的导入与重绑边界。

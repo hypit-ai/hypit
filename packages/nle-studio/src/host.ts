@@ -24,11 +24,13 @@ import {
   createTransitionMaterialization,
   indexNleProject,
   nleCompositionDuration,
+  nleItemEnd,
   nleLinearTimeMapping,
   type NleCommand,
   type NleProjectService,
+  type NleTrack,
 } from "@hypit/nle";
-import { compareExactTemporalValues } from "@hypit/temporal/algebra";
+import { assertTemporalMapPieces, compareExactTemporalValues, sealLocalTemporalDomain, type ExactTemporalValue } from "@hypit/temporal/algebra";
 import {
   acceptsNleComponentMedia,
   assertNleViewForProject,
@@ -64,7 +66,7 @@ import {
   createNleStudioPackageBridge,
   type NleStudioPackageBridge,
 } from "./packages.js";
-import { allocateTimelinePlacement, planTimelineDrop, planTimelineEdit, studioFrameTime } from "./timeline-planning.js";
+import { allocateTimelinePlacement, planTimelineDrop, planTimelineEdit, planTimelineInsertion, studioFrameTime } from "./timeline-planning.js";
 import { NleStudioPreview } from "./preview.js";
 import { NleStudioMediaViews } from "./media-views.js";
 import type {
@@ -663,6 +665,19 @@ export class NleStudioProductSession {
     const context = { project, view, composition };
     const currentItems = () => composition.tracks.flatMap(track => track.items);
     const identity = (role: string) => `${role}-${randomUUID()}`;
+    const placePresent = (
+      input: { readonly track?: string; readonly insertTracks?: readonly string[] },
+      medium: NleTrack["kind"],
+      start: ExactTemporalValue,
+      length: ExactTemporalValue,
+    ) => {
+      const purpose = { kind: "present", start, duration: length } as const;
+      const placement = allocateTimelinePlacement(context, { medium, track: input.track, purpose });
+      if (input.insertTracks === undefined) return placement;
+      if (input.track === undefined) throw new Error("NLE Studio insertion requires a destination Track.");
+      const commands = planTimelineInsertion(context, input.track, input.insertTracks, start, length);
+      return { ...placement, commands };
+    };
     const navigate = (target: string, frame: number, next: readonly NestedVisit[]) => {
       if (!project.compositions.some(entry => entry.id === target)) throw new Error(`Unknown NLE Composition ${target}.`);
       const previous = this.#navigation;
@@ -684,11 +699,36 @@ export class NleStudioProductSession {
         return commit(plan.commands, { track: plan.anchorTrack });
       }
       case "timeline.trim":
+      case "timeline.slip":
+      case "timeline.roll":
+      case "timeline.ripple-trim":
       case "timeline.split":
       case "timeline.remove":
       case "timeline.ripple-remove":
       case "timeline.close-gap": {
         const plan = planTimelineEdit(context, operation);
+        if (plan.commands.length > 0 && (operation.kind === "timeline.slip" || operation.kind === "timeline.roll"
+            || operation.kind === "timeline.ripple-trim" || operation.kind === "timeline.trim")) {
+          const planned = applyNleTransaction(project, { commands: plan.commands });
+          const original = indexNleProject(project);
+          const index = indexNleProject(planned);
+          const subjects = operation.kind === "timeline.roll" ? [operation.left, operation.right] : [operation.item];
+          await Promise.all(subjects.map(async (id) => {
+            const item = index.item(id)!.item;
+            const previous = original.item(id)!.item;
+            if (item.kind !== "present" || item.source !== "media") return;
+            const expands = compareExactTemporalValues(item.start, previous.start) < 0
+              || compareExactTemporalValues(nleItemEnd(item), nleItemEnd(previous)) > 0;
+            if (operation.kind !== "timeline.slip" && !expands) return;
+            const { interpretation } = await this.#resolveMediaBinding(this.#mediaIdentity(item.asset.path, id));
+            if (interpretation.domain === undefined) {
+              if (operation.kind === "timeline.slip") throw new Error(`NLE Item ${id} has no timed Media to slip.`);
+              return;
+            }
+            assertTemporalMapPieces(item.sourceTime.pieces,
+              sealLocalTemporalDomain({ id: `${id}:time`, duration: item.duration }), interpretation.domain);
+          }));
+        }
         return commit(plan.commands, { count: plan.count });
       }
       case "clipboard.copy":
@@ -726,11 +766,12 @@ export class NleStudioProductSession {
         const at = frameTime(operation.atFrame);
         const length = duration ?? interpretation.domain?.duration
           ?? frameTime(Math.max(1, Math.round(5 * view.editRate.numerator / view.editRate.denominator)));
+        if (interpretation.domain !== undefined && compareExactTemporalValues(length, interpretation.domain.duration) > 0) {
+          throw new Error(`NLE Studio placement duration exceeds Project Media ${operation.media}.`);
+        }
         const requested = composition.tracks.find(track => track.id === operation.track);
         const medium = interpretation.picture === undefined || requested?.kind === "audio" ? "audio" : "picture";
-        const placement = allocateTimelinePlacement(context, {
-          medium, track: operation.track, purpose: { kind: "present", start: at, duration: length },
-        });
+        const placement = placePresent(operation, medium, at, length);
         const item = identity("media");
         const materialization = createMediaAssetMaterialization(placement.project, {
           itemId: item, asset, interpretation, track: placement.track, at, duration: length,
@@ -746,9 +787,7 @@ export class NleStudioProductSession {
         }
         const at = frameTime(operation.atFrame);
         const length = duration ?? offering.value.duration;
-        const placement = allocateTimelinePlacement(context, {
-          medium: "picture", track: operation.track, purpose: { kind: "present", start: at, duration: length },
-        });
+        const placement = placePresent(operation, "picture", at, length);
         const item = identity("component");
         const creation = {
           id: item, track: placement.track, component: offering.value.component, parameters: offering.value.parameters,
@@ -848,10 +887,8 @@ export class NleStudioProductSession {
         const requested = composition.tracks.find(track => track.id === operation.track);
         const picture = source.tracks.some(track => track.enabled && track.items.some(item =>
           item.kind === "present" && item.enabled && item.picture !== undefined));
-        const placement = allocateTimelinePlacement(context, {
-          medium: picture && requested?.kind !== "audio" ? "picture" : "audio",
-          track: operation.track, purpose: { kind: "present", start: at, duration: nleCompositionDuration(source) },
-        });
+        const medium = picture && requested?.kind !== "audio" ? "picture" : "audio";
+        const placement = placePresent(operation, medium, at, nleCompositionDuration(source));
         const item = identity("composition");
         const materialization = createCompositionMaterialization(placement.project, {
           id: item, track: placement.track, composition: source.id, at,
