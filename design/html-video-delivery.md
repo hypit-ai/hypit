@@ -121,6 +121,9 @@ Studio 通过同一 terminal link 使用当前已接受的内存 revision。Fram
 Audio executor 在完整节目时钟上执行图，在输出边界按样本裁切并重置时间戳，Picture 使用同一范围内的帧采样。
 Studio 持有临时结果并发布会话资源 URL。
 
+Programme 波形使用相同的 Audio lowering、混音图和输出采样区间，将已裁切的混音转换为峰值 PNG。该 Action
+不需要启动浏览器。它与画面预览分别保留各自最新结果，两者都随接受的编辑 revision 或 Media Catalog 变化失效。
+
 ## 当前生产路径
 
 `examples/ranking-jensen` 是当前端到端 Project。`film.svml` 包含 5 段 A-roll、图片叠层、ranking component、

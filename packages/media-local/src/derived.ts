@@ -15,6 +15,7 @@ import { runBoundedMediaProcess } from "./process.js";
 import { pcmSampleIndex } from "./pcm-clock.js";
 import { resolveLocalMediaToolchain, type LocalMediaToolchainOptions } from "./toolchain.js";
 import { indexLocalVideoFrames, localVideoFrameOrdinal } from "./video-frames.js";
+import { peakWaveformFilter } from "./waveform.js";
 
 export type LocalMediaViewResult = {
   readonly bytes: Uint8Array;
@@ -162,9 +163,8 @@ export async function renderLocalMediaView(input: {
     if (pcm.byteLength !== (last - first) * 4) throw new Error("Media audio preview did not produce the selected sample count.");
     return { bytes: wav(pcm), mediaType: "audio/wav" };
   }
-  const width = boundedInteger(request.width ?? 1024, 16, 2048, "Waveform width");
-  const height = boundedInteger(request.height ?? 96, 16, 512, "Waveform height");
-  const bytes = await ffmpeg(["-i", source, "-filter_complex", `[0:${audio.streamIndex}]${filter},showwavespic=s=${width}x${height}:colors=white:filter=peak[out]`,
+  const waveform = peakWaveformFilter(request.width ?? 1024, request.height ?? 96);
+  const bytes = await ffmpeg(["-i", source, "-filter_complex", `[0:${audio.streamIndex}]${filter},${waveform}[out]`,
     "-map", "[out]", "-frames:v", "1", "-f", "image2pipe", "-vcodec", "png", "pipe:1"], 8 * 1024 * 1024);
   if (bytes.byteLength === 0) throw new Error("Media waveform produced no image.");
   return { bytes, mediaType: "image/png" };

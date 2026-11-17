@@ -67,7 +67,7 @@ export type NleStudioCatalogProjection = {
 
 export type NleStudioPreviewProjection =
   | { readonly state: "unavailable" }
-  | { readonly state: "available"; readonly playback: boolean; readonly generation: number };
+  | { readonly state: "available"; readonly playback: boolean; readonly waveform: boolean; readonly generation: number };
 
 export type NleStudioDeliveryProjection = { readonly state: "available" | "unavailable" };
 
@@ -269,6 +269,10 @@ export type NleStudioActionRequest =
   | NleStudioMediaActionRequest
   | (NleStudioCompositionOperation & { readonly kind: "frame-preview"; readonly atFrame: number })
   | (NleStudioCompositionOperation & { readonly kind: "playback-preview"; readonly atFrame: number; readonly durationFrames: number })
+  | (NleStudioCompositionOperation & {
+      readonly kind: "programme-waveform"; readonly atFrame: number; readonly durationFrames: number;
+      readonly width?: number; readonly height?: number;
+    })
   | {
       readonly kind: "delivery";
       readonly expectedProjectRevision: number;

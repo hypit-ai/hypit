@@ -8,6 +8,9 @@ import {
   type ExactTemporalValue, type TemporalMap, type TemporalRange,
 } from "@hypit/temporal/algebra";
 import { pcmSampleIndex } from "./pcm-clock.js";
+import { runBoundedMediaProcess } from "./process.js";
+import { resolveLocalMediaToolchain, type LocalMediaToolchainOptions } from "./toolchain.js";
+import { peakWaveformFilter } from "./waveform.js";
 
 const seconds = (value: ExactTemporalValue): number => Number(BigInt(value.ticks))
   * value.timeBase.numerator / value.timeBase.denominator;
@@ -95,6 +98,19 @@ async function run(executable: string, args: readonly string[], signal?: AbortSi
   } finally { signal?.removeEventListener("abort", abort); }
 }
 
+function audioInterval(program: AudioProgram, range?: TemporalRange) {
+  assertAudioProgram(program);
+  const zero = exactTemporalZero();
+  const duration = program.domain.duration;
+  const { start, end } = range ?? { start: zero, end: duration };
+  if (compareExactTemporalValues(start, zero) < 0 || compareExactTemporalValues(end, duration) > 0
+    || compareExactTemporalValues(start, end) >= 0) throw new Error("Audio render range is outside the Programme.");
+  const first = pcmSampleIndex(start, program.sampleRate);
+  const last = pcmSampleIndex(end, program.sampleRate);
+  if (first >= last) throw new Error("Audio render interval has no samples.");
+  return { first, last };
+}
+
 export async function renderAudioProgramLocally(input: {
   readonly program: AudioProgram;
   readonly destination: string;
@@ -102,15 +118,7 @@ export async function renderAudioProgramLocally(input: {
   readonly signal?: AbortSignal;
   readonly range?: TemporalRange;
 }): Promise<RenderedAudio> {
-  assertAudioProgram(input.program);
-  const zero = exactTemporalZero();
-  const duration = input.program.domain.duration;
-  const { start, end } = input.range ?? { start: zero, end: duration };
-  if (compareExactTemporalValues(start, zero) < 0 || compareExactTemporalValues(end, duration) > 0
-    || compareExactTemporalValues(start, end) >= 0) throw new Error("Audio render range is outside the Programme.");
-  const first = pcmSampleIndex(start, input.program.sampleRate);
-  const last = pcmSampleIndex(end, input.program.sampleRate);
-  if (first >= last) throw new Error("Audio render interval has no samples.");
+  const { first, last } = audioInterval(input.program, input.range);
   const graph = audioGraph(input.program, first, last);
   await run(input.ffmpegPath ?? "ffmpeg", ["-hide_banner", "-loglevel", "error", "-y",
     ...graph.inputArguments, "-filter_complex", graph.filter, "-map", `[${graph.output}]`,
@@ -119,6 +127,32 @@ export async function renderAudioProgramLocally(input: {
   return { resource: { address: input.destination, mediaType: "audio/wav", size: information.size },
     sampleRate: input.program.sampleRate, channels: input.program.channels,
     sampleFrames: last - first };
+}
+
+/** Sample the same bounded mix and Programme clock as audio delivery, then derive peak pixels. */
+export async function renderAudioProgramWaveformLocally(input: {
+  readonly program: AudioProgram;
+  readonly range: TemporalRange;
+  readonly width: number;
+  readonly height: number;
+  readonly tools?: LocalMediaToolchainOptions;
+  readonly signal?: AbortSignal;
+}): Promise<Uint8Array> {
+  const { first, last } = audioInterval(input.program, input.range);
+  if (last - first > 120 * input.program.sampleRate) throw new Error("Programme waveform range exceeds 120 seconds.");
+  const graph = audioGraph(input.program, first, last);
+  const waveform = peakWaveformFilter(input.width, input.height);
+  const { ffmpegPath } = resolveLocalMediaToolchain(input.tools);
+  const bytes = await runBoundedMediaProcess({
+    executable: ffmpegPath,
+    argv: ["-hide_banner", "-loglevel", "error", "-nostdin", ...graph.inputArguments,
+      "-filter_complex", `${graph.filter};[${graph.output}]${waveform}[peaks]`, "-map", "[peaks]",
+      "-frames:v", "1", "-f", "image2pipe", "-vcodec", "png", "pipe:1"],
+    timeoutMs: 90_000, maxStdoutBytes: 8 * 1024 * 1024,
+    ...(input.signal === undefined ? {} : { signal: input.signal }),
+  });
+  if (bytes.byteLength === 0) throw new Error("Programme waveform produced no image.");
+  return bytes;
 }
 
 export async function muxLocalVideo(input: {

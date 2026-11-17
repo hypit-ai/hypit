@@ -227,6 +227,7 @@ export class NleStudioProductSession {
     this.#preview = value.frameExecutor === undefined ? undefined : new NleStudioPreview({
       host: value.project, document: value.projectDocument, frame: value.frameExecutor,
       ...(value.playbackExecutor === undefined ? {} : { video: value.playbackExecutor }),
+      ...(value.mediaViews === undefined ? {} : { mediaTools: value.mediaViews }),
       publish: action => this.#publishAction(action),
     });
     this.#mediaViews = value.mediaViews === undefined ? undefined
@@ -544,7 +545,8 @@ export class NleStudioProductSession {
 
   #previewProjection(): NleStudioPreviewProjection {
     return this.#preview === undefined ? { state: "unavailable" }
-      : { state: "available", playback: this.#preview.playback, generation: this.#preview.generation };
+      : { state: "available", playback: this.#preview.playback, waveform: this.#preview.waveform,
+        generation: this.#preview.generation };
   }
 
   async observe(request: NleStudioObservationRequest): Promise<NleStudioObservation> {

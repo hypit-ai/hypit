@@ -36,6 +36,18 @@ export type HtmlVideoTerminalLink = {
   readonly audioContributions: readonly AudiovisualAudioContribution[];
 };
 
+export function createTerminalAudioProgram(
+  link: Pick<HtmlVideoTerminalLink, "program" | "audioContributions">,
+  profile?: HtmlVideoDeliveryProfile["audio"],
+): AudioProgram | undefined {
+  return link.program.audio === undefined ? undefined : lowerAudiovisualAudioProgram({
+    program: link.program,
+    contributions: link.audioContributions,
+    sampleRate: profile?.sampleRate ?? 48_000,
+    channels: profile?.channels ?? 2,
+  });
+}
+
 export function createHtmlVideoDeliveryPlan(
   link: HtmlVideoTerminalLink,
   profile: HtmlVideoDeliveryProfile,
@@ -46,12 +58,7 @@ export function createHtmlVideoDeliveryPlan(
     canvas: { width: profile.picture.width, height: profile.picture.height, background: profile.picture.background },
     ...(range === undefined ? {} : { range }),
   });
-  const audio = link.program.audio === undefined ? undefined : lowerAudiovisualAudioProgram({
-    program: link.program,
-    contributions: link.audioContributions,
-    sampleRate: profile.audio?.sampleRate ?? 48_000,
-    channels: profile.audio?.channels ?? 2,
-  });
+  const audio = createTerminalAudioProgram(link, profile.audio);
   return {
     visual: { program: visual, picture: { alpha: "opaque", matte: profile.picture.background }, quality: profile.picture.quality },
     ...(audio === undefined ? {} : { audio }),

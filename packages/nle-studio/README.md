@@ -98,6 +98,9 @@ selection and otherwise uses the local implementations' ordinary defaults.
 
 Media thumbnail, storyboard, waveform and audio audition use the same Action endpoints. Supply an Asset identity
 and the current Media Catalog generation. Timed views take positions on the Asset's Media clock.
+The `programme-waveform` Action takes the active Composition, both revisions and a Programme frame range up
+to two minutes. It returns the peak PNG of the same mix used for playback and delivery. A waveform request can
+run alongside a frame or playback request.
 
 Timeline presentation resources use opaque `api/presentations/:resource` addresses and remain owned by the
 process-local package contribution.

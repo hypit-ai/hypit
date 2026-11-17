@@ -274,11 +274,14 @@ function actionRequest(value: unknown): NleStudioActionRequest {
     return request as NleStudioActionRequest;
   }
   if (!integer(request.expectedProjectRevision)) throw new Error("NLE Studio Action requires a Project revision.");
-  if (request.kind === "frame-preview" || request.kind === "playback-preview") {
+  if (request.kind === "frame-preview" || request.kind === "playback-preview" || request.kind === "programme-waveform") {
     const common = ["kind", "expectedProjectRevision", "expectedViewRevision", "composition", "atFrame"];
-    const range = request.kind === "frame-preview"
-      ? fields(request, ...common)
-      : fields(request, ...common, "durationFrames") && integer(request.durationFrames, 1);
+    const range = request.kind === "frame-preview" ? fields(request, ...common)
+      : integer(request.durationFrames, 1) && (request.kind === "playback-preview"
+        ? fields(request, ...common, "durationFrames")
+        : fields(request, ...common, "durationFrames", "width", "height")
+          && (request.width === undefined || integer(request.width, 16) && Number(request.width) <= 2048)
+          && (request.height === undefined || integer(request.height, 16) && Number(request.height) <= 512));
     if (!range || !integer(request.expectedViewRevision) || !identity(request.composition) || !integer(request.atFrame)) {
       throw new Error(`NLE Studio ${request.kind} fields are invalid.`);
     }

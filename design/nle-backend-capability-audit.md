@@ -87,7 +87,7 @@ ApplicationHost
 | 移除 Project Media | Project Media Service Action | 当前 Service 没有删除操作，也不维护跨 Owner 反向引用 | **产品缺口**。若增加移除，调用者必须显式给出作用边界并由相关 Owner 校验引用 |
 | 原媒体按需读取 | Project resource capability | Project Resource Gateway 与 Studio resource route 支持 capability token 和 byte range | **已具备**，但只是资源读取，不等于解码后的逐帧/同步播放 |
 | 缩略图与 storyboard | Media Action | 以当前 Catalog generation、Media 时钟位置或范围取所选流；storyboard 提供样本到 atlas tile 的映射 | **已具备**后端；Timeline 可见 Item 范围尚未接入 |
-| 波形 | Media/NLE Action | 从所选 Media Audio member 生成峰值 PNG；处理后波形消费当前 AVIR Programme | **已具备**原始波形；处理后波形缺失 |
+| 波形 | Media/NLE Action | `media.waveform` 使用素材时钟；`programme-waveform` 使用当前 Composition 的混音图和节目时间范围 | **已具备** |
 | 音频试听 | Media/NLE playback Action | 素材可输出指定 Media 区间的 WAV；NLE 播放区间可包含混合音频 | **已具备**素材与节目试听；独立 occurrence 试听范围待定 |
 
 ## 2. 轨道和拖放
@@ -222,7 +222,7 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | 淡入淡出 | Audio Process + package Operator | fade 是 Audio Operator 的时间化 closed value | **产品缺口**。需要标准 envelope package 与 Timeline 手势 |
 | 音量包络与关键点 | package Operator parameters | Gain 投影已有线性关键点的精确时间和可编辑增益；NLE 保存其 Process 与 Control relation | **已具备**已有点的增益编辑；创建、移动和移除点仍缺 |
 | Track 混音开关 | NLE Track | Track enabled 参与 lowering | **已具备** |
-| 混合播放、导出与波形一致性 | AudioProgram / Media Actions | 播放与交付共享 `AudioProgram`；处理后波形 Action 仍缺 | **已具备**播放与交付 |
+| 混合播放、导出与波形一致性 | AudioProgram / Media Actions | 播放、交付和 Programme 波形共用 Audio lowering 与本机混音图；Jensen 验证停用轨道只改变 Programme 波形 | **已具备** |
 
 音量、淡化和包络可以成为官方标准 Audio Operator，但不因此成为 NLE 中央字段。NLE 产品可以为标准 package
 提供一等手势；该手势仍通过 package authoring contribution 规划对 closed value 的替换。

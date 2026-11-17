@@ -2,8 +2,11 @@ import { randomUUID } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createHtmlPreviewFrame, createHtmlVideoDeliveryPlan, type HtmlFrameExecutor, type HtmlVideoExecutor } from "@hypit/html-video";
+import {
+  createHtmlPreviewFrame, createHtmlVideoDeliveryPlan, createTerminalAudioProgram, type HtmlFrameExecutor, type HtmlVideoExecutor,
+} from "@hypit/html-video";
 import type { MediaResource } from "@hypit/media";
+import { renderAudioProgramWaveformLocally, type LocalMediaToolchainOptions } from "@hypit/media-local";
 import type { NleProject } from "@hypit/nle";
 import { prepareNleTerminalLink, type NleDeliveryTerminalLink } from "@hypit/nle-delivery";
 import type { ProjectHost } from "@hypit/project";
@@ -11,7 +14,8 @@ import { compareExactTemporalValues, type TemporalRate } from "@hypit/temporal/a
 import type { NleStudioActionObservation, NleStudioActionRequest } from "./protocol.js";
 import { studioFrameTime } from "./timeline-planning.js";
 
-type PreviewRequest = Extract<NleStudioActionRequest, { kind: "frame-preview" | "playback-preview" }>;
+type PreviewRequest = Extract<NleStudioActionRequest, { kind: "frame-preview" | "playback-preview" | "programme-waveform" }>;
+type PreviewChannel = "visual" | "waveform";
 type PreviewAction = {
   readonly handle: string;
   readonly kind: PreviewRequest["kind"];
@@ -27,10 +31,11 @@ export class NleStudioPreview {
   readonly #document: string;
   readonly #frame: HtmlFrameExecutor;
   readonly #video: HtmlVideoExecutor | undefined;
+  readonly #mediaTools: LocalMediaToolchainOptions | undefined;
   readonly #publish: (observation: NleStudioActionObservation) => void;
   readonly #cleanup = new Set<Promise<void>>();
   #generation = 0;
-  #current: PreviewAction | undefined;
+  readonly #current = new Map<PreviewChannel, PreviewAction>();
   #prepared: { readonly key: string; readonly abort: AbortController; readonly link: Promise<NleDeliveryTerminalLink> } | undefined;
 
   constructor(input: {
@@ -38,21 +43,24 @@ export class NleStudioPreview {
     readonly document: string;
     readonly frame: HtmlFrameExecutor;
     readonly video?: HtmlVideoExecutor;
+    readonly mediaTools?: LocalMediaToolchainOptions;
     readonly publish: (observation: NleStudioActionObservation) => void;
   }) {
     this.#host = input.host;
     this.#document = input.document;
     this.#frame = input.frame;
     this.#video = input.video;
+    this.#mediaTools = input.mediaTools;
     this.#publish = input.publish;
   }
 
   get playback(): boolean { return this.#video !== undefined; }
+  get waveform(): boolean { return this.#mediaTools !== undefined; }
   get generation(): number { return this.#generation; }
 
-  #release(): void {
-    const previous = this.#current;
-    this.#current = undefined;
+  #release(channel: PreviewChannel): void {
+    const previous = this.#current.get(channel);
+    this.#current.delete(channel);
     if (previous === undefined) return;
     previous.abort.abort();
     const cleanup = (async () => {
@@ -67,7 +75,7 @@ export class NleStudioPreview {
     this.#generation += 1;
     this.#prepared?.abort.abort();
     this.#prepared = undefined;
-    this.#release();
+    for (const channel of this.#current.keys()) this.#release(channel);
   }
 
   async close(): Promise<void> {
@@ -76,36 +84,46 @@ export class NleStudioPreview {
   }
 
   observe(handle: string): NleStudioActionObservation | undefined {
-    return this.#current?.handle === handle ? structuredClone(this.#current.observation) : undefined;
+    const action = this.#find(handle);
+    return action === undefined ? undefined : structuredClone(action.observation);
   }
 
   resource(handle: string): MediaResource | undefined {
-    return this.#current?.handle === handle ? this.#current.resource : undefined;
+    const action = this.#find(handle);
+    return action?.observation.state === "complete" ? action.resource : undefined;
+  }
+
+  #find(handle: string): PreviewAction | undefined {
+    return [...this.#current.values()].find(action => action.handle === handle);
   }
 
   cancel(handle: string): NleStudioActionObservation | undefined {
-    if (this.#current?.handle !== handle) return undefined;
-    const action = this.#current;
+    const action = this.#find(handle);
+    if (action === undefined) return undefined;
     if (action.observation.state === "queued" || action.observation.state === "running") action.abort.abort();
     return structuredClone(action.observation);
   }
 
   start(request: PreviewRequest, project: NleProject, rate: TemporalRate): NleStudioActionObservation {
     if (request.kind === "playback-preview" && this.#video === undefined) throw new Error("NLE Studio playback preview is unavailable.");
+    if (request.kind === "programme-waveform" && !this.waveform) throw new Error("NLE Studio Programme waveform is unavailable.");
     const frames = request.kind === "frame-preview" ? 1 : request.durationFrames;
-    const maximum = request.kind === "frame-preview" ? 1 : Math.min(240, Math.max(1, Math.floor(6 * rate.numerator / rate.denominator)));
+    const fps = rate.numerator / rate.denominator;
+    const maximum = request.kind === "frame-preview" ? 1 : request.kind === "programme-waveform"
+      ? Math.max(1, Math.floor(120 * fps)) : Math.min(240, Math.max(1, Math.floor(6 * fps)));
     if (!Number.isSafeInteger(frames) || frames < 1 || frames > maximum
       || !Number.isSafeInteger(request.atFrame) || request.atFrame < 0 || !Number.isSafeInteger(request.atFrame + frames)) {
       throw new Error(`NLE Studio preview requires a frame and a range of 1 to ${maximum} frames.`);
     }
-    this.#release();
+    const channel = request.kind === "programme-waveform" ? "waveform" : "visual";
+    this.#release(channel);
     const released = Promise.allSettled(this.#cleanup);
     const handle = randomUUID();
     const action: PreviewAction = {
       handle, kind: request.kind, abort: new AbortController(),
       observation: { handle, kind: request.kind, state: "queued", progress: 0 },
     };
-    this.#current = action;
+    this.#current.set(channel, action);
     this.#publish(action.observation);
     action.task = this.#run(action, request, project, rate, frames, released);
     return structuredClone(action.observation);
@@ -155,8 +173,19 @@ export class NleStudioPreview {
       action.directory = await mkdtemp(join(tmpdir(), "hypit-nle-preview-"));
       signal.throwIfAborted();
       progress(0.1);
-      let frameCount = 1;
-      if (kind === "frame-preview") {
+      let frameCount: number | undefined;
+      if (request.kind === "programme-waveform") {
+        const audio = createTerminalAudioProgram(link);
+        if (audio === undefined) throw new Error("NLE Programme has no Audio output.");
+        const bytes = await renderAudioProgramWaveformLocally({
+          program: audio, range, width: request.width ?? 1024, height: request.height ?? 96,
+          tools: this.#mediaTools!, signal,
+        });
+        const address = join(action.directory, "waveform.png");
+        await writeFile(address, bytes, { signal });
+        action.resource = { address, mediaType: "image/png", size: bytes.byteLength };
+      } else if (request.kind === "frame-preview") {
+        frameCount = 1;
         const request = createHtmlPreviewFrame(link, { canvas, frameRate: rate, range });
         const bytes = await this.#frame.capture(request, signal);
         signal.throwIfAborted();
@@ -175,7 +204,8 @@ export class NleStudioPreview {
       }
       signal.throwIfAborted();
       update({ handle, kind, state: "complete", progress: 1, result: {
-        resource: `api/resources/${encodeURIComponent(handle)}`, mediaType: action.resource.mediaType, frameCount,
+        resource: `api/resources/${encodeURIComponent(handle)}`, mediaType: action.resource.mediaType,
+        ...(frameCount === undefined ? {} : { frameCount }),
       } });
     } catch (error) {
       if (action.directory !== undefined) await rm(action.directory, { recursive: true, force: true }).catch(() => undefined);
