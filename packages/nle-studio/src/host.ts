@@ -30,6 +30,7 @@ import {
   openNleEditingSurface,
   type NleEditingSurface,
   type NleEditingSurfaceCommand,
+  type NleEditingSurfaceReceipt,
 } from "@hypit/nle/surface";
 import type {
   ProjectDocumentLease,
@@ -48,13 +49,18 @@ import {
 } from "./packages.js";
 import type {
   NleStudioAdjustMaterializeRequest,
+  NleStudioCatalogProjection,
   NleStudioComponentMaterializeRequest,
   NleStudioDeliveryStartRequest,
-  NleStudioInspectorResponse,
+  NleStudioInvalidation,
   NleStudioMediaProjection,
   NleStudioMediaPlaceRequest,
+  NleStudioObservation,
+  NleStudioObservationRequest,
+  NleStudioOpenProjection,
+  NleStudioOperationReceipt,
   NleStudioPreviewProjection,
-  NleStudioSession,
+  NleStudioTimelineProjection,
   NleStudioTransitionMaterializeRequest,
 } from "./protocol.js";
 
@@ -83,7 +89,7 @@ export type NleStudioMediaImportRequest = {
 };
 
 export type NleStudioMediaImportPort = {
-  adopt(request: NleStudioMediaImportRequest): Promise<void>;
+  adopt(request: NleStudioMediaImportRequest): Promise<{ readonly reference: { readonly path: string } }>;
 };
 
 export const nleStudioProduct = "hypit.nle-studio";
@@ -283,58 +289,144 @@ export class NleStudioProductSession {
     return this.#project.resources.resolve(token);
   }
 
-  async observe(): Promise<NleStudioSession> {
-    this.#assertOpen();
-    const observation = this.#surface.observe({ kind: "open" });
-    if (observation.kind !== "open") throw new Error("NLE Studio received an invalid open projection.");
+  #catalog(): NleStudioCatalogProjection {
+    return {
+      components: this.#packages.components.map((entry) => ({
+        package: entry.package,
+        offering: entry.id,
+        title: entry.title,
+        category: entry.value.category,
+      })),
+      adjusts: this.#packages.adjusts.map((entry) => ({
+        package: entry.package,
+        offering: entry.id,
+        title: entry.title,
+        medium: entry.value.medium,
+      })),
+      transitions: this.#packages.transitions.map((entry) => ({
+        package: entry.package,
+        offering: entry.id,
+        title: entry.title,
+      })),
+    };
+  }
+
+  #timeline(): NleStudioTimelineProjection {
+    const observation = this.#surface.observe({ kind: "timeline" });
+    if (observation.kind !== "timeline") throw new Error("NLE Studio received an invalid Timeline projection.");
+    const project = this.#projectLease.service.snapshot().project;
+    const composition = project.compositions.find((value) => value.id === observation.value.composition)!;
+    const root = this.#project.boundary.root;
+    const documentDirectory = dirname(resolve(root, this.#projectDocument));
+    return {
+      scene: observation.value,
+      compositions: project.compositions.map((value) => ({ id: value.id, name: value.name })),
+      itemMedia: composition.tracks.flatMap((track) => track.items.flatMap((item) => {
+        if (item.kind !== "present" || item.source !== "media") return [];
+        const local = relative(root, resolve(documentDirectory, item.asset.path));
+        if (local === "" || local === ".." || local.startsWith(`..${sep}`)) {
+          throw new Error(`NLE Media Item ${item.id} leaves the Project Boundary.`);
+        }
+        return [{ item: item.id, media: local.split(sep).join("/") }];
+      })),
+    };
+  }
+
+  #canvas() {
+    const observation = this.#surface.observe({ kind: "canvas" });
+    if (observation.kind !== "canvas") throw new Error("NLE Studio received an invalid Canvas projection.");
+    return observation.value;
+  }
+
+  async #openProjection(): Promise<NleStudioOpenProjection> {
+    const project = this.#projectLease.service.snapshot().project;
     const [media, preview] = await Promise.all([this.#projectMedia(), this.#preview.observe()]);
     return {
-      projectDocument: { path: this.#projectDocument },
+      project: { name: project.name, document: this.#projectDocument },
       viewDocument: this.#viewDocument === undefined
         ? { persistence: "session" }
         : { persistence: "document", path: this.#viewDocument },
-      open: observation.value,
+      status: this.#surface.status(),
+      timeline: this.#timeline(),
+      canvas: this.#canvas(),
       media,
-      catalog: {
-        components: this.#packages.components.map((entry) => ({
-          package: entry.package,
-          offering: entry.id,
-          title: entry.title,
-          category: entry.value.category,
-        })),
-        adjusts: this.#packages.adjusts.map((entry) => ({
-          package: entry.package,
-          offering: entry.id,
-          title: entry.title,
-          medium: entry.value.medium,
-        })),
-        transitions: this.#packages.transitions.map((entry) => ({
-          package: entry.package,
-          offering: entry.id,
-          title: entry.title,
-        })),
-      },
+      catalog: this.#catalog(),
       preview,
       delivery: { state: this.#delivery === undefined ? "unavailable" : "available" },
     };
   }
 
-  async importMediaFile(request: NleStudioMediaImportRequest): Promise<NleStudioSession> {
+  async observe(request: NleStudioObservationRequest): Promise<NleStudioObservation> {
+    this.#assertOpen();
+    switch (request.kind) {
+      case "open": return { kind: "open", value: await this.#openProjection() };
+      case "status": return { kind: "status", value: this.#surface.status() };
+      case "timeline": return { kind: "timeline", value: this.#timeline() };
+      case "canvas": return { kind: "canvas", value: this.#canvas() };
+      case "inspector": {
+        const observation = this.#surface.observe({ kind: "inspector", item: request.item });
+        if (observation.kind !== "inspector") throw new Error("NLE Studio received an invalid Inspector projection.");
+        return { kind: "inspector", value: observation.value };
+      }
+      case "media": return { kind: "media", value: await this.#projectMedia() };
+      case "catalog": return { kind: "catalog", value: this.#catalog() };
+      case "preview": return { kind: "preview", value: await this.#preview.observe() };
+      case "delivery": return {
+        kind: "delivery",
+        value: { state: this.#delivery === undefined ? "unavailable" : "available" },
+      };
+    }
+  }
+
+  #receipt(
+    operation: string,
+    receipt: NleEditingSurfaceReceipt,
+    result?: NleStudioOperationReceipt["result"],
+    extraInvalidations: readonly NleStudioInvalidation[] = [],
+  ): NleStudioOperationReceipt {
+    const invalidated = new Set<NleStudioInvalidation>(extraInvalidations);
+    for (const value of receipt.invalidated) {
+      if (value === "programme") invalidated.add("preview");
+      else invalidated.add(value);
+    }
+    return {
+      operation,
+      status: receipt.status,
+      changed: receipt.changed,
+      invalidated: [...invalidated],
+      ...(result === undefined ? {} : { result }),
+    };
+  }
+
+  #observationReceipt(
+    operation: string,
+    invalidated: readonly NleStudioInvalidation[],
+    result?: NleStudioOperationReceipt["result"],
+  ): NleStudioOperationReceipt {
+    return {
+      operation,
+      status: this.#surface.status(),
+      changed: { project: false, view: false },
+      invalidated: [...invalidated],
+      ...(result === undefined ? {} : { result }),
+    };
+  }
+
+  async importMediaFile(request: NleStudioMediaImportRequest): Promise<NleStudioOperationReceipt> {
     this.#assertOpen();
     if (this.#mediaImport === undefined) {
       throw new Error("NLE Studio has no Project Media import port.");
     }
-    await this.#mediaImport.adopt(request);
-    return await this.observe();
+    const adopted = await this.#mediaImport.adopt(request);
+    return this.#observationReceipt("media.import", ["media"], { media: adopted.reference.path });
   }
 
-  async command(command: NleEditingSurfaceCommand): Promise<NleStudioSession> {
+  async command(command: NleEditingSurfaceCommand): Promise<NleStudioOperationReceipt> {
     this.#assertOpen();
-    this.#surface.command(command);
-    return await this.observe();
+    return this.#receipt(command.kind, this.#surface.command(command));
   }
 
-  async placeMedia(request: NleStudioMediaPlaceRequest): Promise<NleStudioSession> {
+  async placeMedia(request: NleStudioMediaPlaceRequest): Promise<NleStudioOperationReceipt> {
     this.#assertOpen();
     if (!Number.isSafeInteger(request.atFrame) || request.atFrame < 0) {
       throw new Error("NLE Studio Media placement start frame must be a non-negative safe integer.");
@@ -373,16 +465,16 @@ export class NleStudioProductSession {
       ...(request.includeAudio === undefined ? {} : { audio: request.includeAudio ? {} : false }),
       ...(request.layout === undefined ? {} : { picture: { layout: request.layout } }),
     });
-    this.#surface.command({
+    const receipt = this.#surface.command({
       kind: "project.transact",
       expectedProjectRevision: request.expectedProjectRevision,
       expectedViewRevision: request.expectedViewRevision,
       commands: transaction.commands,
     });
-    return await this.observe();
+    return this.#receipt("media.materialize", receipt, { item: request.item });
   }
 
-  async materializeComponent(request: NleStudioComponentMaterializeRequest): Promise<NleStudioSession> {
+  async materializeComponent(request: NleStudioComponentMaterializeRequest): Promise<NleStudioOperationReceipt> {
     this.#assertOpen();
     if (!Number.isSafeInteger(request.atFrame) || request.atFrame < 0) {
       throw new Error("NLE Studio Component placement start frame must be a non-negative safe integer.");
@@ -423,16 +515,16 @@ export class NleStudioProductSession {
         : frameTime(request.durationFrames),
       ...(offering.value.layout === undefined ? {} : { layout: offering.value.layout }),
     });
-    this.#surface.command({
+    const receipt = this.#surface.command({
       kind: "project.transact",
       expectedProjectRevision: request.expectedProjectRevision,
       expectedViewRevision: request.expectedViewRevision,
       commands: transaction.commands,
     });
-    return await this.observe();
+    return this.#receipt("component.materialize", receipt, { item: request.item });
   }
 
-  async materializeAdjust(request: NleStudioAdjustMaterializeRequest): Promise<NleStudioSession> {
+  async materializeAdjust(request: NleStudioAdjustMaterializeRequest): Promise<NleStudioOperationReceipt> {
     this.#assertOpen();
     if (!Number.isSafeInteger(request.atFrame) || request.atFrame < 0) {
       throw new Error("NLE Studio Adjust placement start frame must be a non-negative safe integer.");
@@ -472,16 +564,16 @@ export class NleStudioProductSession {
       at: frameTime(request.atFrame),
       duration: request.durationFrames === undefined ? offering.value.duration : frameTime(request.durationFrames),
     });
-    this.#surface.command({
+    const receipt = this.#surface.command({
       kind: "project.transact",
       expectedProjectRevision: request.expectedProjectRevision,
       expectedViewRevision: request.expectedViewRevision,
       commands: transaction.commands,
     });
-    return await this.observe();
+    return this.#receipt("adjust.materialize", receipt, { item: request.item });
   }
 
-  async materializeTransition(request: NleStudioTransitionMaterializeRequest): Promise<NleStudioSession> {
+  async materializeTransition(request: NleStudioTransitionMaterializeRequest): Promise<NleStudioOperationReceipt> {
     this.#assertOpen();
     if (request.durationFrames !== undefined
       && (!Number.isSafeInteger(request.durationFrames) || request.durationFrames <= 0)) {
@@ -513,13 +605,13 @@ export class NleStudioProductSession {
         ? offering.value.duration
         : frameTime(request.durationFrames),
     });
-    this.#surface.command({
+    const receipt = this.#surface.command({
       kind: "project.transact",
       expectedProjectRevision: request.expectedProjectRevision,
       expectedViewRevision: request.expectedViewRevision,
       commands: transaction.commands,
     });
-    return await this.observe();
+    return this.#receipt("transition.materialize", receipt, { transition: request.transition });
   }
 
   async presentationResource(resource: string): Promise<{ readonly mediaType: string; readonly bytes: Uint8Array }> {
@@ -527,13 +619,6 @@ export class NleStudioProductSession {
     const value = this.#packages.timelinePresentation.resource(resource);
     if (value === undefined) throw new Error(`Unknown NLE Studio presentation resource: ${resource}.`);
     return { mediaType: value.mediaType, bytes: await value.read() };
-  }
-
-  inspector(item: string): NleStudioInspectorResponse {
-    this.#assertOpen();
-    const observation = this.#surface.observe({ kind: "inspector", item });
-    if (observation.kind !== "inspector") throw new Error("NLE Studio received an invalid Inspector projection.");
-    return { inspector: observation.value };
   }
 
   async startDelivery(request: NleStudioDeliveryStartRequest): Promise<NleDeliveryActionObservation> {
@@ -555,16 +640,16 @@ export class NleStudioProductSession {
     return this.#delivery.cancel(handle);
   }
 
-  async save(): Promise<NleStudioSession> {
+  async save(): Promise<NleStudioOperationReceipt> {
     this.#assertOpen();
     await nleProjectOwnerProvider.save(this.#context, this.#projectDocument, this.#projectLease.service);
     if (this.#viewDocument !== undefined && this.#viewLease !== undefined) {
       await nleViewOwnerProvider.save(this.#context, this.#viewDocument, this.#viewLease.service);
     }
-    return await this.observe();
+    return this.#observationReceipt("document.save", []);
   }
 
-  async reload(): Promise<NleStudioSession> {
+  async reload(): Promise<NleStudioOperationReceipt> {
     this.#assertOpen();
     await nleProjectOwnerProvider.reload(this.#context, this.#projectDocument, this.#projectLease.service);
     if (this.#viewDocument !== undefined && this.#viewLease !== undefined) {
@@ -577,7 +662,12 @@ export class NleStudioProductSession {
         before.revision,
       );
     }
-    return await this.observe();
+    return {
+      operation: "document.reload",
+      status: this.#surface.status(),
+      changed: { project: true, view: true },
+      invalidated: ["timeline", "canvas", "inspector", "preview"],
+    };
   }
 
   close(): void {
@@ -649,7 +739,7 @@ export function createNleStudioProductProvider(
       const mediaImport: NleStudioMediaImportPort | undefined = typeof media.adoptFile !== "function" ? undefined : {
         async adopt(request) {
           const mediaType = mediaTypeFromFile(request.sourceName);
-          await media.adoptFile!({ ...request, mediaType }, {
+          const result = await media.adoptFile!({ ...request, mediaType }, {
             inspect: async (path, context) => await inspectMediaFileFromContainerIndex(path, {
               ...(options.mediaTools?.ffprobePath === undefined ? {} : { ffprobePath: options.mediaTools.ffprobePath }),
               ...(context.signal === undefined ? {} : { signal: context.signal }),
@@ -657,6 +747,7 @@ export function createNleStudioProductProvider(
             }),
             select: (inspection) => defaultMediaSelection(inspection, mediaType),
           });
+          return { reference: result.reference };
         },
       };
       const delivery = options.deliveryExecutor === undefined ? undefined : openNleDeliveryService({

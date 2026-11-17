@@ -208,6 +208,13 @@ export function projectNleTimeline(
         track: track.id,
         role: item.kind,
         source: source(item),
+        signals: {
+          picture: item.kind === "present" && item.picture !== undefined,
+          audio: item.kind === "present" && item.audio !== undefined,
+        },
+        ...(item.kind === "present" && item.source === "composition"
+          ? { nestedComposition: item.composition }
+          : {}),
         enabled: item.enabled,
         startFrame,
         durationFrames,
@@ -249,6 +256,17 @@ export function projectNleTimeline(
     composition: composition.id,
     editRate: structuredClone(view.editRate),
     groups: structuredClone(state?.groups ?? []),
+    transitions: composition.transitions.map((value) => ({
+      id: value.id,
+      outgoing: value.outgoing,
+      incoming: value.incoming,
+      operator: structuredClone(value.operator),
+    })),
+    mattes: composition.mattes.map((value) => ({
+      id: value.id,
+      content: value.content,
+      matte: value.matte,
+    })),
     tracks,
     maximumFrame,
   };

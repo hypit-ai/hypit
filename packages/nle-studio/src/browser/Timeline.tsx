@@ -5,7 +5,7 @@ import {
   Volume2, VolumeX,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { NleStudioSession } from "../protocol.js";
+import type { NleStudioOpenProjection } from "../protocol.js";
 import { IconButton } from "./common.js";
 import { timecode } from "./timecode.js";
 import { labelWidth, maxZoom, minZoom, rowSize } from "./timelineGeometry.js";
@@ -69,7 +69,7 @@ function useMarquee(scroller: React.RefObject<HTMLDivElement | null>, selection:
 export function Timeline({ session, frame, selection, busy, onSeek, onSelect, onMove, onTrim, onSplit, onRemove,
   onTrackEnabled, onTrackLocked, onTrackMove, onComposition, onAddTrack, onToggleGroup, canToggleGroup, grouped,
   onDetachAudio, canDetachAudio, onUndo, onRedo }: {
-  readonly session: NleStudioSession;
+  readonly session: NleStudioOpenProjection;
   readonly frame: number;
   readonly selection: readonly string[];
   readonly busy: boolean;
@@ -92,7 +92,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   readonly onUndo: () => void;
   readonly onRedo: () => void;
 }) {
-  const scene = session.open.timeline, fps = scene.editRate.numerator / scene.editRate.denominator;
+  const scene = session.timeline.scene, fps = scene.editRate.numerator / scene.editRate.denominator;
   const scroller = useRef<HTMLDivElement>(null);
   const { zoom, changeZoom } = useTimelineZoom(scroller, labelWidth, scene.composition);
   const pixels = zoom / fps;
@@ -102,21 +102,18 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const draftRef = useRef<typeof draft>(undefined), gesture = useRef<Gesture | undefined>(undefined);
   const seek = useTimelineSeek(scroller, pixels, labelWidth, frame, onSeek);
   const marquee = useMarquee(scroller, selection, onSelect);
-  const reorder = useTrackReorder(scroller, scene.tracks, session.open.status.projectRevision, busy, onTrackMove);
+  const reorder = useTrackReorder(scroller, scene.tracks, session.status.projectRevision, busy, onTrackMove);
   const itemGesture = useItemGesture({ scene, scroller, pixels, frame, snap, busy, selection, onSelect, onMove });
   const width = Math.max(900, (Math.max(scene.maximumFrame, frame) / fps + 10) * zoom);
   const selected = scene.tracks.flatMap(track => track.items).find(item => selection.includes(item.id));
-  const composition = session.open.project.project.compositions.find(value => value.id === scene.composition)!;
-  const projectSelected = composition.tracks.flatMap(track => track.items).find(item => item.id === selected?.id);
-  const nestedComposition = projectSelected?.kind === "present" && projectSelected.source === "composition"
-    ? projectSelected.composition : undefined;
+  const nestedComposition = selected?.nestedComposition;
   const sceneItems = new Map(scene.tracks.flatMap(track => track.items.map(item => [item.id, item] as const)));
   const splitFrame = selected === undefined ? frame : Math.max(selected.startFrame + 1, Math.min(selected.startFrame + selected.durationFrames - 1, frame));
   const canSplit = selected?.affordances.split === true && splitFrame > selected.startFrame && splitFrame < selected.startFrame + selected.durationFrames;
   const stepFrames = Math.max(1, Math.round(([1, 2, 5, 10, 30, 60, 120, 300, 600].find(value => value * zoom >= 78) ?? 1200) * fps));
   const ticks = useMemo(() => Array.from({ length: Math.ceil(width / (stepFrames * pixels)) + 1 }, (_, index) => index * stepFrames), [width, stepFrames, pixels]);
   const zoomPosition = Math.log(zoom / minZoom) / Math.log(maxZoom / minZoom) * 100;
-  const compositions = session.open.project.project.compositions;
+  const compositions = session.timeline.compositions;
 
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -187,8 +184,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     <div className="nle-timeline-toolbar">
       <ToolSelector value={tool} onChange={value => { setTool(value); setCutCursor(undefined); }}/>
       <IconButton label="新建轨道" disabled={busy} onClick={onAddTrack}><Plus size={18} strokeWidth={1.6}/></IconButton><span className="nle-toolbar-separator"/>
-      <IconButton label="撤销" disabled={busy || !session.open.status.projectHistory.canUndo} onClick={onUndo}><Undo2 size={18} strokeWidth={1.6}/></IconButton>
-      <IconButton label="重做" disabled={busy || !session.open.status.projectHistory.canRedo} onClick={onRedo}><Redo2 size={18} strokeWidth={1.6}/></IconButton>
+      <IconButton label="撤销" disabled={busy || !session.status.projectHistory.canUndo} onClick={onUndo}><Undo2 size={18} strokeWidth={1.6}/></IconButton>
+      <IconButton label="重做" disabled={busy || !session.status.projectHistory.canRedo} onClick={onRedo}><Redo2 size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="分割" disabled={busy || !canSplit} onClick={() => selected && onSplit(selected, splitFrame)}><Scissors size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="向左裁剪" disabled={busy || selected?.affordances.trimStart !== true || frame <= selected.startFrame || frame >= selected.startFrame + selected.durationFrames} onClick={() => selected && onTrim(selected, "start", frame)}><PanelLeftClose size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="向右裁剪" disabled={busy || selected?.affordances.trimEnd !== true || frame <= selected.startFrame || frame >= selected.startFrame + selected.durationFrames} onClick={() => selected && onTrim(selected, "end", frame)}><PanelRightClose size={18} strokeWidth={1.6}/></IconButton>
@@ -220,12 +217,12 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
             {track.items.map(item => { const current = draft?.id === item.id ? draft : { start: item.startFrame, duration: item.durationFrames }; const kind = clipClass(item, track); const preview = item.display.layers.find(layer => layer.kind === "preview" && layer.state === "ready"); const text = item.display.layers.find(layer => layer.kind === "text"); return <div key={item.id} data-clip-id={item.id} className={`nle-clip ${kind}${selection.includes(item.id) ? " selected" : ""}${itemGesture.gesture?.ids.includes(item.id) ? " drag-origin" : ""}`} style={{ left: current.start * pixels, width: Math.max(8, current.duration * pixels) }} onPointerDown={event => begin(event, item, "move", track)} onPointerMove={event => {
               if (tool !== "cut" || busy || track.locked) return; const at = item.startFrame + Math.round((event.clientX - event.currentTarget.getBoundingClientRect().left) / pixels); setCutCursor(item.affordances.split && at > item.startFrame && at < item.startFrame + item.durationFrames ? { track: track.id, frame: at } : undefined);
             }} onPointerLeave={() => setCutCursor(undefined)}>
-              <span className="nle-clip-title"><span className="nle-clip-chip">{item.group && <Group size={11}/>} {composition.mattes.some(matte => matte.content === item.id || matte.matte === item.id) && <Link2 size={11}/>} {item.source === "composition" && <Layers size={11}/>} {item.display.title}</span>{kind !== "text" && <span className="nle-clip-chip">{timecode(current.duration, fps)}</span>}</span>
+              <span className="nle-clip-title"><span className="nle-clip-chip">{item.group && <Group size={11}/>} {scene.mattes.some(matte => matte.content === item.id || matte.matte === item.id) && <Link2 size={11}/>} {item.source === "composition" && <Layers size={11}/>} {item.display.title}</span>{kind !== "text" && <span className="nle-clip-chip">{timecode(current.duration, fps)}</span>}</span>
               {preview?.kind === "preview" && preview.state === "ready" && <span className="nle-clip-thumbnails"><img src={preview.resource} style={{ left: 0, width: "100%" }}/></span>}
               {text?.kind === "text" && <span className="nle-clip-text">{text.text}</span>}
               {item.affordances.trimStart && <div className="nle-trim start" aria-label="裁剪开头" onPointerDown={event => begin(event, item, "trim-start", track)}/>} {item.affordances.trimEnd && <div className="nle-trim end" aria-label="裁剪结尾" onPointerDown={event => begin(event, item, "trim-end", track)}/>}<div className={`nle-cut-line${tool === "cut" && cutCursor?.track === track.id && cutCursor.frame >= item.startFrame && cutCursor.frame <= item.startFrame + item.durationFrames ? " visible" : ""}`} style={{ left: ((cutCursor?.frame ?? item.startFrame) - item.startFrame) * pixels }}/>
             </div>; })}
-            {composition.transitions.flatMap(transition => {
+            {scene.transitions.flatMap(transition => {
               const outgoing = sceneItems.get(transition.outgoing), incoming = sceneItems.get(transition.incoming);
               if (outgoing?.track !== track.id || incoming === undefined) return [];
               const start = incoming.startFrame, end = outgoing.startFrame + outgoing.durationFrames;

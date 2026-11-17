@@ -29,9 +29,10 @@ edits/main.nle-view.json` when durable View state is wanted. Without it, the Pro
 View from the Project's root Composition. `--port` selects the loopback listener; port `0` asks the operating system
 for an available port. The service always binds to `127.0.0.1`.
 
-Current production behavior opens and projects Project/View state, renders the finite Timeline, Canvas and Inspector,
-accepts guarded commands, explicitly saves or reloads owner documents, imports local browser files, projects the
-shared Media catalog and exposes delivery Actions when an `HtmlVideoExecutor` is injected by the distribution.
+Current production behavior opens a finite Product projection, renders the Timeline, Canvas and Inspector, accepts
+guarded commands, explicitly saves or reloads owner documents, imports local browser files, projects the shared Media
+catalog and exposes delivery Actions when an `HtmlVideoExecutor` is injected by the distribution. `POST /api/observe`
+selects one finite projection. Mutations return compact receipts, and the browser rereads only invalidated projections.
 Audiovisual preview remains unavailable until a preview Executor port is supplied.
 
 Available entries in the browser Media bin can be placed at the current playhead. The client chooses a compatible
@@ -70,8 +71,8 @@ are independent operations.
 
 `POST api/deliveries` starts one export of the document already opened by the Product Session. `GET
 api/deliveries/:handle` observes its project-local Action and `DELETE api/deliveries/:handle` cancels it. The default
-Node distributions inject one shared local HTML Video Executor; these routes call the NLE Delivery Service directly
-and do not register FFmpeg, Chromium or the Action in the AIGC Execution Directory. The standalone server accepts
+Node distributions inject one shared local HTML Video Executor; these routes call the NLE Delivery Service directly,
+whose Action owns its FFmpeg and Chromium children. The standalone server accepts
 `HYPIT_FFMPEG_PATH`, `HYPIT_FFPROBE_PATH`, `HYPIT_CHROME_PATH` and `HYPIT_ELECTRON_PATH` for explicit executable
 selection and otherwise uses the local implementations' ordinary defaults.
 

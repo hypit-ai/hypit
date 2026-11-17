@@ -48,16 +48,16 @@ ApplicationHost
    └─ selected project Capability Invocation clients
 ```
 
-当前 ApplicationHost、ProjectHost、Product Session 注册和 Session 路由已经成立。NLE Studio 当前公开一个
-完整 Session observation、通用 Surface command、若干物化方法、保存、重载和资源读取。主要缺口是：
+当前 ApplicationHost、ProjectHost、Product Session 注册和 Session 路由已经成立。NLE Studio 当前公开有限
+`observe(request)`、compact mutation receipt、通用 Surface command、若干物化方法、保存、重载和资源读取。
+`open` 只包含首屏有限投影；Timeline observation 显式投影 Composition 导航、关系、信号存在性和 Product
+后端解析的 Item-to-Media identity。主要缺口是：
 
-- Product Session 尚无统一的 `observe(request)` 与 `operate(operation)` 契约；
+- Product Session 尚无统一的 `operate(operation)` 契约；
 - Timeline 最终落点、兼容轨道、补轨和多选分配仍由浏览器规划；
-- mutation 返回整个 Session，而不是 compact receipt 与 projection invalidation；
 - Owner Service 已有进程内订阅，但 Application、Project、Product 和 Action 事件尚未投影给调用者；
 - AIGC Execution Directory 已能注册 Provider/model Environment 并打开 Project client；影音与 Media Action
-  由 Product/owner Service 投影各自注入的 specialized Executor；
-- 当前 Session observation 仍携带完整 Project 与 View snapshot，浏览器因此能够绕过有限投影重新解释作者事实。
+  由 Product/owner Service 投影各自注入的 specialized Executor。
 
 ## 总览
 
@@ -75,7 +75,7 @@ ApplicationHost
 | 文字和字幕 | package Component、Shared Value、NLE materialization | 标量与稳定 collection Inspector、字幕内部时间和共享样式编辑已有；Media 输入绑定与字幕导入缺失 |
 | 声音 | NLE Audio Process、Reconstruction | 表达基础已有；缺标准处理 package、产品操作和执行路径 |
 | 播放和导出 | Audiovisual Executor | NLE 到 AVIR lowering 与 Export Action 已有；Preview Action 缺失 |
-| 保存和撤销 | NLE Project/View Services、Owner Providers | revision、事务、历史和显式保存已有；事件与紧凑 receipt 未闭合 |
+| 保存和撤销 | NLE Project/View Services、Owner Providers | revision、事务、历史、显式保存与 compact receipt 已有；事件未闭合 |
 
 ## 1. 文件和媒体显示
 
@@ -259,7 +259,7 @@ Preview 与 Export 消费同一 accepted Project revision、NLE-to-AVIR lowering
 | revision 冲突 | Owner Services | Project 与 View 分别检查 expected revision；Surface 对跨 Owner 依赖操作同时检查两者 | **已具备** |
 | undo/redo | Owner Services | Project 与 View 有独立历史；新 transaction 清空对应 redo 分支 | **已具备** |
 | Session 状态恢复 | Product Session | selection、playhead、zoom 和 pointer draft 当前在浏览器；不属于 Project/View undo | **产品缺口**仅限产品体验，不进入作者历史 |
-| compact receipt | Product Session | Editing Surface 已生成 changed/invalidated receipt；Studio route 当前丢弃它并返回完整 Session | **产品缺口** |
+| compact receipt | Product Session | Studio command、物化、Media import、save 和 reload 均返回 status、changed、invalidated 与有限 result；浏览器按 invalidation 重读有限 observation | **已具备** |
 | change event | Application/Project/Product/Action event projection | Project、View 和 Media Service 有进程内 subscribe | **产品缺口**。尚无 SSE 或同等 Adapter 投影 |
 
 Project 时间保持精确有理值。View 的 edit rate 定义工作台帧网格，Studio Operation 在边界把帧位置转换为精确
@@ -274,11 +274,11 @@ Project 时间保持精确有理值。View 的 edit rate 定义工作台帧网�
 ```ts
 interface NleStudioProductSession {
   observe(request: NleStudioObservationRequest): Promise<NleStudioObservation>;
-  command(command: NleEditingSurfaceCommand): Promise<NleEditingSurfaceReceipt>;
+  command(command: NleEditingSurfaceCommand): Promise<NleStudioOperationReceipt>;
   operate(operation: NleStudioOperation): Promise<NleStudioOperationReceipt>;
   subscribe(listener: NleStudioEventListener): () => void;
-  save(): Promise<NleStudioObservation>;
-  reload(): Promise<NleStudioObservation>;
+  save(): Promise<NleStudioOperationReceipt>;
+  reload(): Promise<NleStudioOperationReceipt>;
   resource(token: string): ProjectHostResourceResolution;
   close(): void;
 }
@@ -357,14 +357,13 @@ POST       /api/reload
 
 ## 实现顺序
 
-1. 把 Product Session mutation 改为 compact receipt，并让浏览器按 invalidation 读取有限 Observation；
-2. 投影 Application、Project、Product Session 和 Action 事件；
-3. 实现 server-side Timeline drop，收回兼容轨道、锁、冲突、补轨和多选分配；
-4. 完成其余已有事实可支持的 Timeline、clipboard、Composition、Process 和 materialization Operations；
-5. 补 Component Media input bind/unbind、受限 Shared Value seeds 和 collection 行级有限操作；
-6. 接入 Media 派生视图与 NLE Preview，并把已有 Export Action 纳入统一观察事件；
-7. 建立标准 Picture Transform/Crop、Audio Gain/Envelope、preserve-pitch package，并开放对应 package authoring 与产品 Operations；完成 freeze 与 magnetic product planners；
-8. 补完 `text-fine`、`caption-fine` 和 `ranking` 尚缺的物化、Media 绑定、poster 与真实 preview 验收。
+1. 投影 Application、Project、Product Session 和 Action 事件；
+2. 实现 server-side Timeline drop，收回兼容轨道、锁、冲突、补轨和多选分配；
+3. 完成其余已有事实可支持的 Timeline、clipboard、Composition、Process 和 materialization Operations；
+4. 补 Component Media input bind/unbind、受限 Shared Value seeds 和 collection 行级有限操作；
+5. 接入 Media 派生视图与 NLE Preview，并把已有 Export Action 纳入统一观察事件；
+6. 建立标准 Picture Transform/Crop、Audio Gain/Envelope、preserve-pitch package，并开放对应 package authoring 与产品 Operations；完成 freeze 与 magnetic product planners；
+7. 补完 `text-fine`、`caption-fine` 和 `ranking` 尚缺的物化、Media 绑定、poster 与真实 preview 验收。
 
 ## 闭合标准
 

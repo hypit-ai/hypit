@@ -265,10 +265,10 @@ Its stable application contract is grouped by meaning instead of one route for e
 ```ts
 interface NleStudioProductSession {
   observe(request: NleStudioObservationRequest): Promise<NleStudioObservation>;
-  command(command: NleEditingSurfaceCommand): Promise<NleEditingSurfaceReceipt>;
+  command(command: NleEditingSurfaceCommand): Promise<NleStudioOperationReceipt>;
   operate(operation: NleStudioOperation): Promise<NleStudioOperationReceipt>;
-  save(): Promise<NleStudioObservation>;
-  reload(): Promise<NleStudioObservation>;
+  save(): Promise<NleStudioOperationReceipt>;
+  reload(): Promise<NleStudioOperationReceipt>;
   resource(token: string): ProjectHostResourceResolution;
   close(): void;
 }

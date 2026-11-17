@@ -109,6 +109,8 @@ export type NleTimelineSceneItem = {
   readonly track: string;
   readonly role: "present" | "adjust";
   readonly source: "media" | "component" | "composition" | "adjust";
+  readonly signals: { readonly picture: boolean; readonly audio: boolean };
+  readonly nestedComposition?: string;
   readonly enabled: boolean;
   readonly startFrame: number;
   readonly durationFrames: number;
@@ -141,6 +143,13 @@ export type NleTimelineScene = {
   readonly composition: string;
   readonly editRate: TemporalRate;
   readonly groups: readonly NleEditGroup[];
+  readonly transitions: readonly {
+    readonly id: string;
+    readonly outgoing: string;
+    readonly incoming: string;
+    readonly operator: import("@hypit/audiovisual").PackageSymbol;
+  }[];
+  readonly mattes: readonly { readonly id: string; readonly content: string; readonly matte: string }[];
   readonly tracks: readonly NleTimelineSceneTrack[];
   readonly maximumFrame: number;
 };

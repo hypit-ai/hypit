@@ -1,5 +1,12 @@
-import type { NleEditingSurfaceCommand, NleEditingSurfaceOpen } from "@hypit/nle/surface";
-import type { NleInspectorScene } from "@hypit/nle/view";
+import type {
+  NleEditingSurfaceCommand,
+  NleEditingSurfaceStatus,
+} from "@hypit/nle/surface";
+import type {
+  NleCanvasScene,
+  NleInspectorScene,
+  NleTimelineScene,
+} from "@hypit/nle/view";
 import type { NlePictureLayout } from "@hypit/nle";
 import type { HtmlVideoDeliveryProfile, HtmlVideoRenderer } from "@hypit/html-video";
 import type { MediaResource } from "@hypit/media";
@@ -53,16 +60,65 @@ export type NleStudioPreviewProjection =
 
 export type NleStudioDeliveryProjection = { readonly state: "available" | "unavailable" };
 
-export type NleStudioSession = {
-  readonly projectDocument: { readonly path: string };
+export type NleStudioTimelineProjection = {
+  readonly scene: NleTimelineScene;
+  readonly compositions: readonly { readonly id: string; readonly name: string }[];
+  /** Active-Composition Media Items resolved to Project Media Catalog identities by the Product backend. */
+  readonly itemMedia: readonly { readonly item: string; readonly media: string }[];
+};
+
+/** Complete finite projection used to open one NLE Studio Product Session. */
+export type NleStudioOpenProjection = {
+  readonly project: { readonly name: string; readonly document: string };
   readonly viewDocument:
     | { readonly persistence: "session" }
     | { readonly persistence: "document"; readonly path: string };
-  readonly open: NleEditingSurfaceOpen;
+  readonly status: NleEditingSurfaceStatus;
+  readonly timeline: NleStudioTimelineProjection;
+  readonly canvas: NleCanvasScene;
   readonly media: NleStudioMediaProjection;
   readonly catalog: NleStudioCatalogProjection;
   readonly preview: NleStudioPreviewProjection;
   readonly delivery: NleStudioDeliveryProjection;
+};
+
+export type NleStudioObservationRequest =
+  | { readonly kind: "open" }
+  | { readonly kind: "status" }
+  | { readonly kind: "timeline" }
+  | { readonly kind: "canvas" }
+  | { readonly kind: "inspector"; readonly item: string }
+  | { readonly kind: "media" }
+  | { readonly kind: "catalog" }
+  | { readonly kind: "preview" }
+  | { readonly kind: "delivery" };
+
+export type NleStudioObservation =
+  | { readonly kind: "open"; readonly value: NleStudioOpenProjection }
+  | { readonly kind: "status"; readonly value: NleEditingSurfaceStatus }
+  | { readonly kind: "timeline"; readonly value: NleStudioTimelineProjection }
+  | { readonly kind: "canvas"; readonly value: NleCanvasScene }
+  | { readonly kind: "inspector"; readonly value: NleInspectorScene }
+  | { readonly kind: "media"; readonly value: NleStudioMediaProjection }
+  | { readonly kind: "catalog"; readonly value: NleStudioCatalogProjection }
+  | { readonly kind: "preview"; readonly value: NleStudioPreviewProjection }
+  | { readonly kind: "delivery"; readonly value: NleStudioDeliveryProjection };
+
+export type NleStudioInvalidation =
+  | "timeline"
+  | "canvas"
+  | "inspector"
+  | "media"
+  | "catalog"
+  | "preview"
+  | "delivery";
+
+export type NleStudioOperationReceipt = {
+  readonly operation: string;
+  readonly status: NleEditingSurfaceStatus;
+  readonly changed: { readonly project: boolean; readonly view: boolean };
+  readonly invalidated: readonly NleStudioInvalidation[];
+  readonly result?: Readonly<Record<string, string | number | boolean>>;
 };
 
 export type NleStudioCommandRequest = {
@@ -116,14 +172,6 @@ export type NleStudioTransitionMaterializeRequest = {
   readonly outgoing: string;
   readonly incoming: string;
   readonly durationFrames?: number;
-};
-
-export type NleStudioInspectorRequest = {
-  readonly item: string;
-};
-
-export type NleStudioInspectorResponse = {
-  readonly inspector: NleInspectorScene;
 };
 
 /** One explicit export of the NLE document already opened by this Product Session. */

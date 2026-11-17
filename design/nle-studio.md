@@ -87,9 +87,17 @@ ownership transaction or its UI.
 
 ## Local protocol and persistence
 
-The loopback server serves the client and same-origin JSON operations for session observation, guarded Surface
-commands, Inspector projection, save and reload. The protocol is a product adapter and carries no persistent format
-marker or independent revision. Project and View revisions remain visible and separate.
+The loopback server serves the client and same-origin JSON operations for finite observation, guarded Surface commands,
+save and reload. `POST /api/observe` accepts the Product Session's finite observation union. Initial `open` contains
+status, Timeline, Canvas, Composition navigation, Item-to-Media projection, Media, Catalog, Preview and delivery
+availability without embedding either complete owner document. Inspector is another keyed observation. The protocol is a product
+adapter and carries no persistent format marker or independent revision. Project and View revisions remain visible
+and separate.
+
+Every accepted mutation returns one compact receipt containing current owner status, changed owners, invalidated
+projection names and an optional result address. The browser retains unaffected projections and rereads only the
+invalidated Timeline, Canvas, Media, Catalog, Preview or delivery observation. Inspector is reread only for the
+selected Item when invalidated.
 
 `POST api/deliveries` starts an export of the session's already selected NLE Project document through the injected
 Delivery Service. `GET api/deliveries/:handle` observes it and `DELETE api/deliveries/:handle` requests cancellation.
@@ -99,8 +107,8 @@ Within the Product Session mount, `POST api/media/import?name=...` carries one r
 streams it to an invocation-local temporary file, calls the Node Project Media Service's adoption Action with bounded
 container-index inspection, then
 removes the temporary file. Multiple selected files are separate sequential requests. The route returns the refreshed
-Studio session, while Media identity remains the resulting project-relative Media Asset manifest path. This transport
-does not place the accepted Media into the NLE document.
+Media identity in its receipt and invalidates the Media projection. Media identity remains the resulting
+project-relative Media Asset manifest path. This transport does not place the accepted Media into the NLE document.
 
 Saving asks the selected Owner Provider to serialize each dirty owner snapshot, atomically replace its selected file
 and mark that exact Service revision saved only after the write succeeds. Reload is an explicit user or caller

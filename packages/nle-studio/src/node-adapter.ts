@@ -13,9 +13,9 @@ import type {
   NleStudioCommandRequest,
   NleStudioComponentMaterializeRequest,
   NleStudioDeliveryStartRequest,
-  NleStudioInspectorRequest,
   NleStudioMediaPlaceRequest,
-  NleStudioSession,
+  NleStudioObservationRequest,
+  NleStudioOperationReceipt,
   NleStudioTransitionMaterializeRequest,
 } from "./protocol.js";
 
@@ -33,6 +33,26 @@ async function jsonBody(request: IncomingMessage): Promise<unknown> {
   } catch {
     throw new Error("NLE Studio request body must be JSON.");
   }
+}
+
+function observationRequest(value: unknown): NleStudioObservationRequest {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("NLE Studio observation request must be an object.");
+  }
+  const request = value as { readonly kind?: unknown; readonly item?: unknown };
+  const keys = Object.keys(value);
+  if (request.kind === "inspector") {
+    if (keys.some((key) => key !== "kind" && key !== "item") || typeof request.item !== "string"
+      || request.item.length === 0) {
+      throw new Error("NLE Studio Inspector observation requires one Item id.");
+    }
+    return { kind: "inspector", item: request.item };
+  }
+  const kinds = new Set(["open", "status", "timeline", "canvas", "media", "catalog", "preview", "delivery"]);
+  if (keys.length !== 1 || typeof request.kind !== "string" || !kinds.has(request.kind)) {
+    throw new Error("NLE Studio observation kind is invalid.");
+  }
+  return { kind: request.kind as Exclude<NleStudioObservationRequest["kind"], "inspector"> };
 }
 
 function sendJson(response: ServerResponse, status: number, value: unknown): void {
@@ -153,7 +173,7 @@ async function receiveMediaFile(
   studio: NleStudioProductSession,
   request: IncomingMessage,
   name: string,
-): Promise<NleStudioSession> {
+): Promise<NleStudioOperationReceipt> {
   if (name.length === 0) throw new Error("NLE Studio Media import requires a filename.");
   const directory = await mkdtemp(join(tmpdir(), "hypit-media-upload-"));
   const source = join(directory, "source");
@@ -175,8 +195,8 @@ export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
     }
     const studio = session;
     try {
-      if (request.method === "GET" && pathname === "/api/session") {
-        sendJson(response, 200, await studio.observe());
+      if (request.method === "POST" && pathname === "/api/observe") {
+        sendJson(response, 200, await studio.observe(observationRequest(await jsonBody(request))));
         return true;
       }
       if (request.method === "POST" && pathname === "/api/command") {
@@ -208,12 +228,6 @@ export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
         sendJson(response, 200, await studio.materializeTransition(
           await jsonBody(request) as NleStudioTransitionMaterializeRequest,
         ));
-        return true;
-      }
-      if (request.method === "POST" && pathname === "/api/inspector") {
-        const body = await jsonBody(request) as NleStudioInspectorRequest;
-        if (typeof body.item !== "string") throw new Error("NLE Studio Inspector requires an Item id.");
-        sendJson(response, 200, studio.inspector(body.item));
         return true;
       }
       if (request.method === "POST" && pathname === "/api/deliveries") {
