@@ -1,6 +1,7 @@
 import type { NleTimelineScene, NleTimelineSceneItem, NleTimelineSceneTrack } from "@hypit/nle/view";
 import { useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
 import { labelWidth, rulerHeight } from "./timelineGeometry.js";
+import { linkedSelection } from "./selection.js";
 
 export type ItemTrackAddition = {
   readonly id: string;
@@ -41,21 +42,6 @@ function itemKind(item: NleTimelineSceneItem, track: NleTimelineSceneTrack): Flo
   return item.display.layers.some((layer) => layer.kind === "text") ? "text" : "visual";
 }
 
-function relatedItems(scene: NleTimelineScene, seeds: readonly string[]): string[] {
-  const result = new Set(seeds);
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const group of scene.groups) {
-      if (!group.items.some((id) => result.has(id))) continue;
-      for (const id of group.items) {
-        if (!result.has(id)) { result.add(id); changed = true; }
-      }
-    }
-  }
-  return [...result];
-}
-
 function overlaps(item: NleTimelineSceneItem, start: number, duration: number): boolean {
   return start < item.startFrame + item.durationFrames && item.startFrame < start + duration;
 }
@@ -83,15 +69,15 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
   const start = (event: PointerEvent<HTMLElement>, item: NleTimelineSceneItem, track: NleTimelineSceneTrack) => {
     const viewport = scroller.current;
     if (!viewport || busy || event.button !== 0 || track.locked || !item.affordances.move) return;
-    const clicked = relatedItems(scene, [item.id]);
+    const clicked = linkedSelection(scene, [item.id]);
     if (event.metaKey || event.ctrlKey) {
       event.preventDefault(); event.stopPropagation();
       onSelect(selection.includes(item.id)
         ? selection.filter((id) => !clicked.includes(id))
-        : relatedItems(scene, [...selection, ...clicked]));
+        : linkedSelection(scene, [...selection, ...clicked]));
       return;
     }
-    const ids = new Set(relatedItems(scene, selection.includes(item.id) ? selection : clicked));
+    const ids = new Set(linkedSelection(scene, selection.includes(item.id) ? selection : clicked));
     const members = scene.tracks.flatMap((row) => row.items
       .filter((candidate) => ids.has(candidate.id))
       .map((candidate) => ({ item: candidate, track: row })));
@@ -116,15 +102,16 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
 
     const locate = () => {
       if (!active) return;
-      let delta = Math.max(minimum, Math.round((pointer.x - startX + viewport.scrollLeft - scrollLeft) / pixels));
+      const rawDelta = Math.max(minimum, Math.round((pointer.x - startX + viewport.scrollLeft - scrollLeft) / pixels));
+      let delta = rawDelta;
       let aligned: number | undefined;
       if (snap && !pointer.alt) {
         let best = Infinity;
         for (const edge of members.flatMap((member) => [member.item.startFrame, member.item.startFrame + member.item.durationFrames])) {
           for (const boundary of boundaries) {
-            const correction = boundary - (edge + delta);
-            if (Math.abs(correction * pixels) <= 7 && Math.abs(correction) < best && delta + correction >= minimum) {
-              best = Math.abs(correction); aligned = boundary; delta += correction;
+            const correction = boundary - (edge + rawDelta);
+            if (Math.abs(correction * pixels) <= 7 && Math.abs(correction) < best && rawDelta + correction >= minimum) {
+              best = Math.abs(correction); aligned = boundary; delta = rawDelta + correction;
             }
           }
         }
