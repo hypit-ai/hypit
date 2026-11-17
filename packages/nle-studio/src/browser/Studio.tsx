@@ -23,7 +23,7 @@ import {
   saveSession,
   sendCommand,
 } from "./api.js";
-import { CanvasControls } from "./CanvasControls.js";
+import { CanvasControls, type CanvasDraft } from "./CanvasControls.js";
 import { IconButton } from "./common.js";
 import { Inspector } from "./Inspector.js";
 import { PanelResizeHandle, defaultPanelWidths, type PanelSide } from "./PanelResizeHandle.js";
@@ -90,6 +90,7 @@ export function Studio() {
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [panelWidths, setPanelWidths] = useState(readPanelWidths);
   const [source, setSource] = useState<NleStudioMediaEntry>();
+  const [canvasDraft, setCanvasDraft] = useState<CanvasDraft>();
   const workspace = useRef<HTMLDivElement>(null);
   const placeFromDrag = useRef<(drop: MediaDrop) => void>(() => undefined);
   const selectFromDrag = useRef<(entry: NleStudioMediaEntry) => void>(() => undefined);
@@ -145,7 +146,7 @@ export function Studio() {
     return () => { disposed = true; };
   }, [selection[0], session?.open.status.projectRevision, session?.open.status.viewRevision, busy]);
 
-  const command = useCallback((value: NleEditingSurfaceCommand, afterSelection?: readonly string[]) => void perform(async () => {
+  const command = useCallback((value: NleEditingSurfaceCommand, afterSelection?: readonly string[]) => perform(async () => {
     const next = await sendCommand(value, session?.open.status.viewRevision);
     setSession(next);
     setSelection(previous => (afterSelection ?? previous).filter(id => next.open.timeline.tracks.some(track => track.items.some(item => item.id === id))));
@@ -450,8 +451,8 @@ export function Studio() {
         <section className="nle-monitor"><div className="nle-panel-header nle-monitor-title"><span>{projectName}</span><IconButton label={previewExpanded ? "恢复预览" : "放大预览"} onClick={() => setPreviewExpanded(value => !value)}>{previewExpanded ? <Minimize2 size={15}/> : <Maximize2 size={15}/>}</IconButton></div>
           <SourcePreview entry={source} fps={fps} muted={muted} onMute={() => setMuted(value => !value)} onClose={() => setSource(undefined)}/><div className="nle-stage"><div className="nle-editable-preview" style={{ "--canvas-ratio": session.open.canvas.canvas.width / session.open.canvas.canvas.height } as React.CSSProperties}><div className="studio-canvas">
             {session.preview.state === "ready" && <img className="studio-preview-frame" src={session.preview.resource}/>}
-            {session.preview.state !== "ready" && session.open.canvas.layers.filter(layer => activeItems.has(layer.id) && layer.layout !== undefined).map(layer => { const layout = layer.layout!; const canvas = session.open.canvas.canvas; const media = mediaForItem(layer.id); return <button type="button" key={layer.id} className={`studio-canvas-layer${selection.includes(layer.id) ? " selected" : ""}`} onClick={() => select([layer.id])} style={{ left: `${layout.x / canvas.width * 100}%`, top: `${layout.y / canvas.height * 100}%`, width: `${layout.width / canvas.width * 100}%`, height: `${layout.height / canvas.height * 100}%` }}>{media?.resource && media.mediaType?.startsWith("image/") ? <img src={media.resource} style={{ objectFit: layout.fit }}/> : media?.resource && media.mediaType?.startsWith("video/") ? <video src={media.resource} muted playsInline style={{ objectFit: layout.fit }}/> : undefined}<span>{layer.title}</span></button>; })}
-            {session.preview.state !== "ready" && <CanvasControls scene={session.open.canvas} active={activeItems} selection={selection} disabled={busy} onSelect={select}
+            {session.preview.state !== "ready" && session.open.canvas.layers.filter(layer => activeItems.has(layer.id) && layer.layout !== undefined).map(layer => { const layout = canvasDraft?.id === layer.id ? { ...layer.layout!, ...canvasDraft.frame } : layer.layout!; const canvas = session.open.canvas.canvas; const media = mediaForItem(layer.id); return <button type="button" key={layer.id} className="studio-canvas-layer" aria-label={layer.title} onClick={() => select([layer.id])} style={{ left: `${layout.x / canvas.width * 100}%`, top: `${layout.y / canvas.height * 100}%`, width: `${layout.width / canvas.width * 100}%`, height: `${layout.height / canvas.height * 100}%` }}>{media?.resource && media.mediaType?.startsWith("image/") ? <img src={media.resource} style={{ objectFit: layout.fit }}/> : media?.resource && media.mediaType?.startsWith("video/") ? <video src={media.resource} muted playsInline style={{ objectFit: layout.fit }}/> : undefined}</button>; })}
+            {session.preview.state !== "ready" && <CanvasControls scene={session.open.canvas} active={activeItems} selection={selection} disabled={busy} draft={canvasDraft} onDraft={setCanvasDraft} onSelect={select}
               onTranslate={(item, deltaX, deltaY) => command({ kind: "spatial.edit", expectedProjectRevision: session.open.status.projectRevision, expectedViewRevision: session.open.status.viewRevision, item, edit: { kind: "frame.translate", deltaX, deltaY } })}
               onResize={(item, next) => command({ kind: "spatial.edit", expectedProjectRevision: session.open.status.projectRevision, expectedViewRevision: session.open.status.viewRevision, item, edit: { kind: "frame.resize", frame: next } })}/>}
             {session.preview.state !== "ready" && <small className="studio-preview-state">剪辑布局</small>}
