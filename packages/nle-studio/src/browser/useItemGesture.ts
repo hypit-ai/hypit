@@ -32,6 +32,7 @@ export type ItemGestureState = {
   readonly floating: readonly FloatingItem[];
   readonly insertionTop?: number;
   readonly snapFrame?: number;
+  readonly dropTrack?: string;
   readonly valid: boolean;
 };
 
@@ -199,7 +200,9 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
       proposed = valid ? { ids: [...ids], deltaFrames: delta,
         destinations: [...destinations].filter(([id, destination]) => members.find((member) => member.item.id === id)?.track.id !== destination)
           .map(([movedItem, destination]) => ({ item: movedItem, track: destination })), additions } : undefined;
-      setGesture({ ids: [...ids], floating, valid, ...(insertionTop === undefined ? {} : { insertionTop }),
+      const dropTrack = valid && insertionIndex === undefined && destinations.get(item.id) === displayRows[targetIndex]?.id
+        ? displayRows[targetIndex]?.id : undefined;
+      setGesture({ ids: [...ids], floating, valid, ...(dropTrack === undefined ? {} : { dropTrack }), ...(insertionTop === undefined ? {} : { insertionTop }),
         ...(aligned === undefined ? {} : { snapFrame: aligned }) });
     };
 

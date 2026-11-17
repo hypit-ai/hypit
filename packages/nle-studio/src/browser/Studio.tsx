@@ -32,7 +32,7 @@ import { Timeline } from "./Timeline.js";
 import { timecode } from "./timecode.js";
 import { editableSelection, linkedSelection, selectionAtFrame } from "./selection.js";
 import { SourcePreview } from "./SourcePreview.js";
-import type { MediaDrop } from "./mediaDrag.js";
+import { mediaFitsTrack, type MediaDrop } from "./mediaDrag.js";
 import { copyItems, pasteItems, type ItemClipboard } from "./clipboard.js";
 import { useClipClipboard } from "./useClipClipboard.js";
 import { useAssetDrag } from "./useAssetDrag.js";
@@ -326,9 +326,7 @@ export function Studio() {
     const trackKind = entry.kind === "audio" ? "audio" : "picture";
     const durationFrames = entry.durationFrames ?? Math.max(1, Math.round(fps * 5));
     const atFrame = drop?.frame ?? frame;
-    const fits = (track: NleStudioSession["open"]["timeline"]["tracks"][number]) => track.kind === trackKind
-      && !track.locked && track.items.every(item => item.role !== "adjust"
-        && (atFrame + durationFrames <= item.startFrame || atFrame >= item.startFrame + item.durationFrames));
+    const fits = (track: NleStudioSession["open"]["timeline"]["tracks"][number]) => mediaFitsTrack(track, entry.kind, atFrame, durationFrames);
     let current = session;
     let destination = scene.tracks.find(track => track.id === drop?.track && fits(track)) ?? scene.tracks.find(track => fits(track));
     if (destination === undefined) {

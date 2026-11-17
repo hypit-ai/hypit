@@ -289,7 +289,10 @@
 .nle-track-label .icon-button { width: 22px; min-width: 22px; height: 22px; color: var(--text); }
 .nle-track-label .icon-button:hover:not(:disabled) { color: var(--text); }
 .nle-main-label { margin-left: 3px; padding: 0 4px; border: 1px dashed var(--nle-dashed); border-radius: 3px; color: var(--muted); font-size: 10px; line-height: 16px; white-space: nowrap; }
-.nle-track-content { position: relative; isolation: isolate; background: var(--nle-band); border-radius: 0; }
+.nle-track-content { position: relative; isolation: isolate; background: var(--nle-band); border-radius: 0; transition: background-color .12s; }
+.nle-track-content::after { content: ''; position: absolute; inset: 0; z-index: 5; box-shadow: inset 0 0 0 2px var(--pink); pointer-events: none; opacity: 0; transition: opacity .12s; }
+.nle-track.drop-target > .nle-track-label, .nle-track.drop-target > .nle-track-content { background: var(--pink-soft); }
+.nle-track.drop-target > .nle-track-content::after { opacity: 1; }
 .nle-track-space { flex: 1; min-height: 0; }
 .nle-timeline-empty { position: absolute; bottom: 0; display: flex; align-items: center; justify-content: center; padding: 16px; color: var(--muted); font-size: var(--font-size-caption); text-align: center; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .15s, visibility .15s; }
 .nle-timeline-empty.visible { opacity: 1; visibility: visible; }
