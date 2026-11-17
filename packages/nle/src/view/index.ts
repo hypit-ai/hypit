@@ -45,6 +45,8 @@ export {
   type NleOperatorTemporalAuthoring,
   type NleProcessAuthoringContext,
   type NleProcessAddress,
+  type NleTransitionAuthoring,
+  type NleTransitionAuthoringContext,
 } from "./authoring.js";
 export {
   allNleTimelineAffordances,
@@ -79,6 +81,7 @@ export {
   type NleInspectorComponentPresentation,
   type NleInspectorComponentValuePresentation,
   type NleInspectorOperatorPresentation,
+  type NleInspectorTransitionPresentation,
   type NleInspectorPresentationContribution,
   type NleInspectorPresentationHost,
 } from "./inspector.js";

@@ -16,10 +16,11 @@ export function studioFrameTime(frame: number, rate: TemporalRate): ExactTempora
   return { ticks: String(BigInt(frame) * BigInt(rate.denominator)), timeBase: { numerator: 1, denominator: rate.numerator } };
 }
 
-function relatedItems(composition: NleComposition, view: NleView, seeds: readonly string[]): Set<string> {
+function relatedItems(composition: NleComposition, view: NleView, seeds: readonly string[], exceptTransition?: string): Set<string> {
   const relations = [
     ...(nleViewCompositionState(view, composition.id)?.groups.map(group => group.items) ?? []),
-    ...composition.transitions.map(transition => [transition.outgoing, transition.incoming]),
+    ...composition.transitions.filter(transition => transition.id !== exceptTransition)
+      .map(transition => [transition.outgoing, transition.incoming]),
     ...composition.mattes.map(matte => [matte.content, matte.matte]),
   ];
   const selected = new Set(seeds);
@@ -40,6 +41,37 @@ function pictureCollision(item: NleItem, other: NleItem, delta: ExactTemporalVal
 }
 
 type ActiveTimeline = { readonly project: NleProject; readonly composition: NleComposition; readonly view: NleView };
+
+export function resolveTransitionCut(composition: NleComposition, trackId: string, at: ExactTemporalValue) {
+  const track = composition.tracks.find(track => track.id === trackId && track.kind === "picture");
+  const pictures = track?.items.filter(item => item.kind === "present" && item.enabled) ?? [];
+  const left = pictures.filter(item => compareExactTemporalValues(nleItemEnd(item), at) === 0);
+  const right = pictures.filter(item => compareExactTemporalValues(item.start, at) === 0);
+  if (left.length !== 1 || right.length !== 1) {
+    throw new Error(`NLE Studio Transition requires one Picture cut on Track ${trackId} at the selected frame.`);
+  }
+  return [left[0]!, right[0]!] as const;
+}
+
+export function planTransitionWindow(
+  { composition, view }: ActiveTimeline,
+  transition: NleComposition["transitions"][number],
+  duration: ExactTemporalValue,
+): readonly NleCommand[] {
+  const items = composition.tracks.flatMap(track => track.items);
+  const left = items.find(item => item.id === transition.outgoing)!;
+  const right = items.find(item => item.id === transition.incoming)!;
+  const delta = subtractExactTemporalValues(subtractExactTemporalValues(nleItemEnd(left), right.start), duration);
+  if (compareExactTemporalValues(delta, exactTemporalZero()) === 0) return [];
+  assertTransitionMove(composition, view, right.id, transition.id);
+  return [{ kind: "item.move", ids: [right.id], delta }];
+}
+
+export function assertTransitionMove(composition: NleComposition, view: NleView, incoming: string, transition?: string) {
+  if (relatedItems(composition, view, [incoming], transition).size > 1) {
+    throw new Error(`NLE Studio Transition cannot displace linked Item ${incoming}.`);
+  }
+}
 
 function timelineScope(composition: NleComposition, tracks: readonly string[]) {
   const ids = new Set(tracks);

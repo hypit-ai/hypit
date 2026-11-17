@@ -67,7 +67,10 @@ import {
   createNleStudioPackageBridge,
   type NleStudioPackageBridge,
 } from "./packages.js";
-import { allocateTimelinePlacement, planTimelineDrop, planTimelineEdit, planTimelineInsertion, studioFrameTime } from "./timeline-planning.js";
+import {
+  allocateTimelinePlacement, assertTransitionMove, planTimelineDrop, planTimelineEdit,
+  planTimelineInsertion, planTransitionWindow, resolveTransitionCut, studioFrameTime,
+} from "./timeline-planning.js";
 import { observeTimelineMedia } from "./timeline-media.js";
 import { NleStudioPreview } from "./preview.js";
 import { NleStudioMediaViews } from "./media-views.js";
@@ -588,6 +591,11 @@ export class NleStudioProductSession {
         if (observation.kind !== "inspector") throw new Error("NLE Studio received an invalid Inspector projection.");
         return { kind: "inspector", value: observation.value };
       }
+      case "transition-inspector": {
+        const observation = this.#surface.observe(request);
+        if (observation.kind !== request.kind) throw new Error("NLE Studio received an invalid Transition Inspector projection.");
+        return observation;
+      }
       case "component-inputs": return { kind: "component-inputs", value: this.#componentInputs(request.item) };
       case "clipboard": return { kind: "clipboard", value: this.#clipboardProjection() };
       case "media": return { kind: "media", value: await this.#projectMedia() };
@@ -916,9 +924,11 @@ export class NleStudioProductSession {
         if (offering === undefined) {
           throw new Error(`NLE Studio Transition offering ${operation.package}#${operation.offering} is not selected.`);
         }
-        const items = currentItems().filter(item => operation.items.includes(item.id))
-          .sort((left, right) => compareExactTemporalValues(left.start, right.start));
+        const items = "items" in operation ? currentItems().filter(item => operation.items.includes(item.id))
+          .sort((left, right) => compareExactTemporalValues(left.start, right.start))
+          : resolveTransitionCut(composition, operation.track, frameTime(operation.atFrame));
         if (items.length !== 2) throw new Error("NLE Studio Transition requires two Items in the active Composition.");
+        assertTransitionMove(composition, view, items[1]!.id);
         const transition = identity("transition");
         const materialization = createTransitionMaterialization(project, {
           id: transition, composition: composition.id, outgoing: items[0]!.id, incoming: items[1]!.id,
@@ -926,6 +936,25 @@ export class NleStudioProductSession {
           duration: duration ?? offering.value.duration,
         });
         return commit(materialization.commands, { transition });
+      }
+      case "transition.replace":
+      case "transition.resize":
+      case "transition.remove": {
+        const transition = composition.transitions.find(value => value.id === operation.transition);
+        if (transition === undefined) throw new Error(`Unknown NLE Transition ${operation.transition} in ${composition.id}.`);
+        const result = { transition: transition.id };
+        if (operation.kind === "transition.remove") return commit([{ kind: "transition.remove", id: transition.id }], result);
+        const timeCommands = duration === undefined ? [] : planTransitionWindow(context, transition, duration);
+        if (operation.kind === "transition.resize") return commit(timeCommands, result);
+        const offering = this.#packages.transition(operation.package, operation.offering);
+        if (offering === undefined) {
+          throw new Error(`NLE Studio Transition offering ${operation.package}#${operation.offering} is not selected.`);
+        }
+        return commit([...timeCommands, {
+          kind: "transition.replace", transition: {
+            ...transition, operator: offering.value.operator, parameters: offering.value.parameters,
+          },
+        }], result);
       }
       case "composition.materialize": {
         const source = project.compositions.find(entry => entry.id === operation.source);

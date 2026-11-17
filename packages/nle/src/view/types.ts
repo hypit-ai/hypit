@@ -283,6 +283,17 @@ export type NleInspectorScene = {
   readonly processes: readonly NleInspectorProcess[];
 };
 
+export type NleTransitionInspectorScene = {
+  readonly id: string;
+  readonly track: string;
+  readonly outgoing: string;
+  readonly incoming: string;
+  readonly durationFrames: number;
+  readonly operator: import("@hypit/audiovisual").PackageSymbol;
+  readonly editable: boolean;
+  readonly sections: readonly NleInspectorSection[];
+};
+
 export type NleInspectorProcess = {
   readonly medium: "picture" | "audio";
   readonly id: string;

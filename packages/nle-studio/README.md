@@ -62,6 +62,9 @@ authoring contributions.
 
 Process offerings attach to the compatible signal of a selected Present. The Inspector exposes each signal's order,
 enable state and available parameters. Callers can enable, move or remove an exact Process through `POST /api/operate`.
+Select a Timeline Transition to resize the overlap, edit available package fields or remove the relation. A
+Transition offering can replace the selected relation, or create a relation from two Items at a direct cut. API
+callers can also specify a Picture Track and a frame to identify the cut.
 
 Component packages may declare Media inputs dynamically from occurrence parameters. The Inspector presents
 compatible Project Media for each slot and submits a guarded bind or unbind. A Component materialization caller

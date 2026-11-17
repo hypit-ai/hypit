@@ -9,6 +9,7 @@ import type {
   NleTimelineItemCapabilities,
   NleTimelineItemObservation,
   NleTimelineScene,
+  NleTransitionInspectorScene,
   NleViewCommand,
   NleViewServiceSnapshot,
 } from "../view/index.js";
@@ -38,6 +39,7 @@ export type NleEditingSurfaceObservationRequest =
   | { readonly kind: "open"; readonly observations?: readonly NleTimelineItemObservation[] }
   | { readonly kind: "timeline"; readonly observations?: readonly NleTimelineItemObservation[] }
   | { readonly kind: "canvas"; readonly observations?: readonly NleTimelineItemObservation[] }
+  | { readonly kind: "transition-inspector"; readonly transition: string }
   | {
       readonly kind: "inspector";
       readonly item: string;
@@ -49,6 +51,7 @@ export type NleEditingSurfaceObservation =
   | { readonly kind: "open"; readonly value: NleEditingSurfaceOpen }
   | { readonly kind: "timeline"; readonly value: NleTimelineScene }
   | { readonly kind: "canvas"; readonly value: NleCanvasScene }
+  | { readonly kind: "transition-inspector"; readonly value: NleTransitionInspectorScene }
   | { readonly kind: "inspector"; readonly value: NleInspectorScene };
 
 type ProjectAndViewRevision = {
@@ -79,6 +82,13 @@ export type NleEditingSurfaceCommand =
       readonly collection: string;
       readonly row: string;
       readonly action: string;
+    })
+  | (ProjectAndViewRevision & {
+      readonly kind: "transition-inspector.edit";
+      readonly transition: string;
+      readonly section: string;
+      readonly field: string;
+      readonly value: string | number | boolean;
     })
   | (ProjectAndViewRevision & {
       readonly kind: "spatial.edit";

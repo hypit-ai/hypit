@@ -7,6 +7,7 @@ import type {
   NleComponentMediaInput,
   NleInspectorScene,
   NleTimelineScene,
+  NleTransitionInspectorScene,
 } from "@hypit/nle/view";
 import type { HtmlVideoDeliveryProfile, HtmlVideoRenderer } from "@hypit/html-video";
 import type { NlePictureLayout } from "@hypit/nle";
@@ -124,6 +125,7 @@ export type NleStudioObservationRequest =
   | NleStudioTimelineMediaRequest
   | { readonly kind: "canvas" }
   | { readonly kind: "inspector"; readonly item: string }
+  | { readonly kind: "transition-inspector"; readonly transition: string }
   | { readonly kind: "component-inputs"; readonly item: string }
   | { readonly kind: "media" }
   | { readonly kind: "catalog" }
@@ -140,6 +142,7 @@ export type NleStudioObservation =
   | { readonly kind: "timeline-media"; readonly value: readonly NleStudioTimelineMediaView[] }
   | { readonly kind: "canvas"; readonly value: NleCanvasScene }
   | { readonly kind: "inspector"; readonly value: NleInspectorScene }
+  | { readonly kind: "transition-inspector"; readonly value: NleTransitionInspectorScene }
   | { readonly kind: "component-inputs"; readonly value: NleStudioComponentInputsProjection }
   | { readonly kind: "media"; readonly value: NleStudioMediaProjection }
   | { readonly kind: "catalog"; readonly value: NleStudioCatalogProjection }
@@ -250,9 +253,18 @@ export type NleStudioOperation =
   | (NleStudioCompositionOperation & NleStudioProcessEdit)
   | (NleStudioCompositionOperation & NleStudioOfferingReference & {
       readonly kind: "transition.materialize";
-      readonly items: readonly [string, string];
       readonly durationFrames?: number;
+    } & (
+      | { readonly items: readonly [string, string] }
+      | { readonly track: string; readonly atFrame: number }
+    ))
+  | (NleStudioCompositionOperation & NleStudioOfferingReference & {
+      readonly kind: "transition.replace"; readonly transition: string; readonly durationFrames?: number;
     })
+  | (NleStudioCompositionOperation & {
+      readonly kind: "transition.resize"; readonly transition: string; readonly durationFrames: number;
+    })
+  | (NleStudioCompositionOperation & { readonly kind: "transition.remove"; readonly transition: string })
   | (NleStudioPresentPlacement & {
       readonly kind: "composition.materialize";
       readonly source: string;

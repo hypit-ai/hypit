@@ -200,10 +200,13 @@ export class NleEditingSurface {
   observe(request: NleEditingSurfaceObservationRequest): NleEditingSurfaceObservation {
     this.#assertOpen();
     if (request.kind === "status") return { kind: "status", value: this.status() };
-    const extra = request.observations ?? [];
+    const extra = "observations" in request ? request.observations ?? [] : [];
     if (request.kind === "open") return { kind: "open", value: this.#open(extra) };
     const project = this.#projectService.snapshot().project;
     const view = this.#projectionView(project, this.#viewService.snapshot().view);
+    if (request.kind === "transition-inspector") {
+      return { kind: request.kind, value: this.#inspector.transitionScene(project, view, request.transition) };
+    }
     const observations = this.#observations(project, view, extra);
     if (request.kind === "timeline") {
       const capabilities = resolveNleTimelineItemCapabilities(project, view, this.#options.authoring);
@@ -261,13 +264,15 @@ export class NleEditingSurface {
         }, this.#projectService.snapshot().project);
         return this.#receipt({ project: false, view: true }, ["timeline", "canvas", "inspector"]);
       case "inspector.edit":
+      case "transition-inspector.edit":
       case "inspector.invoke": {
         this.#requireRevisions(command.expectedProjectRevision, command.expectedViewRevision);
         const project = this.#projectService.snapshot().project;
         const view = this.#viewService.snapshot().view;
         const transaction = command.kind === "inspector.edit"
           ? this.#inspector.planEdit(project, view, command.item, command.section, command.field, command.value)
-          : this.#inspector.planRowAction(project, view, command.item, command);
+          : command.kind === "inspector.invoke" ? this.#inspector.planRowAction(project, view, command.item, command)
+            : this.#inspector.planTransitionEdit(project, view, command.transition, command.section, command.field, command.value);
         assertNleViewAllowsProjectTransaction(view, project, transaction);
         this.#projectService.transact({
           expectedRevision: command.expectedProjectRevision,

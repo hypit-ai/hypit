@@ -18,6 +18,7 @@ import {
   operate,
   readInspector,
   readOpen,
+  readTransitionInspector,
   refreshOpen,
   reloadSession,
   saveSession,
@@ -25,7 +26,7 @@ import {
 } from "./api.js";
 import { CanvasControls } from "./CanvasControls.js";
 import { IconButton } from "./common.js";
-import { Inspector } from "./Inspector.js";
+import { Inspector, TransitionInspector } from "./Inspector.js";
 import { PanelResizeHandle, defaultPanelWidths, type PanelSide } from "./PanelResizeHandle.js";
 import { StudioBin, type BinTab } from "./StudioBin.js";
 import { Timeline } from "./Timeline.js";
@@ -48,6 +49,7 @@ export function Studio() {
   const [busy, setBusy] = useState(false);
   const [selection, setSelection] = useState<readonly string[]>([]);
   const [inspector, setInspector] = useState<Awaited<ReturnType<typeof readInspector>>>();
+  const [transitionInspector, setTransitionInspector] = useState<Awaited<ReturnType<typeof readTransitionInspector>>>();
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [previewFrom, setPreviewFrom] = useState(0);
@@ -59,12 +61,27 @@ export function Studio() {
   const selectionRef = useRef<readonly string[]>([]);
   const work = useRef<Promise<void>>(Promise.resolve());
   const busyRef = useRef(false);
+  const activeTransition = selection.length === 2 ? session?.timeline.scene.transitions.find(value =>
+    selection.includes(value.outgoing) && selection.includes(value.incoming))?.id : undefined;
+  const projectRevision = session?.status.projectRevision;
+  const viewRevision = session?.status.viewRevision;
   const preview = usePreview({
     session, atFrame: previewFrom, playing,
     blocked: busy || session?.status.viewCompatibility === "stale",
   });
 
   useEffect(() => { if (!playing) setPreviewFrom(frame); }, [frame, playing]);
+  useEffect(() => {
+    setTransitionInspector(undefined);
+    if (activeTransition === undefined) return;
+    let active = true;
+    void readTransitionInspector(activeTransition).then(value => {
+      if (active) setTransitionInspector(value);
+    }).catch((error: unknown) => {
+      if (active) setFailure(error instanceof Error ? error.message : String(error));
+    });
+    return () => { active = false; };
+  }, [activeTransition, projectRevision, viewRevision]);
 
   const storeSession = useCallback((next: NleStudioOpenProjection) => {
     sessionRef.current = next;
@@ -322,10 +339,10 @@ export function Studio() {
   });
   const materializeSelectedTransition = (entry: NleStudioTransitionCatalogEntry) => void perform(async () => {
     if (selection.length !== 2) throw new Error("添加转场前需要选择两个直接相接的片段。");
-    await acceptReceipt(await operate({
-      ...operationContext, kind: "transition.materialize", package: entry.package, offering: entry.offering,
-      items: [selection[0]!, selection[1]!],
-    }));
+    const offering = { ...operationContext, package: entry.package, offering: entry.offering };
+    await acceptReceipt(await operate(activeTransition === undefined
+      ? { ...offering, kind: "transition.materialize", items: [selection[0]!, selection[1]!] }
+      : { ...offering, kind: "transition.replace", transition: activeTransition }));
   });
 
   return <div className="nle-workspace nle-active"><div className={classes} style={{
@@ -373,7 +390,14 @@ export function Studio() {
           <div className="nle-transport"><span className="nle-transport-time"><span className="current">{timecode(frame, fps)}</span><span className="separator">/</span><span className="total">{timecode(scene.maximumFrame, fps)}</span></span><button className="nle-play" aria-label={playing ? "暂停" : "播放"} onClick={togglePlayback}>{playing ? <Pause size={18}/> : <Play size={18}/>}</button><span className="nle-transport-actions"><IconButton label="上一帧" onClick={() => { setPlaying(false); setFrame(value => Math.max(0, value - 1)); }}><StepBack size={15}/></IconButton><IconButton label="下一帧" onClick={() => { setPlaying(false); setFrame(value => Math.min(scene.maximumFrame, value + 1)); }}><StepForward size={15}/></IconButton><IconButton label="静音" onClick={() => setMuted(value => !value)}>{muted ? <VolumeX size={15}/> : <Volume2 size={15}/>}</IconButton></span></div>
         </section>
         <PanelResizeHandle side="properties" label="调整属性面板宽度" width={panelWidths.properties} onResize={(width, save) => resizePanel("properties", width, save)}/>
-        <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist"><button role="tab" aria-selected="true">属性</button></div><div className="nle-panel-body"><Inspector scene={inspector?.scene} component={inspector?.component} media={session.media.entries}
+        <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist"><button role="tab" aria-selected="true">属性</button></div><div className="nle-panel-body">{activeTransition !== undefined
+          ? <TransitionInspector scene={transitionInspector?.id === activeTransition ? transitionInspector : undefined} disabled={editingDisabled}
+            onEdit={(section, field, value) => command({ kind: "transition-inspector.edit", transition: activeTransition,
+              section, field, value, expectedProjectRevision: session.status.projectRevision,
+              expectedViewRevision: session.status.viewRevision })}
+            onResize={durationFrames => place({ ...operationContext, kind: "transition.resize", transition: activeTransition, durationFrames })}
+            onRemove={() => place({ ...operationContext, kind: "transition.remove", transition: activeTransition })}/>
+          : <Inspector scene={inspector?.scene} component={inspector?.component} media={session.media.entries}
           disabled={editingDisabled} onEdit={inspectorEdit}
           onInvoke={(item, section, collection, row, action) => command({
             kind: "inspector.invoke", item, section, collection, row, action,
@@ -382,7 +406,7 @@ export function Studio() {
             await acceptReceipt(await operate(media === ""
               ? { ...operationContext, kind: "component-media.unbind", item, slot }
               : { ...operationContext, kind: "component-media.bind", item, slot, media }));
-          })} onProcessEdit={edit => void perform(async () => acceptReceipt(await operate({ ...operationContext, ...edit })))}/></div></aside>
+          })} onProcessEdit={edit => void perform(async () => acceptReceipt(await operate({ ...operationContext, ...edit })))}/>}</div></aside>
       </div>
       <Timeline session={session} frame={frame} selection={selection} busy={editingDisabled} onSeek={value => { setPlaying(false); setFrame(value); }} onSelect={select}
         onMove={intent => void perform(async () => acceptReceipt(await operate({

@@ -215,6 +215,12 @@ export const hypitPackage = {
         { operator: symbol("transform"), timeWindow: () => true, editParameters: editControlledParameters },
         { operator: symbol("filter"), timeWindow: () => true, editParameters: editControlledParameters },
       ],
+      transitions: [{ operator: symbol("transition"), editParameters(operation, { transition }) {
+        if (operation.kind !== "easing.set" || !interpolationOptions.some(option => option.value === operation.value)) {
+          throw new Error(`Crossfade ${transition.id} easing is invalid.`);
+        }
+        return { ...transition.parameters, easing: operation.value };
+      } }],
     } },
     { kind: "hypit.nle-inspector-presentation", value: {
       kind: "hypit.nle-inspector-presentation",
@@ -226,6 +232,11 @@ export const hypitPackage = {
         { operator: symbol("transform"), project: context => controlledInspector("transform", context) },
         { operator: symbol("filter"), project: context => controlledInspector("filter", context) },
       ],
+      transitions: [{ operator: symbol("transition"), project: ({ transition }) => [{
+        id: "parameters", label: "Crossfade", domain: "how",
+        fields: [{ id: "easing", label: "Easing", control: "select", value: transition.parameters.easing ?? "linear",
+          options: interpolationOptions, operation: value => ({ kind: "easing.set", value }) }],
+      }] }],
     } },
     { kind: "hypit.nle-lowering", value: {
       pictureProcesses: ["frame", "transform", "filter"].map(symbol => ({
@@ -241,6 +252,10 @@ export const hypitPackage = {
     ] } },
   ],
   catalog: [
+    { id: "crossfade", kind: "hypit.nle-transition", title: "Crossfade", value: {
+      operator: symbol("transition"), parameters: { kind: "cross-dissolve", easing: "linear" },
+      duration: { ticks: "1", timeBase: { numerator: 1, denominator: 3 } },
+    } },
     { id: "transform", kind: "hypit.nle-process", title: "Transform", value: {
       medium: "picture", operator: symbol("transform"),
       parameters: { kind: "constant", state: {

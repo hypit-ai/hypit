@@ -17,6 +17,7 @@ import type {
   NlePresentItem,
   NleProject,
   NleTrack,
+  NleTransition,
 } from "../types.js";
 import type { NleTransaction } from "../transaction.js";
 import { assertContributionOwner, packageSymbolKey } from "./symbol.js";
@@ -55,6 +56,18 @@ export type NleProcessAuthoringContext = {
   readonly scope:
     | { readonly kind: "adjust" }
     | { readonly kind: "occurrence"; readonly medium: "picture" | "audio" };
+};
+
+export type NleTransitionAuthoringContext = {
+  readonly project: NleProject;
+  readonly composition: NleComposition;
+  readonly track: NleTrack;
+  readonly transition: NleTransition;
+};
+
+export type NleTransitionAuthoring = {
+  readonly operator: PackageSymbol;
+  readonly editParameters: (operation: unknown, context: NleTransitionAuthoringContext) => Readonly<Record<string, unknown>>;
 };
 
 export type NleComponentValueAuthoringContext = {
@@ -122,6 +135,7 @@ export type NleAuthoringContribution = {
   readonly components: readonly NleComponentAuthoring[];
   readonly componentValues: readonly NleComponentValueAuthoring[];
   readonly operators: readonly NleOperatorTemporalAuthoring[];
+  readonly transitions?: readonly NleTransitionAuthoring[];
 };
 
 export type NleAuthoringHost = {
@@ -131,6 +145,8 @@ export type NleAuthoringHost = {
   readonly hasComponentParameterAuthoring: (component: PackageSymbol) => boolean;
   readonly hasComponentValueAuthoring: (component: PackageSymbol, slot: string) => boolean;
   readonly hasOperatorParameterAuthoring: (operator: PackageSymbol) => boolean;
+  readonly hasTransitionParameterAuthoring: (operator: PackageSymbol) => boolean;
+  readonly planTransitionParameterEdit: (context: NleTransitionAuthoringContext, operation: unknown) => NleTransaction;
   readonly planComponentParameterEdit: (
     context: NleComponentAuthoringContext,
     operation: unknown,
@@ -213,13 +229,14 @@ function assertContribution(value: NleAuthoringContribution): void {
     throw new Error("NLE authoring contribution must be an object.");
   }
   if (!Array.isArray(value.components) || !Array.isArray(value.componentValues)
-    || !Array.isArray(value.operators)) {
+    || !Array.isArray(value.operators) || (value.transitions !== undefined && !Array.isArray(value.transitions))) {
     throw new Error("NLE authoring contribution declarations must be arrays.");
   }
   assertContributionOwner(value.package, [
     ...value.components.map((entry) => entry.component),
     ...value.componentValues.map((entry) => entry.component),
     ...value.operators.map((entry) => entry.operator),
+    ...(value.transitions ?? []).map(entry => entry.operator),
   ], "NLE authoring contribution");
   const keys = new Set<string>();
   for (const entry of value.components) {
@@ -247,6 +264,12 @@ function assertContribution(value: NleAuthoringContribution): void {
       throw new Error(`NLE authoring contribution ${key} editParameters is not callable.`);
     }
   }
+  for (const entry of value.transitions ?? []) {
+    const key = `transition:${packageSymbolKey(entry.operator)}`;
+    if (keys.has(key)) throw new Error(`NLE authoring contribution repeats ${key}.`);
+    keys.add(key);
+    if (typeof entry.editParameters !== "function") throw new Error(`NLE authoring contribution ${key} editParameters is not callable.`);
+  }
   for (const entry of value.componentValues) {
     if (!/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(entry.slot)) {
       throw new Error("NLE Component value authoring slot is invalid.");
@@ -265,6 +288,7 @@ export function createNleAuthoringContribution(value: {
   readonly components?: readonly NleComponentAuthoring[];
   readonly componentValues?: readonly NleComponentValueAuthoring[];
   readonly operators?: readonly NleOperatorTemporalAuthoring[];
+  readonly transitions?: readonly NleTransitionAuthoring[];
 }): NleAuthoringContribution {
   const contribution: NleAuthoringContribution = {
     kind: nleAuthoringContributionKind,
@@ -272,6 +296,7 @@ export function createNleAuthoringContribution(value: {
     components: [...(value.components ?? [])],
     componentValues: [...(value.componentValues ?? [])],
     operators: [...(value.operators ?? [])],
+    ...(value.transitions === undefined ? {} : { transitions: [...value.transitions] }),
   };
   assertContribution(contribution);
   return contribution;
@@ -284,6 +309,7 @@ export function createNleAuthoringHost(
   const components = new Map<string, NleComponentAuthoring>();
   const componentValues = new Map<string, NleComponentValueAuthoring>();
   const operators = new Map<string, NleOperatorTemporalAuthoring>();
+  const transitions = new Map<string, NleTransitionAuthoring>();
   for (const contribution of contributions) {
     assertContribution(contribution);
     for (const entry of contribution.components) {
@@ -295,6 +321,11 @@ export function createNleAuthoringHost(
       const key = packageSymbolKey(entry.operator);
       if (operators.has(key)) throw new Error(`NLE authoring Host has multiple Operator declarations for ${key}.`);
       operators.set(key, entry);
+    }
+    for (const entry of contribution.transitions ?? []) {
+      const key = packageSymbolKey(entry.operator);
+      if (transitions.has(key)) throw new Error(`NLE authoring Host has multiple Transition declarations for ${key}.`);
+      transitions.set(key, entry);
     }
     for (const entry of contribution.componentValues) {
       const key = componentValueKey(entry.component, entry.slot);
@@ -340,6 +371,20 @@ export function createNleAuthoringHost(
     },
     hasOperatorParameterAuthoring(operator) {
       return operators.get(packageSymbolKey(operator))?.editParameters !== undefined;
+    },
+    hasTransitionParameterAuthoring(operator) {
+      return transitions.has(packageSymbolKey(operator));
+    },
+    planTransitionParameterEdit(context, operation) {
+      const { transition } = context;
+      const key = packageSymbolKey(transition.operator);
+      const contribution = transitions.get(key);
+      if (contribution === undefined) throw new Error(`NLE Transition parameter authoring ${key} is not installed.`);
+      assertImplementationBinding({ implementation: transition.operator, parameters: { operation } },
+        `NLE Transition ${transition.id} parameter operation`);
+      const parameters = contribution.editParameters(structuredClone(operation), context);
+      assertImplementationBinding({ implementation: transition.operator, parameters }, `NLE Transition ${transition.id} edited parameters`);
+      return { commands: [{ kind: "transition.replace", transition: { ...transition, parameters: structuredClone(parameters) } }] };
     },
     planComponentParameterEdit(context, operation) {
       const key = packageSymbolKey(context.item.component);

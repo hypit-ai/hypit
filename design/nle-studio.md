@@ -201,8 +201,11 @@ inline. For each offered slot the caller can explicitly link a compatible Projec
 Project Shared Value from the offered default. The binding and new value are accepted in one Project transaction
 with the occurrence and initial Media inputs.
 
-Transition materialization takes two selected Present Items. Studio orders the endpoints by exact start time and
-the NLE planner validates their direct cut, moves the incoming Item and adds the relation atomically. Audio detach
+Transition materialization takes two selected Present Items or a frame and an explicit Picture Track. Studio
+resolves the direct cut and adds its overlap and relation atomically. Resizing adjusts the incoming position and
+checks related Items and the resulting overlap. Replacing a Transition selects a package offering while keeping the
+overlap unless the caller also supplies a duration. The Transition Inspector edits finite package fields through
+the installed reducer. Removing the relation preserves both endpoint placements. Audio detach
 uses one guarded transaction to resolve or add an Audio Track and create the Audio-only occurrence from the
 original Present. Media bytes and package Timeline artwork are served through Product or Project capabilities.
 

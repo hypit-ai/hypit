@@ -1,4 +1,4 @@
-import type { NleInspectorCollection, NleInspectorField, NleInspectorScene } from "@hypit/nle/view";
+import type { NleInspectorCollection, NleInspectorField, NleInspectorScene, NleTransitionInspectorScene } from "@hypit/nle/view";
 import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import type { NleStudioComponentInputsProjection, NleStudioMediaEntry, NleStudioProcessEdit } from "../protocol.js";
 import { IconButton } from "./common.js";
@@ -103,4 +103,25 @@ export function Inspector({ scene, component, media, disabled, onEdit, onMedia, 
       </select></Row>;
     })}
   </Section>}</>;
+}
+
+export function TransitionInspector({ scene, disabled, onResize, onEdit, onRemove }: {
+  readonly scene: NleTransitionInspectorScene | undefined;
+  readonly disabled: boolean;
+  readonly onResize: (frames: number) => void;
+  readonly onEdit: (section: string, field: string, value: string | number | boolean) => void;
+  readonly onRemove: () => void;
+}) {
+  if (scene === undefined) return null;
+  const blocked = disabled || !scene.editable;
+  return <>
+    <Section title="转场">
+      <Row label="时长"><NumberField label="转场帧数" value={scene.durationFrames}
+        min={1} disabled={blocked} onCommit={value => onResize(Math.round(value))}/><small>帧</small></Row>
+      <button type="button" className="button" disabled={blocked} onClick={onRemove}>移除转场</button>
+    </Section>
+    {scene.sections.map(section => <Section key={section.id} title={section.label}>
+      {section.fields.map(field => <Field key={field.id} section={section.id} field={field} disabled={blocked} onEdit={onEdit}/>)}
+    </Section>)}
+  </>;
 }

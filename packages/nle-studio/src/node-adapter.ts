@@ -65,11 +65,18 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
     }
     return { kind: request.kind, item: request.item };
   }
+  if (request.kind === "transition-inspector") {
+    if (keys.length !== 2 || !identity(request.transition)) {
+      throw new Error("NLE Studio Transition Inspector requires one Transition id.");
+    }
+    return { kind: request.kind, transition: request.transition };
+  }
   const kinds = new Set(["open", "project", "status", "timeline", "canvas", "media", "catalog", "preview", "delivery", "clipboard"]);
   if (keys.length !== 1 || typeof request.kind !== "string" || !kinds.has(request.kind)) {
     throw new Error("NLE Studio observation kind is invalid.");
   }
-  return { kind: request.kind as Exclude<NleStudioObservationRequest["kind"], "inspector" | "component-inputs" | "action" | "timeline-media"> };
+  return { kind: request.kind as Exclude<NleStudioObservationRequest["kind"],
+    "inspector" | "component-inputs" | "action" | "timeline-media" | "transition-inspector"> };
 }
 
 function record(value: unknown, subject: string): Readonly<Record<string, unknown>> {
@@ -196,8 +203,19 @@ function operationRequest(value: unknown): NleStudioOperation {
       valid = currentFields("item", "medium", "process") && process;
       break;
     case "transition.materialize":
-      valid = currentFields("package", "offering", "items", "durationFrames") && duration && offering
-        && items?.length === 2 && items[0] !== items[1];
+      valid = duration && offering && (
+        currentFields("package", "offering", "items", "durationFrames") && items?.length === 2 && items[0] !== items[1]
+        || currentFields("package", "offering", "track", "atFrame", "durationFrames") && identity(request.track) && placement
+      );
+      break;
+    case "transition.replace":
+      valid = currentFields("package", "offering", "transition", "durationFrames") && offering && duration && identity(request.transition);
+      break;
+    case "transition.resize":
+      valid = currentFields("transition", "durationFrames") && identity(request.transition) && integer(request.durationFrames, 1);
+      break;
+    case "transition.remove":
+      valid = currentFields("transition") && identity(request.transition);
       break;
     case "composition.materialize":
       valid = currentFields("source", "atFrame", "track", "insertTracks") && placement && insertion && identity(request.source);

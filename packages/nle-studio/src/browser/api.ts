@@ -67,6 +67,12 @@ export async function readTimelineMedia(value: NleStudioTimelineMediaRequest) {
   return result.value;
 }
 
+export async function readTransitionInspector(transition: string) {
+  const result = await observe({ kind: "transition-inspector", transition });
+  if (result.kind !== "transition-inspector") throw new Error("NLE Studio returned another observation kind for Transition Inspector.");
+  return result.value;
+}
+
 export async function refreshOpen(
   current: NleStudioOpenProjection,
   change: Pick<NleStudioOperationReceipt, "invalidated"> & Partial<Pick<NleStudioOperationReceipt, "status">>,
@@ -98,6 +104,7 @@ export async function refreshOpen(
       case "open":
       case "component-inputs":
       case "timeline-media":
+      case "transition-inspector":
       case "action":
       case "inspector": throw new Error(`NLE Studio returned unexpected ${observation.kind} observation.`);
     }

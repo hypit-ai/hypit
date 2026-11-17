@@ -169,11 +169,11 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | --- | --- | --- | --- |
 | 添加 Transition | NLE relationship + package Operator | 显式 outgoing/incoming relation、canonical overlap、package parameters 和原子物化 planner 已实现 | **已具备**基础路径 |
 | 从选区添加 Transition | NLE Studio Operation | 两个选中 Item 由后端按精确时间排序并校验直切关系 | **已具备** |
-| 从播放头选择切点 | NLE Studio Operation | 多轨切点需要显式的轨道或目标选择 | **产品缺口** |
-| 修改类型、参数和时长 | NLE Studio Operation | `transition.replace` 存在；package Inspector 尚未投影 Transition relation | **产品缺口** |
+| 从播放头选择切点 | NLE Studio Operation | 按显式 Picture Track 和精确播放头时间查找唯一的直切 | **已具备**后端路径 |
+| 修改类型、参数和时长 | Studio Operation + package Inspector | 可替换 offering、改变 canonical overlap，或编辑 Transformer package 投影的有限字段；Jensen 实测缓动影响真实帧 | **已具备** |
 | 素材边界补帧 | source-time + Reconstruction + product policy | Project 已能选择 Reconstruction；Transition planner 可检查可用 source range | **产品缺口**。需要明确补帧 package/policy 与失败诊断 |
 | move、trim、split 后维护关系 | NLE Studio planners | Project 最终校验会拒绝失效 relation，但不会替调用者重新计算或删除关系 | **产品缺口** |
-| 删除 Transition | NLE Command | `transition.remove` 已实现 | **已具备**底层语义 |
+| 删除 Transition | NLE Studio Operation | `transition.remove` 删除关系，保留两端当前时间位置 | **已具备** |
 
 ## 9. 滤镜和效果
 
@@ -359,6 +359,7 @@ POST       /api/reload
 - 跨 NLE 文档或 OS 剪贴板需要明确 Media、Shared Value 和 Composition 引用的导入与重绑边界。
 - 多轨复合与任意解除复合需要明确跨轨混合、Adjust 作用域、外层处理和非线性时间关系如何转写为父级作者事实。
 - 独立 occurrence 试听需明确是否包含所在 Track 的 Adjust、上层混音与 Reconstruction。
+- 会穿过 Transition 的 trim/split 需要决定保留重叠、重建或删除关系的具体意图；改变重叠需要新增素材边时，应由已选 Reconstruction 决定如何补帧。
 - Timeline 素材条跨多时间映射片段时，需要按段表示留白、倒放、回绕和零速取样边。当前按需视图使用单段正向映射。
 
 ## 实现顺序

@@ -1,5 +1,5 @@
 import type { PackageSymbol } from "@hypit/audiovisual";
-import { exactTemporalRational } from "@hypit/temporal/algebra";
+import { exactTemporalRational, subtractExactTemporalValues } from "@hypit/temporal/algebra";
 import { planNleComponentValueEdit } from "../component-value-authoring.js";
 import { planNleSpatialEdit } from "../spatial-authoring.js";
 import { indexNleProject } from "../indexing.js";
@@ -7,6 +7,7 @@ import {
   findNleOperatorSharedValue,
   findNleComponentSharedValue,
   findNlePictureLayoutSharedValue,
+  nleItemEnd,
   resolveNleOperatorParameters,
   resolveNlePictureLayout,
 } from "../project.js";
@@ -18,6 +19,7 @@ import type {
   NleComponentValueAuthoringContext,
   NleProcessAddress,
   NleProcessAuthoringContext,
+  NleTransitionAuthoringContext,
 } from "./authoring.js";
 import { createNleComponentValueAuthoringContext } from "./authoring.js";
 import { assertContributionOwner, packageSymbolKey } from "./symbol.js";
@@ -27,6 +29,7 @@ import type {
   NleInspectorSection,
   NleInspectorSectionDraft,
   NleTimelineItemObservation,
+  NleTransitionInspectorScene,
   NleView,
 } from "./types.js";
 import { assertNleViewForProject, nleViewTrackLocked } from "./view.js";
@@ -43,6 +46,11 @@ export type NleInspectorOperatorPresentation = {
   readonly project: (context: NleProcessAuthoringContext) => readonly NleInspectorSectionDraft[];
 };
 
+export type NleInspectorTransitionPresentation = {
+  readonly operator: PackageSymbol;
+  readonly project: (context: NleTransitionAuthoringContext) => readonly Omit<NleInspectorSectionDraft, "collections">[];
+};
+
 export type NleInspectorComponentValuePresentation = {
   readonly component: PackageSymbol;
   readonly slot: string;
@@ -55,6 +63,7 @@ export type NleInspectorPresentationContribution = {
   readonly components: readonly NleInspectorComponentPresentation[];
   readonly componentValues: readonly NleInspectorComponentValuePresentation[];
   readonly operators: readonly NleInspectorOperatorPresentation[];
+  readonly transitions?: readonly NleInspectorTransitionPresentation[];
 };
 
 export type NleInspectorPresentationHost = {
@@ -77,6 +86,10 @@ export type NleInspectorPresentationHost = {
     view: NleView,
     item: string,
     address: { readonly section: string; readonly collection: string; readonly row: string; readonly action: string },
+  ) => NleTransaction;
+  readonly transitionScene: (project: NleProject, view: NleView, transition: string) => NleTransitionInspectorScene;
+  readonly planTransitionEdit: (
+    project: NleProject, view: NleView, transition: string, section: string, field: string, value: string | number | boolean,
   ) => NleTransaction;
 };
 
@@ -176,12 +189,13 @@ function assertDraft(value: NleInspectorSectionDraft, label: string): void {
 function assertContribution(value: NleInspectorPresentationContribution): void {
   assert(value !== null && typeof value === "object", "NLE Inspector contribution must be an object.");
   assert(Array.isArray(value.components) && Array.isArray(value.componentValues)
-    && Array.isArray(value.operators),
+    && Array.isArray(value.operators) && (value.transitions === undefined || Array.isArray(value.transitions)),
     "NLE Inspector contribution declarations must be arrays.");
   assertContributionOwner(value.package, [
     ...value.components.map((entry) => entry.component),
     ...value.componentValues.map((entry) => entry.component),
     ...value.operators.map((entry) => entry.operator),
+    ...(value.transitions ?? []).map(entry => entry.operator),
   ], "NLE Inspector contribution");
   const keys = new Set<string>();
   for (const entry of value.components) {
@@ -192,6 +206,12 @@ function assertContribution(value: NleInspectorPresentationContribution): void {
   }
   for (const entry of value.operators) {
     const key = `operator:${packageSymbolKey(entry.operator)}`;
+    assert(!keys.has(key), `NLE Inspector contribution repeats ${key}.`);
+    keys.add(key);
+    assert(typeof entry.project === "function", `NLE Inspector ${key} projector is not callable.`);
+  }
+  for (const entry of value.transitions ?? []) {
+    const key = `transition:${packageSymbolKey(entry.operator)}`;
     assert(!keys.has(key), `NLE Inspector contribution repeats ${key}.`);
     keys.add(key);
     assert(typeof entry.project === "function", `NLE Inspector ${key} projector is not callable.`);
@@ -211,6 +231,7 @@ export function createNleInspectorPresentationContribution(value: {
   readonly components?: readonly NleInspectorComponentPresentation[];
   readonly componentValues?: readonly NleInspectorComponentValuePresentation[];
   readonly operators?: readonly NleInspectorOperatorPresentation[];
+  readonly transitions?: readonly NleInspectorTransitionPresentation[];
 }): NleInspectorPresentationContribution {
   const contribution: NleInspectorPresentationContribution = {
     kind: nleInspectorPresentationContributionKind,
@@ -218,6 +239,7 @@ export function createNleInspectorPresentationContribution(value: {
     components: [...(value.components ?? [])],
     componentValues: [...(value.componentValues ?? [])],
     operators: [...(value.operators ?? [])],
+    ...(value.transitions === undefined ? {} : { transitions: [...value.transitions] }),
   };
   assertContribution(contribution);
   return contribution;
@@ -363,8 +385,14 @@ export function createNleInspectorPresentationHost(
   const components = new Map<string, NleInspectorComponentPresentation>();
   const componentValues = new Map<string, NleInspectorComponentValuePresentation>();
   const operators = new Map<string, NleInspectorOperatorPresentation>();
+  const transitions = new Map<string, NleInspectorTransitionPresentation>();
   for (const contribution of contributions) {
     assertContribution(contribution);
+    for (const entry of contribution.transitions ?? []) {
+      const key = packageSymbolKey(entry.operator);
+      assert(!transitions.has(key), `NLE Inspector has multiple Transition presentations for ${key}.`);
+      transitions.set(key, entry);
+    }
     for (const entry of contribution.components) {
       const key = packageSymbolKey(entry.component);
       assert(!components.has(key), `NLE Inspector has multiple Component presentations for ${key}.`);
@@ -487,7 +515,41 @@ export function createNleInspectorPresentationHost(
     return authoring.planProcessParameterEdit(section.context as NleProcessAuthoringContext, section.address, operation);
   };
 
+  const transitionSections = (project: NleProject, view: NleView, id: string) => {
+    assertNleViewForProject(view, project);
+    const composition = project.compositions.find(value => value.id === view.activeComposition)!;
+    const transition = composition.transitions.find(value => value.id === id);
+    assert(transition !== undefined, `NLE Transition ${id} is not in active Composition ${composition.id}.`);
+    const { track, item: outgoing } = locatedItem(project, view, transition.outgoing);
+    const { item: incoming } = locatedItem(project, view, transition.incoming);
+    const editable = !nleViewTrackLocked(view, composition.id, track.id);
+    const context = { project, composition, track, transition };
+    const drafts = transitions.get(packageSymbolKey(transition.operator))?.project(context) ?? [];
+    const writeParameters = editable && authoring?.hasTransitionParameterAuthoring(transition.operator) === true;
+    const seen = new Set<string>();
+    const sections = drafts.map(draft => {
+      assert(!seen.has(draft.id), `NLE Transition Inspector repeats section ${draft.id}.`);
+      seen.add(draft.id);
+      return sceneSection(draft.id, draft, { kind: "package", symbol: transition.operator }, writeParameters);
+    });
+    const durationFrames = frames(subtractExactTemporalValues(nleItemEnd(outgoing), incoming.start), view);
+    return { context, editable, sections, drafts, writeParameters, durationFrames };
+  };
+
   return {
+    transitionScene(project, view, id) {
+      const { context: { track, transition }, editable, sections, durationFrames } = transitionSections(project, view, id);
+      return { id, track: track.id, editable, sections, durationFrames, operator: transition.operator,
+        outgoing: transition.outgoing, incoming: transition.incoming };
+    },
+    planTransitionEdit(project, view, id, section, field, value) {
+      const { context, drafts, writeParameters } = transitionSections(project, view, id);
+      assert(writeParameters && authoring !== undefined, `NLE Transition ${id} parameters are not editable in this View.`);
+      const selected = drafts.find(draft => draft.id === section)?.fields.find(candidate => candidate.id === field);
+      assert(selected?.operation !== undefined, `NLE Transition field ${section}.${field} is read-only.`);
+      validateEdit(selected, value);
+      return authoring.planTransitionParameterEdit(context, selected.operation(value));
+    },
     scene(project, view, id, observations = []) {
       assertNleViewForProject(view, project);
       const { composition, track, item } = locatedItem(project, view, id);
