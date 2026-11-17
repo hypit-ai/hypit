@@ -266,7 +266,7 @@
 .nle-timeline-scroll { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; }
 .nle-timeline-scroll.cut-mode .nle-clip, .nle-timeline-scroll.cut-mode .nle-trim { cursor: crosshair; }
 .nle-timeline-scroll.direction-mode, .direction-mode .nle-clip, .direction-mode .nle-trim { cursor: crosshair; }
-.nle-tracks { position: relative; display: flex; flex-direction: column; }
+.nle-tracks { position: relative; display: flex; flex-direction: column; overflow: clip; }
 .nle-tracks > .nle-ruler { flex-shrink: 0; }
 .nle-ruler { display: flex; height: 30px; position: sticky; top: 0; z-index: 5; background: var(--surface); }
 .nle-ruler-label, .nle-track-label { width: 84px; min-width: 84px; position: sticky; left: 0; z-index: 3; background: var(--surface); }

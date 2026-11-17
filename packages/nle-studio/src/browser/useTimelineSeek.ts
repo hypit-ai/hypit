@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 
-export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixels: number, labelWidth: number, frame: number, onSeek: (frame: number) => void) {
+export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixels: number, labelWidth: number, frame: number, endFrame: number, onSeek: (frame: number) => void) {
   const cancel = useRef<() => void>(() => {});
   const seeking = useRef(false), [active, setActive] = useState(false);
   const seek = useRef(onSeek); seek.current = onSeek;
-  useEffect(() => () => cancel.current(), [pixels]);
+  useEffect(() => () => cancel.current(), [pixels, endFrame]);
   const previousFrame = useRef(frame);
   useEffect(() => {
     if (previousFrame.current === frame) return;
@@ -27,7 +27,7 @@ export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixe
     let x = event.clientX, animation = 0, last = -1;
     const locate = () => {
       const bounds = viewport.getBoundingClientRect();
-      const at = Math.max(0, Math.round((Math.max(bounds.left + labelWidth, Math.min(bounds.left + viewport.clientWidth, x)) - bounds.left - labelWidth + viewport.scrollLeft) / pixels));
+      const at = Math.max(0, Math.min(endFrame, Math.round((Math.max(bounds.left + labelWidth, Math.min(bounds.left + viewport.clientWidth, x)) - bounds.left - labelWidth + viewport.scrollLeft) / pixels)));
       if (at !== last) { last = at; seek.current(at); }
     };
     const move = (next: PointerEvent) => { if (next.pointerId === pointerId) { x = next.clientX; locate(); } };
