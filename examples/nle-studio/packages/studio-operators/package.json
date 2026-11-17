@@ -1,0 +1,9 @@
+{
+  "name": "@hypit/studio-operators",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./hypit": "./hypit.js"
+  }
+}

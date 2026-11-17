@@ -151,14 +151,22 @@ export function assertNleViewAllowsProjectTransaction(
       }
     }
   };
-  let projected = project;
+  const completed = applyNleTransaction(project, transaction);
   for (const command of transaction.commands) {
     if (command.kind === "item.move") requireCapability(command.ids, "move");
     else if (command.kind === "item.trim") {
       requireCapability([command.id], command.edge === "start" ? "trimStart" : "trimEnd");
     } else if (command.kind === "item.split") requireCapability([command.id], "split");
+    const touched: LocatedTrack[] = [];
+    for (const snapshot of [project, completed]) {
+      try {
+        touched.push(...commandTracks(snapshot, command));
+      } catch {
+        // A command may address a subject created or removed elsewhere in this same atomic transaction.
+      }
+    }
     const seen = new Set<string>();
-    for (const { composition, track } of commandTracks(projected, command)) {
+    for (const { composition, track } of touched) {
       const key = `${composition.id}\0${track.id}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -168,6 +176,5 @@ export function assertNleViewAllowsProjectTransaction(
         );
       }
     }
-    projected = applyNleTransaction(projected, { commands: [command] });
   }
 }

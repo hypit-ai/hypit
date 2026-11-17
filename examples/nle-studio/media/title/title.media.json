@@ -1,0 +1,33 @@
+{
+  "format": "hypit.media-asset",
+  "media": {
+    "file": {
+      "path": "title.svg",
+      "mediaType": "image/svg+xml"
+    },
+    "interpretation": {
+      "picture": {
+        "kind": "constant",
+        "streamIndex": 0,
+        "interpretation": {
+          "codedWidth": 640,
+          "codedHeight": 360,
+          "sampleAspectRatio": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "rotationDegrees": 0,
+          "picture": {
+            "colorPrimaries": "bt709",
+            "colorTransfer": "srgb",
+            "colorMatrix": "rgb",
+            "colorRange": "full",
+            "bitDepth": 8,
+            "alphaMode": "straight"
+          }
+        }
+      }
+    }
+  },
+  "representations": []
+}

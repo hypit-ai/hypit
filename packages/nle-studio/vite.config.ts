@@ -4,6 +4,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   root: fileURLToPath(new URL("./src/browser/", import.meta.url)),
+  base: "./",
   plugins: [react()],
   build: {
     outDir: fileURLToPath(new URL("./dist/browser/", import.meta.url)),

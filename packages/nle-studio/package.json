@@ -1,7 +1,7 @@
 {
   "name": "@hypit/nle-studio",
   "version": "0.1.0",
-  "description": "Standalone local NLE product adapter and browser client",
+  "description": "NLE Product Session backend and browser client for Hypit",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "bin": {
@@ -17,6 +17,11 @@
       "hypit-source": "./src/protocol.ts",
       "types": "./dist/protocol.d.ts",
       "import": "./dist/protocol.js"
+    },
+    "./node": {
+      "hypit-source": "./src/node-adapter.ts",
+      "types": "./dist/node-adapter.d.ts",
+      "import": "./dist/node-adapter.js"
     }
   },
   "files": ["dist", "README.md"],
@@ -25,7 +30,12 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
+    "@hypit/application": "workspace:^0.1.0",
+    "@hypit/media": "workspace:^0.1.0",
+    "@hypit/media-asset": "workspace:^0.1.0",
+    "@hypit/media-local": "workspace:^0.1.0",
     "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/project": "workspace:^0.1.0",
     "@hypit/temporal": "workspace:^0.1.0",
     "@base-ui/react": "^1.9.0",
     "@fontsource-variable/hanken-grotesk": "^5.3.0",

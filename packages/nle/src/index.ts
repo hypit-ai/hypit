@@ -58,6 +58,7 @@ export {
   createComponentMaterialization,
   createCompositionMaterialization,
   createMediaAssetMaterialization,
+  createTransitionMaterialization,
 } from "./materialize.js";
 export {
   planNleSpatialEdit,

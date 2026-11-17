@@ -189,6 +189,12 @@ to its caller. Those values have invocation or frontend-session lifetime and nev
 Files are staged before the manifest is published so a failed or cancelled action leaves no half-published
 Media Asset.
 
+The Node Project Media Service exposes the project-scoped local-file adoption Action. It chooses or validates a
+portable manifest path below `media/`, serializes concurrent adoptions, invokes a caller-supplied Media Executor,
+publishes the Media Asset and refreshes the one shared Catalog. CLI, Agent, native application and loopback HTTP
+adapters reuse this Action; they differ only in how they acquire or stage the source file. The Media Asset package
+does not depend on the local Executor: the composing Host supplies inspection and selection functions explicitly.
+
 A Publication, Scene recording or NLE export enters Media through the same explicit adoption seam. The caller
 chooses the target path and whether the completed output should become an accepted Media Asset. Completion by
 the producing Executor does not adopt it automatically.
@@ -226,7 +232,7 @@ The Project Media Service is the Media Asset owner's shared open collection insi
 logical uniqueness is:
 
 ```text
-Application Host lifetime + Project Boundary
+ApplicationHost instance + Project Boundary
 ```
 
 The corresponding ProjectHost constructs and closes that instance. NLE, Canvas, Scene, a Media Bench and an Agent
@@ -335,6 +341,11 @@ local image, audio or video
   -> reopen Media Asset
   -> resolve only the primary media
 ```
+
+The initial local product path also accepts a browser file as a bounded transport concern: the loopback adapter
+streams one request body to a temporary file, calls the same project adoption Action and removes the temporary file.
+Importing into Project Media and placing a Media reference into an NLE Composition remain two separate explicit
+actions.
 
 The first complete production path should demonstrate:
 

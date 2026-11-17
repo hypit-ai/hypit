@@ -9,5 +9,5 @@
     "declarationMap": true,
     "sourceMap": true
   },
-  "include": ["src/host.ts", "src/protocol.ts", "src/server.ts"]
+  "include": ["src/host.ts", "src/node-adapter.ts", "src/protocol.ts", "src/server.ts"]
 }

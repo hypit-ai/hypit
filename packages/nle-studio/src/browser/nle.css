@@ -23,11 +23,11 @@
 .nle-workspace :is(input, textarea, select) { color: var(--text); }
 .nle-workspace .icon-button { color: var(--text); }
 .nle-workspace .icon-button:disabled { color: var(--nle-icon-disabled); }
-.nle-workspace .button, :root[data-workbench] .nle-workspace .button { box-sizing: border-box; height: 28px; min-height: 28px; padding: 0 10px; gap: 6px; border: 0; border-radius: 6px; background: var(--nle-pill); color: var(--text); font-size: var(--font-size-caption); transition: background-color .15s, opacity .15s; }
+.nle-workspace .button { box-sizing: border-box; height: 28px; min-height: 28px; padding: 0 10px; gap: 6px; border: 0; border-radius: 6px; background: var(--nle-pill); color: var(--text); font-size: var(--font-size-caption); transition: background-color .15s, opacity .15s; }
 .nle-workspace .button:hover:not(:disabled) { background: var(--nle-hover-fill); }
 .nle-workspace .button > svg:first-child { color: var(--pink); }
-.nle-workspace .button.primary, :root[data-workbench] .nle-workspace .button.primary { background: var(--pink); color: #fff; }
-.nle-workspace .button.primary:hover:not(:disabled), :root[data-workbench] .nle-workspace .button.primary:hover:not(:disabled) { background: var(--pink-hover, var(--pink)); }
+.nle-workspace .button.primary { background: var(--pink); color: #fff; }
+.nle-workspace .button.primary:hover:not(:disabled) { background: var(--pink-hover, var(--pink)); }
 .nle-workspace .button.primary > svg:first-child { color: inherit; }
 
 /* Title row */

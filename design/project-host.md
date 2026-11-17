@@ -18,10 +18,10 @@ The Project manifest owns only boundary-wide author choices:
 Media Assets, NLE documents, Canvas documents and exports remain ordinary owner files and stable owner collections.
 Open tabs remain Product Session state. `package.json` and the lockfile select installed package versions.
 
-`ProjectHost` is the one open runtime for this boundary inside one Application Host. It opens the manifest and package
-environment, owns the shared Project Media Service lifetime, reuses owner Services for documents opened by several
-callers and supplies one project context to Product Sessions. Media, NLE, Canvas and other owners retain the meaning
-and operations of their facts.
+`ProjectHost` is the one open runtime for this boundary inside one ApplicationHost instance. It opens the manifest and
+package environment, owns the shared Project Media Service lifetime, reuses owner Services for documents opened by
+several callers and supplies one project context to Product Sessions. Media, NLE, Canvas and other owners retain the
+meaning and operations of their facts.
 
 ## Default project layout
 
@@ -121,7 +121,8 @@ hypit.project.json          explicitly activated packages and visible offerings
 
 The Host never scans `node_modules` and activates arbitrary code. For every activated package it resolves one
 conventional exported Hypit module from the project package environment, imports it and verifies that the module
-declares the selected npm package name.
+declares the selected npm package name. The package exposes this module through a Node-resolvable `./hypit` export
+with the named value `hypitPackage`.
 
 A Hypit package module may publish many technical contributions and many catalog offerings:
 
@@ -151,6 +152,11 @@ one parameter authoring contribution, one Inspector projection, one Timeline pre
 Those facets do not need separate installation records. Conversely, one package can expose caption offerings,
 Operators and transitions without being split merely for taxonomy.
 
+For example, NLE Studio consumes `hypit.nle-authoring`, `hypit.nle-timeline-presentation` and
+`hypit.nle-inspector-presentation` contributions using the public NLE Host contracts. Its creation browser consumes
+selected `hypit.nle-component`, `hypit.nle-adjust` and `hypit.nle-transition` offerings. These names and values remain NLE product contracts; ProjectHost merely
+preserves their selected package provenance and does not acquire an NLE dependency.
+
 Project-authored packages under `packages/` participate through ordinary workspace dependencies. They are selected in
 the manifest exactly like registry packages. Official packages distributed with a Hypit application are project
 template defaults, not invisible global implementations: creating a project writes their dependencies, lockfile
@@ -165,9 +171,11 @@ manifest activation. Catalog edits are direct Project manifest commands and do n
 ## Host hierarchy and lifetimes
 
 ```text
-Application Host                         application/process lifetime
-├─ project registry and project picker
-├─ window/tab and Product Session registry
+ApplicationHost                         local/deployment service lifetime
+├─ caller connections                   Desktop · Agent · CLI · browser
+├─ ProjectHost registry
+├─ Product Provider and Session registry
+├─ Execution Directory
 └─ ProjectHost                           one per open Project Boundary
    ├─ Project manifest Service
    ├─ Project Package Environment
@@ -184,9 +192,10 @@ Application Host                         application/process lifetime
       └─ Canvas Product Session
 ```
 
-The Application Host is the application-level control plane. It chooses or creates Project Boundaries, reuses one
-ProjectHost per canonical boundary in that application lifetime, and owns shell navigation. Each independent
-application process has its own ProjectHost registry.
+The ApplicationHost is the shared backend control plane. It selects or creates Project Boundaries through explicit
+operations and reuses one ProjectHost per canonical boundary in its service lifetime. Desktop, Agent, CLI and browser
+adapters attach to this registry. Each adapter owns its presentation and navigation, while Product Session identity and
+ProjectHost leases remain coordinated by the ApplicationHost.
 
 The ProjectHost is the project-scoped composition root. It closes all project-scoped resources together, but its
 child Services retain their owner-specific APIs and revisions.
@@ -195,18 +204,19 @@ A product adapter supplies one product's transport and frontend composition. An 
 an NLE Project Service and optional View Service, combines them through the NLE Editing Surface, and receives the same
 Project Media Service and Package Environment used by other products.
 
-A Product Session is one browser page, tab or window connection. Several sessions may lease the same open owner
-Service. Selection, playhead, hover, viewport and pointer drafts remain session state; closing one page does not close
-the shared Service while another lease remains.
+A Product Session is one open product Surface presented by a browser page, Desktop tab, window or Agent view. Several
+sessions may lease the same open owner Service. Selection, playhead, hover, viewport and pointer drafts remain session
+state; the shared Service remains open while any lease exists.
 
 ## Lifecycle scopes
 
-The interactive application follows four nested scopes, with execution beside them:
+The interactive backend follows four nested scopes, with execution beside them:
 
 ```text
-ApplicationHost                              application scope
-├─ ExecutionHost / Execution Directory       shared deployment scope
-│  └─ Invocation                             Action lifetime
+ApplicationHost                              local/deployment service scope
+├─ Execution Directory                       shared execution access
+│  └─ selected Execution Environment          execution deployment scope
+│     └─ Invocation                           Action lifetime
 └─ ProjectHost                               project scope
    ├─ ProjectMediaService                    owner collection scope
    ├─ PackageEnvironment                     project package scope
@@ -214,19 +224,21 @@ ApplicationHost                              application scope
    └─ ProductSession                         interface session scope
 ```
 
-Application scope owns project discovery, shared execution access, shell navigation and Product Session registration.
-Project scope owns one open Project Boundary and its shared project resources. Collection and document scopes give
-owner facts real open lifetimes. Interface scope owns current selection, playhead, zoom, hover, panel and pointer state.
+ApplicationHost scope owns project discovery, the ProjectHost registry, shared execution access and Product Session
+registration. Project scope owns one open Project Boundary and its shared project resources. Collection and document
+scopes give owner facts real open lifetimes. Interface scope owns current selection, playhead, zoom, hover, panel and
+pointer state. Caller adapters own their windows, tabs, conversations and command presentation.
 
-A Product Session leases one or more typed owner Services. Several Product Sessions may lease the same document
-Service. An ExecutionHost may serve several ProjectHosts, and an Invocation may continue after its initiating Product
-Session or ProjectHost has closed. Reopening a project reconnects to that Invocation through its durable address.
+A Product Session leases one or more typed owner Services. Several Product Sessions and caller adapters may lease the
+same document Service. An ExecutionHost may serve several ProjectHosts, and an Invocation may continue after its
+initiating caller, Product Session or ProjectHost has closed. Reopening a project reconnects to that Invocation through
+its durable address.
 
 ## Execution Environments
 
-Provider accounts, model queues, GPU slots, rate limits, durable Provider receipts and recovery belong to an
-application, account, worker or remote-deployment lifetime. ProjectHost receives scoped clients to those Execution
-Environments.
+Provider accounts, model queues, GPU slots, rate limits, durable Provider receipts and recovery belong to an account,
+worker or execution-deployment lifetime. The ApplicationHost exposes selected Environments through its Execution
+Directory, and each ProjectHost receives scoped clients to them.
 
 ```text
 ApplicationHost
@@ -241,9 +253,9 @@ ApplicationHost
    └─ scoped Execution clients
 ```
 
-The ApplicationHost explicitly registers selected Environments. An Environment publishes a finite capability
-projection. The ProjectHost receives clients permitted for that project, and a user, Agent or project program
-explicitly starts each Invocation against a selected compatible Environment.
+The ApplicationHost explicitly registers selected Environments and their clients. An Environment publishes a finite
+capability projection. The ProjectHost receives clients permitted for that project, and a user, Agent or project
+program explicitly starts each Invocation against a selected compatible Environment.
 
 Four selections remain separate:
 
@@ -256,16 +268,17 @@ A Seedance adapter initially may run in the same Node process as the Application
 Deployment, recovery, credential isolation and shared-capacity requirements may place that Environment in a separate
 worker or remote service while preserving the same Generation Graph, ProjectHost and Invocation/Publication seams.
 
-Application configuration owns Provider credentials, account-wide capacity and usable Environments. Project packages
-select Ability definitions and authoring contributions. A project document may retain explicit Invocation and
-Publication references, while the selected Environment retains private Provider recovery state.
+ApplicationHost deployment configuration selects usable Environments and the credential sources available to them.
+Each Environment owns its Provider credentials, account-wide capacity, Invocation recovery and Publication resources.
+Project packages select Ability definitions and authoring contributions. A project document may retain explicit
+Invocation and Publication references.
 
 ## Shared Media
 
 The Project Media Service is unique for:
 
 ```text
-Application Host lifetime + Project Boundary
+ApplicationHost instance + Project Boundary
 ```
 
 More concretely, it is constructed and closed by the corresponding ProjectHost. NLE, Canvas, Scene, Agent and Media
@@ -325,6 +338,7 @@ project.boundary;                  // canonical root and current manifest observ
 project.packages.contributions();  // exact activated package provenance
 project.packages.catalog();        // selected author-facing offerings
 project.media;                     // the shared ProjectMediaService
+await project.media.adoptFile(...); // Node facet; one serialized Media adoption Action
 project.documents;                 // typed provider + path Service leases
 project.resources;                 // invocation-local Host resource addresses
 project.products;                  // Product Session launch and close
@@ -343,9 +357,11 @@ lease.close();
 An NLE product launch is application coordination rather than an NLE command:
 
 ```ts
-const session = await project.products.launch("hypit.nle", {
-  document: "edits/trailer.svml",
-  view: { persistence: "session" },
+const project = await application.openProject({ root: "/work/documentary" });
+const session = await application.launchProduct({
+  project: project.handle,
+  product: "hypit.nle-studio",
+  input: { document: "edits/trailer.svml" },
 });
 ```
 
@@ -354,14 +370,14 @@ then launches a Product Session over that document. ProjectHost supplies the con
 
 ## Backend and frontend boundary
 
-The first complete local application may use one Node process and one loopback HTTP server. Host boundaries do not
-imply process boundaries:
+The first complete local deployment may use one long-lived Node process and one loopback HTTP server. Host boundaries
+do not imply process boundaries:
 
 ```text
-Browser shell
-  project picker · tabs · windows
-        │
-Loopback Application adapter
+Desktop · Agent · CLI · browser
+  callers and product surfaces
+        │ typed adapter
+Loopback Application adapter / direct client
   ApplicationHost
         │
   ProjectHost registry
@@ -369,17 +385,27 @@ Loopback Application adapter
   owner/product HTTP adapters
 ```
 
-The shell calls Application operations to create/open a project and launch a product. It receives an opaque Product
-Session address and opens it in a tab or window. Shell navigation switches directly among Canvas, NLE and other
-Product Sessions.
+A caller uses Application operations to create or open a project. Visual callers may launch a product, receive an
+opaque Product Session address and present it in a tab or window. Agent and CLI callers may invoke ProjectHost, owner
+and Execution operations without creating a Product Session.
 
 The browser receives finite projections and submits typed product operations. Absolute filesystem paths, imported
 package functions and raw Service instances remain behind the loopback adapter. Host resource URLs are
 session-scoped projections for Media thumbnails, package posters and preview frames; they are not persistent owner
 references.
 
+The Project Resource Gateway issues opaque project-lifetime capabilities over Host-resolved resources. A Product
+Session owns the subset it requested, turns those capabilities into its own transport URLs and revokes them when the
+session closes. The Node resolver canonicalizes a declared file inside the Project Boundary before registration.
+HTTP byte ranges, response headers and browser authorization remain product-adapter behavior.
+
 The ProjectHost package does not own browser chrome or a universal JSON command protocol. Application HTTP, Desktop
-IPC, CLI and Agent tools remain adapters over the same typed Host and owner contracts.
+IPC, CLI and Agent tools attach to the same ApplicationHost and remain adapters over typed Host and owner contracts.
+
+The Node Project Media facet is the shared headless import boundary for those adapters. A trusted CLI or native
+adapter may pass a selected local path directly. A browser adapter first streams bytes into a temporary file. Both
+invoke the same adoption Action, and neither creates an NLE Item, Canvas node or another owner fact as an implicit
+side effect.
 
 ## Release shape
 
@@ -388,6 +414,7 @@ The justified release graph becomes:
 ```text
 @hypit/media-asset  -> Project Media Service modules
 @hypit/project      -> Project manifest, package environment and ProjectHost
+@hypit/application  -> ProjectHost registry, Product Sessions and Execution Directory
 @hypit/nle          -> NLE owner facts and Services
 @hypit/nle-studio   -> NLE product adapter and browser client
 @hypit/hypit        -> ApplicationHost composition and distribution defaults
@@ -398,8 +425,9 @@ depend on its context contract. It may depend on the Media Asset release because
 stable Project Media Service for its boundary. Platform package-manager execution remains a selected Executor or Node
 adapter, not part of the manifest Reader.
 
-ApplicationHost remains root distribution composition until another application independently consumes it or its
-deployment lifecycle justifies extraction. Product UIs remain with their product adapter packages.
+ApplicationHost is the root distribution composition. Product UIs remain with their product adapter packages, and
+Execution Environment implementations retain independent deployment and release boundaries where their platform,
+credential, recovery or capacity requirements demand them.
 
 ## First implementation slice
 

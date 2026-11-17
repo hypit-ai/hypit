@@ -46,6 +46,12 @@ The first working owner foundations are Media, AVIR, NLE Project and NLE View:
 - `@hypit/temporal` provides exact clock-free temporal domains and relations;
 - `@hypit/media` inspects, selects and interprets picture and audio members;
 - `@hypit/media-asset` reads, validates, adopts and resolves portable Media Asset documents;
+- `@hypit/application` provides the long-lived ProjectHost, Product Session and Execution Directory registries plus
+  the loopback application adapter;
+- `@hypit/application-home` provides the application-level browser Surface for opening a Project Boundary and launching
+  a registered product;
+- `@hypit/project` opens one Project Boundary, activates its explicit package environment and shares one Media
+  Service plus typed owner-document lifetimes among product sessions;
 - `@hypit/media-local` implements bounded container-index and explicitly selected decoded-unit inspection
   with local ffprobe;
 - `@hypit/audiovisual` defines renderer-independent Programme relations, exact point evaluation and one
@@ -55,9 +61,13 @@ The first working owner foundations are Media, AVIR, NLE Project and NLE View:
   keeping renderer execution outside both documents; one Project-owned typed Shared Value registry lets explicit
   Component slots, package Operator parameters and NLE-owned Picture layout slots share values across occurrences and
   Compositions without entering View state or becoming arbitrary document-path relations;
-- `@hypit/hypit` exposes those packages through the root distribution facade.
+- `@hypit/nle-studio` registers an NLE Product Provider, leases NLE Project and View Services from its selected
+  ProjectHost, and projects shared Project Media through its session adapter;
+- `@hypit/hypit` composes the default ApplicationHost distribution, publishes its local endpoint and registers
+  Application Home plus the NLE Studio Product Provider.
 
 Media Asset documents use the unversioned `hypit.media-asset` format kind. npm semver and the project lockfile
 version implementations; the Media Asset Reader accepts the current owner shape.
 
-Run `pnpm check` and `pnpm build` to verify the current source and release output.
+Run `pnpm build`, then `pnpm application` to start the shared ApplicationHost. `pnpm studio` is the direct
+project-and-product launcher for the included NLE project.

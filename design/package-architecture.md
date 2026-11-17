@@ -40,8 +40,10 @@ The first package graph should remain small:
 project component packages -> @hypit/authoring
 @hypit/project    -> @hypit/media-asset
 @hypit/nle       -> @hypit/audiovisual
-@hypit/nle-studio -> @hypit/project + @hypit/nle
-@hypit/hypit     -> selected owner packages
+@hypit/application -> @hypit/project
+@hypit/application-home -> @hypit/application
+@hypit/nle-studio -> @hypit/application + @hypit/project + @hypit/nle
+@hypit/hypit     -> @hypit/application + @hypit/application-home + selected Product Providers
 ```
 
 The arrows describe source dependencies, not authority. `@hypit/temporal` supplies exact values and mappings. Media
@@ -97,10 +99,23 @@ Preview, review and delivery executors own output clocks, decoding, browser or n
 encoding, progress, cancellation and recovery. Hosts select installed component packages and executor capabilities;
 they do not add those facts to NLE or AVIR.
 
-`@hypit/nle-studio` is the standalone loopback NLE product adapter. Its independent browser artifact, Node entry and
-deployment lifecycle justify a release boundary outside headless `@hypit/nle`. It composes Project and View Services
-through the NLE Editing Surface, and accepts Project Media Service and preview Executor ports without absorbing their
-facts or execution state.
+`@hypit/nle-studio` supplies the NLE Product Provider and browser artifact registered by ApplicationHost. Its product
+lifecycle and visual consumer justify a release boundary outside headless `@hypit/nle`. It composes Project and View
+Services through the NLE Editing Surface, and accepts Project Media Service and preview Executor ports without
+absorbing their facts or execution state.
+
+`@hypit/application` owns the generic ApplicationHost lifecycle, ProjectHost and Product Session registries,
+Execution Directory and Node loopback adapter. It knows Product Providers by stable product identity and opaque
+session interface only. Product-specific protocols and browser artifacts remain in their product packages.
+
+`@hypit/application-home` owns the application-level browser Surface and its Node static adapter. It consumes the
+finite Application projection, temporarily leases a selected project while launching a product, and presents returned
+Product Session capabilities. Product Providers retain their launch-input meaning and validation.
+
+`@hypit/hypit` composes the long-lived ApplicationHost distribution. It registers ProjectHost, selected Product
+Providers, Application Home, the Execution Directory and local adapters. Its Node distribution publishes the live
+loopback endpoint used by Desktop, Agent and CLI callers. Installed Execution Environment packages retain their own
+deployment and recovery boundaries.
 
 `@hypit/project` owns the Project manifest Reader, explicit installed-package activation, package contribution and
 catalog provenance, open owner-Service leases and the ProjectHost lifecycle. Its `node` subpath supplies local path,
@@ -139,7 +154,7 @@ materialize an NLE-compatible author result or publish an implementation that ob
 
 ## First implementation order
 
-The redesign should proceed as one vertical slice rather than by creating every proposed package immediately:
+Implementation proceeds as one vertical slice:
 
 1. keep the current exact temporal foundation and AVIR/NLE owner schemas;
 2. define a small authoring source module with `Timeline`, `Track`, `Present`, `TimeMap`, Present-local `Process`,
@@ -150,5 +165,4 @@ The redesign should proceed as one vertical slice rather than by creating every 
 6. extract `@hypit/authoring` only when a second project component or product consumes it independently;
 7. split renderer or platform executors only when their deployment and process lifecycles justify it.
 
-This order prevents the package graph from becoming another speculative architecture. The durable seams are proved by
-the production path first.
+The production path establishes each durable seam before it becomes an independent release boundary.

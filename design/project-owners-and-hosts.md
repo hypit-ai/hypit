@@ -46,7 +46,7 @@ lifecycle are defined in [Project Boundary and Project Host](project-host.md).
 | --- | --- | --- |
 | Author object | durable | NLE Project, Graph, Scene, Script, Feedback |
 | Workspace or View | durable author/editor choice | selected Publication, track lock, durable layout |
-| Open Service session | application lifetime | undo, single writer, watchers, dirty state |
+| Open Service session | ProjectHost lease lifetime | undo, single writer, watchers, dirty state |
 | Host or frontend session | Surface lifetime | selection, playhead, hover, panel state |
 | Projection | derived | timeline scene, canvas cards, inspector model |
 | Rebuildable cache | derived | waveform, thumbnail, preview frame, object index |
@@ -74,23 +74,26 @@ transport data and applies the Host's permissions.
 
 ### Application and Project Hosts
 
-An Application Host owns project selection and shell-level Product Session navigation. One ProjectHost selects the
-installed package environment and shares project-scoped Services and Executor clients for one open Project Boundary.
-A Product Session presents one product Surface over that project context. Hosts govern application and project
-lifetimes rather than becoming new fact owners, and all of these layers may share one process.
+An ApplicationHost is the long-lived backend root shared by Desktop, Agent, CLI and browser adapters in one local or
+deployed Hypit instance. It owns ProjectHost leases, Product Providers, Product Sessions and the Execution Directory.
+One ProjectHost selects the installed package environment and shares project-scoped Services and Executor clients for
+one open Project Boundary. A Product Session presents one product Surface over that project context. Hosts govern
+application and project lifetimes rather than becoming new fact owners, and all of these layers may share one process.
 
 The resulting interactive hierarchy is:
 
 ```text
-Application scope
-├─ shared ExecutionHost and Execution Directory
-└─ Project scope
+ApplicationHost scope
+├─ Execution Directory
+│  └─ selected Execution Environments
+└─ ProjectHost scope
    ├─ owner collection and document Service scopes
    └─ interface Product Session scopes
 ```
 
-ExecutionHost is shared across ProjectHosts according to deployment and account policy. ProjectHosts receive scoped
-Execution clients. Product Sessions lease typed owner Services and retain only current interaction state.
+An ExecutionHost is shared across ProjectHosts according to deployment and account policy. ProjectHosts receive scoped
+Execution clients. Product Sessions lease typed owner Services and retain only current interaction state. Desktop,
+Codex and other callers resolve projects and execution through the ApplicationHost's shared registries.
 
 ## Product operation forms
 
@@ -177,9 +180,10 @@ npm selections with package-owned symbols, parameters and optional authoring con
 
 ## Agent-native product direction
 
-A capable Agent Host is the long-lived product root. Hypit contributes owner facts, Services, Executors,
-production knowledge and optional professional views. The Host contributes conversation, files, diffs,
-tools, browser, permissions, long tasks and navigation.
+An Agent integration connects to the long-lived ApplicationHost and uses the same ProjectHosts, owner Services,
+Executors and Product Sessions as visual products. The Agent environment contributes conversation, files, diffs,
+tools, browser, permissions, long tasks and navigation. Hypit contributes production facts, operations, execution and
+optional professional views.
 
 Timeline, Canvas, Scene, Review, object index and inspector are views over exact authorities. Each view opens
 the objects relevant to its production decision and submits edits to their owners.

@@ -94,7 +94,7 @@ The four layers are independent:
 | --- | --- | --- |
 | NLE Project | what is the audiovisual work? | durable author document |
 | NLE View | how should one editor arrange and guard editing? | optional durable editor document |
-| Host Session | what is happening in this open Surface now? | application lifetime |
+| Host Session | what is happening in this open Surface now? | Product Session lifetime |
 | Projection | what finite Timeline, Canvas or Inspector read model is shown? | rebuildable |
 
 Selection, playhead, zoom, scroll, hover, current tool, pointer drafts, thumbnails and waveform resources are
@@ -303,8 +303,10 @@ background hash comparison. File watching and platform file I/O remain Host or a
 ## Authoring planners and disposable indexes
 
 Pure materialization planners translate explicit caller choices into ordinary Project transactions for Media Asset,
-component and local Composition Presents plus Adjust Items. They perform no file access, package evaluation or Service
-mutation. A direct spatial planner similarly translates frame, fit and focal-alignment plus explicit
+component and local Composition Presents, Adjust Items and Transitions. Transition materialization atomically turns
+one direct Picture cut into its explicit overlap and relation; no invalid intermediate overlap becomes an accepted
+Project snapshot. The planners perform no file access, package evaluation or Service mutation. A direct spatial
+planner similarly translates frame, fit and focal-alignment plus explicit
 share/link/unlink intentions into Item or Shared Value transactions; editor pointer drafts and snapping remain View
 or Host Session behavior. A Process parameter planner likewise translates explicit share, link and unlink intentions
 into ordinary Process and Shared Value commands.

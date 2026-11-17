@@ -1,0 +1,31 @@
+{
+  "name": "@hypit/application",
+  "version": "0.1.0",
+  "description": "ApplicationHost lifecycle, project registry and product session composition",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    ".": {
+      "hypit-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./projection": {
+      "hypit-source": "./src/types.ts",
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    },
+    "./node": {
+      "hypit-source": "./src/node/index.ts",
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@hypit/project": "workspace:^0.1.0"
+  }
+}

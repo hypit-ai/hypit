@@ -93,20 +93,24 @@ Every seam names its two authorities, address basis and lifecycle.
 
 ## Article VI — Host hierarchy
 
-Agent Host, application, CLI and Web Bench are product entries over the same owner authorities. An Application Host
-selects or creates Project Boundaries and owns shell-level Product Session navigation. One ProjectHost opens each
-selected boundary, its explicit package environment, its shared Project Media Service, owner Services and selected
-Executor clients. A Product Session binds one product Surface to that project context.
+An ApplicationHost is the long-lived backend root for one local user or deployment. Desktop, Agent integrations, CLI,
+browser products and project programs connect to that same Host through explicit adapters. A caller may start the
+ApplicationHost when none is available, but its connection does not define the Host's lifetime.
+
+The ApplicationHost owns the open-ProjectHost registry, Product Provider and Product Session registry, and Execution
+Directory. One ProjectHost opens each selected boundary, its explicit package environment, its shared Project Media
+Service, owner Services and selected Executor clients. A Product Session binds one product Surface to that project
+context. A caller may also use project and owner operations without opening a Product Session.
 
 Host levels govern composition and lifetime rather than domain meaning. An owner Service retains its typed commands
 and revision even when several products share it. Several Services may share a process, and a heavy Executor may use a
 dedicated process.
 
-The interactive application has four nested scopes: Application, Project Boundary, open owner document or collection,
+The interactive backend has four nested scopes: ApplicationHost, Project Boundary, open owner document or collection,
 and Product Session. A Product Session leases the owner Services it presents, so several sessions may share one
-document Service and one session may compose several Services. Execution is an orthogonal deployment scope: an
-ExecutionHost may serve several ProjectHosts, and an Invocation may outlive the interface and project sessions that
-started it.
+document Service and one session may compose several Services. Execution is an orthogonal deployment scope: the
+ApplicationHost's Execution Directory exposes selected Environments, an ExecutionHost may serve several ProjectHosts,
+and an Invocation may outlive the caller connection, Product Session and ProjectHost that started it.
 
 An application operation has one of four forms:
 
@@ -115,9 +119,9 @@ An application operation has one of four forms:
 - Action starts work owned by a concrete Executor;
 - Interaction asks the Host to involve the user or operating system.
 
-Workbench, Desktop, HTTP, IPC and Agent tools are adapters over these operations. Closing one Surface preserves the
-owner object and any open Service still leased by the ProjectHost. Frontend tabs and windows are Product Sessions,
-not owner facts.
+Studio, Desktop, HTTP, IPC, CLI and Agent tools are adapters over these operations. Closing one caller or Surface
+preserves the ApplicationHost, the owner object, recoverable Actions and every Service with a remaining lease.
+Frontend tabs and windows are Product Sessions, not owner facts.
 
 ## Article VII — Distribution
 

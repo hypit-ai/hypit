@@ -50,13 +50,17 @@ more explicit Endpoint adapters with credentials, capacity and recoverable stora
 projection to its clients. ProjectHost receives a scoped client; it does not absorb the Environment or activate every
 installed Provider package.
 
-An Environment may run in the ApplicationHost process, a dedicated local worker or a remote deployment. The process
-placement does not change the Invocation contract. A dedicated Seedance process is justified only by an actual
-deployment, recovery, credential or shared-capacity boundary; the first implementation may use an in-process Seedance
-Endpoint adapter behind the same Environment interface.
+An Environment may run in the ApplicationHost service process, a dedicated local worker or a remote deployment. The
+process placement does not change the Invocation contract. A dedicated Seedance process is justified by its deployment,
+recovery, credential or shared-capacity boundary; an in-process Seedance Endpoint adapter uses the same Environment
+interface.
 
 A completed recoverable Invocation closes one or more named typed outputs and owned resources as a
 Publication. Publication provides an exact stable address for reopening those outputs.
+
+The ApplicationHost's Execution Directory registers and projects available Environments. The selected Environment,
+rather than the directory or caller, owns Invocation recovery, Provider receipts and Publication resources. A caller
+that reconnects through Desktop, Agent, CLI or browser observes the same recoverable Action by its durable address.
 
 Adoption gives the output author meaning:
 

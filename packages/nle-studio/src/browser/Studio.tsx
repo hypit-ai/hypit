@@ -3,8 +3,25 @@ import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import type { NleInspectorScene } from "@hypit/nle/view";
 import { Blend, Captions, Images, Maximize2, Minimize2, Pause, Play, Redo2, Save, StepBack, StepForward, Type, Undo2, Volume2, VolumeX, Wand2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { NleStudioSession } from "../protocol.js";
-import { readInspector, readSession, reloadSession, saveSession, sendCommand } from "./api.js";
+import type {
+  NleStudioAdjustCatalogEntry,
+  NleStudioComponentCatalogEntry,
+  NleStudioMediaEntry,
+  NleStudioSession,
+  NleStudioTransitionCatalogEntry,
+} from "../protocol.js";
+import {
+  materializeAdjust,
+  materializeComponent,
+  materializeTransition,
+  importMedia,
+  placeMedia,
+  readInspector,
+  readSession,
+  reloadSession,
+  saveSession,
+  sendCommand,
+} from "./api.js";
 import { CanvasControls } from "./CanvasControls.js";
 import { IconButton } from "./common.js";
 import { Inspector } from "./Inspector.js";
@@ -114,7 +131,17 @@ export function Studio() {
 
   if (session === undefined) return <div className="nle-editor nle-loading">{failure ?? "正在打开 NLE Studio…"}</div>;
   const scene = session.open.timeline;
+  const fps = scene.editRate.numerator / scene.editRate.denominator;
   const activeComposition = session.open.project.project.compositions.find(composition => composition.id === scene.composition)!;
+  const projectItems = new Map(activeComposition.tracks.flatMap(track => track.items.map(item => [item.id, item] as const)));
+  const mediaByPath = new Map(session.media.entries.map(entry => [entry.id, entry] as const));
+  const mediaForItem = (itemId: string) => {
+    const item = projectItems.get(itemId);
+    if (item?.kind !== "present" || item.source !== "media") return undefined;
+    const base = new URL(session.projectDocument.path, "https://hypit.invalid/");
+    const path = decodeURIComponent(new URL(item.asset.path, base).pathname.slice(1));
+    return mediaByPath.get(path);
+  };
   const selectedProjectItem = activeComposition.tracks.flatMap(track => track.items).find(item => item.id === selection[0]);
   const selectedGroups = scene.groups.filter(group => group.items.some(item => selection.includes(item)));
   const grouped = selectedGroups.length === 1 && selectedGroups[0]!.items.every(item => selection.includes(item))
@@ -131,8 +158,120 @@ export function Studio() {
     command({ kind: "inspector.edit", expectedProjectRevision: session.open.status.projectRevision,
       expectedViewRevision: session.open.status.viewRevision, item: selection[0], section, field, value });
   };
+  const materialize = (entry: NleStudioComponentCatalogEntry) => void perform(async () => {
+    const destination = scene.tracks.find(track => track.kind === "picture" && !track.locked);
+    if (destination === undefined) throw new Error("当前 Composition 没有可写的画面轨道。");
+    const item = `component-${crypto.randomUUID()}`;
+    const next = await materializeComponent({
+      expectedProjectRevision: session.open.status.projectRevision,
+      expectedViewRevision: session.open.status.viewRevision,
+      package: entry.package,
+      offering: entry.offering,
+      item,
+      composition: scene.composition,
+      track: destination.id,
+      atFrame: frame,
+    });
+    setSession(next);
+    setSelection([item]);
+    setInspector((await readInspector(item)).inspector);
+  });
+  const placeProjectMedia = (entry: NleStudioMediaEntry) => void perform(async () => {
+    if (entry.state !== "available") throw new Error(entry.diagnostic ?? "这个项目媒体当前不可用。");
+    const trackKind = entry.kind === "audio" ? "audio" : "picture";
+    const durationFrames = entry.durationFrames ?? Math.max(1, Math.round(fps * 5));
+    const fits = (track: NleStudioSession["open"]["timeline"]["tracks"][number]) => track.kind === trackKind
+      && !track.locked && track.items.every(item => item.role !== "adjust"
+        && (frame + durationFrames <= item.startFrame || frame >= item.startFrame + item.durationFrames));
+    let current = session;
+    let destination = scene.tracks.find(track => fits(track));
+    if (destination === undefined) {
+      const track = `track-${crypto.randomUUID().slice(0, 8)}`;
+      current = await sendCommand({
+        kind: "project.transact",
+        expectedProjectRevision: current.open.status.projectRevision,
+        expectedViewRevision: current.open.status.viewRevision,
+        commands: [{
+          kind: "track.add",
+          composition: scene.composition,
+          track: { id: track, name: trackKind === "audio" ? "音频轨道" : "视频轨道", kind: trackKind,
+            enabled: true, items: [] },
+          ...(trackKind === "picture" && activeComposition.tracks.find(candidate => candidate.kind === "audio") !== undefined
+            ? { before: activeComposition.tracks.find(candidate => candidate.kind === "audio")!.id } : {}),
+        }],
+      });
+      destination = current.open.timeline.tracks.find(candidate => candidate.id === track);
+      if (destination === undefined) throw new Error("新建的媒体轨道没有出现在当前时间线中。");
+    }
+    const item = `media-${crypto.randomUUID()}`;
+    const next = await placeMedia({
+      expectedProjectRevision: current.open.status.projectRevision,
+      expectedViewRevision: current.open.status.viewRevision,
+      item,
+      reference: { path: entry.id },
+      composition: scene.composition,
+      track: destination.id,
+      atFrame: frame,
+      durationFrames,
+      includeAudio: entry.kind === "audiovisual",
+    });
+    setSession(next);
+    setSelection([item]);
+    setInspector((await readInspector(item)).inspector);
+  });
+  const importProjectMedia = (files: readonly File[]) => void perform(async () => {
+    let next = session;
+    for (const file of files) {
+      next = await importMedia(file);
+      setSession(next);
+    }
+  });
+  const materializeEffect = (entry: NleStudioAdjustCatalogEntry) => void perform(async () => {
+    const compatible = scene.tracks.filter(track => track.kind === entry.medium && !track.locked);
+    const destination = entry.medium === "picture" ? compatible.at(-1) : compatible[0];
+    if (destination === undefined) throw new Error(`当前 Composition 没有可写的${entry.medium === "picture" ? "画面" : "音频"}轨道。`);
+    const item = `adjust-${crypto.randomUUID()}`;
+    const next = await materializeAdjust({
+      expectedProjectRevision: session.open.status.projectRevision,
+      expectedViewRevision: session.open.status.viewRevision,
+      package: entry.package,
+      offering: entry.offering,
+      item,
+      composition: scene.composition,
+      track: destination.id,
+      atFrame: frame,
+    });
+    setSession(next);
+    setSelection([item]);
+    setInspector((await readInspector(item)).inspector);
+  });
+  const materializeSelectedTransition = (entry: NleStudioTransitionCatalogEntry) => void perform(async () => {
+    if (selection.length !== 2) throw new Error("添加转场前需要选择同一画面轨道上直接相接的两个片段。");
+    const items = activeComposition.tracks.flatMap(track => track.items.map(item => ({ track, item })))
+      .filter(candidate => selection.includes(candidate.item.id));
+    if (items.length !== 2 || items[0]!.track.id !== items[1]!.track.id || items[0]!.track.kind !== "picture") {
+      throw new Error("转场需要同一画面轨道上的两个片段。");
+    }
+    const ordered = [...items].sort((left, right) => {
+      const editFps = scene.editRate.numerator / scene.editRate.denominator;
+      const frameOf = (value: ExactTemporalValue) => Number(value.ticks) * value.timeBase.numerator
+        / value.timeBase.denominator * editFps;
+      return frameOf(left.item.start) - frameOf(right.item.start);
+    });
+    const transition = `transition-${crypto.randomUUID()}`;
+    const next = await materializeTransition({
+      expectedProjectRevision: session.open.status.projectRevision,
+      expectedViewRevision: session.open.status.viewRevision,
+      package: entry.package,
+      offering: entry.offering,
+      transition,
+      composition: scene.composition,
+      outgoing: ordered[0]!.item.id,
+      incoming: ordered[1]!.item.id,
+    });
+    setSession(next);
+  });
 
-  const fps = scene.editRate.numerator / scene.editRate.denominator;
   return <div className="nle-workspace nle-active"><div className={classes} style={{
     "--nle-bin-preferred": `${panelWidths.bin}px`,
     "--nle-properties-preferred": `${panelWidths.properties}px`,
@@ -145,12 +284,12 @@ export function Studio() {
       </div></div></div>
       {failure !== undefined && <div className="studio-error">{failure}</div>}
       <div className="nle-upper">
-        <aside className="nle-bin"><div className="nle-bin-tabs" role="tablist">{(Object.keys(icons) as BinTab[]).map(id => { const Icon = icons[id]; return <button type="button" role="tab" aria-selected={binTab === id} key={id} onClick={() => setBinTab(id)}><Icon size={18} strokeWidth={1.6}/><span>{tabNames[id]}</span></button>; })}</div><div className="nle-bin-body"><StudioBin tab={binTab} project={session.open.project.project} media={session.media} onSelect={id => select([id])}/></div></aside>
+        <aside className="nle-bin"><div className="nle-bin-tabs" role="tablist">{(Object.keys(icons) as BinTab[]).map(id => { const Icon = icons[id]; return <button type="button" role="tab" aria-selected={binTab === id} key={id} onClick={() => setBinTab(id)}><Icon size={18} strokeWidth={1.6}/><span>{tabNames[id]}</span></button>; })}</div><div className="nle-bin-body"><StudioBin tab={binTab} catalog={session.catalog} media={session.media} disabled={busy} onImportMedia={importProjectMedia} onPlaceMedia={placeProjectMedia} onMaterialize={materialize} onMaterializeAdjust={materializeEffect} onMaterializeTransition={materializeSelectedTransition}/></div></aside>
         <PanelResizeHandle side="bin" label="调整素材面板宽度" width={panelWidths.bin} onResize={(width, save) => resizePanel("bin", width, save)}/>
         <section className="nle-monitor"><div className="nle-panel-header nle-monitor-title"><span>{projectName}</span><IconButton label={previewExpanded ? "恢复预览" : "放大预览"} onClick={() => setPreviewExpanded(value => !value)}>{previewExpanded ? <Minimize2 size={15}/> : <Maximize2 size={15}/>}</IconButton></div>
           <div className="nle-stage"><div className="nle-editable-preview" style={{ "--canvas-ratio": session.open.canvas.canvas.width / session.open.canvas.canvas.height } as React.CSSProperties}><div className="studio-canvas">
             {session.preview.state === "ready" && <img className="studio-preview-frame" src={session.preview.resource}/>}
-            {session.preview.state !== "ready" && session.open.canvas.layers.filter(layer => activeItems.has(layer.id) && layer.layout !== undefined).map(layer => { const layout = layer.layout!; const canvas = session.open.canvas.canvas; return <button type="button" key={layer.id} className={`studio-canvas-layer${selection.includes(layer.id) ? " selected" : ""}`} onClick={() => select([layer.id])} style={{ left: `${layout.x / canvas.width * 100}%`, top: `${layout.y / canvas.height * 100}%`, width: `${layout.width / canvas.width * 100}%`, height: `${layout.height / canvas.height * 100}%` }}><span>{layer.title}</span></button>; })}
+            {session.preview.state !== "ready" && session.open.canvas.layers.filter(layer => activeItems.has(layer.id) && layer.layout !== undefined).map(layer => { const layout = layer.layout!; const canvas = session.open.canvas.canvas; const media = mediaForItem(layer.id); return <button type="button" key={layer.id} className={`studio-canvas-layer${selection.includes(layer.id) ? " selected" : ""}`} onClick={() => select([layer.id])} style={{ left: `${layout.x / canvas.width * 100}%`, top: `${layout.y / canvas.height * 100}%`, width: `${layout.width / canvas.width * 100}%`, height: `${layout.height / canvas.height * 100}%` }}>{media?.resource && media.mediaType?.startsWith("image/") ? <img src={media.resource} style={{ objectFit: layout.fit }}/> : media?.resource && media.mediaType?.startsWith("video/") ? <video src={media.resource} muted playsInline style={{ objectFit: layout.fit }}/> : undefined}<span>{layer.title}</span></button>; })}
             {session.preview.state !== "ready" && <CanvasControls scene={session.open.canvas} active={activeItems} selection={selection} disabled={busy} onSelect={select}
               onTranslate={(item, deltaX, deltaY) => command({ kind: "spatial.edit", expectedProjectRevision: session.open.status.projectRevision, expectedViewRevision: session.open.status.viewRevision, item, edit: { kind: "frame.translate", deltaX, deltaY } })}
               onResize={(item, next) => command({ kind: "spatial.edit", expectedProjectRevision: session.open.status.projectRevision, expectedViewRevision: session.open.status.viewRevision, item, edit: { kind: "frame.resize", frame: next } })}/>}

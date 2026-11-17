@@ -1,10 +1,16 @@
-import type { PackageSymbol } from "@hypit/audiovisual";
+import { assertImplementationBinding, type PackageSymbol } from "@hypit/audiovisual";
 import { mediaPictureExtent, sealMediaInterpretation } from "@hypit/media";
-import { compareExactTemporalValues, exactTemporalZero, type ExactTemporalValue } from "@hypit/temporal/algebra";
+import {
+  compareExactTemporalValues,
+  exactTemporalZero,
+  subtractExactTemporalValues,
+  type ExactTemporalValue,
+} from "@hypit/temporal/algebra";
 import {
   assertNleProject,
   findNleComposition,
   nleCompositionDuration,
+  nleItemEnd,
 } from "./project.js";
 import { containNlePictureLayout } from "./picture.js";
 import { nleLinearTimeMapping } from "./source-time.js";
@@ -167,6 +173,58 @@ export function createAdjustMaterialization(project: NleProject, input: {
     enabled: true,
   };
   return { commands: [{ kind: "item.add", track: input.track, item }] };
+}
+
+/** Plan one package Transition by atomically turning a direct Picture cut into its canonical overlap. */
+export function createTransitionMaterialization(project: NleProject, input: {
+  readonly id: string;
+  readonly composition: string;
+  readonly outgoing: string;
+  readonly incoming: string;
+  readonly operator: PackageSymbol;
+  readonly parameters: Readonly<Record<string, unknown>>;
+  readonly duration: ExactTemporalValue;
+}): NleTransaction {
+  assertNleProject(project);
+  const composition = findNleComposition(project, input.composition);
+  const located = composition.tracks.flatMap((candidate) => candidate.items.map((item) => ({ track: candidate, item })));
+  const outgoing = located.find((candidate) => candidate.item.id === input.outgoing);
+  const incoming = located.find((candidate) => candidate.item.id === input.incoming);
+  assert(outgoing !== undefined, `NLE Transition outgoing Item ${input.outgoing} is not in ${composition.id}.`);
+  assert(incoming !== undefined, `NLE Transition incoming Item ${input.incoming} is not in ${composition.id}.`);
+  assert(input.outgoing !== input.incoming, "NLE Transition requires two different Items.");
+  assert(outgoing.track.id === incoming.track.id && outgoing.track.kind === "picture",
+    "NLE Transition Items must belong to one Picture Track.");
+  assert(outgoing.item.kind === "present" && incoming.item.kind === "present",
+    "NLE Transition requires Present Items.");
+  assert(outgoing.item.enabled && incoming.item.enabled, "NLE Transition cannot use a disabled Item.");
+  assert(compareExactTemporalValues(nleItemEnd(outgoing.item), incoming.item.start) === 0,
+    "NLE Transition materialization requires a direct outgoing/incoming cut.");
+  assert(compareExactTemporalValues(input.duration, exactTemporalZero()) > 0,
+    "NLE Transition duration must be positive.");
+  assert(compareExactTemporalValues(input.duration, outgoing.item.duration) < 0
+    && compareExactTemporalValues(input.duration, incoming.item.duration) < 0,
+  "NLE Transition duration must be shorter than both Items.");
+  assertImplementationBinding({ implementation: input.operator, parameters: input.parameters },
+    `NLE Transition ${input.id}`);
+  return { commands: [
+    {
+      kind: "item.move",
+      ids: [input.incoming],
+      delta: subtractExactTemporalValues(exactTemporalZero(), input.duration),
+    },
+    {
+      kind: "transition.add",
+      composition: composition.id,
+      transition: {
+        id: input.id,
+        outgoing: input.outgoing,
+        incoming: input.incoming,
+        operator: structuredClone(input.operator),
+        parameters: structuredClone(input.parameters),
+      },
+    },
+  ] };
 }
 
 /** Plan one occurrence of another Composition owned by the same Project. */

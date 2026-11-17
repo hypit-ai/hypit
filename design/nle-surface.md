@@ -4,7 +4,7 @@
 
 ## Purpose
 
-An NLE Editing Surface is the typed application port used by a Workbench, Agent tool or another interactive Host. It
+An NLE Editing Surface is the typed application port used by a Studio, Agent tool or another interactive Host. It
 composes one already-open `NleProjectService`, one already-open `NleViewService`, explicitly
 selected package contributions and finite NLE projections.
 
@@ -43,6 +43,11 @@ Any operation whose validity depends on both owners carries both expected revisi
 locks and semantic capabilities immediately before forwarding the resulting ordinary transaction to the Project
 Service. Inspector functions and client observations are never trusted as direct JSON paths or complete replacement
 objects.
+
+The View guard validates the completed Project transaction as one atomic result, then checks touched Tracks against
+the before and completed snapshots. It does not require each command prefix to be a separately valid Project; atomic
+owner operations such as creating a Transition overlap and relation remain expressible without exposing an invalid
+intermediate snapshot.
 
 A Project Command may leave independently persisted View references stale. The successful Project mutation remains
 accepted and status reports `stale`; reconciliation is a separate explicit View mutation. There is deliberately no

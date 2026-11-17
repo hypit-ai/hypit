@@ -1,0 +1,20 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@hypit/studio-components':
+        specifier: workspace:*
+        version: link:packages/studio-components
+      '@hypit/studio-operators':
+        specifier: workspace:*
+        version: link:packages/studio-operators
+
+  packages/studio-components: {}
+
+  packages/studio-operators: {}

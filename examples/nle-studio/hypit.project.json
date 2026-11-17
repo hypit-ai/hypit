@@ -1,0 +1,14 @@
+{
+  "format": "hypit.project",
+  "name": "Hypit NLE Studio",
+  "packages": [
+    {
+      "name": "@hypit/studio-components",
+      "catalog": ["editorial-title"]
+    },
+    {
+      "name": "@hypit/studio-operators",
+      "catalog": ["colour-look", "cross-dissolve"]
+    }
+  ]
+}

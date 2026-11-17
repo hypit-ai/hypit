@@ -1,17 +1,21 @@
-import { randomUUID } from "node:crypto";
-import { readFile, rename, writeFile } from "node:fs/promises";
-import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { dirname, posix, relative, resolve, sep } from "node:path";
+import type { ApplicationProductProvider } from "@hypit/application";
+import type { NodeProjectMediaService } from "@hypit/media-asset/service/node";
+import { defaultMediaSelection } from "@hypit/media";
 import {
-  openNleProjectService,
-  readNleProject,
-  serializeNleProject,
+  inspectMediaFileFromContainerIndex,
+  mediaTypeFromFile,
+} from "@hypit/media-local";
+import {
+  createAdjustMaterialization,
+  createComponentMaterialization,
+  createMediaAssetMaterialization,
+  createTransitionMaterialization,
   type NleProjectService,
 } from "@hypit/nle";
 import {
   createNleView,
   openNleViewService,
-  readNleView,
-  serializeNleView,
   type NleViewService,
 } from "@hypit/nle/view";
 import {
@@ -20,131 +24,494 @@ import {
   type NleEditingSurfaceCommand,
 } from "@hypit/nle/surface";
 import type {
+  ProjectDocumentLease,
+  ProjectHost,
+  ProjectHostContext,
+  ProjectHostResource,
+  ProjectHostResourceResolution,
+} from "@hypit/project";
+import {
+  nleProjectOwnerProvider,
+  nleViewOwnerProvider,
+} from "./owner-providers.js";
+import {
+  createNleStudioPackageBridge,
+  type NleStudioPackageBridge,
+} from "./packages.js";
+import type {
+  NleStudioAdjustMaterializeRequest,
+  NleStudioComponentMaterializeRequest,
   NleStudioInspectorResponse,
   NleStudioMediaProjection,
+  NleStudioMediaPlaceRequest,
   NleStudioPreviewProjection,
   NleStudioSession,
+  NleStudioTransitionMaterializeRequest,
 } from "./protocol.js";
-
-export type NleStudioMediaPort = {
-  observe(): Promise<NleStudioMediaProjection> | NleStudioMediaProjection;
-};
 
 export type NleStudioPreviewPort = {
   observe(): Promise<NleStudioPreviewProjection> | NleStudioPreviewProjection;
 };
 
-export type OpenLocalNleStudioOptions = {
-  readonly projectPath: string;
-  readonly viewPath?: string;
-  readonly media?: NleStudioMediaPort;
+export type OpenNleStudioProductSessionOptions = {
+  readonly project: ProjectHost;
+  readonly document: string;
+  readonly viewDocument?: string;
+  readonly preview?: NleStudioPreviewPort;
+  readonly mediaImport?: NleStudioMediaImportPort;
+};
+
+export type NleStudioProductInput = {
+  readonly document: string;
+  readonly viewDocument?: string;
   readonly preview?: NleStudioPreviewPort;
 };
 
-const emptyMedia: NleStudioMediaPort = {
-  observe: () => ({ entries: [] }),
+export type NleStudioMediaImportRequest = {
+  readonly sourcePath: string;
+  readonly sourceName: string;
 };
+
+export type NleStudioMediaImportPort = {
+  adopt(request: NleStudioMediaImportRequest): Promise<void>;
+};
+
+export const nleStudioProduct = "hypit.nle-studio";
 
 const unavailablePreview: NleStudioPreviewPort = {
   observe: () => ({ state: "unavailable" }),
 };
 
-function absolutePath(path: string): string {
-  return isAbsolute(path) ? path : resolve(process.cwd(), path);
+function context(project: ProjectHost): ProjectHostContext {
+  return {
+    boundary: project.boundary,
+    packages: project.packages,
+    media: project.media,
+    resources: project.resources,
+    executorClients: project.executorClients,
+  };
 }
 
-function portableRelative(fromDirectory: string, target: string): string {
-  const path = relative(fromDirectory, target).split(sep).join("/");
-  return path.length === 0 ? basename(target) : path;
+function mediaName(path: string): string {
+  const name = posix.basename(path);
+  return name.endsWith(".media.json") ? name.slice(0, -".media.json".length) : name;
 }
 
-async function atomicWrite(path: string, contents: string): Promise<void> {
-  const temporary = resolve(dirname(path), `.${basename(path)}.${randomUUID()}.writing`);
-  await writeFile(temporary, contents, "utf8");
-  await rename(temporary, path);
+function sessionView(projectService: NleProjectService, document: string, previous?: NleViewService) {
+  const project = projectService.snapshot().project;
+  const root = project.compositions.find((composition) => composition.id === project.rootComposition)!;
+  const previousSnapshot = previous?.snapshot().view;
+  return createNleView({
+    id: previousSnapshot?.id ?? `${project.id}:studio-view`,
+    name: previousSnapshot?.name ?? `${project.name} Studio View`,
+    project: { path: document },
+    activeComposition: project.rootComposition,
+    ...(previousSnapshot === undefined ? {} : { editRate: previousSnapshot.editRate }),
+    tracks: root.tracks.map((track) => track.id),
+  });
 }
 
-export class LocalNleStudioHost {
-  readonly #projectPath: string;
-  readonly #viewPath: string | undefined;
-  readonly #projectService: NleProjectService;
+function assertViewDocumentTarget(
+  project: ProjectHost,
+  projectDocument: string,
+  viewDocument: string,
+  viewService: NleViewService,
+): void {
+  const root = project.boundary.root;
+  const expected = resolve(root, projectDocument);
+  const actual = resolve(dirname(resolve(root, viewDocument)), viewService.snapshot().view.project.path);
+  if (actual !== expected) {
+    throw new Error(`NLE View ${viewDocument} does not reference Project document ${projectDocument}.`);
+  }
+}
+
+export class NleStudioProductSession {
+  readonly #project: ProjectHost;
+  readonly #context: ProjectHostContext;
+  readonly #projectDocument: string;
+  readonly #viewDocument: string | undefined;
+  readonly #projectLease: ProjectDocumentLease<NleProjectService>;
+  readonly #viewLease: ProjectDocumentLease<NleViewService> | undefined;
   readonly #viewService: NleViewService;
   readonly #surface: NleEditingSurface;
-  readonly #media: NleStudioMediaPort;
+  readonly #packages: NleStudioPackageBridge;
   readonly #preview: NleStudioPreviewPort;
+  readonly #mediaImport: NleStudioMediaImportPort | undefined;
+  readonly #mediaResources = new Map<string, ProjectHostResource>();
+  #mediaGeneration = -1;
   #closed = false;
 
   private constructor(value: {
-    projectPath: string;
-    viewPath: string | undefined;
-    projectService: NleProjectService;
+    project: ProjectHost;
+    context: ProjectHostContext;
+    projectDocument: string;
+    viewDocument: string | undefined;
+    projectLease: ProjectDocumentLease<NleProjectService>;
+    viewLease: ProjectDocumentLease<NleViewService> | undefined;
     viewService: NleViewService;
     surface: NleEditingSurface;
-    media: NleStudioMediaPort;
+    packages: NleStudioPackageBridge;
     preview: NleStudioPreviewPort;
+    mediaImport: NleStudioMediaImportPort | undefined;
   }) {
-    this.#projectPath = value.projectPath;
-    this.#viewPath = value.viewPath;
-    this.#projectService = value.projectService;
+    this.#project = value.project;
+    this.#context = value.context;
+    this.#projectDocument = value.projectDocument;
+    this.#viewDocument = value.viewDocument;
+    this.#projectLease = value.projectLease;
+    this.#viewLease = value.viewLease;
     this.#viewService = value.viewService;
     this.#surface = value.surface;
-    this.#media = value.media;
+    this.#packages = value.packages;
     this.#preview = value.preview;
+    this.#mediaImport = value.mediaImport;
   }
 
-  static async open(options: OpenLocalNleStudioOptions): Promise<LocalNleStudioHost> {
-    const projectPath = absolutePath(options.projectPath);
-    const viewPath = options.viewPath === undefined ? undefined : absolutePath(options.viewPath);
-    const project = readNleProject(await readFile(projectPath, "utf8"));
-    const root = project.compositions.find((composition) => composition.id === project.rootComposition)!;
-    const view = viewPath === undefined
-      ? createNleView({
-        id: "studio-view",
-        name: `${project.name} Workbench`,
-        project: { path: basename(projectPath) },
-        activeComposition: project.rootComposition,
-        tracks: root.tracks.map((track) => track.id),
-      })
-      : readNleView(await readFile(viewPath, "utf8"));
-    const projectService = openNleProjectService(project);
-    const viewService = openNleViewService(view);
-    const surface = openNleEditingSurface(projectService, viewService);
-    surface.observe({ kind: "open" });
-    return new LocalNleStudioHost({
-      projectPath,
-      viewPath,
-      projectService,
-      viewService,
-      surface,
-      media: options.media ?? emptyMedia,
-      preview: options.preview ?? unavailablePreview,
-    });
+  static async open(options: OpenNleStudioProductSessionOptions): Promise<NleStudioProductSession> {
+    const projectContext = context(options.project);
+    const projectLease = await options.project.documents.open(nleProjectOwnerProvider, options.document);
+    let viewLease: ProjectDocumentLease<NleViewService> | undefined;
+    try {
+      viewLease = options.viewDocument === undefined
+        ? undefined
+        : await options.project.documents.open(nleViewOwnerProvider, options.viewDocument);
+      const viewService = viewLease?.service
+        ?? openNleViewService(sessionView(projectLease.service, options.document));
+      if (options.viewDocument !== undefined) {
+        assertViewDocumentTarget(options.project, options.document, options.viewDocument, viewService);
+      }
+      const packages = createNleStudioPackageBridge(projectContext.packages);
+      const surface = openNleEditingSurface(projectLease.service, viewService, {
+        authoring: packages.authoring,
+        timelinePresentation: packages.timelinePresentation,
+        inspectorPresentations: packages.inspectorPresentations,
+        presentationResourceUrl: (resource) => `api/presentations/${encodeURIComponent(resource)}`,
+      });
+      surface.observe({ kind: "open" });
+      return new NleStudioProductSession({
+        project: options.project,
+        context: projectContext,
+        projectDocument: options.document,
+        viewDocument: options.viewDocument,
+        projectLease,
+        viewLease,
+        viewService,
+        surface,
+        packages,
+        preview: options.preview ?? unavailablePreview,
+        mediaImport: options.mediaImport,
+      });
+    } catch (error) {
+      viewLease?.close();
+      projectLease.close();
+      throw error;
+    }
   }
 
   #assertOpen(): void {
-    if (this.#closed) throw new Error("NLE Studio Host is closed.");
+    if (this.#closed) throw new Error("NLE Studio Product Session is closed.");
+  }
+
+  #clearMediaResources(): void {
+    for (const resource of this.#mediaResources.values()) this.#project.resources.revoke(resource.token);
+    this.#mediaResources.clear();
+  }
+
+  async #projectMedia(): Promise<NleStudioMediaProjection> {
+    const catalog = await this.#project.media.observe();
+    const editRate = this.#viewService.snapshot().view.editRate;
+    if (catalog.generation !== this.#mediaGeneration) {
+      this.#clearMediaResources();
+      this.#mediaGeneration = catalog.generation;
+    }
+    return {
+      entries: await Promise.all(catalog.entries.map(async (entry) => {
+        const name = mediaName(entry.reference.path);
+        if (entry.state === "invalid") {
+          return { id: entry.reference.path, name, kind: "unknown" as const, state: "invalid" as const,
+            diagnostic: entry.diagnostic };
+        }
+        const kind = entry.picture === undefined ? "audio" as const
+          : entry.audio ? "audiovisual" as const : "picture" as const;
+        const projectedFrames = entry.duration === undefined ? undefined : Math.round(
+          Number(entry.duration.ticks) * entry.duration.timeBase.numerator / entry.duration.timeBase.denominator
+            * editRate.numerator / editRate.denominator,
+        );
+        const durationFrames = projectedFrames !== undefined && Number.isSafeInteger(projectedFrames)
+          && projectedFrames > 0 ? projectedFrames : undefined;
+        if (entry.state === "missing") {
+          return { id: entry.reference.path, name, kind, state: "missing" as const, mediaType: entry.mediaType,
+            ...(durationFrames === undefined ? {} : { durationFrames }),
+            ...(entry.diagnostic === undefined ? {} : { diagnostic: entry.diagnostic }) };
+        }
+        try {
+          let resource = this.#mediaResources.get(entry.reference.path);
+          if (resource === undefined) {
+            resource = await this.#project.resources.openMedia(entry.reference);
+            this.#mediaResources.set(entry.reference.path, resource);
+          }
+          return { id: entry.reference.path, name, kind, state: "available" as const, mediaType: entry.mediaType,
+            ...(durationFrames === undefined ? {} : { durationFrames }),
+            resource: `api/resources/${encodeURIComponent(resource.token)}` };
+        } catch (error) {
+          return { id: entry.reference.path, name, kind, state: "missing" as const,
+            diagnostic: error instanceof Error ? error.message : String(error) };
+        }
+      })),
+    };
+  }
+
+  resource(token: string): ProjectHostResourceResolution {
+    this.#assertOpen();
+    if (![...this.#mediaResources.values()].some((resource) => resource.token === token)) {
+      throw new Error(`NLE Studio Session does not own Project resource token ${token}.`);
+    }
+    return this.#project.resources.resolve(token);
   }
 
   async observe(): Promise<NleStudioSession> {
     this.#assertOpen();
     const observation = this.#surface.observe({ kind: "open" });
     if (observation.kind !== "open") throw new Error("NLE Studio received an invalid open projection.");
-    const [media, preview] = await Promise.all([this.#media.observe(), this.#preview.observe()]);
+    const [media, preview] = await Promise.all([this.#projectMedia(), this.#preview.observe()]);
     return {
-      projectDocument: { path: this.#projectPath },
-      viewDocument: this.#viewPath === undefined
+      projectDocument: { path: this.#projectDocument },
+      viewDocument: this.#viewDocument === undefined
         ? { persistence: "session" }
-        : { persistence: "document", path: this.#viewPath },
+        : { persistence: "document", path: this.#viewDocument },
       open: observation.value,
       media,
+      catalog: {
+        components: this.#packages.components.map((entry) => ({
+          package: entry.package,
+          offering: entry.id,
+          title: entry.title,
+          category: entry.value.category,
+        })),
+        adjusts: this.#packages.adjusts.map((entry) => ({
+          package: entry.package,
+          offering: entry.id,
+          title: entry.title,
+          medium: entry.value.medium,
+        })),
+        transitions: this.#packages.transitions.map((entry) => ({
+          package: entry.package,
+          offering: entry.id,
+          title: entry.title,
+        })),
+      },
       preview,
     };
+  }
+
+  async importMediaFile(request: NleStudioMediaImportRequest): Promise<NleStudioSession> {
+    this.#assertOpen();
+    if (this.#mediaImport === undefined) {
+      throw new Error("NLE Studio has no Project Media import port.");
+    }
+    await this.#mediaImport.adopt(request);
+    return await this.observe();
   }
 
   async command(command: NleEditingSurfaceCommand): Promise<NleStudioSession> {
     this.#assertOpen();
     this.#surface.command(command);
-    return this.observe();
+    return await this.observe();
+  }
+
+  async placeMedia(request: NleStudioMediaPlaceRequest): Promise<NleStudioSession> {
+    this.#assertOpen();
+    if (!Number.isSafeInteger(request.atFrame) || request.atFrame < 0) {
+      throw new Error("NLE Studio Media placement start frame must be a non-negative safe integer.");
+    }
+    if (request.durationFrames !== undefined
+      && (!Number.isSafeInteger(request.durationFrames) || request.durationFrames <= 0)) {
+      throw new Error("NLE Studio Media placement duration must be a positive safe integer.");
+    }
+    const projectSnapshot = this.#projectLease.service.snapshot();
+    const viewSnapshot = this.#viewService.snapshot();
+    if (viewSnapshot.view.activeComposition !== request.composition) {
+      throw new Error(`NLE Studio Media placement targets inactive Composition ${request.composition}.`);
+    }
+    const composition = projectSnapshot.project.compositions.find((entry) => entry.id === request.composition);
+    if (composition?.tracks.some((track) => track.id === request.track) !== true) {
+      throw new Error(`NLE Studio Media placement Track ${request.track} is outside Composition ${request.composition}.`);
+    }
+    const asset = await this.#project.media.open(request.reference);
+    const rate = viewSnapshot.view.editRate;
+    const frameTime = (frame: number) => {
+      const ticks = frame * rate.denominator;
+      if (!Number.isSafeInteger(ticks)) throw new Error("NLE Studio frame time exceeds the exact editing range.");
+      return { ticks: String(ticks), timeBase: { numerator: 1, denominator: rate.numerator } };
+    };
+    const mediaPath = relative(
+      dirname(resolve(this.#project.boundary.root, this.#projectDocument)),
+      resolve(this.#project.boundary.root, request.reference.path),
+    ).split(sep).join("/");
+    const transaction = createMediaAssetMaterialization(projectSnapshot.project, {
+      itemId: request.item,
+      asset: { path: mediaPath },
+      interpretation: asset.media.interpretation,
+      track: request.track,
+      at: frameTime(request.atFrame),
+      ...(request.durationFrames === undefined ? {} : { duration: frameTime(request.durationFrames) }),
+      ...(request.includeAudio === undefined ? {} : { audio: request.includeAudio ? {} : false }),
+      ...(request.layout === undefined ? {} : { picture: { layout: request.layout } }),
+    });
+    this.#surface.command({
+      kind: "project.transact",
+      expectedProjectRevision: request.expectedProjectRevision,
+      expectedViewRevision: request.expectedViewRevision,
+      commands: transaction.commands,
+    });
+    return await this.observe();
+  }
+
+  async materializeComponent(request: NleStudioComponentMaterializeRequest): Promise<NleStudioSession> {
+    this.#assertOpen();
+    if (!Number.isSafeInteger(request.atFrame) || request.atFrame < 0) {
+      throw new Error("NLE Studio Component placement start frame must be a non-negative safe integer.");
+    }
+    if (request.durationFrames !== undefined
+      && (!Number.isSafeInteger(request.durationFrames) || request.durationFrames <= 0)) {
+      throw new Error("NLE Studio Component placement duration must be a positive safe integer.");
+    }
+    const offering = this.#packages.component(request.package, request.offering);
+    if (offering === undefined) {
+      throw new Error(`NLE Studio Component offering ${request.package}#${request.offering} is not selected.`);
+    }
+    const projectSnapshot = this.#projectLease.service.snapshot();
+    const viewSnapshot = this.#viewService.snapshot();
+    if (viewSnapshot.view.activeComposition !== request.composition) {
+      throw new Error(`NLE Studio Component placement targets inactive Composition ${request.composition}.`);
+    }
+    const composition = projectSnapshot.project.compositions.find((entry) => entry.id === request.composition);
+    if (composition?.tracks.some((track) => track.id === request.track) !== true) {
+      throw new Error(
+        `NLE Studio Component placement Track ${request.track} is outside Composition ${request.composition}.`,
+      );
+    }
+    const rate = viewSnapshot.view.editRate;
+    const frameTime = (frame: number) => {
+      const ticks = frame * rate.denominator;
+      if (!Number.isSafeInteger(ticks)) throw new Error("NLE Studio frame time exceeds the exact editing range.");
+      return { ticks: String(ticks), timeBase: { numerator: 1, denominator: rate.numerator } };
+    };
+    const transaction = createComponentMaterialization(projectSnapshot.project, {
+      id: request.item,
+      track: request.track,
+      component: offering.value.component,
+      parameters: offering.value.parameters,
+      at: frameTime(request.atFrame),
+      duration: request.durationFrames === undefined
+        ? offering.value.duration
+        : frameTime(request.durationFrames),
+      ...(offering.value.layout === undefined ? {} : { layout: offering.value.layout }),
+    });
+    this.#surface.command({
+      kind: "project.transact",
+      expectedProjectRevision: request.expectedProjectRevision,
+      expectedViewRevision: request.expectedViewRevision,
+      commands: transaction.commands,
+    });
+    return await this.observe();
+  }
+
+  async materializeAdjust(request: NleStudioAdjustMaterializeRequest): Promise<NleStudioSession> {
+    this.#assertOpen();
+    if (!Number.isSafeInteger(request.atFrame) || request.atFrame < 0) {
+      throw new Error("NLE Studio Adjust placement start frame must be a non-negative safe integer.");
+    }
+    if (request.durationFrames !== undefined
+      && (!Number.isSafeInteger(request.durationFrames) || request.durationFrames <= 0)) {
+      throw new Error("NLE Studio Adjust placement duration must be a positive safe integer.");
+    }
+    const offering = this.#packages.adjust(request.package, request.offering);
+    if (offering === undefined) {
+      throw new Error(`NLE Studio Adjust offering ${request.package}#${request.offering} is not selected.`);
+    }
+    const projectSnapshot = this.#projectLease.service.snapshot();
+    const viewSnapshot = this.#viewService.snapshot();
+    if (viewSnapshot.view.activeComposition !== request.composition) {
+      throw new Error(`NLE Studio Adjust placement targets inactive Composition ${request.composition}.`);
+    }
+    const composition = projectSnapshot.project.compositions.find((entry) => entry.id === request.composition);
+    const track = composition?.tracks.find((entry) => entry.id === request.track);
+    if (track === undefined) {
+      throw new Error(`NLE Studio Adjust placement Track ${request.track} is outside Composition ${request.composition}.`);
+    }
+    if (track.kind !== offering.value.medium) {
+      throw new Error(`NLE Studio Adjust offering ${request.package}#${request.offering} requires a ${offering.value.medium} Track.`);
+    }
+    const rate = viewSnapshot.view.editRate;
+    const frameTime = (frame: number) => {
+      const ticks = frame * rate.denominator;
+      if (!Number.isSafeInteger(ticks)) throw new Error("NLE Studio frame time exceeds the exact editing range.");
+      return { ticks: String(ticks), timeBase: { numerator: 1, denominator: rate.numerator } };
+    };
+    const transaction = createAdjustMaterialization(projectSnapshot.project, {
+      id: request.item,
+      track: request.track,
+      operator: offering.value.operator,
+      parameters: { kind: "inline", value: offering.value.parameters },
+      at: frameTime(request.atFrame),
+      duration: request.durationFrames === undefined ? offering.value.duration : frameTime(request.durationFrames),
+    });
+    this.#surface.command({
+      kind: "project.transact",
+      expectedProjectRevision: request.expectedProjectRevision,
+      expectedViewRevision: request.expectedViewRevision,
+      commands: transaction.commands,
+    });
+    return await this.observe();
+  }
+
+  async materializeTransition(request: NleStudioTransitionMaterializeRequest): Promise<NleStudioSession> {
+    this.#assertOpen();
+    if (request.durationFrames !== undefined
+      && (!Number.isSafeInteger(request.durationFrames) || request.durationFrames <= 0)) {
+      throw new Error("NLE Studio Transition duration must be a positive safe integer.");
+    }
+    const offering = this.#packages.transition(request.package, request.offering);
+    if (offering === undefined) {
+      throw new Error(`NLE Studio Transition offering ${request.package}#${request.offering} is not selected.`);
+    }
+    const projectSnapshot = this.#projectLease.service.snapshot();
+    const viewSnapshot = this.#viewService.snapshot();
+    if (viewSnapshot.view.activeComposition !== request.composition) {
+      throw new Error(`NLE Studio Transition targets inactive Composition ${request.composition}.`);
+    }
+    const rate = viewSnapshot.view.editRate;
+    const frameTime = (frame: number) => {
+      const ticks = frame * rate.denominator;
+      if (!Number.isSafeInteger(ticks)) throw new Error("NLE Studio frame time exceeds the exact editing range.");
+      return { ticks: String(ticks), timeBase: { numerator: 1, denominator: rate.numerator } };
+    };
+    const transaction = createTransitionMaterialization(projectSnapshot.project, {
+      id: request.transition,
+      composition: request.composition,
+      outgoing: request.outgoing,
+      incoming: request.incoming,
+      operator: offering.value.operator,
+      parameters: offering.value.parameters,
+      duration: request.durationFrames === undefined
+        ? offering.value.duration
+        : frameTime(request.durationFrames),
+    });
+    this.#surface.command({
+      kind: "project.transact",
+      expectedProjectRevision: request.expectedProjectRevision,
+      expectedViewRevision: request.expectedViewRevision,
+      commands: transaction.commands,
+    });
+    return await this.observe();
+  }
+
+  async presentationResource(resource: string): Promise<{ readonly mediaType: string; readonly bytes: Uint8Array }> {
+    this.#assertOpen();
+    const value = this.#packages.timelinePresentation.resource(resource);
+    if (value === undefined) throw new Error(`Unknown NLE Studio presentation resource: ${resource}.`);
+    return { mediaType: value.mediaType, bytes: await value.read() };
   }
 
   inspector(item: string): NleStudioInspectorResponse {
@@ -156,48 +523,124 @@ export class LocalNleStudioHost {
 
   async save(): Promise<NleStudioSession> {
     this.#assertOpen();
-    const project = this.#projectService.snapshot();
-    await atomicWrite(this.#projectPath, serializeNleProject(project.project));
-    this.#projectService.markSaved(project.revision);
-    if (this.#viewPath !== undefined) {
-      const view = this.#viewService.snapshot();
-      await atomicWrite(this.#viewPath, serializeNleView(view.view));
-      this.#viewService.markSaved(view.revision);
+    await nleProjectOwnerProvider.save(this.#context, this.#projectDocument, this.#projectLease.service);
+    if (this.#viewDocument !== undefined && this.#viewLease !== undefined) {
+      await nleViewOwnerProvider.save(this.#context, this.#viewDocument, this.#viewLease.service);
     }
-    return this.observe();
+    return await this.observe();
   }
 
   async reload(): Promise<NleStudioSession> {
     this.#assertOpen();
-    const projectBefore = this.#projectService.snapshot();
-    const project = readNleProject(await readFile(this.#projectPath, "utf8"));
-    this.#projectService.reload(project, projectBefore.revision);
-    const viewBefore = this.#viewService.snapshot();
-    if (this.#viewPath !== undefined) {
-      this.#viewService.reload(readNleView(await readFile(this.#viewPath, "utf8")), viewBefore.revision);
+    await nleProjectOwnerProvider.reload(this.#context, this.#projectDocument, this.#projectLease.service);
+    if (this.#viewDocument !== undefined && this.#viewLease !== undefined) {
+      await nleViewOwnerProvider.reload(this.#context, this.#viewDocument, this.#viewLease.service);
+      assertViewDocumentTarget(this.#project, this.#projectDocument, this.#viewDocument, this.#viewLease.service);
     } else {
-      const root = project.compositions.find((composition) => composition.id === project.rootComposition)!;
-      this.#viewService.reload(createNleView({
-        id: viewBefore.view.id,
-        name: viewBefore.view.name,
-        project: { path: portableRelative(dirname(this.#projectPath), this.#projectPath) },
-        activeComposition: project.rootComposition,
-        editRate: viewBefore.view.editRate,
-        tracks: root.tracks.map((track) => track.id),
-      }), viewBefore.revision);
+      const before = this.#viewService.snapshot();
+      this.#viewService.reload(
+        sessionView(this.#projectLease.service, this.#projectDocument, this.#viewService),
+        before.revision,
+      );
     }
-    return this.observe();
+    return await this.observe();
   }
 
   close(): void {
     if (this.#closed) return;
     this.#closed = true;
     this.#surface.close();
+    this.#clearMediaResources();
+    this.#viewLease?.close();
+    this.#projectLease.close();
   }
 }
 
-export async function openLocalNleStudio(
-  options: OpenLocalNleStudioOptions,
-): Promise<LocalNleStudioHost> {
-  return LocalNleStudioHost.open(options);
+export async function openNleStudioProductSession(
+  options: OpenNleStudioProductSessionOptions,
+): Promise<NleStudioProductSession> {
+  return await NleStudioProductSession.open(options);
 }
+
+function productInput(value: unknown): NleStudioProductInput {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("NLE Studio Product input must be an object.");
+  }
+  const selected = value as Partial<NleStudioProductInput>;
+  if (typeof selected.document !== "string" || selected.document.length === 0) {
+    throw new Error("NLE Studio Product input requires a document path.");
+  }
+  if (selected.viewDocument !== undefined
+    && (typeof selected.viewDocument !== "string" || selected.viewDocument.length === 0)) {
+    throw new Error("NLE Studio View document path is invalid.");
+  }
+  return {
+    document: selected.document,
+    ...(selected.viewDocument === undefined ? {} : { viewDocument: selected.viewDocument }),
+    ...(selected.preview === undefined ? {} : { preview: selected.preview }),
+  };
+}
+
+export const nleStudioProductProvider: ApplicationProductProvider = {
+  product: nleStudioProduct,
+  title: "NLE Studio",
+  launchParameters: [
+    {
+      name: "document",
+      title: "NLE document",
+      required: true,
+      initial: "project.svml",
+      placeholder: "edits/main.svml",
+    },
+    {
+      name: "viewDocument",
+      title: "NLE View document",
+      required: false,
+      placeholder: "edits/main.nle-view.json",
+    },
+  ],
+  async open(project, value) {
+    const selected = productInput(value);
+    const media = project.media as Partial<NodeProjectMediaService>;
+    const mediaImport: NleStudioMediaImportPort | undefined = typeof media.adoptFile !== "function" ? undefined : {
+      async adopt(request) {
+        const mediaType = mediaTypeFromFile(request.sourceName);
+        await media.adoptFile!({ ...request, mediaType }, {
+          inspect: async (path, context) => await inspectMediaFileFromContainerIndex(path, {
+            ...(context.signal === undefined ? {} : { signal: context.signal }),
+            ...(mediaType.startsWith("image/") ? { constantPicture: true } : {}),
+          }),
+          select: (inspection) => defaultMediaSelection(inspection, mediaType),
+        });
+      },
+    };
+    return await openNleStudioProductSession({
+      project,
+      document: selected.document,
+      ...(selected.viewDocument === undefined ? {} : { viewDocument: selected.viewDocument }),
+      ...(selected.preview === undefined ? {} : { preview: selected.preview }),
+      ...(mediaImport === undefined ? {} : { mediaImport }),
+    });
+  },
+};
+
+export {
+  nleProjectOwnerProvider,
+  nleViewOwnerProvider,
+  type NleProjectOwnerProvider,
+  type NleViewOwnerProvider,
+} from "./owner-providers.js";
+export {
+  createNleStudioPackageBridge,
+  nleStudioAdjustOfferingKind,
+  nleStudioComponentOfferingKind,
+  nleStudioTransitionOfferingKind,
+  type NleStudioAdjustOffering,
+  type NleStudioAdjustOfferingValue,
+  type NleStudioComponentCategory,
+  type NleStudioComponentOffering,
+  type NleStudioComponentOfferingValue,
+  type NleStudioPackageBridge,
+  type NleStudioTransitionOffering,
+  type NleStudioTransitionOfferingValue,
+} from "./packages.js";

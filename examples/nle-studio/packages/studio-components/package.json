@@ -1,0 +1,9 @@
+{
+  "name": "@hypit/studio-components",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./hypit": "./hypit.js"
+  }
+}

@@ -93,10 +93,12 @@ identifiers and remove every remaining occurrence outside Git history.
 
 ## Reuse from the previous repository
 
-The previous repository is a source quarry and historical record. Move behavior when a current vertical
-slice has a concrete consumer for it. Re-home the selected implementation under its current owner, simplify
-its dependencies and establish evidence for the current fact. Record useful provenance in the reuse
-commit message.
+The previous SVML/Hypit repository at `/Users/kashorin/svml` is a source quarry and historical record. Before
+implementing a current vertical slice, inspect it for working behavior that is worth reusing. Move that behavior
+only when it fits the current architecture: re-home it under the current owner, preserve current dependency
+directions and lifetimes, simplify its dependencies and establish evidence for the current fact. Reuse the wheel;
+do not restore the old vocabulary, package boundaries, protocols or discarded architecture around it. Record useful
+provenance in the reuse commit message.
 
 Existing user changes take precedence. Remote publication, pull requests and archival actions require the
 user's explicit request.

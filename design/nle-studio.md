@@ -1,37 +1,40 @@
-# NLE Studio local product adapter
+# NLE Studio product adapter
 
-> Status: current standalone local NLE product design.
+> Status: current NLE Product Provider and browser adapter design.
 
 ## Boundary
 
-NLE Studio is a product adapter over existing authorities. It is distributed by Hypit and runs through a loopback HTTP
-service with a browser client. An Application Host may launch it inside an existing ProjectHost; the standalone CLI
-first opens the selected Project Boundary through the same ProjectHost contract. It neither requires nor extends
-another application shell.
+NLE Studio is a Product Provider and browser adapter over existing authorities. The long-lived ApplicationHost launches
+one NLE Studio Product Session against an existing ProjectHost and exposes its finite protocol through the selected
+local transport. A Desktop tab, direct browser launch or Agent view presents that same product Surface.
 
 ```text
-Browser session
+Desktop tab · browser · Agent view
+        │
+ApplicationHost
+        │ Product Session lease
+NLE Studio Product Session
   selection · playhead · zoom · pointer drafts
-        │ finite HTTP projection
-Local NLE Studio Host
+        │ finite product projection
+NLE Studio backend
   ├─ ProjectHost context
   │    ├─ shared Project Media Service
   │    ├─ selected Package Environment
   │    └─ open owner-Service leases
   ├─ NLE Editing Surface
   │    ├─ NLE Project Service
-  │    └─ NLE View Service
+  │    ├─ NLE View Service
+  │    └─ selected package contributions
   ├─ audiovisual preview Executor port
   └─ explicit Project/View file persistence
 ```
 
 The NLE session backend is the product composition root. It leases the independently owned Project and View Services
-from the ProjectHost registry; the Editing Surface routes each mutation to its fact owner.
+from the ProjectHost registry; the Editing Surface routes each mutation to its fact owner. Closing the presenting
+caller releases its Product Session lease without defining the ApplicationHost or ProjectHost lifetime.
 
-The browser mounts NLE Studio directly as its root product. A product selector may choose among several installed
-products in a larger Host, but it never wraps one product inside another product page. When NLE is the only selected
-product, its editor owns the whole browser viewport; no Workbench shell, nested browser page or application-specific
-outer layer is required.
+The presenting caller mounts NLE Studio as one Product Surface. A product selector may choose among several installed
+products, and the selected editor receives the viewport assigned to that Product Session.
 
 ## Lifetimes
 
@@ -48,20 +51,59 @@ second catalog, and another NLE or Canvas Product Session in the same project ob
 frames and generations come only from the audiovisual Executor port. A structural Canvas remains useful when no
 preview Executor has been selected, but it is not presented as rendered programme output.
 
+The browser's Media bin projects that shared catalog. Selecting an available entry explicitly places it at the current
+playhead on a compatible unlocked Track; when none exists, the browser first asks the NLE owner to create one. The
+backend still performs the authoritative interpretation and materialization. In structural Canvas mode, an accepted
+image or video resource may be shown inside its Present Item's layout as source identification. This is a direct media
+resource projection, not Component or Operator evaluation and not an audiovisual preview frame.
+
+The session assembles NLE authoring, Timeline presentation and Inspector presentation contributions from the
+ProjectHost's already selected Package Environment. The NLE contracts validate and index those process-local
+capabilities; ProjectHost does not interpret them. NLE Studio additionally owns the finite `hypit.nle-component`,
+`hypit.nle-adjust` and `hypit.nle-transition` catalog contracts used by its text, subtitle, graphic, effect and
+transition creation surfaces. Selecting an entry invokes the matching NLE materialization planner. The package owns
+the exact Component or Operator symbol, closed initial parameters and declared defaults; it does not return arbitrary
+Project commands.
+
 ## Local protocol and persistence
 
 The loopback server serves the client and same-origin JSON operations for session observation, guarded Surface
 commands, Inspector projection, save and reload. The protocol is a product adapter and carries no persistent format
 marker or independent revision. Project and View revisions remain visible and separate.
 
+Within the Product Session mount, `POST api/media/import?name=...` carries one raw browser `File` body. The adapter
+streams it to an invocation-local temporary file, calls the Node Project Media Service's adoption Action with bounded
+container-index inspection, then
+removes the temporary file. Multiple selected files are separate sequential requests. The route returns the refreshed
+Studio session, while Media identity remains the resulting project-relative Media Asset manifest path. This transport
+does not place the accepted Media into the NLE document.
+
 Saving asks the selected Owner Provider to serialize each dirty owner snapshot, atomically replace its selected file
 and mark that exact Service revision saved only after the write succeeds. Reload is an explicit user or caller
 operation that accepts current file bytes into the corresponding Service. The Host performs no content hashing or
 continuous integrity comparison.
 
+A Media placement operation carries one Project Media reference, destination Composition and Track, exact session
+revisions and frame-grid placement. The product adapter resolves the accepted Media interpretation, converts frames
+to exact NLE time, calls the NLE Media materialization planner and submits its ordinary Project transaction through
+the Editing Surface. Media resource routes accept only capability tokens owned by that Product Session and support
+byte ranges without publishing filesystem paths.
+
+A Component materialization operation carries the selected package and offering id, destination, Item id, frame-grid
+placement and exact session revisions. The backend resolves only an offering selected by the Project manifest, calls
+the NLE Component materialization planner and submits the resulting transaction through the same Surface. Component
+offerings resolve through the ProjectHost's selected Package Environment. Package Timeline artwork, when present,
+stays process-local and is exposed through an opaque same-origin presentation resource route.
+
+An Adjust materialization resolves one selected effect offering and creates an independently timed Item on a
+compatible Picture or Audio Track. A Transition materialization resolves one selected transition offering and an
+explicit pair of Present Items at a direct Picture cut. Its one atomic Project transaction moves the incoming Item by
+the chosen transition duration and adds the relation, so the Service never accepts an unowned overlap as an
+intermediate state. Existing overlaps, gaps and incompatible selections are rejected by current NLE structural rules.
+
 ## Package
 
-`@hypit/nle-studio` is an independent release because it has a browser artifact, a Node deployment entry and a
-product lifecycle distinct from headless `@hypit/nle`. It depends on public ProjectHost, NLE owner and Surface
-contracts. The Project Media Service comes from the ProjectHost; preview remains an Executor dependency whose platform
-implementation is separately selected.
+`@hypit/nle-studio` is an independent release because it has a browser artifact, Product Provider and product lifecycle
+distinct from headless `@hypit/nle`. It depends on public ProjectHost, NLE owner and Surface contracts. The Project
+Media Service comes from the ProjectHost; preview remains an Executor dependency whose platform implementation is
+separately selected.

@@ -1,0 +1,9 @@
+{
+  "name": "hypit-nle-studio-example",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@hypit/studio-components": "workspace:*",
+    "@hypit/studio-operators": "workspace:*"
+  }
+}

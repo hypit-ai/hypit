@@ -1,0 +1,26 @@
+{
+  "name": "@hypit/project",
+  "version": "0.1.0",
+  "description": "Project manifest, package environment and ProjectHost lifecycle",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    ".": {
+      "hypit-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./node": {
+      "hypit-source": "./src/node/index.ts",
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@hypit/media-asset": "workspace:^0.1.0"
+  }
+}

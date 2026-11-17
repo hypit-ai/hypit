@@ -9,6 +9,7 @@
 .studio-canvas { position: absolute; inset: 0; overflow: hidden; background: #050506; box-shadow: 0 12px 36px #0008; }
 .studio-preview-frame { width: 100%; height: 100%; object-fit: contain; }
 .studio-canvas-layer { position: absolute; overflow: hidden; border: 1px solid #ffffff45; color: #eee; background: #ffffff08; }
+.studio-canvas-layer > img, .studio-canvas-layer > video { width: 100%; height: 100%; pointer-events: none; }
 .studio-canvas-layer:hover, .studio-canvas-layer.selected { border-color: var(--pink); box-shadow: 0 0 0 1px var(--pink); }
 .studio-canvas-layer span { position: absolute; left: 4px; top: 4px; max-width: calc(100% - 8px); padding: 2px 5px; overflow: hidden; color: #eee; background: #111c; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
 .studio-preview-state { position: absolute; left: 8px; bottom: 6px; color: #77777d; }

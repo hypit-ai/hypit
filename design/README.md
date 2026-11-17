@@ -1,33 +1,50 @@
 # Hypit design authority
 
-Read the current system in this order:
+## Reading map
 
-1. [System constitution](system-constitution.md) — Hypit's definition, authorities and stable seams.
-2. [Project owners and application hosts](project-owners-and-hosts.md) — author facts, Services, Executors,
-   Hosts and product operations.
-3. [Project Boundary and Project Host](project-host.md) — project files, package activation, shared Media,
-   open document Services and Product Sessions.
-4. [Explicit programs and execution](explicit-programs-and-execution.md) — action coordination, Invocation
-   recovery, Publication and TypeScript project programs.
-5. [Repository bootstrap](repository-bootstrap.md) — implementation birth sequence and selective code reuse.
+Read the current system from authority toward implementation.
 
-Current owner designs:
+### 1. Constitution
 
-- [Media](media.md) — accepted media, signal interpretation, representations, adoption, the open Project
-  Media Service and local media execution.
-- [Component authoring](authoring.md) — TSX author programs, NLE materialization, component expansion and the
-  boundary between author source and the durable edit.
-- [Audiovisual](audiovisual.md) — AVIR Programme facts, one live evaluation constitution, renderer
-  selection and the Media/Scene boundary.
+- [System constitution](system-constitution.md) — Hypit's definition, authorities, seams, Host hierarchy and
+  distribution rules.
+
+### 2. Cross-owner composition and execution
+
+- [Project owners and application hosts](project-owners-and-hosts.md) — the long-lived ApplicationHost, author facts,
+  Services, Executors, caller adapters and product operation forms.
+- [Project Boundary and Project Host](project-host.md) — project files, package activation, shared Media, open
+  document Services and Product Sessions.
+- [Host backend API](host-backend-api.md) — the shared ApplicationHost backend, ProjectHost, Product Providers, Product
+  Sessions, Action lifetimes and their transport projections.
+- [Explicit programs and execution](explicit-programs-and-execution.md) — action coordination, Invocation recovery,
+  Publication and TypeScript project programs.
+
+### 3. Domain and owner designs
+
+- [Media](media.md) — accepted media, signal interpretation, representations, adoption, the open Project Media
+  Service and local media execution.
+- [Component authoring](authoring.md) — TSX author programs, NLE materialization, component expansion and the boundary
+  between author source and the durable edit.
+- [Audiovisual](audiovisual.md) — AVIR Programme facts, one live evaluation constitution, renderer selection and the
+  Media/Scene boundary.
 - [NLE](nle.md) — direct audiovisual composition, the SVML Project document, per-document Service transactions and
   deterministic AVIR lowering.
-- [NLE View](nle-view.md) — durable editing arrangement, per-Composition guards, independent Service lifetime and
-  the finite projection seam.
+- [NLE View](nle-view.md) — durable editing arrangement, per-Composition guards, independent Service lifetime and the
+  finite projection seam.
+
+### 4. Product and Surface designs
+
+- [Application Home](application-home.md) — the application-level browser Surface, product launcher and shared local
+  endpoint discovery.
 - [NLE Editing Surface](nle-surface.md) — application composition over Project and View Services, guarded operations,
   finite observations and projection invalidation.
-- [NLE Studio](nle-studio.md) — standalone local product adapter, browser-session boundary, persistence and Media/preview
-  ports.
+- [NLE Studio](nle-studio.md) — NLE Product Provider, browser-session boundary, persistence and Media/preview ports.
+
+### 5. Distribution and implementation growth
+
 - [Package architecture](package-architecture.md) — release boundaries for authoring, NLE, AVIR and Executors.
+- [Repository bootstrap](repository-bootstrap.md) — implementation birth sequence and selective code reuse.
 
 The constitution precedes package layout. The other pages project it into engineering decisions. Exact
 schemas, operations and adapters live beside their owner code.

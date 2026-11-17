@@ -14,6 +14,16 @@
       "hypit-source": "./src/node/index.ts",
       "types": "./dist/node/index.d.ts",
       "import": "./dist/node/index.js"
+    },
+    "./service": {
+      "hypit-source": "./src/service/index.ts",
+      "types": "./dist/service/index.d.ts",
+      "import": "./dist/service/index.js"
+    },
+    "./service/node": {
+      "hypit-source": "./src/service/node/index.ts",
+      "types": "./dist/service/node/index.d.ts",
+      "import": "./dist/service/node/index.js"
     }
   },
   "files": ["dist", "README.md"],

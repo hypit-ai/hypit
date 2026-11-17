@@ -1,0 +1,29 @@
+{
+  "name": "@hypit/application-home",
+  "version": "0.1.0",
+  "description": "Application-level browser surface for opening projects and launching Hypit products",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    ".": {
+      "hypit-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./node": {
+      "hypit-source": "./src/node-adapter.ts",
+      "types": "./dist/node-adapter.d.ts",
+      "import": "./dist/node-adapter.js"
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.browser.json --noEmit && vite build"
+  },
+  "dependencies": {
+    "@hypit/application": "workspace:^0.1.0"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0"
+  }
+}

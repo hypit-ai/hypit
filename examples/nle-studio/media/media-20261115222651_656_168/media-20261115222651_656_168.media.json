@@ -1,0 +1,33 @@
+{
+  "format": "hypit.media-asset",
+  "media": {
+    "file": {
+      "path": "media-20261115222651_656_168.jpg",
+      "mediaType": "image/jpeg"
+    },
+    "interpretation": {
+      "picture": {
+        "kind": "constant",
+        "streamIndex": 0,
+        "interpretation": {
+          "codedWidth": 1079,
+          "codedHeight": 1457,
+          "sampleAspectRatio": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "rotationDegrees": 0,
+          "picture": {
+            "colorPrimaries": "bt709",
+            "colorTransfer": "srgb",
+            "colorMatrix": "rgb",
+            "colorRange": "full",
+            "bitDepth": 8,
+            "alphaMode": "opaque"
+          }
+        }
+      }
+    }
+  },
+  "representations": []
+}

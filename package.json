@@ -8,6 +8,9 @@
   "engines": {
     "node": ">=24.0.0"
   },
+  "bin": {
+    "hypit-application": "./dist/application-server.js"
+  },
   "exports": {
     ".": {
       "hypit-source": "./src/index.ts",
@@ -18,6 +21,16 @@
       "hypit-source": "./src/audiovisual.ts",
       "types": "./dist/audiovisual.d.ts",
       "import": "./dist/audiovisual.js"
+    },
+    "./application": {
+      "hypit-source": "./src/application.ts",
+      "types": "./dist/application.d.ts",
+      "import": "./dist/application.js"
+    },
+    "./application/node": {
+      "hypit-source": "./src/application-node.ts",
+      "types": "./dist/application-node.d.ts",
+      "import": "./dist/application-node.js"
     },
     "./media": {
       "hypit-source": "./src/media.ts",
@@ -33,6 +46,16 @@
       "hypit-source": "./src/media-asset-node.ts",
       "types": "./dist/media-asset-node.d.ts",
       "import": "./dist/media-asset-node.js"
+    },
+    "./media/asset/service": {
+      "hypit-source": "./src/media-asset-service.ts",
+      "types": "./dist/media-asset-service.d.ts",
+      "import": "./dist/media-asset-service.js"
+    },
+    "./media/asset/service/node": {
+      "hypit-source": "./src/media-asset-service-node.ts",
+      "types": "./dist/media-asset-service-node.d.ts",
+      "import": "./dist/media-asset-service-node.js"
     },
     "./media/local": {
       "hypit-source": "./src/media-local.ts",
@@ -53,6 +76,16 @@
       "hypit-source": "./src/nle-surface.ts",
       "types": "./dist/nle-surface.d.ts",
       "import": "./dist/nle-surface.js"
+    },
+    "./project": {
+      "hypit-source": "./src/project.ts",
+      "types": "./dist/project.d.ts",
+      "import": "./dist/project.js"
+    },
+    "./project/node": {
+      "hypit-source": "./src/project-node.ts",
+      "types": "./dist/project-node.d.ts",
+      "import": "./dist/project-node.js"
     }
   },
   "files": [
@@ -61,18 +94,23 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm --filter @hypit/temporal build && pnpm --filter @hypit/media build && pnpm --filter @hypit/audiovisual build && pnpm --filter @hypit/nle build && pnpm --filter @hypit/media-asset build && pnpm --filter @hypit/media-local build && pnpm --filter @hypit/nle-studio build && pnpm run build:root",
+    "build": "pnpm --filter @hypit/temporal build && pnpm --filter @hypit/media build && pnpm --filter @hypit/media-asset build && pnpm --filter @hypit/media-local build && pnpm --filter @hypit/audiovisual build && pnpm --filter @hypit/nle build && pnpm --filter @hypit/project build && pnpm --filter @hypit/application build && pnpm --filter @hypit/application-home build && pnpm --filter @hypit/nle-studio build && pnpm run build:root",
     "build:root": "tsc -p tsconfig.build.json",
     "check": "tsc -p tsconfig.json --noEmit",
-    "studio": "pnpm --filter @hypit/nle-studio start -- --project ../../examples/nle-studio/project.svml",
+    "application": "node dist/application-server.js",
+    "studio": "pnpm --filter @hypit/nle-studio start -- --root ../../examples/nle-studio --document project.svml",
     "prepack": "pnpm build"
   },
   "dependencies": {
+    "@hypit/application": "workspace:^0.1.0",
+    "@hypit/application-home": "workspace:^0.1.0",
     "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.1.0",
     "@hypit/media-asset": "workspace:^0.1.0",
     "@hypit/media-local": "workspace:^0.1.0",
-    "@hypit/nle": "workspace:^0.1.0"
+    "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/nle-studio": "workspace:^0.1.0",
+    "@hypit/project": "workspace:^0.1.0"
   },
   "devDependencies": {
     "@types/node": "24.10.1",
