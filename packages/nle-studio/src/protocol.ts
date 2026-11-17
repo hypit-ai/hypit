@@ -68,6 +68,12 @@ export type NleStudioPreviewProjection =
 
 export type NleStudioDeliveryProjection = { readonly state: "available" | "unavailable" };
 
+export type NleStudioClipboardProjection = {
+  readonly items: number;
+  readonly groups: number;
+  readonly pendingGroups: number;
+};
+
 export type NleStudioTimelineProjection = {
   readonly scene: NleTimelineScene;
   readonly compositions: readonly { readonly id: string; readonly name: string }[];
@@ -88,6 +94,7 @@ export type NleStudioOpenProjection = {
   readonly catalog: NleStudioCatalogProjection;
   readonly preview: NleStudioPreviewProjection;
   readonly delivery: NleStudioDeliveryProjection;
+  readonly clipboard: NleStudioClipboardProjection;
 };
 
 export type NleStudioObservationRequest =
@@ -101,7 +108,8 @@ export type NleStudioObservationRequest =
   | { readonly kind: "media" }
   | { readonly kind: "catalog" }
   | { readonly kind: "preview" }
-  | { readonly kind: "delivery" };
+  | { readonly kind: "delivery" }
+  | { readonly kind: "clipboard" };
 
 export type NleStudioObservation =
   | { readonly kind: "open"; readonly value: NleStudioOpenProjection }
@@ -114,7 +122,8 @@ export type NleStudioObservation =
   | { readonly kind: "media"; readonly value: NleStudioMediaProjection }
   | { readonly kind: "catalog"; readonly value: NleStudioCatalogProjection }
   | { readonly kind: "preview"; readonly value: NleStudioPreviewProjection }
-  | { readonly kind: "delivery"; readonly value: NleStudioDeliveryProjection };
+  | { readonly kind: "delivery"; readonly value: NleStudioDeliveryProjection }
+  | { readonly kind: "clipboard"; readonly value: NleStudioClipboardProjection };
 
 export type NleStudioInvalidation =
   | "project"
@@ -124,7 +133,8 @@ export type NleStudioInvalidation =
   | "media"
   | "catalog"
   | "preview"
-  | "delivery";
+  | "delivery"
+  | "clipboard";
 
 export type NleStudioOperationReceipt = {
   readonly operation: string;
@@ -187,6 +197,9 @@ export type NleStudioTimelineEdit = NleStudioCompositionOperation & (
 export type NleStudioOperation =
   | NleStudioTimelineDrop
   | NleStudioTimelineEdit
+  | (NleStudioCompositionOperation & { readonly kind: "clipboard.copy" | "clipboard.cut"; readonly items: readonly string[] })
+  | (NleStudioCompositionOperation & { readonly kind: "clipboard.paste"; readonly atFrame: number })
+  | (NleStudioCompositionOperation & { readonly kind: "clipboard.apply-groups" })
   | (NleStudioTimedPlacement & {
       readonly kind: "media.materialize";
       readonly media: string;

@@ -1,6 +1,6 @@
 import type { NleTimelineSceneItem, NleTimelineSceneTrack } from "@hypit/nle/view";
 import {
-  AudioLines, BetweenHorizontalStart, Blend, CircleMinus, CirclePlus, Crop, Film, Group, Layers, Link2, Lock, Magnet,
+  AudioLines, BetweenHorizontalStart, Blend, CircleMinus, CirclePlus, ClipboardCheck, Crop, Film, Group, Layers, Link2, Lock, Magnet,
   PanelLeftClose, PanelRightClose, Plus, Redo2, Scan, Scissors, Snowflake, Trash2, Type, Undo2, Unlock,
   Volume2, VolumeX,
 } from "lucide-react";
@@ -66,7 +66,7 @@ function useMarquee(scroller: React.RefObject<HTMLDivElement | null>, selection:
   return { box, start };
 }
 
-export function Timeline({ session, frame, selection, busy, onSeek, onSelect, onMove, onTrim, onSplit, onRemove,
+export function Timeline({ session, frame, selection, busy, onSeek, onSelect, onMove, onTrim, onSplit, onRemove, onApplyPastedGroups,
   onTrackEnabled, onTrackLocked, onTrackMove, onComposition, onAddTrack, onToggleGroup, canToggleGroup, grouped,
   onDetachAudio, canDetachAudio, onUndo, onRedo }: {
   readonly session: NleStudioOpenProjection;
@@ -79,6 +79,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   readonly onTrim: (item: NleTimelineSceneItem, edge: "start" | "end", atFrame: number) => void;
   readonly onSplit: (items: readonly string[], atFrame: number) => void;
   readonly onRemove: () => void;
+  readonly onApplyPastedGroups: () => void;
   readonly onTrackEnabled: (track: string, enabled: boolean) => void;
   readonly onTrackLocked: (track: string, locked: boolean) => void;
   readonly onTrackMove: (track: string, before?: string) => void;
@@ -192,6 +193,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
       <IconButton label="向左裁剪" disabled={busy || selected?.affordances.trimStart !== true || frame <= selected.startFrame || frame >= selected.startFrame + selected.durationFrames} onClick={() => selected && onTrim(selected, "start", frame)}><PanelLeftClose size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="向右裁剪" disabled={busy || selected?.affordances.trimEnd !== true || frame <= selected.startFrame || frame >= selected.startFrame + selected.durationFrames} onClick={() => selected && onTrim(selected, "end", frame)}><PanelRightClose size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="删除" disabled={busy || selected === undefined} onClick={onRemove}><Trash2 size={18} strokeWidth={1.6}/></IconButton>
+      {session.clipboard.pendingGroups > 0 && <IconButton label="恢复粘贴分组" disabled={busy}
+        onClick={onApplyPastedGroups}><ClipboardCheck size={18} strokeWidth={1.6}/></IconButton>}
       <IconButton label="分离音频" disabled={busy || !canDetachAudio} onClick={onDetachAudio}><AudioLines size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="裁剪画面" disabled><Crop size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="定格" disabled><Snowflake size={18} strokeWidth={1.6}/></IconButton>

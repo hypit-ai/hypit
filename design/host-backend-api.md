@@ -469,7 +469,7 @@ The current implementation already provides:
 
 The next backend capabilities are:
 
-1. semantic Product operations for Timeline insertion, gap closure, clipboard and nested Composition;
+1. semantic Product operations for Timeline insertion and nested Composition authoring;
 2. Media thumbnail, storyboard, waveform and audio-preview Actions;
 3. audiovisual frame/playback preview Actions and unified observation of the existing export Action.
 

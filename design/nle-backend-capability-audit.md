@@ -65,7 +65,7 @@ ApplicationHost
 | 轨道和拖放 | NLE Project、NLE View、NLE Studio planner | 底层事务已有；最终落点规划缺产品后端 |
 | 插入和磁吸 | NLE Project、产品编辑策略 | ripple 基础已有；插入、闭合和连续主轨 planner 不完整 |
 | 片段剪辑和关联 | NLE Project、NLE View | trim、split、move、detach 基础已有；联动范围仍需产品 planner |
-| 复制和复合片段 | Product Session clipboard、NLE Composition | Nested Composition 已有；clipboard 和 compound planner 缺失 |
+| 复制和复合片段 | Product Session clipboard、NLE Composition | 同一文档内 clipboard 与现有 Composition 物化已具备；compound planner 缺失 |
 | 画面和动画 | NLE Picture layout、package Operator | frame、fit、focus 已有；其余画面处理和关键帧由 package value 表达，缺标准 package 与产品操作 |
 | 变速和定格 | NLE source time、Reconstruction | 精确时间映射和定格表达已有；缺产品 planner 与标准 Audio Reconstruction |
 | 转场 | NLE Transition、package Operator | 关系、物化和降低已有；编辑维护 planner 不完整 |
@@ -131,8 +131,8 @@ ApplicationHost
 
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
-| 复制、剪切和粘贴 | Product Session clipboard + NLE Studio Operation | 当前 Session 没有 clipboard contract | **产品缺口**。clipboard 保存有限复制载荷，粘贴 planner 重建本地 ids、关系和轨道分配 |
-| 复制 Transition、Matte 和 Group | NLE Studio paste planner | 三类关系都有稳定本地 id 和显式引用 | **产品缺口**。只复制完整端点集合时重建关系 |
+| 复制、剪切和粘贴 | Product Session clipboard + NLE Studio Operation | Session 保存选区；粘贴重建身份、精确时间和轨道分配 | **已具备**同一 NLE 文档内 |
+| 复制 Transition、Matte 和 Group | NLE Studio paste planner | 完整端点的 Transition/Matte 与 Project 一起粘贴；完整 Group 由一次显式 View 操作恢复 | **已具备** |
 | 建立复合片段 | NLE Composition + Operation | Project 支持多个 Composition，Composition Present 引用本地定义并拒绝循环 | **产品缺口**。缺少从选区构建 child Composition 和 parent occurrence 的原子 planner |
 | 进入与返回复合片段 | NLE View + Product Session interaction | View 可切换 active Composition；播放位置属于 Session | **产品缺口**。需要 navigation receipt 与 Session 播放位置栈 |
 | 复合片段独立副本 | NLE Studio Operation | Composition facts 可深复制并重写本地引用 | **产品缺口** |
@@ -358,10 +358,11 @@ POST       /api/reload
 - 自动磁吸和连续主轨需要明确主轨归属、何时联动侧轨，以及锁轨冲突时的结果。
 - 一次压缩多个不相交空隙需要明确各段的联动范围和处理顺序。当前单空隙操作使用调用者提供的 Tracks。
 - 字幕源需要先确定引用和寿命，再开放导入和批量分轨。
+- 跨 NLE 文档或 OS 剪贴板需要明确 Media、Shared Value 和 Composition 引用的导入与重绑边界。
 
 ## 实现顺序
 
-1. 完成其余已有事实可支持的 Timeline、clipboard、Composition、Process 和 materialization Operations；
+1. 完成其余已有事实可支持的 Timeline、Composition、Process 和 materialization Operations；
 2. 补受限 Shared Value seeds 和 collection 行级有限操作；
 3. 接入 Media 派生视图与 NLE Preview，并统一观察这些 Action 与已有 Export Action；
 4. 建立标准 Picture Transform/Crop、Audio Gain/Envelope、preserve-pitch package，并开放对应 package authoring 与产品 Operations；完成 freeze 与 magnetic product planners；

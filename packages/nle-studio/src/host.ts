@@ -36,6 +36,7 @@ import {
   nleViewTrackLocked,
   openNleViewService,
   planNleComponentMediaEdit,
+  type NleEditGroup,
   type NleViewService,
 } from "@hypit/nle/view";
 import {
@@ -52,6 +53,7 @@ import type {
   ProjectHostResource,
   ProjectHostResourceResolution,
 } from "@hypit/project";
+import { captureStudioClipboard, planStudioPaste, type StudioClipboard } from "./clipboard.js";
 import {
   nleProjectOwnerProvider,
   nleViewOwnerProvider,
@@ -63,6 +65,7 @@ import {
 import { allocateTimelinePlacement, planTimelineDrop, planTimelineEdit, studioFrameTime } from "./timeline-planning.js";
 import type {
   NleStudioCatalogProjection,
+  NleStudioClipboardProjection,
   NleStudioComponentInputsProjection,
   NleStudioDeliveryStartRequest,
   NleStudioEvent,
@@ -175,6 +178,8 @@ export class NleStudioProductSession {
   readonly #unsubscribeSurface: () => void;
   readonly #unsubscribeMedia: () => void;
   #mediaGeneration = -1;
+  #clipboard: StudioClipboard | undefined;
+  #pastedGroups: { readonly composition: string; readonly groups: readonly NleEditGroup[] } | undefined;
   readonly #lifetime = new AbortController();
 
   get closed(): AbortSignal {
@@ -212,6 +217,7 @@ export class NleStudioProductSession {
         : change.owner === "project"
           ? ["project", "timeline", "canvas", "inspector", "preview"]
           : ["timeline", "canvas", "inspector", "media", "preview"];
+      if (change.kind !== "savepoint" && this.#pastedGroups !== undefined) invalidated.push("clipboard");
       this.#emit({
         scope: "product",
         kind: `${change.owner}.${change.kind}`,
@@ -444,6 +450,27 @@ export class NleStudioProductSession {
     };
   }
 
+  #clipboardProjection(): NleStudioClipboardProjection {
+    const pasted = this.#pastedGroups;
+    let pendingGroups = 0;
+    if (pasted !== undefined && pasted.composition === this.#viewService.snapshot().view.activeComposition) {
+      const composition = this.#projectLease.service.snapshot().project.compositions
+        .find(entry => entry.id === pasted.composition);
+      const items = new Set(composition?.tracks.flatMap(track => track.items.map(item => item.id)));
+      if (pasted.groups.every(group => group.items.every(item => items.has(item)))) pendingGroups = pasted.groups.length;
+    }
+    return {
+      items: this.#clipboard?.count ?? 0,
+      groups: this.#clipboard?.groups.length ?? 0,
+      pendingGroups,
+    };
+  }
+
+  #clipboardChanged(receipt: NleStudioOperationReceipt): NleStudioOperationReceipt {
+    this.#emit({ scope: "product", kind: "clipboard.changed", status: receipt.status, invalidated: ["clipboard"] });
+    return { ...receipt, invalidated: [...new Set<NleStudioInvalidation>([...receipt.invalidated, "clipboard"])] };
+  }
+
   #canvas() {
     const observation = this.#surface.observe({ kind: "canvas" });
     if (observation.kind !== "canvas") throw new Error("NLE Studio received an invalid Canvas projection.");
@@ -464,6 +491,7 @@ export class NleStudioProductSession {
       catalog: this.#catalog(),
       preview,
       delivery: { state: this.#delivery === undefined ? "unavailable" : "available" },
+      clipboard: this.#clipboardProjection(),
     };
   }
 
@@ -485,6 +513,7 @@ export class NleStudioProductSession {
         return { kind: "inspector", value: observation.value };
       }
       case "component-inputs": return { kind: "component-inputs", value: this.#componentInputs(request.item) };
+      case "clipboard": return { kind: "clipboard", value: this.#clipboardProjection() };
       case "media": return { kind: "media", value: await this.#projectMedia() };
       case "catalog": return { kind: "catalog", value: this.#catalog() };
       case "preview": return { kind: "preview", value: await this.#preview.observe() };
@@ -502,6 +531,7 @@ export class NleStudioProductSession {
     extraInvalidations: readonly NleStudioInvalidation[] = [],
   ): NleStudioOperationReceipt {
     const invalidated = new Set<NleStudioInvalidation>(extraInvalidations);
+    if (this.#pastedGroups !== undefined && (receipt.changed.project || receipt.changed.view)) invalidated.add("clipboard");
     if (receipt.changed.project) invalidated.add("project");
     if (receipt.changed.view) {
       invalidated.add("media");
@@ -600,6 +630,36 @@ export class NleStudioProductSession {
       case "timeline.close-gap": {
         const plan = planTimelineEdit(context, operation);
         return commit(plan.commands, { count: plan.count });
+      }
+      case "clipboard.copy":
+      case "clipboard.cut": {
+        const clipboard = captureStudioClipboard(composition, view, operation.items);
+        const commands = operation.kind === "clipboard.cut"
+          ? planTimelineEdit(context, { ...operation, kind: "timeline.remove" }).commands
+          : [];
+        const receipt = commit(commands, { count: clipboard.count });
+        this.#clipboard = clipboard;
+        this.#pastedGroups = undefined;
+        return this.#clipboardChanged(receipt);
+      }
+      case "clipboard.paste": {
+        if (this.#clipboard === undefined) throw new Error("NLE Studio clipboard is empty.");
+        const plan = planStudioPaste(this.#clipboard, composition, view, frameTime(operation.atFrame));
+        const receipt = commit(plan.commands, { item: plan.items[0]!, count: plan.items.length });
+        this.#pastedGroups = plan.groups.length === 0 ? undefined : { composition: composition.id, groups: plan.groups };
+        return this.#clipboardChanged(receipt);
+      }
+      case "clipboard.apply-groups": {
+        const pasted = this.#pastedGroups;
+        if (pasted?.composition !== composition.id || this.#clipboardProjection().pendingGroups === 0) {
+          throw new Error(`NLE Studio clipboard has no pasted Groups for ${composition.id}.`);
+        }
+        const receipt = this.#receipt(operation.kind, this.#surface.command({
+          kind: "view.transact", expectedProjectRevision: projectSnapshot.revision, expectedViewRevision: viewSnapshot.revision,
+          commands: pasted.groups.map(group => ({ kind: "group.add", composition: composition.id, group })),
+        }), { count: pasted.groups.length });
+        this.#pastedGroups = undefined;
+        return this.#clipboardChanged(receipt);
       }
       case "media.materialize": {
         const { asset, interpretation } = await this.#resolveMediaBinding(operation.media);
@@ -798,6 +858,8 @@ export class NleStudioProductSession {
   close(): void {
     if (this.closed.aborted) return;
     this.#lifetime.abort();
+    this.#clipboard = undefined;
+    this.#pastedGroups = undefined;
     this.#unsubscribeSurface();
     this.#unsubscribeMedia();
     for (const unsubscribe of this.#deliverySubscriptions.values()) unsubscribe();

@@ -40,6 +40,8 @@ and Track creation in one guarded edit.
 The same endpoint applies trim, multi-Item split, and removal. Callers can close a gap or ripple-remove a
 contiguous interval by selecting an explicit Track scope. Studio offers a separate View reconciliation command
 if a Project edit invalidates a View reference.
+Studio handles Cmd/Ctrl+C, X and V through the session clipboard. Paste preserves relative timing and complete
+audiovisual relations within the open NLE document. The Timeline exposes a separate action for pasted View Groups.
 Audiovisual preview remains unavailable until a preview Executor port is supplied.
 
 Available entries in the browser Media bin can be placed at the current playhead. Studio chooses a compatible Track,

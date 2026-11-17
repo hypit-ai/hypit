@@ -73,6 +73,7 @@ export async function refreshOpen(
     ...(requested.has("catalog") ? [observe({ kind: "catalog" })] : []),
     ...(requested.has("preview") ? [observe({ kind: "preview" })] : []),
     ...(requested.has("delivery") ? [observe({ kind: "delivery" })] : []),
+    ...(requested.has("clipboard") ? [observe({ kind: "clipboard" })] : []),
     ...(change.status === undefined ? [observe({ kind: "status" })] : []),
   ]);
   let next: NleStudioOpenProjection = { ...current, status: change.status ?? current.status };
@@ -85,6 +86,7 @@ export async function refreshOpen(
       case "catalog": next = { ...next, catalog: observation.value }; break;
       case "preview": next = { ...next, preview: observation.value }; break;
       case "delivery": next = { ...next, delivery: observation.value }; break;
+      case "clipboard": next = { ...next, clipboard: observation.value }; break;
       case "status": next = { ...next, status: observation.value }; break;
       case "open":
       case "component-inputs":

@@ -45,7 +45,7 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
     }
     return { kind: request.kind, item: request.item };
   }
-  const kinds = new Set(["open", "project", "status", "timeline", "canvas", "media", "catalog", "preview", "delivery"]);
+  const kinds = new Set(["open", "project", "status", "timeline", "canvas", "media", "catalog", "preview", "delivery", "clipboard"]);
   if (keys.length !== 1 || typeof request.kind !== "string" || !kinds.has(request.kind)) {
     throw new Error("NLE Studio observation kind is invalid.");
   }
@@ -110,6 +110,8 @@ function operationRequest(value: unknown): NleStudioOperation {
       valid = currentFields("items", "atFrame") && items !== undefined && items.length > 0 && integer(request.atFrame, 0);
       break;
     case "timeline.remove":
+    case "clipboard.copy":
+    case "clipboard.cut":
       valid = currentFields("items") && items !== undefined && items.length > 0;
       break;
     case "timeline.ripple-remove":
@@ -118,6 +120,12 @@ function operationRequest(value: unknown): NleStudioOperation {
       break;
     case "timeline.close-gap":
       valid = currentFields("tracks", "atFrame") && tracks !== undefined && tracks.length > 0 && integer(request.atFrame, 0);
+      break;
+    case "clipboard.paste":
+      valid = currentFields("atFrame") && integer(request.atFrame, 0);
+      break;
+    case "clipboard.apply-groups":
+      valid = currentFields();
       break;
     case "media.materialize":
       valid = currentFields("media", "includeAudio", "layout", ...timedFields) && placement && duration

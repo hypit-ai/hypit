@@ -103,6 +103,13 @@ Callers can close a gap at a frame or ripple-remove a contiguous selection by na
 The planner resolves the exact gap edges and shifts following Items once. It rejects an occupied gap and any
 edit whose linked members would need to move outside the named Tracks or across the gap boundary.
 
+Studio's session clipboard holds explicitly selected Items, exact relative placements and complete Transition,
+Matte and View Group membership within one NLE document. Paste creates new Item and relation identities at the
+playhead. It reuses the original Tracks if their current ordering, locks and occupied Picture ranges permit it,
+or creates a new ordered set of Tracks in the active Composition. The Project edit commits once. Complete copied
+Groups can then be applied by an explicit View operation with independent undo. Clipboard observations expose
+counts for copy and paste availability and pending Groups.
+
 The loopback server serves the client and same-origin JSON operations for finite observation, guarded Surface commands,
 save and reload. `POST /api/observe` accepts the Product Session's finite observation union. Initial `open` contains
 status, Timeline, Canvas, Composition navigation, Item-to-Media projection, Media, Catalog, Preview and delivery

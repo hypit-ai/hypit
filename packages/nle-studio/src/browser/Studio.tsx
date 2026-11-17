@@ -179,6 +179,27 @@ export function Studio() {
     });
   }, [acceptReceipt, perform, selection, selectItems, session]);
 
+  const editClipboard = useCallback((kind: "clipboard.copy" | "clipboard.cut" | "clipboard.paste" | "clipboard.apply-groups") => {
+    if (session?.status.viewCompatibility !== "compatible") return;
+    const target = {
+      composition: session.timeline.scene.composition,
+      expectedProjectRevision: session.status.projectRevision,
+      expectedViewRevision: session.status.viewRevision,
+    };
+    void perform(async () => {
+      if (kind === "clipboard.paste") {
+        const receipt = await operate({ ...target, kind, atFrame: frame });
+        const item = receipt.result?.item;
+        await acceptReceipt(receipt, typeof item === "string" ? item : undefined);
+      } else if (kind === "clipboard.apply-groups") {
+        await acceptReceipt(await operate({ ...target, kind }));
+      } else {
+        await acceptReceipt(await operate({ ...target, kind, items: selection }));
+        if (kind === "clipboard.cut") selectItems([]);
+      }
+    });
+  }, [acceptReceipt, frame, perform, selection, selectItems, session]);
+
   useEffect(() => {
     if (!playing || session === undefined) return;
     const fps = session.timeline.scene.editRate.numerator / session.timeline.scene.editRate.denominator;
@@ -196,6 +217,16 @@ export function Studio() {
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       if ((event.target as Element | null)?.closest("input,textarea,select,[contenteditable=true]")) return;
+      if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.repeat) {
+        const key = event.key.toLowerCase();
+        if ((key === "c" || key === "x") && selection.length > 0) {
+          event.preventDefault();
+          editClipboard(key === "c" ? "clipboard.copy" : "clipboard.cut");
+        } else if (key === "v" && (session?.clipboard.items ?? 0) > 0) {
+          event.preventDefault();
+          editClipboard("clipboard.paste");
+        }
+      }
       if (event.code === "Space") { event.preventDefault(); setPlaying(value => !value); }
       if ((event.key === "Delete" || event.key === "Backspace") && selection.length > 0) {
         event.preventDefault();
@@ -203,7 +234,7 @@ export function Studio() {
       }
     };
     window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key);
-  }, [selection, removeSelection]);
+  }, [selection, removeSelection, editClipboard, session?.clipboard.items]);
 
   const activeItems = useMemo(() => new Set(session?.timeline.scene.tracks.flatMap(track => track.items)
     .filter(item => frame >= item.startFrame && frame < item.startFrame + item.durationFrames && item.enabled)
@@ -309,6 +340,7 @@ export function Studio() {
           ...operationContext, kind: "timeline.split", items, atFrame,
         })))}
         onRemove={removeSelection}
+        onApplyPastedGroups={() => editClipboard("clipboard.apply-groups")}
         onTrackEnabled={(track, enabled) => transact([{ kind: "track.update", id: track, enabled }])}
         onTrackLocked={(track, locked) => viewTransact([{ kind: "track-lock.set", composition: scene.composition, track, locked }])}
         onTrackMove={(track, before) => transact([{ kind: "track.move", id: track, ...(before === undefined ? {} : { before }) }])}
