@@ -51,8 +51,9 @@ function newTrackId(): string {
 }
 
 /** Session-only pointer planning over the current finite Timeline projection. */
-export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, selection, onSelect, onMove }: {
+export function useItemGesture({ scene, rows: displayRows, scroller, pixels, frame, snap, busy, selection, onSelect, onMove }: {
   readonly scene: NleTimelineScene;
+  readonly rows: readonly NleTimelineSceneTrack[];
   readonly scroller: RefObject<HTMLDivElement | null>;
   readonly pixels: number;
   readonly frame: number;
@@ -64,7 +65,7 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
 }) {
   const [gesture, setGesture] = useState<ItemGestureState>();
   const cancel = useRef<() => void>(() => undefined);
-  useEffect(() => () => cancel.current(), [scene, pixels, busy]);
+  useEffect(() => () => cancel.current(), [scene, displayRows, pixels, busy]);
 
   const start = (event: PointerEvent<HTMLElement>, item: NleTimelineSceneItem, track: NleTimelineSceneTrack) => {
     const viewport = scroller.current;
@@ -117,11 +118,11 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
         }
       }
 
-      const rows = Array.from(viewport.querySelectorAll<HTMLElement>(".nle-track[data-track-id]"));
+      const rows = Array.from(viewport.querySelectorAll<HTMLElement>(".nle-track[data-track-id]")).filter(row => displayRows.some(track => track.id === row.dataset.trackId));
       const bounds = viewport.getBoundingClientRect();
       const inside = pointer.x >= bounds.left + labelWidth && pointer.x < bounds.right
         && pointer.y >= bounds.top + rulerHeight && pointer.y < bounds.bottom;
-      let targetIndex = scene.tracks.findIndex((candidate) => candidate.id === track.id);
+      let targetIndex = displayRows.findIndex((candidate) => candidate.id === track.id);
       let insertionIndex: number | undefined;
       if (inside && Math.abs(pointer.y - startY) > 4) {
         const y = Math.max(bounds.top + rulerHeight + 1, Math.min(bounds.bottom - 1, pointer.y));
@@ -135,16 +136,16 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
       const destinations = new Map<string, string>();
       const additions: ItemTrackAddition[] = [];
       let insertionTop: number | undefined;
-      const anchorIndex = scene.tracks.findIndex((candidate) => candidate.id === track.id);
+      const anchorIndex = displayRows.findIndex((candidate) => candidate.id === track.id);
       const offset = (insertionIndex ?? targetIndex) - anchorIndex;
 
       const additionAt = (index: number, kind: NleTimelineSceneTrack["kind"], key: string): ItemTrackAddition => {
-        const bounded = Math.max(0, Math.min(scene.tracks.length, index));
+        const bounded = Math.max(0, Math.min(displayRows.length, index));
         const cacheKey = `${key}:${kind}:${bounded}`;
         let addition = created.get(cacheKey);
         if (addition === undefined) {
-          const current = scene.tracks[bounded];
-          const previous = scene.tracks[bounded - 1];
+          const current = displayRows[bounded];
+          const previous = displayRows[bounded - 1];
           const before = kind === "audio"
             ? (current?.kind === "audio" ? current.id : undefined)
             : (previous?.kind === "picture" ? previous.id : undefined);
@@ -160,16 +161,16 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
       };
 
       for (const member of members) {
-        const sourceIndex = scene.tracks.findIndex((candidate) => candidate.id === member.track.id);
+        const sourceIndex = displayRows.findIndex((candidate) => candidate.id === member.track.id);
         const desiredIndex = sourceIndex + offset;
-        let destination = scene.tracks[desiredIndex];
+        let destination = displayRows[desiredIndex];
         if (insertionIndex !== undefined && member.item.id === item.id) {
           const addition = additionAt(insertionIndex, member.track.kind, "drop");
           destinations.set(member.item.id, addition.id);
           continue;
         }
         if (destination === undefined || destination.kind !== member.track.kind || destination.locked) {
-          destination = scene.tracks
+          destination = displayRows
             .map((candidate, index) => ({ candidate, distance: Math.abs(index - desiredIndex) }))
             .filter(({ candidate }) => candidate.kind === member.track.kind && !candidate.locked)
             .sort((a, b) => a.distance - b.distance)[0]?.candidate;
@@ -180,7 +181,7 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
           && destination.items.some((candidate) => !ids.has(candidate.id) && candidate.role === "present"
             && overlaps(candidate, nextStart, member.item.durationFrames));
         if (collision) {
-          const available = scene.tracks.find((candidate) => candidate.kind === member.track.kind && !candidate.locked
+          const available = displayRows.find((candidate) => candidate.kind === member.track.kind && !candidate.locked
             && candidate.items.every((other) => ids.has(other.id) || other.role !== "present"
               || !overlaps(other, nextStart, member.item.durationFrames)));
           if (available !== undefined) destination = available;
