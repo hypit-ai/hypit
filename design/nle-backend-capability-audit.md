@@ -157,10 +157,10 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
-| 恒定速度、倒放和分段映射 | NLE source-time | Item 保存精确 target-to-source pieces；`item.retime` 可替换整条关系 | **已具备**底层表达；缺少产品级 speed planner 与有限 Inspector |
-| 音画协调变速 | NLE Present | 同一 Present 的 Picture/Audio 共用 source-time | **已具备**底层表达 |
+| 恒定速度、倒放和分段映射 | NLE source-time + Studio Operation | `timeline.retime` 以精确有理速度修改单段 Picture-only Media 或 Composition 的源时间，保留 Item 位置和长度 | **已具备**单段画面速率与倒放后端；分段产品编辑待讨论 |
+| 音画协调变速 | NLE Present + Audio Executor | 同一 Present 的 Picture/Audio 共用 source-time。本机 AudioProgram 执行当前接受单位速率的直接 Media 映射 | **执行缺口**。需为选定重采样策略闭合变速音频 |
 | 保持音调策略 | Audio Reconstruction | Audio appearance 已能保存 package Reconstruction 与 closed parameters | **产品缺口**。需要标准 preserve-pitch package、offering 与 Inspector |
-| 定格 occurrence | Picture-only Present + source-time | 零速线性映射表达选定源时刻的 hold，Picture-only occurrence 不产生音频 | **产品缺口**。需要从当前帧物化 occurrence 的 planner |
+| 定格 occurrence | Picture-only Present + source-time | `media.freeze` 将选定帧映射到 Media 时刻后物化新的零速 Picture Present；Jensen 验证首尾帧和原样本一致 | **已具备**无活跃 Picture Process 的正向 Media 采样 |
 | 变速重定时动画与音量点 | Process Control time + package parameters | occurrence 编辑已切片、重基 Process Control relation；点值仍由各 package 拥有 | **产品缺口**。需要 package 参数操作与产品级 speed planner 协同 |
 
 ## 8. 转场
@@ -170,7 +170,7 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | 添加 Transition | NLE relationship + package Operator | 显式 outgoing/incoming relation、canonical overlap、package parameters 和原子物化 planner 已实现 | **已具备**基础路径 |
 | 从选区添加 Transition | NLE Studio Operation | 两个选中 Item 由后端按精确时间排序并校验直切关系 | **已具备** |
 | 从播放头选择切点 | NLE Studio Operation | 按显式 Picture Track 和精确播放头时间查找唯一的直切 | **已具备**后端路径 |
-| 修改类型、参数和时长 | Studio Operation + package Inspector | 可替换 offering、改变 canonical overlap，或编辑 Transformer package 投影的有限字段；Jensen 实测缓动影响真实帧 | **已具备** |
+| 修改类型、参数和时长 | Studio Operation + package Inspector | 可替换 offering、改变 canonical overlap，或编辑 Transition package 投影的有限字段；Jensen 实测缓动影响真实帧 | **已具备** |
 | 素材边界补帧 | source-time + Reconstruction + product policy | Project 已能选择 Reconstruction；Transition planner 可检查可用 source range | **产品缺口**。需要明确补帧 package/policy 与失败诊断 |
 | move、trim、split 后维护关系 | NLE Studio planners | Project 最终校验会拒绝失效 relation，但不会替调用者重新计算或删除关系 | **产品缺口** |
 | 删除 Transition | NLE Studio Operation | `transition.remove` 删除关系，保留两端当前时间位置 | **已具备** |
@@ -361,6 +361,7 @@ POST       /api/reload
 - 独立 occurrence 试听需明确是否包含所在 Track 的 Adjust、上层混音与 Reconstruction。
 - 会穿过 Transition 的 trim/split 需要决定保留重叠、重建或删除关系的具体意图；改变重叠需要新增素材边时，应由已选 Reconstruction 决定如何补帧。
 - Timeline 素材条跨多时间映射片段时，需要按段表示留白、倒放、回绕和零速取样边。当前按需视图使用单段正向映射。
+- 多段变速、带效果或合成图的定格，需要明确采样的是素材、片段处理后信号，还是整个 Programme，以及控制点是否跟随速度变化。
 
 ## 实现顺序
 

@@ -31,7 +31,10 @@ import {
   type NleProjectService,
   type NleTrack,
 } from "@hypit/nle";
-import { assertTemporalMapPieces, compareExactTemporalValues, sealLocalTemporalDomain, type ExactTemporalValue } from "@hypit/temporal/algebra";
+import {
+  assertTemporalMapPieces, compareExactTemporalValues, evaluateTemporalMap, sealLocalTemporalDomain,
+  subtractExactTemporalValues, type ExactTemporalValue,
+} from "@hypit/temporal/algebra";
 import {
   acceptsNleComponentMedia,
   assertNleViewForProject,
@@ -737,6 +740,7 @@ export class NleStudioProductSession {
       }
       case "timeline.trim":
       case "timeline.slip":
+      case "timeline.retime":
       case "timeline.roll":
       case "timeline.ripple-trim":
       case "timeline.split":
@@ -744,7 +748,7 @@ export class NleStudioProductSession {
       case "timeline.ripple-remove":
       case "timeline.close-gap": {
         const plan = planTimelineEdit(context, operation);
-        if (plan.commands.length > 0 && (operation.kind === "timeline.slip" || operation.kind === "timeline.roll"
+        if (plan.commands.length > 0 && (operation.kind === "timeline.slip" || operation.kind === "timeline.retime" || operation.kind === "timeline.roll"
             || operation.kind === "timeline.ripple-trim" || operation.kind === "timeline.trim")) {
           const planned = applyNleTransaction(project, { commands: plan.commands });
           const original = indexNleProject(project);
@@ -756,10 +760,12 @@ export class NleStudioProductSession {
             if (item.kind !== "present" || item.source !== "media") return;
             const expands = compareExactTemporalValues(item.start, previous.start) < 0
               || compareExactTemporalValues(nleItemEnd(item), nleItemEnd(previous)) > 0;
-            if (operation.kind !== "timeline.slip" && !expands) return;
+            if (operation.kind !== "timeline.slip" && operation.kind !== "timeline.retime" && !expands) return;
             const { interpretation } = await this.#resolveMediaBinding(this.#mediaIdentity(item.asset.path, id));
             if (interpretation.domain === undefined) {
-              if (operation.kind === "timeline.slip") throw new Error(`NLE Item ${id} has no timed Media to slip.`);
+              if (operation.kind === "timeline.slip" || operation.kind === "timeline.retime") {
+                throw new Error(`NLE Item ${id} requires timed Media for ${operation.kind}.`);
+              }
               return;
             }
             assertTemporalMapPieces(item.sourceTime.pieces,
@@ -816,6 +822,39 @@ export class NleStudioProductSession {
           ...(operation.layout === undefined ? {} : { picture: { layout: operation.layout } }),
         });
         return commit([...placement.commands, ...materialization.commands], { item, track: placement.track });
+      }
+      case "media.freeze": {
+        const item = currentItems().find(entry => entry.id === operation.item);
+        if (item?.kind !== "present" || item.source !== "media" || item.picture === undefined
+            || item.picture.processes?.some(process => process.enabled)) {
+          throw new Error("NLE Studio freeze requires a Media Picture Present without enabled Picture Processes.");
+        }
+        const at = frameTime(operation.sampleFrame);
+        if (compareExactTemporalValues(at, item.start) < 0 || compareExactTemporalValues(at, nleItemEnd(item)) >= 0) {
+          throw new Error(`NLE Studio sample frame is outside Item ${item.id}.`);
+        }
+        const { interpretation } = await this.#resolveMediaBinding(this.#mediaIdentity(item.asset.path, item.id));
+        if (interpretation.domain === undefined || interpretation.picture?.kind !== "signal") {
+          throw new Error(`NLE Item ${item.id} requires a sampled Media Picture for freeze.`);
+        }
+        const sample = evaluateTemporalMap({ stages: [{
+          target: sealLocalTemporalDomain({ id: `${item.id}:time`, duration: item.duration }),
+          source: interpretation.domain,
+          pieces: item.sourceTime.pieces,
+        }] }, subtractExactTemporalValues(at, item.start), "after");
+        if (sample?.sourceSide !== "after" || evaluateTemporalMap(interpretation.picture.map, sample.position, "after") === undefined) {
+          throw new Error(`NLE Item ${item.id} sample frame must select a forward Picture sample.`);
+        }
+        const start = frameTime(operation.atFrame);
+        const length = duration!;
+        const placement = placePresent(operation, "picture", start, length);
+        const id = identity("freeze");
+        return commit([...placement.commands, {
+          kind: "item.add", track: placement.track, item: {
+            id, kind: "present", source: "media", asset: item.asset, start, duration: length, enabled: true,
+            picture: item.picture, sourceTime: nleLinearTimeMapping(length, sample.position, { numerator: 0, denominator: 1 }),
+          },
+        }], { item: id, track: placement.track });
       }
       case "component.materialize": {
         const offering = this.#packages.component(operation.package, operation.offering);

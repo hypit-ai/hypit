@@ -42,6 +42,8 @@ contiguous interval by selecting an explicit Track scope. Studio offers a separa
 if a Project edit invalidates a View reference.
 The endpoint also supports timed source slip, direct-cut roll and end-edge ripple trim. Media, Component and
 Composition materialization can insert at a boundary by supplying an explicit destination and `insertTracks`.
+Callers can retime a single affine Picture-only source window or create a new held Media Picture from a
+selected forward sample with `media.freeze`.
 Studio handles Cmd/Ctrl+C, X and V through the session clipboard. Paste preserves relative timing and complete
 audiovisual relations within the open NLE document. The Timeline exposes a separate action for pasted View Groups.
 Studio can compound a contiguous single-Track selection and enter or return from a nested Composition. Returning

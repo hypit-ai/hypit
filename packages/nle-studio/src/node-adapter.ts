@@ -140,6 +140,12 @@ function operationRequest(value: unknown): NleStudioOperation {
     case "timeline.slip":
       valid = currentFields("item", "deltaFrames") && identity(request.item) && Number.isSafeInteger(request.deltaFrames);
       break;
+    case "timeline.retime": {
+      const rate = record(request.rate, "NLE Studio source rate");
+      valid = currentFields("item", "rate") && identity(request.item) && Object.keys(rate).length === 2
+        && Number.isSafeInteger(rate.numerator) && rate.numerator !== 0 && integer(rate.denominator, 1);
+      break;
+    }
     case "timeline.roll":
       valid = currentFields("left", "right", "atFrame") && identity(request.left) && identity(request.right)
         && request.left !== request.right && integer(request.atFrame, 0);
@@ -173,6 +179,10 @@ function operationRequest(value: unknown): NleStudioOperation {
       valid = currentFields("media", "includeAudio", "layout", "insertTracks", ...timedFields) && placement && duration && insertion
         && identity(request.media) && (request.includeAudio === undefined || typeof request.includeAudio === "boolean")
         && (request.layout === undefined || validPictureLayout(request.layout));
+      break;
+    case "media.freeze":
+      valid = currentFields("item", "sampleFrame", "insertTracks", ...timedFields) && placement && insertion
+        && identity(request.item) && integer(request.sampleFrame, 0) && integer(request.durationFrames, 1);
       break;
     case "component.materialize": {
       const media = request.media === undefined ? {} : record(request.media, "Component Media seeds");

@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { applyNleTransaction, nleItemEnd, type NleCommand, type NleComposition, type NleItem, type NleProject, type NleTrack } from "@hypit/nle";
+import { applyNleTransaction, nleItemEnd, nleLinearTimeMapping, type NleCommand, type NleComposition, type NleItem, type NleProject, type NleTrack } from "@hypit/nle";
 import { nleViewCompositionState, nleViewTrackLocked, type NleView } from "@hypit/nle/view";
 import {
   addExactTemporalValues,
   compareExactTemporalValues,
   exactTemporalZero,
+  extrapolateTemporalAffineMapPiece,
+  isAffineTemporalMapPiece,
   subtractExactTemporalValues,
   type ExactTemporalValue,
   type TemporalRate,
@@ -170,6 +172,28 @@ export function planTimelineEdit(context: ActiveTimeline, edit: NleStudioTimelin
         commands.push({ kind: "item.slip", id: item.id, delta: time(edit.deltaFrames) });
         count = 1;
       }
+      break;
+    }
+    case "timeline.retime": {
+      const { item } = selection([edit.item])[0]!;
+      if (item.kind !== "present" || item.source === "component" || item.picture === undefined || item.audio !== undefined) {
+        throw new Error(`NLE Item ${item.id} requires a Picture-only Media or Composition Present for retime.`);
+      }
+      const piece = item.sourceTime.pieces[0];
+      if (item.sourceTime.pieces.length !== 1 || piece === undefined || !isAffineTemporalMapPiece(piece)
+          || piece.wrap !== undefined || compare(piece.target.start, exactTemporalZero()) !== 0
+          || compare(piece.target.end, item.duration) !== 0) {
+        throw new Error(`NLE Item ${item.id} retime requires one affine source window covering the Item.`);
+      }
+      if (edit.rate.numerator === 0) throw new Error("NLE Studio speed rate must be nonzero.");
+      const previousEnd = extrapolateTemporalAffineMapPiece(piece, item.duration);
+      const previousDirection = Math.sign(piece.rate.numerator);
+      const sameDirection = previousDirection === 0 || previousDirection === Math.sign(edit.rate.numerator);
+      if (BigInt(piece.rate.numerator) * BigInt(edit.rate.denominator)
+          === BigInt(edit.rate.numerator) * BigInt(piece.rate.denominator)) break;
+      const anchor = sameDirection ? piece.sourceAtStart : previousEnd;
+      commands.push({ kind: "item.retime", id: item.id, time: nleLinearTimeMapping(item.duration, anchor, edit.rate) });
+      count = 1;
       break;
     }
     case "timeline.roll": {

@@ -190,6 +190,12 @@ an Item's end edge and displaces subsequent Items in the selected Track scope by
 ripple trim require the applicable package time-window affordances. The Studio checks timed Media bounds on slip or
 edge extension, and the Project checks Composition source bounds in the transaction.
 
+`timeline.retime` sets a nonzero rational source rate on a Picture-only Media or Composition Present with a
+single affine source window. Placement, duration and Process Control time stay fixed. Reversing direction uses
+the previous source window's other edge. `media.freeze` reads a forward Media Picture sample from an existing
+Present and creates a timed Picture-only hold with the same layout. It accepts sampled Media Pictures without
+enabled Picture Processes.
+
 Process materialization addresses an existing Present in the active Composition. The selected offering declares its
 signal, Operator and closed initial parameters. Studio adds the enabled Process at the end of its signal chain or
 before an explicitly addressed Process. The initial Control relation is the Present's full local interval. Inspector

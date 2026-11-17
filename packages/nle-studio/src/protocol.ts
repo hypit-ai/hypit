@@ -12,6 +12,7 @@ import type {
 import type { HtmlVideoDeliveryProfile, HtmlVideoRenderer } from "@hypit/html-video";
 import type { NlePictureLayout } from "@hypit/nle";
 import type { MediaStoryboardAtlas, MediaViewRequest } from "@hypit/media";
+import type { TemporalRate } from "@hypit/temporal/algebra";
 
 export type NleStudioMediaEntry = {
   readonly id: string;
@@ -220,6 +221,7 @@ type NleStudioOfferingReference = {
 export type NleStudioTimelineEdit = NleStudioCompositionOperation & (
   | { readonly kind: "timeline.trim"; readonly item: string; readonly edge: "start" | "end"; readonly atFrame: number }
   | { readonly kind: "timeline.slip"; readonly item: string; readonly deltaFrames: number }
+  | { readonly kind: "timeline.retime"; readonly item: string; readonly rate: TemporalRate }
   | { readonly kind: "timeline.roll"; readonly left: string; readonly right: string; readonly atFrame: number }
   | { readonly kind: "timeline.ripple-trim"; readonly item: string; readonly tracks: readonly string[]; readonly atFrame: number }
   | { readonly kind: "timeline.split"; readonly items: readonly string[]; readonly atFrame: number }
@@ -239,6 +241,12 @@ export type NleStudioOperation =
       readonly media: string;
       readonly includeAudio?: boolean;
       readonly layout?: NlePictureLayout;
+    })
+  | (NleStudioPresentPlacement & {
+      readonly kind: "media.freeze";
+      readonly item: string;
+      readonly sampleFrame: number;
+      readonly durationFrames: number;
     })
   | (NleStudioPresentPlacement & NleStudioOfferingReference & {
       readonly kind: "component.materialize";
