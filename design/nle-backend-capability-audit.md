@@ -48,31 +48,27 @@ ApplicationHost
    └─ selected project Capability Invocation clients
 ```
 
-当前 ApplicationHost、ProjectHost、Product Session 注册和 Session 路由已经成立。NLE Studio 当前公开有限
-`observe(request)`、compact mutation receipt、通用 Surface command、若干物化方法、保存、重载和资源读取。
-`open` 只包含首屏有限投影；Timeline observation 显式投影 Composition 导航、关系、信号存在性和 Product
-后端解析的 Item-to-Media identity。主要缺口是：
-
-- `operate(operation)` 已承接 Timeline drop、Media/Component/Adjust/Transition/Composition 物化和音频分离；
-- AIGC Execution Directory 已能注册 Provider/model Environment 并打开 Project client；影音与 Media Action
-  由 Product/owner Service 投影各自注入的 specialized Executor。
+NLE Studio 在 ApplicationHost 打开的 ProjectHost 上建立 Product Session。`observe` 读取有限视图，
+`command` 提交当前 Owner 命令，`operate` 将产品意图规划为守卫过的事务。编辑返回 compact receipt，后续
+变化由编排状态和 invalidation event 投影。影音与 Media Action 由发起它们的 Product 或 Owner Service 调用
+各自注入的 Executor，再投影进度、取消和资源。AIGC Capability Invocation 使用独立的 Execution Directory。
 
 ## 总览
 
 | 产品能力 | 当前主要所有者 | 审计结论 |
 | --- | --- | --- |
-| 文件和媒体显示 | Project Media Service、Media Executor | 接受、目录和资源读取已有；派生视图与试听缺执行 |
-| 轨道和拖放 | NLE Project、NLE View、NLE Studio planner | 底层事务已有；最终落点规划缺产品后端 |
-| 插入和磁吸 | NLE Project、产品编辑策略 | ripple 基础已有；插入、闭合和连续主轨 planner 不完整 |
-| 片段剪辑和关联 | NLE Project、NLE View | trim、split、move、detach 基础已有；联动范围仍需产品 planner |
+| 文件和媒体显示 | Project Media Service、Media Executor | 接受、目录、资源读取、派生视图、素材试听和可见范围请求已具备 |
+| 轨道和拖放 | NLE Project、NLE View、NLE Studio planner | Studio 后端规划最终落点、锁、关联成员与补轨 |
+| 插入和磁吸 | NLE Project、产品编辑策略 | 显式范围插入和闭合已具备；连续主轨和自动磁吸待定 |
+| 片段剪辑和关联 | NLE Project、NLE View | move、trim、split、slip、roll、ripple 和 detach 已具备生产路径 |
 | 复制和复合片段 | Product Session clipboard、NLE Composition | 同一文档内 clipboard、单轨 compound/explode、独立副本和 Session 导航已具备 |
-| 画面和动画 | NLE Picture layout、package Operator | frame、fit、focus 已有；其余画面处理和关键帧由 package value 表达，缺标准 package 与产品操作 |
-| 变速和定格 | NLE source time、Reconstruction | 精确时间映射和定格表达已有；缺产品 planner 与标准 Audio Reconstruction |
-| 转场 | NLE Transition、package Operator | 关系、物化和降低已有；编辑维护 planner 不完整 |
-| 滤镜 | Present Process、Adjust、package Operator | 核心事实完整度高；片段效果 catalog 与产品操作不完整 |
-| 文字和字幕 | package Component、Shared Value、NLE materialization | 标量与稳定 collection Inspector、字幕内部时间、共享样式编辑及 Component Media 绑定已有；字幕导入缺失 |
-| 声音 | NLE Audio Process、Reconstruction | 表达基础已有；缺标准处理 package、产品操作和执行路径 |
-| 播放和导出 | Audiovisual Executor | 单帧、有限音画播放区间、导出与统一 Action 观察已具备 |
+| 画面和动画 | NLE Picture layout、package Operator | frame、fit、focus、Transform 和 Filter 已具备；Crop 和关键点新增/移动规则待定 |
+| 变速和定格 | NLE source time、Reconstruction | 单段画面变速、倒放和正向 Media 定格已具备；非单位速率音频仍需终端支持 |
+| 转场 | NLE Transition、package Operator | 显式切点物化、类型替换、参数、时长和移除已具备；复杂编辑后的关系策略待定 |
+| 滤镜 | Present Process、Adjust、package Operator | 片段效果添加、启停、排序、移除和参数通路已具备 |
+| 文字和字幕 | package Component、Shared Value、NLE materialization | 文字、字幕和 ranking 已跑通物化、有限编辑、绑定和预览；字幕来源与批量导入待定 |
+| 声音 | NLE Audio Process、Reconstruction | 片段增益、已有包络点编辑与混音波形已具备；淡化与保音调变速待定 |
+| 播放和导出 | Audiovisual Executor | 单帧、有限音画播放区间、混音波形、导出与统一 Action 观察已具备 |
 | 保存和撤销 | NLE Project/View Services、Owner Providers | revision、事务、历史、显式保存、compact receipt 与变化事件已具备 |
 
 ## 1. 文件和媒体显示
@@ -83,7 +79,7 @@ ApplicationHost
 | 接受字幕源 | Caption materialization input；字幕包或明确的字幕来源 Owner | 当前 Media 类型策略不接受 SRT，NLE 也没有字幕来源事实 | **事实缺口**。应先决定字幕源是一次性物化输入还是持久 Owner 文档 |
 | 目录元数据与失败诊断 | Observation；Project Media Service | Catalog 暴露引用、媒体类型、时长、画面尺寸、旋转、音频存在性及 available/missing/invalid | **已具备** |
 | 多个 Item 复用同一素材 | NLE occurrence；NLE Project | 多个 Media Present 保存同一便携 Media Asset 引用，trim、retime 和 Process 属于 occurrence | **已具备** |
-| 缺失素材保持作者结构 | Media observation + NLE reference | Catalog 可报告 missing；NLE Reader 不依赖打开媒体即可保留 Item 时间与引用 | **已具备**。面向当前打开文档的受影响 Item 投影仍需补充 |
+| 缺失素材保持作者结构 | Media observation + NLE reference | Catalog 可报告 missing；Timeline 提供 Item 到 Media identity，客户端可定位受影响片段 | **已具备** |
 | 移除 Project Media | Project Media Service Action | 当前 Service 没有删除操作，也不维护跨 Owner 反向引用 | **产品缺口**。若增加移除，调用者必须显式给出作用边界并由相关 Owner 校验引用 |
 | 原媒体按需读取 | Project resource capability | Project Resource Gateway 与 Studio resource route 支持 capability token 和 byte range | **已具备**，但只是资源读取，不等于解码后的逐帧/同步播放 |
 | 缩略图与 storyboard | Media Action + Timeline Media observation | 当前 revisions 和 Catalog generation 下，从可见轨道与时间范围规划派生 Action，按 atlas 样本显示 storyboard | **已具备**常量 Picture 及单段正向 source-time |
@@ -145,7 +141,7 @@ ApplicationHost
 | --- | --- | --- | --- |
 | 位置和画框尺寸 | NLE Picture layout | layout 保存 x、y、width、height；Canvas 与 Inspector 有有限投影和 guarded spatial edit | **已具备** |
 | fit 与内容焦点 | NLE Picture layout | fit、contentX、contentY 已持久化并参与 lowering | **已具备** |
-| 旋转、透明度、镜像、单轴内容缩放 | Picture Process + package Operator | Jensen 的 Transform 和 Filter offering 提供旋转、单轴正向缩放和透明度的 Inspector | **已具备**旋转、缩放、透明度；镜像操作仍缺 |
+| 旋转、透明度、镜像、单轴内容缩放 | Picture Process + package Operator | Jensen 的 Transform 和 Filter 提供旋转、可带负号的双轴缩放和透明度 Inspector | **已具备** |
 | 源画面裁剪 | Picture Process + package Operator | source crop 可由 Picture Operator 的 package value 表达 | **产品缺口**。需要标准 Crop/Transform package 与 Canvas 操作 |
 | 画面属性关键帧 | package Operator parameters | Jensen 的 Transform 和 Filter 通过 Inspector 编辑已有关键帧的值与插值方式 | **已具备**已有点值与插值；新增、移动和移除点仍缺 |
 | 关键帧移动、冲突和剪辑跟随 | package authoring + Process Control time | Process 的 local Control relation 会随 split、trim 和 roll 切片、重定时 | **产品缺口**。package authoring 负责点级操作，NLE 负责 occurrence 时间关系 |
@@ -289,7 +285,9 @@ interface NleStudioProductSession {
 - `open`：首屏所需 status、Timeline、Canvas、Media、Catalog 与 Preview 状态；
 - `timeline`：当前 Composition 的有限 Timeline scene 与 affordances；
 - `canvas`：NLE-owned Item frames；
-- `inspector`：一个 Item、Process、关系或 Shared Value 的有限编辑表面；
+- `inspector`：一个 Item 及其 Process 和已绑定 Shared Value 的有限编辑表面；
+- `transition-inspector`：一个 Transition 的端点、重叠时长和有限字段；
+- `timeline-media`：指定可见轨道与时段的有界 Media Action 计划；
 - `media`：Project Media Catalog；
 - `catalog`：Project manifest 选中的 author-facing offerings；
 - `component-inputs`：一个 Component occurrence 的 Media slots 与当前绑定；
@@ -301,16 +299,15 @@ Observation 不向不可信前端发布完整 Project/View 文档、package 函�
 
 当前事实已经足以支持的第一组产品 Operation 是：
 
-- Timeline drop、insert、close-gap、move、trim、split、remove 与 paste；
+- Timeline drop、显式插入、close-gap、trim、split、slip、roll、ripple、remove、clipboard 和画面 retime；
 - Media、Component、Process、Adjust、Transition 与 Composition materialization；
-- Composition compound、duplicate 与 explode；
+- Composition compound、make-unique、explode、进入与返回；
 - Component Media bind/unbind；
 - Component value share、link 与 unlink/make-unique；
 - Inspector finite edit/action；
 - Track add、move、enable 与 View lock/height；
 - Group create/replace/remove；
-- detach audio；
-- caption import，在字幕物化输入边界确定之后。
+- detach audio。
 
 每个 Operation 接受 expected Project/View revisions，重新读取当前 package declarations 与 View guards，生成
 一个完整 owner transaction，再返回 revisions、结果地址和 invalidated projection names。
@@ -326,8 +323,8 @@ Product Session 或 owner Service 需要为自己调用的 specialized Executor 
 - owner 明确承诺时的 reopen/recover；
 - open completed resource。
 
-第一组 Action kinds 是 Media thumbnail/storyboard/waveform/audio-preview，以及 NLE frame-preview、playback-preview
-和 export。它们的 handle 分别属于 Media 或 NLE Product/Service。Provider/model Capability Invocation 的 handle
+当前 Action kinds 包括 Media thumbnail/storyboard/waveform/audio-preview，以及 NLE frame-preview、playback-preview、
+programme-waveform 和 delivery。它们的 handle 分别属于 Media 或 NLE Product/Service。Provider/model Capability Invocation 的 handle
 属于选中的 AIGC Execution Environment，并按该 Environment 的恢复契约长于 Product Session 和调用者连接。
 
 ### HTTP projection
@@ -362,14 +359,15 @@ POST       /api/reload
 - 会穿过 Transition 的 trim/split 需要决定保留重叠、重建或删除关系的具体意图；改变重叠需要新增素材边时，应由已选 Reconstruction 决定如何补帧。
 - Timeline 素材条跨多时间映射片段时，需要按段表示留白、倒放、回绕和零速取样边。当前按需视图使用单段正向映射。
 - 多段变速、带效果或合成图的定格，需要明确采样的是素材、片段处理后信号，还是整个 Programme，以及控制点是否跟随速度变化。
+- Crop 需要确定裁剪坐标属于源画面还是当前画框，以及 Canvas 如何编辑这个 package value。
+- 淡化时长、关键点添加和移动需要确定 Process Control 时间坐标、冲突与裁剪后保留策略。预览和交付已消费同一闭合值。
+- Project Media 移除需要定义受影响的 Owner 引用范围和字节删除协议，调用者承担显式删除意图。
 
-## 实现顺序
+## 待补执行能力
 
-1. 完成其余已有事实可支持的 Timeline、Composition、Process 和 materialization Operations；
-2. 补受限 Shared Value seeds 和 collection 行级有限操作；
-3. 为 Timeline 按可见范围接入已有 Media 派生视图，并补 Programme 波形；
-4. 建立标准 Picture Transform/Crop、Audio Gain/Envelope、preserve-pitch package，并开放对应 package authoring 与产品 Operations；完成 freeze 与 magnetic product planners；
-5. 补完 `text-fine`、`caption-fine` 和 `ranking` 尚缺的物化、Media 绑定、poster 与真实 preview 验收。
+- 非单位速率 Audio Reconstruction 需要闭合 Programme 时间窗的音频采样、方向与音调策略。本机目前执行单位速率直接 Media。
+- 连续预览仍按有限区间渲染，区间接缝可能等待下一段产出。
+- Delivery Action 保持打开进程内的状态。进程重启后的恢复需要持久计划、结果提交与清理协议。
 
 ## 闭合标准
 

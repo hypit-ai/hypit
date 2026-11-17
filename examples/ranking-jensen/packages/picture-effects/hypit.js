@@ -10,8 +10,8 @@ const controlledFields = {
   transform: [
     ["translateX", "Translate X", {}],
     ["translateY", "Translate Y", {}],
-    ["scaleX", "Scale X", { minimum: 0, step: 0.01 }],
-    ["scaleY", "Scale Y", { minimum: 0, step: 0.01 }],
+    ["scaleX", "Scale X", { step: 0.01 }],
+    ["scaleY", "Scale Y", { step: 0.01 }],
     ["rotationDegrees", "Rotation", { step: 1, unit: "deg" }],
     ["originX", "Origin X", { minimum: 0, maximum: 1, step: 0.01 }],
     ["originY", "Origin Y", { minimum: 0, maximum: 1, step: 0.01 }],

@@ -285,45 +285,26 @@ interface NleStudioProductSession {
 Project and View revisions, plans all required owner commands and commits the operation once. It is the correct seam
 for interactions whose authoritative result must not be reconstructed independently by each frontend.
 
-The initial operation family is:
-
-```ts
-type NleStudioOperation =
-  | NleTimelineDropOperation
-  | NleTimelineInsertOperation
-  | NleTimelineCloseGapOperation
-  | NleTimelineTrimOperation
-  | NleTimelineSplitOperation
-  | NleTimelineRemoveOperation
-  | NleTimelinePasteOperation
-  | NleMediaMaterializeOperation
-  | NleComponentMaterializeOperation
-  | NleAdjustMaterializeOperation
-  | NleTransitionMaterializeOperation
-  | NleCompositionMaterializeOperation
-  | NleCompositionCompoundOperation
-  | NleCompositionDuplicateOperation
-  | NleCompositionExplodeOperation
-  | NleCaptionImportOperation;
-```
-
-The operation union grows only when its owner facts and one concrete product consumer exist. It does not contain
-placeholder operations for facts absent from the current NLE schema.
+The [Studio protocol](../packages/nle-studio/src/protocol.ts) defines the exact union. Timeline operations cover
+drop, trim, split, remove, slip, roll, end-edge ripple trim, ripple removal, closing a gap and picture-only retime.
+Materialization covers Media, holds, Component, Process, Adjust, Transition and nested Composition. Media,
+Component and Composition placement accept an explicit insertion scope. The session also exposes clipboard,
+Composition navigation and edits, Process and Transition edits, Component Media binding, and audio detachment.
 
 ### Authoritative Timeline drop
 
 Timeline drop is the first required planner. The request identifies:
 
-- the dragged Project Media, catalog offering or existing Items;
+- the selected existing Items and their anchor;
 - the active Composition and observed Project/View revisions;
-- frame-grid horizontal position;
+- signed frame-grid displacement;
 - vertical drop position or an explicit destination Track;
 - whether the pointer targets an existing Track or a new-track boundary.
 
 The backend resolves compatibility and locks, excludes moved Items' original ranges from conflict checks, searches
 available Tracks, creates required Tracks, preserves multi-selection offsets and submits one Project transaction. The
-receipt returns the committed destinations, revisions and invalidated projections. The frontend owns the drag ghost
-and continuous pointer feedback, not the final allocation algorithm.
+receipt returns the committed anchor Track, revisions and invalidated projections. The frontend projects pointer
+feedback and observes the committed destinations.
 
 ## Specialized Actions and the AIGC Execution Directory
 
@@ -345,6 +326,7 @@ type ProductActionRequest =
   | MediaAudioPreviewRequest
   | NleFramePreviewRequest
   | NlePlaybackPreviewRequest
+  | NleProgrammeWaveformRequest
   | NleExportRequest;
 ```
 
@@ -401,7 +383,7 @@ Event scopes are:
 - ApplicationHost: Project lease and Product Session lifecycle;
 - ProjectHost: Media Catalog generation and open-service inventory;
 - Product Session: NLE Project and View revisions, savepoints and projection invalidations, plus Project Media changes;
-- Action: Preview and Delivery handles, state and progress in the Studio stream.
+- Action: Preview, Media views and Delivery handles, state and progress in the Studio stream.
 
 The selected package environment and execution directory are fixed for their open lifetimes. On opening or
 reconnecting, a client subscribes before reading the finite projection. Loopback streams signal subscription with
@@ -463,45 +445,12 @@ The current implementation already provides:
 - NLE Project and View Services with independent revisions, transactions, undo, redo, savepoints and explicit reload;
 - NLE Editing Surface observations, guards, Inspector and spatial plans;
 - direct commands for Track, Item, source-time, Process, Transition, Matte and shared-value editing;
-- Media, Component, Adjust, Transition and nested Composition materialization foundations;
-- an NLE Studio Product Session capable of opening over an existing ProjectHost.
+- Media, Component, Process, Adjust, Transition and nested Composition materialization;
+- an NLE Studio Product Session capable of opening over an existing ProjectHost;
 - Application and Project observations, Studio finite observations and compact mutation receipts;
 - subscription and loopback events for Application, Project, Studio and audiovisual Actions;
-- exact-range frame and playback preview and Delivery through one Studio Action projection.
-- generation-scoped Media thumbnail, storyboard, waveform and audio audition through the same Action projection.
+- exact-range frame and playback preview, Programme waveform and Delivery through one Studio Action projection;
+- generation-scoped Media thumbnail, storyboard, waveform and audio audition, with bounded Timeline viewport demand.
 
-### Next backend capabilities
-
-The next backend capabilities are:
-
-1. semantic Product operations for Timeline insertion and occurrence Processes;
-2. programme-derived waveforms and Timeline wiring for Media view results.
-
-The planner and receipt work closes application-to-project-to-product editing. The Actions close the audiovisual
-feedback loop needed by a production NLE frontend.
-
-### Owner facts required before further operations
-
-Some product requirements cannot be completed by adding transport endpoints. The current owner schemas must first
-represent their durable meaning:
-
-- rotation, opacity, mirroring and source crop beyond the current layout model;
-- picture-property animation and keyframes;
-- volume, fades, gain envelopes and pitch-preserving retime policy;
-- freeze-frame occurrence meaning;
-- imported caption source and batch subtitle style operations;
-- any durable primary-Track or magnetic-edit policy selected by the author.
-
-Those facts enter NLE or an explicitly selected package owner before their operations enter `NleStudioOperation`.
-Creating transport placeholders first would give the adapter authority over facts the owner cannot yet preserve.
-
-## Implementation closure order
-
-The backend continues along one production path in this order:
-
-1. add remaining planners supported by current NLE facts;
-2. connect Media-derived views and preview through selected Executors, and project the existing export lifecycle through the same Action observation shape;
-3. extend owner facts before exposing animation, audio-envelope and caption-source operations.
-
-At that point a frontend can concentrate on layout, pointer feedback, accessibility and interaction feel. It consumes
-authoritative results but does not reproduce the backend's ownership or planning rules.
+Remaining execution work and decisions about editor behavior and owner facts are tracked in the
+[NLE backend capability audit](nle-backend-capability-audit.md).
