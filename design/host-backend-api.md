@@ -160,6 +160,7 @@ type ApplicationProjection = {
 
 interface ApplicationHost {
   observe(): ApplicationProjection;
+  subscribe(listener: ApplicationEventListener): () => void;
   openProject(input: unknown): Promise<ApplicationProjectLease>;
   closeProject(handle: ApplicationProjectLeaseHandle): Promise<void>;
   launchProduct(input: {
@@ -207,12 +208,14 @@ interface ProjectHost {
   readonly documents: ProjectDocumentRegistry;
   readonly resources: ProjectResourceGateway;
   readonly executorClients: readonly ProjectExecutorClient[];
+  observe(): Promise<ProjectHostProjection>;
+  subscribe(listener: ProjectHostEventListener): () => void;
 }
 ```
 
-Its finite application projection contains the boundary display name, selected package provenance and offerings,
-Project Media Catalog, open Owner Service leases and Product Sessions attached by the ApplicationHost. Absolute paths,
-loaded package functions and raw Service instances stay behind trusted local adapters.
+Its finite projection contains the boundary display name, selected package names, offering identities and titles,
+Project Media Catalog and open Owner Service leases. ApplicationHost projects its attached Product Sessions.
+Absolute paths, loaded package functions and raw Service instances stay behind trusted local adapters.
 
 ### Project operations
 
@@ -265,6 +268,7 @@ Its stable application contract is grouped by meaning instead of one route for e
 ```ts
 interface NleStudioProductSession {
   observe(request: NleStudioObservationRequest): Promise<NleStudioObservation>;
+  subscribe(listener: NleStudioEventListener): () => void;
   command(command: NleEditingSurfaceCommand): Promise<NleStudioOperationReceipt>;
   operate(operation: NleStudioOperation): Promise<NleStudioOperationReceipt>;
   save(): Promise<NleStudioOperationReceipt>;
@@ -391,10 +395,14 @@ event delivery authoritative. A client that misses an event reads the current fi
 
 Event scopes are:
 
-- ApplicationHost: caller leases, project, Product Session and AIGC Execution Directory lifecycle;
-- ProjectHost: Media Catalog generation, package observation and open-service inventory;
-- Product Session: owner revision changes and projection invalidation;
-- Action: state and progress.
+- ApplicationHost: Project lease and Product Session lifecycle;
+- ProjectHost: Media Catalog generation and open-service inventory;
+- Product Session: NLE Project and View revisions, savepoints and projection invalidations, plus Project Media changes;
+- Action: Delivery handle, state and progress in the Studio stream.
+
+The selected package environment and execution directory are fixed for their open lifetimes. On opening or
+reconnecting, a client subscribes before reading the finite projection. Loopback streams signal subscription with
+`ready`, then each live change with `change`. A slow connection can be closed so the caller reconnects and rereads.
 
 ## Local HTTP projection
 
@@ -403,7 +411,10 @@ opaque Product Session path:
 
 ```text
 GET    /api/application
+GET    /api/application/events
 POST   /api/application/projects
+GET    /api/application/project-leases/:lease
+GET    /api/application/project-leases/:lease/events
 DELETE /api/application/project-leases/:lease
 POST   /api/application/sessions
 DELETE /api/application/sessions/:session
@@ -420,6 +431,8 @@ capability and routes only to the adapter registered for that session's product 
 mount projects the same application operations to its browser artifact without publishing the bearer token. Resource capability tokens
 remain scoped to the Project or Product Session that issued them and are revoked with that scope. A browser URL,
 server port, iframe address or HTTP request body never becomes an owner fact.
+The Project stream closes when its lease is released. Within a Studio Session, `GET /api/events` closes with the
+Session.
 
 Desktop IPC, CLI and Agent adapters attach to the same ApplicationHost instance and invoke the same typed ProjectHost,
 Product Session and Action operations. An in-process adapter calls the typed contracts directly; a separate process
@@ -449,17 +462,16 @@ The current implementation already provides:
 - direct commands for Track, Item, source-time, Process, Transition, Matte and shared-value editing;
 - Media, Component, Adjust, Transition and nested Composition materialization foundations;
 - an NLE Studio Product Session capable of opening over an existing ProjectHost.
+- Application and Project observations, Studio finite observations and compact mutation receipts;
+- subscription and loopback events for Application, Project, Studio and Delivery.
 
 ### Next backend capabilities
 
 The next backend capabilities are:
 
-1. Application, Project, Product Session and Action event streams;
-2. compact command receipts and finite invalidation-driven observations;
-3. server-side Timeline drop, insertion, gap, clipboard and nested-Composition planners;
-4. Media thumbnail, storyboard, waveform and audio-preview Actions;
-5. audiovisual frame/playback preview Actions and unified observation of the existing export Action;
-6. application-routed Project observations and project resource capabilities.
+1. semantic Product operations and server-side Timeline drop, insertion, gap, clipboard and nested-Composition planners;
+2. Media thumbnail, storyboard, waveform and audio-preview Actions;
+3. audiovisual frame/playback preview Actions and unified observation of the existing export Action.
 
 The planner and receipt work closes application-to-project-to-product editing. The Actions close the audiovisual
 feedback loop needed by a production NLE frontend.
@@ -483,12 +495,10 @@ Creating transport placeholders first would give the adapter authority over fact
 
 The backend continues along one production path in this order:
 
-1. publish change and Action events from existing Service subscriptions;
-2. make receipts and observation invalidation the normal mutation result;
-3. move final Timeline drop allocation into one NLE Studio planner;
-4. add remaining planners supported by current NLE facts;
-5. connect Media-derived views and preview through selected Executors, and project the existing export lifecycle through the same Action observation shape;
-6. extend owner facts before exposing animation, audio-envelope and caption-source operations.
+1. move final Timeline drop allocation into one NLE Studio planner;
+2. add remaining planners supported by current NLE facts;
+3. connect Media-derived views and preview through selected Executors, and project the existing export lifecycle through the same Action observation shape;
+4. extend owner facts before exposing animation, audio-envelope and caption-source operations.
 
 At that point a frontend can concentrate on layout, pointer feedback, accessibility and interaction feel. It consumes
 authoritative results but does not reproduce the backend's ownership or planning rules.

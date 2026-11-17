@@ -27,6 +27,9 @@ export {
   openProjectHost,
   type OpenProjectHostOptions,
   type ProjectHostContext,
+  type ProjectHostEvent,
+  type ProjectHostEventListener,
+  type ProjectHostProjection,
 } from "./host.js";
 export {
   ProjectResourceGateway,

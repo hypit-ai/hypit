@@ -97,7 +97,10 @@ and separate.
 Every accepted mutation returns one compact receipt containing current owner status, changed owners, invalidated
 projection names and an optional result address. The browser retains unaffected projections and rereads only the
 invalidated Timeline, Canvas, Media, Catalog, Preview or delivery observation. Inspector is reread only for the
-selected Item when invalidated.
+selected Item when invalidated. `GET /api/events` streams NLE Project and View changes, Project Media Catalog
+generations and Delivery progress. The browser rereads the finite open projection on connect or reconnect and
+rereads invalidated projections on live edits. The Delivery observation endpoint provides the current result or
+diagnostic by handle.
 
 `POST api/deliveries` starts an export of the session's already selected NLE Project document through the injected
 Delivery Service. `GET api/deliveries/:handle` observes it and `DELETE api/deliveries/:handle` requests cancellation.

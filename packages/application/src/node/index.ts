@@ -1,4 +1,5 @@
 export { createNodeApplicationProjectProvider } from "./project-provider.js";
+export { serveApplicationEventStream } from "./event-stream.js";
 export {
   NodeApplicationServer,
   openNodeApplicationServer,

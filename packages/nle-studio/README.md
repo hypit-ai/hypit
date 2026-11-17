@@ -33,6 +33,8 @@ Current production behavior opens a finite Product projection, renders the Timel
 guarded commands, explicitly saves or reloads owner documents, imports local browser files, projects the shared Media
 catalog and exposes delivery Actions when an `HtmlVideoExecutor` is injected by the distribution. `POST /api/observe`
 selects one finite projection. Mutations return compact receipts, and the browser rereads only invalidated projections.
+`GET /api/events` publishes document edits, Media Catalog changes and Delivery progress. On connection or reconnection,
+Studio reads the current open projection.
 Audiovisual preview remains unavailable until a preview Executor port is supplied.
 
 Available entries in the browser Media bin can be placed at the current playhead. The client chooses a compatible

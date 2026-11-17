@@ -4,6 +4,7 @@ import type {
   NleStudioComponentMaterializeRequest,
   NleStudioDeliveryObservation,
   NleStudioDeliveryStartRequest,
+  NleStudioEvent,
   NleStudioMediaPlaceRequest,
   NleStudioObservation,
   NleStudioObservationRequest,
@@ -11,6 +12,24 @@ import type {
   NleStudioOperationReceipt,
   NleStudioTransitionMaterializeRequest,
 } from "../protocol.js";
+
+export function connectStudioEvents(input: {
+  readonly ready: () => void;
+  readonly change: (event: NleStudioEvent) => void;
+  readonly invalid: (error: Error) => void;
+}): () => void {
+  const source = new EventSource("api/events");
+  source.addEventListener("ready", input.ready);
+  source.addEventListener("error", () => input.invalid(new Error("Studio 事件连接暂时中断，正在重连。")));
+  source.addEventListener("change", (message) => {
+    try {
+      input.change(JSON.parse(message.data) as NleStudioEvent);
+    } catch (error) {
+      input.invalid(error instanceof Error ? error : new Error(String(error)));
+    }
+  });
+  return () => source.close();
+}
 
 export async function request<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(path, body === undefined ? undefined : {
@@ -41,28 +60,31 @@ export async function readInspector(item: string) {
 
 export async function refreshOpen(
   current: NleStudioOpenProjection,
-  receipt: NleStudioOperationReceipt,
+  change: Pick<NleStudioOperationReceipt, "invalidated"> & Partial<Pick<NleStudioOperationReceipt, "status">>,
 ): Promise<NleStudioOpenProjection> {
-  const requested = new Set(receipt.invalidated);
+  const requested = new Set(change.invalidated);
   const observations = await Promise.all([
+    ...(requested.has("project") ? [observe({ kind: "project" })] : []),
     ...(requested.has("timeline") ? [observe({ kind: "timeline" })] : []),
     ...(requested.has("canvas") ? [observe({ kind: "canvas" })] : []),
     ...(requested.has("media") ? [observe({ kind: "media" })] : []),
     ...(requested.has("catalog") ? [observe({ kind: "catalog" })] : []),
     ...(requested.has("preview") ? [observe({ kind: "preview" })] : []),
     ...(requested.has("delivery") ? [observe({ kind: "delivery" })] : []),
+    ...(change.status === undefined ? [observe({ kind: "status" })] : []),
   ]);
-  let next: NleStudioOpenProjection = { ...current, status: receipt.status };
+  let next: NleStudioOpenProjection = { ...current, status: change.status ?? current.status };
   for (const observation of observations) {
     switch (observation.kind) {
+      case "project": next = { ...next, project: observation.value }; break;
       case "timeline": next = { ...next, timeline: observation.value }; break;
       case "canvas": next = { ...next, canvas: observation.value }; break;
       case "media": next = { ...next, media: observation.value }; break;
       case "catalog": next = { ...next, catalog: observation.value }; break;
       case "preview": next = { ...next, preview: observation.value }; break;
       case "delivery": next = { ...next, delivery: observation.value }; break;
+      case "status": next = { ...next, status: observation.value }; break;
       case "open":
-      case "status":
       case "inspector": throw new Error(`NLE Studio returned unexpected ${observation.kind} observation.`);
     }
   }

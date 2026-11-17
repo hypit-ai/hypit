@@ -10,6 +10,8 @@ export {
   type OpenApplicationHostOptions,
 } from "./host.js";
 export type {
+  ApplicationEvent,
+  ApplicationEventListener,
   ApplicationProductProvider,
   ApplicationProductLaunchParameter,
   ApplicationProductSession,

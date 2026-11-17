@@ -84,6 +84,7 @@ export type NleStudioOpenProjection = {
 
 export type NleStudioObservationRequest =
   | { readonly kind: "open" }
+  | { readonly kind: "project" }
   | { readonly kind: "status" }
   | { readonly kind: "timeline" }
   | { readonly kind: "canvas" }
@@ -95,6 +96,7 @@ export type NleStudioObservationRequest =
 
 export type NleStudioObservation =
   | { readonly kind: "open"; readonly value: NleStudioOpenProjection }
+  | { readonly kind: "project"; readonly value: NleStudioOpenProjection["project"] }
   | { readonly kind: "status"; readonly value: NleEditingSurfaceStatus }
   | { readonly kind: "timeline"; readonly value: NleStudioTimelineProjection }
   | { readonly kind: "canvas"; readonly value: NleCanvasScene }
@@ -105,6 +107,7 @@ export type NleStudioObservation =
   | { readonly kind: "delivery"; readonly value: NleStudioDeliveryProjection };
 
 export type NleStudioInvalidation =
+  | "project"
   | "timeline"
   | "canvas"
   | "inspector"
@@ -119,6 +122,14 @@ export type NleStudioOperationReceipt = {
   readonly changed: { readonly project: boolean; readonly view: boolean };
   readonly invalidated: readonly NleStudioInvalidation[];
   readonly result?: Readonly<Record<string, string | number | boolean>>;
+};
+
+export type NleStudioProjectionEvent = {
+  readonly scope: "product" | "project";
+  readonly kind: string;
+  readonly status: NleEditingSurfaceStatus;
+  readonly invalidated: readonly NleStudioInvalidation[];
+  readonly generation?: number;
 };
 
 export type NleStudioCommandRequest = {
@@ -187,6 +198,15 @@ export type NleStudioDeliveryObservation =
   | (NleStudioDeliveryObservationBase & { readonly state: "complete"; readonly result: MediaResource })
   | (NleStudioDeliveryObservationBase & { readonly state: "failed"; readonly diagnostic: string })
   | (NleStudioDeliveryObservationBase & { readonly state: "cancelled" });
+
+export type NleStudioActionEvent = {
+  readonly scope: "action";
+  readonly kind: "delivery";
+  readonly action: Pick<NleStudioDeliveryObservation, "handle" | "state" | "progress">;
+};
+
+export type NleStudioEvent = NleStudioProjectionEvent | NleStudioActionEvent;
+export type NleStudioEventListener = (event: NleStudioEvent) => void;
 
 export type NleStudioErrorResponse = {
   readonly error: string;

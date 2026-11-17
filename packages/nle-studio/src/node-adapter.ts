@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
-import type { NodeApplicationProductAdapter } from "@hypit/application/node";
+import { serveApplicationEventStream, type NodeApplicationProductAdapter } from "@hypit/application/node";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import { NleStudioProductSession, nleStudioProduct } from "./host.js";
 import type {
@@ -48,7 +48,7 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
     }
     return { kind: "inspector", item: request.item };
   }
-  const kinds = new Set(["open", "status", "timeline", "canvas", "media", "catalog", "preview", "delivery"]);
+  const kinds = new Set(["open", "project", "status", "timeline", "canvas", "media", "catalog", "preview", "delivery"]);
   if (keys.length !== 1 || typeof request.kind !== "string" || !kinds.has(request.kind)) {
     throw new Error("NLE Studio observation kind is invalid.");
   }
@@ -189,12 +189,16 @@ async function receiveMediaFile(
 
 export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
   product: nleStudioProduct,
-  async handle({ request, response, session, pathname, url }) {
+  async handle({ request, response, session, pathname, url, signal }) {
     if (!(session instanceof NleStudioProductSession)) {
       throw new Error("NLE Studio adapter received another Product Session kind.");
     }
     const studio = session;
     try {
+      if (request.method === "GET" && pathname === "/api/events") {
+        serveApplicationEventStream(response, AbortSignal.any([signal, studio.closed]), studio.subscribe.bind(studio));
+        return true;
+      }
       if (request.method === "POST" && pathname === "/api/observe") {
         sendJson(response, 200, await studio.observe(observationRequest(await jsonBody(request))));
         return true;

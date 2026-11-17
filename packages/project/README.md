@@ -9,6 +9,9 @@ registry among product sessions. The
 `node` entry reads the ordinary project directory and resolves only packages explicitly activated by
 `hypit.project.json`.
 
+`ProjectHost.observe()` provides the finite package, Media Catalog and document inventory projection.
+`ProjectHost.subscribe()` reports Media Catalog generations and document lease changes for the open Project.
+
 ```ts
 import { openNodeProjectHost } from "@hypit/project/node";
 

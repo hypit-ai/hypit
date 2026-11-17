@@ -2,16 +2,18 @@ import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import type { NleInspectorScene } from "@hypit/nle/view";
 import { Blend, Captions, Images, Maximize2, Minimize2, Pause, Play, Redo2, Save, StepBack, StepForward, Type, Undo2, Volume2, VolumeX, Wand2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   NleStudioAdjustCatalogEntry,
   NleStudioComponentCatalogEntry,
+  NleStudioInvalidation,
   NleStudioMediaEntry,
   NleStudioOpenProjection,
   NleStudioOperationReceipt,
   NleStudioTransitionCatalogEntry,
 } from "../protocol.js";
 import {
+  connectStudioEvents,
   materializeAdjust,
   materializeComponent,
   materializeTransition,
@@ -59,6 +61,39 @@ export function Studio() {
   const [binTab, setBinTab] = useState<BinTab>("assets");
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [panelWidths, setPanelWidths] = useState(readPanelWidths);
+  const sessionRef = useRef<NleStudioOpenProjection | undefined>(undefined);
+  const selectionRef = useRef<readonly string[]>([]);
+  const work = useRef<Promise<void>>(Promise.resolve());
+  const busyRef = useRef(false);
+
+  const storeSession = useCallback((next: NleStudioOpenProjection) => {
+    sessionRef.current = next;
+    setSession(next);
+  }, []);
+
+  const enqueue = useCallback((operation: () => Promise<void>) => {
+    const result = work.current.then(operation);
+    work.current = result.catch((error: unknown) =>
+      setFailure(error instanceof Error ? error.message : String(error)));
+    return work.current;
+  }, []);
+
+  const selectItems = useCallback((ids: readonly string[]) => {
+    selectionRef.current = ids;
+    setSelection(ids);
+    setInspector(undefined);
+  }, []);
+
+  const refreshInspector = useCallback(async (current: NleStudioOpenProjection) => {
+    const item = selectionRef.current[0];
+    if (item === undefined) return;
+    if (!current.timeline.scene.tracks.some(track => track.items.some(entry => entry.id === item))) {
+      selectItems([]);
+      return;
+    }
+    const next = await readInspector(item);
+    if (selectionRef.current[0] === item) setInspector(next);
+  }, [selectItems]);
 
   const resizePanel = (side: PanelSide, width: number, save: boolean) => {
     setPanelWidths(previous => {
@@ -69,31 +104,61 @@ export function Studio() {
   };
 
   const perform = useCallback(async (operation: () => Promise<void>) => {
-    if (busy) return;
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true); setFailure(undefined); setPlaying(false);
-    try { await operation(); }
-    catch (error) { setFailure(error instanceof Error ? error.message : String(error)); }
-    finally { setBusy(false); }
-  }, [busy]);
+    try { await enqueue(operation); }
+    finally { busyRef.current = false; setBusy(false); }
+  }, [enqueue]);
 
-  useEffect(() => { void perform(async () => setSession(await readOpen())); }, []);
+  useEffect(() => {
+    let active = true;
+    let scheduled = false;
+    let open = false;
+    const pending = new Set<NleStudioInvalidation>();
+    const schedule = () => {
+      if (scheduled) return;
+      scheduled = true;
+      void enqueue(async () => {
+        scheduled = false;
+        if (!active) return;
+        const invalidated = [...pending];
+        pending.clear();
+        const reread = open || sessionRef.current === undefined;
+        open = false;
+        const projection = reread ? await readOpen() : await refreshOpen(sessionRef.current!, { invalidated });
+        if (!active) return;
+        storeSession(projection);
+        if (reread || invalidated.includes("inspector")) await refreshInspector(projection);
+      });
+    };
+    const disconnect = connectStudioEvents({
+      ready: () => { setFailure(undefined); open = true; schedule(); },
+      change: event => {
+        if (event.scope === "action") return;
+        for (const projection of event.invalidated) pending.add(projection);
+        schedule();
+      },
+      invalid: error => setFailure(error.message),
+    });
+    return () => { active = false; disconnect(); };
+  }, [enqueue, refreshInspector, storeSession]);
 
   const select = useCallback((ids: readonly string[]) => {
-    setSelection(ids);
-    if (ids.length === 0) { setInspector(undefined); return; }
-    void perform(async () => setInspector(await readInspector(ids[0]!)));
-  }, [perform]);
+    selectItems(ids);
+    if (ids.length > 0) void enqueue(async () => {
+      if (sessionRef.current !== undefined) await refreshInspector(sessionRef.current);
+    });
+  }, [enqueue, refreshInspector, selectItems]);
 
-  const acceptReceipt = useCallback(async (
-    receipt: NleStudioOperationReceipt,
-    inspectItem: string | undefined = selection[0],
-  ) => {
-    if (session === undefined) return;
-    setSession(await refreshOpen(session, receipt));
-    if (receipt.invalidated.includes("inspector") && inspectItem !== undefined) {
-      setInspector(await readInspector(inspectItem));
-    }
-  }, [selection, session]);
+  const acceptReceipt = useCallback(async (receipt: NleStudioOperationReceipt, item?: string) => {
+    const current = sessionRef.current;
+    if (current === undefined) return;
+    const next = await refreshOpen(current, receipt);
+    storeSession(next);
+    if (item !== undefined) selectItems([item]);
+    if (item !== undefined || receipt.invalidated.includes("inspector")) await refreshInspector(next);
+  }, [refreshInspector, selectItems, storeSession]);
 
   const command = useCallback((value: NleEditingSurfaceCommand) => void perform(async () => {
     await acceptReceipt(await sendCommand(value));
@@ -177,8 +242,6 @@ export function Studio() {
       atFrame: frame,
     });
     await acceptReceipt(receipt, item);
-    setSelection([item]);
-    setInspector(await readInspector(item));
   });
   const placeProjectMedia = (entry: NleStudioMediaEntry) => void perform(async () => {
     if (entry.state !== "available") throw new Error(entry.diagnostic ?? "这个项目媒体当前不可用。");
@@ -219,15 +282,11 @@ export function Studio() {
       durationFrames,
       includeAudio: entry.kind === "audiovisual",
     });
-    setSession(await refreshOpen(current, receipt));
-    setSelection([item]);
-    setInspector(await readInspector(item));
+    await acceptReceipt(receipt, item);
   });
   const importProjectMedia = (files: readonly File[]) => void perform(async () => {
-    let next = session;
     for (const file of files) {
-      next = await refreshOpen(next, await importMedia(file));
-      setSession(next);
+      await acceptReceipt(await importMedia(file));
     }
   });
   const materializeEffect = (entry: NleStudioAdjustCatalogEntry) => void perform(async () => {
@@ -246,8 +305,6 @@ export function Studio() {
       atFrame: frame,
     });
     await acceptReceipt(receipt, item);
-    setSelection([item]);
-    setInspector(await readInspector(item));
   });
   const materializeSelectedTransition = (entry: NleStudioTransitionCatalogEntry) => void perform(async () => {
     if (selection.length !== 2) throw new Error("添加转场前需要选择同一画面轨道上直接相接的两个片段。");

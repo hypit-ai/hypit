@@ -4,6 +4,12 @@ export type ApplicationProjectId = string;
 export type ApplicationProjectLeaseHandle = string;
 export type ApplicationProductSessionHandle = string;
 
+export type ApplicationEvent = (
+  | { readonly kind: "project.lease-opened" | "project.lease-closed"; readonly lease: ApplicationProjectLeaseHandle }
+  | { readonly kind: "product.opened" | "product.closed"; readonly session: ApplicationProductSessionHandle }
+) & { readonly project: ApplicationProjectId; readonly invalidated: readonly ["application"] };
+export type ApplicationEventListener = (event: ApplicationEvent) => void;
+
 export type IdentifiedApplicationProject = {
   readonly key: string;
   readonly input: unknown;

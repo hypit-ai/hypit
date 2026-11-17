@@ -42,6 +42,7 @@ export class ProjectDocumentRegistry<Context> {
   readonly #context: Context;
   readonly #entries = new Map<string, Entry<Context>>();
   readonly #opening = new Map<string, Promise<Entry<Context>>>();
+  readonly #listeners = new Set<() => void>();
   #closed = false;
 
   constructor(context: Context) {
@@ -81,6 +82,7 @@ export class ProjectDocumentRegistry<Context> {
     assert(entry.provider === provider,
       `Project document ${provider.owner}:${path} is already open with another provider instance.`);
     entry.leases += 1;
+    this.#emit();
     let released = false;
     return {
       owner: provider.owner,
@@ -90,6 +92,7 @@ export class ProjectDocumentRegistry<Context> {
         if (released) return;
         released = true;
         entry!.leases -= 1;
+        this.#emit();
       },
     };
   }
@@ -101,9 +104,22 @@ export class ProjectDocumentRegistry<Context> {
     });
   }
 
+  subscribe(listener: () => void): () => void {
+    this.#assertOpen();
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  }
+
+  #emit(): void {
+    for (const listener of this.#listeners) {
+      try { listener(); } catch { /* Observers cannot veto a lease change. */ }
+    }
+  }
+
   async close(): Promise<void> {
     if (this.#closed) return;
     this.#closed = true;
+    this.#listeners.clear();
     await Promise.allSettled(this.#opening.values());
     const entries = [...this.#entries.values()].reverse();
     this.#entries.clear();

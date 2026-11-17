@@ -6,6 +6,7 @@ import type {
   ApplicationProductSession,
   ApplicationProductSessionHandle,
 } from "../index.js";
+import { serveApplicationEventStream } from "./event-stream.js";
 
 export type NodeApplicationProductRequest = {
   readonly request: IncomingMessage;
@@ -14,6 +15,7 @@ export type NodeApplicationProductRequest = {
   readonly sessionHandle: ApplicationProductSessionHandle;
   readonly pathname: string;
   readonly url: URL;
+  readonly signal: AbortSignal;
 };
 
 export type NodeApplicationProductAdapter = {
@@ -97,6 +99,7 @@ export class NodeApplicationServer {
   readonly #home: NodeApplicationHomeAdapter | undefined;
   readonly #homeHandle: string | undefined;
   readonly #server;
+  readonly #shutdown = new AbortController();
   #address: NodeApplicationServerAddress | undefined;
   #listenPromise: Promise<NodeApplicationServerAddress> | undefined;
   #closePromise: Promise<void> | undefined;
@@ -144,12 +147,40 @@ export class NodeApplicationServer {
       sendJson(response, 200, this.application.observe());
       return true;
     }
+    if (request.method === "GET" && url.pathname === "/api/application/events") {
+      serveApplicationEventStream(response, this.#shutdown.signal, this.application.subscribe.bind(this.application));
+      return true;
+    }
     if (request.method === "POST" && url.pathname === "/api/application/projects") {
       const project = await this.application.openProject(await jsonBody(request));
       sendJson(response, 201, { handle: project.handle, project: project.project });
       return true;
     }
     const projectPrefix = "/api/application/project-leases/";
+    if (request.method === "GET" && url.pathname.startsWith(projectPrefix)) {
+      const [encodedLease, projection, ...extra] = url.pathname.slice(projectPrefix.length).split("/");
+      if (extra.length === 0 && (projection === undefined || projection === "events")) {
+        const lease = pathPart(encodedLease!, "Project lease handle");
+        const project = this.application.project(lease);
+        if (projection === undefined) {
+          sendJson(response, 200, await project.observe());
+        } else {
+          const lifetime = new AbortController();
+          const signal = AbortSignal.any([lifetime.signal, this.#shutdown.signal]);
+          serveApplicationEventStream(response, signal, (listener) => {
+            const unsubscribeProject = project.subscribe(listener);
+            const unsubscribeApplication = this.application.subscribe((event) => {
+              if (event.kind === "project.lease-closed" && event.lease === lease) lifetime.abort();
+            });
+            return () => {
+              unsubscribeProject();
+              unsubscribeApplication();
+            };
+          });
+        }
+        return true;
+      }
+    }
     if (request.method === "DELETE" && url.pathname.startsWith(projectPrefix)) {
       await this.application.closeProject(pathPart(url.pathname.slice(projectPrefix.length), "Project lease handle"));
       response.writeHead(204, { "cache-control": "no-store" });
@@ -214,6 +245,7 @@ export class NodeApplicationServer {
       sessionHandle: handle,
       pathname: match[2] ?? "/",
       url,
+      signal: this.#shutdown.signal,
     });
     if (!handled) sendJson(response, 404, { error: "Product operation is unavailable." });
     return true;
@@ -260,6 +292,7 @@ export class NodeApplicationServer {
 
   close(): Promise<void> {
     this.#closePromise ??= (async () => {
+      this.#shutdown.abort();
       if (this.#listenPromise !== undefined) await this.#listenPromise;
       await new Promise<void>((resolve, reject) => {
         if (!this.#server.listening) {

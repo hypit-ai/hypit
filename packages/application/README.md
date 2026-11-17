@@ -19,6 +19,10 @@ The finite application projection lists each registered product's stable identit
 therefore present available products, lease a selected project and launch the chosen Product Session without importing
 that product's implementation.
 
+`ApplicationHost.subscribe()` observes Project lease and Product Session changes. The loopback adapter exposes the
+same notifications at `GET /api/application/events`. A Project lease addresses its finite projection and event stream
+at `/api/application/project-leases/:lease` and `/api/application/project-leases/:lease/events`.
+
 ```ts
 import { openApplicationHost } from "@hypit/application";
 import { createNodeApplicationProjectProvider } from "@hypit/application/node";

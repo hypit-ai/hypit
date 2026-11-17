@@ -5,6 +5,8 @@ import {
   openApplicationExecutionDirectory,
 } from "./execution.js";
 import type {
+  ApplicationEvent,
+  ApplicationEventListener,
   ApplicationProductProvider,
   ApplicationProductSession,
   ApplicationProductSessionHandle,
@@ -72,6 +74,7 @@ export class ApplicationHost {
   readonly #closingProjects = new Map<string, Promise<void>>();
   readonly #sessions = new Map<ApplicationProductSessionHandle, SessionEntry>();
   readonly #closingSessions = new Map<ApplicationProductSessionHandle, Promise<void>>();
+  readonly #listeners = new Set<ApplicationEventListener>();
   #closed = false;
   #closePromise: Promise<void> | undefined;
 
@@ -93,6 +96,18 @@ export class ApplicationHost {
 
   #assertOpen(): void {
     if (this.#closed) throw new Error("ApplicationHost is closed.");
+  }
+
+  subscribe(listener: ApplicationEventListener): () => void {
+    this.#assertOpen();
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  }
+
+  #emit(event: ApplicationEvent): void {
+    for (const listener of this.#listeners) {
+      try { listener(structuredClone(event)); } catch { /* Observers cannot veto a registry change. */ }
+    }
   }
 
   async #openProject(identified: IdentifiedApplicationProject): Promise<ProjectEntry> {
@@ -143,6 +158,7 @@ export class ApplicationHost {
     const handle = `project-lease_${randomUUID()}`;
     entry.leases.add(handle);
     this.#projectLeases.set(handle, entry);
+    this.#emit({ kind: "project.lease-opened", project: entry.id, lease: handle, invalidated: ["application"] });
     let released = false;
     return {
       handle,
@@ -161,7 +177,9 @@ export class ApplicationHost {
     if (entry === undefined) return;
     this.#projectLeases.delete(handle);
     entry.leases.delete(handle);
-    await this.#closeUnusedProject(entry);
+    const closing = this.#closeUnusedProject(entry);
+    this.#emit({ kind: "project.lease-closed", project: entry.id, lease: handle, invalidated: ["application"] });
+    await closing;
   }
 
   async #closeUnusedProject(entry: ProjectEntry): Promise<void> {
@@ -199,10 +217,15 @@ export class ApplicationHost {
       await session.close();
       throw new Error("ApplicationHost closed while opening a Product Session.");
     }
+    if (!this.#projectsById.has(project.id)) {
+      await session.close();
+      throw new Error("Application Project closed while opening a Product Session.");
+    }
     const handle = `session_${randomUUID()}`;
     const entry: SessionEntry = { handle, project, product: input.product, session };
     this.#sessions.set(handle, entry);
     project.sessions.add(handle);
+    this.#emit({ kind: "product.opened", project: project.id, session: handle, invalidated: ["application"] });
     let released = false;
     return {
       handle,
@@ -237,10 +260,15 @@ export class ApplicationHost {
     entry.closing ??= (async () => {
       this.#sessions.delete(handle);
       entry.project.sessions.delete(handle);
+      const event = {
+        kind: "product.closed", project: entry.project.id, session: handle, invalidated: ["application"],
+      } as const;
       try {
         await entry.session.close();
       } finally {
-        await this.#closeUnusedProject(entry.project);
+        const closing = this.#closeUnusedProject(entry.project);
+        this.#emit(event);
+        await closing;
       }
     })().finally(() => this.#closingSessions.delete(handle));
     this.#closingSessions.set(handle, entry.closing);
@@ -273,6 +301,7 @@ export class ApplicationHost {
     this.#closePromise ??= (async () => {
       if (this.#closed) return;
       this.#closed = true;
+      this.#listeners.clear();
       await Promise.allSettled(this.#openingProjects.values());
       const failures: unknown[] = [];
       const sessionResults = await Promise.allSettled([...this.#sessions.keys()].reverse()
