@@ -77,7 +77,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   readonly onSelect: (ids: readonly string[]) => void;
   readonly onMove: (intent: ItemDropIntent) => void;
   readonly onTrim: (item: NleTimelineSceneItem, edge: "start" | "end", atFrame: number) => void;
-  readonly onSplit: (item: NleTimelineSceneItem, atFrame: number) => void;
+  readonly onSplit: (items: readonly string[], atFrame: number) => void;
   readonly onRemove: () => void;
   readonly onTrackEnabled: (track: string, enabled: boolean) => void;
   readonly onTrackLocked: (track: string, locked: boolean) => void;
@@ -108,8 +108,10 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const selected = scene.tracks.flatMap(track => track.items).find(item => selection.includes(item.id));
   const nestedComposition = selected?.nestedComposition;
   const sceneItems = new Map(scene.tracks.flatMap(track => track.items.map(item => [item.id, item] as const)));
-  const splitFrame = selected === undefined ? frame : Math.max(selected.startFrame + 1, Math.min(selected.startFrame + selected.durationFrames - 1, frame));
-  const canSplit = selected?.affordances.split === true && splitFrame > selected.startFrame && splitFrame < selected.startFrame + selected.durationFrames;
+  const canSplit = selection.some(id => {
+    const item = sceneItems.get(id);
+    return item?.affordances.split === true && frame > item.startFrame && frame < item.startFrame + item.durationFrames;
+  });
   const stepFrames = Math.max(1, Math.round(([1, 2, 5, 10, 30, 60, 120, 300, 600].find(value => value * zoom >= 78) ?? 1200) * fps));
   const ticks = useMemo(() => Array.from({ length: Math.ceil(width / (stepFrames * pixels)) + 1 }, (_, index) => index * stepFrames), [width, stepFrames, pixels]);
   const zoomPosition = Math.log(zoom / minZoom) / Math.log(maxZoom / minZoom) * 100;
@@ -135,7 +137,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     event.stopPropagation();
     const localFrame = item.startFrame + Math.round((event.clientX - event.currentTarget.getBoundingClientRect().left) / pixels);
     if (tool === "cut") {
-      if (!track.locked && item.affordances.split && localFrame > item.startFrame && localFrame < item.startFrame + item.durationFrames) onSplit(item, localFrame);
+      if (!track.locked && item.affordances.split && localFrame > item.startFrame && localFrame < item.startFrame + item.durationFrames) onSplit([item.id], localFrame);
       return;
     }
     if (tool === "left" || tool === "right") { directionalSelection(localFrame, tool); return; }
@@ -180,13 +182,13 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   };
 
   return <section className="nle-timeline">
-    <div className="nle-timeline-tabbar"><div className="nle-timeline-tabs" role="tablist">{compositions.map(composition => <div className={`nle-timeline-tab${composition.id === scene.composition ? " current" : ""}`} key={composition.id}><button type="button" role="tab" aria-selected={composition.id === scene.composition} title={composition.name} onClick={() => onComposition(composition.id)}>{composition.name}</button></div>)}</div></div>
+    <div className="nle-timeline-tabbar"><div className="nle-timeline-tabs" role="tablist">{compositions.map(composition => <div className={`nle-timeline-tab${composition.id === scene.composition ? " current" : ""}`} key={composition.id}><button type="button" role="tab" disabled={busy} aria-selected={composition.id === scene.composition} title={composition.name} onClick={() => onComposition(composition.id)}>{composition.name}</button></div>)}</div></div>
     <div className="nle-timeline-toolbar">
       <ToolSelector value={tool} onChange={value => { setTool(value); setCutCursor(undefined); }}/>
       <IconButton label="新建轨道" disabled={busy} onClick={onAddTrack}><Plus size={18} strokeWidth={1.6}/></IconButton><span className="nle-toolbar-separator"/>
       <IconButton label="撤销" disabled={busy || !session.status.projectHistory.canUndo} onClick={onUndo}><Undo2 size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="重做" disabled={busy || !session.status.projectHistory.canRedo} onClick={onRedo}><Redo2 size={18} strokeWidth={1.6}/></IconButton>
-      <IconButton label="分割" disabled={busy || !canSplit} onClick={() => selected && onSplit(selected, splitFrame)}><Scissors size={18} strokeWidth={1.6}/></IconButton>
+      <IconButton label="分割" disabled={busy || !canSplit} onClick={() => onSplit(selection, frame)}><Scissors size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="向左裁剪" disabled={busy || selected?.affordances.trimStart !== true || frame <= selected.startFrame || frame >= selected.startFrame + selected.durationFrames} onClick={() => selected && onTrim(selected, "start", frame)}><PanelLeftClose size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="向右裁剪" disabled={busy || selected?.affordances.trimEnd !== true || frame <= selected.startFrame || frame >= selected.startFrame + selected.durationFrames} onClick={() => selected && onTrim(selected, "end", frame)}><PanelRightClose size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="删除" disabled={busy || selected === undefined} onClick={onRemove}><Trash2 size={18} strokeWidth={1.6}/></IconButton>

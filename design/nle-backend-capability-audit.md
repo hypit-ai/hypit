@@ -112,17 +112,17 @@ ApplicationHost
 | 在播放头插入并后移范围 | NLE Studio Operation | `item.move`、`track.add` 和物化 planners 可组成一个原子事务 | **产品缺口**。缺少明确插入 scope、轨道选择和失败 receipt |
 | 关联成员随插入移动 | NLE Studio planner | Present 可协调 Picture/Audio；View Group 和 Nested Composition 分别表达编辑关系与内容关系 | **产品缺口**。planner 必须显式闭包所触达成员并统一检查锁与冲突 |
 | 连续主轨和自动磁吸 | Product Session policy | 当前产品 planner 没有稳定的主轨选择、插入和闭合策略 | **产品缺口**。只有用户明确保存一种编辑安排时才进入 View，不进入视听 Project |
-| 关闭一个或多个空隙 | NLE Studio Operation | 多 Item `item.move` 与 `item.ripple-trim.scope` 提供原子位移基础 | **产品缺口**。需要后端计算确切 scope、关系闭包和新冲突 |
+| 关闭空隙 | NLE Studio Operation | `timeline.close-gap` 从播放头及指定 Tracks 求精确空隙边，整体位移后段，并守卫关系范围 | **已具备**单个显式空隙 |
 
 ## 4. 片段剪辑和关联
 
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
 | move、trim、slip、roll、ripple trim | NLE Commands | 精确 source-time slicing、shift 与 Project 校验已经实现 | **已具备**底层语义；复杂 scope 和用户意图仍需 Product Operation |
-| split | NLE Command | `item.split` 生成首尾相接的两段，并切分 source/control time 与 occurrence Processes | **已具备**底层语义；多选分割 planner 未闭合 |
-| 删除播放头一侧 | NLE Studio Operation | 可由当前 trim 精确表达 | **产品缺口** |
-| 删除并保留空隙 | NLE Command | `item.remove` 支持原子删除多个 Item | **已具备**底层语义 |
-| 删除并闭合空隙 | NLE Studio Operation | remove 与后续 move 可进入一个事务 | **产品缺口** |
+| split | NLE Studio Operation + NLE Command | `timeline.split` 对选区内跨越播放头的 Items 一次提交，各自切分 source/control time | **已具备** |
+| 删除播放头一侧 | NLE Studio Operation | `timeline.trim` 按精确帧位置修改指定 edge | **已具备** |
+| 删除并保留空隙 | NLE Studio Operation + NLE Command | `timeline.remove` 原子删除显式选区及关联 Transition/Matte，保留其它 Item 的时间 | **已具备** |
+| 删除并闭合空隙 | NLE Studio Operation | `timeline.ripple-remove` 删除连续选区，在显式 Tracks 内整体移动后段 | **已具备**显式范围 |
 | Picture/Audio 协调编辑 | NLE Present | 一个 Present 可同时拥有 Picture 与 Audio appearance，共享 occurrence 时间和 source-time | **已具备** |
 | 分离音频 | NLE Studio Operation + NLE Command | `audio.detach` 分配目标轨后，和 `item.detach-audio` 一起原子提交 | **已具备** |
 | 编辑分组 | NLE View | View Group 持久表达同一 Composition 内的 linked-edit 意图；Timeline drop 在后端展开成员 | **已具备**分组移动，其他组合操作需各自确定作用范围 |
@@ -352,6 +352,12 @@ POST       /api/reload
 
 影音和 Media Action 由发起它们的 Product 或 owner Service 投影，并由各自注入的 specialized Executor 持有；
 只有 AIGC Capability Invocation 才由 ApplicationHost 的 Execution Directory 路由到选中的 Environment。
+
+## 待讨论的产品策略
+
+- 自动磁吸和连续主轨需要明确主轨归属、何时联动侧轨，以及锁轨冲突时的结果。
+- 一次压缩多个不相交空隙需要明确各段的联动范围和处理顺序。当前单空隙操作使用调用者提供的 Tracks。
+- 字幕源需要先确定引用和寿命，再开放导入和批量分轨。
 
 ## 实现顺序
 

@@ -1,6 +1,7 @@
 import { planNleSpatialEdit } from "../spatial-authoring.js";
 import { planNleComponentValueEdit } from "../component-value-authoring.js";
 import { type NleProjectService } from "../service.js";
+import type { NleProject } from "../types.js";
 import {
   allNleCanvasAffordances,
   allNleTimelineAffordances,
@@ -11,6 +12,7 @@ import {
   mergeNleTimelineItemObservations,
   projectNleCanvas,
   projectNleTimeline,
+  reconcileNleView,
   resolveNleSpatialItemCapabilities,
   resolveNleTimelineItemCapabilities,
   type NleAuthoringHost,
@@ -19,6 +21,7 @@ import {
   type NleTimelineAffordancePolicy,
   type NleTimelineItemObservation,
   type NleTimelinePresentationHost,
+  type NleView,
   type NleViewService,
 } from "../view/index.js";
 import type {
@@ -144,24 +147,33 @@ export class NleEditingSurface {
     return () => this.#listeners.delete(listener);
   }
 
-  #observations(extra: readonly NleTimelineItemObservation[]): readonly NleTimelineItemObservation[] {
-    const project = this.#projectService.snapshot().project;
-    const view = this.#viewService.snapshot().view;
+  #observations(
+    project: NleProject, view: NleView, extra: readonly NleTimelineItemObservation[],
+  ): readonly NleTimelineItemObservation[] {
     const packaged = this.#options.timelinePresentation?.observations(
       project, view.activeComposition, this.#options.presentationResourceUrl,
     ) ?? [];
     return mergeNleTimelineItemObservations([...packaged, ...extra]);
   }
 
+  #projectionView(project: NleProject, view: NleView): NleView {
+    try {
+      assertNleViewForProject(view, project);
+      return view;
+    } catch {
+      return reconcileNleView(view, project);
+    }
+  }
+
   #open(observations: readonly NleTimelineItemObservation[]): NleEditingSurfaceOpen {
     const project = this.#projectService.snapshot();
     const view = this.#viewService.snapshot();
-    assertNleViewForProject(view.view, project.project);
-    const merged = this.#observations(observations);
+    const projectionView = this.#projectionView(project.project, view.view);
+    const merged = this.#observations(project.project, projectionView, observations);
     const timelineCapabilities = resolveNleTimelineItemCapabilities(
-      project.project, view.view, this.#options.authoring,
+      project.project, projectionView, this.#options.authoring,
     );
-    const spatialCapabilities = resolveNleSpatialItemCapabilities(project.project, view.view);
+    const spatialCapabilities = resolveNleSpatialItemCapabilities(project.project, projectionView);
     return {
       status: this.status(),
       project,
@@ -170,14 +182,14 @@ export class NleEditingSurface {
       spatialCapabilities,
       timeline: projectNleTimeline(
         project.project,
-        view.view,
+        projectionView,
         merged,
         timelineCapabilities,
         this.#options.timelinePolicy ?? allNleTimelineAffordances,
       ),
       canvas: projectNleCanvas(
         project.project,
-        view.view,
+        projectionView,
         merged,
         spatialCapabilities,
         this.#options.canvasPolicy ?? allNleCanvasAffordances,
@@ -191,9 +203,8 @@ export class NleEditingSurface {
     const extra = request.observations ?? [];
     if (request.kind === "open") return { kind: "open", value: this.#open(extra) };
     const project = this.#projectService.snapshot().project;
-    const view = this.#viewService.snapshot().view;
-    assertNleViewForProject(view, project);
-    const observations = this.#observations(extra);
+    const view = this.#projectionView(project, this.#viewService.snapshot().view);
+    const observations = this.#observations(project, view, extra);
     if (request.kind === "timeline") {
       const capabilities = resolveNleTimelineItemCapabilities(project, view, this.#options.authoring);
       return { kind: "timeline", value: projectNleTimeline(

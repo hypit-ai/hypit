@@ -53,6 +53,10 @@ A Project Command may leave independently persisted View references stale. The s
 accepted and status reports `stale`; reconciliation is a separate explicit View mutation. There is deliberately no
 cross-file distributed transaction or silent cleanup.
 
+Finite observations can still render a stale View. For projection only, the Surface filters stale references and
+selects the Project root if the active Composition was removed. Status and owner snapshots retain the actual View.
+The caller can explicitly reconcile it or use Project history to restore the referenced facts.
+
 ## Receipt and subscription
 
 A Command receipt reports current owner revisions and dirty/history state, which owner changed and which rebuildable

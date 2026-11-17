@@ -83,6 +83,7 @@ function operationRequest(value: unknown): NleStudioOperation {
   const currentFields = (...fields: readonly string[]) => Object.keys(request).every(key =>
     ["kind", "expectedProjectRevision", "expectedViewRevision", "composition", ...fields].includes(key));
   const items = Array.isArray(request.items) && request.items.every(identity) ? request.items : undefined;
+  const tracks = Array.isArray(request.tracks) && request.tracks.every(identity) ? request.tracks : undefined;
   const track = request.track === undefined || identity(request.track);
   const placement = track && integer(request.atFrame, 0);
   const duration = request.durationFrames === undefined || integer(request.durationFrames, 1);
@@ -101,6 +102,23 @@ function operationRequest(value: unknown): NleStudioOperation {
         && Number.isSafeInteger(request.deltaFrames) && location;
       break;
     }
+    case "timeline.trim":
+      valid = currentFields("item", "edge", "atFrame") && identity(request.item) && integer(request.atFrame, 0)
+        && (request.edge === "start" || request.edge === "end");
+      break;
+    case "timeline.split":
+      valid = currentFields("items", "atFrame") && items !== undefined && items.length > 0 && integer(request.atFrame, 0);
+      break;
+    case "timeline.remove":
+      valid = currentFields("items") && items !== undefined && items.length > 0;
+      break;
+    case "timeline.ripple-remove":
+      valid = currentFields("items", "tracks") && items !== undefined && items.length > 0
+        && tracks !== undefined && tracks.length > 0;
+      break;
+    case "timeline.close-gap":
+      valid = currentFields("tracks", "atFrame") && tracks !== undefined && tracks.length > 0 && integer(request.atFrame, 0);
+      break;
     case "media.materialize":
       valid = currentFields("media", "includeAudio", "layout", ...timedFields) && placement && duration
         && identity(request.media) && (request.includeAudio === undefined || typeof request.includeAudio === "boolean")

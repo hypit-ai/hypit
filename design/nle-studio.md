@@ -94,6 +94,15 @@ It searches compatible unlocked Tracks and allocates new ones for gaps or when n
 new Picture Present collisions as a Studio editing policy. Audio intervals can mix on the selected Track.
 The Editing Surface commits Track creation and Item movement in one guarded transaction.
 
+The Timeline also submits trim, split and remove through `operate`. Split cuts the selected Items that cross
+the playhead and commits them together. Remove deletes the explicit selection and its incident audiovisual relations.
+When an edit leaves View references stale, Studio keeps the projections visible and offers explicit reconciliation
+alongside Project undo.
+
+Callers can close a gap at a frame or ripple-remove a contiguous selection by naming the Tracks to move.
+The planner resolves the exact gap edges and shifts following Items once. It rejects an occupied gap and any
+edit whose linked members would need to move outside the named Tracks or across the gap boundary.
+
 The loopback server serves the client and same-origin JSON operations for finite observation, guarded Surface commands,
 save and reload. `POST /api/observe` accepts the Product Session's finite observation union. Initial `open` contains
 status, Timeline, Canvas, Composition navigation, Item-to-Media projection, Media, Catalog, Preview and delivery

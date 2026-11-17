@@ -176,8 +176,17 @@ type NleStudioOfferingReference = {
   readonly offering: string;
 };
 
+export type NleStudioTimelineEdit = NleStudioCompositionOperation & (
+  | { readonly kind: "timeline.trim"; readonly item: string; readonly edge: "start" | "end"; readonly atFrame: number }
+  | { readonly kind: "timeline.split"; readonly items: readonly string[]; readonly atFrame: number }
+  | { readonly kind: "timeline.remove"; readonly items: readonly string[] }
+  | { readonly kind: "timeline.ripple-remove"; readonly items: readonly string[]; readonly tracks: readonly string[] }
+  | { readonly kind: "timeline.close-gap"; readonly tracks: readonly string[]; readonly atFrame: number }
+);
+
 export type NleStudioOperation =
   | NleStudioTimelineDrop
+  | NleStudioTimelineEdit
   | (NleStudioTimedPlacement & {
       readonly kind: "media.materialize";
       readonly media: string;

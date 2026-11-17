@@ -9,7 +9,7 @@ import {
   type ExactTemporalValue,
   type TemporalRate,
 } from "@hypit/temporal/algebra";
-import type { NleStudioTimelineDrop } from "./protocol.js";
+import type { NleStudioTimelineDrop, NleStudioTimelineEdit } from "./protocol.js";
 
 export function studioFrameTime(frame: number, rate: TemporalRate): ExactTemporalValue {
   if (!Number.isSafeInteger(frame)) throw new Error("NLE Studio frame must be a safe integer.");
@@ -40,6 +40,119 @@ function pictureCollision(item: NleItem, other: NleItem, delta: ExactTemporalVal
 }
 
 type ActiveTimeline = { readonly project: NleProject; readonly composition: NleComposition; readonly view: NleView };
+
+export function planTimelineEdit({ composition, view }: ActiveTimeline, edit: NleStudioTimelineEdit) {
+  const entries = composition.tracks.flatMap(track => track.items.map(item => ({ track, item })));
+  const selection = (ids: readonly string[]) => {
+    const selected = new Set(ids);
+    const found = entries.filter(({ item }) => selected.has(item.id));
+    if (found.length === 0 || found.length !== selected.size) {
+      throw new Error(`NLE Studio edit requires existing Items in Composition ${composition.id}.`);
+    }
+    return found;
+  };
+  const time = (frame: number) => studioFrameTime(frame, view.editRate);
+  const compare = compareExactTemporalValues;
+  const commands: NleCommand[] = [];
+  let count = 0;
+  const remove = (ids: ReadonlySet<string>) => {
+    for (const relation of composition.transitions) {
+      if (ids.has(relation.outgoing) || ids.has(relation.incoming)) {
+        commands.push({ kind: "transition.remove", id: relation.id });
+      }
+    }
+    for (const relation of composition.mattes) {
+      if (ids.has(relation.content) || ids.has(relation.matte)) commands.push({ kind: "matte.remove", id: relation.id });
+    }
+    commands.push({ kind: "item.remove", ids: [...ids] });
+    count = ids.size;
+  };
+  const scope = (tracks: readonly string[]) => {
+    const ids = new Set(tracks);
+    if (ids.size === 0 || composition.tracks.filter(track => ids.has(track.id)).length !== ids.size) {
+      throw new Error(`NLE Studio gap edit requires Tracks in Composition ${composition.id}.`);
+    }
+    return ids;
+  };
+  const close = (tracks: ReadonlySet<string>, start: ExactTemporalValue, end: ExactTemporalValue, removed = new Set<string>()) => {
+    const descendants = entries.filter(({ track, item }) => tracks.has(track.id) && !removed.has(item.id));
+    if (descendants.some(({ item }) => compare(item.start, end) < 0 && compare(start, nleItemEnd(item)) < 0)) {
+      throw new Error("NLE Studio gap edit would displace material inside the selected range.");
+    }
+    const next = descendants.filter(({ item }) => compare(item.start, end) >= 0).map(({ item }) => item.id);
+    const linked = relatedItems(composition, view, next);
+    for (const { track, item } of entries) {
+      if (linked.has(item.id) && !removed.has(item.id) && (!tracks.has(track.id) || compare(item.start, end) < 0)) {
+        throw new Error(`NLE Studio gap edit cannot move linked Item ${item.id} within the chosen range and Tracks.`);
+      }
+    }
+    if (next.length > 0) commands.push({ kind: "item.move", ids: next, delta: subtractExactTemporalValues(start, end) });
+    return next.length;
+  };
+  switch (edit.kind) {
+    case "timeline.trim": {
+      const { item } = selection([edit.item])[0]!;
+      const at = time(edit.atFrame);
+      const edge = edit.edge === "start" ? item.start : nleItemEnd(item);
+      if (compare(edge, at) !== 0) {
+        commands.push({ kind: "item.trim", id: item.id, edge: edit.edge, at });
+        count = 1;
+      }
+      break;
+    }
+    case "timeline.split": {
+      const at = time(edit.atFrame);
+      for (const { item } of selection(edit.items)) {
+        if (compare(item.start, at) < 0 && compare(at, nleItemEnd(item)) < 0) {
+          commands.push({ kind: "item.split", id: item.id, at, rightId: `split-${randomUUID()}` });
+          count += 1;
+        }
+      }
+      break;
+    }
+    case "timeline.remove":
+      remove(new Set(selection(edit.items).map(({ item }) => item.id)));
+      break;
+    case "timeline.ripple-remove": {
+      const tracks = scope(edit.tracks);
+      const selected = selection(edit.items).sort((left, right) => compare(left.item.start, right.item.start));
+      if (selected.some(({ track }) => !tracks.has(track.id))) {
+        throw new Error("NLE Studio ripple removal requires the Tracks of all selected Items.");
+      }
+      const start = selected[0]!.item.start;
+      let end = nleItemEnd(selected[0]!.item);
+      for (const { item } of selected.slice(1)) {
+        if (compare(item.start, end) > 0) throw new Error("NLE Studio ripple removal requires a continuous range.");
+        if (compare(nleItemEnd(item), end) > 0) end = nleItemEnd(item);
+      }
+      const removed = new Set(selected.map(({ item }) => item.id));
+      remove(removed);
+      close(tracks, start, end, removed);
+      break;
+    }
+    case "timeline.close-gap": {
+      const tracks = scope(edit.tracks);
+      const at = time(edit.atFrame);
+      let start = exactTemporalZero();
+      let end: ExactTemporalValue | undefined;
+      for (const { track, item } of entries) {
+        if (!tracks.has(track.id)) continue;
+        const itemEnd = nleItemEnd(item);
+        if (compare(itemEnd, at) <= 0) {
+          if (compare(itemEnd, start) > 0) start = itemEnd;
+        } else if (compare(item.start, at) <= 0) {
+          throw new Error("NLE Studio playhead must lie in a gap on the chosen Tracks.");
+        } else if (end === undefined || compare(item.start, end) < 0) {
+          end = item.start;
+        }
+      }
+      if (end === undefined) throw new Error("NLE Studio gap requires a following Item on the chosen Tracks.");
+      count = close(tracks, start, end);
+      break;
+    }
+  }
+  return { commands, count };
+}
 
 export function allocateTimelinePlacement(context: ActiveTimeline, input: {
   readonly medium: NleTrack["kind"];

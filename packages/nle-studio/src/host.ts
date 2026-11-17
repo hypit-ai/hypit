@@ -30,6 +30,7 @@ import {
 import { compareExactTemporalValues } from "@hypit/temporal/algebra";
 import {
   acceptsNleComponentMedia,
+  assertNleViewForProject,
   createNleComponentAuthoringContext,
   createNleView,
   nleViewTrackLocked,
@@ -59,7 +60,7 @@ import {
   createNleStudioPackageBridge,
   type NleStudioPackageBridge,
 } from "./packages.js";
-import { allocateTimelinePlacement, planTimelineDrop, studioFrameTime } from "./timeline-planning.js";
+import { allocateTimelinePlacement, planTimelineDrop, planTimelineEdit, studioFrameTime } from "./timeline-planning.js";
 import type {
   NleStudioCatalogProjection,
   NleStudioComponentInputsProjection,
@@ -559,6 +560,7 @@ export class NleStudioProductSession {
     }
     const { project } = projectSnapshot;
     const { view } = viewSnapshot;
+    assertNleViewForProject(view, project);
     const composition = project.compositions.find(entry => entry.id === operation.composition);
     if (composition === undefined || view.activeComposition !== composition.id) {
       throw new Error(`NLE Studio Operation targets inactive Composition ${operation.composition}.`);
@@ -590,6 +592,14 @@ export class NleStudioProductSession {
       case "timeline.drop": {
         const plan = planTimelineDrop(project, view, operation);
         return commit(plan.commands, { track: plan.anchorTrack });
+      }
+      case "timeline.trim":
+      case "timeline.split":
+      case "timeline.remove":
+      case "timeline.ripple-remove":
+      case "timeline.close-gap": {
+        const plan = planTimelineEdit(context, operation);
+        return commit(plan.commands, { count: plan.count });
       }
       case "media.materialize": {
         const { asset, interpretation } = await this.#resolveMediaBinding(operation.media);
