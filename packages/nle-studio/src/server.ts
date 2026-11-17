@@ -51,10 +51,12 @@ const mediaTools = {
   ...(process.env.HYPIT_CHROME_PATH?.trim() ? { chromePath: process.env.HYPIT_CHROME_PATH.trim() } : {}),
   ...(process.env.HYPIT_ELECTRON_PATH?.trim() ? { electronPath: process.env.HYPIT_ELECTRON_PATH.trim() } : {}),
 };
+const video = createLocalHtmlVideoExecutor(mediaTools);
 const application = openApplicationHost({
   projects: createNodeApplicationProjectProvider(),
   products: [createNleStudioProductProvider({
-    deliveryExecutor: createLocalHtmlVideoExecutor(mediaTools),
+    deliveryExecutor: video,
+    frameExecutor: video,
     mediaTools,
   })],
 });

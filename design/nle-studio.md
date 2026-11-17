@@ -25,7 +25,8 @@ NLE Studio backend
   │    ├─ NLE Project Service
   │    ├─ NLE View Service
   │    └─ selected package contributions
-  ├─ audiovisual preview Executor port
+  ├─ Studio preview Actions
+  │    └─ injected HtmlFrameExecutor and HtmlVideoExecutor
   ├─ NLE Delivery Service
   │    └─ injected HtmlVideoExecutor
   └─ explicit Project/View file persistence
@@ -49,18 +50,18 @@ Selection, playhead, viewport and pending pointer gestures live only in the brow
 discard them without touching author facts. Timeline, Canvas and Inspector scenes are rebuildable finite projections.
 
 Media catalog entries come from the ProjectHost's one Project Media Service. NLE Media references do not become a
-second catalog, and another NLE or Canvas Product Session in the same project observes that same collection. Preview
-frames and generations come only from the selected preview Action port. A structural Canvas remains useful when no
-preview capability has been selected, but it is not presented as rendered programme output.
+second catalog, and another NLE or Canvas Product Session in the same project observes that same collection. The
+Studio Preview Action captures a frame or prepares a bounded video interval against one active Composition and
+accepted editing revision. The Action keeps its result for the Session until a new preview, an owner invalidation
+or Session close. A structural Canvas remains available during editing and while a preview is prepared.
 
-Video export is a Project-local `NleDeliveryService` Action. The application distribution injects an ordinary
-`HtmlVideoExecutor` into the Product Provider; the Product Session opens the Service for its selected ProjectHost and
-projects start, observe and cancel operations. Closing the Product Session closes that Service and cancels its active
-delivery Actions. The Service owns its FFmpeg/browser process tree through the injected Executor.
+Video export is a Project-local `NleDeliveryService` Action. The Product Session starts it with the current
+accepted Project revision. The selected Executor owns its FFmpeg/browser process tree. Session close cancels its
+active Delivery Actions and revokes the Session resource addresses.
 
 The browser's Media bin projects that shared catalog. Selecting an available entry explicitly places it at the current
-playhead on a compatible unlocked Track; when none exists, the browser first asks the NLE owner to create one. The
-backend still performs the authoritative interpretation and materialization. In structural Canvas mode, an accepted
+playhead on a compatible unlocked Track. Studio resolves or creates that Track in the same transaction as
+materialization. In structural Canvas mode, an accepted
 image or video resource may be shown inside its Present Item's layout as source identification. This is a direct media
 resource projection, not Component or Operator evaluation and not an audiovisual preview frame.
 
@@ -132,12 +133,13 @@ Every accepted mutation returns one compact receipt containing current owner sta
 projection names and an optional result address. The browser retains unaffected projections and rereads only the
 invalidated Timeline, Canvas, Media, Catalog, Preview or delivery observation. Inspector is reread only for the
 selected Item when invalidated. `GET /api/events` streams NLE Project and View changes, Project Media Catalog
-generations and Delivery progress. The browser rereads the finite open projection on connect or reconnect and
-rereads invalidated projections on live edits. The Delivery observation endpoint provides the current result or
-diagnostic by handle.
+generations and Action progress. The browser rereads the finite open projection on connect or reconnect and
+rereads invalidated projections on live edits.
 
-`POST api/deliveries` starts an export of the session's already selected NLE Project document through the injected
-Delivery Service. `GET api/deliveries/:handle` observes it and `DELETE api/deliveries/:handle` requests cancellation.
+`POST /api/actions` starts a frame preview, playback preview or delivery. `GET /api/actions/:handle` or
+`observe({ kind: "action", handle })` reads current state. `DELETE /api/actions/:handle` requests cancellation.
+A completed Action exposes a Session resource URL. Playback uses bounded MP4 intervals with programme audio. Studio
+requests the next interval when the current interval ends, so a rendering wait can occur at an interval boundary.
 The destination remains a portable Project path validated by that Service.
 
 Within the Product Session mount, `POST api/media/import?name=...` carries one raw browser `File` body. The adapter

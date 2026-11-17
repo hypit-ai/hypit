@@ -9,8 +9,8 @@ import { serveApplicationEventStream, type NodeApplicationProductAdapter } from 
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import { NleStudioProductSession, nleStudioProduct } from "./host.js";
 import type {
+  NleStudioActionRequest,
   NleStudioCommandRequest,
-  NleStudioDeliveryStartRequest,
   NleStudioObservationRequest,
   NleStudioOperation,
   NleStudioOperationReceipt,
@@ -37,6 +37,13 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
     throw new Error("NLE Studio observation request must be an object.");
   }
   const request = value as { readonly kind?: unknown; readonly item?: unknown };
+  if (request.kind === "action") {
+    const action = value as { readonly handle?: unknown };
+    if (Object.keys(value).length !== 2 || !identity(action.handle)) {
+      throw new Error("NLE Studio Action observation requires one handle.");
+    }
+    return { kind: "action", handle: action.handle };
+  }
   const keys = Object.keys(value);
   if (request.kind === "inspector" || request.kind === "component-inputs") {
     if (keys.some((key) => key !== "kind" && key !== "item") || typeof request.item !== "string"
@@ -49,7 +56,7 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
   if (keys.length !== 1 || typeof request.kind !== "string" || !kinds.has(request.kind)) {
     throw new Error("NLE Studio observation kind is invalid.");
   }
-  return { kind: request.kind as Exclude<NleStudioObservationRequest["kind"], "inspector" | "component-inputs"> };
+  return { kind: request.kind as Exclude<NleStudioObservationRequest["kind"], "inspector" | "component-inputs" | "action"> };
 }
 
 function record(value: unknown, subject: string): Readonly<Record<string, unknown>> {
@@ -179,6 +186,43 @@ function operationRequest(value: unknown): NleStudioOperation {
   }
   if (!valid) throw new Error(`NLE Studio ${request.kind} fields are invalid.`);
   return request as NleStudioOperation;
+}
+
+function actionRequest(value: unknown): NleStudioActionRequest {
+  const request = record(value, "NLE Studio Action request");
+  const fields = (entry: Readonly<Record<string, unknown>>, ...keys: readonly string[]) =>
+    Object.keys(entry).every(key => keys.includes(key));
+  const integer = (entry: unknown, minimum = 0) =>
+    typeof entry === "number" && Number.isSafeInteger(entry) && entry >= minimum;
+  const renderer = (entry: unknown) => entry === undefined || entry === "chromium" || entry === "electron";
+  if (!integer(request.expectedProjectRevision)) throw new Error("NLE Studio Action requires a Project revision.");
+  if (request.kind === "frame-preview" || request.kind === "playback-preview") {
+    const common = ["kind", "expectedProjectRevision", "expectedViewRevision", "composition", "atFrame"];
+    const range = request.kind === "frame-preview"
+      ? fields(request, ...common)
+      : fields(request, ...common, "durationFrames") && integer(request.durationFrames, 1);
+    if (!range || !integer(request.expectedViewRevision) || !identity(request.composition) || !integer(request.atFrame)) {
+      throw new Error(`NLE Studio ${request.kind} fields are invalid.`);
+    }
+    return request as NleStudioActionRequest;
+  }
+  if (request.kind !== "delivery") throw new Error("NLE Studio Action kind is invalid.");
+  const profile = record(request.profile, "NLE Studio delivery profile");
+  const picture = record(profile.picture, "NLE Studio delivery Picture profile");
+  const rate = record(picture.frameRate, "NLE Studio delivery frame rate");
+  const audio = profile.audio === undefined ? undefined : record(profile.audio, "NLE Studio delivery Audio profile");
+  if (!fields(request, "kind", "expectedProjectRevision", "destination", "profile", "renderer")
+    || !identity(request.destination) || !renderer(request.renderer)
+    || !fields(profile, "picture", "audio") || !fields(picture, "width", "height", "frameRate", "background", "quality", "renderer")
+    || !integer(picture.width, 2) || !integer(picture.height, 2) || !renderer(picture.renderer)
+    || typeof picture.background !== "string" || !/^#[a-f0-9]{6}$/iu.test(picture.background)
+    || !["draft", "standard", "high"].includes(String(picture.quality))
+    || !fields(rate, "numerator", "denominator") || !integer(rate.numerator, 1) || !integer(rate.denominator, 1)
+    || (audio !== undefined && (!fields(audio, "sampleRate", "channels") || !integer(audio.sampleRate, 1)
+      || (audio.channels !== 1 && audio.channels !== 2)))) {
+    throw new Error("NLE Studio delivery Action fields are invalid.");
+  }
+  return request as NleStudioActionRequest;
 }
 
 function sendJson(response: ServerResponse, status: number, value: unknown): void {
@@ -342,19 +386,17 @@ export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
         sendJson(response, 200, await receiveMediaFile(studio, request, url.searchParams.get("name") ?? ""));
         return true;
       }
-      if (request.method === "POST" && pathname === "/api/deliveries") {
-        sendJson(response, 202, await studio.startDelivery(
-          await jsonBody(request) as NleStudioDeliveryStartRequest,
-        ));
+      if (request.method === "POST" && pathname === "/api/actions") {
+        sendJson(response, 202, await studio.startAction(actionRequest(await jsonBody(request))));
         return true;
       }
       if ((request.method === "GET" || request.method === "DELETE")
-        && pathname.startsWith("/api/deliveries/")) {
-        const handle = decodeURIComponent(pathname.slice("/api/deliveries/".length));
-        if (handle.length === 0 || handle.includes("/")) throw new Error("NLE Studio Delivery handle is invalid.");
+        && pathname.startsWith("/api/actions/")) {
+        const handle = decodeURIComponent(pathname.slice("/api/actions/".length));
+        if (handle.length === 0 || handle.includes("/")) throw new Error("NLE Studio Action handle is invalid.");
         sendJson(response, 200, request.method === "DELETE"
-          ? studio.cancelDelivery(handle)
-          : studio.observeDelivery(handle));
+          ? studio.cancelAction(handle)
+          : studio.observeAction(handle));
         return true;
       }
       if (request.method === "POST" && pathname === "/api/save") {

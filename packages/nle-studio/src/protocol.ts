@@ -9,7 +9,6 @@ import type {
   NleTimelineScene,
 } from "@hypit/nle/view";
 import type { HtmlVideoDeliveryProfile, HtmlVideoRenderer } from "@hypit/html-video";
-import type { MediaResource } from "@hypit/media";
 import type { NlePictureLayout } from "@hypit/nle";
 
 export type NleStudioMediaEntry = {
@@ -62,9 +61,7 @@ export type NleStudioCatalogProjection = {
 
 export type NleStudioPreviewProjection =
   | { readonly state: "unavailable" }
-  | { readonly state: "idle" }
-  | { readonly state: "pending"; readonly generation: string }
-  | { readonly state: "ready"; readonly generation: string; readonly resource: string };
+  | { readonly state: "available"; readonly playback: boolean; readonly generation: number };
 
 export type NleStudioDeliveryProjection = { readonly state: "available" | "unavailable" };
 
@@ -110,6 +107,7 @@ export type NleStudioObservationRequest =
   | { readonly kind: "catalog" }
   | { readonly kind: "preview" }
   | { readonly kind: "delivery" }
+  | { readonly kind: "action"; readonly handle: string }
   | { readonly kind: "clipboard" };
 
 export type NleStudioObservation =
@@ -124,6 +122,7 @@ export type NleStudioObservation =
   | { readonly kind: "catalog"; readonly value: NleStudioCatalogProjection }
   | { readonly kind: "preview"; readonly value: NleStudioPreviewProjection }
   | { readonly kind: "delivery"; readonly value: NleStudioDeliveryProjection }
+  | { readonly kind: "action"; readonly value: NleStudioActionObservation }
   | { readonly kind: "clipboard"; readonly value: NleStudioClipboardProjection };
 
 export type NleStudioInvalidation =
@@ -230,24 +229,30 @@ export type NleStudioOperation =
   | (NleStudioCompositionOperation & { readonly kind: "component-media.bind"; readonly item: string; readonly slot: string; readonly media: string })
   | (NleStudioCompositionOperation & { readonly kind: "component-media.unbind"; readonly item: string; readonly slot: string });
 
-/** One explicit export of the NLE document already opened by this Product Session. */
-export type NleStudioDeliveryStartRequest = {
-  readonly destination: string;
-  readonly profile: HtmlVideoDeliveryProfile;
-  readonly renderer?: HtmlVideoRenderer;
-};
+export type NleStudioActionRequest =
+  | (NleStudioCompositionOperation & { readonly kind: "frame-preview"; readonly atFrame: number })
+  | (NleStudioCompositionOperation & { readonly kind: "playback-preview"; readonly atFrame: number; readonly durationFrames: number })
+  | {
+      readonly kind: "delivery";
+      readonly expectedProjectRevision: number;
+      readonly destination: string;
+      readonly profile: HtmlVideoDeliveryProfile;
+      readonly renderer?: HtmlVideoRenderer;
+    };
 
-type NleStudioDeliveryObservationBase = { readonly handle: string; readonly progress: number };
-export type NleStudioDeliveryObservation =
-  | (NleStudioDeliveryObservationBase & { readonly state: "queued" | "running" })
-  | (NleStudioDeliveryObservationBase & { readonly state: "complete"; readonly result: MediaResource })
-  | (NleStudioDeliveryObservationBase & { readonly state: "failed"; readonly diagnostic: string })
-  | (NleStudioDeliveryObservationBase & { readonly state: "cancelled" });
+export type NleStudioActionKind = NleStudioActionRequest["kind"];
+type NleStudioActionBase = { readonly handle: string; readonly kind: NleStudioActionKind; readonly progress: number };
+export type NleStudioActionObservation = NleStudioActionBase & (
+  | { readonly state: "queued" | "running" }
+  | { readonly state: "complete"; readonly result: { readonly resource: string; readonly mediaType: string; readonly frameCount?: number } }
+  | { readonly state: "failed"; readonly diagnostic: string }
+  | { readonly state: "cancelled" }
+);
 
 export type NleStudioActionEvent = {
   readonly scope: "action";
-  readonly kind: "delivery";
-  readonly action: Pick<NleStudioDeliveryObservation, "handle" | "state" | "progress">;
+  readonly kind: NleStudioActionKind;
+  readonly action: Pick<NleStudioActionObservation, "handle" | "state" | "progress">;
 };
 
 export type NleStudioEvent = NleStudioProjectionEvent | NleStudioActionEvent;

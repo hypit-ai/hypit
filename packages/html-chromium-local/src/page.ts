@@ -19,10 +19,9 @@ async function closeChromiumProcess(
   child: ChildProcessByStdio<null, Readable, Readable>,
   directory: string,
 ): Promise<void> {
-  if (child.exitCode === null && child.signalCode === null) {
+  if (child.pid !== undefined && child.exitCode === null && child.signalCode === null) {
     const exited = once(child, "exit");
-    if (child.pid === undefined) child.kill("SIGKILL");
-    else await terminateLocalProcessTree(child.pid);
+    await terminateLocalProcessTree(child.pid);
     await exited;
   }
   child.stdout.destroy();
@@ -36,7 +35,7 @@ export class ChromiumHtmlPage {
   readonly #directory: string;
   readonly #sessionId: string;
   readonly #pending = new Map<number, PendingCall>();
-  readonly #events = new Map<string, Array<() => void>>();
+  readonly #events = new Map<string, PendingCall[]>();
   #nextId = 1;
 
   private constructor(process: ChildProcessByStdio<null, Readable, Readable>, socket: WebSocket,
@@ -52,10 +51,17 @@ export class ChromiumHtmlPage {
         else pending.resolve(message.result);
       } else if (message.method !== undefined) {
         const key = `${message.sessionId ?? "browser"}:${message.method}`;
-        for (const resolve of this.#events.get(key) ?? []) resolve();
+        for (const call of this.#events.get(key) ?? []) call.resolve(undefined);
         this.#events.delete(key);
       }
     });
+    socket.addEventListener("close", () => {
+      const error = new Error("Chromium DevTools connection closed.");
+      for (const call of this.#pending.values()) call.reject(error);
+      this.#pending.clear();
+      for (const calls of this.#events.values()) for (const call of calls) call.reject(error);
+      this.#events.clear();
+    }, { once: true });
   }
 
   static async open(input: { readonly executable: string; readonly url: string; readonly width: number; readonly height: number;
@@ -92,9 +98,7 @@ export class ChromiumHtmlPage {
       await page.#call("Runtime.enable", {}, true);
       await page.#call("Emulation.setDeviceMetricsOverride", { width: input.width, height: input.height,
         deviceScaleFactor: 1, mobile: false }, true);
-      const loaded = page.#event("Page.loadEventFired");
-      await page.#call("Page.navigate", { url: input.url }, true);
-      await loaded;
+      await Promise.all([page.#event("Page.loadEventFired"), page.#call("Page.navigate", { url: input.url }, true)]);
       await page.#evaluate("window.__hypitUsePreparedSourceFrames('/__hypit_source')", true);
       await page.#evaluate(`window.__hypitFrameProgram.prepare(${JSON.stringify(input.selection)})`, true);
       return page;
@@ -136,7 +140,9 @@ export class ChromiumHtmlPage {
 
   #event(method: string): Promise<void> {
     const key = `${this.#sessionId}:${method}`;
-    return new Promise(resolve => this.#events.set(key, [...(this.#events.get(key) ?? []), resolve]));
+    return new Promise((resolve, reject) => this.#events.set(key, [
+      ...(this.#events.get(key) ?? []), { resolve: () => resolve(), reject },
+    ]));
   }
 
   #call(method: string, params: unknown, session = false): Promise<unknown> {

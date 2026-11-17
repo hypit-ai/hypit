@@ -271,10 +271,13 @@ interface NleStudioProductSession {
   subscribe(listener: NleStudioEventListener): () => void;
   command(command: NleEditingSurfaceCommand): Promise<NleStudioOperationReceipt>;
   operate(operation: NleStudioOperation): Promise<NleStudioOperationReceipt>;
+  startAction(request: NleStudioActionRequest): Promise<NleStudioActionObservation>;
+  observeAction(handle: string): NleStudioActionObservation;
+  cancelAction(handle: string): NleStudioActionObservation;
   save(): Promise<NleStudioOperationReceipt>;
   reload(): Promise<NleStudioOperationReceipt>;
   resource(token: string): ProjectHostResourceResolution;
-  close(): void;
+  close(): Promise<void>;
 }
 ```
 
@@ -398,7 +401,7 @@ Event scopes are:
 - ApplicationHost: Project lease and Product Session lifecycle;
 - ProjectHost: Media Catalog generation and open-service inventory;
 - Product Session: NLE Project and View revisions, savepoints and projection invalidations, plus Project Media changes;
-- Action: Delivery handle, state and progress in the Studio stream.
+- Action: Preview and Delivery handles, state and progress in the Studio stream.
 
 The selected package environment and execution directory are fixed for their open lifetimes. On opening or
 reconnecting, a client subscribes before reading the finite projection. Loopback streams signal subscription with
@@ -463,15 +466,15 @@ The current implementation already provides:
 - Media, Component, Adjust, Transition and nested Composition materialization foundations;
 - an NLE Studio Product Session capable of opening over an existing ProjectHost.
 - Application and Project observations, Studio finite observations and compact mutation receipts;
-- subscription and loopback events for Application, Project, Studio and Delivery.
+- subscription and loopback events for Application, Project, Studio and audiovisual Actions;
+- exact-range frame and playback preview and Delivery through one Studio Action projection.
 
 ### Next backend capabilities
 
 The next backend capabilities are:
 
-1. semantic Product operations for Timeline insertion and nested Composition authoring;
-2. Media thumbnail, storyboard, waveform and audio-preview Actions;
-3. audiovisual frame/playback preview Actions and unified observation of the existing export Action.
+1. semantic Product operations for Timeline insertion and occurrence Processes;
+2. Media thumbnail, storyboard, waveform and audio-preview Actions.
 
 The planner and receipt work closes application-to-project-to-product editing. The Actions close the audiovisual
 feedback loop needed by a production NLE frontend.

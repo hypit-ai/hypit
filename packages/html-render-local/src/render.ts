@@ -169,6 +169,33 @@ export async function renderHtmlVisualLocally(input: {
         destination: input.destination, options: input.options ?? {} }));
 }
 
+export async function captureHtmlFrameLocally(input: {
+  readonly backend: HtmlCaptureBackend;
+  readonly request: HtmlFrameRequest;
+  readonly options?: LocalHtmlRenderOptions;
+}): Promise<Uint8Array> {
+  const { backend, request, options = {} } = input;
+  if (backend.mode !== "frame-buffer") throw new Error(`HTML backend ${backend.id} does not render frame images.`);
+  const [frame] = request.frames;
+  if (request.frames.length !== 1 || frame === undefined || !Number.isSafeInteger(frame)
+    || frame < 0 || frame >= request.program.frameCount) {
+    throw new Error("HTML capture requires one frame inside the Programme.");
+  }
+  options.signal?.throwIfAborted();
+  return await staged(request.program, [{ startFrame: frame, endFrameExclusive: frame + 1 }], options, async (files) => {
+    options.signal?.throwIfAborted();
+    const worker = await backend.createWorker(request, files, options);
+    try {
+      options.signal?.throwIfAborted();
+      const bytes = await worker.capture(frame, request.picture.alpha === "straight");
+      options.signal?.throwIfAborted();
+      return bytes;
+    } finally {
+      await worker.close();
+    }
+  });
+}
+
 export async function renderHtmlFramesLocally(input: {
   readonly backend: HtmlCaptureBackend;
   readonly request: HtmlFrameRequest;

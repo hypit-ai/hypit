@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { dirname, posix, relative, resolve, sep } from "node:path";
 import type { ApplicationProductProvider } from "@hypit/application";
-import type { HtmlVideoExecutor } from "@hypit/html-video";
+import type { HtmlFrameExecutor, HtmlVideoExecutor } from "@hypit/html-video";
 import type { NodeProjectMediaService } from "@hypit/media-asset/service/node";
 import { defaultMediaSelection } from "@hypit/media";
 import {
@@ -64,11 +64,13 @@ import {
   type NleStudioPackageBridge,
 } from "./packages.js";
 import { allocateTimelinePlacement, planTimelineDrop, planTimelineEdit, studioFrameTime } from "./timeline-planning.js";
+import { NleStudioPreview } from "./preview.js";
 import type {
+  NleStudioActionObservation,
+  NleStudioActionRequest,
   NleStudioCatalogProjection,
   NleStudioClipboardProjection,
   NleStudioComponentInputsProjection,
-  NleStudioDeliveryStartRequest,
   NleStudioEvent,
   NleStudioEventListener,
   NleStudioInvalidation,
@@ -82,15 +84,12 @@ import type {
   NleStudioTimelineProjection,
 } from "./protocol.js";
 
-export type NleStudioPreviewPort = {
-  observe(): Promise<NleStudioPreviewProjection> | NleStudioPreviewProjection;
-};
-
 export type OpenNleStudioProductSessionOptions = {
   readonly project: ProjectHost;
   readonly document: string;
   readonly viewDocument?: string;
-  readonly preview?: NleStudioPreviewPort;
+  readonly frameExecutor?: HtmlFrameExecutor;
+  readonly playbackExecutor?: HtmlVideoExecutor;
   readonly mediaImport?: NleStudioMediaImportPort;
   readonly delivery?: NleDeliveryService;
 };
@@ -98,7 +97,6 @@ export type OpenNleStudioProductSessionOptions = {
 export type NleStudioProductInput = {
   readonly document: string;
   readonly viewDocument?: string;
-  readonly preview?: NleStudioPreviewPort;
 };
 
 export type NleStudioMediaImportRequest = {
@@ -111,10 +109,6 @@ export type NleStudioMediaImportPort = {
 };
 
 export const nleStudioProduct = "hypit.nle-studio";
-
-const unavailablePreview: NleStudioPreviewPort = {
-  observe: () => ({ state: "unavailable" }),
-};
 
 type NestedVisit = { readonly parent: string; readonly child: string; readonly frame: number };
 
@@ -171,13 +165,14 @@ export class NleStudioProductSession {
   readonly #viewService: NleViewService;
   readonly #surface: NleEditingSurface;
   readonly #packages: NleStudioPackageBridge;
-  readonly #preview: NleStudioPreviewPort;
+  readonly #preview: NleStudioPreview | undefined;
   readonly #mediaImport: NleStudioMediaImportPort | undefined;
   readonly #delivery: NleDeliveryService | undefined;
   readonly #mediaResources = new Map<string, Promise<ProjectHostResource>>();
   readonly #mediaTokens = new Set<string>();
   readonly #listeners = new Set<NleStudioEventListener>();
   readonly #deliverySubscriptions = new Map<string, () => void>();
+  readonly #deliveryHandles = new Set<NleDeliveryActionHandle>();
   readonly #unsubscribeSurface: () => void;
   readonly #unsubscribeMedia: () => void;
   #mediaGeneration = -1;
@@ -200,7 +195,8 @@ export class NleStudioProductSession {
     viewService: NleViewService;
     surface: NleEditingSurface;
     packages: NleStudioPackageBridge;
-    preview: NleStudioPreviewPort;
+    frameExecutor: HtmlFrameExecutor | undefined;
+    playbackExecutor: HtmlVideoExecutor | undefined;
     mediaImport: NleStudioMediaImportPort | undefined;
     delivery: NleDeliveryService | undefined;
   }) {
@@ -213,10 +209,15 @@ export class NleStudioProductSession {
     this.#viewService = value.viewService;
     this.#surface = value.surface;
     this.#packages = value.packages;
-    this.#preview = value.preview;
+    this.#preview = value.frameExecutor === undefined ? undefined : new NleStudioPreview({
+      host: value.project, document: value.projectDocument, frame: value.frameExecutor,
+      ...(value.playbackExecutor === undefined ? {} : { video: value.playbackExecutor }),
+      publish: action => this.#publishAction(action),
+    });
     this.#mediaImport = value.mediaImport;
     this.#delivery = value.delivery;
     this.#unsubscribeSurface = this.#surface.subscribe((change) => {
+      if (change.kind !== "savepoint") this.#preview?.invalidate();
       const invalidated: NleStudioInvalidation[] = change.kind === "savepoint" ? []
         : change.owner === "project"
           ? ["project", "timeline", "canvas", "inspector", "preview"]
@@ -231,11 +232,12 @@ export class NleStudioProductSession {
     });
     this.#unsubscribeMedia = this.#project.subscribe((event) => {
       if (event.kind !== "media.catalog") return;
+      this.#preview?.invalidate();
       this.#emit({
         scope: "project",
         kind: "media.catalog",
         status: this.#surface.status(),
-        invalidated: ["media"],
+        invalidated: ["media", "preview"],
         generation: event.generation,
       });
     });
@@ -272,7 +274,8 @@ export class NleStudioProductSession {
         viewService,
         surface,
         packages,
-        preview: options.preview ?? unavailablePreview,
+        frameExecutor: options.frameExecutor,
+        playbackExecutor: options.playbackExecutor,
         mediaImport: options.mediaImport,
         delivery: options.delivery,
       });
@@ -295,6 +298,10 @@ export class NleStudioProductSession {
         // Observation cannot veto an accepted owner change or Action update.
       }
     }
+  }
+
+  #publishAction({ handle, kind, progress, state }: NleStudioActionObservation): void {
+    this.#emit({ scope: "action", kind, action: { handle, progress, state } });
   }
 
   subscribe(listener: NleStudioEventListener): () => void {
@@ -372,10 +379,14 @@ export class NleStudioProductSession {
 
   resource(token: string): ProjectHostResourceResolution {
     this.#assertOpen();
-    if (!this.#mediaTokens.has(token)) {
-      throw new Error(`NLE Studio Session does not own Project resource token ${token}.`);
+    if (this.#mediaTokens.has(token)) return this.#project.resources.resolve(token);
+    const preview = this.#preview?.resource(token);
+    if (preview !== undefined) return preview;
+    if (this.#deliveryHandles.has(token)) {
+      const delivery = this.#delivery!.observe(token);
+      if (delivery.state === "complete") return delivery.result;
     }
-    return this.#project.resources.resolve(token);
+    throw new Error(`NLE Studio resource ${token} is unavailable in this Session.`);
   }
 
   #catalog(): NleStudioCatalogProjection {
@@ -484,7 +495,7 @@ export class NleStudioProductSession {
   }
 
   async #openProjection(): Promise<NleStudioOpenProjection> {
-    const [media, preview] = await Promise.all([this.#projectMedia(), this.#preview.observe()]);
+    const media = await this.#projectMedia();
     return {
       project: this.#projectProjection(),
       viewDocument: this.#viewDocument === undefined
@@ -495,7 +506,7 @@ export class NleStudioProductSession {
       canvas: this.#canvas(),
       media,
       catalog: this.#catalog(),
-      preview,
+      preview: this.#previewProjection(),
       delivery: { state: this.#delivery === undefined ? "unavailable" : "available" },
       clipboard: this.#clipboardProjection(),
     };
@@ -503,6 +514,11 @@ export class NleStudioProductSession {
 
   #projectProjection(): NleStudioOpenProjection["project"] {
     return { name: this.#projectLease.service.snapshot().project.name, document: this.#projectDocument };
+  }
+
+  #previewProjection(): NleStudioPreviewProjection {
+    return this.#preview === undefined ? { state: "unavailable" }
+      : { state: "available", playback: this.#preview.playback, generation: this.#preview.generation };
   }
 
   async observe(request: NleStudioObservationRequest): Promise<NleStudioObservation> {
@@ -522,7 +538,8 @@ export class NleStudioProductSession {
       case "clipboard": return { kind: "clipboard", value: this.#clipboardProjection() };
       case "media": return { kind: "media", value: await this.#projectMedia() };
       case "catalog": return { kind: "catalog", value: this.#catalog() };
-      case "preview": return { kind: "preview", value: await this.#preview.observe() };
+      case "preview": return { kind: "preview", value: this.#previewProjection() };
+      case "action": return { kind: "action", value: this.observeAction(request.handle) };
       case "delivery": return {
         kind: "delivery",
         value: { state: this.#delivery === undefined ? "unavailable" : "available" },
@@ -846,34 +863,69 @@ export class NleStudioProductSession {
     return { mediaType: value.mediaType, bytes: await value.read() };
   }
 
-  async startDelivery(request: NleStudioDeliveryStartRequest): Promise<NleDeliveryActionObservation> {
+  #deliveryObservation(observation: NleDeliveryActionObservation): NleStudioActionObservation {
+    const base = { handle: observation.handle, kind: "delivery" as const, progress: observation.progress };
+    switch (observation.state) {
+      case "complete": return { ...base, state: "complete", result: {
+        resource: `api/resources/${encodeURIComponent(observation.handle)}`, mediaType: observation.result.mediaType,
+      } };
+      case "failed": return { ...base, state: "failed", diagnostic: observation.diagnostic };
+      default: return { ...base, state: observation.state };
+    }
+  }
+
+  async startAction(request: NleStudioActionRequest): Promise<NleStudioActionObservation> {
     this.#assertOpen();
+    const snapshot = this.#projectLease.service.snapshot();
+    if (snapshot.revision !== request.expectedProjectRevision) {
+      throw new NleEditingSurfaceRevisionConflict("project", request.expectedProjectRevision, snapshot.revision);
+    }
+    if (request.kind !== "delivery") {
+      const view = this.#viewService.snapshot();
+      if (view.revision !== request.expectedViewRevision) {
+        throw new NleEditingSurfaceRevisionConflict("view", request.expectedViewRevision, view.revision);
+      }
+      if (request.composition !== view.view.activeComposition) {
+        throw new Error(`NLE Studio preview targets inactive Composition ${request.composition}.`);
+      }
+      if (this.#preview === undefined) throw new Error("NLE Studio preview is unavailable.");
+      assertNleViewForProject(view.view, snapshot.project);
+      return this.#preview.start(request, snapshot.project, view.view.editRate);
+    }
     if (this.#delivery === undefined) throw new Error("NLE Studio video delivery is unavailable.");
-    const handle = await this.#delivery.start({ ...request, document: this.#projectDocument });
+    const handle = await this.#delivery.start({
+      document: this.#projectDocument, destination: request.destination, profile: request.profile, snapshot: snapshot.project,
+      ...(request.renderer === undefined ? {} : { renderer: request.renderer }),
+    });
     this.#assertOpen();
-    const unsubscribe = this.#delivery.subscribe(handle, ({ handle, state, progress }) => {
-      if (state !== "queued" && state !== "running") {
+    this.#deliveryHandles.add(handle);
+    const unsubscribe = this.#delivery.subscribe(handle, (action) => {
+      if (action.state !== "queued" && action.state !== "running") {
         this.#deliverySubscriptions.get(handle)?.();
         this.#deliverySubscriptions.delete(handle);
       }
-      this.#emit({ scope: "action", kind: "delivery", action: { handle, state, progress } });
+      this.#publishAction(this.#deliveryObservation(action));
     });
     const current = this.#delivery.observe(handle);
     if (current.state === "queued" || current.state === "running") this.#deliverySubscriptions.set(handle, unsubscribe);
     else unsubscribe();
-    return current;
+    return this.#deliveryObservation(current);
   }
 
-  observeDelivery(handle: NleDeliveryActionHandle): NleDeliveryActionObservation {
+  observeAction(handle: string): NleStudioActionObservation {
     this.#assertOpen();
-    if (this.#delivery === undefined) throw new Error("NLE Studio video delivery is unavailable.");
-    return this.#delivery.observe(handle);
+    if (this.#deliveryHandles.has(handle)) return this.#deliveryObservation(this.#delivery!.observe(handle));
+    const preview = this.#preview?.observe(handle);
+    if (preview !== undefined) return preview;
+    throw new Error(`NLE Studio Action ${handle} is unavailable in this Session.`);
   }
 
-  cancelDelivery(handle: NleDeliveryActionHandle): NleDeliveryActionObservation {
+  cancelAction(handle: string): NleStudioActionObservation {
     this.#assertOpen();
-    if (this.#delivery === undefined) throw new Error("NLE Studio video delivery is unavailable.");
-    return this.#delivery.cancel(handle);
+    if (this.#deliveryHandles.has(handle)) return this.#deliveryObservation(this.#delivery!.cancel(handle));
+    const preview = this.#preview?.cancel(handle);
+    if (preview !== undefined) return preview;
+    throw new Error(`NLE Studio Action ${handle} is unavailable in this Session.`);
   }
 
   async save(): Promise<NleStudioOperationReceipt> {
@@ -906,7 +958,7 @@ export class NleStudioProductSession {
     };
   }
 
-  close(): void {
+  async close(): Promise<void> {
     if (this.closed.aborted) return;
     this.#lifetime.abort();
     this.#clipboard = undefined;
@@ -916,9 +968,11 @@ export class NleStudioProductSession {
     this.#unsubscribeMedia();
     for (const unsubscribe of this.#deliverySubscriptions.values()) unsubscribe();
     this.#deliverySubscriptions.clear();
+    this.#deliveryHandles.clear();
     this.#listeners.clear();
     this.#surface.close();
     this.#delivery?.close();
+    await this.#preview?.close();
     this.#clearMediaResources();
     this.#viewLease?.close();
     this.#projectLease.close();
@@ -936,6 +990,9 @@ function productInput(value: unknown): NleStudioProductInput {
     throw new Error("NLE Studio Product input must be an object.");
   }
   const selected = value as Partial<NleStudioProductInput>;
+  if (Object.keys(selected).some(key => key !== "document" && key !== "viewDocument")) {
+    throw new Error("NLE Studio Product input fields are invalid.");
+  }
   if (typeof selected.document !== "string" || selected.document.length === 0) {
     throw new Error("NLE Studio Product input requires a document path.");
   }
@@ -946,11 +1003,11 @@ function productInput(value: unknown): NleStudioProductInput {
   return {
     document: selected.document,
     ...(selected.viewDocument === undefined ? {} : { viewDocument: selected.viewDocument }),
-    ...(selected.preview === undefined ? {} : { preview: selected.preview }),
   };
 }
 
 export type NleStudioProductProviderOptions = {
+  readonly frameExecutor?: HtmlFrameExecutor;
   readonly deliveryExecutor?: HtmlVideoExecutor;
   readonly mediaTools?: LocalMediaToolchainOptions;
 };
@@ -1003,7 +1060,8 @@ export function createNleStudioProductProvider(
           project,
           document: selected.document,
           ...(selected.viewDocument === undefined ? {} : { viewDocument: selected.viewDocument }),
-          ...(selected.preview === undefined ? {} : { preview: selected.preview }),
+          ...(options.frameExecutor === undefined ? {} : { frameExecutor: options.frameExecutor }),
+          ...(options.deliveryExecutor === undefined ? {} : { playbackExecutor: options.deliveryExecutor }),
           ...(mediaImport === undefined ? {} : { mediaImport }),
           ...(delivery === undefined ? {} : { delivery }),
         });

@@ -52,9 +52,21 @@ function projectReference(root: string, document: string, reference: NleMediaRef
 }
 
 function mediaReferences(project: NleProject): readonly NleMediaReference[] {
-  return project.compositions.flatMap(composition => composition.tracks.flatMap(track =>
-    track.items.flatMap(item => item.kind !== "present" ? [] : item.source === "media" ? [item.asset]
-      : item.source === "component" ? Object.values(item.media ?? {}) : [])));
+  const compositions = new Map(project.compositions.map(value => [value.id, value] as const));
+  const visited = new Set<string>();
+  const references: NleMediaReference[] = [];
+  const visit = (id: string) => {
+    if (visited.has(id)) return;
+    visited.add(id);
+    for (const track of compositions.get(id)!.tracks) for (const item of track.items) {
+      if (item.kind !== "present" || !item.enabled) continue;
+      if (item.source === "media") references.push(item.asset);
+      else if (item.source === "component") references.push(...Object.values(item.media ?? {}));
+      else visit(item.composition);
+    }
+  };
+  visit(project.rootComposition);
+  return references;
 }
 
 function contributions<T extends object>(host: ProjectHost, kind: string): readonly T[] {
@@ -94,16 +106,24 @@ function linkNleDelivery(input: {
   };
 }
 
-export async function prepareNleDelivery(input: {
+export async function prepareNleTerminalLink(input: {
   readonly host: ProjectHost;
   readonly document: string;
-  readonly profile: HtmlVideoDeliveryProfile;
-}): Promise<PreparedNleDelivery> {
+  readonly snapshot?: NleProject;
+  readonly composition?: string;
+  readonly signal?: AbortSignal;
+}): Promise<NleDeliveryTerminalLink> {
+  input.signal?.throwIfAborted();
   const document = projectPath(input.host.boundary.root, input.document, "NLE delivery document");
-  const project = readNleProject(await readFile(document, "utf8"));
+  const selected = input.snapshot === undefined ? readNleProject(await readFile(document, "utf8")) : structuredClone(input.snapshot);
+  const project = input.composition === undefined ? selected : { ...selected, rootComposition: input.composition };
+  if (!project.compositions.some(composition => composition.id === project.rootComposition)) {
+    throw new Error(`NLE Project ${project.id} has no Composition ${project.rootComposition}.`);
+  }
   const resolver = createNodeProjectResourceResolver(input.host.boundary.root);
   const resolved = new Map<string, ResolvedMedia>();
   for (const reference of mediaReferences(project)) {
+    input.signal?.throwIfAborted();
     if (!resolved.has(reference.path)) resolved.set(reference.path, await input.host.media.resolveMedia(
       projectReference(input.host.boundary.root, document, reference), resolver));
   }
@@ -115,13 +135,24 @@ export async function prepareNleDelivery(input: {
       return structuredClone(value);
     },
   });
-  const link = linkNleDelivery({
+  input.signal?.throwIfAborted();
+  return linkNleDelivery({
     project,
     lowering,
     html: contributions<AudiovisualHtmlContribution>(input.host, audiovisualHtmlContributionKind),
     audio: contributions<AudiovisualAudioContribution>(input.host, audiovisualAudioContributionKind),
   });
-  return { project, link, plan: createHtmlVideoDeliveryPlan(link, input.profile) };
+}
+
+export async function prepareNleDelivery(input: {
+  readonly host: ProjectHost;
+  readonly document: string;
+  readonly profile: HtmlVideoDeliveryProfile;
+  readonly snapshot?: NleProject;
+  readonly signal?: AbortSignal;
+}): Promise<PreparedNleDelivery> {
+  const link = await prepareNleTerminalLink(input);
+  return { project: link.project, link, plan: createHtmlVideoDeliveryPlan(link, input.profile) };
 }
 
 export type NleDeliveryActionHandle = string;
@@ -138,6 +169,7 @@ export type NleDeliveryRequest = {
   readonly destination: string;
   readonly profile: HtmlVideoDeliveryProfile;
   readonly renderer?: HtmlVideoRenderer;
+  readonly snapshot?: NleProject;
 };
 
 export interface NleDeliveryService {
@@ -221,7 +253,10 @@ class ProjectNleDeliveryService implements NleDeliveryService {
     const handle = action.observation.handle;
     try {
       this.#publish(action, { handle, state: "running", progress: 0 });
-      const prepared = await prepareNleDelivery({ host: this.#host, document: request.document, profile: request.profile });
+      const prepared = await prepareNleDelivery({
+        host: this.#host, document: request.document, profile: request.profile, signal: action.abort.signal,
+        ...(request.snapshot === undefined ? {} : { snapshot: request.snapshot }),
+      });
       action.abort.signal.throwIfAborted();
       this.#publish(action, { handle, state: "running", progress: 0.05 });
       const result = await this.#executor.execute(prepared.plan, {

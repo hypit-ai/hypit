@@ -33,7 +33,7 @@ export {
 
 export type OpenNodeHypitApplicationOptions = {
   readonly execution?: ApplicationExecutionDirectory;
-  /** Local audiovisual tools supplied to the default NLE Studio delivery dependency. */
+  /** Local audiovisual tools supplied to the default NLE Studio executors. */
   readonly localHtmlVideo?: LocalHtmlVideoTools;
   readonly products?: readonly ApplicationProductProvider[];
 };
@@ -54,6 +54,7 @@ export function openNodeHypitApplication(
     projects: createNodeApplicationProjectProvider(),
     products: [createNleStudioProductProvider({
       deliveryExecutor: video,
+      frameExecutor: video,
       ...(options.localHtmlVideo === undefined ? {} : { mediaTools: options.localHtmlVideo }),
     }), ...(options.products ?? [])],
     execution: options.execution ?? openApplicationExecutionDirectory([]),

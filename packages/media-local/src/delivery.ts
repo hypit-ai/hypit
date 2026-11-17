@@ -3,7 +3,10 @@ import { once } from "node:events";
 import { stat } from "node:fs/promises";
 import { assertAudioProgram, type AudioProgram, type RenderedAudio } from "@hypit/audio-program";
 import type { RenderedVisual } from "@hypit/html-program";
-import type { ExactTemporalValue, TemporalMap, TemporalRange } from "@hypit/temporal/algebra";
+import {
+  compareExactTemporalValues, exactTemporalZero,
+  type ExactTemporalValue, type TemporalMap, type TemporalRange,
+} from "@hypit/temporal/algebra";
 
 const seconds = (value: ExactTemporalValue): number => Number(BigInt(value.ticks))
   * value.timeBase.numerator / value.timeBase.denominator;
@@ -21,7 +24,9 @@ function controlExpression(map: TemporalMap): string {
   return `((${rate})*(t-(${start}))+(${source}))`;
 }
 
-function audioGraph(program: AudioProgram): { readonly inputArguments: readonly string[]; readonly filter: string; readonly output: string } {
+function audioGraph(program: AudioProgram, start: number, end: number): {
+  readonly inputArguments: readonly string[]; readonly filter: string; readonly output: string;
+} {
   const inputArguments: string[] = [];
   const filters: string[] = [];
   const compiled = new Map<string, string>();
@@ -71,11 +76,12 @@ function audioGraph(program: AudioProgram): { readonly inputArguments: readonly 
     return output;
   };
   const root = compile(program.root);
-  filters.push(`[${root}]aresample=${program.sampleRate},apad,atrim=start=0:end=${duration}[audioOut]`);
+  filters.push(`[${root}]aresample=${program.sampleRate}:first_pts=0,apad,atrim=start_sample=${start}:end_sample=${end},asetpts=PTS-STARTPTS[audioOut]`);
   return { inputArguments, filter: filters.join(";"), output: "audioOut" };
 }
 
 async function run(executable: string, args: readonly string[], signal?: AbortSignal): Promise<void> {
+  signal?.throwIfAborted();
   const process = spawn(executable, [...args], { stdio: ["ignore", "ignore", "pipe"] });
   let diagnostic = "";
   process.stderr.on("data", (chunk: Buffer) => { diagnostic += chunk.toString("utf8"); });
@@ -83,6 +89,7 @@ async function run(executable: string, args: readonly string[], signal?: AbortSi
   signal?.addEventListener("abort", abort, { once: true });
   try {
     const [code] = await once(process, "exit") as [number | null];
+    signal?.throwIfAborted();
     if (code !== 0) throw new Error(`FFmpeg failed (${code ?? "signal"}): ${diagnostic.trim()}`);
   } finally { signal?.removeEventListener("abort", abort); }
 }
@@ -92,16 +99,32 @@ export async function renderAudioProgramLocally(input: {
   readonly destination: string;
   readonly ffmpegPath?: string;
   readonly signal?: AbortSignal;
+  readonly range?: TemporalRange;
 }): Promise<RenderedAudio> {
   assertAudioProgram(input.program);
-  const graph = audioGraph(input.program);
+  const zero = exactTemporalZero();
+  const duration = input.program.domain.duration;
+  const { start, end } = input.range ?? { start: zero, end: duration };
+  if (compareExactTemporalValues(start, zero) < 0 || compareExactTemporalValues(end, duration) > 0
+    || compareExactTemporalValues(start, end) >= 0) throw new Error("Audio render range is outside the Programme.");
+  const sample = (value: ExactTemporalValue) => {
+    const numerator = BigInt(value.ticks) * BigInt(value.timeBase.numerator) * BigInt(input.program.sampleRate);
+    const denominator = BigInt(value.timeBase.denominator);
+    const index = Number((2n * numerator + denominator) / (2n * denominator));
+    if (!Number.isSafeInteger(index)) throw new Error("Audio render sample exceeds the supported range.");
+    return index;
+  };
+  const first = sample(start);
+  const last = sample(end);
+  if (first >= last) throw new Error("Audio render interval has no samples.");
+  const graph = audioGraph(input.program, first, last);
   await run(input.ffmpegPath ?? "ffmpeg", ["-hide_banner", "-loglevel", "error", "-y",
     ...graph.inputArguments, "-filter_complex", graph.filter, "-map", `[${graph.output}]`,
     "-c:a", "pcm_s16le", "-ar", String(input.program.sampleRate), "-ac", String(input.program.channels), input.destination], input.signal);
   const information = await stat(input.destination);
   return { resource: { address: input.destination, mediaType: "audio/wav", size: information.size },
     sampleRate: input.program.sampleRate, channels: input.program.channels,
-    sampleFrames: Math.round(seconds(input.program.domain.duration) * input.program.sampleRate) };
+    sampleFrames: last - first };
 }
 
 export async function muxLocalVideo(input: {

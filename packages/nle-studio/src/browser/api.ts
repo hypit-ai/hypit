@@ -1,7 +1,7 @@
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import type {
-  NleStudioDeliveryObservation,
-  NleStudioDeliveryStartRequest,
+  NleStudioActionObservation,
+  NleStudioActionRequest,
   NleStudioEvent,
   NleStudioObservation,
   NleStudioObservationRequest,
@@ -90,6 +90,7 @@ export async function refreshOpen(
       case "status": next = { ...next, status: observation.value }; break;
       case "open":
       case "component-inputs":
+      case "action":
       case "inspector": throw new Error(`NLE Studio returned unexpected ${observation.kind} observation.`);
     }
   }
@@ -115,21 +116,18 @@ export async function importMedia(file: File): Promise<NleStudioOperationReceipt
   return value;
 }
 
-export function startDelivery(value: NleStudioDeliveryStartRequest): Promise<NleStudioDeliveryObservation> {
-  return request("api/deliveries", value);
+export function startAction(value: NleStudioActionRequest): Promise<NleStudioActionObservation> {
+  return request("api/actions", value);
 }
 
-export async function readDelivery(handle: string): Promise<NleStudioDeliveryObservation> {
-  const response = await fetch(`api/deliveries/${encodeURIComponent(handle)}`);
-  const value = await response.json() as NleStudioDeliveryObservation & { error?: string };
-  if (!response.ok) throw new Error(value.error ?? `NLE Studio Delivery read failed with ${response.status}.`);
-  return value;
+export async function readAction(handle: string): Promise<NleStudioActionObservation> {
+  return request(`api/actions/${encodeURIComponent(handle)}`);
 }
 
-export async function cancelDelivery(handle: string): Promise<NleStudioDeliveryObservation> {
-  const response = await fetch(`api/deliveries/${encodeURIComponent(handle)}`, { method: "DELETE" });
-  const value = await response.json() as NleStudioDeliveryObservation & { error?: string };
-  if (!response.ok) throw new Error(value.error ?? `NLE Studio Delivery cancellation failed with ${response.status}.`);
+export async function cancelAction(handle: string): Promise<NleStudioActionObservation> {
+  const response = await fetch(`api/actions/${encodeURIComponent(handle)}`, { method: "DELETE" });
+  const value = await response.json() as NleStudioActionObservation & { error?: string };
+  if (!response.ok) throw new Error(value.error ?? `NLE Studio Action cancellation failed with ${response.status}.`);
   return value;
 }
 

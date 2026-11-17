@@ -45,7 +45,8 @@ audiovisual relations within the open NLE document. The Timeline exposes a separ
 Studio can compound a contiguous single-Track selection and enter or return from a nested Composition. Returning
 restores the parent playhead. The backend also supports making a nested definition unique and exploding a
 full-duration, unmodified single-Track occurrence.
-Audiovisual preview remains unavailable until a preview Executor port is supplied.
+The local distribution renders single-frame previews and bounded playback with the selected Chromium and Media
+toolchain.
 
 Available entries in the browser Media bin can be placed at the current playhead. Studio chooses a compatible Track,
 creates one when needed, and returns the new Item identity. The structural Canvas displays accepted image and video
@@ -83,10 +84,9 @@ serialized Project Media adoption Action available to CLI and native callers, an
 accepted bytes and Media Asset manifest are copied below the project's `media/` collection. Import and NLE placement
 are independent operations.
 
-`POST api/deliveries` starts one export of the document already opened by the Product Session. `GET
-api/deliveries/:handle` observes its project-local Action and `DELETE api/deliveries/:handle` cancels it. The default
-Node distributions inject one shared local HTML Video Executor; these routes call the NLE Delivery Service directly,
-whose Action owns its FFmpeg and Chromium children. The standalone server accepts
+`POST /api/actions` starts frame preview, playback preview or delivery at the accepted Project revision. `GET
+/api/actions/:handle` observes the Action and `DELETE /api/actions/:handle` requests cancellation. Completed
+results have Session-owned resource URLs. The standalone server accepts
 `HYPIT_FFMPEG_PATH`, `HYPIT_FFPROBE_PATH`, `HYPIT_CHROME_PATH` and `HYPIT_ELECTRON_PATH` for explicit executable
 selection and otherwise uses the local implementations' ordinary defaults.
 

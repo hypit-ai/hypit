@@ -72,7 +72,7 @@ ApplicationHost
 | 滤镜 | Present Process、Adjust、package Operator | 核心事实完整度高；片段效果 catalog 与产品操作不完整 |
 | 文字和字幕 | package Component、Shared Value、NLE materialization | 标量与稳定 collection Inspector、字幕内部时间、共享样式编辑及 Component Media 绑定已有；字幕导入缺失 |
 | 声音 | NLE Audio Process、Reconstruction | 表达基础已有；缺标准处理 package、产品操作和执行路径 |
-| 播放和导出 | Audiovisual Executor | NLE 到 AVIR lowering 与 Export Action 已有；Preview Action 缺失 |
+| 播放和导出 | Audiovisual Executor | 单帧、有限音画播放区间、导出与统一 Action 观察已具备 |
 | 保存和撤销 | NLE Project/View Services、Owner Providers | revision、事务、历史、显式保存、compact receipt 与变化事件已具备 |
 
 ## 1. 文件和媒体显示
@@ -185,7 +185,7 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | 启用、停用、排序、删除 | NLE Commands | `process.replace`、`process.move`、`process.remove` 已实现，Process 保存 enabled | **已具备**底层语义；前端有限操作未完整投影 |
 | 独立效果创建与长度编辑 | Adjust offering + Timeline edit | Adjust catalog/materialization 已实现；普通 move/trim 依赖 Operator `timeWindow` 声明 | **已具备**基础路径 |
 | 参数编辑与共享 | package authoring + Inspector + Shared Value | Operator authoring、Inspector 和 Project-owned Operator Shared Value 已实现 | **已具备**基础路径 |
-| 效果预览 | NLE Preview Action | Timeline 可以显示 package poster，但真实 audiovisual preview 未连接 | **执行缺口** |
+| 效果预览 | NLE Preview Action | 单帧和播放区间消费含 Process/Adjust 的同一 NLE Programme | **已具备** |
 
 具体滤镜种类和数值范围由选中的 package Operator 声明，不进入 NLE 中央 schema。
 
@@ -201,7 +201,7 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | 字幕逐词和内部时间 | caption Component parameters | `caption-fine` 以稳定 word/unit row collection 投影逐词内容和精确有理时间，并由 package reducer 替换闭合 parameters | **已具备** Jensen 编辑路径；在 package 证明切片语义前不开放通用 trim/split |
 | SRT 导入和多轨分配 | Caption materialization Operation | 当前无 SRT parser、字幕物化 planner 或重叠条目分轨 Operation | **产品缺口**，并依赖字幕源边界决策 |
 | 单条样式与共享样式 | inline Component value + Project Shared Value | 同一 package slot 可 inline 或 shared；Inspector 可选择本地或兼容共享值，unlink 复制解析值 inline，编辑分别守卫一个或全部用户 Track | **已具备**；命名新共享值的交互仍缺 |
-| 预览和导出一致性 | package lowering + terminal programs | Component 可 lower 为 AVIR Source，Delivery 已通过同一 `HtmlProgram` frame ABI；Studio 单帧 Preview 尚未连接 | **产品缺口** |
+| 预览和导出一致性 | package lowering + terminal programs | Frame Preview、Playback Preview 与导出使用同一 NLE terminal link 和 `HtmlProgram` ABI | **已具备** |
 
 ### 组件验收切片
 
@@ -228,7 +228,7 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | 淡入淡出 | Audio Process + package Operator | fade 是 Audio Operator 的时间化 closed value | **产品缺口**。需要标准 envelope package 与 Timeline 手势 |
 | 音量包络与关键点 | package Operator parameters | closed parameters 可保存点、曲线和插值；NLE 保存其 Process 与 Control relation | **产品缺口**。需要结构化 package authoring 与有限投影 |
 | Track 混音开关 | NLE Track | Track enabled 参与 lowering | **已具备** |
-| 混合播放、导出与波形一致性 | AudioProgram / Media Actions | AVIR Audio mix 已 lower 为 `AudioProgram` 并进入 Delivery；播放与处理后波形 Action 尚未连接 | **产品缺口** |
+| 混合播放、导出与波形一致性 | AudioProgram / Media Actions | 播放与交付共享 `AudioProgram`；处理后波形 Action 仍缺 | **已具备**播放与交付 |
 
 音量、淡化和包络可以成为官方标准 Audio Operator，但不因此成为 NLE 中央字段。NLE 产品可以为标准 package
 提供一等手势；该手势仍通过 package authoring contribution 规划对 closed value 的替换。
@@ -239,8 +239,8 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | --- | --- | --- | --- |
 | 确定性 Programme 构造 | NLE lowering | accepted NLE snapshot 可降低为一个闭合 AVIR Programme，包括 Nested、Process、Adjust、Transition 和 Matte | **已具备** |
 | 结构 Canvas | NLE projection | 无 Preview Executor 时可显示 Item frame 与直接 Media identification | **已具备**，它不是渲染结果 |
-| 单帧预览 | HTML frame Action | `HtmlProgram` 支持独立帧请求；Studio Preview port 尚未连接 Project Action | **产品缺口** |
-| 连续播放和 seek | HTML playback Action + Session transport | 当前播放头和计时在浏览器本地推进，尚未请求终端 Programme | **产品缺口** |
+| 单帧预览 | HTML frame Action | Studio 以当前 revision 和 Composition 请求精确一帧并返回 PNG capability | **已具备** |
+| 播放和 seek | HTML playback Action + Session transport | seek 请求单帧；播放请求有声 MP4 区间，结束后请求下一段 | **已具备**有限区间；区间接缝存在渲染等待 |
 | 导出 | HTML video Delivery Action | Project 范围的 `NleDeliveryService` 已提供启动、观察、取消与资源交付，并调用注入的 `HtmlVideoExecutor`；Jensen Project 已完成生产路径 | **已具备**后端路径 |
 | Action 恢复与结果生命周期 | Delivery Service + selected Executor | 当前 Service 保存打开进程内的 Action；跨进程重启恢复尚未实现 | **执行缺口** |
 
@@ -275,10 +275,13 @@ interface NleStudioProductSession {
   command(command: NleEditingSurfaceCommand): Promise<NleStudioOperationReceipt>;
   operate(operation: NleStudioOperation): Promise<NleStudioOperationReceipt>;
   subscribe(listener: NleStudioEventListener): () => void;
+  startAction(request: NleStudioActionRequest): Promise<NleStudioActionObservation>;
+  observeAction(handle: string): NleStudioActionObservation;
+  cancelAction(handle: string): NleStudioActionObservation;
   save(): Promise<NleStudioOperationReceipt>;
   reload(): Promise<NleStudioOperationReceipt>;
   resource(token: string): ProjectHostResourceResolution;
-  close(): void;
+  close(): Promise<void>;
 }
 ```
 
@@ -365,7 +368,7 @@ POST       /api/reload
 
 1. 完成其余已有事实可支持的 Timeline、Composition、Process 和 materialization Operations；
 2. 补受限 Shared Value seeds 和 collection 行级有限操作；
-3. 接入 Media 派生视图与 NLE Preview，并统一观察这些 Action 与已有 Export Action；
+3. 接入 Media 派生视图并投影到 Studio Action 观察；
 4. 建立标准 Picture Transform/Crop、Audio Gain/Envelope、preserve-pitch package，并开放对应 package authoring 与产品 Operations；完成 freeze 与 magnetic product planners；
 5. 补完 `text-fine`、`caption-fine` 和 `ranking` 尚缺的物化、Media 绑定、poster 与真实 preview 验收。
 

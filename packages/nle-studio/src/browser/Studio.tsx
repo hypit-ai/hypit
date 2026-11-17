@@ -29,6 +29,7 @@ import { PanelResizeHandle, defaultPanelWidths, type PanelSide } from "./PanelRe
 import { StudioBin, type BinTab } from "./StudioBin.js";
 import { Timeline } from "./Timeline.js";
 import { timecode } from "./timecode.js";
+import { usePreview } from "./usePreview.js";
 
 function readPanelWidths(): typeof defaultPanelWidths {
   try {
@@ -48,6 +49,7 @@ export function Studio() {
   const [inspector, setInspector] = useState<Awaited<ReturnType<typeof readInspector>>>();
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [previewFrom, setPreviewFrom] = useState(0);
   const [muted, setMuted] = useState(false);
   const [binTab, setBinTab] = useState<BinTab>("assets");
   const [previewExpanded, setPreviewExpanded] = useState(false);
@@ -56,6 +58,12 @@ export function Studio() {
   const selectionRef = useRef<readonly string[]>([]);
   const work = useRef<Promise<void>>(Promise.resolve());
   const busyRef = useRef(false);
+  const preview = usePreview({
+    session, atFrame: previewFrom, playing,
+    blocked: busy || session?.status.viewCompatibility === "stale",
+  });
+
+  useEffect(() => { if (!playing) setPreviewFrom(frame); }, [frame, playing]);
 
   const storeSession = useCallback((next: NleStudioOpenProjection) => {
     sessionRef.current = next;
@@ -200,8 +208,18 @@ export function Studio() {
     });
   }, [acceptReceipt, frame, perform, selection, selectItems, session]);
 
+  const togglePlayback = useCallback(() => {
+    if (playing) { setPlaying(false); return; }
+    const maximum = session?.timeline.scene.maximumFrame ?? 0;
+    if (busyRef.current || maximum < 1) return;
+    const start = frame >= maximum ? 0 : frame;
+    setFrame(start);
+    setPreviewFrom(start);
+    setPlaying(true);
+  }, [frame, playing, session]);
+
   useEffect(() => {
-    if (!playing || session === undefined) return;
+    if (!playing || session === undefined || preview.playback) return;
     const fps = session.timeline.scene.editRate.numerator / session.timeline.scene.editRate.denominator;
     const startFrame = frame >= session.timeline.scene.maximumFrame - 1 ? 0 : frame;
     const started = performance.now(); let animation = 0;
@@ -212,7 +230,7 @@ export function Studio() {
     };
     setFrame(startFrame); animation = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animation);
-  }, [playing]);
+  }, [playing, preview.playback]);
 
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -227,14 +245,14 @@ export function Studio() {
           editClipboard("clipboard.paste");
         }
       }
-      if (event.code === "Space") { event.preventDefault(); setPlaying(value => !value); }
+      if (event.code === "Space") { event.preventDefault(); togglePlayback(); }
       if ((event.key === "Delete" || event.key === "Backspace") && selection.length > 0) {
         event.preventDefault();
         removeSelection();
       }
     };
     window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key);
-  }, [selection, removeSelection, editClipboard, session?.clipboard.items]);
+  }, [selection, removeSelection, editClipboard, session?.clipboard.items, togglePlayback]);
 
   const activeItems = useMemo(() => new Set(session?.timeline.scene.tracks.flatMap(track => track.items)
     .filter(item => frame >= item.startFrame && frame < item.startFrame + item.durationFrames && item.enabled)
@@ -245,6 +263,8 @@ export function Studio() {
   const staleView = session.status.viewCompatibility === "stale";
   const editingDisabled = busy || staleView;
   const fps = scene.editRate.numerator / scene.editRate.denominator;
+  const renderedPreview = preview.state?.state === "complete" ? preview.state.result : undefined;
+  const previewDiagnostic = preview.state?.state === "failed" ? preview.state.diagnostic : preview.failure;
   const mediaByPath = new Map(session.media.entries.map(entry => [entry.id, entry] as const));
   const mediaByItem = new Map(session.timeline.itemMedia.map(entry => [entry.item, entry.media] as const));
   const mediaForItem = (itemId: string) => mediaByPath.get(mediaByItem.get(itemId) ?? "");
@@ -320,14 +340,26 @@ export function Studio() {
         <PanelResizeHandle side="bin" label="调整素材面板宽度" width={panelWidths.bin} onResize={(width, save) => resizePanel("bin", width, save)}/>
         <section className="nle-monitor"><div className="nle-panel-header nle-monitor-title"><span>{projectName}</span><IconButton label={previewExpanded ? "恢复预览" : "放大预览"} onClick={() => setPreviewExpanded(value => !value)}>{previewExpanded ? <Minimize2 size={15}/> : <Maximize2 size={15}/>}</IconButton></div>
           <div className="nle-stage"><div className="nle-editable-preview" style={{ "--canvas-ratio": session.canvas.canvas.width / session.canvas.canvas.height } as React.CSSProperties}><div className="studio-canvas">
-            {session.preview.state === "ready" && <img className="studio-preview-frame" src={session.preview.resource}/>}
-            {session.preview.state !== "ready" && session.canvas.layers.filter(layer => activeItems.has(layer.id) && layer.layout !== undefined).map(layer => { const layout = layer.layout!; const canvas = session.canvas.canvas; const media = mediaForItem(layer.id); return <button type="button" key={layer.id} className={`studio-canvas-layer${selection.includes(layer.id) ? " selected" : ""}`} onClick={() => select([layer.id])} style={{ left: `${layout.x / canvas.width * 100}%`, top: `${layout.y / canvas.height * 100}%`, width: `${layout.width / canvas.width * 100}%`, height: `${layout.height / canvas.height * 100}%` }}>{media?.resource && media.mediaType?.startsWith("image/") ? <img src={media.resource} style={{ objectFit: layout.fit }}/> : media?.resource && media.mediaType?.startsWith("video/") ? <video src={media.resource} muted playsInline style={{ objectFit: layout.fit }}/> : undefined}<span>{layer.title}</span></button>; })}
-            {session.preview.state !== "ready" && <CanvasControls scene={session.canvas} active={activeItems} selection={selection} disabled={editingDisabled} onSelect={select}
+            {renderedPreview?.mediaType === "image/png" && <img className="studio-preview-frame" src={renderedPreview.resource}/>}
+            {renderedPreview?.mediaType === "video/mp4" && playing && <video className="studio-preview-frame"
+              key={renderedPreview.resource} src={renderedPreview.resource} muted={muted} autoPlay playsInline
+              onTimeUpdate={event => setFrame(Math.min(scene.maximumFrame, previewFrom + Math.floor(event.currentTarget.currentTime * fps)))}
+              onEnded={() => {
+                const next = previewFrom + (renderedPreview.frameCount ?? 1);
+                setFrame(Math.min(next, scene.maximumFrame));
+                if (next >= scene.maximumFrame) setPlaying(false);
+                else setPreviewFrom(next);
+              }}/>}
+            {renderedPreview === undefined && session.canvas.layers.filter(layer => activeItems.has(layer.id) && layer.layout !== undefined).map(layer => { const layout = layer.layout!; const canvas = session.canvas.canvas; const media = mediaForItem(layer.id); return <button type="button" key={layer.id} className={`studio-canvas-layer${selection.includes(layer.id) ? " selected" : ""}`} onClick={() => select([layer.id])} style={{ left: `${layout.x / canvas.width * 100}%`, top: `${layout.y / canvas.height * 100}%`, width: `${layout.width / canvas.width * 100}%`, height: `${layout.height / canvas.height * 100}%` }}>{media?.resource && media.mediaType?.startsWith("image/") ? <img src={media.resource} style={{ objectFit: layout.fit }}/> : media?.resource && media.mediaType?.startsWith("video/") ? <video src={media.resource} muted playsInline style={{ objectFit: layout.fit }}/> : undefined}<span>{layer.title}</span></button>; })}
+            {!playing && <CanvasControls scene={session.canvas} active={activeItems} selection={selection} disabled={editingDisabled} onSelect={select}
               onTranslate={(item, deltaX, deltaY) => command({ kind: "spatial.edit", expectedProjectRevision: session.status.projectRevision, expectedViewRevision: session.status.viewRevision, item, edit: { kind: "frame.translate", deltaX, deltaY } })}
               onResize={(item, next) => command({ kind: "spatial.edit", expectedProjectRevision: session.status.projectRevision, expectedViewRevision: session.status.viewRevision, item, edit: { kind: "frame.resize", frame: next } })}/>}
-            {session.preview.state !== "ready" && <small className="studio-preview-state">结构画布 · Preview Executor 未连接</small>}
+            {previewDiagnostic !== undefined && <small title={previewDiagnostic} className="studio-preview-state">预览渲染失败</small>}
+            {previewDiagnostic === undefined && renderedPreview === undefined && <small className="studio-preview-state">
+              {session.preview.state === "unavailable" ? "结构画布" : preview.state?.state === "running" ? "正在渲染预览" : "预览待就绪"}
+            </small>}
           </div></div></div>
-          <div className="nle-transport"><span className="nle-transport-time"><span className="current">{timecode(frame, fps)}</span><span className="separator">/</span><span className="total">{timecode(scene.maximumFrame, fps)}</span></span><button className="nle-play" aria-label={playing ? "暂停" : "播放"} onClick={() => setPlaying(value => !value)}>{playing ? <Pause size={18}/> : <Play size={18}/>}</button><span className="nle-transport-actions"><IconButton label="上一帧" onClick={() => { setPlaying(false); setFrame(value => Math.max(0, value - 1)); }}><StepBack size={15}/></IconButton><IconButton label="下一帧" onClick={() => { setPlaying(false); setFrame(value => Math.min(scene.maximumFrame, value + 1)); }}><StepForward size={15}/></IconButton><IconButton label="静音" onClick={() => setMuted(value => !value)}>{muted ? <VolumeX size={15}/> : <Volume2 size={15}/>}</IconButton></span></div>
+          <div className="nle-transport"><span className="nle-transport-time"><span className="current">{timecode(frame, fps)}</span><span className="separator">/</span><span className="total">{timecode(scene.maximumFrame, fps)}</span></span><button className="nle-play" aria-label={playing ? "暂停" : "播放"} onClick={togglePlayback}>{playing ? <Pause size={18}/> : <Play size={18}/>}</button><span className="nle-transport-actions"><IconButton label="上一帧" onClick={() => { setPlaying(false); setFrame(value => Math.max(0, value - 1)); }}><StepBack size={15}/></IconButton><IconButton label="下一帧" onClick={() => { setPlaying(false); setFrame(value => Math.min(scene.maximumFrame, value + 1)); }}><StepForward size={15}/></IconButton><IconButton label="静音" onClick={() => setMuted(value => !value)}>{muted ? <VolumeX size={15}/> : <Volume2 size={15}/>}</IconButton></span></div>
         </section>
         <PanelResizeHandle side="properties" label="调整属性面板宽度" width={panelWidths.properties} onResize={(width, save) => resizePanel("properties", width, save)}/>
         <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist"><button role="tab" aria-selected="true">属性</button></div><div className="nle-panel-body"><Inspector scene={inspector?.scene} component={inspector?.component} media={session.media.entries}

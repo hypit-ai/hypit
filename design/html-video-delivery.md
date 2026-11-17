@@ -113,6 +113,11 @@ Product Provider；每个 Product Session 用该依赖打开 Project 范围的 `
 由 Product adapter 直接投影，注入的 Executor 管理 FFmpeg 与 browser 进程，Product Session 关闭时取消其仍在
 运行的交付。
 
+Studio 通过同一 terminal link 使用当前已接受的内存 revision。Frame preview 选择一帧精确范围，通过
+`HtmlFrameExecutor` 请求 PNG。Playback preview 选择一个精确范围，通过同一视频 Executor 生成有声 MP4。
+Audio executor 在完整节目时钟上执行图，在输出边界按样本裁切并重置时间戳，Picture 使用同一范围内的帧采样。
+Studio 持有临时结果并发布会话资源 URL。
+
 ## 当前生产路径
 
 `examples/ranking-jensen` 是当前端到端 Project。`film.svml` 包含 5 段 A-roll、图片叠层、ranking component、

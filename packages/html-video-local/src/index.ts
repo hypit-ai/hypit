@@ -2,11 +2,12 @@ import { mkdir, mkdtemp, rename, rm, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { chromiumHtmlBackend } from "@hypit/html-chromium-local";
 import { electronHtmlBackend } from "@hypit/html-electron-local";
-import { renderHtmlVisualLocally, type HtmlCaptureBackend } from "@hypit/html-render-local";
+import { captureHtmlFrameLocally, renderHtmlVisualLocally, type HtmlCaptureBackend } from "@hypit/html-render-local";
 import type {
   HtmlVideoExecutionOptions,
   HtmlVideoExecutor,
   HtmlVideoDeliveryPlan,
+  HtmlFrameExecutor,
 } from "@hypit/html-video";
 import {
   inspectLocalMediaToolchain,
@@ -23,7 +24,7 @@ export type LocalHtmlVideoTools = LocalMediaToolchainOptions & {
   readonly electronPath?: string;
 };
 
-class LocalHtmlVideoExecutor implements HtmlVideoExecutor {
+class LocalHtmlVideoExecutor implements HtmlVideoExecutor, HtmlFrameExecutor {
   readonly #media: LocalMediaToolchain;
   #mediaReady: Promise<void> | undefined;
   readonly #chromium: HtmlCaptureBackend;
@@ -35,13 +36,28 @@ class LocalHtmlVideoExecutor implements HtmlVideoExecutor {
     this.#electron = tools.electronPath === undefined ? undefined : electronHtmlBackend(tools.electronPath);
   }
 
-  async execute(plan: HtmlVideoDeliveryPlan, options: HtmlVideoExecutionOptions): Promise<MediaResource> {
+  async #checkMedia(): Promise<void> {
     this.#mediaReady ??= inspectLocalMediaToolchain(this.#media).then((inspection) => {
       if (inspection.state !== "ready") {
         throw new Error(`Local Media toolchain is ${inspection.state}: ${inspection.diagnostic} Install compatible FFmpeg and FFprobe executables or configure their explicit paths.`);
       }
     });
     await this.#mediaReady;
+  }
+
+  async capture(request: Parameters<HtmlFrameExecutor["capture"]>[0], signal?: AbortSignal): Promise<Uint8Array> {
+    if (request.program.videoSources.length > 0) await this.#checkMedia();
+    return await captureHtmlFrameLocally({
+      backend: this.#chromium, request, options: {
+        ffmpegPath: this.#media.ffmpegPath, ffprobePath: this.#media.ffprobePath,
+        ...(signal === undefined ? {} : { signal }),
+      },
+    });
+  }
+
+  async execute(plan: HtmlVideoDeliveryPlan, options: HtmlVideoExecutionOptions): Promise<MediaResource> {
+    await this.#checkMedia();
+    options.signal?.throwIfAborted();
     if (await stat(options.destination).then(() => true, () => false)) {
       throw new Error(`Video delivery destination already exists: ${options.destination}.`);
     }
@@ -74,6 +90,7 @@ class LocalHtmlVideoExecutor implements HtmlVideoExecutor {
           program: plan.audio,
           destination: audioPath,
           ffmpegPath: this.#media.ffmpegPath,
+          ...(plan.range === undefined ? {} : { range: plan.range }),
           ...(options.signal === undefined ? {} : { signal: options.signal }),
         }).then(value => {
           options.onProgress?.({ phase: "audio", completed: 1, total: 1 });
@@ -99,6 +116,6 @@ class LocalHtmlVideoExecutor implements HtmlVideoExecutor {
   }
 }
 
-export function createLocalHtmlVideoExecutor(tools: LocalHtmlVideoTools = {}): HtmlVideoExecutor {
+export function createLocalHtmlVideoExecutor(tools: LocalHtmlVideoTools = {}): HtmlVideoExecutor & HtmlFrameExecutor {
   return new LocalHtmlVideoExecutor(tools);
 }

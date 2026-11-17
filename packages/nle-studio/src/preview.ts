@@ -1,0 +1,189 @@
+import { randomUUID } from "node:crypto";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createHtmlPreviewFrame, createHtmlVideoDeliveryPlan, type HtmlFrameExecutor, type HtmlVideoExecutor } from "@hypit/html-video";
+import type { MediaResource } from "@hypit/media";
+import type { NleProject } from "@hypit/nle";
+import { prepareNleTerminalLink, type NleDeliveryTerminalLink } from "@hypit/nle-delivery";
+import type { ProjectHost } from "@hypit/project";
+import { compareExactTemporalValues, type TemporalRate } from "@hypit/temporal/algebra";
+import type { NleStudioActionObservation, NleStudioActionRequest } from "./protocol.js";
+import { studioFrameTime } from "./timeline-planning.js";
+
+type PreviewRequest = Exclude<NleStudioActionRequest, { kind: "delivery" }>;
+type PreviewAction = {
+  readonly handle: string;
+  readonly kind: PreviewRequest["kind"];
+  readonly abort: AbortController;
+  observation: NleStudioActionObservation;
+  directory?: string;
+  resource?: MediaResource;
+  task?: Promise<void>;
+};
+
+export class NleStudioPreview {
+  readonly #host: ProjectHost;
+  readonly #document: string;
+  readonly #frame: HtmlFrameExecutor;
+  readonly #video: HtmlVideoExecutor | undefined;
+  readonly #publish: (observation: NleStudioActionObservation) => void;
+  readonly #cleanup = new Set<Promise<void>>();
+  #generation = 0;
+  #current: PreviewAction | undefined;
+  #prepared: { readonly key: string; readonly abort: AbortController; readonly link: Promise<NleDeliveryTerminalLink> } | undefined;
+
+  constructor(input: {
+    readonly host: ProjectHost;
+    readonly document: string;
+    readonly frame: HtmlFrameExecutor;
+    readonly video?: HtmlVideoExecutor;
+    readonly publish: (observation: NleStudioActionObservation) => void;
+  }) {
+    this.#host = input.host;
+    this.#document = input.document;
+    this.#frame = input.frame;
+    this.#video = input.video;
+    this.#publish = input.publish;
+  }
+
+  get playback(): boolean { return this.#video !== undefined; }
+  get generation(): number { return this.#generation; }
+
+  #release(): void {
+    const previous = this.#current;
+    this.#current = undefined;
+    if (previous === undefined) return;
+    previous.abort.abort();
+    const cleanup = (async () => {
+      await previous.task;
+      if (previous.directory !== undefined) await rm(previous.directory, { recursive: true, force: true });
+    })();
+    this.#cleanup.add(cleanup);
+    void cleanup.finally(() => this.#cleanup.delete(cleanup)).catch(() => undefined);
+  }
+
+  invalidate(): void {
+    this.#generation += 1;
+    this.#prepared?.abort.abort();
+    this.#prepared = undefined;
+    this.#release();
+  }
+
+  async close(): Promise<void> {
+    this.invalidate();
+    await Promise.allSettled(this.#cleanup);
+  }
+
+  observe(handle: string): NleStudioActionObservation | undefined {
+    return this.#current?.handle === handle ? structuredClone(this.#current.observation) : undefined;
+  }
+
+  resource(handle: string): MediaResource | undefined {
+    return this.#current?.handle === handle ? this.#current.resource : undefined;
+  }
+
+  cancel(handle: string): NleStudioActionObservation | undefined {
+    if (this.#current?.handle !== handle) return undefined;
+    const action = this.#current;
+    if (action.observation.state === "queued" || action.observation.state === "running") action.abort.abort();
+    return structuredClone(action.observation);
+  }
+
+  start(request: PreviewRequest, project: NleProject, rate: TemporalRate): NleStudioActionObservation {
+    if (request.kind === "playback-preview" && this.#video === undefined) throw new Error("NLE Studio playback preview is unavailable.");
+    const frames = request.kind === "frame-preview" ? 1 : request.durationFrames;
+    const maximum = request.kind === "frame-preview" ? 1 : Math.min(240, Math.max(1, Math.floor(6 * rate.numerator / rate.denominator)));
+    if (!Number.isSafeInteger(frames) || frames < 1 || frames > maximum
+      || !Number.isSafeInteger(request.atFrame) || request.atFrame < 0 || !Number.isSafeInteger(request.atFrame + frames)) {
+      throw new Error(`NLE Studio preview requires a frame and a range of 1 to ${maximum} frames.`);
+    }
+    this.#release();
+    const released = Promise.allSettled(this.#cleanup);
+    const handle = randomUUID();
+    const action: PreviewAction = {
+      handle, kind: request.kind, abort: new AbortController(),
+      observation: { handle, kind: request.kind, state: "queued", progress: 0 },
+    };
+    this.#current = action;
+    this.#publish(action.observation);
+    action.task = this.#run(action, request, project, rate, frames, released);
+    return structuredClone(action.observation);
+  }
+
+  #preparedLink(request: PreviewRequest, project: NleProject): Promise<NleDeliveryTerminalLink> {
+    const key = `${request.expectedProjectRevision}:${request.composition}`;
+    if (this.#prepared?.key === key) return this.#prepared.link;
+    this.#prepared?.abort.abort();
+    const abort = new AbortController();
+    const link = prepareNleTerminalLink({
+      host: this.#host, document: this.#document, snapshot: project, composition: request.composition, signal: abort.signal,
+    }).catch((error: unknown) => {
+      if (this.#prepared?.abort === abort) this.#prepared = undefined;
+      throw error;
+    });
+    this.#prepared = { key, abort, link };
+    return link;
+  }
+
+  async #run(
+    action: PreviewAction, request: PreviewRequest, project: NleProject, rate: TemporalRate, frames: number,
+    previous: Promise<unknown>,
+  ) {
+    const { handle, kind } = action;
+    const signal = AbortSignal.any([action.abort.signal, AbortSignal.timeout(90_000)]);
+    const update = (observation: NleStudioActionObservation) => {
+      action.observation = observation;
+      this.#publish(observation);
+    };
+    const progress = (value: number) => update({ handle, kind, state: "running", progress: value });
+    try {
+      await previous;
+      signal.throwIfAborted();
+      progress(0);
+      const link = await this.#preparedLink(request, project);
+      signal.throwIfAborted();
+      const start = studioFrameTime(request.atFrame, rate);
+      const desired = studioFrameTime(request.atFrame + frames, rate);
+      const duration = link.program.domain.duration;
+      if (compareExactTemporalValues(start, duration) >= 0) throw new Error("NLE Studio preview frame is outside the Programme.");
+      const range = { start, end: compareExactTemporalValues(desired, duration) > 0 ? duration : desired };
+      const source = project.compositions.find(value => value.id === request.composition)!.canvas;
+      const scale = Math.min(1, 960 / Math.max(source.width, source.height));
+      const even = (value: number) => Math.max(2, Math.floor(value * scale / 2) * 2);
+      const canvas = { width: even(source.width), height: even(source.height), background: "#15161b" };
+      action.directory = await mkdtemp(join(tmpdir(), "hypit-nle-preview-"));
+      signal.throwIfAborted();
+      progress(0.1);
+      let frameCount = 1;
+      if (kind === "frame-preview") {
+        const request = createHtmlPreviewFrame(link, { canvas, frameRate: rate, range });
+        const bytes = await this.#frame.capture(request, signal);
+        signal.throwIfAborted();
+        const address = join(action.directory, "frame.png");
+        await writeFile(address, bytes, { signal });
+        action.resource = { address, mediaType: "image/png", size: bytes.byteLength };
+      } else {
+        const plan = createHtmlVideoDeliveryPlan(link, { picture: { ...canvas, frameRate: rate, quality: "draft" } }, range);
+        frameCount = plan.visual.program.frameCount;
+        action.resource = await this.#video!.execute(plan, {
+          destination: join(action.directory, "playback.mp4"), renderer: "chromium", signal,
+          onProgress: value => {
+            if (value.phase === "visual" && value.total > 0 && !signal.aborted) progress(0.1 + 0.8 * value.completed / value.total);
+          },
+        });
+      }
+      signal.throwIfAborted();
+      update({ handle, kind, state: "complete", progress: 1, result: {
+        resource: `api/resources/${encodeURIComponent(handle)}`, mediaType: action.resource.mediaType, frameCount,
+      } });
+    } catch (error) {
+      if (action.directory !== undefined) await rm(action.directory, { recursive: true, force: true }).catch(() => undefined);
+      delete action.resource;
+      update(action.abort.signal.aborted
+        ? { handle, kind, state: "cancelled", progress: action.observation.progress }
+        : { handle, kind, state: "failed", progress: action.observation.progress,
+          diagnostic: error instanceof Error ? error.message : String(error) });
+    }
+  }
+}

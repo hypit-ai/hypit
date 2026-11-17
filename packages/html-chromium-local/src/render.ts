@@ -8,7 +8,8 @@ export function chromiumHtmlBackend(chromePath = defaultChrome): HtmlCaptureBack
   return {
     id: "hypit.html.chromium",
     mode: "frame-buffer",
-    async createWorker(request, staged) {
+    async createWorker(request, staged, options) {
+      options.signal?.throwIfAborted();
       const page = await ChromiumHtmlPage.open({
         executable: chromePath,
         url: staged.url,
@@ -18,9 +19,21 @@ export function chromiumHtmlBackend(chromePath = defaultChrome): HtmlCaptureBack
           ? request.frames.map((frame) => ({ startFrame: frame, endFrameExclusive: frame + 1 }))
           : [request.range ?? { startFrame: 0, endFrameExclusive: request.program.frameCount }],
       });
+      let closing: Promise<void> | undefined;
+      const close = () => closing ??= page.close();
+      const abort = () => { void close().catch(() => undefined); };
+      options.signal?.addEventListener("abort", abort, { once: true });
+      if (options.signal?.aborted === true) {
+        options.signal.removeEventListener("abort", abort);
+        await close();
+        options.signal.throwIfAborted();
+      }
       return {
         capture: (frame, transparent) => page.capture(frame, transparent),
-        close: () => page.close(),
+        close: () => {
+          options.signal?.removeEventListener("abort", abort);
+          return close();
+        },
       };
     },
   };
