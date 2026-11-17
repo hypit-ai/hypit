@@ -81,6 +81,13 @@ explicitly opt-in, use no committed secret and incur no cost when not enabled.
 |---|---|---|
 | `pnpm test:whisperx-service` | Python WhisperX service | Python 3.13, uv, frozen sync |
 | `pnpm test:image-opencv` | the OpenCV Provider across Transform and Compose | the Provider's interpreter at `packages/provider-image-opencv-local/runtime/.venv`; set `HYPIT_OPENCV_PYTHON` to use another |
+| `pnpm test:browser` | capture-browser pixels, recordings and CLI capture | a prepared capture browser (`node bin/hypit.mjs capture install-browser`), ffmpeg and ffprobe |
+
+`pnpm test` keeps the capture-browser files in the suite but skips their browser-dependent tests.
+That browser is installed outside pnpm, CI has none, and a prepared machine would otherwise run
+several Chrome instances beside the ordinary suite. `pnpm test:browser` enables them explicitly,
+one file at a time, so each test keeps the wall-clock budget measured for it standalone. The
+browser-free assertions in those files still run in `pnpm test`, exactly as they do in CI.
 
 For the local HTML rasterization tests, set `HYPIT_BROWSER_TESTS=1` in your shell environment, then run the command below from the repository root. Chrome, ffmpeg and ffprobe must be available.
 

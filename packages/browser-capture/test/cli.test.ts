@@ -11,6 +11,10 @@ import { runCaptureCli } from "../src/cli.js";
 import type { CliIo } from "@hypit/hypit/cli";
 
 const executablePath = process.env.HYPIT_CAPTURE_TEST_BROWSER ?? await captureBrowserExecutablePath();
+const browserReady = existsSync(executablePath);
+const browserSkip = process.env.HYPIT_CAPTURE_BROWSER_TESTS === "0"
+  ? "Browser tests are disabled in the routine suite; run `node test/run.mjs browser`"
+  : !browserReady && "Chrome is not installed";
 const exec = promisify(execFile);
 const launcher = resolve("bin/hypit.mjs");
 
@@ -25,7 +29,7 @@ test("capture rejects incomplete or contradictory requests before browser work",
 });
 
 test("the shipped launcher captures from a plain project and passes script arguments without project dependencies", {
-  skip: !existsSync(executablePath) && "Chrome is not installed", timeout: 30_000,
+  skip: browserSkip, timeout: 30_000,
 }, async () => {
   const work = await mkdtemp(join(tmpdir(), "hypit-capture-cli-"));
   try {
