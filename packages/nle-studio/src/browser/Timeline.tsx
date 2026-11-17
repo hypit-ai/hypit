@@ -13,7 +13,7 @@ import { ToolSelector, type TimelineTool } from "./ToolSelector.js";
 import { useTimelineSeek } from "./useTimelineSeek.js";
 import { useTimelineZoom } from "./useTimelineZoom.js";
 import { useTrackReorder } from "./useTrackReorder.js";
-import { useItemGesture, type ItemMovePlan } from "./useItemGesture.js";
+import { useItemGesture, type ItemDropIntent } from "./useItemGesture.js";
 
 type Gesture = {
   readonly item: NleTimelineSceneItem;
@@ -75,7 +75,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   readonly busy: boolean;
   readonly onSeek: (frame: number) => void;
   readonly onSelect: (ids: readonly string[]) => void;
-  readonly onMove: (plan: ItemMovePlan) => void;
+  readonly onMove: (intent: ItemDropIntent) => void;
   readonly onTrim: (item: NleTimelineSceneItem, edge: "start" | "end", atFrame: number) => void;
   readonly onSplit: (item: NleTimelineSceneItem, atFrame: number) => void;
   readonly onRemove: () => void;

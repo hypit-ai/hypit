@@ -9,6 +9,7 @@ import type {
   NleStudioObservation,
   NleStudioObservationRequest,
   NleStudioOpenProjection,
+  NleStudioOperation,
   NleStudioOperationReceipt,
   NleStudioTransitionMaterializeRequest,
 } from "../protocol.js";
@@ -93,6 +94,10 @@ export async function refreshOpen(
 
 export function sendCommand(command: NleEditingSurfaceCommand): Promise<NleStudioOperationReceipt> {
   return request("api/command", { command });
+}
+
+export function operate(value: NleStudioOperation): Promise<NleStudioOperationReceipt> {
+  return request("api/operate", value);
 }
 
 export function placeMedia(value: NleStudioMediaPlaceRequest): Promise<NleStudioOperationReceipt> {

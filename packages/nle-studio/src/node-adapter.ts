@@ -15,6 +15,7 @@ import type {
   NleStudioDeliveryStartRequest,
   NleStudioMediaPlaceRequest,
   NleStudioObservationRequest,
+  NleStudioOperation,
   NleStudioOperationReceipt,
   NleStudioTransitionMaterializeRequest,
 } from "./protocol.js";
@@ -53,6 +54,36 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
     throw new Error("NLE Studio observation kind is invalid.");
   }
   return { kind: request.kind as Exclude<NleStudioObservationRequest["kind"], "inspector"> };
+}
+
+function record(value: unknown, fields: readonly string[], subject: string): Readonly<Record<string, unknown>> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)
+    || Object.keys(value).some(key => !fields.includes(key))) {
+    throw new Error(`${subject} must be an object with current fields.`);
+  }
+  return value as Readonly<Record<string, unknown>>;
+}
+
+function identity(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
+function operationRequest(value: unknown): NleStudioOperation {
+  const request = record(value, [
+    "kind", "expectedProjectRevision", "expectedViewRevision", "composition", "anchor", "items", "deltaFrames", "target",
+  ], "NLE Studio Operation");
+  if (request.kind !== "timeline.drop" || !Number.isSafeInteger(request.expectedProjectRevision)
+    || Number(request.expectedProjectRevision) < 0 || !Number.isSafeInteger(request.expectedViewRevision)
+    || Number(request.expectedViewRevision) < 0 || !identity(request.composition) || !identity(request.anchor)
+    || !Array.isArray(request.items) || !request.items.every(identity) || !Number.isSafeInteger(request.deltaFrames)) {
+    throw new Error("NLE Studio Timeline drop requires revisions, a Composition, selected Items, an anchor and a frame delta.");
+  }
+  const target = record(request.target, ["kind", "track", "before"], "NLE Studio Timeline drop target");
+  if (!(target.kind === "track" && identity(target.track) && !Object.hasOwn(target, "before"))
+    && !(target.kind === "gap" && !Object.hasOwn(target, "track") && (!Object.hasOwn(target, "before") || identity(target.before)))) {
+    throw new Error("NLE Studio Timeline drop target requires a Track or a gap.");
+  }
+  return request as NleStudioOperation;
 }
 
 function sendJson(response: ServerResponse, status: number, value: unknown): void {
@@ -206,6 +237,10 @@ export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
       if (request.method === "POST" && pathname === "/api/command") {
         const body = await jsonBody(request) as NleStudioCommandRequest;
         sendJson(response, 200, await studio.command(body.command as NleEditingSurfaceCommand));
+        return true;
+      }
+      if (request.method === "POST" && pathname === "/api/operate") {
+        sendJson(response, 200, await studio.operate(operationRequest(await jsonBody(request))));
         return true;
       }
       if (request.method === "POST" && pathname === "/api/media/place") {

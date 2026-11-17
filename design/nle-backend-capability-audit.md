@@ -53,8 +53,7 @@ ApplicationHost
 `open` 只包含首屏有限投影；Timeline observation 显式投影 Composition 导航、关系、信号存在性和 Product
 后端解析的 Item-to-Media identity。主要缺口是：
 
-- Product Session 尚无统一的 `operate(operation)` 契约；
-- Timeline 最终落点、兼容轨道、补轨和多选分配仍由浏览器规划；
+- `operate(operation)` 已承接 Timeline drop，物化和其余组合操作仍待接入；
 - AIGC Execution Directory 已能注册 Provider/model Environment 并打开 Project client；影音与 Media Action
   由 Product/owner Service 投影各自注入的 specialized Executor。
 
@@ -95,14 +94,14 @@ ApplicationHost
 
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
-| Item 移动与换轨 | Product Operation -> NLE transaction | `item.move` 支持多 Item、统一 delta 和逐 Item destination | **产品缺口**。浏览器当前计算 destination |
-| 空白区域补轨 | Product Operation -> `track.add` + `item.move` | NLE 事务可以原子新增 Track 并移动 Item | **产品缺口**。浏览器当前生成 Track id、类型、顺序和事务 |
-| 兼容轨道与锁 | NLE Studio planner + NLE View guard | View 保存 Track lock；Surface 在提交前检查 guard | **产品缺口**。后端尚未按垂直落点、媒体能力、锁和冲突选择最终 Track |
-| 落点冲突分配 | NLE Studio planner | Project 校验拒绝未被 Transition 解释的 Picture Present 重叠 | **产品缺口**。缺少排除被移动原范围、搜索邻近轨道和补轨的 planner |
-| 多选保持相对布局 | NLE Studio planner | `item.move` 能原子移动多个 Item；View Group 提供编辑关系 | **产品缺口**。成员分轨与冲突解决仍在浏览器 |
+| Item 移动与换轨 | Product Operation -> NLE transaction | `timeline.drop` 依据锚点、落点和选区统一计算精确 delta 和逐 Item destination | **已具备** |
+| 空白区域补轨 | Product Operation -> `track.add` + `item.move` | 后端生成身份与轨道顺序，新增 Track 和移动 Item 作为一次 NLE 事务提交 | **已具备** |
+| 兼容轨道与锁 | NLE Studio planner + NLE View guard | 后端跳过锁定及异类目标，并拒绝从锁定源轨道移动 | **已具备** |
+| 落点冲突分配 | NLE Studio planner | 按 Studio 交互策略为新 Picture Present 冲突寻找邻轨或补轨，保留已移动成员间的画面关系和 Audio mix | **已具备** |
+| 多选保持相对布局 | NLE Studio planner | 同源轨道成员作为一个批次；View Group、Transition 和 Matte 端点闭包共享时间位移，保留轨道相对显示顺序 | **已具备** |
 | 默认时长 | Materialization planner | 时序媒体可采用 Interpretation duration；常量图片要求显式 occurrence duration；Component/Adjust offering 带默认 duration | **产品缺口**。图片默认时长应由产品 policy 在一次物化 Operation 中确定 |
 | Track 层级排序 | NLE Command | `track.move` 修改 Composition 中 Track 顺序；lowering 按 Picture Track 后到前组合 | **已具备**，当前浏览器直接发底层命令 |
-| Track 类型兼容 | NLE fact + product planner | 当前持久 Track 类型只有 Picture 与 Audio；独立画面处理由 Picture Track 上的 Adjust 表达 | **产品缺口**。planner 应按 Present/Adjust 和输出域判定兼容性 |
+| Track 类型兼容 | NLE fact + product planner | 拖动沿用源轨道的输出域，物化使用各 offering 或 Media 的输出域 | **已具备**拖动路径；物化操作仍待接入统一分配 |
 | Track 锁定 | NLE View Command | `track-lock.set` 与 Surface guard 已实现 | **已具备**，但多成员 Operation 必须在后端一次检查所有触达 Track |
 | Track 启用与音频静音 | NLE Project Command | `track.update.enabled` 参与 lowering | **已具备**。当前是领域统一的 Track enablement，而非额外静音状态 |
 
@@ -356,12 +355,11 @@ POST       /api/reload
 
 ## 实现顺序
 
-1. 实现 server-side Timeline drop，收回兼容轨道、锁、冲突、补轨和多选分配；
-2. 完成其余已有事实可支持的 Timeline、clipboard、Composition、Process 和 materialization Operations；
-3. 补 Component Media input bind/unbind、受限 Shared Value seeds 和 collection 行级有限操作；
-4. 接入 Media 派生视图与 NLE Preview，并统一观察这些 Action 与已有 Export Action；
-5. 建立标准 Picture Transform/Crop、Audio Gain/Envelope、preserve-pitch package，并开放对应 package authoring 与产品 Operations；完成 freeze 与 magnetic product planners；
-6. 补完 `text-fine`、`caption-fine` 和 `ranking` 尚缺的物化、Media 绑定、poster 与真实 preview 验收。
+1. 完成其余已有事实可支持的 Timeline、clipboard、Composition、Process 和 materialization Operations；
+2. 补 Component Media input bind/unbind、受限 Shared Value seeds 和 collection 行级有限操作；
+3. 接入 Media 派生视图与 NLE Preview，并统一观察这些 Action 与已有 Export Action；
+4. 建立标准 Picture Transform/Crop、Audio Gain/Envelope、preserve-pitch package，并开放对应 package authoring 与产品 Operations；完成 freeze 与 magnetic product planners；
+5. 补完 `text-fine`、`caption-fine` 和 `ranking` 尚缺的物化、Media 绑定、poster 与真实 preview 验收。
 
 ## 闭合标准
 

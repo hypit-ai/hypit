@@ -18,6 +18,7 @@ import {
   materializeComponent,
   materializeTransition,
   importMedia,
+  operate,
   placeMedia,
   readInspector,
   readOpen,
@@ -357,13 +358,10 @@ export function Studio() {
         <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist"><button role="tab" aria-selected="true">属性</button></div><div className="nle-panel-body"><Inspector scene={inspector} disabled={busy} onEdit={inspectorEdit}/></div></aside>
       </div>
       <Timeline session={session} frame={frame} selection={selection} busy={busy} onSeek={value => { setPlaying(false); setFrame(value); }} onSelect={select}
-        onMove={plan => transact([
-          ...plan.additions.map(addition => ({ kind: "track.add" as const, composition: scene.composition,
-            track: { id: addition.id, name: addition.name, kind: addition.kind, enabled: true, items: [] },
-            ...(addition.before === undefined ? {} : { before: addition.before }) })),
-          { kind: "item.move", ids: plan.ids, delta: exactFrame(plan.deltaFrames, session),
-            ...(plan.destinations.length === 0 ? {} : { destinations: plan.destinations }) },
-        ])}
+        onMove={intent => void perform(async () => acceptReceipt(await operate({
+          kind: "timeline.drop", composition: scene.composition, ...intent,
+          expectedProjectRevision: session.status.projectRevision, expectedViewRevision: session.status.viewRevision,
+        })))}
         onTrim={(item, edge, atFrame) => transact([{ kind: "item.trim", id: item.id, edge, at: exactFrame(atFrame, session) }])}
         onSplit={(item, atFrame) => transact([{ kind: "item.split", id: item.id, at: exactFrame(atFrame, session), rightId: `${item.id}-split-${crypto.randomUUID().slice(0, 8)}` }])}
         onRemove={() => { if (selection.length > 0) { transact([{ kind: "item.remove", ids: selection }]); select([]); } }}

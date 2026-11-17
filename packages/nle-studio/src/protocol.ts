@@ -136,6 +136,21 @@ export type NleStudioCommandRequest = {
   readonly command: NleEditingSurfaceCommand;
 };
 
+export type NleStudioTimelineDrop = {
+  readonly kind: "timeline.drop";
+  readonly expectedProjectRevision: number;
+  readonly expectedViewRevision: number;
+  readonly composition: string;
+  readonly anchor: string;
+  readonly items: readonly string[];
+  readonly deltaFrames: number;
+  readonly target:
+    | { readonly kind: "track"; readonly track: string }
+    | { readonly kind: "gap"; readonly before?: string };
+};
+
+export type NleStudioOperation = NleStudioTimelineDrop;
+
 export type NleStudioMediaPlaceRequest = {
   readonly expectedProjectRevision: number;
   readonly expectedViewRevision: number;

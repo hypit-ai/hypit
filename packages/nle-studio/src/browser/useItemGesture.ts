@@ -1,20 +1,9 @@
 import type { NleTimelineScene, NleTimelineSceneItem, NleTimelineSceneTrack } from "@hypit/nle/view";
 import { useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
+import type { NleStudioTimelineDrop } from "../protocol.js";
 import { labelWidth, rulerHeight } from "./timelineGeometry.js";
 
-export type ItemTrackAddition = {
-  readonly id: string;
-  readonly name: string;
-  readonly kind: NleTimelineSceneTrack["kind"];
-  readonly before?: string;
-};
-
-export type ItemMovePlan = {
-  readonly ids: readonly string[];
-  readonly deltaFrames: number;
-  readonly destinations: readonly { readonly item: string; readonly track: string }[];
-  readonly additions: readonly ItemTrackAddition[];
-};
+export type ItemDropIntent = Pick<NleStudioTimelineDrop, "anchor" | "items" | "deltaFrames" | "target">;
 
 type FloatingItem = {
   readonly id: string;
@@ -41,14 +30,19 @@ function itemKind(item: NleTimelineSceneItem, track: NleTimelineSceneTrack): Flo
   return item.display.layers.some((layer) => layer.kind === "text") ? "text" : "visual";
 }
 
-function relatedItems(scene: NleTimelineScene, seeds: readonly string[]): string[] {
+function relatedItems(scene: NleTimelineScene, seeds: readonly string[], moving = false): string[] {
   const result = new Set(seeds);
+  const relations = scene.groups.map(group => group.items);
+  if (moving) {
+    relations.push(...scene.transitions.map(transition => [transition.outgoing, transition.incoming]));
+    relations.push(...scene.mattes.map(matte => [matte.content, matte.matte]));
+  }
   let changed = true;
   while (changed) {
     changed = false;
-    for (const group of scene.groups) {
-      if (!group.items.some((id) => result.has(id))) continue;
-      for (const id of group.items) {
+    for (const members of relations) {
+      if (!members.some((id) => result.has(id))) continue;
+      for (const id of members) {
         if (!result.has(id)) { result.add(id); changed = true; }
       }
     }
@@ -56,15 +50,7 @@ function relatedItems(scene: NleTimelineScene, seeds: readonly string[]): string
   return [...result];
 }
 
-function overlaps(item: NleTimelineSceneItem, start: number, duration: number): boolean {
-  return start < item.startFrame + item.durationFrames && item.startFrame < start + duration;
-}
-
-function newTrackId(): string {
-  return `track-${crypto.randomUUID().slice(0, 8)}`;
-}
-
-/** Session-only pointer planning over the current finite Timeline projection. */
+/** Session-local pointer feedback. The operation resolves destinations after release. */
 export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, selection, onSelect, onMove }: {
   readonly scene: NleTimelineScene;
   readonly scroller: RefObject<HTMLDivElement | null>;
@@ -74,7 +60,7 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
   readonly busy: boolean;
   readonly selection: readonly string[];
   readonly onSelect: (ids: readonly string[]) => void;
-  readonly onMove: (plan: ItemMovePlan) => void;
+  readonly onMove: (intent: ItemDropIntent) => void;
 }) {
   const [gesture, setGesture] = useState<ItemGestureState>();
   const cancel = useRef<() => void>(() => undefined);
@@ -91,7 +77,8 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
         : relatedItems(scene, [...selection, ...clicked]));
       return;
     }
-    const ids = new Set(relatedItems(scene, selection.includes(item.id) ? selection : clicked));
+    const seeds = selection.includes(item.id) ? selection : clicked;
+    const ids = new Set(relatedItems(scene, seeds, true));
     const members = scene.tracks.flatMap((row) => row.items
       .filter((candidate) => ids.has(candidate.id))
       .map((candidate) => ({ item: candidate, track: row })));
@@ -108,26 +95,28 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
       .filter((candidate) => !ids.has(candidate.id))
       .flatMap((candidate) => [candidate.startFrame, candidate.startFrame + candidate.durationFrames]))];
     const minimum = -Math.min(...members.map((member) => member.item.startFrame));
-    const created = new Map<string, ItemTrackAddition>();
     handle.setPointerCapture(pointerId);
     let active = false, animation = 0;
     let pointer = { x: startX, y: startY, alt: event.altKey };
-    let proposed: ItemMovePlan | undefined;
+    let proposed: ItemDropIntent | undefined;
 
     const locate = () => {
       if (!active) return;
       let delta = Math.max(minimum, Math.round((pointer.x - startX + viewport.scrollLeft - scrollLeft) / pixels));
       let aligned: number | undefined;
       if (snap && !pointer.alt) {
-        let best = Infinity;
+        let adjustment: number | undefined;
         for (const edge of members.flatMap((member) => [member.item.startFrame, member.item.startFrame + member.item.durationFrames])) {
           for (const boundary of boundaries) {
             const correction = boundary - (edge + delta);
-            if (Math.abs(correction * pixels) <= 7 && Math.abs(correction) < best && delta + correction >= minimum) {
-              best = Math.abs(correction); aligned = boundary; delta += correction;
+            if (Math.abs(correction * pixels) <= 7 && Math.abs(correction) < Math.abs(adjustment ?? Infinity)
+              && delta + correction >= minimum) {
+              adjustment = correction;
+              aligned = boundary;
             }
           }
         }
+        delta += adjustment ?? 0;
       }
 
       const rows = Array.from(viewport.querySelectorAll<HTMLElement>(".nle-track[data-track-id]"));
@@ -144,63 +133,15 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
         else targetIndex = rows.findIndex((row) => { const rect = row.getBoundingClientRect(); return y >= rect.top && y < rect.bottom; });
       }
 
-      let valid = inside && targetIndex >= 0;
-      const destinations = new Map<string, string>();
-      const additions: ItemTrackAddition[] = [];
-      let insertionTop: number | undefined;
-      const anchorIndex = scene.tracks.findIndex((candidate) => candidate.id === track.id);
-      const offset = (insertionIndex ?? targetIndex) - anchorIndex;
-
-      const additionAt = (index: number, kind: NleTimelineSceneTrack["kind"], key: string): ItemTrackAddition => {
-        const bounded = Math.max(0, Math.min(scene.tracks.length, index));
-        const cacheKey = `${key}:${kind}:${bounded}`;
-        let addition = created.get(cacheKey);
-        if (addition === undefined) {
-          const current = scene.tracks[bounded];
-          const previous = scene.tracks[bounded - 1];
-          const before = kind === "audio"
-            ? (current?.kind === "audio" ? current.id : undefined)
-            : (previous?.kind === "picture" ? previous.id : undefined);
-          addition = { id: newTrackId(), name: kind === "audio" ? "音频轨道" : "视频轨道", kind, ...(before === undefined ? {} : { before }) };
-          created.set(cacheKey, addition);
-        }
-        if (!additions.some((candidate) => candidate.id === addition!.id)) additions.push(addition);
-        const row = rows[Math.min(bounded, rows.length - 1)];
-        insertionTop = bounded >= rows.length
-          ? (rows.at(-1)?.offsetTop ?? 0) + (rows.at(-1)?.offsetHeight ?? 0)
-          : row?.offsetTop;
-        return addition;
-      };
-
-      for (const member of members) {
-        const sourceIndex = scene.tracks.findIndex((candidate) => candidate.id === member.track.id);
-        const desiredIndex = sourceIndex + offset;
-        let destination = scene.tracks[desiredIndex];
-        if (insertionIndex !== undefined && member.item.id === item.id) {
-          const addition = additionAt(insertionIndex, member.track.kind, "drop");
-          destinations.set(member.item.id, addition.id);
-          continue;
-        }
-        if (destination === undefined || destination.kind !== member.track.kind || destination.locked) {
-          destination = scene.tracks
-            .map((candidate, index) => ({ candidate, distance: Math.abs(index - desiredIndex) }))
-            .filter(({ candidate }) => candidate.kind === member.track.kind && !candidate.locked)
-            .sort((a, b) => a.distance - b.distance)[0]?.candidate;
-        }
-        if (destination === undefined) { valid = false; continue; }
-        const nextStart = member.item.startFrame + delta;
-        const collision = member.track.kind === "picture" && member.item.role === "present"
-          && destination.items.some((candidate) => !ids.has(candidate.id) && candidate.role === "present"
-            && overlaps(candidate, nextStart, member.item.durationFrames));
-        if (collision) {
-          const available = scene.tracks.find((candidate) => candidate.kind === member.track.kind && !candidate.locked
-            && candidate.items.every((other) => ids.has(other.id) || other.role !== "present"
-              || !overlaps(other, nextStart, member.item.durationFrames)));
-          if (available !== undefined) destination = available;
-          else destinations.set(member.item.id, additionAt(desiredIndex, member.track.kind, `overlap:${member.track.id}`).id);
-        }
-        if (!destinations.has(member.item.id)) destinations.set(member.item.id, destination.id);
-      }
+      const lane = scene.tracks[targetIndex];
+      const before = insertionIndex === undefined ? undefined : scene.tracks[insertionIndex]?.id;
+      const target: ItemDropIntent["target"] | undefined = insertionIndex !== undefined
+        ? { kind: "gap", ...(before === undefined ? {} : { before }) }
+        : lane === undefined ? undefined : { kind: "track", track: lane.id };
+      const valid = inside && target !== undefined;
+      const lastRow = rows.at(-1);
+      const insertionTop = insertionIndex === undefined ? undefined
+        : rows[insertionIndex]?.offsetTop ?? (lastRow === undefined ? undefined : lastRow.offsetTop + lastRow.offsetHeight);
 
       const floating = members.flatMap((member): FloatingItem[] => {
         const origin = origins.get(member.item.id);
@@ -208,9 +149,7 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
           kind: itemKind(member.item, member.track), left: origin.left + pointer.x - startX,
           top: origin.top + pointer.y - startY, width: origin.width, height: origin.height }];
       });
-      proposed = valid ? { ids: [...ids], deltaFrames: delta,
-        destinations: [...destinations].filter(([id, destination]) => members.find((member) => member.item.id === id)?.track.id !== destination)
-          .map(([movedItem, destination]) => ({ item: movedItem, track: destination })), additions } : undefined;
+      proposed = valid ? { anchor: item.id, items: seeds, deltaFrames: delta, target } : undefined;
       setGesture({ ids: [...ids], floating, valid, ...(insertionTop === undefined ? {} : { insertionTop }),
         ...(aligned === undefined ? {} : { snapFrame: aligned }) });
     };
@@ -246,7 +185,8 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
       if (next.pointerId !== pointerId) return;
       move(next); const accepted = proposed, wasActive = active; cleanup();
       if (!wasActive) { onSelect([...ids]); return; }
-      if (accepted !== undefined && (accepted.deltaFrames !== 0 || accepted.destinations.length > 0)) onMove(accepted);
+      if (accepted !== undefined && (accepted.deltaFrames !== 0
+        || accepted.target.kind === "gap" || accepted.target.track !== track.id)) onMove(accepted);
     };
     cancel.current = cleanup;
     window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);

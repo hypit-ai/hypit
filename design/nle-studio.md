@@ -87,6 +87,13 @@ ownership transaction or its UI.
 
 ## Local protocol and persistence
 
+Timeline dragging submits `timeline.drop` through `POST /api/operate`. The browser supplies selected Items, an
+anchor Item, a frame delta and a Track or gap. Studio follows View Groups and connected Transition and Matte
+endpoints, computes one exact time displacement and keeps each source lane together in relative visual order.
+It searches compatible unlocked Tracks and allocates new ones for gaps or when needed. The drop planner avoids
+new Picture Present collisions as a Studio editing policy. Audio intervals can mix on the selected Track.
+The Editing Surface commits Track creation and Item movement in one guarded transaction.
+
 The loopback server serves the client and same-origin JSON operations for finite observation, guarded Surface commands,
 save and reload. `POST /api/observe` accepts the Product Session's finite observation union. Initial `open` contains
 status, Timeline, Canvas, Composition navigation, Item-to-Media projection, Media, Catalog, Preview and delivery
@@ -133,8 +140,8 @@ stays process-local and is exposed through an opaque same-origin presentation re
 An Adjust materialization resolves one selected effect offering and creates an independently timed Item on a
 compatible Picture or Audio Track. A Transition materialization resolves one selected transition offering and an
 explicit pair of Present Items at a direct Picture cut. Its one atomic Project transaction moves the incoming Item by
-the chosen transition duration and adds the relation, so the Service never accepts an unowned overlap as an
-intermediate state. Existing overlaps, gaps and incompatible selections are rejected by current NLE structural rules.
+the chosen transition duration and adds the relation in one transaction. Transition materialization requires a
+direct cut between compatible Items.
 
 ## Package
 

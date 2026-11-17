@@ -35,6 +35,8 @@ catalog and exposes delivery Actions when an `HtmlVideoExecutor` is injected by 
 selects one finite projection. Mutations return compact receipts, and the browser rereads only invalidated projections.
 `GET /api/events` publishes document edits, Media Catalog changes and Delivery progress. On connection or reconnection,
 Studio reads the current open projection.
+Timeline drops use `POST /api/operate`. Studio resolves the selected Items, compatible unlocked Tracks, collisions
+and Track creation in one guarded edit.
 Audiovisual preview remains unavailable until a preview Executor port is supplied.
 
 Available entries in the browser Media bin can be placed at the current playhead. The client chooses a compatible

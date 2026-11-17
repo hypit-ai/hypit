@@ -28,6 +28,7 @@ import {
 } from "@hypit/nle/view";
 import {
   openNleEditingSurface,
+  NleEditingSurfaceRevisionConflict,
   type NleEditingSurface,
   type NleEditingSurfaceCommand,
   type NleEditingSurfaceReceipt,
@@ -47,6 +48,7 @@ import {
   createNleStudioPackageBridge,
   type NleStudioPackageBridge,
 } from "./packages.js";
+import { planTimelineDrop } from "./timeline-planning.js";
 import type {
   NleStudioAdjustMaterializeRequest,
   NleStudioCatalogProjection,
@@ -60,6 +62,7 @@ import type {
   NleStudioObservation,
   NleStudioObservationRequest,
   NleStudioOpenProjection,
+  NleStudioOperation,
   NleStudioOperationReceipt,
   NleStudioPreviewProjection,
   NleStudioTimelineProjection,
@@ -499,6 +502,25 @@ export class NleStudioProductSession {
   async command(command: NleEditingSurfaceCommand): Promise<NleStudioOperationReceipt> {
     this.#assertOpen();
     return this.#receipt(command.kind, this.#surface.command(command));
+  }
+
+  async operate(operation: NleStudioOperation): Promise<NleStudioOperationReceipt> {
+    this.#assertOpen();
+    const project = this.#projectLease.service.snapshot();
+    const view = this.#viewService.snapshot();
+    if (project.revision !== operation.expectedProjectRevision) {
+      throw new NleEditingSurfaceRevisionConflict("project", operation.expectedProjectRevision, project.revision);
+    }
+    if (view.revision !== operation.expectedViewRevision) {
+      throw new NleEditingSurfaceRevisionConflict("view", operation.expectedViewRevision, view.revision);
+    }
+    const plan = planTimelineDrop(project.project, view.view, operation);
+    const result = { track: plan.anchorTrack };
+    if (plan.commands.length === 0) return this.#observationReceipt(operation.kind, [], result);
+    return this.#receipt(operation.kind, this.#surface.command({
+      kind: "project.transact", expectedProjectRevision: project.revision, expectedViewRevision: view.revision,
+      commands: plan.commands,
+    }), result);
   }
 
   async placeMedia(request: NleStudioMediaPlaceRequest): Promise<NleStudioOperationReceipt> {

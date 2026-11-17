@@ -469,7 +469,7 @@ The current implementation already provides:
 
 The next backend capabilities are:
 
-1. semantic Product operations and server-side Timeline drop, insertion, gap, clipboard and nested-Composition planners;
+1. semantic Product operations for Timeline insertion, gap closure, clipboard and nested Composition;
 2. Media thumbnail, storyboard, waveform and audio-preview Actions;
 3. audiovisual frame/playback preview Actions and unified observation of the existing export Action.
 
@@ -495,10 +495,9 @@ Creating transport placeholders first would give the adapter authority over fact
 
 The backend continues along one production path in this order:
 
-1. move final Timeline drop allocation into one NLE Studio planner;
-2. add remaining planners supported by current NLE facts;
-3. connect Media-derived views and preview through selected Executors, and project the existing export lifecycle through the same Action observation shape;
-4. extend owner facts before exposing animation, audio-envelope and caption-source operations.
+1. add remaining planners supported by current NLE facts;
+2. connect Media-derived views and preview through selected Executors, and project the existing export lifecycle through the same Action observation shape;
+3. extend owner facts before exposing animation, audio-envelope and caption-source operations.
 
 At that point a frontend can concentrate on layout, pointer feedback, accessibility and interaction feel. It consumes
 authoritative results but does not reproduce the backend's ownership or planning rules.
