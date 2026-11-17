@@ -37,7 +37,7 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("NLE Studio observation request must be an object.");
   }
-  const request = value as { readonly kind?: unknown; readonly item?: unknown };
+  const request = record(value, "NLE Studio observation request");
   if (request.kind === "action") {
     const action = value as { readonly handle?: unknown };
     if (Object.keys(value).length !== 2 || !identity(action.handle)) {
@@ -46,6 +46,18 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
     return { kind: "action", handle: action.handle };
   }
   const keys = Object.keys(value);
+  if (request.kind === "timeline-media") {
+    const fields = ["kind", "composition", "expectedProjectRevision", "expectedViewRevision", "expectedMediaGeneration",
+      "tracks", "fromFrame", "toFrame"];
+    if (keys.some(key => !fields.includes(key)) || !identity(request.composition) || !Array.isArray(request.tracks)
+      || !request.tracks.every(identity) || request.tracks.length > 64
+      || ![request.expectedProjectRevision, request.expectedViewRevision, request.expectedMediaGeneration, request.fromFrame, request.toFrame]
+        .every(value => typeof value === "number" && Number.isSafeInteger(value) && value >= 0)
+      || Number(request.toFrame) <= Number(request.fromFrame)) {
+      throw new Error("NLE Studio Timeline Media observation requires revisions, Tracks and a positive visible range.");
+    }
+    return request as NleStudioObservationRequest;
+  }
   if (request.kind === "inspector" || request.kind === "component-inputs") {
     if (keys.some((key) => key !== "kind" && key !== "item") || typeof request.item !== "string"
       || request.item.length === 0) {
@@ -57,7 +69,7 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
   if (keys.length !== 1 || typeof request.kind !== "string" || !kinds.has(request.kind)) {
     throw new Error("NLE Studio observation kind is invalid.");
   }
-  return { kind: request.kind as Exclude<NleStudioObservationRequest["kind"], "inspector" | "component-inputs" | "action"> };
+  return { kind: request.kind as Exclude<NleStudioObservationRequest["kind"], "inspector" | "component-inputs" | "action" | "timeline-media"> };
 }
 
 function record(value: unknown, subject: string): Readonly<Record<string, unknown>> {

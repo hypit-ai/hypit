@@ -85,6 +85,21 @@ export type NleStudioTimelineProjection = {
   readonly itemMedia: readonly { readonly item: string; readonly media: string }[];
 };
 
+export type NleStudioTimelineMediaRequest = NleStudioCompositionOperation & {
+  readonly kind: "timeline-media";
+  readonly expectedMediaGeneration: number;
+  readonly tracks: readonly string[];
+  readonly fromFrame: number;
+  readonly toFrame: number;
+};
+
+export type NleStudioTimelineMediaView = {
+  readonly item: string;
+  readonly fromFrame: number;
+  readonly toFrame: number;
+  readonly action: NleStudioMediaActionRequest;
+};
+
 /** Complete finite projection used to open one NLE Studio Product Session. */
 export type NleStudioOpenProjection = {
   readonly project: { readonly name: string; readonly document: string };
@@ -106,6 +121,7 @@ export type NleStudioObservationRequest =
   | { readonly kind: "project" }
   | { readonly kind: "status" }
   | { readonly kind: "timeline" }
+  | NleStudioTimelineMediaRequest
   | { readonly kind: "canvas" }
   | { readonly kind: "inspector"; readonly item: string }
   | { readonly kind: "component-inputs"; readonly item: string }
@@ -121,6 +137,7 @@ export type NleStudioObservation =
   | { readonly kind: "project"; readonly value: NleStudioOpenProjection["project"] }
   | { readonly kind: "status"; readonly value: NleEditingSurfaceStatus }
   | { readonly kind: "timeline"; readonly value: NleStudioTimelineProjection }
+  | { readonly kind: "timeline-media"; readonly value: readonly NleStudioTimelineMediaView[] }
   | { readonly kind: "canvas"; readonly value: NleCanvasScene }
   | { readonly kind: "inspector"; readonly value: NleInspectorScene }
   | { readonly kind: "component-inputs"; readonly value: NleStudioComponentInputsProjection }

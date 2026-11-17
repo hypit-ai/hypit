@@ -65,6 +65,12 @@ materialization. In structural Canvas mode, an accepted
 image or video resource may be shown inside its Present Item's layout as source identification. This is a direct media
 resource projection, not Component or Operator evaluation and not an audiovisual preview frame.
 
+Timeline Media observation takes visible Tracks, an edit-frame interval, the Project and View revisions and the
+Media Catalog generation. It intersects the viewport with each visible occurrence and plans up to eight Media
+Actions. For constant pictures it requests a thumbnail. For a visible range within one forward affine source-time
+piece it maps to the accepted Media clock and requests storyboard or raw waveform pixels. Studio cancels pending
+requests when the visible range changes. Compiling the Programme remains a separate request.
+
 The session assembles NLE authoring, Timeline presentation and Inspector presentation contributions from the
 ProjectHost's already selected Package Environment. The NLE contracts validate and index those process-local
 capabilities; ProjectHost does not interpret them. NLE Studio additionally owns the finite `hypit.nle-component`,

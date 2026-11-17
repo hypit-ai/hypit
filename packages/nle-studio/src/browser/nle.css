@@ -314,6 +314,12 @@
 .nle-clip-thumbnails img { position: absolute; top: 0; height: 100%; object-fit: cover; pointer-events: none; animation: var(--fade-in); }
 @media (prefers-reduced-motion: reduce) { .nle-clip-thumbnails img { animation: none; } .nle-clip::after { transition: none; } }
 .nle-clip.with-audio .nle-clip-thumbnails { bottom: 12px; }
+.nle-clip-media { position: absolute; top: 16px; bottom: 0; display: flex; overflow: hidden; pointer-events: none; }
+.nle-clip-media > span { flex: 1; background-repeat: no-repeat; }
+.nle-clip-media > img { width: 100%; height: 100%; object-fit: cover; }
+.nle-clip-media.waveform { top: auto; height: 12px; mix-blend-mode: screen; opacity: .65; }
+.nle-clip-media.waveform > img { object-fit: fill; }
+.nle-clip.audio .nle-clip-media.waveform { top: 16px; height: auto; }
 .nle-clip.with-audio .nle-audio-waveform { top: auto; height: 12px; background: #3e6a6d; }
 .nle-trim { position: absolute; z-index: 4; width: 8px; top: 0; bottom: 0; cursor: ew-resize; }
 .nle-trim.start { left: 0; } .nle-trim.end { right: 0; }

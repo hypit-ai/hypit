@@ -14,6 +14,7 @@ import { useTimelineSeek } from "./useTimelineSeek.js";
 import { useTimelineZoom } from "./useTimelineZoom.js";
 import { useTrackReorder } from "./useTrackReorder.js";
 import { useItemGesture, type ItemDropIntent } from "./useItemGesture.js";
+import { TimelineMedia, useTimelineMedia } from "./TimelineMedia.js";
 
 type Gesture = {
   readonly item: NleTimelineSceneItem;
@@ -101,6 +102,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const scroller = useRef<HTMLDivElement>(null);
   const { zoom, changeZoom } = useTimelineZoom(scroller, labelWidth, scene.composition);
   const pixels = zoom / fps;
+  const mediaViews = useTimelineMedia(scroller, session, pixels, labelWidth);
   const [snap, setSnap] = useState(true), [tool, setTool] = useState<TimelineTool>("select");
   const [draft, setDraft] = useState<{ readonly id: string; readonly start: number; readonly duration: number }>();
   const [cutCursor, setCutCursor] = useState<{ readonly track: string; readonly frame: number }>();
@@ -233,6 +235,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
             }} onPointerLeave={() => setCutCursor(undefined)}>
               <span className="nle-clip-title"><span className="nle-clip-chip">{item.group && <Group size={11}/>} {scene.mattes.some(matte => matte.content === item.id || matte.matte === item.id) && <Link2 size={11}/>} {item.source === "composition" && <Layers size={11}/>} {item.display.title}</span>{kind !== "text" && <span className="nle-clip-chip">{timecode(current.duration, fps)}</span>}</span>
               {preview?.kind === "preview" && preview.state === "ready" && <span className="nle-clip-thumbnails"><img src={preview.resource} style={{ left: 0, width: "100%" }}/></span>}
+              {item.source === "media" && draft?.id !== item.id
+                && <TimelineMedia views={mediaViews} item={item.id} start={item.startFrame} frameWidth={pixels}/>}
               {text?.kind === "text" && <span className="nle-clip-text">{text.text}</span>}
               {item.affordances.trimStart && <div className="nle-trim start" aria-label="裁剪开头" onPointerDown={event => begin(event, item, "trim-start", track)}/>} {item.affordances.trimEnd && <div className="nle-trim end" aria-label="裁剪结尾" onPointerDown={event => begin(event, item, "trim-end", track)}/>}<div className={`nle-cut-line${tool === "cut" && cutCursor?.track === track.id && cutCursor.frame >= item.startFrame && cutCursor.frame <= item.startFrame + item.durationFrames ? " visible" : ""}`} style={{ left: ((cutCursor?.frame ?? item.startFrame) - item.startFrame) * pixels }}/>
             </div>; })}

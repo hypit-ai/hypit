@@ -101,6 +101,8 @@ and the current Media Catalog generation. Timed views take positions on the Asse
 The `programme-waveform` Action takes the active Composition, both revisions and a Programme frame range up
 to two minutes. It returns the peak PNG of the same mix used for playback and delivery. A waveform request can
 run alongside a frame or playback request.
+Studio's Timeline uses the `timeline-media` observation on scroll or resize and requests bounded thumbnail,
+storyboard and raw waveform resources for the visible portion of Media Presents.
 
 Timeline presentation resources use opaque `api/presentations/:resource` addresses and remain owned by the
 process-local package contribution.

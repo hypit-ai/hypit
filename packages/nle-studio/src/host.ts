@@ -68,6 +68,7 @@ import {
   type NleStudioPackageBridge,
 } from "./packages.js";
 import { allocateTimelinePlacement, planTimelineDrop, planTimelineEdit, planTimelineInsertion, studioFrameTime } from "./timeline-planning.js";
+import { observeTimelineMedia } from "./timeline-media.js";
 import { NleStudioPreview } from "./preview.js";
 import { NleStudioMediaViews } from "./media-views.js";
 import type {
@@ -556,6 +557,31 @@ export class NleStudioProductSession {
       case "project": return { kind: "project", value: this.#projectProjection() };
       case "status": return { kind: "status", value: this.#surface.status() };
       case "timeline": return { kind: "timeline", value: this.#timeline() };
+      case "timeline-media": {
+        const catalog = await this.#project.media.observe();
+        this.#assertOpen();
+        const snapshot = this.#projectLease.service.snapshot();
+        const { view, revision } = this.#viewService.snapshot();
+        if (snapshot.revision !== request.expectedProjectRevision) {
+          throw new NleEditingSurfaceRevisionConflict("project", request.expectedProjectRevision, snapshot.revision);
+        }
+        if (revision !== request.expectedViewRevision) {
+          throw new NleEditingSurfaceRevisionConflict("view", request.expectedViewRevision, revision);
+        }
+        if (catalog.generation !== request.expectedMediaGeneration) {
+          throw new NleStudioMediaRevisionConflict(request.expectedMediaGeneration, catalog.generation);
+        }
+        const composition = snapshot.project.compositions.find(value => value.id === request.composition);
+        if (composition === undefined || composition.id !== view.activeComposition) {
+          throw new Error(`NLE Studio Timeline Media targets inactive Composition ${request.composition}.`);
+        }
+        return {
+          kind: "timeline-media",
+          value: this.#mediaViews === undefined ? [] : observeTimelineMedia({
+            composition, rate: view.editRate, request, catalog, mediaIdentity: item => this.#mediaIdentity(item.asset.path, item.id),
+          }),
+        };
+      }
       case "canvas": return { kind: "canvas", value: this.#canvas() };
       case "inspector": {
         const observation = this.#surface.observe({ kind: "inspector", item: request.item });

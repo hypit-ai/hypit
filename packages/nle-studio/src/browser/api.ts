@@ -8,6 +8,7 @@ import type {
   NleStudioOpenProjection,
   NleStudioOperation,
   NleStudioOperationReceipt,
+  NleStudioTimelineMediaRequest,
 } from "../protocol.js";
 
 export function connectStudioEvents(input: {
@@ -60,6 +61,12 @@ export async function readInspector(item: string) {
   return { scene: scene.value, component: component.value };
 }
 
+export async function readTimelineMedia(value: NleStudioTimelineMediaRequest) {
+  const result = await observe(value);
+  if (result.kind !== "timeline-media") throw new Error("NLE Studio returned another observation kind for Timeline Media.");
+  return result.value;
+}
+
 export async function refreshOpen(
   current: NleStudioOpenProjection,
   change: Pick<NleStudioOperationReceipt, "invalidated"> & Partial<Pick<NleStudioOperationReceipt, "status">>,
@@ -90,6 +97,7 @@ export async function refreshOpen(
       case "status": next = { ...next, status: observation.value }; break;
       case "open":
       case "component-inputs":
+      case "timeline-media":
       case "action":
       case "inspector": throw new Error(`NLE Studio returned unexpected ${observation.kind} observation.`);
     }

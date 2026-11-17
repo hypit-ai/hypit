@@ -86,7 +86,7 @@ ApplicationHost
 | 缺失素材保持作者结构 | Media observation + NLE reference | Catalog 可报告 missing；NLE Reader 不依赖打开媒体即可保留 Item 时间与引用 | **已具备**。面向当前打开文档的受影响 Item 投影仍需补充 |
 | 移除 Project Media | Project Media Service Action | 当前 Service 没有删除操作，也不维护跨 Owner 反向引用 | **产品缺口**。若增加移除，调用者必须显式给出作用边界并由相关 Owner 校验引用 |
 | 原媒体按需读取 | Project resource capability | Project Resource Gateway 与 Studio resource route 支持 capability token 和 byte range | **已具备**，但只是资源读取，不等于解码后的逐帧/同步播放 |
-| 缩略图与 storyboard | Media Action | 以当前 Catalog generation、Media 时钟位置或范围取所选流；storyboard 提供样本到 atlas tile 的映射 | **已具备**后端；Timeline 可见 Item 范围尚未接入 |
+| 缩略图与 storyboard | Media Action + Timeline Media observation | 当前 revisions 和 Catalog generation 下，从可见轨道与时间范围规划派生 Action，按 atlas 样本显示 storyboard | **已具备**常量 Picture 及单段正向 source-time |
 | 波形 | Media/NLE Action | `media.waveform` 使用素材时钟；`programme-waveform` 使用当前 Composition 的混音图和节目时间范围 | **已具备** |
 | 音频试听 | Media/NLE playback Action | 素材可输出指定 Media 区间的 WAV；NLE 播放区间可包含混合音频 | **已具备**素材与节目试听；独立 occurrence 试听范围待定 |
 
@@ -359,6 +359,7 @@ POST       /api/reload
 - 跨 NLE 文档或 OS 剪贴板需要明确 Media、Shared Value 和 Composition 引用的导入与重绑边界。
 - 多轨复合与任意解除复合需要明确跨轨混合、Adjust 作用域、外层处理和非线性时间关系如何转写为父级作者事实。
 - 独立 occurrence 试听需明确是否包含所在 Track 的 Adjust、上层混音与 Reconstruction。
+- Timeline 素材条跨多时间映射片段时，需要按段表示留白、倒放、回绕和零速取样边。当前按需视图使用单段正向映射。
 
 ## 实现顺序
 
