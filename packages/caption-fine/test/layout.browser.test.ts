@@ -13,6 +13,10 @@ import { fixtureResource } from "../../../test/fixture-resource.js";
 import { fineCaptionStyle, renderFineCaption, scheduleFineCaption } from "../src/index.js";
 
 const executablePath = process.env.HYPIT_CAPTURE_TEST_BROWSER ?? await captureBrowserExecutablePath();
+const browserReady = existsSync(executablePath);
+const browserSkip = process.env.HYPIT_CAPTURE_BROWSER_TESTS === "0"
+  ? "Browser tests are disabled in the routine suite; run `node test/run.mjs browser`"
+  : !browserReady && "Selected capture browser is not prepared";
 
 function cueHtml(source: string, width: number, extra: Recipe["properties"]): string {
   const document = captionDocument(parseScript("layout", `<line>${source}</line>`), "caption", "story");
@@ -38,7 +42,7 @@ function cueHtml(source: string, width: number, extra: Recipe["properties"]): st
 }
 
 test("joined activation keeps complete Cue geometry through alignment and wrapping", {
-  skip: !existsSync(executablePath) && "Selected capture browser is not prepared",
+  skip: browserSkip,
 }, async () => {
   await withCapture({ launch: { executablePath } }, async ({ page }) => {
     for (const style of [{ align: "left" }, { align: "center" }, { align: "right" },
@@ -62,7 +66,7 @@ test("joined activation keeps complete Cue geometry through alignment and wrappi
 });
 
 test("joined backgrounds cover wrapped glyphs, preserve opacity and seek without stale geometry", {
-  skip: !existsSync(executablePath) && "Selected capture browser is not prepared",
+  skip: browserSkip,
 }, async () => {
   await withCapture({ launch: { executablePath } }, async ({ page }) => {
     for (const [source, width] of [["supercalifragilisticexpialidocious more", 170],

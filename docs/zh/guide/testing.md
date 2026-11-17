@@ -70,6 +70,12 @@ test("compiles the expected exports", async () => {
 |---|---|---|
 | `pnpm test:whisperx-service` | Python WhisperX 服务 | Python 3.13、uv、frozen sync |
 | `pnpm test:image-opencv` | OpenCV Transform 与 Compose | Provider 自带的解释器，位于 `packages/provider-image-opencv-local/runtime/.venv`；要用别的解释器就设 `HYPIT_OPENCV_PYTHON` |
+| `pnpm test:browser` | capture 浏览器的像素、录制与 CLI 截图 | 已准备的 capture 浏览器（`node bin/hypit.mjs capture install-browser`）、ffmpeg 与 ffprobe |
+
+`pnpm test` 仍会加载 capture 浏览器相关文件，但跳过其中依赖浏览器的测试。该浏览器在 pnpm 之外
+安装，CI 上没有；在已准备的机器上，它们会与常规测试同时启动多个 Chrome 实例。
+`pnpm test:browser` 显式启用这些测试并逐个文件运行，使每个测试保持单独运行时所测量的时间预算。
+这些文件里不依赖浏览器的断言仍由 `pnpm test` 执行，与 CI 完全一致。
 
 要运行本地 HTML 光栅化测试，先在当前 shell 环境中设置 `HYPIT_BROWSER_TESTS=1`，再从仓库根目录执行以下命令。需要可用的 Chrome、ffmpeg 和 ffprobe。
 

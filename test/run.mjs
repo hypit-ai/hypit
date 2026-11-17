@@ -34,6 +34,23 @@ const suites = {
       HYPIT_OPENCV_PYTHON: managedPython("packages/provider-image-opencv-local/runtime"),
     },
   },
+  /**
+   * Tests that start the capture browser depend on a Chrome for Testing installation that pnpm
+   * does not provide, so they are opt-in like the other environment-specific workloads. The
+   * ordinary suite still loads their files but runs only their browser-free assertions, which is
+   * exactly what CI does without a browser. Run this suite one file at a time: each file starts
+   * its own full Chrome, and concurrent instances turn fixed per-test budgets into scheduling
+   * lotteries. That matches the conditions each budget was measured under.
+   */
+  browser: {
+    files: [
+      "packages/browser-capture/test/capture.test.ts",
+      "packages/browser-capture/test/cli.test.ts",
+      "packages/caption-fine/test/layout.browser.test.ts",
+    ],
+    env: { HYPIT_CAPTURE_BROWSER_TESTS: "1" },
+    concurrency: 1,
+  },
 };
 
 const name = process.argv[2];
@@ -62,13 +79,23 @@ if (suite === undefined) {
  */
 const testTimeoutMs = 120_000;
 
+/** A suite may pin file concurrency when its files contend for the same external resource. */
+const concurrency = suite?.concurrency === undefined ? [] : [`--test-concurrency=${suite.concurrency}`];
+
+/**
+ * The routine suite disables tests that need a prepared capture browser, so a developer machine
+ * behaves like CI even when a browser happens to be installed. The browser suite enables them;
+ * running a file directly leaves the variable unset and keeps its usual detection.
+ */
+const routineEnv = { HYPIT_CAPTURE_BROWSER_TESTS: "0" };
+
 const result = spawnSync(process.execPath, [
-  "--import", "tsx", "--test", `--test-timeout=${testTimeoutMs}`, ...files,
+  "--import", "tsx", "--test", `--test-timeout=${testTimeoutMs}`, ...concurrency, ...files,
 ], {
   stdio: "inherit",
   windowsHide: true,
   // What the caller already chose wins: these are defaults for running the suite, not a policy.
-  env: { ...suite?.env, ...process.env },
+  env: { ...(suite?.env ?? routineEnv), ...process.env },
 });
 if (result.error !== undefined) throw result.error;
 process.exit(result.status ?? 1);

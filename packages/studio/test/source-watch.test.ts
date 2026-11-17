@@ -87,8 +87,10 @@ test("a filesystem Source watcher detects an atomic replacement save", async t =
   await rename(join(root, "replacement.tmp"), source);
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
+    // A file event normally arrives in milliseconds. This budget only bounds a watcher that never
+    // reports, and must sit above the scheduling delay the parallel suite adds on a busy machine.
     await Promise.race([event, new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error("Source replacement was not observed")), 3000);
+      timer = setTimeout(() => reject(new Error("Source replacement was not observed")), 10_000);
     })]);
   } finally {
     clearTimeout(timer);

@@ -232,6 +232,7 @@
     "test:runtime-scale": "node test/run.mjs runtime-scale",
     "test:whisperx-service": "uv run --project packages/provider-whisperx-local/runtime --frozen python -m unittest discover -s packages/provider-whisperx-local/test/service -p \"test_*.py\"",
     "test:image-opencv": "node test/run.mjs image-opencv",
+    "test:browser": "node test/run.mjs browser",
     "hypit": "node bin/hypit.mjs",
     "studio": "node bin/hypit.mjs studio",
     "prepack": "npm run build:public-types"
