@@ -54,6 +54,7 @@ import type {
   ProjectHostResourceResolution,
 } from "@hypit/project";
 import { captureStudioClipboard, planStudioPaste, type StudioClipboard } from "./clipboard.js";
+import { planCompound, planExplodeComposition, planUniqueComposition } from "./composition-planning.js";
 import {
   nleProjectOwnerProvider,
   nleViewOwnerProvider,
@@ -114,6 +115,8 @@ export const nleStudioProduct = "hypit.nle-studio";
 const unavailablePreview: NleStudioPreviewPort = {
   observe: () => ({ state: "unavailable" }),
 };
+
+type NestedVisit = { readonly parent: string; readonly child: string; readonly frame: number };
 
 function context(project: ProjectHost): ProjectHostContext {
   return {
@@ -180,6 +183,7 @@ export class NleStudioProductSession {
   #mediaGeneration = -1;
   #clipboard: StudioClipboard | undefined;
   #pastedGroups: { readonly composition: string; readonly groups: readonly NleEditGroup[] } | undefined;
+  #navigation: readonly NestedVisit[] = [];
   readonly #lifetime = new AbortController();
 
   get closed(): AbortSignal {
@@ -401,8 +405,10 @@ export class NleStudioProductSession {
     if (observation.kind !== "timeline") throw new Error("NLE Studio received an invalid Timeline projection.");
     const project = this.#projectLease.service.snapshot().project;
     const composition = project.compositions.find((value) => value.id === observation.value.composition)!;
+    const visit = this.#navigation.at(-1);
     return {
       scene: observation.value,
+      canReturn: visit?.child === composition.id && project.compositions.some(entry => entry.id === visit.parent),
       compositions: project.compositions.map((value) => ({ id: value.id, name: value.name })),
       itemMedia: composition.tracks.flatMap((track) => track.items.flatMap((item) => {
         if (item.kind !== "present" || item.source !== "media") return [];
@@ -617,6 +623,20 @@ export class NleStudioProductSession {
     const context = { project, view, composition };
     const currentItems = () => composition.tracks.flatMap(track => track.items);
     const identity = (role: string) => `${role}-${randomUUID()}`;
+    const navigate = (target: string, frame: number, next: readonly NestedVisit[]) => {
+      if (!project.compositions.some(entry => entry.id === target)) throw new Error(`Unknown NLE Composition ${target}.`);
+      const previous = this.#navigation;
+      this.#navigation = next;
+      try {
+        return this.#receipt(operation.kind, this.#surface.command({
+          kind: "view.transact", expectedProjectRevision: projectSnapshot.revision, expectedViewRevision: viewSnapshot.revision,
+          commands: [{ kind: "view.update", activeComposition: target }],
+        }), { composition: target, frame });
+      } catch (error) {
+        this.#navigation = previous;
+        throw error;
+      }
+    };
 
     switch (operation.kind) {
       case "timeline.drop": {
@@ -760,6 +780,37 @@ export class NleStudioProductSession {
         });
         return commit([...placement.commands, ...materialization.commands], { item, track: placement.track });
       }
+      case "composition.compound": {
+        const plan = planCompound(project, composition, operation.items, operation.name);
+        return commit(plan.commands, { item: plan.item, composition: plan.composition });
+      }
+      case "composition.make-unique": {
+        const plan = planUniqueComposition(project, composition, operation.item);
+        return commit(plan.commands, { item: plan.item, composition: plan.composition });
+      }
+      case "composition.explode": {
+        const plan = planExplodeComposition(project, composition, operation.item);
+        return commit(plan.commands, { item: plan.item, count: plan.count });
+      }
+      case "composition.select":
+        return operation.target === composition.id
+          ? commit([], { composition: composition.id })
+          : navigate(operation.target, 0, []);
+      case "composition.enter": {
+        const item = currentItems().find(entry => entry.id === operation.item);
+        if (item?.kind !== "present" || item.source !== "composition") {
+          throw new Error(`NLE Item ${operation.item} is not a Composition Present in ${composition.id}.`);
+        }
+        const previous = this.#navigation.at(-1)?.child === composition.id ? this.#navigation : [];
+        return navigate(item.composition, 0, [
+          ...previous, { parent: composition.id, child: item.composition, frame: operation.atFrame },
+        ]);
+      }
+      case "composition.return": {
+        const visit = this.#navigation.at(-1);
+        if (visit?.child !== composition.id) throw new Error(`NLE Studio has no parent visit for ${composition.id}.`);
+        return navigate(visit.parent, visit.frame, this.#navigation.slice(0, -1));
+      }
       case "audio.detach": {
         const source = currentItems().find(item => item.id === operation.item);
         if (source === undefined) throw new Error(`Unknown NLE Item ${operation.item} in Composition ${composition.id}.`);
@@ -860,6 +911,7 @@ export class NleStudioProductSession {
     this.#lifetime.abort();
     this.#clipboard = undefined;
     this.#pastedGroups = undefined;
+    this.#navigation = [];
     this.#unsubscribeSurface();
     this.#unsubscribeMedia();
     for (const unsubscribe of this.#deliverySubscriptions.values()) unsubscribe();

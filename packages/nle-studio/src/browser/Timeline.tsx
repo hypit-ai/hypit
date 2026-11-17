@@ -1,6 +1,6 @@
 import type { NleTimelineSceneItem, NleTimelineSceneTrack } from "@hypit/nle/view";
 import {
-  AudioLines, BetweenHorizontalStart, Blend, CircleMinus, CirclePlus, ClipboardCheck, Crop, Film, Group, Layers, Link2, Lock, Magnet,
+  ArrowLeft, AudioLines, BetweenHorizontalStart, Blend, CircleMinus, CirclePlus, ClipboardCheck, Crop, Film, Group, Layers, Link2, Lock, Magnet,
   PanelLeftClose, PanelRightClose, Plus, Redo2, Scan, Scissors, Snowflake, Trash2, Type, Undo2, Unlock,
   Volume2, VolumeX,
 } from "lucide-react";
@@ -67,7 +67,8 @@ function useMarquee(scroller: React.RefObject<HTMLDivElement | null>, selection:
 }
 
 export function Timeline({ session, frame, selection, busy, onSeek, onSelect, onMove, onTrim, onSplit, onRemove, onApplyPastedGroups,
-  onTrackEnabled, onTrackLocked, onTrackMove, onComposition, onAddTrack, onToggleGroup, canToggleGroup, grouped,
+  onTrackEnabled, onTrackLocked, onTrackMove, onComposition, onEnterComposition, onReturnComposition,
+  onCompound, onAddTrack, onToggleGroup, canToggleGroup, grouped,
   onDetachAudio, canDetachAudio, onUndo, onRedo }: {
   readonly session: NleStudioOpenProjection;
   readonly frame: number;
@@ -84,6 +85,9 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   readonly onTrackLocked: (track: string, locked: boolean) => void;
   readonly onTrackMove: (track: string, before?: string) => void;
   readonly onComposition: (composition: string) => void;
+  readonly onEnterComposition: (item: string) => void;
+  readonly onReturnComposition: () => void;
+  readonly onCompound: () => void;
   readonly onAddTrack: () => void;
   readonly onToggleGroup: () => void;
   readonly canToggleGroup: boolean;
@@ -198,7 +202,12 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
       <IconButton label="分离音频" disabled={busy || !canDetachAudio} onClick={onDetachAudio}><AudioLines size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="裁剪画面" disabled><Crop size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="定格" disabled><Snowflake size={18} strokeWidth={1.6}/></IconButton>
-      <IconButton label={nestedComposition ? "打开复合片段" : "复合片段"} disabled={busy || nestedComposition === undefined} onClick={() => nestedComposition && onComposition(nestedComposition)}><Layers size={18} strokeWidth={1.6}/></IconButton>
+      <IconButton label={nestedComposition !== undefined && selection.length === 1 ? "打开复合片段" : "建立复合片段"}
+        disabled={busy || selected === undefined}
+        onClick={() => nestedComposition !== undefined && selection.length === 1 && selected !== undefined
+          ? onEnterComposition(selected.id) : onCompound()}><Layers size={18} strokeWidth={1.6}/></IconButton>
+      {session.timeline.canReturn && <IconButton label="返回父 Composition" disabled={busy}
+        onClick={onReturnComposition}><ArrowLeft size={18} strokeWidth={1.6}/></IconButton>}
       <IconButton label={grouped ? "取消组合" : "组合"} className={grouped ? "active" : ""} disabled={busy || !canToggleGroup} onClick={onToggleGroup}><Group size={18} strokeWidth={1.6}/></IconButton><span className="nle-toolbar-space"/>
       <IconButton label="主轨道" disabled><BetweenHorizontalStart size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="吸附" className={snap ? "active" : ""} onClick={() => setSnap(value => !value)}><Magnet size={18} strokeWidth={1.6}/></IconButton>

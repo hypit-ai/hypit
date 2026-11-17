@@ -273,6 +273,14 @@ export function Studio() {
     const receipt = await operate(operation);
     await acceptReceipt(receipt, typeof receipt.result?.item === "string" ? receipt.result.item : undefined);
   });
+  const navigate = (operation: NleStudioOperation) => void perform(async () => {
+    const receipt = await operate(operation);
+    await acceptReceipt(receipt);
+    if (typeof receipt.result?.frame === "number") {
+      setFrame(Math.min(receipt.result.frame, sessionRef.current?.timeline.scene.maximumFrame ?? 0));
+      selectItems([]);
+    }
+  });
   const materialize = (entry: NleStudioComponentCatalogEntry) => place({
     ...operationContext, kind: "component.materialize", package: entry.package, offering: entry.offering, atFrame: frame,
   });
@@ -344,7 +352,10 @@ export function Studio() {
         onTrackEnabled={(track, enabled) => transact([{ kind: "track.update", id: track, enabled }])}
         onTrackLocked={(track, locked) => viewTransact([{ kind: "track-lock.set", composition: scene.composition, track, locked }])}
         onTrackMove={(track, before) => transact([{ kind: "track.move", id: track, ...(before === undefined ? {} : { before }) }])}
-        onComposition={composition => viewTransact([{ kind: "view.update", activeComposition: composition }])}
+        onComposition={target => navigate({ ...operationContext, kind: "composition.select", target })}
+        onEnterComposition={item => navigate({ ...operationContext, kind: "composition.enter", item, atFrame: frame })}
+        onReturnComposition={() => navigate({ ...operationContext, kind: "composition.return" })}
+        onCompound={() => place({ ...operationContext, kind: "composition.compound", items: selection, name: "复合片段" })}
         onAddTrack={() => transact([{ kind: "track.add", composition: scene.composition, track: { id: `track-${crypto.randomUUID().slice(0, 8)}`, name: "新轨道", kind: "picture", enabled: true, items: [] } }])}
         canToggleGroup={canToggleGroup} grouped={grouped} onToggleGroup={() => {
           if (!canToggleGroup) return;

@@ -148,6 +148,23 @@ function operationRequest(value: unknown): NleStudioOperation {
     case "composition.materialize":
       valid = currentFields("source", "atFrame", "track") && placement && identity(request.source);
       break;
+    case "composition.compound":
+      valid = currentFields("items", "name") && items !== undefined && items.length > 0
+        && typeof request.name === "string" && request.name.trim().length > 0;
+      break;
+    case "composition.make-unique":
+    case "composition.explode":
+      valid = currentFields("item") && identity(request.item);
+      break;
+    case "composition.select":
+      valid = currentFields("target") && identity(request.target);
+      break;
+    case "composition.enter":
+      valid = currentFields("item", "atFrame") && identity(request.item) && integer(request.atFrame, 0);
+      break;
+    case "composition.return":
+      valid = currentFields();
+      break;
     case "audio.detach":
       valid = currentFields("item", "track") && track && identity(request.item);
       break;

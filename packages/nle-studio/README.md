@@ -42,6 +42,9 @@ contiguous interval by selecting an explicit Track scope. Studio offers a separa
 if a Project edit invalidates a View reference.
 Studio handles Cmd/Ctrl+C, X and V through the session clipboard. Paste preserves relative timing and complete
 audiovisual relations within the open NLE document. The Timeline exposes a separate action for pasted View Groups.
+Studio can compound a contiguous single-Track selection and enter or return from a nested Composition. Returning
+restores the parent playhead. The backend also supports making a nested definition unique and exploding a
+full-duration, unmodified single-Track occurrence.
 Audiovisual preview remains unavailable until a preview Executor port is supplied.
 
 Available entries in the browser Media bin can be placed at the current playhead. Studio chooses a compatible Track,

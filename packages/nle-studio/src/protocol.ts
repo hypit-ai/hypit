@@ -76,6 +76,7 @@ export type NleStudioClipboardProjection = {
 
 export type NleStudioTimelineProjection = {
   readonly scene: NleTimelineScene;
+  readonly canReturn: boolean;
   readonly compositions: readonly { readonly id: string; readonly name: string }[];
   /** Active-Composition Media Items resolved to Project Media Catalog identities by the Product backend. */
   readonly itemMedia: readonly { readonly item: string; readonly media: string }[];
@@ -220,6 +221,11 @@ export type NleStudioOperation =
       readonly kind: "composition.materialize";
       readonly source: string;
     })
+  | (NleStudioCompositionOperation & { readonly kind: "composition.compound"; readonly items: readonly string[]; readonly name: string })
+  | (NleStudioCompositionOperation & { readonly kind: "composition.make-unique" | "composition.explode"; readonly item: string })
+  | (NleStudioCompositionOperation & { readonly kind: "composition.enter"; readonly item: string; readonly atFrame: number })
+  | (NleStudioCompositionOperation & { readonly kind: "composition.select"; readonly target: string })
+  | (NleStudioCompositionOperation & { readonly kind: "composition.return" })
   | (NleStudioCompositionOperation & { readonly kind: "audio.detach"; readonly item: string; readonly track?: string })
   | (NleStudioCompositionOperation & { readonly kind: "component-media.bind"; readonly item: string; readonly slot: string; readonly media: string })
   | (NleStudioCompositionOperation & { readonly kind: "component-media.unbind"; readonly item: string; readonly slot: string });

@@ -65,7 +65,7 @@ ApplicationHost
 | 轨道和拖放 | NLE Project、NLE View、NLE Studio planner | 底层事务已有；最终落点规划缺产品后端 |
 | 插入和磁吸 | NLE Project、产品编辑策略 | ripple 基础已有；插入、闭合和连续主轨 planner 不完整 |
 | 片段剪辑和关联 | NLE Project、NLE View | trim、split、move、detach 基础已有；联动范围仍需产品 planner |
-| 复制和复合片段 | Product Session clipboard、NLE Composition | 同一文档内 clipboard 与现有 Composition 物化已具备；compound planner 缺失 |
+| 复制和复合片段 | Product Session clipboard、NLE Composition | 同一文档内 clipboard、单轨 compound/explode、独立副本和 Session 导航已具备 |
 | 画面和动画 | NLE Picture layout、package Operator | frame、fit、focus 已有；其余画面处理和关键帧由 package value 表达，缺标准 package 与产品操作 |
 | 变速和定格 | NLE source time、Reconstruction | 精确时间映射和定格表达已有；缺产品 planner 与标准 Audio Reconstruction |
 | 转场 | NLE Transition、package Operator | 关系、物化和降低已有；编辑维护 planner 不完整 |
@@ -133,11 +133,11 @@ ApplicationHost
 | --- | --- | --- | --- |
 | 复制、剪切和粘贴 | Product Session clipboard + NLE Studio Operation | Session 保存选区；粘贴重建身份、精确时间和轨道分配 | **已具备**同一 NLE 文档内 |
 | 复制 Transition、Matte 和 Group | NLE Studio paste planner | 完整端点的 Transition/Matte 与 Project 一起粘贴；完整 Group 由一次显式 View 操作恢复 | **已具备** |
-| 建立复合片段 | NLE Composition + Operation | Project 支持多个 Composition，Composition Present 引用本地定义并拒绝循环 | **产品缺口**。缺少从选区构建 child Composition 和 parent occurrence 的原子 planner |
-| 进入与返回复合片段 | NLE View + Product Session interaction | View 可切换 active Composition；播放位置属于 Session | **产品缺口**。需要 navigation receipt 与 Session 播放位置栈 |
-| 复合片段独立副本 | NLE Studio Operation | Composition facts 可深复制并重写本地引用 | **产品缺口** |
+| 建立复合片段 | NLE Composition + Operation | `composition.compound` 把单轨连续 Present 和完整关系移动到 child，在原画面层级留下父 occurrence | **已具备**单轨路径 |
+| 进入与返回复合片段 | NLE View + Product Session interaction | enter/return 修改 active View，返回时恢复 Session 保存的父播放头位置 | **已具备** |
+| 复合片段独立副本 | NLE Studio Operation | make-unique 深复制本地定义关系并重绑当前 occurrence；保留显式 Project Media 和 Shared Value 引用 | **已具备** |
 | 外层移动、裁剪和变速 | Composition Present | occurrence 拥有独立 placement 与 source-time；Nested lowering 已实现 | **已具备**底层语义 |
-| 解除复合 | NLE Studio Operation | Nested lowering 已证明可求值语义，但没有把 child facts 提升到 parent 的 planner | **产品缺口** |
+| 解除复合 | NLE Studio Operation | explode 将单轨、全长、无额外时空变换或处理的 child 内容提升到原 parent 位置 | **已具备**可无歧义提升的路径 |
 
 ## 6. 画面和动画
 
@@ -359,6 +359,7 @@ POST       /api/reload
 - 一次压缩多个不相交空隙需要明确各段的联动范围和处理顺序。当前单空隙操作使用调用者提供的 Tracks。
 - 字幕源需要先确定引用和寿命，再开放导入和批量分轨。
 - 跨 NLE 文档或 OS 剪贴板需要明确 Media、Shared Value 和 Composition 引用的导入与重绑边界。
+- 多轨复合与任意解除复合需要明确跨轨混合、Adjust 作用域、外层处理和非线性时间关系如何转写为父级作者事实。
 
 ## 实现顺序
 

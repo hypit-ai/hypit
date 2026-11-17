@@ -110,6 +110,17 @@ or creates a new ordered set of Tracks in the active Composition. The Project ed
 Groups can then be applied by an explicit View operation with independent undo. Clipboard observations expose
 counts for copy and paste availability and pending Groups.
 
+Composition authoring can make a compound from one contiguous selection of Present Items in an enabled Track.
+The backend moves the selected Items and complete relations into a child with the same canvas and rebases their
+exact time. The parent occurrence occupies the selection's original paint position. Make-unique copies the
+referenced Composition tree and retargets the selected occurrence. Its Project Media and Shared Value references
+remain explicit shared references. Explode inserts a fresh copy of the children in the parent at the occurrence's
+position when the source has one matching Track and the occurrence is full-duration with identity time and layout.
+The source definition remains available to its other occurrences.
+
+Opening a Composition occurrence changes the active View and records the previous playhead in that Studio Session.
+Returning restores that frame. Selecting a Composition tab starts a fresh navigation path.
+
 The loopback server serves the client and same-origin JSON operations for finite observation, guarded Surface commands,
 save and reload. `POST /api/observe` accepts the Product Session's finite observation union. Initial `open` contains
 status, Timeline, Canvas, Composition navigation, Item-to-Media projection, Media, Catalog, Preview and delivery
