@@ -1,8 +1,9 @@
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
+import { nleLinearTimeMapping, type NleCommand } from "@hypit/nle";
 import type { NleInspectorScene } from "@hypit/nle/view";
 import { Blend, Captions, Images, Maximize2, Minimize2, Pause, Play, Redo2, Save, StepBack, StepForward, Type, Undo2, Volume2, VolumeX, Wand2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 import type {
   NleStudioAdjustCatalogEntry,
   NleStudioComponentCatalogEntry,
@@ -39,6 +40,13 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ErrorNotice } from "./ErrorNotice.js";
 import { enterMotion } from "./motion.js";
 import { useEditorPosition } from "./useEditorPosition.js";
+import { EditingHistory, type EditorFocus } from "./editingHistory.js";
+import { activeComposition as compositionOf, changeSpeed, closeTrackGaps, createCompound, duplicateCompound, editTransitionDuration, frameOf, frameTime, freezeItem, identity, magneticEdit, removeItems, reverseItems, rippleRemove, unpackCompound, type EditPlan } from "./editPlans.js";
+import { TransitionInspector } from "./TransitionInspector.js";
+import { TemporalInspector } from "./TemporalInspector.js";
+import { ProcessInspector } from "./ProcessInspector.js";
+import { catalogDragId, type CatalogDrag } from "./catalogDrag.js";
+import { EditorDialog } from "./EditorDialog.js";
 
 function exactFrame(frame: number, session: NleStudioSession): ExactTemporalValue {
   const rate = session.open.timeline.editRate;
@@ -57,21 +65,35 @@ function readPanelWidths(): typeof defaultPanelWidths {
 
 export function Studio() {
   const reduced = useReducedMotion();
-  const [session, setSession] = useState<NleStudioSession>();
+  const [session, updateSession] = useState<NleStudioSession>();
+  const sessionRef = useRef<NleStudioSession | undefined>(undefined);
+  const history = useRef(new EditingHistory());
+  const setSession = useCallback((next: NleStudioSession) => { history.current.observe(sessionRef.current, next); sessionRef.current = next; updateSession(next); }, []);
   const [failure, setFailure] = useState<string>();
   const [busy, setBusy] = useState(false);
-  const [selection, setSelection] = useState<readonly string[]>([]);
+  const [selection, updateSelection] = useState<readonly string[]>([]);
+  const selectionRef = useRef<readonly string[]>([]);
+  const setSelection = useCallback((value: SetStateAction<readonly string[]>) => { const next = typeof value === "function" ? value(selectionRef.current) : value; selectionRef.current = next; updateSelection(next); }, []);
+  const [transitionId, setTransitionId] = useState<string>();
   const [inspector, setInspector] = useState<NleInspectorScene>();
-  const [frame, setFrame] = useState(0);
+  const [frame, updateFrame] = useState(0);
+  const frameRef = useRef(0);
+  const setFrame = useCallback((value: SetStateAction<number>) => { const next = typeof value === "function" ? value(frameRef.current) : value; frameRef.current = next; updateFrame(next); }, []);
   const [playing, setPlaying] = useState(false);
+  useEffect(() => { const hide = () => { if (document.hidden) setPlaying(false); }; document.addEventListener("visibilitychange", hide); return () => document.removeEventListener("visibilitychange", hide); }, []);
   const [muted, setMuted] = useState(false);
+  const [primaryTrack, setPrimaryTrack] = useState<string>();
+  const primaryKey = session ? `hypit:nle:primary:${session.open.project.project.id}/${session.projectDocument.path}/${session.open.timeline.composition}` : undefined;
+  useEffect(() => { try { setPrimaryTrack(primaryKey ? localStorage.getItem(primaryKey) ?? undefined : undefined); } catch { setPrimaryTrack(undefined); } }, [primaryKey]);
+  const [renameProject, setRenameProject] = useState(false);
   const [binTab, setBinTab] = useState<BinTab>("assets");
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [panelWidths, setPanelWidths] = useState(readPanelWidths);
   const [source, setSource] = useState<NleStudioMediaEntry>();
   const workspace = useRef<HTMLDivElement>(null);
   const placeFromDrag = useRef<(drop: MediaDrop) => void>(() => undefined);
-  const assetDrag = useAssetDrag(session?.open.timeline, workspace, frame, busy, drop => placeFromDrag.current(drop), entry => { setPlaying(false); setSource(entry); });
+  const selectFromDrag = useRef<(entry: NleStudioMediaEntry) => void>(() => undefined);
+  const assetDrag = useAssetDrag(session?.open.timeline, workspace, frame, busy, drop => placeFromDrag.current(drop), entry => selectFromDrag.current(entry));
   useEditorPosition(session, { frame, selection, previewExpanded }, position => { setFrame(position.frame); setSelection(position.selection); setPreviewExpanded(position.previewExpanded); });
   const inflight = useRef(false);
   const clipboard = useRef(new Map<string, ItemClipboard>());
@@ -84,23 +106,34 @@ export function Studio() {
     });
   };
 
-  const perform = useCallback(async (operation: () => Promise<void>) => {
+  const focus = useCallback((): EditorFocus | undefined => sessionRef.current ? { composition: sessionRef.current.open.timeline.composition, frame: frameRef.current, selection: selectionRef.current } : undefined, []);
+  const perform = useCallback(async (operation: () => Promise<void>, recordHistory = true) => {
     if (inflight.current) return;
     inflight.current = true;
+    if (recordHistory) history.current.begin(focus());
     setBusy(true); setFailure(undefined); setPlaying(false);
     try { await operation(); }
     catch (error) { setFailure(error instanceof Error ? error.message : String(error)); }
-    finally { inflight.current = false; setBusy(false); }
-  }, []);
+    finally { if (recordHistory) history.current.finish(focus()); inflight.current = false; setBusy(false); }
+  }, [focus]);
 
-  useEffect(() => { void perform(async () => setSession(await readSession())); }, []);
+  useEffect(() => { void perform(async () => setSession(await readSession()), false); }, []);
+  const replayHistory = useCallback((direction: "undo" | "redo") => void perform(async () => {
+    const current = sessionRef.current;
+    if (!current || !history.current.available(current, direction)) return;
+    const restored = await history.current.replay(direction, current, sendCommand, setSession);
+    const next = sessionRef.current!;
+    if (restored && restored.composition === next.open.timeline.composition) { setFrame(restored.frame); setSelection(editableSelection(next.open.timeline, restored.selection)); }
+    else setSelection(previous => editableSelection(next.open.timeline, previous));
+  }, false), [perform, setSession, setFrame, setSelection]);
 
   const select = useCallback((ids: readonly string[]) => {
     setSelection(session === undefined ? [] : linkedSelection(session.open.timeline, ids));
-    setSource(undefined); setPlaying(false);
+    setSource(undefined); setPlaying(false); setTransitionId(undefined);
   }, [session]);
 
   useEffect(() => {
+    if (busy) return;
     const item = selection[0];
     if (item === undefined || !session?.open.timeline.tracks.some(track => track.items.some(candidate => candidate.id === item))) {
       setInspector(undefined); return;
@@ -110,7 +143,7 @@ export function Studio() {
       if (!disposed) { setInspector(undefined); setFailure(error instanceof Error ? error.message : String(error)); }
     });
     return () => { disposed = true; };
-  }, [selection[0], session?.open.status.projectRevision, session?.open.status.viewRevision]);
+  }, [selection[0], session?.open.status.projectRevision, session?.open.status.viewRevision, busy]);
 
   const command = useCallback((value: NleEditingSurfaceCommand, afterSelection?: readonly string[]) => void perform(async () => {
     const next = await sendCommand(value, session?.open.status.viewRevision);
@@ -120,9 +153,23 @@ export function Studio() {
 
   const transact = useCallback((commands: Extract<NleEditingSurfaceCommand, { kind: "project.transact" }>["commands"], afterSelection?: readonly string[]) => {
     if (session === undefined || commands.length === 0) return;
-    command({ kind: "project.transact", expectedProjectRevision: session.open.status.projectRevision,
-      expectedViewRevision: session.open.status.viewRevision, commands }, afterSelection);
-  }, [command, session]);
+    try {
+      command({ kind: "project.transact", expectedProjectRevision: session.open.status.projectRevision,
+        expectedViewRevision: session.open.status.viewRevision, commands: magneticEdit(session, commands, primaryTrack) }, afterSelection);
+    } catch (error) { setFailure(error instanceof Error ? error.message : String(error)); }
+  }, [command, session, primaryTrack]);
+
+  const applyPlan = useCallback((build: () => EditPlan) => void perform(async () => {
+    const plan = build(); let current = sessionRef.current!;
+    if (plan.commands.length) {
+      current = await sendCommand({ kind: "project.transact", expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision, commands: magneticEdit(current, plan.commands, primaryTrack) }, current.open.status.viewRevision);
+      setSession(current);
+    }
+    if (plan.viewCommands?.length) {
+      current = await sendCommand({ kind: "view.transact", expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision, commands: plan.viewCommands }); setSession(current);
+    }
+    setSelection(previous => editableSelection(current.open.timeline, plan.selection ?? previous));
+  }), [perform, primaryTrack, setSession, setSelection]);
 
   useClipClipboard({
     available: session !== undefined && !busy && source === undefined,
@@ -131,14 +178,13 @@ export function Studio() {
       if (!session) return;
       clipboard.current.set(token, copyItems(session, selection));
       while (clipboard.current.size > 10) clipboard.current.delete(clipboard.current.keys().next().value!);
-      if (cut) transact([{ kind: "item.remove", ids: editableSelection(session.open.timeline, selection) }], []);
+      if (cut) transact(removeItems(session, selection), []);
     },
     paste: token => {
       if (!session) return;
       const content = clipboard.current.get(token);
       if (!content) return;
-      try { const plan = pasteItems(session, content, frame); transact(plan.commands, plan.selection); }
-      catch (error) { setFailure(error instanceof Error ? error.message : String(error)); }
+      applyPlan(() => pasteItems(session, content, frame));
     },
   });
 
@@ -184,25 +230,33 @@ export function Studio() {
         if (event.code === "KeyZ" && !busy) {
           event.preventDefault();
           const direction = event.shiftKey ? "redo" : "undo";
-          if (session.open.status.projectHistory[direction === "redo" ? "canRedo" : "canUndo"]) command({ kind: direction === "redo" ? "project.redo" : "project.undo", expectedProjectRevision: session.open.status.projectRevision });
+          replayHistory(direction);
         }
         if (event.code === "KeyS") { event.preventDefault(); void perform(async () => setSession(await saveSession())); }
         return;
       }
-      if (event.code === "Space" && source === undefined) { event.preventDefault(); setPlaying(value => !value); }
+      if (event.code === "Space" && source === undefined) { event.preventDefault(); if (!event.repeat) setPlaying(value => !value); }
       if (event.key === "Escape") { setSource(undefined); setPreviewExpanded(false); }
       if (event.key === "Home" || event.key === "End") { event.preventDefault(); setPlaying(false); setFrame(event.key === "Home" ? 0 : Math.max(0, session.open.timeline.maximumFrame - 1)); }
+      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        event.preventDefault(); setPlaying(false);
+        const points = [...new Set([0, session.open.timeline.maximumFrame, ...session.open.timeline.tracks.flatMap(track => track.items.flatMap(item => [item.startFrame, item.startFrame + item.durationFrames]))])].sort((a, b) => a - b);
+        setFrame(event.key === "ArrowUp" ? points.findLast(value => value < frame) ?? 0 : points.find(value => value > frame) ?? frame);
+      }
       if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && source === undefined) {
         event.preventDefault(); setPlaying(false); const delta = (event.key === "ArrowLeft" ? -1 : 1) * (event.shiftKey ? 10 : 1);
         setFrame(value => Math.max(0, Math.min(session.open.timeline.maximumFrame, value + delta)));
       }
+      if ((event.key === "Delete" || event.key === "Backspace") && transitionId) {
+        event.preventDefault(); if (!busy) { try { transact(editTransitionDuration(session, transitionId, undefined).commands); setTransitionId(undefined); } catch (error) { setFailure(error instanceof Error ? error.message : String(error)); } } return;
+      }
       if ((event.key === "Delete" || event.key === "Backspace") && selection.length > 0) {
         event.preventDefault(); const ids = editableSelection(session.open.timeline, selection);
-        if (ids.length && !busy) transact([{ kind: "item.remove", ids }]);
+        if (ids.length && !busy) transact(removeItems(session, ids));
       }
     };
     window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key);
-  }, [selection, select, transact, session, frame, busy, source, command, perform, groupSelection]);
+  }, [selection, select, transact, session, frame, busy, source, command, perform, groupSelection, replayHistory, transitionId]);
 
   const activeItems = useMemo(() => new Set(session?.open.timeline.tracks.flatMap(track => track.items)
     .filter(item => frame >= item.startFrame && frame < item.startFrame + item.durationFrames && item.enabled)
@@ -228,34 +282,42 @@ export function Studio() {
   const selectedGroups = scene.groups.filter(group => group.items.some(item => selection.includes(item)));
   const grouped = selectedGroups.length === 1 && selectedGroups[0]!.items.every(item => selection.includes(item))
     && selection.every(item => selectedGroups[0]!.items.includes(item));
-  const canToggleGroup = selection.length > 1 || selectedGroups.length > 0;
-  const canDetachAudio = selection.length === 1 && selectedProjectItem?.kind === "present"
+  const writableSelection = editableSelection(scene, selection);
+  const canToggleGroup = writableSelection.length > 1 || writableSelection.length > 0 && selectedGroups.length > 0;
+  const canDetachAudio = selection.length === 1 && writableSelection.length === 1 && selectedProjectItem?.kind === "present"
     && selectedProjectItem.picture !== undefined && selectedProjectItem.audio !== undefined;
   const icons = { assets: Images, text: Type, subtitles: Captions, transitions: Blend, effects: Wand2 } as const;
   const tabNames = { assets: "素材", text: "文本", subtitles: "字幕", transitions: "转场", effects: "效果" } as const;
   const classes = `nle-editor${previewExpanded ? " nle-preview-expanded" : ""}`;
   const projectName = session.open.project.project.name;
+  const canUndo = history.current.available(session, "undo"), canRedo = history.current.available(session, "redo");
+  const selectedTransition = activeComposition.transitions.find(value => value.id === transitionId);
+  const selectedSceneItem = scene.tracks.flatMap(track => track.items).find(item => item.id === selection[0]);
+  const selectionLocked = scene.tracks.some(track => track.locked && track.items.some(item => selection.includes(item.id)));
   const inspectorEdit = (section: string, field: string, value: string | number | boolean) => {
     if (selection[0] === undefined) return;
     command({ kind: "inspector.edit", expectedProjectRevision: session.open.status.projectRevision,
       expectedViewRevision: session.open.status.viewRevision, item: selection[0], section, field, value });
   };
-  const materialize = (entry: NleStudioComponentCatalogEntry) => void perform(async () => {
-    const destination = scene.tracks.find(track => track.kind === "picture" && !track.locked);
-    if (destination === undefined) throw new Error("当前 Composition 没有可写的画面轨道。");
-    const item = `component-${crypto.randomUUID()}`;
-    const next = await materializeComponent({
-      expectedProjectRevision: session.open.status.projectRevision,
-      expectedViewRevision: session.open.status.viewRevision,
-      package: entry.package,
-      offering: entry.offering,
-      item,
-      composition: scene.composition,
-      track: destination.id,
-      atFrame: frame,
-    });
-    setSession(next);
-    setSelection([item]);
+  const ensureTrack = async (medium: "picture" | "audio", drop?: MediaDrop, empty = false) => {
+    let current = sessionRef.current!;
+    const timeline = current.open.timeline, composition = compositionOf(current);
+    const fits = (track: typeof timeline.tracks[number]) => !track.locked && track.kind === medium && (!empty || track.items.length === 0);
+    let destination = timeline.tracks.find(track => track.id === drop?.track && fits(track)) ?? (!drop?.track ? timeline.tracks.find(fits) : undefined);
+    if (!destination) {
+      const track = identity("track"), targetIndex = composition.tracks.findIndex(track => track.id === drop?.track);
+      const before = targetIndex >= 0 ? composition.tracks[targetIndex + 1]?.id : medium === "picture" ? composition.tracks.find(track => track.kind === "audio")?.id : undefined;
+      current = await sendCommand({ kind: "project.transact", expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision,
+        commands: [{ kind: "track.add", composition: timeline.composition, track: { id: track, name: medium === "picture" ? "画面轨道" : "音频轨道", kind: medium, enabled: true, items: [] }, ...(before ? { before } : {}) }] });
+      setSession(current); destination = current.open.timeline.tracks.find(value => value.id === track)!;
+    }
+    return { current, destination };
+  };
+  const materialize = (entry: NleStudioComponentCatalogEntry, drop?: MediaDrop) => void perform(async () => {
+    const { current, destination } = await ensureTrack("picture", drop, true), item = identity("component");
+    const next = await materializeComponent({ expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision,
+      package: entry.package, offering: entry.offering, item, composition: current.open.timeline.composition, track: destination.id, atFrame: drop?.frame ?? frame });
+    setSession(next); setSelection([item]); setSource(undefined); setFrame(drop?.frame ?? frame);
     setInspector((await readInspector(item)).inspector);
   });
   const placeProjectMedia = (entry: NleStudioMediaEntry, drop?: MediaDrop) => void perform(async () => {
@@ -283,6 +345,7 @@ export function Studio() {
             ? { before: activeComposition.tracks.find(candidate => candidate.kind === "audio")!.id } : {}),
         }],
       });
+      setSession(current);
       destination = current.open.timeline.tracks.find(candidate => candidate.id === track);
       if (destination === undefined) throw new Error("新建的媒体轨道没有出现在当前时间线中。");
     }
@@ -303,7 +366,6 @@ export function Studio() {
     setSelection([item]);
     setInspector((await readInspector(item)).inspector);
   });
-  placeFromDrag.current = drop => { const entry = session.media.entries.find(entry => entry.id === drop.id); if (entry) placeProjectMedia(entry, drop); };
   const importProjectMedia = (files: readonly File[]) => void perform(async () => {
     let next = session;
     for (const file of files) {
@@ -311,29 +373,37 @@ export function Studio() {
       setSession(next);
     }
   });
-  const materializeEffect = (entry: NleStudioAdjustCatalogEntry) => void perform(async () => {
-    const compatible = scene.tracks.filter(track => track.kind === entry.medium && !track.locked);
-    const destination = entry.medium === "picture" ? compatible.at(-1) : compatible[0];
-    if (destination === undefined) throw new Error(`当前 Composition 没有可写的${entry.medium === "picture" ? "画面" : "音频"}轨道。`);
-    const item = `adjust-${crypto.randomUUID()}`;
-    const next = await materializeAdjust({
-      expectedProjectRevision: session.open.status.projectRevision,
-      expectedViewRevision: session.open.status.viewRevision,
-      package: entry.package,
-      offering: entry.offering,
-      item,
-      composition: scene.composition,
-      track: destination.id,
-      atFrame: frame,
-    });
+  const materializeEffect = (entry: NleStudioAdjustCatalogEntry, drop?: MediaDrop) => void perform(async () => {
+    const currentComposition = compositionOf(sessionRef.current!);
+    const targetIds = drop?.item ? editableSelection(scene, [drop.item]) : drop ? [] : editableSelection(scene, selection);
+    const targets = currentComposition.tracks.flatMap(track => track.items.map(item => ({ track, item }))).filter(({ track, item }) => targetIds.includes(item.id) && (item.kind === "adjust" ? track.kind === entry.medium : Boolean(item[entry.medium])));
+    const { current, destination } = await ensureTrack(entry.medium, drop), item = identity("adjust");
+    let next = await materializeAdjust({ expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision,
+      package: entry.package, offering: entry.offering, item, composition: current.open.timeline.composition, track: destination.id, atFrame: drop?.frame ?? frame });
     setSession(next);
-    setSelection([item]);
-    setInspector((await readInspector(item)).inspector);
+    if (targets.length) {
+      const effect = compositionOf(next).tracks.flatMap(track => track.items).find(value => value.id === item);
+      if (effect?.kind !== "adjust") throw new Error("效果创建结果未包含调整项目。");
+      const commands: NleCommand[] = targets.map(({ item: target }) => target.kind === "adjust"
+        ? { kind: "item.replace", item: { ...target, operator: effect.operator, parameters: structuredClone(effect.parameters), controlTime: nleLinearTimeMapping(target.duration) } }
+        : { kind: "process.add", item: target.id, medium: entry.medium, process: { id: identity("process"), operator: effect.operator, parameters: structuredClone(effect.parameters), enabled: true, controlTime: nleLinearTimeMapping(target.duration) } });
+      commands.push({ kind: "item.remove", ids: [item] });
+      next = await sendCommand({ kind: "project.transact", expectedProjectRevision: next.open.status.projectRevision, expectedViewRevision: next.open.status.viewRevision, commands }, next.open.status.viewRevision);
+      setSession(next); setSelection(targets.map(({ item }) => item.id));
+    } else setSelection([item]);
+    setSource(undefined);
   });
-  const materializeSelectedTransition = (entry: NleStudioTransitionCatalogEntry) => void perform(async () => {
-    if (selection.length !== 2) throw new Error("添加转场前需要选择同一画面轨道上直接相接的两个片段。");
+  const materializeSelectedTransition = (entry: NleStudioTransitionCatalogEntry, drop?: MediaDrop) => void perform(async () => {
+    let selected = selection;
+    if (drop) {
+      const track = activeComposition.tracks.find(track => track.id === drop.track);
+      const candidates = (track?.items ?? []).filter(item => item.kind === "present").flatMap(outgoing => (track?.items ?? []).filter(incoming => incoming.kind === "present" && frameOf(session, incoming.start) === frameOf(session, outgoing.start) + frameOf(session, outgoing.duration)).map(incoming => ({ outgoing, incoming, distance: Math.abs(frameOf(session, incoming.start) - drop.frame) }))).sort((a, b) => a.distance - b.distance);
+      if (!candidates[0]) throw new Error("请将转场拖到同一画面轨道上直接相接的两个片段之间。");
+      selected = [candidates[0].outgoing.id, candidates[0].incoming.id];
+    }
+    if (selected.length !== 2) throw new Error("添加转场前需要选择同一画面轨道上直接相接的两个片段。");
     const items = activeComposition.tracks.flatMap(track => track.items.map(item => ({ track, item })))
-      .filter(candidate => selection.includes(candidate.item.id));
+      .filter(candidate => selected.includes(candidate.item.id));
     if (items.length !== 2 || items[0]!.track.id !== items[1]!.track.id || items[0]!.track.kind !== "picture") {
       throw new Error("转场需要同一画面轨道上的两个片段。");
     }
@@ -357,21 +427,25 @@ export function Studio() {
     setSession(next);
   });
 
+  const catalogDrags: CatalogDrag[] = [...session.catalog.components.map(entry => ({ kind: "component" as const, entry })), ...session.catalog.adjusts.map(entry => ({ kind: "effect" as const, entry })), ...session.catalog.transitions.map(entry => ({ kind: "transition" as const, entry }))];
+  const placeCatalog = (value: CatalogDrag, drop?: MediaDrop) => { if (value.kind === "component") materialize(value.entry, drop); else if (value.kind === "effect") materializeEffect(value.entry, drop); else materializeSelectedTransition(value.entry, drop); };
+  placeFromDrag.current = drop => { const catalog = catalogDrags.find(value => catalogDragId(value) === drop.id); if (catalog) placeCatalog(catalog, drop); else { const entry = session.media.entries.find(entry => entry.id === drop.id); if (entry) placeProjectMedia(entry, drop); } };
+  selectFromDrag.current = entry => { const catalog = catalogDrags.find(value => catalogDragId(value) === entry.id); if (catalog) placeCatalog(catalog); else { setPlaying(false); setSource(entry); } };
   return <motion.div ref={workspace} className="nle-workspace nle-active" {...enterMotion(reduced)}
       onDragOver={event => { if (event.dataTransfer.types.includes("Files")) { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; } }}
       onDrop={event => { if (!event.defaultPrevented && event.dataTransfer.files.length) { event.preventDefault(); event.stopPropagation(); importProjectMedia(Array.from(event.dataTransfer.files)); } }}><div className={classes} style={{
     "--nle-bin-preferred": `${panelWidths.bin}px`,
     "--nle-properties-preferred": `${panelWidths.properties}px`,
   } as React.CSSProperties}>
-      <div className="nle-titlebar"><div className="nle-titlebar-side"><small>{session.open.status.projectDirty || session.open.status.viewDirty ? "未保存" : "已保存"}</small></div><strong>{projectName}</strong><div className="nle-titlebar-side end"><div className="nle-toolbar-actions">
-        <IconButton label="撤销" disabled={busy || !session.open.status.projectHistory.canUndo} onClick={() => command({ kind: "project.undo", expectedProjectRevision: session.open.status.projectRevision })}><Undo2 size={16}/></IconButton>
-        <IconButton label="重做" disabled={busy || !session.open.status.projectHistory.canRedo} onClick={() => command({ kind: "project.redo", expectedProjectRevision: session.open.status.projectRevision })}><Redo2 size={16}/></IconButton>
-        <button className="button" disabled={busy} onClick={() => void perform(async () => { setSession(await reloadSession()); select([]); })}>重载</button>
+      <div className="nle-titlebar"><div className="nle-titlebar-side"><small>{session.open.status.projectDirty || session.open.status.viewDirty ? "未保存" : "已保存"}</small></div><button type="button" className="nle-titlebar-name" disabled={busy} onClick={() => setRenameProject(true)} title="重命名项目">{projectName}</button><div className="nle-titlebar-side end"><div className="nle-toolbar-actions">
+        <IconButton label="撤销" disabled={busy || !canUndo} onClick={() => replayHistory("undo")}><Undo2 size={16}/></IconButton>
+        <IconButton label="重做" disabled={busy || !canRedo} onClick={() => replayHistory("redo")}><Redo2 size={16}/></IconButton>
+        <button className="button" disabled={busy} onClick={() => void perform(async () => { setSession(await reloadSession()); history.current.reset(); select([]); })}>重载</button>
         <button className="button primary" disabled={busy || !session.open.status.projectDirty && !session.open.status.viewDirty} onClick={() => void perform(async () => setSession(await saveSession()))}><Save size={14}/>保存</button>
       </div></div></div>
-      <ErrorNotice message={failure} onClose={() => setFailure(undefined)}/>
+      <ErrorNotice message={failure} onClose={() => setFailure(undefined)}/>{renameProject && <EditorDialog title="重命名项目" initialName={projectName} onClose={() => setRenameProject(false)} onSubmit={name => transact([{ kind: "project.update", name }])}/>}
       <div className="nle-upper">
-        <aside className="nle-bin"><div className="nle-bin-tabs" role="tablist">{(Object.keys(icons) as BinTab[]).map(id => { const Icon = icons[id]; return <button type="button" role="tab" aria-selected={binTab === id} key={id} onClick={() => setBinTab(id)}><Icon size={18} strokeWidth={1.6}/><span>{tabNames[id]}</span></button>; })}</div><AnimatePresence mode="popLayout" initial={false}><motion.div key={binTab} className="nle-bin-body" {...enterMotion(reduced)}><StudioBin tab={binTab} catalog={session.catalog} media={session.media} disabled={busy} onImportMedia={importProjectMedia} onPlaceMedia={placeProjectMedia} selectedMedia={source?.id} onPreviewMedia={entry => { setPlaying(false); setSource(entry); }} onBeginMediaDrag={assetDrag.start} onMaterialize={materialize} onMaterializeAdjust={materializeEffect} onMaterializeTransition={materializeSelectedTransition}/></motion.div></AnimatePresence></aside>
+        <aside className="nle-bin"><div className="nle-bin-tabs" role="tablist">{(Object.keys(icons) as BinTab[]).map(id => { const Icon = icons[id]; return <button type="button" role="tab" aria-selected={binTab === id} key={id} onClick={() => setBinTab(id)}><Icon size={18} strokeWidth={1.6}/><span>{tabNames[id]}</span></button>; })}</div><AnimatePresence mode="popLayout" initial={false}><motion.div key={binTab} className="nle-bin-body" {...enterMotion(reduced)}><StudioBin tab={binTab} catalog={session.catalog} media={session.media} disabled={busy} onImportMedia={importProjectMedia} onPlaceMedia={placeProjectMedia} selectedMedia={source?.id} onPreviewMedia={entry => { setPlaying(false); setSource(entry); }} onBeginMediaDrag={assetDrag.start} onBeginPresetDrag={(event, value) => assetDrag.start(event, { id: catalogDragId(value), name: value.entry.title, kind: value.kind === "effect" && value.entry.medium === "audio" ? "audio" : "picture", state: "available" })} onMaterialize={materialize} onMaterializeAdjust={materializeEffect} onMaterializeTransition={materializeSelectedTransition}/></motion.div></AnimatePresence></aside>
         <PanelResizeHandle side="bin" label="调整素材面板宽度" width={panelWidths.bin} onResize={(width, save) => resizePanel("bin", width, save)}/>
         <section className="nle-monitor"><div className="nle-panel-header nle-monitor-title"><span>{projectName}</span><IconButton label={previewExpanded ? "恢复预览" : "放大预览"} onClick={() => setPreviewExpanded(value => !value)}>{previewExpanded ? <Minimize2 size={15}/> : <Maximize2 size={15}/>}</IconButton></div>
           <SourcePreview entry={source} fps={fps} muted={muted} onMute={() => setMuted(value => !value)} onClose={() => setSource(undefined)}/><div className="nle-stage"><div className="nle-editable-preview" style={{ "--canvas-ratio": session.open.canvas.canvas.width / session.open.canvas.canvas.height } as React.CSSProperties}><div className="studio-canvas">
@@ -385,9 +459,15 @@ export function Studio() {
           <div className="nle-transport"><span className="nle-transport-time"><span className="current">{timecode(frame, fps)}</span><span className="separator">/</span><span className="total">{timecode(scene.maximumFrame, fps)}</span></span><button className="nle-play" aria-label={playing ? "暂停" : "播放"} onClick={() => setPlaying(value => !value)}>{playing ? <Pause size={18}/> : <Play size={18}/>}</button><span className="nle-transport-actions"><IconButton label="上一帧" onClick={() => { setPlaying(false); setFrame(value => Math.max(0, value - 1)); }}><StepBack size={15}/></IconButton><IconButton label="下一帧" onClick={() => { setPlaying(false); setFrame(value => Math.min(scene.maximumFrame, value + 1)); }}><StepForward size={15}/></IconButton><IconButton label="静音" onClick={() => setMuted(value => !value)}>{muted ? <VolumeX size={15}/> : <Volume2 size={15}/>}</IconButton></span></div>
         </section>
         <PanelResizeHandle side="properties" label="调整属性面板宽度" width={panelWidths.properties} onResize={(width, save) => resizePanel("properties", width, save)}/>
-        <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist"><button role="tab" aria-selected="true">属性</button></div><AnimatePresence mode="popLayout" initial={false}><motion.div key={inspector?.item ?? "empty"} className="nle-panel-body" {...enterMotion(reduced)}><Inspector scene={inspector} disabled={busy} onEdit={inspectorEdit}/></motion.div></AnimatePresence></aside>
+        <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist"><button role="tab" aria-selected="true">属性</button></div><AnimatePresence mode="popLayout" initial={false}><motion.div key={transitionId ?? selection[0] ?? "empty"} className="nle-panel-body" {...enterMotion(reduced)}>{selectedTransition ? <TransitionInspector duration={Math.round(frameOf(session, projectItems.get(selectedTransition.outgoing)!.duration) + frameOf(session, projectItems.get(selectedTransition.outgoing)!.start) - frameOf(session, projectItems.get(selectedTransition.incoming)!.start))} disabled={busy || selectionLocked} onDuration={value => applyPlan(() => editTransitionDuration(session, selectedTransition.id, value))} onRemove={() => { applyPlan(() => editTransitionDuration(session, selectedTransition.id, undefined)); setTransitionId(undefined); }}/>
+            : <Inspector scene={inspector} disabled={busy} onEdit={inspectorEdit}/>}{!selectedTransition && selectedProjectItem && selectedSceneItem && <><TemporalInspector item={selectedProjectItem} start={selectedSceneItem.startFrame} duration={selectedSceneItem.durationFrames} disabled={busy || selectionLocked}
+            onStart={value => transact([{ kind: "item.move", ids: editableSelection(scene, selection), delta: frameTime(session, value - selectedSceneItem.startFrame) }])}
+            onDuration={value => transact([{ kind: "item.trim", id: selectedProjectItem.id, edge: "end", at: frameTime(session, selectedSceneItem.startFrame + value) }])}
+            onSpeed={value => applyPlan(() => changeSpeed(session, selection, value))} onReverse={() => applyPlan(() => reverseItems(session, selection))}
+            onSlip={value => transact(editableSelection(scene, selection).map(id => ({ kind: "item.slip", id, delta: frameTime(session, value) })))}
+            onFreeze={() => applyPlan(() => freezeItem(session, selectedProjectItem, frame))}/><ProcessInspector item={selectedProjectItem} disabled={busy || selectionLocked} onEdit={transact}/></>}</motion.div></AnimatePresence></aside>
       </div>
-      <AnimatePresence mode="popLayout" initial={false}><Timeline key={`${session.projectDocument.path}/${scene.composition}`} session={session} frame={frame} selection={selection} busy={busy} onSeek={value => { setPlaying(false); setSource(undefined); setFrame(value); }} onSelect={select}
+      <AnimatePresence mode="popLayout" initial={false}><Timeline key={`${session.projectDocument.path}/${scene.composition}`} session={session} frame={frame} selection={selection} busy={busy} onSelectTransition={setTransitionId} selectedTransition={transitionId} onSeek={value => { setPlaying(false); setSource(undefined); setFrame(value); }} onSelect={select}
         draggedMedia={assetDrag.drag?.entry} mediaDrop={assetDrag.drag?.drop}
         onMove={plan => transact([
           ...plan.additions.map(addition => ({ kind: "track.add" as const, composition: scene.composition,
@@ -399,7 +479,7 @@ export function Studio() {
         onTrim={(item, edge, atFrame) => transact([{ kind: "item.trim", id: item.id, edge, at: exactFrame(atFrame, session) }])}
         onTrimSelection={(items, edge, atFrame) => transact(items.map(item => ({ kind: "item.trim", id: item.id, edge, at: exactFrame(atFrame, session) })))}
         onSplit={(items, atFrame) => transact(items.map(item => ({ kind: "item.split", id: item.id, at: exactFrame(atFrame, session), rightId: `split-${crypto.randomUUID()}` })))}
-        onRemove={() => { const ids = editableSelection(scene, selection); if (ids.length) transact([{ kind: "item.remove", ids }]); }}
+        onRemove={() => { const ids = editableSelection(scene, selection); if (ids.length) transact(removeItems(session, ids)); }}
         onTrackEnabled={(track, enabled) => transact([{ kind: "track.update", id: track, enabled }])}
         onTrackLocked={(track, locked) => viewTransact([{ kind: "track-lock.set", composition: scene.composition, track, locked }])}
         onTrackMove={(track, before) => transact([{ kind: "track.move", id: track, ...(before === undefined ? {} : { before }) }])}
@@ -417,7 +497,27 @@ export function Studio() {
               audioItemId: `audio-item-${crypto.randomUUID().slice(0, 8)}`, track },
           ]);
         }}
-        onUndo={() => command({ kind: "project.undo", expectedProjectRevision: session.open.status.projectRevision })}
-        onRedo={() => command({ kind: "project.redo", expectedProjectRevision: session.open.status.projectRevision })}/></AnimatePresence>
+        primaryTrack={primaryTrack} onTrackMagnet={track => {
+          const next = primaryTrack === track ? undefined : track;
+          if (next) applyPlan(() => closeTrackGaps(session, next));
+          setPrimaryTrack(next); try { if (primaryKey) { if (next) localStorage.setItem(primaryKey, next); else localStorage.removeItem(primaryKey); } } catch {}
+        }}
+        canUndo={canUndo} canRedo={canRedo} onUndo={() => replayHistory("undo")} onRedo={() => replayHistory("redo")}
+        onCompositionCreate={(name, canvas) => void perform(async () => {
+          const id = identity("composition"); let current = sessionRef.current!;
+          current = await sendCommand({ kind: "project.transact", expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision, commands: [{ kind: "composition.add", composition: { id, name, canvas, tracks: [], transitions: [], mattes: [] } }] }); setSession(current);
+          current = await sendCommand({ kind: "view.transact", expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision, commands: [{ kind: "view.update", activeComposition: id }] }); setSession(current); setSelection([]); setFrame(0);
+        })}
+        onCompositionEdit={(name, canvas) => transact([{ kind: "composition.update", id: scene.composition, name, canvas }])}
+        onCompositionRoot={() => transact([{ kind: "project.update", rootComposition: scene.composition }])}
+        onCompositionRemove={() => transact([{ kind: "composition.remove", id: scene.composition }], [])}
+        onCreateCompound={() => applyPlan(() => createCompound(session, selection, "复合片段"))}
+        onDuplicateCompound={id => { const item = projectItems.get(id); if (item) applyPlan(() => duplicateCompound(session, item, frame)); }}
+        onUnpackCompound={id => { const item = projectItems.get(id); if (item) applyPlan(() => unpackCompound(session, item)); }}
+        onRippleRemove={ids => applyPlan(() => rippleRemove(session, ids))}
+        onCloseGaps={(track, at) => applyPlan(() => closeTrackGaps(session, track, at))}
+        onTrackRename={(id, name) => transact([{ kind: "track.update", id, name }])}
+        onTrackRemove={id => { const track = activeComposition.tracks.find(track => track.id === id); if (track) transact([...removeItems(session, track.items.map(item => item.id)), { kind: "track.remove", id }]); }}
+        onTrackHeight={(track, heightPx) => viewTransact([{ kind: "track-height.set", composition: scene.composition, track, heightPx }])}/></AnimatePresence>
     </div><AnimatePresence>{assetDrag.drag && <motion.div className="studio-asset-floating" initial={{ opacity: 0 }} animate={{ opacity: assetDrag.drag.drop ? 1 : .6 }} exit={{ opacity: 0 }} style={{ left: assetDrag.drag.x + 12, top: assetDrag.drag.y + 12 }}>{assetDrag.drag.entry.name}</motion.div>}</AnimatePresence></motion.div>;
 }

@@ -1,14 +1,14 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Check as CheckIcon, ChevronDown, ChevronUp, Triangle } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
-import { expandMotion } from "./motion.js";
+import { enterMotion, expandMotion } from "./motion.js";
 
 export function Section({ title, children, defaultOpen = true }: { readonly title: ReactNode; readonly children: ReactNode; readonly defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   const reduced = useReducedMotion();
-  return <section className="nle-section"><header className="nle-section-header">
+  return <motion.section className="nle-section" {...enterMotion(reduced)}><header className="nle-section-header">
     <button type="button" className="nle-section-title" aria-expanded={open} onClick={() => setOpen(value => !value)}><span>{title}</span><Triangle size={7} fill="currentColor" strokeWidth={0} className={open ? "" : "collapsed"}/></button>
-  </header><AnimatePresence initial={false}>{open && <motion.div className="nle-section-body" {...expandMotion(reduced)}><div className="nle-section-content">{children}</div></motion.div>}</AnimatePresence></section>;
+  </header><AnimatePresence initial={false}>{open && <motion.div className="nle-section-body" {...expandMotion(reduced)}><div className="nle-section-content">{children}</div></motion.div>}</AnimatePresence></motion.section>;
 }
 
 export function Row({ label, children }: { readonly label: ReactNode; readonly children: ReactNode }) {

@@ -1,3 +1,4 @@
+import { AnimatePresence } from "motion/react";
 import type { NleInspectorField, NleInspectorScene } from "@hypit/nle/view";
 import { NumberField, Row, Section, Toggle } from "./controls.js";
 import { useRef, useState } from "react";
@@ -49,7 +50,7 @@ export function Inspector({ scene, disabled, onEdit }: {
   readonly onEdit: (section: string, field: string, value: string | number | boolean) => void;
 }) {
   if (scene === undefined) return <p className="nle-empty">选择一个时间线项目以检查属性</p>;
-  return <>{scene.sections.map(section => <Section title={section.label} key={section.id}>
+  return <AnimatePresence initial={false}>{scene.sections.map(section => <Section title={section.label} key={section.id}>
     {section.fields.map(field => <Field key={`${scene.item}/${field.id}`} section={section.id} field={field} disabled={disabled} onEdit={onEdit}/>) }
-  </Section>)}</>;
+  </Section>)}</AnimatePresence>;
 }

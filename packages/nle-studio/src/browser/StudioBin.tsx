@@ -8,6 +8,7 @@ import type {
   NleStudioMediaProjection,
   NleStudioTransitionCatalogEntry,
 } from "../protocol.js";
+import type { CatalogDrag } from "./catalogDrag.js";
 import { IconButton } from "./common.js";
 import { MediaThumbnail } from "./MediaThumbnail.js";
 
@@ -20,7 +21,9 @@ function Empty({ children }: { readonly children: React.ReactNode }) {
   return <p className="nle-preset-empty">{children}</p>;
 }
 
-function Browser({ heading, entries, empty, onSelect }: {
+function Browser({ heading, entries, empty, onSelect, disabled, onBeginDrag }: {
+  readonly disabled: boolean;
+  readonly onBeginDrag: (event: PointerEvent, id: string) => void;
   readonly heading: string;
   readonly entries: readonly { readonly id: string; readonly name: string; readonly detail?: string; readonly kind: "text" | "transition" | "effect" | "subtitle" }[];
   readonly empty: string;
@@ -28,7 +31,7 @@ function Browser({ heading, entries, empty, onSelect }: {
 }) {
   const [query, setQuery] = useState("");
   const filtered = entries.filter(entry => entry.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
-  return <div className="nle-bin-split"><nav className="nle-bin-side"><button type="button" aria-pressed="true">{heading}</button></nav><div className="nle-bin-main"><div className="nle-bin-toolbar"><label className="nle-preset-search"><Search size={14}/><input value={query} placeholder="搜索" onChange={event => setQuery(event.target.value)}/></label></div><div className="nle-bin-label">{heading}</div>{filtered.length === 0 ? <Empty>{empty}</Empty> : <div className="nle-preset-grid">{filtered.map(entry => <article className="nle-preset" key={entry.id}><button type="button" className={`nle-preset-preview studio-preset ${entry.kind}`} onClick={() => onSelect(entry.id)}><span>{entry.kind === "text" ? <Type size={22}/> : entry.kind === "transition" ? <Blend size={22}/> : entry.kind === "subtitle" ? <Captions size={22}/> : <Wand2 size={22}/>}</span>{entry.detail && <small>{entry.detail}</small>}</button><IconButton className="nle-preset-add" label="添加到时间线" onClick={() => onSelect(entry.id)}><Plus size={14}/></IconButton><span className="nle-preset-name">{entry.name}</span></article>)}</div>}</div></div>;
+  return <div className="nle-bin-split"><nav className="nle-bin-side"><button type="button" aria-pressed="true">{heading}</button></nav><div className="nle-bin-main"><div className="nle-bin-toolbar"><label className="nle-preset-search"><Search size={14}/><input value={query} placeholder="搜索" onChange={event => setQuery(event.target.value)}/></label></div><div className="nle-bin-label">{heading}</div>{filtered.length === 0 ? <Empty>{empty}</Empty> : <div className="nle-preset-grid">{filtered.map(entry => <article className="nle-preset" key={entry.id}><button type="button" className={`nle-preset-preview studio-preset ${entry.kind}`} disabled={disabled} onPointerDown={event => onBeginDrag(event, entry.id)} onClick={event => { if (event.detail === 0) onSelect(entry.id); }}><span>{entry.kind === "text" ? <Type size={22}/> : entry.kind === "transition" ? <Blend size={22}/> : entry.kind === "subtitle" ? <Captions size={22}/> : <Wand2 size={22}/>}</span><small>{entry.name}</small></button><IconButton className="nle-preset-add" label="添加到时间线" disabled={disabled} onClick={() => onSelect(entry.id)}><Plus size={14}/></IconButton><span className="nle-preset-name">{entry.name}</span></article>)}</div>}</div></div>;
 }
 
 function Assets({ media, disabled, onImport, onPlace, onPreview, onBeginDrag, selected }: {
@@ -58,7 +61,7 @@ function Assets({ media, disabled, onImport, onPlace, onPreview, onBeginDrag, se
 }
 
 export function StudioBin({
-  tab, catalog, media, disabled, onImportMedia, onPlaceMedia, onMaterialize, onMaterializeAdjust, onMaterializeTransition, onPreviewMedia, onBeginMediaDrag, selectedMedia,
+  tab, catalog, media, disabled, onImportMedia, onPlaceMedia, onMaterialize, onMaterializeAdjust, onMaterializeTransition, onPreviewMedia, onBeginMediaDrag, onBeginPresetDrag, selectedMedia,
 }: {
   readonly tab: BinTab;
   readonly catalog: NleStudioCatalogProjection;
@@ -67,6 +70,7 @@ export function StudioBin({
   readonly onImportMedia: (files: readonly File[]) => void;
   readonly onPlaceMedia: (entry: NleStudioMediaEntry) => void;
   readonly onPreviewMedia: (entry: NleStudioMediaEntry) => void;
+  readonly onBeginPresetDrag: (event: PointerEvent, value: CatalogDrag) => void;
   readonly onBeginMediaDrag: (event: PointerEvent, entry: NleStudioMediaEntry) => void;
   readonly selectedMedia: string | undefined;
   readonly onMaterialize: (entry: NleStudioComponentCatalogEntry) => void;
@@ -93,7 +97,12 @@ export function StudioBin({
     return [];
   }, [catalog, tab]);
   if (tab === "assets") return <Assets media={media} disabled={disabled} onImport={onImportMedia} onPlace={onPlaceMedia} onPreview={onPreviewMedia} onBeginDrag={onBeginMediaDrag} selected={selectedMedia}/>;
-  return <Browser heading={labels[tab]} entries={values} empty={tab === "text" ? "项目没有选择文本或图形组件" : tab === "subtitles" ? "项目没有选择字幕组件" : tab === "transitions" ? "项目没有选择转场" : "项目没有选择效果"} onSelect={id => {
+  return <Browser heading={labels[tab]} entries={values} disabled={disabled} onBeginDrag={(event, id) => {
+    const [packageName, offering] = id.split("\u0000");
+    if (tab === "effects") { const entry = catalog.adjusts.find(entry => entry.package === packageName && entry.offering === offering); if (entry) onBeginPresetDrag(event, { kind: "effect", entry }); }
+    else if (tab === "transitions") { const entry = catalog.transitions.find(entry => entry.package === packageName && entry.offering === offering); if (entry) onBeginPresetDrag(event, { kind: "transition", entry }); }
+    else { const entry = catalog.components.find(entry => entry.package === packageName && entry.offering === offering); if (entry) onBeginPresetDrag(event, { kind: "component", entry }); }
+  }} empty={tab === "text" ? "项目没有选择文本或图形组件" : tab === "subtitles" ? "项目没有选择字幕组件" : tab === "transitions" ? "项目没有选择转场" : "项目没有选择效果"} onSelect={id => {
     const [packageName, offering] = id.split("\u0000");
     if (tab === "effects") {
       const entry = catalog.adjusts.find(candidate => candidate.package === packageName && candidate.offering === offering);

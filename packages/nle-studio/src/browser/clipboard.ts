@@ -1,5 +1,6 @@
 import type { NleCommand, NleItem, NleMatte, NleProcess, NleTrack, NleTransition } from "@hypit/nle";
 import { addExactTemporalValues, compareExactTemporalValues, subtractExactTemporalValues } from "@hypit/temporal/algebra";
+import type { NleEditGroup, NleViewCommand } from "@hypit/nle/view";
 import type { NleStudioSession } from "../protocol.js";
 import { editableSelection } from "./selection.js";
 
@@ -8,6 +9,7 @@ export type ItemClipboard = {
   readonly tracks: readonly NleTrack[];
   readonly transitions: readonly NleTransition[];
   readonly mattes: readonly NleMatte[];
+  readonly groups?: readonly NleEditGroup[];
 };
 
 function renewProcesses<T extends { readonly processes?: readonly NleProcess[] }>(appearance: T): T {
@@ -24,12 +26,14 @@ export function copyItems(session: NleStudioSession, selection: readonly string[
     tracks: composition.tracks.map(track => ({ ...track, items: track.items.filter(item => ids.has(item.id)) })).filter(track => track.items.length),
     transitions: composition.transitions.filter(value => ids.has(value.outgoing) && ids.has(value.incoming)),
     mattes: composition.mattes.filter(value => ids.has(value.content) && ids.has(value.matte)),
+    groups: session.open.timeline.groups.filter(group => group.items.every(id => ids.has(id))),
   });
 }
 
 export function pasteItems(session: NleStudioSession, clipboard: ItemClipboard, frame: number): {
   readonly commands: readonly NleCommand[];
   readonly selection: readonly string[];
+  readonly viewCommands?: readonly NleViewCommand[];
 } {
   if (clipboard.project !== session.open.project.project.id) throw new Error("请在同一项目内粘贴片段。");
   const items = clipboard.tracks.flatMap(track => track.items);
@@ -69,5 +73,5 @@ export function pasteItems(session: NleStudioSession, clipboard: ItemClipboard, 
     transition: { ...transition, id: `transition-${crypto.randomUUID()}`, outgoing: names.get(transition.outgoing)!, incoming: names.get(transition.incoming)! } });
   for (const matte of clipboard.mattes) commands.push({ kind: "matte.add", composition: composition.id,
     matte: { ...matte, id: `matte-${crypto.randomUUID()}`, content: names.get(matte.content)!, matte: names.get(matte.matte)! } });
-  return { commands, selection: [...names.values()] };
+  return { commands, selection: [...names.values()], viewCommands: (clipboard.groups ?? []).map(group => ({ kind: "group.add", composition: composition.id, group: { ...group, id: `group-${crypto.randomUUID()}`, items: group.items.map(id => names.get(id)!) } })) };
 }

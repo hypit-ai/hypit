@@ -32,7 +32,8 @@ export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObjec
               .filter(value => Math.abs(value - at) * pixels <= 7).sort((a, b) => Math.abs(a - at) - Math.abs(b - at))[0];
             at = boundary ?? at;
           }
-          drop = { id: entry.id, frame: at, ...(track ? { track: track.id } : {}) };
+          const item = document.elementFromPoint(pointer.x, pointer.y)?.closest<HTMLElement>("[data-clip-id]")?.dataset.clipId;
+          drop = { id: entry.id, frame: at, ...(track ? { track: track.id } : {}), ...(item ? { item } : {}) };
         }
       }
       setDrag({ entry, x: pointer.x, y: pointer.y, ...(drop ? { drop } : {}) });
