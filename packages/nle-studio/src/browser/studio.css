@@ -1,8 +1,8 @@
 #studio { width: 100%; height: 100%; overflow: hidden; }
+.nle-editor, .nle-bin, .nle-properties, .nle-monitor { position: relative; }
 .nle-workspace > .nle-editor { padding-top: 0; }
 .nle-titlebar small { color: var(--muted); font-size: var(--font-size-caption); }
 .nle-titlebar .icon-button { width: 28px; min-width: 28px; height: 28px; }
-.studio-error { margin: 0 0 8px; padding: 7px 12px; border-radius: 6px; color: var(--error); background: var(--error-soft); font-size: var(--font-size-caption); }
 
 /* Current Surface canvas contents; the surrounding player and transform chrome are the transplanted NLE frontend. */
 .nle-editable-preview { position: relative; flex: none; width: min(100cqw, calc(100cqh * var(--canvas-ratio))); aspect-ratio: var(--canvas-ratio); }
@@ -22,3 +22,31 @@
 .studio-library-thumbnail { color: var(--muted); }
 .studio-preset { display: flex; width: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: var(--text); }
 .studio-preset small { max-width: 90%; overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+
+.nle-stage { position: relative; }
+.studio-source-preview { position: absolute; inset: 48px 0 0; z-index: 15; display: flex; flex-direction: column; padding: 10px; background: var(--nle-media-bg); }
+.studio-source-preview header { display: flex; flex: none; align-items: center; gap: 12px; min-width: 0; padding-bottom: 10px; }
+.studio-source-preview header > span { overflow: hidden; color: var(--text); text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-size-caption); }
+.studio-source-content { display: flex; flex: 1; align-items: center; justify-content: center; min-width: 0; min-height: 0; overflow: hidden; }
+.studio-source-content > img, .studio-source-content > video { display: block; width: 100%; height: 100%; object-fit: contain; }
+.studio-source-audio { display: flex; align-items: center; flex-direction: column; gap: 24px; width: min(100%, 420px); color: var(--muted); }
+.studio-source-audio audio { width: 100%; }
+.studio-library-thumbnail video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.studio-media-drop { pointer-events: none; visibility: hidden; opacity: 0; transition: opacity .15s, visibility .15s; }
+.studio-media-drop.visible { visibility: visible; opacity: .7; }
+.studio-asset-floating { position: fixed; z-index: 100; max-width: 220px; overflow: hidden; padding: 12px 16px; border: 1px solid var(--pink); border-radius: 6px; background: var(--surface); color: var(--text); font-size: var(--font-size-caption); text-overflow: ellipsis; white-space: nowrap; pointer-events: none; box-shadow: var(--shadow); }
+.nle-clip:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .studio-media-drop { transition: none; } }
+.studio-dialog-backdrop { position: fixed; inset: 0; z-index: 200; background: #0008; transition: opacity .2s; }
+.studio-dialog { position: fixed; z-index: 201; top: 50%; left: 50%; translate: -50% -50%; width: min(400px, calc(100vw - 32px)); padding: 24px; background: var(--surface); color: var(--text); transition: opacity .2s, scale .2s; }
+.studio-dialog-backdrop[data-starting-style], .studio-dialog-backdrop[data-ending-style], .studio-dialog[data-starting-style], .studio-dialog[data-ending-style] { opacity: 0; }
+.studio-dialog[data-starting-style], .studio-dialog[data-ending-style] { scale: .96; }
+.studio-dialog h2 { margin: 0 0 20px; font-size: 18px; }
+.studio-dialog form, .studio-dialog label { display: flex; flex-direction: column; gap: 8px; }
+.studio-dialog form { gap: 16px; }
+.studio-dialog input { width: 100%; min-width: 0; box-sizing: border-box; }
+.studio-dialog-size { display: flex; gap: 16px; }
+.studio-dialog-size label { flex: 1; min-width: 0; }
+.studio-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.nle-titlebar-name { color: inherit; font-weight: 600; border: 0; background: transparent; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .studio-dialog, .studio-dialog-backdrop { transition: none; } }

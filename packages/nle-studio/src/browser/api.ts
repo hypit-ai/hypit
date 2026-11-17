@@ -23,8 +23,26 @@ export function readSession(): Promise<NleStudioSession> {
   return request("api/session");
 }
 
-export function sendCommand(command: NleEditingSurfaceCommand): Promise<NleStudioSession> {
-  return request("api/command", { command });
+export async function sendCommand(command: NleEditingSurfaceCommand, currentViewRevision?: number): Promise<NleStudioSession> {
+  try {
+    return await request("api/command", { command });
+  } catch (error) {
+    const projectMutation = command.kind === "project.transact" || command.kind === "project.undo" || command.kind === "project.redo";
+    const staleView = error instanceof Error && /^NLE View (?:Group .+ references missing Item |Composition .+ references missing Track |references missing Composition |active Composition .+ does not exist)/u.test(error.message);
+    const viewRevision = "expectedViewRevision" in command ? command.expectedViewRevision : currentViewRevision;
+    if (!projectMutation || !staleView || viewRevision === undefined) throw error;
+    // A Project edit can be accepted before the product's subsequent View projection fails.
+    // Reconcile that exact resulting revision without resubmitting the Project mutation.
+    try {
+      return await request("api/command", { command: {
+        kind: "view.reconcile",
+        expectedProjectRevision: command.expectedProjectRevision + 1,
+        expectedViewRevision: viewRevision,
+      } });
+    } catch {
+      throw error;
+    }
+  }
 }
 
 export function placeMedia(value: NleStudioMediaPlaceRequest): Promise<NleStudioSession> {

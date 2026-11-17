@@ -6,7 +6,7 @@ export const minZoom = 4, maxZoom = 4000;
 
 export function rowSize(row: NleTimelineSceneTrack | undefined): number {
   if (row === undefined) return rowHeight;
-  return row.heightPx <= compactRowHeight || row.items.every(item => item.role === "adjust") ? compactRowHeight : row.heightPx;
+  return row.heightPx;
 }
 
 export function rowOffset(rows: readonly NleTimelineSceneTrack[], index: number): number {
