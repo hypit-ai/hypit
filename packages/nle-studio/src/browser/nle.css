@@ -214,6 +214,9 @@
 .nle-button-bar button:hover:not(:disabled) { background: var(--nle-hover-fill); }
 .nle-button-bar button[aria-pressed=true] { color: var(--pink); }
 .nle-button-bar button:disabled { color: var(--nle-icon-disabled); }
+.nle-picture-alignment { display: flex; gap: 8px; min-width: 0; }
+.nle-picture-alignment .nle-button-bar { flex-wrap: nowrap; min-width: 0; }
+.nle-picture-alignment .nle-button-bar button { flex-shrink: 1; min-width: 0; }
 .nle-color { display: flex; align-items: center; gap: 8px; flex: none; width: 112px; height: 28px; padding: 0 6px; border-radius: 4px; background: var(--nle-field); font-size: var(--font-size-caption); cursor: pointer; }
 .nle-color input { width: 18px; height: 18px; min-height: 0; padding: 0; border: 0; border-radius: 3px; background: transparent; cursor: pointer; }
 .nle-text-inspector { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }

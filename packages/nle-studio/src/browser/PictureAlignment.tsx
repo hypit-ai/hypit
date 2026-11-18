@@ -1,7 +1,7 @@
 import type { NleCanvas, NlePictureFrame } from "@hypit/nle";
 import { AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical } from "lucide-react";
 import { IconButton } from "./common.js";
-import { Row, Section } from "./controls.js";
+import { Section } from "./controls.js";
 
 export function PictureAlignment({ canvas, frame, disabled, onTranslate }: {
   readonly canvas: NleCanvas;
@@ -20,13 +20,15 @@ export function PictureAlignment({ canvas, frame, disabled, onTranslate }: {
     { label: "底部对齐", Icon: AlignEndHorizontal, y: canvas.height - frame.height },
   ];
   return <Section title="画面对齐">
-    <Row label="水平"><div className="nle-button-bar">{horizontal.map(({ label, Icon, x }) =>
-      <IconButton key={label} label={label} disabled={disabled || x === frame.x} onClick={() => onTranslate(x - frame.x, 0)}>
-        <Icon size={16}/>
-      </IconButton>)}</div></Row>
-    <Row label="垂直"><div className="nle-button-bar">{vertical.map(({ label, Icon, y }) =>
-      <IconButton key={label} label={label} disabled={disabled || y === frame.y} onClick={() => onTranslate(0, y - frame.y)}>
-        <Icon size={16}/>
-      </IconButton>)}</div></Row>
+    <div className="nle-picture-alignment">
+      <div className="nle-button-bar" role="group" aria-label="水平对齐">{horizontal.map(({ label, Icon, x }) =>
+        <IconButton key={label} label={label} disabled={disabled || x === frame.x} onClick={() => onTranslate(x - frame.x, 0)}>
+          <Icon size={16}/>
+        </IconButton>)}</div>
+      <div className="nle-button-bar" role="group" aria-label="垂直对齐">{vertical.map(({ label, Icon, y }) =>
+        <IconButton key={label} label={label} disabled={disabled || y === frame.y} onClick={() => onTranslate(0, y - frame.y)}>
+          <Icon size={16}/>
+        </IconButton>)}</div>
+    </div>
   </Section>;
 }
