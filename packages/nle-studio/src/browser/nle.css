@@ -38,6 +38,7 @@
 .nle-titlebar-side { display: flex; min-width: 0; }
 .nle-titlebar-side.end { justify-content: flex-end; }
 .nle-toolbar-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.nle-toolbar-actions .icon-button:hover:not(:disabled):not(.selected) { background: var(--nle-hover-fill); }
 
 /* Upper panels */
 .nle-upper { --nle-bin-width: min(var(--nle-bin-preferred, 560px), 46cqw); --nle-properties-width: min(var(--nle-properties-preferred, 360px), 30cqw);
