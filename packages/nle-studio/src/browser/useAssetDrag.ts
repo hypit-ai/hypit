@@ -32,7 +32,7 @@ export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObjec
           if (viewport.dataset.snap === "true" && !pointer.alt) {
             const boundary = [0, frame, ...scene.tracks.flatMap(track => track.items.flatMap(item => [item.startFrame, item.startFrame + item.durationFrames]))]
               .filter(value => Math.abs(value - at) * pixels <= 7).sort((a, b) => Math.abs(a - at) - Math.abs(b - at))[0];
-            at = boundary ?? at;
+            if (boundary !== undefined) at = Math.round(boundary);
           }
           const item = document.elementFromPoint(pointer.x, pointer.y)?.closest<HTMLElement>("[data-clip-id]")?.dataset.clipId;
           if (cuts === undefined) {
