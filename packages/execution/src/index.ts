@@ -1,6 +1,9 @@
 export type JsonValue = null | boolean | number | string | readonly JsonValue[] | { readonly [key: string]: JsonValue };
 
 export type InvocationAddress = { readonly environment: string; readonly invocation: string };
+export class InvocationIdentityConflict extends Error {
+  constructor(readonly address: InvocationAddress) { super(`Invocation ${address.invocation} already exists in ${address.environment}.`); }
+}
 export type InvocationRequest = {
   readonly capability: string;
   readonly input: JsonValue;
@@ -90,6 +93,7 @@ export type ExecutionClient = {
   quote(request: InvocationRequest, options?: { readonly inputs?: QuoteInputs; readonly signal?: AbortSignal }): Promise<ExecutionQuote>;
   start(request: InvocationRequest, options?: {
     readonly inputs?: Readonly<Record<string, ExecutionResourceSource>>;
+    readonly invocation?: string;
     readonly signal?: AbortSignal;
   }): Promise<InvocationAddress>;
   get(address: InvocationAddress): Promise<InvocationObservation | undefined>;

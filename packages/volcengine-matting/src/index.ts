@@ -10,6 +10,11 @@ export type PortraitMattingRequest = {
 export const portraitMatting: Capability<PortraitMattingRequest> = {
   id: "@hypit/volcengine-matting/matte-portrait-video",
   title: "Volcengine Portrait Matting",
+  authoring: [
+    { name: "source", kind: "resource", media: "video", required: true },
+    { name: "format", kind: "choice", choices: ["WEBM", "MOV", "MP4"], default: "WEBM" },
+    { name: "backgroundColor", kind: "choice", choices: ["black", "white", "green"] },
+  ],
   outputs: mediaOutput("video"),
   readRequest(value) {
     const input = modelObject(value, "Portrait Matting", ["source", "format", "backgroundColor"]);

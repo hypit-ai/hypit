@@ -6,6 +6,7 @@ import type {
   ExecutionClient, ExecutionClientLease, ExecutionEnvironment, ExecutionQuote, ExecutionResourceSource, InvocationAddress,
   InvocationFailure, InvocationRequest, Publication, PublicationResource, QuoteInputs,
 } from "../index.js";
+import { InvocationIdentityConflict } from "../index.js";
 import type {
   ProviderCollection, ProviderContext, ProviderDirectEndpoint, ProviderEndpoint, ProviderOutputWriter,
   ProviderPending, ProviderReceipt, ProviderSubmission,
@@ -58,6 +59,7 @@ class LocalExecutionEnvironment implements ExecutionEnvironment {
   readonly #unlock: () => void;
   readonly #records: Map<string, InvocationRecord>;
   readonly #tasks = new Map<string, Promise<void>>();
+  readonly #starting = new Set<string>();
   readonly #requests = new Set<Promise<unknown>>();
   readonly #mutations = new Map<string, Promise<unknown>>();
   readonly #faults = new Map<string, Error>();
@@ -214,9 +216,13 @@ class LocalExecutionEnvironment implements ExecutionEnvironment {
       return [name, { mediaType, ...(size === undefined ? {} : { size }) }];
     }));
     const { endpoint, claims, capability, input } = this.#prepare(request, metadata);
-    const address = { environment: this.projection.id, invocation: randomUUID() };
-    const stage = await this.#storage.incoming();
+    const address = { environment: this.projection.id,
+      invocation: options.invocation === undefined ? randomUUID() : invocationId(options.invocation) };
+    if (this.#records.has(address.invocation) || this.#starting.has(address.invocation)) throw new InvocationIdentityConflict(address);
+    this.#starting.add(address.invocation);
+    let stage: string | undefined;
     try {
+      stage = await this.#storage.incoming();
       const inputs: [string, PublicationResource][] = [];
       for (const [index, [name, source]] of sources.entries()) {
         inputs.push([name, await stageResource(stage, `inputs/${index}.bin`, source, signal)]);
@@ -234,7 +240,10 @@ class LocalExecutionEnvironment implements ExecutionEnvironment {
       this.#records.set(address.invocation, record);
       this.#drain();
       return { ...address };
-    } finally { await rm(stage, { recursive: true, force: true }); }
+    } finally {
+      this.#starting.delete(address.invocation);
+      if (stage !== undefined) await rm(stage, { recursive: true, force: true });
+    }
   }
 
   async #wait(address: InvocationAddress, signal: AbortSignal): Promise<ReturnType<typeof observe>> {

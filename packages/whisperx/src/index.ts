@@ -12,6 +12,11 @@ export type WhisperXRequest = {
 export const whisperX: Capability<WhisperXRequest> = {
   id: "@hypit/whisperx/whisperx-transcription",
   title: "WhisperX transcription",
+  authoring: [
+    { name: "audio", kind: "resource", media: "audio", required: true },
+    { name: "language", kind: "text" },
+    { name: "prompt", kind: "text" },
+  ],
   readRequest(value) {
     const input = modelObject(value, "WhisperX request", ["audio", "language", "prompt"]);
     return { audio: readModelReference(input.audio, "audio"),

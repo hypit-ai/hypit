@@ -104,6 +104,27 @@ importers:
         specifier: workspace:^0.1.0
         version: link:../execution
 
+  packages/canvas:
+    dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
+      '@hypit/media':
+        specifier: workspace:^0.1.0
+        version: link:../media
+      '@hypit/media-asset':
+        specifier: workspace:^0.1.0
+        version: link:../media-asset
+      '@hypit/media-local':
+        specifier: workspace:^0.1.0
+        version: link:../media-local
+      '@hypit/project':
+        specifier: workspace:^0.1.0
+        version: link:../project
+      '@hypit/timed-transcript':
+        specifier: workspace:^0.1.0
+        version: link:../timed-transcript
+
   packages/execution: {}
 
   packages/fishaudio-speech:

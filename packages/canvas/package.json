@@ -1,0 +1,21 @@
+{
+  "name": "@hypit/canvas",
+  "version": "0.1.0",
+  "description": "Project Canvas document and generation operations",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    ".": { "hypit-source": "./src/index.ts", "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./node": { "hypit-source": "./src/node.ts", "types": "./dist/node.d.ts", "import": "./dist/node.js" }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": { "build": "tsc -p tsconfig.build.json" },
+  "dependencies": {
+    "@hypit/execution": "workspace:^0.1.0",
+    "@hypit/media": "workspace:^0.1.0",
+    "@hypit/media-asset": "workspace:^0.1.0",
+    "@hypit/media-local": "workspace:^0.1.0",
+    "@hypit/project": "workspace:^0.1.0",
+    "@hypit/timed-transcript": "workspace:^0.1.0"
+  }
+}

@@ -8,6 +8,12 @@ const formats = ["wav", "mp3"] as const;
 export const miMoVoiceDesign: Capability<MiMoDesignRequest> = {
   id: "@hypit/mimo-speech/mimo-v2.5-tts-voicedesign",
   title: "MiMo 2.5 Voice Design",
+  authoring: [
+    { name: "description", kind: "text", required: true },
+    { name: "text", kind: "text" },
+    { name: "autoGenerateText", kind: "boolean" },
+    { name: "format", kind: "choice", choices: formats, default: "wav" },
+  ],
   outputs: mediaOutput("audio"),
   readRequest(value) {
     const input = modelObject(value, "MiMo Voice Design", ["description", "text", "autoGenerateText", "format"]);
@@ -22,6 +28,11 @@ export const miMoVoiceDesign: Capability<MiMoDesignRequest> = {
 export const miMoVoiceClone: Capability<MiMoCloneRequest> = {
   id: "@hypit/mimo-speech/mimo-v2.5-tts-voiceclone",
   title: "MiMo 2.5 Voice Clone",
+  authoring: [
+    { name: "reference", kind: "resource", media: "audio", required: true },
+    { name: "text", kind: "text", required: true },
+    { name: "format", kind: "choice", choices: formats, default: "wav" },
+  ],
   outputs: mediaOutput("audio"),
   readRequest(value) {
     const input = modelObject(value, "MiMo Voice Clone", ["reference", "text", "format"]);

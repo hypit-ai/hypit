@@ -9,6 +9,11 @@
       "hypit-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./hypit": {
+      "hypit-source": "./src/hypit.ts",
+      "types": "./dist/hypit.d.ts",
+      "import": "./dist/hypit.js"
     }
   },
   "files": [

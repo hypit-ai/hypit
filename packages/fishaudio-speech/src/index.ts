@@ -10,6 +10,11 @@ type FishFormat = typeof formats[number];
 export const fishVoiceDesign: Capability<FishDesignRequest> = {
   id: "@hypit/fishaudio-speech/voice-design-1",
   title: "Fish Audio Voice Design",
+  authoring: [
+    { name: "description", kind: "text", required: true },
+    { name: "text", kind: "text" },
+    { name: "language", kind: "text" },
+  ],
   outputs: mediaOutput("audio"),
   readRequest(value) {
     const input = modelObject(value, "Fish Audio Voice Design", ["description", "text", "language"]);
@@ -22,6 +27,12 @@ export const fishVoiceDesign: Capability<FishDesignRequest> = {
 export const fishVoiceClone: Capability<FishCloneRequest> = {
   id: "@hypit/fishaudio-speech/voice-clone",
   title: "Fish Audio Voice Clone",
+  authoring: [
+    { name: "references", kind: "resources", media: "audio", maxItems: 20, required: true },
+    { name: "text", kind: "text", required: true },
+    { name: "title", kind: "text", default: "reference" },
+    { name: "format", kind: "choice", choices: formats, default: "mp3" },
+  ],
   outputs: mediaOutput("audio"),
   readRequest(value) {
     const input = modelObject(value, "Fish Audio Voice Clone", ["references", "text", "title", "format"]);
@@ -35,6 +46,11 @@ export const fishVoiceClone: Capability<FishCloneRequest> = {
 export const fishS21ProFree: Capability<FishSynthesisRequest> = {
   id: "@hypit/fishaudio-speech/s2.1-pro-free",
   title: "Fish Audio S2.1 Pro Free",
+  authoring: [
+    { name: "text", kind: "text", required: true },
+    { name: "voice", kind: "text" },
+    { name: "format", kind: "choice", choices: formats, default: "mp3" },
+  ],
   outputs: mediaOutput("audio"),
   readRequest(value) {
     const input = modelObject(value, "Fish Audio S2.1", ["text", "voice", "format"]);

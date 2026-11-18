@@ -1,4 +1,4 @@
-import type { Capability, InvocationInputs } from "./model.js";
+import type { Capability, InvocationInputs, ModelField } from "./model.js";
 
 type MediaKind = "image" | "video" | "audio";
 export type ModelReference = { readonly resource: string; readonly personReference?: boolean };
@@ -75,6 +75,7 @@ export function mediaOutput(kind: MediaKind): Capability["outputs"] {
   return {
     [kind]: {
       type: `@hypit/execution/generated-${field}`,
+      media: kind,
       read(value, resources) {
         const names = modelObject(value, `Generated ${field}`, [field])[field];
         if (!Array.isArray(names) || names.length === 0 || new Set(names).size !== names.length
@@ -143,9 +144,26 @@ export function defineVideoModel(definition: VideoDefinition): Capability<VideoR
   if (definition.webSearch) fields.push("webSearch");
   if (definition.seed) fields.push("seed");
   const modes = ["text", ...(firstFrame ? ["frames" as const] : []), ...(references ? ["references" as const] : [])] as const;
+  const authoring: ModelField[] = [
+    { name: "mode", kind: "choice", choices: modes, required: true, default: "text" },
+    { name: "prompt", kind: "text", required: true },
+    { name: "duration", kind: "number", required: !sourceDuration },
+    { name: "resolution", kind: "choice", choices: definition.resolutions, default: definition.defaultResolution },
+    { name: "aspectRatio", kind: "choice", choices: [...new Set([...definition.aspectRatios, ...(definition.frameRatios ?? [])])] },
+  ];
+  const classification = classifiedVisuals ? { personReference: true } : {};
+  if (firstFrame) authoring.push({ name: "firstFrame", kind: "resource", media: "image", modes: ["frames"], required: true, ...classification });
+  if (lastFrame) authoring.push({ name: "lastFrame", kind: "resource", media: "image", modes: ["frames"], ...classification });
+  if (references?.[0]) authoring.push({ name: "referenceImages", kind: "resources", media: "image", modes: ["references"], maxItems: references[0], ...classification });
+  if (references?.[1]) authoring.push({ name: "referenceVideos", kind: "resources", media: "video", modes: ["references"], maxItems: references[1], ...classification });
+  if (references?.[2]) authoring.push({ name: "referenceAudios", kind: "resources", media: "audio", modes: ["references"], maxItems: references[2] });
+  if (definition.audio !== undefined) authoring.push({ name: "generateAudio", kind: "boolean" });
+  if (definition.webSearch) authoring.push({ name: "webSearch", kind: "boolean" });
+  if (definition.seed) authoring.push({ name: "seed", kind: "number" });
   return {
     id: `${definition.package}/${definition.model}`,
     title: definition.title,
+    authoring,
     outputs: mediaOutput("video"),
     readRequest(value) {
       const request = modelObject(value, definition.title, fields);
@@ -243,9 +261,25 @@ export function defineImageModel(definition: ImageDefinition): Capability<ImageR
   if (definition.mask) fields.push("mask");
   if (definition.watermark) fields.push("watermark");
   if (definition.nsfwCheck) fields.push("nsfwCheck");
+  const authoring: ModelField[] = [
+    { name: "mode", kind: "choice", choices: ["text", "edit"], required: true, default: "text" },
+    { name: "prompt", kind: "text", required: true },
+    { name: "aspectRatio", kind: "choice", choices: definition.aspectRatios, default: definition.defaultAspectRatio ?? "1:1" },
+    { name: "images", kind: "resources", media: "image", required: true, modes: ["edit"], maxItems: definition.references },
+  ];
+  if (definition.resolutions) authoring.push({ name: "resolution", kind: "choice", choices: definition.resolutions,
+    ...(definition.defaultResolution === undefined ? {} : { default: definition.defaultResolution }) });
+  if (definition.quality) authoring.push({ name: "quality", kind: "choice", choices: definition.quality });
+  if (definition.backgrounds) authoring.push({ name: "background", kind: "choice", choices: definition.backgrounds });
+  if (definition.formats) authoring.push({ name: "outputFormat", kind: "choice", choices: definition.formats });
+  if (definition.outputs) authoring.push({ name: "n", kind: "number", default: 1 });
+  if (definition.mask) authoring.push({ name: "mask", kind: "resource", media: "image", modes: ["edit"] });
+  if (definition.watermark) authoring.push({ name: "watermark", kind: "boolean" });
+  if (definition.nsfwCheck) authoring.push({ name: "nsfwCheck", kind: "boolean" });
   return {
     id: `${definition.package}/${definition.model}`,
     title: definition.title,
+    authoring,
     outputs: mediaOutput("image"),
     readRequest(value) {
       const request = modelObject(value, definition.title, fields);
