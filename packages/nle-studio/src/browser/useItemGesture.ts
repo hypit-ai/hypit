@@ -50,6 +50,10 @@ function overlaps(item: NleTimelineSceneItem, start: number, duration: number): 
   return start < item.startFrame + item.durationFrames && item.startFrame < start + duration;
 }
 
+function sameTrackType(a: NleTimelineSceneTrack, b: NleTimelineSceneTrack): boolean {
+  return a.kind === b.kind && a.role === b.role;
+}
+
 function newTrackId(): string {
   return `track-${crypto.randomUUID().slice(0, 8)}`;
 }
@@ -100,6 +104,12 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
     const movingEdges = members.flatMap(({ item }) => [item.startFrame, item.startFrame + item.durationFrames]);
     const minimum = -Math.min(...members.map((member) => member.item.startFrame));
     const anchorIndex = displayRows.findIndex((candidate) => candidate.id === track.id);
+    const fullySelectedTracks = new Set(movingTracks.filter(({ track, items }) => items.length === track.items.length)
+      .map(({ track }) => track.id));
+    const onlyTrackOfType = !displayRows.some(row => row.id !== track.id && sameTrackType(row, track));
+    let firstSelectedRow = anchorIndex, lastSelectedRow = anchorIndex;
+    while (firstSelectedRow > 0 && fullySelectedTracks.has(displayRows[firstSelectedRow - 1]!.id)) firstSelectedRow--;
+    while (lastSelectedRow + 1 < displayRows.length && fullySelectedTracks.has(displayRows[lastSelectedRow + 1]!.id)) lastSelectedRow++;
     const created = new Map<string, ItemTrackAddition>();
     handle.setPointerCapture(pointerId);
     let active = false, animation = 0;
@@ -109,12 +119,6 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
 
     const locate = () => {
       if (!active) return;
-      const rawDelta = Math.max(minimum, Math.round((pointer.x - startX + viewport.scrollLeft - scrollLeft) / pixels));
-      const aligned = snap && !pointer.alt
-        ? snapTimelineEdges(movingEdges.map(edge => edge + rawDelta), frame, boundaries, pixels, correction => rawDelta + correction >= minimum)
-        : undefined;
-      const delta = rawDelta + (aligned?.correction ?? 0);
-
       const rows = Array.from(viewport.querySelectorAll<HTMLElement>(".nle-track[data-track-id]")).filter(row => displayRows.some(track => track.id === row.dataset.trackId));
       const bounds = viewport.getBoundingClientRect();
       const inside = pointer.x >= bounds.left + labelWidth && pointer.x < bounds.right
@@ -146,9 +150,20 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
         insertionEdge = undefined;
       }
 
+      const keepSource = insertionIndex !== undefined && fullySelectedTracks.has(track.id)
+        && (onlyTrackOfType || (insertionIndex >= firstSelectedRow && insertionIndex <= lastSelectedRow + 1));
+      if (keepSource) {
+        targetIndex = anchorIndex;
+        insertionIndex = undefined;
+      }
+      const rawDelta = Math.max(minimum, Math.round((pointer.x - startX + viewport.scrollLeft - scrollLeft) / pixels));
+      const aligned = snap && !pointer.alt && (!keepSource || rawDelta !== 0)
+        ? snapTimelineEdges(movingEdges.map(edge => edge + rawDelta), frame, boundaries, pixels, correction => rawDelta + correction >= minimum)
+        : undefined;
+      const delta = rawDelta + (aligned?.correction ?? 0);
       const hovered = displayRows[targetIndex];
       const valid = inside && (insertionIndex !== undefined
-        || (hovered?.kind === track.kind && hovered.role === track.role && !hovered.locked));
+        || (hovered !== undefined && sameTrackType(hovered, track) && !hovered.locked));
       const destinations = new Map<string, string>();
       const additions: ItemTrackAddition[] = [];
       let insertionTop: number | undefined;
@@ -181,7 +196,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
         const desiredIndex = sourceIndex + offset;
         let destinationId = inserted && source.id === track.id ? inserted.id : undefined;
         if (destinationId === undefined) {
-          const fits = (candidate: NleTimelineSceneTrack) => candidate.kind === source.kind && candidate.role === source.role && !candidate.locked
+          const fits = (candidate: NleTimelineSceneTrack) => sameTrackType(candidate, source) && !candidate.locked
             && items.every((item) => candidate.items.every((other) => ids.has(other.id)
               || !overlaps(other, item.startFrame + delta, item.durationFrames))
               && (plannedItems.get(candidate.id) ?? []).every((other) => !overlaps(other, item.startFrame, item.durationFrames)));
