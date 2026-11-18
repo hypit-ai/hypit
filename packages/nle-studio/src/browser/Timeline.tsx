@@ -16,7 +16,7 @@ import { frameOf, frameTime, magneticEdit, moveItemEditPlan, trackGaps } from ".
 import { ClipMenu } from "./ClipMenu.js";
 import { IconButton } from "./common.js";
 import { timecode } from "./timecode.js";
-import { componentTrackRole, labelWidth, maxZoom, minZoom, rowHeight, rowSize, rulerHeight, timelineRows } from "./timelineGeometry.js";
+import { componentTrackRole, labelWidth, maxZoom, minZoom, rowHeight, rowSize, rulerHeight, snapTimelineEdges, timelineRows, timelineSnapBoundaries } from "./timelineGeometry.js";
 import { ToolSelector, type TimelineTool } from "./ToolSelector.js";
 import { useTimelineSeek } from "./useTimelineSeek.js";
 import { useTimelineZoom } from "./useTimelineZoom.js";
@@ -107,7 +107,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const { zoom, changeZoom } = useTimelineZoom(scroller, labelWidth, `${session.open.project.project.id}/${session.projectDocument.path}/${scene.composition}`);
   const pixels = zoom / fps;
   const [snap, setSnap] = useState(true), [tool, setTool] = useState<TimelineTool>("select");
-  const [draft, setDraft] = useState<{ readonly id: string; readonly edge: "start" | "end"; readonly start: number; readonly duration: number }>();
+  const [draft, setDraft] = useState<{ readonly id: string; readonly edge: "start" | "end"; readonly start: number; readonly duration: number; readonly snapFrame?: number }>();
   const [cutCursor, setCutCursor] = useState<{ readonly track: string; readonly frame: number }>();
   const knownTracks = useRef(new Set(scene.tracks.map(track => track.id)));
   const [emptyDestinations, setEmptyDestinations] = useState<ReadonlySet<string>>(() => new Set());
@@ -156,7 +156,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
       && session.catalog.adjusts.some(entry => catalogDragId({ kind: "effect", entry }) === draggedMedia?.id));
   const highlightedTrack = acceptsDrop ? mediaTrack.id : primaryTrack && !magneticFrames ? undefined : itemGesture.gesture?.dropTrack;
   const insertionTop = reorder.position?.top ?? itemGesture.gesture?.insertionTop;
-  const snapFrame = itemGesture.gesture?.valid ? itemGesture.gesture.snapFrame : undefined;
+  const snapFrame = (itemGesture.gesture?.valid ? itemGesture.gesture.snapFrame : undefined) ?? draft?.snapFrame ?? drop?.snapFrame;
   const snappedToPlayhead = snapFrame === frame;
   const playheadSnapClass = snappedToPlayhead ? " adsorbed" : "";
   const rowFade = fadeMotion(reduced);
@@ -206,21 +206,24 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     cancelTrim.current();
     element.setPointerCapture(event.pointerId);
     gesture.current = { item, mode, pointer: event.pointerId, startX: event.clientX, originStart: item.startFrame, originDuration: item.durationFrames, element };
+    const boundaries = timelineSnapBoundaries(scene, new Set([item.id]));
     const move = (next: PointerEvent) => {
       const current = gesture.current; if (!current || next.pointerId !== current.pointer) return;
-      let delta = Math.round((next.clientX - current.startX) / pixels);
-      if (snap && !next.altKey) {
-        const edge = current.originStart + (current.mode === "trim-end" ? current.originDuration : 0);
-        const boundary = [0, frame, ...scene.tracks.flatMap(row => row.items.filter(candidate => candidate.id !== item.id)
-          .flatMap(candidate => [candidate.startFrame, candidate.startFrame + candidate.durationFrames]))]
-          .filter(value => Math.abs(value - edge - delta) * pixels <= 7)
-          .sort((a, b) => Math.abs(a - edge - delta) - Math.abs(b - edge - delta))[0];
-        if (boundary !== undefined) delta = boundary - edge;
-      }
-      if (current.mode === "trim-start") {
-        const start = Math.max(0, Math.min(current.originStart + current.originDuration - 1, current.originStart + delta));
-        draftRef.current = { id: item.id, edge: "start", start, duration: current.originDuration + current.originStart - start };
-      } else draftRef.current = { id: item.id, edge: "end", start: current.originStart, duration: Math.max(1, current.originDuration + delta) };
+      const trimmingStart = current.mode === "trim-start";
+      const end = current.originStart + current.originDuration;
+      const minimum = trimmingStart ? 0 : current.originStart + 1;
+      const maximum = trimmingStart ? end - 1 : Infinity;
+      const originalEdge = trimmingStart ? current.originStart : end;
+      const proposed = Math.max(minimum, Math.min(maximum, originalEdge + Math.round((next.clientX - current.startX) / pixels)));
+      const aligned = snap && !next.altKey ? snapTimelineEdges([proposed], frame, boundaries, pixels,
+        correction => proposed + correction >= minimum && proposed + correction <= maximum) : undefined;
+      const edge = aligned?.frame ?? proposed;
+      draftRef.current = {
+        id: item.id, edge: trimmingStart ? "start" : "end",
+        start: trimmingStart ? edge : current.originStart,
+        duration: trimmingStart ? end - edge : edge - current.originStart,
+        ...(aligned ? { snapFrame: aligned.frame } : {}),
+      };
       setDraft(draftRef.current);
     };
     const cleanup = () => {

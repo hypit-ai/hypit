@@ -39,3 +39,25 @@ export function timelineRows(scene: NleTimelineScene, view: NleView, primaryTrac
 export function rowSize(row: NleTimelineSceneTrack | undefined): number {
   return row?.heightPx ?? rowHeight;
 }
+
+export function timelineSnapBoundaries(scene: NleTimelineScene, excluding?: ReadonlySet<string>): number[] {
+  return [0, ...scene.tracks.flatMap(track => track.items
+    .filter(item => !excluding?.has(item.id))
+    .flatMap(item => [item.startFrame, item.startFrame + item.durationFrames]))];
+}
+
+export function snapTimelineEdges(
+  edges: readonly number[], playhead: number, boundaries: readonly number[], pixels: number,
+  allows: (correction: number) => boolean = () => true,
+): { readonly frame: number; readonly correction: number } | undefined {
+  const nearest = (targets: readonly number[]) => {
+    let best: { frame: number; correction: number } | undefined;
+    for (const frame of targets) for (const edge of edges) {
+      const correction = frame - edge;
+      if (Math.abs(correction * pixels) <= 7 && allows(correction)
+        && (best === undefined || Math.abs(correction) < Math.abs(best.correction))) best = { frame, correction };
+    }
+    return best;
+  };
+  return nearest([playhead]) ?? nearest(boundaries);
+}

@@ -1,6 +1,6 @@
 import type { NleTimelineScene, NleTimelineSceneItem, NleTimelineSceneTrack } from "@hypit/nle/view";
 import { useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
-import { labelWidth, rulerHeight, studioTrackName } from "./timelineGeometry.js";
+import { labelWidth, rulerHeight, snapTimelineEdges, studioTrackName, timelineSnapBoundaries } from "./timelineGeometry.js";
 import { linkedSelection } from "./selection.js";
 
 export type ItemTrackAddition = {
@@ -96,9 +96,8 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
     const scrollLeft = viewport.scrollLeft;
     const origins = new Map(Array.from(viewport.querySelectorAll<HTMLElement>("[data-clip-id]"))
       .map((element) => [element.dataset.clipId!, element.getBoundingClientRect()] as const));
-    const boundaries = [0, frame, ...scene.tracks.flatMap((row) => row.items
-      .filter((candidate) => !ids.has(candidate.id))
-      .flatMap((candidate) => [candidate.startFrame, candidate.startFrame + candidate.durationFrames]))];
+    const boundaries = timelineSnapBoundaries(scene, ids);
+    const movingEdges = members.flatMap(({ item }) => [item.startFrame, item.startFrame + item.durationFrames]);
     const minimum = -Math.min(...members.map((member) => member.item.startFrame));
     const created = new Map<string, ItemTrackAddition>();
     handle.setPointerCapture(pointerId);
@@ -110,19 +109,10 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
     const locate = () => {
       if (!active) return;
       const rawDelta = Math.max(minimum, Math.round((pointer.x - startX + viewport.scrollLeft - scrollLeft) / pixels));
-      let delta = rawDelta;
-      let aligned: number | undefined;
-      if (snap && !pointer.alt) {
-        let best = Infinity;
-        for (const edge of members.flatMap((member) => [member.item.startFrame, member.item.startFrame + member.item.durationFrames])) {
-          for (const boundary of boundaries) {
-            const correction = boundary - (edge + rawDelta);
-            if (Math.abs(correction * pixels) <= 7 && Math.abs(correction) < best && rawDelta + correction >= minimum) {
-              best = Math.abs(correction); aligned = boundary; delta = rawDelta + correction;
-            }
-          }
-        }
-      }
+      const aligned = snap && !pointer.alt
+        ? snapTimelineEdges(movingEdges.map(edge => edge + rawDelta), frame, boundaries, pixels, correction => rawDelta + correction >= minimum)
+        : undefined;
+      const delta = rawDelta + (aligned?.correction ?? 0);
 
       const rows = Array.from(viewport.querySelectorAll<HTMLElement>(".nle-track[data-track-id]")).filter(row => displayRows.some(track => track.id === row.dataset.trackId));
       const bounds = viewport.getBoundingClientRect();
@@ -204,10 +194,13 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
         for (const item of items) destinations.set(item.id, destinationId);
       }
 
+      const previewDelta = valid && aligned
+        ? delta * pixels - (viewport.scrollLeft - scrollLeft)
+        : pointer.x - startX;
       const floating = members.flatMap((member): FloatingItem[] => {
         const origin = origins.get(member.item.id);
         return origin === undefined ? [] : [{ id: member.item.id, title: member.item.display.title,
-          kind: itemKind(member.item, member.track), left: origin.left + pointer.x - startX,
+          kind: itemKind(member.item, member.track), left: origin.left + previewDelta,
           top: origin.top + pointer.y - startY, width: origin.width, height: origin.height }];
       });
       const plan = valid ? { ids: [...ids], deltaFrames: delta,
@@ -218,7 +211,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
       const dropTrack = valid && insertionIndex === undefined && destinations.get(item.id) === displayRows[targetIndex]?.id
         ? displayRows[targetIndex]?.id : undefined;
       setGesture({ ids: [...ids], floating, valid, plan: proposed, ...(dropTrack === undefined ? {} : { dropTrack }), ...(!valid || insertionTop === undefined ? {} : { insertionTop }),
-        ...(aligned === undefined ? {} : { snapFrame: aligned }) });
+        ...(aligned === undefined ? {} : { snapFrame: aligned.frame }) });
     };
 
     const move = (next: globalThis.PointerEvent) => {

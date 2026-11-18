@@ -8,6 +8,7 @@ import type { TransitionCut } from "./transitionCuts.js";
 export type MediaDrop = {
   readonly id: string;
   readonly frame: number;
+  readonly snapFrame?: number;
   readonly track?: string;
   readonly item?: string;
   readonly transitionCut?: TransitionCut;

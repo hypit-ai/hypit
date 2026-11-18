@@ -2,7 +2,7 @@ import type { NleTimelineScene, NleTimelineSceneTrack } from "@hypit/nle/view";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
 import type { NleStudioMediaEntry } from "../protocol.js";
 import type { MediaDrop } from "./mediaDrag.js";
-import { labelWidth, rulerHeight } from "./timelineGeometry.js";
+import { labelWidth, rulerHeight, snapTimelineEdges, timelineSnapBoundaries } from "./timelineGeometry.js";
 import { transitionCutAt, type TransitionCut } from "./transitionCuts.js";
 
 export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObject<HTMLElement | null>, frame: number, busy: boolean,
@@ -20,6 +20,7 @@ export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObjec
     handle.setPointerCapture(pointerId);
     let moved = false, drop: MediaDrop | undefined, animation = 0;
     let pointer = { x, y, alt: event.altKey }, viewport: HTMLElement | undefined;
+    const boundaries = timelineSnapBoundaries(scene);
     const locate = () => {
       if (!moved) return;
       const target = document.elementFromPoint(pointer.x, pointer.y)?.closest<HTMLElement>("[data-nle-drop]");
@@ -32,15 +33,13 @@ export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObjec
           && (cuts !== undefined || (role === "effect" ? track.role !== "subtitle" : track.role === role));
         if (pixels > 0 && compatible && pointer.x >= bounds.left + labelWidth && pointer.y >= bounds.top + rulerHeight) {
           const position = (pointer.x - bounds.left - labelWidth + viewport.scrollLeft) / pixels;
-          let at = Math.max(0, Math.round(position));
-          if (viewport.dataset.snap === "true" && !pointer.alt) {
-            const boundary = [0, frame, ...scene.tracks.flatMap(track => track.items.flatMap(item => [item.startFrame, item.startFrame + item.durationFrames]))]
-              .filter(value => Math.abs(value - at) * pixels <= 7).sort((a, b) => Math.abs(a - at) - Math.abs(b - at))[0];
-            if (boundary !== undefined) at = Math.round(boundary);
-          }
-          const item = document.elementFromPoint(pointer.x, pointer.y)?.closest<HTMLElement>("[data-clip-id]")?.dataset.clipId;
           if (cuts === undefined) {
-            drop = { id: entry.id, frame: at, ...(track ? { track: track.id } : {}), ...(item ? { item } : {}) };
+            const at = Math.max(0, Math.round(position));
+            const aligned = viewport.dataset.snap === "true" && !pointer.alt
+              ? snapTimelineEdges([at], frame, boundaries, pixels) : undefined;
+            const item = document.elementFromPoint(pointer.x, pointer.y)?.closest<HTMLElement>("[data-clip-id]")?.dataset.clipId;
+            drop = { id: entry.id, frame: aligned ? Math.round(aligned.frame) : at,
+              ...(aligned ? { snapFrame: aligned.frame } : {}), ...(track ? { track: track.id } : {}), ...(item ? { item } : {}) };
           } else if (track) {
             const transitionCut = transitionCutAt(cuts, position, track.id, 32 / pixels);
             if (transitionCut) drop = { id: entry.id, frame: transitionCut.frame, track: track.id, transitionCut };
