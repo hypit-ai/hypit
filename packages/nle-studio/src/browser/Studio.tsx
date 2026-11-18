@@ -253,7 +253,7 @@ export function Studio() {
 
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || session === undefined || (event.target as Element | null)?.closest("input,textarea,select,[contenteditable=true]") || document.querySelector("[role=dialog],[role=menu]")) return;
+      if (event.defaultPrevented || session === undefined || (event.target as Element | null)?.closest("input,textarea,[role=combobox],[contenteditable=true]") || document.querySelector("[role=dialog],[role=menu],[role=listbox]")) return;
       if (source !== undefined) { if (event.key === "Escape") setSource(undefined); return; }
       if (event.metaKey || event.ctrlKey) {
         if (event.code === "KeyA") { event.preventDefault(); select(editableSelection(session.open.timeline, session.open.timeline.tracks.flatMap(track => track.items.map(item => item.id)))); }

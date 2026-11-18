@@ -178,7 +178,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
 
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || (event.target as Element | null)?.closest("input,textarea,select,[contenteditable=true]") || document.querySelector("[role=dialog],[role=menu]")) return;
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || (event.target as Element | null)?.closest("input,textarea,[role=combobox],[contenteditable=true]") || document.querySelector("[role=dialog],[role=menu],[role=listbox]")) return;
       const next: TimelineTool | undefined = event.code === "KeyA" || event.key === "Escape" ? "select" : event.code === "KeyB" ? "cut" : event.code === "BracketLeft" ? "left" : event.code === "BracketRight" ? "right" : undefined;
       if (next) { event.preventDefault(); cancelTrim.current(); setTool(next); setCutCursor(undefined); }
     };

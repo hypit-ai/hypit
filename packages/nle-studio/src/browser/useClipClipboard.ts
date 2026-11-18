@@ -10,7 +10,7 @@ export function useClipClipboard(options: {
 }) {
   const current = useRef(options); current.current = options;
   useEffect(() => {
-    const ownsEvent = () => current.current.available && !document.activeElement?.closest("input,textarea,select,[contenteditable=true]") && !document.querySelector("[role=dialog],[role=menu]");
+    const ownsEvent = () => current.current.available && !document.activeElement?.closest("input,textarea,[role=combobox],[contenteditable=true]") && !document.querySelector("[role=dialog],[role=menu],[role=listbox]");
     const copy = (event: ClipboardEvent) => {
       if (!ownsEvent() || !current.current.canCopy || !event.clipboardData) return;
       const token = crypto.randomUUID();

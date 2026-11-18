@@ -1,3 +1,5 @@
+import { Select } from "@base-ui/react/select";
+import { Check, ChevronDown } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import type { NleInspectorField, NleInspectorScene } from "@hypit/nle/view";
 import { NumberField, Row, Section, Toggle } from "./controls.js";
@@ -29,10 +31,28 @@ function Field({ section, field, disabled, onEdit }: {
     return <Row label={field.label}><Toggle disabled={disabled} label={field.label} checked={field.value === true} onChange={value => onEdit(section, field.id, value)}/></Row>;
   }
   if (field.control === "select") {
-    return <Row label={field.label}><select disabled={disabled} value={String(field.value)}
-      onChange={event => onEdit(section, field.id, event.target.value)}>
-      {(field.options ?? []).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-    </select></Row>;
+    const options = field.options ?? [];
+    return <Row label={field.label}>
+      <Select.Root items={options} value={String(field.value)} disabled={disabled} modal={false}
+        onValueChange={value => { if (value !== null) onEdit(section, field.id, value); }}>
+        <Select.Trigger className="select-trigger dropdown-trigger" aria-label={field.label}>
+          <Select.Value className="select-value"/>
+          <Select.Icon className="dropdown-chevron"><ChevronDown size={16}/></Select.Icon>
+        </Select.Trigger>
+        <Select.Portal>
+          <Select.Positioner className="dropdown-positioner" alignItemWithTrigger={false} sideOffset={6} collisionPadding={12}>
+            <Select.Popup className="dropdown-content" data-dropdown-content="">
+              <Select.List className="dropdown-list">
+                {options.map(option => <Select.Item key={option.value} value={option.value} className="dropdown-item">
+                  <Select.ItemText className="dropdown-item-label">{option.label}</Select.ItemText>
+                  <Select.ItemIndicator className="dropdown-item-check"><Check size={16}/></Select.ItemIndicator>
+                </Select.Item>)}
+              </Select.List>
+            </Select.Popup>
+          </Select.Positioner>
+        </Select.Portal>
+      </Select.Root>
+    </Row>;
   }
   if (field.control === "number") return <Row label={field.label}><NumberField disabled={disabled} label={field.label} value={Number(field.value)}
     {...(field.minimum === undefined ? {} : { min: field.minimum })}
