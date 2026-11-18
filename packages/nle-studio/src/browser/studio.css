@@ -10,6 +10,12 @@
 .studio-preview-frame { width: 100%; height: 100%; object-fit: contain; }
 .studio-canvas-layer { position: absolute; overflow: hidden; padding: 0; border: 0; border-radius: 0; background: transparent; }
 .studio-canvas-layer > img, .studio-canvas-layer > video { width: 100%; height: 100%; pointer-events: none; }
+.studio-text-list .studio-text-entry { display: grid; width: 100%; grid-template-columns: auto 1fr; gap: 4px 10px; text-align: left; padding: 6px; border-radius: 4px; }
+.studio-text-entry time { font-variant-numeric: tabular-nums; color: var(--muted); }
+.studio-text-entry-content { grid-column: 2; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); }
+.studio-text-list .selected .studio-text-entry, .studio-text-entry:hover { background: var(--nle-field); }
+.studio-composition-back { display: flex; align-items: center; padding-inline: 4px; }
+.studio-composition-back .icon-button { width: 24px; height: 24px; }
 
 /* Finite Surface Inspector fields inside the transplanted property panel. */
 .nle-properties .nle-row output { color: var(--text); font-size: var(--font-size-caption); text-align: right; }

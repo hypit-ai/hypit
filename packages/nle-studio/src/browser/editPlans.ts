@@ -4,6 +4,7 @@ import type { NleViewCommand } from "@hypit/nle/view";
 import type { NleStudioSession } from "../protocol.js";
 import { editableSelection, linkedSelection } from "./selection.js";
 import { copyItems, pasteItems } from "./clipboard.js";
+import type { ItemMovePlan } from "./useItemGesture.js";
 
 export type EditPlan = { readonly commands: readonly NleCommand[]; readonly selection?: readonly string[]; readonly viewCommands?: readonly NleViewCommand[] };
 export const identity = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
@@ -160,12 +161,23 @@ export function reverseItems(session: NleStudioSession, selected: readonly strin
     return { kind: "item.retime" as const, id: item.id, time };
   }) };
 }
+function freezePiece(session: NleStudioSession, item: NleItem, frame: number) {
+  if (item.kind !== "present" || !item.picture || item.picture.processes?.length) return undefined;
+  const local = subtract(frameTime(session, frame), item.start);
+  const piece = item.sourceTime.pieces.find(piece => compare(local, piece.target.start) >= 0 && compare(local, piece.target.end) < 0);
+  return piece && isAffineTemporalMapPiece(piece) ? { piece, local } : undefined;
+}
+
+export function canFreezeItem(session: NleStudioSession, item: NleItem, frame: number): boolean {
+  return freezePiece(session, item, frame) !== undefined;
+}
+
 export function freezeItem(session: NleStudioSession, item: NleItem, frame: number): EditPlan {
   if (item.kind !== "present" || !item.picture) throw new Error("定格需要画面片段。");
   if (item.picture.processes?.length) throw new Error("带有效果的画面定格需要渲染执行器提供帧捕获。请先选择原始素材片段。");
-  const local = subtract(frameTime(session, frame), item.start);
-  const piece = item.sourceTime.pieces.find(piece => compare(local, piece.target.start) >= 0 && compare(local, piece.target.end) < 0);
-  if (!piece || !isAffineTemporalMapPiece(piece)) throw new Error("当前播放位置需要线性时间映射才能定格。");
+  const sample = freezePiece(session, item, frame);
+  if (!sample) throw new Error("当前播放位置需要线性时间映射才能定格。");
+  const { piece, local } = sample;
   const id = identity("freeze"), duration = frameTime(session, Math.round(session.open.timeline.editRate.numerator / session.open.timeline.editRate.denominator * 3));
   const { audio, ...visual } = item;
   const clipboard = { project: session.open.project.project.id, tracks: [{ id: identity("track"), name: "定格", kind: "picture" as const, enabled: true, items: [{ ...visual, id, duration, sourceTime: nleLinearTimeMapping(duration, extrapolateTemporalAffineMapPiece(piece, local), { numerator: 0, denominator: 1 }), picture: { ...item.picture, processes: [] } }] }], transitions: [], mattes: [] };
@@ -310,6 +322,16 @@ export function magneticEdit(session: NleStudioSession, commands: readonly NleCo
     if (ids.length) extra.push({ ...command, ids });
   }
   return [...commands.map(command => command.kind === "item.add" && fresh.has(command.item.id) ? { ...command, item: { ...command.item, start: add(command.item.start, fresh.get(command.item.id)!) } } : command), ...extra];
+}
+
+export function moveItemCommands(session: NleStudioSession, plan: ItemMovePlan): NleCommand[] {
+  return [
+    ...plan.additions.map(addition => ({ kind: "track.add" as const, composition: session.open.timeline.composition,
+      track: { id: addition.id, name: addition.name, kind: addition.kind, enabled: true, items: [] },
+      ...(addition.before === undefined ? {} : { before: addition.before }) })),
+    { kind: "item.move", ids: plan.ids, delta: frameTime(session, plan.deltaFrames),
+      ...(plan.destinations.length === 0 ? {} : { destinations: plan.destinations }) },
+  ];
 }
 
 export function editTransitionDuration(session: NleStudioSession, id: string, frames: number | undefined): EditPlan {
