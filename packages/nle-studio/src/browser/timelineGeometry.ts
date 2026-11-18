@@ -43,7 +43,8 @@ export function rowSize(row: NleTimelineSceneTrack | undefined): number {
 export function timelineSnapBoundaries(scene: NleTimelineScene, excluding?: ReadonlySet<string>): number[] {
   return scene.tracks.flatMap(track => track.items
     .filter(item => !excluding?.has(item.id))
-    .flatMap(item => [item.startFrame, item.startFrame + item.durationFrames]));
+    .flatMap(item => [item.startFrame, item.startFrame + item.durationFrames]))
+    .filter(frame => frame > 0);
 }
 
 export function snapTimelineEdges(
