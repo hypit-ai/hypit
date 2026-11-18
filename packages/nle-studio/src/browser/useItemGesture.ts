@@ -81,9 +81,10 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
       return;
     }
     const ids = new Set(linkedSelection(scene, selection.includes(item.id) ? selection : clicked));
-    const members = scene.tracks.flatMap((row) => row.items
-      .filter((candidate) => ids.has(candidate.id))
-      .map((candidate) => ({ item: candidate, track: row })));
+    const movingTracks = scene.tracks.map((row) => ({
+      track: row, items: row.items.filter((candidate) => ids.has(candidate.id)),
+    })).filter(({ items }) => items.length > 0);
+    const members = movingTracks.flatMap(({ track, items }) => items.map((item) => ({ item, track })));
     if (members.length === 0 || members.some((member) => member.track.locked || !member.item.affordances.move)) return;
 
     cancel.current(); event.preventDefault(); event.stopPropagation(); onSelect([...ids]);
@@ -140,7 +141,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
         }
       }
 
-      let valid = inside && targetIndex >= 0;
+      const valid = inside && targetIndex >= 0;
       const destinations = new Map<string, string>();
       const additions: ItemTrackAddition[] = [];
       let insertionTop: number | undefined;
@@ -167,33 +168,25 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
 
       const inserted = insertionIndex === undefined ? undefined : additionAt(insertionIndex, track.kind, "drop");
       const offset = (insertionIndex ?? targetIndex) - anchorIndex;
-      for (const member of members) {
-        const sourceIndex = displayRows.findIndex((candidate) => candidate.id === member.track.id);
+      const plannedItems = new Map<string, readonly NleTimelineSceneItem[]>();
+      for (const { track: source, items } of movingTracks) {
+        const sourceIndex = displayRows.findIndex((candidate) => candidate.id === source.id);
         const desiredIndex = sourceIndex + offset;
-        let destination = displayRows[desiredIndex];
-        if (inserted && member.track.id === track.id) {
-          destinations.set(member.item.id, inserted.id);
-          continue;
-        }
-        if (destination === undefined || destination.kind !== member.track.kind || destination.locked) {
-          destination = displayRows
+        let destinationId = inserted && source.id === track.id ? inserted.id : undefined;
+        if (destinationId === undefined) {
+          const fits = (candidate: NleTimelineSceneTrack) => candidate.kind === source.kind && !candidate.locked
+            && items.every((item) => candidate.items.every((other) => ids.has(other.id)
+              || !overlaps(other, item.startFrame + delta, item.durationFrames))
+              && (plannedItems.get(candidate.id) ?? []).every((other) => !overlaps(other, item.startFrame, item.durationFrames)));
+          const target = displayRows[desiredIndex];
+          const destination = target && fits(target) ? target : displayRows
             .map((candidate, index) => ({ candidate, distance: Math.abs(index - desiredIndex) }))
-            .filter(({ candidate }) => candidate.kind === member.track.kind && !candidate.locked)
+            .filter(({ candidate }) => fits(candidate))
             .sort((a, b) => a.distance - b.distance)[0]?.candidate;
+          destinationId = destination?.id ?? additionAt(desiredIndex, source.kind, `overlap:${source.id}`).id;
         }
-        if (destination === undefined) { valid = false; continue; }
-        const nextStart = member.item.startFrame + delta;
-        const collision = member.track.kind === "picture" && member.item.role === "present"
-          && destination.items.some((candidate) => !ids.has(candidate.id) && candidate.role === "present"
-            && overlaps(candidate, nextStart, member.item.durationFrames));
-        if (collision) {
-          const available = displayRows.find((candidate) => candidate.kind === member.track.kind && !candidate.locked
-            && candidate.items.every((other) => ids.has(other.id) || other.role !== "present"
-              || !overlaps(other, nextStart, member.item.durationFrames)));
-          if (available !== undefined) destination = available;
-          else destinations.set(member.item.id, additionAt(desiredIndex, member.track.kind, `overlap:${member.track.id}`).id);
-        }
-        if (!destinations.has(member.item.id)) destinations.set(member.item.id, destination.id);
+        plannedItems.set(destinationId, [...(plannedItems.get(destinationId) ?? []), ...items]);
+        for (const item of items) destinations.set(item.id, destinationId);
       }
 
       const floating = members.flatMap((member): FloatingItem[] => {
@@ -209,7 +202,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
       if (key !== previousPlan) { previousPlan = key; proposed = plan; }
       const dropTrack = valid && insertionIndex === undefined && destinations.get(item.id) === displayRows[targetIndex]?.id
         ? displayRows[targetIndex]?.id : undefined;
-      setGesture({ ids: [...ids], floating, valid, plan: proposed, ...(dropTrack === undefined ? {} : { dropTrack }), ...(insertionTop === undefined ? {} : { insertionTop }),
+      setGesture({ ids: [...ids], floating, valid, plan: proposed, ...(dropTrack === undefined ? {} : { dropTrack }), ...(!valid || insertionTop === undefined ? {} : { insertionTop }),
         ...(aligned === undefined ? {} : { snapFrame: aligned }) });
     };
 
