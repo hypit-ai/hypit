@@ -299,7 +299,9 @@
 .nle-track-insertion { position: absolute; left: 0; right: 0; height: 2px; margin-top: -1px; background: var(--pink); z-index: 7; pointer-events: none; opacity: 0; transition: opacity .12s; }
 .nle-track-insertion.visible { opacity: 1; }
 .nle-clip { --clip: #1f4c51; position: absolute; top: 0; bottom: 0; overflow: hidden; border: 1px solid transparent; border-radius: 4px; background: var(--clip); color: #fff; cursor: grab; touch-action: none; }
-.nle-clip[data-clip-id] { background-clip: padding-box; }
+.nle-clip[data-clip-id] { --clip-face-inset: 2px; background: transparent; }
+.nle-clip[data-clip-id]::before { content: ""; position: absolute; inset: 0 var(--clip-face-inset); border-radius: 3px; background: var(--clip); pointer-events: none; }
+.nle-clip[data-clip-id]::after, .nle-clip[data-clip-id] .nle-clip-thumbnails { inset-inline: var(--clip-face-inset); }
 .nle-clip.visual { --clip: #1f4c51; }
 .nle-clip.audio { --clip: #1c4f4a; }
 .nle-clip.text { --clip: #6a4a2f; }
@@ -325,6 +327,10 @@
 .nle-trim.end::before { right: 0; border-radius: 0 3px 3px 0; }
 .nle-trim::after { top: calc(50% - 1px); width: 2px; height: 2px; border-radius: 50%; background: #666; box-shadow: 0 -4px #666, 0 4px #666; }
 .nle-trim.start::after { left: 2px; } .nle-trim.end::after { right: 2px; }
+.nle-clip[data-clip-id] .nle-trim.start::before { left: var(--clip-face-inset); }
+.nle-clip[data-clip-id] .nle-trim.end::before { right: var(--clip-face-inset); }
+.nle-clip[data-clip-id] .nle-trim.start::after { left: calc(2px + var(--clip-face-inset)); }
+.nle-clip[data-clip-id] .nle-trim.end::after { right: calc(2px + var(--clip-face-inset)); }
 .nle-clip.selected .nle-trim::before, .nle-clip.selected .nle-trim::after { opacity: 1; }
 .nle-clip.drag-origin { opacity: .25; }
 .nle-clip-ghost { height: 56px; bottom: auto; z-index: 2; pointer-events: none; opacity: .85; border-color: var(--nle-line); }
