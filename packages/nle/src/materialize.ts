@@ -94,7 +94,9 @@ export function createMediaAssetMaterialization(project: NleProject, input: {
       asset: structuredClone(input.asset),
       start: structuredClone(input.at),
       duration: structuredClone(duration),
-      sourceTime: nleLinearTimeMapping(duration),
+      sourceTime: interpretation.domain === undefined
+        ? nleLinearTimeMapping(duration, exactTemporalZero(), { numerator: 0, denominator: 1 })
+        : nleLinearTimeMapping(duration),
       enabled: true,
       ...(includeAudio ? { audio: structuredClone(input.audio ?? {}) } : {}),
       ...(destination.kind === "audio" ? {} : {

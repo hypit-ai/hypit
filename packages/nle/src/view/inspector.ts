@@ -1,5 +1,7 @@
 import type { PackageSymbol } from "../implementation.js";
 import { exactTemporalRational, subtractExactTemporalValues } from "@hypit/temporal/algebra";
+import { nleProcessControlDuration } from "../process-time.js";
+import { projectNleProcessEdge } from "./projection.js";
 import { planNleComponentValueEdit } from "../component-value-authoring.js";
 import { planNleSpatialEdit } from "../spatial-authoring.js";
 import { indexNleProject } from "../indexing.js";
@@ -655,6 +657,10 @@ export function createNleInspectorPresentationHost(
       const processes = item.kind !== "present" ? [] : (["picture", "audio"] as const).flatMap(medium =>
         (item[medium]?.processes ?? []).map(process => ({
           medium, id: process.id, label: process.operator.symbol, enabled: process.enabled, editable: writable,
+          timing: projectNleProcessEdge(process.controlTime, view.editRate) ?? {
+            edge: "mapping" as const,
+            canAlign: exactTemporalRational(nleProcessControlDuration(process.controlTime)).numerator > 0n,
+          },
         })));
       return { item: id, title: displayedTitle, sections, processes };
     },

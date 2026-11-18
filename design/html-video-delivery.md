@@ -17,6 +17,7 @@ SVML / NLE Project snapshot + Project Media + selected render contributions
 ```
 
 执行器接收已关闭的程序和显式输出请求，负责浏览器、解码、混音、编码和封装的执行生命周期。
+编译器在内部计算画面和音频共用的剪辑时间映射。预览和导出通过 `prepareNleCompilation` 请求所需的终端程序。
 
 ## npm 边界
 

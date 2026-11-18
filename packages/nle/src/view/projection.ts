@@ -1,6 +1,7 @@
 import { exactTemporalRational, type ExactTemporalValue, type TemporalRate } from "@hypit/temporal/algebra";
-import type { NleItem, NleProject, NleTrack } from "../types.js";
+import type { NleItem, NleProcessControlTime, NleProject, NleTrack } from "../types.js";
 import type {
+  NleEdgeProcessTiming,
   NleTimelineDisplayLayer,
   NleTimelineAffordancePolicy,
   NleTimelineItemObservation,
@@ -25,6 +26,10 @@ function frames(value: ExactTemporalValue, rate: TemporalRate): number {
     * rate.numerator / rate.denominator;
   if (!Number.isFinite(result)) throw new Error("NLE Timeline frame projection exceeds finite UI coordinates.");
   return result;
+}
+
+export function projectNleProcessEdge(time: NleProcessControlTime, rate: TemporalRate): NleEdgeProcessTiming | undefined {
+  if ("edge" in time) return { edge: time.edge, durationFrames: frames(time.duration, rate) };
 }
 
 function source(item: NleItem): NleTimelineSceneItem["source"] {
@@ -218,6 +223,11 @@ export function projectNleTimeline(
         enabled: item.enabled,
         startFrame,
         durationFrames,
+        anchoredProcesses: item.kind !== "present" ? [] : (["picture", "audio"] as const).flatMap(medium =>
+          (item[medium]?.processes ?? []).flatMap(process => {
+            const timing = process.enabled ? projectNleProcessEdge(process.controlTime, view.editRate) : undefined;
+            return timing === undefined ? [] : [{ ...timing, medium, id: process.id, label: process.operator.symbol }];
+          })),
         ...(group === undefined ? {} : { group }),
         display: {
           title: item.name ?? observation?.title ?? defaultTitle(project, item),

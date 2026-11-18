@@ -7,6 +7,7 @@ import {
   type ExactTemporalValue,
 } from "@hypit/temporal/algebra";
 import { assertNleProject } from "./project.js";
+import { sliceNleProcessTime } from "./process-time.js";
 import { shiftNleTimeMapping, sliceNleTimeMapping } from "./source-time.js";
 import type {
   NleCanvas,
@@ -16,6 +17,7 @@ import type {
   NleItem,
   NleMatte,
   NleProcess,
+  NleProcessControlTime,
   NlePresentItem,
   NleProject,
   NleSharedValue,
@@ -125,7 +127,7 @@ export type NleCommand =
       readonly item: string;
       readonly medium: "picture" | "audio";
       readonly id: string;
-      readonly controlTime: NleTimeMapping;
+      readonly controlTime: NleProcessControlTime;
     }
   | {
       readonly kind: "process.remove";
@@ -254,13 +256,15 @@ function sliceOccurrenceOperators(
   item: MutableItem,
   oldDuration: ExactTemporalValue,
   range: { readonly start: ExactTemporalValue; readonly end: ExactTemporalValue },
+  splitFragment?: "start" | "end",
 ): void {
   if (item.kind !== "present") return;
   for (const process of [...(item.picture?.processes ?? []), ...(item.audio?.processes ?? [])]) {
-    (process as { controlTime: NleTimeMapping }).controlTime = sliceNleTimeMapping(
+    (process as { controlTime: NleProcessControlTime }).controlTime = sliceNleProcessTime(
       process.controlTime,
       oldDuration,
       range,
+      splitFragment,
     );
   }
 }
@@ -269,9 +273,10 @@ function sliceItemTime(
   item: MutableItem,
   oldDuration: ExactTemporalValue,
   range: { readonly start: ExactTemporalValue; readonly end: ExactTemporalValue },
+  splitFragment?: "start" | "end",
 ): void {
   setItemTime(item, sliceNleTimeMapping(itemTime(item), oldDuration, range));
-  sliceOccurrenceOperators(item, oldDuration, range);
+  sliceOccurrenceOperators(item, oldDuration, range, splitFragment);
 }
 
 function trimItem(item: MutableItem, edge: "start" | "end", at: ExactTemporalValue): void {
@@ -508,12 +513,12 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         sliceItemTime(right, oldDuration, {
           start: offset,
           end: oldDuration,
-        });
+        }, "end");
         item.duration = offset;
         sliceItemTime(item, oldDuration, {
           start: exactTemporalZero(),
           end: offset,
-        });
+        }, "start");
         track.items.splice(track.items.indexOf(item) + 1, 0, right);
         break;
       }
@@ -564,7 +569,7 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         const processes = mutableProcesses(next, command.item, command.medium);
         const process = processes.find((candidate) => candidate.id === command.id);
         if (process === undefined) throw new Error(`Unknown NLE Process: ${command.id}.`);
-        (process as { controlTime: NleTimeMapping }).controlTime = structuredClone(command.controlTime);
+        (process as { controlTime: NleProcessControlTime }).controlTime = structuredClone(command.controlTime);
         break;
       }
       case "process.remove": {

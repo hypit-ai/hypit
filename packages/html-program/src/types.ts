@@ -81,7 +81,7 @@ export type HtmlVisual = {
   readonly html: string;
   /** Rules scoped to the compiler-owned root. `:scope` addresses that root. */
   readonly css?: string;
-  /** Function body receiving `(root, data, context)` and returning synchronous `render(localFrame)`. */
+  /** Function body receiving `(root, data, context)` and returning synchronous `render(localFrame, outputFrame)`. */
   readonly setup?: string;
   readonly data?: unknown;
   /** Package-owned bytes and stills. Timed media arrives only through named Picture inputs. */

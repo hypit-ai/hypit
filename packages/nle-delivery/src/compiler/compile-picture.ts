@@ -89,6 +89,9 @@ export function compilePicture(
     readonly spans: readonly HtmlFrameSpan[];
     readonly samples?: readonly (TemporalMapEvaluation | null)[];
   };
+  const occurrencePosition = (occurrence: Occurrence, frame: number) => addExactTemporalValues(
+    occurrence.placement.active.start, subtractExactTemporalValues(positions[frame]!, occurrence.placement.start),
+  );
   const pictureReads = new Map<string, PictureFrames>();
   const readPicture = (occurrence: Occurrence): PictureFrames => {
     const cached = pictureReads.get(occurrence.id);
@@ -104,8 +107,7 @@ export function compilePicture(
     const samples = Array<TemporalMapEvaluation | null>(frameCount).fill(null);
     for (const { startFrame, endFrameExclusive } of range) {
       for (let frame = startFrame; frame < endFrameExclusive; frame++) {
-        const local = addExactTemporalValues(occurrence.placement.active.start,
-          subtractExactTemporalValues(positions[frame]!, occurrence.placement.start));
+        const local = occurrencePosition(occurrence, frame);
         samples[frame] = evaluate(local, "after") ?? null;
       }
     }
@@ -183,10 +185,22 @@ export function compilePicture(
         return mediaElement(content.media, elementId, domain, read,
           picture?.kind === "signal" ? picture.reconstruction : undefined);
       }
+      const itemTime = content.visual.setup === undefined ? undefined : picture?.itemTime;
+      let itemPositions: (ExactTemporalValue | null)[] | undefined;
+      if (itemTime !== undefined) {
+        const evaluate = createTemporalMapEvaluator(itemTime.mapping);
+        itemPositions = Array<ExactTemporalValue | null>(frameCount).fill(null);
+        for (const { startFrame, endFrameExclusive } of read.spans) {
+          for (let frame = startFrame; frame < endFrameExclusive; frame++) {
+            itemPositions[frame] = evaluate(occurrencePosition(occurrence, frame), "after")?.position ?? null;
+          }
+        }
+      }
       const frames = content.visual.setup === undefined ? undefined : read.samples === undefined
-        ? Array<number>(frameCount).fill(0)
+        ? itemPositions?.map(at => at === null ? null : 0) ?? Array<number>(frameCount).fill(0)
         : read.samples.map(sample => sample === null ? null : seconds(sample.position) * rate);
-      return visualElement(elementId, content.visual, domain, read.spans, [], undefined, frames);
+      return visualElement(elementId, content.visual, domain, read.spans, [],
+        itemTime === undefined ? undefined : { [itemTime.name]: itemPositions! }, frames);
     }
     if (node.kind === "over") return {
       kind: "box", id: elementId, spans: whole, style: domainStyle(domain), children: node.inputs.map(build),

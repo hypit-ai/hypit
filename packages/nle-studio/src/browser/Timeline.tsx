@@ -5,7 +5,7 @@ import {
   Volume2, VolumeX,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { NleStudioOpenProjection } from "../protocol.js";
+import type { NleStudioOpenProjection, NleStudioProcessAddress, NleStudioProcessEdit, NleStudioTrimRange } from "../protocol.js";
 import { IconButton } from "./common.js";
 import { timecode } from "./timecode.js";
 import { labelWidth, maxZoom, minZoom, rowSize } from "./timelineGeometry.js";
@@ -23,6 +23,7 @@ type Gesture = {
   readonly startX: number;
   readonly originStart: number;
   readonly originDuration: number;
+  readonly range: NleStudioTrimRange;
   readonly element: HTMLElement;
 };
 
@@ -33,6 +34,59 @@ function clipClass(item: NleTimelineSceneItem, track: NleTimelineSceneTrack): st
   if (track.kind === "audio") return "audio";
   if (item.source === "composition") return "compound";
   return item.display.layers.some(layer => layer.kind === "text") ? "text" : "visual";
+}
+
+function ProcessTimingHandle({ timing, duration, pixels, disabled, onSelect, onResize }: {
+  readonly timing: NleTimelineSceneItem["anchoredProcesses"][number];
+  readonly duration: number;
+  readonly pixels: number;
+  readonly disabled: boolean;
+  readonly onSelect: () => void;
+  readonly onResize: (frames: number) => void;
+}) {
+  const [draft, setDraft] = useState<number>();
+  const drag = useRef<{ pointer: number; x: number; frames: number }>(undefined);
+  const visible = Math.min(duration, timing.durationFrames);
+  const direction = timing.edge === "start" ? 1 : -1;
+  const label = timing.edge === "start" ? "片头效果" : "片尾效果";
+  const clamp = (frames: number) => Math.max(1, Math.min(Math.floor(duration), Math.round(frames)));
+  const stop = () => { drag.current = undefined; setDraft(undefined); };
+  return <div className={`nle-process-range ${timing.edge}`}
+    style={{ width: `${100 * Math.min(duration, draft ?? visible) / duration}%` }}>
+    <button type="button" className="nle-process-region" aria-label={`选择${timing.label}`} title={`${timing.label} · ${label}`}
+      onPointerDown={event => event.stopPropagation()} onClick={onSelect}/>
+    <button type="button" className="nle-process-handle" disabled={disabled || duration < 1}
+      aria-label={`调整${label}时长`} title={`调整${label}时长`}
+      onPointerDown={event => {
+        event.stopPropagation();
+        if (event.button !== 0 || drag.current !== undefined) return;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        drag.current = { pointer: event.pointerId, x: event.clientX, frames: visible };
+        onSelect();
+      }}
+      onPointerMove={event => {
+        const current = drag.current;
+        if (current?.pointer !== event.pointerId) return;
+        setDraft(clamp(current.frames + direction * (event.clientX - current.x) / pixels));
+      }}
+      onPointerUp={event => {
+        const current = drag.current;
+        if (current?.pointer !== event.pointerId) return;
+        const distance = direction * (event.clientX - current.x) / pixels;
+        const next = clamp(current.frames + distance);
+        stop();
+        if (Math.abs(distance) >= 0.5 && next !== Math.round(current.frames)) onResize(next);
+      }}
+      onLostPointerCapture={stop} onPointerCancel={stop}
+      onKeyDown={event => {
+        const delta = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
+        if (delta === 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const next = clamp(visible + delta * direction);
+        if (next !== Math.round(visible)) onResize(next);
+      }}/>
+  </div>;
 }
 
 function useMarquee(scroller: React.RefObject<HTMLDivElement | null>, selection: readonly string[], onSelect: (ids: readonly string[]) => void) {
@@ -70,7 +124,7 @@ function useMarquee(scroller: React.RefObject<HTMLDivElement | null>, selection:
 export function Timeline({ session, frame, selection, busy, onSeek, onSelect, onMove, onTrim, onSplit, onRemove, onApplyPastedGroups,
   onTrackEnabled, onTrackLocked, onTrackMove, onComposition, onEnterComposition, onReturnComposition,
   onCompound, onAddTrack, onToggleGroup, canToggleGroup, grouped,
-  onDetachAudio, canDetachAudio, onUndo, onRedo }: {
+  onDetachAudio, canDetachAudio, onUndo, onRedo, selectedProcess, onSelectProcess, onProcessTiming }: {
   readonly session: NleStudioOpenProjection;
   readonly frame: number;
   readonly selection: readonly string[];
@@ -97,6 +151,9 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   readonly canDetachAudio: boolean;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
+  readonly selectedProcess: NleStudioProcessAddress | undefined;
+  readonly onSelectProcess: (address: NleStudioProcessAddress) => void;
+  readonly onProcessTiming: (edit: NleStudioProcessEdit) => void;
 }) {
   const scene = session.timeline.scene, fps = scene.editRate.numerator / scene.editRate.denominator;
   const scroller = useRef<HTMLDivElement>(null);
@@ -113,6 +170,12 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const itemGesture = useItemGesture({ scene, scroller, pixels, frame, snap, busy, selection, onSelect, onMove });
   const width = Math.max(900, (Math.max(scene.maximumFrame, frame) / fps + 10) * zoom);
   const selected = scene.tracks.flatMap(track => track.items).find(item => selection.includes(item.id));
+  const trimRanges = session.timeline.trimRanges;
+  const canTrimSelectionAt = (edge: "start" | "end") => {
+    if (selected === undefined || frame <= selected.startFrame || frame >= selected.startFrame + selected.durationFrames) return false;
+    const range = trimRanges[selected.id]?.[edge];
+    return range !== undefined && frame >= range.minimum && frame <= range.maximum;
+  };
   const nestedComposition = selected?.nestedComposition;
   const sceneItems = new Map(scene.tracks.flatMap(track => track.items.map(item => [item.id, item] as const)));
   const canSplit = selection.some(id => {
@@ -150,18 +213,23 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     if (tool === "left" || tool === "right") { directionalSelection(localFrame, tool); return; }
     if (mode === "move") { itemGesture.start(event, item, track); return; }
     onSelect(event.metaKey || event.ctrlKey ? [...new Set([...selection, item.id])] : [item.id]);
-    if (track.locked || (mode === "trim-start" && !item.affordances.trimStart) || (mode === "trim-end" && !item.affordances.trimEnd)) return;
+    const range = trimRanges[item.id]?.[mode === "trim-start" ? "start" : "end"];
+    if (track.locked || range === undefined) return;
     const element = event.currentTarget;
     element.setPointerCapture(event.pointerId);
-    gesture.current = { item, mode, pointer: event.pointerId, startX: event.clientX, originStart: item.startFrame, originDuration: item.durationFrames, element };
+    gesture.current = { item, mode, pointer: event.pointerId, startX: event.clientX, originStart: item.startFrame, originDuration: item.durationFrames, element, range };
     const move = (next: PointerEvent) => {
       const current = gesture.current; if (!current || next.pointerId !== current.pointer) return;
       let delta = Math.round((next.clientX - current.startX) / pixels);
       if (snap) { const unit = Math.max(1, Math.round(fps / 2)); delta = Math.round(delta / unit) * unit; }
-      if (current.mode === "trim-start") {
-        const start = Math.max(0, Math.min(current.originStart + current.originDuration - 1, current.originStart + delta));
-        draftRef.current = { id: item.id, start, duration: current.originDuration + current.originStart - start };
-      } else draftRef.current = { id: item.id, start: current.originStart, duration: Math.max(1, current.originDuration + delta) };
+      const end = current.originStart + current.originDuration;
+      const left = current.mode === "trim-start";
+      const origin = left ? current.originStart : end;
+      const at = Math.max(current.range.minimum, Math.min(current.range.maximum, Math.round(origin + delta)));
+      const advances = delta < 0 ? at < origin : delta > 0 && at > origin;
+      draftRef.current = !advances ? undefined : left
+        ? { id: item.id, start: at, duration: end - at }
+        : { id: item.id, start: current.originStart, duration: at - current.originStart };
       setDraft(draftRef.current);
     };
     const cleanup = () => {
@@ -172,7 +240,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
       const current = gesture.current; if (!current || next.pointerId !== current.pointer) return;
       const accepted = draftRef.current; if (current.element.hasPointerCapture(current.pointer)) current.element.releasePointerCapture(current.pointer); cleanup();
       if (!accepted) return;
-      onTrim(current.item, current.mode === "trim-start" ? "start" : "end", current.mode === "trim-start" ? accepted.start : accepted.start + accepted.duration);
+      onTrim(current.item, current.mode === "trim-start" ? "start" : "end",
+        current.mode === "trim-start" ? accepted.start : Math.round(accepted.start + accepted.duration));
     };
     const cancel = () => cleanup();
     window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish); window.addEventListener("pointercancel", cancel);
@@ -196,8 +265,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
       <IconButton label="撤销" disabled={busy || !session.status.projectHistory.canUndo} onClick={onUndo}><Undo2 size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="重做" disabled={busy || !session.status.projectHistory.canRedo} onClick={onRedo}><Redo2 size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="分割" disabled={busy || !canSplit} onClick={() => onSplit(selection, frame)}><Scissors size={18} strokeWidth={1.6}/></IconButton>
-      <IconButton label="向左裁剪" disabled={busy || selected?.affordances.trimStart !== true || frame <= selected.startFrame || frame >= selected.startFrame + selected.durationFrames} onClick={() => selected && onTrim(selected, "start", frame)}><PanelLeftClose size={18} strokeWidth={1.6}/></IconButton>
-      <IconButton label="向右裁剪" disabled={busy || selected?.affordances.trimEnd !== true || frame <= selected.startFrame || frame >= selected.startFrame + selected.durationFrames} onClick={() => selected && onTrim(selected, "end", frame)}><PanelRightClose size={18} strokeWidth={1.6}/></IconButton>
+      <IconButton label="向左裁剪" disabled={busy || !canTrimSelectionAt("start")} onClick={() => selected && onTrim(selected, "start", frame)}><PanelLeftClose size={18} strokeWidth={1.6}/></IconButton>
+      <IconButton label="向右裁剪" disabled={busy || !canTrimSelectionAt("end")} onClick={() => selected && onTrim(selected, "end", frame)}><PanelRightClose size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="删除" disabled={busy || selected === undefined} onClick={onRemove}><Trash2 size={18} strokeWidth={1.6}/></IconButton>
       {session.clipboard.pendingGroups > 0 && <IconButton label="恢复粘贴分组" disabled={busy}
         onClick={onApplyPastedGroups}><ClipboardCheck size={18} strokeWidth={1.6}/></IconButton>}
@@ -230,7 +299,15 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
             <IconButton label={track.locked ? "解锁轨道" : "锁定轨道"} className="nle-track-lock" disabled={busy} aria-pressed={track.locked} onClick={() => onTrackLocked(track.id, !track.locked)}>{track.locked ? <Lock size={14}/> : <Unlock size={14}/>}</IconButton>
             <IconButton label={track.enabled ? "停用轨道" : "启用轨道"} disabled={busy} onClick={() => onTrackEnabled(track.id, !track.enabled)}>{track.enabled ? <Volume2 size={14}/> : <VolumeX size={14}/>}</IconButton></span></div>
           <div className="nle-track-content" style={{ width }} onPointerDown={event => { if (event.target === event.currentTarget) seek.start(event); }}>
-            {track.items.map(item => { const current = draft?.id === item.id ? draft : { start: item.startFrame, duration: item.durationFrames }; const kind = clipClass(item, track); const preview = item.display.layers.find(layer => layer.kind === "preview" && layer.state === "ready"); const text = item.display.layers.find(layer => layer.kind === "text"); return <div key={item.id} data-clip-id={item.id} className={`nle-clip ${kind}${selection.includes(item.id) ? " selected" : ""}${itemGesture.gesture?.ids.includes(item.id) ? " drag-origin" : ""}`} style={{ left: current.start * pixels, width: Math.max(8, current.duration * pixels) }} onPointerDown={event => begin(event, item, "move", track)} onPointerMove={event => {
+            {track.items.map(item => {
+              const current = draft?.id === item.id ? draft : { start: item.startFrame, duration: item.durationFrames };
+              const kind = clipClass(item, track);
+              const preview = item.display.layers.find(layer => layer.kind === "preview" && layer.state === "ready");
+              const text = item.display.layers.find(layer => layer.kind === "text");
+              const timing = tool === "select" && selectedProcess?.item === item.id
+                ? item.anchoredProcesses.find(process => process.medium === selectedProcess.medium && process.id === selectedProcess.process)
+                : undefined;
+              return <div key={item.id} data-clip-id={item.id} className={`nle-clip ${kind}${selection.includes(item.id) ? " selected" : ""}${itemGesture.gesture?.ids.includes(item.id) ? " drag-origin" : ""}`} style={{ left: current.start * pixels, width: Math.max(8, current.duration * pixels) }} onPointerDown={event => begin(event, item, "move", track)} onPointerMove={event => {
               if (tool !== "cut" || busy || track.locked) return; const at = item.startFrame + Math.round((event.clientX - event.currentTarget.getBoundingClientRect().left) / pixels); setCutCursor(item.affordances.split && at > item.startFrame && at < item.startFrame + item.durationFrames ? { track: track.id, frame: at } : undefined);
             }} onPointerLeave={() => setCutCursor(undefined)}>
               <span className="nle-clip-title"><span className="nle-clip-chip">{item.group && <Group size={11}/>} {scene.mattes.some(matte => matte.content === item.id || matte.matte === item.id) && <Link2 size={11}/>} {item.source === "composition" && <Layers size={11}/>} {item.display.title}</span>{kind !== "text" && <span className="nle-clip-chip">{timecode(current.duration, fps)}</span>}</span>
@@ -238,7 +315,11 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
               {item.source === "media" && draft?.id !== item.id
                 && <TimelineMedia views={mediaViews} item={item.id} start={item.startFrame} frameWidth={pixels}/>}
               {text?.kind === "text" && <span className="nle-clip-text">{text.text}</span>}
-              {item.affordances.trimStart && <div className="nle-trim start" aria-label="裁剪开头" onPointerDown={event => begin(event, item, "trim-start", track)}/>} {item.affordances.trimEnd && <div className="nle-trim end" aria-label="裁剪结尾" onPointerDown={event => begin(event, item, "trim-end", track)}/>}<div className={`nle-cut-line${tool === "cut" && cutCursor?.track === track.id && cutCursor.frame >= item.startFrame && cutCursor.frame <= item.startFrame + item.durationFrames ? " visible" : ""}`} style={{ left: ((cutCursor?.frame ?? item.startFrame) - item.startFrame) * pixels }}/>
+              {trimRanges[item.id]?.start && <div className="nle-trim start" aria-label="裁剪开头" onPointerDown={event => begin(event, item, "trim-start", track)}/>} {trimRanges[item.id]?.end && <div className="nle-trim end" aria-label="裁剪结尾" onPointerDown={event => begin(event, item, "trim-end", track)}/>}<div className={`nle-cut-line${tool === "cut" && cutCursor?.track === track.id && cutCursor.frame >= item.startFrame && cutCursor.frame <= item.startFrame + item.durationFrames ? " visible" : ""}`} style={{ left: ((cutCursor?.frame ?? item.startFrame) - item.startFrame) * pixels }}/>
+              {timing !== undefined && selectedProcess !== undefined && <ProcessTimingHandle key={`${timing.medium}:${timing.id}`}
+                timing={timing} duration={current.duration} pixels={pixels} disabled={busy || track.locked}
+                onSelect={() => onSelectProcess(selectedProcess)}
+                onResize={durationFrames => onProcessTiming({ kind: "process.timing", ...selectedProcess, edge: timing.edge, durationFrames })}/>}
             </div>; })}
             {scene.transitions.flatMap(transition => {
               const outgoing = sceneItems.get(transition.outgoing), incoming = sceneItems.get(transition.incoming);

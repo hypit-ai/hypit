@@ -66,7 +66,7 @@ chosen, but the semantic kernel is small:
 - `Transition` relates an outgoing and incoming Present;
 - `Matte` relates content to a matte-source Present;
 - `Composition` and Track order describe nested Picture composition and spatial use;
-- named Picture and Audio elements preserve the two signal domains of one occurrence.
+- Picture and Audio participation on the same Media or Composition occurrence share placement and source time.
 
 These elements are authoring declarations over local authoring time, occurrences, relations and package symbols.
 Renderer and model execution settings stay with their selected Executors.
@@ -114,30 +114,34 @@ NLE transaction that accepts the newly materialized facts.
 
 ## Component instances and expansion
 
-A component may remain one opaque NLE Present or expose an editable materialization boundary.
+A project can place a package component as one Component Present. A project program can also materialize
+a local Composition with independently editable child Items.
 
-An opaque instance stores:
+A Component Present stores:
 
 - a stable package and symbol selection;
 - closed occurrence parameters;
 - explicit package-defined Media input references;
-- optional package value slots with inline or Project-shared ownership;
-- declared Picture and Audio outputs.
+- optional package value slots with inline or Project-shared ownership.
+
+The selected package supplies the local Picture extent, optional duration and `HtmlVisual` through
+`hypit.nle-render`. The delivery compiler maps the Present's source time to the visual's local frame.
+A visual may also request an Item-local time Control for behavior attached to the visible edges. For instance a
+caption can follow source time for word timing and evaluate its own entrance and exit against the Item window.
+[Component render contract](../packages/nle-delivery/README.md#project-package-render-contributions)
 
 For a Component with editable Media inputs, its authoring contribution declares each current slot's identity,
 label, requiredness and accepted interpretation. The package may derive slots from stable collection entries.
 Studio supplies accepted Project Media references for the declared slots and validates their interpretations on bind
 or materialization. The Component remains responsible for evaluating its required inputs.
 
-An expanded result materializes a local NLE Composition with stable child ids. Acceptance is explicit, after which
-that Composition is ordinary NLE author material and does not retain a live dependency on the Component source or the
-author program. A component can use ordinary functions, conditions and loops internally, but only a finite
-materialized result with stable identity is independently editable.
+When a project program exposes internal objects for direct editing, it materializes them as ordinary NLE Items in
+a local Composition. The program resolves their identities, times and references before the caller accepts the result
+through an NLE transaction. Each materialized Item can then be selected and edited directly in Studio.
 
-An opaque Component source remains the implementation authority for its reusable behavior, while its NLE occurrence
-owns this project's placement, trim, local parameters and direct edit relations. A caller that materializes editable
-children chooses the target Composition and transaction; rerunning the author program later produces another explicit
-candidate transaction rather than rewriting accepted NLE facts.
+The package owns the reusable visual behavior of a Component Present. The NLE occurrence owns its placement,
+source time and selected parameters. A caller that materializes editable children chooses the target Composition
+and the transaction that accepts the resulting Items.
 
 ## Authoring relations
 

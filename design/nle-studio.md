@@ -110,6 +110,10 @@ the playhead and commits them together. Remove deletes the explicit selection an
 When an edit leaves View references stale, Studio keeps the projections visible and offers explicit reconciliation
 alongside Project undo.
 
+The selected edge-aligned Process has a Control interval drawn within its Present on the Timeline. The inner
+handle and the Inspector duration field both submit `process.timing` with the exact Process address and edit-frame
+duration. Inspector also selects the alignment. The browser keeps the selection and drag draft for the Session.
+
 Callers can close a gap at a frame or ripple-remove a contiguous selection by naming the Tracks to move.
 The planner resolves the exact gap edges and shifts following Items once. It rejects an occupied gap and any
 edit whose linked members would need to move outside the named Tracks or across the gap boundary.
@@ -184,11 +188,16 @@ scope. The playhead must fall at a boundary or in empty space on each selected T
 starting at or after the playhead by the inserted duration, checks their View Group, Transition and Matte members,
 and places the new Present in the same transaction.
 
+The Timeline observation publishes each eligible trim handle's admissible edit-frame range. The Studio planner
+uses the resolved Media Catalog, Composition duration or package source-time declaration, together with the current
+source and Process mappings. The handle clamps to the range while dragging. A trim command checks the edit against
+the current bounds, and the Project transaction validates structural relationships at commit.
+
 `timeline.slip` moves a timed Media or Composition source window while preserving placement and Process Control
 time. `timeline.roll` moves one direct cut on one Track by trimming both endpoints. `timeline.ripple-trim` edits
 an Item's end edge and displaces subsequent Items in the selected Track scope by the exact duration change. Roll and
-ripple trim require the applicable package time-window affordances. The Studio checks timed Media bounds on slip or
-edge extension, and the Project checks Composition source bounds in the transaction.
+ripple trim require the applicable package time-window affordances. Roll and ripple trim check the affected edge
+windows together with the transaction's other changes.
 
 `timeline.retime` sets a nonzero rational source rate on a Picture-only Media or Composition Present with a
 single affine source window. Placement, duration and Process Control time stay fixed. Reversing direction uses

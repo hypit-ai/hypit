@@ -266,15 +266,11 @@
           </process>
           <process id="broll-01-zero-updates-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
             <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":0.9,"scaleY":0.9,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="237/200" source-start="0/1" rate="1/1" />
-            </control-time>
+            <control-time edge="start" duration="1/4" control-duration="1/4" />
           </process>
           <process id="broll-01-zero-updates-exit-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"611","timeBase":{"numerator":1,"denominator":600}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"343","timeBase":{"numerator":1,"denominator":300}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="237/200" source-start="0/1" rate="1/1" />
-            </control-time>
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"1","timeBase":{"numerator":1,"denominator":8}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
+            <control-time edge="end" duration="1/6" control-duration="1/6" />
           </process>
         </picture>
       </present>

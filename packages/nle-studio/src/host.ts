@@ -3,6 +3,7 @@ import { dirname, posix, relative, resolve, sep } from "node:path";
 import type { ApplicationProductProvider } from "@hypit/application";
 import type { HtmlFrameExecutor, HtmlVideoExecutor } from "@hypit/html-video";
 import type { NodeProjectMediaService } from "@hypit/media-asset/service/node";
+import type { ProjectMediaCatalog, ProjectMediaCatalogEntry } from "@hypit/media-asset/service";
 import { defaultMediaSelection } from "@hypit/media";
 import {
   inspectMediaFileFromContainerIndex,
@@ -26,9 +27,15 @@ import {
   nleCompositionDuration,
   nleItemEnd,
   nleLinearTimeMapping,
+  nleProcessControlDuration,
+  resolveNleProcessTime,
   planNleComponentValueEdit,
   type NleCommand,
+  type NleComposition,
+  type NleItem,
+  type NleProject,
   type NleProjectService,
+  type NleSourceTimeBounds,
   type NleTrack,
 } from "@hypit/nle";
 import {
@@ -75,6 +82,7 @@ import {
   planTimelineInsertion, planTransitionWindow, resolveTransitionCut, studioFrameTime,
 } from "./timeline-planning.js";
 import { observeTimelineMedia } from "./timeline-media.js";
+import { planTrimEdge, projectTrimRange } from "./trim-planning.js";
 import { NleStudioPreview } from "./preview.js";
 import { NleStudioMediaViews } from "./media-views.js";
 import type {
@@ -263,7 +271,7 @@ export class NleStudioProductSession {
         scope: "project",
         kind: "media.catalog",
         status: this.#surface.status(),
-        invalidated: ["media", "preview"],
+        invalidated: ["media", "timeline", "preview"],
         generation: event.generation,
       });
     });
@@ -362,8 +370,8 @@ export class NleStudioProductSession {
     return pending;
   }
 
-  async #projectMedia(): Promise<NleStudioMediaProjection> {
-    const catalog = await this.#project.media.observe();
+  async #projectMedia(observed?: ProjectMediaCatalog): Promise<NleStudioMediaProjection> {
+    const catalog = observed ?? await this.#project.media.observe();
     this.#assertOpen();
     const editRate = this.#viewService.snapshot().view.editRate;
     if (catalog.generation !== this.#mediaGeneration) {
@@ -445,14 +453,28 @@ export class NleStudioProductSession {
     };
   }
 
-  #timeline(): NleStudioTimelineProjection {
+  #timeline(catalog: ProjectMediaCatalog): NleStudioTimelineProjection {
+    this.#assertOpen();
     const observation = this.#surface.observe({ kind: "timeline" });
     if (observation.kind !== "timeline") throw new Error("NLE Studio received an invalid Timeline projection.");
     const project = this.#projectLease.service.snapshot().project;
     const composition = project.compositions.find((value) => value.id === observation.value.composition)!;
     const visit = this.#navigation.at(-1);
+    const entries = new Map(catalog.entries.map(entry => [entry.reference.path, entry] as const));
+    const ranges: [string, NleStudioTimelineProjection["trimRanges"][string]][] = [];
+    for (const track of observation.value.tracks) for (const scene of track.items) {
+      if (!scene.affordances.trimStart && !scene.affordances.trimEnd) continue;
+      const subjectTrack = composition.tracks.find(value => value.id === track.id)!;
+      const item = subjectTrack.items.find(value => value.id === scene.id)!;
+      const source = this.#trimSource(project, composition, subjectTrack, item, entries);
+      const rate = observation.value.editRate;
+      const start = scene.affordances.trimStart ? projectTrimRange(project, composition, item, "start", rate, source) : undefined;
+      const end = scene.affordances.trimEnd ? projectTrimRange(project, composition, item, "end", rate, source) : undefined;
+      ranges.push([item.id, { ...(start === undefined ? {} : { start }), ...(end === undefined ? {} : { end }) }]);
+    }
     return {
       scene: observation.value,
+      trimRanges: Object.fromEntries(ranges),
       canReturn: visit?.child === composition.id && project.compositions.some(entry => entry.id === visit.parent),
       compositions: project.compositions.map((value) => ({ id: value.id, name: value.name })),
       itemMedia: composition.tracks.flatMap((track) => track.items.flatMap((item) => {
@@ -460,6 +482,20 @@ export class NleStudioProductSession {
         return [{ item: item.id, media: this.#mediaIdentity(item.asset.path, item.id) }];
       })),
     };
+  }
+
+  #trimSource(project: NleProject, composition: NleComposition, track: NleTrack, item: NleItem,
+    entries: ReadonlyMap<string, ProjectMediaCatalogEntry>): NleSourceTimeBounds | undefined {
+    if (item.kind === "adjust") return undefined;
+    if (item.source === "component") {
+      return this.#packages.authoring.componentSourceTime({ project, composition, track, item });
+    }
+    if (item.source === "composition") {
+      return { kind: "timed", duration: nleCompositionDuration(project.compositions.find(value => value.id === item.composition)!) };
+    }
+    const entry = entries.get(this.#mediaIdentity(item.asset.path, item.id));
+    if (entry?.state !== "available") return undefined;
+    return entry.duration === undefined ? { kind: "constant" } : { kind: "timed", duration: entry.duration };
   }
 
   #mediaIdentity(path: string, item: string): string {
@@ -529,14 +565,15 @@ export class NleStudioProductSession {
   }
 
   async #openProjection(): Promise<NleStudioOpenProjection> {
-    const media = await this.#projectMedia();
+    const catalog = await this.#project.media.observe();
+    const media = await this.#projectMedia(catalog);
     return {
       project: this.#projectProjection(),
       viewDocument: this.#viewDocument === undefined
         ? { persistence: "session" }
         : { persistence: "document", path: this.#viewDocument },
       status: this.#surface.status(),
-      timeline: this.#timeline(),
+      timeline: this.#timeline(catalog),
       canvas: this.#canvas(),
       media,
       catalog: this.#catalog(),
@@ -562,7 +599,7 @@ export class NleStudioProductSession {
       case "open": return { kind: "open", value: await this.#openProjection() };
       case "project": return { kind: "project", value: this.#projectProjection() };
       case "status": return { kind: "status", value: this.#surface.status() };
-      case "timeline": return { kind: "timeline", value: this.#timeline() };
+      case "timeline": return { kind: "timeline", value: this.#timeline(await this.#project.media.observe()) };
       case "timeline-media": {
         const catalog = await this.#project.media.observe();
         this.#assertOpen();
@@ -748,29 +785,32 @@ export class NleStudioProductSession {
       case "timeline.ripple-remove":
       case "timeline.close-gap": {
         const plan = planTimelineEdit(context, operation);
-        if (plan.commands.length > 0 && (operation.kind === "timeline.slip" || operation.kind === "timeline.retime" || operation.kind === "timeline.roll"
-            || operation.kind === "timeline.ripple-trim" || operation.kind === "timeline.trim")) {
+        const trims = plan.commands.flatMap(command => command.kind === "item.roll" ? [
+          { id: command.left, edge: "end" as const, at: command.at },
+          { id: command.right, edge: "start" as const, at: command.at },
+        ] : command.kind === "item.trim" || command.kind === "item.ripple-trim" ? [command] : []);
+        if (trims.length > 0) {
+          const catalog = await this.#project.media.observe();
+          const entries = new Map(catalog.entries.map(entry => [entry.reference.path, entry] as const));
+          const index = indexNleProject(project);
+          const preparation = trims.flatMap(({ id, edge, at }) => {
+            const { item, track } = index.item(id)!;
+            const prepare = planTrimEdge(item, edge, at, view.editRate, this.#trimSource(project, composition, track, item, entries));
+            return prepare === undefined ? [] : [prepare];
+          });
+          return commit([...preparation, ...plan.commands], { count: plan.count });
+        }
+        if (plan.commands.length > 0 && (operation.kind === "timeline.slip" || operation.kind === "timeline.retime")) {
           const planned = applyNleTransaction(project, { commands: plan.commands });
-          const original = indexNleProject(project);
-          const index = indexNleProject(planned);
-          const subjects = operation.kind === "timeline.roll" ? [operation.left, operation.right] : [operation.item];
-          await Promise.all(subjects.map(async (id) => {
-            const item = index.item(id)!.item;
-            const previous = original.item(id)!.item;
-            if (item.kind !== "present" || item.source !== "media") return;
-            const expands = compareExactTemporalValues(item.start, previous.start) < 0
-              || compareExactTemporalValues(nleItemEnd(item), nleItemEnd(previous)) > 0;
-            if (operation.kind !== "timeline.slip" && operation.kind !== "timeline.retime" && !expands) return;
-            const { interpretation } = await this.#resolveMediaBinding(this.#mediaIdentity(item.asset.path, id));
+          const item = indexNleProject(planned).item(operation.item)!.item;
+          if (item.kind === "present" && item.source === "media") {
+            const { interpretation } = await this.#resolveMediaBinding(this.#mediaIdentity(item.asset.path, item.id));
             if (interpretation.domain === undefined) {
-              if (operation.kind === "timeline.slip" || operation.kind === "timeline.retime") {
-                throw new Error(`NLE Item ${id} requires timed Media for ${operation.kind}.`);
-              }
-              return;
+              throw new Error(`NLE Item ${item.id} requires timed Media for ${operation.kind}.`);
             }
             assertTemporalMapPieces(item.sourceTime.pieces,
-              sealLocalTemporalDomain({ id: `${id}:time`, duration: item.duration }), interpretation.domain);
-          }));
+              sealLocalTemporalDomain({ id: `${item.id}:time`, duration: item.duration }), interpretation.domain);
+          }
         }
         return commit(plan.commands, { count: plan.count });
       }
@@ -941,17 +981,34 @@ export class NleStudioProductSession {
       }
       case "process.enable":
       case "process.move":
+      case "process.timing":
       case "process.remove": {
         const item = currentItems().find(entry => entry.id === operation.item);
         const process = item?.kind === "present" ? item[operation.medium]?.processes?.find(entry => entry.id === operation.process)
           : undefined;
-        if (process === undefined) throw new Error(`NLE Item ${operation.item} has no ${operation.medium} Process ${operation.process}.`);
+        if (item === undefined || process === undefined) {
+          throw new Error(`NLE Item ${operation.item} has no ${operation.medium} Process ${operation.process}.`);
+        }
         const address = { item: operation.item, medium: operation.medium };
         const result = { item: operation.item, process: operation.process };
         if (operation.kind === "process.enable") {
           return commit(process.enabled === operation.enabled ? [] : [{
             kind: "process.replace", ...address, process: { ...process, enabled: operation.enabled },
           }], result);
+        }
+        if (operation.kind === "process.timing") {
+          const timing = process.controlTime;
+          if (operation.edge === "mapping") {
+            if ("pieces" in timing) return commit([], result);
+            return commit([{ kind: "process.retime", ...address, id: process.id,
+              controlTime: { ...resolveNleProcessTime(timing, item.duration), controlDuration: timing.controlDuration },
+            }], result);
+          }
+          const controlDuration = nleProcessControlDuration(timing);
+          return commit([{ kind: "process.retime", ...address, id: process.id, controlTime: {
+            edge: operation.edge, controlDuration,
+            duration: duration ?? ("edge" in timing ? timing.duration : controlDuration),
+          } }], result);
         }
         if (operation.kind === "process.remove") return commit([{ kind: "process.remove", ...address, id: process.id }], result);
         return commit(operation.before === process.id ? [] : [{

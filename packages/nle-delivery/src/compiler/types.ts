@@ -18,12 +18,14 @@ export type ResolvedSource = {
   readonly picture?: {
     readonly spatialDomain: LocalSpatialDomain;
     readonly time?: LocalTemporalDomain;
+    readonly itemTimeControl?: string;
   };
   readonly audio?: LocalTemporalDomain;
 };
 
 export type PictureRead = {
   readonly spatialDomain: LocalSpatialDomain;
+  readonly itemTime?: { readonly name: string; readonly mapping: TemporalMap };
 } & (
   | { readonly kind: "constant" }
   | { readonly kind: "signal"; readonly mapping: TemporalMap; readonly reconstruction?: HtmlPictureReconstruction }

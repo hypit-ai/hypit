@@ -170,6 +170,9 @@
 .nle-row { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; min-height: 24px; }
 .nle-row-label { min-width: 0; color: var(--text); font-size: var(--font-size-caption); overflow-wrap: anywhere; }
 .nle-row-content { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.nle-process-fields { display: grid; grid-template-columns: subgrid; row-gap: 8px; }
+.nle-process-select { padding: 2px 4px; border: 0; border-radius: 3px; color: inherit; background: transparent; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.nle-process-select[aria-pressed="true"] { background: var(--nle-field); }
 .nle-row.end .nle-row-content { justify-content: flex-end; }
 .nle-row-content > .select-trigger { flex: 1; min-width: 0; height: 28px; min-height: 28px; background: var(--nle-field); border-color: transparent; font-size: var(--font-size-caption); }
 .nle-slider { position: relative; display: flex; align-items: center; flex: 1; min-width: 40px; height: 20px; }
@@ -330,6 +333,14 @@
 .nle-trim::after { top: calc(50% - 1px); width: 2px; height: 2px; border-radius: 50%; background: #666; box-shadow: 0 -4px #666, 0 4px #666; }
 .nle-trim.start::after { left: 2px; } .nle-trim.end::after { right: 2px; }
 .nle-clip.selected .nle-trim::before, .nle-clip.selected .nle-trim::after { opacity: 1; }
+.nle-process-range { position: absolute; z-index: 5; bottom: 2px; height: 10px; min-width: 2px; pointer-events: none; }
+.nle-process-range.start { left: 0; }
+.nle-process-range.end { right: 0; }
+.nle-process-region { position: absolute; inset: 0; width: 100%; padding: 0; border: 1px solid #f6cd91; border-radius: 2px; background: #854a25d9; pointer-events: auto; }
+.nle-process-handle { position: absolute; top: -2px; width: 7px; height: 13px; padding: 0; border: 1px solid #533019; border-radius: 2px; background: #f6cd91; cursor: ew-resize; pointer-events: auto; touch-action: none; }
+.nle-process-range.start .nle-process-handle { right: -3px; }
+.nle-process-range.end .nle-process-handle { left: -3px; }
+.nle-process-handle:disabled { pointer-events: none; }
 .nle-clip.drag-origin { opacity: .25; }
 .nle-clip-ghost { height: 56px; bottom: auto; z-index: 2; pointer-events: none; opacity: .85; border-color: var(--nle-line); }
 .nle-floating-preview { z-index: 100; }

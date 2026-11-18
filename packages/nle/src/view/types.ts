@@ -114,6 +114,7 @@ export type NleTimelineSceneItem = {
   readonly enabled: boolean;
   readonly startFrame: number;
   readonly durationFrames: number;
+  readonly anchoredProcesses: readonly (NleProcessAddressProjection & NleEdgeProcessTiming)[];
   readonly group?: string;
   readonly display: {
     readonly title: string;
@@ -294,10 +295,19 @@ export type NleTransitionInspectorScene = {
   readonly sections: readonly NleInspectorSection[];
 };
 
-export type NleInspectorProcess = {
+export type NleProcessAddressProjection = {
   readonly medium: "picture" | "audio";
   readonly id: string;
   readonly label: string;
+};
+
+export type NleEdgeProcessTiming = {
+  readonly edge: "start" | "end";
+  readonly durationFrames: number;
+};
+
+export type NleInspectorProcess = NleProcessAddressProjection & {
   readonly enabled: boolean;
   readonly editable: boolean;
+  readonly timing: NleEdgeProcessTiming | { readonly edge: "mapping"; readonly canAlign: boolean };
 };

@@ -1,6 +1,6 @@
 import type { NleInspectorCollection, NleInspectorField, NleInspectorScene, NleTransitionInspectorScene } from "@hypit/nle/view";
 import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
-import type { NleStudioComponentInputsProjection, NleStudioMediaEntry, NleStudioProcessEdit } from "../protocol.js";
+import type { NleStudioComponentInputsProjection, NleStudioMediaEntry, NleStudioProcessAddress, NleStudioProcessEdit } from "../protocol.js";
 import { IconButton } from "./common.js";
 import { NumberField, Row, Section, Toggle } from "./controls.js";
 
@@ -52,11 +52,13 @@ function Collection({ section, collection, disabled, onEdit, onInvoke }: {
   </div>;
 }
 
-export function Inspector({ scene, component, media, disabled, onEdit, onMedia, onProcessEdit, onInvoke }: {
+export function Inspector({ scene, component, media, disabled, selectedProcess, onSelectProcess, onEdit, onMedia, onProcessEdit, onInvoke }: {
   readonly scene: NleInspectorScene | undefined;
   readonly component: NleStudioComponentInputsProjection | undefined;
   readonly media: readonly NleStudioMediaEntry[];
   readonly disabled: boolean;
+  readonly selectedProcess: NleStudioProcessAddress | undefined;
+  readonly onSelectProcess: (address: NleStudioProcessAddress) => void;
   readonly onEdit: (section: string, field: string, value: string | number | boolean) => void;
   readonly onMedia: (item: string, slot: string, media: string) => void;
   readonly onProcessEdit: (edit: NleStudioProcessEdit) => void;
@@ -70,17 +72,41 @@ export function Inspector({ scene, component, media, disabled, onEdit, onMedia, 
       {processes.map((process, index) => {
         const address = { item: scene.item, medium, process: process.id };
         const editable = !disabled && process.editable;
+        const active = selectedProcess?.item === scene.item && selectedProcess.medium === medium
+          && selectedProcess.process === process.id;
+        const timing = process.timing;
         const before = processes[index + 2]?.id;
-        return <Row key={process.id} label={process.label}>
-          <Toggle disabled={!editable} label={`启用 ${process.label}`} checked={process.enabled}
-            onChange={enabled => onProcessEdit({ kind: "process.enable", ...address, enabled })}/>
-          <IconButton label={`向前移动 ${process.label}`} disabled={!editable || index === 0}
-            onClick={() => onProcessEdit({ kind: "process.move", ...address, before: processes[index - 1]!.id })}><ArrowUp size={14}/></IconButton>
-          <IconButton label={`向后移动 ${process.label}`} disabled={!editable || index === processes.length - 1}
-            onClick={() => onProcessEdit({ kind: "process.move", ...address, ...(before === undefined ? {} : { before }) })}><ArrowDown size={14}/></IconButton>
-          <IconButton label={`删除 ${process.label}`} disabled={!editable}
-            onClick={() => onProcessEdit({ kind: "process.remove", ...address })}><Trash2 size={14}/></IconButton>
-        </Row>;
+        return <div className="nle-process-fields" key={process.id}>
+          <Row label={<button type="button" className="nle-process-select" aria-pressed={active}
+            onClick={() => onSelectProcess(address)}>{process.label}</button>}>
+            <Toggle disabled={!editable} label={`启用 ${process.label}`} checked={process.enabled}
+              onChange={enabled => onProcessEdit({ kind: "process.enable", ...address, enabled })}/>
+            <IconButton label={`向前移动 ${process.label}`} disabled={!editable || index === 0}
+              onClick={() => onProcessEdit({ kind: "process.move", ...address, before: processes[index - 1]!.id })}><ArrowUp size={14}/></IconButton>
+            <IconButton label={`向后移动 ${process.label}`} disabled={!editable || index === processes.length - 1}
+              onClick={() => onProcessEdit({ kind: "process.move", ...address, ...(before === undefined ? {} : { before }) })}><ArrowDown size={14}/></IconButton>
+            <IconButton label={`删除 ${process.label}`} disabled={!editable}
+              onClick={() => onProcessEdit({ kind: "process.remove", ...address })}><Trash2 size={14}/></IconButton>
+          </Row>
+          {active && <Row label="效果定位"><select aria-label="效果定位" value={timing.edge}
+            disabled={!editable || (timing.edge === "mapping" && !timing.canAlign)}
+            onChange={event => {
+              const edge = event.target.value;
+              if (edge === "start" || edge === "end" || edge === "mapping") {
+                onProcessEdit({ kind: "process.timing", ...address, edge });
+              }
+            }}>
+            <option value="mapping">固定控制时间</option>
+            <option value="start">贴片头</option>
+            <option value="end">贴片尾</option>
+          </select></Row>}
+          {active && timing.edge !== "mapping" && <Row label="效果时长">
+            <NumberField label="效果时长（帧）" disabled={!editable}
+              value={Math.max(1, Math.round(timing.durationFrames))} min={1} max={Number.MAX_SAFE_INTEGER}
+              onCommit={value => onProcessEdit({ kind: "process.timing", ...address, edge: timing.edge, durationFrames: Math.round(value) })}/>
+            <small>帧</small>
+          </Row>}
+        </div>;
       })}
     </Section>;
   })}{scene.sections.map(section => <Section title={section.label} key={section.id}>

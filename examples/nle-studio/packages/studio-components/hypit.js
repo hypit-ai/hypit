@@ -24,7 +24,8 @@ export const hypitPackage = {
     value: {
       kind: "hypit.nle-authoring",
       package: packageName,
-      components: [{ component: title, timeWindow: () => true, editParameters: parameterEdit }],
+      components: [{ component: title, timeWindow: () => true, sourceTime: () => ({ kind: "constant" }),
+        editParameters: parameterEdit }],
       componentValues: [],
       operators: [],
     },

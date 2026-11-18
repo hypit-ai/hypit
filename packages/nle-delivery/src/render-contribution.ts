@@ -15,6 +15,8 @@ export type NleRenderContext = {
 
 export type NleComponentRenderContext = NleRenderContext & {
   readonly item: NleComponentItem;
+  /** Finite Source extent covering this occurrence's authored reads. */
+  readonly sourceDuration: ExactTemporalValue;
   /** Invocation-local resources resolved by the Host from the Item's persistent Media references. */
   readonly media: Readonly<Record<string, ResolvedMedia>>;
   /** Inline and shared slot bindings resolved to the same closed package values. */
@@ -52,6 +54,8 @@ export type NleComponentPicture = {
   /** A Picture without a source duration is constant. */
   readonly duration?: ExactTemporalValue;
   readonly visual: HtmlVisual;
+  /** Optional named Control for Item-local time, independent of the Source clock. */
+  readonly itemTimeControl?: string;
 };
 
 export type NlePictureEffect = {

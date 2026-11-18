@@ -9,7 +9,9 @@ import type {
   NleStudioOpenProjection,
   NleStudioOperation,
   NleStudioOperationReceipt,
+  NleStudioProcessAddress,
   NleStudioProcessCatalogEntry,
+  NleStudioProcessEdit,
   NleStudioTransitionCatalogEntry,
 } from "../protocol.js";
 import {
@@ -48,6 +50,7 @@ export function Studio() {
   const [failure, setFailure] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [selection, setSelection] = useState<readonly string[]>([]);
+  const [processSelection, setProcessSelection] = useState<NleStudioProcessAddress>();
   const [inspector, setInspector] = useState<Awaited<ReturnType<typeof readInspector>>>();
   const [transitionInspector, setTransitionInspector] = useState<Awaited<ReturnType<typeof readTransitionInspector>>>();
   const [frame, setFrame] = useState(0);
@@ -98,6 +101,7 @@ export function Studio() {
   const selectItems = useCallback((ids: readonly string[]) => {
     selectionRef.current = ids;
     setSelection(ids);
+    setProcessSelection(current => ids.length === 1 && current?.item === ids[0] ? current : undefined);
     setInspector(undefined);
   }, []);
 
@@ -287,6 +291,17 @@ export function Studio() {
   const mediaByItem = new Map(session.timeline.itemMedia.map(entry => [entry.item, entry.media] as const));
   const mediaForItem = (itemId: string) => mediaByPath.get(mediaByItem.get(itemId) ?? "");
   const selectedProjectItem = scene.tracks.flatMap(track => track.items).find(item => item.id === selection[0]);
+  const firstProcess = selectedProjectItem?.anchoredProcesses[0] ?? inspector?.scene.processes[0];
+  let selectedProcess: NleStudioProcessAddress | undefined;
+  if (selection.length === 1 && selectedProjectItem !== undefined) {
+    const inspectorHasSelection = inspector?.scene.processes.some(process =>
+      process.id === processSelection?.process && process.medium === processSelection.medium);
+    if (processSelection?.item === selectedProjectItem.id && inspectorHasSelection !== false) {
+      selectedProcess = processSelection;
+    } else if (firstProcess !== undefined) {
+      selectedProcess = { item: selectedProjectItem.id, medium: firstProcess.medium, process: firstProcess.id };
+    }
+  }
   const selectedGroups = scene.groups.filter(group => group.items.some(item => selection.includes(item)));
   const grouped = selectedGroups.length === 1 && selectedGroups[0]!.items.every(item => selection.includes(item))
     && selection.every(item => selectedGroups[0]!.items.includes(item));
@@ -310,6 +325,9 @@ export function Studio() {
   const place = (operation: NleStudioOperation) => void perform(async () => {
     const receipt = await operate(operation);
     await acceptReceipt(receipt, typeof receipt.result?.item === "string" ? receipt.result.item : undefined);
+  });
+  const editProcess = (edit: NleStudioProcessEdit) => void perform(async () => {
+    await acceptReceipt(await operate({ ...operationContext, ...edit }));
   });
   const navigate = (operation: NleStudioOperation) => void perform(async () => {
     const receipt = await operate(operation);
@@ -398,7 +416,7 @@ export function Studio() {
             onResize={durationFrames => place({ ...operationContext, kind: "transition.resize", transition: activeTransition, durationFrames })}
             onRemove={() => place({ ...operationContext, kind: "transition.remove", transition: activeTransition })}/>
           : <Inspector scene={inspector?.scene} component={inspector?.component} media={session.media.entries}
-          disabled={editingDisabled} onEdit={inspectorEdit}
+          disabled={editingDisabled} selectedProcess={selectedProcess} onSelectProcess={setProcessSelection} onEdit={inspectorEdit}
           onInvoke={(item, section, collection, row, action) => command({
             kind: "inspector.invoke", item, section, collection, row, action,
             expectedProjectRevision: session.status.projectRevision, expectedViewRevision: session.status.viewRevision,
@@ -406,9 +424,11 @@ export function Studio() {
             await acceptReceipt(await operate(media === ""
               ? { ...operationContext, kind: "component-media.unbind", item, slot }
               : { ...operationContext, kind: "component-media.bind", item, slot, media }));
-          })} onProcessEdit={edit => void perform(async () => acceptReceipt(await operate({ ...operationContext, ...edit })))}/>}</div></aside>
+          })} onProcessEdit={editProcess}/>}</div></aside>
       </div>
       <Timeline session={session} frame={frame} selection={selection} busy={editingDisabled} onSeek={value => { setPlaying(false); setFrame(value); }} onSelect={select}
+        selectedProcess={selectedProcess} onSelectProcess={setProcessSelection}
+        onProcessTiming={editProcess}
         onMove={intent => void perform(async () => acceptReceipt(await operate({
           ...operationContext, kind: "timeline.drop", ...intent,
         })))}

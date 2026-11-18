@@ -212,6 +212,12 @@ function operationRequest(value: unknown): NleStudioOperation {
     case "process.remove":
       valid = currentFields("item", "medium", "process") && process;
       break;
+    case "process.timing":
+      valid = process && (request.edge === "mapping"
+        ? currentFields("item", "medium", "process", "edge")
+        : (request.edge === "start" || request.edge === "end")
+          && currentFields("item", "medium", "process", "edge", "durationFrames") && duration);
+      break;
     case "transition.materialize":
       valid = duration && offering && (
         currentFields("package", "offering", "items", "durationFrames") && items?.length === 2 && items[0] !== items[1]

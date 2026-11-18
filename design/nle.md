@@ -80,8 +80,8 @@ central NLE field or SVML element. Static values, keyframes and interpolation re
 parameter value. NLE owns only the common temporal placement, Control mapping, ordered application and explicit
 sharing of that value.
 
-The Reader owns the exact complete schema. A Component Present may remain opaque or point at a materialized local
-Composition; either way its parent occurrence is one Item and its internal ordering is local to that Composition.
+The Reader owns the exact complete schema. A Component Present references an installed package symbol. A Composition
+Present references a local Composition definition whose child Items can be edited on their own timeline.
 
 A Component occurrence maps package-declared Media slot identities to document-relative Media references. Its
 installed authoring contribution can describe the current slots from the occurrence's closed parameters. Each slot
@@ -101,8 +101,8 @@ Transition gives one overlap an additional two-input audiovisual meaning; it is 
 exist. Editing surfaces may still plan another Track when that better represents the author's layer intent. Audio
 Track intervals may overlap and mix.
 
-A Present-local Process uses exact Item-local Control time. Splitting a Present slices and rebases that Control time
-with the Source relation. Processing that covers several Presents uses a timed Adjust Item on a real Track; wrapping
+A Present-local Process uses exact Item-local Control time. A Process can align its Control interval to one edge of
+its Present. Processing that covers several Presents uses a timed Adjust Item on a real Track; wrapping
 the Presents in a nested Composition and applying an outer Process remains another explicit authoring choice.
 
 Picture layout is deliberately the small NLE-owned spatial substrate: every Picture occurrence needs a frame, fit and
@@ -165,14 +165,12 @@ The three product surfaces retain different authority:
 | Surface | NLE-owned edit | Package-owned contribution | Never an SVML fact |
 | --- | --- | --- | --- |
 | Canvas | Picture frame, fit, focus and occurrence selection | actual rendered pixels; a future proven need may add bounded semantic handles | selection outlines, guides and preview resource addresses |
-| Inspector | occurrence, layout, source and relationship structure | Component, Shared Value, Process and Reconstruction fields plus semantic reducers | control chrome and open/closed panel state |
-| Timeline | placement, Track structure and the fixed move/trim/split vocabulary | factual labels/artwork and whether generic trim/split preserve meaning | tone, chrome, thumbnails, waveform, playhead and pointer drafts |
+| Inspector | occurrence, layout, source, Process timing and relationship structure | Component, Shared Value, Process and Reconstruction fields plus semantic reducers | control chrome and open/closed panel state |
+| Timeline | placement, Track structure, move/trim/split and duration handles for edge-aligned Processes | factual labels/artwork and whether generic trim/split preserve meaning | tone, chrome, thumbnails, waveform, playhead and pointer drafts |
 
-A package does not receive an arbitrary Timeline command surface. Moving an unlocked occurrence is always NLE
-placement. Generic trim and split are exposed only when the Source and every occurrence-local Process explicitly
-declare that slicing their existing Source/Control relations preserves meaning; absence is read-only. If a later
-package needs edge-relative or otherwise rewriting behavior, that concrete behavior must establish a semantic
-operation before the time-window contract grows.
+Moving an unlocked occurrence is NLE placement. Generic trim and split are exposed only when the Source and every
+occurrence-local Process explicitly declare that the NLE time-window operations preserve their meaning. An
+edge-aligned Process follows the NLE rules below. The package still owns the values sampled in its Control domain.
 
 ## First Project document
 
@@ -217,6 +215,13 @@ Composition and its source-time map selects the positions to read.
 target relation while the Source is offline. Lowering attaches the resolved finite Source domain and rejects a
 relation that reads outside it. Move changes Programme placement; trim slices and rebases source time; slip shifts
 source coordinates; retime replaces the explicit relation.
+
+A Source supplies readable time independently of the Present's placement. Timed Media and Compositions supply a
+finite duration. A Component that supports time-window edits can declare its readable source time as constant,
+timed with a finite duration, or timed from zero onward. Trim preserves the source position of the retained time
+and can expose more source where the boundary mapping has a valid extension. Constant sources continue to supply
+the same picture while a window extends. A timed Component that can evaluate beyond its last authored event
+receives the finite span required by each compiled occurrence.
 
 Media Present Items reference portable Media Asset documents. Opening and saving the Project performs no Media
 inspection. The Host resolves a used reference only while lowering and supplies invocation-local `ResolvedMedia`.
@@ -312,9 +317,14 @@ An Adjust is an independently timed Timeline Item applying one Operator to the P
 its ordered Track position. The Track kind selects its medium. Outside the Adjust range, the accumulated signal
 passes through unchanged. Compilation limits the Adjust to its authored range.
 
-The selected package Process or Adjust uses the `signal` input. The compiler maps persisted Item-local Control
-time into programme time. Trimming, splitting and rolling an Item exactly slice and rebase those relations together
-with the Item.
+The selected package Process or Adjust uses the `signal` input. The compiler maps Item-local Control time into
+programme time. A Process can store explicit map pieces or align a fixed-duration interval to the Present's start
+or end. Alignment maps that interval linearly to the stable Control domain and holds its boundary values outside
+the interval. A shorter Present shows the portion next to the aligned edge at the same rate.
+
+Trim and roll slice explicit maps and resolve aligned intervals against the edited edges. Split preserves the
+sampled curve on both fragments. The fragment with the original aligned edge retains the alignment, and the other
+fragment keeps an explicit slice of the original map with the same Control duration.
 
 ## Transitions and Mattes
 

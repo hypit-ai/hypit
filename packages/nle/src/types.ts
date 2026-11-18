@@ -122,13 +122,21 @@ export type NleTimeMapping = {
   readonly pieces: readonly TemporalMapPiece[];
 };
 
+export type NleProcessControlTime =
+  | (NleTimeMapping & { readonly controlDuration?: ExactTemporalValue })
+  | {
+      readonly edge: "start" | "end";
+      readonly duration: ExactTemporalValue;
+      readonly controlDuration: ExactTemporalValue;
+    };
+
 export type NleProcess = {
   readonly id: string;
   readonly operator: PackageSymbol;
   readonly enabled: boolean;
   readonly parameters: NleParameterBinding;
   /** Item-local target coordinates selecting the package Operator's Control clock. */
-  readonly controlTime: NleTimeMapping;
+  readonly controlTime: NleProcessControlTime;
 };
 
 type NleTimelineItemBase = {
@@ -172,7 +180,8 @@ export type NleCompositionItem = NlePresentBase & {
 export type NlePresentItem = NleMediaItem | NleComponentItem | NleCompositionItem;
 
 /** Programme-scoped processing over the Picture or Audio accumulated below this Track position. */
-export type NleAdjustItem = NleTimelineItemBase & NleProcess & {
+export type NleAdjustItem = NleTimelineItemBase & Omit<NleProcess, "controlTime"> & {
+  readonly controlTime: NleTimeMapping;
   readonly kind: "adjust";
 };
 

@@ -63,6 +63,10 @@ export function assertOccurrence(value: Occurrence): void {
   assert(value.picture !== undefined || value.audio !== undefined, `Occurrence ${value.id} has no output.`);
   if (value.picture !== undefined) {
     assertLocalSpatialDomain(value.picture.spatialDomain);
+    if (value.picture.itemTime !== undefined) {
+      assertIdentity(value.picture.itemTime.name, `Occurrence ${value.id} Item time Control`);
+      assertSourceMapping(value.picture.itemTime.mapping, value.domain, value.id);
+    }
     if (value.picture.kind === "signal") {
       assertSourceMapping(value.picture.mapping, value.domain, value.id);
       if (value.picture.reconstruction !== undefined) {

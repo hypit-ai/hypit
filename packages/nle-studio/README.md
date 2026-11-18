@@ -40,7 +40,9 @@ and Track creation in one guarded edit.
 The same endpoint applies trim, multi-Item split, and removal. Callers can close a gap or ripple-remove a
 contiguous interval by selecting an explicit Track scope. Studio offers a separate View reconciliation command
 if a Project edit invalidates a View reference.
-The endpoint also supports timed source slip, direct-cut roll and end-edge ripple trim. Media, Component and
+The Timeline reports the legal edit-frame range of each trim handle. Both projection and mutation use the resolved
+source time and the Item's time maps. The endpoint also supports timed source slip, direct-cut roll and end-edge
+ripple trim. Media, Component and
 Composition materialization can insert at a boundary by supplying an explicit destination and `insertTracks`.
 Callers can retime a single affine Picture-only source window or create a new held Media Picture from a
 selected forward sample with `media.freeze`.
@@ -64,6 +66,9 @@ authoring contributions.
 
 Process offerings attach to the compatible signal of a selected Present. The Inspector exposes each signal's order,
 enable state and available parameters. Callers can enable, move or remove an exact Process through `POST /api/operate`.
+Select a Process in the Inspector to align its Control interval to the Present start or end. Set its duration in
+edit frames, or drag the inner handle of the selected interval on the clip. Both use `process.timing`. The clip trim
+handle moves the Present edge and its aligned interval together.
 Select a Timeline Transition to resize the overlap, edit available package fields or remove the relation. A
 Transition offering can replace the selected relation, or create a relation from two Items at a direct cut. API
 callers can also specify a Picture Track and a frame to identify the cut.

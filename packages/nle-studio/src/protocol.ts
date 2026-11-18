@@ -79,12 +79,15 @@ export type NleStudioClipboardProjection = {
   readonly pendingGroups: number;
 };
 
+export type NleStudioTrimRange = { readonly minimum: number; readonly maximum: number };
+
 export type NleStudioTimelineProjection = {
   readonly scene: NleTimelineScene;
   readonly canReturn: boolean;
   readonly compositions: readonly { readonly id: string; readonly name: string }[];
   /** Active-Composition Media Items resolved to Project Media Catalog identities by the Product backend. */
   readonly itemMedia: readonly { readonly item: string; readonly media: string }[];
+  readonly trimRanges: Readonly<Record<string, Partial<Record<"start" | "end", NleStudioTrimRange>>>>;
 };
 
 export type NleStudioTimelineMediaRequest = NleStudioCompositionOperation & {
@@ -287,14 +290,18 @@ export type NleStudioOperation =
   | (NleStudioCompositionOperation & { readonly kind: "component-media.bind"; readonly item: string; readonly slot: string; readonly media: string })
   | (NleStudioCompositionOperation & { readonly kind: "component-media.unbind"; readonly item: string; readonly slot: string });
 
-export type NleStudioProcessEdit = {
+export type NleStudioProcessAddress = {
   readonly item: string;
   readonly medium: "picture" | "audio";
   readonly process: string;
-} & (
+};
+
+export type NleStudioProcessEdit = NleStudioProcessAddress & (
   | { readonly kind: "process.enable"; readonly enabled: boolean }
   | { readonly kind: "process.move"; readonly before?: string }
   | { readonly kind: "process.remove" }
+  | { readonly kind: "process.timing"; readonly edge: "start" | "end"; readonly durationFrames?: number }
+  | { readonly kind: "process.timing"; readonly edge: "mapping" }
 );
 
 export type NleStudioMediaActionRequest = MediaViewRequest & {

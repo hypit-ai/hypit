@@ -16,7 +16,10 @@ referenced by the edit and a `render(value, context)` function. The function rec
 Components, resolved Media inputs and inline or shared slot values.
 
 - A Component returns its local Picture `region`, optional exact `duration` and an `HtmlVisual`. An omitted duration
-  describes a constant Picture. A timed visual renders the requested local frame.
+  describes a constant Picture. A timed visual produces the same result for a given local frame regardless of
+  request order. Its SVML Present owns placement, source time and the selected parameters. The render contribution
+  receives the finite `sourceDuration` needed by the occurrence. It can name an `itemTimeControl` for behaviors
+  attached to the visible window, and read it through `context.controlPosition(name, outputFrame)`.
 - A Picture Process or Adjust returns an `HtmlVisual` using `{{input:signal}}`. Transitions use `outgoing` and
   `incoming`, and Mattes use `content` and `matte`. Each effect can declare the local control names it reads.
 - An Audio Process or Adjust returns an audio filter expression and its control names. Source reads use accepted Project Media.
@@ -25,3 +28,6 @@ Components, resolved Media inputs and inline or shared slot values.
 The compiler binds inputs and computes exact control mappings from the edit. Authoring, Inspector and Timeline
 contributions remain independently selectable for the same package symbol. See the selected packages in
 [the Jensen project](../../examples/ranking-jensen/) for complete examples.
+
+To make the internal objects of a scene directly editable on the timeline, a project program can materialize them
+as NLE Items in a Composition. [Component authoring](../../design/authoring.md#component-instances-and-expansion)

@@ -11,6 +11,7 @@ import {
   type NleItem,
   type NleMatte,
   type NleProcess,
+  type NleProcessControlTime,
   type NleParameterBinding,
   type NlePictureAppearance,
   type NleMediaPictureAppearance,
@@ -397,8 +398,8 @@ function readParameterBinding(value: XmlElement): NleParameterBinding {
     : { kind: "shared", ref: shared };
 }
 
-function readTimeMapping(value: XmlElement): NleTimeMapping {
-  attributes(value, []);
+function readTimeMapping(value: XmlElement, optional: readonly string[] = []): NleTimeMapping {
+  attributes(value, [], optional);
   assertChildren(value, ["linear", "cubic"]);
   return { pieces: value.children.map((piece, index): TemporalMapPiece => {
     if (piece.name === "linear") {
@@ -470,8 +471,25 @@ function readProcess(value: XmlElement): NleProcess {
     operator: packageSymbol(value),
     enabled: booleanAttr(value, "enabled"),
     parameters: readParameterBinding(value),
-    controlTime: readTimeMapping(onlyChild(value, "control-time")),
+    controlTime: readProcessTime(onlyChild(value, "control-time")),
   };
+}
+
+function readProcessTime(value: XmlElement): NleProcessControlTime {
+  const edge = optionalAttr(value, "edge");
+  if (edge !== undefined) {
+    attributes(value, ["edge", "duration", "control-duration"]);
+    assertChildren(value, []);
+    if (edge !== "start" && edge !== "end") fail("<control-time> edge must be start or end.");
+    return {
+      edge,
+      duration: time(attr(value, "duration"), "Control placement duration"),
+      controlDuration: time(attr(value, "control-duration"), "Control duration"),
+    };
+  }
+  const mapping = readTimeMapping(value, ["control-duration"]);
+  const duration = optionalAttr(value, "control-duration");
+  return duration === undefined ? mapping : { ...mapping, controlDuration: time(duration, "Control duration") };
 }
 
 function readPicture(value: XmlElement, media: boolean): NleMediaPictureAppearance {
@@ -705,9 +723,9 @@ function json(value: Readonly<Record<string, unknown>>, depth: number, name = "p
   return `${indent}<${name}>${escapeText(JSON.stringify(value))}</${name}>\n`;
 }
 
-function timeMapping(value: NleTimeMapping, depth: number, name: string): string {
+function timeMapping(value: NleTimeMapping, depth: number, name: string, controlDuration?: ExactTemporalValue): string {
   const indent = "  ".repeat(depth);
-  let result = `${indent}<${name}>\n`;
+  let result = `${indent}<${name}${a("control-duration", controlDuration === undefined ? undefined : exact(controlDuration))}>\n`;
   for (const piece of value.pieces) {
     if ("rate" in piece) {
       result += `${indent}  <linear${a("target-start", exact(piece.target.start))}${a("target-end", exact(piece.target.end))}`
@@ -749,8 +767,14 @@ function printProcess(value: NleProcess, depth: number): string {
   const parameters = parameterBinding(value.parameters, depth + 1);
   return `${indent}<process${a("id", value.id)}${a("package", value.operator.package)}${a("symbol", value.operator.symbol)}`
     + `${a("enabled", value.enabled)}${parameters.attribute}>\n${parameters.body}`
-    + timeMapping(value.controlTime, depth + 1, "control-time")
+    + printProcessTime(value.controlTime, depth + 1)
     + `${indent}</process>\n`;
+}
+
+function printProcessTime(value: NleProcessControlTime, depth: number): string {
+  if ("pieces" in value) return timeMapping(value, depth, "control-time", value.controlDuration);
+  return `${"  ".repeat(depth)}<control-time${a("edge", value.edge)}${a("duration", exact(value.duration))}`
+    + `${a("control-duration", exact(value.controlDuration))} />\n`;
 }
 
 function picture(value: NleMediaPictureAppearance, depth: number): string {

@@ -20,6 +20,8 @@ import type {
   NleTransition,
 } from "../types.js";
 import type { NleTransaction } from "../transaction.js";
+import type { NleSourceTimeBounds } from "../source-time.js";
+import { assertExactTemporalValue, compareExactTemporalValues, exactTemporalZero } from "@hypit/temporal/algebra";
 import { assertContributionOwner, packageSymbolKey } from "./symbol.js";
 
 export const nleAuthoringContributionKind = "hypit.nle-authoring";
@@ -89,8 +91,10 @@ export type NleComponentValueAuthoringContext = {
 
 export type NleComponentAuthoring = {
   readonly component: PackageSymbol;
-  /** Whether ordinary trim and split preserve this occurrence by slicing only its existing Source relation. */
+  /** Whether the Component supports ordinary NLE time-window edits. */
   readonly timeWindow?: (context: NleComponentAuthoringContext) => boolean;
+  /** Readable source coordinates, independent of the Item's current placement. */
+  readonly sourceTime?: (context: NleComponentAuthoringContext) => NleSourceTimeBounds;
   /** Package-owned parameter operation. The returned closed parameters replace this occurrence's parameters. */
   readonly editParameters?: (
     operation: unknown,
@@ -140,6 +144,7 @@ export type NleAuthoringContribution = {
 
 export type NleAuthoringHost = {
   readonly componentTimeWindow: (context: NleComponentAuthoringContext) => boolean | undefined;
+  readonly componentSourceTime: (context: NleComponentAuthoringContext) => NleSourceTimeBounds | undefined;
   readonly componentMediaInputs: (context: NleComponentAuthoringContext) => readonly NleComponentMediaInput[];
   readonly operatorTimeWindow: (context: NleProcessAuthoringContext) => boolean | undefined;
   readonly hasComponentParameterAuthoring: (component: PackageSymbol) => boolean;
@@ -246,6 +251,9 @@ function assertContribution(value: NleAuthoringContribution): void {
     if (entry.timeWindow !== undefined && typeof entry.timeWindow !== "function") {
       throw new Error(`NLE authoring contribution ${key} timeWindow is not callable.`);
     }
+    if (entry.sourceTime !== undefined && typeof entry.sourceTime !== "function") {
+      throw new Error(`NLE authoring contribution ${key} sourceTime is not callable.`);
+    }
     if (entry.editParameters !== undefined && typeof entry.editParameters !== "function") {
       throw new Error(`NLE authoring contribution ${key} editParameters is not callable.`);
     }
@@ -338,6 +346,20 @@ export function createNleAuthoringHost(
   return {
     componentTimeWindow(context) {
       return components.get(packageSymbolKey(context.item.component))?.timeWindow?.(context);
+    },
+    componentSourceTime(context) {
+      const declare = components.get(packageSymbolKey(context.item.component))?.sourceTime;
+      if (declare === undefined) return undefined;
+      const bounds = declare(context);
+      const label = `NLE Item ${context.item.id} source time`;
+      if (bounds?.kind !== "constant" && bounds?.kind !== "timed") throw new Error(`${label} is invalid.`);
+      if (bounds.kind === "timed" && bounds.duration !== undefined) {
+        assertExactTemporalValue(bounds.duration, `${label} duration`);
+        if (compareExactTemporalValues(bounds.duration, exactTemporalZero()) <= 0) {
+          throw new Error(`${label} duration must be positive.`);
+        }
+      }
+      return bounds;
     },
     componentMediaInputs(context) {
       const { item } = context;

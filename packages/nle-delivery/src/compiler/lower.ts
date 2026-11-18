@@ -29,11 +29,14 @@ import {
   assertNleProject,
   findNleComposition,
   nleCompositionDuration,
+  nleLinearTimeMapping,
+  nleTimeMappingRequiredDuration,
   resolveNleOperatorParameters,
   resolveNleComponentValue,
   resolveNlePictureLayout,
   rootNleComposition,
-  nleTimeMappingRequiredDuration,
+  nleProcessControlDuration,
+  resolveNleProcessTime,
 } from "@hypit/nle";
 import type {
   NleAdjustItem,
@@ -42,6 +45,7 @@ import type {
   NleProcess,
   NlePresentItem,
   NleProject,
+  NleTimeMapping,
   NleTrack,
   NleTransition,
 } from "@hypit/nle";
@@ -135,12 +139,15 @@ function resolveItem(
     binding.slot,
     resolveNleComponentValue(project, item.component, binding),
   ]));
-  const { region, duration, visual } = host.resolveComponent(item, { ...context, item, media, values });
+  const requested = nleTimeMappingRequiredDuration(item.sourceTime);
+  const sourceDuration = compareExactTemporalValues(requested, exactTemporalZero()) > 0 ? requested : item.duration;
+  const { region, duration, visual, itemTimeControl } = host.resolveComponent(item, { ...context, item, media, values, sourceDuration });
   return {
     content: { kind: "visual", visual },
     picture: {
       spatialDomain: { id: `${item.id}:source-space`, region },
       ...(duration === undefined ? {} : { time: { id: `${item.id}:source-time`, duration } }),
+      ...(itemTimeControl === undefined ? {} : { itemTimeControl }),
     },
   };
 }
@@ -155,14 +162,21 @@ function pictureRead(
   picture: NonNullable<ResolvedSource["picture"]>,
   reconstruction: HtmlPictureReconstruction | undefined,
 ): PictureRead {
+  const name = picture.itemTimeControl;
+  const itemTime = name === undefined ? {} : { itemTime: {
+    name,
+    mapping: sealTemporalMap({ stages: [{ target: domain, source: domain,
+      pieces: nleLinearTimeMapping(domain.duration).pieces }] }),
+  } };
   if (picture.time === undefined) {
     assert(reconstruction === undefined, `NLE Item ${item.id} reconstruction requires a timed Picture.`);
-    return { kind: "constant", spatialDomain: picture.spatialDomain };
+    return { kind: "constant", spatialDomain: picture.spatialDomain, ...itemTime };
   }
   return {
     kind: "signal",
     spatialDomain: picture.spatialDomain,
     mapping: sourceMap(item, domain, picture.time),
+    ...itemTime,
     ...(reconstruction === undefined ? {} : { reconstruction }),
   };
 }
@@ -182,7 +196,7 @@ function bindControls(
 }
 
 function operatorControlMapping(
-  process: NleProcess,
+  mapping: NleTimeMapping,
   start: ExactTemporalValue,
   parent: LocalTemporalDomain,
   control: LocalTemporalDomain,
@@ -190,7 +204,7 @@ function operatorControlMapping(
   return sealTemporalMap({ stages: [{
     target: parent,
     source: control,
-    pieces: process.controlTime.pieces.map((piece) => ({
+    pieces: mapping.pieces.map((piece) => ({
       ...structuredClone(piece),
       target: {
         start: addExactTemporalValues(start, piece.target.start),
@@ -214,7 +228,7 @@ function processContext(
     process,
     parameters: resolveNleOperatorParameters(project, process.operator, process.parameters),
     scope,
-    controlDuration: nleTimeMappingRequiredDuration(process.controlTime),
+    controlDuration: nleProcessControlDuration(process.controlTime),
   };
 }
 
@@ -227,13 +241,14 @@ function pictureProcessNode(
   parent: LocalTemporalDomain,
 ): string {
   const effect = host.resolvePictureOperator(process, context);
+  const mapping = resolveNleProcessTime(process.controlTime, context.scope.item.duration);
   const id = `${context.scope.item.id}:picture-operator:${process.id}`;
   nodes[id] = {
     kind: "apply",
     visual: effect.visual,
     inputs: { signal: input },
     controlMappings: bindControls(process.id, effect.controls, context.controlDuration,
-      control => operatorControlMapping(process, context.scope.item.start, parent, control)),
+      control => operatorControlMapping(mapping, context.scope.item.start, parent, control)),
   };
   return id;
 }
@@ -247,13 +262,14 @@ function audioProcessNode(
   parent: LocalTemporalDomain,
 ): string {
   const effect = host.resolveAudioOperator(process, context);
+  const mapping = resolveNleProcessTime(process.controlTime, context.scope.item.duration);
   const id = `${context.scope.item.id}:audio-operator:${process.id}`;
   nodes[id] = {
     kind: "apply",
     filter: effect.filter,
     input,
     controlMappings: bindControls(process.id, effect.controls, context.controlDuration,
-      control => operatorControlMapping(process, context.scope.item.start, parent, control)),
+      control => operatorControlMapping(mapping, context.scope.item.start, parent, control)),
   };
   return id;
 }
@@ -463,6 +479,9 @@ function importNestedProgram(
             ...picture,
             spatialDomain: namespaceSpatialDomain(prefix, picture.spatialDomain),
             ...(picture.kind === "constant" ? {} : { mapping: retimeSource(picture.mapping) }),
+            ...(picture.itemTime === undefined ? {} : { itemTime: {
+              name: picture.itemTime.name, mapping: retimeSource(picture.itemTime.mapping),
+            } }),
           },
         }),
         ...(occurrenceValue.audio === undefined ? {} : { audio: retimeSource(occurrenceValue.audio) }),

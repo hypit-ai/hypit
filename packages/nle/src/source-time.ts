@@ -17,6 +17,11 @@ import {
 } from "@hypit/temporal/algebra";
 import type { NleTimeMapping } from "./types.js";
 
+/** Readable time of a resolved Source. Timed Sources start at zero. */
+export type NleSourceTimeBounds =
+  | { readonly kind: "constant" }
+  | { readonly kind: "timed"; readonly duration?: ExactTemporalValue };
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
@@ -126,14 +131,16 @@ function extension(
   start: ExactTemporalValue,
   end: ExactTemporalValue,
   rebase: ExactTemporalValue,
+  holdAt?: "start" | "end",
 ): TemporalMapPiece {
-  return {
-    ...extrapolateTemporalMapPieceRange(piece, { start, end }),
-    target: {
-      start: subtractExactTemporalValues(start, rebase),
-      end: subtractExactTemporalValues(end, rebase),
-    },
+  const target = {
+    start: subtractExactTemporalValues(start, rebase),
+    end: subtractExactTemporalValues(end, rebase),
   };
+  if (holdAt === undefined) return { ...extrapolateTemporalMapPieceRange(piece, { start, end }), target };
+  const sourceAtStart = holdAt === "start" ? piece.sourceAtStart
+    : isAffineTemporalMapPiece(piece) ? extrapolateTemporalAffineMapPiece(piece, piece.target.end) : piece.sourceAtEnd;
+  return { target, sourceAtStart, rate: { numerator: 0, denominator: 1 } };
 }
 
 /** Select an Item-local range, exactly subdividing pieces and rebasing its start to zero. */
@@ -141,6 +148,7 @@ export function sliceNleTimeMapping(
   value: NleTimeMapping,
   oldDuration: ExactTemporalValue,
   range: TemporalRange,
+  holdBoundary = false,
 ): NleTimeMapping {
   assert(compareExactTemporalValues(range.start, range.end) < 0, "NLE source-time slice must be positive.");
   const zero = exactTemporalZero();
@@ -148,14 +156,16 @@ export function sliceNleTimeMapping(
   if (compareExactTemporalValues(range.start, zero) < 0) {
     const until = compareExactTemporalValues(range.end, zero) < 0 ? range.end : zero;
     if (compareExactTemporalValues(range.start, until) < 0) {
-      pieces.push(extension(boundaryPiece(value.pieces, zero, "start"), range.start, until, range.start));
+      pieces.push(extension(boundaryPiece(value.pieces, zero, "start"),
+        range.start, until, range.start, holdBoundary ? "start" : undefined));
     }
   }
   pieces.push(...sliceTemporalMapPieces(value.pieces, range));
   if (compareExactTemporalValues(range.end, oldDuration) > 0) {
     const from = compareExactTemporalValues(range.start, oldDuration) > 0 ? range.start : oldDuration;
     if (compareExactTemporalValues(from, range.end) < 0) {
-      pieces.push(extension(boundaryPiece(value.pieces, oldDuration, "end"), from, range.end, range.start));
+      pieces.push(extension(boundaryPiece(value.pieces, oldDuration, "end"),
+        from, range.end, range.start, holdBoundary ? "end" : undefined));
     }
   }
   const duration = subtractExactTemporalValues(range.end, range.start);

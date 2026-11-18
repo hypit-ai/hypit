@@ -26,7 +26,9 @@ export {
   nleTimeMappingRequiredDuration,
   shiftNleTimeMapping,
   sliceNleTimeMapping,
+  type NleSourceTimeBounds,
 } from "./source-time.js";
+export { nleProcessControlDuration, resolveNleProcessTime, sliceNleProcessTime } from "./process-time.js";
 export {
   containNlePictureLayout,
   fitNlePictureContent,

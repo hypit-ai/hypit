@@ -186,6 +186,17 @@ A Process is ordered, occurrence-local use of one package Operator:
 Its parameters are either the one inline `parameters` child or one `parameters-ref` attribute naming an Operator
 Shared Value. The two forms are mutually exclusive.
 
+An occurrence-local Process can align the start or end of its Control interval to the corresponding Present edge:
+
+```xml
+<control-time edge="end" duration="1/6" control-duration="1/4" />
+```
+
+`duration` measures the interval on the Present, and `control-duration` measures the complete Operator Control
+domain. The example plays a quarter-second curve in the last sixth of a second of the Present. The curve holds at
+its boundaries outside that interval. A short Present crops the curve at the free end. An explicit Process map may
+also specify `control-duration` to retain the complete domain when a split preserves only part of the curve.
+
 An Adjust applies one package Operator to the signal accumulated below its Track position:
 
 ```xml

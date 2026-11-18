@@ -9,7 +9,8 @@ import {
   type ExactTemporalValue,
   type TemporalMapPiece,
 } from "@hypit/temporal/algebra";
-import { assertNleTimeMapping } from "./source-time.js";
+import { resolveNleProcessTime } from "./process-time.js";
+import { assertNleTimeMapping, nleTimeMappingRequiredDuration } from "./source-time.js";
 import { parseSvml, printSvml } from "./svml.js";
 import {
   nleProjectFormat,
@@ -237,9 +238,28 @@ function assertProcesses(value: unknown, duration: ExactTemporalValue, label: st
     assertParameterBinding(process.parameters,
       process.operator as NleProcess["operator"],
       `${label} Process ${process.id}.parameters`);
-    assertTimeMapping(process.controlTime, duration,
+    assertProcessTime(process.controlTime, duration,
       `${label} Process ${process.id}.controlTime`);
   }
+}
+
+function assertProcessTime(value: unknown, duration: ExactTemporalValue, label: string): void {
+  record(value, label);
+  if (Object.hasOwn(value, "edge")) {
+    onlyKeys(value, ["edge", "duration", "controlDuration"], label);
+    assert(value.edge === "start" || value.edge === "end", `${label}.edge must be start or end.`);
+    assertPositiveTime(value.duration, `${label}.duration`);
+    assertPositiveTime(value.controlDuration, `${label}.controlDuration`);
+    resolveNleProcessTime({ edge: value.edge, duration: value.duration, controlDuration: value.controlDuration }, duration);
+    return;
+  }
+  onlyKeys(value, ["pieces", "controlDuration"], label);
+  const mapping = { pieces: value.pieces };
+  assertTimeMapping(mapping, duration, label);
+  if (value.controlDuration === undefined) return;
+  assertPositiveTime(value.controlDuration, `${label}.controlDuration`);
+  assert(compareExactTemporalValues(nleTimeMappingRequiredDuration(mapping as NleTimeMapping), value.controlDuration) <= 0,
+    `${label} reads beyond its Control duration.`);
 }
 
 function assertPictureAppearance(
