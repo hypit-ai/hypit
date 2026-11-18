@@ -306,6 +306,43 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     });
   });
 
+  /**
+   * A gesture writes its parameters one after another. Each write also wakes the Studio watcher,
+   * which schedules its own publish of the file it just wrote; a write that arrives while that
+   * publish is pending is refused as if the file had changed outside Studio. The refused write can
+   * be repeated — the server resolves the parameter range against the current snapshot — so wait
+   * for the pending publish to land and try again with the revision it produced.
+   */
+  const waitForSnapshotAfter = async (revision: number): Promise<void> => {
+    for (let tick = 0; tick < 40; tick += 1) {
+      const latest = store.current()?.snapshot.revision;
+      if (latest !== undefined && latest > revision) return;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  };
+
+  const commitParameterEdit = async (
+    itemId: string,
+    edit: { readonly parameterId: string; readonly value: number },
+  ): Promise<number> => {
+    for (let attempt = 0; ; attempt += 1) {
+      const revision = store.current()?.snapshot.revision;
+      if (revision === undefined) throw new Error("The Studio Source closed before the gesture committed.");
+      try {
+        return await applyStudioMutation({
+          type: "parameter.adjust",
+          revision,
+          owner: { kind: "item", itemId },
+          parameterId: edit.parameterId,
+          value: edit.value,
+        });
+      } catch (error) {
+        if (attempt >= 4 || !/changed outside Studio/u.test(String(error))) throw error;
+        await waitForSnapshotAfter(revision);
+      }
+    }
+  };
+
   const finishCanvasDrag = (event: PointerEvent): void => {
     if (activeDrag === undefined || event.pointerId !== activeDrag.pointerId) return;
     const drag = activeDrag;
@@ -341,13 +378,7 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     void (async () => {
       let revision = current.snapshot.revision;
       for (const edit of edits) {
-        revision = await applyStudioMutation({
-          type: "parameter.adjust",
-          revision,
-          owner: { kind: "item", itemId: drag.item.id },
-          parameterId: edit.parameterId,
-          value: edit.value,
-        });
+        revision = await commitParameterEdit(drag.item.id, edit);
       }
       pendingCommittedPreview = { expectedMinRevision: revision, reset: () => overlay.setPreview(undefined) };
       const latest = store.current();
