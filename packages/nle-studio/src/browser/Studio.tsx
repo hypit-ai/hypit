@@ -300,7 +300,7 @@ export function Studio() {
   const scene = session.open.timeline;
   const dirty = session.open.status.projectDirty || session.open.status.viewDirty;
   const savedAt = session.lastSavedAt ? localSaveTime.format(new Date(session.lastSavedAt)) : undefined;
-  const saveStatus = dirty ? busy ? "正在自动保存" : "有未保存的修改" : savedAt ? `${savedAt} 自动保存本地` : "自动保存本地";
+  const saveStatus = dirty ? busy ? "正在自动保存" : "有未保存的修改" : savedAt ? `${savedAt} 自动保存` : "自动保存";
   const reload = () => void perform(async () => {
     setSession(await reloadSession());
     history.current.reset();
