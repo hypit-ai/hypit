@@ -324,14 +324,30 @@ export function magneticEdit(session: NleStudioSession, commands: readonly NleCo
   return [...commands.map(command => command.kind === "item.add" && fresh.has(command.item.id) ? { ...command, item: { ...command.item, start: add(command.item.start, fresh.get(command.item.id)!) } } : command), ...extra];
 }
 
-export function moveItemCommands(session: NleStudioSession, plan: ItemMovePlan): NleCommand[] {
-  return [
-    ...plan.additions.map(addition => ({ kind: "track.add" as const, composition: session.open.timeline.composition,
+export function moveItemEditPlan(session: NleStudioSession, plan: ItemMovePlan): EditPlan {
+  const { composition, tracks } = session.open.timeline;
+  const display = tracks.map(({ id, kind }) => ({ id, kind }));
+  const commands: NleCommand[] = [];
+  for (const addition of plan.additions) {
+    const index = addition.displayBefore === undefined ? display.length
+      : display.findIndex(track => track.id === addition.displayBefore);
+    const neighbor = addition.kind === "picture"
+      ? display.slice(0, index).findLast(track => track.kind === addition.kind)
+      : display.slice(index).find(track => track.kind === addition.kind);
+    commands.push({ kind: "track.add", composition,
       track: { id: addition.id, name: addition.name, kind: addition.kind, enabled: true, items: [] },
-      ...(addition.before === undefined ? {} : { before: addition.before }) })),
-    { kind: "item.move", ids: plan.ids, delta: frameTime(session, plan.deltaFrames),
-      ...(plan.destinations.length === 0 ? {} : { destinations: plan.destinations }) },
-  ];
+      ...(neighbor === undefined ? {} : { before: neighbor.id }),
+    });
+    display.splice(index, 0, addition);
+  }
+  commands.push({ kind: "item.move", ids: plan.ids, delta: frameTime(session, plan.deltaFrames),
+    ...(plan.destinations.length === 0 ? {} : { destinations: plan.destinations }),
+  });
+  const firstAudio = display.findIndex(track => track.kind === "audio");
+  const hasMixedTracks = firstAudio >= 0 && display.slice(firstAudio + 1).some(track => track.kind === "picture");
+  const hasTrackOrder = session.open.view.view.compositions.find(state => state.composition === composition)?.trackOrder !== undefined;
+  if (plan.additions.length === 0 || (!hasMixedTracks && !hasTrackOrder)) return { commands };
+  return { commands, viewCommands: [{ kind: "track-order.set", composition, tracks: display.map(track => track.id) }] };
 }
 
 export function editTransitionDuration(session: NleStudioSession, id: string, frames: number | undefined): EditPlan {

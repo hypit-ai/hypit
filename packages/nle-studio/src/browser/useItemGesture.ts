@@ -7,7 +7,7 @@ export type ItemTrackAddition = {
   readonly id: string;
   readonly name: string;
   readonly kind: NleTimelineSceneTrack["kind"];
-  readonly before?: string;
+  readonly displayBefore?: string;
 };
 
 export type ItemMovePlan = {
@@ -126,12 +126,18 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
         && pointer.y >= bounds.top + rulerHeight && pointer.y < bounds.bottom;
       let targetIndex = displayRows.findIndex((candidate) => candidate.id === track.id);
       let insertionIndex: number | undefined;
-      if (inside && Math.abs(pointer.y - startY) > 4) {
-        const y = Math.max(bounds.top + rulerHeight + 1, Math.min(bounds.bottom - 1, pointer.y));
-        const boundary = rows.findIndex((row) => Math.abs(y - row.getBoundingClientRect().top) <= 6);
-        const afterLast = rows.length > 0 && y >= rows.at(-1)!.getBoundingClientRect().bottom - 6;
-        if (boundary >= 0 || afterLast) insertionIndex = boundary >= 0 ? boundary : rows.length;
-        else targetIndex = rows.findIndex((row) => { const rect = row.getBoundingClientRect(); return y >= rect.top && y < rect.bottom; });
+      const firstRow = rows[0], lastRow = rows.at(-1);
+      const movedVertically = Math.abs(pointer.y - startY) > 4;
+      if (inside && firstRow && lastRow) {
+        const y = pointer.y;
+        const tolerance = movedVertically ? 6 : 0;
+        if (y <= firstRow.getBoundingClientRect().top + tolerance) insertionIndex = 0;
+        else if (y >= lastRow.getBoundingClientRect().bottom - tolerance) insertionIndex = rows.length;
+        else if (movedVertically) {
+          const boundary = rows.findIndex((row) => Math.abs(y - row.getBoundingClientRect().top) <= tolerance);
+          if (boundary >= 0) insertionIndex = boundary;
+          else targetIndex = rows.findIndex((row) => { const rect = row.getBoundingClientRect(); return y >= rect.top && y < rect.bottom; });
+        }
       }
 
       let valid = inside && targetIndex >= 0;
@@ -139,36 +145,34 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
       const additions: ItemTrackAddition[] = [];
       let insertionTop: number | undefined;
       const anchorIndex = displayRows.findIndex((candidate) => candidate.id === track.id);
-      const offset = (insertionIndex ?? targetIndex) - anchorIndex;
 
       const additionAt = (index: number, kind: NleTimelineSceneTrack["kind"], key: string): ItemTrackAddition => {
         const bounded = Math.max(0, Math.min(displayRows.length, index));
         const cacheKey = `${key}:${kind}:${bounded}`;
         let addition = created.get(cacheKey);
         if (addition === undefined) {
-          const current = displayRows[bounded];
-          const previous = displayRows[bounded - 1];
-          const before = kind === "audio"
-            ? (current?.kind === "audio" ? current.id : undefined)
-            : (previous?.kind === "picture" ? previous.id : undefined);
-          addition = { id: newTrackId(), name: kind === "audio" ? "音频轨道" : "视频轨道", kind, ...(before === undefined ? {} : { before }) };
+          const displayBefore = (bounded === 0 ? scene.tracks[0] : displayRows[bounded])?.id;
+          addition = {
+            id: newTrackId(), name: kind === "audio" ? "音频轨道" : "视频轨道", kind,
+            ...(displayBefore === undefined ? {} : { displayBefore }),
+          };
           created.set(cacheKey, addition);
         }
         if (!additions.some((candidate) => candidate.id === addition!.id)) additions.push(addition);
-        const row = rows[Math.min(bounded, rows.length - 1)];
-        insertionTop = bounded >= rows.length
-          ? (rows.at(-1)?.offsetTop ?? 0) + (rows.at(-1)?.offsetHeight ?? 0)
-          : row?.offsetTop;
+        if (key === "drop" || insertionIndex === undefined) {
+          insertionTop = rows[bounded]?.offsetTop ?? (lastRow ? lastRow.offsetTop + lastRow.offsetHeight : undefined);
+        }
         return addition;
       };
 
+      const inserted = insertionIndex === undefined ? undefined : additionAt(insertionIndex, track.kind, "drop");
+      const offset = (insertionIndex ?? targetIndex) - anchorIndex;
       for (const member of members) {
         const sourceIndex = displayRows.findIndex((candidate) => candidate.id === member.track.id);
         const desiredIndex = sourceIndex + offset;
         let destination = displayRows[desiredIndex];
-        if (insertionIndex !== undefined && member.item.id === item.id) {
-          const addition = additionAt(insertionIndex, member.track.kind, "drop");
-          destinations.set(member.item.id, addition.id);
+        if (inserted && member.track.id === track.id) {
+          destinations.set(member.item.id, inserted.id);
           continue;
         }
         if (destination === undefined || destination.kind !== member.track.kind || destination.locked) {

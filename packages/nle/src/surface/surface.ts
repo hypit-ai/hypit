@@ -1,8 +1,10 @@
 import { planNleSpatialEdit } from "../spatial-authoring.js";
 import { type NleProjectService } from "../service.js";
+import { applyNleTransaction } from "../transaction.js";
 import {
   allNleCanvasAffordances,
   allNleTimelineAffordances,
+  applyNleViewTransaction,
   assertNleSpatialEditAllowed,
   assertNleViewAllowsProjectTransaction,
   assertNleViewForProject,
@@ -234,11 +236,17 @@ export class NleEditingSurface {
           transaction,
           resolveNleTimelineItemCapabilities(project, view, this.#options.authoring),
         );
+        const viewCommands = command.viewCommands ?? [];
+        const completed = viewCommands.length > 0 ? applyNleTransaction(project, transaction) : undefined;
+        if (completed !== undefined) applyNleViewTransaction(view, completed, { commands: viewCommands });
         this.#projectService.transact({
           expectedRevision: command.expectedProjectRevision,
           commands: command.commands,
         });
-        return this.#receipt({ project: true, view: false },
+        if (completed !== undefined) {
+          this.#viewService.transact({ expectedRevision: command.expectedViewRevision, commands: viewCommands }, completed);
+        }
+        return this.#receipt({ project: true, view: completed !== undefined },
           ["timeline", "canvas", "inspector", "programme"]);
       }
       case "view.transact":

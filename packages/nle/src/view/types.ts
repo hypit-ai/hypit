@@ -30,6 +30,8 @@ export type NleViewCompositionState = {
   readonly composition: string;
   readonly tracks: readonly NleViewTrackState[];
   readonly groups: readonly NleEditGroup[];
+  /** Optional top-to-bottom Timeline arrangement. */
+  readonly trackOrder?: readonly string[];
 };
 
 /** Persistent editing arrangement for one NLE Project document. */

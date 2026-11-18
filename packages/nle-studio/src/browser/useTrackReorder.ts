@@ -10,7 +10,7 @@ export function useTrackReorder(
   displayRows: readonly NleTimelineSceneTrack[],
   revision: number,
   busy: boolean,
-  onMove: (track: string, before?: string) => void,
+  onMove: (track: string, before: string | undefined, displayOrder: readonly string[]) => void,
 ) {
   const [position, setPosition] = useState<DropPosition>();
   const cancel = useRef<() => void>(() => {});
@@ -73,7 +73,7 @@ export function useTrackReorder(
         ...orderedDisplay.filter(item => item.kind === "audio"),
       ];
       const index = sourceOrder.findIndex(item => item.id === track.id);
-      onMove(track.id, sourceOrder[index + 1]?.id);
+      onMove(track.id, sourceOrder[index + 1]?.id, orderedDisplay.map(item => item.id));
     };
     cancel.current = cleanup;
     window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish);

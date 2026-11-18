@@ -1,7 +1,7 @@
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import { nleLinearTimeMapping, type NleCommand, type NleItem } from "@hypit/nle";
-import type { NleInspectorScene } from "@hypit/nle/view";
+import type { NleInspectorScene, NleViewCommand } from "@hypit/nle/view";
 import { Blend, Captions, Images, Maximize2, Minimize2, Pause, Play, Redo2, Save, StepBack, StepForward, Type, Undo2, Volume2, VolumeX, Wand2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 import type {
@@ -44,7 +44,7 @@ import { ErrorNotice } from "./ErrorNotice.js";
 import { enterMotion } from "./motion.js";
 import { useEditorPosition } from "./useEditorPosition.js";
 import { EditingHistory, type EditorFocus } from "./editingHistory.js";
-import { activeComposition as compositionOf, canFreezeItem, changeSpeed, closeTrackGaps, createCompound, duplicateCompound, editTransitionDuration, frameOf, frameTime, freezeItem, identity, magneticEdit, moveItemCommands, removeItems, reverseItems, rippleRemove, unpackCompound, type EditPlan } from "./editPlans.js";
+import { activeComposition as compositionOf, canFreezeItem, changeSpeed, closeTrackGaps, createCompound, duplicateCompound, editTransitionDuration, frameOf, frameTime, freezeItem, identity, magneticEdit, moveItemEditPlan, removeItems, reverseItems, rippleRemove, unpackCompound, type EditPlan } from "./editPlans.js";
 import { TransitionInspector } from "./TransitionInspector.js";
 import { TemporalInspector } from "./TemporalInspector.js";
 import { ProcessInspector } from "./ProcessInspector.js";
@@ -158,11 +158,12 @@ export function Studio() {
     setSelection(previous => (afterSelection ?? previous).filter(id => next.open.timeline.tracks.some(track => track.items.some(item => item.id === id))));
   }), [perform, session?.open.status.viewRevision]);
 
-  const transact = useCallback((commands: Extract<NleEditingSurfaceCommand, { kind: "project.transact" }>["commands"], afterSelection?: readonly string[]) => {
+  const transact = useCallback((commands: readonly NleCommand[], afterSelection?: readonly string[], viewCommands?: readonly NleViewCommand[]) => {
     if (session === undefined || commands.length === 0) return;
     try {
       command({ kind: "project.transact", expectedProjectRevision: session.open.status.projectRevision,
-        expectedViewRevision: session.open.status.viewRevision, commands: magneticEdit(session, commands, primaryTrack) }, afterSelection);
+        expectedViewRevision: session.open.status.viewRevision, commands: magneticEdit(session, commands, primaryTrack),
+        ...(viewCommands === undefined ? {} : { viewCommands }) }, afterSelection);
     } catch (error) { setFailure(error instanceof Error ? error.message : String(error)); }
   }, [command, session, primaryTrack]);
 
@@ -528,14 +529,21 @@ export function Studio() {
       </div>
       <AnimatePresence mode="popLayout" initial={false}><Timeline key={`${session.projectDocument.path}/${scene.composition}`} session={session} frame={frame} selection={selection} busy={busy} onSelectTransition={id => { setTransitionId(id); setPropertiesTab("properties"); }} selectedTransition={transitionId} onSeek={value => { setPlaying(false); setSource(undefined); setFrame(value); }} onSelect={select}
         draggedMedia={assetDrag.drag?.entry} mediaDrop={assetDrag.drag?.drop}
-        onMove={plan => transact(moveItemCommands(session, plan))}
+        onMove={move => {
+          const plan = moveItemEditPlan(session, move);
+          transact(plan.commands, undefined, plan.viewCommands);
+        }}
         onTrim={(item, edge, atFrame) => transact([{ kind: "item.trim", id: item.id, edge, at: exactFrame(atFrame, session) }])}
         onTrimSelection={(items, edge, atFrame) => transact(items.map(item => ({ kind: "item.trim", id: item.id, edge, at: exactFrame(atFrame, session) })))}
         onSplit={(items, atFrame) => transact(items.map(item => ({ kind: "item.split", id: item.id, at: exactFrame(atFrame, session), rightId: `split-${crypto.randomUUID()}` })))}
         onRemove={() => { const ids = editableSelection(scene, selection); if (ids.length) transact(removeItems(session, ids)); }}
         onTrackEnabled={(track, enabled) => transact([{ kind: "track.update", id: track, enabled }])}
         onTrackLocked={(track, locked) => viewTransact([{ kind: "track-lock.set", composition: scene.composition, track, locked }])}
-        onTrackMove={(track, before) => transact([{ kind: "track.move", id: track, ...(before === undefined ? {} : { before }) }])}
+        onTrackMove={(track, before, displayOrder) => {
+          const order = session.open.view.view.compositions.find(state => state.composition === scene.composition)?.trackOrder;
+          transact([{ kind: "track.move", id: track, ...(before === undefined ? {} : { before }) }], undefined,
+            order === undefined ? undefined : [{ kind: "track-order.set", composition: scene.composition, tracks: displayOrder }]);
+        }}
         onComposition={composition => openComposition(composition, "tab")}
         compositionParents={compositionParents}
         onEnterComposition={composition => openComposition(composition, "enter")}
