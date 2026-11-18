@@ -1,6 +1,7 @@
 import type { NleEditingSurfaceCommand, NleEditingSurfaceOpen } from "@hypit/nle/surface";
 import type { NleInspectorScene } from "@hypit/nle/view";
-import type { NlePictureLayout } from "@hypit/nle";
+import type { ExactTemporalValue } from "@hypit/temporal/algebra";
+import type { NleComponentItem, NlePictureLayout } from "@hypit/nle";
 
 export type NleStudioMediaEntry = {
   readonly id: string;
@@ -22,6 +23,8 @@ export type NleStudioComponentCatalogEntry = {
   readonly offering: string;
   readonly title: string;
   readonly category: "text" | "subtitle" | "graphic";
+  readonly component: NleComponentItem["component"];
+  readonly duration: ExactTemporalValue;
 };
 
 export type NleStudioAdjustCatalogEntry = {
@@ -78,6 +81,7 @@ export type NleStudioMediaPlaceRequest = {
   readonly track: string;
   readonly atFrame: number;
   readonly durationFrames?: number;
+  readonly insert?: boolean;
   readonly includeAudio?: boolean;
   readonly layout?: NlePictureLayout;
 };

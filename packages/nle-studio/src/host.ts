@@ -13,6 +13,7 @@ import {
   createTransitionMaterialization,
   readNleProject,
   NleRevisionConflict,
+  type NleCommand,
   type NleProject,
   type NleProjectService,
 } from "@hypit/nle";
@@ -49,6 +50,7 @@ import {
   createNleStudioPackageBridge,
   type NleStudioPackageBridge,
 } from "./packages.js";
+import { planMediaInsertion } from "./media-insertion.js";
 import type {
   NleStudioAdjustMaterializeRequest,
   NleStudioComponentMaterializeRequest,
@@ -308,6 +310,8 @@ export class NleStudioProductSession {
           offering: entry.id,
           title: entry.title,
           category: entry.value.category,
+          component: entry.value.component,
+          duration: entry.value.duration,
         })),
         adjusts: this.#packages.adjusts.map((entry) => ({
           package: entry.package,
@@ -356,7 +360,8 @@ export class NleStudioProductSession {
       throw new Error(`NLE Studio Media placement targets inactive Composition ${request.composition}.`);
     }
     const composition = projectSnapshot.project.compositions.find((entry) => entry.id === request.composition);
-    if (composition?.tracks.some((track) => track.id === request.track) !== true) {
+    const track = composition?.tracks.find((entry) => entry.id === request.track);
+    if (composition === undefined || track === undefined) {
       throw new Error(`NLE Studio Media placement Track ${request.track} is outside Composition ${request.composition}.`);
     }
     const asset = await this.#project.media.open(request.reference);
@@ -370,13 +375,18 @@ export class NleStudioProductSession {
       dirname(resolve(this.#project.boundary.root, this.#projectDocument)),
       resolve(this.#project.boundary.root, request.reference.path),
     ).split(sep).join("/");
+    const at = frameTime(request.atFrame);
+    const duration = request.durationFrames === undefined ? asset.media.interpretation.domain?.duration : frameTime(request.durationFrames);
+    const insertion = request.insert === true && duration !== undefined
+      ? planMediaInsertion(composition, track, viewSnapshot.view.compositions.find(state => state.composition === composition.id)?.groups ?? [], at, duration)
+      : undefined;
     const transaction = createMediaAssetMaterialization(projectSnapshot.project, {
       itemId: request.item,
       asset: { path: mediaPath },
       interpretation: asset.media.interpretation,
       track: request.track,
-      at: frameTime(request.atFrame),
-      ...(request.durationFrames === undefined ? {} : { duration: frameTime(request.durationFrames) }),
+      at: insertion?.start ?? at,
+      ...(duration === undefined ? {} : { duration }),
       ...(request.includeAudio === undefined ? {} : { audio: request.includeAudio ? {} : false }),
       ...(request.layout === undefined ? {} : { picture: { layout: request.layout } }),
     });
@@ -384,7 +394,7 @@ export class NleStudioProductSession {
       kind: "project.transact",
       expectedProjectRevision: request.expectedProjectRevision,
       expectedViewRevision: request.expectedViewRevision,
-      commands: transaction.commands,
+      commands: insertion?.move ? [insertion.move, ...transaction.commands] : transaction.commands,
     });
     return await this.observe();
   }
@@ -509,7 +519,9 @@ export class NleStudioProductSession {
       if (!Number.isSafeInteger(ticks)) throw new Error("NLE Studio frame time exceeds the exact editing range.");
       return { ticks: String(ticks), timeBase: { numerator: 1, denominator: rate.numerator } };
     };
-    const transaction = createTransitionMaterialization(projectSnapshot.project, {
+    const existing = projectSnapshot.project.compositions.find(entry => entry.id === request.composition)?.transitions
+      .find(entry => entry.id === request.transition && entry.outgoing === request.outgoing && entry.incoming === request.incoming);
+    const commands: readonly NleCommand[] = existing === undefined ? createTransitionMaterialization(projectSnapshot.project, {
       id: request.transition,
       composition: request.composition,
       outgoing: request.outgoing,
@@ -519,12 +531,15 @@ export class NleStudioProductSession {
       duration: request.durationFrames === undefined
         ? offering.value.duration
         : frameTime(request.durationFrames),
-    });
+    }).commands : [{
+      kind: "transition.replace",
+      transition: { ...existing, operator: offering.value.operator, parameters: offering.value.parameters },
+    }];
     this.#surface.command({
       kind: "project.transact",
       expectedProjectRevision: request.expectedProjectRevision,
       expectedViewRevision: request.expectedViewRevision,
-      commands: transaction.commands,
+      commands,
     });
     return await this.observe();
   }

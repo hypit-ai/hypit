@@ -25,7 +25,7 @@ import { useItemGesture, type ItemMovePlan } from "./useItemGesture.js";
 import { directionalSelection, editableSelection, selectionAtFrame } from "./selection.js";
 import { useMarqueeSelection } from "./useMarqueeSelection.js";
 import { useTimelineViewport } from "./useTimelineViewport.js";
-import { mediaFitsTrack, type MediaDrop } from "./mediaDrag.js";
+import { componentFitsTrack, mediaFitsTrack, type MediaDrop } from "./mediaDrag.js";
 import { catalogDragId } from "./catalogDrag.js";
 
 type Gesture = {
@@ -147,9 +147,10 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   }, [session, scene.composition, primaryTrack, movePlan, draft]);
   const mediaTrack = scene.tracks.find(track => track.id === drop?.track);
   const mediaEntry = session.media.entries.find(entry => entry.id === draggedMedia?.id);
+  const componentEntry = session.catalog.components.find(entry => catalogDragId({ kind: "component", entry }) === draggedMedia?.id);
   const acceptsDrop = drop && mediaTrack && !mediaTrack.locked && (mediaEntry
     ? mediaFitsTrack(mediaTrack, mediaEntry.kind, drop.frame, mediaEntry.durationFrames ?? Math.max(1, Math.round(fps * 5)))
-    : session.catalog.components.some(entry => catalogDragId({ kind: "component", entry }) === draggedMedia?.id) ? mediaTrack.items.length === 0
+    : componentEntry ? componentFitsTrack(session, mediaTrack, drop.frame, componentEntry.duration)
     : session.catalog.adjusts.some(entry => catalogDragId({ kind: "effect", entry }) === draggedMedia?.id));
   const highlightedTrack = acceptsDrop ? mediaTrack.id : primaryTrack && !magneticFrames ? undefined : itemGesture.gesture?.dropTrack;
   const insertionTop = reorder.position?.top ?? itemGesture.gesture?.insertionTop;
@@ -304,7 +305,9 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
               const start = incoming.startFrame, end = outgoing.startFrame + outgoing.durationFrames;
               return end <= start ? [] : [<motion.button {...fadeMotion(reduced)} key={transition.id} className={`nle-transition-block${selectedTransition === transition.id ? " selected" : ""}`} style={{ left: start * pixels, width: Math.max(10, (end - start) * pixels) }} title={transition.operator.symbol} onPointerDown={event => event.stopPropagation()} onClick={() => { onSelect([transition.outgoing, transition.incoming]); onSeek(Math.floor((start + end) / 2)); onSelectTransition(transition.id); }}><Blend size={12}/></motion.button>];
             })}</AnimatePresence>
-            <div className={`nle-clip nle-clip-ghost studio-media-drop ${track.kind === "audio" ? "audio" : "visual"}${drop?.track === track.id ? " visible" : ""}`} style={{ left: (drop?.frame ?? 0) * pixels, width: Math.max(8, (draggedMedia?.durationFrames ?? fps * 5) * pixels) }}><span className="nle-clip-title">{draggedMedia?.name}</span></div>
+            <AnimatePresence initial={false}>{drop?.track === track.id && drop.transitionCut && <motion.div {...fadeMotion(reduced)}
+              className="nle-snap-line" style={{ left: drop.frame * pixels }} aria-hidden="true"/>}</AnimatePresence>
+            <div className={`nle-clip nle-clip-ghost studio-media-drop ${track.kind === "audio" ? "audio" : "visual"}${drop?.track === track.id && !drop.transitionCut ? " visible" : ""}`} style={{ left: (drop?.frame ?? 0) * pixels, width: Math.max(8, (draggedMedia?.durationFrames ?? fps * 5) * pixels) }}><span className="nle-clip-title">{draggedMedia?.name}</span></div>
           </div>
           </TrackMenu>
         </motion.div>)}</AnimatePresence>

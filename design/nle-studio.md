@@ -51,9 +51,10 @@ second catalog, and another NLE or Canvas Product Session in the same project ob
 frames and generations come only from the audiovisual Executor port. A structural Canvas remains useful when no
 preview Executor has been selected, but it is not presented as rendered programme output.
 
-The browser's Media bin projects that shared catalog. Selecting an available entry explicitly places it at the current
-playhead on a compatible unlocked Track; when none exists, the browser first asks the NLE owner to create one. The
-backend still performs the authoritative interpretation and materialization. In structural Canvas mode, an accepted
+The browser's Media bin projects that shared catalog. The add button inserts an available entry at the playhead
+or the start of the containing Item on a compatible unlocked Track. Later Items on that Track and their linked
+Items shift within the same Project transaction. Dragging a Media entry places it in open time. When the
+placement needs a Track, the browser asks the NLE owner to create one. In structural Canvas mode, an accepted
 image or video resource may be shown inside its Present Item's layout as source identification. This is a direct media
 resource projection, not Component or Operator evaluation and not an audiovisual preview frame.
 
@@ -99,7 +100,7 @@ An Adjust materialization resolves one selected effect offering and creates an i
 compatible Picture or Audio Track. A Transition materialization resolves one selected transition offering and an
 explicit pair of Present Items at a direct Picture cut. Its one atomic Project transaction moves the incoming Item by
 the chosen transition duration and adds the relation, so the Service never accepts an unowned overlap as an
-intermediate state. Existing overlaps, gaps and incompatible selections are rejected by current NLE structural rules.
+intermediate state. Applying another offering to that relation replaces its Operator and parameters while retaining its extent.
 
 ## Package
 

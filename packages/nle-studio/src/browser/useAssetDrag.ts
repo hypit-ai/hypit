@@ -3,13 +3,14 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, ty
 import type { NleStudioMediaEntry } from "../protocol.js";
 import type { MediaDrop } from "./mediaDrag.js";
 import { labelWidth, rulerHeight } from "./timelineGeometry.js";
+import { transitionCutAt, type TransitionCut } from "./transitionCuts.js";
 
 export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObject<HTMLElement | null>, frame: number, busy: boolean,
   place: (drop: MediaDrop) => void, select: (entry: NleStudioMediaEntry) => void) {
   const [drag, setDrag] = useState<{ entry: NleStudioMediaEntry; x: number; y: number; drop?: MediaDrop }>();
   const cancel = useRef<() => void>(() => undefined);
   useEffect(() => () => cancel.current(), [scene, busy]);
-  const start = (event: ReactPointerEvent, entry: NleStudioMediaEntry) => {
+  const start = (event: ReactPointerEvent, entry: NleStudioMediaEntry, cuts?: readonly TransitionCut[]) => {
     if (event.button !== 0 || !scene || busy || entry.state !== "available") return;
     cancel.current(); event.preventDefault();
     const handle = event.currentTarget, pointerId = event.pointerId, x = event.clientX, y = event.clientY;
@@ -26,14 +27,20 @@ export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObjec
         const track = scene.tracks.find(track => track.id === target.dataset.nleDrop);
         const compatible = !track || !track.locked && track.kind === (entry.kind === "audio" ? "audio" : "picture");
         if (pixels > 0 && compatible && pointer.x >= bounds.left + labelWidth && pointer.y >= bounds.top + rulerHeight) {
-          let at = Math.max(0, Math.round((pointer.x - bounds.left - labelWidth + viewport.scrollLeft) / pixels));
+          const position = (pointer.x - bounds.left - labelWidth + viewport.scrollLeft) / pixels;
+          let at = Math.max(0, Math.round(position));
           if (viewport.dataset.snap === "true" && !pointer.alt) {
             const boundary = [0, frame, ...scene.tracks.flatMap(track => track.items.flatMap(item => [item.startFrame, item.startFrame + item.durationFrames]))]
               .filter(value => Math.abs(value - at) * pixels <= 7).sort((a, b) => Math.abs(a - at) - Math.abs(b - at))[0];
             at = boundary ?? at;
           }
           const item = document.elementFromPoint(pointer.x, pointer.y)?.closest<HTMLElement>("[data-clip-id]")?.dataset.clipId;
-          drop = { id: entry.id, frame: at, ...(track ? { track: track.id } : {}), ...(item ? { item } : {}) };
+          if (cuts === undefined) {
+            drop = { id: entry.id, frame: at, ...(track ? { track: track.id } : {}), ...(item ? { item } : {}) };
+          } else if (track) {
+            const transitionCut = transitionCutAt(cuts, position, track.id, 32 / pixels);
+            if (transitionCut) drop = { id: entry.id, frame: transitionCut.frame, track: track.id, transitionCut };
+          }
         }
       }
       setDrag({ entry, x: pointer.x, y: pointer.y, ...(drop ? { drop } : {}) });

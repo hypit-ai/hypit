@@ -14,6 +14,8 @@
 .studio-text-entry time { font-variant-numeric: tabular-nums; color: var(--muted); }
 .studio-text-entry-content { grid-column: 2; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); }
 .studio-text-list .selected .studio-text-entry, .studio-text-entry:hover { background: var(--nle-field); }
+.studio-text-entry-fields { overflow: hidden; }
+.studio-text-entry-fields .nle-section { padding-inline: 6px; }
 .studio-composition-back { display: flex; align-items: center; padding-inline: 4px; }
 .studio-composition-back .icon-button { width: 24px; height: 24px; }
 
