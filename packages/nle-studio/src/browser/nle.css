@@ -297,7 +297,9 @@
 .nle-track-space { flex: 1; min-height: 0; }
 .nle-timeline-empty { position: absolute; bottom: 0; display: flex; align-items: center; justify-content: center; padding: 16px; color: var(--muted); font-size: var(--font-size-caption); text-align: center; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .15s, visibility .15s; }
 .nle-timeline-empty.visible { opacity: 1; visibility: visible; }
-.nle-track-insertion { position: absolute; left: 0; right: 0; height: 2px; margin-top: -1px; background: var(--pink); z-index: 7; pointer-events: none; }
+.nle-track-insertion, .nle-snap-line { --nle-guide-thickness: 2px; position: absolute; background: var(--pink); z-index: 7; pointer-events: none; }
+.nle-track-insertion { left: 0; right: 0; height: var(--nle-guide-thickness); margin-top: calc(var(--nle-guide-thickness) / -2); }
+.nle-snap-line { top: 0; bottom: 0; width: var(--nle-guide-thickness); margin-left: calc(var(--nle-guide-thickness) / -2); }
 .nle-clip { --clip: #1f4c51; position: absolute; top: 0; bottom: 0; overflow: hidden; border: 1px solid transparent; border-radius: 4px; background: var(--clip); color: #fff; cursor: grab; touch-action: none; }
 .nle-clip[data-clip-id] { background-clip: padding-box; border-left-color: var(--clip); }
 .nle-clip.visual { --clip: #1f4c51; }
@@ -336,14 +338,13 @@
 .nle-marquee { position: absolute; z-index: 5; pointer-events: none; border: 1px solid var(--nle-line); background: var(--nle-line-wash); opacity: 0; transition: opacity .1s; }
 .nle-marquee.visible { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .nle-marquee { transition: none; } }
-.nle-playhead, .nle-snap-line { position: absolute; width: 1px; top: 0; bottom: 0; background: var(--nle-line); pointer-events: none; z-index: 6; }
+.nle-playhead { position: absolute; width: 1px; top: 0; bottom: 0; background: var(--nle-line); pointer-events: none; z-index: 6; }
 .nle-playhead { transition: background-color .15s; }
 .nle-playhead.adsorbed { background: var(--pink); }
 .nle-playhead-control { position: absolute; top: 0; bottom: 0; width: 0; z-index: 7; pointer-events: none; }
 .nle-playhead-control > button { display: flex; align-items: flex-start; justify-content: center; position: sticky; top: 0; margin-left: -7px; width: 14px; height: 22px; padding: 0; background: transparent; border: 0; pointer-events: auto; touch-action: none; cursor: default; }
 .nle-playhead-control > button::before { content: ''; display: block; flex: none; width: 9px; height: 13px; margin-top: 3px; border: 1.5px solid var(--nle-line); border-radius: 2px 2px 5px 5px; background: var(--surface); box-sizing: border-box; transition: border-color .15s; }
 .nle-playhead-control.adsorbed > button::before { border-color: var(--pink); }
-.nle-snap-line { background: #f5d742; opacity: .8; }
 .nle-asset-drag { position: fixed; z-index: 100; pointer-events: none; max-width: 220px; padding: 6px 10px; border-radius: 4px; background: var(--nle-pill); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-size-caption); box-shadow: var(--shadow); }
 .nle-gain-inspector { margin-top: 0; }
 
