@@ -16,6 +16,7 @@ export type ItemMovePlan = {
   readonly deltaFrames: number;
   readonly destinations: readonly { readonly item: string; readonly track: string }[];
   readonly additions: readonly ItemTrackAddition[];
+  readonly reorder?: { readonly tracks: readonly string[]; readonly displayBefore: string | undefined };
 };
 
 type FloatingItem = {
@@ -34,7 +35,7 @@ export type ItemGestureState = {
   readonly insertionTop?: number;
   readonly snapFrame?: number;
   readonly sourceTrack: string;
-  readonly dropTrack: string;
+  readonly dropTrack?: string;
   readonly plan: ItemMovePlan | undefined;
 };
 
@@ -106,10 +107,11 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
     const anchorIndex = displayRows.findIndex((candidate) => candidate.id === track.id);
     const fullySelectedTracks = new Set(movingTracks.filter(({ track, items }) => items.length === track.items.length)
       .map(({ track }) => track.id));
-    const onlyTrackOfType = !displayRows.some(row => row.id !== track.id && sameTrackType(row, track));
     let firstSelectedRow = anchorIndex, lastSelectedRow = anchorIndex;
     while (firstSelectedRow > 0 && fullySelectedTracks.has(displayRows[firstSelectedRow - 1]!.id)) firstSelectedRow--;
     while (lastSelectedRow + 1 < displayRows.length && fullySelectedTracks.has(displayRows[lastSelectedRow + 1]!.id)) lastSelectedRow++;
+    const selectedBlock = displayRows.slice(firstSelectedRow, lastSelectedRow + 1).map(row => row.id);
+    const canReorderBlock = fullySelectedTracks.has(track.id) && selectedBlock.length === movingTracks.length;
     const created = new Map<string, ItemTrackAddition>();
     handle.setPointerCapture(pointerId);
     let active = false, animation = 0;
@@ -151,13 +153,14 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
       }
 
       const keepSource = insertionIndex !== undefined && fullySelectedTracks.has(track.id)
-        && (onlyTrackOfType || (insertionIndex >= firstSelectedRow && insertionIndex <= lastSelectedRow + 1));
-      if (keepSource) {
+        && insertionIndex >= firstSelectedRow && insertionIndex <= lastSelectedRow + 1;
+      const reorderIndex = canReorderBlock && !keepSource ? insertionIndex : undefined;
+      if (keepSource || reorderIndex !== undefined) {
         targetIndex = anchorIndex;
         insertionIndex = undefined;
       }
       const rawDelta = Math.max(minimum, Math.round((pointer.x - startX + viewport.scrollLeft - scrollLeft) / pixels));
-      const aligned = snap && !pointer.alt && (!keepSource || rawDelta !== 0)
+      const aligned = snap && !pointer.alt && (rawDelta !== 0 || (!keepSource && reorderIndex === undefined))
         ? snapTimelineEdges(movingEdges.map(edge => edge + rawDelta), frame, boundaries, pixels, correction => rawDelta + correction >= minimum)
         : undefined;
       const delta = rawDelta + (aligned?.correction ?? 0);
@@ -166,14 +169,17 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
         || (hovered !== undefined && sameTrackType(hovered, track) && !hovered.locked));
       const destinations = new Map<string, string>();
       const additions: ItemTrackAddition[] = [];
-      let insertionTop: number | undefined;
+      const insertionTopAt = (index: number) => rows[index]?.offsetTop ?? (lastRow ? lastRow.offsetTop + lastRow.offsetHeight : undefined);
+      const displayBeforeAt = (index: number) => (index === 0 ? scene.tracks[0] : displayRows[index])?.id;
+      const reorder = reorderIndex === undefined ? undefined : { tracks: selectedBlock, displayBefore: displayBeforeAt(reorderIndex) };
+      let insertionTop = reorderIndex === undefined ? undefined : insertionTopAt(reorderIndex);
 
       const additionAt = (index: number, { id, kind, role }: NleTimelineSceneTrack, key: string): ItemTrackAddition => {
         const bounded = Math.max(0, Math.min(displayRows.length, index));
         const cacheKey = `${key}:${role ?? kind}:${bounded}`;
         let addition = created.get(cacheKey);
         if (addition === undefined) {
-          const displayBefore = (bounded === 0 ? scene.tracks[0] : displayRows[bounded])?.id;
+          const displayBefore = displayBeforeAt(bounded);
           addition = {
             id: newTrackId(), name: studioTrackName(kind, role), kind,
             ...(role === undefined ? {} : { role }),
@@ -182,9 +188,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
           created.set(cacheKey, addition);
         }
         if (!additions.some((candidate) => candidate.id === addition!.id)) additions.push(addition);
-        if (id === track.id) {
-          insertionTop = rows[bounded]?.offsetTop ?? (lastRow ? lastRow.offsetTop + lastRow.offsetHeight : undefined);
-        }
+        if (id === track.id) insertionTop = insertionTopAt(bounded);
         return addition;
       };
 
@@ -222,11 +226,12 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
       });
       const plan = valid ? { ids: [...ids], deltaFrames: delta,
         destinations: [...destinations].filter(([id, destination]) => members.find((member) => member.item.id === id)?.track.id !== destination)
-          .map(([movedItem, destination]) => ({ item: movedItem, track: destination })), additions } : undefined;
+          .map(([movedItem, destination]) => ({ item: movedItem, track: destination })), additions,
+        ...(reorder === undefined ? {} : { reorder }) } : undefined;
       const key = JSON.stringify(plan) ?? "";
       if (key !== previousPlan) { previousPlan = key; proposed = plan; }
-      const dropTrack = proposed?.destinations.find(destination => destination.item === item.id)?.track ?? track.id;
-      setGesture({ ids: [...ids], floating, sourceTrack: track.id, dropTrack, plan: proposed, ...(insertionTop === undefined ? {} : { insertionTop }),
+      const dropTrack = proposed?.reorder ? undefined : proposed?.destinations.find(destination => destination.item === item.id)?.track ?? track.id;
+      setGesture({ ids: [...ids], floating, sourceTrack: track.id, ...(dropTrack === undefined ? {} : { dropTrack }), plan: proposed, ...(insertionTop === undefined ? {} : { insertionTop }),
         ...(aligned === undefined ? {} : { snapFrame: aligned.frame }) });
     };
 
@@ -268,7 +273,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
       if (next.pointerId !== pointerId) return;
       move(next); const accepted = proposed, wasActive = active; cleanup();
       if (!wasActive) { onSelect([...ids]); return; }
-      if (accepted !== undefined && (accepted.deltaFrames !== 0 || accepted.destinations.length > 0)) onMove(accepted);
+      if (accepted !== undefined && (accepted.deltaFrames !== 0 || accepted.destinations.length > 0 || accepted.reorder)) onMove(accepted);
     };
     cancel.current = cleanup;
     window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);

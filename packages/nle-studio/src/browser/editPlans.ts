@@ -345,11 +345,28 @@ export function magneticEdit(session: NleStudioSession, commands: readonly NleCo
 
 export function moveItemEditPlan(session: NleStudioSession, plan: ItemMovePlan): EditPlan {
   const { composition, tracks } = session.open.timeline;
-  const display = tracks.map(({ id, kind }) => ({ id, kind }));
+  let display = tracks.map(({ id, kind }) => ({ id, kind }));
   const commands: NleCommand[] = [];
+  const displayIndex = (before: string | undefined) => before === undefined ? display.length
+    : display.findIndex(track => track.id === before);
+  if (plan.reorder) {
+    const moved = new Set(plan.reorder.tracks);
+    const block = display.filter(track => moved.has(track.id));
+    display = display.filter(track => !moved.has(track.id));
+    display.splice(displayIndex(plan.reorder.displayBefore), 0, ...block);
+    const sourceOrder = [
+      ...display.filter(track => track.kind === "picture").reverse(),
+      ...display.filter(track => track.kind === "audio"),
+    ];
+    for (let index = sourceOrder.length - 1; index >= 0; index--) {
+      const track = sourceOrder[index]!;
+      if (!moved.has(track.id)) continue;
+      const next = sourceOrder[index + 1];
+      commands.push({ kind: "track.move", id: track.id, ...(next?.kind === track.kind ? { before: next.id } : {}) });
+    }
+  }
   for (const addition of plan.additions) {
-    const index = addition.displayBefore === undefined ? display.length
-      : display.findIndex(track => track.id === addition.displayBefore);
+    const index = displayIndex(addition.displayBefore);
     const neighbor = addition.kind === "picture"
       ? display.slice(0, index).findLast(track => track.kind === addition.kind)
       : display.slice(index).find(track => track.kind === addition.kind);
@@ -359,13 +376,15 @@ export function moveItemEditPlan(session: NleStudioSession, plan: ItemMovePlan):
     });
     display.splice(index, 0, addition);
   }
-  commands.push({ kind: "item.move", ids: plan.ids, delta: frameTime(session, plan.deltaFrames),
-    ...(plan.destinations.length === 0 ? {} : { destinations: plan.destinations }),
-  });
+  if (!plan.reorder || plan.deltaFrames !== 0 || plan.destinations.length > 0) {
+    commands.push({ kind: "item.move", ids: plan.ids, delta: frameTime(session, plan.deltaFrames),
+      ...(plan.destinations.length === 0 ? {} : { destinations: plan.destinations }),
+    });
+  }
   const firstAudio = display.findIndex(track => track.kind === "audio");
   const hasMixedTracks = firstAudio >= 0 && display.slice(firstAudio + 1).some(track => track.kind === "picture");
   const hasTrackOrder = session.open.view.view.compositions.find(state => state.composition === composition)?.trackOrder !== undefined;
-  if (plan.additions.length === 0 || (!hasMixedTracks && !hasTrackOrder)) return { commands };
+  if ((!plan.reorder && plan.additions.length === 0) || (!hasMixedTracks && !hasTrackOrder)) return { commands };
   return { commands, viewCommands: [{ kind: "track-order.set", composition, tracks: display.map(track => track.id) }] };
 }
 
