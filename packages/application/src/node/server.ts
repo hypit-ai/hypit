@@ -7,6 +7,7 @@ import type {
   ApplicationProductSessionHandle,
 } from "../index.js";
 import { serveApplicationEventStream } from "./event-stream.js";
+import { executionHttp } from "./execution-http.js";
 
 export type NodeApplicationProductRequest = {
   readonly request: IncomingMessage;
@@ -123,7 +124,7 @@ export class NodeApplicationServer {
       try {
         await this.#handle(request, response);
       } catch (error) {
-        sendJson(response, 400, { error: error instanceof Error ? error.message : String(error) });
+        if (!response.destroyed) sendJson(response, 400, { error: error instanceof Error ? error.message : String(error) });
       }
     });
   }
@@ -141,6 +142,18 @@ export class NodeApplicationServer {
     if (!url.pathname.startsWith("/api/application")) return false;
     if (!authorized) {
       sendJson(response, 401, { error: "Application authorization is required." });
+      return true;
+    }
+    if (url.pathname.startsWith("/api/application/execution/")) {
+      if (!this.#authorized(request) || !["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(request.socket.remoteAddress ?? "")) {
+        sendJson(response, 401, { error: "Application authorization is required." });
+        return true;
+      }
+      const disconnected = new AbortController();
+      response.once("close", () => disconnected.abort());
+      const signal = AbortSignal.any([this.#shutdown.signal, disconnected.signal]);
+      const result = await executionHttp(this.application, url, request.method, () => jsonBody(request), signal);
+      if (!response.destroyed) sendJson(response, result.status, result.value);
       return true;
     }
     if (request.method === "GET" && url.pathname === "/api/application") {
@@ -293,15 +306,16 @@ export class NodeApplicationServer {
   close(): Promise<void> {
     this.#closePromise ??= (async () => {
       this.#shutdown.abort();
-      if (this.#listenPromise !== undefined) await this.#listenPromise;
-      await new Promise<void>((resolve, reject) => {
-        if (!this.#server.listening) {
-          resolve();
-          return;
+      try {
+        await this.#listenPromise?.catch(() => undefined);
+        if (this.#server.listening) {
+          await new Promise<void>((resolve, reject) => {
+            this.#server.close((error) => error === undefined ? resolve() : reject(error));
+          });
         }
-        this.#server.close((error) => error === undefined ? resolve() : reject(error));
-      });
-      await this.application.close();
+      } finally {
+        await this.application.close();
+      }
     })();
     return this.#closePromise;
   }

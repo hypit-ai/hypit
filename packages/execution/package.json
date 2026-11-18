@@ -1,0 +1,39 @@
+{
+  "name": "@hypit/execution",
+  "version": "0.1.0",
+  "description": "Recoverable AIGC Invocation and Publication contracts and local execution",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    ".": {
+      "hypit-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./model": {
+      "hypit-source": "./src/model.ts",
+      "types": "./dist/model.d.ts",
+      "import": "./dist/model.js"
+    },
+    "./provider": {
+      "hypit-source": "./src/provider.ts",
+      "types": "./dist/provider.d.ts",
+      "import": "./dist/provider.js"
+    },
+    "./node": {
+      "hypit-source": "./src/node/index.ts",
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

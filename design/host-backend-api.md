@@ -192,7 +192,9 @@ environment before opening it. Selecting a directory, choosing import files, rev
 destination is an Interaction implemented by the connected caller adapter, not a durable Project fact.
 
 An Agent or CLI caller may open a Project lease and call ProjectHost, owner and Execution operations directly. A
-Product Session is required only when the caller needs a product Surface and its interface state.
+Product Session is required for operations that use product-specific context and interface state. A terminal
+caller can lease such a session without opening a visual Surface.
+See [Hypit CLI and shared Host operations](cli.md) for the terminal command surface and its use of the local API.
 
 ## ProjectHost
 
@@ -207,14 +209,17 @@ interface ProjectHost {
   readonly media: ProjectMediaService;
   readonly documents: ProjectDocumentRegistry;
   readonly resources: ProjectResourceGateway;
-  readonly executorClients: readonly ProjectExecutorClient[];
+  readonly executionClients: readonly ProjectExecutionClient[];
+  executionClient(environment: string): ProjectExecutionClient | undefined;
   observe(): Promise<ProjectHostProjection>;
   subscribe(listener: ProjectHostEventListener): () => void;
 }
 ```
 
 Its finite projection contains the boundary display name, selected package names, offering identities and titles,
-Project Media Catalog and open Owner Service leases. ApplicationHost projects its attached Product Sessions.
+Project Media Catalog, permitted Execution Environment IDs and open Owner Service leases. ApplicationHost projects
+its attached Product Sessions. An Environment ID selects the project-scoped client, even when multiple Environments
+use the same deployment kind.
 Absolute paths, loaded package functions and raw Service instances stay behind trusted local adapters.
 
 ### Project operations
@@ -305,6 +310,11 @@ The backend resolves compatibility and locks, excludes moved Items' original ran
 available Tracks, creates required Tracks, preserves multi-selection offsets and submits one Project transaction. The
 receipt returns the committed anchor Track, revisions and invalidated projections. The frontend projects pointer
 feedback and observes the committed destinations.
+
+### Canvas Product Session
+
+The Canvas Product opens one Canvas document through the selected ProjectHost and projects its cards,
+input relationships, Media and attached Invocation observations. See [Canvas Host and open lifetime](canvas.md#host-和打开期).
 
 ## Specialized Actions and the AIGC Execution Directory
 
@@ -403,6 +413,19 @@ GET    /api/application/project-leases/:lease/events
 DELETE /api/application/project-leases/:lease
 POST   /api/application/sessions
 DELETE /api/application/sessions/:session
+GET    /api/application/execution/:environment/capabilities
+GET    /api/application/execution/:environment/doctor
+POST   /api/application/execution/:environment/quote
+POST   /api/application/execution/:environment/invocations
+GET    /api/application/execution/:environment/invocations/:invocation
+POST   /api/application/execution/:environment/invocations/:invocation/cancel
+GET    /api/application/execution/:environment/invocations/:invocation/publication
+GET    /api/application/execution/:environment/auth
+DELETE /api/application/execution/:environment/auth
+POST   /api/application/execution/:environment/auth/attempt
+GET    /api/application/execution/:environment/auth/attempt/:attempt
+POST   /api/application/execution/:environment/auth/attempt/:attempt
+DELETE /api/application/execution/:environment/auth/attempt/:attempt
 
 GET    /home/:capability/
 *      /home/:capability/api/application/*
@@ -413,7 +436,9 @@ GET    /sessions/:session/
 
 Application control operations require the server's bearer token. A Product Session URL contains an opaque session
 capability and routes only to the adapter registered for that session's product kind. The Application Home capability
-mount projects the same application operations to its browser artifact without publishing the bearer token. Resource capability tokens
+mount projects project and session operations to its browser artifact. Execution routes require the bearer token
+on the direct loopback endpoint, and can select an existing project lease with `?project=<lease>`.
+Resource capability tokens
 remain scoped to the Project or Product Session that issued them and are revoked with that scope. A browser URL,
 server port, iframe address or HTTP request body never becomes an owner fact.
 The Project stream closes when its lease is released. Within a Studio Session, `GET /api/events` closes with the
@@ -439,6 +464,7 @@ The current implementation already provides:
 - an Application Home capability route and browser artifact for product launch and active-session projection;
 - permission-restricted local endpoint publication and live Application instance validation;
 - an application AIGC Execution Directory that opens project-scoped clients from selected Provider/model Environments;
+- a typed Node project client for durable AIGC Invocation, cancellation, Publication manifests and resource streaming;
 - Project Boundary manifest and package activation;
 - one ProjectHost with shared Media, package, document and resource services;
 - local Media inspection, atomic adoption, Catalog refresh and byte-range resource access;

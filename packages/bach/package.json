@@ -1,0 +1,24 @@
+{
+  "name": "@hypit/bach",
+  "version": "0.1.0",
+  "description": "Hypit bach capability contracts",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    ".": {
+      "hypit-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@hypit/execution": "workspace:^0.1.0"
+  }
+}

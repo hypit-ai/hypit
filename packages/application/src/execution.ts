@@ -1,18 +1,64 @@
-import type { ProjectBoundary, ProjectExecutorClient } from "@hypit/project";
+import type { ExecutionClientLease, ExecutionEnvironment } from "@hypit/execution";
+import type { ProjectBoundary, ProjectExecutionClient, ProjectExecutionClientLease } from "@hypit/project";
 
-export type ApplicationExecutionEnvironmentProjection = {
+export type ApplicationExecutionEnvironmentProjection = ExecutionEnvironment["projection"];
+
+export type ApplicationAuthorizationStatus =
+  | { readonly status: "disconnected" }
+  | { readonly status: "connected" | "needs-refresh" | "reconnect"; readonly expiresAt: number;
+      readonly refreshExpiresAt?: number };
+
+export type ApplicationAuthorizationAttempt = {
   readonly id: string;
-  readonly kind: string;
-  readonly title: string;
+  readonly authorizationUrl: string;
+  readonly expiresAt: number;
+} & ({ readonly state: "pending" }
+  | { readonly state: "complete"; readonly connection: ApplicationAuthorizationStatus }
+  | { readonly state: "failed"; readonly error: string });
+
+export type ApplicationExecutionAuthorization = {
+  status(): Promise<ApplicationAuthorizationStatus>;
+  disconnect(): Promise<void>;
+  begin(manual: boolean): Promise<ApplicationAuthorizationAttempt>;
+  observe(id: string): ApplicationAuthorizationAttempt;
+  complete(id: string, proof: string): Promise<ApplicationAuthorizationAttempt>;
+  cancel(id: string): void;
+  close(): void;
 };
 
 /** Selected AIGC Provider/model deployment available to project-scoped Capability Invocation clients. */
 export type ApplicationExecutionEnvironment = {
   readonly projection: ApplicationExecutionEnvironmentProjection;
-  openProjectClient(boundary: ProjectBoundary): ProjectExecutorClient | undefined
-    | Promise<ProjectExecutorClient | undefined>;
+  readonly local?: {
+    connect(): ExecutionClientLease;
+    readonly doctor?: NonNullable<ExecutionEnvironment["doctor"]>;
+    readonly authorization?: ApplicationExecutionAuthorization;
+  };
+  openProjectClient(boundary: ProjectBoundary): ProjectExecutionClientLease | undefined
+    | Promise<ProjectExecutionClientLease | undefined>;
   close(): void | Promise<void>;
 };
+
+/** Bind an Environment to the Projects selected by this application deployment. */
+export function bindApplicationExecutionEnvironment(
+  environment: ExecutionEnvironment,
+  allowsProject: (boundary: ProjectBoundary) => boolean = () => true,
+  local?: { readonly authorization?: ApplicationExecutionAuthorization },
+): ApplicationExecutionEnvironment {
+  return {
+    projection: environment.projection,
+    ...(local === undefined ? {} : { local: {
+      connect: () => environment.connect(),
+      ...(environment.doctor === undefined ? {} : { doctor: environment.doctor.bind(environment) }),
+      ...(local.authorization === undefined ? {} : { authorization: local.authorization }),
+    } }),
+    openProjectClient: boundary => allowsProject(boundary) ? environment.connect() : undefined,
+    close: () => {
+      local?.authorization?.close();
+      return environment.close();
+    },
+  };
+}
 
 function identity(value: string, label: string): void {
   if (!/^[a-z][a-z0-9.-]{0,191}$/u.test(value)) {
@@ -48,20 +94,19 @@ export class ApplicationExecutionDirectory {
     return this.#environments.get(id);
   }
 
-  async openProjectClients(boundary: ProjectBoundary): Promise<readonly ProjectExecutorClient[]> {
+  async openProjectClients(boundary: ProjectBoundary): Promise<readonly ProjectExecutionClient[]> {
     if (this.#closePromise !== undefined) throw new Error("Execution Directory is closed.");
-    const clients: ProjectExecutorClient[] = [];
+    const clients: ProjectExecutionClient[] = [];
     try {
-      for (const environment of this.#environments.values()) {
-        const client = await environment.openProjectClient(structuredClone(boundary));
-        if (client !== undefined) clients.push(client);
-      }
-      const kinds = new Set<string>();
-      for (const client of clients) {
-        if (kinds.has(client.kind)) {
-          throw new Error(`Execution Directory repeats project client kind ${client.kind}.`);
+      for (const [id, environment] of this.#environments) {
+        const lease = await environment.openProjectClient(structuredClone(boundary));
+        if (lease !== undefined) {
+          if (lease.client.environment !== id) {
+            await lease.close();
+            throw new Error(`Execution client identity differs from its Environment ${id}.`);
+          }
+          clients.push({ environment: id, client: lease.client, close: () => lease.close() });
         }
-        kinds.add(client.kind);
       }
       return clients;
     } catch (error) {

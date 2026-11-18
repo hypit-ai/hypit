@@ -44,8 +44,8 @@ lifecycle are defined in [Project Boundary and Project Host](project-host.md).
 
 | Layer | Persistence | Examples |
 | --- | --- | --- |
-| Author object | durable | NLE Project, Graph, Scene, Script, Feedback |
-| Workspace or View | durable author/editor choice | selected Publication, track lock, durable layout |
+| Author object | durable | NLE Project, Canvas, Scene, Script, Feedback |
+| View | durable editor choice | track lock, durable NLE layout |
 | Open Service session | ProjectHost lease lifetime | undo, single writer, watchers, dirty state |
 | Host or frontend session | Surface lifetime | selection, playhead, hover, panel state |
 | Projection | derived | timeline scene, canvas cards, inspector model |
@@ -54,6 +54,59 @@ lifecycle are defined in [Project Boundary and Project Host](project-host.md).
 A value enters an author object when it changes the work or a durable author choice. It enters a View when it
 changes the reopened editing arrangement. Session values support the current interaction. Projections and
 caches derive from their authorities.
+
+## Local filesystem layout
+
+The local Hypit distribution establishes the per-user paths. A source checkout, an npm installation and a desktop
+distribution can run the same backend. Desktop, CLI and Agent callers attach to its published endpoint and pass
+explicit project paths. The directory containing the executable and the caller's working directory are independent
+of these defaults.
+
+These are the defaults for the macOS and Windows Node distribution. Resolve Documents through the operating
+system so the user's redirected or relocated folder is honored.
+
+| Purpose | macOS | Windows |
+| --- | --- | --- |
+| Default parent for new projects | `~/Documents/Hypit/Projects/` | `<Documents>\Hypit\Projects\` |
+| Per-user Hypit data root | `~/Library/Application Support/Hypit/` | `%LOCALAPPDATA%\Hypit\` |
+| Application configuration | `application/` under the data root | `application\` under the data root |
+| Live backend endpoint | `runtime/application.json` under the data root | `runtime\application.json` under the data root |
+| Durable local AIGC work | `execution/<environment-id>/` under the data root | `execution\<environment-id>\` under the data root |
+| Per-user rebuildable cache | `~/Library/Caches/Hypit/` | `%LOCALAPPDATA%\Hypit\cache\` |
+| Request staging | OS temporary directory | OS temporary directory |
+
+[Apple filesystem locations](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html)
+and [Windows known folders](https://learn.microsoft.com/en-us/windows/win32/shell/knownfolderid) define the
+system locations used by these defaults.
+
+- **Projects.** Creating a project uses an explicitly chosen destination or the configured default project parent.
+  Each entry is an ordinary Project Boundary with its own files and package lock. Opening a project accepts any
+  valid boundary path, including a source checkout, an external drive or another user-selected folder. The default
+  parent is a convenience for creating and browsing projects. The chosen project path identifies an open project.
+- **Application.** The local distribution owns durable per-user settings such as the chosen default project
+  parent and execution environment connection selections. A recent-project list, when persisted, contains paths.
+  The endpoint record and lock coordinate the running backend. Open Projects, leases and Product Sessions are
+  in-memory ApplicationHost state.
+- **Execution.** Each local AIGC Environment owns a persistent data root, which may be set explicitly on its
+  deployment. It stores Invocation state, Provider receipts and Publication manifests and bytes. A remote
+  Environment owns these on its deployment. The Application retains its connection selection. Closing a project,
+  caller or local process preserves durable Environment data for reopening. Receiving a Publication as Project
+  Media copies its selected bytes into that Project Boundary through the Media owner.
+- **Provider credentials.** The Node host stores OAuth credentials in the current OS account's credential
+  store on macOS and Windows. Linux uses owner-private files under the user data root. A HypiHub slot has
+  a process-released lock under `credentials/hypihub/` in that root. See
+  [Provider authorization](explicit-programs-and-execution.md#provider-authorization).
+- **Code.** Application, worker and Provider Endpoint code lives wherever the distribution or package manager
+  installed it, or in a developer checkout. The local distribution selects Environment implementations explicitly.
+  Project components, Model capabilities and project programs use ordinary project npm dependencies and files.
+  FFmpeg and other specialized executables follow the caller's explicit executable selection or OS lookup.
+- **Generated working data.** Rebuildable caches belong to their producer and scope. Project-local caches may use
+  the Project's `.hypit/cache/`. Request staging holds uploads, captures and other temporary bytes. Recovery facts
+  and published generation bytes belong to durable storage.
+
+The Node launcher implements the endpoint path. The HypiHub Node deployment uses the Environment path
+for its Invocation and Publication files. Durable Application settings and default project creation use
+this layout as their design.
 
 ## Service, Executor, Adapter and Host
 
@@ -132,15 +185,16 @@ the materialized Project document and lower it again without re-running the auth
 ### Generation
 
 ```text
-Graph recipe + Workspace selection
+Canvas recipe + selected input values
   -> explicit single-node Invocation
   -> selected Execution Environment
   -> Publication
-  -> explicit Workspace selection or owner adoption
+  -> explicit Canvas selection or owner adoption
 ```
 
-Graph relations describe typed inputs. An operation-source input resolves to an explicitly selected,
-completed value. Invoking a node attaches that node's Invocation and Publication.
+One Canvas document stores the recipe, typed input links, layout, Invocation attachments and Publication selections.
+An input link resolves to an explicitly selected, completed value. Submitting a node attaches its Invocation address.
+Selecting a completed Publication is a separate author action. See [Canvas backend design](canvas.md).
 
 ### Scene
 

@@ -25,6 +25,10 @@ meaning and operations of their facts.
 
 ## Default project layout
 
+The local distribution proposes a default parent for new Project Boundaries and accepts an explicitly selected path
+when opening or creating one. See [local filesystem layout](project-owners-and-hosts.md#local-filesystem-layout)
+for the macOS and Windows defaults.
+
 ```text
 documentary/
 ├─ hypit.project.json
@@ -255,22 +259,23 @@ ApplicationHost
 
 The ApplicationHost explicitly registers selected Environments and their clients. An Environment publishes a finite
 capability projection. The ProjectHost receives clients permitted for that project, and a user, Agent or project
-program explicitly starts each Invocation against a selected compatible Environment.
+program explicitly starts each Invocation against a selected compatible Environment. The client is addressed by the
+Environment ID. The project projection lists only IDs for which the project holds a client lease.
 
 Four selections remain separate:
 
-1. an Ability package defines the typed semantic request and outputs;
+1. a Model package defines a Capability's typed request and outputs;
 2. a Provider Endpoint adapter implements one Provider/model wire protocol and supported request subset;
 3. an Execution Environment supplies credentials, capacity, scheduling and recoverable Invocation storage;
 4. the Invocation caller selects the concrete available Environment for one Action.
 
 A Seedance adapter initially may run in the same Node process as the ApplicationHost while retaining this contract.
 Deployment, recovery, credential isolation and shared-capacity requirements may place that Environment in a separate
-worker or remote service while preserving the same Generation Graph, ProjectHost and Invocation/Publication seams.
+worker or remote service while preserving the same Canvas, ProjectHost and Invocation/Publication seams.
 
 ApplicationHost deployment configuration selects usable Environments and the credential sources available to them.
 Each Environment owns its Provider credentials, account-wide capacity, Invocation recovery and Publication resources.
-Project packages select Ability definitions and authoring contributions. A project document may retain explicit
+Project packages select Model capabilities and authoring contributions. A project document may retain explicit
 Invocation and Publication references.
 
 ## Shared Media
@@ -331,7 +336,7 @@ const project = await openNodeProjectHost({
   root,
   ownerProviders,
   productProviders,
-  executorClients,
+  executionClients,
 });
 
 project.boundary;                  // canonical root and current manifest observation

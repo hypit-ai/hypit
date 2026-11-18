@@ -32,9 +32,9 @@ async function identifyNodeApplicationProject(value: unknown): Promise<Identifie
 export function createNodeApplicationProjectProvider(): ApplicationProjectProvider {
   return {
     identify: identifyNodeApplicationProject,
-    open: async (value, executorClients) => {
+    open: async (value, executionClients) => {
       const selected = input(value);
-      return await openNodeProjectHost({ root: selected.root, executorClients });
+      return await openNodeProjectHost({ root: selected.root, executionClients });
     },
   };
 }

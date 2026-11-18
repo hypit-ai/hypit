@@ -4,7 +4,7 @@ import { materializeHtmlProgram, selectHtmlArtifacts, type HtmlFrameSpan, type H
 import type { StagedHtmlFiles } from "./types.js";
 
 const extensions: Readonly<Record<string, string>> = {
-  "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp",
+  "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/svg+xml": ".svg",
   "video/mp4": ".mp4", "video/webm": ".webm",
   "font/woff2": ".woff2", "font/woff": ".woff", "font/ttf": ".ttf", "font/otf": ".otf",
 };

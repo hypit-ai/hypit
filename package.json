@@ -9,7 +9,7 @@
     "node": ">=24.0.0"
   },
   "bin": {
-    "hypit-application": "./dist/application-server.js"
+    "hypit": "./dist/cli.js"
   },
   "exports": {
     ".": {
@@ -31,6 +31,16 @@
       "hypit-source": "./src/application-node.ts",
       "types": "./dist/application-node.d.ts",
       "import": "./dist/application-node.js"
+    },
+    "./execution": {
+      "hypit-source": "./src/execution.ts",
+      "types": "./dist/execution.d.ts",
+      "import": "./dist/execution.js"
+    },
+    "./execution/node": {
+      "hypit-source": "./src/execution-node.ts",
+      "types": "./dist/execution-node.d.ts",
+      "import": "./dist/execution-node.js"
     },
     "./media": {
       "hypit-source": "./src/media.ts",
@@ -125,21 +135,24 @@
   },
   "files": [
     "dist",
+    "runtime/hypihub-windows-credential.ps1",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm --filter @hypit/temporal build && pnpm --filter @hypit/media build && pnpm --filter @hypit/media-asset build && pnpm --filter @hypit/html-program build && pnpm --filter @hypit/audio-program build && pnpm --filter @hypit/media-local build && pnpm --filter @hypit/nle build && pnpm --filter @hypit/html-video build && pnpm --filter @hypit/project build && pnpm --filter @hypit/application build && pnpm --filter @hypit/html-render-local build && pnpm --filter @hypit/html-chromium-local build && pnpm --filter @hypit/html-electron-local build && pnpm --filter @hypit/html-video-local build && pnpm --filter @hypit/nle-delivery build && pnpm --filter @hypit/text-fine build && pnpm --filter @hypit/application-home build && pnpm --filter @hypit/nle-studio build && pnpm run build:root",
+    "build": "pnpm -r run build && pnpm run build:root",
     "build:root": "tsc -p tsconfig.build.json",
     "check": "tsc -p tsconfig.json --noEmit",
-    "application": "node dist/application-server.js",
-    "studio": "pnpm --filter @hypit/nle-studio start -- --root ../../examples/nle-studio --document project.svml",
+    "application": "node dist/cli.js host start",
+    "studio": "node dist/cli.js nle open project.svml --project examples/nle-studio --view project.nle-view.json",
     "prepack": "pnpm build"
   },
   "dependencies": {
     "@hypit/audio-program": "workspace:^0.1.0",
     "@hypit/application": "workspace:^0.1.0",
     "@hypit/application-home": "workspace:^0.1.0",
+    "@hypit/execution": "workspace:^0.1.0",
+    "@hypit/provider-hypihub": "workspace:^0.1.0",
     "@hypit/html-chromium-local": "workspace:^0.1.0",
     "@hypit/html-electron-local": "workspace:^0.1.0",
     "@hypit/html-program": "workspace:^0.1.0",

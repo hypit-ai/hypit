@@ -22,7 +22,7 @@ The package graph remains small while separating platform execution from owner s
 
 @hypit/authoring  -> @hypit/nle
 project component packages -> @hypit/authoring
-@hypit/project    -> @hypit/media-asset
+@hypit/project    -> @hypit/media-asset + @hypit/execution (client types)
 @hypit/html-render-local -> @hypit/html-program
 @hypit/html-chromium-local -> @hypit/html-render-local
 @hypit/html-electron-local -> @hypit/html-render-local
@@ -30,7 +30,9 @@ project component packages -> @hypit/authoring
 @hypit/html-video-local -> @hypit/html-video + local HTML/Audio execution
 @hypit/nle-delivery -> @hypit/nle + @hypit/project + @hypit/html-video + @hypit/html-program + @hypit/audio-program
 @hypit/text-fine -> @hypit/nle + @hypit/nle-delivery + @hypit/html-program
-@hypit/application -> @hypit/project
+@hypit/seedance   -> @hypit/execution/model
+@hypit/provider-hypihub -> @hypit/seedance + @hypit/execution/provider
+@hypit/application -> @hypit/project + @hypit/execution (environment types)
 @hypit/application-home -> @hypit/application
 @hypit/nle-studio -> @hypit/application + @hypit/project + @hypit/nle + @hypit/nle-delivery
 @hypit/hypit     -> Application + Home + selected Products + selected AIGC Execution Environments
@@ -129,6 +131,52 @@ deployment and recovery boundaries.
 catalog provenance, open owner-Service leases and the ProjectHost lifecycle. Its `node` subpath supplies local path,
 file and npm-resolution adapters. It does not depend on NLE, Canvas or another optional owner. The full boundary,
 manifest and Host API are defined in [Project Boundary and Project Host](project-host.md).
+
+## AIGC package and deployment boundaries
+
+Model and Provider packages are independent npm releases. A Model package such as `@hypit/seedance` owns its exact
+Capabilities, request validation and output types, and may supply project authoring contributions. A Provider package
+such as `@hypit/provider-hypihub` owns the mapping to its service, request support, credential requirements and the
+Provider-side submission, polling and collection protocol. It declares compatible ranges for the Model contracts
+it implements and for the Provider API.
+
+A Model package follows the model family. Separately selectable model variants retain separate Capability IDs,
+and input modes stay inside the Capability request. A Provider maps each supported mode to the service route it uses.
+For example, Seedance 2.5 and Seedance 2.5 Flash share one npm package, and each accepts text, frame and reference modes.
+GPT Image 2.5 Flare and Sunburst each keep one Capability while HypiHub selects a text or edit service model ID.
+
+`@hypit/execution` is the AIGC execution release. Its public contracts support Model authors, Provider authors,
+Invocation callers and Environment deployments. Keep these contracts and the initial Node Environment in one release
+with separate entry points:
+
+- `@hypit/execution/model` supplies the small Capability declaration contract consumed by Model packages.
+- `@hypit/execution/provider` supplies the Endpoint adapter contract consumed by Provider packages.
+- `@hypit/execution` exposes the Invocation and Publication client contract.
+- `@hypit/execution/node` implements the local Environment, capacity admission, durable Invocation recovery, and
+  Publication storage. Scheduler, journal and storage implementation details are modules inside this release.
+
+The Model and Provider entry points load independently of the Node runtime and storage modules. The execution
+package consumes explicit Capability declarations and Endpoint adapters supplied by the deployment. The Environment
+receives scoped input resources and publishes completed outputs through its own contract.
+
+```text
+Model packages    -> @hypit/execution/model
+Provider packages -> Model contracts + @hypit/execution/provider
+Node distribution -> @hypit/application + selected Environment implementations and Provider packages
+```
+
+`@hypit/application` retains environment registration, discovery and project client leases. `@hypit/hypit` selects
+the available Environment instances in its distribution. A local distribution may embed an Environment in the
+ApplicationHost process, and a worker deployment may host the same Environment independently. Both present the
+same client contract. Environment IDs, credential sources, capacity and the data root are deployment configuration.
+
+Project dependencies and the project lockfile select Model packages used by authoring. Deployment dependencies and
+its lockfile select the Environment and Provider implementations; deployment configuration explicitly enables the
+capabilities it supplies. Published npm artifacts use the same public import specifiers as development source and
+declare ordinary compatibility ranges. Verify release closure by installing the packed artifacts outside the
+monorepo in the roles they serve.
+
+See [Invocation ownership and capacity](explicit-programs-and-execution.md#capability-invocation-and-publication).
 
 ## Component package contract
 

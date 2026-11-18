@@ -1,4 +1,4 @@
-import type { ProjectBoundary, ProjectExecutorClient, ProjectHost } from "@hypit/project";
+import type { ProjectBoundary, ProjectExecutionClient, ProjectHost } from "@hypit/project";
 
 export type ApplicationProjectId = string;
 export type ApplicationProjectLeaseHandle = string;
@@ -18,7 +18,7 @@ export type IdentifiedApplicationProject = {
 
 export type ApplicationProjectProvider = {
   identify(input: unknown): Promise<IdentifiedApplicationProject>;
-  open(input: unknown, executorClients: readonly ProjectExecutorClient[]): Promise<ProjectHost>;
+  open(input: unknown, executionClients: readonly ProjectExecutionClient[]): Promise<ProjectHost>;
 };
 
 export type ApplicationProductSession = {

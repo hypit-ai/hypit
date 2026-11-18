@@ -26,6 +26,7 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
+    "@hypit/execution": "workspace:^0.1.0",
     "@hypit/project": "workspace:^0.1.0"
   }
 }

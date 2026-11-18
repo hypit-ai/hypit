@@ -17,6 +17,9 @@ importers:
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:packages/audio-program
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:packages/execution
       '@hypit/html-chromium-local':
         specifier: workspace:^0.1.0
         version: link:packages/html-chromium-local
@@ -56,6 +59,9 @@ importers:
       '@hypit/project':
         specifier: workspace:^0.1.0
         version: link:packages/project
+      '@hypit/provider-hypihub':
+        specifier: workspace:^0.1.0
+        version: link:packages/provider-hypihub
     devDependencies:
       '@types/node':
         specifier: 24.10.1
@@ -66,6 +72,9 @@ importers:
 
   packages/application:
     dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
       '@hypit/project':
         specifier: workspace:^0.1.0
         version: link:../project
@@ -88,6 +97,32 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.0
         version: link:../temporal
+
+  packages/bach:
+    dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
+
+  packages/execution: {}
+
+  packages/fishaudio-speech:
+    dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
+
+  packages/gpt-image:
+    dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
+
+  packages/grok-imagine:
+    dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
 
   packages/html-chromium-local:
     dependencies:
@@ -210,6 +245,24 @@ importers:
         specifier: workspace:^0.1.0
         version: link:../temporal
 
+  packages/mimo-speech:
+    dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
+
+  packages/minimax-h3:
+    dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
+
+  packages/nano-banana:
+    dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
+
   packages/nle:
     dependencies:
       '@hypit/media':
@@ -257,9 +310,6 @@ importers:
       '@hypit/html-video':
         specifier: workspace:^0.1.0
         version: link:../html-video
-      '@hypit/html-video-local':
-        specifier: workspace:^0.1.0
-        version: link:../html-video-local
       '@hypit/media':
         specifier: workspace:^0.1.0
         version: link:../media
@@ -307,11 +357,74 @@ importers:
         specifier: ^7.1.0
         version: 7.3.8(@types/node@24.10.1)
 
+  packages/pixverse:
+    dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
+
   packages/project:
     dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
       '@hypit/media-asset':
         specifier: workspace:^0.1.0
         version: link:../media-asset
+
+  packages/provider-hypihub:
+    dependencies:
+      '@hypit/bach':
+        specifier: workspace:^0.1.0
+        version: link:../bach
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
+      '@hypit/fishaudio-speech':
+        specifier: workspace:^0.1.0
+        version: link:../fishaudio-speech
+      '@hypit/gpt-image':
+        specifier: workspace:^0.1.0
+        version: link:../gpt-image
+      '@hypit/grok-imagine':
+        specifier: workspace:^0.1.0
+        version: link:../grok-imagine
+      '@hypit/mimo-speech':
+        specifier: workspace:^0.1.0
+        version: link:../mimo-speech
+      '@hypit/minimax-h3':
+        specifier: workspace:^0.1.0
+        version: link:../minimax-h3
+      '@hypit/nano-banana':
+        specifier: workspace:^0.1.0
+        version: link:../nano-banana
+      '@hypit/pixverse':
+        specifier: workspace:^0.1.0
+        version: link:../pixverse
+      '@hypit/seedance':
+        specifier: workspace:^0.1.0
+        version: link:../seedance
+      '@hypit/seedream':
+        specifier: workspace:^0.1.0
+        version: link:../seedream
+      '@hypit/volcengine-matting':
+        specifier: workspace:^0.1.0
+        version: link:../volcengine-matting
+      '@hypit/whisperx':
+        specifier: workspace:^0.1.0
+        version: link:../whisperx
+
+  packages/seedance:
+    dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
+
+  packages/seedream:
+    dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
 
   packages/temporal: {}
 
@@ -326,6 +439,23 @@ importers:
       '@hypit/nle-delivery':
         specifier: workspace:^0.1.0
         version: link:../nle-delivery
+
+  packages/timed-transcript: {}
+
+  packages/volcengine-matting:
+    dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
+
+  packages/whisperx:
+    dependencies:
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
+      '@hypit/timed-transcript':
+        specifier: workspace:^0.1.0
+        version: link:../timed-transcript
 
 packages:
 

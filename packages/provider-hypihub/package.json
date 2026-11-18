@@ -1,0 +1,36 @@
+{
+  "name": "@hypit/provider-hypihub",
+  "version": "0.1.0",
+  "description": "HypiHub authorization and AIGC Endpoint adapters",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    ".": {
+      "hypit-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@hypit/execution": "workspace:^0.1.0",
+    "@hypit/seedance": "workspace:^0.1.0",
+    "@hypit/bach": "workspace:^0.1.0",
+    "@hypit/gpt-image": "workspace:^0.1.0",
+    "@hypit/grok-imagine": "workspace:^0.1.0",
+    "@hypit/minimax-h3": "workspace:^0.1.0",
+    "@hypit/nano-banana": "workspace:^0.1.0",
+    "@hypit/pixverse": "workspace:^0.1.0",
+    "@hypit/seedream": "workspace:^0.1.0",
+    "@hypit/fishaudio-speech": "workspace:^0.1.0",
+    "@hypit/mimo-speech": "workspace:^0.1.0",
+    "@hypit/volcengine-matting": "workspace:^0.1.0",
+    "@hypit/whisperx": "workspace:^0.1.0"
+  }
+}

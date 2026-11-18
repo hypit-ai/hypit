@@ -1,6 +1,10 @@
 export {
   ApplicationExecutionDirectory,
+  bindApplicationExecutionEnvironment,
   openApplicationExecutionDirectory,
+  type ApplicationAuthorizationAttempt,
+  type ApplicationAuthorizationStatus,
+  type ApplicationExecutionAuthorization,
   type ApplicationExecutionEnvironment,
   type ApplicationExecutionEnvironmentProjection,
 } from "./execution.js";

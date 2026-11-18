@@ -146,7 +146,7 @@ function context(project: ProjectHost): ProjectHostContext {
     packages: project.packages,
     media: project.media,
     resources: project.resources,
-    executorClients: project.executorClients,
+    executionClients: project.executionClients,
   };
 }
 

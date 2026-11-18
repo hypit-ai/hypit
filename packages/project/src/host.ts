@@ -2,14 +2,14 @@ import type { ProjectMediaCatalog, ProjectMediaService } from "@hypit/media-asse
 import { ProjectDocumentRegistry, type OpenProjectDocumentObservation } from "./document-registry.js";
 import type { ProjectPackageEnvironment } from "./package-environment.js";
 import type { ProjectResourceGateway } from "./resources.js";
-import type { ProjectBoundary, ProjectExecutorClient } from "./types.js";
+import type { ProjectBoundary, ProjectExecutionClient } from "./types.js";
 
 export type ProjectHostContext = {
   readonly boundary: ProjectBoundary;
   readonly packages: ProjectPackageEnvironment;
   readonly media: ProjectMediaService;
   readonly resources: ProjectResourceGateway;
-  readonly executorClients: readonly ProjectExecutorClient[];
+  readonly executionClients: readonly ProjectExecutionClient[];
 };
 
 export type OpenProjectHostOptions = ProjectHostContext;
@@ -23,6 +23,7 @@ export type ProjectHostEventListener = (event: ProjectHostEvent) => void;
 export type ProjectHostProjection = {
   readonly name: string;
   readonly packages: readonly string[];
+  readonly executionEnvironments: readonly string[];
   readonly catalog: readonly { readonly package: string; readonly id: string; readonly kind: string; readonly title: string }[];
   readonly documents: readonly OpenProjectDocumentObservation[];
   readonly media: ProjectMediaCatalog;
@@ -33,7 +34,7 @@ export class ProjectHost {
   readonly packages: ProjectPackageEnvironment;
   readonly media: ProjectMediaService;
   readonly resources: ProjectResourceGateway;
-  readonly executorClients: readonly ProjectExecutorClient[];
+  readonly executionClients: readonly ProjectExecutionClient[];
   readonly documents: ProjectDocumentRegistry<ProjectHostContext>;
   readonly #listeners = new Set<ProjectHostEventListener>();
   readonly #unsubscribeMedia: () => void;
@@ -41,13 +42,16 @@ export class ProjectHost {
   #closePromise: Promise<void> | undefined;
 
   constructor(options: OpenProjectHostOptions) {
-    const executorKinds = new Set<string>();
-    for (const entry of options.executorClients) {
-      if (!/^[a-z][a-z0-9.-]{0,191}$/u.test(entry.kind) || typeof entry.close !== "function") {
-        throw new Error("ProjectHost Executor client is invalid.");
+    const environments = new Set<string>();
+    for (const entry of options.executionClients) {
+      if (!/^[a-z][a-z0-9.-]{0,191}$/u.test(entry.environment)
+        || entry.client?.environment !== entry.environment || typeof entry.close !== "function") {
+        throw new Error("ProjectHost AIGC execution client is invalid.");
       }
-      if (executorKinds.has(entry.kind)) throw new Error(`ProjectHost repeats Executor client ${entry.kind}.`);
-      executorKinds.add(entry.kind);
+      if (environments.has(entry.environment)) {
+        throw new Error(`ProjectHost repeats Execution Environment ${entry.environment}.`);
+      }
+      environments.add(entry.environment);
     }
     this.boundary = {
       root: options.boundary.root,
@@ -56,13 +60,13 @@ export class ProjectHost {
     this.packages = options.packages;
     this.media = options.media;
     this.resources = options.resources;
-    this.executorClients = [...options.executorClients];
+    this.executionClients = [...options.executionClients];
     this.documents = new ProjectDocumentRegistry<ProjectHostContext>({
       boundary: this.boundary,
       packages: this.packages,
       media: this.media,
       resources: this.resources,
-      executorClients: this.executorClients,
+      executionClients: this.executionClients,
     });
     this.#unsubscribeMedia = this.media.subscribe(({ generation }) =>
       this.#emit({ kind: "media.catalog", generation, invalidated: ["media"] }));
@@ -81,10 +85,16 @@ export class ProjectHost {
     return {
       name: this.boundary.manifest.name,
       packages: this.packages.packages(),
+      executionEnvironments: this.executionClients.map(entry => entry.environment),
       catalog: this.packages.catalog().map(({ package: name, id, kind, title }) => ({ package: name, id, kind, title })),
       documents: this.documents.observe(),
       media,
     };
+  }
+
+  executionClient(environment: string): ProjectExecutionClient | undefined {
+    if (this.#closePromise !== undefined) throw new Error("ProjectHost is closed.");
+    return this.executionClients.find(entry => entry.environment === environment);
   }
 
   #emit(event: ProjectHostEvent): void {
@@ -102,8 +112,8 @@ export class ProjectHost {
       await this.documents.close().catch((error) => failures.push(error));
       this.resources.close();
       this.media.close();
-      for (const entry of [...this.executorClients].reverse()) {
-        await Promise.resolve(entry.close()).catch((error) => failures.push(error));
+      for (const entry of [...this.executionClients].reverse()) {
+        try { await entry.close(); } catch (error) { failures.push(error); }
       }
       if (failures.length > 0) throw failures[0];
     })();

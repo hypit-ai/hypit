@@ -1,3 +1,5 @@
+import type { ExecutionClientLease } from "@hypit/execution";
+
 export const projectManifestFormat = "hypit.project";
 
 export type ProjectPackageSelection = {
@@ -34,9 +36,9 @@ export type ProjectBoundary = {
   readonly manifest: ProjectManifest;
 };
 
-export type ProjectExecutorClient = {
-  /** A project-scoped client of one selected AIGC Execution Environment. */
-  readonly kind: string;
-  readonly client: unknown;
-  close(): void | Promise<void>;
+/** Access granted by an AIGC Execution Environment for the lifetime of one ProjectHost. */
+export type ProjectExecutionClientLease = ExecutionClientLease;
+
+export type ProjectExecutionClient = ProjectExecutionClientLease & {
+  readonly environment: string;
 };

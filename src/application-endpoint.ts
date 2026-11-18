@@ -1,15 +1,14 @@
 import { randomUUID } from "node:crypto";
 import {
-  chmod,
   mkdir,
   readFile,
   rename,
-  rmdir,
   unlink,
   writeFile,
 } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import type { NodeApplicationServerAddress } from "@hypit/application/node";
 
 export type NodeHypitApplicationEndpoint = {
@@ -29,11 +28,6 @@ export type NodeHypitApplicationEndpointLease = {
   readonly endpoint: NodeHypitApplicationEndpoint;
   readonly path: string;
   close(): Promise<void>;
-};
-
-type EndpointLockOwner = {
-  readonly instance: string;
-  readonly process: number;
 };
 
 function defaultStateDirectory(): string {
@@ -66,7 +60,8 @@ function endpoint(value: unknown): NodeHypitApplicationEndpoint | undefined {
     || (selected.home !== undefined && typeof selected.home !== "string")) return undefined;
   try {
     const origin = new URL(selected.origin);
-    if (origin.protocol !== "http:" || (origin.hostname !== "127.0.0.1" && origin.hostname !== "[::1]")) {
+    if (selected.origin !== origin.origin || origin.protocol !== "http:"
+      || (origin.hostname !== "127.0.0.1" && origin.hostname !== "[::1]")) {
       return undefined;
     }
     if (selected.home !== undefined && new URL(selected.home).origin !== origin.origin) return undefined;
@@ -105,91 +100,68 @@ export async function findNodeHypitApplicationEndpoint(
   return found !== undefined && await endpointIsLive(found) ? found : undefined;
 }
 
-function processIsAlive(identifier: number): boolean {
-  try {
-    process.kill(identifier, 0);
-    return true;
-  } catch (error) {
-    return error !== null && typeof error === "object" && (error as { code?: unknown }).code === "EPERM";
-  }
+export async function waitForLocalApplication(options: NodeHypitApplicationEndpointOptions, signal?: AbortSignal) {
+  const deadline = Date.now() + 8_000;
+  do {
+    signal?.throwIfAborted();
+    const endpoint = await findNodeHypitApplicationEndpoint(options);
+    if (endpoint !== undefined) return endpoint;
+    await delay(100, undefined, { signal });
+  } while (Date.now() < deadline);
+  throw new Error("Hypit Host did not become ready. Run hypit host start in the foreground to see its diagnostic.");
 }
 
-async function lockOwner(path: string): Promise<EndpointLockOwner | undefined> {
+export async function reserveNodeHypitApplicationEndpoint(
+  options: NodeHypitApplicationEndpointOptions = {},
+) {
+  const path = nodeHypitApplicationEndpointPath(options);
+  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+  const { DatabaseSync } = await import("node:sqlite");
+  let lock;
   try {
-    const value = JSON.parse(await readFile(join(path, "owner.json"), "utf8")) as Partial<EndpointLockOwner>;
-    return typeof value.instance === "string" && Number.isSafeInteger(value.process)
-      ? value as EndpointLockOwner
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-async function clearLock(path: string, instance?: string): Promise<void> {
-  const owner = await lockOwner(path);
-  if (instance !== undefined && owner?.instance !== instance) return;
-  await unlink(join(path, "owner.json")).catch(() => undefined);
-  await rmdir(path).catch(() => undefined);
-}
-
-async function acquireLock(path: string, owner: EndpointLockOwner): Promise<void> {
-  try {
-    await mkdir(path, { mode: 0o700 });
+    lock = new DatabaseSync(`${path}.sqlite`);
+    lock.exec("BEGIN EXCLUSIVE");
   } catch (error) {
-    if (error === null || typeof error !== "object" || (error as { code?: unknown }).code !== "EEXIST") throw error;
-    const selected = await lockOwner(path);
-    if (selected !== undefined && processIsAlive(selected.process)) {
-      throw new Error(`Hypit Application ${selected.instance} is already starting or running.`);
-    }
-    await clearLock(path);
-    await mkdir(path, { mode: 0o700 });
-  }
-  try {
-    await writeFile(join(path, "owner.json"), `${JSON.stringify(owner)}\n`, { mode: 0o600, flag: "wx" });
-  } catch (error) {
-    await rmdir(path).catch(() => undefined);
+    lock?.close();
+    if (typeof error === "object" && error !== null && "errcode" in error && error.errcode === 5) return undefined;
     throw error;
   }
+  let published: NodeHypitApplicationEndpoint | undefined;
+  let closed = false;
+  const close = async () => {
+    if (closed) return;
+    closed = true;
+    try {
+      const current = await readEndpointFile(path);
+      if (published !== undefined && current?.instance === published.instance) await unlink(path);
+    } finally {
+      lock.close();
+    }
+  };
+  return {
+    close,
+    async publish(address: NodeApplicationServerAddress): Promise<NodeHypitApplicationEndpointLease> {
+      if (closed || published !== undefined) throw new Error("Application endpoint publication is unavailable.");
+      const value: NodeHypitApplicationEndpoint = { format: "hypit.application-endpoint", ...address, process: process.pid };
+      const temporary = `${path}.${randomUUID()}.tmp`;
+      try {
+        await writeFile(temporary, `${JSON.stringify(value)}\n`, { mode: 0o600, flag: "wx" });
+        await rename(temporary, path);
+        published = value;
+      } finally {
+        await unlink(temporary).catch(() => undefined);
+      }
+      return { endpoint: value, path, close };
+    },
+  };
 }
 
 export async function publishNodeHypitApplicationEndpoint(
   address: NodeApplicationServerAddress,
   options: NodeHypitApplicationEndpointOptions = {},
 ): Promise<NodeHypitApplicationEndpointLease> {
-  const path = nodeHypitApplicationEndpointPath(options);
-  const directory = dirname(path);
-  const lock = `${path}.lock`;
-  await mkdir(directory, { recursive: true, mode: 0o700 });
-  await chmod(directory, 0o700);
-  const owner = { instance: address.instance, process: process.pid } satisfies EndpointLockOwner;
-  await acquireLock(lock, owner);
-  const value: NodeHypitApplicationEndpoint = {
-    format: "hypit.application-endpoint",
-    instance: address.instance,
-    origin: address.origin,
-    token: address.token,
-    ...(address.home === undefined ? {} : { home: address.home }),
-    process: process.pid,
-  };
-  const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
-  try {
-    await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600, flag: "wx" });
-    await rename(temporary, path);
-  } catch (error) {
-    await unlink(temporary).catch(() => undefined);
-    await clearLock(lock, address.instance);
-    throw error;
-  }
-  let closed = false;
-  return {
-    endpoint: value,
-    path,
-    close: async () => {
-      if (closed) return;
-      closed = true;
-      const current = await readEndpointFile(path);
-      if (current?.instance === address.instance) await unlink(path).catch(() => undefined);
-      await clearLock(lock, address.instance);
-    },
-  };
+  const reservation = await reserveNodeHypitApplicationEndpoint(options);
+  if (reservation === undefined) throw new Error("Hypit Application is already starting or running.");
+  try { return await reservation.publish(address); }
+  catch (error) { await reservation.close(); throw error; }
 }

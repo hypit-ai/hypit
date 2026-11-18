@@ -11,23 +11,22 @@ Executor port.
 
 The browser presents the editor in the viewport assigned to its Product Session.
 
-Build and open the included project through the local product launcher from the repository root:
+Build and open the included project through the shared Hypit Host from the repository root.
 
 ```sh
 pnpm build
 pnpm studio
 ```
 
-The default address is `http://127.0.0.1:4317`. To open another project:
+Use the distribution's `hypit` command to select another project.
 
 ```sh
-pnpm --filter @hypit/nle-studio start -- --root /absolute/path/to/project --document edits/main.svml
+hypit nle open edits/main.svml --project /absolute/path/to/project
 ```
 
-`--document` and `--view` are portable paths inside the selected Project Boundary. Pass `--view
+`--view` and the given document are paths inside the selected Project Boundary. Pass `--view
 edits/main.nle-view.json` when durable View state is wanted. Without it, the Product Session creates a session-only
-View from the Project's root Composition. `--port` selects the loopback listener; port `0` asks the operating system
-for an available port. The service always binds to `127.0.0.1`.
+View from the Project's root Composition. The shared Host publishes its loopback address on startup.
 
 Current production behavior opens a finite Product projection, renders the Timeline, Canvas and Inspector, accepts
 guarded commands, explicitly saves or reloads owner documents, imports local browser files, projects the shared Media
@@ -102,7 +101,7 @@ are independent operations.
 
 `POST /api/actions` starts frame preview, playback preview or delivery at the accepted Project revision. `GET
 /api/actions/:handle` observes the Action and `DELETE /api/actions/:handle` requests cancellation. Completed
-results have Session-owned resource URLs. The standalone server accepts
+results have Session-owned resource URLs. The Hypit Host accepts
 `HYPIT_FFMPEG_PATH`, `HYPIT_FFPROBE_PATH`, `HYPIT_CHROME_PATH` and `HYPIT_ELECTRON_PATH` for explicit executable
 selection and otherwise uses the local implementations' ordinary defaults.
 

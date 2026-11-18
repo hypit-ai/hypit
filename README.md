@@ -38,7 +38,7 @@ TypeScript project programs provide the executable automation surface over Host 
 
 ## Current implementation
 
-The working core covers Media, NLE editing and video delivery.
+The working core covers Media, NLE editing, video delivery and recoverable local AIGC execution.
 
 - `@hypit/temporal` provides exact clock-free temporal domains and relations;
 - `@hypit/media` inspects, selects and interprets picture and audio members;
@@ -49,6 +49,9 @@ The working core covers Media, NLE editing and video delivery.
   a registered product;
 - `@hypit/project` opens one Project Boundary, activates its explicit package environment and shares one Media
   Service plus typed owner-document lifetimes among product sessions;
+- `@hypit/execution` runs independent Capability Invocations, reopens Provider receipts and streams typed
+  Publication resources. Model family packages declare exact image, video, speech and transcription Capabilities.
+  `@hypit/provider-hypihub` binds those Capabilities to a configured HypiHub account;
 - `@hypit/media-local` implements bounded container-index and explicitly selected decoded-unit inspection
   with local ffprobe;
 - `@hypit/nle-delivery` compiles an accepted snapshot and selected package implementations into portable
@@ -70,9 +73,73 @@ The working core covers Media, NLE editing and video delivery.
 Media Asset documents use the unversioned `hypit.media-asset` format kind. npm semver and the project lockfile
 version implementations; the Media Asset Reader accepts the current owner shape.
 
-Run `pnpm build`, then `pnpm application` to start the shared ApplicationHost. `pnpm studio` is the direct
-project-and-product launcher for the included NLE project.
+Run `pnpm build`, then `pnpm studio` to open the included NLE project through the shared ApplicationHost.
+Use `pnpm application` to run the same Host in the foreground. An npm installation exposes `hypit` for
+the same operations. See `hypit --help` for its command surface.
 
-The Node Application and direct Studio launchers use ordinary `PATH` lookup for FFmpeg/FFprobe and the local browser
+```sh
+hypit nle inspect edits/main.svml --project /path/to/project
+hypit nle export edits/main.svml --project /path/to/project --to exports/draft.mp4
+hypit auth login
+hypit execution doctor
+hypit execution quote @hypit/gpt-image/gpt-image-2 --input request.json
+```
+
+The Node Host uses ordinary `PATH` lookup for FFmpeg/FFprobe and the local browser
 defaults. An embedding or launcher may select explicit executables with `HYPIT_FFMPEG_PATH`, `HYPIT_FFPROBE_PATH`,
 `HYPIT_CHROME_PATH` and `HYPIT_ELECTRON_PATH`; these configure the local Executor used by NLE Studio delivery.
+
+## Run AIGC from a Node project program
+
+Supply a HypiHub API key or select a connected account, then explicitly select the Environment when
+opening the ApplicationHost. See [HypiHub account authorization](packages/provider-hypihub/README.md#connect-a-hypihub-account).
+This program generates a still, then supplies the selected still to a video Invocation as a first frame.
+
+```ts
+import { createWriteStream } from "node:fs";
+import { pipeline } from "node:stream/promises";
+import { bindApplicationExecutionEnvironment, openApplicationExecutionDirectory } from "@hypit/hypit/application";
+import { openNodeHypitApplication } from "@hypit/hypit/application/node";
+import { openNodeHypiHubEnvironment } from "@hypit/hypit/execution/node";
+import type { ExecutionClient, InvocationRequest } from "@hypit/hypit/execution";
+
+async function generate(
+  client: ExecutionClient, request: InvocationRequest, options?: Parameters<ExecutionClient["start"]>[1],
+) {
+  const address = await client.start(request, options);
+  const result = await client.wait(address);
+  if (result.phase !== "complete") throw new Error(result.failure?.message ?? result.phase);
+  return address;
+}
+
+const environment = await openNodeHypiHubEnvironment({ apiKey });
+const application = openNodeHypitApplication({
+  execution: openApplicationExecutionDirectory([bindApplicationExecutionEnvironment(environment)]),
+});
+try {
+  const project = await application.openProject({ root: projectRoot });
+  const client = project.host.executionClient("hypihub")!.client;
+  const still = await generate(client, {
+    capability: "@hypit/gpt-image/gpt-image-2",
+    input: { mode: "text", prompt: "A quiet mountain lake at dawn", aspectRatio: "16:9" },
+  });
+  const firstFrame = await client.openResource(still, "image", "image-1");
+  const shot = await generate(client, {
+    capability: "@hypit/seedance/seedance-2.5-flash",
+    input: {
+      mode: "frames", prompt: "Glide slowly across the water", duration: 4,
+      firstFrame: { resource: "opening-frame", personReference: false },
+    },
+  }, { inputs: { "opening-frame": firstFrame } });
+
+  const video = await client.openResource(shot, "video", "video-1");
+  await pipeline(video.bytes, createWriteStream(destination, { flags: "wx" }));
+} finally {
+  await application.close();
+}
+```
+
+The resulting file can enter the Project through the existing Media import. Until explicitly adopted,
+the generated assets remain in their Publications. Retain the Invocation addresses to reopen those
+Publications after a restart. See the [Execution API](packages/execution/README.md) for the lifecycle
+and resource contract.

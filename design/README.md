@@ -12,11 +12,13 @@ Read the current system from authority toward implementation.
 ### 2. Cross-owner composition and execution
 
 - [Project owners and application hosts](project-owners-and-hosts.md) — the long-lived ApplicationHost, author facts,
-  Services, Executors, caller adapters and product operation forms.
+  Services, Executors, local filesystem layout, caller adapters and product operation forms.
 - [Project Boundary and Project Host](project-host.md) — project files, package activation, shared Media, open
   document Services and Product Sessions.
 - [Host backend API](host-backend-api.md) — the shared ApplicationHost backend, ProjectHost, Product Providers, Product
   Sessions, Action lifetimes and their transport projections.
+- [Hypit CLI and shared Host operations](cli.md) — the executable, Host client, account diagnostics, quotation and
+  terminal access to NLE operations.
 - [Explicit programs and execution](explicit-programs-and-execution.md) — action coordination, Invocation recovery,
   Publication and TypeScript project programs.
 
@@ -26,6 +28,8 @@ Read the current system from authority toward implementation.
   Service and local media execution.
 - [Component authoring](authoring.md) — TSX author programs, NLE materialization, component expansion and the boundary
   between author source and the durable edit.
+- [Canvas 后端和项目文件](canvas.md) — Canvas 的项目文档、npm 边界、生成操作和首个实现切片。
+- [Canvas 操作与终端接口](canvas-api.md) — 修订事务、报价、提交恢复、卡片历史和采用。
 - [HTML 视听执行与导出 API](html-video-delivery.md) — NLE 编译、HTML/Audio Program、视频
   Delivery Action 与 npm 执行边界。
 - [NLE](nle.md) — direct audiovisual composition, the SVML Project document, per-document Service transactions and

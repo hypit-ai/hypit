@@ -31,7 +31,7 @@ Each domain owns the meaning, validation, editing and persistence of its facts. 
 
 - Media Asset and its accepted representations;
 - NLE Project and NLE View;
-- Generation Graph and Generation Workspace;
+- Canvas documents;
 - Scene Project and Scene View;
 - Script, Narrative, Transcript and semantic evidence;
 - Feedback;

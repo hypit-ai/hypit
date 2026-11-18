@@ -4,9 +4,6 @@
   "description": "NLE Product Session backend and browser client for Hypit",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
-  "bin": {
-    "hypit-nle-studio": "./dist/server.js"
-  },
   "exports": {
     ".": {
       "hypit-source": "./src/host.ts",
@@ -26,13 +23,11 @@
   },
   "files": ["dist", "README.md"],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.browser.json --noEmit && vite build",
-    "start": "node dist/server.js"
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.browser.json --noEmit && vite build"
   },
   "dependencies": {
     "@hypit/application": "workspace:^0.1.0",
     "@hypit/html-video": "workspace:^0.1.0",
-    "@hypit/html-video-local": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.1.0",
     "@hypit/media-asset": "workspace:^0.1.0",
     "@hypit/media-local": "workspace:^0.1.0",
