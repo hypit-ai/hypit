@@ -1,6 +1,6 @@
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
-import { nleLinearTimeMapping, type NleCommand } from "@hypit/nle";
+import { nleLinearTimeMapping, type NleCommand, type NleItem } from "@hypit/nle";
 import type { NleInspectorScene } from "@hypit/nle/view";
 import { Blend, Captions, Images, Maximize2, Minimize2, Pause, Play, Redo2, Save, StepBack, StepForward, Type, Undo2, Volume2, VolumeX, Wand2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
@@ -24,6 +24,9 @@ import {
   sendCommand,
 } from "./api.js";
 import { CanvasControls, type CanvasDraft } from "./CanvasControls.js";
+import { TimelineMedia } from "./TimelineMedia.js";
+import { PictureAlignment } from "./PictureAlignment.js";
+import { TimelineTextList } from "./TimelineTextList.js";
 import { IconButton } from "./common.js";
 import { Inspector } from "./Inspector.js";
 import { PanelResizeHandle, defaultPanelWidths, type PanelSide } from "./PanelResizeHandle.js";
@@ -41,7 +44,7 @@ import { ErrorNotice } from "./ErrorNotice.js";
 import { enterMotion } from "./motion.js";
 import { useEditorPosition } from "./useEditorPosition.js";
 import { EditingHistory, type EditorFocus } from "./editingHistory.js";
-import { activeComposition as compositionOf, changeSpeed, closeTrackGaps, createCompound, duplicateCompound, editTransitionDuration, frameOf, frameTime, freezeItem, identity, magneticEdit, removeItems, reverseItems, rippleRemove, unpackCompound, type EditPlan } from "./editPlans.js";
+import { activeComposition as compositionOf, canFreezeItem, changeSpeed, closeTrackGaps, createCompound, duplicateCompound, editTransitionDuration, frameOf, frameTime, freezeItem, identity, magneticEdit, moveItemCommands, removeItems, reverseItems, rippleRemove, unpackCompound, type EditPlan } from "./editPlans.js";
 import { TransitionInspector } from "./TransitionInspector.js";
 import { TemporalInspector } from "./TemporalInspector.js";
 import { ProcessInspector } from "./ProcessInspector.js";
@@ -87,6 +90,8 @@ export function Studio() {
   useEffect(() => { try { setPrimaryTrack(primaryKey ? localStorage.getItem(primaryKey) ?? undefined : undefined); } catch { setPrimaryTrack(undefined); } }, [primaryKey]);
   const [renameProject, setRenameProject] = useState(false);
   const [binTab, setBinTab] = useState<BinTab>("assets");
+  const [propertiesTab, setPropertiesTab] = useState<"properties" | "text">("properties");
+  const [compositionParents, setCompositionParents] = useState<readonly string[]>([]);
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [panelWidths, setPanelWidths] = useState(readPanelWidths);
   const [source, setSource] = useState<NleStudioMediaEntry>();
@@ -124,6 +129,7 @@ export function Studio() {
     if (!current || !history.current.available(current, direction)) return;
     const restored = await history.current.replay(direction, current, sendCommand, setSession);
     const next = sessionRef.current!;
+    if (next.open.timeline.composition !== current.open.timeline.composition) setCompositionParents([]);
     if (restored && restored.composition === next.open.timeline.composition) { setFrame(restored.frame); setSelection(editableSelection(next.open.timeline, restored.selection)); }
     else setSelection(previous => editableSelection(next.open.timeline, previous));
   }, false), [perform, setSession, setFrame, setSelection]);
@@ -259,7 +265,7 @@ export function Studio() {
     window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key);
   }, [selection, select, transact, session, frame, busy, source, command, perform, groupSelection, replayHistory, transitionId]);
 
-  const activeItems = useMemo(() => new Set(session?.open.timeline.tracks.flatMap(track => track.items)
+  const activeItems = useMemo(() => new Set(session?.open.timeline.tracks.filter(track => track.enabled).flatMap(track => track.items)
     .filter(item => frame >= item.startFrame && frame < item.startFrame + item.durationFrames && item.enabled)
     .map(item => item.id) ?? []), [frame, session]);
 
@@ -269,17 +275,36 @@ export function Studio() {
   </div>;
   const scene = session.open.timeline;
   const fps = scene.editRate.numerator / scene.editRate.denominator;
+  const openComposition = (id: string, navigation: "tab" | "enter" | "back") => {
+    if (id === scene.composition) return;
+    const parents = navigation === "enter" ? [...compositionParents, scene.composition]
+      : navigation === "back" ? compositionParents.slice(0, compositionParents.lastIndexOf(id)) : [];
+    void perform(async () => {
+      const next = await sendCommand({ kind: "view.transact", expectedProjectRevision: session.open.status.projectRevision,
+        expectedViewRevision: session.open.status.viewRevision, commands: [{ kind: "view.update", activeComposition: id }] });
+      setCompositionParents(parents);
+      setSource(undefined);
+      setTransitionId(undefined);
+      setSession(next);
+    });
+  };
   const activeComposition = session.open.project.project.compositions.find(composition => composition.id === scene.composition)!;
   const projectItems = new Map(activeComposition.tracks.flatMap(track => track.items.map(item => [item.id, item] as const)));
   const mediaByPath = new Map(session.media.entries.map(entry => [entry.id, entry] as const));
-  const mediaForItem = (itemId: string) => {
-    const item = projectItems.get(itemId);
-    if (item?.kind !== "present" || item.source !== "media") return undefined;
+  const mediaForItem = (item: NleItem) => {
+    if (item.kind !== "present" || item.source !== "media") return undefined;
     const base = new URL(session.projectDocument.path, "https://hypit.invalid/");
     const path = decodeURIComponent(new URL(item.asset.path, base).pathname.slice(1));
     return mediaByPath.get(path);
   };
+  const previewTime = frameTime(session, frame);
+  const previewPlaying = playing && source === undefined;
   const selectedProjectItem = activeComposition.tracks.flatMap(track => track.items).find(item => item.id === selection[0]);
+  const selectedLayer = session.open.canvas.layers.find(layer => layer.id === selection[0]);
+  const translatePicture = (item: string, deltaX: number, deltaY: number) => command({
+    kind: "spatial.edit", expectedProjectRevision: session.open.status.projectRevision,
+    expectedViewRevision: session.open.status.viewRevision, item, edit: { kind: "frame.translate", deltaX, deltaY },
+  });
   const selectedGroups = scene.groups.filter(group => group.items.some(item => selection.includes(item)));
   const grouped = selectedGroups.length === 1 && selectedGroups[0]!.items.every(item => selection.includes(item))
     && selection.every(item => selectedGroups[0]!.items.includes(item));
@@ -295,6 +320,10 @@ export function Studio() {
   const selectedTransition = activeComposition.transitions.find(value => value.id === transitionId);
   const selectedSceneItem = scene.tracks.flatMap(track => track.items).find(item => item.id === selection[0]);
   const selectionLocked = scene.tracks.some(track => track.locked && track.items.some(item => selection.includes(item.id)));
+  const canFreeze = selection.length === 1 && !selectionLocked && !!selectedProjectItem && canFreezeItem(session, selectedProjectItem, frame);
+  const freezeSelection = () => {
+    if (canFreeze && selectedProjectItem) applyPlan(() => freezeItem(session, selectedProjectItem, frame));
+  };
   const inspectorEdit = (section: string, field: string, value: string | number | boolean) => {
     if (selection[0] === undefined) return;
     command({ kind: "inspector.edit", expectedProjectRevision: session.open.status.projectRevision,
@@ -439,7 +468,7 @@ export function Studio() {
       <div className="nle-titlebar"><div className="nle-titlebar-side"><small>{session.open.status.projectDirty || session.open.status.viewDirty ? "未保存" : "已保存"}</small></div><button type="button" className="nle-titlebar-name" disabled={busy} onClick={() => setRenameProject(true)} title="重命名项目">{projectName}</button><div className="nle-titlebar-side end"><div className="nle-toolbar-actions">
         <IconButton label="撤销" disabled={busy || !canUndo} onClick={() => replayHistory("undo")}><Undo2 size={16}/></IconButton>
         <IconButton label="重做" disabled={busy || !canRedo} onClick={() => replayHistory("redo")}><Redo2 size={16}/></IconButton>
-        <button className="button" disabled={busy} onClick={() => void perform(async () => { setSession(await reloadSession()); history.current.reset(); select([]); })}>重载</button>
+        <button className="button" disabled={busy} onClick={() => void perform(async () => { setSession(await reloadSession()); history.current.reset(); setCompositionParents([]); select([]); })}>重载</button>
         <button className="button primary" disabled={busy || !session.open.status.projectDirty && !session.open.status.viewDirty} onClick={() => void perform(async () => setSession(await saveSession()))}><Save size={14}/>保存</button>
       </div></div></div>
       <ErrorNotice message={failure} onClose={() => setFailure(undefined)}/>{renameProject && <EditorDialog title="重命名项目" initialName={projectName} onClose={() => setRenameProject(false)} onSubmit={name => transact([{ kind: "project.update", name }])}/>}
@@ -449,31 +478,57 @@ export function Studio() {
         <section className="nle-monitor"><div className="nle-panel-header nle-monitor-title"><span>{projectName}</span><IconButton label={previewExpanded ? "恢复预览" : "放大预览"} onClick={() => setPreviewExpanded(value => !value)}>{previewExpanded ? <Minimize2 size={15}/> : <Maximize2 size={15}/>}</IconButton></div>
           <SourcePreview entry={source} fps={fps} muted={muted} onMute={() => setMuted(value => !value)} onClose={() => setSource(undefined)}/><div className="nle-stage"><div className="nle-editable-preview" style={{ "--canvas-ratio": session.open.canvas.canvas.width / session.open.canvas.canvas.height } as React.CSSProperties}><div className="studio-canvas">
             {session.preview.state === "ready" && <img className="studio-preview-frame" src={session.preview.resource}/>}
-            {session.preview.state !== "ready" && session.open.canvas.layers.filter(layer => activeItems.has(layer.id) && layer.layout !== undefined).map(layer => { const layout = canvasDraft?.id === layer.id ? { ...layer.layout!, ...canvasDraft.frame } : layer.layout!; const canvas = session.open.canvas.canvas; const media = mediaForItem(layer.id); return <button type="button" key={layer.id} className="studio-canvas-layer" aria-label={layer.title} onClick={() => select([layer.id])} style={{ left: `${layout.x / canvas.width * 100}%`, top: `${layout.y / canvas.height * 100}%`, width: `${layout.width / canvas.width * 100}%`, height: `${layout.height / canvas.height * 100}%` }}>{media?.resource && media.mediaType?.startsWith("image/") ? <img src={media.resource} style={{ objectFit: layout.fit }}/> : media?.resource && media.mediaType?.startsWith("video/") ? <video src={media.resource} muted playsInline style={{ objectFit: layout.fit }}/> : undefined}</button>; })}
+            {session.preview.state !== "ready" && session.open.canvas.layers.map(layer => {
+              if (!activeItems.has(layer.id) || layer.layout === undefined) return null;
+              const item = projectItems.get(layer.id);
+              if (item?.kind !== "present" || item.source !== "media") return null;
+              const media = mediaForItem(item);
+              if (!media?.resource || !media.mediaType) return null;
+              const layout = canvasDraft?.id === layer.id ? { ...layer.layout, ...canvasDraft.frame } : layer.layout;
+              const canvas = session.open.canvas.canvas;
+              return <button type="button" key={layer.id} className="studio-canvas-layer" aria-label={layer.title}
+                onClick={() => select([layer.id])} style={{ left: `${layout.x / canvas.width * 100}%`, top: `${layout.y / canvas.height * 100}%`,
+                  width: `${layout.width / canvas.width * 100}%`, height: `${layout.height / canvas.height * 100}%` }}>
+                <TimelineMedia item={item} resource={media.resource} mediaType={media.mediaType} at={previewTime} playing={previewPlaying} muted={muted} layout={layout}/>
+              </button>;
+            })}
+            {session.preview.state !== "ready" && [...projectItems.values()].map(item => {
+              if (item.kind !== "present" || item.source !== "media" || item.picture || !item.audio || !activeItems.has(item.id)) return null;
+              const media = mediaForItem(item);
+              return media?.resource && media.mediaType ? <TimelineMedia key={item.id} item={item} resource={media.resource} mediaType={media.mediaType}
+                at={previewTime} playing={previewPlaying} muted={muted}/> : null;
+            })}
             {session.preview.state !== "ready" && <CanvasControls scene={session.open.canvas} active={activeItems} selection={selection} disabled={busy} draft={canvasDraft} onDraft={setCanvasDraft} onSelect={select}
-              onTranslate={(item, deltaX, deltaY) => command({ kind: "spatial.edit", expectedProjectRevision: session.open.status.projectRevision, expectedViewRevision: session.open.status.viewRevision, item, edit: { kind: "frame.translate", deltaX, deltaY } })}
+              onTranslate={translatePicture}
               onResize={(item, next) => command({ kind: "spatial.edit", expectedProjectRevision: session.open.status.projectRevision, expectedViewRevision: session.open.status.viewRevision, item, edit: { kind: "frame.resize", frame: next } })}/>}
           </div></div></div>
           <div className="nle-transport"><span className="nle-transport-time"><span className="current">{timecode(frame, fps)}</span><span className="separator">/</span><span className="total">{timecode(scene.maximumFrame, fps)}</span></span><button className="nle-play" aria-label={playing ? "暂停" : "播放"} onClick={() => setPlaying(value => !value)}>{playing ? <Pause size={18}/> : <Play size={18}/>}</button><span className="nle-transport-actions"><IconButton label="上一帧" onClick={() => { setPlaying(false); setFrame(value => Math.max(0, value - 1)); }}><StepBack size={15}/></IconButton><IconButton label="下一帧" onClick={() => { setPlaying(false); setFrame(value => Math.min(scene.maximumFrame, value + 1)); }}><StepForward size={15}/></IconButton><IconButton label="静音" onClick={() => setMuted(value => !value)}>{muted ? <VolumeX size={15}/> : <Volume2 size={15}/>}</IconButton></span></div>
         </section>
         <PanelResizeHandle side="properties" label="调整属性面板宽度" width={panelWidths.properties} onResize={(width, save) => resizePanel("properties", width, save)}/>
-        <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist"><button role="tab" aria-selected="true">属性</button></div><AnimatePresence mode="popLayout" initial={false}><motion.div key={transitionId ?? selection[0] ?? "empty"} className="nle-panel-body" {...enterMotion(reduced)}>{selectedTransition ? <TransitionInspector duration={Math.round(frameOf(session, projectItems.get(selectedTransition.outgoing)!.duration) + frameOf(session, projectItems.get(selectedTransition.outgoing)!.start) - frameOf(session, projectItems.get(selectedTransition.incoming)!.start))} disabled={busy || selectionLocked} onDuration={value => applyPlan(() => editTransitionDuration(session, selectedTransition.id, value))} onRemove={() => { applyPlan(() => editTransitionDuration(session, selectedTransition.id, undefined)); setTransitionId(undefined); }}/>
-            : <Inspector scene={inspector} disabled={busy} onEdit={inspectorEdit}/>}{!selectedTransition && selectedProjectItem && selectedSceneItem && <><TemporalInspector item={selectedProjectItem} start={selectedSceneItem.startFrame} duration={selectedSceneItem.durationFrames} disabled={busy || selectionLocked}
+        <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist">
+          <button role="tab" aria-selected={propertiesTab === "properties"} onClick={() => setPropertiesTab("properties")}>属性</button>
+          <button role="tab" aria-selected={propertiesTab === "text"} onClick={() => setPropertiesTab("text")}>文本与字幕</button>
+        </div><AnimatePresence mode="popLayout" initial={false}>{propertiesTab === "text"
+          ? <motion.div key="text-list" className="nle-panel-body" {...enterMotion(reduced)}>
+            <TimelineTextList scene={scene} selection={selection} onSelect={item => { select([item.id]); setFrame(item.startFrame); }}/>
+            {inspector?.item === selection[0] && <Inspector scene={inspector} disabled={busy} onEdit={inspectorEdit}/>}
+          </motion.div>
+          : <motion.div key={transitionId ?? selection[0] ?? "empty"} className="nle-panel-body" {...enterMotion(reduced)}>{selectedTransition ? <TransitionInspector duration={Math.round(frameOf(session, projectItems.get(selectedTransition.outgoing)!.duration) + frameOf(session, projectItems.get(selectedTransition.outgoing)!.start) - frameOf(session, projectItems.get(selectedTransition.incoming)!.start))} disabled={busy || selectionLocked} onDuration={value => applyPlan(() => editTransitionDuration(session, selectedTransition.id, value))} onRemove={() => { applyPlan(() => editTransitionDuration(session, selectedTransition.id, undefined)); setTransitionId(undefined); }}/>
+            : <Inspector scene={inspector} disabled={busy} onEdit={inspectorEdit}/>}
+          {!selectedTransition && selection.length === 1 && selectedLayer?.layout && <PictureAlignment
+            canvas={session.open.canvas.canvas} frame={canvasDraft?.id === selectedLayer.id ? canvasDraft.frame : selectedLayer.layout}
+            disabled={busy || !selectedLayer.affordances.translate}
+            onTranslate={(x, y) => void translatePicture(selectedLayer.id, x, y)}/>}
+          {!selectedTransition && selectedProjectItem && selectedSceneItem && <><TemporalInspector item={selectedProjectItem} start={selectedSceneItem.startFrame} duration={selectedSceneItem.durationFrames} disabled={busy || selectionLocked}
             onStart={value => transact([{ kind: "item.move", ids: editableSelection(scene, selection), delta: frameTime(session, value - selectedSceneItem.startFrame) }])}
             onDuration={value => transact([{ kind: "item.trim", id: selectedProjectItem.id, edge: "end", at: frameTime(session, selectedSceneItem.startFrame + value) }])}
             onSpeed={value => applyPlan(() => changeSpeed(session, selection, value))} onReverse={() => applyPlan(() => reverseItems(session, selection))}
             onSlip={value => transact(editableSelection(scene, selection).map(id => ({ kind: "item.slip", id, delta: frameTime(session, value) })))}
-            onFreeze={() => applyPlan(() => freezeItem(session, selectedProjectItem, frame))}/><ProcessInspector item={selectedProjectItem} disabled={busy || selectionLocked} onEdit={transact}/></>}</motion.div></AnimatePresence></aside>
+            canFreeze={canFreeze} onFreeze={freezeSelection}/><ProcessInspector item={selectedProjectItem} disabled={busy || selectionLocked} onEdit={transact}/></>}</motion.div>}</AnimatePresence></aside>
       </div>
-      <AnimatePresence mode="popLayout" initial={false}><Timeline key={`${session.projectDocument.path}/${scene.composition}`} session={session} frame={frame} selection={selection} busy={busy} onSelectTransition={setTransitionId} selectedTransition={transitionId} onSeek={value => { setPlaying(false); setSource(undefined); setFrame(value); }} onSelect={select}
+      <AnimatePresence mode="popLayout" initial={false}><Timeline key={`${session.projectDocument.path}/${scene.composition}`} session={session} frame={frame} selection={selection} busy={busy} onSelectTransition={id => { setTransitionId(id); setPropertiesTab("properties"); }} selectedTransition={transitionId} onSeek={value => { setPlaying(false); setSource(undefined); setFrame(value); }} onSelect={select}
         draggedMedia={assetDrag.drag?.entry} mediaDrop={assetDrag.drag?.drop}
-        onMove={plan => transact([
-          ...plan.additions.map(addition => ({ kind: "track.add" as const, composition: scene.composition,
-            track: { id: addition.id, name: addition.name, kind: addition.kind, enabled: true, items: [] },
-            ...(addition.before === undefined ? {} : { before: addition.before }) })),
-          { kind: "item.move", ids: plan.ids, delta: exactFrame(plan.deltaFrames, session),
-            ...(plan.destinations.length === 0 ? {} : { destinations: plan.destinations }) },
-        ])}
+        onMove={plan => transact(moveItemCommands(session, plan))}
         onTrim={(item, edge, atFrame) => transact([{ kind: "item.trim", id: item.id, edge, at: exactFrame(atFrame, session) }])}
         onTrimSelection={(items, edge, atFrame) => transact(items.map(item => ({ kind: "item.trim", id: item.id, edge, at: exactFrame(atFrame, session) })))}
         onSplit={(items, atFrame) => transact(items.map(item => ({ kind: "item.split", id: item.id, at: exactFrame(atFrame, session), rightId: `split-${crypto.randomUUID()}` })))}
@@ -481,9 +536,13 @@ export function Studio() {
         onTrackEnabled={(track, enabled) => transact([{ kind: "track.update", id: track, enabled }])}
         onTrackLocked={(track, locked) => viewTransact([{ kind: "track-lock.set", composition: scene.composition, track, locked }])}
         onTrackMove={(track, before) => transact([{ kind: "track.move", id: track, ...(before === undefined ? {} : { before }) }])}
-        onComposition={composition => viewTransact([{ kind: "view.update", activeComposition: composition }])}
+        onComposition={composition => openComposition(composition, "tab")}
+        compositionParents={compositionParents}
+        onEnterComposition={composition => openComposition(composition, "enter")}
+        onReturnComposition={composition => openComposition(composition, "back")}
         onAddTrack={() => transact([{ kind: "track.add", composition: scene.composition, track: { id: `track-${crypto.randomUUID().slice(0, 8)}`, name: "新轨道", kind: "picture", enabled: true, items: [] } }])}
         canToggleGroup={canToggleGroup} grouped={grouped} onToggleGroup={() => groupSelection(grouped)}
+        canFreeze={canFreeze} onFreeze={freezeSelection}
         canDetachAudio={canDetachAudio} onDetachAudio={() => {
           if (!canDetachAudio || selectedProjectItem === undefined) return;
           const existing = scene.tracks.find(track => track.kind === "audio" && !track.locked);
@@ -504,7 +563,7 @@ export function Studio() {
         onCompositionCreate={(name, canvas) => void perform(async () => {
           const id = identity("composition"); let current = sessionRef.current!;
           current = await sendCommand({ kind: "project.transact", expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision, commands: [{ kind: "composition.add", composition: { id, name, canvas, tracks: [], transitions: [], mattes: [] } }] }); setSession(current);
-          current = await sendCommand({ kind: "view.transact", expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision, commands: [{ kind: "view.update", activeComposition: id }] }); setSession(current); setSelection([]); setFrame(0);
+          current = await sendCommand({ kind: "view.transact", expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision, commands: [{ kind: "view.update", activeComposition: id }] }); setCompositionParents([]); setSession(current); setSelection([]); setFrame(0);
         })}
         onCompositionEdit={(name, canvas) => transact([{ kind: "composition.update", id: scene.composition, name, canvas }])}
         onCompositionRoot={() => transact([{ kind: "project.update", rootComposition: scene.composition }])}

@@ -2,7 +2,7 @@ import type { NleItem } from "@hypit/nle";
 import { NumberField, Row, Section, Toggle } from "./controls.js";
 import { uniformSpeed } from "./editPlans.js";
 
-export function TemporalInspector({ item, start, duration, disabled, onStart, onDuration, onSpeed, onReverse, onSlip, onFreeze }: {
+export function TemporalInspector({ item, start, duration, disabled, onStart, onDuration, onSpeed, onReverse, onSlip, canFreeze, onFreeze }: {
   readonly item: NleItem;
   readonly start: number;
   readonly duration: number;
@@ -13,6 +13,7 @@ export function TemporalInspector({ item, start, duration, disabled, onStart, on
   readonly onReverse: () => void;
   readonly onSlip: (frames: number) => void;
   readonly onFreeze: () => void;
+  readonly canFreeze: boolean;
 }) {
   const speed = uniformSpeed(item);
   return <>
@@ -24,7 +25,7 @@ export function TemporalInspector({ item, start, duration, disabled, onStart, on
     {item.kind === "present" && <Section title="变速">
       <Row label="倍速">{speed !== undefined && speed !== 0 ? <NumberField label="倍速" value={Math.abs(speed)} min={0.01} max={100} step={0.1} disabled={disabled} onCommit={onSpeed}/> : <output>{speed === 0 ? "定格" : "分段时间映射"}</output>}</Row>
       <Row label="反向播放"><Toggle label="反向播放" checked={speed !== undefined && speed < 0} disabled={disabled} onChange={onReverse}/></Row>
-      {item.picture && <Row label="定格"><button type="button" className="button small" disabled={disabled} onClick={onFreeze}>在播放头创建定格</button></Row>}
+      {item.picture && <Row label="定格"><button type="button" className="button small" disabled={disabled || !canFreeze} onClick={onFreeze}>在播放头创建定格</button></Row>}
     </Section>}
   </>;
 }

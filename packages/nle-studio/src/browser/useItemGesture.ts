@@ -33,6 +33,7 @@ export type ItemGestureState = {
   readonly insertionTop?: number;
   readonly snapFrame?: number;
   readonly dropTrack?: string;
+  readonly plan: ItemMovePlan | undefined;
   readonly valid: boolean;
 };
 
@@ -100,7 +101,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
     handle.setPointerCapture(pointerId);
     let active = false, animation = 0;
     let pointer = { x: startX, y: startY, alt: event.altKey };
-    let proposed: ItemMovePlan | undefined;
+    let proposed: ItemMovePlan | undefined, previousPlan = "";
 
     const locate = () => {
       if (!active) return;
@@ -197,12 +198,14 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
           kind: itemKind(member.item, member.track), left: origin.left + pointer.x - startX,
           top: origin.top + pointer.y - startY, width: origin.width, height: origin.height }];
       });
-      proposed = valid ? { ids: [...ids], deltaFrames: delta,
+      const plan = valid ? { ids: [...ids], deltaFrames: delta,
         destinations: [...destinations].filter(([id, destination]) => members.find((member) => member.item.id === id)?.track.id !== destination)
           .map(([movedItem, destination]) => ({ item: movedItem, track: destination })), additions } : undefined;
+      const key = JSON.stringify(plan) ?? "";
+      if (key !== previousPlan) { previousPlan = key; proposed = plan; }
       const dropTrack = valid && insertionIndex === undefined && destinations.get(item.id) === displayRows[targetIndex]?.id
         ? displayRows[targetIndex]?.id : undefined;
-      setGesture({ ids: [...ids], floating, valid, ...(dropTrack === undefined ? {} : { dropTrack }), ...(insertionTop === undefined ? {} : { insertionTop }),
+      setGesture({ ids: [...ids], floating, valid, plan: proposed, ...(dropTrack === undefined ? {} : { dropTrack }), ...(insertionTop === undefined ? {} : { insertionTop }),
         ...(aligned === undefined ? {} : { snapFrame: aligned }) });
     };
 
