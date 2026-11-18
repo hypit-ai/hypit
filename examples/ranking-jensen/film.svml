@@ -2,7 +2,7 @@
 <svml id="ranking-jensen" name="Ranking the best person Jensen ever dated" root="main">
   <shared-value id="caption-style:nvidia" name="nvidia" owner="component">
     <component package="@hypit/caption-fine" symbol="fine" slot="style" />
-    <value>{"activeBox":{"background":"#83e21b","borderColor":"#00000000","borderRadius":6,"borderWidth":0,"continuity":"isolated","mode":"current","paddingX":10,"paddingY":4,"shadow":{"blur":10,"color":"#70d812","offsetX":0,"offsetY":0,"opacity":0.36,"spread":0},"transitionFrames":2},"activePaint":{"color":"#ffffff","outlineColor":"#090a0f","outlineWidth":2.6,"shadowBlur":3,"shadowColor":"#0000008f","shadowOffsetX":0,"shadowOffsetY":1},"activeResponse":{"frames":3,"kind":"pop","scale":1.04},"blockAlign":"center","color":"#ffffff","cueBox":{"background":"#00000000","borderColor":"#00000000","borderRadius":0,"borderWidth":0,"continuity":"isolated","paddingX":0,"paddingY":0},"entry":{"frames":2,"kind":"fade"},"exit":{"frames":2,"kind":"fade"},"fontFamily":"Montserrat, Arial Black, Arial, sans-serif","fontSize":44,"fontWeight":900,"inlineSize":"hug","karaoke":{"activeColor":"#ffffff","mode":"current","transition":"step"},"letterSpacing":-0.8,"lineHeight":1.25,"maxLines":2,"maxWordsPerLine":5,"outlineColor":"#090a0f","outlineWidth":2.8,"overflow":"visible","shadowBlur":7,"shadowColor":"#000000b8","shadowOffsetX":0,"shadowOffsetY":3,"textAlign":"center","wrap":"word"}</value>
+    <value>{"activeBox":{"background":"#83e21b","borderColor":"#00000000","borderRadius":6,"borderWidth":0,"continuity":"isolated","mode":"current","paddingX":10,"paddingY":4,"shadow":{"blur":10,"color":"#70d812","offsetX":0,"offsetY":0,"opacity":0.36,"spread":0},"transitionFrames":2},"activePaint":{"color":"#ffffff","outlineColor":"#090a0f","outlineWidth":2.6,"shadowBlur":3,"shadowColor":"#0000008f","shadowOffsetX":0,"shadowOffsetY":1},"activeResponse":{"frames":3,"kind":"pop","scale":1.04},"blockAlign":"center","color":"#ffffff","cueBox":{"background":"#00000000","borderColor":"#00000000","borderRadius":0,"borderWidth":0,"continuity":"isolated","paddingX":0,"paddingY":0},"entry":{"frames":2,"kind":"fade"},"exit":{"frames":2,"kind":"fade"},"inlineSize":"hug","karaoke":{"activeColor":"#ffffff","mode":"current","transition":"step"},"maxLines":2,"maxWordsPerLine":5,"outlineColor":"#090a0f","outlineWidth":2.8,"overflow":"visible","shadowBlur":7,"shadowColor":"#000000b8","shadowOffsetX":0,"shadowOffsetY":3,"textAlign":"center","wrap":"word","typography":{"fontWeight":900,"lineHeight":1.25,"fontSizePx":44,"letterSpacingPx":-0.8,"fonts":["@fontsource-variable/montserrat","Arial Black","Arial","sans-serif"]}}</value>
   </shared-value>
   <shared-value id="caption-bottom" name="Caption bottom" owner="nle">
     <picture-layout x="43" y="653" width="634" height="230" fit="fill" />
@@ -1117,13 +1117,13 @@
     </track>
     <track id="title" name="Title" kind="picture" enabled="true">
       <present id="jensen-ranking-title" name="Ranking the best person Jensen ever dated" source="component" start="0/1" duration="1397/24" enabled="true">
-        <component package="@hypit-example/ranking-football-components" symbol="reference-title" />
-        <parameters>{"first":"RANKING THE BEST PERSON","second":"JENSEN EVER DATED 🔥💦🍑","top":74}</parameters>
+        <component package="@hypit/text-fine" symbol="fine" />
+        <parameters>{"typography":{"fontWeight":900,"lineHeight":1.02,"fonts":["Arial Black","@fontsource-variable/montserrat","Arial","Apple Color Emoji","Segoe UI Emoji","sans-serif"],"fontSizePx":42,"letterSpacingPx":-1.2},"paints":[{"kind":"fill","paint":{"kind":"solid","color":"#070707"}}],"children":[{"kind":"text","id":"title-first","text":"RANKING THE BEST PERSON"},{"kind":"break","id":"title-break"},{"kind":"text","id":"title-second","text":"JENSEN EVER DATED 🔥💦🍑"}],"placement":{"kind":"flow","paddingPx":{"top":5,"right":20,"bottom":4,"left":20},"inlineAlign":"center","blockAlign":"start","wrap":"none","overflow":"visible","columns":1,"columnGapPx":0,"background":"#f4f2e8"}}</parameters>
         <source-time>
-          <linear target-start="0/1" target-end="1397/24" source-start="0/1" rate="1/1" />
+          <linear target-start="0/1" target-end="1397/24" source-start="0/1" rate="0/1" />
         </source-time>
         <picture>
-          <layout x="0" y="0" width="720" height="1280" fit="fill" />
+          <layout x="0" y="74" width="720" height="94" fit="fill" />
         </picture>
       </present>
     </track>

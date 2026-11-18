@@ -27,8 +27,8 @@ const underlineUnits = underlineLayer === null ? new Map() : unitMap(underlineLa
 const baseWords = wordMap(baseLayer);
 const activeWords = activeLayer === null ? new Map() : wordMap(activeLayer);
 const underlineWords = underlineLayer === null ? new Map() : wordMap(underlineLayer);
-const authoredWords = new Map(data.caption.words.map(word => [word.id, word]));
-const visibleBaseWords = data.caption.words.map(word => baseWords.get(word.id)).filter(Boolean);
+const authoredWords = new Map(data.words.map(word => [word.id, word]));
+const visibleBaseWords = data.words.map(word => baseWords.get(word.id)).filter(Boolean);
 const seconds = value => Number(value.ticks) * value.timeBase.numerator / value.timeBase.denominator;
 const fps = typeof context.frameRate === 'number' ? context.frameRate : context.frameRate.numerator / context.frameRate.denominator;
 const durationFrames = Math.ceil(seconds(data.duration) * fps);
@@ -106,18 +106,19 @@ const prepareGraphemes = (wordId, elements) => {
   }
   return columns;
 };
-if (segmenter !== undefined) for (const word of data.caption.words) {
+if (segmenter !== undefined) for (const word of data.words) {
   graphemesByWord.set(word.id, prepareGraphemes(word.id,
     [baseWords.get(word.id), activeWords.get(word.id), underlineWords.get(word.id)]));
 }
 
-const records = data.caption.units.map((unit, index) => {
-  const next = data.caption.units[index + 1];
+const records = data.unitsInPlaybackOrder.map((unit, index, units) => {
+  const next = units[index + 1];
   // A spoken unit owns every output frame touched by its exact time range. Starting on the containing
   // frame and ending after the last touched frame also gives every response
   // animation a stable integer-frame phase instead of entering partway through.
   const startFrame = Math.max(0, Math.floor(seconds(unit.start) * fps));
   const endFrame = Math.max(startFrame + 1, Math.ceil(seconds(unit.end) * fps));
+  // The next start hands off current emphasis even when the earlier unit has a later end.
   const nextStartFrame = next === undefined
     ? undefined : Math.max(0, Math.floor(seconds(next.start) * fps));
   const activationEndFrame = next === undefined ? endFrame
@@ -281,15 +282,15 @@ const loopAt = (localFrame, startFrame, activePaint) => {
     + translucent(selected.color, selected.opacity) + ')' };
 };
 
-const activeBoxAt = (localFrame, startFrame, endFrame) => {
-  const logicalEnd = data.activeBox.mode === 'trail' ? durationFrames : endFrame;
-  if (data.activeBox.mode === 'off' || localFrame < startFrame || localFrame >= logicalEnd) {
+const activeBoxAt = (localFrame, startFrame, endFrame, itemFrame) => {
+  const untilEnd = data.activeBox.mode === 'trail' ? durationFrames - itemFrame : endFrame - localFrame;
+  const sinceStart = localFrame - startFrame;
+  if (data.activeBox.mode === 'off' || sinceStart < 0 || untilEnd <= 0) {
     return { active: false, motion: { ...neutral, opacity: 0, transform: 'scale(0.82)' } };
   }
-  const duration = Math.max(0, logicalEnd - startFrame);
+  const duration = sinceStart + untilEnd;
   const enterFrames = data.activeBox.enter === 'none' ? 0 : Math.min(data.activeBox.transitionFrames, duration);
   const exitFrames = data.activeBox.exit === 'none' ? 0 : Math.min(data.activeBox.transitionFrames, duration);
-  const sinceStart = localFrame - startFrame, untilEnd = logicalEnd - localFrame;
   if (enterFrames > 0 && sinceStart < enterFrames) {
     return { active: true, motion: oneShot(data.activeBox.enter, sinceStart / enterFrames) };
   }
@@ -382,12 +383,13 @@ const revealGraphemes = (record, localFrame) => {
 };
 
 let activePath = '';
-return localFrame => {
+return (localFrame, outputFrame) => {
+  const itemFrame = seconds(context.controlPosition('item', outputFrame)) * fps;
   const duration = durationFrames;
   const enterFrames = data.entry.kind === 'none' ? 0 : Math.min(data.entry.frames, Math.floor(duration / 2));
   const exitFrames = data.exit.kind === 'none' ? 0 : Math.min(data.exit.frames, Math.floor(duration / 2));
-  const entryProgress = enterFrames <= 0 ? 1 : clamp(localFrame / enterFrames);
-  const exitProgress = exitFrames <= 0 ? 1 : clamp((duration - localFrame) / exitFrames);
+  const entryProgress = enterFrames <= 0 ? 1 : clamp(itemFrame / enterFrames);
+  const exitProgress = exitFrames <= 0 ? 1 : clamp((duration - itemFrame) / exitFrames);
   const cueLifecycle = entryProgress < 1 ? cueEntrance(entryProgress)
     : exitProgress < 1 ? oneShot(data.exit.kind, exitProgress) : neutral;
   applyMotion(cue, [cueLifecycle, data.loop.target === 'cue' ? loopAt(localFrame, 0, false) : neutral]);
@@ -409,7 +411,7 @@ return localFrame => {
     revealGraphemes(record, localFrame);
 
     const box = activeBoxAt(localFrame, record.startFrame,
-      data.activeBox.mode === 'current' ? record.activationEndFrame : record.endFrame);
+      data.activeBox.mode === 'current' ? record.activationEndFrame : record.endFrame, itemFrame);
     paintBox(record, box);
     if (data.activeBox.continuity === 'joined' && box.active) {
       selectedPath = data.activeBox.mode === 'trail' ? record.trailPath : record.currentPath;

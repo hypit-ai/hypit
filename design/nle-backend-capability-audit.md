@@ -194,10 +194,10 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | 时间线标题、文本和海报 | package Timeline presentation | Component 可贡献 title、tone、chrome、text layer 和资源 poster | **已具备** |
 | Component Media inputs | Component occurrence + package declaration | Package 声明当前 slot 与信号要求，Studio 投影 Inspector、验证物化 seeds 并接受 bind/unbind；`ranking` 使用逐条目静态图片 slot | **已具备** |
 | Component value ownership | NLE Project + package slot owner | 创建时可用 offering 默认值内联、选择兼容共享值或原子创建命名共享值；同一 Inspector、reducer 和反向用户索引用于后续编辑 | **已具备** |
-| 字幕逐词和内部时间 | caption Component parameters | `caption-fine` 以稳定 word/unit row collection 投影逐词内容和精确有理时间，并由 package reducer 替换闭合 parameters | **已具备** Jensen 编辑路径；在 package 证明切片语义前不开放通用 trim/split |
+| 字幕逐词和内部时间 | caption Component parameters、NLE source time | `caption-fine` 投影逐词内容和 timing unit 的精确有理时间。Trim 和 split 切分读取窗口，词时间沿用 cue 源坐标，整条字幕的出入场跟随 Item 边缘 | **已具备** Jensen 编辑路径 |
 | SRT 导入和多轨分配 | Caption materialization Operation | 当前无 SRT parser、字幕物化 planner 或重叠条目分轨 Operation | **产品缺口**，并依赖字幕源边界决策 |
 | 单条样式与共享样式 | inline Component value + Project Shared Value | 同一 package slot 可 inline 或 shared；Inspector 可选择本地或兼容共享值，unlink 复制解析值 inline，编辑分别守卫一个或全部用户 Track | **已具备**；命名新共享值的交互仍缺 |
-| 预览和导出一致性 | package lowering + terminal programs | Frame Preview、Playback Preview 与导出使用同一 NLE terminal link 和 `HtmlProgram` ABI | **已具备** |
+| 预览和导出一致性 | NLE 交付编译 | Frame Preview、Playback Preview 与导出共用 NLE 编译入口和 `HtmlProgram` 帧接口 | **已具备** |
 
 ### 组件验收切片
 

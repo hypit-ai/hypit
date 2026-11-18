@@ -315,6 +315,18 @@ importers:
 
   packages/temporal: {}
 
+  packages/text-fine:
+    dependencies:
+      '@hypit/html-program':
+        specifier: workspace:^0.1.0
+        version: link:../html-program
+      '@hypit/nle':
+        specifier: workspace:^0.1.0
+        version: link:../nle
+      '@hypit/nle-delivery':
+        specifier: workspace:^0.1.0
+        version: link:../nle-delivery
+
 packages:
 
   '@babel/code-frame@7.29.7':

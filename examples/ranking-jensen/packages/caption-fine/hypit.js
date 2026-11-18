@@ -1,6 +1,7 @@
-import { fileURLToPath } from "node:url";
+import { assertNleTextTypography, readNleTextFontSource } from "@hypit/nle-delivery";
 
 import { compileCaptionFine } from "./component.js";
+import { formatCaptionTime, parseCaptionTime, validateCaptionUnitTime } from "./timing.js";
 
 const packageName = "@hypit/caption-fine";
 const component = { package: packageName, symbol: "fine" };
@@ -11,55 +12,6 @@ function record(value, label) {
     throw new Error(`${label} must be an object.`);
   }
   return value;
-}
-
-function gcd(left, right) {
-  let a = left < 0n ? -left : left;
-  let b = right < 0n ? -right : right;
-  while (b !== 0n) [a, b] = [b, a % b];
-  return a;
-}
-
-function temporalRational(value, label) {
-  const exact = record(value, label);
-  const base = record(exact.timeBase, `${label}.timeBase`);
-  if (typeof exact.ticks !== "string" || !/^-?\d+$/u.test(exact.ticks)
-      || !Number.isSafeInteger(base.numerator) || !Number.isSafeInteger(base.denominator)
-      || base.denominator <= 0) {
-    throw new Error(`${label} is invalid.`);
-  }
-  const numerator = BigInt(exact.ticks) * BigInt(base.numerator);
-  const denominator = BigInt(base.denominator);
-  const divisor = gcd(numerator, denominator);
-  return { numerator: numerator / divisor, denominator: denominator / divisor };
-}
-
-function temporalText(value, label) {
-  const exact = temporalRational(value, label);
-  return `${exact.numerator}/${exact.denominator}`;
-}
-
-function parseTemporalText(value, label) {
-  if (typeof value !== "string") throw new Error(`${label} requires exact rational seconds.`);
-  const match = /^(-?\d+)\/([1-9]\d*)$/u.exec(value.trim());
-  if (match === null) throw new Error(`${label} must use numerator/denominator seconds.`);
-  const numerator = BigInt(match[1]);
-  const denominator = BigInt(match[2]);
-  if (numerator < 0n || denominator > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new Error(`${label} is outside the supported exact range.`);
-  }
-  const divisor = gcd(numerator, denominator);
-  return {
-    ticks: String(numerator / divisor),
-    timeBase: { numerator: 1, denominator: Number(denominator / divisor) },
-  };
-}
-
-function compareTemporal(left, right) {
-  const a = temporalRational(left, "Caption time");
-  const b = temporalRational(right, "Caption time");
-  const difference = a.numerator * b.denominator - b.numerator * a.denominator;
-  return difference < 0n ? -1 : difference > 0n ? 1 : 0;
 }
 
 function captionValue(parameters, label) {
@@ -128,14 +80,14 @@ function captionInspector(context) {
             id: `unit:${unit.id}:start`,
             label: "Start",
             control: "text",
-            value: temporalText(unit.start, `Caption ${unit.id} start`),
+            value: formatCaptionTime(unit.start, `Caption ${unit.id} start`),
             unit: "s",
             operation: value => ({ kind: "unit.time.set", unit: unit.id, edge: "start", value }),
           }, {
             id: `unit:${unit.id}:end`,
             label: "End",
             control: "text",
-            value: temporalText(unit.end, `Caption ${unit.id} end`),
+            value: formatCaptionTime(unit.end, `Caption ${unit.id} end`),
             unit: "s",
             operation: value => ({ kind: "unit.time.set", unit: unit.id, edge: "end", value }),
           }, {
@@ -173,57 +125,80 @@ function editCaptionParameters(operation, context) {
     }
     const unit = caption.units.find((entry) => record(entry, "Caption unit").id === selected.unit);
     if (unit === undefined) throw new Error(`Caption ${context.item.id} has no unit ${selected.unit}.`);
-    unit[selected.edge] = parseTemporalText(selected.value, `Caption ${selected.unit} ${selected.edge}`);
-    if (compareTemporal(unit.start, unit.end) >= 0) {
-      throw new Error(`Caption ${selected.unit} start must precede its end.`);
-    }
-    if (compareTemporal(unit.end, context.item.duration) > 0) {
-      throw new Error(`Caption ${selected.unit} ends outside the occurrence.`);
-    }
+    unit[selected.edge] = parseCaptionTime(selected.value, `Caption ${selected.unit} ${selected.edge}`);
+    validateCaptionUnitTime(unit);
     return parameters;
   }
   throw new Error(`Caption ${context.item.id} operation is unavailable.`);
 }
 
+const typographyFields = {
+  fontSizePx: { label: "Font size", minimum: 1, unit: "px" },
+  fontWeight: { label: "Font weight", minimum: 1, maximum: 1000, step: 1 },
+  lineHeight: { label: "Line height", minimum: 0.01, step: 0.01 },
+  letterSpacingPx: { label: "Letter spacing", step: 0.1, unit: "px" },
+  wordSpacingPx: { label: "Word spacing", step: 0.1, unit: "px" },
+};
+
 function styleInspector(context) {
   const style = record(context.value, `Caption ${context.item.id} value ${context.slot}`);
-  const fields = [];
-  const scalar = (id, label, control, options = {}) => {
-    const value = style[id];
-    if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") return;
-    fields.push({ id, label, control, value, ...options,
-      operation: next => ({ kind: "style.set", field: id, value: next }) });
-  };
-  scalar("fontFamily", "Font", "text");
-  scalar("fontSize", "Font size", "number", { minimum: 1, maximum: 500, step: 1 });
-  scalar("fontWeight", "Font weight", "number", { minimum: 100, maximum: 900, step: 100 });
-  scalar("color", "Color", "color");
-  scalar("lineHeight", "Line height", "number", { minimum: 0.5, maximum: 4, step: 0.05 });
-  scalar("letterSpacing", "Letter spacing", "number", { minimum: -20, maximum: 100, step: 0.1 });
-  scalar("maxWordsPerLine", "Words per line", "number", { minimum: 1, step: 1 });
-  if (fields.length === 0) fields.push({ id: "empty", label: "Style", control: "readout", value: "No scalar fields" });
-  return [{ id: "typography", label: "Caption style", domain: "how", fields }];
+  const typography = style.typography ?? {};
+  assertNleTextTypography(typography);
+  const fields = Object.entries(typographyFields).flatMap(([id, options]) => {
+    const value = typography[id];
+    return value === undefined ? [] : [{ id, control: "number", ...options, value,
+      operation: next => ({ kind: "typography.set", field: id, value: next }) }];
+  });
+  if (typeof style.color === "string") fields.push({
+    id: "color", label: "Color", control: "color", value: style.color,
+    operation: value => ({ kind: "color.set", value }),
+  });
+  if (typeof style.maxWordsPerLine === "number") fields.push({
+    id: "maxWordsPerLine", label: "Words per line", control: "number", minimum: 1, step: 1, value: style.maxWordsPerLine,
+    operation: value => ({ kind: "words-per-line.set", value }),
+  });
+  return [{ id: "typography", label: "Caption style", domain: "how", fields,
+    ...(typography.fonts === undefined ? {} : { collections: [{
+      id: "fonts", label: "Font stack", rows: typography.fonts.map((font, index) => ({
+        id: `font:${index}`, label: font, fields: [{
+          id: `font:${index}:source`, label: "Font", control: "text", value: font,
+          operation: value => ({ kind: "font.set", index, value }),
+        }],
+      })),
+    }] }),
+  }];
 }
 
 function editStyle(operation, context) {
-  const style = structuredClone(record(context.value, `Caption ${context.item.id} value ${context.slot}`));
-  const selected = record(operation, `Caption ${context.item.id} value ${context.slot} operation`);
-  const fields = new Set(["fontFamily", "fontSize", "fontWeight", "color", "lineHeight", "letterSpacing", "maxWordsPerLine"]);
-  if (selected.kind !== "style.set" || typeof selected.field !== "string" || !fields.has(selected.field)
-      || (typeof selected.value !== "string" && typeof selected.value !== "number"
-        && typeof selected.value !== "boolean")) {
-    throw new Error(`Caption ${context.item.id} value ${context.slot} operation is invalid.`);
+  const style = record(context.value, `Caption ${context.item.id} value ${context.slot}`);
+  const typography = style.typography ?? {};
+  assertNleTextTypography(typography);
+  const edit = record(operation, `Caption ${context.item.id} value ${context.slot} operation`);
+  const { value } = edit;
+  switch (edit.kind) {
+    case "typography.set": {
+      const { field } = edit;
+      if (typeof field !== "string" || !Object.hasOwn(typographyFields, field)
+        || typeof value !== "number" || !Number.isFinite(value)) break;
+      const next = { ...typography, [field]: value };
+      assertNleTextTypography(next);
+      return { ...style, typography: next };
+    }
+    case "font.set": {
+      const { index } = edit;
+      if (!Number.isSafeInteger(index) || typography.fonts?.[index] === undefined || typeof value !== "string") break;
+      readNleTextFontSource(value);
+      return { ...style, typography: { ...typography, fonts: typography.fonts.map((font, i) => i === index ? value : font) } };
+    }
+    case "color.set":
+      if (typeof value === "string" && /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(value)) return { ...style, color: value };
+      break;
+    case "words-per-line.set":
+      if (Number.isSafeInteger(value) && value >= 1 && value <= 10_000) return { ...style, maxWordsPerLine: value };
+      break;
   }
-  style[selected.field] = selected.value;
-  return style;
+  throw new Error(`Caption ${context.item.id} value ${context.slot} operation is invalid.`);
 }
-
-const montserrat = {
-  address: fileURLToPath(import.meta.resolve(
-    "@fontsource-variable/montserrat/files/montserrat-latin-wght-normal.woff2",
-  )),
-  mediaType: "font/woff2",
-};
 
 function resolveLayout(item, project) {
   if (item.picture === undefined) throw new Error(`Fine Caption ${item.id} has no Picture appearance.`);
@@ -243,7 +218,8 @@ function renderCaption(item, context) {
   if (style === undefined) throw new Error(`Fine Caption ${item.id} requires value slot style.`);
   return {
     region: { x: 0, y: 0, width, height },
-    duration: item.duration,
+    duration: context.sourceDuration,
+    itemTimeControl: "item",
     visual: compileCaptionFine({
       id: `${item.id}:source`,
       parameters: {
@@ -252,7 +228,7 @@ function renderCaption(item, context) {
         duration: item.duration,
         layout: { width, height },
       },
-    }, montserrat),
+    }, context.resolveTextFont),
   };
 }
 
@@ -290,7 +266,8 @@ export const hypitPackage = {
       value: {
         kind: "hypit.nle-authoring",
         package: packageName,
-        components: [{ component, editParameters: editCaptionParameters }],
+        components: [{ component, timeWindow: () => true, sourceTime: () => ({ kind: "timed" }),
+          editParameters: editCaptionParameters }],
         componentValues: [{ component, slot: "style", editValue: editStyle }],
         operators: [],
       },
@@ -308,8 +285,8 @@ export const hypitPackage = {
       units: [{ id: "unit", start: { ...captionDuration, ticks: "0" }, end: captionDuration, wordIds: ["word"] }],
     } },
     values: { style: {
-      fontFamily: "system-ui, sans-serif", fontSize: 58, fontWeight: 800, color: "#ffffff",
-      lineHeight: 1.05, letterSpacing: 0, maxWordsPerLine: 8, blockAlign: "end",
+      typography: { fonts: ["system-ui", "sans-serif"], fontSizePx: 58, fontWeight: 800, lineHeight: 1.05, letterSpacingPx: 0 },
+      color: "#ffffff", maxWordsPerLine: 8, blockAlign: "end",
     } },
   } }],
 };

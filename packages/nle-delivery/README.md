@@ -31,3 +31,16 @@ contributions remain independently selectable for the same package symbol. See t
 
 To make the internal objects of a scene directly editable on the timeline, a project program can materialize them
 as NLE Items in a Composition. [Component authoring](../../design/authoring.md#component-instances-and-expansion)
+
+## Text fonts
+
+Text Fine and Caption Fine use `typography.fonts` as an ordered list of font sources. Each entry is a system family
+such as `system-ui`, a project-root-relative path such as `./assets/fonts/brand.woff2`, or an installed
+`@fontsource/...` or `@fontsource-variable/...` package. The project package manifest and lockfile select the
+installed version. Project files may be WOFF, WOFF2, TTF or OTF. Use concrete font sources when the text needs
+to retain its glyphs and metrics across machines.
+
+The project's render context resolves references through `resolveTextFont`. `nleTextFragment` compiles a text
+tree, its base typography and per-run overrides, using the requested weight and style. Fontsource CSS selects
+the published character subsets. The HTML Program embeds face declarations and stages the files required for
+the requested frames.

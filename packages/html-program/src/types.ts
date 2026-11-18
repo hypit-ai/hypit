@@ -68,6 +68,7 @@ export type HtmlVisualDependency =
       readonly family: string;
       readonly weight?: string;
       readonly style?: string;
+      readonly unicodeRange?: string;
     }
   | {
       readonly kind: "picture";

@@ -1,0 +1,21 @@
+{
+  "name": "@hypit/text-fine",
+  "version": "0.1.0",
+  "description": "Rich text components for editable Hypit video projects",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    "./hypit": {
+      "hypit-source": "./src/hypit.ts",
+      "types": "./dist/hypit.d.ts",
+      "default": "./dist/hypit.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": { "build": "tsc -p tsconfig.build.json" },
+  "dependencies": {
+    "@hypit/html-program": "workspace:^0.1.0",
+    "@hypit/nle": "workspace:^0.1.0",
+    "@hypit/nle-delivery": "workspace:^0.1.0"
+  }
+}

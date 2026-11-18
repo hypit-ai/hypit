@@ -39,8 +39,13 @@ function dependency(value: HtmlVisualDependency, index: number): void {
     || typeof value.resource.mediaType !== "string" || value.resource.mediaType.length === 0) {
     throw new Error(`HTML visual dependency ${value.id} resource is invalid.`);
   }
-  if (value.kind === "font" && (typeof value.family !== "string" || value.family.length === 0)) {
-    throw new Error(`HTML visual font ${value.id} requires a family.`);
+  if (value.kind === "font") {
+    if (typeof value.family !== "string" || !/^[A-Za-z0-9 _-]+$/u.test(value.family)
+      || value.weight !== undefined && !/^(?:normal|bold|[0-9]{1,4}(?: [0-9]{1,4})?)$/u.test(value.weight)
+      || value.style !== undefined && !["normal", "italic", "oblique"].includes(value.style)
+      || value.unicodeRange !== undefined && !/^U\+[\da-f?]{1,6}(?:-[\da-f]{1,6})?(?:,U\+[\da-f?]{1,6}(?:-[\da-f]{1,6})?)*$/iu.test(value.unicodeRange)) {
+      throw new Error(`HTML visual font ${value.id} has an invalid face descriptor.`);
+    }
   }
 }
 

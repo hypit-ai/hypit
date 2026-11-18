@@ -77,6 +77,7 @@ export type HtmlTextTypography = {
   readonly fontSizePx?: number;
   readonly fontWeight?: number;
   readonly fontStyle?: "normal" | "italic" | "oblique";
+  readonly fontSynthesis?: "none";
   readonly lineHeight?: number;
   readonly letterSpacingPx?: number;
   readonly wordSpacingPx?: number;
@@ -97,35 +98,35 @@ export type HtmlTextDecoration = {
   readonly style?: "solid" | "double" | "dotted" | "dashed" | "wavy";
 };
 
-export type HtmlTextStyle = {
-  readonly typography?: HtmlTextTypography;
+export type HtmlTextStyle<Typography = HtmlTextTypography> = {
+  readonly typography?: Typography;
   readonly paints?: readonly HtmlTextPaintLayer[];
   readonly decoration?: HtmlTextDecoration;
   /** Exact inline advance for authored separators that must not inherit a font's space glyph. */
   readonly inlineAdvancePx?: number;
 };
 
-export type HtmlTextNode =
+export type HtmlTextNode<Typography = HtmlTextTypography> =
   | {
       readonly kind: "text";
       readonly id: string;
       readonly text: string;
-      readonly style?: HtmlTextStyle;
+      readonly style?: HtmlTextStyle<Typography>;
     }
   | {
       readonly kind: "group";
       readonly id: string;
-      readonly children: readonly HtmlTextNode[];
-      readonly style?: HtmlTextStyle;
+      readonly children: readonly HtmlTextNode<Typography>[];
+      readonly style?: HtmlTextStyle<Typography>;
     }
   | { readonly kind: "break"; readonly id: string };
 
-export type HtmlTextFragmentSpec = {
+export type HtmlTextFragmentSpec<Typography = HtmlTextTypography> = {
   readonly id: string;
-  readonly typography: HtmlTextTypography;
+  readonly typography: Typography;
   readonly paints: readonly HtmlTextPaintLayer[];
   readonly decoration?: HtmlTextDecoration;
-  readonly children: readonly HtmlTextNode[];
+  readonly children: readonly HtmlTextNode<Typography>[];
 };
 
 export type HtmlTextFragment = {
@@ -197,6 +198,7 @@ function typographyCss(value: HtmlTextTypography, label: string): string[] {
     css.push(`font-weight:${value.fontWeight}`);
   }
   if (value.fontStyle !== undefined) css.push(`font-style:${value.fontStyle}`);
+  if (value.fontSynthesis !== undefined) css.push(`font-synthesis:${value.fontSynthesis}`);
   if (value.lineHeight !== undefined) {
     assert(value.lineHeight > 0, `${label} line height is invalid.`);
     css.push(`line-height:${number(value.lineHeight, `${label} line height`)}`);
@@ -411,7 +413,7 @@ function renderNode(
     return `<span data-hypit-text-node="${escapeHtml(node.id)}" data-hypit-text-kind="group"${languageAttributes(selectedTypography, `HTML Text node ${node.id}`)} style="${escapeHtml(style)}">${node.children.map((child) =>
       renderNode(child, selectedTypography, selectedPaints, selectedDecoration, identities, filters)).join("")}</span>`;
   }
-  assert(node.text.length > 0, `HTML Text node ${node.id} is empty.`);
+  assert(typeof node.text === "string", `HTML Text node ${node.id} requires text.`);
   const glyphPaints = selectedPaints.filter((paint): paint is Exclude<HtmlTextPaintLayer, { kind: "box" }> =>
     paint.kind !== "box");
   const described = glyphPaints.map((paint, index) => ({

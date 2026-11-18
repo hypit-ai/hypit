@@ -8,6 +8,7 @@ import type {
   NleComponentRenderContext, NleMatteRenderContext, NlePictureReconstructionContext, NleProcessRenderContext,
   NleRenderContribution, NleTransitionRenderContext, ResolveNleMedia, SelectedNleRenderContribution,
 } from "../render-contribution.js";
+import type { ResolveNleTextFont } from "../text.js";
 function select<T extends { readonly symbol: string; readonly render: unknown }>(
   contributions: readonly SelectedNleRenderContribution[],
   implementations: (value: NleRenderContribution) => readonly T[] | undefined,
@@ -46,6 +47,7 @@ function select<T extends { readonly symbol: string; readonly render: unknown }>
 export function createNleRenderResolver(
   contributions: readonly SelectedNleRenderContribution[],
   resolveMedia: ResolveNleMedia,
+  resolveTextFont: ResolveNleTextFont,
 ) {
   const component = select(contributions, value => value.components, "Component");
   const pictureProcess = select(contributions, value => value.pictureProcesses, "Picture Process");
@@ -56,8 +58,16 @@ export function createNleRenderResolver(
 
   return {
     resolveMedia,
-    resolveComponent(item: NleComponentItem, context: NleComponentRenderContext) {
-      const picture = component(item.component, `Item ${item.id}`).render(item, context);
+    resolveComponent(item: NleComponentItem, context: Omit<NleComponentRenderContext, "resolveTextFont">) {
+      const picture = component(item.component, `Item ${item.id}`).render(item, {
+        ...context,
+        resolveTextFont(source, weight, style) {
+          try { return resolveTextFont(source, weight, style); }
+          catch (cause) {
+            throw new Error("NLE Item " + item.id + ": " + (cause instanceof Error ? cause.message : String(cause)), { cause });
+          }
+        },
+      });
       assertHtmlVisual(picture.visual);
       return picture;
     },

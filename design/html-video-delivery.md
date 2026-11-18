@@ -37,6 +37,10 @@ Project package 通过 `hypit.nle-render` 提供组件 Picture、Picture effect�
 同一包也可提供 Inspector、Timeline 和 catalog。Project lockfile 选择版本。编译准备结果随该请求或接受的预览 revision
 一起管理。[组件渲染接口](../packages/nle-delivery/README.md)
 
+文字组件使用同一套有序字体引用。项目参数可以选择项目目录内的字体文件、已安装的 Fontsource 包和系统字体。
+编译器按组件使用的字重和字形解析文件与字符子集，并将它们封装为有使用区间的 HTML Artifacts。HTML Program 为
+解析出的字库使用专用 family 名。页面先显示请求范围内的画面，再等待字体加载完成，最后初始化组件并执行取帧。
+
 本机组合层为一次 Executor 实例选择同一组 `ffmpegPath` 与 `ffprobePath`。`@hypit/media-local` 关闭并检查这组
 工具；HTML Source preparation、Picture encoding、Audio execution 与 mux 复用该选择。未显式配置时从 Host
 `PATH` 解析 `ffmpeg` 与 `ffprobe`。普通执行不安装工具，应用发行版或 embedding 负责提供可执行文件。

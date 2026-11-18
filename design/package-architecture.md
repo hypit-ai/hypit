@@ -29,6 +29,7 @@ project component packages -> @hypit/authoring
 @hypit/html-video -> @hypit/html-program + @hypit/audio-program
 @hypit/html-video-local -> @hypit/html-video + local HTML/Audio execution
 @hypit/nle-delivery -> @hypit/nle + @hypit/project + @hypit/html-video + @hypit/html-program + @hypit/audio-program
+@hypit/text-fine -> @hypit/nle + @hypit/nle-delivery + @hypit/html-program
 @hypit/application -> @hypit/project
 @hypit/application-home -> @hypit/application
 @hypit/nle-studio -> @hypit/application + @hypit/project + @hypit/nle + @hypit/nle-delivery
@@ -75,6 +76,9 @@ Transitions, Mattes and shared values.
 
 NLE Project serialization is the SVML representation of the edit. It contains no TSX source text, View
 selection, Service revision or execution plan.
+
+`@hypit/text-fine` is a selectable component package. It supplies rich text layout, text motion and editing facets.
+NLE owns each Item’s placement and source-time map. The component produces its Picture using the shared HTML text renderer.
 
 ### `@hypit/html-program` and `@hypit/audio-program`
 

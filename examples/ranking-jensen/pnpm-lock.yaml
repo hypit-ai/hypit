@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@fontsource-variable/montserrat':
+        specifier: 5.3.0
+        version: 5.3.0
       '@hypit-example/ranking-football-components':
         specifier: workspace:*
         version: link:packages/ranking-football-components
@@ -29,17 +32,20 @@ importers:
       '@hypit/project':
         specifier: link:../../packages/project
         version: link:../../packages/project
+      '@hypit/text-fine':
+        specifier: link:../../packages/text-fine
+        version: link:../../packages/text-fine
 
   packages/audio-effects: {}
 
   packages/caption-fine:
     dependencies:
-      '@fontsource-variable/montserrat':
-        specifier: 5.3.0
-        version: 5.3.0
       '@hypit/html-program':
         specifier: link:../../../../packages/html-program
         version: link:../../../../packages/html-program
+      '@hypit/nle-delivery':
+        specifier: link:../../../../packages/nle-delivery
+        version: link:../../../../packages/nle-delivery
 
   packages/picture-effects: {}
 

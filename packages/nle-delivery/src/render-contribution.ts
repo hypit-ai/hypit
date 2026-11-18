@@ -6,6 +6,7 @@ import type {
   NlePictureRect, NlePresentItem, NleProcess, NleProject, NlePictureReconstruction, NleTrack, NleTransition,
 } from "@hypit/nle";
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
+import type { ResolveNleTextFont } from "./text.js";
 
 export type NleRenderContext = {
   readonly project: NleProject;
@@ -21,6 +22,8 @@ export type NleComponentRenderContext = NleRenderContext & {
   readonly media: Readonly<Record<string, ResolvedMedia>>;
   /** Inline and shared slot bindings resolved to the same closed package values. */
   readonly values: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+  /** Resolve one authored font source within this Project compilation. */
+  readonly resolveTextFont: ResolveNleTextFont;
 };
 
 export type NlePictureReconstructionContext = NleRenderContext & {

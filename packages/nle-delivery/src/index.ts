@@ -8,6 +8,9 @@ import { compileAudio } from "./compiler/compile-audio.js";
 import { compilePicture } from "./compiler/compile-picture.js";
 import { lowerNleProject } from "./compiler/lower.js";
 import { createNleRenderResolver } from "./compiler/resolve.js";
+import { createProjectFontResolver } from "./project-fonts.js";
+export { assertNleTextFragment, assertNleTextTypography, nleTextFragment, readNleTextFontSource } from "./text.js";
+export type { NleTextNode, NleTextTypography, ResolveNleTextFont } from "./text.js";
 import { nleRenderContributionKind, type NleRenderContribution } from "./render-contribution.js";
 export { nleRenderContributionKind } from "./render-contribution.js";
 export type {
@@ -107,7 +110,7 @@ export async function prepareNleCompilation(input: {
     const value = resolved.get(reference.path);
     if (value === undefined) throw new Error(`NLE delivery did not resolve Media ${reference.path}.`);
     return structuredClone(value);
-  });
+  }, createProjectFontResolver(input.host.boundary.root));
   input.signal?.throwIfAborted();
   const program = lowerNleProject(project, resolverForCompilation);
   function audioProgram(profile?: HtmlVideoDeliveryProfile["audio"]): AudioProgram | undefined {

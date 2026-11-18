@@ -1,5 +1,7 @@
-import { htmlLineUnionRuntime, htmlTextFragment } from "@hypit/html-program";
+import { htmlLineUnionRuntime } from "@hypit/html-program";
+import { assertNleTextTypography, nleTextFragment } from "@hypit/nle-delivery";
 import { captionFineHtmlRuntime } from "./runtime.js";
+import { captionUnitsInPlaybackOrder } from "./timing.js";
 
 const oneShotMotions = [
     "none", "fade", "pop", "scale", "spring", "bounce", "elastic", "stamp", "tilt", "zoom-blur",
@@ -50,12 +52,6 @@ function boxShadowCss(value) {
     if (value.shadow.opacity <= 0)
         return "none";
     return `${value.shadow.offsetX}px ${value.shadow.offsetY}px ${value.shadow.blur}px ${value.shadow.spread}px ${alphaHex(value.shadow.color, value.shadow.opacity)}`;
-}
-function optionalFont(value, fallback = "system-ui, sans-serif") {
-    if (value === undefined)
-        return fallback;
-    assert(typeof value === "string" && /^[A-Za-z0-9 ,'"-]{1,160}$/u.test(value), "Fine Caption fontFamily is invalid.");
-    return value;
 }
 function optionalChoice(value, fallback, choices, label) {
     if (value === undefined)
@@ -113,16 +109,11 @@ function attributes(value) {
     assert(Array.isArray(value), "Fine Caption attributeFaces must be an array.");
     return value.map((item, index) => {
         const input = record(item, `Fine Caption attributeFaces.${index}`);
-        exactKeys(input, ["attribute", "value", "fontFamily", "fontWeight", "fontStyle"], `Fine Caption attributeFaces.${index}`);
+        exactKeys(input, ["attribute", "value", "typography"], `Fine Caption attributeFaces.${index}`);
         assert(typeof input.attribute === "string" && input.attribute.trim().length > 0, `Fine Caption attributeFaces.${index}.attribute is invalid.`);
         assert(typeof input.value === "string" || typeof input.value === "number" || typeof input.value === "boolean", `Fine Caption attributeFaces.${index}.value is invalid.`);
-        return {
-            attribute: input.attribute,
-            value: input.value,
-            ...(input.fontFamily === undefined ? {} : { fontFamily: optionalFont(input.fontFamily) }),
-            ...(input.fontWeight === undefined ? {} : { fontWeight: optionalInteger(input.fontWeight, 700, `Fine Caption attributeFaces.${index}.fontWeight`, 100, 900) }),
-            ...(input.fontStyle === undefined ? {} : { fontStyle: optionalChoice(input.fontStyle, "normal", ["normal", "italic"], `Fine Caption attributeFaces.${index}.fontStyle`) }),
-        };
+        assertNleTextTypography(input.typography);
+        return { attribute: input.attribute, value: input.value, typography: input.typography };
     });
 }
 function wordTypography(word, faces) {
@@ -130,12 +121,7 @@ function wordTypography(word, faces) {
     for (const face of faces) {
         if (!word.attributes.some((attribute) => attribute.name === face.attribute && attribute.value === face.value))
             continue;
-        typography = {
-            ...typography,
-            ...(face.fontFamily === undefined ? {} : { fontFamily: face.fontFamily }),
-            ...(face.fontWeight === undefined ? {} : { fontWeight: face.fontWeight }),
-            ...(face.fontStyle === undefined ? {} : { fontStyle: face.fontStyle }),
-        };
+        typography = { ...typography, ...face.typography };
     }
     return Object.keys(typography).length === 0 ? undefined : typography;
 }
@@ -203,7 +189,7 @@ function structuralLineCount(payload, maxWordsPerLine) {
     }
     return lines;
 }
-export function compileCaptionFine(source, fontResource) {
+export function compileCaptionFine(source, resolveTextFont) {
     const parameters = record(source.parameters, `Fine Caption ${source.id} parameters`);
     exactKeys(parameters, ["caption", "style", "duration", "layout"], `Fine Caption ${source.id} parameters`);
     const caption = record(parameters.caption, `Fine Caption ${source.id} caption`);
@@ -231,6 +217,7 @@ export function compileCaptionFine(source, fontResource) {
           && value.wordIds.length > 0 && value.wordIds.every(id => typeof id === "string" && wordIds.has(id)),
         `Fine Caption ${source.id} unit ${index} is invalid.`);
     }
+    const unitsInPlaybackOrder = captionUnitsInPlaybackOrder(caption.units);
     const style = record(parameters.style, `Fine Caption ${source.id} style`);
     const pictureLayout = record(parameters.layout, `Fine Caption ${source.id} layout`);
     assert(typeof pictureLayout.width === "number" && pictureLayout.width > 0
@@ -238,8 +225,7 @@ export function compileCaptionFine(source, fontResource) {
       `Fine Caption ${source.id} layout is invalid.`);
     const item = { id: source.id };
     exactKeys(style, [
-        "color", "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "wordGap",
-        "language", "direction", "writingMode", "textTransform", "variantCaps", "kerning",
+        "color", "typography", "wordGap",
         "textAlign", "blockAlign", "inlineSize", "wrap", "maxWordsPerLine", "maxLines", "overflow",
         "minimumScale", "outlineColor", "outlineWidth", "shadowColor", "shadowBlur", "shadowOffsetX",
         "shadowOffsetY", "shadowSpread", "glow", "longShadow", "gradient", "opacity",
@@ -249,23 +235,17 @@ export function compileCaptionFine(source, fontResource) {
     ], `NLE Fine Caption ${item.id} style`);
     const color = optionalColor(style.color, "#ffffff", "Fine Caption color");
     const opacity = optionalNumber(style.opacity, 1, "Fine Caption opacity", 0, 1);
-    const fontFamily = optionalFont(style.fontFamily);
-    const fontSize = optionalNumber(style.fontSize, 58, "Fine Caption fontSize", 1, 500);
-    const fontWeight = optionalInteger(style.fontWeight, 800, "Fine Caption fontWeight", 100, 900);
-    const lineHeight = optionalNumber(style.lineHeight, 1.05, "Fine Caption lineHeight", 0.5, 4);
-    const letterSpacing = optionalNumber(style.letterSpacing, 0, "Fine Caption letterSpacing", -20, 100);
-    // Fine has always treated authored word gap as a physical replacement for a normal space.
-    // Its omitted value scales with the type size instead of collapsing words together.
-    const wordGap = optionalNumber(style.wordGap, fontSize * 0.25, "Fine Caption wordGap", 0, 100);
-    const language = style.language;
-    if (language !== undefined) {
-        assert(typeof language === "string" && /^[A-Za-z0-9]{1,8}(?:-[A-Za-z0-9]{1,8})*$/u.test(language), "Fine Caption language is invalid.");
-    }
-    const direction = optionalChoice(style.direction, "ltr", ["auto", "ltr", "rtl"], "Fine Caption direction");
-    const writingMode = optionalChoice(style.writingMode, "horizontal-tb", ["horizontal-tb", "vertical-rl", "vertical-lr"], "Fine Caption writingMode");
-    const textTransform = optionalChoice(style.textTransform, "none", ["none", "uppercase", "lowercase", "capitalize"], "Fine Caption textTransform");
-    const variantCaps = optionalChoice(style.variantCaps, "normal", ["normal", "small-caps", "all-small-caps"], "Fine Caption variantCaps");
-    const kerning = optionalChoice(style.kerning, "auto", ["auto", "normal", "none"], "Fine Caption kerning");
+    const authoredTypography = style.typography ?? {};
+    assertNleTextTypography(authoredTypography);
+    const typography = {
+        fonts: ["system-ui", "sans-serif"],
+        fontSizePx: 58, fontWeight: 800, fontStyle: "normal", lineHeight: 1.05,
+        letterSpacingPx: 0, direction: "ltr", writingMode: "horizontal-tb", textTransform: "none",
+        variantCaps: "normal", kerning: "auto", ...authoredTypography,
+    };
+    // Each authored word gap replaces the space glyph with a fixed advance.
+    const wordGap = optionalNumber(style.wordGap, typography.fontSizePx * 0.25, "Fine Caption wordGap", 0, 100);
+    const { direction } = typography;
     const textAlign = optionalChoice(style.textAlign, "center", ["left", "center", "right"], "Fine Caption textAlign");
     const blockAlign = optionalChoice(style.blockAlign, "center", ["start", "center", "end"], "Fine Caption blockAlign");
     const inlineSize = optionalChoice(style.inlineSize, "hug", ["hug", "fixed"], "Fine Caption inlineSize");
@@ -467,48 +447,29 @@ export function compileCaptionFine(source, fontResource) {
             offsetY: activeShadowOffsetY, spread: activeShadowSpread },
         glow: activeGlow, longShadow: activeLongShadow,
     });
-    const typography = {
-        fontFamily,
-        fontSizePx: fontSize,
-        fontWeight,
-        fontStyle: "normal",
-        lineHeight,
-        letterSpacingPx: letterSpacing,
-        ...(language === undefined ? {} : { language }),
-        direction,
-        writingMode,
-        textTransform,
-        variantCaps,
-        kerning,
-    };
     const textNodes = captionTextNodes(caption, attributeFaces, maxWordsPerLine, wordGap);
     const decoration = (value) => value.mode === "off"
         ? undefined : { line: "underline", color: value.color, thicknessPx: value.thickness,
         offsetPx: value.offset, style: value.style };
     const baseDecoration = decoration(baseUnderline);
-    const text = htmlTextFragment({
+    const text = nleTextFragment({
         id: `${item.id}-text-base`, typography, paints: basePaints,
         ...(baseDecoration === undefined ? {} : { decoration: baseDecoration }),
         children: textNodes,
-    });
-    const activeText = karaoke.mode === "off" ? undefined : htmlTextFragment({
+    }, resolveTextFont);
+    const activeText = karaoke.mode === "off" ? undefined : nleTextFragment({
         id: `${item.id}-text-active`, typography, paints: activePaints, children: textNodes,
-    });
-    const activeUnderlineText = activeUnderline.mode === "off" ? undefined : htmlTextFragment({
+    }, resolveTextFont);
+    const activeUnderlineText = activeUnderline.mode === "off" ? undefined : nleTextFragment({
         id: `${item.id}-text-active-underline`, typography,
         paints: [{ kind: "fill", paint: { kind: "solid", color: "#00000000" } }],
         decoration: decoration(activeUnderline),
         children: textNodes,
-    });
+    }, resolveTextFont);
     return {
-            dependencies: [...text.dependencies, {
-                id: "caption-fine-montserrat",
-                kind: "font",
-                family: "Montserrat",
-                weight: "100 900",
-                resource: structuredClone(fontResource),
-            }],
-            data: { caption, duration: structuredClone(parameters.duration), karaoke, cueBox, activeBox, entry, exit, atom,
+            dependencies: text.dependencies,
+            data: { words: caption.words, unitsInPlaybackOrder, duration: structuredClone(parameters.duration),
+                karaoke, cueBox, activeBox, entry, exit, atom,
                 activeResponse, loop, slideDistance, direction,
                 loopPaint: {
                     base: { fill: color, glow: { color: glow.color, opacity: glow.opacity, blur: glow.blur } },

@@ -219,27 +219,6 @@ if(localFrame>=endFrame){settle(element);continue;}const frame=localFrame-startF
   };
 }
 
-function titleParameters(value, label) {
-  const parameters = record(value, label);
-  fields(parameters, ["first", "second", "top"], label);
-  const top = parameters.top ?? 42;
-  assert(typeof top === "number" && Number.isFinite(top) && top >= 0 && top <= 400, `${label}.top is invalid.`);
-  return { first: text(parameters.first, `${label}.first`), second: text(parameters.second, `${label}.second`), top };
-}
-
-function escapeHtml(value) {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
-}
-
-function titleVisual(source) {
-  const value = titleParameters(source.parameters.value, `Football Reference Title ${source.id}`);
-  return {
-    html: `<div data-reference-title><div>${escapeHtml(value.first)}</div><div>${escapeHtml(value.second)}</div></div>`,
-    css: `:scope>[data-reference-title]{position:absolute;left:0;right:0;top:${value.top}px;height:94px;box-sizing:border-box;padding:5px 20px 4px;background:#f4f2e8;color:#070707;font-family:Arial Black,Montserrat,Arial,Apple Color Emoji,Segoe UI Emoji,sans-serif;font-size:42px;font-weight:900;letter-spacing:-1.2px;line-height:1.02;text-align:center;white-space:nowrap}:scope>[data-reference-title]>div{height:43px}`,
-  };
-}
-
 function flashVisual(source) {
   const value = revealFlashParameters(source.parameters.value, `Football Reveal Flash ${source.id}`);
   return {
@@ -256,11 +235,6 @@ function boardTimeline(context) {
     title: context.item.name ?? "Tier board",
     layers: [{ kind: "text", text: `${value.entries.length} entries · ${value.rows.length} tiers` }],
   };
-}
-
-function titleTimeline(context) {
-  const value = titleParameters(context.item.parameters, `Football Reference Title ${context.item.id}`);
-  return { title: `${value.first} ${value.second}`, layers: [{ kind: "text", text: value.first }] };
 }
 
 function boardInspector(context) {
@@ -348,21 +322,6 @@ function boardInspector(context) {
   }];
 }
 
-function titleInspector(context) {
-  const value = titleParameters(context.item.parameters, `Football Reference Title ${context.item.id}`);
-  return [{
-    id: "title",
-    label: "Reference title",
-    domain: "how",
-    fields: [{ id: "first", label: "First line", control: "text", value: value.first,
-      operation: next => ({ kind: "title.set", field: "first", value: next }) },
-    { id: "second", label: "Second line", control: "text", value: value.second,
-      operation: next => ({ kind: "title.set", field: "second", value: next }) },
-    { id: "top", label: "Top", control: "number", value: value.top, minimum: 0, maximum: 400, step: 1,
-      operation: next => ({ kind: "title.set", field: "top", value: next }) }],
-  }];
-}
-
 function flashInspector(context) {
   const value = revealFlashParameters(context.item.parameters, `Football Reveal Flash ${context.item.id}`);
   return [{
@@ -411,14 +370,6 @@ function editComponentParameters(operation, context) {
     boardParameters(parameters, `Football Tier Board ${context.item.id}`);
     return parameters;
   }
-  if (context.item.component.symbol === "reference-title") {
-    if (selected.kind !== "title.set" || !["first", "second", "top"].includes(selected.field)) {
-      throw new Error(`Reference title operation ${selected.kind} is unavailable.`);
-    }
-    parameters[selected.field] = selected.value;
-    titleParameters(parameters, `Football Reference Title ${context.item.id}`);
-    return parameters;
-  }
   if (context.item.component.symbol === "reveal-flash") {
     if (selected.kind !== "flash.set"
         || !["intensity", "attackFrames", "holdFrames", "decayFrames", "color", "glowColor"].includes(selected.field)) {
@@ -442,8 +393,6 @@ export const hypitPackage = {
         components: [
           { component: componentSymbol("tier-board"), displayName: "Tier board", tone: "violet",
             chrome: "group", heightPx: 72, project: boardTimeline, poster: tierPoster },
-          { component: componentSymbol("reference-title"), displayName: "Reference title", tone: "magenta",
-            chrome: "standard", project: titleTimeline },
           { component: componentSymbol("reveal-flash"), displayName: "Reveal flash", tone: "orange",
             chrome: "compact" },
         ],
@@ -457,7 +406,6 @@ export const hypitPackage = {
         package: packageName,
         components: [
           { component: componentSymbol("tier-board"), project: boardInspector },
-          { component: componentSymbol("reference-title"), project: titleInspector },
           { component: componentSymbol("reveal-flash"), project: flashInspector },
         ],
         componentValues: [],
@@ -476,7 +424,6 @@ export const hypitPackage = {
             mediaInputs: (context) => boardParameters(context.item.parameters, `Tier board ${context.item.id}`).entries
               .map(entry => ({ slot: entry.input, label: entry.label, required: true, picture: "constant" })),
           },
-          { component: componentSymbol("reference-title"), editParameters: editComponentParameters },
           { component: componentSymbol("reveal-flash"), editParameters: editComponentParameters },
         ],
         componentValues: [],
@@ -487,22 +434,11 @@ export const hypitPackage = {
       kind: "hypit.nle-render",
       value: { components: [
         { symbol: "tier-board", render: (item, context) => renderComponent(item, context, tierBoardVisual) },
-        { symbol: "reference-title", render: (item, context) => renderComponent(item, context, titleVisual) },
         { symbol: "reveal-flash", render: (item, context) => renderComponent(item, context, flashVisual) },
       ] },
     },
   ],
   catalog: [{
-    id: "reference-title",
-    kind: "hypit.nle-component",
-    title: "Reference title",
-    value: {
-      category: "text",
-      component: componentSymbol("reference-title"),
-      duration: { ticks: "3", timeBase: { numerator: 1, denominator: 1 } },
-      parameters: { first: "Title", second: "Subtitle", top: 80 },
-    },
-  }, {
     id: "tier-board",
     kind: "hypit.nle-component",
     title: "Tier board",

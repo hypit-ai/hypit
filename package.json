@@ -129,7 +129,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm --filter @hypit/temporal build && pnpm --filter @hypit/media build && pnpm --filter @hypit/media-asset build && pnpm --filter @hypit/html-program build && pnpm --filter @hypit/audio-program build && pnpm --filter @hypit/media-local build && pnpm --filter @hypit/nle build && pnpm --filter @hypit/html-video build && pnpm --filter @hypit/project build && pnpm --filter @hypit/application build && pnpm --filter @hypit/html-render-local build && pnpm --filter @hypit/html-chromium-local build && pnpm --filter @hypit/html-electron-local build && pnpm --filter @hypit/html-video-local build && pnpm --filter @hypit/nle-delivery build && pnpm --filter @hypit/application-home build && pnpm --filter @hypit/nle-studio build && pnpm run build:root",
+    "build": "pnpm --filter @hypit/temporal build && pnpm --filter @hypit/media build && pnpm --filter @hypit/media-asset build && pnpm --filter @hypit/html-program build && pnpm --filter @hypit/audio-program build && pnpm --filter @hypit/media-local build && pnpm --filter @hypit/nle build && pnpm --filter @hypit/html-video build && pnpm --filter @hypit/project build && pnpm --filter @hypit/application build && pnpm --filter @hypit/html-render-local build && pnpm --filter @hypit/html-chromium-local build && pnpm --filter @hypit/html-electron-local build && pnpm --filter @hypit/html-video-local build && pnpm --filter @hypit/nle-delivery build && pnpm --filter @hypit/text-fine build && pnpm --filter @hypit/application-home build && pnpm --filter @hypit/nle-studio build && pnpm run build:root",
     "build:root": "tsc -p tsconfig.build.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "application": "node dist/application-server.js",

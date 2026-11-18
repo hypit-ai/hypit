@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "type": "module",
   "dependencies": {
-    "@fontsource-variable/montserrat": "5.3.0",
-    "@hypit/html-program": "link:../../../../packages/html-program"
+    "@hypit/html-program": "link:../../../../packages/html-program",
+    "@hypit/nle-delivery": "link:../../../../packages/nle-delivery"
   },
   "exports": { "./hypit": "./hypit.js" }
 }
