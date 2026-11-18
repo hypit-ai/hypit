@@ -100,7 +100,7 @@ delivery slice focuses on observation and export.
 
 ## Further terminal operations
 
-Canvas command design uses the same local Host. See [Canvas operations and CLI](canvas-api.md#cli-投影).
+Canvas commands use the same local Host. See [Canvas operations and CLI](canvas-api.md#cli-投影).
 
 Project creation, Media import and single-frame review use the relevant Project, Media and NLE owner operations.
 Publication resource export uses the Environment's typed resource access. Acceptance of an output into Media

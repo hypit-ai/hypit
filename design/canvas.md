@@ -1,6 +1,6 @@
 # Canvas 后端和项目文件
 
-> 一张 Canvas 对应一份项目文档。具体 Reader、类型和命令契约随 owner 实现落在包内。
+> 一张 Canvas 对应一份项目文档。具体 Reader、类型和命令契约位于 owner 包内。
 
 ## Canvas 拥有的事实
 
@@ -20,16 +20,16 @@ Execution Environment。Environment 管理账号、并发、运行状态、回�
 
 | 单元 | 职责 |
 | --- | --- |
-| `@hypit/canvas` | Canvas Reader、序列化、事务、打开期 Service、节点准备与有限投影。 |
-| `@hypit/canvas/node` | 同一发行单元下的文件适配和 Project Owner Provider。通过 ProjectHost 打开共享 Service，注入 Media 读取和项目的 Execution client。 |
+| `@hypit/canvas` | Canvas Reader、序列化、事务和打开期 Service。 |
+| `@hypit/canvas/node` | 同一发行单元下的文件适配和 Project Owner Provider。通过 ProjectHost 打开共享 Service，使用 Media 读取和项目的 Execution client 实现单节点准备、历史和采用。 |
+| `@hypit/canvas-studio` | Canvas Product Provider、会话协议、本地 HTTP 适配和浏览器界面。 |
 | Model 包，如 `@hypit/gpt-image` 和 `@hypit/seedance` | 确切 Capability、请求验证和输出定义。需要用于 Canvas 时，通过现有 `./hypit` 发布创作目录项和端口描述，沿用现有模型配置中的选项、默认值、媒体角色和限制。 |
 | `@hypit/execution` 和选定的 Provider | 报价、提交、观察、取消、Publication 和资源流。Provider 实现由应用或 worker 部署选择。 |
 | `@hypit/hypit` | 在发行版里组装 Canvas Product Session 所需后端，并给 CLI 和 API 接同一组类型化操作。 |
 
-首期只为 Canvas owner 增加一个 npm 包。Product Session 的后端适配先作为 Canvas 包中的模块。
-有独立的浏览器构建和产品发布生命周期时，再决定 Canvas Studio 的发行边界。Canvas owner
-依赖 Project 和 Execution 契约。Model 和 Provider 继续按现有方向依赖 Execution，Model 的端口描述
-使用结构化数据，可以从现有模型定义导出，Canvas 按显式选择读取。浏览器和终端显示这些描述。
+Canvas Studio 和 NLE Studio 各自发行浏览器构建和产品协议。Canvas owner 依赖 Project 和 Execution
+契约，可以独立用于项目程序。Model 和 Provider 依赖 Execution，Model 的结构化端口描述由项目的包选择
+加载，供 Canvas、浏览器和终端读取。
 
 `package.json` 和 lockfile 选择确切实现。项目的 `hypit.project.json` 选择加载的 Model 包和目录项。
 Environment 独立报告本部署可用的 Capability。一个已安装但当前环境不可用的模型仍有可编辑的配方，
@@ -41,7 +41,7 @@ Environment 独立报告本部署可用的 Capability。一个已安装但当前
 ApplicationHost
 ├─ Product Providers
 │  ├─ NLE Studio
-│  └─ Canvas
+│  └─ Canvas Studio
 ├─ ProjectHost                              project/
 │  ├─ Package Environment + Project Media
 │  └─ Document Registry
@@ -58,7 +58,7 @@ Project，再用项目 lease 和具体文档路径打开 Canvas Product Session�
 与 Product Session 的生命周期。Canvas 和 NLE 共享同一个 ProjectHost 的包环境、Media 和文档注册表。
 
 Canvas 的 Node Owner Provider 使用 ProjectHost 的文档注册表打开 Service。同一 Project 内，同一
-owner 和同一路径复用同一个打开的 Service。两个窗口打开一张 Canvas 时，共用修订、保存和变更事件。
+owner 和同一真实文件路径复用同一个打开的 Service。两个窗口打开一张 Canvas 时，共用修订、保存和变更事件。
 打开另一份文件则有独立的 Canvas Service。首期已确认的卡片编辑由 owner 校验修订后原子保存，保存成功后
 发布变更。拖动中的临时坐标和鼠标选择属于各自的会话。
 
@@ -147,7 +147,7 @@ project/
 
 选中项包含确切的输出和资源名。同一个 Invocation 可以产生多张图或多个音频资源，每次选择有明确
 对象。结构化结果按具名输出读取，并通过其类型和目标 owner 的契约接收。正在执行的 Invocation
-显示在卡片记录里。完成事件更新投影，选择动作由调用者显式发出。
+显示在卡片记录里。会话重新观察进度和结果时读取 Environment，选择动作由调用者显式发出。
 
 ## 后端调用
 
@@ -168,11 +168,8 @@ project/
 保存附着地址和 Execution 入队是两条持久化边界。Canvas 先保存可查询的地址，
 Execution 对同一地址只接受一次。重开时使用 [同地址查询](canvas-api.md#报价提交和恢复)。
 
-## 首个实现切片
+## 在 Studio 工作
 
-1. 用一个 Canvas Service 实现 Reader、保存、修订事务和投影，覆盖卡片、输入、连线、布局和选择。
-   先接一张现有 Media 卡片和两个模型目录项。
-2. 接通单节点准备、精确结果观察和素材接收。把 GPT Image 的两次结果展示在同一卡片上，
-   选定一个后驱动 Seedance 首帧。验证再次选择改变新请求的输入，已经接受的请求保持原引用。
-3. 复用当前 CLI 和本地 API 的 Host 客户端，走同一份打开的 Canvas。显式把一段视频接收到 Media，
-   再用现有 NLE 操作放入时间线。用直接运行的生产路径验证打开、编辑、报价、提交、重开和采用。
+在 Application Home 选择 Canvas，输入项目中的画布路径，或运行 `hypit canvas open <path>`。通过卡片
+右侧面板编辑配方和输入来源，拖动或调整尺寸后保存位置。生成历史可以预览、选择和采用。选择一个输出后，
+连到该输出的下游配方会在下一次报价或提交时读取这一选择。

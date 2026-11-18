@@ -1,0 +1,23 @@
+{
+  "name": "@hypit/canvas-studio",
+  "version": "0.1.0",
+  "description": "Canvas Product Session and browser client for Hypit",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    ".": { "hypit-source": "./src/host.ts", "types": "./dist/host.d.ts", "import": "./dist/host.js" },
+    "./protocol": { "hypit-source": "./src/protocol.ts", "types": "./dist/protocol.d.ts", "import": "./dist/protocol.js" },
+    "./node": { "hypit-source": "./src/node-adapter.ts", "types": "./dist/node-adapter.d.ts", "import": "./dist/node-adapter.js" }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.browser.json && vite build"
+  },
+  "dependencies": {
+    "@hypit/application": "workspace:^0.1.0",
+    "@hypit/canvas": "workspace:^0.1.0",
+    "@hypit/execution": "workspace:^0.1.0",
+    "@hypit/project": "workspace:^0.1.0"
+  },
+  "devDependencies": { "vite": "^7.1.0" }
+}

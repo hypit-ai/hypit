@@ -113,6 +113,14 @@ lifecycle and visual consumer justify a release boundary outside headless `@hypi
 Services through the NLE Editing Surface, and accepts Project Media Service and preview Executor ports without
 absorbing their facts or execution state.
 
+`@hypit/canvas` owns the Canvas document, revision transactions and shared Service. Its `node` subpath
+provides Project file persistence, one-card request preparation, Invocation attachments and history observations,
+and explicit adoption into Project Media or a transcript document. It uses the Project's installed Model
+contributions and its scoped Execution clients.
+
+`@hypit/canvas-studio` owns the Canvas Product Provider, browser artifact and session protocol. The browser and
+CLI use the same Product Session adapter. Project programs can open the Canvas owner directly.
+
 `@hypit/application` owns the generic ApplicationHost lifecycle, ProjectHost and Product Session registries,
 AIGC Execution Environment registry and Node loopback adapter. It knows Product Providers by stable product identity and opaque
 session interface only. Product-specific protocols and browser artifacts remain in their product packages.

@@ -12,6 +12,8 @@ import {
   type NodeApplicationServer,
 } from "@hypit/application/node";
 import { applicationHomeNodeAdapter } from "@hypit/application-home/node";
+import { createCanvasStudioProductProvider } from "@hypit/canvas-studio";
+import { canvasStudioNodeProductAdapter } from "@hypit/canvas-studio/node";
 import {
   createNleStudioProductProvider,
 } from "@hypit/nle-studio";
@@ -56,7 +58,7 @@ export function openNodeHypitApplication(
       deliveryExecutor: video,
       frameExecutor: video,
       ...(options.localHtmlVideo === undefined ? {} : { mediaTools: options.localHtmlVideo }),
-    }), ...(options.products ?? [])],
+    }), createCanvasStudioProductProvider(options.localHtmlVideo), ...(options.products ?? [])],
     execution: options.execution ?? openApplicationExecutionDirectory([]),
   });
 }
@@ -68,7 +70,7 @@ export function openNodeHypitApplicationServer(
   return openNodeApplicationServer({
     application,
     home: applicationHomeNodeAdapter,
-    products: [nleStudioNodeProductAdapter, ...(options.productAdapters ?? [])],
+    products: [nleStudioNodeProductAdapter, canvasStudioNodeProductAdapter, ...(options.productAdapters ?? [])],
     ...(options.hostname === undefined ? {} : { hostname: options.hostname }),
     ...(options.port === undefined ? {} : { port: options.port }),
     ...(options.token === undefined ? {} : { token: options.token }),

@@ -3,7 +3,8 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { findNodeHypitApplicationEndpoint, nodeHypitApplicationEndpointPath } from "./application-endpoint.js";
-import { connectLocalHost } from "./cli/client.js";
+import { canvasCommand } from "./cli/canvas.js";
+import { LocalHostError, connectLocalHost } from "./cli/client.js";
 import { authCommand, executionCommand, type CliResult } from "./cli/execution.js";
 import { nleCommand, projectRoot } from "./cli/nle.js";
 
@@ -17,6 +18,13 @@ const usage = `Usage: hypit <command> [options]
   execution inspect|wait|cancel|publication <invocation>
   nle open|inspect <file.svml> [--project <directory>] [--view <file>]
   nle export <file.svml> --to <project-relative.mp4> [--profile <file>]
+  canvas create <file.canvas.json> --name <name>
+  canvas open|inspect|catalog <file.canvas.json> [--project <directory>]
+  canvas node|history <file.canvas.json> <node>
+  canvas apply <file.canvas.json> --input <file|->
+  canvas quote|invoke <file.canvas.json> <node> [--environment <id>] [--endpoint <id>]
+  canvas invoke also requires --if-revision <revision> and accepts --invocation-id <uuid>
+  canvas adopt <file.canvas.json> <node> --input <file|->
 
 Use --json for structured output and --endpoint-file for an explicitly selected local Host.
 Use --help or --version without starting the Host.
@@ -32,14 +40,18 @@ function argumentsFor(raw: string[], group: string, action: string) {
   const options = {
     ...common,
     ...(group === "host" && action === "start" ? { port: { type: "string" }, "execution-root": { type: "string" } } as const : {}),
-    ...(group === "execution" || group === "auth" ? { environment: { type: "string" } } as const : {}),
+    ...(group === "execution" || group === "auth" || group === "canvas" && ["quote", "invoke"].includes(action) ? { environment: { type: "string" } } as const : {}),
     ...(group === "auth" && action === "login" ? { manual: { type: "boolean" }, "no-open": { type: "boolean" } } as const : {}),
-    ...(group === "execution" && action !== "doctor" || group === "nle" ? { project: { type: "string" } } as const : {}),
+    ...(group === "execution" && action !== "doctor" || group === "nle" || group === "canvas" ? { project: { type: "string" } } as const : {}),
     ...(group === "execution" && ["quote", "submit"].includes(action) ? {
       endpoint: { type: "string" }, input: { type: "string" }, resources: { type: "string" },
     } as const : {}),
     ...(group === "nle" && action !== "export" ? { view: { type: "string" } } as const : {}),
-    ...(group === "nle" && action === "open" ? { "no-open": { type: "boolean" } } as const : {}),
+    ...((group === "nle" || group === "canvas") && action === "open" ? { "no-open": { type: "boolean" } } as const : {}),
+    ...(group === "canvas" && action === "create" ? { name: { type: "string" } } as const : {}),
+    ...(group === "canvas" && ["apply", "adopt"].includes(action) ? { input: { type: "string" } } as const : {}),
+    ...(group === "canvas" && ["quote", "invoke"].includes(action) ? { endpoint: { type: "string" }, "if-revision": { type: "string" } } as const : {}),
+    ...(group === "canvas" && action === "invoke" ? { "invocation-id": { type: "string" } } as const : {}),
     ...(group === "nle" && action === "export" ? { to: { type: "string" }, profile: { type: "string" } } as const : {}),
   };
   return parseArgs({ args: raw, options, allowPositionals: true, strict: true });
@@ -62,6 +74,7 @@ async function command(args: string[]): Promise<void> {
     auth: ["status", "login", "logout"],
     execution: ["capabilities", "doctor", "quote", "submit", "inspect", "wait", "cancel", "publication"],
     nle: ["open", "inspect", "export"],
+    canvas: ["create", "open", "inspect", "catalog", "node", "apply", "history", "quote", "invoke", "adopt"],
   };
   if (action === undefined || !Object.hasOwn(actions, group) || !actions[group]!.includes(action)) {
     throw new Error("Unknown Hypit command. Run hypit --help.");
@@ -71,10 +84,11 @@ async function command(args: string[]): Promise<void> {
     const value = values[name];
     return typeof value === "string" ? value : undefined;
   };
-  const [subject] = positionals;
-  const takesSubject = group === "nle" || group === "project" || group === "execution" && action !== "capabilities";
-  if (positionals.length > (takesSubject ? 1 : 0)) throw new Error("Unexpected positional argument.");
-  if (group === "nle" && subject === undefined) throw new Error("NLE requires a document path.");
+  const [subject, canvasNode] = positionals;
+  const takesSubject = group === "canvas" || group === "nle" || group === "project" || group === "execution" && action !== "capabilities";
+  const takesNode = group === "canvas" && ["node", "history", "quote", "invoke", "adopt"].includes(action);
+  if (positionals.length > (takesNode ? 2 : takesSubject ? 1 : 0)) throw new Error("Unexpected positional argument.");
+  if ((group === "nle" || group === "canvas") && subject === undefined) throw new Error(group + " requires a document path.");
   const endpoint = values["endpoint-file"] === undefined ? {} : { path: resolve(values["endpoint-file"]) };
   const environment = text("environment") ?? "hypihub";
 
@@ -136,6 +150,21 @@ async function command(args: string[]): Promise<void> {
         ...(input === undefined ? {} : { input }),
         ...(resources === undefined ? {} : { resources }),
       }, signal));
+    } else if (group === "canvas") {
+      const name = text("name");
+      const input = text("input");
+      const expectedRevision = text("if-revision");
+      const invocation = text("invocation-id");
+      const endpoint = text("endpoint");
+      output(await canvasCommand(host, action, subject!, {
+        ...project, environment, noOpen: values["no-open"] === true,
+        ...(canvasNode === undefined ? {} : { node: canvasNode }),
+        ...(name === undefined ? {} : { name }),
+        ...(input === undefined ? {} : { input }),
+        ...(expectedRevision === undefined ? {} : { expectedRevision }),
+        ...(invocation === undefined ? {} : { invocation }),
+        ...(endpoint === undefined ? {} : { endpoint }),
+      }, signal));
     } else if (group === "nle") {
       const view = text("view");
       const to = text("to");
@@ -165,7 +194,7 @@ const args = process.argv.slice(2);
 try { await command(args); }
 catch (error) {
   const message = error instanceof Error ? error.message : String(error);
-  if (args.includes("--json")) process.stdout.write(JSON.stringify({ error: message }) + "\n");
+  if (args.includes("--json")) process.stdout.write(JSON.stringify({ error: message, ...(error instanceof LocalHostError ? { code: error.code, subject: error.subject } : {}) }) + "\n");
   else process.stderr.write(`hypit: ${message}\n`);
   process.exitCode = message === "Interrupted." ? 130 : 1;
 }

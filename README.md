@@ -67,6 +67,8 @@ The working core covers Media, NLE editing, video delivery and recoverable local
   Compositions without entering View state or becoming arbitrary document-path relations;
 - `@hypit/nle-studio` registers an NLE Product Provider, leases NLE Project and View Services from its selected
   ProjectHost, and projects shared Project Media through its session adapter;
+- `@hypit/canvas` owns recipe cards, their input links and result selection. `@hypit/canvas-studio` opens them through
+  the same ProjectHost and exposes the board, generation history and explicit adoption into Project Media;
 - `@hypit/hypit` composes the default ApplicationHost distribution, publishes its local endpoint and supplies the local
   HTML Video Executor as an NLE Studio Product dependency.
 
@@ -80,10 +82,14 @@ the same operations. See `hypit --help` for its command surface.
 ```sh
 hypit nle inspect edits/main.svml --project /path/to/project
 hypit nle export edits/main.svml --project /path/to/project --to exports/draft.mp4
+hypit canvas create generation/opening.canvas.json --name Opening
+hypit canvas open generation/opening.canvas.json
 hypit auth login
 hypit execution doctor
 hypit execution quote @hypit/gpt-image/gpt-image-2 --input request.json
 ```
+
+For Canvas Model package selection, see [Canvas Studio setup](packages/canvas-studio/README.md).
 
 The Node Host uses ordinary `PATH` lookup for FFmpeg/FFprobe and the local browser
 defaults. An embedding or launcher may select explicit executables with `HYPIT_FFMPEG_PATH`, `HYPIT_FFPROBE_PATH`,

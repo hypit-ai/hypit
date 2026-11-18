@@ -5,6 +5,10 @@ import {
   type NodeHypitApplicationEndpoint, type NodeHypitApplicationEndpointOptions,
 } from "../application-endpoint.js";
 
+export class LocalHostError extends Error {
+  constructor(message: string, readonly status: number, readonly code?: string, readonly subject?: unknown) { super(message); }
+}
+
 export class LocalHostClient {
   constructor(readonly endpoint: NodeHypitApplicationEndpoint) {}
 
@@ -21,7 +25,9 @@ export class LocalHostClient {
     const value: unknown = await response.json().catch(() => undefined);
     if (!response.ok) {
       const message = typeof value === "object" && value !== null && "error" in value && typeof value.error === "string" ? value.error : undefined;
-      throw new Error(message ?? `Hypit Host returned HTTP ${response.status}.`);
+      const body = typeof value === "object" && value !== null ? value as Record<string, unknown> : undefined;
+      throw new LocalHostError(message ?? `Hypit Host returned HTTP ${response.status}.`, response.status,
+        typeof body?.code === "string" ? body.code : undefined, body?.subject);
     }
     return value as Result;
   }

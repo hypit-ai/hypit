@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "customConditions": [], "types": ["vite/client"], "noEmit": true },
+  "include": ["src/browser/**/*.ts", "src/protocol.ts"]
+}

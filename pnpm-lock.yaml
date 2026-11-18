@@ -17,6 +17,9 @@ importers:
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:packages/audio-program
+      '@hypit/canvas-studio':
+        specifier: workspace:^0.1.0
+        version: link:packages/canvas-studio
       '@hypit/execution':
         specifier: workspace:^0.1.0
         version: link:packages/execution
@@ -124,6 +127,25 @@ importers:
       '@hypit/timed-transcript':
         specifier: workspace:^0.1.0
         version: link:../timed-transcript
+
+  packages/canvas-studio:
+    dependencies:
+      '@hypit/application':
+        specifier: workspace:^0.1.0
+        version: link:../application
+      '@hypit/canvas':
+        specifier: workspace:^0.1.0
+        version: link:../canvas
+      '@hypit/execution':
+        specifier: workspace:^0.1.0
+        version: link:../execution
+      '@hypit/project':
+        specifier: workspace:^0.1.0
+        version: link:../project
+    devDependencies:
+      vite:
+        specifier: ^7.1.0
+        version: 7.3.8(@types/node@24.10.1)
 
   packages/execution: {}
 

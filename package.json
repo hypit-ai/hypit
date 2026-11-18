@@ -151,6 +151,7 @@
     "@hypit/audio-program": "workspace:^0.1.0",
     "@hypit/application": "workspace:^0.1.0",
     "@hypit/application-home": "workspace:^0.1.0",
+    "@hypit/canvas-studio": "workspace:^0.1.0",
     "@hypit/execution": "workspace:^0.1.0",
     "@hypit/provider-hypihub": "workspace:^0.1.0",
     "@hypit/html-chromium-local": "workspace:^0.1.0",

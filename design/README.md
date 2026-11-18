@@ -28,7 +28,7 @@ Read the current system from authority toward implementation.
   Service and local media execution.
 - [Component authoring](authoring.md) — TSX author programs, NLE materialization, component expansion and the boundary
   between author source and the durable edit.
-- [Canvas 后端和项目文件](canvas.md) — Canvas 的项目文档、npm 边界、生成操作和首个实现切片。
+- [Canvas 后端和项目文件](canvas.md) — Canvas 的项目文档、npm 边界、生成操作和 Studio。
 - [Canvas 操作与终端接口](canvas-api.md) — 修订事务、报价、提交恢复、卡片历史和采用。
 - [HTML 视听执行与导出 API](html-video-delivery.md) — NLE 编译、HTML/Audio Program、视频
   Delivery Action 与 npm 执行边界。
