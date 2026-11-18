@@ -8,7 +8,7 @@
     "./hypit": {
       "hypit-source": "./src/hypit.ts",
       "types": "./dist/hypit.d.ts",
-      "import": "./dist/hypit.js"
+      "default": "./dist/hypit.js"
     },
     ".": {
       "hypit-source": "./src/index.ts",

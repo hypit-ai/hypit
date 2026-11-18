@@ -11,7 +11,7 @@ import {
 import type { Capability, ModelField } from "@hypit/execution/model";
 import { defaultMediaSelection } from "@hypit/media";
 import { NodeProjectMediaService } from "@hypit/media-asset/service/node";
-import { inspectMediaFileFromContainerIndex } from "@hypit/media-local";
+import { inspectMediaFileByDecodedUnits, inspectMediaFileFromContainerIndex } from "@hypit/media-local";
 import type { ProjectHostContext } from "@hypit/project";
 import { createNodeProjectResourceResolver } from "@hypit/project/node";
 import { assertTimedTranscript, encodeTimedTranscript } from "@hypit/timed-transcript";
@@ -117,9 +117,18 @@ export class CanvasOperations {
     const model = this.#models.get(node.capability);
     if (model === undefined) return { node, outputs: [], issues: [`Recipe ${id} needs ${node.capability}.`] };
     const mode = get(node.inputs, "mode");
-    const issues = (model.authoring ?? []).flatMap(field => field.required
-      && (field.modes === undefined || (mode !== undefined && "value" in mode && field.modes.some(value => value === mode.value)))
-      && get(node.inputs, field.name) === undefined && field.default === undefined ? [`Missing input ${field.name}.`] : []);
+    const activeMode = mode !== undefined && "value" in mode ? mode.value : model.authoring?.find(field => field.name === "mode")?.default;
+    const issues = (model.authoring ?? []).flatMap(field => {
+      if (field.modes !== undefined && !field.modes.some(value => value === activeMode)) return [];
+      const input = get(node.inputs, field.name);
+      if (input === undefined) return field.required && field.default === undefined ? [`Missing input ${field.name}.`] : [];
+      const values = bindingValues(input);
+      if (field.required && values.length === 0) return [`Missing input ${field.name}.`];
+      if (field.personReference && values.some(value => !("value" in value) && value.personReference === undefined)) {
+        return [`Indicate whether the references in ${field.name} depict a person.`];
+      }
+      return [];
+    });
     return { node, model: this.#description(model), outputs: Object.keys(model.outputs), issues,
       selected: get(document.results, id)?.selected ?? {} };
   }
@@ -215,7 +224,7 @@ export class CanvasOperations {
     const durationSeconds = duration === undefined ? undefined
       : Number(duration.ticks) * duration.timeBase.numerator / duration.timeBase.denominator;
     return { mediaType: resource.mediaType,
-      ...(durationSeconds === undefined || !Number.isFinite(durationSeconds) ? {} : { durationSeconds }), ...(resource.size === undefined ? {} : { size: resource.size }),
+      ...(durationSeconds === undefined || durationSeconds <= 0 || !Number.isFinite(durationSeconds) ? {} : { durationSeconds }), ...(resource.size === undefined ? {} : { size: resource.size }),
       bytes: (async function* () { yield* createReadStream(resource.address); })() } satisfies ExecutionResourceSource & { durationSeconds?: number };
   }
 
@@ -237,9 +246,13 @@ export class CanvasOperations {
     const entries: [string, JsonValue][] = [];
     for (const [name, binding] of Object.entries(node.inputs)) {
       const values: JsonValue[] = [];
+      const field = model.authoring?.find(field => field.name === name);
       for (const [index, value] of bindingValues(binding).entries()) {
         const source = { input: name, index, binding: value };
         try {
+          if (field?.personReference && !("value" in value) && value.personReference === undefined) {
+            throw new CanvasError("reference-classification-required", "Indicate whether the reference in " + name + " depicts a person.");
+          }
           if ("value" in value) values.push(value.value);
           else if ("media" in value) values.push(stage(await this.openMedia(value.media), value.personReference));
           else {
@@ -380,10 +393,17 @@ export class CanvasOperations {
       await pipeline(source.bytes, createWriteStream(file, { flags: "wx" }), signal === undefined ? {} : { signal });
       const result = await media.adoptFile({ sourcePath: file, sourceName: name, mediaType: resource.mediaType,
         ...(destination === undefined ? {} : { target: destination }) }, {
-        inspect: (path, context) => inspectMediaFileFromContainerIndex(path, {
-          ...this.#inspectOptions, ...(context.signal === undefined ? {} : { signal: context.signal }),
-          ...(resource.mediaType.startsWith("image/") ? { constantPicture: true } : {}),
-        }),
+        inspect: async (path, context) => {
+          const options = { ...this.#inspectOptions, ...(context.signal === undefined ? {} : { signal: context.signal }) };
+          const still = resource.mediaType.startsWith("image/");
+          const indexed = await inspectMediaFileFromContainerIndex(path, { ...options, constantPicture: still });
+          const primary = resource.mediaType.startsWith("audio/") ? "audio" : "picture";
+          if (still || indexed.streams.some(stream =>
+            stream.kind === primary && !stream.disposition.attachedPicture && stream.startPts !== undefined && stream.endPts !== undefined)) {
+            return indexed;
+          }
+          return await inspectMediaFileByDecodedUnits(path, options);
+        },
         select: inspection => defaultMediaSelection(inspection, resource.mediaType),
       }, signal === undefined ? {} : { signal });
       return { kind: "media" as const, reference: result.reference };
@@ -394,8 +414,8 @@ export class CanvasOperations {
 function mediaExtension(mediaType: string): string | undefined {
   const extensions: Record<string, string> = {
     "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif", "image/avif": "avif",
-    "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov",
-    "audio/mpeg": "mp3", "audio/opus": "opus", "audio/wav": "wav", "audio/mp4": "m4a", "audio/flac": "flac", "audio/ogg": "ogg",
+    "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov", "video/x-matroska": "mkv",
+    "audio/mpeg": "mp3", "audio/opus": "opus", "audio/wav": "wav", "audio/x-wav": "wav", "audio/aac": "aac", "audio/mp4": "m4a", "audio/flac": "flac", "audio/ogg": "ogg",
   };
   return get(extensions, mediaType);
 }

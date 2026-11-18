@@ -1,5 +1,5 @@
 import type { InvocationAddress, JsonValue } from "@hypit/execution";
-import { assertProjectRelativePath } from "@hypit/project";
+import { verifyMediaAssetReference } from "@hypit/media-asset";
 
 export type MediaReference = { readonly path: string };
 export type CanvasSource = { readonly node: string; readonly output: string };
@@ -63,10 +63,11 @@ function map<Value>(value: unknown, subject: string, read: (value: unknown) => V
 }
 
 export function readMediaReference(value: unknown): MediaReference {
-  const source = record(value, "Media reference", ["path"]);
-  const path = text(source.path, "Media path");
-  assertProjectRelativePath(path);
-  return { path };
+  try { verifyMediaAssetReference(value); }
+  catch (error) {
+    throw new CanvasError("invalid-media-reference", error instanceof Error ? error.message : String(error));
+  }
+  return { path: value.path };
 }
 
 function readValue(value: unknown): CanvasValue {
