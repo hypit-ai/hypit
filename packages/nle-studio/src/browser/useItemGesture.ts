@@ -33,9 +33,9 @@ export type ItemGestureState = {
   readonly floating: readonly FloatingItem[];
   readonly insertionTop?: number;
   readonly snapFrame?: number;
-  readonly dropTrack?: string;
+  readonly sourceTrack: string;
+  readonly dropTrack: string;
   readonly plan: ItemMovePlan | undefined;
-  readonly valid: boolean;
 };
 
 function itemKind(item: NleTimelineSceneItem, track: NleTimelineSceneTrack): FloatingItem["kind"] {
@@ -99,6 +99,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
     const boundaries = timelineSnapBoundaries(scene, ids);
     const movingEdges = members.flatMap(({ item }) => [item.startFrame, item.startFrame + item.durationFrames]);
     const minimum = -Math.min(...members.map((member) => member.item.startFrame));
+    const anchorIndex = displayRows.findIndex((candidate) => candidate.id === track.id);
     const created = new Map<string, ItemTrackAddition>();
     handle.setPointerCapture(pointerId);
     let active = false, animation = 0;
@@ -118,7 +119,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
       const bounds = viewport.getBoundingClientRect();
       const inside = pointer.x >= bounds.left + labelWidth && pointer.x < bounds.right
         && pointer.y >= bounds.top + rulerHeight && pointer.y < bounds.bottom;
-      let targetIndex = displayRows.findIndex((candidate) => candidate.id === track.id);
+      let targetIndex = anchorIndex;
       let insertionIndex: number | undefined;
       const firstRow = rows[0], lastRow = rows.at(-1);
       const movedVertically = Math.abs(pointer.y - startY) > 4;
@@ -145,13 +146,14 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
         insertionEdge = undefined;
       }
 
-      const valid = inside && targetIndex >= 0 && (insertionIndex !== undefined || displayRows[targetIndex]?.role === track.role);
+      const hovered = displayRows[targetIndex];
+      const valid = inside && (insertionIndex !== undefined
+        || (hovered?.kind === track.kind && hovered.role === track.role && !hovered.locked));
       const destinations = new Map<string, string>();
       const additions: ItemTrackAddition[] = [];
       let insertionTop: number | undefined;
-      const anchorIndex = displayRows.findIndex((candidate) => candidate.id === track.id);
 
-      const additionAt = (index: number, { kind, role }: NleTimelineSceneTrack, key: string): ItemTrackAddition => {
+      const additionAt = (index: number, { id, kind, role }: NleTimelineSceneTrack, key: string): ItemTrackAddition => {
         const bounded = Math.max(0, Math.min(displayRows.length, index));
         const cacheKey = `${key}:${role ?? kind}:${bounded}`;
         let addition = created.get(cacheKey);
@@ -165,7 +167,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
           created.set(cacheKey, addition);
         }
         if (!additions.some((candidate) => candidate.id === addition!.id)) additions.push(addition);
-        if (key === "drop" || insertionIndex === undefined) {
+        if (id === track.id) {
           insertionTop = rows[bounded]?.offsetTop ?? (lastRow ? lastRow.offsetTop + lastRow.offsetHeight : undefined);
         }
         return addition;
@@ -174,7 +176,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
       const inserted = insertionIndex === undefined ? undefined : additionAt(insertionIndex, track, "drop");
       const offset = (insertionIndex ?? targetIndex) - anchorIndex;
       const plannedItems = new Map<string, readonly NleTimelineSceneItem[]>();
-      for (const { track: source, items } of movingTracks) {
+      for (const { track: source, items } of valid ? movingTracks : []) {
         const sourceIndex = displayRows.findIndex((candidate) => candidate.id === source.id);
         const desiredIndex = sourceIndex + offset;
         let destinationId = inserted && source.id === track.id ? inserted.id : undefined;
@@ -208,9 +210,8 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
           .map(([movedItem, destination]) => ({ item: movedItem, track: destination })), additions } : undefined;
       const key = JSON.stringify(plan) ?? "";
       if (key !== previousPlan) { previousPlan = key; proposed = plan; }
-      const dropTrack = valid && insertionIndex === undefined && destinations.get(item.id) === displayRows[targetIndex]?.id
-        ? displayRows[targetIndex]?.id : undefined;
-      setGesture({ ids: [...ids], floating, valid, plan: proposed, ...(dropTrack === undefined ? {} : { dropTrack }), ...(!valid || insertionTop === undefined ? {} : { insertionTop }),
+      const dropTrack = proposed?.destinations.find(destination => destination.item === item.id)?.track ?? track.id;
+      setGesture({ ids: [...ids], floating, sourceTrack: track.id, dropTrack, plan: proposed, ...(insertionTop === undefined ? {} : { insertionTop }),
         ...(aligned === undefined ? {} : { snapFrame: aligned.frame }) });
     };
 

@@ -131,21 +131,26 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const marquee = useMarqueeSelection(scene, scroller, selection, onSelect, busy, pixels);
   const reorder = useTrackReorder(scroller, scene.tracks, rows, session.open.status.projectRevision, busy, onTrackMove);
   const itemGesture = useItemGesture({ scene, rows, scroller, pixels, frame, snap, busy, selection, onSelect, onMove });
-  const movePlan = itemGesture.gesture?.plan;
-  const magneticFrames = useMemo(() => {
-    if (!primaryTrack || (!movePlan && !draft)) return undefined;
-    const commands: readonly NleCommand[] = draft ? [{
-      kind: "item.trim", id: draft.id, edge: draft.edge,
-      at: frameTime(session, draft.edge === "start" ? draft.start : draft.start + draft.duration),
-    }] : movePlan ? moveItemEditPlan(session, movePlan).commands : [];
+  const itemDrag = itemGesture.gesture;
+  const movePlan = itemDrag?.plan;
+  const editPreview = useMemo(() => {
     try {
+      const commands: readonly NleCommand[] | undefined = movePlan ? moveItemEditPlan(session, movePlan).commands
+        : primaryTrack && draft ? [{
+          kind: "item.trim", id: draft.id, edge: draft.edge,
+          at: frameTime(session, draft.edge === "start" ? draft.start : draft.start + draft.duration),
+        }] : undefined;
+      if (commands === undefined) return undefined;
       const project = applyNleTransaction(session.open.project.project, { commands: magneticEdit(session, commands, primaryTrack) });
-      return new Map(project.compositions.find(value => value.id === scene.composition)?.tracks.flatMap(track =>
-        track.items.map(item => [item.id, { track: track.id, start: frameOf(session, item.start), duration: frameOf(session, item.duration) }] as const)));
+      const tracks = project.compositions.find(value => value.id === scene.composition)?.tracks;
+      return { magneticFrames: primaryTrack ? new Map(tracks?.flatMap(track =>
+        track.items.map(item => [item.id, { track: track.id, start: frameOf(session, item.start), duration: frameOf(session, item.duration) }] as const))) : undefined };
     } catch {
       return undefined;
     }
   }, [session, scene.composition, primaryTrack, movePlan, draft]);
+  const magneticFrames = editPreview?.magneticFrames;
+  const itemDropAccepted = movePlan !== undefined && editPreview !== undefined;
   const mediaTrack = scene.tracks.find(track => track.id === drop?.track);
   const mediaEntry = session.media.entries.find(entry => entry.id === draggedMedia?.id);
   const componentEntry = session.catalog.components.find(entry => catalogDragId({ kind: "component", entry }) === draggedMedia?.id);
@@ -154,9 +159,9 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     : componentEntry ? componentFitsTrack(session, mediaTrack, drop.frame, componentEntry.duration, componentTrackRole(componentEntry.category))
     : (mediaTrack.role === "effect" || drop.item !== undefined)
       && session.catalog.adjusts.some(entry => catalogDragId({ kind: "effect", entry }) === draggedMedia?.id));
-  const highlightedTrack = acceptsDrop ? mediaTrack.id : primaryTrack && !magneticFrames ? undefined : itemGesture.gesture?.dropTrack;
-  const insertionTop = reorder.position?.top ?? itemGesture.gesture?.insertionTop;
-  const snapFrame = (itemGesture.gesture?.valid ? itemGesture.gesture.snapFrame : undefined) ?? draft?.snapFrame ?? drop?.snapFrame;
+  const highlightedTrack = acceptsDrop ? mediaTrack.id : itemDropAccepted ? itemDrag?.dropTrack : itemDrag?.sourceTrack;
+  const insertionTop = reorder.position?.top ?? (itemDropAccepted ? itemDrag?.insertionTop : undefined);
+  const snapFrame = (itemDropAccepted ? itemDrag?.snapFrame : undefined) ?? draft?.snapFrame ?? drop?.snapFrame;
   const snappedToPlayhead = snapFrame === frame;
   const playheadSnapClass = snappedToPlayhead ? " adsorbed" : "";
   const rowFade = fadeMotion(reduced);
