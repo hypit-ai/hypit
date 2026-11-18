@@ -328,6 +328,7 @@
 .nle-trim::after { top: calc(50% - 1px); width: 2px; height: 2px; border-radius: 50%; background: #666; box-shadow: 0 -4px #666, 0 4px #666; }
 .nle-trim.start::after { left: 2px; } .nle-trim.end::after { right: 2px; }
 .nle-clip.selected .nle-trim::before, .nle-clip.selected .nle-trim::after { opacity: 1; }
+.nle-clip[data-clip-id].selected:has(> .nle-trim.start) { border-left-color: #fff; }
 .nle-clip.drag-origin { opacity: .25; }
 .nle-clip-ghost { height: 56px; bottom: auto; z-index: 2; pointer-events: none; opacity: .85; border-color: var(--nle-line); }
 .nle-floating-preview { z-index: 100; }
