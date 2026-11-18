@@ -2,11 +2,29 @@ import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import type {
   NleStudioAdjustMaterializeRequest,
   NleStudioComponentMaterializeRequest,
+  NleStudioConflict,
   NleStudioInspectorResponse,
   NleStudioMediaPlaceRequest,
   NleStudioSession,
   NleStudioTransitionMaterializeRequest,
 } from "../protocol.js";
+
+export class StudioConflictError extends Error {
+  constructor(readonly conflict: NleStudioConflict, message: string) {
+    super(message);
+    this.name = "StudioConflictError";
+  }
+}
+
+async function studioResponse<T>(response: Response): Promise<T> {
+  const value = await response.json() as T & { error?: string; conflict?: NleStudioConflict };
+  if (!response.ok) {
+    const message = value.error ?? `NLE Studio request failed with ${response.status}.`;
+    if (response.status === 409 && value.conflict) throw new StudioConflictError(value.conflict, message);
+    throw new Error(message);
+  }
+  return value;
+}
 
 export async function request<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(path, body === undefined ? undefined : {
@@ -14,9 +32,7 @@ export async function request<T>(path: string, body?: unknown): Promise<T> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  const value = await response.json() as T & { error?: string };
-  if (!response.ok) throw new Error(value.error ?? `NLE Studio request failed with ${response.status}.`);
-  return value;
+  return studioResponse<T>(response);
 }
 
 export function readSession(): Promise<NleStudioSession> {
@@ -55,9 +71,7 @@ export async function importMedia(file: File): Promise<NleStudioSession> {
     headers: { "content-type": file.type || "application/octet-stream" },
     body: file,
   });
-  const value = await response.json() as NleStudioSession & { error?: string };
-  if (!response.ok) throw new Error(value.error ?? `NLE Studio Media import failed with ${response.status}.`);
-  return value;
+  return studioResponse<NleStudioSession>(response);
 }
 
 export function materializeComponent(value: NleStudioComponentMaterializeRequest): Promise<NleStudioSession> {
@@ -78,6 +92,10 @@ export function readInspector(item: string): Promise<NleStudioInspectorResponse>
 
 export function saveSession(): Promise<NleStudioSession> {
   return request("api/save", {});
+}
+
+export async function checkSessionDocuments(): Promise<void> {
+  await request("api/documents/check", {});
 }
 
 export function reloadSession(): Promise<NleStudioSession> {

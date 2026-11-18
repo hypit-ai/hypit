@@ -1,4 +1,4 @@
-import { dirname, posix, relative, resolve, sep } from "node:path";
+import { basename, dirname, posix, relative, resolve, sep } from "node:path";
 import type { ApplicationProductProvider } from "@hypit/application";
 import type { NodeProjectMediaService } from "@hypit/media-asset/service/node";
 import { defaultMediaSelection } from "@hypit/media";
@@ -11,11 +11,18 @@ import {
   createComponentMaterialization,
   createMediaAssetMaterialization,
   createTransitionMaterialization,
+  readNleProject,
+  NleRevisionConflict,
+  type NleProject,
   type NleProjectService,
 } from "@hypit/nle";
 import {
   createNleView,
   openNleViewService,
+  readNleView,
+  reconcileNleView,
+  NleViewRevisionConflict,
+  type NleView,
   type NleViewService,
 } from "@hypit/nle/view";
 import {
@@ -31,8 +38,12 @@ import type {
   ProjectHostResourceResolution,
 } from "@hypit/project";
 import {
+  assertStudioDocumentUnchanged,
   nleProjectOwnerProvider,
   nleViewOwnerProvider,
+  readStudioDocument,
+  rememberStudioDocument,
+  studioDocumentModifiedAt,
 } from "./owner-providers.js";
 import {
   createNleStudioPackageBridge,
@@ -81,6 +92,7 @@ export const nleStudioProduct = "hypit.nle-studio";
 const unavailablePreview: NleStudioPreviewPort = {
   observe: () => ({ state: "unavailable" }),
 };
+const documentOperations = new WeakMap<NleProjectService, Promise<void>>();
 
 function context(project: ProjectHost): ProjectHostContext {
   return {
@@ -97,16 +109,13 @@ function mediaName(path: string): string {
   return name.endsWith(".media.json") ? name.slice(0, -".media.json".length) : name;
 }
 
-function sessionView(projectService: NleProjectService, document: string, previous?: NleViewService) {
-  const project = projectService.snapshot().project;
+function sessionView(project: NleProject, document: string, id = `${project.id}:studio-view`) {
   const root = project.compositions.find((composition) => composition.id === project.rootComposition)!;
-  const previousSnapshot = previous?.snapshot().view;
   return createNleView({
-    id: previousSnapshot?.id ?? `${project.id}:studio-view`,
-    name: previousSnapshot?.name ?? `${project.name} Studio View`,
+    id,
+    name: `${project.name} Studio View`,
     project: { path: document },
     activeComposition: project.rootComposition,
-    ...(previousSnapshot === undefined ? {} : { editRate: previousSnapshot.editRate }),
     tracks: root.tracks.map((track) => track.id),
   });
 }
@@ -115,11 +124,11 @@ function assertViewDocumentTarget(
   project: ProjectHost,
   projectDocument: string,
   viewDocument: string,
-  viewService: NleViewService,
+  view: NleView,
 ): void {
   const root = project.boundary.root;
   const expected = resolve(root, projectDocument);
-  const actual = resolve(dirname(resolve(root, viewDocument)), viewService.snapshot().view.project.path);
+  const actual = resolve(dirname(resolve(root, viewDocument)), view.project.path);
   if (actual !== expected) {
     throw new Error(`NLE View ${viewDocument} does not reference Project document ${projectDocument}.`);
   }
@@ -129,7 +138,8 @@ export class NleStudioProductSession {
   readonly #project: ProjectHost;
   readonly #context: ProjectHostContext;
   readonly #projectDocument: string;
-  readonly #viewDocument: string | undefined;
+  readonly #viewDocument: string;
+  readonly #defaultView: boolean;
   readonly #projectLease: ProjectDocumentLease<NleProjectService>;
   readonly #viewLease: ProjectDocumentLease<NleViewService> | undefined;
   readonly #viewService: NleViewService;
@@ -140,12 +150,15 @@ export class NleStudioProductSession {
   readonly #mediaResources = new Map<string, ProjectHostResource>();
   #mediaGeneration = -1;
   #closed = false;
+  #lastSavedAt: string;
 
   private constructor(value: {
     project: ProjectHost;
     context: ProjectHostContext;
     projectDocument: string;
-    viewDocument: string | undefined;
+    viewDocument: string;
+    defaultView: boolean;
+    lastSavedAt: string;
     projectLease: ProjectDocumentLease<NleProjectService>;
     viewLease: ProjectDocumentLease<NleViewService> | undefined;
     viewService: NleViewService;
@@ -158,6 +171,8 @@ export class NleStudioProductSession {
     this.#context = value.context;
     this.#projectDocument = value.projectDocument;
     this.#viewDocument = value.viewDocument;
+    this.#defaultView = value.defaultView;
+    this.#lastSavedAt = value.lastSavedAt;
     this.#projectLease = value.projectLease;
     this.#viewLease = value.viewLease;
     this.#viewService = value.viewService;
@@ -170,16 +185,21 @@ export class NleStudioProductSession {
   static async open(options: OpenNleStudioProductSessionOptions): Promise<NleStudioProductSession> {
     const projectContext = context(options.project);
     const projectLease = await options.project.documents.open(nleProjectOwnerProvider, options.document);
+    const viewDocument = options.viewDocument ?? `${options.document.replace(/\.svml$/u, "")}.nle-view.json`;
     let viewLease: ProjectDocumentLease<NleViewService> | undefined;
     try {
-      viewLease = options.viewDocument === undefined
-        ? undefined
-        : await options.project.documents.open(nleViewOwnerProvider, options.viewDocument);
-      const viewService = viewLease?.service
-        ?? openNleViewService(sessionView(projectLease.service, options.document));
-      if (options.viewDocument !== undefined) {
-        assertViewDocumentTarget(options.project, options.document, options.viewDocument, viewService);
+      try {
+        viewLease = await options.project.documents.open(nleViewOwnerProvider, viewDocument);
+      } catch (error) {
+        if (options.viewDocument !== undefined || (error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
+      const viewService = viewLease?.service
+        ?? openNleViewService(sessionView(projectLease.service.snapshot().project, basename(options.document)));
+      if (viewLease === undefined) rememberStudioDocument(viewService, undefined);
+      const viewSnapshot = viewService.snapshot();
+      assertViewDocumentTarget(options.project, options.document, viewDocument, viewSnapshot.view);
+      viewService.reconcile(projectLease.service.snapshot().project, viewSnapshot.revision);
+      const modifiedAt = await Promise.all([options.document, viewDocument].map(path => studioDocumentModifiedAt(projectContext, path)));
       const packages = createNleStudioPackageBridge(projectContext.packages);
       const surface = openNleEditingSurface(projectLease.service, viewService, {
         authoring: packages.authoring,
@@ -192,7 +212,9 @@ export class NleStudioProductSession {
         project: options.project,
         context: projectContext,
         projectDocument: options.document,
-        viewDocument: options.viewDocument,
+        viewDocument,
+        defaultView: options.viewDocument === undefined,
+        lastSavedAt: new Date(Math.max(...modifiedAt)).toISOString(),
         projectLease,
         viewLease,
         viewService,
@@ -276,9 +298,8 @@ export class NleStudioProductSession {
     const [media, preview] = await Promise.all([this.#projectMedia(), this.#preview.observe()]);
     return {
       projectDocument: { path: this.#projectDocument },
-      viewDocument: this.#viewDocument === undefined
-        ? { persistence: "session" }
-        : { persistence: "document", path: this.#viewDocument },
+      viewDocument: { persistence: "document", path: this.#viewDocument },
+      lastSavedAt: this.#lastSavedAt,
       open: observation.value,
       media,
       catalog: {
@@ -310,6 +331,7 @@ export class NleStudioProductSession {
       throw new Error("NLE Studio has no Project Media import port.");
     }
     await this.#mediaImport.adopt(request);
+    this.#lastSavedAt = new Date().toISOString();
     return await this.observe();
   }
 
@@ -521,29 +543,71 @@ export class NleStudioProductSession {
     return { inspector: observation.value };
   }
 
-  async save(): Promise<NleStudioSession> {
-    this.#assertOpen();
-    await nleProjectOwnerProvider.save(this.#context, this.#projectDocument, this.#projectLease.service);
-    if (this.#viewDocument !== undefined && this.#viewLease !== undefined) {
-      await nleViewOwnerProvider.save(this.#context, this.#viewDocument, this.#viewLease.service);
-    }
-    return await this.observe();
+  #withDocuments<T>(operation: () => Promise<T>): Promise<T> {
+    const project = this.#projectLease.service;
+    const previous = documentOperations.get(project) ?? Promise.resolve();
+    const next = previous.then(() => { this.#assertOpen(); return operation(); });
+    documentOperations.set(project, next.then(() => undefined, () => undefined));
+    return next;
   }
 
-  async reload(): Promise<NleStudioSession> {
-    this.#assertOpen();
-    await nleProjectOwnerProvider.reload(this.#context, this.#projectDocument, this.#projectLease.service);
-    if (this.#viewDocument !== undefined && this.#viewLease !== undefined) {
-      await nleViewOwnerProvider.reload(this.#context, this.#viewDocument, this.#viewLease.service);
-      assertViewDocumentTarget(this.#project, this.#projectDocument, this.#viewDocument, this.#viewLease.service);
-    } else {
-      const before = this.#viewService.snapshot();
-      this.#viewService.reload(
-        sessionView(this.#projectLease.service, this.#projectDocument, this.#viewService),
-        before.revision,
-      );
-    }
-    return await this.observe();
+  async #checkDocuments(): Promise<void> {
+    await assertStudioDocumentUnchanged(this.#context, this.#projectDocument, this.#projectLease.service);
+    await assertStudioDocumentUnchanged(this.#context, this.#viewDocument, this.#viewService);
+  }
+
+  checkDocuments(): Promise<void> {
+    return this.#withDocuments(() => this.#checkDocuments());
+  }
+
+  save(): Promise<NleStudioSession> {
+    return this.#withDocuments(async () => {
+      await this.#checkDocuments();
+      if (this.#projectLease.service.snapshot().dirty) {
+        await nleProjectOwnerProvider.save(this.#context, this.#projectDocument, this.#projectLease.service);
+        this.#lastSavedAt = new Date().toISOString();
+      }
+      if (this.#viewService.snapshot().dirty) {
+        await nleViewOwnerProvider.save(this.#context, this.#viewDocument, this.#viewService);
+        this.#lastSavedAt = new Date().toISOString();
+      }
+      return await this.observe();
+    });
+  }
+
+  reload(): Promise<NleStudioSession> {
+    return this.#withDocuments(async () => {
+      const projectService = this.#projectLease.service;
+      const projectSnapshot = projectService.snapshot();
+      const viewSnapshot = this.#viewService.snapshot();
+      const [projectContents, viewContents, projectModifiedAt, viewModifiedAt] = await Promise.all([
+        readStudioDocument(this.#context, this.#projectDocument),
+        readStudioDocument(this.#context, this.#viewDocument),
+        studioDocumentModifiedAt(this.#context, this.#projectDocument),
+        studioDocumentModifiedAt(this.#context, this.#viewDocument),
+      ]);
+      if (projectContents === undefined) throw new Error(`NLE Studio cannot reload missing document ${this.#projectDocument}.`);
+      if (viewContents === undefined && !this.#defaultView) throw new Error(`NLE Studio cannot reload missing document ${this.#viewDocument}.`);
+      const project = readNleProject(projectContents);
+      const view = viewContents === undefined
+        ? sessionView(project, basename(this.#projectDocument), viewSnapshot.view.id)
+        : readNleView(viewContents);
+      if (project.id !== projectSnapshot.project.id || view.id !== viewSnapshot.view.id) {
+        throw new Error("NLE Studio cannot reload a document with a different identity.");
+      }
+      assertViewDocumentTarget(this.#project, this.#projectDocument, this.#viewDocument, view);
+      const nextView = reconcileNleView(view, project);
+      const projectRevision = projectService.snapshot().revision;
+      const viewRevision = this.#viewService.snapshot().revision;
+      if (projectRevision !== projectSnapshot.revision) throw new NleRevisionConflict(projectSnapshot.revision, projectRevision);
+      if (viewRevision !== viewSnapshot.revision) throw new NleViewRevisionConflict(viewSnapshot.revision, viewRevision);
+      projectService.reload(project, projectRevision);
+      this.#viewService.reload(nextView, viewRevision);
+      rememberStudioDocument(projectService, projectContents);
+      rememberStudioDocument(this.#viewService, viewContents);
+      this.#lastSavedAt = new Date(Math.max(projectModifiedAt, viewModifiedAt)).toISOString();
+      return await this.observe();
+    });
   }
 
   close(): void {

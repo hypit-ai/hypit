@@ -24,14 +24,14 @@ The default address is `http://127.0.0.1:4317`. To open another project:
 pnpm --filter @hypit/nle-studio start -- --root /absolute/path/to/project --document edits/main.svml
 ```
 
-`--document` and `--view` are portable paths inside the selected Project Boundary. Pass `--view
-edits/main.nle-view.json` when durable View state is wanted. Without it, the Product Session creates a session-only
-View from the Project's root Composition. `--port` selects the loopback listener; port `0` asks the operating system
-for an available port. The service always binds to `127.0.0.1`.
+`--document` and `--view` are portable paths inside the selected Project Boundary. Studio uses the sibling
+`main.nle-view.json` for `main.svml` by default and creates it when the View is first edited. Use `--view` to select
+an existing View at a different path. `--port` selects the loopback listener. Port `0` uses an available port.
+The service binds to `127.0.0.1`.
 
 Current production behavior opens and projects Project/View state, renders the finite Timeline, Canvas and Inspector,
-accepts guarded commands, explicitly saves or reloads owner documents, imports local browser files and projects the
-shared Media catalog.
+accepts guarded commands, and imports local browser files into the shared Media catalog. Studio saves Project
+and View edits locally and prompts for a reload when an external edit conflicts.
 Audiovisual preview remains unavailable until a preview Executor port is supplied.
 
 Available entries in the browser Media bin can be placed at the current playhead. The client chooses a compatible

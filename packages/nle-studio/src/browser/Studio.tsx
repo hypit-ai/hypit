@@ -2,16 +2,19 @@ import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import { nleLinearTimeMapping, type NleCommand, type NleItem } from "@hypit/nle";
 import type { NleInspectorScene, NleViewCommand } from "@hypit/nle/view";
-import { Blend, Captions, Images, Maximize2, Minimize2, Pause, Play, Redo2, Save, StepBack, StepForward, Type, Undo2, Volume2, VolumeX, Wand2 } from "lucide-react";
+import { Dialog } from "@base-ui/react/dialog";
+import { Blend, Captions, Images, Maximize2, Minimize2, Pause, Play, Redo2, StepBack, StepForward, Type, Undo2, Volume2, VolumeX, Wand2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 import type {
   NleStudioAdjustCatalogEntry,
   NleStudioComponentCatalogEntry,
+  NleStudioConflict,
   NleStudioMediaEntry,
   NleStudioSession,
   NleStudioTransitionCatalogEntry,
 } from "../protocol.js";
 import {
+  checkSessionDocuments,
   materializeAdjust,
   materializeComponent,
   materializeTransition,
@@ -22,6 +25,7 @@ import {
   reloadSession,
   saveSession,
   sendCommand,
+  StudioConflictError,
 } from "./api.js";
 import { CanvasControls, type CanvasDraft } from "./CanvasControls.js";
 import { TimelineMedia } from "./TimelineMedia.js";
@@ -51,6 +55,8 @@ import { ProcessInspector } from "./ProcessInspector.js";
 import { catalogDragId, type CatalogDrag } from "./catalogDrag.js";
 import { EditorDialog } from "./EditorDialog.js";
 
+const localSaveTime = new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+
 function exactFrame(frame: number, session: NleStudioSession): ExactTemporalValue {
   const rate = session.open.timeline.editRate;
   return { ticks: String(frame * rate.denominator), timeBase: { numerator: 1, denominator: rate.numerator } };
@@ -73,6 +79,8 @@ export function Studio() {
   const history = useRef(new EditingHistory());
   const setSession = useCallback((next: NleStudioSession) => { history.current.observe(sessionRef.current, next); sessionRef.current = next; updateSession(next); }, []);
   const [failure, setFailure] = useState<string>();
+  const [conflict, setConflict] = useState<NleStudioConflict>();
+  const [conflictOpen, setConflictOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [selection, updateSelection] = useState<readonly string[]>([]);
   const selectionRef = useRef<readonly string[]>([]);
@@ -113,17 +121,32 @@ export function Studio() {
   };
 
   const focus = useCallback((): EditorFocus | undefined => sessionRef.current ? { composition: sessionRef.current.open.timeline.composition, frame: frameRef.current, selection: selectionRef.current } : undefined, []);
-  const perform = useCallback(async (operation: () => Promise<void>, recordHistory = true) => {
+  const perform = useCallback(async (operation: () => Promise<void>, recordHistory = true, autosave = true) => {
     if (inflight.current) return;
     inflight.current = true;
     if (recordHistory) history.current.begin(focus());
     setBusy(true); setFailure(undefined); setPlaying(false);
-    try { await operation(); }
-    catch (error) { setFailure(error instanceof Error ? error.message : String(error)); }
+    try {
+      if (autosave && sessionRef.current) {
+        await checkSessionDocuments();
+        setConflict(undefined);
+        setConflictOpen(false);
+      }
+      await operation();
+      const status = sessionRef.current?.open.status;
+      if (autosave && (status?.projectDirty || status?.viewDirty)) setSession(await saveSession());
+    } catch (error) {
+      if (error instanceof StudioConflictError) {
+        setConflict(error.conflict);
+        setConflictOpen(true);
+      } else {
+        setFailure(error instanceof Error ? error.message : String(error));
+      }
+    }
     finally { if (recordHistory) history.current.finish(focus()); inflight.current = false; setBusy(false); }
-  }, [focus]);
+  }, [focus, setSession]);
 
-  useEffect(() => { void perform(async () => setSession(await readSession()), false); }, []);
+  useEffect(() => { void perform(async () => setSession(await readSession()), false, false); }, []);
   const replayHistory = useCallback((direction: "undo" | "redo") => void perform(async () => {
     const current = sessionRef.current;
     if (!current || !history.current.available(current, direction)) return;
@@ -240,7 +263,7 @@ export function Studio() {
           const direction = event.shiftKey ? "redo" : "undo";
           replayHistory(direction);
         }
-        if (event.code === "KeyS") { event.preventDefault(); void perform(async () => setSession(await saveSession())); }
+        if (event.code === "KeyS") event.preventDefault();
         return;
       }
       if (event.code === "Space" && source === undefined) { event.preventDefault(); if (!event.repeat) setPlaying(value => !value); }
@@ -271,10 +294,21 @@ export function Studio() {
     .map(item => item.id) ?? []), [frame, session]);
 
   if (session === undefined) return <div className="nle-editor nle-loading">
-    {failure ? <button type="button" className="button" onClick={() => void perform(async () => setSession(await readSession()))}>重新打开</button> : <span role="status">正在打开 NLE Studio…</span>}
+    {failure ? <button type="button" className="button" onClick={() => void perform(async () => setSession(await readSession()), false, false)}>重新打开</button> : <span role="status">正在打开 NLE Studio…</span>}
     <ErrorNotice message={failure} onClose={() => undefined}/>
   </div>;
   const scene = session.open.timeline;
+  const dirty = session.open.status.projectDirty || session.open.status.viewDirty;
+  const savedAt = session.lastSavedAt ? localSaveTime.format(new Date(session.lastSavedAt)) : undefined;
+  const saveStatus = dirty ? busy ? "正在自动保存" : "有未保存的修改" : savedAt ? `${savedAt} 自动保存本地` : "自动保存本地";
+  const reload = () => void perform(async () => {
+    setSession(await reloadSession());
+    history.current.reset();
+    setCompositionParents([]);
+    select([]);
+    setConflict(undefined);
+    setConflictOpen(false);
+  }, false, false);
   const fps = scene.editRate.numerator / scene.editRate.denominator;
   const openComposition = (id: string, navigation: "tab" | "enter" | "back") => {
     if (id === scene.composition) return;
@@ -466,12 +500,21 @@ export function Studio() {
     "--nle-bin-preferred": `${panelWidths.bin}px`,
     "--nle-properties-preferred": `${panelWidths.properties}px`,
   } as React.CSSProperties}>
-      <div className="nle-titlebar"><div className="nle-titlebar-side"><small>{session.open.status.projectDirty || session.open.status.viewDirty ? "未保存" : "已保存"}</small></div><button type="button" className="nle-titlebar-name" disabled={busy} onClick={() => setRenameProject(true)} title="重命名项目">{projectName}</button><div className="nle-titlebar-side end"><div className="nle-toolbar-actions">
+      <div className="nle-titlebar"><div className="nle-titlebar-side">{conflict
+        ? <button type="button" className="button" onClick={() => setConflictOpen(true)}>自动保存暂停</button>
+        : <small>{saveStatus}</small>}</div><button type="button" className="nle-titlebar-name" disabled={busy} onClick={() => setRenameProject(true)} title="重命名项目">{projectName}</button><div className="nle-titlebar-side end"><div className="nle-toolbar-actions">
         <IconButton label="撤销" disabled={busy || !canUndo} onClick={() => replayHistory("undo")}><Undo2 size={16}/></IconButton>
         <IconButton label="重做" disabled={busy || !canRedo} onClick={() => replayHistory("redo")}><Redo2 size={16}/></IconButton>
-        <button className="button" disabled={busy} onClick={() => void perform(async () => { setSession(await reloadSession()); history.current.reset(); setCompositionParents([]); select([]); })}>重载</button>
-        <button className="button primary" disabled={busy || !session.open.status.projectDirty && !session.open.status.viewDirty} onClick={() => void perform(async () => setSession(await saveSession()))}><Save size={14}/>保存</button>
+        <button className="button" disabled={busy} onClick={() => { if (dirty && conflict) setConflictOpen(true); else reload(); }}>重载</button>
       </div></div></div>
+      <Dialog.Root open={conflictOpen} onOpenChange={setConflictOpen}>
+        <Dialog.Portal><Dialog.Backdrop className="studio-dialog-backdrop"/><Dialog.Popup className="studio-dialog modal">
+          <Dialog.Title>检测到编辑冲突</Dialog.Title>
+          <Dialog.Description>{conflict?.kind === "document" ? `磁盘上的 ${conflict.path} 已被外部修改。` : "项目状态已在另一处更新。"}{dirty ? "重载会丢弃 Studio 中尚未保存的修改。" : "重载后可继续编辑。"} </Dialog.Description>
+          {failure && <p role="alert">{failure}</p>}
+          <footer><button type="button" className="button" disabled={busy} onClick={() => setConflictOpen(false)}>暂不处理</button><button type="button" className="button primary" disabled={busy} onClick={reload}>重载磁盘版本</button></footer>
+        </Dialog.Popup></Dialog.Portal>
+      </Dialog.Root>
       <ErrorNotice message={failure} onClose={() => setFailure(undefined)}/>{renameProject && <EditorDialog title="重命名项目" initialName={projectName} onClose={() => setRenameProject(false)} onSubmit={name => transact([{ kind: "project.update", name }])}/>}
       <div className="nle-upper">
         <aside className="nle-bin"><div className="nle-bin-tabs" role="tablist">{(Object.keys(icons) as BinTab[]).map(id => { const Icon = icons[id]; return <button type="button" role="tab" aria-selected={binTab === id} key={id} onClick={() => setBinTab(id)}><Icon size={18} strokeWidth={1.6}/><span>{tabNames[id]}</span></button>; })}</div><AnimatePresence mode="popLayout" initial={false}><motion.div key={binTab} className="nle-bin-body" {...enterMotion(reduced)}><StudioBin tab={binTab} catalog={session.catalog} media={session.media} disabled={busy} onImportMedia={importProjectMedia} onPlaceMedia={placeProjectMedia} selectedMedia={source?.id} onPreviewMedia={entry => { setPlaying(false); setSource(entry); }} onBeginMediaDrag={assetDrag.start} onBeginPresetDrag={(event, value) => assetDrag.start(event, { id: catalogDragId(value), name: value.entry.title, kind: value.kind === "effect" && value.entry.medium === "audio" ? "audio" : "picture", state: "available" })} onMaterialize={materialize} onMaterializeAdjust={materializeEffect} onMaterializeTransition={materializeSelectedTransition}/></motion.div></AnimatePresence></aside>

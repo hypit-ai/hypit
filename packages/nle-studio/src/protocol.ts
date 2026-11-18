@@ -51,6 +51,7 @@ export type NleStudioPreviewProjection =
 
 export type NleStudioSession = {
   readonly projectDocument: { readonly path: string };
+  readonly lastSavedAt?: string;
   readonly viewDocument:
     | { readonly persistence: "session" }
     | { readonly persistence: "document"; readonly path: string };
@@ -59,6 +60,10 @@ export type NleStudioSession = {
   readonly catalog: NleStudioCatalogProjection;
   readonly preview: NleStudioPreviewProjection;
 };
+
+export type NleStudioConflict =
+  | { readonly kind: "document"; readonly path: string }
+  | { readonly kind: "revision" };
 
 export type NleStudioCommandRequest = {
   readonly command: NleEditingSurfaceCommand;

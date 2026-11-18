@@ -8,10 +8,12 @@ import { fileURLToPath } from "node:url";
 import type { NodeApplicationProductAdapter } from "@hypit/application/node";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import { NleStudioProductSession, nleStudioProduct } from "./host.js";
+import { NleStudioDocumentConflict } from "./owner-providers.js";
 import type {
   NleStudioAdjustMaterializeRequest,
   NleStudioCommandRequest,
   NleStudioComponentMaterializeRequest,
+  NleStudioConflict,
   NleStudioInspectorRequest,
   NleStudioMediaPlaceRequest,
   NleStudioSession,
@@ -219,6 +221,11 @@ export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
         sendJson(response, 200, await studio.save());
         return true;
       }
+      if (request.method === "POST" && pathname === "/api/documents/check") {
+        await studio.checkDocuments();
+        sendJson(response, 200, {});
+        return true;
+      }
       if (request.method === "POST" && pathname === "/api/reload") {
         sendJson(response, 200, await studio.reload());
         return true;
@@ -237,8 +244,10 @@ export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
       }
       return request.method === "GET" && await sendStatic(response, pathname);
     } catch (error) {
-      const conflict = error instanceof Error && error.name.includes("RevisionConflict");
-      sendJson(response, conflict ? 409 : 400, { error: error instanceof Error ? error.message : String(error) });
+      const conflict: NleStudioConflict | undefined = error instanceof NleStudioDocumentConflict
+        ? { kind: "document", path: error.path }
+        : error instanceof Error && error.name.includes("RevisionConflict") ? { kind: "revision" } : undefined;
+      sendJson(response, conflict ? 409 : 400, { error: error instanceof Error ? error.message : String(error), ...(conflict ? { conflict } : {}) });
       return true;
     }
   },
