@@ -1,6 +1,6 @@
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
-import { nleLinearTimeMapping, type NleCommand, type NleItem } from "@hypit/nle";
+import { nleCompositionDuration, nleLinearTimeMapping, type NleCommand, type NleItem } from "@hypit/nle";
 import type { NleInspectorScene, NleViewCommand } from "@hypit/nle/view";
 import { Dialog } from "@base-ui/react/dialog";
 import { Blend, Captions, Images, Maximize2, Minimize2, Pause, Play, Redo2, StepBack, StepForward, Type, Undo2, Volume2, VolumeX, Wand2 } from "lucide-react";
@@ -48,7 +48,7 @@ import { ErrorNotice } from "./ErrorNotice.js";
 import { enterMotion } from "./motion.js";
 import { useEditorPosition } from "./useEditorPosition.js";
 import { EditingHistory, type EditorFocus } from "./editingHistory.js";
-import { activeComposition as compositionOf, canFreezeItem, changeSpeed, closeTrackGaps, createCompound, duplicateCompound, editTransitionDuration, frameOf, frameTime, freezeItem, identity, magneticEdit, moveItemEditPlan, removeItems, reverseItems, rippleRemove, unpackCompound, type EditPlan } from "./editPlans.js";
+import { activeComposition as compositionOf, canFreezeItem, changeSpeed, closeTrackGaps, createCompound, duplicateCompound, editTransitionDuration, frameOf, frameTime, freezeItem, identity, magneticEdit, moveItemEditPlan, removeItems, reverseItems, rippleRemove, slipItems, unpackCompound, type EditPlan } from "./editPlans.js";
 import { TransitionInspector } from "./TransitionInspector.js";
 import { transitionCutAt, transitionCuts } from "./transitionCuts.js";
 import { TemporalInspector } from "./TemporalInspector.js";
@@ -359,6 +359,14 @@ export function Studio() {
   const selectedTransition = activeComposition.transitions.find(value => value.id === transitionId);
   const selectedSceneItem = scene.tracks.flatMap(track => track.items).find(item => item.id === selection[0]);
   const selectionLocked = scene.tracks.some(track => track.locked && track.items.some(item => selection.includes(item.id)));
+  const slipTargets = writableSelection.map(id => {
+    const item = projectItems.get(id)!;
+    const nested = item.kind === "present" && item.source === "composition"
+      ? session.open.project.project.compositions.find(value => value.id === item.composition) : undefined;
+    return { item, sourceDuration: nested ? nleCompositionDuration(nested) : mediaForItem(item)?.duration };
+  });
+  const slipEarlier = slipItems(slipTargets, frameTime(session, -1));
+  const slipLater = slipItems(slipTargets, frameTime(session, 1));
   const canFreeze = selection.length === 1 && !selectionLocked && !!selectedProjectItem && canFreezeItem(session, selectedProjectItem, frame);
   const freezeSelection = () => {
     if (canFreeze && selectedProjectItem) applyPlan(() => freezeItem(session, selectedProjectItem, frame));
@@ -580,7 +588,8 @@ export function Studio() {
             onStart={value => transact([{ kind: "item.move", ids: editableSelection(scene, selection), delta: frameTime(session, value - selectedSceneItem.startFrame) }])}
             onDuration={value => transact([{ kind: "item.trim", id: selectedProjectItem.id, edge: "end", at: frameTime(session, selectedSceneItem.startFrame + value) }])}
             onSpeed={value => applyPlan(() => changeSpeed(session, selection, value))} onReverse={() => applyPlan(() => reverseItems(session, selection))}
-            onSlip={value => transact(editableSelection(scene, selection).map(id => ({ kind: "item.slip", id, delta: frameTime(session, value) })))}
+            onSlipEarlier={slipEarlier && (() => transact(slipEarlier))}
+            onSlipLater={slipLater && (() => transact(slipLater))}
             canFreeze={canFreeze} onFreeze={freezeSelection}/><ProcessInspector item={selectedProjectItem} disabled={busy || selectionLocked} onEdit={transact}/></>}</motion.div>}</AnimatePresence></aside>
       </div>
       <AnimatePresence mode="popLayout" initial={false}><Timeline key={`${session.projectDocument.path}/${scene.composition}`} session={session} frame={frame} selection={selection} busy={busy} onSelectTransition={id => { setTransitionId(id); setPropertiesTab("properties"); }} selectedTransition={transitionId} onSeek={value => { setPlaying(false); setSource(undefined); setFrame(value); }} onSelect={select}

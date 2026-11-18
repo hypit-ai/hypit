@@ -263,9 +263,13 @@ export class NleStudioProductSession {
         );
         const durationFrames = projectedFrames !== undefined && Number.isSafeInteger(projectedFrames)
           && projectedFrames > 0 ? projectedFrames : undefined;
+        const timing = {
+          ...(entry.duration === undefined ? {} : { duration: entry.duration }),
+          ...(durationFrames === undefined ? {} : { durationFrames }),
+        };
         if (entry.state === "missing") {
           return { id: entry.reference.path, name, kind, state: "missing" as const, mediaType: entry.mediaType,
-            ...(durationFrames === undefined ? {} : { durationFrames }),
+            ...timing,
             ...(entry.diagnostic === undefined ? {} : { diagnostic: entry.diagnostic }) };
         }
         try {
@@ -275,10 +279,10 @@ export class NleStudioProductSession {
             this.#mediaResources.set(entry.reference.path, resource);
           }
           return { id: entry.reference.path, name, kind, state: "available" as const, mediaType: entry.mediaType,
-            ...(durationFrames === undefined ? {} : { durationFrames }),
+            ...timing,
             resource: `api/resources/${encodeURIComponent(resource.token)}` };
         } catch (error) {
-          return { id: entry.reference.path, name, kind, state: "missing" as const,
+          return { id: entry.reference.path, name, kind, state: "missing" as const, ...timing,
             diagnostic: error instanceof Error ? error.message : String(error) };
         }
       })),

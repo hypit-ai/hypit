@@ -2,7 +2,7 @@ import type { NleItem } from "@hypit/nle";
 import { NumberField, Row, Section, Toggle } from "./controls.js";
 import { uniformSpeed } from "./editPlans.js";
 
-export function TemporalInspector({ item, start, duration, disabled, onStart, onDuration, onSpeed, onReverse, onSlip, canFreeze, onFreeze }: {
+export function TemporalInspector({ item, start, duration, disabled, onStart, onDuration, onSpeed, onReverse, onSlipEarlier, onSlipLater, canFreeze, onFreeze }: {
   readonly item: NleItem;
   readonly start: number;
   readonly duration: number;
@@ -11,7 +11,8 @@ export function TemporalInspector({ item, start, duration, disabled, onStart, on
   readonly onDuration: (frames: number) => void;
   readonly onSpeed: (speed: number) => void;
   readonly onReverse: () => void;
-  readonly onSlip: (frames: number) => void;
+  readonly onSlipEarlier: (() => void) | undefined;
+  readonly onSlipLater: (() => void) | undefined;
   readonly onFreeze: () => void;
   readonly canFreeze: boolean;
 }) {
@@ -20,7 +21,10 @@ export function TemporalInspector({ item, start, duration, disabled, onStart, on
     <Section title="时间">
       <Row label="起始帧"><NumberField label="起始帧" value={start} min={0} precision={0} disabled={disabled} onCommit={value => onStart(Math.round(value))}/></Row>
       <Row label="持续帧数"><NumberField label="持续帧数" value={duration} min={1} precision={0} disabled={disabled} onCommit={value => onDuration(Math.round(value))}/></Row>
-      <Row label="素材偏移"><button className="button small" disabled={disabled} onClick={() => onSlip(-1)}>前移一帧</button><button className="button small" disabled={disabled} onClick={() => onSlip(1)}>后移一帧</button></Row>
+      <Row label="素材偏移">
+        <button type="button" className="button small" disabled={disabled || !onSlipEarlier} onClick={onSlipEarlier}>前移一帧</button>
+        <button type="button" className="button small" disabled={disabled || !onSlipLater} onClick={onSlipLater}>后移一帧</button>
+      </Row>
     </Section>
     {item.kind === "present" && <Section title="变速">
       <Row label="倍速">{speed !== undefined && speed !== 0 ? <NumberField label="倍速" value={Math.abs(speed)} min={0.01} max={100} step={0.1} disabled={disabled} onCommit={onSpeed}/> : <output>{speed === 0 ? "定格" : "分段时间映射"}</output>}</Row>

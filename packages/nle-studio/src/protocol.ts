@@ -9,6 +9,7 @@ export type NleStudioMediaEntry = {
   readonly kind: "picture" | "audio" | "audiovisual" | "unknown";
   readonly state: "available" | "missing" | "invalid";
   readonly mediaType?: string;
+  readonly duration?: ExactTemporalValue;
   readonly durationFrames?: number;
   readonly resource?: string;
   readonly diagnostic?: string;

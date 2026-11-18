@@ -1,4 +1,4 @@
-import { applyNleTransaction, fitNlePictureContent, nleItemEnd, nleLinearTimeMapping, resolveNlePictureLayout, sliceNleTimeMapping, type NleCommand, type NleComposition, type NleItem, type NleProcess, type NleTimeMapping, type NleTrack } from "@hypit/nle";
+import { applyNleTransaction, fitNlePictureContent, nleItemEnd, nleLinearTimeMapping, nleTimeMappingRequiredDuration, resolveNlePictureLayout, shiftNleTimeMapping, sliceNleTimeMapping, type NleCommand, type NleComposition, type NleItem, type NleProcess, type NleTimeMapping, type NleTrack } from "@hypit/nle";
 import { addExactTemporalValues as add, compareExactTemporalValues as compare, exactTemporalZero, extrapolateTemporalAffineMapPiece, isAffineTemporalMapPiece, scaleExactTemporalValue as scale, subtractExactTemporalValues as subtract, type ExactTemporalValue, type TemporalRate } from "@hypit/temporal/algebra";
 import type { NleViewCommand } from "@hypit/nle/view";
 import type { NleStudioSession } from "../protocol.js";
@@ -12,6 +12,24 @@ export const activeComposition = (session: NleStudioSession) => session.open.pro
 export function frameTime(session: NleStudioSession, frame: number): ExactTemporalValue {
   const rate = session.open.timeline.editRate;
   return { ticks: String(Math.round(frame) * rate.denominator), timeBase: { numerator: 1, denominator: rate.numerator } };
+}
+export function slipItems(
+  targets: readonly { readonly item: NleItem; readonly sourceDuration: ExactTemporalValue | undefined }[],
+  delta: ExactTemporalValue,
+): readonly NleCommand[] | undefined {
+  if (!targets.length) return undefined;
+  const commands: NleCommand[] = [];
+  for (const { item, sourceDuration } of targets) {
+    const mapping = item.kind === "adjust" ? item.controlTime : item.sourceTime;
+    try {
+      const shifted = shiftNleTimeMapping(mapping, item.duration, delta);
+      if (sourceDuration !== undefined && compare(nleTimeMappingRequiredDuration(shifted), sourceDuration) > 0) return undefined;
+    } catch {
+      return undefined;
+    }
+    commands.push({ kind: "item.slip", id: item.id, delta });
+  }
+  return commands;
 }
 export const frameOf = (session: NleStudioSession, time: ExactTemporalValue) => Number(time.ticks) * time.timeBase.numerator / time.timeBase.denominator * session.open.timeline.editRate.numerator / session.open.timeline.editRate.denominator;
 const maximum = (a: ExactTemporalValue, b: ExactTemporalValue) => compare(a, b) >= 0 ? a : b;
