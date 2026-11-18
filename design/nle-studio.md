@@ -93,8 +93,10 @@ byte ranges without publishing filesystem paths.
 A Component materialization operation carries the selected package and offering id, destination, Item id, frame-grid
 placement and exact session revisions. The backend resolves only an offering selected by the Project manifest, calls
 the NLE Component materialization planner and submits the resulting transaction through the same Surface. Component
-offerings resolve through the ProjectHost's selected Package Environment. Package Timeline artwork, when present,
-stays process-local and is exposed through an opaque same-origin presentation resource route.
+offerings resolve through the ProjectHost's selected Package Environment. A subtitle offering produces a subtitle
+Component Present on a dedicated subtitle Track. Studio reuses a subtitle Track with sufficient space or creates one.
+Package Timeline artwork, when present, stays process-local and is exposed through an opaque same-origin presentation
+resource route.
 
 An Adjust materialization resolves one selected effect offering and creates an independently timed Item on a
 compatible Picture or Audio Track. A Transition materialization resolves one selected transition offering and an

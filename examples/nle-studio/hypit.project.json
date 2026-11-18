@@ -4,7 +4,7 @@
   "packages": [
     {
       "name": "@hypit/studio-components",
-      "catalog": ["editorial-title"]
+      "catalog": ["editorial-title", "subtitle"]
     },
     {
       "name": "@hypit/studio-operators",

@@ -1,4 +1,4 @@
-import type { NleTimelineScene } from "@hypit/nle/view";
+import type { NleTimelineScene, NleTimelineSceneTrack } from "@hypit/nle/view";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
 import type { NleStudioMediaEntry } from "../protocol.js";
 import type { MediaDrop } from "./mediaDrag.js";
@@ -10,7 +10,10 @@ export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObjec
   const [drag, setDrag] = useState<{ entry: NleStudioMediaEntry; x: number; y: number; drop?: MediaDrop }>();
   const cancel = useRef<() => void>(() => undefined);
   useEffect(() => () => cancel.current(), [scene, busy]);
-  const start = (event: ReactPointerEvent, entry: NleStudioMediaEntry, cuts?: readonly TransitionCut[]) => {
+  const start = (event: ReactPointerEvent, entry: NleStudioMediaEntry, { cuts, role }: {
+    cuts?: readonly TransitionCut[];
+    role?: NleTimelineSceneTrack["role"];
+  } = {}) => {
     if (event.button !== 0 || !scene || busy || entry.state !== "available") return;
     cancel.current(); event.preventDefault();
     const handle = event.currentTarget, pointerId = event.pointerId, x = event.clientX, y = event.clientY;
@@ -25,7 +28,7 @@ export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObjec
       if (viewport && target) {
         const pixels = Number(viewport.dataset.framePixels), bounds = viewport.getBoundingClientRect();
         const track = scene.tracks.find(track => track.id === target.dataset.nleDrop);
-        const compatible = !track || !track.locked && track.kind === (entry.kind === "audio" ? "audio" : "picture");
+        const compatible = !track || !track.locked && (cuts !== undefined || track.role === role) && track.kind === (entry.kind === "audio" ? "audio" : "picture");
         if (pixels > 0 && compatible && pointer.x >= bounds.left + labelWidth && pointer.y >= bounds.top + rulerHeight) {
           const position = (pointer.x - bounds.left - labelWidth + viewport.scrollLeft) / pixels;
           let at = Math.max(0, Math.round(position));

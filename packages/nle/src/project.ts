@@ -288,9 +288,16 @@ function assertItem(value: unknown, track: NleTrack, ids: Set<string>): asserts 
     onlyKeys(value, value.source === "media"
       ? [...present, "asset"]
       : value.source === "component"
-        ? [...present, "component", "sharedValueBindings", "parameters", "media"]
+        ? [...present, "component", "role", "sharedValueBindings", "parameters", "media"]
         : [...present, "composition"], label);
   }
+  if (value.role !== undefined) {
+    assert(value.role === "subtitle", `${label}.role is invalid.`);
+  }
+  const subtitle = value.kind === "present" && value.source === "component" && value.role === "subtitle";
+  assert(subtitle === (track.role === "subtitle"),
+    `${label} must use a Track with a matching subtitle role.`);
+  if (subtitle) assert(value.audio === undefined, `${label} cannot include Audio.`);
   identity(value.id, `${label}.id`);
   assert(!ids.has(value.id), `NLE Project repeats Item ${value.id}.`);
   ids.add(value.id);
@@ -360,12 +367,14 @@ function assertItem(value: unknown, track: NleTrack, ids: Set<string>): asserts 
 
 function assertTrack(value: unknown, trackIds: Set<string>, itemIds: Set<string>): asserts value is NleTrack {
   record(value, "NLE Track");
-  onlyKeys(value, ["id", "name", "kind", "enabled", "items"], "NLE Track");
+  onlyKeys(value, ["id", "name", "kind", "role", "enabled", "items"], "NLE Track");
   identity(value.id, "NLE Track.id");
   assert(!trackIds.has(value.id), `NLE Composition repeats Track ${value.id}.`);
   trackIds.add(value.id);
   text(value.name, `NLE Track ${value.id}.name`);
   assert(value.kind === "picture" || value.kind === "audio", `NLE Track ${value.id}.kind is invalid.`);
+  assert(value.role === undefined || value.role === "subtitle" && value.kind === "picture",
+    `NLE Track ${value.id}.role requires a Picture Track with a valid role.`);
   assert(typeof value.enabled === "boolean", `NLE Track ${value.id}.enabled must be boolean.`);
   assert(Array.isArray(value.items), `NLE Track ${value.id}.items must be an array.`);
   for (const item of value.items) assertItem(item, value as unknown as NleTrack, itemIds);

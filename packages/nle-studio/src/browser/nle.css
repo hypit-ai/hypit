@@ -278,7 +278,7 @@
 .nle-ruler-scale > span { position: absolute; top: 0; height: 100%; padding: 7px 0 0 4px; color: var(--muted); font-size: 10px; line-height: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
 .nle-ruler-scale > span::before { content: ''; position: absolute; left: 0; top: 8px; height: 10px; width: 1px; background: var(--nle-tick); }
 .nle-ruler-scale > span::after { content: ''; position: absolute; left: var(--minor); top: 13px; height: 5px; width: 1px; background: var(--nle-tick-minor); }
-.nle-track { display: flex; flex-shrink: 0; height: 62px; padding: 3px 0; box-sizing: border-box; transition: height .15s; }
+.nle-track { display: flex; flex-shrink: 0; height: 62px; padding: 3px 0; box-sizing: border-box; }
 .nle-track.main { height: 86px; }
 .nle-tracks > .nle-track-top { display: flex; flex: 0 0 var(--nle-track-padding, 62px); }
 .nle-track-top .nle-track-space { min-height: 0; }
@@ -520,7 +520,6 @@
 .nle-clip.effect { --clip: #53666b; }
 .nle-track.compact .nle-clip-title, .nle-clip-ghost.compact .nle-clip-title { top: 50%; transform: translateY(-50%); }
 .nle-clip.text .nle-clip-text { display: none; }
-@media (prefers-reduced-motion: reduce) { .nle-track { transition: none; } }
 
 .nle-asset-drag.effect-element { width: 160px; height: 30px; padding: 0; background: #53666b; border: 1px solid var(--nle-line); color: #fff; }
 .nle-asset-drag.effect-element .nle-clip-title { top: 50%; transform: translateY(-50%); }

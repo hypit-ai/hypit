@@ -149,6 +149,7 @@ export type NleMediaItem = NlePresentBase & {
 
 export type NleComponentItem = NlePresentBase & {
   readonly source: "component";
+  readonly role?: "subtitle";
   readonly component: PackageSymbol;
   /** Reusable package-defined slots remain distinct from occurrence-local parameters. */
   readonly sharedValueBindings?: readonly NleComponentSharedValueBinding[];
@@ -176,6 +177,7 @@ export type NleTrack = {
   readonly id: string;
   readonly name: string;
   readonly kind: "picture" | "audio";
+  readonly role?: "subtitle";
   readonly enabled: boolean;
   /** Picture Tracks and their Items are ordered back-to-front. */
   readonly items: readonly NleItem[];

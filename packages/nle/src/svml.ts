@@ -371,7 +371,7 @@ function readAudio(value: XmlElement): NleAudioAppearance {
 }
 
 function readPresent(value: XmlElement): NlePresentItem {
-  attributes(value, ["id", "source", "start", "duration", "enabled"], ["name"]);
+  attributes(value, ["id", "source", "start", "duration", "enabled"], ["name", "role"]);
   assertChildren(value, [
     "source-time", "media", "component", "composition", "parameters", "shared", "media-input", "picture", "audio",
   ]);
@@ -387,6 +387,8 @@ function readPresent(value: XmlElement): NlePresentItem {
     ...(optionalChild(value, "audio") === undefined ? {} : { audio: readAudio(optionalChild(value, "audio")!) }),
   };
   const source = attr(value, "source");
+  const role = optionalAttr(value, "role");
+  if (role !== undefined && (source !== "component" || role !== "subtitle")) fail("<present> role requires a subtitle Component.");
   if (source === "media") {
     assertChildren(value, ["source-time", "media", "picture", "audio"]);
     const media = onlyChild(value, "media");
@@ -413,6 +415,7 @@ function readPresent(value: XmlElement): NlePresentItem {
       ...base,
       source,
       component: packageSymbol(component),
+      ...(role === "subtitle" ? { role } : {}),
       parameters: jsonObject(onlyChild(value, "parameters")),
       ...(bindings.length === 0 ? {} : { sharedValueBindings: bindings }),
       ...(media.length === 0 ? {} : { media: Object.fromEntries(media) }),
@@ -445,12 +448,15 @@ function readAdjust(value: XmlElement): NleItem {
 }
 
 function readTrack(value: XmlElement): NleTrack {
-  attributes(value, ["id", "name", "kind", "enabled"]);
+  attributes(value, ["id", "name", "kind", "enabled"], ["role"]);
   assertChildren(value, ["present", "adjust"]);
+  const role = optionalAttr(value, "role");
+  if (role !== undefined && role !== "subtitle") fail(`<track> role ${role} is invalid.`);
   return {
     id: attr(value, "id"),
     name: attr(value, "name"),
     kind: attr(value, "kind") as NleTrack["kind"],
+    ...(role === undefined ? {} : { role }),
     enabled: booleanAttr(value, "enabled"),
     items: value.children.map((child) => child.name === "present" ? readPresent(child) : readAdjust(child)),
   };
@@ -631,6 +637,7 @@ function audio(value: NleAudioAppearance, depth: number): string {
 function present(value: NlePresentItem, depth: number): string {
   const indent = "  ".repeat(depth);
   let result = `${indent}<present${a("id", value.id)}${a("name", value.name)}${a("source", value.source)}`
+    + `${a("role", value.source === "component" ? value.role : undefined)}`
     + `${a("start", exact(value.start))}${a("duration", exact(value.duration))}${a("enabled", value.enabled)}>\n`;
   if (value.source === "media") result += `${indent}  <media${a("path", value.asset.path)} />\n`;
   else if (value.source === "component") {
@@ -662,7 +669,7 @@ function adjust(value: Extract<NleItem, { readonly kind: "adjust" }>, depth: num
 function track(value: NleTrack, depth: number): string {
   const indent = "  ".repeat(depth);
   let result = `${indent}<track${a("id", value.id)}${a("name", value.name)}${a("kind", value.kind)}`
-    + `${a("enabled", value.enabled)}>\n`;
+    + `${a("role", value.role)}${a("enabled", value.enabled)}>\n`;
   for (const item of value.items) result += item.kind === "present" ? present(item, depth + 1) : adjust(item, depth + 1);
   return `${result}${indent}</track>\n`;
 }

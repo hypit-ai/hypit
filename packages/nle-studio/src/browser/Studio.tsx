@@ -368,24 +368,26 @@ export function Studio() {
     command({ kind: "inspector.edit", expectedProjectRevision: session.open.status.projectRevision,
       expectedViewRevision: session.open.status.viewRevision, item, section, field, value });
   };
-  const ensureTrack = async (medium: "picture" | "audio", drop?: MediaDrop, componentDuration?: ExactTemporalValue) => {
+  const ensureTrack = async (medium: "picture" | "audio", drop?: MediaDrop, componentDuration?: ExactTemporalValue, role?: "subtitle") => {
     let current = sessionRef.current!;
     const timeline = current.open.timeline, composition = compositionOf(current);
     const fits = (track: typeof timeline.tracks[number]) => componentDuration === undefined
-      ? !track.locked && track.kind === medium
-      : componentFitsTrack(current, track, drop?.frame ?? frame, componentDuration);
+      ? !track.locked && track.kind === medium && track.role === role
+      : componentFitsTrack(current, track, drop?.frame ?? frame, componentDuration, role);
     let destination = timeline.tracks.find(track => track.id === drop?.track && fits(track)) ?? (!drop?.track ? timeline.tracks.find(fits) : undefined);
     if (!destination) {
       const track = identity("track"), targetIndex = composition.tracks.findIndex(track => track.id === drop?.track);
-      const before = targetIndex >= 0 ? composition.tracks[targetIndex + 1]?.id : medium === "picture" ? composition.tracks.find(track => track.kind === "audio")?.id : undefined;
+      const before = targetIndex >= 0 ? composition.tracks[targetIndex + 1]?.id
+        : role === "subtitle" ? composition.tracks[composition.tracks.findLastIndex(track => track.kind === "picture") + 1]?.id
+        : medium === "picture" ? composition.tracks.find(track => track.kind === "audio")?.id : undefined;
       current = await sendCommand({ kind: "project.transact", expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision,
-        commands: [{ kind: "track.add", composition: timeline.composition, track: { id: track, name: medium === "picture" ? "画面轨道" : "音频轨道", kind: medium, enabled: true, items: [] }, ...(before ? { before } : {}) }] });
+        commands: [{ kind: "track.add", composition: timeline.composition, track: { id: track, name: role === "subtitle" ? "字幕轨道" : medium === "picture" ? "画面轨道" : "音频轨道", kind: medium, ...(role === undefined ? {} : { role }), enabled: true, items: [] }, ...(before ? { before } : {}) }] });
       setSession(current); destination = current.open.timeline.tracks.find(value => value.id === track)!;
     }
     return { current, destination };
   };
   const materialize = (entry: NleStudioComponentCatalogEntry, drop?: MediaDrop) => void perform(async () => {
-    const { current, destination } = await ensureTrack("picture", drop, entry.duration), item = identity("component");
+    const { current, destination } = await ensureTrack("picture", drop, entry.duration, entry.category === "subtitle" ? "subtitle" : undefined), item = identity("component");
     const next = await materializeComponent({ expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision,
       package: entry.package, offering: entry.offering, item, composition: current.open.timeline.composition, track: destination.id, atFrame: drop?.frame ?? frame });
     setSession(next); setSelection([item]); setSource(undefined); setTransitionId(undefined); setFrame(drop?.frame ?? frame);
@@ -525,7 +527,10 @@ export function Studio() {
         <aside className="nle-bin"><div className="nle-bin-tabs" role="tablist">{(Object.keys(icons) as BinTab[]).map(id => { const Icon = icons[id]; return <button type="button" role="tab" aria-selected={binTab === id} key={id} onClick={() => setBinTab(id)}><Icon size={18} strokeWidth={1.6}/><span>{tabNames[id]}</span></button>; })}</div><AnimatePresence mode="popLayout" initial={false}><motion.div key={binTab} className="nle-bin-body" {...enterMotion(reduced)}><StudioBin tab={binTab} catalog={session.catalog} media={session.media} disabled={busy} onImportMedia={importProjectMedia} onPlaceMedia={placeProjectMedia} selectedMedia={source?.id} onPreviewMedia={entry => { setPlaying(false); setSource(entry); }} onBeginMediaDrag={assetDrag.start} onBeginPresetDrag={(event, value) => assetDrag.start(event, {
           id: catalogDragId(value), name: value.entry.title, kind: value.kind === "effect" && value.entry.medium === "audio" ? "audio" : "picture", state: "available",
           ...(value.kind === "component" ? { durationFrames: frameOf(session, value.entry.duration) } : {}),
-        }, value.kind === "transition" ? transitionCuts(session) : undefined)} onMaterialize={materialize} onMaterializeAdjust={materializeEffect} onMaterializeTransition={materializeSelectedTransition}/></motion.div></AnimatePresence></aside>
+        }, {
+          ...(value.kind === "transition" ? { cuts: transitionCuts(session) } : {}),
+          ...(value.kind === "component" && value.entry.category === "subtitle" ? { role: "subtitle" } : {}),
+        })} onMaterialize={materialize} onMaterializeAdjust={materializeEffect} onMaterializeTransition={materializeSelectedTransition}/></motion.div></AnimatePresence></aside>
         <PanelResizeHandle side="bin" label="调整素材面板宽度" width={panelWidths.bin} onResize={(width, save) => resizePanel("bin", width, save)}/>
         <section className="nle-monitor"><div className="nle-panel-header nle-monitor-title"><span>{projectName}</span><IconButton label={previewExpanded ? "恢复预览" : "放大预览"} onClick={() => setPreviewExpanded(value => !value)}>{previewExpanded ? <Minimize2 size={15}/> : <Maximize2 size={15}/>}</IconButton></div>
           <SourcePreview entry={source} fps={fps} muted={muted} onMute={() => setMuted(value => !value)} onClose={() => setSource(undefined)}/><div className="nle-stage"><div className="nle-editable-preview" style={{ "--canvas-ratio": session.open.canvas.canvas.width / session.open.canvas.canvas.height } as React.CSSProperties}><div className="studio-canvas">

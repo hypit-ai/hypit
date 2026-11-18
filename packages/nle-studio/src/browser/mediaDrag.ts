@@ -18,13 +18,13 @@ export function mediaFitsTrack(track: NleTimelineSceneTrack, kind: NleStudioMedi
     && track.items.every(item => atFrame + durationFrames <= item.startFrame || atFrame >= item.startFrame + item.durationFrames);
 }
 
-export function mediaTrackCompatible(track: NleTimelineSceneTrack, kind: NleStudioMediaEntry["kind"]): boolean {
-  return track.kind === (kind === "audio" ? "audio" : "picture") && !track.locked
+export function mediaTrackCompatible(track: NleTimelineSceneTrack, kind: NleStudioMediaEntry["kind"], role?: NleTimelineSceneTrack["role"]): boolean {
+  return track.kind === (kind === "audio" ? "audio" : "picture") && !track.locked && track.role === role
     && track.items.every(item => item.role !== "adjust");
 }
 
-export function componentFitsTrack(session: NleStudioSession, track: NleTimelineSceneTrack, atFrame: number, duration: ExactTemporalValue): boolean {
-  if (!mediaTrackCompatible(track, "picture")) return false;
+export function componentFitsTrack(session: NleStudioSession, track: NleTimelineSceneTrack, atFrame: number, duration: ExactTemporalValue, role?: NleTimelineSceneTrack["role"]): boolean {
+  if (!mediaTrackCompatible(track, "picture", role)) return false;
   const start = frameTime(session, atFrame), end = add(start, duration);
   return activeComposition(session).tracks.find(row => row.id === track.id)?.items.every(item =>
     compare(end, item.start) <= 0 || compare(start, nleItemEnd(item)) >= 0) ?? false;

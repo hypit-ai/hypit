@@ -433,6 +433,7 @@ export class NleStudioProductSession {
       id: request.item,
       track: request.track,
       component: offering.value.component,
+      ...(offering.value.category === "subtitle" ? { role: "subtitle" } : {}),
       parameters: offering.value.parameters,
       at: frameTime(request.atFrame),
       duration: request.durationFrames === undefined

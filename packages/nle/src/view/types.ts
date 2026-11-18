@@ -1,7 +1,7 @@
 import type { TemporalRate } from "@hypit/temporal/algebra";
 import type { NlePictureExtent, NlePictureRect } from "../picture.js";
 import type { NleSpatialEdit } from "../spatial-authoring.js";
-import type { NleCanvas, NlePictureLayout, NleSharedValue } from "../types.js";
+import type { NleCanvas, NlePictureLayout, NleSharedValue, NleTrack } from "../types.js";
 
 export const nleViewFormat = "hypit.nle-view";
 
@@ -86,7 +86,6 @@ export type NleTimelineItemObservation = {
   readonly presentation?: {
     readonly tone: NleTimelineTone;
     readonly chrome: "standard" | "group" | "compact";
-    readonly heightPx?: number;
   };
 };
 
@@ -122,7 +121,6 @@ export type NleTimelineSceneItem = {
   readonly presentation: {
     readonly tone: NleTimelineTone;
     readonly chrome: "standard" | "group" | "compact";
-    readonly heightPx?: number;
   };
   readonly affordances: NleTimelineItemAffordances;
 };
@@ -130,7 +128,8 @@ export type NleTimelineSceneItem = {
 export type NleTimelineSceneTrack = {
   readonly id: string;
   readonly name: string;
-  readonly kind: "picture" | "audio";
+  readonly kind: NleTrack["kind"];
+  readonly role?: NleTrack["role"];
   readonly enabled: boolean;
   readonly locked: boolean;
   readonly heightPx: number;

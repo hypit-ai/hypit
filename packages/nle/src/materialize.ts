@@ -18,6 +18,7 @@ import type { NleTransaction } from "./transaction.js";
 import type {
   NleAdjustItem,
   NleAudioAppearance,
+  NleComponentItem,
   NleComponentSharedValueBinding,
   NleComposition,
   NleMediaInterpretation,
@@ -112,6 +113,7 @@ export function createComponentMaterialization(project: NleProject, input: {
   readonly id: string;
   readonly track: string;
   readonly component: PackageSymbol;
+  readonly role?: NleComponentItem["role"];
   readonly parameters: Readonly<Record<string, unknown>>;
   readonly sharedValueBindings?: readonly NleComponentSharedValueBinding[];
   readonly media?: Readonly<Record<string, NleMediaReference>>;
@@ -124,6 +126,7 @@ export function createComponentMaterialization(project: NleProject, input: {
   assertNleProject(project);
   const location = track(project, input.track);
   const destination = location.track;
+  assert(destination.role === input.role, `NLE Component ${input.id} requires a Track with a matching subtitle role.`);
   assert(destination.kind !== "audio" || input.audio !== undefined,
     `NLE Component ${input.id} on an Audio Track requires Audio appearance.`);
   return { commands: [{
@@ -133,6 +136,7 @@ export function createComponentMaterialization(project: NleProject, input: {
       id: input.id,
       kind: "present",
       source: "component",
+      ...(input.role === undefined ? {} : { role: input.role }),
       component: structuredClone(input.component),
       parameters: structuredClone(input.parameters),
       ...(input.sharedValueBindings === undefined

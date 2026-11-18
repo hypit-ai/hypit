@@ -7,6 +7,7 @@ export type ItemTrackAddition = {
   readonly id: string;
   readonly name: string;
   readonly kind: NleTimelineSceneTrack["kind"];
+  readonly role?: NleTimelineSceneTrack["role"];
   readonly displayBefore?: string;
 };
 
@@ -40,6 +41,7 @@ export type ItemGestureState = {
 function itemKind(item: NleTimelineSceneItem, track: NleTimelineSceneTrack): FloatingItem["kind"] {
   if (item.role === "adjust") return "effect";
   if (track.kind === "audio") return "audio";
+  if (track.role === "subtitle") return "text";
   if (item.source === "composition") return "compound";
   return item.display.layers.some((layer) => layer.kind === "text") ? "text" : "visual";
 }
@@ -153,20 +155,21 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
         insertionEdge = undefined;
       }
 
-      const valid = inside && targetIndex >= 0;
+      const valid = inside && targetIndex >= 0 && (insertionIndex !== undefined || displayRows[targetIndex]?.role === track.role);
       const destinations = new Map<string, string>();
       const additions: ItemTrackAddition[] = [];
       let insertionTop: number | undefined;
       const anchorIndex = displayRows.findIndex((candidate) => candidate.id === track.id);
 
-      const additionAt = (index: number, kind: NleTimelineSceneTrack["kind"], key: string): ItemTrackAddition => {
+      const additionAt = (index: number, { kind, role }: NleTimelineSceneTrack, key: string): ItemTrackAddition => {
         const bounded = Math.max(0, Math.min(displayRows.length, index));
-        const cacheKey = `${key}:${kind}:${bounded}`;
+        const cacheKey = `${key}:${role ?? kind}:${bounded}`;
         let addition = created.get(cacheKey);
         if (addition === undefined) {
           const displayBefore = (bounded === 0 ? scene.tracks[0] : displayRows[bounded])?.id;
           addition = {
-            id: newTrackId(), name: kind === "audio" ? "音频轨道" : "视频轨道", kind,
+            id: newTrackId(), name: role === "subtitle" ? "字幕轨道" : kind === "audio" ? "音频轨道" : "视频轨道", kind,
+            ...(role === undefined ? {} : { role }),
             ...(displayBefore === undefined ? {} : { displayBefore }),
           };
           created.set(cacheKey, addition);
@@ -178,7 +181,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
         return addition;
       };
 
-      const inserted = insertionIndex === undefined ? undefined : additionAt(insertionIndex, track.kind, "drop");
+      const inserted = insertionIndex === undefined ? undefined : additionAt(insertionIndex, track, "drop");
       const offset = (insertionIndex ?? targetIndex) - anchorIndex;
       const plannedItems = new Map<string, readonly NleTimelineSceneItem[]>();
       for (const { track: source, items } of movingTracks) {
@@ -186,7 +189,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
         const desiredIndex = sourceIndex + offset;
         let destinationId = inserted && source.id === track.id ? inserted.id : undefined;
         if (destinationId === undefined) {
-          const fits = (candidate: NleTimelineSceneTrack) => candidate.kind === source.kind && !candidate.locked
+          const fits = (candidate: NleTimelineSceneTrack) => candidate.kind === source.kind && candidate.role === source.role && !candidate.locked
             && items.every((item) => candidate.items.every((other) => ids.has(other.id)
               || !overlaps(other, item.startFrame + delta, item.durationFrames))
               && (plannedItems.get(candidate.id) ?? []).every((other) => !overlaps(other, item.startFrame, item.durationFrames)));
@@ -195,7 +198,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
             .map((candidate, index) => ({ candidate, distance: Math.abs(index - desiredIndex) }))
             .filter(({ candidate }) => fits(candidate))
             .sort((a, b) => a.distance - b.distance)[0]?.candidate;
-          destinationId = destination?.id ?? additionAt(desiredIndex, source.kind, `overlap:${source.id}`).id;
+          destinationId = destination?.id ?? additionAt(desiredIndex, source, `overlap:${source.id}`).id;
         }
         plannedItems.set(destinationId, [...(plannedItems.get(destinationId) ?? []), ...items]);
         for (const item of items) destinations.set(item.id, destinationId);

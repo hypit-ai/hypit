@@ -55,8 +55,6 @@ type NleTimelinePresentationBase = {
   readonly displayName: string;
   readonly tone: NleTimelineTone;
   readonly chrome: NleTimelinePresentationChrome;
-  /** Package-preferred default. A persisted View height still wins. */
-  readonly heightPx?: number;
   readonly poster?: NleTimelinePresentationPoster;
 };
 
@@ -115,9 +113,6 @@ function assertBase(value: NleTimelinePresentationBase, key: string): void {
     `NLE Timeline presentation ${key} displayName is empty.`);
   assert(tones.has(value.tone), `NLE Timeline presentation ${key} tone is invalid.`);
   assert(chromes.has(value.chrome), `NLE Timeline presentation ${key} chrome is invalid.`);
-  assert(value.heightPx === undefined || Number.isSafeInteger(value.heightPx)
-    && value.heightPx >= 32 && value.heightPx <= 240,
-  `NLE Timeline presentation ${key} height must be an integer from 32 through 240 pixels.`);
   assertPoster(value.poster, key);
 }
 
@@ -250,7 +245,6 @@ export function createNleTimelinePresentationHost(
       presentation: {
         tone: base.tone,
         chrome: base.chrome,
-        ...(base.heightPx === undefined ? {} : { heightPx: base.heightPx }),
       },
     };
   };

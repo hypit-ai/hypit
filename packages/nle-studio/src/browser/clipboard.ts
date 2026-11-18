@@ -54,11 +54,11 @@ export function pasteItems(session: NleStudioSession, clipboard: ItemClipboard, 
       return compareExactTemporalValues(start, addExactTemporalValues(other.start, other.duration)) < 0
         && compareExactTemporalValues(other.start, addExactTemporalValues(start, item.duration)) < 0;
     }));
-    let track = existing !== undefined && view?.locked !== true && !overlaps ? existing.id : undefined;
+    let track = existing?.kind === source.kind && existing.role === source.role && view?.locked !== true && !overlaps ? existing.id : undefined;
     if (track === undefined) {
       track = `track-${crypto.randomUUID()}`;
       commands.push({ kind: "track.add", composition: composition.id,
-        track: { id: track, name: source.name, kind: source.kind, enabled: true, items: [] } });
+        track: { ...source, id: track, enabled: true, items: [] } });
     }
     for (const original of source.items) {
       let value: NleItem = { ...structuredClone(original), id: names.get(original.id)!, start: addExactTemporalValues(original.start, delta) };

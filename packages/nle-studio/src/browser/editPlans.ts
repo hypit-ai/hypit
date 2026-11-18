@@ -180,7 +180,8 @@ export function freezeItem(session: NleStudioSession, item: NleItem, frame: numb
   const { piece, local } = sample;
   const id = identity("freeze"), duration = frameTime(session, Math.round(session.open.timeline.editRate.numerator / session.open.timeline.editRate.denominator * 3));
   const { audio, ...visual } = item;
-  const clipboard = { project: session.open.project.project.id, tracks: [{ id: identity("track"), name: "定格", kind: "picture" as const, enabled: true, items: [{ ...visual, id, duration, sourceTime: nleLinearTimeMapping(duration, extrapolateTemporalAffineMapPiece(piece, local), { numerator: 0, denominator: 1 }), picture: { ...item.picture, processes: [] } }] }], transitions: [], mattes: [] };
+  const role = item.source === "component" ? item.role : undefined;
+  const clipboard = { project: session.open.project.project.id, tracks: [{ id: identity("track"), name: "定格", kind: "picture" as const, ...(role === undefined ? {} : { role }), enabled: true, items: [{ ...visual, id, duration, sourceTime: nleLinearTimeMapping(duration, extrapolateTemporalAffineMapPiece(piece, local), { numerator: 0, denominator: 1 }), picture: { ...item.picture, processes: [] } }] }], transitions: [], mattes: [] };
   return pasteItems(session, clipboard, frame);
 }
 
@@ -306,7 +307,7 @@ export function magneticEdit(session: NleStudioSession, commands: readonly NleCo
   const scene = session.open.timeline;
   const planned: NleStudioSession = { ...session, open: { ...session.open, project: { ...session.open.project, project }, timeline: { ...scene, tracks: composition.tracks.map(track => {
     const original = scene.tracks.find(value => value.id === track.id);
-    return { id: track.id, name: track.name, kind: track.kind, enabled: track.enabled, locked: original?.locked ?? false, heightPx: original?.heightPx ?? 62, tone: original?.tone ?? "neutral", items: track.items.map(item => {
+    return { id: track.id, name: track.name, kind: track.kind, ...(track.role === undefined ? {} : { role: track.role }), enabled: track.enabled, locked: original?.locked ?? false, heightPx: original?.heightPx ?? 62, tone: original?.tone ?? "neutral", items: track.items.map(item => {
       const previous = original?.items.find(value => value.id === item.id);
       return { ...previous, id: item.id, track: track.id, role: item.kind === "adjust" ? "adjust" as const : "present" as const, source: item.kind === "adjust" ? "adjust" as const : item.source,
         enabled: item.enabled, startFrame: frameOf(session, item.start), durationFrames: frameOf(session, item.duration), display: previous?.display ?? { title: item.name ?? item.id, layers: [] }, presentation: previous?.presentation ?? { tone: "neutral" as const, chrome: "standard" as const }, affordances: previous?.affordances ?? { select: true as const, move: true, trimStart: true, trimEnd: true, split: true } };
@@ -335,7 +336,7 @@ export function moveItemEditPlan(session: NleStudioSession, plan: ItemMovePlan):
       ? display.slice(0, index).findLast(track => track.kind === addition.kind)
       : display.slice(index).find(track => track.kind === addition.kind);
     commands.push({ kind: "track.add", composition,
-      track: { id: addition.id, name: addition.name, kind: addition.kind, enabled: true, items: [] },
+      track: { id: addition.id, name: addition.name, kind: addition.kind, ...(addition.role === undefined ? {} : { role: addition.role }), enabled: true, items: [] },
       ...(neighbor === undefined ? {} : { before: neighbor.id }),
     });
     display.splice(index, 0, addition);
