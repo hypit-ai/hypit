@@ -153,6 +153,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     : session.catalog.adjusts.some(entry => catalogDragId({ kind: "effect", entry }) === draggedMedia?.id));
   const highlightedTrack = acceptsDrop ? mediaTrack.id : primaryTrack && !magneticFrames ? undefined : itemGesture.gesture?.dropTrack;
   const insertionTop = reorder.position?.top ?? itemGesture.gesture?.insertionTop;
+  const snapFrame = itemGesture.gesture?.valid ? itemGesture.gesture.snapFrame : undefined;
+  const snappedToPlayhead = snapFrame === frame;
   const rowFade = fadeMotion(reduced);
   const rowTransition = { ...rowFade.transition, layout: { duration: reduced ? 0 : .22, ease: softEase } };
   const tracksHeight = rows.reduce((height, track) => height + rowSize(track), 0);
@@ -309,8 +311,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
         <div className={`nle-timeline-empty${rows.length === 0 ? " visible" : ""}`} style={{ left: labelWidth, width, height: trackPadding }}>从素材区拖入文件，开始剪辑</div>
         <div className={`nle-marquee${marquee.box?.visible ? " visible" : ""}`} style={marquee.box ?? { width: 0, height: 0 }}/>
         <AnimatePresence initial={false}>{insertionTop !== undefined && <motion.div {...fadeMotion(reduced)} className="nle-track-insertion" style={{ top: insertionTop }}/>}</AnimatePresence>
-        {itemGesture.gesture?.snapFrame !== undefined && <div className="nle-snap-line" style={{ left: labelWidth + itemGesture.gesture.snapFrame * pixels }}/>}
-        <div className="nle-playhead" style={{ left: labelWidth + frame * pixels }}/><div className="nle-playhead-control" style={{ left: labelWidth + frame * pixels }}><button className={seek.active ? "active" : ""} aria-label="播放头" onPointerDown={seek.start}/></div>
+        {snapFrame !== undefined && !snappedToPlayhead && <div className="nle-snap-line" style={{ left: labelWidth + snapFrame * pixels }}/>}
+        <div className={`nle-playhead${snappedToPlayhead ? " adsorbed" : ""}`} style={{ left: labelWidth + frame * pixels }}/><div className="nle-playhead-control" style={{ left: labelWidth + frame * pixels }}><button className={seek.active ? "active" : ""} aria-label="播放头" onPointerDown={seek.start}/></div>
       </div>
     </motion.div>
     <AnimatePresence>{itemGesture.gesture?.floating.map(item => <motion.div {...fadeMotion(reduced)} key={item.id} className="nle-floating-preview" style={{ position: "fixed", left: item.left, top: item.top, width: item.width, height: item.height, pointerEvents: "none" }}><div className={`nle-clip nle-clip-ghost ${item.kind}`} style={{ inset: 0, height: item.height }}><span className="nle-clip-title"><span className="nle-clip-chip">{item.title}</span></span></div></motion.div>)}</AnimatePresence>
