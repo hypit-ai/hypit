@@ -621,7 +621,39 @@ button:focus-visible, textarea:focus-visible {
 }
 .stage-overlay { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .box { --tone: #fff; }
-.box-content { fill: transparent; stroke: rgba(228, 231, 236, .72); stroke-width: 1.5; }
+.box-content { fill: transparent; stroke: rgba(228, 231, 236, .88); stroke-width: 1.5; }
+.stage-box-movable { pointer-events: all; }
+#app .stage-box-movable,
+#app .stage-scaler[data-dragging="move"],
+#app .stage-scaler[data-dragging="move"] * { cursor: move !important; }
+.stage-handle-hit { fill: transparent; pointer-events: all; }
+.stage-handle {
+  fill: #ffffff;
+  stroke: rgba(17, 18, 20, .85);
+  stroke-width: 1.25;
+  pointer-events: all;
+}
+#app .stage-handle-nw, #app .stage-handle-se,
+#app .stage-scaler[data-dragging="nw"], #app .stage-scaler[data-dragging="nw"] *,
+#app .stage-scaler[data-dragging="se"], #app .stage-scaler[data-dragging="se"] * { cursor: nwse-resize !important; }
+#app .stage-handle-ne, #app .stage-handle-sw,
+#app .stage-scaler[data-dragging="ne"], #app .stage-scaler[data-dragging="ne"] *,
+#app .stage-scaler[data-dragging="sw"], #app .stage-scaler[data-dragging="sw"] * { cursor: nesw-resize !important; }
+#app .stage-handle-n, #app .stage-handle-s,
+#app .stage-scaler[data-dragging="n"], #app .stage-scaler[data-dragging="n"] *,
+#app .stage-scaler[data-dragging="s"], #app .stage-scaler[data-dragging="s"] * { cursor: ns-resize !important; }
+#app .stage-handle-e, #app .stage-handle-w,
+#app .stage-scaler[data-dragging="e"], #app .stage-scaler[data-dragging="e"] *,
+#app .stage-scaler[data-dragging="w"], #app .stage-scaler[data-dragging="w"] * { cursor: ew-resize !important; }
+.stage-snap-guide { stroke: var(--interaction-accent); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: none; }
+.stage-gap-guide { stroke: #38bdf8; stroke-width: 1.25; pointer-events: none; }
+.stage-gap-label {
+  fill: #e0f2fe;
+  font: 600 11px var(--font-mono);
+  paint-order: stroke;
+  stroke: rgba(11, 12, 14, .9);
+  pointer-events: none;
+}
 .box-content-guide { fill: none; stroke: rgba(255, 255, 255, .55); stroke-width: 1; stroke-dasharray: 3 4; }
 .box-label {
   fill: #fff;
@@ -629,6 +661,7 @@ button:focus-visible, textarea:focus-visible {
   paint-order: stroke;
   stroke: rgba(0, 0, 0, .85);
   stroke-width: 5px;
+  pointer-events: none;
 }
 .box-elsewhere { opacity: .26; }
 .stage-bar {
