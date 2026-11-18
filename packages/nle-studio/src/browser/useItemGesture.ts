@@ -103,6 +103,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
     let active = false, animation = 0;
     let pointer = { x: startX, y: startY, alt: event.altKey };
     let proposed: ItemMovePlan | undefined, previousPlan = "";
+    let insertionEdge: "top" | "bottom" | undefined;
 
     const locate = () => {
       if (!active) return;
@@ -132,13 +133,24 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
       if (inside && firstRow && lastRow) {
         const y = pointer.y;
         const tolerance = movedVertically ? 6 : 0;
-        if (y <= firstRow.getBoundingClientRect().top + tolerance) insertionIndex = 0;
-        else if (y >= lastRow.getBoundingClientRect().bottom - tolerance) insertionIndex = rows.length;
-        else if (movedVertically) {
+        const firstTop = firstRow.getBoundingClientRect().top;
+        const lastBottom = lastRow.getBoundingClientRect().bottom;
+        if (y <= firstTop + (insertionEdge === "top" ? 12 : tolerance)) {
+          insertionEdge = "top";
+          insertionIndex = 0;
+        } else if (y >= lastBottom - (insertionEdge === "bottom" ? 12 : tolerance)) {
+          insertionEdge = "bottom";
+          insertionIndex = rows.length;
+        } else {
+          insertionEdge = undefined;
+        }
+        if (insertionIndex === undefined && movedVertically) {
           const boundary = rows.findIndex((row) => Math.abs(y - row.getBoundingClientRect().top) <= tolerance);
           if (boundary >= 0) insertionIndex = boundary;
           else targetIndex = rows.findIndex((row) => { const rect = row.getBoundingClientRect(); return y >= rect.top && y < rect.bottom; });
         }
+      } else {
+        insertionEdge = undefined;
       }
 
       const valid = inside && targetIndex >= 0;
@@ -215,11 +227,18 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
     const scroll = () => {
       if (active) {
         const bounds = viewport.getBoundingClientRect();
-        const dx = pointer.x < bounds.left + labelWidth + 24 ? -Math.min(12, (bounds.left + labelWidth + 24 - pointer.x) / 4)
-          : pointer.x > bounds.right - 24 ? Math.min(12, (pointer.x - bounds.right + 24) / 4) : 0;
-        const dy = pointer.y < bounds.top + rulerHeight + 24 ? -Math.min(10, (bounds.top + rulerHeight + 24 - pointer.y) / 4)
-          : pointer.y > bounds.bottom - 24 ? Math.min(10, (pointer.y - bounds.bottom + 24) / 4) : 0;
-        if (dx || dy) { viewport.scrollLeft += dx; viewport.scrollTop += dy; locate(); }
+        const left = bounds.left + labelWidth, top = bounds.top + rulerHeight;
+        const inside = pointer.x >= left && pointer.x < bounds.right && pointer.y >= top && pointer.y < bounds.bottom;
+        if (inside) {
+          const dx = pointer.x < left + 24 ? -Math.min(12, (left + 24 - pointer.x) / 4)
+            : pointer.x > bounds.right - 24 ? Math.min(12, (pointer.x - bounds.right + 24) / 4) : 0;
+          const dy = pointer.y < top + 24 ? -Math.min(10, (top + 24 - pointer.y) / 4)
+            : pointer.y > bounds.bottom - 24 ? Math.min(10, (pointer.y - bounds.bottom + 24) / 4) : 0;
+          const previousLeft = viewport.scrollLeft, previousTop = viewport.scrollTop;
+          if (dx) viewport.scrollLeft += dx;
+          if (dy) viewport.scrollTop += dy;
+          if (viewport.scrollLeft !== previousLeft || viewport.scrollTop !== previousTop) locate();
+        }
       }
       animation = requestAnimationFrame(scroll);
     };

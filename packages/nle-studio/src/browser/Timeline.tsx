@@ -6,7 +6,7 @@ import {
   Volume2, VolumeX,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { enterMotion, fadeMotion } from "./motion.js";
+import { enterMotion, fadeMotion, softEase } from "./motion.js";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
 import type { NleStudioMediaEntry, NleStudioSession } from "../protocol.js";
 import { CompositionActions } from "./CompositionActions.js";
@@ -152,6 +152,9 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     : session.catalog.components.some(entry => catalogDragId({ kind: "component", entry }) === draggedMedia?.id) ? mediaTrack.items.length === 0
     : session.catalog.adjusts.some(entry => catalogDragId({ kind: "effect", entry }) === draggedMedia?.id));
   const highlightedTrack = acceptsDrop ? mediaTrack.id : primaryTrack && !magneticFrames ? undefined : itemGesture.gesture?.dropTrack;
+  const insertionTop = reorder.position?.top ?? itemGesture.gesture?.insertionTop;
+  const rowFade = fadeMotion(reduced);
+  const rowTransition = { ...rowFade.transition, layout: { duration: reduced ? 0 : .22, ease: softEase } };
   const tracksHeight = rows.reduce((height, track) => height + rowSize(track), 0);
   const trackPadding = Math.max(rowHeight, (viewport.height - rulerHeight - tracksHeight) / 2);
   const selected = scene.tracks.flatMap(track => track.items).find(item => selection.includes(item.id));
@@ -267,7 +270,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
       <IconButton label="适合时间线" onClick={() => changeZoom(((scroller.current?.clientWidth ?? 1000) - labelWidth - 40) / Math.max(1, scene.maximumFrame / fps), true)}><Scan size={18} strokeWidth={1.6}/></IconButton>
       <div className="nle-zoom"><IconButton label="缩小" disabled={zoom <= minZoom} onClick={() => changeZoom(zoom / 1.25)}><CircleMinus size={18} strokeWidth={1.6}/></IconButton><div className="nle-zoom-slider" onPointerDown={startZoomDrag}><span className="nle-zoom-rail" aria-hidden="true" style={{ "--fill": `${zoomPosition}%` } as React.CSSProperties}/><input type="range" aria-label="时间线缩放" min="0" max="100" step="any" value={zoomPosition} onChange={event => changeZoom(minZoom * (maxZoom / minZoom) ** (Number(event.target.value) / 100))}/></div><IconButton label="放大" disabled={zoom >= maxZoom} onClick={() => changeZoom(zoom * 1.25)}><CirclePlus size={18} strokeWidth={1.6}/></IconButton></div>
     </div>
-    <div className={`nle-timeline-scroll${tool === "cut" ? " cut-mode" : tool === "left" || tool === "right" ? " direction-mode" : ""}`} ref={scroller} onPointerDown={event => {
+    <motion.div layoutScroll className={`nle-timeline-scroll${tool === "cut" ? " cut-mode" : tool === "left" || tool === "right" ? " direction-mode" : ""}`} ref={scroller} onPointerDown={event => {
       if (tool === "select") marquee.start(event);
       else if ((tool === "left" || tool === "right") && !(event.target as Element).closest(".nle-clip,.nle-track-label,.nle-ruler,button")) {
         const bounds = event.currentTarget.getBoundingClientRect(); onSelect(directionalSelection(scene, Math.max(0, Math.round((event.clientX - bounds.left - labelWidth + event.currentTarget.scrollLeft) / pixels)), tool));
@@ -276,7 +279,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
       <div className="nle-tracks" style={{ width: labelWidth + width, minHeight: Math.max(viewport.height, rulerHeight + tracksHeight + trackPadding * 2), "--nle-track-padding": `${trackPadding}px` } as React.CSSProperties}>
         <div className="nle-ruler"><div className="nle-ruler-label"/><div className="nle-ruler-scale" style={{ width }} onPointerDown={seek.start}>{ticks.map(value => <span key={value} style={{ left: value * pixels, "--minor": `${stepFrames * pixels / 2}px` } as React.CSSProperties}>{timecode(value, fps)}</span>)}<i className={`nle-ruler-frame${pixels >= 8 ? " visible" : ""}`} style={{ left: frame * pixels, width: pixels }}/></div></div>
         <div className="nle-track-top"><div className="nle-track-label empty"/><div className="nle-track-space" data-nle-drop="" style={{ width }}/></div>
-        <AnimatePresence initial={false}>{rows.map(track => <TrackMenu key={track.id} name={track.name} primary={primaryTrack === track.id} picture={track.kind === "picture"} onMagnet={() => onTrackMagnet(track.id)} disabled={busy || track.locked} pixels={pixels} gaps={trackGaps(composition.tracks.find(value => value.id === track.id)!).map(range => ({ start: frameOf(session, range.start), end: frameOf(session, range.end) }))} onCloseGaps={at => onCloseGaps(track.id, at)} onRename={name => onTrackRename(track.id, name)} onRemove={() => onTrackRemove(track.id)} onHeight={height => onTrackHeight(track.id, height)}><motion.div {...fadeMotion(reduced)} className={`nle-track${rowSize(track) <= 36 ? " compact" : ""}${primaryTrack === track.id ? " main" : ""}${track.locked ? " locked" : ""}${highlightedTrack === track.id ? " drop-target" : ""}`} data-track-id={track.id} key={track.id} style={{ height: rowSize(track) }}>
+        <AnimatePresence initial={false} mode="popLayout">{rows.map(track => <motion.div {...rowFade} layout={reduced ? false : "position"} transition={rowTransition} className={`nle-track${rowSize(track) <= 36 ? " compact" : ""}${primaryTrack === track.id ? " main" : ""}${track.locked ? " locked" : ""}${highlightedTrack === track.id ? " drop-target" : ""}`} data-track-id={track.id} key={track.id} style={{ height: rowSize(track) }}>
+          <TrackMenu name={track.name} primary={primaryTrack === track.id} picture={track.kind === "picture"} onMagnet={() => onTrackMagnet(track.id)} disabled={busy || track.locked} pixels={pixels} gaps={trackGaps(composition.tracks.find(value => value.id === track.id)!).map(range => ({ start: frameOf(session, range.start), end: frameOf(session, range.end) }))} onCloseGaps={at => onCloseGaps(track.id, at)} onRename={name => onTrackRename(track.id, name)} onRemove={() => onTrackRemove(track.id)} onHeight={height => onTrackHeight(track.id, height)}>
           <div className={`nle-track-label${reorder.position?.trackId === track.id ? " reordering" : ""}`} data-reorderable={!track.locked && !busy} title={primaryTrack === track.id ? `${track.name} / 主轨道` : track.name} data-primary={primaryTrack === track.id || undefined} onPointerDown={event => reorder.start(event, track)}><span className="nle-track-icons"><span className="nle-track-kind">{primaryTrack === track.id ? <Magnet size={14}/> : track.items.every(item => item.role === "adjust") ? <Layers size={14}/> : track.kind === "audio" ? <AudioLines size={14}/> : track.items.some(item => item.display.layers.some(layer => layer.kind === "text")) ? <Type size={14}/> : <Film size={14}/>}</span>
             <IconButton label={track.locked ? "解锁轨道" : "锁定轨道"} className="nle-track-lock" disabled={busy} aria-pressed={track.locked} onClick={() => onTrackLocked(track.id, !track.locked)}>{track.locked ? <Lock size={14}/> : <Unlock size={14}/>}</IconButton>
             <IconButton label={track.enabled ? "停用轨道" : "启用轨道"} disabled={busy} onClick={() => onTrackEnabled(track.id, !track.enabled)}>{track.enabled ? <Volume2 size={14}/> : <VolumeX size={14}/>}</IconButton></span></div>
@@ -299,15 +303,16 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
             })}</AnimatePresence>
             <div className={`nle-clip nle-clip-ghost studio-media-drop ${track.kind === "audio" ? "audio" : "visual"}${drop?.track === track.id ? " visible" : ""}`} style={{ left: (drop?.frame ?? 0) * pixels, width: Math.max(8, (draggedMedia?.durationFrames ?? fps * 5) * pixels) }}><span className="nle-clip-title">{draggedMedia?.name}</span></div>
           </div>
-        </motion.div></TrackMenu>)}</AnimatePresence>
+          </TrackMenu>
+        </motion.div>)}</AnimatePresence>
         <div className="nle-track-space-row"><div className="nle-track-label empty"/><div className="nle-track-space" data-nle-drop="" style={{ width }}/></div>
         <div className={`nle-timeline-empty${rows.length === 0 ? " visible" : ""}`} style={{ left: labelWidth, width, height: trackPadding }}>从素材区拖入文件，开始剪辑</div>
         <div className={`nle-marquee${marquee.box?.visible ? " visible" : ""}`} style={marquee.box ?? { width: 0, height: 0 }}/>
-        <div className={`nle-track-insertion${reorder.position || itemGesture.gesture?.insertionTop !== undefined ? " visible" : ""}`} style={{ top: reorder.position?.top ?? itemGesture.gesture?.insertionTop ?? 0 }}/>
+        <AnimatePresence initial={false}>{insertionTop !== undefined && <motion.div {...fadeMotion(reduced)} className="nle-track-insertion" style={{ top: insertionTop }}/>}</AnimatePresence>
         {itemGesture.gesture?.snapFrame !== undefined && <div className="nle-snap-line" style={{ left: labelWidth + itemGesture.gesture.snapFrame * pixels }}/>}
         <div className="nle-playhead" style={{ left: labelWidth + frame * pixels }}/><div className="nle-playhead-control" style={{ left: labelWidth + frame * pixels }}><button className={seek.active ? "active" : ""} aria-label="播放头" onPointerDown={seek.start}/></div>
       </div>
-    </div>
-    {itemGesture.gesture?.floating.map(item => <div key={item.id} className="nle-floating-preview" style={{ position: "fixed", left: item.left, top: item.top, width: item.width, height: item.height, pointerEvents: "none" }}><div className={`nle-clip nle-clip-ghost ${item.kind}`} style={{ inset: 0, height: item.height }}><span className="nle-clip-title"><span className="nle-clip-chip">{item.title}</span></span></div></div>)}
+    </motion.div>
+    <AnimatePresence>{itemGesture.gesture?.floating.map(item => <motion.div {...fadeMotion(reduced)} key={item.id} className="nle-floating-preview" style={{ position: "fixed", left: item.left, top: item.top, width: item.width, height: item.height, pointerEvents: "none" }}><div className={`nle-clip nle-clip-ghost ${item.kind}`} style={{ inset: 0, height: item.height }}><span className="nle-clip-title"><span className="nle-clip-chip">{item.title}</span></span></div></motion.div>)}</AnimatePresence>
   </motion.section>;
 }

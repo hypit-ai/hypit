@@ -277,7 +277,7 @@
 .nle-ruler-scale > span { position: absolute; top: 0; height: 100%; padding: 7px 0 0 4px; color: var(--muted); font-size: 10px; line-height: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
 .nle-ruler-scale > span::before { content: ''; position: absolute; left: 0; top: 8px; height: 10px; width: 1px; background: var(--nle-tick); }
 .nle-ruler-scale > span::after { content: ''; position: absolute; left: var(--minor); top: 13px; height: 5px; width: 1px; background: var(--nle-tick-minor); }
-.nle-track { display: flex; flex-shrink: 0; height: 62px; padding: 3px 0; box-sizing: border-box; animation: var(--fade-in); transition: height .15s; }
+.nle-track { display: flex; flex-shrink: 0; height: 62px; padding: 3px 0; box-sizing: border-box; transition: height .15s; }
 .nle-track.main { height: 86px; }
 .nle-tracks > .nle-track-top { display: flex; flex: 0 0 var(--nle-track-padding, 62px); }
 .nle-track-top .nle-track-space { min-height: 0; }
@@ -297,8 +297,7 @@
 .nle-track-space { flex: 1; min-height: 0; }
 .nle-timeline-empty { position: absolute; bottom: 0; display: flex; align-items: center; justify-content: center; padding: 16px; color: var(--muted); font-size: var(--font-size-caption); text-align: center; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .15s, visibility .15s; }
 .nle-timeline-empty.visible { opacity: 1; visibility: visible; }
-.nle-track-insertion { position: absolute; left: 0; right: 0; height: 2px; margin-top: -1px; background: var(--pink); z-index: 7; pointer-events: none; opacity: 0; transition: opacity .12s; }
-.nle-track-insertion.visible { opacity: 1; }
+.nle-track-insertion { position: absolute; left: 0; right: 0; height: 2px; margin-top: -1px; background: var(--pink); z-index: 7; pointer-events: none; }
 .nle-clip { --clip: #1f4c51; position: absolute; top: 0; bottom: 0; overflow: hidden; border: 1px solid transparent; border-radius: 4px; background: var(--clip); color: #fff; cursor: grab; touch-action: none; }
 .nle-clip[data-clip-id] { background-clip: padding-box; border-left-color: var(--clip); }
 .nle-clip.visual { --clip: #1f4c51; }
@@ -518,7 +517,7 @@
 .nle-clip.effect { --clip: #53666b; }
 .nle-track.compact .nle-clip-title, .nle-clip-ghost.compact .nle-clip-title { top: 50%; transform: translateY(-50%); }
 .nle-clip.text .nle-clip-text { display: none; }
-@media (prefers-reduced-motion: reduce) { .nle-track { animation: none; transition: none; } }
+@media (prefers-reduced-motion: reduce) { .nle-track { transition: none; } }
 
 .nle-asset-drag.effect-element { width: 160px; height: 30px; padding: 0; background: #53666b; border: 1px solid var(--nle-line); color: #fff; }
 .nle-asset-drag.effect-element .nle-clip-title { top: 50%; transform: translateY(-50%); }
