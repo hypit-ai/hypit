@@ -34,7 +34,8 @@ The document contains:
 - the Composition initially opened by this View;
 - one positive rational display and editing rate;
 - sparse editor state partitioned by Project Composition;
-- Track lock and optional durable row height inside each partition;
+- Track lock and optional durable row height inside each partition.
+  Subtitle, text and effect Tracks use the same compact row height;
 - linked-edit Groups whose Items all belong to that Composition.
 
 Partitioning by Composition preserves the address basis after NLE Projects gained multiple reusable definitions.
@@ -79,7 +80,7 @@ possible. npm installation and the selected Host decide which contributions exis
 observable.
 
 Presentation and authoring remain separate facets even when one package supplies both. A Timeline contribution may
-provide only factual title/text, Host-backed artwork and the product's finite tone, chrome and preferred-height
+provide only factual title/text, Host-backed artwork and the product's finite tone, chrome
 tokens. It cannot add commands. An Inspector contribution may provide only the product's finite control vocabulary;
 its process-local operation projector is removed from the Scene before transport. The browser returns a stable
 section/field address and scalar value, then the Host recomputes the operation from the current snapshot. It never

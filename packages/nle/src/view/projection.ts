@@ -104,14 +104,8 @@ function assertObservation(observation: NleTimelineItemObservation): void {
     throw new Error(`NLE Timeline observation ${observation.item} Picture extent is invalid.`);
   }
   const presentation = observation.presentation;
-  if (presentation !== undefined) {
-    if (!tones.has(presentation.tone) || !chromes.has(presentation.chrome)) {
-      throw new Error(`NLE Timeline observation ${observation.item} presentation is invalid.`);
-    }
-    if (presentation.heightPx !== undefined && (!Number.isSafeInteger(presentation.heightPx)
-      || presentation.heightPx < 32 || presentation.heightPx > 240)) {
-      throw new Error(`NLE Timeline observation ${observation.item} height is invalid.`);
-    }
+  if (presentation !== undefined && (!tones.has(presentation.tone) || !chromes.has(presentation.chrome))) {
+    throw new Error(`NLE Timeline observation ${observation.item} presentation is invalid.`);
   }
 }
 
@@ -196,8 +190,8 @@ export function projectNleTimeline(
 
   let maximumFrame = 1;
   const timelineTracks = [
-    ...composition.tracks.filter((track) => track.kind === "picture").reverse(),
-    ...composition.tracks.filter((track) => track.kind === "audio"),
+    ...composition.tracks.filter(track => track.kind === "picture").reverse(),
+    ...composition.tracks.filter(track => track.kind === "audio"),
   ];
   const tracks = timelineTracks.map((track) => {
     const trackState = state?.tracks.find((candidate) => candidate.track === track.id);
@@ -233,8 +227,10 @@ export function projectNleTimeline(
           title: item.name ?? observation?.title ?? defaultTitle(project, item),
           layers: structuredClone(observation?.layers ?? []),
         },
-        presentation: structuredClone(observation?.presentation
-          ?? { tone: defaultTone(item, track), chrome: defaultChrome(item) }),
+        presentation: {
+          tone: observation?.presentation?.tone ?? defaultTone(item, track),
+          chrome: observation?.presentation?.chrome ?? defaultChrome(item),
+        },
         affordances: {
           select: true,
           move: capability?.move === true && policy.move,
@@ -244,20 +240,14 @@ export function projectNleTimeline(
         },
       };
     });
-    const defaultHeight = items.length === 0
-      ? track.kind === "audio" ? 48 : 52
-      : Math.max(...items.map((item) => item.presentation.heightPx
-        ?? (track.kind === "audio" ? 48
-          : item.role === "adjust" ? 32
-          : item.source === "media" ? 76
-          : 52)));
     return {
       id: track.id,
       name: track.name,
       kind: track.kind,
+      ...(track.role === undefined ? {} : { role: track.role }),
       enabled: track.enabled,
       locked: trackState?.locked ?? false,
-      heightPx: trackState?.heightPx ?? defaultHeight,
+      heightPx: trackState?.heightPx ?? (track.role === undefined ? 62 : 36),
       tone: track.kind === "picture" ? "blue" as const : "green" as const,
       items,
     };

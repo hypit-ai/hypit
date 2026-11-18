@@ -35,6 +35,8 @@ The initial SVML surface is deliberately small:
 - a `Present` is a temporal Item for a Media, Component or another Composition;
 - a Composition Present is the parent timeline's one Item for the nested Composition;
 - a `Track` is an ordered Picture or Audio editing row;
+- a Picture Track with the subtitle role contains subtitle Component Presents;
+  a subtitle Component Present belongs to a Track with that role;
 - Item-local source-time mappings and Processes are stored on the Present;
 - an `Adjust` is a timed Process over the signal accumulated below its Track position;
 - a Transition is an explicit relation around an adjacent Picture cut.

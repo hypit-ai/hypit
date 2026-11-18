@@ -109,12 +109,7 @@ export function Inspector({ scene, component, media, disabled, selectedProcess, 
         </div>;
       })}
     </Section>;
-  })}{scene.sections.map(section => <Section title={section.label} key={section.id}>
-    {section.fields.map(field => <Field key={field.id} section={section.id} field={field} disabled={disabled} onEdit={onEdit}/>) }
-    {section.collections?.map(collection => <Collection key={collection.id} section={section.id}
-      collection={collection} disabled={disabled} onEdit={onEdit}
-      onInvoke={(section, collection, row, action) => onInvoke(scene.item, section, collection, row, action)}/>) }
-  </Section>)}{component !== undefined && component.inputs.length > 0 && <Section title="媒体输入">
+  })}<InspectorSections scene={scene} disabled={disabled} onEdit={onEdit} onInvoke={onInvoke}/>{component !== undefined && component.inputs.length > 0 && <Section title="媒体输入">
     {component.inputs.map(input => {
       const options = media.filter(entry => entry.state === "available" && (
         input.picture === undefined || (entry.pictureKind !== undefined
@@ -129,6 +124,20 @@ export function Inspector({ scene, component, media, disabled, selectedProcess, 
       </select></Row>;
     })}
   </Section>}</>;
+}
+
+export function InspectorSections({ scene, disabled, onEdit, onInvoke }: {
+  readonly scene: NleInspectorScene;
+  readonly disabled: boolean;
+  readonly onEdit: (section: string, field: string, value: string | number | boolean) => void;
+  readonly onInvoke: (item: string, section: string, collection: string, row: string, action: string) => void;
+}) {
+  return <>{scene.sections.map(section => <Section title={section.label} key={section.id}>
+    {section.fields.map(field => <Field key={field.id} section={section.id} field={field} disabled={disabled} onEdit={onEdit}/>) }
+    {section.collections?.map(collection => <Collection key={collection.id} section={section.id}
+      collection={collection} disabled={disabled} onEdit={onEdit}
+      onInvoke={(section, collection, row, action) => onInvoke(scene.item, section, collection, row, action)}/>) }
+  </Section>)}</>;
 }
 
 export function TransitionInspector({ scene, disabled, onResize, onEdit, onRemove }: {

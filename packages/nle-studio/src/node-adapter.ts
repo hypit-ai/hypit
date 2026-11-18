@@ -46,6 +46,11 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
     return { kind: "action", handle: action.handle };
   }
   const keys = Object.keys(value);
+  if (request.kind === "timeline-drop") {
+    const drop = operationRequest(request.drop);
+    if (keys.length !== 2 || drop.kind !== "timeline.drop") throw new Error("NLE Studio Timeline drop observation is invalid.");
+    return { kind: "timeline-drop", drop };
+  }
   if (request.kind === "timeline-media") {
     const fields = ["kind", "composition", "expectedProjectRevision", "expectedViewRevision", "expectedMediaGeneration",
       "tracks", "fromFrame", "toFrame"];
@@ -76,7 +81,7 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
     throw new Error("NLE Studio observation kind is invalid.");
   }
   return { kind: request.kind as Exclude<NleStudioObservationRequest["kind"],
-    "inspector" | "component-inputs" | "action" | "timeline-media" | "transition-inspector"> };
+    "inspector" | "component-inputs" | "action" | "timeline-drop" | "timeline-media" | "transition-inspector"> };
 }
 
 function record(value: unknown, subject: string): Readonly<Record<string, unknown>> {
@@ -548,7 +553,7 @@ export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
       }
       return request.method === "GET" && await sendStatic(response, pathname);
     } catch (error) {
-      const conflict = error instanceof Error && error.name.includes("RevisionConflict");
+      const conflict = error instanceof Error && (error.name.includes("RevisionConflict") || error.name === "NleStudioDocumentConflict");
       sendJson(response, conflict ? 409 : 400, { error: error instanceof Error ? error.message : String(error) });
       return true;
     }

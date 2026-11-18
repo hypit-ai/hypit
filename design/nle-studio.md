@@ -98,8 +98,9 @@ ownership transaction or its UI.
 
 ## Local protocol and persistence
 
-Timeline dragging submits `timeline.drop` through `POST /api/operate`. The browser supplies selected Items, an
-anchor Item, a frame delta and a Track or gap. Studio follows View Groups and connected Transition and Matte
+Timeline dragging supplies selected Items, an anchor Item, a frame delta and a Track or gap. While the pointer is
+down, `observe({ kind: "timeline-drop", drop })` runs the same planner against the current revisions and returns the
+destination Track or gap for the highlight. Releasing the pointer submits `timeline.drop` through `POST /api/operate`. Studio follows View Groups and connected Transition and Matte
 endpoints, computes one exact time displacement and keeps each source lane together in relative visual order.
 It searches compatible unlocked Tracks and allocates new ones for gaps or when needed. The drop planner avoids
 new Picture Present collisions as a Studio editing policy. Audio intervals can mix on the selected Track.
@@ -158,7 +159,8 @@ requests the next interval when the current interval ends, so a rendering wait c
 The same endpoint starts `media.thumbnail`, `media.storyboard`, `media.waveform` and `media.audio-preview` against
 one accepted Asset identity and Catalog generation. These operations sample the Asset's Media clock. Studio retains
 a bounded set of results and revokes them when the Catalog changes or the Session closes.
-The destination remains a portable Project path validated by that Service.
+Delivery accepts a portable destination validated by its Service. Source Preview uses the selected Project Media
+resource and its local media clock. Scrubbing a source leaves the Programme playhead under the session's control.
 
 Within the Product Session mount, `POST api/media/import?name=...` carries one raw browser `File` body. The adapter
 streams it to an invocation-local temporary file, calls the Node Project Media Service's adoption Action with bounded
@@ -167,10 +169,11 @@ removes the temporary file. Multiple selected files are separate sequential requ
 Media identity in its receipt and invalidates the Media projection. Media identity remains the resulting
 project-relative Media Asset manifest path. This transport does not place the accepted Media into the NLE document.
 
-Saving asks the selected Owner Provider to serialize each dirty owner snapshot, atomically replace its selected file
-and mark that exact Service revision saved only after the write succeeds. Reload is an explicit user or caller
-operation that accepts current file bytes into the corresponding Service. The Host performs no content hashing or
-continuous integrity comparison.
+The browser requests a save after accepting an edit to a durable document. Studio serializes saves and reloads for
+the shared Project document. A save compares the file with the bytes last accepted by its Owner Provider, atomically
+replaces that file and marks the exact Service revision saved after the write succeeds. If another program modifies
+the file, Studio reports a save conflict and retains the open edit. Reload explicitly accepts current file bytes.
+A View opened for the Session stays in memory. A View opened with an explicit document path is saved separately.
 
 The `operate` union also accepts Media, Component, Adjust, Transition and nested Composition materialization and
 audio detachment. A placement carries an active Composition, expected revisions, a frame and an optional explicit
@@ -179,9 +182,9 @@ and submits Track creation and materialization in one guarded Project transactio
 interpretation's timed duration unless the caller chooses a duration. Constant assets default to five seconds on the
 View frame grid. Media placement also accepts a Picture layout and an Audio inclusion choice. Component and Adjust
 durations default to their offering. Automatic placement selects an enabled,
-unlocked Track of the required medium. Picture Presents use a free lane and timed Adjusts default to the end of
-their medium's authored track order. An explicit Track permits deliberate Picture stacking and is checked for
-medium and lock.
+unlocked Track of the required medium. Picture Presents use a free lane, and timed Adjusts use an effect Track at the end of their medium's authored order.
+Subtitle offerings allocate a Picture Track with the subtitle role. An explicitly chosen Track is checked for its
+medium, subtitle membership and View lock.
 
 Media, Component and Composition placement can include `insertTracks` with an explicit destination Track in that
 scope. The playhead must fall at a boundary or in empty space on each selected Track. The planner moves Items

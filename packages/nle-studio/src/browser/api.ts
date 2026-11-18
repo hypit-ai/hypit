@@ -40,6 +40,12 @@ export async function request<T>(path: string, body?: unknown): Promise<T> {
   return value;
 }
 
+export async function readDropDestination(drop: import("../protocol.js").NleStudioTimelineDrop) {
+  const result = await observe({ kind: "timeline-drop", drop });
+  if (result.kind !== "timeline-drop") throw new Error("NLE Studio returned an invalid drop observation.");
+  return result.value;
+}
+
 async function observe(value: NleStudioObservationRequest): Promise<NleStudioObservation> {
   return await request("api/observe", value);
 }
@@ -103,6 +109,7 @@ export async function refreshOpen(
       case "status": next = { ...next, status: observation.value }; break;
       case "open":
       case "component-inputs":
+      case "timeline-drop":
       case "timeline-media":
       case "transition-inspector":
       case "action":

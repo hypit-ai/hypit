@@ -79,12 +79,17 @@ export type NleStudioClipboardProjection = {
   readonly pendingGroups: number;
 };
 
+export type NleStudioDropDestination =
+  | { readonly track: string }
+  | { readonly gap: true; readonly before?: string };
+
 export type NleStudioTrimRange = { readonly minimum: number; readonly maximum: number };
 
 export type NleStudioTimelineProjection = {
   readonly scene: NleTimelineScene;
   readonly canReturn: boolean;
-  readonly compositions: readonly { readonly id: string; readonly name: string }[];
+  readonly compositions: readonly { readonly id: string; readonly name: string; readonly referenced: boolean }[];
+  readonly retimeRates: Readonly<Record<string, TemporalRate>>;
   /** Active-Composition Media Items resolved to Project Media Catalog identities by the Product backend. */
   readonly itemMedia: readonly { readonly item: string; readonly media: string }[];
   readonly trimRanges: Readonly<Record<string, Partial<Record<"start" | "end", NleStudioTrimRange>>>>;
@@ -107,7 +112,7 @@ export type NleStudioTimelineMediaView = {
 
 /** Complete finite projection used to open one NLE Studio Product Session. */
 export type NleStudioOpenProjection = {
-  readonly project: { readonly name: string; readonly document: string };
+  readonly project: { readonly name: string; readonly document: string; readonly rootComposition: string };
   readonly viewDocument:
     | { readonly persistence: "session" }
     | { readonly persistence: "document"; readonly path: string };
@@ -126,6 +131,7 @@ export type NleStudioObservationRequest =
   | { readonly kind: "project" }
   | { readonly kind: "status" }
   | { readonly kind: "timeline" }
+  | { readonly kind: "timeline-drop"; readonly drop: NleStudioTimelineDrop }
   | NleStudioTimelineMediaRequest
   | { readonly kind: "canvas" }
   | { readonly kind: "inspector"; readonly item: string }
@@ -143,6 +149,7 @@ export type NleStudioObservation =
   | { readonly kind: "project"; readonly value: NleStudioOpenProjection["project"] }
   | { readonly kind: "status"; readonly value: NleEditingSurfaceStatus }
   | { readonly kind: "timeline"; readonly value: NleStudioTimelineProjection }
+  | { readonly kind: "timeline-drop"; readonly value: NleStudioDropDestination }
   | { readonly kind: "timeline-media"; readonly value: readonly NleStudioTimelineMediaView[] }
   | { readonly kind: "canvas"; readonly value: NleCanvasScene }
   | { readonly kind: "inspector"; readonly value: NleInspectorScene }

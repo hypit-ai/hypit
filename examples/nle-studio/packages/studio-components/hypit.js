@@ -39,7 +39,6 @@ export const hypitPackage = {
         displayName: "Editorial title",
         tone: "magenta",
         chrome: "standard",
-        heightPx: 64,
         project: ({ item }) => ({
           title: stringParameter(item.parameters, "title", "Editorial title"),
           layers: [{ kind: "text", text: stringParameter(item.parameters, "eyebrow", "TITLE") }],
@@ -97,6 +96,17 @@ export const hypitPackage = {
       },
       duration: { ticks: "4", timeBase: { numerator: 1, denominator: 1 } },
       layout: { x: 120, y: 124, width: 1680, height: 300, fit: "contain" }
+    }
+  }, {
+    id: "subtitle",
+    kind: "hypit.nle-component",
+    title: "Subtitle",
+    value: {
+      category: "subtitle",
+      component: title,
+      parameters: { eyebrow: "", title: "Subtitle", accent: "#ffffff" },
+      duration: { ticks: "3", timeBase: { numerator: 1, denominator: 1 } },
+      layout: { x: 120, y: 860, width: 1680, height: 140, fit: "contain" }
     }
   }]
 };

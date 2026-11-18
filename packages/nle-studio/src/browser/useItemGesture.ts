@@ -1,7 +1,7 @@
 import type { NleTimelineScene, NleTimelineSceneItem, NleTimelineSceneTrack } from "@hypit/nle/view";
 import { useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
 import type { NleStudioTimelineDrop } from "../protocol.js";
-import { labelWidth, rulerHeight } from "./timelineGeometry.js";
+import { labelWidth, rulerHeight, snapTimelineEdges, timelineSnapBoundaries } from "./timelineGeometry.js";
 
 export type ItemDropIntent = Pick<NleStudioTimelineDrop, "anchor" | "items" | "deltaFrames" | "target">;
 
@@ -18,14 +18,14 @@ type FloatingItem = {
 export type ItemGestureState = {
   readonly ids: readonly string[];
   readonly floating: readonly FloatingItem[];
-  readonly insertionTop?: number;
   readonly snapFrame?: number;
-  readonly valid: boolean;
+  readonly intent?: ItemDropIntent;
 };
 
 function itemKind(item: NleTimelineSceneItem, track: NleTimelineSceneTrack): FloatingItem["kind"] {
   if (item.role === "adjust") return "effect";
   if (track.kind === "audio") return "audio";
+  if (track.role === "subtitle") return "text";
   if (item.source === "composition") return "compound";
   return item.display.layers.some((layer) => layer.kind === "text") ? "text" : "visual";
 }
@@ -91,67 +91,67 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
     const scrollLeft = viewport.scrollLeft;
     const origins = new Map(Array.from(viewport.querySelectorAll<HTMLElement>("[data-clip-id]"))
       .map((element) => [element.dataset.clipId!, element.getBoundingClientRect()] as const));
-    const boundaries = [0, frame, ...scene.tracks.flatMap((row) => row.items
-      .filter((candidate) => !ids.has(candidate.id))
-      .flatMap((candidate) => [candidate.startFrame, candidate.startFrame + candidate.durationFrames]))];
+    const boundaries = timelineSnapBoundaries(scene, ids);
+    const movingEdges = members.flatMap(member => [member.item.startFrame, member.item.startFrame + member.item.durationFrames]);
     const minimum = -Math.min(...members.map((member) => member.item.startFrame));
     handle.setPointerCapture(pointerId);
     let active = false, animation = 0;
     let pointer = { x: startX, y: startY, alt: event.altKey };
     let proposed: ItemDropIntent | undefined;
+    let edge: "top" | "bottom" | undefined;
 
     const locate = () => {
       if (!active) return;
-      let delta = Math.max(minimum, Math.round((pointer.x - startX + viewport.scrollLeft - scrollLeft) / pixels));
-      let aligned: number | undefined;
-      if (snap && !pointer.alt) {
-        let adjustment: number | undefined;
-        for (const edge of members.flatMap((member) => [member.item.startFrame, member.item.startFrame + member.item.durationFrames])) {
-          for (const boundary of boundaries) {
-            const correction = boundary - (edge + delta);
-            if (Math.abs(correction * pixels) <= 7 && Math.abs(correction) < Math.abs(adjustment ?? Infinity)
-              && delta + correction >= minimum) {
-              adjustment = correction;
-              aligned = boundary;
-            }
-          }
-        }
-        delta += adjustment ?? 0;
-      }
-
+      const raw = Math.max(minimum, Math.round((pointer.x - startX + viewport.scrollLeft - scrollLeft) / pixels));
+      const aligned = snap && !pointer.alt
+        ? snapTimelineEdges(movingEdges.map(value => value + raw), frame, boundaries, pixels, delta => raw + delta >= minimum)
+        : undefined;
+      const delta = Math.max(Math.ceil(minimum), raw + Math.round(aligned?.correction ?? 0));
       const rows = Array.from(viewport.querySelectorAll<HTMLElement>(".nle-track[data-track-id]"));
       const bounds = viewport.getBoundingClientRect();
       const inside = pointer.x >= bounds.left + labelWidth && pointer.x < bounds.right
         && pointer.y >= bounds.top + rulerHeight && pointer.y < bounds.bottom;
       let targetIndex = scene.tracks.findIndex((candidate) => candidate.id === track.id);
       let insertionIndex: number | undefined;
-      if (inside && Math.abs(pointer.y - startY) > 4) {
-        const y = Math.max(bounds.top + rulerHeight + 1, Math.min(bounds.bottom - 1, pointer.y));
-        const boundary = rows.findIndex((row) => Math.abs(y - row.getBoundingClientRect().top) <= 6);
-        const afterLast = rows.length > 0 && y >= rows.at(-1)!.getBoundingClientRect().bottom - 6;
-        if (boundary >= 0 || afterLast) insertionIndex = boundary >= 0 ? boundary : rows.length;
-        else targetIndex = rows.findIndex((row) => { const rect = row.getBoundingClientRect(); return y >= rect.top && y < rect.bottom; });
+      const first = rows[0];
+      const last = rows.at(-1);
+      if (inside && first && last) {
+        const movedVertically = Math.abs(pointer.y - startY) > 4;
+        const tolerance = movedVertically ? 6 : 0;
+        if (pointer.y <= first.getBoundingClientRect().top + (edge === "top" ? 12 : tolerance)) {
+          edge = "top";
+          insertionIndex = 0;
+        } else if (pointer.y >= last.getBoundingClientRect().bottom - (edge === "bottom" ? 12 : tolerance)) {
+          edge = "bottom";
+          insertionIndex = rows.length;
+        } else {
+          edge = undefined;
+          if (movedVertically) {
+            const boundary = rows.findIndex(row => Math.abs(pointer.y - row.getBoundingClientRect().top) <= tolerance);
+            if (boundary >= 0) insertionIndex = boundary;
+            else targetIndex = rows.findIndex(row => {
+              const rect = row.getBoundingClientRect();
+              return pointer.y >= rect.top && pointer.y < rect.bottom;
+            });
+          }
+        }
       }
-
       const lane = scene.tracks[targetIndex];
       const before = insertionIndex === undefined ? undefined : scene.tracks[insertionIndex]?.id;
       const target: ItemDropIntent["target"] | undefined = insertionIndex !== undefined
         ? { kind: "gap", ...(before === undefined ? {} : { before }) }
         : lane === undefined ? undefined : { kind: "track", track: lane.id };
-      const valid = inside && target !== undefined;
-      const lastRow = rows.at(-1);
-      const insertionTop = insertionIndex === undefined ? undefined
-        : rows[insertionIndex]?.offsetTop ?? (lastRow === undefined ? undefined : lastRow.offsetTop + lastRow.offsetHeight);
-
+      const valid = inside && target !== undefined && (target.kind === "gap"
+        || lane?.kind === track.kind && lane.role === track.role && !lane.locked);
       const floating = members.flatMap((member): FloatingItem[] => {
         const origin = origins.get(member.item.id);
         return origin === undefined ? [] : [{ id: member.item.id, title: member.item.display.title,
-          kind: itemKind(member.item, member.track), left: origin.left + pointer.x - startX,
+          kind: itemKind(member.item, member.track), left: origin.left + (aligned === undefined ? pointer.x - startX : delta * pixels - (viewport.scrollLeft - scrollLeft)),
           top: origin.top + pointer.y - startY, width: origin.width, height: origin.height }];
       });
       proposed = valid ? { anchor: item.id, items: seeds, deltaFrames: delta, target } : undefined;
-      setGesture({ ids: [...ids], floating, valid, ...(insertionTop === undefined ? {} : { insertionTop }),
-        ...(aligned === undefined ? {} : { snapFrame: aligned }) });
+      setGesture({ ids: [...ids], floating, ...(proposed === undefined ? {} : { intent: proposed }),
+        ...(aligned === undefined ? {} : { snapFrame: aligned.frame }) });
     };
 
     const move = (next: globalThis.PointerEvent) => {

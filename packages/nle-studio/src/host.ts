@@ -78,7 +78,7 @@ import {
   type NleStudioPackageBridge,
 } from "./packages.js";
 import {
-  allocateTimelinePlacement, assertTransitionMove, planTimelineDrop, planTimelineEdit,
+  allocateTimelinePlacement, assertTransitionMove, nleRetimeWindow, planTimelineDrop, planTimelineEdit,
   planTimelineInsertion, planTransitionWindow, resolveTransitionCut, studioFrameTime,
 } from "./timeline-planning.js";
 import { observeTimelineMedia } from "./timeline-media.js";
@@ -130,6 +130,7 @@ export type NleStudioMediaImportPort = {
 };
 
 export const nleStudioProduct = "hypit.nle-studio";
+const documentOperations = new WeakMap<NleProjectService, Promise<void>>();
 
 type NestedVisit = { readonly parent: string; readonly child: string; readonly frame: number };
 
@@ -459,6 +460,9 @@ export class NleStudioProductSession {
     if (observation.kind !== "timeline") throw new Error("NLE Studio received an invalid Timeline projection.");
     const project = this.#projectLease.service.snapshot().project;
     const composition = project.compositions.find((value) => value.id === observation.value.composition)!;
+    const referenced = new Set(project.compositions.flatMap(entry => entry.tracks.flatMap(track => track.items.flatMap(item =>
+      item.kind === "present" && item.source === "composition" ? [item.composition] : []))));
+    const { view } = this.#viewService.snapshot();
     const visit = this.#navigation.at(-1);
     const entries = new Map(catalog.entries.map(entry => [entry.reference.path, entry] as const));
     const ranges: [string, NleStudioTimelineProjection["trimRanges"][string]][] = [];
@@ -476,7 +480,12 @@ export class NleStudioProductSession {
       scene: observation.value,
       trimRanges: Object.fromEntries(ranges),
       canReturn: visit?.child === composition.id && project.compositions.some(entry => entry.id === visit.parent),
-      compositions: project.compositions.map((value) => ({ id: value.id, name: value.name })),
+      compositions: project.compositions.map(({ id, name }) => ({ id, name, referenced: referenced.has(id) })),
+      retimeRates: Object.fromEntries(composition.tracks.flatMap(track => nleViewTrackLocked(view, composition.id, track.id) ? []
+        : track.items.flatMap(item => {
+          const rate = nleRetimeWindow(item)?.rate;
+          return rate === undefined || rate.numerator === 0 ? [] : [[item.id, rate]];
+        }))),
       itemMedia: composition.tracks.flatMap((track) => track.items.flatMap((item) => {
         if (item.kind !== "present" || item.source !== "media") return [];
         return [{ item: item.id, media: this.#mediaIdentity(item.asset.path, item.id) }];
@@ -584,7 +593,8 @@ export class NleStudioProductSession {
   }
 
   #projectProjection(): NleStudioOpenProjection["project"] {
-    return { name: this.#projectLease.service.snapshot().project.name, document: this.#projectDocument };
+    const { name, rootComposition } = this.#projectLease.service.snapshot().project;
+    return { name, rootComposition, document: this.#projectDocument };
   }
 
   #previewProjection(): NleStudioPreviewProjection {
@@ -600,6 +610,22 @@ export class NleStudioProductSession {
       case "project": return { kind: "project", value: this.#projectProjection() };
       case "status": return { kind: "status", value: this.#surface.status() };
       case "timeline": return { kind: "timeline", value: this.#timeline(await this.#project.media.observe()) };
+      case "timeline-drop": {
+        const project = this.#projectLease.service.snapshot();
+        const view = this.#viewService.snapshot();
+        if (project.revision !== request.drop.expectedProjectRevision) {
+          throw new NleEditingSurfaceRevisionConflict("project", request.drop.expectedProjectRevision, project.revision);
+        }
+        if (view.revision !== request.drop.expectedViewRevision) {
+          throw new NleEditingSurfaceRevisionConflict("view", request.drop.expectedViewRevision, view.revision);
+        }
+        const plan = planTimelineDrop(project.project, view.view, request.drop);
+        // Apply against an in-memory snapshot to validate the same owner rules used by the commit.
+        if (plan.commands.length > 0) applyNleTransaction(project.project, { commands: plan.commands });
+        const before = plan.newTrack?.before;
+        return { kind: "timeline-drop", value: plan.newTrack === undefined ? { track: plan.anchorTrack }
+          : { gap: true, ...(before === undefined ? {} : { before }) } };
+      }
       case "timeline-media": {
         const catalog = await this.#project.media.observe();
         this.#assertOpen();
@@ -747,9 +773,10 @@ export class NleStudioProductSession {
       medium: NleTrack["kind"],
       start: ExactTemporalValue,
       length: ExactTemporalValue,
+      role?: NleTrack["role"],
     ) => {
       const purpose = { kind: "present", start, duration: length } as const;
-      const placement = allocateTimelinePlacement(context, { medium, track: input.track, purpose });
+      const placement = allocateTimelinePlacement(context, { medium, track: input.track, purpose, ...(role === undefined ? {} : { role }) });
       if (input.insertTracks === undefined) return placement;
       if (input.track === undefined) throw new Error("NLE Studio insertion requires a destination Track.");
       const commands = planTimelineInsertion(context, input.track, input.insertTracks, start, length);
@@ -903,12 +930,14 @@ export class NleStudioProductSession {
         }
         const at = frameTime(operation.atFrame);
         const length = duration ?? offering.value.duration;
-        const placement = placePresent(operation, "picture", at, length);
+        const role = offering.value.category === "graphic" ? undefined : offering.value.category;
+        const placement = placePresent(operation, "picture", at, length, role);
         const item = identity("component");
         const valueBindings = Object.entries(offering.value.values ?? {}).map(([slot, value]) =>
           ({ slot, kind: "inline" as const, value }));
         const creation = {
           id: item, track: placement.track, component: offering.value.component, parameters: offering.value.parameters,
+          ...(role === "subtitle" ? { role } : {}),
           at, duration: length, ...(offering.value.layout === undefined ? {} : { layout: offering.value.layout }),
           ...(valueBindings.length === 0 ? {} : { valueBindings }),
         };
@@ -1210,34 +1239,45 @@ export class NleStudioProductSession {
     throw new Error(`NLE Studio Action ${handle} is unavailable in this Session.`);
   }
 
-  async save(): Promise<NleStudioOperationReceipt> {
-    this.#assertOpen();
-    await nleProjectOwnerProvider.save(this.#context, this.#projectDocument, this.#projectLease.service);
-    if (this.#viewDocument !== undefined && this.#viewLease !== undefined) {
-      await nleViewOwnerProvider.save(this.#context, this.#viewDocument, this.#viewLease.service);
-    }
-    return this.#observationReceipt("document.save", []);
+  #withDocuments<Result>(operation: () => Promise<Result>): Promise<Result> {
+    const service = this.#projectLease.service;
+    const prior = documentOperations.get(service) ?? Promise.resolve();
+    const next = prior.then(() => { this.#assertOpen(); return operation(); });
+    documentOperations.set(service, next.then(() => undefined, () => undefined));
+    return next;
   }
 
-  async reload(): Promise<NleStudioOperationReceipt> {
-    this.#assertOpen();
-    await nleProjectOwnerProvider.reload(this.#context, this.#projectDocument, this.#projectLease.service);
-    if (this.#viewDocument !== undefined && this.#viewLease !== undefined) {
-      await nleViewOwnerProvider.reload(this.#context, this.#viewDocument, this.#viewLease.service);
-      assertViewDocumentTarget(this.#project, this.#projectDocument, this.#viewDocument, this.#viewLease.service);
-    } else {
-      const before = this.#viewService.snapshot();
-      this.#viewService.reload(
-        sessionView(this.#projectLease.service, this.#projectDocument, this.#viewService),
-        before.revision,
-      );
-    }
-    return {
-      operation: "document.reload",
-      status: this.#surface.status(),
-      changed: { project: true, view: true },
-      invalidated: ["project", "timeline", "canvas", "inspector", "media", "preview"],
-    };
+  save(): Promise<NleStudioOperationReceipt> {
+    return this.#withDocuments(async () => {
+      if (this.#projectLease.service.snapshot().dirty) {
+        await nleProjectOwnerProvider.save(this.#context, this.#projectDocument, this.#projectLease.service);
+      }
+      if (this.#viewDocument !== undefined && this.#viewLease?.service.snapshot().dirty) {
+        await nleViewOwnerProvider.save(this.#context, this.#viewDocument, this.#viewLease.service);
+      }
+      return this.#observationReceipt("document.save", []);
+    });
+  }
+
+  reload(): Promise<NleStudioOperationReceipt> {
+    return this.#withDocuments(async () => {
+      await nleProjectOwnerProvider.reload(this.#context, this.#projectDocument, this.#projectLease.service);
+      if (this.#viewDocument !== undefined && this.#viewLease !== undefined) {
+        await nleViewOwnerProvider.reload(this.#context, this.#viewDocument, this.#viewLease.service);
+        assertViewDocumentTarget(this.#project, this.#projectDocument, this.#viewDocument, this.#viewLease.service);
+      } else {
+        const before = this.#viewService.snapshot();
+        this.#viewService.reload(
+          sessionView(this.#projectLease.service, this.#projectDocument, this.#viewService), before.revision,
+        );
+      }
+      return {
+        operation: "document.reload",
+        status: this.#surface.status(),
+        changed: { project: true, view: true },
+        invalidated: ["project", "timeline", "canvas", "inspector", "media", "preview"],
+      };
+    });
   }
 
   async close(): Promise<void> {

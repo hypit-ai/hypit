@@ -1,16 +1,18 @@
 import { randomUUID } from "node:crypto";
-import { readFile, rename, rm, writeFile } from "node:fs/promises";
+import { link, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, relative, resolve, sep } from "node:path";
 import {
   openNleProjectService,
   readNleProject,
   serializeNleProject,
-  type NleProjectService,
+  NleRevisionConflict,
+  NleProjectService,
 } from "@hypit/nle";
 import {
   openNleViewService,
   readNleView,
   serializeNleView,
+  NleViewRevisionConflict,
   type NleViewService,
 } from "@hypit/nle/view";
 import {
@@ -29,15 +31,67 @@ function projectFile(context: ProjectHostContext, path: string): string {
   return target;
 }
 
-async function atomicWrite(path: string, contents: string): Promise<void> {
-  const temporary = resolve(dirname(path), `.${basename(path)}.${randomUUID()}.writing`);
-  await writeFile(temporary, contents, { encoding: "utf8", flag: "wx" });
+type NleDocumentService = NleProjectService | NleViewService;
+const savedContents = new WeakMap<NleDocumentService, string | undefined>();
+
+export class NleStudioDocumentConflict extends Error {
+  constructor(readonly path: string) {
+    super(`NLE Studio document changed on disk: ${path}`);
+    this.name = "NleStudioDocumentConflict";
+  }
+}
+
+async function readStudioDocument(context: ProjectHostContext, path: string): Promise<string | undefined> {
   try {
-    await rename(temporary, path);
+    return await readFile(projectFile(context, path), "utf8");
   } catch (error) {
-    await rm(temporary, { force: true });
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw error;
   }
+}
+
+function rememberStudioDocument(service: NleDocumentService, contents: string | undefined): void {
+  savedContents.set(service, contents);
+}
+
+async function assertStudioDocumentUnchanged(context: ProjectHostContext, path: string, service: NleDocumentService): Promise<void> {
+  const contents = await readStudioDocument(context, path);
+  if (!savedContents.has(service) || contents !== savedContents.get(service)) throw new NleStudioDocumentConflict(path);
+}
+
+async function saveDocument(
+  context: ProjectHostContext,
+  file: string,
+  service: NleDocumentService,
+  revision: number,
+  contents: string,
+): Promise<void> {
+  const path = projectFile(context, file);
+  const temporary = resolve(dirname(path), `.${basename(path)}.${randomUUID()}.writing`);
+  try {
+    await writeFile(temporary, contents, { encoding: "utf8", flag: "wx" });
+    await assertStudioDocumentUnchanged(context, file, service);
+    const currentRevision = service.snapshot().revision;
+    if (currentRevision !== revision) {
+      throw service instanceof NleProjectService
+        ? new NleRevisionConflict(revision, currentRevision)
+        : new NleViewRevisionConflict(revision, currentRevision);
+    }
+    if (savedContents.get(service) === undefined) {
+      try {
+        await link(temporary, path);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "EEXIST") throw new NleStudioDocumentConflict(file);
+        throw error;
+      }
+    } else {
+      await rename(temporary, path);
+    }
+  } finally {
+    await rm(temporary, { force: true });
+  }
+  rememberStudioDocument(service, contents);
+  service.markSaved(revision);
 }
 
 export type NleProjectOwnerProvider = ProjectOwnerProvider<NleProjectService, ProjectHostContext> & {
@@ -53,35 +107,43 @@ export type NleViewOwnerProvider = ProjectOwnerProvider<NleViewService, ProjectH
 export const nleProjectOwnerProvider: NleProjectOwnerProvider = {
   owner: "nle.project",
   async open(context, path) {
-    return openNleProjectService(readNleProject(await readFile(projectFile(context, path), "utf8")));
+    const contents = await readFile(projectFile(context, path), "utf8");
+    const service = openNleProjectService(readNleProject(contents));
+    rememberStudioDocument(service, contents);
+    return service;
   },
   close() {},
   async save(context, path, service) {
     const snapshot = service.snapshot();
-    await atomicWrite(projectFile(context, path), serializeNleProject(snapshot.project));
-    service.markSaved(snapshot.revision);
+    await saveDocument(context, path, service, snapshot.revision, serializeNleProject(snapshot.project));
   },
   async reload(context, path, service) {
     const snapshot = service.snapshot();
-    const project = readNleProject(await readFile(projectFile(context, path), "utf8"));
+    const contents = await readFile(projectFile(context, path), "utf8");
+    const project = readNleProject(contents);
     service.reload(project, snapshot.revision);
+    rememberStudioDocument(service, contents);
   },
 };
 
 export const nleViewOwnerProvider: NleViewOwnerProvider = {
   owner: "nle.view",
   async open(context, path) {
-    return openNleViewService(readNleView(await readFile(projectFile(context, path), "utf8")));
+    const contents = await readFile(projectFile(context, path), "utf8");
+    const service = openNleViewService(readNleView(contents));
+    rememberStudioDocument(service, contents);
+    return service;
   },
   close() {},
   async save(context, path, service) {
     const snapshot = service.snapshot();
-    await atomicWrite(projectFile(context, path), serializeNleView(snapshot.view));
-    service.markSaved(snapshot.revision);
+    await saveDocument(context, path, service, snapshot.revision, serializeNleView(snapshot.view));
   },
   async reload(context, path, service) {
     const snapshot = service.snapshot();
-    const view = readNleView(await readFile(projectFile(context, path), "utf8"));
+    const contents = await readFile(projectFile(context, path), "utf8");
+    const view = readNleView(contents);
     service.reload(view, snapshot.revision);
+    rememberStudioDocument(service, contents);
   },
 };

@@ -19,6 +19,7 @@ import type {
   NleAdjustItem,
   NleAudioAppearance,
   NleComponentValueBinding,
+  NleComponentItem,
   NleComposition,
   NleMediaInterpretation,
   NleMediaReference,
@@ -114,6 +115,7 @@ export function createComponentMaterialization(project: NleProject, input: {
   readonly id: string;
   readonly track: string;
   readonly component: PackageSymbol;
+  readonly role?: NleComponentItem["role"];
   readonly parameters: Readonly<Record<string, unknown>>;
   readonly valueBindings?: readonly NleComponentValueBinding[];
   readonly media?: Readonly<Record<string, NleMediaReference>>;
@@ -127,6 +129,8 @@ export function createComponentMaterialization(project: NleProject, input: {
   const destination = location.track;
   assert(destination.kind === "picture",
     `NLE Component ${input.id} requires a Picture Track.`);
+  assert((destination.role === "subtitle") === (input.role === "subtitle"),
+    `NLE Component ${input.id} requires a Track with a matching subtitle role.`);
   return { commands: [{
     kind: "item.add",
     track: destination.id,
@@ -134,6 +138,7 @@ export function createComponentMaterialization(project: NleProject, input: {
       id: input.id,
       kind: "present",
       source: "component",
+      ...(input.role === undefined ? {} : { role: input.role }),
       component: structuredClone(input.component),
       parameters: structuredClone(input.parameters),
       ...(input.valueBindings === undefined

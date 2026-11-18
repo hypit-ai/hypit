@@ -57,6 +57,10 @@ canvas. `track.kind` is `picture` or `audio`; `enabled` is `true` or `false`. Pi
 Picture Item order is the direct back-to-front paint order within its Track, including overlapping Items. Audio
 contributions mix.
 
+A `track` can declare `role="effect"` for Picture or Audio, or `role="text"` or `role="subtitle"` for Picture.
+Subtitle Tracks contain Component Presents carrying `role="subtitle"`. Other Presents follow their track's
+ordinary Picture or Audio placement rules. The authored Track order determines Picture paint order.
+
 ## Present Items
 
 Every Present has one source kind, exact Programme placement and one source-time mapping:

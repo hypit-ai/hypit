@@ -115,3 +115,7 @@ storyboard and raw waveform resources for the visible portion of Media Presents.
 
 Timeline presentation resources use opaque `api/presentations/:resource` addresses and remain owned by the
 process-local package contribution.
+
+Studio autosaves browser edits to the Project document and to a View opened with an explicit document path.
+When the file has changed on disk, Studio reports a save conflict. Reload accepts the current file explicitly.
+The Timeline uses the Host’s resolved drop destination, trim ranges, and guarded operations.

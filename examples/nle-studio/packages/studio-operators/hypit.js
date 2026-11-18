@@ -41,7 +41,6 @@ export const hypitPackage = {
         displayName: "Colour look",
         tone: "violet",
         chrome: "compact",
-        heightPx: 44,
       }],
     },
   }, {

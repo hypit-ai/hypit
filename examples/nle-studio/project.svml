@@ -34,7 +34,7 @@
         </picture>
       </present>
     </track>
-    <track id="picture-adjust" name="Adjust · Programme" kind="picture" enabled="true">
+    <track id="picture-adjust" name="Adjust · Programme" kind="picture" role="effect" enabled="true">
       <adjust id="programme-look" name="Programme Look" package="@hypit/studio-operators" symbol="Colour" start="0/1" duration="18/1" enabled="true">
         <parameters>{"contrast":1.08,"saturation":0.94,"temperature":-2}</parameters>
         <control-time>

@@ -1,0 +1,39 @@
+.region-notices {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 240;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  width: min(560px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  overflow: auto;
+  pointer-events: none;
+}
+.region-notices-viewport { position: fixed; }
+.region-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  flex: none;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+  text-align: left;
+}
+.region-notice-error { background: var(--error-soft); color: var(--error); }
+.region-notice > svg { flex: none; margin-top: 3px; }
+.region-notice-content { flex: 1; min-width: 0; }
+.region-notice-message { white-space: pre-wrap; overflow-wrap: anywhere; max-height: min(180px, 30vh); overflow: auto; user-select: text; }
+.region-notice-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.region-notice .region-notice-close { flex: none; width: 24px; height: 24px; padding: 3px; color: inherit; }
