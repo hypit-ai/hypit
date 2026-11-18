@@ -126,7 +126,7 @@ export function createComponentMaterialization(project: NleProject, input: {
   assertNleProject(project);
   const location = track(project, input.track);
   const destination = location.track;
-  assert(destination.role === input.role, `NLE Component ${input.id} requires a Track with a matching subtitle role.`);
+  assert((destination.role === "subtitle") === (input.role === "subtitle"), `NLE Component ${input.id} requires a Track with a matching subtitle role.`);
   assert(destination.kind !== "audio" || input.audio !== undefined,
     `NLE Component ${input.id} on an Audio Track requires Audio appearance.`);
   return { commands: [{

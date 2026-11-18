@@ -23,7 +23,11 @@ export function copyItems(session: NleStudioSession, selection: readonly string[
   const composition = session.open.project.project.compositions.find(value => value.id === session.open.timeline.composition)!;
   return structuredClone({
     project: session.open.project.project.id,
-    tracks: composition.tracks.map(track => ({ ...track, items: track.items.filter(item => ids.has(item.id)) })).filter(track => track.items.length),
+    tracks: composition.tracks.map(track => {
+      const row = session.open.timeline.tracks.find(value => value.id === track.id);
+      const role = row?.role ?? track.role;
+      return { ...track, ...(role === undefined ? {} : { role }), items: track.items.filter(item => ids.has(item.id)) };
+    }).filter(track => track.items.length),
     transitions: composition.transitions.filter(value => ids.has(value.outgoing) && ids.has(value.incoming)),
     mattes: composition.mattes.filter(value => ids.has(value.content) && ids.has(value.matte)),
     groups: session.open.timeline.groups.filter(group => group.items.every(id => ids.has(id))),
@@ -54,7 +58,7 @@ export function pasteItems(session: NleStudioSession, clipboard: ItemClipboard, 
       return compareExactTemporalValues(start, addExactTemporalValues(other.start, other.duration)) < 0
         && compareExactTemporalValues(other.start, addExactTemporalValues(start, item.duration)) < 0;
     }));
-    let track = existing?.kind === source.kind && existing.role === source.role && view?.locked !== true && !overlaps ? existing.id : undefined;
+    let track = existing?.kind === source.kind && (view?.role ?? existing.role) === source.role && view?.locked !== true && !overlaps ? existing.id : undefined;
     if (track === undefined) {
       track = `track-${crypto.randomUUID()}`;
       commands.push({ kind: "track.add", composition: composition.id,

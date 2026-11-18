@@ -1,6 +1,6 @@
 import type { NleTimelineScene, NleTimelineSceneItem, NleTimelineSceneTrack } from "@hypit/nle/view";
 import { useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
-import { labelWidth, rulerHeight } from "./timelineGeometry.js";
+import { labelWidth, rulerHeight, studioTrackName } from "./timelineGeometry.js";
 import { linkedSelection } from "./selection.js";
 
 export type ItemTrackAddition = {
@@ -168,7 +168,7 @@ export function useItemGesture({ scene, rows: displayRows, scroller, pixels, fra
         if (addition === undefined) {
           const displayBefore = (bounded === 0 ? scene.tracks[0] : displayRows[bounded])?.id;
           addition = {
-            id: newTrackId(), name: role === "subtitle" ? "字幕轨道" : kind === "audio" ? "音频轨道" : "视频轨道", kind,
+            id: newTrackId(), name: studioTrackName(kind, role), kind,
             ...(role === undefined ? {} : { role }),
             ...(displayBefore === undefined ? {} : { displayBefore }),
           };

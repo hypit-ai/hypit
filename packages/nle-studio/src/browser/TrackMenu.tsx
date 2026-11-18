@@ -16,7 +16,7 @@ export function TrackMenu({ children, name, primary, picture, onMagnet, disabled
   readonly onCloseGaps: (frame?: number) => void;
   readonly onRename: (name: string) => void;
   readonly onRemove: () => void;
-  readonly onHeight: (height: number | null) => void;
+  readonly onHeight: ((height: number | null) => void) | undefined;
 }) {
   const present = useIsPresent();
   const [at, setAt] = useState(0), [rename, setRename] = useState(false);
@@ -29,9 +29,11 @@ export function TrackMenu({ children, name, primary, picture, onMagnet, disabled
     <ContextMenu.Item className="dropdown-item" disabled={!gaps.some(gap => at >= gap.start && at < gap.end)} onClick={() => onCloseGaps(at)}><FoldHorizontal size={16}/>关闭此处间隙</ContextMenu.Item>
     <ContextMenu.Item className="dropdown-item" disabled={!gaps.length} onClick={() => onCloseGaps()}><FoldHorizontal size={16}/>关闭全部间隙</ContextMenu.Item>
     <ContextMenu.Item className="dropdown-item" onClick={() => setRename(true)}><Pencil size={16}/>重命名轨道</ContextMenu.Item>
-    <ContextMenu.Item className="dropdown-item" onClick={() => onHeight(36)}><Rows3 size={16}/>紧凑轨道</ContextMenu.Item>
-    <ContextMenu.Item className="dropdown-item" onClick={() => onHeight(86)}><Rows3 size={16}/>展开轨道</ContextMenu.Item>
-    <ContextMenu.Item className="dropdown-item" onClick={() => onHeight(null)}><Rows3 size={16}/>默认轨道高度</ContextMenu.Item>
+    {onHeight && <>
+      <ContextMenu.Item className="dropdown-item" onClick={() => onHeight(36)}><Rows3 size={16}/>紧凑轨道</ContextMenu.Item>
+      <ContextMenu.Item className="dropdown-item" onClick={() => onHeight(86)}><Rows3 size={16}/>展开轨道</ContextMenu.Item>
+      <ContextMenu.Item className="dropdown-item" onClick={() => onHeight(null)}><Rows3 size={16}/>默认轨道高度</ContextMenu.Item>
+    </>}
     <ContextMenu.Item className="dropdown-item" onClick={onRemove}><Trash2 size={16}/>删除轨道及片段</ContextMenu.Item>
   </ContextMenu.Popup></ContextMenu.Positioner></ContextMenu.Portal></ContextMenu.Root>{rename && <EditorDialog title="重命名轨道" initialName={name} onClose={() => setRename(false)} onSubmit={onRename}/>}</>;
 }

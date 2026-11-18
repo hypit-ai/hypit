@@ -373,8 +373,9 @@ function assertTrack(value: unknown, trackIds: Set<string>, itemIds: Set<string>
   trackIds.add(value.id);
   text(value.name, `NLE Track ${value.id}.name`);
   assert(value.kind === "picture" || value.kind === "audio", `NLE Track ${value.id}.kind is invalid.`);
-  assert(value.role === undefined || value.role === "subtitle" && value.kind === "picture",
-    `NLE Track ${value.id}.role requires a Picture Track with a valid role.`);
+  assert(value.role === undefined || value.role === "effect"
+    || value.kind === "picture" && (value.role === "subtitle" || value.role === "text"),
+    `NLE Track ${value.id}.role is invalid for its Track kind.`);
   assert(typeof value.enabled === "boolean", `NLE Track ${value.id}.enabled must be boolean.`);
   assert(Array.isArray(value.items), `NLE Track ${value.id}.items must be an array.`);
   for (const item of value.items) assertItem(item, value as unknown as NleTrack, itemIds);

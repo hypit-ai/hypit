@@ -177,7 +177,7 @@ export type NleTrack = {
   readonly id: string;
   readonly name: string;
   readonly kind: "picture" | "audio";
-  readonly role?: "subtitle";
+  readonly role?: "subtitle" | "text" | "effect";
   readonly enabled: boolean;
   /** Picture Tracks and their Items are ordered back-to-front. */
   readonly items: readonly NleItem[];

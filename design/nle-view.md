@@ -35,7 +35,7 @@ The document contains:
 - one positive rational display and editing rate;
 - sparse editor state partitioned by Project Composition;
 - Track lock and optional durable row height inside each partition.
-  Default row height is determined by the Track role;
+  Subtitle, text and effect Tracks use the same compact row height;
 - linked-edit Groups whose Items all belong to that Composition.
 
 Partitioning by Composition preserves the address basis after NLE Projects gained multiple reusable definitions.

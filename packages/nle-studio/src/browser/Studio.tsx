@@ -1,6 +1,6 @@
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
-import { nleCompositionDuration, nleLinearTimeMapping, type NleCommand, type NleItem } from "@hypit/nle";
+import { nleCompositionDuration, nleLinearTimeMapping, type NleCommand, type NleItem, type NleTrack } from "@hypit/nle";
 import type { NleInspectorScene, NleViewCommand } from "@hypit/nle/view";
 import { Dialog } from "@base-ui/react/dialog";
 import { Blend, Captions, Images, Maximize2, Minimize2, Pause, Play, Redo2, StepBack, StepForward, Type, Undo2, Volume2, VolumeX, Wand2 } from "lucide-react";
@@ -43,6 +43,7 @@ import { componentFitsTrack, mediaFitsTrack, mediaTrackCompatible, type MediaDro
 import { copyItems, pasteItems, type ItemClipboard } from "./clipboard.js";
 import { useClipClipboard } from "./useClipClipboard.js";
 import { useAssetDrag } from "./useAssetDrag.js";
+import { componentTrackRole, inferStudioTrackRole, studioTrackName } from "./timelineGeometry.js";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ErrorNotice } from "./ErrorNotice.js";
 import { enterMotion } from "./motion.js";
@@ -78,7 +79,21 @@ export function Studio() {
   const [session, updateSession] = useState<NleStudioSession>();
   const sessionRef = useRef<NleStudioSession | undefined>(undefined);
   const history = useRef(new EditingHistory());
-  const setSession = useCallback((next: NleStudioSession) => { history.current.observe(sessionRef.current, next); sessionRef.current = next; updateSession(next); }, []);
+  const legacyTrackRoles = useRef(new Map<string, NleTrack["role"]>());
+  const setSession = useCallback((next: NleStudioSession) => {
+    const timeline = next.open.timeline;
+    const tracks = timeline.tracks.map(track => {
+      if (track.role !== undefined) return track;
+      const key = `${next.projectDocument.path}/${timeline.composition}/${track.id}`;
+      if (!legacyTrackRoles.current.has(key)) legacyTrackRoles.current.set(key, inferStudioTrackRole(track));
+      const role = legacyTrackRoles.current.get(key);
+      return role === undefined ? track : { ...track, role };
+    });
+    const resolved = { ...next, open: { ...next.open, timeline: { ...timeline, tracks } } };
+    history.current.observe(sessionRef.current, resolved);
+    sessionRef.current = resolved;
+    updateSession(resolved);
+  }, []);
   const [failure, setFailure] = useState<string>();
   const [conflict, setConflict] = useState<NleStudioConflict>();
   const [conflictOpen, setConflictOpen] = useState(false);
@@ -376,7 +391,7 @@ export function Studio() {
     command({ kind: "inspector.edit", expectedProjectRevision: session.open.status.projectRevision,
       expectedViewRevision: session.open.status.viewRevision, item, section, field, value });
   };
-  const ensureTrack = async (medium: "picture" | "audio", drop?: MediaDrop, componentDuration?: ExactTemporalValue, role?: "subtitle") => {
+  const ensureTrack = async (medium: "picture" | "audio", drop?: MediaDrop, componentDuration?: ExactTemporalValue, role?: NleTrack["role"]) => {
     let current = sessionRef.current!;
     const timeline = current.open.timeline, composition = compositionOf(current);
     const fits = (track: typeof timeline.tracks[number]) => componentDuration === undefined
@@ -389,13 +404,13 @@ export function Studio() {
         : role === "subtitle" ? composition.tracks[composition.tracks.findLastIndex(track => track.kind === "picture") + 1]?.id
         : medium === "picture" ? composition.tracks.find(track => track.kind === "audio")?.id : undefined;
       current = await sendCommand({ kind: "project.transact", expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision,
-        commands: [{ kind: "track.add", composition: timeline.composition, track: { id: track, name: role === "subtitle" ? "字幕轨道" : medium === "picture" ? "画面轨道" : "音频轨道", kind: medium, ...(role === undefined ? {} : { role }), enabled: true, items: [] }, ...(before ? { before } : {}) }] });
+        commands: [{ kind: "track.add", composition: timeline.composition, track: { id: track, name: studioTrackName(medium, role), kind: medium, ...(role === undefined ? {} : { role }), enabled: true, items: [] }, ...(before ? { before } : {}) }] });
       setSession(current); destination = current.open.timeline.tracks.find(value => value.id === track)!;
     }
     return { current, destination };
   };
   const materialize = (entry: NleStudioComponentCatalogEntry, drop?: MediaDrop) => void perform(async () => {
-    const { current, destination } = await ensureTrack("picture", drop, entry.duration, entry.category === "subtitle" ? "subtitle" : undefined), item = identity("component");
+    const { current, destination } = await ensureTrack("picture", drop, entry.duration, componentTrackRole(entry.category)), item = identity("component");
     const next = await materializeComponent({ expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision,
       package: entry.package, offering: entry.offering, item, composition: current.open.timeline.composition, track: destination.id, atFrame: drop?.frame ?? frame });
     setSession(next); setSelection([item]); setSource(undefined); setTransitionId(undefined); setFrame(drop?.frame ?? frame);
@@ -463,7 +478,10 @@ export function Studio() {
     const currentComposition = compositionOf(sessionRef.current!);
     const targetIds = drop?.item ? editableSelection(scene, [drop.item]) : drop ? [] : editableSelection(scene, selection);
     const targets = currentComposition.tracks.flatMap(track => track.items.map(item => ({ track, item }))).filter(({ track, item }) => targetIds.includes(item.id) && (item.kind === "adjust" ? track.kind === entry.medium : Boolean(item[entry.medium])));
-    const { current, destination } = await ensureTrack(entry.medium, drop), item = identity("adjust");
+    const targetTrack = scene.tracks.find(track => track.id === targets[0]?.track.id && track.kind === entry.medium && track.role !== "subtitle");
+    const { current, destination } = targetTrack ? { current: sessionRef.current!, destination: targetTrack }
+      : await ensureTrack(entry.medium, drop, undefined, "effect");
+    const item = identity("adjust");
     let next = await materializeAdjust({ expectedProjectRevision: current.open.status.projectRevision, expectedViewRevision: current.open.status.viewRevision,
       package: entry.package, offering: entry.offering, item, composition: current.open.timeline.composition, track: destination.id, atFrame: drop?.frame ?? frame });
     setSession(next);
@@ -537,7 +555,8 @@ export function Studio() {
           ...(value.kind === "component" ? { durationFrames: frameOf(session, value.entry.duration) } : {}),
         }, {
           ...(value.kind === "transition" ? { cuts: transitionCuts(session) } : {}),
-          ...(value.kind === "component" && value.entry.category === "subtitle" ? { role: "subtitle" } : {}),
+          ...(value.kind === "component" && value.entry.category !== "graphic" ? { role: value.entry.category } : {}),
+          ...(value.kind === "effect" ? { role: "effect" } : {}),
         })} onMaterialize={materialize} onMaterializeAdjust={materializeEffect} onMaterializeTransition={materializeSelectedTransition}/></motion.div></AnimatePresence></aside>
         <PanelResizeHandle side="bin" label="调整素材面板宽度" width={panelWidths.bin} onResize={(width, save) => resizePanel("bin", width, save)}/>
         <section className="nle-monitor"><div className="nle-panel-header nle-monitor-title"><span>{projectName}</span><IconButton label={previewExpanded ? "恢复预览" : "放大预览"} onClick={() => setPreviewExpanded(value => !value)}>{previewExpanded ? <Minimize2 size={15}/> : <Maximize2 size={15}/>}</IconButton></div>

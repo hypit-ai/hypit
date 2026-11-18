@@ -451,7 +451,9 @@ function readTrack(value: XmlElement): NleTrack {
   attributes(value, ["id", "name", "kind", "enabled"], ["role"]);
   assertChildren(value, ["present", "adjust"]);
   const role = optionalAttr(value, "role");
-  if (role !== undefined && role !== "subtitle") fail(`<track> role ${role} is invalid.`);
+  if (role !== undefined && role !== "subtitle" && role !== "text" && role !== "effect") {
+    fail(`<track> role ${role} is invalid.`);
+  }
   return {
     id: attr(value, "id"),
     name: attr(value, "name"),

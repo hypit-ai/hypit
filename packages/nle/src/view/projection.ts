@@ -253,7 +253,7 @@ export function projectNleTimeline(
       ...(track.role === undefined ? {} : { role: track.role }),
       enabled: track.enabled,
       locked: trackState?.locked ?? false,
-      heightPx: trackState?.heightPx ?? (track.role === "subtitle" ? 36 : 62),
+      heightPx: track.role === undefined ? trackState?.heightPx ?? 62 : 36,
       tone: track.kind === "picture" ? "blue" as const : "green" as const,
       items,
     };

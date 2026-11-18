@@ -28,7 +28,8 @@ export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObjec
       if (viewport && target) {
         const pixels = Number(viewport.dataset.framePixels), bounds = viewport.getBoundingClientRect();
         const track = scene.tracks.find(track => track.id === target.dataset.nleDrop);
-        const compatible = !track || !track.locked && (cuts !== undefined || track.role === role) && track.kind === (entry.kind === "audio" ? "audio" : "picture");
+        const compatible = !track || !track.locked && track.kind === (entry.kind === "audio" ? "audio" : "picture")
+          && (cuts !== undefined || (role === "effect" ? track.role !== "subtitle" : track.role === role));
         if (pixels > 0 && compatible && pointer.x >= bounds.left + labelWidth && pointer.y >= bounds.top + rulerHeight) {
           const position = (pointer.x - bounds.left - labelWidth + viewport.scrollLeft) / pixels;
           let at = Math.max(0, Math.round(position));
