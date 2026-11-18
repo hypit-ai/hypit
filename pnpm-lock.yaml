@@ -190,21 +190,15 @@ importers:
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:../audio-program
-      '@hypit/audiovisual':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual
-      '@hypit/audiovisual-audio':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual-audio
-      '@hypit/audiovisual-html':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual-html
       '@hypit/html-program':
         specifier: workspace:^0.1.0
         version: link:../html-program
       '@hypit/media':
         specifier: workspace:^0.1.0
         version: link:../media
+      '@hypit/temporal':
+        specifier: workspace:^0.1.0
+        version: link:../temporal
 
   packages/html-video-local:
     dependencies:
@@ -275,6 +269,9 @@ importers:
 
   packages/nle-delivery:
     dependencies:
+      '@hypit/audio-program':
+        specifier: workspace:^0.1.0
+        version: link:../audio-program
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
         version: link:../audiovisual
@@ -284,6 +281,9 @@ importers:
       '@hypit/audiovisual-html':
         specifier: workspace:^0.1.0
         version: link:../audiovisual-html
+      '@hypit/html-program':
+        specifier: workspace:^0.1.0
+        version: link:../html-program
       '@hypit/html-video':
         specifier: workspace:^0.1.0
         version: link:../html-video
@@ -296,6 +296,9 @@ importers:
       '@hypit/project':
         specifier: workspace:^0.1.0
         version: link:../project
+      '@hypit/temporal':
+        specifier: workspace:^0.1.0
+        version: link:../temporal
 
   packages/nle-studio:
     dependencies:

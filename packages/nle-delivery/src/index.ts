@@ -1,16 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { audiovisualAudioContributionKind, type AudiovisualAudioContribution } from "@hypit/audiovisual-audio";
-import type { AudiovisualProgram } from "@hypit/audiovisual";
+import { audiovisualAudioContributionKind, lowerAudiovisualAudioProgram, type AudiovisualAudioContribution } from "@hypit/audiovisual-audio";
+import type { AudioProgram } from "@hypit/audio-program";
+import type { HtmlCanvas, HtmlFrameRate, HtmlFrameRequest } from "@hypit/html-program";
+import type { ExactTemporalValue, TemporalRange } from "@hypit/temporal/algebra";
 import {
   audiovisualHtmlContributionKind,
   linkAudiovisualProgramToHtml,
   type AudiovisualHtmlContribution,
-  type AudiovisualHtmlLink,
+  lowerAudiovisualPictureToHtmlProgram,
 } from "@hypit/audiovisual-html";
 import {
-  createHtmlVideoDeliveryPlan,
   type HtmlVideoDeliveryPlan,
   type HtmlVideoDeliveryProfile,
   type HtmlVideoExecutor,
@@ -24,7 +25,6 @@ import {
   type NleLoweringContribution,
   type NleMediaReference,
   type NleProject,
-  type NleLoweringHost,
 } from "@hypit/nle";
 import type { MediaResource, ResolvedMedia } from "@hypit/media";
 import type { ProjectHost } from "@hypit/project";
@@ -78,41 +78,20 @@ function contributions<T extends object>(host: ProjectHost, kind: string): reado
   });
 }
 
-export type PreparedNleDelivery = {
-  readonly project: NleProject;
-  readonly link: NleDeliveryTerminalLink;
-  readonly plan: HtmlVideoDeliveryPlan;
+export type PreparedNleCompilation = {
+  readonly duration: ExactTemporalValue;
+  compileFrame(output: { readonly canvas: HtmlCanvas; readonly frameRate: HtmlFrameRate; readonly range: TemporalRange }): HtmlFrameRequest;
+  compileAudio(profile?: HtmlVideoDeliveryProfile["audio"]): AudioProgram | undefined;
+  compileVideo(profile: HtmlVideoDeliveryProfile, range?: TemporalRange): HtmlVideoDeliveryPlan;
 };
 
-export type NleDeliveryTerminalLink = {
-  readonly project: NleProject;
-  readonly program: AudiovisualProgram;
-  readonly picture: AudiovisualHtmlLink;
-  readonly audioContributions: readonly AudiovisualAudioContribution[];
-};
-
-function linkNleDelivery(input: {
-  readonly project: NleProject;
-  readonly lowering: NleLoweringHost;
-  readonly html: readonly AudiovisualHtmlContribution[];
-  readonly audio: readonly AudiovisualAudioContribution[];
-}): NleDeliveryTerminalLink {
-  const program = lowerNleProjectToAudiovisual(input.project, input.lowering);
-  return {
-    project: structuredClone(input.project),
-    program,
-    picture: linkAudiovisualProgramToHtml(program, input.html),
-    audioContributions: input.audio,
-  };
-}
-
-export async function prepareNleTerminalLink(input: {
+export async function prepareNleCompilation(input: {
   readonly host: ProjectHost;
   readonly document: string;
   readonly snapshot?: NleProject;
   readonly composition?: string;
   readonly signal?: AbortSignal;
-}): Promise<NleDeliveryTerminalLink> {
+}): Promise<PreparedNleCompilation> {
   input.signal?.throwIfAborted();
   const document = projectPath(input.host.boundary.root, input.document, "NLE delivery document");
   const selected = input.snapshot === undefined ? readNleProject(await readFile(document, "utf8")) : structuredClone(input.snapshot);
@@ -136,12 +115,42 @@ export async function prepareNleTerminalLink(input: {
     },
   });
   input.signal?.throwIfAborted();
-  return linkNleDelivery({
-    project,
-    lowering,
-    html: contributions<AudiovisualHtmlContribution>(input.host, audiovisualHtmlContributionKind),
-    audio: contributions<AudiovisualAudioContribution>(input.host, audiovisualAudioContributionKind),
-  });
+  const program = lowerNleProjectToAudiovisual(project, lowering);
+  const picture = linkAudiovisualProgramToHtml(
+    program, contributions<AudiovisualHtmlContribution>(input.host, audiovisualHtmlContributionKind),
+  );
+  const audioContributions = contributions<AudiovisualAudioContribution>(input.host, audiovisualAudioContributionKind);
+  function compileAudio(profile?: HtmlVideoDeliveryProfile["audio"]): AudioProgram | undefined {
+    return program.audio === undefined ? undefined : lowerAudiovisualAudioProgram({
+      program,
+      contributions: audioContributions,
+      sampleRate: profile?.sampleRate ?? 48_000,
+      channels: profile?.channels ?? 2,
+    });
+  }
+  return {
+    duration: structuredClone(program.domain.duration),
+    compileFrame(output) {
+      return {
+        program: lowerAudiovisualPictureToHtmlProgram(picture, output),
+        frames: [0],
+        picture: { alpha: "opaque", matte: output.canvas.background },
+      };
+    },
+    compileAudio,
+    compileVideo(profile, range) {
+      const { width, height, background, frameRate, quality } = profile.picture;
+      const visual = lowerAudiovisualPictureToHtmlProgram(picture, {
+        frameRate, canvas: { width, height, background }, ...(range === undefined ? {} : { range }),
+      });
+      const audio = compileAudio(profile.audio);
+      return {
+        visual: { program: visual, picture: { alpha: "opaque", matte: background }, quality },
+        ...(audio === undefined ? {} : { audio }),
+        ...(range === undefined ? {} : { range }),
+      };
+    },
+  };
 }
 
 export async function prepareNleDelivery(input: {
@@ -150,9 +159,9 @@ export async function prepareNleDelivery(input: {
   readonly profile: HtmlVideoDeliveryProfile;
   readonly snapshot?: NleProject;
   readonly signal?: AbortSignal;
-}): Promise<PreparedNleDelivery> {
-  const link = await prepareNleTerminalLink(input);
-  return { project: link.project, link, plan: createHtmlVideoDeliveryPlan(link, input.profile) };
+}): Promise<HtmlVideoDeliveryPlan> {
+  const compilation = await prepareNleCompilation(input);
+  return compilation.compileVideo(input.profile);
 }
 
 export type NleDeliveryActionHandle = string;
@@ -253,13 +262,13 @@ class ProjectNleDeliveryService implements NleDeliveryService {
     const handle = action.observation.handle;
     try {
       this.#publish(action, { handle, state: "running", progress: 0 });
-      const prepared = await prepareNleDelivery({
+      const plan = await prepareNleDelivery({
         host: this.#host, document: request.document, profile: request.profile, signal: action.abort.signal,
         ...(request.snapshot === undefined ? {} : { snapshot: request.snapshot }),
       });
       action.abort.signal.throwIfAborted();
       this.#publish(action, { handle, state: "running", progress: 0.05 });
-      const result = await this.#executor.execute(prepared.plan, {
+      const result = await this.#executor.execute(plan, {
         destination,
         renderer: request.renderer ?? request.profile.picture.renderer ?? "chromium",
         signal: action.abort.signal,

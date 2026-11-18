@@ -2,13 +2,11 @@ import { randomUUID } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  createHtmlPreviewFrame, createHtmlVideoDeliveryPlan, createTerminalAudioProgram, type HtmlFrameExecutor, type HtmlVideoExecutor,
-} from "@hypit/html-video";
+import type { HtmlFrameExecutor, HtmlVideoExecutor } from "@hypit/html-video";
 import type { MediaResource } from "@hypit/media";
 import { renderAudioProgramWaveformLocally, type LocalMediaToolchainOptions } from "@hypit/media-local";
 import type { NleProject } from "@hypit/nle";
-import { prepareNleTerminalLink, type NleDeliveryTerminalLink } from "@hypit/nle-delivery";
+import { prepareNleCompilation, type PreparedNleCompilation } from "@hypit/nle-delivery";
 import type { ProjectHost } from "@hypit/project";
 import { compareExactTemporalValues, type TemporalRate } from "@hypit/temporal/algebra";
 import type { NleStudioActionObservation, NleStudioActionRequest } from "./protocol.js";
@@ -36,7 +34,7 @@ export class NleStudioPreview {
   readonly #cleanup = new Set<Promise<void>>();
   #generation = 0;
   readonly #current = new Map<PreviewChannel, PreviewAction>();
-  #prepared: { readonly key: string; readonly abort: AbortController; readonly link: Promise<NleDeliveryTerminalLink> } | undefined;
+  #prepared: { readonly key: string; readonly abort: AbortController; readonly compilation: Promise<PreparedNleCompilation> } | undefined;
 
   constructor(input: {
     readonly host: ProjectHost;
@@ -129,19 +127,19 @@ export class NleStudioPreview {
     return structuredClone(action.observation);
   }
 
-  #preparedLink(request: PreviewRequest, project: NleProject): Promise<NleDeliveryTerminalLink> {
+  #prepareCompilation(request: PreviewRequest, project: NleProject): Promise<PreparedNleCompilation> {
     const key = `${request.expectedProjectRevision}:${request.composition}`;
-    if (this.#prepared?.key === key) return this.#prepared.link;
+    if (this.#prepared?.key === key) return this.#prepared.compilation;
     this.#prepared?.abort.abort();
     const abort = new AbortController();
-    const link = prepareNleTerminalLink({
+    const compilation = prepareNleCompilation({
       host: this.#host, document: this.#document, snapshot: project, composition: request.composition, signal: abort.signal,
     }).catch((error: unknown) => {
       if (this.#prepared?.abort === abort) this.#prepared = undefined;
       throw error;
     });
-    this.#prepared = { key, abort, link };
-    return link;
+    this.#prepared = { key, abort, compilation };
+    return compilation;
   }
 
   async #run(
@@ -159,11 +157,11 @@ export class NleStudioPreview {
       await previous;
       signal.throwIfAborted();
       progress(0);
-      const link = await this.#preparedLink(request, project);
+      const compilation = await this.#prepareCompilation(request, project);
       signal.throwIfAborted();
       const start = studioFrameTime(request.atFrame, rate);
       const desired = studioFrameTime(request.atFrame + frames, rate);
-      const duration = link.program.domain.duration;
+      const duration = compilation.duration;
       if (compareExactTemporalValues(start, duration) >= 0) throw new Error("NLE Studio preview frame is outside the Programme.");
       const range = { start, end: compareExactTemporalValues(desired, duration) > 0 ? duration : desired };
       const source = project.compositions.find(value => value.id === request.composition)!.canvas;
@@ -175,7 +173,7 @@ export class NleStudioPreview {
       progress(0.1);
       let frameCount: number | undefined;
       if (request.kind === "programme-waveform") {
-        const audio = createTerminalAudioProgram(link);
+        const audio = compilation.compileAudio();
         if (audio === undefined) throw new Error("NLE Programme has no Audio output.");
         const bytes = await renderAudioProgramWaveformLocally({
           program: audio, range, width: request.width ?? 1024, height: request.height ?? 96,
@@ -186,14 +184,14 @@ export class NleStudioPreview {
         action.resource = { address, mediaType: "image/png", size: bytes.byteLength };
       } else if (request.kind === "frame-preview") {
         frameCount = 1;
-        const request = createHtmlPreviewFrame(link, { canvas, frameRate: rate, range });
+        const request = compilation.compileFrame({ canvas, frameRate: rate, range });
         const bytes = await this.#frame.capture(request, signal);
         signal.throwIfAborted();
         const address = join(action.directory, "frame.png");
         await writeFile(address, bytes, { signal });
         action.resource = { address, mediaType: "image/png", size: bytes.byteLength };
       } else {
-        const plan = createHtmlVideoDeliveryPlan(link, { picture: { ...canvas, frameRate: rate, quality: "draft" } }, range);
+        const plan = compilation.compileVideo({ picture: { ...canvas, frameRate: rate, quality: "draft" } }, range);
         frameCount = plan.visual.program.frameCount;
         action.resource = await this.#video!.execute(plan, {
           destination: join(action.directory, "playback.mp4"), renderer: "chromium", signal,

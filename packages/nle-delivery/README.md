@@ -5,5 +5,5 @@ snapshot to AVIR, closes Picture as `HtmlProgram` and Audio as `AudioProgram`, b
 submits that plan to the Application-provided HTML Video Executor. The Service owns its project-local delivery Action
 handles, progress, cancellation and destination validation; it owns neither the document nor the completed result.
 
-`prepareNleTerminalLink` is shared by delivery and Studio preview. A caller can supply the accepted in-memory
+`prepareNleCompilation` is shared by delivery and Studio preview. A caller can supply the accepted in-memory
 snapshot and select a Composition. A standalone delivery request can read its selected project document directly.
