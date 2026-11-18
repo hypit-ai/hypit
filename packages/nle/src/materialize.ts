@@ -23,7 +23,7 @@ import type {
   NleMediaInterpretation,
   NleMediaReference,
   NleParameterBinding,
-  NlePictureAppearance,
+  NleMediaPictureAppearance,
   NlePictureLayout,
   NleProject,
   NleTimeMapping,
@@ -61,7 +61,7 @@ export function createMediaAssetMaterialization(project: NleProject, input: {
   readonly at: ExactTemporalValue;
   readonly duration?: ExactTemporalValue;
   readonly audio?: Partial<NleAudioAppearance> | false;
-  readonly picture?: Partial<NlePictureAppearance> & { readonly layout?: NlePictureLayout };
+  readonly picture?: Partial<NleMediaPictureAppearance> & { readonly layout?: NlePictureLayout };
 }): NleTransaction {
   assertNleProject(project);
   const interpretation = sealMediaInterpretation(input.interpretation);
@@ -119,13 +119,12 @@ export function createComponentMaterialization(project: NleProject, input: {
   readonly duration: ExactTemporalValue;
   readonly sourceTime?: NleTimeMapping;
   readonly layout?: NlePictureLayout;
-  readonly audio?: Partial<NleAudioAppearance>;
 }): NleTransaction {
   assertNleProject(project);
   const location = track(project, input.track);
   const destination = location.track;
-  assert(destination.kind !== "audio" || input.audio !== undefined,
-    `NLE Component ${input.id} on an Audio Track requires Audio appearance.`);
+  assert(destination.kind === "picture",
+    `NLE Component ${input.id} requires a Picture Track.`);
   return { commands: [{
     kind: "item.add",
     track: destination.id,
@@ -142,10 +141,7 @@ export function createComponentMaterialization(project: NleProject, input: {
       duration: structuredClone(input.duration),
       sourceTime: structuredClone(input.sourceTime ?? nleLinearTimeMapping(input.duration)),
       enabled: true,
-      ...(input.audio === undefined ? {} : { audio: structuredClone(input.audio) }),
-      ...(destination.kind === "audio" ? {} : {
-        picture: { layout: structuredClone(input.layout ?? fullCanvas(location.composition)) },
-      }),
+      picture: { layout: structuredClone(input.layout ?? fullCanvas(location.composition)) },
     },
   }] };
 }

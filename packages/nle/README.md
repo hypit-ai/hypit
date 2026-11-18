@@ -29,9 +29,8 @@ reference to a Shared Value declared for its exact Operator symbol. The process-
 share, link and unlink operations, and Inspector editing of a shared value guards every current user's Track.
 
 Component Items may bind package-defined input names to portable Media Asset references. The Host resolves those
-references for one lowering invocation before resolving the component Source. Picture and Audio appearances may also
-select package-owned Signal Reconstruction for their exact mapped reads; constant Picture outputs remain constant and
-cannot be reconstructed.
+references before rendering the Component Picture. A timed Media Picture can select a package sampling
+implementation for its exact source read.
 
 `NleProjectService` owns the process-local revision, undo/redo, dirty/savepoint state and observation for one open
 Project. The Project file contains none of those session facts. Saving and reload remain explicit Host operations;

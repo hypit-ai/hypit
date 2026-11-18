@@ -181,7 +181,7 @@ internals:
 3. exact source mappings support affine pieces, reverse, hold and wrap;
 4. transitions and Mattes are explicit references between objects, not ambiguous child nesting;
 5. every Process belongs to one Present and carries exact local Control time; every Adjust has its own Programme range;
-6. Picture and Audio may remain coordinated for one Present while receiving different reconstruction selections;
+6. Picture and Audio of one Media Present share placement and source time. A timed Media Picture may select its reconstruction;
 7. component and Operator parameters are closed package-owned JSON objects whose internal fields remain outside the
    central syntax;
 8. controls are local to an item, Composition or relation and are pulled through nested mappings by lowering;

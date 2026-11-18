@@ -1,22 +1,13 @@
 import { assertHtmlPictureReconstruction, assertHtmlVisual } from "@hypit/html-program";
 import {
-  assertIdentity, assertPackageSymbol,
-  type NleComponentItem, type NleMatte, type NleProcess, type NleSignalReconstruction,
+  assertPackageSymbol,
+  type NleComponentItem, type NleMatte, type NleProcess, type NlePictureReconstruction,
   type NleTransition, type PackageSymbol,
 } from "@hypit/nle";
 import type {
   NleComponentRenderContext, NleMatteRenderContext, NlePictureReconstructionContext, NleProcessRenderContext,
   NleRenderContribution, NleTransitionRenderContext, ResolveNleMedia, SelectedNleRenderContribution,
 } from "../render-contribution.js";
-import type { AudioOperator, PictureOperator, CompiledSource } from "./types.js";
-import type { ExactTemporalValue } from "@hypit/temporal/algebra";
-
-export type NleResolvedItemSource = {
-  readonly source: CompiledSource;
-  readonly pictureOutput?: string;
-  readonly audioOutput?: string;
-};
-
 function select<T extends { readonly symbol: string; readonly render: unknown }>(
   contributions: readonly SelectedNleRenderContribution[],
   implementations: (value: NleRenderContribution) => readonly T[] | undefined,
@@ -52,16 +43,6 @@ function select<T extends { readonly symbol: string; readonly render: unknown }>
   };
 }
 
-function controls(id: string, names: readonly string[] | undefined, duration: ExactTemporalValue) {
-  if (names !== undefined && (!Array.isArray(names) || new Set(names).size !== names.length)) {
-    throw new Error(`NLE ${id} must declare distinct control names.`);
-  }
-  return Object.fromEntries((names ?? []).map(name => {
-    assertIdentity(name, `NLE ${id} control name`);
-    return [name, { id: `${id}:${name}`, duration }];
-  }));
-}
-
 export function createNleRenderResolver(
   contributions: readonly SelectedNleRenderContribution[],
   resolveMedia: ResolveNleMedia,
@@ -75,57 +56,28 @@ export function createNleRenderResolver(
 
   return {
     resolveMedia,
-    resolveComponent(item: NleComponentItem,
-      context: NleComponentRenderContext): NleResolvedItemSource {
-      const { region, duration, visual } = component(item.component, `Item ${item.id}`).render(item, context);
-      assertHtmlVisual(visual);
-      const spatialDomain = { id: `${item.id}:source-space`, region };
-      return {
-        source: {
-          id: `${item.id}:source`,
-          content: { kind: "visual", visual },
-          outputs: {
-            picture: duration === undefined
-              ? { signal: "picture", kind: "constant", spatialDomain }
-              : { signal: "picture", kind: "signal", spatialDomain, domain: { id: `${item.id}:source-time`, duration } },
-          },
-        },
-        pictureOutput: "picture",
-      };
+    resolveComponent(item: NleComponentItem, context: NleComponentRenderContext) {
+      const picture = component(item.component, `Item ${item.id}`).render(item, context);
+      assertHtmlVisual(picture.visual);
+      return picture;
     },
-    resolvePictureOperator(process: NleProcess,
-      context: NleProcessRenderContext): PictureOperator {
-      const output = pictureProcess(process.operator, `Process ${process.id}`).render(process, context);
-      return {
-        id: `${process.id}:operator`, visual: output.visual,
-        inputs: ["signal"], temporalControls: controls(process.id, output.controls, context.controlDuration),
-      };
+    resolvePictureOperator(process: NleProcess, context: NleProcessRenderContext) {
+      return pictureProcess(process.operator, `Process ${process.id}`).render(process, context);
     },
-    resolveAudioOperator(process: NleProcess,
-      context: NleProcessRenderContext): AudioOperator {
-      const output = audioProcess(process.operator, `Process ${process.id}`).render(process, context);
-      return {
-        id: `${process.id}:operator`, filter: output.filter,
-        inputs: ["signal"], temporalControls: controls(process.id, output.controls, context.controlDuration),
-      };
+    resolveAudioOperator(process: NleProcess, context: NleProcessRenderContext) {
+      const effect = audioProcess(process.operator, `Process ${process.id}`).render(process, context);
+      if (typeof effect.filter !== "string" || effect.filter.trim().length === 0) {
+        throw new Error(`NLE Audio Process ${process.id} requires a filter expression.`);
+      }
+      return effect;
     },
-    resolveTransition(value: NleTransition,
-      context: NleTransitionRenderContext): PictureOperator {
-      const output = transition(value.operator, `Transition ${value.id}`).render(value, context);
-      return {
-        id: `${value.id}:operator`, visual: output.visual,
-        inputs: ["outgoing", "incoming"], temporalControls: controls(value.id, output.controls, context.domain.duration),
-      };
+    resolveTransition(value: NleTransition, context: NleTransitionRenderContext) {
+      return transition(value.operator, `Transition ${value.id}`).render(value, context);
     },
-    resolveMatte(value: NleMatte,
-      context: NleMatteRenderContext): PictureOperator {
-      const output = matte(value.operator, `Matte ${value.id}`).render(value, context);
-      return {
-        id: `${value.id}:operator`, visual: output.visual,
-        inputs: ["content", "matte"], temporalControls: controls(value.id, output.controls, context.content.duration),
-      };
+    resolveMatte(value: NleMatte, context: NleMatteRenderContext) {
+      return matte(value.operator, `Matte ${value.id}`).render(value, context);
     },
-    resolvePictureReconstruction(value: NleSignalReconstruction,
+    resolvePictureReconstruction(value: NlePictureReconstruction,
       context: NlePictureReconstructionContext) {
       const output = pictureReconstruction(value.using, `Item ${context.item.id}`).render(value, context);
       assertHtmlPictureReconstruction(output);

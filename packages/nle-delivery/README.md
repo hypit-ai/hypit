@@ -19,7 +19,7 @@ Components, resolved Media inputs and inline or shared slot values.
   describes a constant Picture. A timed visual renders the requested local frame.
 - A Picture Process or Adjust returns an `HtmlVisual` using `{{input:signal}}`. Transitions use `outgoing` and
   `incoming`, and Mattes use `content` and `matte`. Each effect can declare the local control names it reads.
-- An Audio Process or Adjust returns an audio filter and its control names. Source reads use accepted Project Media.
+- An Audio Process or Adjust returns an audio filter expression and its control names. Source reads use accepted Project Media.
 - A Picture Reconstruction returns the sampling implementation for one timed Media Picture.
 
 The compiler binds inputs and computes exact control mappings from the edit. Authoring, Inspector and Timeline

@@ -65,7 +65,7 @@ export const hypitPackage = {
       symbol: "gain",
       render: (_process, { parameters }) => ({
         controls: parameters.kind === "keyframes" ? ["gain"] : [],
-        filter: { filter: `{{input:signal}}volume='${gainExpression(parameters)}':eval=frame{{output}}` },
+        filter: `{{input:signal}}volume='${gainExpression(parameters)}':eval=frame{{output}}`,
       }),
     }] } },
   ],

@@ -242,23 +242,19 @@ function assertProcesses(value: unknown, duration: ExactTemporalValue, label: st
   }
 }
 
-function assertAppearance(
+function assertPictureAppearance(
   value: unknown,
-  medium: "picture" | "audio",
+  media: boolean,
   duration: ExactTemporalValue,
   label: string,
 ): void {
   record(value, label);
-  if (medium === "picture") {
-    onlyKeys(value, ["layout", "reconstruction", "processes"], label);
-    record(value.layout, `${label}.layout`);
-    if (Object.hasOwn(value.layout, "ref")) {
-      onlyKeys(value.layout, ["ref"], `${label}.layout`);
-      identity(value.layout.ref, `${label}.layout.ref`);
-    } else assertLayout(value.layout, `${label}.layout`);
-  } else {
-    onlyKeys(value, ["reconstruction", "processes"], label);
-  }
+  onlyKeys(value, media ? ["layout", "reconstruction", "processes"] : ["layout", "processes"], label);
+  record(value.layout, `${label}.layout`);
+  if (Object.hasOwn(value.layout, "ref")) {
+    onlyKeys(value.layout, ["ref"], `${label}.layout`);
+    identity(value.layout.ref, `${label}.layout.ref`);
+  } else assertLayout(value.layout, `${label}.layout`);
   if (value.reconstruction !== undefined) {
     record(value.reconstruction, `${label}.reconstruction`);
     onlyKeys(value.reconstruction, ["using", "parameters"], `${label}.reconstruction`);
@@ -285,12 +281,12 @@ function assertItem(value: unknown, track: NleTrack, ids: Set<string>): asserts 
   } else {
     assert(value.source === "media" || value.source === "component" || value.source === "composition",
       `${label}.source is invalid.`);
-    const present = [...common, "source", "sourceTime", "picture", "audio"];
+    const present = [...common, "source", "sourceTime", "picture"];
     onlyKeys(value, value.source === "media"
-      ? [...present, "asset"]
+      ? [...present, "asset", "audio"]
       : value.source === "component"
         ? [...present, "component", "valueBindings", "parameters", "media"]
-        : [...present, "composition"], label);
+        : [...present, "composition", "audio"], label);
   }
   identity(value.id, `${label}.id`);
   assert(!ids.has(value.id), `NLE Project repeats Item ${value.id}.`);
@@ -310,10 +306,12 @@ function assertItem(value: unknown, track: NleTrack, ids: Set<string>): asserts 
   }
   assertTimeMapping(value.sourceTime, value.duration as ExactTemporalValue, `${label}.sourceTime`);
   if (value.picture !== undefined) {
-    assertAppearance(value.picture, "picture", value.duration as ExactTemporalValue, `${label}.picture`);
+    assertPictureAppearance(value.picture, value.source === "media", value.duration as ExactTemporalValue, `${label}.picture`);
   }
   if (value.audio !== undefined) {
-    assertAppearance(value.audio, "audio", value.duration as ExactTemporalValue, `${label}.audio`);
+    record(value.audio, `${label}.audio`);
+    onlyKeys(value.audio, ["processes"], `${label}.audio`);
+    assertProcesses(value.audio.processes ?? [], value.duration as ExactTemporalValue, `${label}.audio.processes`);
   }
   if (track.kind === "picture") {
     assert(value.picture !== undefined, `${label} on Picture Track ${track.id} has no Picture appearance.`);
@@ -364,9 +362,6 @@ function assertItem(value: unknown, track: NleTrack, ids: Set<string>): asserts 
     }
   } else {
     identity(value.composition, `${label}.composition`);
-    assert((value.picture as { readonly reconstruction?: unknown } | undefined)?.reconstruction === undefined
-      && (value.audio as { readonly reconstruction?: unknown } | undefined)?.reconstruction === undefined,
-    `${label} cannot reconstruct a nested Composition aggregate.`);
   }
 }
 

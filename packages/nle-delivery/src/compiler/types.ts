@@ -9,30 +9,25 @@ import type {
 } from "@hypit/temporal/algebra";
 import type { LocalSpatialDomain, SpatialMap, SpatialRegion } from "./spatial.js";
 
-export type PictureSourceOutput = {
-  readonly signal: "picture";
+export type SourceContent =
+  | { readonly kind: "media"; readonly media: ResolvedMedia }
+  | { readonly kind: "visual"; readonly visual: HtmlVisual };
+
+export type ResolvedSource = {
+  readonly content: SourceContent;
+  readonly picture?: {
+    readonly spatialDomain: LocalSpatialDomain;
+    readonly time?: LocalTemporalDomain;
+  };
+  readonly audio?: LocalTemporalDomain;
+};
+
+export type PictureRead = {
   readonly spatialDomain: LocalSpatialDomain;
 } & (
-  | { readonly kind: "signal"; readonly domain: LocalTemporalDomain }
   | { readonly kind: "constant" }
+  | { readonly kind: "signal"; readonly mapping: TemporalMap; readonly reconstruction?: HtmlPictureReconstruction }
 );
-
-export type AudioSourceOutput = {
-  readonly signal: "audio";
-  readonly kind: "signal";
-  readonly domain: LocalTemporalDomain;
-};
-
-export type CompiledSourceOutput = PictureSourceOutput | AudioSourceOutput;
-
-/** One resolved Source implementation used by a closed Programme. */
-export type CompiledSource = {
-  readonly id: string;
-  readonly outputs: Readonly<Record<string, CompiledSourceOutput>>;
-  readonly content:
-    | { readonly kind: "media"; readonly media: ResolvedMedia }
-    | { readonly kind: "visual"; readonly visual: HtmlVisual };
-};
 
 export type OccurrencePlacement = {
   readonly parent: LocalTemporalDomain;
@@ -40,59 +35,26 @@ export type OccurrencePlacement = {
   readonly active: TemporalRange;
 };
 
-export type OccurrenceOutputSelection =
-  | {
-      readonly kind: "signal";
-      readonly mapping: TemporalMap;
-      /** Package-owned interpretation of this exact mapped read, not of the Source itself. */
-      readonly reconstruction?: HtmlPictureReconstruction;
-    }
-  | { readonly kind: "constant" };
-
-/** One stable use of a Source. Trimming changes placement, not Source identity. */
 export type Occurrence = {
   readonly id: string;
-  readonly source: CompiledSource;
+  readonly content: SourceContent;
   readonly domain: LocalTemporalDomain;
   readonly placement: OccurrencePlacement;
-  readonly selections: Readonly<Record<string, OccurrenceOutputSelection>>;
-};
-
-type OperatorInputTemporalSupport = {
-  readonly before: ExactTemporalValue;
-  readonly after: ExactTemporalValue;
-};
-
-export type OperatorTemporalSupport = {
-  readonly inputs: Readonly<Record<string, OperatorInputTemporalSupport>>;
-  readonly tail: ExactTemporalValue;
-};
-
-type Operator = {
-  readonly id: string;
-  readonly inputs: readonly string[];
-  readonly temporalControls: Readonly<Record<string, LocalTemporalDomain>>;
-};
-
-export type PictureOperator = Operator & {
-  readonly visual: HtmlVisual;
-};
-
-export type AudioOperator = Operator & {
-  readonly filter: Omit<AudioFilterProgram, "controls">;
+  readonly picture?: PictureRead;
+  readonly audio?: TemporalMap;
 };
 
 export type PictureNodeId = string;
 export type PictureNode =
-  | { readonly kind: "transparent" }
-  | { readonly kind: "use"; readonly occurrence: string; readonly output: string }
+  | { readonly kind: "transparent"; readonly spatialDomain: LocalSpatialDomain }
+  | { readonly kind: "use"; readonly occurrence: string }
   | { readonly kind: "restrict"; readonly input: PictureNodeId; readonly range: TemporalRange }
   | { readonly kind: "crop"; readonly input: PictureNodeId; readonly region: SpatialRegion }
   | { readonly kind: "remap"; readonly input: PictureNodeId; readonly mapping: SpatialMap }
   | { readonly kind: "over"; readonly inputs: readonly PictureNodeId[] }
   | {
       readonly kind: "apply";
-      readonly operator: PictureOperator;
+      readonly visual: HtmlVisual;
       readonly inputs: Readonly<Record<string, PictureNodeId>>;
       readonly controlMappings: Readonly<Record<string, TemporalMap>>;
     };
@@ -105,13 +67,13 @@ export type PictureGraph = {
 export type AudioNodeId = string;
 export type AudioNode =
   | { readonly kind: "silence" }
-  | { readonly kind: "use"; readonly occurrence: string; readonly output: string }
+  | { readonly kind: "use"; readonly occurrence: string }
   | { readonly kind: "restrict"; readonly input: AudioNodeId; readonly range: TemporalRange }
   | { readonly kind: "mix"; readonly inputs: readonly AudioNodeId[] }
   | {
       readonly kind: "apply";
-      readonly operator: AudioOperator;
-      readonly inputs: Readonly<Record<string, AudioNodeId>>;
+      readonly filter: AudioFilterProgram["filter"];
+      readonly input: AudioNodeId;
       readonly controlMappings: Readonly<Record<string, TemporalMap>>;
     };
 
@@ -128,30 +90,4 @@ export type CompilationGraph = {
   readonly occurrences: Readonly<Record<string, Occurrence>>;
   readonly picture?: PictureGraph;
   readonly audio?: AudioGraph;
-};
-
-export type EvaluatedSourceSample = {
-  readonly temporal:
-    | {
-        readonly kind: "signal";
-        readonly at: ExactTemporalValue;
-        readonly side: "before" | "after";
-      }
-    | { readonly kind: "constant" };
-};
-
-export type EvaluatedPictureNode =
-  | { readonly kind: "transparent" }
-  | ({ readonly kind: "sample" } & EvaluatedSourceSample)
-  | { readonly kind: "alias"; readonly input: PictureNodeId }
-  | { readonly kind: "crop"; readonly input: PictureNodeId; readonly region: SpatialRegion }
-  | { readonly kind: "remap"; readonly input: PictureNodeId; readonly mapping: SpatialMap }
-  | { readonly kind: "over"; readonly inputs: readonly PictureNodeId[] }
-  | {
-      readonly kind: "apply";
-      readonly controlPositions: Readonly<Record<string, ExactTemporalValue>>;
-    };
-
-export type EvaluatedPictureGraph = {
-  readonly nodes: Readonly<Record<string, EvaluatedPictureNode>>;
 };

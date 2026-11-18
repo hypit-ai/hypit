@@ -1,9 +1,10 @@
 import { resolvedMediaSource } from "./media.js";
-import { assertCompiledSource, occurrenceParentRange, sealOccurrence } from "./occurrence.js";
+import { occurrenceParentRange } from "./occurrence.js";
 import { sealCompilationGraph } from "./program.js";
+import { pictureNodeSpatialDomains } from "./picture.js";
 import { sealLocalSpatialDomain, sealSpatialMap, type LocalSpatialDomain, type SpatialMap } from "./spatial.js";
 import type {
-  AudioNode, CompilationGraph, CompiledSource, Occurrence, OccurrenceOutputSelection, PictureNode, PictureOperator,
+  AudioNode, CompilationGraph, Occurrence, PictureNode, PictureRead, ResolvedSource,
 } from "./types.js";
 import type { HtmlPictureReconstruction } from "@hypit/html-program";
 import {
@@ -24,6 +25,7 @@ import {
 } from "@hypit/temporal/algebra";
 import {
   fitNlePictureContent,
+  assertIdentity,
   assertNleProject,
   findNleComposition,
   nleCompositionDuration,
@@ -44,7 +46,7 @@ import type {
   NleTransition,
 } from "@hypit/nle";
 import type { NleProcessRenderContext, NleRenderContext } from "../render-contribution.js";
-import type { NleResolvedItemSource, NleRenderResolver } from "./resolve.js";
+import type { NleRenderResolver } from "./resolve.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -113,101 +115,70 @@ function placementMap(
   });
 }
 
-function validateResolvedSource(value: NleResolvedItemSource, item: NlePresentItem): void {
-  assertCompiledSource(value.source);
-  if (value.pictureOutput !== undefined) {
-    const output = value.source.outputs[value.pictureOutput];
-    assert(output !== undefined && output.signal === "picture",
-      `NLE Item ${item.id} resolved Picture output ${value.pictureOutput}, but the Source does not expose it.`);
-  }
-  if (value.audioOutput !== undefined) {
-    const output = value.source.outputs[value.audioOutput];
-    assert(output !== undefined && output.signal === "audio",
-      `NLE Item ${item.id} resolved Audio output ${value.audioOutput}, but the Source does not expose it.`);
-  }
-}
-
 function resolveItem(
   project: NleProject,
   composition: NleComposition,
   track: NleTrack,
   item: NlePresentItem,
   host: NleRenderResolver,
-): NleResolvedItemSource {
+): ResolvedSource {
   const context: NleRenderContext = { project, composition, track };
   if (item.source === "media") {
-    const source = resolvedMediaSource(`${item.id}:source`, host.resolveMedia(item.asset, {
-      ...context,
-      kind: "item",
-      item,
-    }));
-    return {
-      source,
-      ...(source.outputs.picture === undefined ? {} : { pictureOutput: "picture" }),
-      ...(source.outputs.audio === undefined ? {} : { audioOutput: "audio" }),
-    };
+    return resolvedMediaSource(`${item.id}:source`, host.resolveMedia(item.asset));
   }
   assert(item.source === "component", `NLE Item ${item.id} is not a resolvable Media or Component source.`);
   const media = Object.fromEntries(Object.entries(item.media ?? {}).map(([input, asset]) => [
     input,
-    host.resolveMedia(asset, { ...context, kind: "component-input", item, input }),
+    host.resolveMedia(asset),
   ]));
   const values = Object.fromEntries((item.valueBindings ?? []).map((binding) => [
     binding.slot,
     resolveNleComponentValue(project, item.component, binding),
   ]));
-  const resolved = host.resolveComponent(item, { ...context, item, media, values });
-  validateResolvedSource(resolved, item);
-  return resolved;
-}
-
-function selection(
-  item: NlePresentItem,
-  source: CompiledSource,
-  outputName: string,
-  reconstruction?: HtmlPictureReconstruction,
-): OccurrenceOutputSelection {
-  const output = source.outputs[outputName];
-  assert(output !== undefined, `NLE Item ${item.id} selects missing Source output ${outputName}.`);
-  if (output.kind === "constant") {
-    assert(reconstruction === undefined,
-      `NLE Item ${item.id} cannot reconstruct constant output ${outputName}.`);
-    return { kind: "constant" };
-  }
-  const local = sealLocalTemporalDomain({ id: `${item.id}:time`, duration: structuredClone(item.duration) });
+  const { region, duration, visual } = host.resolveComponent(item, { ...context, item, media, values });
   return {
-    kind: "signal",
-    mapping: sealTemporalMap({ stages: [{
-      target: local,
-      source: output.domain,
-      pieces: structuredClone(item.sourceTime.pieces),
-    }] }),
-    ...(reconstruction === undefined ? {} : { reconstruction: structuredClone(reconstruction) }),
+    content: { kind: "visual", visual },
+    picture: {
+      spatialDomain: { id: `${item.id}:source-space`, region },
+      ...(duration === undefined ? {} : { time: { id: `${item.id}:source-time`, duration } }),
+    },
   };
 }
 
-function occurrence(
+function sourceMap(item: NlePresentItem, local: LocalTemporalDomain, source: LocalTemporalDomain): TemporalMap {
+  return sealTemporalMap({ stages: [{ target: local, source, pieces: item.sourceTime.pieces }] });
+}
+
+function pictureRead(
   item: NlePresentItem,
-  parent: CompilationGraph["domain"],
-  source: CompiledSource,
-  outputs: readonly string[],
-  reconstructions: Readonly<Record<string, HtmlPictureReconstruction>>,
-): Occurrence {
-  const domain = sealLocalTemporalDomain({ id: `${item.id}:time`, duration: structuredClone(item.duration) });
-  return sealOccurrence({
-    id: item.id,
-    source,
-    domain,
-    placement: {
-      parent,
-      start: structuredClone(item.start),
-      active: { start: exactTemporalZero(), end: structuredClone(item.duration) },
-    },
-    selections: Object.fromEntries([...new Set(outputs)].map((output) => [
-      output,
-      selection(item, source, output, reconstructions[output]),
-    ])),
-  });
+  domain: LocalTemporalDomain,
+  picture: NonNullable<ResolvedSource["picture"]>,
+  reconstruction: HtmlPictureReconstruction | undefined,
+): PictureRead {
+  if (picture.time === undefined) {
+    assert(reconstruction === undefined, `NLE Item ${item.id} reconstruction requires a timed Picture.`);
+    return { kind: "constant", spatialDomain: picture.spatialDomain };
+  }
+  return {
+    kind: "signal",
+    spatialDomain: picture.spatialDomain,
+    mapping: sourceMap(item, domain, picture.time),
+    ...(reconstruction === undefined ? {} : { reconstruction }),
+  };
+}
+
+function bindControls(
+  id: string,
+  names: readonly string[] | undefined,
+  duration: ExactTemporalValue,
+  mapping: (domain: LocalTemporalDomain) => TemporalMap,
+): Readonly<Record<string, TemporalMap>> {
+  assert(names === undefined || (Array.isArray(names) && new Set(names).size === names.length),
+    `NLE ${id} must declare distinct control names.`);
+  return Object.fromEntries((names ?? []).map(name => {
+    assertIdentity(name, `NLE ${id} control name`);
+    return [name, mapping({ id: `${id}:${name}`, duration })];
+  }));
 }
 
 function operatorControlMapping(
@@ -215,11 +186,7 @@ function operatorControlMapping(
   start: ExactTemporalValue,
   parent: LocalTemporalDomain,
   control: LocalTemporalDomain,
-  label: string,
 ) {
-  const required = nleTimeMappingRequiredDuration(process.controlTime);
-  assert(compareExactTemporalValues(control.duration, required) === 0,
-    `${label} Control ${control.id} duration does not match its persisted control time.`);
   return sealTemporalMap({ stages: [{
     target: parent,
     source: control,
@@ -259,18 +226,14 @@ function pictureProcessNode(
   host: NleRenderResolver,
   parent: LocalTemporalDomain,
 ): string {
-  const operator = host.resolvePictureOperator(process, context);
-  const controlMappings = Object.fromEntries(Object.entries(operator.temporalControls).map(([name, control]) => [
-    name,
-    operatorControlMapping(process, context.scope.item.start, parent, control,
-      `NLE Picture Process ${process.id}`),
-  ]));
+  const effect = host.resolvePictureOperator(process, context);
   const id = `${context.scope.item.id}:picture-operator:${process.id}`;
   nodes[id] = {
     kind: "apply",
-    operator,
-    inputs: { [operator.inputs[0]!]: input },
-    controlMappings,
+    visual: effect.visual,
+    inputs: { signal: input },
+    controlMappings: bindControls(process.id, effect.controls, context.controlDuration,
+      control => operatorControlMapping(process, context.scope.item.start, parent, control)),
   };
   return id;
 }
@@ -283,18 +246,14 @@ function audioProcessNode(
   host: NleRenderResolver,
   parent: LocalTemporalDomain,
 ): string {
-  const operator = host.resolveAudioOperator(process, context);
-  const controlMappings = Object.fromEntries(Object.entries(operator.temporalControls).map(([name, control]) => [
-    name,
-    operatorControlMapping(process, context.scope.item.start, parent, control,
-      `NLE Audio Process ${process.id}`),
-  ]));
+  const effect = host.resolveAudioOperator(process, context);
   const id = `${context.scope.item.id}:audio-operator:${process.id}`;
   nodes[id] = {
     kind: "apply",
-    operator,
-    inputs: { [operator.inputs[0]!]: input },
-    controlMappings,
+    filter: effect.filter,
+    input,
+    controlMappings: bindControls(process.id, effect.controls, context.controlDuration,
+      control => operatorControlMapping(process, context.scope.item.start, parent, control)),
   };
   return id;
 }
@@ -463,20 +422,6 @@ function importNestedProgram(
   const occurrences: Record<string, Occurrence> = {};
   const occurrenceClones = new Map<string, readonly string[]>();
   for (const [id, occurrenceValue] of Object.entries(program.occurrences)) {
-    const source = {
-      ...structuredClone(occurrenceValue.source),
-      id: namespaced(prefix, occurrenceValue.source.id),
-      outputs: Object.fromEntries(Object.entries(occurrenceValue.source.outputs).map(([name, output]) => [
-        name,
-        {
-          ...structuredClone(output),
-          ...(output.signal === "picture"
-            ? { spatialDomain: namespaceSpatialDomain(prefix, output.spatialDomain) }
-            : {}),
-          ...(output.kind === "signal" ? { domain: namespaceDomain(prefix, output.domain) } : {}),
-        },
-      ])),
-    };
     const activeParentRange = occurrenceParentRange(occurrenceValue);
     const regions = preimageRanges(occurrenceMap, program.domain, activeParentRange);
     const cloneIds: string[] = [];
@@ -498,47 +443,47 @@ function importNestedProgram(
           }],
         }],
       };
-      occurrences[cloneId] = sealOccurrence({
+      const retimeSource = (mapping: TemporalMap): TemporalMap => sealTemporalMap({ stages: [
+        { target: cloneDomain, source: childDomain, pieces: selectedPieces },
+        ...childToOccurrence.stages,
+        ...namespaceSelectionMap(prefix, mapping).stages,
+      ] });
+      const picture = occurrenceValue.picture;
+      occurrences[cloneId] = {
         id: cloneId,
-        source,
+        content: occurrenceValue.content,
         domain: cloneDomain,
         placement: {
           parent,
           start: shifted(region.start, item.start),
           active: { start: exactTemporalZero(), end: structuredClone(duration) },
         },
-        selections: Object.fromEntries(Object.entries(occurrenceValue.selections).map(([name, selectionValue]) => [
-          name,
-          selectionValue.kind === "constant"
-            ? { kind: "constant" }
-            : {
-                ...structuredClone(selectionValue),
-                mapping: sealTemporalMap({ stages: [
-                  {
-                    target: cloneDomain,
-                    source: childDomain,
-                    pieces: selectedPieces,
-                  },
-                  ...childToOccurrence.stages,
-                  ...namespaceSelectionMap(prefix, selectionValue.mapping).stages,
-                ] }),
-              },
-        ])),
-      });
+        ...(picture === undefined ? {} : {
+          picture: {
+            ...picture,
+            spatialDomain: namespaceSpatialDomain(prefix, picture.spatialDomain),
+            ...(picture.kind === "constant" ? {} : { mapping: retimeSource(picture.mapping) }),
+          },
+        }),
+        ...(occurrenceValue.audio === undefined ? {} : { audio: retimeSource(occurrenceValue.audio) }),
+      };
       cloneIds.push(cloneId);
     }
     occurrenceClones.set(id, cloneIds);
   }
 
   const pictureNodes: Record<string, PictureNode> = {};
+  const space = program.picture === undefined ? undefined : pictureNodeSpatialDomains(program.picture, program);
   for (const [id, node] of Object.entries(program.picture?.nodes ?? {})) {
+    const sourceDomain = space?.get(id);
+    if (sourceDomain === undefined) continue;
     const importedId = namespaced(prefix, id);
     const imported: PictureNode = (() => {
       switch (node.kind) {
-        case "transparent": return { kind: "transparent" };
+        case "transparent": return { kind: "transparent", spatialDomain: namespaceSpatialDomain(prefix, sourceDomain) };
         case "use": {
           const clones = occurrenceClones.get(node.occurrence) ?? [];
-          if (clones.length === 0) return { kind: "transparent" };
+          if (clones.length === 0) return { kind: "transparent", spatialDomain: namespaceSpatialDomain(prefix, sourceDomain) };
           if (clones.length === 1) return { ...node, occurrence: clones[0]! };
           const uses = clones.map((occurrence, index) => {
             const use = `${importedId}:region:${index}`;
@@ -549,7 +494,7 @@ function importNestedProgram(
         }
         case "restrict": {
           const ranges = preimageRanges(occurrenceMap, program.domain, node.range);
-          if (ranges.length === 0) return { kind: "transparent" };
+          if (ranges.length === 0) return { kind: "transparent", spatialDomain: namespaceSpatialDomain(prefix, sourceDomain) };
           if (ranges.length === 1) return {
             ...node,
             input: namespaced(prefix, node.input),
@@ -577,13 +522,7 @@ function importNestedProgram(
         };
         case "over": return { kind: "over", inputs: node.inputs.map((input) => namespaced(prefix, input)) };
         case "apply": return {
-          ...structuredClone(node),
-          operator: {
-            ...structuredClone(node.operator),
-            id: namespaced(prefix, node.operator.id),
-            temporalControls: Object.fromEntries(Object.entries(node.operator.temporalControls)
-              .map(([name, control]) => [name, namespaceDomain(prefix, control)])),
-          },
+          ...node,
           inputs: Object.fromEntries(Object.entries(node.inputs)
             .map(([name, input]) => [name, namespaced(prefix, input)])),
           controlMappings: Object.fromEntries(Object.entries(node.controlMappings)
@@ -635,15 +574,8 @@ function importNestedProgram(
         }
         case "mix": return { kind: "mix", inputs: node.inputs.map((input) => namespaced(prefix, input)) };
         case "apply": return {
-          ...structuredClone(node),
-          operator: {
-            ...structuredClone(node.operator),
-            id: namespaced(prefix, node.operator.id),
-            temporalControls: Object.fromEntries(Object.entries(node.operator.temporalControls)
-              .map(([name, control]) => [name, namespaceDomain(prefix, control)])),
-          },
-          inputs: Object.fromEntries(Object.entries(node.inputs)
-            .map(([name, input]) => [name, namespaced(prefix, input)])),
+          ...node,
+          input: namespaced(prefix, node.input),
           controlMappings: Object.fromEntries(Object.entries(node.controlMappings)
             .map(([name, map]) => [name, retimeNestedControlMap(prefix, item, occurrenceMap, map, parent)])),
         };
@@ -664,10 +596,11 @@ function importNestedProgram(
   };
 }
 
-function lowerCompositionToAudiovisual(
+function lowerComposition(
   project: NleProject,
   composition: NleComposition,
   host: NleRenderResolver,
+  outputs: { readonly picture: boolean; readonly audio: boolean },
 ): CompilationGraph {
   const duration = nleCompositionDuration(composition);
   assert(compareExactTemporalValues(duration, exactTemporalZero()) > 0,
@@ -688,9 +621,9 @@ function lowerCompositionToAudiovisual(
     for (const item of track.items) {
       if (!item.enabled) continue;
       if (track.kind === "picture") {
-        if (!matteSources.has(item.id)) pictureOrder.push(item.id);
-        if (item.kind === "present" && item.audio !== undefined) audioOrder.push(item.id);
-      } else audioOrder.push(item.id);
+        if (outputs.picture && !matteSources.has(item.id)) pictureOrder.push(item.id);
+        if (outputs.audio && item.kind === "present" && item.audio !== undefined) audioOrder.push(item.id);
+      } else if (outputs.audio) audioOrder.push(item.id);
     }
   }
 
@@ -718,7 +651,7 @@ function lowerCompositionToAudiovisual(
     if (item.source === "composition") {
       const sourceComposition = findNleComposition(project, item.composition);
       const nested = importNestedProgram(
-        lowerCompositionToAudiovisual(project, sourceComposition, host),
+        lowerComposition(project, sourceComposition, host, { picture: needsPicture, audio: needsAudio }),
         item,
         domain,
       );
@@ -781,40 +714,32 @@ function lowerCompositionToAudiovisual(
       continue;
     }
     const resolved = resolveItem(project, composition, track, item, host);
-    const outputs: string[] = [];
-    if (needsPicture) {
-      assert(resolved.pictureOutput !== undefined,
-        `NLE Item ${item.id} requests Picture but resolved no Picture output.`);
-      outputs.push(resolved.pictureOutput);
-    }
-    if (needsAudio) {
-      assert(resolved.audioOutput !== undefined,
-        `NLE Item ${item.id} requests Audio but resolved no Audio output.`);
-      outputs.push(resolved.audioOutput);
-    }
-    const reconstructions: Record<string, HtmlPictureReconstruction> = {};
-    if (needsPicture && item.picture!.reconstruction !== undefined) {
-      reconstructions[resolved.pictureOutput!] = host.resolvePictureReconstruction(item.picture!.reconstruction, {
-        project, composition, track, item,
-      });
-    }
-    if (needsAudio && item.audio!.reconstruction !== undefined) {
-      const { using } = item.audio!.reconstruction;
-      throw new Error(`NLE Item ${item.id} has no Audio Reconstruction implementation ${using.package}#${using.symbol}.`);
-    }
-    occurrences[item.id] = occurrence(item, domain, resolved.source, outputs, reconstructions);
-    if (needsPicture) {
-      const outputName = resolved.pictureOutput!;
-      const output = resolved.source.outputs[outputName]!;
-      assert(output.signal === "picture", `NLE Item ${item.id} resolved a non-Picture output.`);
+    const picture = needsPicture ? resolved.picture : undefined;
+    const audio = needsAudio ? resolved.audio : undefined;
+    assert(!needsPicture || picture !== undefined, `NLE Item ${item.id} requires a Picture source.`);
+    assert(!needsAudio || audio !== undefined, `NLE Item ${item.id} requires an Audio source.`);
+    const reconstruction = item.source === "media" ? item.picture?.reconstruction : undefined;
+    const localTime = sealLocalTemporalDomain({ id: `${item.id}:time`, duration: item.duration });
+    occurrences[item.id] = {
+      id: item.id,
+      content: resolved.content,
+      domain: localTime,
+      placement: { parent: domain, start: item.start, active: { start: exactTemporalZero(), end: item.duration } },
+      ...(picture === undefined ? {} : {
+        picture: pictureRead(item, localTime, picture, reconstruction === undefined ? undefined
+          : host.resolvePictureReconstruction(reconstruction, { project, composition, track, item })),
+      }),
+      ...(audio === undefined ? {} : { audio: sourceMap(item, localTime, audio) }),
+    };
+    if (picture !== undefined) {
       const localPicture = itemSpace(project, item);
       const use = `${item.id}:picture`;
       const fitted = `${item.id}:fitted`;
       const placed = `${item.id}:placed`;
       const restricted = `${item.id}:picture-range`;
-      pictureNodes[use] = { kind: "use", occurrence: item.id, output: outputName };
+      pictureNodes[use] = { kind: "use", occurrence: item.id };
       pictureNodes[fitted] = {
-        kind: "remap", input: use, mapping: fitMap(project, item, localPicture, output.spatialDomain),
+        kind: "remap", input: use, mapping: fitMap(project, item, localPicture, picture.spatialDomain),
       };
       let localRoot = fitted;
       for (const process of item.picture!.processes ?? []) {
@@ -837,11 +762,10 @@ function lowerCompositionToAudiovisual(
       itemPictureRoots.set(id, restricted);
     }
 
-    if (needsAudio) {
-      const outputName = resolved.audioOutput!;
+    if (audio !== undefined) {
       const use = `${item.id}:audio`;
       const restricted = `${item.id}:audio-range`;
-      audioNodes[use] = { kind: "use", occurrence: item.id, output: outputName };
+      audioNodes[use] = { kind: "use", occurrence: item.id };
       let localRoot = use;
       for (const process of item.audio!.processes ?? []) {
         if (!process.enabled) continue;
@@ -860,23 +784,19 @@ function lowerCompositionToAudiovisual(
   }
 
   const linearControlMappings = (
-    operator: PictureOperator,
+    id: string,
+    names: readonly string[] | undefined,
     start: ExactTemporalValue,
-    activeDuration: ExactTemporalValue,
-    label: string,
-  ) => Object.fromEntries(Object.entries(operator.temporalControls).map(([name, control]) => {
-    assert(compareExactTemporalValues(control.duration, activeDuration) === 0,
-      `${label} Control ${name} duration does not match its relation range.`);
-    return [name, sealTemporalMap({ stages: [{
-      target: domain,
-      source: control,
-      pieces: [{
-        target: { start: structuredClone(start), end: addExactTemporalValues(start, activeDuration) },
-        sourceAtStart: exactTemporalZero(),
-        rate: { numerator: 1, denominator: 1 },
-      }],
-    }] })];
-  }));
+    duration: ExactTemporalValue,
+  ) => bindControls(id, names, duration, control => sealTemporalMap({ stages: [{
+    target: domain,
+    source: control,
+    pieces: [{
+      target: { start, end: addExactTemporalValues(start, duration) },
+      sourceAtStart: exactTemporalZero(),
+      rate: { numerator: 1, denominator: 1 },
+    }],
+  }] }));
 
   const matteRoots = new Map<string, string>();
   const resolveMatteRoot = (id: string): string => {
@@ -894,7 +814,7 @@ function lowerCompositionToAudiovisual(
     const matte = located.get(relation.matte)!;
     assert(content.item.kind === "present" && matte.item.kind === "present",
       `NLE Matte ${relation.id} requires Present Items.`);
-    const operator = host.resolveMatte(relation, {
+    const effect = host.resolveMatte(relation, {
       project,
       composition,
       track: content.track,
@@ -904,14 +824,9 @@ function lowerCompositionToAudiovisual(
     const node = `${relation.content}:matte:${relation.id}`;
     pictureNodes[node] = {
       kind: "apply",
-      operator,
+      visual: effect.visual,
       inputs: { content: input, matte: source },
-      controlMappings: linearControlMappings(
-        operator,
-        content.item.start,
-        content.item.duration,
-        `NLE Matte ${relation.id}`,
-      ),
+      controlMappings: linearControlMappings(relation.id, effect.controls, content.item.start, content.item.duration),
     };
     matteRoots.set(id, node);
     return node;
@@ -934,7 +849,7 @@ function lowerCompositionToAudiovisual(
       id: `${value.id}:time`,
       duration: subtractExactTemporalValues(end, start),
     });
-    const operator = host.resolveTransition(value, {
+    const effect = host.resolveTransition(value, {
       project,
       composition,
       track: outgoing.track,
@@ -946,13 +861,12 @@ function lowerCompositionToAudiovisual(
     const restricted = `${value.id}:range`;
     pictureNodes[applied] = {
       kind: "apply",
-      operator,
+      visual: effect.visual,
       inputs: {
         outgoing: resolveMatteRoot(value.outgoing),
         incoming: resolveMatteRoot(value.incoming),
       },
-      controlMappings: linearControlMappings(operator, start, transitionDomain.duration,
-        `NLE Transition ${value.id}`),
+      controlMappings: linearControlMappings(value.id, effect.controls, start, transitionDomain.duration),
     };
     pictureNodes[restricted] = {
       kind: "restrict",
@@ -1022,7 +936,7 @@ function lowerCompositionToAudiovisual(
       continue;
     }
     const input = pictureRoot ?? `${composition.id}:transparent`;
-    if (pictureRoot === undefined) pictureNodes[input] = { kind: "transparent" };
+    if (pictureRoot === undefined) pictureNodes[input] = { kind: "transparent", spatialDomain: pictureDomain };
     const applied = pictureProcessNode(
       pictureNodes,
       input,
@@ -1063,7 +977,7 @@ function lowerCompositionToAudiovisual(
 
   assert(pictureRoot !== undefined || audioRoot !== undefined,
     `NLE Composition ${composition.id} contains no active Picture or Audio output.`);
-  return sealCompilationGraph({
+  return {
     id: `${project.id}:${composition.id}`,
     domain,
     occurrences,
@@ -1072,11 +986,11 @@ function lowerCompositionToAudiovisual(
       picture: { nodes: pictureNodes, root: pictureRoot },
     }),
     ...(audioRoot === undefined ? {} : { audio: { nodes: audioNodes, root: audioRoot } }),
-  });
+  };
 }
 
 /** Deterministically project the Root Composition into one closed compilation graph. */
 export function lowerNleProject(project: NleProject, host: NleRenderResolver): CompilationGraph {
   assertNleProject(project);
-  return lowerCompositionToAudiovisual(project, rootNleComposition(project), host);
+  return sealCompilationGraph(lowerComposition(project, rootNleComposition(project), host, { picture: true, audio: true }));
 }

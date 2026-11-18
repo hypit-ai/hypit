@@ -155,7 +155,7 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | --- | --- | --- | --- |
 | 恒定速度、倒放和分段映射 | NLE source-time + Studio Operation | `timeline.retime` 以精确有理速度修改单段 Picture-only Media 或 Composition 的源时间，保留 Item 位置和长度 | **已具备**单段画面速率与倒放后端；分段产品编辑待讨论 |
 | 音画协调变速 | NLE Present + Audio Executor | 同一 Present 的 Picture/Audio 共用 source-time。本机 AudioProgram 执行当前接受单位速率的直接 Media 映射 | **执行缺口**。需为选定重采样策略闭合变速音频 |
-| 保持音调策略 | Audio Reconstruction | Audio appearance 已能保存 package Reconstruction 与 closed parameters | **产品缺口**。需要标准 preserve-pitch package、offering 与 Inspector |
+| 保持音调策略 | Audio Executor | 变速音频需要确定音调是否随速度变化 | **执行缺口**。随音频变速一起验证 |
 | 定格 occurrence | Picture-only Present + source-time | `media.freeze` 将选定帧映射到 Media 时刻后物化新的零速 Picture Present；Jensen 验证首尾帧和原样本一致 | **已具备**无活跃 Picture Process 的正向 Media 采样 |
 | 变速重定时动画与音量点 | Process Control time + package parameters | occurrence 编辑已切片、重基 Process Control relation；点值仍由各 package 拥有 | **产品缺口**。需要 package 参数操作与产品级 speed planner 协同 |
 
@@ -213,7 +213,7 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
-| Audio occurrence 与 reconstruction | NLE Audio appearance | Present 可有 Audio appearance，支持 package Signal Reconstruction 和 Audio Processes | **已具备**基础 |
+| Audio occurrence 与处理 | NLE Audio appearance | Present 可有 Audio appearance，并绑定有序 Audio Processes | **已具备**基础 |
 | 片段增益 | Audio Process + package Operator | Jensen 选择 Gain offering，通过 Inspector 编辑倍数，播放与交付消费同一 AudioProgram | **已具备** Jensen 路径 |
 | 淡入淡出 | Audio Process + package Operator | fade 是 Audio Operator 的时间化 closed value | **产品缺口**。需要标准 envelope package 与 Timeline 手势 |
 | 音量包络与关键点 | package Operator parameters | Gain 投影已有线性关键点的精确时间和可编辑增益；NLE 保存其 Process 与 Control relation | **已具备**已有点的增益编辑；创建、移动和移除点仍缺 |
@@ -355,7 +355,7 @@ POST       /api/reload
 - 字幕源需要先确定引用和寿命，再开放导入和批量分轨。
 - 跨 NLE 文档或 OS 剪贴板需要明确 Media、Shared Value 和 Composition 引用的导入与重绑边界。
 - 多轨复合与任意解除复合需要明确跨轨混合、Adjust 作用域、外层处理和非线性时间关系如何转写为父级作者事实。
-- 独立 occurrence 试听需明确是否包含所在 Track 的 Adjust、上层混音与 Reconstruction。
+- 独立 occurrence 试听需明确是否包含所在 Track 的 Adjust 与上层混音。
 - 会穿过 Transition 的 trim/split 需要决定保留重叠、重建或删除关系的具体意图；改变重叠需要新增素材边时，应由已选 Reconstruction 决定如何补帧。
 - Timeline 素材条跨多时间映射片段时，需要按段表示留白、倒放、回绕和零速取样边。当前按需视图使用单段正向映射。
 - 多段变速、带效果或合成图的定格，需要明确采样的是素材、片段处理后信号，还是整个 Programme，以及控制点是否跟随速度变化。
@@ -365,7 +365,7 @@ POST       /api/reload
 
 ## 待补执行能力
 
-- 非单位速率 Audio Reconstruction 需要闭合 Programme 时间窗的音频采样、方向与音调策略。本机目前执行单位速率直接 Media。
+- 变速音频需要定义输出采样、方向与音调策略。本机执行器当前支持单位速率 Media。
 - 连续预览仍按有限区间渲染，区间接缝可能等待下一段产出。
 - Delivery Action 保持打开进程内的状态。进程重启后的恢复需要持久计划、结果提交与清理协议。
 

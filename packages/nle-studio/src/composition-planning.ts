@@ -136,7 +136,6 @@ export function planExplodeComposition(project: NleProject, parent: NleCompositi
     || childTrack.items.some(member => member.kind !== "present")
     || (item.audio !== undefined) !== hasAudio || (item.audio?.processes?.length ?? 0) !== 0
     || (item.picture?.processes?.length ?? 0) !== 0
-    || item.picture?.reconstruction !== undefined || item.audio?.reconstruction !== undefined
     || !identityPlacement(item, parent, source)) {
     throw new Error("NLE Studio explode requires one matching child Track and an unmodified, full-duration Composition occurrence.");
   }

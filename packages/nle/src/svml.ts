@@ -13,11 +13,12 @@ import {
   type NleProcess,
   type NleParameterBinding,
   type NlePictureAppearance,
+  type NleMediaPictureAppearance,
   type NlePictureLayout,
   type NlePresentItem,
   type NleProject,
   type NleSharedValue,
-  type NleSignalReconstruction,
+  type NlePictureReconstruction,
   type NleTimeMapping,
   type NleTrack,
   type NleTransition,
@@ -455,7 +456,7 @@ function readLayout(value: XmlElement): NlePictureAppearance["layout"] {
   };
 }
 
-function readReconstruction(value: XmlElement): NleSignalReconstruction {
+function readReconstruction(value: XmlElement): NlePictureReconstruction {
   attributes(value, ["package", "symbol"]);
   assertChildren(value, ["parameters"]);
   return { using: packageSymbol(value), parameters: jsonObject(onlyChild(value, "parameters")) };
@@ -473,14 +474,13 @@ function readProcess(value: XmlElement): NleProcess {
   };
 }
 
-function readPicture(value: XmlElement): NlePictureAppearance {
+function readPicture(value: XmlElement, media: boolean): NleMediaPictureAppearance {
   attributes(value, []);
-  assertChildren(value, ["layout", "reconstruction", "process"]);
+  assertChildren(value, media ? ["layout", "reconstruction", "process"] : ["layout", "process"]);
+  const sampling = media ? optionalChild(value, "reconstruction") : undefined;
   return {
     layout: readLayout(onlyChild(value, "layout")),
-    ...(optionalChild(value, "reconstruction") === undefined ? {} : {
-      reconstruction: readReconstruction(optionalChild(value, "reconstruction")!),
-    }),
+    ...(sampling === undefined ? {} : { reconstruction: readReconstruction(sampling) }),
     ...(value.children.some((child) => child.name === "process") ? {
       processes: value.children.filter((child) => child.name === "process").map(readProcess),
     } : {}),
@@ -489,15 +489,9 @@ function readPicture(value: XmlElement): NlePictureAppearance {
 
 function readAudio(value: XmlElement): NleAudioAppearance {
   attributes(value, []);
-  assertChildren(value, ["reconstruction", "process"]);
-  return {
-    ...(optionalChild(value, "reconstruction") === undefined ? {} : {
-      reconstruction: readReconstruction(optionalChild(value, "reconstruction")!),
-    }),
-    ...(value.children.some((child) => child.name === "process") ? {
-      processes: value.children.filter((child) => child.name === "process").map(readProcess),
-    } : {}),
-  };
+  assertChildren(value, ["process"]);
+  const processes = value.children.map(readProcess);
+  return processes.length === 0 ? {} : { processes };
 }
 
 function readPresent(value: XmlElement): NlePresentItem {
@@ -505,6 +499,8 @@ function readPresent(value: XmlElement): NlePresentItem {
   assertChildren(value, [
     "source-time", "media", "component", "composition", "parameters", "value", "media-input", "picture", "audio",
   ]);
+  const source = attr(value, "source");
+  const picture = optionalChild(value, "picture");
   const base = {
     id: attr(value, "id"),
     ...(optionalAttr(value, "name") === undefined ? {} : { name: attr(value, "name") }),
@@ -513,19 +509,21 @@ function readPresent(value: XmlElement): NlePresentItem {
     duration: time(attr(value, "duration"), `Present ${attr(value, "id")} duration`),
     enabled: booleanAttr(value, "enabled"),
     sourceTime: readTimeMapping(onlyChild(value, "source-time")),
-    ...(optionalChild(value, "picture") === undefined ? {} : { picture: readPicture(optionalChild(value, "picture")!) }),
-    ...(optionalChild(value, "audio") === undefined ? {} : { audio: readAudio(optionalChild(value, "audio")!) }),
+    ...(picture === undefined ? {} : { picture: readPicture(picture, source === "media") }),
   };
-  const source = attr(value, "source");
+  const audio = optionalChild(value, "audio");
   if (source === "media") {
     assertChildren(value, ["source-time", "media", "picture", "audio"]);
     const media = onlyChild(value, "media");
     attributes(media, ["path"]);
     assertChildren(media, []);
-    return { ...base, source, asset: { path: attr(media, "path") } };
+    return {
+      ...base, source, asset: { path: attr(media, "path") },
+      ...(audio === undefined ? {} : { audio: readAudio(audio) }),
+    };
   }
   if (source === "component") {
-    assertChildren(value, ["source-time", "component", "parameters", "value", "media-input", "picture", "audio"]);
+    assertChildren(value, ["source-time", "component", "parameters", "value", "media-input", "picture"]);
     const component = onlyChild(value, "component");
     attributes(component, ["package", "symbol"]);
     assertChildren(component, []);
@@ -563,7 +561,10 @@ function readPresent(value: XmlElement): NlePresentItem {
     const composition = onlyChild(value, "composition");
     attributes(composition, ["ref"]);
     assertChildren(composition, []);
-    return { ...base, source, composition: attr(composition, "ref") };
+    return {
+      ...base, source, composition: attr(composition, "ref"),
+      ...(audio === undefined ? {} : { audio: readAudio(audio) }),
+    };
   }
   return fail(`<present> source ${source} is invalid.`);
 }
@@ -736,7 +737,7 @@ function layout(value: NlePictureAppearance["layout"], depth: number): string {
     + `${a("content-y", value.contentY)} />\n`;
 }
 
-function reconstruction(value: NleSignalReconstruction, depth: number): string {
+function reconstruction(value: NlePictureReconstruction, depth: number): string {
   const indent = "  ".repeat(depth);
   return `${indent}<reconstruction${a("package", value.using.package)}${a("symbol", value.using.symbol)}>\n`
     + json(value.parameters, depth + 1)
@@ -752,7 +753,7 @@ function printProcess(value: NleProcess, depth: number): string {
     + `${indent}</process>\n`;
 }
 
-function picture(value: NlePictureAppearance, depth: number): string {
+function picture(value: NleMediaPictureAppearance, depth: number): string {
   const indent = "  ".repeat(depth);
   let result = `${indent}<picture>\n${layout(value.layout, depth + 1)}`;
   if (value.reconstruction !== undefined) result += reconstruction(value.reconstruction, depth + 1);
@@ -763,7 +764,6 @@ function picture(value: NlePictureAppearance, depth: number): string {
 function audio(value: NleAudioAppearance, depth: number): string {
   const indent = "  ".repeat(depth);
   let result = `${indent}<audio>\n`;
-  if (value.reconstruction !== undefined) result += reconstruction(value.reconstruction, depth + 1);
   for (const valueProcess of value.processes ?? []) result += printProcess(valueProcess, depth + 1);
   return `${result}${indent}</audio>\n`;
 }

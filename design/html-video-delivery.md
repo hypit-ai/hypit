@@ -58,7 +58,8 @@ interface HypitFrameProgram {
 两个 renderer 使用同一组件逐帧语义。
 
 全片交付选择完整节目范围，frame preview 选择一帧对应的精确范围。编译器按输出帧率确定节目采样点，
-并为每个采样点计算素材取帧位置。一个 `HtmlProgram` 执行整个已选画面。
+并为每个采样点计算素材取帧位置。空间变换与裁剪关闭为静态布局，组件局部时间、媒体取帧和 controls 随帧求值。
+一个 `HtmlProgram` 执行整个已选画面。
 
 `applyFrame(frame)` 的完成是截图屏障，不只是一次同步 DOM 写入。HTML Visual 可以监听 `hypit-frame`，并通过
 事件 detail 的 `waitUntil(promise)` 把当前帧所需的异步就绪工作加入屏障。这个协议只等待当前输出帧的资源与

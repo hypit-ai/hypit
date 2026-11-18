@@ -1,8 +1,8 @@
 import { assertLocalTemporalDomain, compareExactTemporalValues } from "@hypit/temporal/algebra";
-import { assertAudioGraph, audioGraphUses } from "./audio.js";
+import { assertAudioGraph, audioGraphUses, audioInputs } from "./audio.js";
 import { assertIdentity } from "@hypit/nle";
 import { assertOccurrence } from "./occurrence.js";
-import { assertPictureGraph, pictureGraphUses } from "./picture.js";
+import { assertPictureGraph, pictureGraphUses, pictureInputs } from "./picture.js";
 import { assertLocalSpatialDomain } from "./spatial.js";
 import type { CompilationGraph } from "./types.js";
 
@@ -14,7 +14,7 @@ function sameDomain(left: CompilationGraph["domain"], right: CompilationGraph["d
   return left.id === right.id && compareExactTemporalValues(left.duration, right.duration) === 0;
 }
 
-export function assertCompilationGraph(value: CompilationGraph): void {
+function assertCompilationGraph(value: CompilationGraph): void {
   assertIdentity(value.id, "CompilationGraph.id");
   assertLocalTemporalDomain(value.domain);
   assert(value.picture !== undefined || value.audio !== undefined, `Programme ${value.id} has no outputs.`);
@@ -33,24 +33,52 @@ export function assertCompilationGraph(value: CompilationGraph): void {
   }
   if (value.picture !== undefined) assertPictureGraph(value.picture, value);
   if (value.audio !== undefined) assertAudioGraph(value.audio, value);
-  const uses = [
-    ...(value.picture === undefined ? [] : pictureGraphUses(value.picture)),
-    ...(value.audio === undefined ? [] : audioGraphUses(value.audio)),
-  ];
-  const usedOccurrences = new Set(uses.map((use) => use.occurrence));
-  for (const id of Object.keys(value.occurrences)) {
-    assert(usedOccurrences.has(id), `Programme ${value.id} contains unused Occurrence ${id}.`);
-  }
-  const usedSelections = new Set(uses.map((use) => `${use.occurrence}\u0000${use.output}`));
-  for (const occurrence of Object.values(value.occurrences)) {
-    for (const output of Object.keys(occurrence.selections)) {
-      assert(usedSelections.has(`${occurrence.id}\u0000${output}`),
-        `Occurrence ${occurrence.id} contains unused output Selection ${output}.`);
-    }
-  }
+}
+
+function reachableGraph<Node>(
+  graph: { readonly root: string; readonly nodes: Readonly<Record<string, Node>> },
+  inputs: (node: Node) => readonly string[],
+  label: string,
+): { readonly root: string; readonly nodes: Readonly<Record<string, Node>> } {
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const visit = (id: string): void => {
+    assert(!visiting.has(id), `${label} contains a cycle through ${id}.`);
+    if (visited.has(id)) return;
+    const node = graph.nodes[id];
+    assert(node !== undefined, `${label} references missing node ${id}.`);
+    visiting.add(id);
+    for (const input of inputs(node)) visit(input);
+    visiting.delete(id);
+    visited.add(id);
+  };
+  visit(graph.root);
+  return { root: graph.root, nodes: Object.fromEntries(Object.entries(graph.nodes).filter(([id]) => visited.has(id))) };
 }
 
 export function sealCompilationGraph(value: CompilationGraph): CompilationGraph {
-  assertCompilationGraph(value);
-  return structuredClone(value);
+  const picture = value.picture === undefined ? undefined
+    : reachableGraph(value.picture, pictureInputs, `Programme ${value.id} Picture`);
+  const audio = value.audio === undefined ? undefined
+    : reachableGraph(value.audio, audioInputs, `Programme ${value.id} Audio`);
+  const pictureUses = picture === undefined ? new Set<string>() : pictureGraphUses(picture);
+  const audioUses = audio === undefined ? new Set<string>() : audioGraphUses(audio);
+  const occurrences = Object.fromEntries(Object.entries(value.occurrences).flatMap(([id, occurrence]) => {
+    const pictureRead = pictureUses.has(id) ? occurrence.picture : undefined;
+    const audioRead = audioUses.has(id) ? occurrence.audio : undefined;
+    if (pictureRead === undefined && audioRead === undefined) return [];
+    return [[id, {
+      id: occurrence.id, content: occurrence.content, domain: occurrence.domain, placement: occurrence.placement,
+      ...(pictureRead === undefined ? {} : { picture: pictureRead }),
+      ...(audioRead === undefined ? {} : { audio: audioRead }),
+    }]];
+  }));
+  const programme = {
+    ...value,
+    ...(picture === undefined ? {} : { picture }),
+    ...(audio === undefined ? {} : { audio }),
+    occurrences,
+  };
+  assertCompilationGraph(programme);
+  return structuredClone(programme);
 }

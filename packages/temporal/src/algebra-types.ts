@@ -15,62 +15,9 @@ export type TemporalRange = {
   readonly end: ExactTemporalValue;
 };
 
-/** One total value signal over a finite local time domain. Value interpolation remains owner-defined. */
-export type TemporalControlSegment<Value, Interpolation> = {
-  readonly range: TemporalRange;
-  readonly from: Value;
-  readonly to: Value;
-  readonly interpolation: Interpolation;
-};
-
-export type TemporalControl<Value, Interpolation> = {
-  readonly domain: LocalTemporalDomain;
-  readonly segments: readonly TemporalControlSegment<Value, Interpolation>[];
-};
-
 export type TemporalRate = {
   readonly numerator: number;
   readonly denominator: number;
-};
-
-/** One inward exact distance from an edge of a finite local domain. */
-export type ExactTemporalRelativePoint = {
-  readonly edge: "start" | "end";
-  readonly offset: ExactTemporalValue;
-};
-
-export type ExactTemporalRelativeRange = {
-  readonly from: ExactTemporalRelativePoint;
-  readonly until: ExactTemporalRelativePoint;
-};
-
-/** Clock-free occurrence-local relation syntax, resolved only after both finite domains exist. */
-export type ExactTemporalRelation =
-  | {
-      readonly kind: "rate";
-      readonly target: ExactTemporalRelativeRange;
-      readonly targetAt: ExactTemporalRelativePoint;
-      readonly sourceAt: ExactTemporalRelativePoint;
-      readonly rate: TemporalRate;
-      readonly source: ExactTemporalRelativeRange;
-      readonly wrap?: ExactTemporalRelativeRange;
-    }
-  | {
-      readonly kind: "fit";
-      readonly target: ExactTemporalRelativeRange;
-      readonly source: ExactTemporalRelativeRange;
-    }
-  | {
-      readonly kind: "cubic";
-      readonly target: ExactTemporalRelativeRange;
-      readonly sourceAtStart: ExactTemporalRelativePoint;
-      readonly sourceControl1: ExactTemporalRelativePoint;
-      readonly sourceControl2: ExactTemporalRelativePoint;
-      readonly sourceAtEnd: ExactTemporalRelativePoint;
-    };
-
-export type ExactTemporalRelationSpec = {
-  readonly relations: readonly ExactTemporalRelation[];
 };
 
 /** One exact affine piece. Missing target ranges are gaps. */

@@ -60,7 +60,7 @@ export type NleComponentValueBinding = NleValueBinding<Readonly<Record<string, u
 };
 
 /** Package selection for a non-default interpretation of one exact mapped signal read. */
-export type NleSignalReconstruction = {
+export type NlePictureReconstruction = {
   readonly using: PackageSymbol;
   readonly parameters: Readonly<Record<string, unknown>>;
 };
@@ -104,13 +104,15 @@ export type NlePictureLayoutReference = {
 export type NlePictureAppearance = {
   /** Inline occurrence layout or one explicit Project-owned linked layout. */
   readonly layout: NlePictureLayout | NlePictureLayoutReference;
-  readonly reconstruction?: NleSignalReconstruction;
   /** Occurrence-local Picture processing, ordered inner-to-outer. */
   readonly processes?: readonly NleProcess[];
 };
 
+export type NleMediaPictureAppearance = NlePictureAppearance & {
+  readonly reconstruction?: NlePictureReconstruction;
+};
+
 export type NleAudioAppearance = {
-  readonly reconstruction?: NleSignalReconstruction;
   /** Occurrence-local Audio processing, ordered inner-to-outer. */
   readonly processes?: readonly NleProcess[];
 };
@@ -146,11 +148,13 @@ type NlePresentBase = NleTimelineItemBase & {
 
 export type NleMediaItem = NlePresentBase & {
   readonly source: "media";
+  readonly picture?: NleMediaPictureAppearance;
   readonly asset: NleMediaReference;
 };
 
 export type NleComponentItem = NlePresentBase & {
   readonly source: "component";
+  readonly audio?: never;
   readonly component: PackageSymbol;
   /** Package-defined values remain distinct from occurrence-local parameters and may be inline or shared. */
   readonly valueBindings?: readonly NleComponentValueBinding[];

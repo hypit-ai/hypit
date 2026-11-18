@@ -14,16 +14,13 @@ export function compileAudio(input: {
     if (node.kind === "mix") return [id, { kind: "mix", id, inputs: [...node.inputs] }];
     if (node.kind === "use") {
       const occurrence = input.program.occurrences[node.occurrence]!;
-      const selection = occurrence.selections[node.output];
-      if (selection?.kind !== "signal") throw new Error(`Audio use ${id} requires a signal selection.`);
-      const content = occurrence.source.content;
-      if (content.kind !== "media") throw new Error(`Audio use ${id} requires Media.`);
-      return [id, { kind: "media", id, media: structuredClone(content.media),
-        output: node.output, targetStart: structuredClone(occurrence.placement.start),
-        targetRange: structuredClone(occurrence.placement.active), mapping: structuredClone(selection.mapping) }];
+      const content = occurrence.content;
+      if (content.kind !== "media" || occurrence.audio === undefined) throw new Error(`Audio use ${id} requires Media.`);
+      return [id, { kind: "media", id, media: content.media, targetStart: occurrence.placement.start,
+        targetRange: occurrence.placement.active, mapping: occurrence.audio }];
     }
-    return [id, { kind: "process", id, inputs: structuredClone(node.inputs),
-      program: { ...node.operator.filter, controls: structuredClone(node.controlMappings) } }];
+    return [id, { kind: "process", id, inputs: { signal: node.input },
+      program: { filter: node.filter, controls: node.controlMappings } }];
   }));
   return sealAudioProgram({ domain: structuredClone(input.program.domain), sampleRate: input.sampleRate,
     channels: input.channels, nodes, root: graph.root });

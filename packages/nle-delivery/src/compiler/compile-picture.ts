@@ -1,21 +1,23 @@
-import { createPictureEvaluator } from "./evaluation.js";
+import { occurrenceParentRange } from "./occurrence.js";
 import { pictureFramePositions } from "./output.js";
 import { pictureNodeSpatialDomains } from "./picture.js";
 import { invertSpatialMap, type LocalSpatialDomain, type SpatialMap } from "./spatial.js";
-import type { CompilationGraph, EvaluatedPictureNode, PictureNode } from "./types.js";
+import type { CompilationGraph, Occurrence } from "./types.js";
 import {
-  assertHtmlVisual,
   compileHtmlPictureProgram,
   type HtmlCanvas,
   type HtmlFrameRate,
+  type HtmlFrameSpan,
   type HtmlPictureElement,
   type HtmlPictureReconstruction,
   type HtmlPictureStyle,
   type HtmlProgram,
   type HtmlVisual,
 } from "@hypit/html-program";
-import type { ExactTemporalValue, TemporalRange } from "@hypit/temporal/algebra";
-import { evaluateTemporalMap } from "@hypit/temporal/algebra";
+import {
+  addExactTemporalValues, compareExactTemporalValues, createTemporalMapEvaluator, subtractExactTemporalValues,
+  type ExactTemporalValue, type TemporalMapEvaluation, type TemporalRange,
+} from "@hypit/temporal/algebra";
 import type { ResolvedMedia } from "@hypit/media";
 
 const seconds = (value: ExactTemporalValue): number => Number(BigInt(value.ticks))
@@ -64,37 +66,70 @@ export function compilePicture(
   const positions = pictureFramePositions(program, output.frameRate, output.range);
   const frameCount = positions.length;
   if (!Number.isSafeInteger(frameCount) || frameCount <= 0) throw new Error("HTML output frame count is invalid.");
-  const evaluate = createPictureEvaluator(program);
-  const evaluations = positions.map(evaluate);
   const domains = pictureNodeSpatialDomains(program.picture, program);
   let serial = 0;
   const id = (kind: string): string => `${kind}-${++serial}`;
-  const evaluatedNode = (frame: number, nodeId: string): EvaluatedPictureNode => evaluations[frame]!.nodes[nodeId]!;
-  const active = (nodeId: string): readonly boolean[] => evaluations.map((_evaluation, frame) =>
-    evaluatedNode(frame, nodeId).kind !== "transparent");
-  const renderFrames = (nodeId: string): readonly (number | null)[] => evaluations.map((_evaluation, frame) => {
-    const node = evaluatedNode(frame, nodeId);
-    if (node.kind !== "sample") return null;
-    if (node.temporal.kind === "signal") return seconds(node.temporal.at) * rate;
-    return 0;
-  });
+  const whole: readonly HtmlFrameSpan[] = [{ startFrame: 0, endFrameExclusive: frameCount }];
+  const firstFrameAt = (time: ExactTemporalValue): number => {
+    let low = 0;
+    let high = frameCount;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      if (compareExactTemporalValues(positions[middle]!, time) < 0) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  };
+  const spansForRange = (range: TemporalRange): readonly HtmlFrameSpan[] => {
+    const startFrame = firstFrameAt(range.start);
+    const endFrameExclusive = firstFrameAt(range.end);
+    return startFrame === endFrameExclusive ? [] : [{ startFrame, endFrameExclusive }];
+  };
+  type PictureFrames = {
+    readonly spans: readonly HtmlFrameSpan[];
+    readonly samples?: readonly (TemporalMapEvaluation | null)[];
+  };
+  const pictureReads = new Map<string, PictureFrames>();
+  const readPicture = (occurrence: Occurrence): PictureFrames => {
+    const cached = pictureReads.get(occurrence.id);
+    if (cached !== undefined) return cached;
+    const range = spansForRange(occurrenceParentRange(occurrence));
+    const picture = occurrence.picture!;
+    if (picture.kind === "constant") {
+      const read = { spans: range };
+      pictureReads.set(occurrence.id, read);
+      return read;
+    }
+    const evaluate = createTemporalMapEvaluator(picture.mapping);
+    const samples = Array<TemporalMapEvaluation | null>(frameCount).fill(null);
+    for (const { startFrame, endFrameExclusive } of range) {
+      for (let frame = startFrame; frame < endFrameExclusive; frame++) {
+        const local = addExactTemporalValues(occurrence.placement.active.start,
+          subtractExactTemporalValues(positions[frame]!, occurrence.placement.start));
+        samples[frame] = evaluate(local, "after") ?? null;
+      }
+    }
+    const read = { spans: activeSpans(samples.map(sample => sample !== null)), samples };
+    pictureReads.set(occurrence.id, read);
+    return read;
+  };
   const visualElement = (
     elementId: string,
     visual: HtmlVisual,
     domain: LocalSpatialDomain,
-    frames: readonly (number | null)[],
+    spans: readonly HtmlFrameSpan[],
     slots: readonly { readonly name: string; readonly element: HtmlPictureElement }[] = [],
     controls?: Readonly<Record<string, readonly (ExactTemporalValue | null)[]>>,
+    frames?: readonly (number | null)[],
   ): HtmlPictureElement => {
-    assertHtmlVisual(visual);
     return {
       kind: "program",
       id: elementId,
-      spans: activeSpans(frames.map((frame) => frame !== null)),
+      spans,
       style: domainStyle(domain),
       program: visual,
       slots,
-      renderFrames: frames,
+      ...(frames === undefined ? {} : { renderFrames: frames }),
       ...(controls === undefined ? {} : { controlPositions: controls }),
     };
   };
@@ -102,12 +137,12 @@ export function compilePicture(
     media: ResolvedMedia,
     elementId: string,
     domain: LocalSpatialDomain,
-    nodeId: string,
+    read: ReturnType<typeof readPicture>,
     reconstruction: HtmlPictureReconstruction | undefined,
   ): HtmlPictureElement => {
     const picture = media.interpretation.picture;
-    if (picture === undefined) throw new Error(`Media Picture node ${nodeId} has no selected stream.`);
-    const spans = activeSpans(active(nodeId));
+    if (picture === undefined) throw new Error(`Media Picture ${elementId} has no selected stream.`);
+    const { spans } = read;
     if (picture.kind === "constant") return {
       kind: "image",
       id: elementId,
@@ -116,6 +151,7 @@ export function compilePicture(
       resource: media.resource,
       picture: picture.interpretation.picture,
     };
+    const evaluateMedia = createTemporalMapEvaluator(picture.map);
     return {
       kind: "video",
       id: elementId,
@@ -126,53 +162,54 @@ export function compilePicture(
       presentationStart: structuredClone(picture.presentationStart),
       interpretation: structuredClone(picture.interpretation),
       ...(reconstruction === undefined ? {} : { reconstruction: structuredClone(reconstruction) }),
-      sourceFrames: evaluations.map((_evaluation, frame) => {
-        const node = evaluatedNode(frame, nodeId);
-        if (node.kind !== "sample" || node.temporal.kind !== "signal") return null;
-        const sample = evaluateTemporalMap(picture.map, node.temporal.at, node.temporal.side);
-        return sample === undefined ? null : {
-          position: sample.position,
-          side: sample.sourceSide,
-        };
+      sourceFrames: read.samples!.map(source => {
+        if (source === null) return null;
+        const sample = evaluateMedia(source.position, source.sourceSide);
+        return sample === undefined ? null : { position: sample.position, side: sample.sourceSide };
       }),
     };
   };
+  const graph = program.picture;
   const build = (nodeId: string): HtmlPictureElement => {
-    const node: PictureNode = program.picture!.nodes[nodeId]!;
+    const node = graph.nodes[nodeId]!;
     const domain = domains.get(nodeId)!;
     const elementId = id(`picture-${node.kind}`);
     if (node.kind === "transparent") return { kind: "box", id: elementId, spans: [], style: domainStyle(domain), children: [] };
     if (node.kind === "use") {
       const occurrence = program.occurrences[node.occurrence]!;
-      const content = occurrence.source.content;
-      const selection = occurrence.selections[node.output];
-      return content.kind === "media"
-        ? mediaElement(content.media, elementId, domain, nodeId,
-          selection?.kind === "signal" ? selection.reconstruction : undefined)
-        : visualElement(elementId, content.visual, domain, renderFrames(nodeId));
+      const { content, picture } = occurrence;
+      const read = readPicture(occurrence);
+      if (content.kind === "media") {
+        return mediaElement(content.media, elementId, domain, read,
+          picture?.kind === "signal" ? picture.reconstruction : undefined);
+      }
+      const frames = content.visual.setup === undefined ? undefined : read.samples === undefined
+        ? Array<number>(frameCount).fill(0)
+        : read.samples.map(sample => sample === null ? null : seconds(sample.position) * rate);
+      return visualElement(elementId, content.visual, domain, read.spans, [], undefined, frames);
     }
     if (node.kind === "over") return {
-      kind: "box", id: elementId, spans: activeSpans(active(nodeId)), style: domainStyle(domain), children: node.inputs.map(build),
+      kind: "box", id: elementId, spans: whole, style: domainStyle(domain), children: node.inputs.map(build),
     };
     if (node.kind === "restrict") return {
-      kind: "box", id: elementId, spans: activeSpans(active(nodeId)), style: domainStyle(domain), children: [build(node.input)],
+      kind: "box", id: elementId, spans: spansForRange(node.range), style: domainStyle(domain), children: [build(node.input)],
     };
     if (node.kind === "crop") {
       const source = domains.get(node.input)!.region;
       const x = node.region.x - source.x;
       const y = node.region.y - source.y;
       return {
-        kind: "box", id: elementId, spans: activeSpans(active(nodeId)),
+        kind: "box", id: elementId, spans: whole,
         style: [...domainStyle(domain), { name: "overflow", value: "hidden" }],
         children: [{
-          kind: "box", id: id("crop-offset"), spans: activeSpans(active(nodeId)),
+          kind: "box", id: id("crop-offset"), spans: whole,
           style: [
             { name: "position", value: "absolute" }, { name: "left", value: `${x}px` }, { name: "top", value: `${y}px` },
             { name: "width", value: `${node.region.width}px` }, { name: "height", value: `${node.region.height}px` },
             { name: "overflow", value: "hidden" },
           ],
           children: [{
-            kind: "box", id: id("crop-source"), spans: activeSpans(active(nodeId)),
+            kind: "box", id: id("crop-source"), spans: whole,
             style: [
               { name: "position", value: "absolute" }, { name: "left", value: `${-x}px` }, { name: "top", value: `${-y}px` },
               { name: "width", value: `${source.width}px` }, { name: "height", value: `${source.height}px` },
@@ -181,30 +218,33 @@ export function compilePicture(
         }],
       };
     }
-    if (node.kind === "remap") {
-      const transforms = evaluations.map((_evaluation, frame) => {
-        const value = evaluatedNode(frame, nodeId);
-        return value.kind === "remap" ? cssTransform(value.mapping) : null;
-      });
-      const visual: HtmlVisual = {
-        html: '<div data-hypit-remap>{{input:signal}}</div>',
-        data: { transforms },
-        css: ":scope>[data-hypit-remap]{position:absolute;left:0;top:0;transform-origin:0 0}",
-        setup: "const child=root.querySelector(':scope>[data-hypit-remap]');return frame=>{const value=data.transforms[Math.max(0,Math.min(data.transforms.length-1,Math.floor(frame)))];root.style.display=value===null?'none':'block';if(value!==null)child.style.transform=value;};",
-      };
-      return visualElement(elementId, visual, domain,
-        evaluations.map((_value, frame) => frame), [{ name: "signal", element: build(node.input) }]);
+    if (node.kind === "remap") return {
+      kind: "box", id: elementId, spans: whole, style: domainStyle(domain),
+      children: [{
+        kind: "box", id: `${elementId}:transform`, spans: whole,
+        style: [
+          { name: "position", value: "absolute" },
+          { name: "left", value: "0" },
+          { name: "top", value: "0" },
+          { name: "transform-origin", value: "0 0" },
+          { name: "transform", value: cssTransform(node.mapping) },
+        ],
+        children: [build(node.input)],
+      }],
+    };
+    const controls = Object.entries(node.controlMappings).map(([name, mapping]) => ({
+      name, evaluate: createTemporalMapEvaluator(mapping), positions: Array<ExactTemporalValue | null>(frameCount).fill(null),
+    }));
+    if (controls.length > 0) {
+      for (const [frame, at] of positions.entries()) {
+        const observed = controls.map(control => control.evaluate(at, "after")?.position);
+        if (observed.some(position => position === undefined)) continue;
+        for (const [index, control] of controls.entries()) control.positions[frame] = observed[index]!;
+      }
     }
-    if (node.kind === "apply") {
-      const controls: Record<string, readonly (ExactTemporalValue | null)[]> = {};
-      for (const name of Object.keys(node.operator.temporalControls)) controls[name] = evaluations.map((_evaluation, frame) => {
-        const value = evaluatedNode(frame, nodeId);
-        return value.kind === "apply" ? value.controlPositions[name] ?? null : null;
-      });
-      return visualElement(elementId, node.operator.visual, domain, evaluations.map((_value, frame) => frame),
-        Object.entries(node.inputs).map(([name, input]) => ({ name, element: build(input) })), controls);
-    }
-    throw new Error(`HTML lowering cannot compile Picture node ${nodeId}.`);
+    return visualElement(elementId, node.visual, domain, whole,
+      Object.entries(node.inputs).map(([name, input]) => ({ name, element: build(input) })),
+      Object.fromEntries(controls.map(control => [control.name, control.positions])));
   };
   return compileHtmlPictureProgram({
     id: program.id,

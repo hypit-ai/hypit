@@ -13,7 +13,6 @@ export type AudioProgramNode =
       readonly kind: "media";
       readonly id: string;
       readonly media: ResolvedMedia;
-      readonly output: string;
       readonly targetStart: import("@hypit/temporal").ExactTemporalValue;
       readonly targetRange: TemporalRange;
       readonly mapping: TemporalMap;

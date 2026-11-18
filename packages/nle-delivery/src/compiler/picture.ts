@@ -1,13 +1,11 @@
 import {
   assertExactTemporalValue,
-  assertTemporalControlMapping,
   compareExactTemporalValues,
   exactTemporalZero,
   type LocalTemporalDomain,
   type TemporalRange,
 } from "@hypit/temporal/algebra";
 import { assertIdentity } from "@hypit/nle";
-import { assertPictureOperator } from "./operator.js";
 import {
   assertSpatialMap,
   assertSpatialRegion,
@@ -30,7 +28,7 @@ function assertRange(value: TemporalRange, domain: LocalTemporalDomain, label: s
   `${label} lies outside Programme domain ${domain.id}.`);
 }
 
-function references(node: PictureNode): readonly string[] {
+export function pictureInputs(node: PictureNode): readonly string[] {
   switch (node.kind) {
     case "transparent": case "use": return [];
     case "restrict": case "crop": case "remap": return [node.input];
@@ -42,15 +40,10 @@ function references(node: PictureNode): readonly string[] {
 function assertNode(id: string, node: PictureNode, program: CompilationGraph): void {
   assertIdentity(id, "Picture node id");
   switch (node.kind) {
-    case "transparent": return;
+    case "transparent": assertSpatialRegion(node.spatialDomain.region, `Picture ${id} domain`); return;
     case "use": {
       const occurrence = program.occurrences[node.occurrence];
-      assert(occurrence !== undefined, `Picture use ${id} references missing Occurrence ${node.occurrence}.`);
-      const output = occurrence.source.outputs[node.output];
-      assert(output !== undefined, `Picture use ${id} references missing Source output ${node.output}.`);
-      assert(occurrence.selections[node.output] !== undefined,
-        `Picture use ${id} has no Selection for Source output ${node.output}.`);
-      assert(output.signal === "picture", `Picture use ${id} received ${output.signal}, expected picture.`);
+      assert(occurrence?.picture !== undefined, `Picture use ${id} requires a Picture read on ${node.occurrence}.`);
       return;
     }
     case "restrict": assertRange(node.range, program.domain, `Picture restrict ${id}`); return;
@@ -58,21 +51,7 @@ function assertNode(id: string, node: PictureNode, program: CompilationGraph): v
     case "remap": assertSpatialMap(node.mapping); return;
 
     case "over": assert(node.inputs.length > 0, `Picture over ${id} has no inputs.`); return;
-    case "apply": {
-      assertPictureOperator(node.operator, `Picture apply ${id} operator`);
-      const expected = new Set(node.operator.inputs);
-      for (const name of Object.keys(node.inputs)) assert(expected.has(name), `Picture apply ${id} has unknown input ${name}.`);
-      for (const name of expected) assert(node.inputs[name] !== undefined, `Picture apply ${id} is missing input ${name}.`);
-      const controls = new Set(Object.keys(node.operator.temporalControls));
-      for (const name of Object.keys(node.controlMappings)) {
-        assert(controls.has(name), `Picture apply ${id} has unknown Control ${name}.`);
-      }
-      for (const name of controls) {
-        const mapping = node.controlMappings[name];
-        assert(mapping !== undefined, `Picture apply ${id} is missing Control Mapping ${name}.`);
-        assertTemporalControlMapping(node.operator.temporalControls[name]!, mapping, program.domain);
-      }
-    }
+    case "apply": assert(Object.keys(node.inputs).length > 0, `Picture apply ${id} has no inputs.`); return;
   }
 }
 
@@ -95,8 +74,6 @@ export function pictureNodeSpatialDomains(
   value: PictureGraph,
   program: CompilationGraph,
 ): ReadonlyMap<PictureNodeId, LocalSpatialDomain> {
-  const programmeDomain = program.pictureDomain;
-  assert(programmeDomain !== undefined, `Programme ${program.id} Picture has no output spatial domain.`);
   const domains = new Map<string, LocalSpatialDomain>();
   const domainOf = (id: string): LocalSpatialDomain => {
     const cached = domains.get(id);
@@ -105,8 +82,8 @@ export function pictureNodeSpatialDomains(
     assert(node !== undefined, `Programme ${program.id} Picture graph references missing node ${id}.`);
     let domain: LocalSpatialDomain;
     switch (node.kind) {
-      case "transparent": domain = programmeDomain; break;
-      case "use": domain = (program.occurrences[node.occurrence]!.source.outputs[node.output] as { spatialDomain: LocalSpatialDomain }).spatialDomain; break;
+      case "transparent": domain = node.spatialDomain; break;
+      case "use": domain = program.occurrences[node.occurrence]!.picture!.spatialDomain; break;
       case "restrict": domain = domainOf(node.input); break;
       case "crop":
         domain = domainOf(node.input);
@@ -122,7 +99,7 @@ export function pictureNodeSpatialDomains(
     domains.set(id, domain);
     return domain;
   };
-  for (const id of Object.keys(value.nodes)) domainOf(id);
+  domainOf(value.root);
   return domains;
 }
 
@@ -132,26 +109,11 @@ export function assertPictureGraph(value: PictureGraph, program: CompilationGrap
   const entries = Object.entries(value.nodes);
   assert(entries.length > 0, `Programme ${program.id} has no Picture nodes.`);
   for (const [id, node] of entries) assertNode(id, node, program);
-  const visiting = new Set<string>();
-  const visited = new Set<string>();
-  const visit = (id: string): void => {
-    const node = value.nodes[id];
-    assert(node !== undefined, `Programme ${program.id} Picture graph references missing node ${id}.`);
-    assert(!visiting.has(id), `Programme ${program.id} Picture graph contains a cycle through node ${id}.`);
-    if (visited.has(id)) return;
-    visiting.add(id);
-    for (const reference of references(node)) visit(reference);
-    visiting.delete(id);
-    visited.add(id);
-  };
-  visit(value.root);
-  assert(visited.size === entries.length, `Programme ${program.id} Picture graph contains unreachable nodes.`);
   const root = pictureNodeSpatialDomains(value, program).get(value.root)!;
   assert(sameSpatialDomain(root, program.pictureDomain!),
     `Programme ${program.id} Picture root closes in ${root.id}, not ${program.pictureDomain!.id}.`);
 }
 
-export function pictureGraphUses(value: PictureGraph): readonly { readonly occurrence: string; readonly output: string }[] {
-  return Object.values(value.nodes).flatMap((node) => node.kind === "use"
-    ? [{ occurrence: node.occurrence, output: node.output }] : []);
+export function pictureGraphUses(value: PictureGraph): Set<string> {
+  return new Set(Object.values(value.nodes).flatMap(node => node.kind === "use" ? [node.occurrence] : []));
 }

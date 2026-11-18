@@ -2,8 +2,8 @@ import type { AudioFilterProgram } from "@hypit/audio-program";
 import type { HtmlPictureReconstruction, HtmlVisual } from "@hypit/html-program";
 import type { ResolvedMedia } from "@hypit/media";
 import type {
-  NleAdjustItem, NleComponentItem, NleComposition, NleMatte, NleMediaItem, NleMediaReference,
-  NlePictureRect, NlePresentItem, NleProcess, NleProject, NleSignalReconstruction, NleTrack, NleTransition,
+  NleAdjustItem, NleComponentItem, NleComposition, NleMatte, NleMediaReference,
+  NlePictureRect, NlePresentItem, NleProcess, NleProject, NlePictureReconstruction, NleTrack, NleTransition,
 } from "@hypit/nle";
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 
@@ -12,15 +12,6 @@ export type NleRenderContext = {
   readonly composition: NleComposition;
   readonly track: NleTrack;
 };
-
-type NleMediaRenderContext = NleRenderContext & (
-  | { readonly kind: "item"; readonly item: NleMediaItem }
-  | {
-      readonly kind: "component-input";
-      readonly item: NleComponentItem;
-      readonly input: string;
-    }
-);
 
 export type NleComponentRenderContext = NleRenderContext & {
   readonly item: NleComponentItem;
@@ -69,7 +60,7 @@ export type NlePictureEffect = {
 };
 
 export type NleAudioEffect = {
-  readonly filter: Omit<AudioFilterProgram, "controls">;
+  readonly filter: AudioFilterProgram["filter"];
   readonly controls?: readonly string[];
 };
 
@@ -87,10 +78,10 @@ export type NleRenderContribution = {
   readonly transitions?: readonly RenderImplementation<NleTransition, NleTransitionRenderContext, NlePictureEffect>[];
   readonly mattes?: readonly RenderImplementation<NleMatte, NleMatteRenderContext, NlePictureEffect>[];
   readonly pictureReconstructions?: readonly RenderImplementation<
-    NleSignalReconstruction, NlePictureReconstructionContext, HtmlPictureReconstruction
+    NlePictureReconstruction, NlePictureReconstructionContext, HtmlPictureReconstruction
   >[];
 };
 
 export type SelectedNleRenderContribution = { readonly package: string; readonly value: NleRenderContribution };
 
-export type ResolveNleMedia = (reference: NleMediaReference, context: NleMediaRenderContext) => ResolvedMedia;
+export type ResolveNleMedia = (reference: NleMediaReference) => ResolvedMedia;

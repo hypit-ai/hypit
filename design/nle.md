@@ -198,11 +198,11 @@ entry. A Composition owns:
 - portable Media Asset document references;
 - installed component package symbols, occurrence-local closed parameters, inline/shared Component value bindings and
   package-defined Media input references;
-- optional package-owned Picture and Audio reconstruction selections for exact mapped reads.
+- optional package-owned reconstruction for an exact mapped Media Picture read.
 
 Picture Tracks are ordered back-to-front. Their Item order is the direct paint order within a Track. Audio
-contributions mix additively. An enabled Picture-track Present may contribute coordinated Audio. An Audio-track
-Present contributes Audio only.
+contributions mix additively. Media and Composition Presents can contribute coordinated Audio on Picture Tracks, or
+Audio alone on Audio Tracks. A Component Present supplies a Picture.
 
 The canvas is a unit-neutral logical Picture domain. It does not choose output pixels, frame rate or a background
 colour. A visible background is an explicit Picture contribution; delivery policy may separately composite
@@ -274,8 +274,7 @@ closed parameter value by id. Inline and shared parameters use the same package 
 shared Process parameter replaces the one Project value and guards every current user's Track. This covers future
 package Operators without adding NLE-specific parameter classes.
 
-Picture and Audio appearances may select a package-owned Signal Reconstruction. Reconstruction belongs to one exact
-source read after source-time mapping. Constant Picture outputs cannot select reconstruction because they have no mapped signal read.
+A timed Media Picture can select package-owned reconstruction for its exact source read after source-time mapping.
 
 ## Nested Composition
 

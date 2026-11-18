@@ -151,8 +151,8 @@ one package Operator's stable Control domain.
 <picture>
   <layout x="0" y="0" width="1920" height="1080"
           fit="cover" content-x="0.5" content-y="0.5" />
-  <reconstruction package="@project/picture" symbol="interpolate">
-    <parameters>{"quality":"preview"}</parameters>
+  <reconstruction package="@project/picture" symbol="nearest">
+    <parameters>{}</parameters>
   </reconstruction>
   <!-- ordered process elements -->
 </picture>
@@ -165,8 +165,9 @@ one package Operator's stable Control domain.
 ```
 
 Inline `fit` is `fill`, `contain` or `cover`. `content-x` and `content-y` are optional normalized focal coordinates.
-An `audio` element has no layout. Both appearances may contain one optional `reconstruction` and an ordered list of
-`process` elements. Reconstruction belongs to the selected mapped read, not to the Source definition.
+Media and Composition Presents may have Audio appearances. Component Presents supply Picture appearances.
+Each appearance may contain ordered `process` elements. A Media Picture may select a package
+`reconstruction` for its mapped read. The selected implementation samples a timed Picture.
 
 ## Processes and Adjusts
 

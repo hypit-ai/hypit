@@ -48,7 +48,7 @@ justified when an independent owner consumes the same format with its own releas
 
 ### `@hypit/temporal`
 
-Owns exact temporal values, finite local domains, target-to-source maps, controls, composition and preimage
+Owns exact temporal values, finite local domains, target-to-source maps, composition and preimage
 operations. It does not own NLE placement, media selection, frame grids or renderer policy.
 
 ### `@hypit/media` and `@hypit/media-asset`
