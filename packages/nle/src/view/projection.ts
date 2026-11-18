@@ -149,6 +149,32 @@ export function mergeNleTimelineItemObservations(
   return [...merged.values()];
 }
 
+function orderTimelineTracks(tracks: readonly NleTrack[], preferred: readonly string[] | undefined): readonly NleTrack[] {
+  const defaults = [
+    ...tracks.filter((track) => track.kind === "picture").reverse(),
+    ...tracks.filter((track) => track.kind === "audio"),
+  ];
+  if (preferred === undefined) return defaults;
+
+  const byId = new Map(defaults.map((track) => [track.id, track]));
+  const ordered = preferred.flatMap((id) => {
+    const track = byId.get(id);
+    return track === undefined ? [] : [track];
+  });
+  const placed = new Set(preferred);
+  for (const [index, track] of defaults.entries()) {
+    if (placed.has(track.id)) continue;
+    const next = defaults.slice(index + 1).find((candidate) => candidate.kind === track.kind && placed.has(candidate.id));
+    const previous = ordered.findLastIndex((candidate) => candidate.kind === track.kind);
+    const position = next !== undefined ? ordered.indexOf(next)
+      : previous >= 0 ? previous + 1
+        : track.kind === "picture" ? 0 : ordered.length;
+    ordered.splice(position, 0, track);
+    placed.add(track.id);
+  }
+  return ordered;
+}
+
 /** Join the active Composition, durable View choices and finite invocation-local observations. */
 export function projectNleTimeline(
   project: NleProject,
@@ -190,10 +216,7 @@ export function projectNleTimeline(
   }
 
   let maximumFrame = 1;
-  const timelineTracks = [
-    ...composition.tracks.filter((track) => track.kind === "picture").reverse(),
-    ...composition.tracks.filter((track) => track.kind === "audio"),
-  ];
+  const timelineTracks = orderTimelineTracks(composition.tracks, state?.trackOrder);
   const tracks = timelineTracks.map((track) => {
     const trackState = state?.tracks.find((candidate) => candidate.track === track.id);
     const items = track.items.map((item): NleTimelineSceneItem => {

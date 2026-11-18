@@ -59,6 +59,7 @@ export type NleEditingSurfaceCommand =
   | (ProjectAndViewRevision & {
       readonly kind: "project.transact";
       readonly commands: readonly NleCommand[];
+      readonly viewCommands?: readonly NleViewCommand[];
     })
   | (ProjectAndViewRevision & {
       readonly kind: "view.transact";

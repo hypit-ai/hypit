@@ -22,6 +22,7 @@ export type NleViewCommand =
       readonly track: string;
       readonly heightPx: number | null;
     }
+  | { readonly kind: "track-order.set"; readonly composition: string; readonly tracks: readonly string[] }
   | { readonly kind: "group.add"; readonly composition: string; readonly group: NleEditGroup }
   | { readonly kind: "group.replace"; readonly composition: string; readonly group: NleEditGroup }
   | { readonly kind: "group.remove"; readonly composition: string; readonly id: string };
@@ -34,6 +35,7 @@ type MutableCompositionState = {
   composition: string;
   tracks: { track: string; locked: boolean; heightPx?: number }[];
   groups: NleEditGroup[];
+  trackOrder?: string[];
 };
 
 type MutableView = Omit<NleView, "name" | "activeComposition" | "editRate" | "compositions"> & {
@@ -103,6 +105,15 @@ export function applyNleViewTransaction(
         }
         if (command.heightPx === null) delete current.heightPx;
         else current.heightPx = command.heightPx;
+        break;
+      }
+      case "track-order.set": {
+        const composition = projectComposition(project, command.composition);
+        const knownTracks = new Set(composition.tracks.map((track) => track.id));
+        for (const track of command.tracks) {
+          if (!knownTracks.has(track)) throw new Error(`Unknown NLE Track ${track} in Composition ${composition.id}.`);
+        }
+        mutableComposition(next, composition.id).trackOrder = [...command.tracks];
         break;
       }
       case "group.add":

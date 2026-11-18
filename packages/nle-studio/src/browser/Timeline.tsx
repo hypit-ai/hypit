@@ -12,7 +12,7 @@ import type { NleStudioMediaEntry, NleStudioSession } from "../protocol.js";
 import { CompositionActions } from "./CompositionActions.js";
 import { CompoundMenu } from "./CompoundMenu.js";
 import { TrackMenu } from "./TrackMenu.js";
-import { frameOf, frameTime, magneticEdit, moveItemCommands, trackGaps } from "./editPlans.js";
+import { frameOf, frameTime, magneticEdit, moveItemEditPlan, trackGaps } from "./editPlans.js";
 import { ClipMenu } from "./ClipMenu.js";
 import { IconButton } from "./common.js";
 import { timecode } from "./timecode.js";
@@ -81,7 +81,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   readonly onRemove: () => void;
   readonly onTrackEnabled: (track: string, enabled: boolean) => void;
   readonly onTrackLocked: (track: string, locked: boolean) => void;
-  readonly onTrackMove: (track: string, before?: string) => void;
+  readonly onTrackMove: (track: string, before: string | undefined, displayOrder: readonly string[]) => void;
   readonly onComposition: (composition: string) => void;
   readonly compositionParents: readonly string[];
   readonly onEnterComposition: (composition: string) => void;
@@ -133,10 +133,10 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const movePlan = itemGesture.gesture?.plan;
   const magneticFrames = useMemo(() => {
     if (!primaryTrack || (!movePlan && !draft)) return undefined;
-    const commands: NleCommand[] = draft ? [{
+    const commands: readonly NleCommand[] = draft ? [{
       kind: "item.trim", id: draft.id, edge: draft.edge,
       at: frameTime(session, draft.edge === "start" ? draft.start : draft.start + draft.duration),
-    }] : movePlan ? moveItemCommands(session, movePlan) : [];
+    }] : movePlan ? moveItemEditPlan(session, movePlan).commands : [];
     try {
       const project = applyNleTransaction(session.open.project.project, { commands: magneticEdit(session, commands, primaryTrack) });
       return new Map(project.compositions.find(value => value.id === scene.composition)?.tracks.flatMap(track =>
