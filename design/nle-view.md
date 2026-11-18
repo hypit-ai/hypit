@@ -5,7 +5,7 @@
 ## Purpose
 
 An NLE View is an optional durable editor document over one NLE Project. It owns how an author wants that Project
-arranged and guarded for editing; it never owns audiovisual content and never participates in AVIR lowering.
+arranged and guarded for editing; it never owns audiovisual content and never participates in delivery compilation.
 
 Project and View remain separate owner documents:
 
@@ -13,7 +13,7 @@ Project and View remain separate owner documents:
 NLE Project                         NLE View
 tracks, items, time, Processes        active Composition, grid
 picture and audio meaning           Track locks and row heights
-AVIR lowering                       linked-edit Groups
+delivery compilation                       linked-edit Groups
 ```
 
 The renderer-facing `view` or `EditProject` object used by a product is a rebuildable projection, not this durable
@@ -129,4 +129,4 @@ The implementation preserves these invariants:
   edits become explicit Project transactions through declaration-specific authoring semantics;
 - package Component and NLE Picture-layout sections expose the same inline/shared ownership distinction and apply
   every affected View Track guard while keeping link and unlink occurrence-local;
-- View changes cannot affect AVIR lowering.
+- View changes cannot affect delivery compilation.

@@ -1,5 +1,4 @@
-import { assertImplementationBinding, assertPackageSymbol, type PackageSymbol } from "@hypit/audiovisual";
-import type { NlePictureLayout } from "@hypit/nle";
+import { assertImplementationBinding, assertPackageSymbol, type NlePictureLayout, type PackageSymbol } from "@hypit/nle";
 import {
   createNleAuthoringHost,
   createNleTimelinePresentationHost,

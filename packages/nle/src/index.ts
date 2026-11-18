@@ -1,4 +1,5 @@
 export type * from "./types.js";
+export { assertIdentity, assertImplementationBinding, assertPackageSymbol, type PackageSymbol } from "./implementation.js";
 export { nleProjectFormat } from "./types.js";
 export {
   assertNleProject,
@@ -46,22 +47,6 @@ export {
   type NleServiceSnapshot,
   type NleServiceTransaction,
 } from "./service.js";
-export { lowerNleProjectToAudiovisual } from "./lower.js";
-export {
-  createNlePackageLoweringHost,
-  defineNleLoweringContribution,
-  nleLoweringContributionKind,
-} from "./package-lowering.js";
-export type {
-  CreateNlePackageLoweringHostOptions,
-  NleAudioProcessLoweringImplementation,
-  NleComponentLoweringImplementation,
-  NleLoweringContribution,
-  NleMatteLoweringImplementation,
-  NlePictureProcessLoweringImplementation,
-  NleReconstructionLoweringImplementation,
-  NleTransitionLoweringImplementation,
-} from "./package-lowering.js";
 export {
   indexNleComposition,
   indexNleProject,

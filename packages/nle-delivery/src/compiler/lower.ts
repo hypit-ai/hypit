@@ -1,24 +1,11 @@
-import {
-  assertAudioOperator,
-  assertPictureOperator,
-  assertProgramSource,
-  assertSignalReconstruction,
-  occurrenceParentRange,
-  resolvedMediaSource,
-  sealAudiovisualProgram,
-  sealLocalSpatialDomain,
-  sealOccurrence,
-  sealSpatialMap,
-  type AudioNode,
-  type AudiovisualProgram,
-  type LocalSpatialDomain,
-  type Occurrence,
-  type OccurrenceOutputSelection,
-  type PictureNode,
-  type ProgramSource,
-  type SignalReconstruction,
-  type SpatialMap,
-} from "@hypit/audiovisual";
+import { resolvedMediaSource } from "./media.js";
+import { assertCompiledSource, occurrenceParentRange, sealOccurrence } from "./occurrence.js";
+import { sealCompilationGraph } from "./program.js";
+import { sealLocalSpatialDomain, sealSpatialMap, type LocalSpatialDomain, type SpatialMap } from "./spatial.js";
+import type {
+  AudioNode, CompilationGraph, CompiledSource, Occurrence, OccurrenceOutputSelection, PictureNode, PictureOperator,
+} from "./types.js";
+import type { HtmlPictureReconstruction } from "@hypit/html-program";
 import {
   addExactTemporalValues,
   compareExactTemporalValues,
@@ -35,8 +22,8 @@ import {
   type TemporalMap,
   type TemporalMapPiece,
 } from "@hypit/temporal/algebra";
-import { fitNlePictureContent } from "./picture.js";
 import {
+  fitNlePictureContent,
   assertNleProject,
   findNleComposition,
   nleCompositionDuration,
@@ -44,23 +31,20 @@ import {
   resolveNleComponentValue,
   resolveNlePictureLayout,
   rootNleComposition,
-} from "./project.js";
-import { nleTimeMappingRequiredDuration } from "./source-time.js";
+  nleTimeMappingRequiredDuration,
+} from "@hypit/nle";
 import type {
   NleAdjustItem,
   NleComposition,
   NleItem,
-  NleLoweringContext,
-  NleLoweringHost,
   NleProcess,
-  NleProcessLoweringContext,
   NlePresentItem,
   NleProject,
-  NleResolvedItemSource,
-  NleSignalReconstruction,
   NleTrack,
   NleTransition,
-} from "./types.js";
+} from "@hypit/nle";
+import type { NleProcessRenderContext, NleRenderContext } from "../render-contribution.js";
+import type { NleResolvedItemSource, NleRenderResolver } from "./resolve.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -130,7 +114,7 @@ function placementMap(
 }
 
 function validateResolvedSource(value: NleResolvedItemSource, item: NlePresentItem): void {
-  assertProgramSource(value.source);
+  assertCompiledSource(value.source);
   if (value.pictureOutput !== undefined) {
     const output = value.source.outputs[value.pictureOutput];
     assert(output !== undefined && output.signal === "picture",
@@ -148,9 +132,9 @@ function resolveItem(
   composition: NleComposition,
   track: NleTrack,
   item: NlePresentItem,
-  host: NleLoweringHost,
+  host: NleRenderResolver,
 ): NleResolvedItemSource {
-  const context: NleLoweringContext = { project, composition, track };
+  const context: NleRenderContext = { project, composition, track };
   if (item.source === "media") {
     const source = resolvedMediaSource(`${item.id}:source`, host.resolveMedia(item.asset, {
       ...context,
@@ -179,9 +163,9 @@ function resolveItem(
 
 function selection(
   item: NlePresentItem,
-  source: ProgramSource,
+  source: CompiledSource,
   outputName: string,
-  reconstruction?: SignalReconstruction,
+  reconstruction?: HtmlPictureReconstruction,
 ): OccurrenceOutputSelection {
   const output = source.outputs[outputName];
   assert(output !== undefined, `NLE Item ${item.id} selects missing Source output ${outputName}.`);
@@ -204,10 +188,10 @@ function selection(
 
 function occurrence(
   item: NlePresentItem,
-  parent: AudiovisualProgram["domain"],
-  source: ProgramSource,
+  parent: CompilationGraph["domain"],
+  source: CompiledSource,
   outputs: readonly string[],
-  reconstructions: Readonly<Record<string, SignalReconstruction>>,
+  reconstructions: Readonly<Record<string, HtmlPictureReconstruction>>,
 ): Occurrence {
   const domain = sealLocalTemporalDomain({ id: `${item.id}:time`, duration: structuredClone(item.duration) });
   return sealOccurrence({
@@ -254,8 +238,8 @@ function processContext(
   composition: NleComposition,
   track: NleTrack,
   process: NleProcess,
-  scope: NleProcessLoweringContext["scope"],
-): NleProcessLoweringContext {
+  scope: NleProcessRenderContext["scope"],
+): NleProcessRenderContext {
   return {
     project,
     composition,
@@ -271,14 +255,11 @@ function pictureProcessNode(
   nodes: Record<string, PictureNode>,
   input: string,
   process: NleProcess,
-  context: NleProcessLoweringContext,
-  host: NleLoweringHost,
+  context: NleProcessRenderContext,
+  host: NleRenderResolver,
   parent: LocalTemporalDomain,
 ): string {
   const operator = host.resolvePictureOperator(process, context);
-  assertPictureOperator(operator, `NLE Picture Process ${process.id}`);
-  assert(operator.inputs.length === 1,
-    `NLE Picture Process ${process.id} must expose exactly one input.`);
   const controlMappings = Object.fromEntries(Object.entries(operator.temporalControls).map(([name, control]) => [
     name,
     operatorControlMapping(process, context.scope.item.start, parent, control,
@@ -298,14 +279,11 @@ function audioProcessNode(
   nodes: Record<string, AudioNode>,
   input: string,
   process: NleProcess,
-  context: NleProcessLoweringContext,
-  host: NleLoweringHost,
+  context: NleProcessRenderContext,
+  host: NleRenderResolver,
   parent: LocalTemporalDomain,
 ): string {
   const operator = host.resolveAudioOperator(process, context);
-  assertAudioOperator(operator, `NLE Audio Process ${process.id}`);
-  assert(operator.inputs.length === 1,
-    `NLE Audio Process ${process.id} must expose exactly one input.`);
   const controlMappings = Object.fromEntries(Object.entries(operator.temporalControls).map(([name, control]) => [
     name,
     operatorControlMapping(process, context.scope.item.start, parent, control,
@@ -469,7 +447,7 @@ function preimageRanges(
 }
 
 function importNestedProgram(
-  program: AudiovisualProgram,
+  program: CompilationGraph,
   item: Extract<NlePresentItem, { readonly source: "composition" }>,
   parent: LocalTemporalDomain,
 ): {
@@ -597,19 +575,6 @@ function importNestedProgram(
           input: namespaced(prefix, node.input),
           mapping: namespaceSpatialMap(prefix, node.mapping),
         };
-        case "remap-control": return {
-          ...structuredClone(node),
-          input: namespaced(prefix, node.input),
-          control: {
-            domain: namespaceDomain(prefix, node.control.domain),
-            segments: node.control.segments.map((segment) => ({
-              ...structuredClone(segment),
-              from: namespaceSpatialMap(prefix, segment.from),
-              to: namespaceSpatialMap(prefix, segment.to),
-            })),
-          },
-          controlMapping: retimeNestedControlMap(prefix, item, occurrenceMap, node.controlMapping, parent),
-        };
         case "over": return { kind: "over", inputs: node.inputs.map((input) => namespaced(prefix, input)) };
         case "apply": return {
           ...structuredClone(node),
@@ -702,8 +667,8 @@ function importNestedProgram(
 function lowerCompositionToAudiovisual(
   project: NleProject,
   composition: NleComposition,
-  host: NleLoweringHost,
-): AudiovisualProgram {
+  host: NleRenderResolver,
+): CompilationGraph {
   const duration = nleCompositionDuration(composition);
   assert(compareExactTemporalValues(duration, exactTemporalZero()) > 0,
     `NLE Composition ${composition.id} has no enabled Items to lower.`);
@@ -827,30 +792,15 @@ function lowerCompositionToAudiovisual(
         `NLE Item ${item.id} requests Audio but resolved no Audio output.`);
       outputs.push(resolved.audioOutput);
     }
-    const reconstructions: Record<string, SignalReconstruction> = {};
-    const resolveReconstruction = (
-      signal: "picture" | "audio",
-      output: string,
-      value: NleSignalReconstruction,
-    ): void => {
-      const resolvedReconstruction = host.resolveSignalReconstruction(value, {
-        project,
-        composition,
-        track,
-        item,
-        signal,
-        output,
-      });
-      assertSignalReconstruction(resolvedReconstruction, `NLE Item ${item.id} ${signal} reconstruction`);
-      assert(resolvedReconstruction.signal === signal,
-        `NLE Item ${item.id} ${signal} reconstruction targets ${resolvedReconstruction.signal}.`);
-      reconstructions[output] = resolvedReconstruction;
-    };
+    const reconstructions: Record<string, HtmlPictureReconstruction> = {};
     if (needsPicture && item.picture!.reconstruction !== undefined) {
-      resolveReconstruction("picture", resolved.pictureOutput!, item.picture!.reconstruction);
+      reconstructions[resolved.pictureOutput!] = host.resolvePictureReconstruction(item.picture!.reconstruction, {
+        project, composition, track, item,
+      });
     }
     if (needsAudio && item.audio!.reconstruction !== undefined) {
-      resolveReconstruction("audio", resolved.audioOutput!, item.audio!.reconstruction);
+      const { using } = item.audio!.reconstruction;
+      throw new Error(`NLE Item ${item.id} has no Audio Reconstruction implementation ${using.package}#${using.symbol}.`);
     }
     occurrences[item.id] = occurrence(item, domain, resolved.source, outputs, reconstructions);
     if (needsPicture) {
@@ -910,7 +860,7 @@ function lowerCompositionToAudiovisual(
   }
 
   const linearControlMappings = (
-    operator: import("@hypit/audiovisual").PictureOperator,
+    operator: PictureOperator,
     start: ExactTemporalValue,
     activeDuration: ExactTemporalValue,
     label: string,
@@ -951,10 +901,6 @@ function lowerCompositionToAudiovisual(
       content: content.item,
       matte: matte.item,
     });
-    assertPictureOperator(operator, `NLE Matte ${relation.id}`);
-    assert(operator.inputs.length === 2
-      && operator.inputs.includes("content") && operator.inputs.includes("matte"),
-    `NLE Matte ${relation.id} Operator must expose content and matte inputs.`);
     const node = `${relation.content}:matte:${relation.id}`;
     pictureNodes[node] = {
       kind: "apply",
@@ -996,10 +942,6 @@ function lowerCompositionToAudiovisual(
       incoming: incoming.item,
       domain: transitionDomain,
     });
-    assertPictureOperator(operator, `NLE Transition ${value.id}`);
-    assert(operator.inputs.length === 2
-      && operator.inputs.includes("outgoing") && operator.inputs.includes("incoming"),
-    `NLE Transition ${value.id} Operator must expose outgoing and incoming inputs.`);
     const applied = `${value.id}:apply`;
     const restricted = `${value.id}:range`;
     pictureNodes[applied] = {
@@ -1121,7 +1063,7 @@ function lowerCompositionToAudiovisual(
 
   assert(pictureRoot !== undefined || audioRoot !== undefined,
     `NLE Composition ${composition.id} contains no active Picture or Audio output.`);
-  return sealAudiovisualProgram({
+  return sealCompilationGraph({
     id: `${project.id}:${composition.id}`,
     domain,
     occurrences,
@@ -1133,8 +1075,8 @@ function lowerCompositionToAudiovisual(
   });
 }
 
-/** Deterministically project the Root Composition into one closed invocation-local AVIR Programme. */
-export function lowerNleProjectToAudiovisual(project: NleProject, host: NleLoweringHost): AudiovisualProgram {
+/** Deterministically project the Root Composition into one closed compilation graph. */
+export function lowerNleProject(project: NleProject, host: NleRenderResolver): CompilationGraph {
   assertNleProject(project);
   return lowerCompositionToAudiovisual(project, rootNleComposition(project), host);
 }

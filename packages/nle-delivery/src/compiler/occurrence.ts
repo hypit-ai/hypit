@@ -10,10 +10,10 @@ import {
   type LocalTemporalDomain,
   type TemporalRange,
 } from "@hypit/temporal/algebra";
-import { assertImplementationBinding, assertIdentity } from "./implementation.js";
-import { assertSignalReconstruction } from "./reconstruction.js";
+import { assertIdentity } from "@hypit/nle";
+import { assertHtmlPictureReconstruction } from "@hypit/html-program";
 import { assertLocalSpatialDomain } from "./spatial.js";
-import type { Occurrence, OccurrencePlacement, ProgramSource } from "./types.js";
+import type { Occurrence, OccurrencePlacement, CompiledSource } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -36,17 +36,16 @@ function rangeDuration(range: TemporalRange): ExactTemporalValue {
   return subtractExactTemporalValues(range.end, range.start);
 }
 
-export function assertProgramSource(value: ProgramSource): void {
-  assertIdentity(value.id, "ProgramSource.id");
-  assertImplementationBinding(value, `ProgramSource ${value.id}`);
+export function assertCompiledSource(value: CompiledSource): void {
+  assertIdentity(value.id, "CompiledSource.id");
   const outputs = Object.entries(value.outputs);
-  assert(outputs.length > 0, `ProgramSource ${value.id} has no outputs.`);
+  assert(outputs.length > 0, `CompiledSource ${value.id} has no outputs.`);
   for (const [name, output] of outputs) {
-    assertIdentity(name, `ProgramSource ${value.id} output`);
+    assertIdentity(name, `CompiledSource ${value.id} output`);
     if (output.signal === "picture") assertLocalSpatialDomain(output.spatialDomain);
     if (output.kind === "signal") assertLocalTemporalDomain(output.domain);
     assert(output.signal === "picture" || output.kind === "signal",
-      `ProgramSource ${value.id}.${name} constant Audio is not defined.`);
+      `CompiledSource ${value.id}.${name} constant Audio is not defined.`);
   }
 }
 
@@ -72,7 +71,7 @@ export function assertOccurrencePlacement(value: OccurrencePlacement, occurrence
 
 export function assertOccurrence(value: Occurrence): void {
   assertIdentity(value.id, "Occurrence.id");
-  assertProgramSource(value.source);
+  assertCompiledSource(value.source);
   assertLocalTemporalDomain(value.domain);
   assertOccurrencePlacement(value.placement, value.domain);
   const selections = Object.entries(value.selections);
@@ -92,10 +91,9 @@ export function assertOccurrence(value: Occurrence): void {
     assert(last !== undefined && sameDomain(last.source, output.domain),
       `Occurrence ${value.id}.${name} Mapping must end in Source output domain ${output.domain.id}.`);
     if (selection.reconstruction !== undefined) {
-      assertSignalReconstruction(selection.reconstruction,
-        `Occurrence ${value.id}.${name} reconstruction`);
-      assert(selection.reconstruction.signal === output.signal,
-        `Occurrence ${value.id}.${name} reconstruction targets ${selection.reconstruction.signal}, not ${output.signal}.`);
+      assert(output.signal === "picture" && value.source.content.kind === "media",
+        `Occurrence ${value.id}.${name} reconstruction requires a Media Picture.`);
+      assertHtmlPictureReconstruction(selection.reconstruction);
     }
   }
 }

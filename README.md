@@ -10,26 +10,23 @@ individual meanings and lifecycles.
 The [design index](design/README.md) is the architectural entry point. Repository work follows
 [AGENTS.md](AGENTS.md).
 
-The current authoring direction has three distinct representations:
+The authoring and delivery path separates source, editable document and compiled programs.
 
 ```text
-TSX author program -> NLE Project document -> AVIR Programme -> HtmlProgram + AudioProgram -> video delivery
+TSX author program -> NLE Project document -> HtmlProgram + AudioProgram -> video delivery
 ```
 
 TSX supplies ordinary modules and reusable component declarations. The NLE Project is the durable editable
-authority; its current SVML serialization is owned by NLE. AVIR is an invocation-local execution
-projection. AIGC, semantic, Scene and other owner results enter through explicit Publication, Adoption, Reference or
-materialization seams and are not hidden inside AVIR.
+authority, serialized as SVML. The NLE delivery compiler reads one accepted snapshot and prepares execution programs.
+AIGC, semantic and Scene results enter through explicit Publication, Adoption, Reference or Materialization.
 
-The TSX authoring materializer described by the design documents is not yet a released package. The current
-implementation owns the NLE document and AVIR seams first; the authoring source module will be introduced only with a
-concrete production consumer.
+Ordinary project programs can call the NLE document and delivery APIs directly. The TSX authoring materializer is planned.
 
 ## Initial production paths
 
 The implementation begins with two complete paths:
 
-1. accepted project media and a project component enter an NLE Project, close AVIR and terminal programs, and produce
+1. accepted project media and a project component enter an NLE Project and compile to terminal programs for
    a video delivery;
 2. an explicit Capability Invocation runs through its selected Execution Environment, closes a Publication,
    enters a target owner through adoption, and participates in an NLE delivery.
@@ -41,7 +38,7 @@ TypeScript project programs provide the executable automation surface over Host 
 
 ## Current implementation
 
-The first working owner foundations are Media, AVIR, NLE Project and NLE View:
+The working core covers Media, NLE editing and video delivery.
 
 - `@hypit/temporal` provides exact clock-free temporal domains and relations;
 - `@hypit/media` inspects, selects and interprets picture and audio members;
@@ -54,15 +51,13 @@ The first working owner foundations are Media, AVIR, NLE Project and NLE View:
   Service plus typed owner-document lifetimes among product sessions;
 - `@hypit/media-local` implements bounded container-index and explicitly selected decoded-unit inspection
   with local ffprobe;
-- `@hypit/audiovisual` defines renderer-independent Programme relations, exact point evaluation and one
-  fixed package-symbol extension boundary;
-- `@hypit/audiovisual-html` and `@hypit/audiovisual-audio` close AVIR into portable `HtmlProgram` and `AudioProgram`
-  terminal plans;
+- `@hypit/nle-delivery` compiles an accepted snapshot and selected package implementations into portable
+  `HtmlProgram` and `AudioProgram` outputs and owns the delivery Action;
 - `@hypit/html-chromium-local` and `@hypit/html-electron-local` execute the same frame-addressed HTML document through
   frame-buffer or shared-texture capture;
 - `@hypit/html-video-local` provides an operating-system `HtmlVideoExecutor` using explicitly selected browser and
-  local media tools, while `@hypit/nle-delivery` links one accepted NLE snapshot and owns its delivery Action;
-- `@hypit/nle` owns durable direct composition, exact Project transactions, deterministic AVIR lowering and the
+  local media tools;
+- `@hypit/nle` owns durable direct composition, exact Project transactions and the
   independent `@hypit/nle/view` editing-arrangement and `@hypit/nle/surface` application-composition subpaths while
   keeping renderer execution outside both documents; one Project-owned typed Shared Value registry lets explicit
   Component slots, package Operator parameters and NLE-owned Picture layout slots share values across occurrences and

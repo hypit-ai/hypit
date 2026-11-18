@@ -17,15 +17,6 @@ importers:
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:packages/audio-program
-      '@hypit/audiovisual':
-        specifier: workspace:^0.1.0
-        version: link:packages/audiovisual
-      '@hypit/audiovisual-audio':
-        specifier: workspace:^0.1.0
-        version: link:packages/audiovisual-audio
-      '@hypit/audiovisual-html':
-        specifier: workspace:^0.1.0
-        version: link:packages/audiovisual-html
       '@hypit/html-chromium-local':
         specifier: workspace:^0.1.0
         version: link:packages/html-chromium-local
@@ -91,42 +82,6 @@ importers:
 
   packages/audio-program:
     dependencies:
-      '@hypit/media':
-        specifier: workspace:^0.1.0
-        version: link:../media
-      '@hypit/temporal':
-        specifier: workspace:^0.1.0
-        version: link:../temporal
-
-  packages/audiovisual:
-    dependencies:
-      '@hypit/media':
-        specifier: workspace:^0.1.0
-        version: link:../media
-      '@hypit/temporal':
-        specifier: workspace:^0.1.0
-        version: link:../temporal
-
-  packages/audiovisual-audio:
-    dependencies:
-      '@hypit/audio-program':
-        specifier: workspace:^0.1.0
-        version: link:../audio-program
-      '@hypit/audiovisual':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual
-      '@hypit/media':
-        specifier: workspace:^0.1.0
-        version: link:../media
-
-  packages/audiovisual-html:
-    dependencies:
-      '@hypit/audiovisual':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual
-      '@hypit/html-program':
-        specifier: workspace:^0.1.0
-        version: link:../html-program
       '@hypit/media':
         specifier: workspace:^0.1.0
         version: link:../media
@@ -257,9 +212,6 @@ importers:
 
   packages/nle:
     dependencies:
-      '@hypit/audiovisual':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual
       '@hypit/media':
         specifier: workspace:^0.1.0
         version: link:../media
@@ -272,15 +224,6 @@ importers:
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:../audio-program
-      '@hypit/audiovisual':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual
-      '@hypit/audiovisual-audio':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual-audio
-      '@hypit/audiovisual-html':
-        specifier: workspace:^0.1.0
-        version: link:../audiovisual-html
       '@hypit/html-program':
         specifier: workspace:^0.1.0
         version: link:../html-program

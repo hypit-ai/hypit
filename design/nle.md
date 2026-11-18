@@ -8,14 +8,14 @@
 An NLE Project is the durable author document that says what one edit is now. It owns named Composition definitions,
 one Root Composition entry, direct Programme time, Picture and Audio Track order, Present occurrences, Media,
 component and local Composition references, source-time relations and NLE-owned spatial placement. It does not
-persist AVIR, renderer programmes, editor UI state or execution plans.
+persist renderer programmes, editor UI state or execution plans.
 
 The Project is one owner object inside the wider Hypit Project Boundary. “Project” here means one editable NLE
 document, not the directory-wide collection of Media, Generation, Scene and other owners.
 
 An ordinary TypeScript/TSX author program may create the initial Project through an explicit materialization action.
 That program is reusable source/module input to materialization. Once materialized, NLE commands edit the Project
-directly; the Project serializes the current edit and lowers to AVIR without re-running the author program. SVML is
+directly; the Project serializes the current edit and delivers from that saved edit. SVML is
 the NLE Project's current document representation.
 
 The authoring boundary is described in [Component authoring](authoring.md). It deliberately keeps AIGC recipes,
@@ -25,7 +25,7 @@ ordinary References, Publications, Media adoption or explicit materialization.
 ## SVML document and initial NLE surface
 
 The durable NLE Project is serialized as **SVML**, an XML-like markup representation owned by NLE. The NLE Reader and
-serializer enforce the current Project schema, and AVIR lowering consumes the resulting NLE Project snapshot.
+serializer enforce the current Project schema, and delivery compilation consumes the resulting NLE Project snapshot.
 The complete current element, attribute and closed-value contract lives beside the owner implementation in
 [`packages/nle/SVML.md`](../packages/nle/SVML.md).
 
@@ -127,7 +127,7 @@ not Project facts. Track locks, durable edit Groups, editor grid and Track row h
 View. Track enablement, Track order, Item placement and Picture layout belong to the Project because they describe the
 work or its author structure.
 
-AVIR lowering accepts only an NLE Project and explicit Host resolvers. For every two Views over the same Project:
+Delivery compilation reads the accepted NLE Project and explicitly selected implementations. For every two Views over the same Project:
 
 ```text
 lower(project, host) == lower(project, host)
@@ -140,7 +140,7 @@ There is deliberately no View argument whose value could change the Programme.
 SVML is the narrow durable waist between author-time programs and execution-time audiovisual programs. An author
 program or package may compute initial facts, but SVML stores only the accepted Composition structure, exact time,
 explicit references and closed values. In the other direction, SVML does not attempt to spell every renderer
-operation: package Components and Operators lower their owned closed values into AVIR. Variables, expressions,
+operation: package Components and Operators render from their owned closed values. Variables, expressions,
 functions and renderer graphs therefore belong on opposite sides of the Project document rather than becoming its
 syntax.
 
@@ -210,15 +210,8 @@ transparency.
 
 ## Present and source time
 
-A Present is an NLE authoring role, not an AVIR node. It owns one Media, component or local Composition occurrence:
-
-```text
-NLE Present
-  -> resolved ProgramSource
-  -> AVIR Occurrence + exact TemporalMap
-  -> Picture use / remap / restrict / over
-  -> Audio use / restrict / mix
-```
+A Present owns one Media, Component or local Composition occurrence. Its placement selects the span in the current
+Composition and its source-time map selects the positions to read.
 
 `sourceTime.pieces` are stored in the Item-local target domain `[0, duration]`. The Project can validate that
 target relation while the Source is offline. Lowering attaches the resolved finite Source domain and rejects a
@@ -230,8 +223,7 @@ inspection. The Host resolves a used reference only while lowering and supplies 
 
 A component Present stores an unversioned npm package symbol, closed parameters and optional package-defined names
 mapped to portable Media Asset references. During lowering the Host resolves those references to invocation-local
-Media resources before resolving the component Source; runtime addresses and bytes never enter the Project. The Host
-selects installed package code and resolves one AVIR ProgramSource with explicit Picture and Audio output names.
+Media resources before calling the selected package render contribution. The component supplies its local Picture extent and visual.
 Missing packages, Media inputs and outputs fail with the exact Item and requested material.
 
 Package authoring may derive a finite, potentially dynamic list of Media input roles from one Component occurrence's
@@ -270,7 +262,7 @@ value and guards every current user's Track.
 `picture.layout` is the first NLE declaration because frame, fit and focal alignment are NLE meanings. A Picture
 appearance stores either one inline layout or one reference to a compatible Shared Value. Spatial authoring can
 promote an inline layout, link another Picture Item, edit the shared owner, or unlink an Item by copying the resolved
-layout back inline. Canvas, Inspector and AVIR lowering resolve the reference before using its geometry.
+layout back inline. Canvas, Inspector and delivery compilation resolve the reference before using its geometry.
 
 An Inspector identifies one Shared Value owner, its declaration and all current users. Editing the owner through a
 View requires every user's Track to be writable. Link and unlink remain occurrence-local edits. The View stores
@@ -283,8 +275,7 @@ shared Process parameter replaces the one Project value and guards every current
 package Operators without adding NLE-specific parameter classes.
 
 Picture and Audio appearances may select a package-owned Signal Reconstruction. Reconstruction belongs to one exact
-Occurrence output selection after source-time mapping; it does not redefine the ProgramSource or introduce a second
-evaluation language. Constant Picture outputs cannot select reconstruction because they have no mapped signal read.
+source read after source-time mapping. Constant Picture outputs cannot select reconstruction because they have no mapped signal read.
 
 ## Nested Composition
 
@@ -298,10 +289,8 @@ Composition definitions do not accept package parameters or Media inputs. Reusab
 Components; nested Composition is direct NLE author structure. All definitions remain inside one NLE Project Service,
 revision, undo history and savepoint.
 
-Lowering recursively projects the referenced definition, namespaces its AVIR Sources, Occurrences, graph nodes,
-Controls and spatial domains by occurrence path, pulls its exact temporal regions back into the parent time domain
-and then applies the outer Item layout and Processes. No Composition Source, nested programme or foreign evaluator
-survives in the closed AVIR Programme.
+Compilation recursively expands each referenced definition, namespaces its content by occurrence path, pulls its exact
+temporal regions back into parent time and applies the outer Item layout and Processes.
 
 The Composition Item's `sourceTime` is the exact relation from Item-local time to referenced-Composition time.
 Lowering uses the shared temporal preimage algebra to pull back child Occurrences, restrictions and Control mappings.
@@ -322,12 +311,10 @@ Package display metadata and Inspector implementations are not Project facts.
 
 An Adjust is an independently timed Timeline Item applying one Operator to the Picture or Audio accumulated below
 its ordered Track position. The Track kind selects its medium. Outside the Adjust range, the accumulated signal
-passes through unchanged. An Adjust is NLE author structure lowered to ordinary AVIR
-`apply`, `restrict`, `over` and `mix` relations.
+passes through unchanged. Compilation limits the Adjust to its authored range.
 
-Operator resolution is explicit Host behavior. The resolved AVIR Operator must expose exactly one input for this
-first direct-processing slice. Its package Controls receive mappings translated from persisted Item-local Control
-time into Programme time. Trimming, splitting and rolling an Item exactly slice and rebase those relations together
+The selected package Process or Adjust uses the `signal` input. The compiler maps persisted Item-local Control
+time into programme time. Trimming, splitting and rolling an Item exactly slice and rebase those relations together
 with the Item.
 
 ## Transitions and Mattes
@@ -344,8 +331,7 @@ has at most one direct Matte, dependencies must be acyclic, and a Transition can
 matte source. The package Operator exposes exact `content` and `matte` inputs.
 
 Both relations store stable package symbols and closed parameters. Their package Controls receive implicit linear
-mappings over the overlap or content range. Lowering resolves Matte dependencies before Transition chains and emits
-only native AVIR multi-input `apply`, `restrict` and `over` relations.
+mappings over the overlap or content range. Compilation resolves Matte dependencies before Transition chains.
 
 ## Transactions and open lifetime
 
@@ -396,29 +382,16 @@ A disposable Composition or Project index accelerates lookup of Items, Media Ass
 Shared Value users, Composition users and relation participants. It is rebuilt from one exact snapshot and is
 never serialized or treated as another authority.
 
-## AVIR lowering
+## Delivery compilation
 
-Lowering is a read-only deterministic projection:
+The delivery compiler reads one accepted NLE snapshot, its resolved Media and selected npm render contributions.
+The Root programme ends at the latest enabled Item edge. Picture fitting places source content in the Item's local
+frame, then places that frame on the Composition canvas. Picture and Audio of one Media Present share exact placement
+and source-time mapping. The compilation request selects how the resulting programme is sampled.
 
-```text
-NLE Project snapshot
-  + resolved Media
-  + installed component implementations
-  -> closed AudiovisualProgram
-```
-
-The Root Programme domain ends at its latest enabled Item edge. Muted Tracks and disabled Items produce no signal.
-Picture fitting first maps the Source domain into the Item-local frame; placement then maps the Project canvas into
-that frame. AVIR retains the two maps as ordinary renderer-neutral relations. Audio uses the same Occurrence and
-source-time selection when a Present exposes both signals. Nested definitions are expanded and namespaced into this
-same Programme.
-Before resolving a Component Source, lowering resolves inline and shared value bindings into one slot-indexed map of
-closed values. The Host receives occurrence-local parameters on the Item and resolved slot values in the lowering
-context; neither side is silently copied into or merged with the other, and Component execution cannot distinguish
-whether a value was inline or shared.
-
-Terminal linking, output sampling, browser processes, decoding, caches, encoding and delivery remain outside the NLE
-owner. NLE delivery consumes one accepted snapshot and submits closed `HtmlProgram` and `AudioProgram` plans.
+The Component receives occurrence-local parameters on the Item and a separate map of resolved slot values. Inline
+and shared bindings resolve to the same package-owned value. The compiler produces a frame-addressed `HtmlProgram`
+and a continuous `AudioProgram` as requested. See [delivery compilation](html-video-delivery.md).
 
 ## Current implementation boundary
 
@@ -430,8 +403,7 @@ The following capabilities are outside the current implementation:
 ## Package shape and required behavior
 
 `@hypit/nle` is the first release boundary. Project schema, the current document Reader and serializer, exact time
-editing, Picture fitting, the per-document Project and View Services and AVIR lowering share one owner and release
-lifecycle. A TSX authoring materializer may begin as a source module in this release; it becomes `@hypit/authoring`
+editing, Picture fitting and the per-document Project and View Services share one owner and release lifecycle. A TSX authoring materializer may begin as a source module in this release; it becomes `@hypit/authoring`
 only when an independent component or product consumer proves a separate release boundary. View modules begin at the
 `@hypit/nle/view` subpath. The application composition over both Services begins at `@hypit/nle/surface`. Platform
 file I/O and audiovisual execution remain outside it.
@@ -445,10 +417,10 @@ The implementation preserves these invariants:
 - trim, slip and retime preserve exact piecewise source-time meaning;
 - split and roll exactly subdivide or extend source-time relations while preserving their stated outer edges;
 - ripple moves only its explicit scope, and detached Audio becomes an independent valid Present;
-- ordered occurrence Processes and Programme Adjusts lower to native AVIR applications with exact Controls;
-- Transition chains and acyclic Matte dependencies lower to native multi-input AVIR Operators without painting
+- ordered occurrence Processes and Programme Adjusts compile with exact control mappings;
+- Transition chains and acyclic Matte dependencies bind their named Picture inputs without painting
   Matte sources independently;
-- Media and component Presents lower headlessly into coordinated AVIR Picture and Audio relations;
+- Media and component Presents compile headlessly into Picture or Audio programs for the requested output;
 - component Media inputs resolve at the Host seam and reconstruction remains attached to the selected mapped read;
 - Project Shared Values use one typed registry and lifecycle while exact Component, Operator and NLE declarations validate every
   binding, derive cross-Composition users and retain their own lowering meaning;
@@ -457,8 +429,8 @@ The implementation preserves these invariants:
   NLE-owned geometry;
 - materialization and direct spatial planners produce ordinary atomic Project transactions;
 - disposable indexes derive reverse references from canonical Project facts;
-- one Project owns a Root plus reusable acyclic Composition definitions, whose occurrences expand into one flat AVIR
-  Programme with exact affine rate, reverse, hold, wrap and edit pullback, without foreign Sources or sampled time;
+- one Project owns a Root plus reusable acyclic Composition definitions, whose occurrences expand using exact rate, reverse, hold,
+  wrap and edit pullback;
 - Picture contain, cover, fill and focal placement lower to the expected spatial maps;
 - disabled Tracks, Items and Processes and missing materials produce precise observable behavior;
 - no View or Session fact participates in lowering.

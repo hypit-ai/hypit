@@ -1,4 +1,4 @@
-import type { PackageSymbol } from "@hypit/audiovisual";
+import type { PackageSymbol } from "../implementation.js";
 import { exactTemporalRational, subtractExactTemporalValues } from "@hypit/temporal/algebra";
 import { planNleComponentValueEdit } from "../component-value-authoring.js";
 import { planNleSpatialEdit } from "../spatial-authoring.js";

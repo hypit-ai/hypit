@@ -106,7 +106,7 @@ recoverable Capability Invocation, Publication closure, owner Services and proje
 implementations.
 
 Reuse the current owner fact or Action required by a production slice; place a TSX materializer, NLE document fact or
-AVIR relation under its current owner.
+delivery compilation rule under its current owner.
 
 ## Verification strategy
 

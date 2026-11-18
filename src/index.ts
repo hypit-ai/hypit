@@ -1,7 +1,4 @@
 export * as audioProgram from "@hypit/audio-program";
-export * as audiovisual from "@hypit/audiovisual";
-export * as audiovisualAudio from "@hypit/audiovisual-audio";
-export * as audiovisualHtml from "@hypit/audiovisual-html";
 export * as application from "@hypit/application";
 export * as htmlProgram from "@hypit/html-program";
 export * as htmlVideo from "@hypit/html-video";

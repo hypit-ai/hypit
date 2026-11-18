@@ -1,23 +1,23 @@
 import { assertLocalTemporalDomain, compareExactTemporalValues } from "@hypit/temporal/algebra";
 import { assertAudioGraph, audioGraphUses } from "./audio.js";
-import { assertIdentity } from "./implementation.js";
+import { assertIdentity } from "@hypit/nle";
 import { assertOccurrence } from "./occurrence.js";
 import { assertPictureGraph, pictureGraphUses } from "./picture.js";
 import { assertLocalSpatialDomain } from "./spatial.js";
-import type { AudiovisualProgram, Occurrence } from "./types.js";
+import type { CompilationGraph } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function sameDomain(left: AudiovisualProgram["domain"], right: AudiovisualProgram["domain"]): boolean {
+function sameDomain(left: CompilationGraph["domain"], right: CompilationGraph["domain"]): boolean {
   return left.id === right.id && compareExactTemporalValues(left.duration, right.duration) === 0;
 }
 
-export function assertAudiovisualProgram(value: AudiovisualProgram): void {
-  assertIdentity(value.id, "AudiovisualProgram.id");
+export function assertCompilationGraph(value: CompilationGraph): void {
+  assertIdentity(value.id, "CompilationGraph.id");
   assertLocalTemporalDomain(value.domain);
-  assert(value.picture !== undefined || value.audio !== undefined, `Audiovisual Programme ${value.id} has no outputs.`);
+  assert(value.picture !== undefined || value.audio !== undefined, `Programme ${value.id} has no outputs.`);
   if (value.picture === undefined) {
     assert(value.pictureDomain === undefined, `Audio-only Programme ${value.id} contains an unused Picture domain.`);
   } else {
@@ -25,7 +25,7 @@ export function assertAudiovisualProgram(value: AudiovisualProgram): void {
     assertLocalSpatialDomain(value.pictureDomain);
   }
   for (const [id, occurrence] of Object.entries(value.occurrences)) {
-    assertIdentity(id, "Audiovisual Programme Occurrence id");
+    assertIdentity(id, "Programme Occurrence id");
     assert(id === occurrence.id, `Occurrence key ${id} does not match identity ${occurrence.id}.`);
     assertOccurrence(occurrence);
     assert(sameDomain(occurrence.placement.parent, value.domain),
@@ -39,7 +39,7 @@ export function assertAudiovisualProgram(value: AudiovisualProgram): void {
   ];
   const usedOccurrences = new Set(uses.map((use) => use.occurrence));
   for (const id of Object.keys(value.occurrences)) {
-    assert(usedOccurrences.has(id), `Audiovisual Programme ${value.id} contains unused Occurrence ${id}.`);
+    assert(usedOccurrences.has(id), `Programme ${value.id} contains unused Occurrence ${id}.`);
   }
   const usedSelections = new Set(uses.map((use) => `${use.occurrence}\u0000${use.output}`));
   for (const occurrence of Object.values(value.occurrences)) {
@@ -50,12 +50,7 @@ export function assertAudiovisualProgram(value: AudiovisualProgram): void {
   }
 }
 
-export function sealAudiovisualProgram(value: AudiovisualProgram): AudiovisualProgram {
-  assertAudiovisualProgram(value);
+export function sealCompilationGraph(value: CompilationGraph): CompilationGraph {
+  assertCompilationGraph(value);
   return structuredClone(value);
-}
-
-export function audiovisualProgramOccurrences(value: AudiovisualProgram): readonly Occurrence[] {
-  assertAudiovisualProgram(value);
-  return Object.values(value.occurrences).map((occurrence) => structuredClone(occurrence));
 }

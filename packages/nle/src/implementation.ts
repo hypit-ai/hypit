@@ -1,4 +1,13 @@
-import type { ImplementationBinding, PackageSymbol } from "./types.js";
+/** npm selects the implementation version; the symbol is assigned by that package. */
+export type PackageSymbol = {
+  readonly package: string;
+  readonly symbol: string;
+};
+
+type ImplementationBinding = {
+  readonly implementation: PackageSymbol;
+  readonly parameters: Readonly<Record<string, unknown>>;
+};
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

@@ -1,4 +1,4 @@
-import { assertImplementationBinding, type PackageSymbol } from "@hypit/audiovisual";
+import { assertImplementationBinding, type PackageSymbol } from "./implementation.js";
 import { mediaPictureExtent, sealMediaInterpretation } from "@hypit/media";
 import {
   compareExactTemporalValues,

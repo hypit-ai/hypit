@@ -147,7 +147,7 @@ export type NleTimelineScene = {
     readonly id: string;
     readonly outgoing: string;
     readonly incoming: string;
-    readonly operator: import("@hypit/audiovisual").PackageSymbol;
+    readonly operator: import("../implementation.js").PackageSymbol;
   }[];
   readonly mattes: readonly { readonly id: string; readonly content: string; readonly matte: string }[];
   readonly tracks: readonly NleTimelineSceneTrack[];
@@ -258,7 +258,7 @@ export type NleInspectorSection = {
   readonly domain: NleInspectorDomain;
   readonly owner:
     | { readonly kind: "nle" }
-    | { readonly kind: "package"; readonly symbol: import("@hypit/audiovisual").PackageSymbol }
+    | { readonly kind: "package"; readonly symbol: import("../implementation.js").PackageSymbol }
     | {
         readonly kind: "shared-value";
         readonly ref: string;
@@ -289,7 +289,7 @@ export type NleTransitionInspectorScene = {
   readonly outgoing: string;
   readonly incoming: string;
   readonly durationFrames: number;
-  readonly operator: import("@hypit/audiovisual").PackageSymbol;
+  readonly operator: import("../implementation.js").PackageSymbol;
   readonly editable: boolean;
   readonly sections: readonly NleInspectorSection[];
 };

@@ -6,9 +6,9 @@ import {
   type LocalTemporalDomain,
   type TemporalRange,
 } from "@hypit/temporal/algebra";
-import { assertIdentity } from "./implementation.js";
+import { assertIdentity } from "@hypit/nle";
 import { assertAudioOperator } from "./operator.js";
-import type { AudioGraph, AudioNode, AudiovisualProgram } from "./types.js";
+import type { AudioGraph, AudioNode, CompilationGraph } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -32,7 +32,7 @@ function references(node: AudioNode): readonly string[] {
   }
 }
 
-function assertNode(id: string, node: AudioNode, program: AudiovisualProgram): void {
+function assertNode(id: string, node: AudioNode, program: CompilationGraph): void {
   assertIdentity(id, "Audio node id");
   switch (node.kind) {
     case "silence": return;
@@ -64,7 +64,7 @@ function assertNode(id: string, node: AudioNode, program: AudiovisualProgram): v
   }
 }
 
-export function assertAudioGraph(value: AudioGraph, program: AudiovisualProgram): void {
+export function assertAudioGraph(value: AudioGraph, program: CompilationGraph): void {
   assertIdentity(value.root, "AudioGraph.root");
   assert(value.nodes[value.root] !== undefined, `Programme ${program.id} has no Audio root node ${value.root}.`);
   const entries = Object.entries(value.nodes);

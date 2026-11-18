@@ -1,11 +1,5 @@
-import type {
-  AudioOperator,
-  PackageSymbol,
-  PictureOperator,
-  ProgramSource,
-  SignalReconstruction,
-} from "@hypit/audiovisual";
-import type { MediaInterpretation, ResolvedMedia } from "@hypit/media";
+import type { PackageSymbol } from "./implementation.js";
+import type { MediaInterpretation } from "@hypit/media";
 import type { ExactTemporalValue, TemporalMapPiece } from "@hypit/temporal/algebra";
 
 export const nleProjectFormat = "hypit.nle-project";
@@ -225,95 +219,6 @@ export type NleProject = {
   /** Typed Project-wide values addressable from explicit slots in any Composition. */
   readonly sharedValues: readonly NleSharedValue[];
   readonly compositions: readonly NleComposition[];
-};
-
-export type NleResolvedItemSource = {
-  readonly source: ProgramSource;
-  readonly pictureOutput?: string;
-  readonly audioOutput?: string;
-};
-
-export type NleLoweringContext = {
-  readonly project: NleProject;
-  readonly composition: NleComposition;
-  readonly track: NleTrack;
-};
-
-export type NleMediaLoweringContext = NleLoweringContext & (
-  | { readonly kind: "item"; readonly item: NleMediaItem }
-  | {
-      readonly kind: "component-input";
-      readonly item: NleComponentItem;
-      readonly input: string;
-    }
-);
-
-export type NleComponentLoweringContext = NleLoweringContext & {
-  readonly item: NleComponentItem;
-  /** Invocation-local resources resolved by the Host from the Item's persistent Media references. */
-  readonly media: Readonly<Record<string, ResolvedMedia>>;
-  /** Inline and shared slot bindings resolved to the same closed package values. */
-  readonly values: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
-};
-
-export type NleSignalReconstructionLoweringContext = NleLoweringContext & {
-  readonly item: NlePresentItem;
-  readonly signal: "picture" | "audio";
-  readonly output: string;
-};
-
-export type NleProcessLoweringContext = NleLoweringContext & {
-  readonly process: NleProcess;
-  /** Closed value resolved from the process's inline or Project-owned binding. */
-  readonly parameters: Readonly<Record<string, unknown>>;
-  readonly scope:
-    | { readonly kind: "occurrence"; readonly item: NlePresentItem }
-    | { readonly kind: "adjust"; readonly item: NleAdjustItem };
-  /** Stable package Control extent required by the persisted control-time relation. */
-  readonly controlDuration: ExactTemporalValue;
-};
-
-export type NleTransitionLoweringContext = NleLoweringContext & {
-  readonly outgoing: NlePresentItem;
-  readonly incoming: NlePresentItem;
-  readonly domain: import("@hypit/temporal/algebra").LocalTemporalDomain;
-};
-
-export type NleMatteLoweringContext = NleLoweringContext & {
-  readonly content: NlePresentItem;
-  readonly matte: NlePresentItem;
-};
-
-/** Resolution is explicit Host behavior; neither filesystem access nor package loading occurs in Core. */
-export type NleLoweringHost = {
-  readonly resolveMedia: (
-    asset: NleMediaReference,
-    context: NleMediaLoweringContext,
-  ) => ResolvedMedia;
-  readonly resolveComponent: (
-    item: NleComponentItem,
-    context: NleComponentLoweringContext,
-  ) => NleResolvedItemSource;
-  readonly resolveSignalReconstruction: (
-    reconstruction: NleSignalReconstruction,
-    context: NleSignalReconstructionLoweringContext,
-  ) => SignalReconstruction;
-  readonly resolvePictureOperator: (
-    process: NleProcess,
-    context: NleProcessLoweringContext,
-  ) => PictureOperator;
-  readonly resolveAudioOperator: (
-    process: NleProcess,
-    context: NleProcessLoweringContext,
-  ) => AudioOperator;
-  readonly resolveTransition: (
-    transition: NleTransition,
-    context: NleTransitionLoweringContext,
-  ) => PictureOperator;
-  readonly resolveMatte: (
-    matte: NleMatte,
-    context: NleMatteLoweringContext,
-  ) => PictureOperator;
 };
 
 /** File-persistent Media facts accepted by the pure materialization planner. */

@@ -237,31 +237,22 @@ function resolveLayout(item, project) {
   return structuredClone(shared.value);
 }
 
-function resolveCaption(item, context) {
-  const layout = resolveLayout(item, context.project);
+function renderCaption(item, context) {
+  const { width, height } = resolveLayout(item, context.project);
   const style = context.values.style;
   if (style === undefined) throw new Error(`Fine Caption ${item.id} requires value slot style.`);
   return {
-    source: {
+    region: { x: 0, y: 0, width, height },
+    duration: item.duration,
+    visual: compileCaptionFine({
       id: `${item.id}:source`,
-      implementation: { package: "@hypit/caption-fine", symbol: "fine" },
       parameters: {
-        caption: structuredClone(item.parameters.caption),
-        style: structuredClone(style),
-        duration: structuredClone(item.duration),
-        layout: { width: layout.width, height: layout.height },
+        caption: item.parameters.caption,
+        style,
+        duration: item.duration,
+        layout: { width, height },
       },
-      outputs: { picture: {
-        signal: "picture",
-        kind: "signal",
-        domain: { id: `${item.id}:source-time`, duration: structuredClone(item.duration) },
-        spatialDomain: {
-          id: `${item.id}:source-space`,
-          region: { x: 0, y: 0, width: layout.width, height: layout.height },
-        },
-      } },
-    },
-    pictureOutput: "picture",
+    }, montserrat),
   };
 }
 
@@ -305,15 +296,8 @@ export const hypitPackage = {
       },
     },
     {
-      kind: "hypit.nle-lowering",
-      value: { components: [{ symbol: "fine", resolve: resolveCaption }] },
-    },
-    {
-      kind: "hypit.audiovisual-html",
-      value: { sources: [{
-        symbol: "fine",
-        compile: source => compileCaptionFine(source, montserrat),
-      }] },
+      kind: "hypit.nle-render",
+      value: { components: [{ symbol: "fine", render: renderCaption }] },
     },
   ],
   catalog: [{ id: "caption", title: "Fine Caption", kind: "hypit.nle-component", value: {

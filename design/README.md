@@ -26,12 +26,10 @@ Read the current system from authority toward implementation.
   Service and local media execution.
 - [Component authoring](authoring.md) — TSX author programs, NLE materialization, component expansion and the boundary
   between author source and the durable edit.
-- [Audiovisual](audiovisual.md) — AVIR Programme facts, one live evaluation constitution, renderer selection and the
-  Media/Scene boundary.
-- [HTML 视听执行与导出 API](html-video-delivery.md) — AVIR terminal lowering、HTML/Audio Program、视频
+- [HTML 视听执行与导出 API](html-video-delivery.md) — NLE 编译、HTML/Audio Program、视频
   Delivery Action 与 npm 执行边界。
 - [NLE](nle.md) — direct audiovisual composition, the SVML Project document, per-document Service transactions and
-  deterministic AVIR lowering.
+  exact composition semantics.
 - [NLE View](nle-view.md) — durable editing arrangement, per-Composition guards, independent Service lifetime and the
   finite projection seam.
 
@@ -47,7 +45,7 @@ Read the current system from authority toward implementation.
 
 ### 5. Distribution and implementation growth
 
-- [Package architecture](package-architecture.md) — release boundaries for authoring, NLE, AVIR and Executors.
+- [Package architecture](package-architecture.md) — release boundaries for authoring, NLE compilation and Executors.
 - [Repository bootstrap](repository-bootstrap.md) — implementation birth sequence and selective code reuse.
 
 The constitution precedes package layout. The other pages project it into engineering decisions. Exact

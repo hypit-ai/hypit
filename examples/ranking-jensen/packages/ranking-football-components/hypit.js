@@ -55,28 +55,19 @@ function resolveLayout(item, project) {
   return structuredClone(shared.value);
 }
 
-function componentSource(item, context, symbol) {
-  const layout = resolveLayout(item, context.project);
+function renderComponent(item, context, render) {
+  const { width, height } = resolveLayout(item, context.project);
   return {
-    source: {
+    region: { x: 0, y: 0, width, height },
+    duration: item.duration,
+    visual: render({
       id: `${item.id}:source`,
-      implementation: { package: packageName, symbol },
       parameters: {
-        value: structuredClone(item.parameters),
-        layout: { width: layout.width, height: layout.height },
-        media: structuredClone(context.media),
+        value: item.parameters,
+        layout: { width, height },
+        media: context.media,
       },
-      outputs: { picture: {
-        signal: "picture",
-        kind: "signal",
-        domain: { id: `${item.id}:source-time`, duration: structuredClone(item.duration) },
-        spatialDomain: {
-          id: `${item.id}:source-space`,
-          region: { x: 0, y: 0, width: layout.width, height: layout.height },
-        },
-      } },
-    },
-    pictureOutput: "picture",
+    }),
   };
 }
 
@@ -493,19 +484,11 @@ export const hypitPackage = {
       },
     },
     {
-      kind: "hypit.nle-lowering",
+      kind: "hypit.nle-render",
       value: { components: [
-        { symbol: "tier-board", resolve: (item, context) => componentSource(item, context, "tier-board") },
-        { symbol: "reference-title", resolve: (item, context) => componentSource(item, context, "reference-title") },
-        { symbol: "reveal-flash", resolve: (item, context) => componentSource(item, context, "reveal-flash") },
-      ] },
-    },
-    {
-      kind: "hypit.audiovisual-html",
-      value: { sources: [
-        { symbol: "tier-board", compile: tierBoardVisual },
-        { symbol: "reference-title", compile: titleVisual },
-        { symbol: "reveal-flash", compile: flashVisual },
+        { symbol: "tier-board", render: (item, context) => renderComponent(item, context, tierBoardVisual) },
+        { symbol: "reference-title", render: (item, context) => renderComponent(item, context, titleVisual) },
+        { symbol: "reveal-flash", render: (item, context) => renderComponent(item, context, flashVisual) },
       ] },
     },
   ],

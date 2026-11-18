@@ -17,25 +17,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./audiovisual": {
-      "hypit-source": "./src/audiovisual.ts",
-      "types": "./dist/audiovisual.d.ts",
-      "import": "./dist/audiovisual.js"
-    },
     "./audio/program": {
       "hypit-source": "./src/audio-program.ts",
       "types": "./dist/audio-program.d.ts",
       "import": "./dist/audio-program.js"
-    },
-    "./audiovisual/audio": {
-      "hypit-source": "./src/audiovisual-audio.ts",
-      "types": "./dist/audiovisual-audio.d.ts",
-      "import": "./dist/audiovisual-audio.js"
-    },
-    "./audiovisual/html": {
-      "hypit-source": "./src/audiovisual-html.ts",
-      "types": "./dist/audiovisual-html.d.ts",
-      "import": "./dist/audiovisual-html.js"
     },
     "./application": {
       "hypit-source": "./src/application.ts",
@@ -144,7 +129,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm --filter @hypit/temporal build && pnpm --filter @hypit/media build && pnpm --filter @hypit/media-asset build && pnpm --filter @hypit/html-program build && pnpm --filter @hypit/audio-program build && pnpm --filter @hypit/media-local build && pnpm --filter @hypit/audiovisual build && pnpm --filter @hypit/audiovisual-html build && pnpm --filter @hypit/audiovisual-audio build && pnpm --filter @hypit/nle build && pnpm --filter @hypit/html-video build && pnpm --filter @hypit/project build && pnpm --filter @hypit/application build && pnpm --filter @hypit/html-render-local build && pnpm --filter @hypit/html-chromium-local build && pnpm --filter @hypit/html-electron-local build && pnpm --filter @hypit/html-video-local build && pnpm --filter @hypit/nle-delivery build && pnpm --filter @hypit/application-home build && pnpm --filter @hypit/nle-studio build && pnpm run build:root",
+    "build": "pnpm --filter @hypit/temporal build && pnpm --filter @hypit/media build && pnpm --filter @hypit/media-asset build && pnpm --filter @hypit/html-program build && pnpm --filter @hypit/audio-program build && pnpm --filter @hypit/media-local build && pnpm --filter @hypit/nle build && pnpm --filter @hypit/html-video build && pnpm --filter @hypit/project build && pnpm --filter @hypit/application build && pnpm --filter @hypit/html-render-local build && pnpm --filter @hypit/html-chromium-local build && pnpm --filter @hypit/html-electron-local build && pnpm --filter @hypit/html-video-local build && pnpm --filter @hypit/nle-delivery build && pnpm --filter @hypit/application-home build && pnpm --filter @hypit/nle-studio build && pnpm run build:root",
     "build:root": "tsc -p tsconfig.build.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "application": "node dist/application-server.js",
@@ -155,9 +140,6 @@
     "@hypit/audio-program": "workspace:^0.1.0",
     "@hypit/application": "workspace:^0.1.0",
     "@hypit/application-home": "workspace:^0.1.0",
-    "@hypit/audiovisual": "workspace:^0.1.0",
-    "@hypit/audiovisual-audio": "workspace:^0.1.0",
-    "@hypit/audiovisual-html": "workspace:^0.1.0",
     "@hypit/html-chromium-local": "workspace:^0.1.0",
     "@hypit/html-electron-local": "workspace:^0.1.0",
     "@hypit/html-program": "workspace:^0.1.0",

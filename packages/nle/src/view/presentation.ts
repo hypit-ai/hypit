@@ -1,4 +1,4 @@
-import type { PackageSymbol } from "@hypit/audiovisual";
+import type { PackageSymbol } from "../implementation.js";
 import type {
   NleAdjustItem,
   NleComponentItem,

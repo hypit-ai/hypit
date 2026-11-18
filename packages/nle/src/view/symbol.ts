@@ -1,4 +1,4 @@
-import { assertPackageSymbol, type PackageSymbol } from "@hypit/audiovisual";
+import { assertPackageSymbol, type PackageSymbol } from "../implementation.js";
 
 export function packageSymbolKey(value: PackageSymbol): string {
   assertPackageSymbol(value, "NLE package symbol");

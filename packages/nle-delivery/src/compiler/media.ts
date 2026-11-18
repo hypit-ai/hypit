@@ -1,6 +1,6 @@
 import { sealMediaInterpretation, type ResolvedMedia } from "@hypit/media";
 import type { LocalSpatialDomain } from "./spatial.js";
-import type { ProgramSource, ProgramSourceOutput } from "./types.js";
+import type { CompiledSource, CompiledSourceOutput } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -24,14 +24,14 @@ function pictureDomain(id: string, media: ResolvedMedia): LocalSpatialDomain {
   };
 }
 
-/** Project one Host-resolved accepted Media value into the fixed live AVIR Source contract. */
-export function resolvedMediaSource(id: string, value: ResolvedMedia): ProgramSource {
+/** Project one Host-resolved accepted Media value into the fixed compiler source. */
+export function resolvedMediaSource(id: string, value: ResolvedMedia): CompiledSource {
   assert(typeof id === "string" && id.length > 0, "Resolved Media Source id is empty.");
   assert(value.resource.address.length > 0, `Resolved Media ${id} resource address is empty.`);
   assert(value.resource.mediaType.length > 0, `Resolved Media ${id} resource media type is empty.`);
   const interpretation = sealMediaInterpretation(value.interpretation);
   const signalDomain = interpretation.domain;
-  const outputs: Record<string, ProgramSourceOutput> = {};
+  const outputs: Record<string, CompiledSourceOutput> = {};
   if (interpretation.picture !== undefined) {
     const spatialDomain = pictureDomain(id, { resource: value.resource, interpretation });
     outputs.picture = interpretation.picture.kind === "constant"
@@ -51,8 +51,7 @@ export function resolvedMediaSource(id: string, value: ResolvedMedia): ProgramSo
   assert(Object.keys(outputs).length > 0, `Resolved Media ${id} has no selected Picture or Audio member.`);
   return {
     id,
-    implementation: { package: "@hypit/audiovisual", symbol: "resolved-media" },
-    parameters: { media: { resource: structuredClone(value.resource), interpretation } },
+    content: { kind: "media", media: { resource: structuredClone(value.resource), interpretation } },
     outputs,
   };
 }

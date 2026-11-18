@@ -1,4 +1,4 @@
-import { assertImplementationBinding, type PackageSymbol } from "@hypit/audiovisual";
+import { assertImplementationBinding, type PackageSymbol } from "../implementation.js";
 import { indexNleProject } from "../indexing.js";
 import {
   findNleComponentSharedValue,

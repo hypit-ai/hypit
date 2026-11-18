@@ -72,7 +72,7 @@ The Surface does not own:
 
 - file paths, file watching, atomic writes or external-change policy;
 - selection, playhead, zoom, pointer drafts or optimistic UI state;
-- AVIR execution, preview generations, export/review Actions or cancellation;
+- delivery execution, preview generations, export/review Actions or cancellation;
 - HTTP, IPC, CLI or browser resource URLs;
 - Media catalogs or package discovery.
 

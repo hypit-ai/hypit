@@ -227,14 +227,14 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
-| 确定性 Programme 构造 | NLE lowering | accepted NLE snapshot 可降低为一个闭合 AVIR Programme，包括 Nested、Process、Adjust、Transition 和 Matte | **已具备** |
+| 确定性 Programme 构造 | NLE lowering | accepted NLE snapshot 可编译为闭合的 Picture 与 Audio 程序，包括 Nested、Process、Adjust、Transition 和 Matte | **已具备** |
 | 结构 Canvas | NLE projection | 无 Preview Executor 时可显示 Item frame 与直接 Media identification | **已具备**，它不是渲染结果 |
 | 单帧预览 | HTML frame Action | Studio 以当前 revision 和 Composition 请求精确一帧并返回 PNG capability | **已具备** |
 | 播放和 seek | HTML playback Action + Session transport | seek 请求单帧；播放请求有声 MP4 区间，结束后请求下一段 | **已具备**有限区间；区间接缝存在渲染等待 |
 | 导出 | HTML video Delivery Action | Project 范围的 `NleDeliveryService` 已提供启动、观察、取消与资源交付，并调用注入的 `HtmlVideoExecutor`；Jensen Project 已完成生产路径 | **已具备**后端路径 |
 | Action 恢复与结果生命周期 | Delivery Service + selected Executor | 当前 Service 保存打开进程内的 Action；跨进程重启恢复尚未实现 | **执行缺口** |
 
-Preview 与 Export 消费同一 accepted Project revision、NLE-to-AVIR lowering 和 `HtmlProgram` frame ABI。输出
+Preview 与 Export 消费同一 accepted Project revision、NLE 编译 和 `HtmlProgram` frame ABI。输出
 时钟、编码和任务恢复属于 Executor，不进入 NLE Project。
 
 ## 13. 保存和撤销

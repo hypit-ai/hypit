@@ -1,7 +1,6 @@
 # Component authoring and NLE materialization
 
-> Status: current design for the authoring boundary. NLE owns the durable edit; AVIR owns the closed audiovisual
-> execution projection.
+> Status: current design for the authoring boundary. NLE owns the durable edit.
 
 ## Purpose
 
@@ -11,9 +10,8 @@ Hypit has one authoring path for reusable audiovisual components and one durable
 TSX author program
   -> materialization
 NLE Project document
-  -> deterministic lowering
-AVIR Programme
-  -> HtmlProgram + AudioProgram
+  -> delivery compilation
+HtmlProgram + AudioProgram
   -> selected video delivery
 ```
 
@@ -23,8 +21,7 @@ imports, conditions, loops, component composition and author-time data selection
 The NLE Project is the durable author document that says what the edit is now. Its current markup representation is
 SVML, an XML-like spelling interpreted by the NLE Reader and serializer. TSX evaluation materializes NLE facts.
 
-AVIR is the invocation-local, renderer-independent semantic projection of an accepted NLE snapshot. Terminal linking
-closes its Picture and Audio as execution-facing programs.
+Delivery compiles each accepted snapshot into execution-facing Picture and Audio programs.
 
 ## Three layers and their lifetimes
 
@@ -32,7 +29,6 @@ closes its Picture and Audio as execution-facing programs.
 | --- | --- | --- |
 | TSX author program | What reusable program and initial author intent should be materialized? | Source/module lifetime; its package or project owns it |
 | NLE Project | What is this edit now? | Durable owner document; NLE Service edits it |
-| AVIR Programme | How does this accepted snapshot evaluate? | Invocation-local semantic projection |
 | Terminal Programs | What exact HTML Picture and Audio graph will execute? | Invocation-local closed execution input |
 
 The layers are connected by explicit actions:
@@ -41,16 +37,14 @@ The layers are connected by explicit actions:
 module import       loads a component implementation
 materialize         turns an author program into NLE facts
 edit                mutates NLE Project facts
-lower               closes an NLE snapshot as AVIR
-link                closes AVIR as HtmlProgram and AudioProgram
+compile             produces HtmlProgram and AudioProgram for the requested output
 deliver             executes the closed terminal programs
 ```
 
 This separation is deliberately asymmetric. Above NLE, ordinary TypeScript, packages and callers may evaluate
-variables, expressions, conditions and loops, but materialization accepts only their closed result. Below NLE, AVIR
-and terminal programs may express the complete execution graph, while the Project keeps only the productive direct
-editing subset: occurrences, exact time, layout, ordered processing, relations and package-owned closed values. The
-NLE document is neither a stored program assignment language nor a universal renderer IR.
+variables, expressions, conditions and loops. Materialization accepts their closed result. The delivery compiler
+combines selected package implementations with the Project’s direct editing facts, which include occurrences, exact
+time, layout, ordered processing, relations and package-owned closed values.
 
 After materialization, an installed package can make its own closed values editable without supplying product UI.
 The exact `(package, symbol)` in the Project selects bounded Timeline, Inspector, authoring and temporal facets from
@@ -112,7 +106,7 @@ nested `process`, the cut becomes one `transition`, and every source and Control
 time. The important facts are stable ids, exact ranges, explicit references and unversioned package symbols.
 
 After materialization, the NLE Project is authoritative for direct editing. A trim, split, slip, retime, transition
-change or parameter edit mutates the NLE Project, then lowers the new snapshot to AVIR. TSX source and NLE facts retain
+change or parameter edit mutates the NLE Project, then compiles the new snapshot for the requested output. TSX source and NLE facts retain
 their separate persistence lifetimes.
 
 Re-materializing a changed TSX program is an explicit operation. The caller chooses the target Composition and the
@@ -147,7 +141,7 @@ candidate transaction rather than rewriting accepted NLE facts.
 
 ## Authoring relations
 
-The authoring vocabulary deliberately mirrors author intent rather than AVIR node algebra:
+The authoring vocabulary expresses these editing relations.
 
 ```text
 Present       places a Media, Component or local Composition in programme time
@@ -160,9 +154,7 @@ Composition/Track establishes nested local order and Audio participation
 Control       maps a local authoring domain to an Operator parameter
 ```
 
-The NLE lowerer turns these facts into AVIR `use`, `restrict`, `crop`, `remap`, `over`, `mix` and `apply` relations.
-The authoring layer does not need to expose those relations as a general algebra, but it must retain the information
-needed to lower them exactly.
+These relations preserve enough information to compile exact source reads, picture composition and audio mixing.
 
 ## AIGC, semantic and other owners
 
@@ -198,5 +190,4 @@ internals:
 
 The first syntax experiment should cover one vertical slice containing a 13-second two-clip transition, an Item-local
 Process, a piecewise retime, a Matte, a component instance and one semantic or generated input. The experiment is
-successful only when the same NLE Project can be edited directly, serialized, reopened and lowered to the same AVIR
-semantics without re-running the author program.
+successful only when the same NLE Project can be edited directly, serialized, reopened and compiled to the same execution programs without re-running the author program.

@@ -6,8 +6,7 @@ import {
   type LocalTemporalDomain,
   type TemporalRange,
 } from "@hypit/temporal/algebra";
-import { assertSpatialMapControl, spatialMapControlDomains } from "./control.js";
-import { assertIdentity } from "./implementation.js";
+import { assertIdentity } from "@hypit/nle";
 import { assertPictureOperator } from "./operator.js";
 import {
   assertSpatialMap,
@@ -16,7 +15,7 @@ import {
   type LocalSpatialDomain,
   type SpatialRegion,
 } from "./spatial.js";
-import type { AudiovisualProgram, PictureGraph, PictureNode, PictureNodeId } from "./types.js";
+import type { CompilationGraph, PictureGraph, PictureNode, PictureNodeId } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -34,13 +33,13 @@ function assertRange(value: TemporalRange, domain: LocalTemporalDomain, label: s
 function references(node: PictureNode): readonly string[] {
   switch (node.kind) {
     case "transparent": case "use": return [];
-    case "restrict": case "crop": case "remap": case "remap-control": return [node.input];
+    case "restrict": case "crop": case "remap": return [node.input];
     case "over": return node.inputs;
     case "apply": return Object.values(node.inputs);
   }
 }
 
-function assertNode(id: string, node: PictureNode, program: AudiovisualProgram): void {
+function assertNode(id: string, node: PictureNode, program: CompilationGraph): void {
   assertIdentity(id, "Picture node id");
   switch (node.kind) {
     case "transparent": return;
@@ -57,10 +56,7 @@ function assertNode(id: string, node: PictureNode, program: AudiovisualProgram):
     case "restrict": assertRange(node.range, program.domain, `Picture restrict ${id}`); return;
     case "crop": assertSpatialRegion(node.region, `Picture crop ${id}`); return;
     case "remap": assertSpatialMap(node.mapping); return;
-    case "remap-control":
-      assertSpatialMapControl(node.control);
-      assertTemporalControlMapping(node.control.domain, node.controlMapping, program.domain);
-      return;
+
     case "over": assert(node.inputs.length > 0, `Picture over ${id} has no inputs.`); return;
     case "apply": {
       assertPictureOperator(node.operator, `Picture apply ${id} operator`);
@@ -97,7 +93,7 @@ function commonDomain(domains: readonly LocalSpatialDomain[], label: string): Lo
 
 export function pictureNodeSpatialDomains(
   value: PictureGraph,
-  program: AudiovisualProgram,
+  program: CompilationGraph,
 ): ReadonlyMap<PictureNodeId, LocalSpatialDomain> {
   const programmeDomain = program.pictureDomain;
   assert(programmeDomain !== undefined, `Programme ${program.id} Picture has no output spatial domain.`);
@@ -120,12 +116,6 @@ export function pictureNodeSpatialDomains(
         assert(sameSpatialDomain(domainOf(node.input), node.mapping.source), `Picture remap ${id} reads the wrong source domain.`);
         domain = node.mapping.target;
         break;
-      case "remap-control": {
-        const controlled = spatialMapControlDomains(node.control);
-        assert(sameSpatialDomain(domainOf(node.input), controlled.source), `Picture remap Control ${id} reads the wrong source domain.`);
-        domain = controlled.target;
-        break;
-      }
       case "over": domain = commonDomain(node.inputs.map(domainOf), `Picture over ${id}`); break;
       case "apply": domain = commonDomain(Object.values(node.inputs).map(domainOf), `Picture apply ${id}`); break;
     }
@@ -136,7 +126,7 @@ export function pictureNodeSpatialDomains(
   return domains;
 }
 
-export function assertPictureGraph(value: PictureGraph, program: AudiovisualProgram): void {
+export function assertPictureGraph(value: PictureGraph, program: CompilationGraph): void {
   assertIdentity(value.root, "PictureGraph.root");
   assert(value.nodes[value.root] !== undefined, `Programme ${program.id} has no Picture root node ${value.root}.`);
   const entries = Object.entries(value.nodes);

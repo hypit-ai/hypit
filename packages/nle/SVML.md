@@ -1,7 +1,7 @@
 # SVML
 
 SVML is the XML-like persistent spelling of one `NleProject`. The TypeScript `NleProject` value is the semantic
-schema; the SVML Reader, serializer, Project validator and AVIR lowerer must agree on every persisted fact.
+schema; the SVML Reader, serializer, Project validator and delivery compiler must agree on every persisted fact.
 
 SVML is data, not an evaluator. It contains no imports, variables, functions, conditions, loops, package code,
 renderer program, execution request or editor state. A TypeScript/TSX author program may materialize ordinary NLE
@@ -261,7 +261,7 @@ Reading proceeds without executing package code or inspecting Media:
 1. the XML Reader validates the exact element and attribute structure;
 2. the NLE Project validator validates ids, references, time, track rules, relations and Shared Value bindings;
 3. a selected package contribution validates and edits its own closed Component or Operator values;
-4. AVIR lowering resolves installed implementations, Media and output names for one accepted Project snapshot.
+4. Delivery compilation resolves installed implementations and Media for one accepted Project snapshot.
 
 A missing package or package-owned input is reported with the referring NLE object. Unknown SVML structure fails by
 the current structural rules. The Reader does not infer another schema.

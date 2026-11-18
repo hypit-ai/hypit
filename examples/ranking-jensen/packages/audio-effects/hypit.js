@@ -1,17 +1,5 @@
-const zero = { ticks: "0", timeBase: { numerator: 1, denominator: 1 } };
 const packageName = "@hypit/audio-effects";
 const gainSymbol = { package: packageName, symbol: "gain" };
-function gainOperator(process, context) {
-  const controlled = context.parameters.kind === "keyframes";
-  return {
-    id: `${process.id}:operator`,
-    implementation: gainSymbol,
-    parameters: structuredClone(context.parameters),
-    inputs: ["signal"],
-    temporalControls: controlled ? { gain: { id: `${process.id}:gain`, duration: structuredClone(context.controlDuration) } } : {},
-    temporalSupport: { inputs: { signal: { before: zero, after: zero } }, tail: zero },
-  };
-}
 const seconds = value => Number(value.ticks) * value.timeBase.numerator / value.timeBase.denominator;
 function gainExpression(parameters) {
   if (parameters.kind === "constant") return String(parameters.gain);
@@ -73,11 +61,11 @@ export const hypitPackage = {
       kind: "hypit.nle-inspector-presentation", package: packageName, components: [], componentValues: [],
       operators: [{ operator: gainSymbol, project: gainInspector }],
     } },
-    { kind: "hypit.nle-lowering", value: { audioProcesses: [{ symbol: "gain", resolve: gainOperator }] } },
-    { kind: "hypit.audiovisual-audio", value: { operators: [{
+    { kind: "hypit.nle-render", value: { audioProcesses: [{
       symbol: "gain",
-      compile: operator => ({
-        filter: `{{input:signal}}volume='${gainExpression(operator.parameters)}':eval=frame{{output}}`,
+      render: (_process, { parameters }) => ({
+        controls: parameters.kind === "keyframes" ? ["gain"] : [],
+        filter: { filter: `{{input:signal}}volume='${gainExpression(parameters)}':eval=frame{{output}}` },
       }),
     }] } },
   ],

@@ -1,4 +1,4 @@
-import { assertImplementationBinding, assertPackageSymbol } from "@hypit/audiovisual";
+import { assertImplementationBinding, assertPackageSymbol } from "./implementation.js";
 import {
   addExactTemporalValues,
   assertExactTemporalValue,

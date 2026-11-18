@@ -1,7 +1,6 @@
 # `@hypit/nle`
 
-Durable direct audiovisual composition, exact edit transactions, one open Service per Project document and
-deterministic lowering to `@hypit/audiovisual`.
+Durable direct audiovisual composition, exact edit transactions, one open Service per Project document.
 
 An ordinary TypeScript/TSX author program may materialize an initial Project through an explicit authoring action,
 but the Project document is the authority for subsequent edits. Its current SVML serialization is owned by this
@@ -45,20 +44,20 @@ disposable Composition index derives reverse lookups without adding persistent f
 
 A Composition Present references another definition in the same Project. References are reusable and acyclic; all
 definitions share one Project Service and save lifetime. Lowering namespaces and expands nested occurrences into the
-same closed AVIR Programme. Its exact temporal preimage
+same compiled programme. Its exact temporal preimage
 pulls child regions and Control mappings through piecewise affine rate, reverse, hold, wrap and ordinary edit
 relations. A finite multi-preimage becomes multiple flat occurrences; non-constant cubic roots reject explicitly
 rather than being sampled or approximated.
 
 Present appearances may own ordered occurrence-local Picture and Audio Processes. Independently timed Adjust Items
 process the signal accumulated below their Track position. Both retain exact Control time, explicit enablement and
-inline or shared parameters, and lower to native AVIR Operator applications; package UI metadata and executor plans
+inline or shared parameters, and compile to their selected effect implementations; package UI metadata and executor plans
 are not persisted.
 
 Picture Items may overlap directly and paint in their persistent Track order. Picture Transitions and Mattes are
 explicit multi-Item Project relations. Transitions evaluate canonical overlap
 chains; Mattes form acyclic dependencies whose source Items are sampled but not independently painted. Both lower to
-native multi-input AVIR Operators.
+effects with named Picture inputs.
 
 The persistent root is `<svml>`. npm and the project lockfile select package implementation versions.
 The complete current element, attribute, closed-JSON and validation contract is documented in [SVML](SVML.md).
@@ -72,7 +71,7 @@ outside it.
 
 One open View document has one independent `NleViewService`; revision, undo/redo and savepoints are process-local.
 Project changes do not silently rewrite a View. The Host may explicitly reconcile stale references. A Track lock is
-checked only for Project transactions initiated through that View and never changes Project or AVIR meaning.
+checked only for Project transactions initiated through that View and never changes Project composition.
 
 `projectNleTimeline` joins the active Composition with those durable View choices and finite invocation-local Item
 observations. Component packages and preview caches may contribute bounded titles, layers and presentation tokens;

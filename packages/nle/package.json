@@ -1,7 +1,7 @@
 {
   "name": "@hypit/nle",
   "version": "0.1.0",
-  "description": "Durable audiovisual composition, NLE editing views and deterministic AVIR lowering",
+  "description": "Durable audiovisual composition and direct editing",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "exports": {
@@ -26,7 +26,6 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@hypit/audiovisual": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.1.0",
     "@hypit/temporal": "workspace:^0.1.0"
   }

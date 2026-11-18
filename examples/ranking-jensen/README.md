@@ -7,9 +7,8 @@ NLE Project. Project packages supply the ranking, title, flash, caption and effe
 The local `media/` collection and deliveries are working data and are not committed.
 
 Run `node deliver.mjs` after accepting the 41 referenced Media Assets. The script opens the current ProjectHost,
-closes the accepted `film.svml` snapshot as AVIR and terminal programs, submits a Delivery Action to the local HTML
+compiles the accepted `film.svml` snapshot to Picture and Audio programs, submits a Delivery Action to the local HTML
 Video Executor and observes it to completion.
-The accepted SVML lowers to 99 AVIR Occurrences, 579 Picture nodes and 42 Audio nodes.
 
 The selected `@hypit/picture-effects` package also proves bounded editing facets. Its Frame, Transform and Filter
 Operators project finite Inspector sections; Transform and Filter semantic operations replace only their closed

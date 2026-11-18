@@ -1,16 +1,20 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { audiovisualAudioContributionKind, lowerAudiovisualAudioProgram, type AudiovisualAudioContribution } from "@hypit/audiovisual-audio";
 import type { AudioProgram } from "@hypit/audio-program";
 import type { HtmlCanvas, HtmlFrameRate, HtmlFrameRequest } from "@hypit/html-program";
 import type { ExactTemporalValue, TemporalRange } from "@hypit/temporal/algebra";
-import {
-  audiovisualHtmlContributionKind,
-  linkAudiovisualProgramToHtml,
-  type AudiovisualHtmlContribution,
-  lowerAudiovisualPictureToHtmlProgram,
-} from "@hypit/audiovisual-html";
+import { compileAudio } from "./compiler/compile-audio.js";
+import { compilePicture } from "./compiler/compile-picture.js";
+import { lowerNleProject } from "./compiler/lower.js";
+import { createNleRenderResolver } from "./compiler/resolve.js";
+import { nleRenderContributionKind, type NleRenderContribution } from "./render-contribution.js";
+export { nleRenderContributionKind } from "./render-contribution.js";
+export type {
+  NleAudioEffect, NleComponentPicture, NleComponentRenderContext, NleMatteRenderContext,
+  NlePictureEffect, NlePictureReconstructionContext, NleProcessRenderContext, NleRenderContribution,
+  NleRenderContext, NleTransitionRenderContext,
+} from "./render-contribution.js";
 import {
   type HtmlVideoDeliveryPlan,
   type HtmlVideoDeliveryProfile,
@@ -18,11 +22,7 @@ import {
   type HtmlVideoRenderer,
 } from "@hypit/html-video";
 import {
-  createNlePackageLoweringHost,
-  lowerNleProjectToAudiovisual,
-  nleLoweringContributionKind,
   readNleProject,
-  type NleLoweringContribution,
   type NleMediaReference,
   type NleProject,
 } from "@hypit/nle";
@@ -69,15 +69,6 @@ function mediaReferences(project: NleProject): readonly NleMediaReference[] {
   return references;
 }
 
-function contributions<T extends object>(host: ProjectHost, kind: string): readonly T[] {
-  return host.packages.contributions(kind).map(entry => {
-    if (entry.value === null || typeof entry.value !== "object" || Array.isArray(entry.value)) {
-      throw new Error(`Project package ${entry.package} has an invalid ${kind} contribution.`);
-    }
-    return { kind, package: entry.package, ...entry.value } as T;
-  });
-}
-
 export type PreparedNleCompilation = {
   readonly duration: ExactTemporalValue;
   compileFrame(output: { readonly canvas: HtmlCanvas; readonly frameRate: HtmlFrameRate; readonly range: TemporalRange }): HtmlFrameRequest;
@@ -106,24 +97,22 @@ export async function prepareNleCompilation(input: {
     if (!resolved.has(reference.path)) resolved.set(reference.path, await input.host.media.resolveMedia(
       projectReference(input.host.boundary.root, document, reference), resolver));
   }
-  const lowering = createNlePackageLoweringHost({
-    contributions: contributions<NleLoweringContribution>(input.host, nleLoweringContributionKind),
-    resolveMedia(reference) {
-      const value = resolved.get(reference.path);
-      if (value === undefined) throw new Error(`NLE delivery did not resolve Media ${reference.path}.`);
-      return structuredClone(value);
-    },
+  const contributions = input.host.packages.contributions(nleRenderContributionKind).map(entry => {
+    if (entry.value === null || typeof entry.value !== "object" || Array.isArray(entry.value)) {
+      throw new Error(`Project package ${entry.package} has an invalid NLE render contribution.`);
+    }
+    return { package: entry.package, value: entry.value as NleRenderContribution };
+  });
+  const resolverForCompilation = createNleRenderResolver(contributions, reference => {
+    const value = resolved.get(reference.path);
+    if (value === undefined) throw new Error(`NLE delivery did not resolve Media ${reference.path}.`);
+    return structuredClone(value);
   });
   input.signal?.throwIfAborted();
-  const program = lowerNleProjectToAudiovisual(project, lowering);
-  const picture = linkAudiovisualProgramToHtml(
-    program, contributions<AudiovisualHtmlContribution>(input.host, audiovisualHtmlContributionKind),
-  );
-  const audioContributions = contributions<AudiovisualAudioContribution>(input.host, audiovisualAudioContributionKind);
-  function compileAudio(profile?: HtmlVideoDeliveryProfile["audio"]): AudioProgram | undefined {
-    return program.audio === undefined ? undefined : lowerAudiovisualAudioProgram({
+  const program = lowerNleProject(project, resolverForCompilation);
+  function audioProgram(profile?: HtmlVideoDeliveryProfile["audio"]): AudioProgram | undefined {
+    return program.audio === undefined ? undefined : compileAudio({
       program,
-      contributions: audioContributions,
       sampleRate: profile?.sampleRate ?? 48_000,
       channels: profile?.channels ?? 2,
     });
@@ -132,18 +121,18 @@ export async function prepareNleCompilation(input: {
     duration: structuredClone(program.domain.duration),
     compileFrame(output) {
       return {
-        program: lowerAudiovisualPictureToHtmlProgram(picture, output),
+        program: compilePicture(program, output),
         frames: [0],
         picture: { alpha: "opaque", matte: output.canvas.background },
       };
     },
-    compileAudio,
+    compileAudio: audioProgram,
     compileVideo(profile, range) {
       const { width, height, background, frameRate, quality } = profile.picture;
-      const visual = lowerAudiovisualPictureToHtmlProgram(picture, {
+      const visual = compilePicture(program, {
         frameRate, canvas: { width, height, background }, ...(range === undefined ? {} : { range }),
       });
-      const audio = compileAudio(profile.audio);
+      const audio = audioProgram(profile.audio);
       return {
         visual: { program: visual, picture: { alpha: "opaque", matte: background }, quality },
         ...(audio === undefined ? {} : { audio }),

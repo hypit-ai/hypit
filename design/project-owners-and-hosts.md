@@ -117,7 +117,7 @@ TSX author program + selected owner results
   -> explicit NLE materialization
   -> NLE Project + installed component packages
   -> NLE Project Service + NLE Editing Surface snapshot
-  -> closed AVIR Programme
+  -> NLE delivery compilation
   -> HtmlProgram + AudioProgram
   -> selected HTML video execution
   -> preview, review or delivery file

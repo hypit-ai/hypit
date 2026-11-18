@@ -1,7 +1,7 @@
 {
   "name": "@hypit/nle-delivery",
   "version": "0.1.0",
-  "description": "NLE Project linking and HTML video delivery orchestration",
+  "description": "NLE compilation and project video delivery",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "exports": {
@@ -15,9 +15,6 @@
   "scripts": { "build": "tsc -p tsconfig.build.json" },
   "dependencies": {
     "@hypit/audio-program": "workspace:^0.1.0",
-    "@hypit/audiovisual": "workspace:^0.1.0",
-    "@hypit/audiovisual-audio": "workspace:^0.1.0",
-    "@hypit/audiovisual-html": "workspace:^0.1.0",
     "@hypit/html-program": "workspace:^0.1.0",
     "@hypit/html-video": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.1.0",

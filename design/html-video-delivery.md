@@ -1,35 +1,25 @@
 # HTML 视听执行与导出 API
 
-> 状态：当前 NLE、AVIR、HTML 与视频交付 Action 设计。
+> 状态：当前 NLE 编译、HTML 与视频交付 Action 设计。
 
 ## 边界
 
-一次 NLE 交付固定一个 Project snapshot 和已安装 package selection。Project 范围的 Delivery Service 把作者
-事实关闭为 AVIR、`HtmlProgram` 与 `AudioProgram`，创建平台中立的 `HtmlVideoDeliveryPlan`，再调用注入的
-`HtmlVideoExecutor`。
+一次交付固定一个 Project snapshot、已安装的项目包和输出 profile。NLE 交付编译器解析媒体、
+组件和处理实现，计算素材的精确读取位置及 effects 的输入和控制值，生成资源闭合的 `HtmlProgram` 和
+`AudioProgram`。Delivery Service 组装 `HtmlVideoDeliveryPlan` 并交给注入的 `HtmlVideoExecutor`。
 
 ```text
-SVML / NLE Project snapshot
-  -> NLE lowering                         -> closed AVIR Programme
-  -> Picture implementation linking      -> HtmlProgram
-  -> Audio implementation linking        -> AudioProgram
-  -> HtmlVideoDeliveryPlan
-  -> HtmlVideoExecutor
-  -> HTML renderer + Audio renderer + video mux
-  -> completed MediaResource
+SVML / NLE Project snapshot + Project Media + selected render contributions
+  -> NLE delivery compilation
+  -> HtmlProgram + AudioProgram
+  -> preview / waveform / video delivery
   -> optional Media adoption
 ```
 
-AVIR 不携带 HTML、浏览器或编码事实。`HtmlProgram` 不携带 NLE、AVIR 或 package lookup；它是资源闭合、可按
-frame address 求值的便携页面程序。`AudioProgram` 是对应的连续音频执行图。Executor 从封闭 plan 开始工作，
-不读取 SVML、不修改 NLE，也不解析作者组件参数。
+执行器接收已关闭的程序和显式输出请求，负责浏览器、解码、混音、编码和封装的执行生命周期。
 
 ## npm 边界
 
-- `@hypit/audiovisual` 拥有 AVIR Programme 与精确的 Picture/Audio 语义；
-- `@hypit/audiovisual-html` 连接已安装 Picture Source/Operator 实现，并把 AVIR Picture 单向 lower 为
-  `HtmlProgram`；
-- `@hypit/audiovisual-audio` 把 AVIR Audio 单向 lower 为 `AudioProgram`；
 - `@hypit/html-program` 拥有 Artifact 使用区间、Video Source 采样计划、稳定 Picture DOM、frame ABI 与画布；
 - `@hypit/audio-program` 拥有 renderer-facing 连续音频图；
 - `@hypit/html-video` 拥有交付计划和 Executor 契约；
@@ -39,11 +29,12 @@ frame address 求值的便携页面程序。`AudioProgram` 是对应的连续音
 - `@hypit/html-electron-local` 提供 Electron encoded-stream worker；
 - `@hypit/media-local` 执行 `AudioProgram` 并封装最终视频；
 - `@hypit/html-video-local` 装配浏览器、Audio 执行和 mux，成为本机 `HtmlVideoExecutor`；
-- `@hypit/nle-delivery` 联合 Project snapshot、Media、package contributions 和 Executor，并拥有 Project 范围的
+- `@hypit/nle-delivery` 从 snapshot、Media 和 render contributions 编译终端程序，并拥有 Project 范围的
   Action handle、进度、取消与目标路径检查。
 
-Project package 可以在同一个 npm release 中开放 NLE lowering、HTML Picture implementation、Audio
-implementation、Inspector 与 catalog facet。Project lockfile 选择其版本；链接结果只活在本次交付调用中。
+Project package 通过 `hypit.nle-render` 提供组件 Picture、Picture effect、Audio effect 或 Picture Reconstruction。
+同一包也可提供 Inspector、Timeline 和 catalog。Project lockfile 选择版本。编译准备结果随该请求或接受的预览 revision
+一起管理。[组件渲染接口](../packages/nle-delivery/README.md)
 
 本机组合层为一次 Executor 实例选择同一组 `ffmpegPath` 与 `ffprobePath`。`@hypit/media-local` 关闭并检查这组
 工具；HTML Source preparation、Picture encoding、Audio execution 与 mux 复用该选择。未显式配置时从 Host
@@ -52,7 +43,7 @@ implementation、Inspector 与 catalog facet。Project lockfile 选择其版本�
 ## `HtmlProgram` frame ABI
 
 一个 `HtmlProgram` 包含完整 HTML 文档、有限帧域、Artifact 表与显式 Video Source 采样计划。静态依赖带有
-保守的可观察帧区间；动态媒体只能通过 AVIR Picture 输入进入编译器拥有的 display plane。页面暴露：
+保守的可观察帧区间；动态媒体只能通过 Picture 输入进入编译器拥有的 display plane。页面暴露：
 
 ```ts
 interface HypitFrameProgram {
@@ -64,11 +55,10 @@ interface HypitFrameProgram {
 
 任意合法帧都可以独立请求。页面负责组件状态、Operator controls 与 DOM 合成。执行层按照 Video Source 计划
 准备媒体帧，capture backend 只捕获完成后的画面。Chromium 与 Electron 共享 Programme、staging 和输出请求，
-renderer 选择不会改变 AVIR lowering 或组件语义。
+两个 renderer 使用同一组件逐帧语义。
 
-Lowering 调用可以选择 Programme 内的一个显式精确范围；全片交付选择完整 Programme 范围，frame preview
-选择局部范围。AVIR 先把该范围和输出帧率关闭为精确 observations，并投影为 Source-local demand，然后由一个
-完整 `HtmlProgram` 执行整个已选 Picture 图。
+全片交付选择完整节目范围，frame preview 选择一帧对应的精确范围。编译器按输出帧率确定节目采样点，
+并为每个采样点计算素材取帧位置。一个 `HtmlProgram` 执行整个已选画面。
 
 `applyFrame(frame)` 的完成是截图屏障，不只是一次同步 DOM 写入。HTML Visual 可以监听 `hypit-frame`，并通过
 事件 detail 的 `waitUntil(promise)` 把当前帧所需的异步就绪工作加入屏障。这个协议只等待当前输出帧的资源与
@@ -96,7 +86,7 @@ interpretation 的多个 HTML Source 共享 probe、解码需求和驻留像素�
 Chromium 自动并发以 Host CPU/内存导出的 browser ceiling 为上限，先用较小 live count 开始。worker 只领取约
 一秒的连续输出批次；稳定批次的真实生产吞吐决定是否增加 worker，吞吐退化时在批次边界退休 worker。短片不
 创建无法摊销启动成本的 browser；调用者指定数值 `workers` 时保持固定并发。调节只属于本次 Action，不改变
-Programme、AVIR 或输出帧顺序。
+终端程序或输出帧顺序。
 
 ## Project Service 与 Action
 
@@ -105,8 +95,7 @@ Programme、AVIR 或输出帧顺序。
 program，并把 plan 交给自身配置的 Executor。
 
 Action 状态为 `queued -> running -> complete`，也可进入 `failed` 或 `cancelled`。完成状态携带
-`MediaResource`。目标像素、帧率、背景、质量、renderer、采样率与声道数属于本次 profile，不进入 SVML 或
-AVIR。输出文件在完成前属于 Executor；完成结果只有经过显式 Media adoption 才成为 Project Media。
+`MediaResource`。目标像素、帧率、背景、质量、renderer、采样率与声道数通过本次 profile 传入。输出文件在完成前属于 Executor；完成结果只有经过显式 Media adoption 才成为 Project Media。
 
 HTTP、CLI、Agent 与 NLE Studio 都是该 Service 的调用者或 Adapter，不各自实现 lowering、浏览器捕获或编码。
 本机 Chromium、Electron 和 FFmpeg 是由所选 Executor 管理的普通操作系统工具链。
@@ -116,7 +105,7 @@ Product Provider；每个 Product Session 用该依赖打开 Project 范围的 `
 由 Product adapter 直接投影，注入的 Executor 管理 FFmpeg 与 browser 进程，Product Session 关闭时取消其仍在
 运行的交付。
 
-Studio 通过同一 terminal link 使用当前已接受的内存 revision。Frame preview 选择一帧精确范围，通过
+Studio 对当前接受的内存 revision 复用同一次编译准备。Frame preview 选择一帧精确范围，通过
 `HtmlFrameExecutor` 请求 PNG。Playback preview 选择一个精确范围，通过同一视频 Executor 生成有声 MP4。
 Audio executor 在完整节目时钟上执行图，在输出边界按样本裁切并重置时间戳，Picture 使用同一范围内的帧采样。
 Studio 持有临时结果并发布会话资源 URL。
@@ -128,7 +117,7 @@ Programme 波形使用相同的 Audio lowering、混音图和输出采样区间�
 
 `examples/ranking-jensen` 是当前端到端 Project。`film.svml` 包含 5 段 A-roll、图片叠层、ranking component、
 caption、BGM、SFX、闪屏、Picture processes 与 transitions。路径从 ProjectHost 读取 snapshot，解析 Media 和
-四个 Project packages，关闭 AVIR、`HtmlProgram` 与 `AudioProgram`，通过本机 Executor 输出 720×1280、
+四个 Project packages，编译 `HtmlProgram` 与 `AudioProgram`，通过本机 Executor 输出 720×1280、
 24 fps、58.208333 秒的 H.264/AAC MP4。
 
 Picture Source、Picture Operator 与 Audio Operator 的实现由选定 package contribution 提供。通用执行层只处理

@@ -340,7 +340,7 @@ Every specialized Action publishes through its owning Service or Executor:
 - the lifetime promised by that Action owner.
 
 Thumbnail, storyboard and waveform caches are rebuildable Executor results. Preview and export consume the same
-closed NLE-to-AVIR meaning, while their clocks, buffering, encoding and process state remain Executor-private.
+accepted NLE snapshot and delivery compilation, while their clocks, buffering, encoding and process state remain Executor-private.
 
 The AIGC Execution Directory is application-scoped, while each selected Environment owns its own credentials,
 Provider/model capacity, Invocation journal, Provider receipts and Publication resources. ApplicationHost routes and
