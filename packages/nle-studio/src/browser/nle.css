@@ -296,7 +296,7 @@
 .nle-track-label .icon-button:hover:not(:disabled) { color: var(--text); }
 .nle-main-label { margin-left: 3px; padding: 0 4px; border: 1px dashed var(--nle-dashed); border-radius: 3px; color: var(--muted); font-size: 10px; line-height: 16px; white-space: nowrap; }
 .nle-track-content { position: relative; isolation: isolate; background: var(--nle-band); border-radius: 0; transition: background-color .12s; }
-.nle-track.drop-target > .nle-track-content { background: var(--nle-track-drop-fill); }
+.nle-track-content[data-drop-target] { background: var(--nle-track-drop-fill); }
 @media (prefers-reduced-motion: reduce) { .nle-track-content { transition: none; } }
 .nle-track-space { flex: 1; min-height: 0; }
 .nle-timeline-empty { position: absolute; bottom: 0; display: flex; align-items: center; justify-content: center; padding: 16px; color: var(--muted); font-size: var(--font-size-caption); text-align: center; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .15s, visibility .15s; }
