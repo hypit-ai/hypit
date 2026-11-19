@@ -20,6 +20,7 @@ function Source({ entry, fps, muted, onMute, onClose }: {
   const [error, setError] = useState<string>();
   const [attempt, setAttempt] = useState(0);
   const timed = entry.mediaType?.startsWith("video/") || entry.mediaType?.startsWith("audio/");
+  const image = entry.mediaType?.startsWith("image/") ?? false;
   const lastFrame = Math.max(0, Math.ceil(duration * fps) - 1), frame = Math.min(lastFrame, Math.round(time * fps));
   const failed = () => setError(`无法预览素材：${entry.name}`);
   const seek = (target: number) => {
@@ -61,18 +62,20 @@ function Source({ entry, fps, muted, onMute, onClose }: {
     onPlay: () => setPlaying(true), onPause: () => setPlaying(false), onEnded: () => setPlaying(false), onError: failed,
   };
   return <>
-    <header><button type="button" className="button" onClick={onClose}><ArrowLeft size={14}/>返回剪辑</button><span>{entry.name}</span></header>
+    <header><button type="button" className="button" onClick={onClose}><ArrowLeft size={14}/>返回剪辑</button><span>{image ? `图片 ${entry.name}` : entry.name}</span></header>
     <div className="studio-source-content">{entry.resource === undefined ? <p>{entry.diagnostic ?? "素材暂时不可用"}</p>
       : entry.mediaType?.startsWith("image/") ? <img key={attempt} src={entry.resource} alt={entry.name} onError={failed}/>
       : entry.mediaType?.startsWith("video/") ? <video key={attempt} ref={node => { media.current = node; }} {...props} playsInline onClick={toggle}/>
       : <div className="studio-source-audio"><AudioLines size={48}/><audio key={attempt} ref={node => { media.current = node; }} {...props}/></div>}</div>
-    <div className="nle-source-controls">
+    {!image && <div className="nle-source-controls">
       {timed && <input className="nle-source-seek" type="range" min={0} max={lastFrame} step={1} value={frame} disabled={!duration || Boolean(error)} aria-label="素材播放位置" aria-valuetext={timecode(frame, fps)} onChange={event => seek(Number(event.target.value))}/>}
-      <div className="nle-transport"><span className="nle-transport-time">{timed ? <><span className="current">{timecode(frame, fps)}</span><span className="separator">/</span><span className="total">{timecode(Math.round(duration * fps), fps)}</span></> : <span className="total">图片预览</span>}</span>
-        <button type="button" className="nle-play" aria-label={playing ? "暂停素材" : "播放素材"} disabled={!timed || Boolean(error)} onClick={toggle}>{playing ? <Pause size={18}/> : <Play size={18}/>}</button>
-        <span className="nle-transport-actions"><IconButton label="素材后退五秒" disabled={!timed || Boolean(error)} onClick={() => seek(frame - Math.round(fps * 5))}><StepBack size={15}/></IconButton><IconButton label="素材前进五秒" disabled={!timed || Boolean(error)} onClick={() => seek(frame + Math.round(fps * 5))}><StepForward size={15}/></IconButton><IconButton label={muted ? "开启素材声音" : "静音素材"} disabled={!timed} onClick={onMute}>{muted ? <VolumeX size={16}/> : <Volume2 size={16}/>}</IconButton></span>
+      <div className="nle-transport"><span className="nle-transport-time">{timed ? <><span className="current">{timecode(frame, fps)}</span><span className="separator">/</span><span className="total">{timecode(Math.round(duration * fps), fps)}</span></> : null}</span>
+        <span className="nle-transport-center"><IconButton label="素材后退五秒" disabled={!timed || Boolean(error)} onClick={() => seek(frame - Math.round(fps * 5))}><StepBack size={15}/></IconButton>
+          <button type="button" className="nle-play" aria-label={playing ? "暂停素材" : "播放素材"} disabled={!timed || Boolean(error)} onClick={toggle}>{playing ? <Pause size={18}/> : <Play size={18}/>}</button>
+          <IconButton label="素材前进五秒" disabled={!timed || Boolean(error)} onClick={() => seek(frame + Math.round(fps * 5))}><StepForward size={15}/></IconButton></span>
+        <span className="nle-transport-actions"><IconButton label={muted ? "开启素材声音" : "静音素材"} disabled={!timed} onClick={onMute}>{muted ? <VolumeX size={16}/> : <Volume2 size={16}/>}</IconButton></span>
       </div>
-    </div>
+    </div>}
     <ErrorNotice message={error} onClose={() => {}}><button type="button" className="button small" onClick={() => { setError(undefined); setPlaying(false); setAttempt(value => value + 1); }}>重试</button></ErrorNotice>
   </>;
 }

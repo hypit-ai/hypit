@@ -55,3 +55,20 @@
 .studio-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .nle-titlebar-name { color: inherit; font-weight: 600; border: 0; background: transparent; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .studio-dialog, .studio-dialog-backdrop { transition: none; } }
+/* Export settings dialog (mock): label column, segmented choices, summary line. */
+.studio-dialog.export-dialog { width: min(480px, calc(100vw - 32px)); }
+.export-dialog form { gap: 14px; }
+.export-dialog .export-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 12px; flex-direction: row; }
+.export-label { color: var(--muted); font-size: var(--font-size-caption); }
+.export-name { display: flex; align-items: center; gap: 6px; }
+.export-name small { color: var(--muted); }
+.export-location { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.export-location > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.export-location .button { min-height: 28px; padding: 3px 12px; }
+.export-segmented { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--nle-field, var(--hover)); }
+.export-segmented button { flex: 1; min-width: 0; height: 28px; padding: 0 6px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: var(--font-size-caption); white-space: nowrap; transition: background-color .15s, color .15s; }
+.export-segmented button:hover:not(:disabled) { color: var(--text); }
+.export-segmented button[aria-checked=true] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.export-segmented button:disabled { color: color-mix(in srgb, var(--text) 22%, transparent); cursor: not-allowed; }
+.export-dialog footer { justify-content: center; margin-top: 12px; }
+.export-dialog footer .button { min-width: 96px; }

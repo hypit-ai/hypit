@@ -2,8 +2,8 @@ import { applyNleTransaction, type NleCommand } from "@hypit/nle";
 import type { NleTimelineSceneItem, NleTimelineSceneTrack } from "@hypit/nle/view";
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 import {
-  ArrowLeft, AudioLines, Blend, Captions, CircleMinus, CirclePlus, Film, Group, Layers, Link2, Lock, Magnet, Snowflake,
-  PanelLeftClose, PanelRightClose, Plus, Redo2, Scan, Scissors, Trash2, Type, Undo2, Unlock,
+  ArrowLeft, AudioLines, Blend, Captions, CircleMinus, CirclePlus, Film, Group, Layers, Link2, Lock, Magnet, Music, Snowflake,
+  PanelLeftClose, PanelRightClose, Plus, Redo2, Scan, Scissors, SlidersHorizontal, Trash2, Type, Undo2, Unlock,
   Volume2, VolumeX,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -15,9 +15,11 @@ import { CompoundMenu } from "./CompoundMenu.js";
 import { TrackMenu } from "./TrackMenu.js";
 import { createTrimConstraint, frameOf, magneticEdit, moveItemEditPlan, trackGaps, trimItemCommand } from "./editPlans.js";
 import { ClipMenu } from "./ClipMenu.js";
+import { ClipFilmstrip, ClipWaveform, CompoundFilmstrip } from "./ClipMedia.js";
+import { clipMediaEntry } from "./clipMediaData.js";
 import { IconButton } from "./common.js";
 import { timecode } from "./timecode.js";
-import { componentTrackRole, defaultMaxZoom, emptyTimelineMinZoom, labelWidth, rowHeight, rowSize, rulerHeight, snapTimelineEdges, timelineEndPadding, timelineRows, timelineSnapBoundaries } from "./timelineGeometry.js";
+import { compactRowHeight, componentTrackRole, defaultMaxZoom, emptyTimelineMinZoom, labelWidth, rowHeight, rowSize, rulerHeight, snapTimelineEdges, timelineEndPadding, timelineRows, timelineSnapBoundaries } from "./timelineGeometry.js";
 import { ToolSelector, type TimelineTool } from "./ToolSelector.js";
 import { useTimelineSeek } from "./useTimelineSeek.js";
 import { useTimelineZoom } from "./useTimelineZoom.js";
@@ -38,6 +40,18 @@ type Gesture = {
   readonly originDuration: number;
   readonly element: HTMLElement;
 };
+
+/** Ruler labels: `m:ss` on whole seconds, `m:ss:ff` once steps fall below a second. */
+function rulerLabel(frame: number, rate: number, frames: boolean): string {
+  const totalSeconds = Math.floor(frame / rate), hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor(totalSeconds / 60) % 60, seconds = String(totalSeconds % 60).padStart(2, "0");
+  const clock = hours > 0 ? `${hours}:${String(minutes).padStart(2, "0")}:${seconds}` : `${minutes}:${seconds}`;
+  return frames ? `${clock}:${String(frame % rate).padStart(2, "0")}` : clock;
+}
+
+const transitionNames: Readonly<Record<string, string>> = { CrossDissolve: "交叉溶解" };
+/** Room left for the music icon at the head of an audio clip; the waveform starts after it. */
+const waveformInset = 36;
 
 function clipClass(item: NleTimelineSceneItem, track: NleTimelineSceneTrack): string {
   if (item.role === "adjust") return "effect";
@@ -183,8 +197,13 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const splitItems = selectionAtFrame(scene, selection, frame, "split");
   const trimStartItems = selectionAtFrame(scene, selection, frame, "trimStart");
   const trimEndItems = selectionAtFrame(scene, selection, frame, "trimEnd");
-  const tickSeconds = 78 / zoom;
-  const stepFrames = Math.max(1, Math.round(([1, 2, 5, 10, 30, 60, 120, 300, 600].find(value => value >= tickSeconds) ?? Math.ceil(tickSeconds / 600) * 600) * fps));
+  const frameRate = Math.max(1, Math.round(fps));
+  // Labelled steps reach single frames when zoomed in; seconds and minutes otherwise.
+  const stepCandidates = [...[1, 2, 5, 10, 15].filter(value => value < frameRate), ...[1, 2, 5, 10, 30, 60, 120, 300, 600, 1200].map(value => value * frameRate)];
+  // Long programmes keep growing the labelled step in ten-minute multiples.
+  const stepFrames = stepCandidates.find(value => value * pixels >= 78) ?? Math.ceil(78 / pixels / (600 * frameRate)) * 600 * frameRate;
+  // Unlabelled subdivisions: as many as fit at 6px or more, on whole frames when the step is shorter than a second.
+  const minorCount = [10, 6, 5, 4, 3, 2].find(count => stepFrames * pixels / count >= 6 && (stepFrames >= frameRate || stepFrames % count === 0)) ?? 1;
   const ticks = useMemo(() => Array.from({ length: Math.floor(endFrame / stepFrames) + 1 }, (_, index) => index * stepFrames), [endFrame, stepFrames]);
   const compositions = session.open.project.project.compositions;
   const parent = compositions.find(value => value.id === compositionParents.at(-1));
@@ -305,9 +324,9 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
       }
     }} onPointerLeave={() => setCutCursor(undefined)} data-frame-pixels={pixels} data-snap={snap}>
       <div className="nle-tracks" style={{ width: labelWidth + width, minHeight: Math.max(viewport.height, rulerHeight + tracksHeight + trackPadding * 2), "--nle-track-padding": `${trackPadding}px` } as React.CSSProperties}>
-        <div className="nle-ruler"><div className="nle-ruler-label"/><div className="nle-ruler-scale" style={{ width }} onPointerDown={seek.start}>{ticks.map(value => <span key={value} style={{ left: value * pixels, "--minor": `${stepFrames * pixels / 2}px` } as React.CSSProperties}>{timecode(value, fps)}</span>)}<i className={`nle-ruler-frame${pixels >= 8 ? " visible" : ""}`} style={{ left: frame * pixels, width: pixels }}/></div></div>
+        <div className="nle-ruler"><div className="nle-ruler-label"/><div className="nle-ruler-scale" style={{ width }} onPointerDown={seek.start}>{ticks.map(value => <span key={value} style={{ left: value * pixels, "--half": minorCount % 2 === 0 ? `${stepFrames * pixels / 2}px` : "-100px" } as React.CSSProperties}>{rulerLabel(value, frameRate, stepFrames < frameRate)}</span>)}<b className="nle-ruler-minor" style={{ "--minor-step": `${stepFrames * pixels / minorCount}px` } as React.CSSProperties} aria-hidden="true"/><i className={`nle-ruler-frame${pixels >= 8 ? " visible" : ""}`} style={{ left: frame * pixels, width: pixels }}/></div></div>
         <div className="nle-track-top"><div className="nle-track-label empty"/><div className="nle-track-space" data-nle-drop="" style={{ width }}/></div>
-        <AnimatePresence initial={false} mode="popLayout">{rows.map(track => <motion.div {...rowFade} layout={reduced ? false : "position"} transition={rowTransition} className={`nle-track${rowSize(track) <= 36 ? " compact" : ""}${primaryTrack === track.id ? " main" : ""}${track.locked ? " locked" : ""}`} data-track-id={track.id} key={track.id} style={{ height: rowSize(track) }}>
+        <AnimatePresence initial={false} mode="popLayout">{rows.map(track => <motion.div {...rowFade} layout={reduced ? false : "position"} transition={rowTransition} className={`nle-track${rowSize(track) <= compactRowHeight ? " compact" : ""}${primaryTrack === track.id ? " main" : ""}${track.locked ? " locked" : ""}`} data-track-id={track.id} key={track.id} style={{ height: rowSize(track) }}>
           <TrackMenu name={track.name} primary={primaryTrack === track.id} picture={track.kind === "picture" && track.role === undefined} onMagnet={() => onTrackMagnet(track.id)} disabled={busy || track.locked} pixels={pixels} gaps={trackGaps(composition.tracks.find(value => value.id === track.id)!).map(range => ({ start: frameOf(session, range.start), end: frameOf(session, range.end) }))} onCloseGaps={at => onCloseGaps(track.id, at)} onRename={name => onTrackRename(track.id, name)} onRemove={() => onTrackRemove(track.id)} onHeight={track.role === undefined ? height => onTrackHeight(track.id, height) : undefined}>
           <div className={`nle-track-label${reorder.position?.trackId === track.id ? " reordering" : ""}`} data-reorderable={!track.locked && !busy} title={primaryTrack === track.id ? `${track.name} / 主轨道` : track.name} data-primary={primaryTrack === track.id || undefined} onPointerDown={event => reorder.start(event, track)}><span className="nle-track-icons"><span className="nle-track-kind">{primaryTrack === track.id ? <Magnet size={14}/> : track.role === "subtitle" ? <Captions size={14}/> : track.items.every(item => item.role === "adjust") ? <Layers size={14}/> : track.kind === "audio" ? <AudioLines size={14}/> : track.items.some(item => item.display.layers.some(layer => layer.kind === "text")) ? <Type size={14}/> : <Film size={14}/>}</span>
             <IconButton label={track.locked ? "解锁轨道" : "锁定轨道"} className="nle-track-lock" disabled={busy} aria-pressed={track.locked} onClick={() => onTrackLocked(track.id, !track.locked)}>{track.locked ? <Lock size={14}/> : <Unlock size={14}/>}</IconButton>
@@ -315,19 +334,22 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
           <div className="nle-track-content" data-nle-drop={track.id} data-drop-target={highlightedTrack === track.id || undefined} style={{ width }}>
             <AnimatePresence initial={false}>{track.items.map(item => { const previewFrame = magneticFrames?.get(item.id);
               const current = previewFrame?.track === track.id ? previewFrame
-                : draft?.id === item.id ? draft : { start: item.startFrame, duration: item.durationFrames }; const kind = clipClass(item, track); const preview = item.display.layers.find(layer => layer.kind === "preview" && layer.state === "ready"); const text = item.display.layers.find(layer => layer.kind === "text"); const projectItem = composition.tracks.flatMap(track => track.items).find(candidate => candidate.id === item.id); const menuIds = editableSelection(scene, selection.includes(item.id) ? selection : [item.id]); const split = selectionAtFrame(scene, menuIds, frame, "split"), left = selectionAtFrame(scene, menuIds, frame, "trimStart"), right = selectionAtFrame(scene, menuIds, frame, "trimEnd"); return <ClipMenu key={item.id} disabled={busy || track.locked} canSplit={split.length > 0} canTrimStart={left.length > 0} canTrimEnd={right.length > 0} onSelect={() => onSelect(menuIds)} onSplit={() => onSplit(split, frame)} onTrimStart={() => onTrimSelection(left, "start", frame)} onTrimEnd={() => onTrimSelection(right, "end", frame)} onRemove={() => onRemove()} onRippleRemove={() => onRippleRemove(menuIds)} {...(projectItem?.kind === "present" && projectItem.source === "composition" ? { onOpen: () => onEnterComposition(projectItem.composition), onDuplicate: () => onDuplicateCompound(item.id), onUnpack: () => onUnpackCompound(item.id) } : {})}><motion.div {...fadeMotion(reduced)} data-clip-id={item.id} role="button" tabIndex={0} aria-label={item.display.title} aria-pressed={selection.includes(item.id)} className={`nle-clip ${kind}${selection.includes(item.id) ? " selected" : ""}${itemGesture.gesture?.ids.includes(item.id) ? " drag-origin" : ""}`} style={{ left: current.start * pixels, width: Math.max(8, current.duration * pixels) }} onPointerDown={event => begin(event, item, "move", track)} onDoubleClick={() => { if (projectItem?.kind === "present" && projectItem.source === "composition") onEnterComposition(projectItem.composition); }} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); onSelect(editableSelection(scene, [item.id])); } }} onPointerMove={event => {
+                : draft?.id === item.id ? draft : { start: item.startFrame, duration: item.durationFrames }; const kind = clipClass(item, track); const textRole = kind === "text" ? track.role === "subtitle" ? " is-subtitle" : " is-title" : ""; const preview = item.display.layers.find(layer => layer.kind === "preview" && layer.state === "ready"); const text = item.display.layers.find(layer => layer.kind === "text"); const projectItem = composition.tracks.flatMap(track => track.items).find(candidate => candidate.id === item.id); const parameterTitle = projectItem?.kind === "present" && projectItem.source === "component" ? projectItem.parameters.title : undefined; const label = kind !== "text" ? item.display.title : typeof parameterTitle === "string" && parameterTitle.trim() ? parameterTitle : text?.kind === "text" && text.text.trim() ? text.text : item.display.title; const menuIds = editableSelection(scene, selection.includes(item.id) ? selection : [item.id]); const split = selectionAtFrame(scene, menuIds, frame, "split"), left = selectionAtFrame(scene, menuIds, frame, "trimStart"), right = selectionAtFrame(scene, menuIds, frame, "trimEnd"); return <ClipMenu key={item.id} disabled={busy || track.locked} canSplit={split.length > 0} canTrimStart={left.length > 0} canTrimEnd={right.length > 0} onSelect={() => onSelect(menuIds)} onSplit={() => onSplit(split, frame)} onTrimStart={() => onTrimSelection(left, "start", frame)} onTrimEnd={() => onTrimSelection(right, "end", frame)} onRemove={() => onRemove()} onRippleRemove={() => onRippleRemove(menuIds)} {...(projectItem?.kind === "present" && projectItem.source === "composition" ? { onOpen: () => onEnterComposition(projectItem.composition), onDuplicate: () => onDuplicateCompound(item.id), onUnpack: () => onUnpackCompound(item.id) } : {})}><motion.div {...fadeMotion(reduced)} data-clip-id={item.id} role="button" tabIndex={0} aria-label={item.display.title} aria-pressed={selection.includes(item.id)} className={`nle-clip ${kind}${textRole}${selection.includes(item.id) ? " selected" : ""}${itemGesture.gesture?.ids.includes(item.id) ? " drag-origin" : ""}`} style={{ left: current.start * pixels, width: Math.max(8, current.duration * pixels) }} onPointerDown={event => begin(event, item, "move", track)} onDoubleClick={() => { if (projectItem?.kind === "present" && projectItem.source === "composition") onEnterComposition(projectItem.composition); }} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); onSelect(editableSelection(scene, [item.id])); } }} onPointerMove={event => {
               if (tool !== "cut" || busy || track.locked) return; const at = item.startFrame + Math.round((event.clientX - event.currentTarget.getBoundingClientRect().left) / pixels); setCutCursor(item.affordances.split && at > item.startFrame && at < item.startFrame + item.durationFrames ? { track: track.id, frame: at } : undefined);
             }} onPointerLeave={() => setCutCursor(undefined)}>
-              <span className="nle-clip-title"><span className="nle-clip-chip">{item.group && <Group size={11}/>} {composition.mattes.some(matte => matte.content === item.id || matte.matte === item.id) && <Link2 size={11}/>} {item.source === "composition" && <Layers size={11}/>} {item.display.title}</span>{kind !== "text" && <span className="nle-clip-chip">{timecode(current.duration, fps)}</span>}</span>
+              <span className="nle-clip-title">{kind !== "visual" && <span className="nle-clip-icon">{kind === "text" ? track.role === "subtitle" ? <Captions size={13}/> : <Type size={13}/> : kind === "effect" ? <SlidersHorizontal size={13}/> : kind === "compound" ? <Layers size={13}/> : <Music size={13}/>}</span>}<span className="nle-clip-chip">{item.group && <Group size={11}/>} {composition.mattes.some(matte => matte.content === item.id || matte.matte === item.id) && <Link2 size={11}/>} {label}</span>{kind !== "text" && <span className="nle-clip-chip">{timecode(current.duration, fps)}</span>}</span>
               {preview?.kind === "preview" && preview.state === "ready" && <span className="nle-clip-thumbnails"><img src={preview.resource} style={{ left: 0, width: "100%" }}/></span>}
               {text?.kind === "text" && <span className="nle-clip-text">{text.text}</span>}
+              {kind === "compound" && projectItem && <CompoundFilmstrip session={session} item={projectItem} width={current.duration * pixels} height={rowSize(track) - 12} pixels={pixels} fps={fps}/>}
+              {projectItem?.kind === "present" && projectItem.source === "media" && (kind === "visual" || kind === "audio") && (() => { const entry = clipMediaEntry(session, projectItem); if (!entry?.resource || entry.state !== "available") return null; return kind === "audio" ? <ClipWaveform item={projectItem} entry={entry} width={current.duration * pixels} inset={waveformInset} pixels={pixels} fps={fps}/> : <ClipFilmstrip item={projectItem} entry={entry} width={current.duration * pixels} height={rowSize(track) - 12} pixels={pixels} fps={fps}/>; })()}
               {item.affordances.trimStart && <div className="nle-trim start" aria-label="裁剪开头" onPointerDown={event => begin(event, item, "trim-start", track)}/>} {item.affordances.trimEnd && <div className="nle-trim end" aria-label="裁剪结尾" onPointerDown={event => begin(event, item, "trim-end", track)}/>}<div className={`nle-cut-line${tool === "cut" && cutCursor?.track === track.id && cutCursor.frame >= item.startFrame && cutCursor.frame <= item.startFrame + item.durationFrames ? " visible" : ""}`} style={{ left: ((cutCursor?.frame ?? item.startFrame) - item.startFrame) * pixels }}/>
             </motion.div></ClipMenu>; })}</AnimatePresence>
             <AnimatePresence initial={false}>{composition.transitions.flatMap(transition => {
               const outgoing = sceneItems.get(transition.outgoing), incoming = sceneItems.get(transition.incoming);
               if (outgoing?.track !== track.id || incoming === undefined) return [];
               const start = incoming.startFrame, end = outgoing.startFrame + outgoing.durationFrames;
-              return end <= start ? [] : [<motion.button {...fadeMotion(reduced)} key={transition.id} className={`nle-transition-block${selectedTransition === transition.id ? " selected" : ""}`} style={{ left: start * pixels, width: Math.max(10, (end - start) * pixels) }} title={transition.operator.symbol} onPointerDown={event => event.stopPropagation()} onClick={() => { onSelect([transition.outgoing, transition.incoming]); onSeek(Math.floor((start + end) / 2)); onSelectTransition(transition.id); }}><Blend size={12}/></motion.button>];
+              const name = transitionNames[transition.operator.symbol] ?? transition.operator.symbol;
+              return end <= start ? [] : [<motion.button {...fadeMotion(reduced)} key={transition.id} aria-label={name} className={`nle-transition-block${selectedTransition === transition.id ? " selected" : ""}`} style={{ left: start * pixels, width: Math.max(6, (end - start) * pixels) }} title={name} onPointerDown={event => event.stopPropagation()} onClick={() => { onSelect([transition.outgoing, transition.incoming]); onSeek(Math.floor((start + end) / 2)); onSelectTransition(transition.id); }}/>];
             })}</AnimatePresence>
             <AnimatePresence initial={false}>{drop?.track === track.id && drop.transitionCut && <motion.div {...fadeMotion(reduced)}
               className="nle-snap-line" style={{ left: drop.frame * pixels }} aria-hidden="true"/>}</AnimatePresence>
