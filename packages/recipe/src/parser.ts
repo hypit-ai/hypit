@@ -11,17 +11,35 @@ const RULE = /^[a-z][a-z0-9_-]*(?:\.[a-z][a-z0-9_-]*)+/u;
 const PROPERTY = /^[a-z][a-z0-9-]*/u;
 const SHEET_ID = /^[a-z][a-z0-9_-]{0,63}$/u;
 
+function locationOf(source: string, offset: number): { line: number; column: number } {
+  const before = source.slice(0, offset);
+  const lines = before.split(/\r\n|\r|\n/u);
+  return { line: lines.length, column: [...(lines.at(-1) ?? "")].length + 1 };
+}
+
 export class RecipeSyntaxError extends Error {
   readonly code: string;
   readonly sourceName: string;
   readonly offset: number;
+  readonly detail: string;
+  readonly line: number | undefined;
+  readonly column: number | undefined;
 
-  constructor(code: string, message: string, sourceName: string, offset: number) {
-    super(`${sourceName}:${offset}: ${message}`);
+  constructor(code: string, message: string, sourceName: string, offset: number, source?: string) {
+    const position = source === undefined ? undefined : locationOf(source, offset);
+    const at = position === undefined ? `${offset}` : `${position.line}:${position.column}`;
+    super(`${sourceName}:${at}: ${message}`);
     this.name = "RecipeSyntaxError";
     this.code = code;
     this.sourceName = sourceName;
     this.offset = offset;
+    this.detail = message;
+    this.line = position?.line;
+    this.column = position?.column;
+  }
+
+  withSource(sourceName: string, source: string): RecipeSyntaxError {
+    return new RecipeSyntaxError(this.code, this.detail, sourceName, this.offset, source);
   }
 }
 
@@ -261,6 +279,15 @@ function parseProperties(
 }
 
 export function parseRecipe(sourceName: string, source: string): ParsedSvsSheet {
+  try {
+    return parseRecipeSource(sourceName, source);
+  } catch (error) {
+    if (error instanceof RecipeSyntaxError && error.line === undefined) throw error.withSource(sourceName, source);
+    throw error;
+  }
+}
+
+function parseRecipeSource(sourceName: string, source: string): ParsedSvsSheet {
   const text = withoutComments(sourceName, source);
   let cursor = skipSpace(text, 0);
   if (!text.startsWith("<sheet", cursor)) fail(sourceName, "SVS_ROOT", "Source must open with <sheet>.", cursor);

@@ -305,6 +305,21 @@ test("SVS rejects duplicate public recipes", () => {
   );
 });
 
+test("Recipe syntax errors report line and column", () => {
+  const source = '<sheet version="1">\n  x {\n</sheet>';
+  assert.throws(
+    () => parseRecipe("lines.svs", source),
+    (error: unknown) => {
+      assert.ok(error instanceof RecipeSyntaxError);
+      assert.equal(error.code, "SVS_RULE");
+      assert.equal(error.line, 2);
+      assert.ok(error.column !== undefined && error.column >= 1);
+      assert.match(error.message, /lines\.svs:2:\d+:/u);
+      return true;
+    },
+  );
+});
+
 test("quoted Recipe values may contain Prompt punctuation without changing SVS structure", () => {
   const sheet = parseRecipe(
     "prompt.svs",
