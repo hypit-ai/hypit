@@ -48,7 +48,7 @@ export function timelineSnapBoundaries(scene: NleTimelineScene, excluding?: Read
 }
 
 export function snapTimelineEdges(
-  edges: readonly number[], playhead: number, boundaries: readonly number[], pixels: number,
+  edges: readonly number[], playhead: number | undefined, boundaries: readonly number[], pixels: number,
   allows: (correction: number) => boolean = () => true,
 ): { readonly frame: number; readonly correction: number } | undefined {
   const nearest = (targets: readonly number[]) => {
@@ -60,5 +60,5 @@ export function snapTimelineEdges(
     }
     return best;
   };
-  return nearest([playhead]) ?? nearest(boundaries);
+  return (playhead === undefined ? undefined : nearest([playhead])) ?? nearest(boundaries);
 }

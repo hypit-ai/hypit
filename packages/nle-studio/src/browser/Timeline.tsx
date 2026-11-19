@@ -129,7 +129,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const draftRef = useRef<typeof draft>(undefined), gesture = useRef<Gesture | undefined>(undefined);
   const width = Math.max(viewport.right - viewport.left, (scene.maximumFrame + Math.ceil(fps * 15)) * pixels + 12);
   const endFrame = Math.floor((width - 12) / pixels);
-  const seek = useTimelineSeek(scroller, pixels, labelWidth, frame, endFrame, onSeek);
+  const snapBoundaries = useMemo(() => timelineSnapBoundaries(scene), [scene]);
+  const seek = useTimelineSeek(scroller, pixels, labelWidth, frame, endFrame, snap ? snapBoundaries : undefined, onSeek);
   const marquee = useMarqueeSelection(scene, scroller, selection, onSelect, busy, pixels);
   const reorder = useTrackReorder(scroller, scene.tracks, rows, session.open.status.projectRevision, busy, onTrackMove);
   const itemGesture = useItemGesture({ scene, rows, scroller, pixels, frame, snap, busy, selection, onSelect, onMove });
@@ -163,7 +164,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const insertionTop = reorder.position?.top ?? (itemDropAccepted ? itemDrag?.insertionTop : undefined);
   const snapFrame = (itemDropAccepted ? itemDrag?.snapFrame : undefined) ?? draft?.snapFrame ?? drop?.snapFrame;
   const snappedToPlayhead = snapFrame === frame;
-  const playheadSnapClass = snappedToPlayhead ? " adsorbed" : "";
+  const playheadSnapClass = snappedToPlayhead || seek.snapped ? " adsorbed" : "";
   const rowFade = fadeMotion(reduced);
   const rowTransition = { ...rowFade.transition, layout: { duration: reduced ? 0 : .22, ease: softEase } };
   const tracksHeight = rows.reduce((height, track) => height + rowSize(track), 0);
