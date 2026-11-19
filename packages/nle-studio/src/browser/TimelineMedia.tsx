@@ -157,12 +157,16 @@ export function TimelineMedia({ views, item, start, frameWidth }: {
   return views.filter(view => view.item === item).map(view => {
     const { atlas } = view;
     const resource = view.image.src;
+    if (view.action.kind === "media.thumbnail") {
+      return <span aria-hidden="true" key={view.action.kind} className="nle-clip-media still"
+        style={{ backgroundImage: `url("${resource}")` }}/>;
+    }
     const left = (view.fromFrame - start) * frameWidth;
     const width = (view.toFrame - view.fromFrame) * frameWidth;
     const audio = view.action.kind === "media.waveform";
     return <span aria-hidden="true" key={view.action.kind}
       className={audio ? "nle-clip-media waveform" : "nle-clip-media"}
-      style={view.action.kind === "media.thumbnail" ? { left: 0, width: "100%" } : { left, width }}>
+      style={{ left, width }}>
       {atlas === undefined ? <img src={resource} alt=""/> : atlas.samples.map(({ tile }, index) => {
         const column = tile % atlas.columns, row = Math.floor(tile / atlas.columns);
         const x = atlas.columns === 1 ? 0 : column / (atlas.columns - 1) * 100;
