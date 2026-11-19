@@ -36,7 +36,8 @@ selects one finite projection. Mutations return compact receipts, and the browse
 Studio reads the current open projection.
 Timeline drops use `POST /api/operate`. Studio resolves the selected Items, compatible unlocked Tracks, collisions
 and Track creation in one guarded edit.
-Dragging the full contents of contiguous Tracks of one medium into a gap moves those Tracks together.
+Dragging the full contents of contiguous Tracks into a gap moves those Tracks together. Track headers and gaps
+can be used to interleave Picture and Audio Tracks, with the display order recorded in the View.
 The same endpoint applies trim, multi-Item split, and removal. Callers can close a gap or ripple-remove a
 contiguous interval by selecting an explicit Track scope. Studio offers a separate View reconciliation command
 if a Project edit invalidates a View reference.

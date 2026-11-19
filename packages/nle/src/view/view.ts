@@ -88,11 +88,22 @@ export function assertNleView(value: unknown): asserts value is NleView {
   const compositionIds = new Set<string>();
   for (const state of value.compositions) {
     record(state, "NLE View Composition state");
-    onlyKeys(state, ["composition", "tracks", "groups"], "NLE View Composition state");
+    onlyKeys(state, ["composition", "tracks", "groups", ...(Object.hasOwn(state, "trackOrder") ? ["trackOrder"] : [])],
+      "NLE View Composition state");
     identity(state.composition, "NLE View Composition reference");
     assert(!compositionIds.has(state.composition),
       `NLE View repeats Composition state ${state.composition}.`);
     compositionIds.add(state.composition);
+
+    if (Object.hasOwn(state, "trackOrder")) {
+      assert(Array.isArray(state.trackOrder), `NLE View Composition ${state.composition}.trackOrder must be an array.`);
+      const ordered = new Set<string>();
+      for (const track of state.trackOrder) {
+        identity(track, `NLE View Composition ${state.composition} Track order reference`);
+        assert(!ordered.has(track), `NLE View Composition ${state.composition} repeats Track ${track} in its order.`);
+        ordered.add(track);
+      }
+    }
 
     assert(Array.isArray(state.tracks), `NLE View Composition ${state.composition}.tracks must be an array.`);
     const tracks = new Set<string>();
@@ -221,6 +232,7 @@ export function reconcileNleView(view: NleView, project: NleProject): NleView {
       composition: state.composition,
       tracks: state.tracks.filter((track) => tracks.has(track.track)),
       groups: state.groups.filter((group) => group.items.every((item) => items.has(item))),
+      ...(state.trackOrder === undefined ? {} : { trackOrder: state.trackOrder.filter((track) => tracks.has(track)) }),
     }];
   });
   const next: NleView = {

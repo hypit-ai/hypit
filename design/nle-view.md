@@ -12,7 +12,7 @@ Project and View remain separate owner documents:
 ```text
 NLE Project                         NLE View
 tracks, items, time, Processes        active Composition, grid
-picture and audio meaning           Track locks and row heights
+picture and audio meaning           Track locks, row heights and display order
 delivery compilation                       linked-edit Groups
 ```
 
@@ -36,6 +36,8 @@ The document contains:
 - sparse editor state partitioned by Project Composition;
 - Track lock and optional durable row height inside each partition.
   Subtitle, text and effect Tracks use the same compact row height;
+- optional Track display order in each partition. It can interleave Picture and Audio Tracks. The timeline
+  projects existing Track identities in that order and places newly added Tracks alongside their own medium;
 - linked-edit Groups whose Items all belong to that Composition.
 
 Partitioning by Composition preserves the address basis after NLE Projects gained multiple reusable definitions.

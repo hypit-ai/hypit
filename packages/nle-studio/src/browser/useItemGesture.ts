@@ -17,6 +17,7 @@ type FloatingItem = {
 
 export type ItemGestureState = {
   readonly ids: readonly string[];
+  readonly sourceTrack: string;
   readonly floating: readonly FloatingItem[];
   readonly snapFrame?: number;
   readonly intent?: ItemDropIntent;
@@ -150,7 +151,7 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
           top: origin.top + pointer.y - startY, width: origin.width, height: origin.height }];
       });
       proposed = valid ? { anchor: item.id, items: seeds, deltaFrames: delta, target } : undefined;
-      setGesture({ ids: [...ids], floating, ...(proposed === undefined ? {} : { intent: proposed }),
+      setGesture({ ids: [...ids], sourceTrack: track.id, floating, ...(proposed === undefined ? {} : { intent: proposed }),
         ...(aligned === undefined ? {} : { snapFrame: aligned.frame }) });
     };
 

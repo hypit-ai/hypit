@@ -243,6 +243,7 @@ export type NleStudioTimelineEdit = NleStudioCompositionOperation & (
 export type NleStudioOperation =
   | NleStudioTimelineDrop
   | NleStudioTimelineEdit
+  | (NleStudioCompositionOperation & { readonly kind: "timeline.track-reorder"; readonly track: string; readonly before?: string })
   | (NleStudioCompositionOperation & { readonly kind: "clipboard.copy" | "clipboard.cut"; readonly items: readonly string[] })
   | (NleStudioCompositionOperation & { readonly kind: "clipboard.paste"; readonly atFrame: number })
   | (NleStudioCompositionOperation & { readonly kind: "clipboard.apply-groups" })

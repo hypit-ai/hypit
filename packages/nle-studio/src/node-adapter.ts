@@ -140,6 +140,9 @@ function operationRequest(value: unknown): NleStudioOperation {
         && Number.isSafeInteger(request.deltaFrames) && location;
       break;
     }
+    case "timeline.track-reorder":
+      valid = currentFields("track", "before") && identity(request.track) && before;
+      break;
     case "timeline.trim":
       valid = currentFields("item", "edge", "atFrame") && identity(request.item) && integer(request.atFrame, 0)
         && (request.edge === "start" || request.edge === "end");

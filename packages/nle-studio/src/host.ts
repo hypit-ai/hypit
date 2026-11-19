@@ -44,6 +44,7 @@ import {
 } from "@hypit/temporal/algebra";
 import {
   acceptsNleComponentMedia,
+  applyNleViewTransaction,
   assertNleViewForProject,
   createNleComponentAuthoringContext,
   createNleView,
@@ -51,6 +52,7 @@ import {
   openNleViewService,
   planNleComponentMediaEdit,
   type NleEditGroup,
+  type NleViewCommand,
   type NleViewService,
 } from "@hypit/nle/view";
 import {
@@ -82,7 +84,7 @@ import {
 } from "./packages.js";
 import {
   allocateTimelinePlacement, assertTransitionMove, nleRetimeWindow, planTimelineDrop, planTimelineEdit,
-  planTimelineInsertion, planTransitionWindow, resolveTransitionCut, studioFrameTime,
+  planTimelineInsertion, planTimelineTrackReorder, planTransitionWindow, resolveTransitionCut, studioFrameTime,
 } from "./timeline-planning.js";
 import { observeTimelineMedia } from "./timeline-media.js";
 import { planTrimEdge, projectTrimRange } from "./trim-planning.js";
@@ -613,7 +615,6 @@ export class NleStudioProductSession {
           throw new NleEditingSurfaceRevisionConflict("view", request.drop.expectedViewRevision, view.revision);
         }
         const plan = planTimelineDrop(project.project, view.view, request.drop);
-        // Apply against an in-memory snapshot to validate the same owner rules used by the commit.
         if (plan.commands.length > 0) applyNleTransaction(project.project, { commands: plan.commands });
         return { kind: "timeline-drop", value: plan.destination };
       }
@@ -747,6 +748,19 @@ export class NleStudioProductSession {
         commands,
       }), result);
     };
+    const commitTrackArrangement = (plan: ReturnType<typeof planTimelineTrackReorder>, result: NleStudioOperationReceipt["result"]) => {
+      if (plan.trackOrder === undefined) return commit(plan.commands, result);
+      const order: NleViewCommand = { kind: "track-order.set", composition: composition.id, tracks: plan.trackOrder };
+      const nextProject = plan.commands.length === 0 ? project : applyNleTransaction(project, { commands: plan.commands });
+      applyNleViewTransaction(view, nextProject, { commands: [order] });
+      const projectReceipt = commit(plan.commands, result);
+      const viewReceipt = this.#receipt(operation.kind, this.#surface.command({
+        kind: "view.transact", expectedProjectRevision: projectReceipt.status.projectRevision,
+        expectedViewRevision: viewSnapshot.revision, commands: [order],
+      }), result);
+      return { ...viewReceipt, changed: { project: projectReceipt.changed.project, view: true },
+        invalidated: [...new Set([...projectReceipt.invalidated, ...viewReceipt.invalidated])] };
+    };
     const frameTime = (value: number) => studioFrameTime(value, view.editRate);
     const durationOverride = "durationFrames" in operation ? operation.durationFrames : undefined;
     if (durationOverride !== undefined && (!Number.isSafeInteger(durationOverride) || durationOverride <= 0)) {
@@ -791,8 +805,10 @@ export class NleStudioProductSession {
     switch (operation.kind) {
       case "timeline.drop": {
         const plan = planTimelineDrop(project, view, operation);
-        return commit(plan.commands, { track: plan.anchorTrack });
+        return commitTrackArrangement(plan, { track: plan.anchorTrack });
       }
+      case "timeline.track-reorder":
+        return commitTrackArrangement(planTimelineTrackReorder(composition, view, operation.track, operation.before), { track: operation.track });
       case "timeline.trim":
       case "timeline.slip":
       case "timeline.retime":

@@ -59,6 +59,7 @@ function readPanelWidths(): typeof defaultPanelWidths {
 }
 
 export function Studio() {
+  const history = useRef<{ undo: NleStudioOperationReceipt["changed"][]; redo: NleStudioOperationReceipt["changed"][] }>({ undo: [], redo: [] });
   const [session, setSession] = useState<NleStudioOpenProjection>();
   const [failure, setFailure] = useState<string>();
   const [saveConflict, setSaveConflict] = useState(false);
@@ -181,10 +182,13 @@ export function Studio() {
         if (!active) return;
         const invalidated = [...pending];
         pending.clear();
-        const reread = open || sessionRef.current === undefined;
+        const previous = sessionRef.current;
+        const reread = open || previous === undefined;
         open = false;
-        const projection = reread ? await readOpen() : await refreshOpen(sessionRef.current!, { invalidated });
+        const projection = reread ? await readOpen() : await refreshOpen(previous!, { invalidated });
         if (!active) return;
+        if (previous !== undefined && (projection.status.projectRevision !== previous.status.projectRevision
+          || projection.status.viewRevision !== previous.status.viewRevision)) history.current = { undo: [], redo: [] };
         storeSession(projection);
         if (reread || invalidated.includes("inspector")) await refreshInspector(projection);
       });
@@ -212,10 +216,14 @@ export function Studio() {
     setFrame(value.frame); select(value.selection); setPreviewExpanded(value.previewExpanded);
   });
 
-  const acceptReceipt = useCallback(async (receipt: NleStudioOperationReceipt, item?: string) => {
+  const acceptReceipt = useCallback(async (receipt: NleStudioOperationReceipt, item?: string, recordHistory = true) => {
     const current = sessionRef.current;
     if (current === undefined) return;
     const next = await refreshOpen(current, receipt);
+    if (recordHistory && (receipt.changed.project || receipt.changed.view)) {
+      history.current.undo.push(receipt.changed);
+      history.current.redo = [];
+    }
     storeSession(next);
     if (item !== undefined) selectItems([item]);
     if (item !== undefined || receipt.invalidated.includes("inspector")) await refreshInspector(next);
@@ -458,19 +466,48 @@ export function Studio() {
     if (!window.confirm("使用文件中的版本？当前未保存的改动会丢失，撤销记录也会清空。")) return;
     void perform(async () => {
       const receipt = await reloadSession();
+      history.current = { undo: [], redo: [] };
       setSaveConflict(false);
       select([]);
-      await acceptReceipt(receipt);
+      await acceptReceipt(receipt, undefined, false);
     }, false);
   };
+
+  const canReplay = (direction: "undo" | "redo") => {
+    const key = direction === "undo" ? "canUndo" : "canRedo";
+    const entry = history.current[direction].at(-1) ?? { project: true, view: false };
+    return (!entry.project || session.status.projectHistory[key]) && (!entry.view || session.status.viewHistory[key]);
+  };
+  const replay = (direction: "undo" | "redo") => void perform(async () => {
+    const source = history.current[direction];
+    const entry = source.at(-1);
+    const owners = direction === "undo" ? ["view", "project"] as const : ["project", "view"] as const;
+    try {
+      for (const owner of owners) {
+        if (!(entry?.[owner] ?? (owner === "project"))) continue;
+        const status = sessionRef.current!.status;
+        const receipt = await sendCommand(owner === "project"
+          ? { kind: direction === "undo" ? "project.undo" : "project.redo", expectedProjectRevision: status.projectRevision }
+          : { kind: direction === "undo" ? "view.undo" : "view.redo", expectedViewRevision: status.viewRevision });
+        await acceptReceipt(receipt, undefined, false);
+      }
+      if (entry !== undefined) {
+        source.pop();
+        history.current[direction === "undo" ? "redo" : "undo"].push(entry);
+      }
+    } catch (error) {
+      history.current = { undo: [], redo: [] };
+      throw error;
+    }
+  });
 
   return <div className="nle-workspace nle-active"><div className={classes} style={{
     "--nle-bin-preferred": `${panelWidths.bin}px`,
     "--nle-properties-preferred": `${panelWidths.properties}px`,
   } as React.CSSProperties}>
       <div className="nle-titlebar"><div className="nle-titlebar-side"><small>{session.status.projectDirty ? "未保存" : "已保存"}</small></div><strong>{projectName}</strong><div className="nle-titlebar-side end"><div className="nle-toolbar-actions">
-        <IconButton label="撤销" disabled={busy || !session.status.projectHistory.canUndo} onClick={() => command({ kind: "project.undo", expectedProjectRevision: session.status.projectRevision })}><Undo2 size={16}/></IconButton>
-        <IconButton label="重做" disabled={busy || !session.status.projectHistory.canRedo} onClick={() => command({ kind: "project.redo", expectedProjectRevision: session.status.projectRevision })}><Redo2 size={16}/></IconButton>
+        <IconButton label="撤销" disabled={busy || !canReplay("undo")} onClick={() => replay("undo")}><Undo2 size={16}/></IconButton>
+        <IconButton label="重做" disabled={busy || !canReplay("redo")} onClick={() => replay("redo")}><Redo2 size={16}/></IconButton>
         <button className="button primary" disabled={busy || !session.status.projectDirty && !session.status.viewDirty} onClick={() => void perform(async () => acceptReceipt(await saveSession()))}><Save size={14}/>保存</button>
       </div></div></div>
       <ErrorNotice message={failure ?? previewDiagnostic} onClose={() => setFailure(undefined)}/>
@@ -553,7 +590,7 @@ export function Studio() {
               : { ...operationContext, kind: "component-media.bind", item, slot, media }));
           })} onProcessEdit={editProcess}/>}</div></aside>
       </div>
-      <div className="nle-timeline-mount" ref={timelineRoot}><Timeline session={session} frame={frame} selection={selection} busy={editingDisabled} onSeek={value => { setPlaying(false); setSource(undefined); setFrame(value); }} onSelect={select}
+      <div className="nle-timeline-mount" ref={timelineRoot}><Timeline session={session} frame={frame} selection={selection} busy={editingDisabled} canUndo={canReplay("undo")} canRedo={canReplay("redo")} onSeek={value => { setPlaying(false); setSource(undefined); setFrame(value); }} onSelect={select}
         drop={assetDrag.drag?.drop} canFreeze={canFreeze} onFreeze={() => selectedProjectItem && place({
           ...operationContext, kind: "media.freeze", item: selectedProjectItem.id, sampleFrame: frame,
           atFrame: Math.ceil(selectedProjectItem.startFrame + selectedProjectItem.durationFrames), durationFrames: Math.max(1, Math.round(fps * 3)),
@@ -602,7 +639,7 @@ export function Studio() {
         onCloseGap={(track, atFrame) => place({ ...operationContext, kind: "timeline.close-gap", tracks: [track], atFrame })}
         onCompoundUnique={item => place({ ...operationContext, kind: "composition.make-unique", item })}
         onCompoundExplode={item => place({ ...operationContext, kind: "composition.explode", item })}
-        onTrackMove={(track, before) => transact([{ kind: "track.move", id: track, ...(before === undefined ? {} : { before }) }])}
+        onTrackMove={(track, before) => place({ ...operationContext, kind: "timeline.track-reorder", track, ...(before === undefined ? {} : { before }) })}
         onComposition={target => navigate({ ...operationContext, kind: "composition.select", target })}
         onEnterComposition={item => navigate({ ...operationContext, kind: "composition.enter", item, atFrame: frame })}
         onReturnComposition={() => navigate({ ...operationContext, kind: "composition.return" })}
@@ -624,8 +661,8 @@ export function Studio() {
           if (!canDetachAudio || selectedProjectItem === undefined) return;
           await acceptReceipt(await operate({ ...operationContext, kind: "audio.detach", item: selectedProjectItem.id }));
         })}
-        onUndo={() => command({ kind: "project.undo", expectedProjectRevision: session.status.projectRevision })}
-        onRedo={() => command({ kind: "project.redo", expectedProjectRevision: session.status.projectRevision })}/></div>
+        onUndo={() => replay("undo")}
+        onRedo={() => replay("redo")}/></div>
       {assetDrag.drag !== undefined && <div className="nle-floating-preview" style={{ position: "fixed", left: assetDrag.drag.x + 12, top: assetDrag.drag.y + 12, pointerEvents: "none" }}>
         <MediaThumbnail entry={assetDrag.drag.entry}/><span>{assetDrag.drag.entry.name}</span>
       </div>}

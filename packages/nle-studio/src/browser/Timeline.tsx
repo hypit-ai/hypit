@@ -1,4 +1,5 @@
 import type { NleTimelineSceneItem, NleTimelineSceneTrack } from "@hypit/nle/view";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   ArrowLeft, AudioLines, Blend, CircleMinus, CirclePlus, ClipboardCheck, Crop, Film, Group, Layers, Link2, Lock, Magnet,
   PanelLeftClose, PanelRightClose, Plus, Redo2, Scan, Scissors, Snowflake, Trash2, Type, Undo2, Unlock,
@@ -25,6 +26,7 @@ import { CompoundMenu } from "./CompoundMenu.js";
 import { TrackMenu } from "./TrackMenu.js";
 import { ClipMenu } from "./ClipMenu.js";
 import { directionalSelection, selectionAtFrame } from "./selection.js";
+import { fadeMotion } from "./motion.js";
 
 type Gesture = {
   readonly item: NleTimelineSceneItem;
@@ -135,7 +137,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   onTrackEnabled, onTrackLocked, onTrackMove, onTrackRename, onTrackRemove, onTrackHeight, onCloseGap, onRippleRemove, onComposition,
   onCompositionCreate, onCompositionEdit, onCompositionRoot, onCompositionRemove, onEnterComposition, onReturnComposition,
   onCompound, onCompoundUnique, onCompoundExplode, onAddTrack, onToggleGroup, canToggleGroup, grouped,
-  onDetachAudio, canDetachAudio, onUndo, onRedo, drop, canFreeze, onFreeze, selectedProcess, onSelectProcess, onProcessTiming }: {
+  onDetachAudio, canDetachAudio, canUndo, canRedo, onUndo, onRedo, drop, canFreeze, onFreeze, selectedProcess, onSelectProcess, onProcessTiming }: {
   readonly session: NleStudioOpenProjection;
   readonly drop: MediaDrop | undefined;
   readonly canFreeze: boolean;
@@ -176,11 +178,14 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   readonly canDetachAudio: boolean;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
+  readonly canUndo: boolean;
+  readonly canRedo: boolean;
   readonly selectedProcess: NleStudioProcessAddress | undefined;
   readonly onSelectProcess: (address: NleStudioProcessAddress) => void;
   readonly onProcessTiming: (edit: NleStudioProcessEdit) => void;
 }) {
   const scene = session.timeline.scene, fps = scene.editRate.numerator / scene.editRate.denominator;
+  const reduced = useReducedMotion();
   const scroller = useRef<HTMLDivElement>(null);
   const viewport = useTimelineViewport(scroller, labelWidth);
   const lastClipEnd = useMemo(() => scene.tracks.reduce((latest, track) => track.items.reduce(
@@ -201,10 +206,11 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const snapBoundaries = useMemo(() => timelineSnapBoundaries(scene), [scene]);
   const seek = useTimelineSeek(scroller, pixels, labelWidth, frame, endFrame, snap ? snapBoundaries : undefined, onSeek);
   const marquee = useMarquee(scroller, selection, onSelect);
-  const reorder = useTrackReorder(scroller, scene.tracks, scene.tracks, session.status.projectRevision, busy, onTrackMove);
+  const reorder = useTrackReorder(scroller, scene.tracks, `${session.status.projectRevision}:${session.status.viewRevision}`, busy, onTrackMove);
   const itemGesture = useItemGesture({ scene, scroller, pixels, frame, snap, busy, selection, onSelect, onMove });
   const [resolvedDrop, setResolvedDrop] = useState<{ key: string; value: NleStudioDropDestination }>();
-  const intent = itemGesture.gesture?.intent;
+  const itemDrag = itemGesture.gesture;
+  const intent = itemDrag?.intent;
   const dropIntent = intent === undefined ? undefined : JSON.stringify({
     ...intent, kind: "timeline.drop", composition: scene.composition,
     expectedProjectRevision: session.status.projectRevision, expectedViewRevision: session.status.viewRevision,
@@ -212,21 +218,21 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   useEffect(() => {
     if (dropIntent === undefined) return;
     let active = true;
-    const timer = setTimeout(() => void readDropDestination(JSON.parse(dropIntent))
+    const animation = requestAnimationFrame(() => void readDropDestination(JSON.parse(dropIntent))
       .then(value => { if (active) setResolvedDrop({ key: dropIntent, value }); }).catch(() => {
         if (active) setResolvedDrop(undefined);
-      }), 45);
-    return () => { active = false; clearTimeout(timer); };
+      }));
+    return () => { active = false; cancelAnimationFrame(animation); };
   }, [dropIntent]);
   const resolved = resolvedDrop?.key === dropIntent ? resolvedDrop?.value : undefined;
-  const highlightedTrack = drop?.track ?? (resolved && "track" in resolved ? resolved.track : undefined);
+  const highlightedTrack = drop?.track ?? (resolved === undefined ? itemDrag?.sourceTrack : "track" in resolved ? resolved.track : undefined);
   const rows = Array.from(scroller.current?.querySelectorAll<HTMLElement>(".nle-track[data-track-id]") ?? []);
   const resolvedGap = resolved && "gap" in resolved ? resolved : undefined;
   const after = rows.at(-1);
   const insertion = reorder.position?.top ?? (resolvedGap === undefined ? undefined
     : resolvedGap.before === undefined ? (after === undefined ? undefined : after.offsetTop + after.offsetHeight)
       : rows.find(row => row.dataset.trackId === resolvedGap.before)?.offsetTop);
-  const guide = itemGesture.gesture?.snapFrame ?? draft?.snapFrame ?? drop?.snapFrame ?? drop?.transitionCut?.frame;
+  const guide = (resolved === undefined ? undefined : itemDrag?.snapFrame) ?? draft?.snapFrame ?? drop?.snapFrame ?? drop?.transitionCut?.frame;
   const playheadSnap = guide === frame || seek.snapped ? " adsorbed" : "";
   const trackPadding = Math.max(rowHeight, (viewport.height - rulerHeight - scene.tracks.reduce((height, track) => height + rowSize(track), 0)) / 2);
   const selected = scene.tracks.flatMap(track => track.items).find(item => selection.includes(item.id));
@@ -335,8 +341,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     <div className="nle-timeline-toolbar">
       <ToolSelector value={tool} onChange={value => { setTool(value); setCutCursor(undefined); }}/>
       <IconButton label="新建轨道" disabled={busy} onClick={onAddTrack}><Plus size={18} strokeWidth={1.6}/></IconButton><span className="nle-toolbar-separator"/>
-      <IconButton label="撤销" disabled={busy || !session.status.projectHistory.canUndo} onClick={onUndo}><Undo2 size={18} strokeWidth={1.6}/></IconButton>
-      <IconButton label="重做" disabled={busy || !session.status.projectHistory.canRedo} onClick={onRedo}><Redo2 size={18} strokeWidth={1.6}/></IconButton>
+      <IconButton label="撤销" disabled={busy || !canUndo} onClick={onUndo}><Undo2 size={18} strokeWidth={1.6}/></IconButton>
+      <IconButton label="重做" disabled={busy || !canRedo} onClick={onRedo}><Redo2 size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="分割" disabled={busy || splitItems.length === 0} onClick={() => onSplit(splitItems.map(item => item.id), frame)}><Scissors size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="向左裁剪" disabled={busy || !canTrimSelectionAt("start")} onClick={() => selected && onTrim(selected, "start", frame)}><PanelLeftClose size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="向右裁剪" disabled={busy || !canTrimSelectionAt("end")} onClick={() => selected && onTrim(selected, "end", frame)}><PanelRightClose size={18} strokeWidth={1.6}/></IconButton>
@@ -430,7 +436,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
         </div></TrackMenu>; })}
         <div className="nle-track-space-row" data-nle-drop=""><div className="nle-track-label empty"/><div className="nle-track-space" style={{ width }}/></div>
         <div className={`nle-marquee${marquee.box?.visible ? " visible" : ""}`} style={marquee.box ?? { width: 0, height: 0 }}/>
-        <div className={`nle-track-insertion${insertion !== undefined ? " visible" : ""}`} style={{ top: insertion ?? 0 }}/>
+        <AnimatePresence initial={false}>{insertion !== undefined && <motion.div {...fadeMotion(reduced)}
+          className="nle-track-insertion" style={{ top: insertion }} />}</AnimatePresence>
         {guide !== undefined && guide !== frame && <div className="nle-snap-line" style={{ left: labelWidth + guide * pixels }}/>}
         <div className={`nle-playhead${playheadSnap}`} style={{ left: labelWidth + frame * pixels }}/><div className={`nle-playhead-control${playheadSnap}`} style={{ left: labelWidth + frame * pixels }}><button className={seek.active ? "active" : ""} aria-label="播放头" onPointerDown={seek.start}/></div>
       </div>

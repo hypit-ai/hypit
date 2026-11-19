@@ -26,7 +26,7 @@ export {
   type NleViewServiceTransaction,
 } from "./service.js";
 export { assertNleViewAllowsProjectTransaction } from "./guard.js";
-export { mergeNleTimelineItemObservations, projectNleTimeline } from "./projection.js";
+export { mergeNleTimelineItemObservations, orderNleTimelineTracks, projectNleTimeline } from "./projection.js";
 export {
   createNleAuthoringContribution,
   createNleAuthoringHost,

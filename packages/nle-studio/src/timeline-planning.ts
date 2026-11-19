@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { applyNleTransaction, nleItemEnd, nleLinearTimeMapping, type NleCommand, type NleComposition, type NleItem, type NleProject, type NleTrack } from "@hypit/nle";
-import { nleViewCompositionState, nleViewTrackLocked, type NleView } from "@hypit/nle/view";
+import { nleViewCompositionState, nleViewTrackLocked, orderNleTimelineTracks, type NleView } from "@hypit/nle/view";
 import {
   addExactTemporalValues,
   compareExactTemporalValues,
@@ -36,9 +36,8 @@ function relatedItems(composition: NleComposition, view: NleView, seeds: readonl
   return selected;
 }
 
-function pictureCollision(item: NleItem, other: NleItem, delta: ExactTemporalValue): boolean {
-  return item.kind === "present" && other.kind === "present"
-    && compareExactTemporalValues(addExactTemporalValues(item.start, delta), nleItemEnd(other)) < 0
+function overlapsAfterMove(item: NleItem, other: NleItem, delta: ExactTemporalValue): boolean {
+  return compareExactTemporalValues(addExactTemporalValues(item.start, delta), nleItemEnd(other)) < 0
     && compareExactTemporalValues(other.start, addExactTemporalValues(nleItemEnd(item), delta)) < 0;
 }
 
@@ -323,9 +322,55 @@ function makeTrack(kind: NleTrack["kind"], role?: NleTrack["role"]): NleTrack {
   return { id: `track-${randomUUID()}`, name, kind, ...(role === undefined ? {} : { role }), enabled: true, items: [] };
 }
 
-/** Studio Timeline allocation policy over current Project and View facts. */
-export function planTimelineDrop(project: NleProject, view: NleView, drop: NleStudioTimelineDrop): {
+type TrackArrangement = {
   readonly commands: readonly NleCommand[];
+  readonly trackOrder?: readonly string[];
+};
+
+function preferredTrackOrder(composition: NleComposition, view: NleView, rows: readonly NleTrack[]) {
+  const firstAudio = rows.findIndex(track => track.kind === "audio");
+  const mixed = firstAudio >= 0 && rows.slice(firstAudio + 1).some(track => track.kind === "picture");
+  return mixed || nleViewCompositionState(view, composition.id)?.trackOrder !== undefined
+    ? { trackOrder: rows.map(track => track.id) } : {};
+}
+
+function planTrackArrangement(composition: NleComposition, view: NleView, rows: readonly NleTrack[],
+  block: readonly NleTrack[], gap: number): TrackArrangement {
+  const moved = new Set(block);
+  const ordered = rows.filter(track => !moved.has(track));
+  const index = rows.slice(0, gap).filter(track => !moved.has(track)).length;
+  ordered.splice(index, 0, ...block);
+  if (ordered.every((track, index) => track === rows[index])) return { commands: [] };
+
+  const commands: NleCommand[] = [];
+  for (const kind of ["picture", "audio"] as const) {
+    const previous = rows.filter(track => track.kind === kind);
+    const next = ordered.filter(track => track.kind === kind);
+    if (next.every((track, index) => track === previous[index])) continue;
+    if (kind === "picture") next.reverse();
+    for (let index = next.length - 1; index >= 0; index--) {
+      const track = next[index]!;
+      if (!moved.has(track)) continue;
+      const before = next[index + 1]?.id;
+      commands.push({ kind: "track.move", id: track.id, ...(before === undefined ? {} : { before }) });
+    }
+  }
+  return { commands, ...preferredTrackOrder(composition, view, ordered) };
+}
+
+export function planTimelineTrackReorder(composition: NleComposition, view: NleView, track: string,
+  before: string | undefined): TrackArrangement {
+  const rows = orderNleTimelineTracks(composition.tracks, nleViewCompositionState(view, composition.id)?.trackOrder);
+  const moved = rows.find(row => row.id === track);
+  if (moved === undefined) throw new Error(`NLE Studio cannot reorder unknown Track ${track}.`);
+  if (nleViewTrackLocked(view, composition.id, track)) throw new Error(`NLE Studio cannot reorder locked Track ${track}.`);
+  const target = before === undefined ? rows.length : rows.findIndex(row => row.id === before);
+  if (target < 0) throw new Error(`NLE Studio reorder targets unknown Track ${before}.`);
+  return planTrackArrangement(composition, view, rows, [moved], target);
+}
+
+/** Studio Timeline allocation policy over current Project and View facts. */
+export function planTimelineDrop(project: NleProject, view: NleView, drop: NleStudioTimelineDrop): TrackArrangement & {
   readonly anchorTrack: string;
   readonly destination: NleStudioDropDestination;
 } {
@@ -333,10 +378,7 @@ export function planTimelineDrop(project: NleProject, view: NleView, drop: NleSt
   if (composition === undefined || view.activeComposition !== composition.id) {
     throw new Error(`NLE Studio drop targets inactive Composition ${drop.composition}.`);
   }
-  const rows = [
-    ...composition.tracks.filter(track => track.kind === "picture").reverse(),
-    ...composition.tracks.filter(track => track.kind === "audio"),
-  ];
+  const rows = [...orderNleTimelineTracks(composition.tracks, nleViewCompositionState(view, composition.id)?.trackOrder)];
   const ids = relatedItems(composition, view, drop.items);
   const entries = rows.flatMap(track => track.items.filter(item => ids.has(item.id)).map(item => ({ track, item })));
   if (!drop.items.includes(drop.anchor) || entries.length !== ids.size) {
@@ -365,30 +407,24 @@ export function planTimelineDrop(project: NleProject, view: NleView, drop: NleSt
     const block = rows.filter(track => selectedTracks.has(track));
     const first = rows.indexOf(block[0]!);
     const end = first + block.length;
-    if (rows[end - 1] === block.at(-1)
-      && block.every(track => track.kind === anchorTrack.kind && track.items.every(item => ids.has(item.id)))) {
-      const mediumStart = rows.findIndex(track => track.kind === anchorTrack.kind);
-      const mediumEnd = rows.findLastIndex(track => track.kind === anchorTrack.kind) + 1;
-      const gap = Math.max(mediumStart, Math.min(mediumEnd, target));
+    if (rows[end - 1] === block.at(-1) && block.every(track => track.items.every(item => ids.has(item.id)))) {
+      const arrangement = planTrackArrangement(composition, view, rows, block, target);
+      const reordered = arrangement.commands.length > 0 || arrangement.trackOrder !== undefined;
       let destination: NleStudioDropDestination = currentTrack;
-      if (gap < first || gap > end) {
-        const picture = anchorTrack.kind === "picture";
-        const adjacent = rows[picture ? gap - 1 : gap];
-        const remaining = composition.tracks.filter(track => !selectedTracks.has(track));
-        const before = adjacent?.kind === anchorTrack.kind ? adjacent.id
-          : remaining[remaining.findLastIndex(track => track.kind === anchorTrack.kind) + 1]?.id;
-        const authoredOrder = picture ? block.reverse() : block;
-        for (const track of authoredOrder) {
-          commands.push({ kind: "track.move", id: track.id, ...(before === undefined ? {} : { before }) });
-        }
-        const displayBefore = rows[gap]?.id;
-        destination = { gap: true, ...(displayBefore === undefined ? {} : { before: displayBefore }) };
+      if (reordered) {
+        const before = rows[target]?.id;
+        destination = { gap: true, ...(before === undefined ? {} : { before }) };
       }
+      commands.push(...arrangement.commands);
       if (changesTime) commands.push({ kind: "item.move", ids: [...ids], delta });
-      return { commands, anchorTrack: anchorTrack.id, destination };
+      return { ...arrangement, commands, anchorTrack: anchorTrack.id, destination };
     }
-  } else if (drop.target.track === anchorTrack.id && !changesTime) {
-    return { commands, anchorTrack: anchorTrack.id, destination: currentTrack };
+  } else {
+    const lane = rows[target]!;
+    if (lane.kind !== anchorTrack.kind || lane.role !== anchorTrack.role || locked(lane)
+      || (lane.id === anchorTrack.id && !changesTime)) {
+      return { commands, anchorTrack: anchorTrack.id, destination: currentTrack };
+    }
   }
   const destinations: { item: string; track: string }[] = [];
   const sourceRows = [...rows];
@@ -399,17 +435,15 @@ export function planTimelineDrop(project: NleProject, view: NleView, drop: NleSt
     const candidates = rows.map((track, index) => ({ track, index }))
       .filter(({ track, index }) => index >= minimum && index < maximum
         && track.kind === source.kind && track.role === source.role && !locked(track)
-        && (track.kind === "audio" || track.items.every(other => ids.has(other.id)
-          || members.every(item => !pictureCollision(item, other, delta)))))
+        && track.items.every(other => ids.has(other.id)
+          || members.every(item => !overlapsAfterMove(item, other, delta))))
       .sort((left, right) => Math.abs(left.index - desired) - Math.abs(right.index - desired));
     let destination = forceNew ? undefined : candidates[0]?.track;
     if (destination === undefined) {
-      const audioStart = rows.filter(track => track.kind === "picture").length;
-      const low = Math.max(minimum, source.kind === "picture" ? 0 : audioStart);
-      const high = Math.min(maximum, source.kind === "picture" ? audioStart : rows.length);
-      const index = Math.max(low, Math.min(high, desired));
-      const adjacent = source.kind === "picture" ? rows[index - 1] : rows[index];
-      const before = adjacent?.kind === source.kind ? adjacent.id : undefined;
+      const index = Math.max(minimum, Math.min(maximum, desired));
+      const neighbor = source.kind === "picture" ? rows.slice(0, index).findLast(track => track.kind === source.kind)
+        : rows.slice(index).find(track => track.kind === source.kind);
+      const before = neighbor?.id;
       destination = makeTrack(source.kind, source.role);
       commands.push({ kind: "track.add", composition: composition.id, track: destination, ...(before === undefined ? {} : { before }) });
       rows.splice(index, 0, destination);
@@ -439,7 +473,8 @@ export function planTimelineDrop(project: NleProject, view: NleView, drop: NleSt
   if (destinations.length > 0 || changesTime) {
     commands.push({ kind: "item.move", ids: entries.map(({ item }) => item.id), delta, destinations });
   }
-  if (sourceRows.includes(anchor)) return { commands, anchorTrack: anchor.id, destination: { track: anchor.id } };
+  const arrangement = rows.length === sourceRows.length ? {} : preferredTrackOrder(composition, view, rows);
+  if (sourceRows.includes(anchor)) return { ...arrangement, commands, anchorTrack: anchor.id, destination: { track: anchor.id } };
   const before = rows.slice(rows.indexOf(anchor) + 1).find(track => sourceRows.includes(track))?.id;
-  return { commands, anchorTrack: anchor.id, destination: { gap: true, ...(before === undefined ? {} : { before }) } };
+  return { ...arrangement, commands, anchorTrack: anchor.id, destination: { gap: true, ...(before === undefined ? {} : { before }) } };
 }
