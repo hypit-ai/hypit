@@ -1,6 +1,6 @@
 import { applyNleTransaction, fitNlePictureContent, nleItemEnd, nleLinearTimeMapping, nleTimeMappingRequiredDuration, resolveNlePictureLayout, shiftNleTimeMapping, sliceNleTimeMapping, type NleCommand, type NleComposition, type NleItem, type NleProcess, type NleTimeMapping, type NleTrack } from "@hypit/nle";
 import { addExactTemporalValues as add, compareExactTemporalValues as compare, exactTemporalZero, extrapolateTemporalAffineMapPiece, isAffineTemporalMapPiece, scaleExactTemporalValue as scale, subtractExactTemporalValues as subtract, type ExactTemporalValue, type TemporalRate } from "@hypit/temporal/algebra";
-import type { NleViewCommand } from "@hypit/nle/view";
+import type { NleTimelineSceneItem, NleViewCommand } from "@hypit/nle/view";
 import type { NleStudioSession } from "../protocol.js";
 import { editableSelection, linkedSelection } from "./selection.js";
 import { copyItems, pasteItems } from "./clipboard.js";
@@ -14,27 +14,59 @@ export function frameTime(session: NleStudioSession, frame: number): ExactTempor
   return { ticks: String(Math.round(frame) * rate.denominator), timeBase: { numerator: 1, denominator: rate.numerator } };
 }
 export function trimItemCommand(session: NleStudioSession, id: string, edge: "start" | "end", atFrame: number): NleCommand {
-  const at = frameTime(session, atFrame);
-  const trim = { kind: "item.trim", id, edge, at } as const;
-  if (edge === "end") return trim;
-  const item = activeComposition(session).tracks.flatMap(track => track.items).find(item => item.id === id);
-  if (item?.kind !== "adjust" || compare(at, item.start) >= 0) return trim;
-  const first = item.controlTime.pieces[0];
-  if (first === undefined || compare(first.target.start, exactTemporalZero()) !== 0) return trim;
+  return { kind: "item.trim", id, edge, at: frameTime(session, atFrame) };
+}
 
-  const offset = subtract(at, item.start);
-  try {
-    sliceNleTimeMapping(item.controlTime, item.duration, { start: offset, end: item.duration });
-    return trim;
-  } catch {
-    const lead = subtract(item.start, at);
-    const held = nleLinearTimeMapping(lead, first.sourceAtStart, { numerator: 0, denominator: 1 });
-    const shifted = item.controlTime.pieces.map(piece => ({ ...piece,
-      target: { start: add(piece.target.start, lead), end: add(piece.target.end, lead) },
-    }));
-    return { kind: "item.replace", item: { ...item, start: at, duration: add(item.duration, lead),
-      controlTime: { pieces: [...held.pieces, ...shifted] } } };
-  }
+export function createTrimConstraint(session: NleStudioSession, clip: NleTimelineSceneItem, edge: "start" | "end",
+  mediaDuration: ExactTemporalValue | undefined, primaryTrack: string | undefined) {
+  const composition = activeComposition(session);
+  const project = session.open.project.project;
+  const original = composition.tracks.find(track => track.id === clip.track)?.items.find(item => item.id === clip.id);
+  const origin = edge === "start" ? clip.startFrame : clip.startFrame + clip.durationFrames;
+  let minimum = edge === "start" ? 0 : Math.min(origin, Math.ceil(clip.startFrame + 1));
+  let maximum = edge === "start" ? Math.max(origin, Math.floor(clip.startFrame + clip.durationFrames - 1)) : Infinity;
+  const accepted = new Map<number, boolean>();
+  const originalSourceEnd = original?.kind === "present" && mediaDuration !== undefined
+    ? nleTimeMappingRequiredDuration(original.sourceTime) : undefined;
+  const sourceEnd = mediaDuration !== undefined && originalSourceEnd !== undefined && compare(originalSourceEnd, mediaDuration) > 0
+    ? originalSourceEnd : mediaDuration;
+
+  const allows = (frame: number): boolean => {
+    if (frame === origin) return true;
+    if (!Number.isSafeInteger(frame) || frame < minimum || frame > maximum) return false;
+    const cached = accepted.get(frame);
+    if (cached !== undefined) return cached;
+    let valid = false;
+    try {
+      const commands = magneticEdit(session, [trimItemCommand(session, clip.id, edge, frame)], primaryTrack);
+      const next = applyNleTransaction(project, { commands });
+      const trimmed = next.compositions.find(value => value.id === composition.id)?.tracks
+        .find(track => track.id === clip.track)?.items.find(item => item.id === clip.id);
+      valid = trimmed !== undefined && (trimmed.kind !== "present" || sourceEnd === undefined
+        || compare(nleTimeMappingRequiredDuration(trimmed.sourceTime), sourceEnd) <= 0);
+    } catch {
+      valid = false;
+    }
+    accepted.set(frame, valid);
+    return valid;
+  };
+
+  const clamp = (frame: number): number => {
+    if (frame === origin) return origin;
+    const target = Math.max(minimum, Math.min(maximum, frame));
+    if (allows(target)) return target;
+    let valid = origin, invalid = target;
+    while (Math.abs(invalid - valid) > 1) {
+      const middle = valid + (invalid - valid) / 2;
+      const candidate = target < origin ? Math.ceil(middle) : Math.floor(middle);
+      if (allows(candidate)) valid = candidate;
+      else invalid = candidate;
+    }
+    if (target < origin) minimum = valid;
+    else maximum = valid;
+    return valid;
+  };
+  return { allows, clamp };
 }
 export function slipItems(
   targets: readonly { readonly item: NleItem; readonly sourceDuration: ExactTemporalValue | undefined }[],

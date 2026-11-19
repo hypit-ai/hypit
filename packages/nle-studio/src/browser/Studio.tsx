@@ -613,6 +613,7 @@ export function Studio() {
       </div>
       <AnimatePresence mode="popLayout" initial={false}><Timeline key={`${session.projectDocument.path}/${scene.composition}`} session={session} frame={frame} selection={selection} busy={busy} onSelectTransition={id => { setTransitionId(id); setPropertiesTab("properties"); }} selectedTransition={transitionId} onSeek={value => { setPlaying(false); setSource(undefined); setFrame(value); }} onSelect={select}
         draggedMedia={assetDrag.drag?.entry} mediaDrop={assetDrag.drag?.drop}
+        mediaDurationForItem={id => { const item = projectItems.get(id); return item && mediaForItem(item)?.duration; }}
         onMove={move => {
           const plan = moveItemEditPlan(session, move);
           transact(plan.commands, undefined, plan.viewCommands);

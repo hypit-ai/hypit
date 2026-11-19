@@ -1,5 +1,6 @@
 import { applyNleTransaction, type NleCommand } from "@hypit/nle";
 import type { NleTimelineSceneItem, NleTimelineSceneTrack } from "@hypit/nle/view";
+import type { ExactTemporalValue } from "@hypit/temporal/algebra";
 import {
   ArrowLeft, AudioLines, Blend, Captions, CircleMinus, CirclePlus, Film, Group, Layers, Link2, Lock, Magnet, Snowflake,
   PanelLeftClose, PanelRightClose, Plus, Redo2, Scan, Scissors, Trash2, Type, Undo2, Unlock,
@@ -12,7 +13,7 @@ import type { NleStudioMediaEntry, NleStudioSession } from "../protocol.js";
 import { CompositionActions } from "./CompositionActions.js";
 import { CompoundMenu } from "./CompoundMenu.js";
 import { TrackMenu } from "./TrackMenu.js";
-import { frameOf, magneticEdit, moveItemEditPlan, trackGaps, trimItemCommand } from "./editPlans.js";
+import { createTrimConstraint, frameOf, magneticEdit, moveItemEditPlan, trackGaps, trimItemCommand } from "./editPlans.js";
 import { ClipMenu } from "./ClipMenu.js";
 import { IconButton } from "./common.js";
 import { timecode } from "./timecode.js";
@@ -47,7 +48,7 @@ function clipClass(item: NleTimelineSceneItem, track: NleTimelineSceneTrack): st
 }
 
 export function Timeline({ session, frame, selection, busy, onSeek, onSelect, onMove, onTrim, onSplit, onRemove, onFreeze, canFreeze,
-  compositionParents, onEnterComposition, onReturnComposition,
+  compositionParents, onEnterComposition, onReturnComposition, mediaDurationForItem,
   onTrackEnabled, onTrackLocked, onTrackMove, onComposition, onAddTrack, onToggleGroup, canToggleGroup, grouped,
   onDetachAudio, canDetachAudio, onUndo, onRedo, draggedMedia, mediaDrop: drop, onTrimSelection, canUndo, canRedo, onCreateCompound, onDuplicateCompound, onUnpackCompound, onRippleRemove, onCloseGaps, onTrackRename, onTrackRemove, onTrackHeight, onSelectTransition, selectedTransition, primaryTrack, onTrackMagnet, onCompositionCreate, onCompositionEdit, onCompositionRoot, onCompositionRemove, ref }: {
   readonly onCompositionCreate: (name: string, canvas: { width: number; height: number }) => void;
@@ -77,6 +78,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   readonly onSelect: (ids: readonly string[]) => void;
   readonly onMove: (plan: ItemMovePlan) => void;
   readonly onTrim: (item: NleTimelineSceneItem, edge: "start" | "end", atFrame: number) => void;
+  readonly mediaDurationForItem: (id: string) => ExactTemporalValue | undefined;
   readonly onSplit: (items: readonly NleTimelineSceneItem[], atFrame: number) => void;
   readonly onTrimSelection: (items: readonly NleTimelineSceneItem[], edge: "start" | "end", atFrame: number) => void;
   readonly onRemove: () => void;
@@ -209,17 +211,18 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     cancelTrim.current();
     element.setPointerCapture(event.pointerId);
     gesture.current = { item, mode, pointer: event.pointerId, startX: event.clientX, originStart: item.startFrame, originDuration: item.durationFrames, element };
+    const constraint = createTrimConstraint(session, item, mode === "trim-start" ? "start" : "end", mediaDurationForItem(item.id), primaryTrack);
     const boundaries = timelineSnapBoundaries(scene, new Set([item.id]));
     const move = (next: PointerEvent) => {
       const current = gesture.current; if (!current || next.pointerId !== current.pointer) return;
       const trimmingStart = current.mode === "trim-start";
       const end = current.originStart + current.originDuration;
-      const minimum = trimmingStart ? 0 : current.originStart + 1;
-      const maximum = trimmingStart ? end - 1 : Infinity;
       const originalEdge = trimmingStart ? current.originStart : end;
-      const proposed = Math.max(minimum, Math.min(maximum, originalEdge + Math.round((next.clientX - current.startX) / pixels)));
-      const aligned = snap && !next.altKey ? snapTimelineEdges([proposed], frame, boundaries, pixels,
-        correction => proposed + correction >= minimum && proposed + correction <= maximum) : undefined;
+      const delta = Math.round((next.clientX - current.startX) / pixels);
+      const requested = delta === 0 ? originalEdge : Math.round(originalEdge + delta);
+      const proposed = constraint.clamp(requested);
+      const aligned = snap && !next.altKey && proposed === requested && proposed !== originalEdge
+        ? snapTimelineEdges([proposed], frame, boundaries, pixels, correction => constraint.allows(proposed + correction)) : undefined;
       const edge = aligned?.frame ?? proposed;
       draftRef.current = {
         id: item.id, edge: trimmingStart ? "start" : "end",
@@ -239,7 +242,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     const finish = (next: PointerEvent) => {
       const current = gesture.current; if (!current || next.pointerId !== current.pointer) return;
       move(next); const accepted = draftRef.current; cleanup();
-      if (!accepted) return;
+      if (!accepted || (accepted.start === current.originStart && accepted.duration === current.originDuration)) return;
       onTrim(current.item, current.mode === "trim-start" ? "start" : "end", current.mode === "trim-start" ? accepted.start : accepted.start + accepted.duration);
     };
     const cancel = (next: PointerEvent) => { if (next.pointerId === event.pointerId) cleanup(); };
