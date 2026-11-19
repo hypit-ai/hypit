@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Canvas · Hypit</title>
-    <script type="module" src="./main.ts"></script>
+    <script type="module" src="./main.tsx"></script>
   </head>
   <body>
     <header class="masthead">
@@ -17,17 +17,12 @@
     <main class="workspace">
       <section class="board-pane" aria-label="Canvas board">
         <div class="toolbar">
-          <label>Model <select id="model-picker" aria-label="Model to add"></select></label>
-          <button id="add-model" class="primary" disabled>Add model</button>
-          <label>Project media <select id="media-picker" aria-label="Project Media to add"></select></label>
-          <button id="add-media" disabled>Add media</button>
+          <button id="add-card" class="primary" disabled>+ Add card</button>
+          <p class="board-hint">Drag between ports to connect cards</p>
           <button id="refresh" class="refresh">Refresh</button>
         </div>
         <div class="board-area">
-          <div id="viewport" class="viewport" tabindex="0" aria-label="Card workspace">
-            <div id="world" class="world"></div>
-          </div>
-          <canvas id="wires" class="wires" aria-hidden="true"></canvas>
+          <div id="viewport" class="viewport" aria-label="Card workspace"></div>
           <div id="empty" class="empty" hidden>
             <h2>This canvas is empty</h2>
             <p id="empty-copy">Add a model or Project Media to start.</p>

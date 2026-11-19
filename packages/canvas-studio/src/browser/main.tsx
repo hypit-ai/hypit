@@ -1,10 +1,10 @@
-import type { CanvasCommand, CanvasNode } from "@hypit/canvas";
+import type { CanvasCommand } from "@hypit/canvas";
 import type {
   CanvasAdoptionReceipt, CanvasCancelReceipt, CanvasCommandReceipt, CanvasInvokeReceipt, CanvasObservation,
   CanvasObservationRequest, CanvasPreviewReceipt, CanvasQuoteReceipt, CanvasStudioEvent,
 } from "../protocol.js";
 import { Board } from "./board.js";
-import { control, element, filename, option } from "./dom.js";
+import { control, element } from "./dom.js";
 import { renderHistory, renderInspector, type InspectorActions } from "./inspector.js";
 import "./style.css";
 
@@ -16,10 +16,7 @@ const state = control("save-state");
 const notice = control("notice");
 const inspector = control("inspector");
 const empty = control("empty");
-const modelPicker = control("model-picker", "select");
-const mediaPicker = control("media-picker", "select");
-const addModel = control("add-model", "button");
-const addMedia = control("add-media", "button");
+const addCard = control("add-card", "button");
 let snapshot: Snapshot | undefined;
 let catalog: Catalog | undefined;
 let selected: string | undefined;
@@ -31,6 +28,7 @@ let boardReads = 0;
 let catalogReads = 0;
 let historyReads = 0;
 let deferred = false;
+let reveal: string | undefined;
 
 class RequestError extends Error {
   constructor(message: string, readonly code?: string) { super(message); }
@@ -54,8 +52,6 @@ function message(text: string, problem = false) {
 }
 
 function fail(error: unknown) { message(error instanceof Error ? error.message : String(error), true); }
-
-const board = new Board(selectNode, save);
 
 const actions: InspectorActions = {
   commit: save,
@@ -94,6 +90,9 @@ const actions: InspectorActions = {
   },
 };
 
+const board = new Board({ select: selectNode, commit: save, preview: actions.preview,
+  settled() { if (deferred && pending === 0) void refreshBoard().catch(fail); } });
+
 function selection() { return snapshot?.document.nodes.find(node => node.id === selected); }
 
 function selectNode(id: string | undefined) {
@@ -117,15 +116,18 @@ function renderSelection() {
 
 function renderBoard() {
   if (snapshot === undefined || catalog === undefined) return;
+  if (board.dragging) { deferred = true; return; }
+  addCard.disabled = false;
   const document = snapshot.document;
   title.textContent = document.name;
   window.document.title = document.name + " · Hypit Canvas";
   empty.hidden = document.nodes.length > 0;
   control("empty-copy").textContent = catalog.palette.length > 0 || catalog.media.entries.length > 0
-    ? "Add a model or Project Media to start."
+    ? "Add a model or Project Media to start. You can also double-click the canvas."
     : "Select models in hypit.project.json or import Project Media.";
   if (selection() === undefined) selected = undefined;
-  board.update(document, catalog.models, selected);
+  board.update(document, snapshot.revision, catalog, selected, reveal);
+  reveal = undefined;
   state.textContent = pending > 0 ? "Saving…" : "Saved";
   renderSelection();
 }
@@ -134,6 +136,7 @@ async function refreshBoard() {
   const sequence = ++boardReads;
   const value = await observe({ kind: "board" });
   if (value.kind !== "board" || sequence !== boardReads) return;
+  if (board.dragging) { deferred = true; return; }
   if (snapshot?.revision !== value.revision || deferred) {
     deferred = false;
     snapshot = value;
@@ -146,19 +149,6 @@ async function refreshCatalog() {
   const value = await observe({ kind: "catalog" });
   if (value.kind !== "catalog" || sequence !== catalogReads) return;
   catalog = value;
-  const model = modelPicker.value;
-  modelPicker.replaceChildren(...(value.palette.length === 0 ? [option("", "No models selected")]
-    : value.palette.map(item => option(item.id, item.title))));
-  if (value.palette.some(item => item.id === model)) modelPicker.value = model;
-  const path = mediaPicker.value;
-  const media = value.media.entries.filter(item => item.state === "available");
-  mediaPicker.replaceChildren(...(media.length === 0 ? [option("", "No Project Media")]
-    : media.map(item => option(item.reference.path, filename(item.reference.path)))));
-  if (media.some(item => item.reference.path === path)) mediaPicker.value = path;
-  addModel.disabled = value.palette.length === 0;
-  addMedia.disabled = media.length === 0;
-  modelPicker.disabled = addModel.disabled;
-  mediaPicker.disabled = addMedia.disabled;
   renderBoard();
 }
 
@@ -173,15 +163,16 @@ async function refreshHistory() {
   if (container !== null) renderHistory(container, preview, node, model, snapshot.document, value.entries, actions);
 }
 
-function save(commands: CanvasCommand[]) {
+function save(commands: CanvasCommand[], expectedRevision?: string) {
+  if (commands.length === 0) return;
   pending++;
   state.textContent = "Saving…";
   queue = queue.then(async () => {
     if (snapshot === undefined) return;
     try {
-      await request<CanvasCommandReceipt>("command", { expectedRevision: snapshot.revision, commands });
+      await request<CanvasCommandReceipt>("command", { expectedRevision: expectedRevision ?? snapshot.revision, commands });
       const added = commands.find(command => command.kind === "node.add");
-      if (added !== undefined && added.kind === "node.add") selected = added.node.id;
+      if (added !== undefined && added.kind === "node.add") selected = reveal = added.node.id;
       await refreshBoard();
       if (pending === 1) message("");
     } catch (error) {
@@ -197,25 +188,7 @@ function save(commands: CanvasCommand[]) {
   });
 }
 
-function add(node: CanvasNode) {
-  if (snapshot === undefined) return;
-  const layout = snapshot.document.layout;
-  let index = 0;
-  let placement: { x: number; y: number };
-  do {
-    placement = { x: index % 3 * 320, y: Math.floor(index / 3) * 180 };
-    index++;
-  } while (Object.values(layout).some(item => Math.abs(placement.x - item.x) < 250 && Math.abs(placement.y - item.y) < 125));
-  save([{ kind: "node.add", node, placement }]);
-}
-
-addModel.onclick = () => {
-  const item = catalog?.palette.find(model => model.id === modelPicker.value);
-  if (item !== undefined) add({ id: "recipe-" + globalThis.crypto.randomUUID().slice(0, 12), capability: item.id, inputs: {} });
-};
-addMedia.onclick = () => {
-  if (mediaPicker.value !== "") add({ id: "media-" + globalThis.crypto.randomUUID().slice(0, 12), media: { path: mediaPicker.value } });
-};
+addCard.onclick = () => board.openAdd();
 control("refresh").onclick = () => { void Promise.all([refreshBoard(), refreshCatalog()]).then(() => message("")).catch(fail); };
 inspector.addEventListener("focusout", () => {
   if (deferred) window.setTimeout(() => { if (pending === 0) void refreshBoard().catch(fail); }, 0);

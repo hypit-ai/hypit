@@ -3,13 +3,15 @@ import type { InvocationAddress, JsonValue } from "@hypit/execution";
 import type {
   CanvasAdoptionRequest, CanvasModel, CanvasObservation, CanvasPreviewRequest, CanvasQuoteReceipt,
 } from "../protocol.js";
-import { nodeTitle } from "./board.js";
+import { activeFields, nodeTitle, supplies } from "./wiring.js";
+import { cardSize } from "./placement.js";
 import { button, element, field, filename, option, titleFor } from "./dom.js";
 
 type Catalog = Extract<CanvasObservation, { kind: "catalog" }>;
 type Recipe = Extract<CanvasNode, { capability: string }>;
 type History = Extract<CanvasObservation, { kind: "history" }>;
 type ModelField = CanvasModel["fields"][number];
+const renderedHistories = new WeakMap<HTMLElement, string>();
 
 export type InspectorActions = {
   commit(commands: CanvasCommand[]): void;
@@ -29,15 +31,14 @@ function fieldChoices(nodes: CanvasDocument["nodes"], recipe: Recipe, model: Mod
   for (const node of nodes) {
     if (node.id === recipe.id) continue;
     if ("media" in node) {
-      const available = catalog.media.entries.find(entry => entry.reference.path === node.media.path);
-      if (available?.state === "available" && (model.media === undefined || available.mediaType.startsWith(model.media + "/"))) {
+      if (supplies(node, "media", model, catalog)) {
         outputChoices.push({ value: { from: { node: node.id, output: "media" } }, label: nodeTitle(node, catalog.models) + " · Media card" });
       }
       continue;
     }
     const definition = catalog.models.find(item => item.id === node.capability);
-    for (const [name, output] of Object.entries(definition?.outputs ?? {})) {
-      if (model.media !== undefined && output.media !== model.media) continue;
+    for (const name of Object.keys(definition?.outputs ?? {})) {
+      if (!supplies(node, name, model, catalog)) continue;
       outputChoices.push({ value: { from: { node: node.id, output: name } }, label: nodeTitle(node, catalog.models) + " · " + name });
     }
   }
@@ -153,6 +154,8 @@ function showPreview(target: HTMLElement, request: CanvasPreviewRequest, actions
 }
 
 export function renderInspector(root: HTMLElement, node: CanvasNode, document: CanvasDocument, catalog: Catalog, actions: InspectorActions) {
+  const panel = root.dataset.node === node.id && root.dataset.panel === "results" ? "results" : "parameters";
+  root.dataset.node = node.id;
   root.replaceChildren();
   const name = element("input");
   name.value = nodeTitle(node, catalog.models);
@@ -170,13 +173,14 @@ export function renderInspector(root: HTMLElement, node: CanvasNode, document: C
     const input = element("input");
     input.type = "number";
     input.step = "any";
-    input.value = String(placement[key] ?? (key === "width" ? 240 : 120));
+    if (key === "width" || key === "height") input.min = "1";
+    input.value = String(placement[key] ?? (key === "width" ? cardSize.width : cardSize.height));
     input.onchange = () => {
       if (input.value === "" || !input.checkValidity()) return;
       const value = Number(input.value);
       actions.commit(key === "x" || key === "y" ? [{ kind: "node.move", node: node.id, x: key === "x" ? value : placement.x,
         y: key === "y" ? value : placement.y }] : [{ kind: "node.resize", node: node.id,
-        width: key === "width" ? value : placement.width ?? 240, height: key === "height" ? value : placement.height ?? 120 }]);
+        width: key === "width" ? value : placement.width ?? cardSize.width, height: key === "height" ? value : placement.height ?? cardSize.height }]);
     };
     coordinates.append(field(titleFor(key), input));
   }
@@ -193,6 +197,21 @@ export function renderInspector(root: HTMLElement, node: CanvasNode, document: C
     root.append(field("Media asset", select), preview);
     showPreview(preview, { node: node.id }, actions);
   } else {
+    const tabs = element("div", "inspector-tabs");
+    const parameters = element("section", "inspector-panel");
+    const historyPanel = element("section", "inspector-panel");
+    const parametersTab = button("Parameters", () => showPanel("parameters"));
+    const resultsTab = button("Results", () => showPanel("results"));
+    function showPanel(name: "parameters" | "results") {
+      root.dataset.panel = name;
+      parameters.hidden = name !== "parameters";
+      historyPanel.hidden = name !== "results";
+      parametersTab.setAttribute("aria-pressed", String(!parameters.hidden));
+      resultsTab.setAttribute("aria-pressed", String(!historyPanel.hidden));
+    }
+    tabs.append(parametersTab, resultsTab);
+    root.append(tabs, parameters, historyPanel);
+    showPanel(panel);
     const model = catalog.models.find(model => model.id === node.capability);
     const results = Object.hasOwn(document.results, node.id) ? document.results[node.id] : undefined;
     const modelPicker = element("select");
@@ -209,15 +228,15 @@ export function renderInspector(root: HTMLElement, node: CanvasNode, document: C
       }
       actions.commit(commands);
     };
-    root.append(field("Model", modelPicker));
-    if (model === undefined) root.append(element("p", "muted", "Select the Model package in the Project manifest."));
-    else renderRecipe(root, node, model, document, catalog, actions);
+    parameters.append(field("Model", modelPicker));
+    if (model === undefined) parameters.append(element("p", "muted", "Select the Model package in the Project manifest."));
+    else renderRecipe(parameters, node, model, document, catalog, actions);
     const selected = Object.values(results?.selected ?? {}).find(item => item.resource !== undefined);
-    root.append(element("h2", "section-title", "Results"), preview);
+    historyPanel.append(element("h2", "section-title", "Generation history"), preview);
     if (selected !== undefined) showPreview(preview, { node: node.id, selection: selected }, actions);
     const history = element("div", "history");
     history.id = "history-entries";
-    root.append(history);
+    historyPanel.append(history);
   }
   root.append(button("Remove card", () => {
     if (window.confirm("Remove this card and its links?")) actions.commit([{ kind: "node.remove", node: node.id }]);
@@ -228,11 +247,8 @@ export function renderInspector(root: HTMLElement, node: CanvasNode, document: C
 function renderRecipe(
   root: HTMLElement, node: Recipe, model: CanvasModel, document: CanvasDocument, catalog: Catalog, actions: InspectorActions,
 ) {
-  const mode = node.inputs.mode;
-  const activeMode = mode !== undefined && "value" in mode ? mode.value : model.fields.find(field => field.name === "mode")?.default;
   const parameters = element("div", "fields");
-  for (const descriptor of model.fields) {
-    if (descriptor.modes !== undefined && !descriptor.modes.some(mode => mode === activeMode)) continue;
+  for (const descriptor of activeFields(node, model)) {
     if (descriptor.kind === "resource" || descriptor.kind === "resources") {
       parameters.append(renderResource(node, descriptor, node.inputs[descriptor.name], document, catalog, actions));
     } else parameters.append(renderValue(node, descriptor, model, actions));
@@ -281,6 +297,9 @@ export function renderHistory(
 ) {
   const focused = window.document.activeElement;
   if (focused instanceof HTMLElement && root.contains(focused)) return;
+  const signature = JSON.stringify(entries);
+  if (renderedHistories.get(root) === signature) return;
+  renderedHistories.set(root, signature);
   root.replaceChildren();
   const results = Object.hasOwn(board.results, node.id) ? board.results[node.id] : undefined;
   if (entries.length === 0) {

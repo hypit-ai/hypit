@@ -67,6 +67,11 @@ Canvas Product Session 持有文档 lease，把作者事实、项目模型目录
 引用提供预览。会话关闭时释放文档 lease、订阅和预览资源。已接受的 Invocation 继续由 Environment
 负责，再打开时按文件中附着的地址读取进度和结果。
 
+Canvas Studio 在浏览器里处理镜头、吸附和手势反馈。移动和缩放卡片完成后提交一份修订事务。端口的可用性来自
+项目 Model 描述及当前参数；连线建立、移除和检查器里的输入编辑提交相同的 Canvas 输入命令。将端口拖到空白处时，
+新增卡片及其输入关系在同一事务保存。图片和视频预览通过 Product Session 读取 Project Media 或明确选择的
+Publication 资源。
+
 单节点准备、报价、提交及附着是项目作用域下的 Canvas 操作。其实现复用 Canvas Service 和 ProjectHost
 提供的依赖，Canvas Product Session、CLI 和项目程序都可以调用。Product Session 负责观察、会话资源和
 交互投影。Media 采用经现有 Media Service 独立提交，接受后的引用可被 Canvas 和 NLE 分别显式使用。
