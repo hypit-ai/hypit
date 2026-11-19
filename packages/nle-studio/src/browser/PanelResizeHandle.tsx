@@ -19,7 +19,8 @@ export function PanelResizeHandle({ side, label, width, onResize }: {
     const current = gesture.current;
     if (!current || current.pointer !== event.pointerId) return;
     current.value = Math.round(Math.max(180, Math.min(current.max, current.initial + (event.clientX - current.x) * (side === 'bin' ? 1 : -1))));
-    onResize(current.value, false);
+    // Live preview without a React render; the final width is committed through onResize when the drag ends.
+    event.currentTarget.closest<HTMLElement>('.nle-editor')?.style.setProperty(side === 'bin' ? '--nle-bin-preferred' : '--nle-properties-preferred', `${current.value}px`);
   };
   const finish = (event: PointerEvent<HTMLDivElement>) => {
     if (gesture.current?.pointer !== event.pointerId) return;
@@ -71,7 +72,8 @@ export function TimelineResizeHandle({ height, onResize }: {
     const current = gesture.current;
     if (!current || current.pointer !== event.pointerId) return;
     current.value = clamp(current.initial - (event.clientY - current.y), current.max);
-    onResize(current.value, false);
+    // Live preview without a React render; the final height is committed through onResize when the drag ends.
+    event.currentTarget.closest<HTMLElement>('.nle-editor')?.style.setProperty('--nle-timeline-height', `${current.value}px`);
   };
   const finish = (event: PointerEvent<HTMLDivElement>) => {
     if (gesture.current?.pointer !== event.pointerId) return;
