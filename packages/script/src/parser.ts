@@ -111,12 +111,15 @@ export function parseScript(
   sourceName: string,
   input: string,
   sourceOffset = 0,
+  sourceForLocation?: string,
 ): ParsedNarrative {
   // Source ranges are a public inverse used by Studio and diagnostics. Parse
   // the exact UTF-16 text so CRLF and decomposed Unicode never shift an edit.
   const source = input;
+  // A slice with a non-zero offset cannot produce an absolute line without the full source.
+  const positionSource = sourceForLocation ?? (sourceOffset === 0 ? source : undefined);
   const fail = (code: string, message: string, offset?: number): never => {
-    throw new ScriptSyntaxError(code, message, sourceName, offset === undefined ? undefined : sourceOffset + offset);
+    throw new ScriptSyntaxError(code, message, sourceName, offset === undefined ? undefined : sourceOffset + offset, positionSource);
   };
 
   const segments: ParsedSegment[] = [];

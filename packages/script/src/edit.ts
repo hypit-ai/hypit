@@ -105,7 +105,7 @@ function rewrite(input: AdjustmentInput, markers: readonly NamedAnchor[]): strin
     }
   }
   const base = applyEdits(input.source, edits);
-  const parsed = parseScript(input.sourceName, base, origin);
+  const parsed = parseScript(input.sourceName, base, origin, base);
   const sites = new Map(scriptAnchorEditSites(parsed).map((site, order) => [site.anchorId, { ...site, order }]));
   const groups = new Map<number, Array<NamedAnchor & { affinity: Affinity; order: number }>>();
   for (const value of moved) {
@@ -126,7 +126,7 @@ function rewrite(input: AdjustmentInput, markers: readonly NamedAnchor[]): strin
     return { range: { start: offset, end: offset }, replacement };
   });
   const next = applyEdits(base, insertions);
-  const reparsed = parseScript(input.sourceName, next, origin);
+  const reparsed = parseScript(input.sourceName, next, origin, next);
   const actual = namedAnchors(reparsed);
   if (canonicalStringify(actual) !== canonicalStringify(markers)) {
     throw new Error("Script marker adjustment did not preserve the requested semantic bindings.");
