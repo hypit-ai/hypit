@@ -3,7 +3,7 @@ import type { NleCommand } from "@hypit/nle";
 import type { NleTimelineSceneItem } from "@hypit/nle/view";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
-import { Blend, Captions, Images, Maximize2, Minimize2, Pause, Play, Redo2, StepBack, StepForward, Type, Undo2, Volume2, VolumeX, Wand2 } from "lucide-react";
+import { Blend, Captions, Images, Maximize2, Minimize2, Pause, Play, StepBack, StepForward, Type, Volume2, VolumeX, Wand2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   NleStudioAdjustCatalogEntry,
@@ -689,11 +689,9 @@ export function Studio() {
         ? <button type="button" className="button" onClick={() => setConflictOpen(true)}>自动保存暂停</button>
         : <small>{dirty ? busy ? "正在自动保存" : "有未保存的修改" : savedAt ? `${saveTime.format(savedAt)} 已自动保存` : "已自动保存"}</small>}</div>
         <button type="button" className="nle-titlebar-name" disabled={editingDisabled} onClick={() => setRenameProject(true)} title="重命名项目">{projectName}</button>
-        <div className="nle-titlebar-side end"><div className="nle-toolbar-actions">
-          <IconButton label="撤销" disabled={busy || !canReplay("undo")} onClick={() => replay("undo")}><Undo2 size={16}/></IconButton>
-          <IconButton label="重做" disabled={busy || !canReplay("redo")} onClick={() => replay("redo")}><Redo2 size={16}/></IconButton>
+        <div className="nle-titlebar-side end">
           <button type="button" className="button" disabled={busy} onClick={() => dirty ? setConflictOpen(true) : useFileVersion()}>重载</button>
-        </div></div>
+        </div>
       </div>
       <Dialog.Root open={conflictOpen} onOpenChange={setConflictOpen}>
         <Dialog.Portal><Dialog.Backdrop className="studio-dialog-backdrop"/><Dialog.Popup className="studio-dialog modal">
