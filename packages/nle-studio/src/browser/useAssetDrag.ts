@@ -30,7 +30,7 @@ export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObjec
         const track = scene.tracks.find(track => track.id === target.dataset.nleDrop);
         const compatible = track === undefined
           || (cuts !== undefined ? track.kind === "picture" && !track.locked
-            : role === "effect" ? !track.locked && track.role !== "subtitle"
+            : role === "effect" ? mediaTrackCompatible(track, entry.kind, track.role) && (track.role === undefined || track.role === "effect")
             : mediaTrackCompatible(track, entry.kind, role));
         if (pixels > 0 && compatible && pointer.x >= bounds.left + labelWidth && pointer.y >= bounds.top + rulerHeight) {
           const position = (pointer.x - bounds.left - labelWidth + viewport.scrollLeft) / pixels;

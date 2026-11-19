@@ -1,7 +1,7 @@
 import type { NleTimelineSceneItem, NleTimelineSceneTrack } from "@hypit/nle/view";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
-  ArrowLeft, AudioLines, Blend, CircleMinus, CirclePlus, ClipboardCheck, Crop, Film, Group, Layers, Link2, Lock, Magnet,
+  ArrowLeft, AudioLines, Blend, Captions, CircleMinus, CirclePlus, ClipboardCheck, Crop, Film, Group, Layers, Link2, Lock, Magnet,
   PanelLeftClose, PanelRightClose, Plus, Redo2, Scan, Scissors, Snowflake, Trash2, Type, Undo2, Unlock,
   Volume2, VolumeX,
 } from "lucide-react";
@@ -40,12 +40,12 @@ type Gesture = {
 
 type MarqueeBox = { readonly left: number; readonly top: number; readonly width: number; readonly height: number; readonly visible: boolean };
 
-function clipClass(item: NleTimelineSceneItem, track: NleTimelineSceneTrack): string {
+function clipClass(item: NleTimelineSceneItem, track: NleTimelineSceneTrack, isText: boolean): string {
   if (item.role === "adjust") return "effect";
   if (track.kind === "audio") return "audio";
-  if (track.role === "subtitle") return "text";
+  if (track.role === "subtitle" || isText) return "text";
   if (item.source === "composition") return "compound";
-  return item.display.layers.some(layer => layer.kind === "text") ? "text" : "visual";
+  return "visual";
 }
 
 function ProcessTimingHandle({ timing, duration, pixels, disabled, onSelect, onResize }: {
@@ -204,10 +204,11 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const draftRef = useRef<typeof draft>(undefined), gesture = useRef<Gesture | undefined>(undefined);
   const cancelTrim = useRef<() => void>(() => undefined);
   const snapBoundaries = useMemo(() => timelineSnapBoundaries(scene), [scene]);
+  const textItems = useMemo(() => new Set(session.timeline.textItems), [session.timeline.textItems]);
   const seek = useTimelineSeek(scroller, pixels, labelWidth, frame, endFrame, snap ? snapBoundaries : undefined, onSeek);
   const marquee = useMarquee(scroller, selection, onSelect);
   const reorder = useTrackReorder(scroller, scene.tracks, `${session.status.projectRevision}:${session.status.viewRevision}`, busy, onTrackMove);
-  const itemGesture = useItemGesture({ scene, scroller, pixels, frame, snap, busy, selection, onSelect, onMove });
+  const itemGesture = useItemGesture({ scene, textItems, scroller, pixels, frame, snap, busy, selection, onSelect, onMove });
   const [resolvedDrop, setResolvedDrop] = useState<{ key: string; value: NleStudioDropDestination }>();
   const itemDrag = itemGesture.gesture;
   const intent = itemDrag?.intent;
@@ -390,14 +391,14 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
           return <TrackMenu key={track.id} name={track.name} disabled={busy || track.locked} pixels={pixels} gaps={gaps}
             onCloseGap={at => onCloseGap(track.id, at)} onRename={name => onTrackRename(track.id, name)}
             {...(track.items.length > 0 ? {} : { onRemove: () => onTrackRemove(track.id) })}
-            onHeight={height => onTrackHeight(track.id, height)}><div className={`nle-track${rowSize(track) === 36 ? " compact" : ""}${track.locked ? " locked" : ""}`} data-track-id={track.id} key={track.id} style={{ height: rowSize(track) }}>
-          <div className={`nle-track-label${reorder.position?.trackId === track.id ? " reordering" : ""}`} data-reorderable={!track.locked && !busy} title={track.name} onPointerDown={event => reorder.start(event, track)}><span className="nle-track-icons"><span className="nle-track-kind">{track.items.every(item => item.role === "adjust") ? <Layers size={14}/> : track.kind === "audio" ? <AudioLines size={14}/> : track.items.some(item => item.display.layers.some(layer => layer.kind === "text")) ? <Type size={14}/> : <Film size={14}/>}</span>
+            onHeight={track.role === undefined ? height => onTrackHeight(track.id, height) : undefined}><div className={`nle-track${rowSize(track) === 36 ? " compact" : ""}${track.locked ? " locked" : ""}`} data-track-id={track.id} key={track.id} style={{ height: rowSize(track) }}>
+          <div className={`nle-track-label${reorder.position?.trackId === track.id ? " reordering" : ""}`} data-reorderable={!track.locked && !busy} title={track.name} onPointerDown={event => reorder.start(event, track)}><span className="nle-track-icons"><span className="nle-track-kind">{track.role === "effect" ? <Layers size={14}/> : track.role === "subtitle" ? <Captions size={14}/> : track.role === "text" ? <Type size={14}/> : track.kind === "audio" ? <AudioLines size={14}/> : <Film size={14}/>}</span>
             <IconButton label={track.locked ? "解锁轨道" : "锁定轨道"} className="nle-track-lock" disabled={busy} aria-pressed={track.locked} onClick={() => onTrackLocked(track.id, !track.locked)}>{track.locked ? <Lock size={14}/> : <Unlock size={14}/>}</IconButton>
             <IconButton label={track.enabled ? "停用轨道" : "启用轨道"} disabled={busy} onClick={() => onTrackEnabled(track.id, !track.enabled)}>{track.enabled ? <Volume2 size={14}/> : <VolumeX size={14}/>}</IconButton></span></div>
           <div className="nle-track-content" data-drop-target={highlightedTrack === track.id ? "" : undefined} data-nle-drop={track.id} style={{ width }} onPointerDown={event => { if (event.target === event.currentTarget) seek.start(event); }}>
             {track.items.map(item => {
               const current = draft?.id === item.id ? draft : { start: item.startFrame, duration: item.durationFrames };
-              const kind = clipClass(item, track);
+              const kind = clipClass(item, track, textItems.has(item.id));
               const preview = item.display.layers.find(layer => layer.kind === "preview" && layer.state === "ready");
               const text = item.display.layers.find(layer => layer.kind === "text");
               const timing = tool === "select" && selectedProcess?.item === item.id

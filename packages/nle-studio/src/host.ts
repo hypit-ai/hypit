@@ -85,6 +85,7 @@ import {
 import {
   allocateTimelinePlacement, assertTransitionMove, nleRetimeWindow, planTimelineDrop, planTimelineEdit,
   planTimelineInsertion, planTimelineTrackReorder, planTransitionWindow, resolveTransitionCut, studioFrameTime,
+  studioTextItems, studioTrackRole,
 } from "./timeline-planning.js";
 import { observeTimelineMedia } from "./timeline-media.js";
 import { planTrimEdge, projectTrimRange } from "./trim-planning.js";
@@ -455,6 +456,12 @@ export class NleStudioProductSession {
     if (observation.kind !== "timeline") throw new Error("NLE Studio received an invalid Timeline projection.");
     const project = this.#projectLease.service.snapshot().project;
     const composition = project.compositions.find((value) => value.id === observation.value.composition)!;
+    const textItems = studioTextItems(composition, this.#packages.components);
+    const tracksById = new Map(composition.tracks.map(track => [track.id, track]));
+    const tracks = observation.value.tracks.map(track => {
+      const role = studioTrackRole(tracksById.get(track.id)!, textItems);
+      return role === undefined ? track : { ...track, role, heightPx: 36 };
+    });
     const referenced = new Set(project.compositions.flatMap(entry => entry.tracks.flatMap(track => track.items.flatMap(item =>
       item.kind === "present" && item.source === "composition" ? [item.composition] : []))));
     const { view } = this.#viewService.snapshot();
@@ -463,7 +470,7 @@ export class NleStudioProductSession {
     const ranges: [string, NleStudioTimelineProjection["trimRanges"][string]][] = [];
     for (const track of observation.value.tracks) for (const scene of track.items) {
       if (!scene.affordances.trimStart && !scene.affordances.trimEnd) continue;
-      const subjectTrack = composition.tracks.find(value => value.id === track.id)!;
+      const subjectTrack = tracksById.get(track.id)!;
       const item = subjectTrack.items.find(value => value.id === scene.id)!;
       const source = this.#trimSource(project, composition, subjectTrack, item, entries);
       const rate = observation.value.editRate;
@@ -472,7 +479,8 @@ export class NleStudioProductSession {
       ranges.push([item.id, { ...(start === undefined ? {} : { start }), ...(end === undefined ? {} : { end }) }]);
     }
     return {
-      scene: observation.value,
+      scene: { ...observation.value, tracks },
+      textItems: [...textItems],
       trimRanges: Object.fromEntries(ranges),
       canReturn: visit?.child === composition.id && project.compositions.some(entry => entry.id === visit.parent),
       compositions: project.compositions.map(({ id, name }) => ({ id, name, referenced: referenced.has(id) })),
@@ -614,7 +622,12 @@ export class NleStudioProductSession {
         if (view.revision !== request.drop.expectedViewRevision) {
           throw new NleEditingSurfaceRevisionConflict("view", request.drop.expectedViewRevision, view.revision);
         }
-        const plan = planTimelineDrop(project.project, view.view, request.drop);
+        const composition = project.project.compositions.find(value => value.id === request.drop.composition);
+        if (composition === undefined || view.view.activeComposition !== composition.id) {
+          throw new Error(`NLE Studio drop targets inactive Composition ${request.drop.composition}.`);
+        }
+        const plan = planTimelineDrop({ project: project.project, view: view.view, composition },
+          studioTextItems(composition, this.#packages.components), request.drop);
         if (plan.commands.length > 0) applyNleTransaction(project.project, { commands: plan.commands });
         return { kind: "timeline-drop", value: plan.destination };
       }
@@ -771,6 +784,7 @@ export class NleStudioProductSession {
     }
     const duration = durationOverride === undefined ? undefined : frameTime(durationOverride);
     const context = { project, view, composition };
+    const textItems = () => studioTextItems(composition, this.#packages.components);
     const currentItems = () => composition.tracks.flatMap(track => track.items);
     const identity = (role: string) => `${role}-${randomUUID()}`;
     const placePresent = (
@@ -781,7 +795,7 @@ export class NleStudioProductSession {
       role?: NleTrack["role"],
     ) => {
       const purpose = { kind: "present", start, duration: length } as const;
-      const placement = allocateTimelinePlacement(context, { medium, track: input.track, purpose, ...(role === undefined ? {} : { role }) });
+      const placement = allocateTimelinePlacement(context, textItems(), { medium, track: input.track, purpose, ...(role === undefined ? {} : { role }) });
       if (input.insertTracks === undefined) return placement;
       if (input.track === undefined) throw new Error("NLE Studio insertion requires a destination Track.");
       const commands = planTimelineInsertion(context, input.track, input.insertTracks, start, length);
@@ -804,7 +818,7 @@ export class NleStudioProductSession {
 
     switch (operation.kind) {
       case "timeline.drop": {
-        const plan = planTimelineDrop(project, view, operation);
+        const plan = planTimelineDrop(context, textItems(), operation);
         return commitTrackArrangement(plan, { track: plan.anchorTrack });
       }
       case "timeline.track-reorder":
@@ -985,7 +999,7 @@ export class NleStudioProductSession {
         if (offering === undefined) {
           throw new Error(`NLE Studio Adjust offering ${operation.package}#${operation.offering} is not selected.`);
         }
-        const placement = allocateTimelinePlacement(context, {
+        const placement = allocateTimelinePlacement(context, textItems(), {
           medium: offering.value.medium, track: operation.track, purpose: { kind: "adjust" },
         });
         const item = identity("adjust");
@@ -1137,7 +1151,7 @@ export class NleStudioProductSession {
       case "audio.detach": {
         const source = currentItems().find(item => item.id === operation.item);
         if (source === undefined) throw new Error(`Unknown NLE Item ${operation.item} in Composition ${composition.id}.`);
-        const placement = allocateTimelinePlacement(context, {
+        const placement = allocateTimelinePlacement(context, textItems(), {
           medium: "audio", track: operation.track,
           purpose: { kind: "present", start: source.start, duration: source.duration },
         });

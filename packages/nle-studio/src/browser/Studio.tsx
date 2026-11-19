@@ -568,7 +568,8 @@ export function Studio() {
             })}>{rate.numerator < 0 ? "恢复正放" : "倒放"}</button>
           </Section>}
           {propertiesTab === "text" ? <TimelineTextList scene={scene} selection={selection}
-            textItems={new Set(scene.tracks.filter(track => track.role === "subtitle" || track.role === "text").flatMap(track => track.items.map(item => item.id)))}
+            textItems={new Set([...session.timeline.textItems,
+              ...scene.tracks.filter(track => track.role === "subtitle").flatMap(track => track.items.map(item => item.id))])}
             inspector={inspector?.scene} disabled={editingDisabled} onSelect={item => {
               setPlaying(false); setSource(undefined); setFrame(Math.round(item.startFrame)); select([item.id]);
             }} onEdit={(item, section, field, value) => { void command({ ...operationContext, kind: "inspector.edit", item, section, field, value }); }}

@@ -87,6 +87,7 @@ export type NleStudioTrimRange = { readonly minimum: number; readonly maximum: n
 
 export type NleStudioTimelineProjection = {
   readonly scene: NleTimelineScene;
+  readonly textItems: readonly string[];
   readonly canReturn: boolean;
   readonly compositions: readonly { readonly id: string; readonly name: string; readonly referenced: boolean }[];
   readonly retimeRates: Readonly<Record<string, TemporalRate>>;

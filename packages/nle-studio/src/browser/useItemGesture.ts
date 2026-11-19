@@ -23,12 +23,12 @@ export type ItemGestureState = {
   readonly intent?: ItemDropIntent;
 };
 
-function itemKind(item: NleTimelineSceneItem, track: NleTimelineSceneTrack): FloatingItem["kind"] {
+function itemKind(item: NleTimelineSceneItem, track: NleTimelineSceneTrack, isText: boolean): FloatingItem["kind"] {
   if (item.role === "adjust") return "effect";
   if (track.kind === "audio") return "audio";
-  if (track.role === "subtitle") return "text";
+  if (track.role === "subtitle" || isText) return "text";
   if (item.source === "composition") return "compound";
-  return item.display.layers.some((layer) => layer.kind === "text") ? "text" : "visual";
+  return "visual";
 }
 
 function relatedItems(scene: NleTimelineScene, seeds: readonly string[], moving = false): string[] {
@@ -52,8 +52,9 @@ function relatedItems(scene: NleTimelineScene, seeds: readonly string[], moving 
 }
 
 /** Session-local pointer feedback. The operation resolves destinations after release. */
-export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, selection, onSelect, onMove }: {
+export function useItemGesture({ scene, textItems, scroller, pixels, frame, snap, busy, selection, onSelect, onMove }: {
   readonly scene: NleTimelineScene;
+  readonly textItems: ReadonlySet<string>;
   readonly scroller: RefObject<HTMLDivElement | null>;
   readonly pixels: number;
   readonly frame: number;
@@ -93,6 +94,7 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
     const origins = new Map(Array.from(viewport.querySelectorAll<HTMLElement>("[data-clip-id]"))
       .map((element) => [element.dataset.clipId!, element.getBoundingClientRect()] as const));
     const boundaries = timelineSnapBoundaries(scene, ids);
+    const sourceRole = textItems.has(item.id) ? "text" : track.role === "text" ? undefined : track.role;
     const movingEdges = members.flatMap(member => [member.item.startFrame, member.item.startFrame + member.item.durationFrames]);
     const minimum = -Math.min(...members.map((member) => member.item.startFrame));
     handle.setPointerCapture(pointerId);
@@ -138,7 +140,7 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
         ? { kind: "gap", ...(before === undefined ? {} : { before }) }
         : lane === undefined ? undefined : { kind: "track", track: lane.id };
       const valid = inside && target !== undefined && (target.kind === "gap"
-        || lane?.kind === track.kind && lane.role === track.role && !lane.locked);
+        || lane?.kind === track.kind && lane.role === sourceRole && !lane.locked);
       const raw = Math.max(Math.ceil(minimum), Math.round((pointer.x - startX + viewport.scrollLeft - scrollLeft) / pixels));
       const aligned = snap && !pointer.alt && (raw !== 0 || target?.kind !== "gap")
         ? snapTimelineEdges(movingEdges.map(value => value + raw), frame, boundaries, pixels, delta => raw + delta >= minimum)
@@ -147,7 +149,7 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
       const floating = members.flatMap((member): FloatingItem[] => {
         const origin = origins.get(member.item.id);
         return origin === undefined ? [] : [{ id: member.item.id, title: member.item.display.title,
-          kind: itemKind(member.item, member.track), left: origin.left + (aligned === undefined ? pointer.x - startX : delta * pixels - (viewport.scrollLeft - scrollLeft)),
+          kind: itemKind(member.item, member.track, textItems.has(member.item.id)), left: origin.left + (aligned === undefined ? pointer.x - startX : delta * pixels - (viewport.scrollLeft - scrollLeft)),
           top: origin.top + pointer.y - startY, width: origin.width, height: origin.height }];
       });
       proposed = valid ? { anchor: item.id, items: seeds, deltaFrames: delta, target } : undefined;

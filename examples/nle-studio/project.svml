@@ -14,6 +14,17 @@
       </present>
     </track>
     <track id="picture-overlay" name="Picture · Overlay" kind="picture" enabled="true">
+      <present id="b-roll" name="Editing detail" source="media" start="7/1" duration="7/1" enabled="true">
+        <media path="media/media-20261115222651_656_168/media-20261115222651_656_168.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="7/1" source-start="3/1" rate="1/1" />
+        </source-time>
+        <picture>
+          <layout x="1090" y="590" width="710" height="400" fit="cover" />
+        </picture>
+      </present>
+    </track>
+    <track id="picture-text" name="文字轨道" kind="picture" role="text" enabled="true">
       <present id="opening-title" name="A new way to edit" source="component" start="1/1" duration="5/1" enabled="true">
         <component package="@hypit/studio-components" symbol="Title" />
         <parameters>{"eyebrow":"HYPIT","title":"A new way to edit","accent":"#73e6b5"}</parameters>
@@ -22,15 +33,6 @@
         </source-time>
         <picture>
           <layout x="120" y="124" width="1680" height="300" fit="contain" />
-        </picture>
-      </present>
-      <present id="b-roll" name="Editing detail" source="media" start="7/1" duration="7/1" enabled="true">
-        <media path="media/media-20261115222651_656_168/media-20261115222651_656_168.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="7/1" source-start="3/1" rate="1/1" />
-        </source-time>
-        <picture>
-          <layout x="1090" y="590" width="710" height="400" fit="cover" />
         </picture>
       </present>
     </track>

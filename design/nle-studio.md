@@ -188,8 +188,9 @@ interpretation's timed duration unless the caller chooses a duration. Constant a
 View frame grid. Media placement also accepts a Picture layout and an Audio inclusion choice. Component and Adjust
 durations default to their offering. Automatic placement selects an enabled,
 unlocked Track of the required medium. Picture Presents use a free lane, and timed Adjusts use an effect Track at the end of their medium's authored order.
-Subtitle offerings allocate a Picture Track with the subtitle role. An explicitly chosen Track is checked for its
-medium, subtitle membership and View lock.
+Text and subtitle offerings allocate dedicated Picture Tracks with their respective roles. Studio checks the
+destination medium, role and View lock for placement. A Text Track can also be resolved from a lane containing
+only text Components. Text, subtitle and effect rows use the same compact height.
 
 Media, Component and Composition placement can include `insertTracks` with an explicit destination Track in that
 scope. The playhead must fall at a boundary or in empty space on each selected Track. The planner moves Items
