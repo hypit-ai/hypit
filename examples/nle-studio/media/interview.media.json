@@ -1,0 +1,194 @@
+{
+  "format": "hypit.media-asset",
+  "media": {
+    "file": {
+      "path": "interview.mp4",
+      "mediaType": "video/mp4"
+    },
+    "interpretation": {
+      "domain": {
+        "id": "media",
+        "duration": {
+          "ticks": "22",
+          "timeBase": {
+            "numerator": 1,
+            "denominator": 1
+          }
+        }
+      },
+      "picture": {
+        "kind": "signal",
+        "streamIndex": 0,
+        "presentationStart": {
+          "ticks": "0",
+          "timeBase": {
+            "numerator": 1,
+            "denominator": 15360
+          }
+        },
+        "sourceDomain": {
+          "id": "media:picture-source",
+          "duration": {
+            "ticks": "22",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          }
+        },
+        "map": {
+          "stages": [
+            {
+              "target": {
+                "id": "media",
+                "duration": {
+                  "ticks": "22",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                }
+              },
+              "source": {
+                "id": "media:picture-source",
+                "duration": {
+                  "ticks": "22",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                }
+              },
+              "pieces": [
+                {
+                  "target": {
+                    "start": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "numerator": 1,
+                        "denominator": 1
+                      }
+                    },
+                    "end": {
+                      "ticks": "22",
+                      "timeBase": {
+                        "numerator": 1,
+                        "denominator": 1
+                      }
+                    }
+                  },
+                  "sourceAtStart": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "rate": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "interpretation": {
+          "codedWidth": 640,
+          "codedHeight": 360,
+          "sampleAspectRatio": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "rotationDegrees": 0,
+          "picture": {
+            "colorPrimaries": "bt709",
+            "colorTransfer": "bt709",
+            "colorMatrix": "bt709",
+            "colorRange": "limited",
+            "bitDepth": 8,
+            "alphaMode": "opaque"
+          }
+        }
+      },
+      "audio": {
+        "streamIndex": 1,
+        "presentationStart": {
+          "ticks": "0",
+          "timeBase": {
+            "numerator": 1,
+            "denominator": 48000
+          }
+        },
+        "sourceDomain": {
+          "id": "media:audio-source",
+          "duration": {
+            "ticks": "22",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          }
+        },
+        "map": {
+          "stages": [
+            {
+              "target": {
+                "id": "media",
+                "duration": {
+                  "ticks": "22",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                }
+              },
+              "source": {
+                "id": "media:audio-source",
+                "duration": {
+                  "ticks": "22",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                }
+              },
+              "pieces": [
+                {
+                  "target": {
+                    "start": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "numerator": 1,
+                        "denominator": 1
+                      }
+                    },
+                    "end": {
+                      "ticks": "22",
+                      "timeBase": {
+                        "numerator": 1,
+                        "denominator": 1
+                      }
+                    }
+                  },
+                  "sourceAtStart": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "rate": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "representations": []
+}

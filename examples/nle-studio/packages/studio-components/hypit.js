@@ -17,6 +17,41 @@ function parameterEdit(operation, context) {
   return { ...context.item.parameters, [field]: value };
 }
 
+function renderTitle(item, { project }) {
+  const layout = item.picture.layout;
+  const { width, height } = "ref" in layout
+    ? project.sharedValues.find(value => value.id === layout.ref).value : layout;
+  const subtitle = item.role === "subtitle";
+  return {
+    region: { x: 0, y: 0, width, height },
+    visual: {
+      html: '<div data-title><div data-eyebrow></div><div data-heading></div></div>',
+      css: `:scope > [data-title] {
+        position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
+        align-items: ${subtitle ? "center" : "flex-start"}; gap: ${height * .06}px;
+        color: white; font: 700 ${height * .34}px/1.05 system-ui, sans-serif;
+        text-shadow: 0 2px 10px #0d191e;
+      }
+      :scope [data-eyebrow] { font-size: ${height * .13}px; letter-spacing: .12em; }
+      :scope [data-eyebrow]:empty { display: none; }`,
+      data: {
+        eyebrow: stringParameter(item.parameters, "eyebrow", "TITLE"),
+        heading: stringParameter(item.parameters, "title", "Editorial title"),
+        accent: stringParameter(item.parameters, "accent", "#73e6b5"),
+      },
+      setup: `
+        const eyebrow = root.querySelector('[data-eyebrow]');
+        const heading = root.querySelector('[data-heading]');
+        eyebrow.textContent = data.eyebrow;
+        heading.textContent = data.heading;
+        eyebrow.style.color = data.accent;
+        if (data.eyebrow === '') heading.style.color = data.accent;
+        return () => {};
+      `,
+    },
+  };
+}
+
 export const hypitPackage = {
   package: packageName,
   contributions: [{
@@ -81,6 +116,9 @@ export const hypitPackage = {
       componentValues: [],
       operators: [],
     },
+  }, {
+    kind: "hypit.nle-render",
+    value: { components: [{ symbol: title.symbol, render: renderTitle }] },
   }],
   catalog: [{
     id: "editorial-title",

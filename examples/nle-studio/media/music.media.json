@@ -1,0 +1,99 @@
+{
+  "format": "hypit.media-asset",
+  "media": {
+    "file": {
+      "path": "music.m4a",
+      "mediaType": "audio/mp4"
+    },
+    "interpretation": {
+      "domain": {
+        "id": "media",
+        "duration": {
+          "ticks": "22",
+          "timeBase": {
+            "numerator": 1,
+            "denominator": 1
+          }
+        }
+      },
+      "audio": {
+        "streamIndex": 0,
+        "presentationStart": {
+          "ticks": "0",
+          "timeBase": {
+            "numerator": 1,
+            "denominator": 48000
+          }
+        },
+        "sourceDomain": {
+          "id": "media:audio-source",
+          "duration": {
+            "ticks": "22",
+            "timeBase": {
+              "numerator": 1,
+              "denominator": 1
+            }
+          }
+        },
+        "map": {
+          "stages": [
+            {
+              "target": {
+                "id": "media",
+                "duration": {
+                  "ticks": "22",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                }
+              },
+              "source": {
+                "id": "media:audio-source",
+                "duration": {
+                  "ticks": "22",
+                  "timeBase": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                }
+              },
+              "pieces": [
+                {
+                  "target": {
+                    "start": {
+                      "ticks": "0",
+                      "timeBase": {
+                        "numerator": 1,
+                        "denominator": 1
+                      }
+                    },
+                    "end": {
+                      "ticks": "22",
+                      "timeBase": {
+                        "numerator": 1,
+                        "denominator": 1
+                      }
+                    }
+                  },
+                  "sourceAtStart": {
+                    "ticks": "0",
+                    "timeBase": {
+                      "numerator": 1,
+                      "denominator": 1
+                    }
+                  },
+                  "rate": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "representations": []
+}

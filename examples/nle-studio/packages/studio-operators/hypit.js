@@ -19,6 +19,47 @@ function editColour(operation, context) {
   return { ...context.parameters, [field]: value };
 }
 
+function renderColour(process, { parameters }) {
+  const contrast = Math.max(0, numberParameter(parameters, "contrast", 1));
+  const saturation = Math.max(0, numberParameter(parameters, "saturation", 1));
+  const warmth = Math.max(-100, Math.min(100, numberParameter(parameters, "temperature", 0))) / 100;
+  const id = "studio-colour-" + Array.from(process.id, character => character.codePointAt(0).toString(16)).join("-");
+  return {
+    visual: {
+      html: `<svg width="0" height="0" aria-hidden="true"><filter id="${id}" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix" values="${1 + warmth * .2} 0 0 0 0  0 1 0 0 0  0 0 ${1 - warmth * .2} 0 0  0 0 0 1 0"/>
+        </filter></svg><div data-colour>{{input:signal}}</div>`,
+      css: `:scope > [data-colour] { position: absolute; inset: 0; filter: contrast(${contrast}) saturate(${saturation}) url(#${id}); }`,
+    },
+  };
+}
+
+function renderDissolve(transition, { domain }) {
+  return {
+    controls: ["progress"],
+    visual: {
+      html: '<div data-dissolve><div data-outgoing>{{input:outgoing}}</div><div data-incoming>{{input:incoming}}</div></div>',
+      css: `:scope > [data-dissolve] { position: absolute; inset: 0; isolation: isolate; }
+      :scope [data-outgoing], :scope [data-incoming] { position: absolute; inset: 0; }
+      :scope [data-incoming] { mix-blend-mode: plus-lighter; }`,
+      data: { duration: domain.duration, smooth: transition.parameters.curve === "smooth" },
+      setup: `
+        const outgoing = root.querySelector('[data-outgoing]');
+        const incoming = root.querySelector('[data-incoming]');
+        const seconds = value => Number(value.ticks) * value.timeBase.numerator / value.timeBase.denominator;
+        const duration = seconds(data.duration);
+        return frame => {
+          const position = context.controlPosition('progress', frame);
+          const progress = position === undefined ? 0 : Math.max(0, Math.min(1, seconds(position) / duration));
+          const opacity = data.smooth ? progress * progress * (3 - 2 * progress) : progress;
+          outgoing.style.opacity = String(1 - opacity);
+          incoming.style.opacity = String(opacity);
+        };
+      `,
+    },
+  };
+}
+
 export const hypitPackage = {
   package: packageName,
   contributions: [{
@@ -86,6 +127,12 @@ export const hypitPackage = {
           }],
         }],
       }],
+    },
+  }, {
+    kind: "hypit.nle-render",
+    value: {
+      pictureProcesses: [{ symbol: colour.symbol, render: renderColour }],
+      transitions: [{ symbol: crossDissolve.symbol, render: renderDissolve }],
     },
   }],
   catalog: [{
