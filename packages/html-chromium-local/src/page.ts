@@ -65,14 +65,23 @@ export class ChromiumHtmlPage {
   }
 
   static async open(input: { readonly executable: string; readonly url: string; readonly width: number; readonly height: number;
-    readonly selection: readonly { readonly startFrame: number; readonly endFrameExclusive: number }[] }): Promise<ChromiumHtmlPage> {
+    readonly selection: readonly { readonly startFrame: number; readonly endFrameExclusive: number }[];
+    readonly signal?: AbortSignal }): Promise<ChromiumHtmlPage> {
+    input.signal?.throwIfAborted();
     const directory = await mkdtemp(join(tmpdir(), "hypit-html-chromium-"));
     const process = spawn(input.executable, ["--headless=new", "--hide-scrollbars", "--no-first-run",
       "--no-default-browser-check", "--allow-file-access-from-files", "--remote-debugging-port=0",
       `--user-data-dir=${join(directory, "profile")}`, `--window-size=${input.width},${input.height}`, "about:blank"],
     { detached: globalThis.process.platform !== "win32", stdio: ["ignore", "pipe", "pipe"] });
     let socket: WebSocket | undefined;
-    try {
+    let stage = "opening DevTools";
+    let rejectReadiness!: (error: unknown) => void;
+    const cancelled = new Promise<never>((_resolve, reject) => { rejectReadiness = reject; });
+    const abort = () => rejectReadiness(input.signal?.reason);
+    const timeout = setTimeout(() => rejectReadiness(new Error(`Chromium timed out while ${stage}.`)), 30_000).unref();
+    input.signal?.addEventListener("abort", abort, { once: true });
+    if (input.signal?.aborted) abort();
+    const prepare = async () => {
       const websocket = await new Promise<string>((resolve, reject) => {
         let value = "";
         const inspect = (chunk: Buffer) => {
@@ -84,11 +93,13 @@ export class ChromiumHtmlPage {
         process.once("error", reject);
         process.once("exit", code => reject(new Error(`Chromium exited before opening DevTools (${code ?? "signal"}).`)));
       });
+      stage = "connecting to DevTools";
       socket = new WebSocket(websocket);
       await new Promise<void>((resolve, reject) => {
         socket!.addEventListener("open", () => resolve(), { once: true });
         socket!.addEventListener("error", () => reject(new Error("Cannot connect to Chromium DevTools.")), { once: true });
       });
+      stage = "creating the capture page";
       const provisional = new ChromiumHtmlPage(process, socket, directory, "");
       const target = await provisional.#call("Target.createTarget", { url: "about:blank" }) as { targetId: string };
       const attached = await provisional.#call("Target.attachToTarget", { targetId: target.targetId, flatten: true }) as { sessionId: string };
@@ -98,10 +109,19 @@ export class ChromiumHtmlPage {
       await page.#call("Runtime.enable", {}, true);
       await page.#call("Emulation.setDeviceMetricsOverride", { width: input.width, height: input.height,
         deviceScaleFactor: 1, mobile: false }, true);
-      await Promise.all([page.#event("Page.loadEventFired"), page.#call("Page.navigate", { url: input.url }, true)]);
+      stage = "loading the HTML program";
+      const navigation = page.#call("Page.navigate", { url: input.url }, true).then(value => {
+        const { errorText } = value as { errorText?: string };
+        if (errorText !== undefined) throw new Error(`Cannot load the HTML program: ${errorText}.`);
+      });
+      await Promise.all([page.#event("Page.loadEventFired"), navigation]);
+      stage = "preparing the HTML program";
       await page.#evaluate("window.__hypitUsePreparedSourceFrames('/__hypit_source')", true);
       await page.#evaluate(`window.__hypitFrameProgram.prepare(${JSON.stringify(input.selection)})`, true);
       return page;
+    };
+    try {
+      return await Promise.race([prepare(), cancelled]);
     } catch (error) {
       socket?.close();
       try { await closeChromiumProcess(process, directory); }
@@ -109,6 +129,9 @@ export class ChromiumHtmlPage {
         throw new AggregateError([error, cleanupError], "Chromium failed to open and its process tree did not close cleanly.");
       }
       throw error;
+    } finally {
+      clearTimeout(timeout);
+      input.signal?.removeEventListener("abort", abort);
     }
   }
 

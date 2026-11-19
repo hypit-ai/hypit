@@ -15,6 +15,7 @@ export function chromiumHtmlBackend(chromePath = defaultChrome): HtmlCaptureBack
         url: staged.url,
         width: request.program.canvas.width,
         height: request.program.canvas.height,
+        ...(options.signal === undefined ? {} : { signal: options.signal }),
         selection: "frames" in request
           ? request.frames.map((frame) => ({ startFrame: frame, endFrameExclusive: frame + 1 }))
           : [request.range ?? { startFrame: 0, endFrameExclusive: request.program.frameCount }],
