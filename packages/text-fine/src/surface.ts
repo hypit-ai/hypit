@@ -531,7 +531,9 @@ function runStyle(value: SurfaceResolvedReference): VisualTextRunStyle {
   return { typography: style.typography, paints: style.paints };
 }
 
-function paragraph(element: StructuredElement, index: number, resolve: (path: string) => SurfaceResolvedReference | undefined): VisualTextDocument["paragraphs"][number] {
+type DocumentIdAllocator = (prefix: "paragraph" | "run" | "break") => string;
+
+function paragraph(element: StructuredElement, resolve: (path: string) => SurfaceResolvedReference | undefined, allocate: DocumentIdAllocator): VisualTextDocument["paragraphs"][number] {
   allowed(element, ["id", "style"]);
   const inlines: VisualTextDocument["paragraphs"][number]["inlines"][number][] = [];
   // Source indentation belongs to the file, not to the words. An item's own direct text is dedented
@@ -553,12 +555,10 @@ function paragraph(element: StructuredElement, index: number, resolve: (path: st
   // One segment lies before each mark and one after the last, so a text run reads the segment at the
   // current mark and only a nested element moves on to the next.
   let segmentIndex = 0;
-  let inlineIndex = 0;
   for (const child of merged) {
-    inlineIndex += 1;
     if (child.kind === "text") {
       const value = segments[segmentIndex] ?? child.value;
-      if (value.length > 0) inlines.push({ kind: "text", id: `run-${inlineIndex}`, text: value });
+      if (value.length > 0) inlines.push({ kind: "text", id: allocate("run"), text: value });
       continue;
     }
     segmentIndex += 1;
@@ -567,7 +567,7 @@ function paragraph(element: StructuredElement, index: number, resolve: (path: st
       allowed(child, []);
       // A break carries nothing, and text written inside one was being dropped without a word.
       empty(child);
-      inlines.push({ kind: "break", id: `break-${inlineIndex}` });
+      inlines.push({ kind: "break", id: allocate("break") });
       continue;
     }
     if (name !== "Span") throw new Error(`${element.name} accepts text, Span and Break children.`);
@@ -577,7 +577,7 @@ function paragraph(element: StructuredElement, index: number, resolve: (path: st
     if (spanText.length === 0) throw new Error(`${child.name} cannot be empty.`);
     const styleRef = child.attributes.style === undefined ? undefined : reference(child.attributes.style, `${child.name}.style`, textFineTypes.style, resolve);
     inlines.push({
-      kind: "text", id: optionalText(child, "id") ?? `run-${inlineIndex}`, text: spanText,
+      kind: "text", id: optionalText(child, "id") ?? allocate("run"), text: spanText,
       ...(styleRef === undefined ? {} : { style: runStyle(styleRef) }),
       ...(child.attributes.language === undefined ? {} : { language: text(child, "language") }),
       ...(child.attributes.direction === undefined ? {} : { direction: enumText(child, "direction", ["auto", "ltr", "rtl"] as const) }),
@@ -585,7 +585,7 @@ function paragraph(element: StructuredElement, index: number, resolve: (path: st
   }
   if (inlines.length === 0) throw new Error(`${element.name} cannot be empty.`);
   const styleRef = element.attributes.style === undefined ? undefined : reference(element.attributes.style, `${element.name}.style`, textFineTypes.style, resolve);
-  return { id: optionalText(element, "id") ?? `paragraph-${index}`, inlines, ...(styleRef === undefined ? {} : { style: runStyle(styleRef) }) };
+  return { id: optionalText(element, "id") ?? allocate("paragraph"), inlines, ...(styleRef === undefined ? {} : { style: runStyle(styleRef) }) };
 }
 
 function document(element: StructuredElement, resolve: (path: string) => SurfaceResolvedReference | undefined): VisualTextDocument {
@@ -593,7 +593,32 @@ function document(element: StructuredElement, resolve: (path: string) => Surface
   if (paragraphChildren.length > 0) {
     const invalid = element.children.find((child) => child.kind === "element" ? localName(child.name) !== "P" : child.value.trim().length > 0);
     if (invalid !== undefined) throw new Error(`${element.name} cannot mix P children with direct text.`);
-    return { paragraphs: paragraphChildren.map((child, index) => paragraph(child, index + 1, resolve)) };
+    // Generated paragraph, run and break ids are numbered within the document, not within the
+    // paragraph. Explicit ids are reserved first so a generated id cannot take a name the author
+    // already chose.
+    const reserved = new Set<string>();
+    for (const child of paragraphChildren) {
+      const paragraphId = optionalText(child, "id");
+      if (paragraphId !== undefined) reserved.add(paragraphId);
+      for (const nested of child.children) {
+        if (nested.kind !== "element" || localName(nested.name) !== "Span") continue;
+        const inlineId = optionalText(nested, "id");
+        if (inlineId !== undefined) reserved.add(inlineId);
+      }
+    }
+    const counters = new Map<"paragraph" | "run" | "break", number>();
+    const allocate: DocumentIdAllocator = (prefix) => {
+      let counter = counters.get(prefix) ?? 0;
+      let id: string;
+      do {
+        counter += 1;
+        id = `${prefix}-${counter}`;
+      } while (reserved.has(id));
+      counters.set(prefix, counter);
+      reserved.add(id);
+      return id;
+    };
+    return { paragraphs: paragraphChildren.map((child) => paragraph(child, resolve, allocate)) };
   }
   if (element.children.some((child) => child.kind === "element")) throw new Error(`${element.name} direct content accepts no nested elements; use P and Span.`);
   const content = dedent(element.children.map((child) => child.kind === "text" ? child.value : "").join(""));
