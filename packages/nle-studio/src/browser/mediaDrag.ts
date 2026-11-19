@@ -13,18 +13,23 @@ export type MediaDrop = {
   readonly id: string;
   readonly frame: number;
   readonly snapFrame?: number;
+  readonly durationFrames?: number;
   readonly track?: string;
   readonly item?: string;
   readonly transitionCut?: TransitionCut;
 };
 
 export function mediaTrackCompatible(track: NleTimelineSceneTrack, kind: NleStudioMediaEntry["kind"], role?: NleTimelineSceneTrack["role"]): boolean {
-  return track.kind === (kind === "audio" ? "audio" : "picture") && !track.locked && track.role === role;
+  return track.kind === (kind === "audio" ? "audio" : "picture") && track.enabled && !track.locked && track.role === role;
+}
+
+export function trackHasRoom(track: NleTimelineSceneTrack, start: number, duration: number): boolean {
+  return track.items.every(clip => start + duration <= clip.startFrame || start >= clip.startFrame + clip.durationFrames);
 }
 
 export function transitionCuts(scene: NleTimelineScene): TransitionCut[] {
   return scene.tracks.flatMap(track => {
-    if (track.kind !== "picture" || track.locked) return [];
+    if (track.kind !== "picture" || track.locked || !track.enabled) return [];
     const items = track.items.filter(item => item.role === "present" && item.enabled);
     const transitions = scene.transitions.flatMap(transition => {
       const incoming = items.find(item => item.id === transition.incoming);

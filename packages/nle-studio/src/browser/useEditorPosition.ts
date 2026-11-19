@@ -13,7 +13,7 @@ function read(key: string): EditorPosition {
   } catch { return { previewExpanded: false, positions: {} }; }
 }
 
-export function useEditorPosition(session: NleStudioOpenProjection | undefined, value: Position & { readonly previewExpanded: boolean }, restore: (position: Position & { readonly previewExpanded: boolean }) => void) {
+export function useEditorPosition(session: NleStudioOpenProjection | undefined, value: Position & { readonly previewExpanded: boolean }, navigationFrame: { current: number | undefined }, restore: (position: Position & { readonly previewExpanded: boolean }) => void) {
   const key = session === undefined ? undefined : `hypit:nle:position:${session.project.name}/${session.project.document}`;
   const composition = session?.timeline.scene.composition;
   const active = useRef<{ key: string; composition: string; saved: EditorPosition } | undefined>(undefined);
@@ -25,11 +25,13 @@ export function useEditorPosition(session: NleStudioOpenProjection | undefined, 
     const initial = active.current?.key !== key;
     const saved = initial ? read(key) : active.current!.saved;
     active.current = { key, composition, saved };
-    if (!initial) return;
     const position = saved.positions[composition];
     restoring.current = true;
+    const frame = navigationFrame.current;
+    navigationFrame.current = undefined;
     restoreRef.current({
-      frame: Number.isSafeInteger(position?.frame) ? Math.max(0, Math.min(session.timeline.scene.maximumFrame - 1, position!.frame)) : 0,
+      frame: frame ?? (Number.isSafeInteger(position?.frame)
+        ? Math.max(0, Math.min(session.timeline.scene.maximumFrame - 1, position!.frame)) : 0),
       selection: editableSelection(session.timeline.scene, Array.isArray(position?.selection) ? position.selection.filter(id => typeof id === "string") : []),
       previewExpanded: initial ? saved.previewExpanded : value.previewExpanded,
     });

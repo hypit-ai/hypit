@@ -1,8 +1,23 @@
+import { Select } from "@base-ui/react/select";
+import { useRef, useState } from "react";
 import type { NleInspectorCollection, NleInspectorField, NleInspectorScene, NleTransitionInspectorScene } from "@hypit/nle/view";
-import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, Trash2 } from "lucide-react";
 import type { NleStudioComponentInputsProjection, NleStudioMediaEntry, NleStudioProcessAddress, NleStudioProcessEdit } from "../protocol.js";
 import { IconButton } from "./common.js";
 import { NumberField, Row, Section, Toggle } from "./controls.js";
+
+function TextField({ field, disabled, onCommit }: {
+  readonly field: NleInspectorField;
+  readonly disabled: boolean;
+  readonly onCommit: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState<string>();
+  const cancel = useRef(false);
+  return <input aria-label={field.label} disabled={disabled} value={draft ?? String(field.value)}
+    onFocus={() => { cancel.current = false; }} onChange={event => setDraft(event.target.value)}
+    onBlur={event => { const value = event.target.value; setDraft(undefined); if (!cancel.current && value !== String(field.value)) onCommit(value); }}
+    onKeyDown={event => { if (event.key === "Escape") { cancel.current = true; setDraft(undefined); event.currentTarget.blur(); } else if (event.key === "Enter") event.currentTarget.blur(); }}/>;
+}
 
 function Field({ section, field, disabled, onEdit }: {
   readonly section: string;
@@ -17,18 +32,37 @@ function Field({ section, field, disabled, onEdit }: {
     return <Row label={field.label}><Toggle disabled={disabled} label={field.label} checked={field.value === true} onChange={value => onEdit(section, field.id, value)}/></Row>;
   }
   if (field.control === "select") {
-    return <Row label={field.label}><select disabled={disabled} value={String(field.value)}
-      onChange={event => onEdit(section, field.id, event.target.value)}>
-      {(field.options ?? []).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-    </select></Row>;
+    const options = field.options ?? [];
+    return <Row label={field.label}>
+      <Select.Root items={options} value={String(field.value)} disabled={disabled} modal={false}
+        onValueChange={value => { if (value !== null) onEdit(section, field.id, value); }}>
+        <Select.Trigger className="select-trigger dropdown-trigger" aria-label={field.label}>
+          <Select.Value className="select-value"/>
+          <Select.Icon className="dropdown-chevron"><ChevronDown size={16}/></Select.Icon>
+        </Select.Trigger>
+        <Select.Portal>
+          <Select.Positioner className="dropdown-positioner" alignItemWithTrigger={false} sideOffset={6} collisionPadding={12}>
+            <Select.Popup className="dropdown-content" data-dropdown-content="">
+              <Select.List className="dropdown-list">
+                {options.map(option => <Select.Item key={option.value} value={option.value} className="dropdown-item">
+                  <Select.ItemText className="dropdown-item-label">{option.label}</Select.ItemText>
+                  <Select.ItemIndicator className="dropdown-item-check"><Check size={16}/></Select.ItemIndicator>
+                </Select.Item>)}
+              </Select.List>
+            </Select.Popup>
+          </Select.Positioner>
+        </Select.Portal>
+      </Select.Root>
+    </Row>;
   }
   if (field.control === "number") return <Row label={field.label}><NumberField disabled={disabled} label={field.label} value={Number(field.value)}
     {...(field.minimum === undefined ? {} : { min: field.minimum })}
     {...(field.maximum === undefined ? {} : { max: field.maximum })}
     {...(field.step === undefined ? {} : { step: field.step })}
     onCommit={value => onEdit(section, field.id, value)}/>{field.unit !== undefined && <small>{field.unit}</small>}</Row>;
-  const type = field.control === "color" ? "color" : "text";
-  return <Row label={field.label}><input disabled={disabled} type={type} value={String(field.value)} onChange={event => onEdit(section, field.id, event.target.value)}/></Row>;
+  return <Row label={field.label}>{field.control === "color"
+    ? <input aria-label={field.label} disabled={disabled} type="color" value={String(field.value)} onChange={event => onEdit(section, field.id, event.target.value)}/>
+    : <TextField field={field} disabled={disabled} onCommit={value => onEdit(section, field.id, value)}/>}</Row>;
 }
 
 function Collection({ section, collection, disabled, onEdit, onInvoke }: {

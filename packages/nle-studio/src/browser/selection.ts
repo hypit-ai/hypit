@@ -32,12 +32,13 @@ export function selectionAtFrame(
   ids: readonly string[],
   frame: number,
   capability: "split" | "trimStart" | "trimEnd",
+  accepts: (item: NleTimelineSceneItem) => boolean = () => true,
 ): NleTimelineSceneItem[] {
   const selected = new Set(editableSelection(scene, ids));
   const items = new Map(scene.tracks.flatMap(track => track.items.map(item => [item.id, item] as const)));
   const eligible = (id: string) => {
     const item = items.get(id);
-    return item !== undefined && item.affordances[capability]
+    return item !== undefined && item.affordances[capability] && accepts(item)
       && frame > item.startFrame && frame < item.startFrame + item.durationFrames;
   };
   return [...selected].filter(id => linkedSelection(scene, [id]).every(eligible)).map(id => items.get(id)!);
