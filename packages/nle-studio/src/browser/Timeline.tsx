@@ -16,6 +16,7 @@ import { useTimelineZoom } from "./useTimelineZoom.js";
 import { useTrackReorder } from "./useTrackReorder.js";
 import { useItemGesture, type ItemDropIntent } from "./useItemGesture.js";
 import { TimelineMedia, useTimelineMedia } from "./TimelineMedia.js";
+import { TimelineRuler } from "./TimelineRuler.js";
 
 import { readDropDestination } from "./api.js";
 import { useTimelineViewport } from "./useTimelineViewport.js";
@@ -246,10 +247,6 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const nestedComposition = selected?.nestedComposition;
   const sceneItems = new Map(scene.tracks.flatMap(track => track.items.map(item => [item.id, item] as const)));
   const splitItems = selectionAtFrame(scene, selection, frame, "split");
-  const tickSeconds = 78 / zoom;
-  const stepFrames = Math.max(1, Math.round(([1, 2, 5, 10, 30, 60, 120, 300, 600].find(value => value >= tickSeconds)
-    ?? Math.ceil(tickSeconds / 600) * 600) * fps));
-  const ticks = useMemo(() => Array.from({ length: Math.ceil(width / (stepFrames * pixels)) + 1 }, (_, index) => index * stepFrames), [width, stepFrames, pixels]);
   const compositions = session.timeline.compositions;
   const composition = compositions.find(item => item.id === scene.composition);
 
@@ -378,7 +375,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
       }
     }} onPointerLeave={() => setCutCursor(undefined)}>
       <div className="nle-tracks" style={{ width: labelWidth + width, minHeight: "100%", "--nle-track-padding": `${trackPadding}px` } as React.CSSProperties}>
-        <div className="nle-ruler"><div className="nle-ruler-label"/><div className="nle-ruler-scale" style={{ width }} onPointerDown={seek.start}>{ticks.map(value => <span key={value} style={{ left: value * pixels, "--minor": `${stepFrames * pixels / 2}px` } as React.CSSProperties}>{timecode(value, fps)}</span>)}<i className={`nle-ruler-frame${pixels >= 8 ? " visible" : ""}`} style={{ left: frame * pixels, width: pixels }}/></div></div>
+        <TimelineRuler scroller={scroller} width={width} viewportWidth={viewport.width} endFrame={endFrame}
+          pixels={pixels} fps={fps} frame={frame} onSeek={seek.start}/>
         <div className="nle-track-top" data-nle-drop=""><div className="nle-track-label empty"/><div className="nle-track-space" style={{ width }}/></div>
         {scene.tracks.map(track => {
           const intervals = [...track.items].sort((left, right) => left.startFrame - right.startFrame);
