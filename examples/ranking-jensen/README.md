@@ -6,6 +6,31 @@ NLE Project. Project packages supply the ranking, title, flash, caption and effe
 
 The local `media/` collection and deliveries are working data and are not committed.
 
+## Import this cut from TSX
+
+After building the repository packages, run these commands from this example directory:
+
+```sh
+pnpm install
+pnpm import:composition
+HYPIT_DELIVERY_NAME=ranking-jensen-from-source.mp4 node deliver.mjs film.from-source.svml
+```
+
+[`authors/main.tsx`](authors/main.tsx) is the Composition Source for the full edit. It places the five A-roll takes
+using their accepted Media durations; projects named source-local speech anchors onto those placements; and uses
+the same reveal point for the tier board, sound and flash. It assembles the B-roll groups, both cross-dissolves,
+background music, title, and individually editable caption cues. The existing package components own their renders.
+
+[`authors/speech.ts`](authors/speech.ts) holds the accepted timing edition: named speech landmarks in each selected
+take and the display words and timing units of its cues. [`authors/broll.ts`](authors/broll.ts) maps those names to media
+choices, layouts, and motion. No generation or transcription runs during import. Changing which source take to use
+requires matching its speech timing edition to that take first.
+
+The importer resolves the already accepted Project Media, runs the TSX once and creates a new sibling
+`film.from-source.svml`. It refuses to overwrite a file at that path. It never reads or changes the checked-in
+`film.svml`. Open the new SVML in Studio with `hypit nle open film.from-source.svml`; it is an ordinary editable
+NLE Project independent of the TSX. The output is ignored by Git so it can be regenerated or moved aside.
+
 The ranking title is an `@hypit/text-fine#fine` Item with two editable text runs and an explicit line break.
 Its Picture layout places the banner on the canvas. Its text parameters set the font, spacing, fill and panel background.
 The title and the shared caption style each declare an ordered `typography.fonts` stack. Both reference the project's

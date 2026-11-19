@@ -61,6 +61,14 @@ effects with named Picture inputs.
 The persistent root is `<svml>`. npm and the project lockfile select package implementation versions.
 The complete current element, attribute, closed-JSON and validation contract is documented in [SVML](SVML.md).
 
+## Composition Source subpath
+
+`@hypit/nle/authoring` provides a JSX factory and `materializeComposition` for project programs. A caller resolves
+accepted inputs and passes them to the synchronous Composition Source. The result is an ordinary, validated
+`NleProject` that can be serialized with `serializeNleProject`. The subpath does not load files, run models, or
+write to an existing edit. `projectSourceInstant` and `projectSourceRange` map exact source-local evidence through
+a selected finite forward affine placement.
+
 ## View subpath
 
 `@hypit/nle/view` owns the optional durable editing arrangement for one Project. Its

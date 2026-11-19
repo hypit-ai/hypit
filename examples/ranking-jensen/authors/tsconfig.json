@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "jsx": "react",
+    "jsxFactory": "jsx",
+    "types": [],
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmitOnError": true,
+    "skipLibCheck": true,
+    "outDir": "../.hypit/authoring"
+  },
+  "include": ["*.ts", "*.tsx"]
+}

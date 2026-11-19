@@ -19,6 +19,11 @@
       "hypit-source": "./src/surface/index.ts",
       "types": "./dist/surface/index.d.ts",
       "import": "./dist/surface/index.js"
+    },
+    "./authoring": {
+      "hypit-source": "./src/authoring.ts",
+      "types": "./dist/authoring.d.ts",
+      "import": "./dist/authoring.js"
     }
   },
   "files": ["dist", "README.md", "SVML.md"],

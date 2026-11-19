@@ -20,8 +20,7 @@ The package graph remains small while separating platform execution from owner s
   ├── @hypit/media-asset
   └── @hypit/nle
 
-@hypit/authoring  -> @hypit/nle
-project component packages -> @hypit/authoring
+Composition Sources -> @hypit/nle/authoring
 @hypit/project    -> @hypit/media-asset + @hypit/execution (client types)
 @hypit/html-render-local -> @hypit/html-program
 @hypit/html-chromium-local -> @hypit/html-render-local
@@ -40,9 +39,8 @@ project component packages -> @hypit/authoring
 
 The arrows describe source dependencies, not authority. `@hypit/temporal` supplies exact values and mappings. Media
 packages interpret accepted media. `@hypit/nle` owns the Project document, transactions and materialization target.
-`@hypit/nle-delivery` owns compilation for preview and delivery. A future `@hypit/authoring` package
-would own the TSX authoring vocabulary and materialization adapter, but its first implementation may remain a source
-module inside the NLE release until a second consumer proves an independent release boundary.
+`@hypit/nle-delivery` owns compilation for preview and delivery. `@hypit/nle/authoring` provides the TSX authoring
+vocabulary and pure materialization to the NLE document within the NLE release.
 
 The NLE release contains the SVML Reader, serializer and current schema. A separate serialization release becomes
 justified when an independent owner consumes the same format with its own release lifecycle.
@@ -59,22 +57,14 @@ operations. It does not own NLE placement, media selection, frame grids or rende
 `@hypit/media` owns execution-independent stream observations and interpretations. `@hypit/media-asset` owns
 portable accepted-media documents and adoption. Neither owns NLE placement or authoring components.
 
-### `@hypit/authoring` (planned boundary)
-
-Owns the TypeScript/TSX authoring vocabulary and materialization of a finite author program into NLE commands or a
-Project value. It may provide `Timeline`, `Track`, `Media`, `Component`, `TimeMap`, `Control`, Present-local `Process`,
-`Transition`, `Matte` and spatial authoring elements.
-
-It does not own durable edits, AIGC recipes, semantic evidence, renderer selection or executor state.
-
-The package must distinguish author-time materialization from frame evaluation. A component can be materialized to
-an editable NLE Composition or remain an opaque Component Present with a package symbol and closed parameters.
-
 ### `@hypit/nle`
 
 Owns the durable NLE Project document and SVML schema, Reader and serializer, Project Service, edit transactions,
 Composition and Track facts, Present occurrences, source-time relations, Present-local Processes and timed Adjusts,
 Transitions, Mattes and shared values.
+
+The `authoring` subpath validates the declarations of a synchronous Composition Source into a new Project value.
+Local input resolution and file creation are responsibilities of the calling project program.
 
 NLE Project serialization is the SVML representation of the edit. It contains no TSX source text, View
 selection, Service revision or execution plan.

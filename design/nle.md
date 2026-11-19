@@ -414,8 +414,8 @@ The following capabilities are outside the current implementation:
 ## Package shape and required behavior
 
 `@hypit/nle` is the first release boundary. Project schema, the current document Reader and serializer, exact time
-editing, Picture fitting and the per-document Project and View Services share one owner and release lifecycle. A TSX authoring materializer may begin as a source module in this release; it becomes `@hypit/authoring`
-only when an independent component or product consumer proves a separate release boundary. View modules begin at the
+editing, Picture fitting and the per-document Project and View Services share one owner and release lifecycle.
+The TSX materializer is exposed through `@hypit/nle/authoring`. View modules begin at the
 `@hypit/nle/view` subpath. The application composition over both Services begins at `@hypit/nle/surface`. Platform
 file I/O and audiovisual execution remain outside it.
 

@@ -21,7 +21,7 @@ const host = await openNodeProjectHost({ root });
 const delivery = openNleDeliveryService({ host, executor });
 try {
   const handle = await delivery.start({
-    document: "film.svml",
+    document: process.argv[2] ?? "film.svml",
     destination: `deliveries/${deliveryName}`,
     profile: {
       picture: {

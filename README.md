@@ -20,7 +20,9 @@ TSX supplies ordinary modules and reusable component declarations. The NLE Proje
 authority, serialized as SVML. The NLE delivery compiler reads one accepted snapshot and prepares execution programs.
 AIGC, semantic and Scene results enter through explicit Publication, Adoption, Reference or Materialization.
 
-Ordinary project programs can call the NLE document and delivery APIs directly. The TSX authoring materializer is planned.
+Ordinary project programs can call the NLE document and delivery APIs directly. The
+[Jensen example](examples/ranking-jensen/README.md#import-this-cut-from-tsx) uses the Composition Source materializer
+to create an editable SVML from accepted local inputs.
 
 ## Initial production paths
 

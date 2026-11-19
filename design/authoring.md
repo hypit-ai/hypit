@@ -4,10 +4,10 @@
 
 ## Purpose
 
-Hypit has one authoring path for reusable audiovisual components and one durable authority for the edit:
+An optional Composition Source can author a new edit. The NLE Project is the durable authority for editing:
 
 ```text
-TSX author program
+accepted local inputs + TSX Composition Source
   -> materialization
 NLE Project document
   -> delivery compilation
@@ -15,8 +15,9 @@ HtmlProgram + AudioProgram
   -> selected video delivery
 ```
 
-The TSX program is ordinary TypeScript with a small Hypit authoring vocabulary. It supplies functions, module
-imports, conditions, loops, component composition and author-time data selection with source/module lifetime.
+The Composition Source is an ordinary `.tsx` module with a small Hypit authoring vocabulary. It supplies functions,
+module imports, conditions, loops and author-time data selection with source/module lifetime. The caller resolves
+explicit inputs before invoking a synchronous author function that returns finite edit declarations.
 
 The NLE Project is the durable author document that says what the edit is now. Its current markup representation is
 SVML, an XML-like spelling interpreted by the NLE Reader and serializer. TSX evaluation materializes NLE facts.
@@ -52,65 +53,47 @@ the package chosen by the project lockfile. A presentation facet produces a fini
 reducer accepts one semantic operation and returns a replacement closed value. The Host alone turns that value into
 an NLE transaction and retains revision, View-guard and validation authority.
 
-## Author programs
+## Composition Source
 
-A component author imports ordinary modules and returns Hypit authoring elements. The exact TSX spelling remains to be
-chosen, but the semantic kernel is small:
-
-- `Timeline` or `Composition` establishes a local finite programme domain;
-- `Track` establishes ordered Picture or Audio participation;
-- `Media`, `Component` and `Use` create Present occurrences;
-- `TimeMap` describes target-to-source time, including affine pieces, reverse, hold and wrap;
-- `Control` describes a parameter over a local authoring domain;
-- Present-local `Process` applies one Operator to one Present;
-- `Transition` relates an outgoing and incoming Present;
-- `Matte` relates content to a matte-source Present;
-- `Composition` and Track order describe nested Picture composition and spatial use;
-- Picture and Audio participation on the same Media or Composition occurrence share placement and source time.
-
-These elements are authoring declarations over local authoring time, occurrences, relations and package symbols.
-Renderer and model execution settings stay with their selected Executors.
-
-An author program may use ordinary program logic to choose declarations:
+`@hypit/nle/authoring` supplies a JSX factory and the synchronous `defineComposition` / `materializeComposition` seam.
+TypeScript can lower the TSX with `jsx: "react"` and `jsxFactory: "jsx"`; the factory collects declarations and has
+no React runtime. `Composition` and `Track` arrange the edit. `Media` and `Component` place occurrences with optional
+source maps and ordered Processes. `Item` places an already constructed NLE Item. `Transition`, `Matte` and
+`SharedValue` declare exact relationships and reusable values.
 
 ```tsx
-import plan from "./generated/shot-plan.json";
+import { Composition, Media, Track, defineComposition, jsx, seconds } from "@hypit/nle/authoring";
 
-export function Shot() {
-  return (
-    <Timeline duration="13s">
-      <PictureTrack id="main">
-        <Media id="A" asset={plan.first} start="0s" duration="10s" />
-        <Media id="B" asset={plan.second} start="8s" duration="5s">
-          <Process operator={colorGrade} parameters={{ lut: plan.lut }} />
-        </Media>
-        <Transition between={["A", "B"]} start="8s" duration="2s" type="dissolve" />
-      </PictureTrack>
-    </Timeline>
-  );
-}
+export default defineComposition((input: { opening: { path: string } }) => (
+  <Composition id="main" width={720} height={1280}>
+    <Track id="picture" kind="picture">
+      <Media id="opening" asset={input.opening} at={seconds("0")} duration={seconds("13")}
+        picture={{ layout: { x: 0, y: 0, width: 720, height: 1280, fit: "cover" } }} />
+    </Track>
+  </Composition>
+));
 ```
 
-The generated plan may originate from Generation, Script, Transcript, semantic evidence or an explicit project
-program. The author program receives its selected result as a value or Reference during author-time materialization.
+A named input can refer to accepted Media, a measured point or range in a selected take, or other closed data.
+`projectSourceInstant` and `projectSourceRange` project exact source time through a single forward affine placement,
+including trim and constant forward speed. An out-of-window point fails with its supplied label. Other mappings
+require the caller to choose a concrete projection. TSX is trusted project code; synchrony does not sandbox effects.
 
 ## Materialization into NLE
 
 Materialization evaluates the author program at author time and produces ordinary NLE Project facts. It must create
 stable local ids, explicit references and closed values for every fact that the NLE can edit.
 
-The result of the example above is conceptually:
-
-The materialized SVML uses the schema shown in [NLE Project](nle.md): `B` becomes one `present`, the grade becomes a
-nested `process`, the cut becomes one `transition`, and every source and Control mapping is written as exact rational
-time. The important facts are stable ids, exact ranges, explicit references and unversioned package symbols.
+The materializer validates the result with the NLE Project validator. An occurrence becomes a `present`, local
+effects become nested `process` declarations, and a cut can carry a `transition`. SVML retains stable IDs, exact
+time, explicit references and package symbols.
 
 After materialization, the NLE Project is authoritative for direct editing. A trim, split, slip, retime, transition
 change or parameter edit mutates the NLE Project, then compiles the new snapshot for the requested output. TSX source and NLE facts retain
 their separate persistence lifetimes.
 
-Re-materializing a changed TSX program is an explicit operation. The caller chooses the target Composition and the
-NLE transaction that accepts the newly materialized facts.
+Re-materialization is explicit. The Jensen importer creates a separate SVML and refuses to replace an existing file.
+Adopting materialized facts into an existing edit requires an NLE transaction against its current revision.
 
 ## Component instances and expansion
 
@@ -174,6 +157,9 @@ Generation / Semantic / Scene owner
 ```
 
 Each peer result keeps its producing owner and enters NLE through the stated adoption or materialization operation.
+A preparation script or Canvas may submit and await Seedance or WhisperX ahead of time. The Composition Source
+receives selected Media and timing evidence; it does not initiate an Invocation. The caller may read local inputs
+asynchronously before invoking it. The duration of an edit occurrence is separate from a Model request duration.
 
 ## Syntax decision rules
 
@@ -192,6 +178,6 @@ internals:
 9. output clock, renderer canvas, frame rate and process lifetime belong to the selected Executor;
 10. the persistent NLE document is the editable authority after materialization.
 
-The first syntax experiment should cover one vertical slice containing a 13-second two-clip transition, an Item-local
-Process, a piecewise retime, a Matte, a component instance and one semantic or generated input. The experiment is
-successful only when the same NLE Project can be edited directly, serialized, reopened and compiled to the same execution programs without re-running the author program.
+The [Jensen Composition Source](../examples/ranking-jensen/README.md#import-this-cut-from-tsx) exercises the full cut:
+named speech cues, B-roll group placement, loops, cross-dissolves, timed graphics, gain envelopes and captions.
+The imported SVML can be opened and delivered without running its source again.
