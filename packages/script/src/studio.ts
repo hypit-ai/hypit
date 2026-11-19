@@ -132,7 +132,7 @@ export const scriptStudioTemporalDomains: readonly StudioTemporalDomainCompanion
     if (closeEnd === undefined) return undefined;
     const end = closeEnd - closing.length;
     if (end < input.contentStart || input.source.slice(end, closeEnd) !== closing) return undefined;
-    const parsed = parseScript(input.sourceName, input.source.slice(input.contentStart, end), input.contentStart);
+    const parsed = parseScript(input.sourceName, input.source.slice(input.contentStart, end), input.contentStart, input.source);
     return {
       domainId: narrativeId,
       sourcePath: input.sourceName,
@@ -153,7 +153,7 @@ export const scriptStudioTemporalDomains: readonly StudioTemporalDomainCompanion
     };
   },
   adjust(input) {
-    const parsed = parseScript(input.sourceName, input.source);
+    const parsed = parseScript(input.sourceName, input.source, 0, input.source);
     return input.adjustment.kind === "span"
       ? adjustScriptSelection({ sourceName: input.sourceName, source: input.source, parsed,
           adjustment: { id: input.adjustment.itemId, startAnchorId: input.adjustment.startAnchorId,
