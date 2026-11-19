@@ -771,7 +771,6 @@ export function nleCompositionDuration(value: NleComposition): ExactTemporalValu
   let duration = exactTemporalZero();
   for (const track of value.tracks) {
     for (const item of track.items) {
-      if (!item.enabled) continue;
       const end = nleItemEnd(item);
       if (compareExactTemporalValues(end, duration) > 0) duration = end;
     }

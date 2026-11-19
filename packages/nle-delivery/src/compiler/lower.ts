@@ -623,7 +623,7 @@ function lowerComposition(
 ): CompilationGraph {
   const duration = nleCompositionDuration(composition);
   assert(compareExactTemporalValues(duration, exactTemporalZero()) > 0,
-    `NLE Composition ${composition.id} has no enabled Items to lower.`);
+    `NLE Composition ${composition.id} has no timed Items to lower.`);
   const domain = sealLocalTemporalDomain({ id: `${composition.id}:time`, duration });
   const pictureDomain = programmeSpace(composition);
   const occurrences: Record<string, Occurrence> = {};
@@ -712,9 +712,8 @@ function lowerComposition(
       }
 
       if (needsAudio) {
-        assert(nested.audioRoot !== undefined,
-          `NLE Composition Item ${item.id} requests Audio but Composition ${item.composition} has none.`);
-        let localRoot = nested.audioRoot;
+        let localRoot = nested.audioRoot ?? `${item.id}:composition-silence`;
+        if (nested.audioRoot === undefined) audioNodes[localRoot] = { kind: "silence" };
         for (const process of item.audio!.processes ?? []) {
           if (!process.enabled) continue;
           localRoot = audioProcessNode(
@@ -994,8 +993,10 @@ function lowerComposition(
     audioRoot = audioAdjust(audioNodes, input, applied, item, duration);
   }
 
-  assert(pictureRoot !== undefined || audioRoot !== undefined,
-    `NLE Composition ${composition.id} contains no active Picture or Audio output.`);
+  if (outputs.picture && pictureRoot === undefined) {
+    pictureRoot = `${composition.id}:transparent`;
+    pictureNodes[pictureRoot] = { kind: "transparent", spatialDomain: pictureDomain };
+  }
   return {
     id: `${project.id}:${composition.id}`,
     domain,

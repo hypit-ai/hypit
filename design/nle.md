@@ -41,6 +41,11 @@ The initial SVML surface is deliberately small:
 - an `Adjust` is a timed Process over the signal accumulated below its Track position;
 - a Transition is an explicit relation around an adjacent Picture cut.
 
+Composition extent is zero or the latest Item end across its Tracks. Item and Track enablement control the signal
+and preserve that extent. A timed black picture at the tail is an ordinary Item and contributes its end to the extent.
+A positive extent with no active Picture produces the requested output background. A nested Composition with no
+active Audio supplies silence to an occurrence that requests Audio.
+
 The current SVML shape includes:
 
 ```xml
