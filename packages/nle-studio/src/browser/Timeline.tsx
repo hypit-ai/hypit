@@ -110,7 +110,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     (end, item) => Math.max(end, item.startFrame + item.durationFrames), latest), 0), [scene.tracks]);
   const minZoom = lastClipEnd > 0 ? Math.max(1, viewport.width - timelineEndPadding) * fps / (4 * lastClipEnd) : emptyTimelineMinZoom;
   const maxZoom = Math.max(defaultMaxZoom, 4 * minZoom);
-  const { zoom, changeZoom, changeZoomPosition } = useTimelineZoom(scroller, labelWidth,
+  const { zoom, zoomPosition, changeZoom, changeZoomPosition, stepZoom } = useTimelineZoom(scroller, labelWidth,
     `${session.open.project.project.id}/${session.projectDocument.path}/${scene.composition}`, minZoom, maxZoom);
   const pixels = zoom / fps;
   const [snap, setSnap] = useState(true), [tool, setTool] = useState<TimelineTool>("select");
@@ -186,7 +186,6 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const tickSeconds = 78 / zoom;
   const stepFrames = Math.max(1, Math.round(([1, 2, 5, 10, 30, 60, 120, 300, 600].find(value => value >= tickSeconds) ?? Math.ceil(tickSeconds / 600) * 600) * fps));
   const ticks = useMemo(() => Array.from({ length: Math.floor(endFrame / stepFrames) + 1 }, (_, index) => index * stepFrames), [endFrame, stepFrames]);
-  const zoomPosition = Math.log(zoom / minZoom) / Math.log(maxZoom / minZoom) * 100;
   const compositions = session.open.project.project.compositions;
   const parent = compositions.find(value => value.id === compositionParents.at(-1));
 
@@ -290,7 +289,14 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
       <IconButton label={grouped ? "取消组合" : "组合"} className={grouped ? "active" : ""} disabled={busy || !canToggleGroup} onClick={onToggleGroup}><Group size={18} strokeWidth={1.6}/></IconButton><span className="nle-toolbar-space"/>
       <IconButton label="吸附" className={snap ? "active" : ""} onClick={() => setSnap(value => !value)}><Magnet size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="适合时间线" onClick={() => changeZoom((viewport.width - 40) / (lastClipEnd > 0 ? lastClipEnd / fps : 1), true)}><Scan size={18} strokeWidth={1.6}/></IconButton>
-      <div className="nle-zoom"><IconButton label="缩小" disabled={zoom <= minZoom} onClick={() => changeZoom(zoom / 1.25)}><CircleMinus size={18} strokeWidth={1.6}/></IconButton><div className="nle-zoom-slider" onPointerDown={startZoomDrag}><span className="nle-zoom-rail" aria-hidden="true" style={{ "--fill": `${zoomPosition}%` } as React.CSSProperties}/><input type="range" aria-label="时间线缩放" min="0" max="100" step="any" value={zoomPosition} onChange={event => changeZoomPosition(Number(event.target.value) / 100)}/></div><IconButton label="放大" disabled={zoom >= maxZoom} onClick={() => changeZoom(zoom * 1.25)}><CirclePlus size={18} strokeWidth={1.6}/></IconButton></div>
+      <div className="nle-zoom">
+        <IconButton label="缩小" disabled={zoom <= minZoom} onClick={() => stepZoom(-1)}><CircleMinus size={18} strokeWidth={1.6}/></IconButton>
+        <div className="nle-zoom-slider" onPointerDown={startZoomDrag}>
+          <span className="nle-zoom-rail" aria-hidden="true" style={{ "--fill": `${zoomPosition * 100}%` } as React.CSSProperties}/>
+          <input type="range" aria-label="时间线缩放" min="0" max="100" step="any" value={zoomPosition * 100} onChange={event => changeZoomPosition(Number(event.target.value) / 100)}/>
+        </div>
+        <IconButton label="放大" disabled={zoom >= maxZoom} onClick={() => stepZoom(1)}><CirclePlus size={18} strokeWidth={1.6}/></IconButton>
+      </div>
     </div>
     <motion.div layoutScroll className={`nle-timeline-scroll${tool === "cut" ? " cut-mode" : tool === "left" || tool === "right" ? " direction-mode" : ""}`} ref={scroller} onPointerDown={event => {
       if (tool === "select") marquee.start(event);
