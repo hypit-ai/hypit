@@ -12,7 +12,7 @@ import type { NleStudioMediaEntry, NleStudioSession } from "../protocol.js";
 import { CompositionActions } from "./CompositionActions.js";
 import { CompoundMenu } from "./CompoundMenu.js";
 import { TrackMenu } from "./TrackMenu.js";
-import { frameOf, frameTime, magneticEdit, moveItemEditPlan, trackGaps } from "./editPlans.js";
+import { frameOf, magneticEdit, moveItemEditPlan, trackGaps, trimItemCommand } from "./editPlans.js";
 import { ClipMenu } from "./ClipMenu.js";
 import { IconButton } from "./common.js";
 import { timecode } from "./timecode.js";
@@ -136,10 +136,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const editPreview = useMemo(() => {
     try {
       const commands: readonly NleCommand[] | undefined = movePlan ? moveItemEditPlan(session, movePlan).commands
-        : primaryTrack && draft ? [{
-          kind: "item.trim", id: draft.id, edge: draft.edge,
-          at: frameTime(session, draft.edge === "start" ? draft.start : draft.start + draft.duration),
-        }] : undefined;
+        : primaryTrack && draft ? [trimItemCommand(session, draft.id, draft.edge,
+          draft.edge === "start" ? draft.start : draft.start + draft.duration)] : undefined;
       if (commands === undefined) return undefined;
       const project = applyNleTransaction(session.open.project.project, { commands: magneticEdit(session, commands, primaryTrack) });
       const tracks = project.compositions.find(value => value.id === scene.composition)?.tracks;

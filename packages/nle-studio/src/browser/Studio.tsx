@@ -49,7 +49,7 @@ import { ErrorNotice } from "./ErrorNotice.js";
 import { enterMotion } from "./motion.js";
 import { useEditorPosition } from "./useEditorPosition.js";
 import { EditingHistory, type EditorFocus } from "./editingHistory.js";
-import { activeComposition as compositionOf, canFreezeItem, changeSpeed, closeTrackGaps, createCompound, duplicateCompound, editTransitionDuration, frameOf, frameTime, freezeItem, identity, magneticEdit, moveItemEditPlan, removeItems, reverseItems, rippleRemove, slipItems, unpackCompound, type EditPlan } from "./editPlans.js";
+import { activeComposition as compositionOf, canFreezeItem, changeSpeed, closeTrackGaps, createCompound, duplicateCompound, editTransitionDuration, frameOf, frameTime, freezeItem, identity, magneticEdit, moveItemEditPlan, removeItems, reverseItems, rippleRemove, slipItems, trimItemCommand, unpackCompound, type EditPlan } from "./editPlans.js";
 import { TransitionInspector } from "./TransitionInspector.js";
 import { transitionCutAt, transitionCuts } from "./transitionCuts.js";
 import { TemporalInspector } from "./TemporalInspector.js";
@@ -617,8 +617,8 @@ export function Studio() {
           const plan = moveItemEditPlan(session, move);
           transact(plan.commands, undefined, plan.viewCommands);
         }}
-        onTrim={(item, edge, atFrame) => transact([{ kind: "item.trim", id: item.id, edge, at: exactFrame(atFrame, session) }])}
-        onTrimSelection={(items, edge, atFrame) => transact(items.map(item => ({ kind: "item.trim", id: item.id, edge, at: exactFrame(atFrame, session) })))}
+        onTrim={(item, edge, atFrame) => transact([trimItemCommand(session, item.id, edge, atFrame)])}
+        onTrimSelection={(items, edge, atFrame) => transact(items.map(item => trimItemCommand(session, item.id, edge, atFrame)))}
         onSplit={(items, atFrame) => transact(items.map(item => ({ kind: "item.split", id: item.id, at: exactFrame(atFrame, session), rightId: `split-${crypto.randomUUID()}` })))}
         onRemove={() => { const ids = editableSelection(scene, selection); if (ids.length) transact(removeItems(session, ids)); }}
         onTrackEnabled={(track, enabled) => transact([{ kind: "track.update", id: track, enabled }])}

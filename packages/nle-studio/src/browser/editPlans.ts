@@ -13,6 +13,29 @@ export function frameTime(session: NleStudioSession, frame: number): ExactTempor
   const rate = session.open.timeline.editRate;
   return { ticks: String(Math.round(frame) * rate.denominator), timeBase: { numerator: 1, denominator: rate.numerator } };
 }
+export function trimItemCommand(session: NleStudioSession, id: string, edge: "start" | "end", atFrame: number): NleCommand {
+  const at = frameTime(session, atFrame);
+  const trim = { kind: "item.trim", id, edge, at } as const;
+  if (edge === "end") return trim;
+  const item = activeComposition(session).tracks.flatMap(track => track.items).find(item => item.id === id);
+  if (item?.kind !== "adjust" || compare(at, item.start) >= 0) return trim;
+  const first = item.controlTime.pieces[0];
+  if (first === undefined || compare(first.target.start, exactTemporalZero()) !== 0) return trim;
+
+  const offset = subtract(at, item.start);
+  try {
+    sliceNleTimeMapping(item.controlTime, item.duration, { start: offset, end: item.duration });
+    return trim;
+  } catch {
+    const lead = subtract(item.start, at);
+    const held = nleLinearTimeMapping(lead, first.sourceAtStart, { numerator: 0, denominator: 1 });
+    const shifted = item.controlTime.pieces.map(piece => ({ ...piece,
+      target: { start: add(piece.target.start, lead), end: add(piece.target.end, lead) },
+    }));
+    return { kind: "item.replace", item: { ...item, start: at, duration: add(item.duration, lead),
+      controlTime: { pieces: [...held.pieces, ...shifted] } } };
+  }
+}
 export function slipItems(
   targets: readonly { readonly item: NleItem; readonly sourceDuration: ExactTemporalValue | undefined }[],
   delta: ExactTemporalValue,
