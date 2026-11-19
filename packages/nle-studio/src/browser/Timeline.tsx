@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { NleStudioOpenProjection, NleStudioProcessAddress, NleStudioProcessEdit, NleStudioTrimRange } from "../protocol.js";
 import { IconButton } from "./common.js";
 import { timecode } from "./timecode.js";
-import { labelWidth, maxZoom, minZoom, rowHeight, rowSize, rulerHeight, snapTimelineEdges, timelineSnapBoundaries } from "./timelineGeometry.js";
+import { defaultMaxZoom, emptyTimelineMinZoom, labelWidth, rowHeight, rowSize, rulerHeight, snapTimelineEdges, timelineEndPadding, timelineSnapBoundaries } from "./timelineGeometry.js";
 import { ToolSelector, type TimelineTool } from "./ToolSelector.js";
 import { useTimelineSeek } from "./useTimelineSeek.js";
 import { useTimelineZoom } from "./useTimelineZoom.js";
@@ -34,7 +34,6 @@ type Gesture = {
   readonly originStart: number;
   readonly originDuration: number;
   readonly range: NleStudioTrimRange;
-  readonly element: HTMLElement;
 };
 
 type MarqueeBox = { readonly left: number; readonly top: number; readonly width: number; readonly height: number; readonly visible: boolean };
@@ -183,17 +182,24 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
 }) {
   const scene = session.timeline.scene, fps = scene.editRate.numerator / scene.editRate.denominator;
   const scroller = useRef<HTMLDivElement>(null);
-  const { zoom, changeZoom } = useTimelineZoom(scroller, labelWidth, scene.composition);
+  const viewport = useTimelineViewport(scroller, labelWidth);
+  const lastClipEnd = useMemo(() => scene.tracks.reduce((latest, track) => track.items.reduce(
+    (end, item) => Math.max(end, item.startFrame + item.durationFrames), latest), 0), [scene.tracks]);
+  const minZoom = lastClipEnd > 0
+    ? Math.max(1, viewport.width - timelineEndPadding) * fps / (4 * lastClipEnd) : emptyTimelineMinZoom;
+  const maxZoom = Math.max(defaultMaxZoom, 4 * minZoom);
+  const { zoom, zoomPosition, changeZoom, changeZoomPosition, stepZoom } = useTimelineZoom(scroller, labelWidth, scene.composition, minZoom, maxZoom);
   const pixels = zoom / fps;
   const mediaViews = useTimelineMedia(scroller, session, pixels, labelWidth);
-  const viewport = useTimelineViewport(scroller, labelWidth);
-  const width = Math.max(viewport.right - viewport.left, (scene.maximumFrame + Math.ceil(fps * 15)) * pixels + 12);
-  const endFrame = Math.floor((width - 12) / pixels);
+  const width = Math.max(viewport.width, (scene.maximumFrame + Math.ceil(fps * 15)) * pixels + timelineEndPadding);
+  const endFrame = Math.floor((width - timelineEndPadding) / pixels);
   const [snap, setSnap] = useState(true), [tool, setTool] = useState<TimelineTool>("select");
   const [draft, setDraft] = useState<{ readonly id: string; readonly start: number; readonly duration: number; readonly snapFrame?: number }>();
   const [cutCursor, setCutCursor] = useState<{ readonly track: string; readonly frame: number }>();
   const draftRef = useRef<typeof draft>(undefined), gesture = useRef<Gesture | undefined>(undefined);
-  const seek = useTimelineSeek(scroller, pixels, labelWidth, frame, endFrame, onSeek);
+  const cancelTrim = useRef<() => void>(() => undefined);
+  const snapBoundaries = useMemo(() => timelineSnapBoundaries(scene), [scene]);
+  const seek = useTimelineSeek(scroller, pixels, labelWidth, frame, endFrame, snap ? snapBoundaries : undefined, onSeek);
   const marquee = useMarquee(scroller, selection, onSelect);
   const reorder = useTrackReorder(scroller, scene.tracks, scene.tracks, session.status.projectRevision, busy, onTrackMove);
   const itemGesture = useItemGesture({ scene, scroller, pixels, frame, snap, busy, selection, onSelect, onMove });
@@ -221,7 +227,7 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     : resolvedGap.before === undefined ? (after === undefined ? undefined : after.offsetTop + after.offsetHeight)
       : rows.find(row => row.dataset.trackId === resolvedGap.before)?.offsetTop);
   const guide = itemGesture.gesture?.snapFrame ?? draft?.snapFrame ?? drop?.snapFrame ?? drop?.transitionCut?.frame;
-  const playheadSnap = guide === frame ? " adsorbed" : "";
+  const playheadSnap = guide === frame || seek.snapped ? " adsorbed" : "";
   const trackPadding = Math.max(rowHeight, (viewport.height - rulerHeight - scene.tracks.reduce((height, track) => height + rowSize(track), 0)) / 2);
   const selected = scene.tracks.flatMap(track => track.items).find(item => selection.includes(item.id));
   const trimRanges = session.timeline.trimRanges;
@@ -233,11 +239,14 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
   const nestedComposition = selected?.nestedComposition;
   const sceneItems = new Map(scene.tracks.flatMap(track => track.items.map(item => [item.id, item] as const)));
   const splitItems = selectionAtFrame(scene, selection, frame, "split");
-  const stepFrames = Math.max(1, Math.round(([1, 2, 5, 10, 30, 60, 120, 300, 600].find(value => value * zoom >= 78) ?? 1200) * fps));
+  const tickSeconds = 78 / zoom;
+  const stepFrames = Math.max(1, Math.round(([1, 2, 5, 10, 30, 60, 120, 300, 600].find(value => value >= tickSeconds)
+    ?? Math.ceil(tickSeconds / 600) * 600) * fps));
   const ticks = useMemo(() => Array.from({ length: Math.ceil(width / (stepFrames * pixels)) + 1 }, (_, index) => index * stepFrames), [width, stepFrames, pixels]);
-  const zoomPosition = Math.log(zoom / minZoom) / Math.log(maxZoom / minZoom) * 100;
   const compositions = session.timeline.compositions;
   const composition = compositions.find(item => item.id === scene.composition);
+
+  useEffect(() => () => cancelTrim.current(), [pixels, busy, session.status.projectRevision, session.status.viewRevision]);
 
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -262,9 +271,10 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     onSelect(event.metaKey || event.ctrlKey ? [...new Set([...selection, item.id])] : [item.id]);
     const range = trimRanges[item.id]?.[mode === "trim-start" ? "start" : "end"];
     if (track.locked || range === undefined) return;
+    cancelTrim.current();
     const element = event.currentTarget;
     element.setPointerCapture(event.pointerId);
-    gesture.current = { item, mode, pointer: event.pointerId, startX: event.clientX, originStart: item.startFrame, originDuration: item.durationFrames, element, range };
+    gesture.current = { item, mode, pointer: event.pointerId, startX: event.clientX, originStart: item.startFrame, originDuration: item.durationFrames, range };
     const boundaries = timelineSnapBoundaries(scene, new Set([item.id]));
     const move = (next: PointerEvent) => {
       const current = gesture.current; if (!current || next.pointerId !== current.pointer) return;
@@ -285,23 +295,31 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     };
     const cleanup = () => {
       window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("keydown", key); window.removeEventListener("blur", cleanup);
+      if (element.hasPointerCapture(event.pointerId)) element.releasePointerCapture(event.pointerId);
+      cancelTrim.current = () => undefined;
       gesture.current = undefined; draftRef.current = undefined; setDraft(undefined);
     };
     const finish = (next: PointerEvent) => {
       const current = gesture.current; if (!current || next.pointerId !== current.pointer) return;
-      const accepted = draftRef.current; if (current.element.hasPointerCapture(current.pointer)) current.element.releasePointerCapture(current.pointer); cleanup();
+      move(next);
+      const accepted = draftRef.current;
+      cleanup();
       if (!accepted) return;
       onTrim(current.item, current.mode === "trim-start" ? "start" : "end",
         current.mode === "trim-start" ? accepted.start : Math.round(accepted.start + accepted.duration));
     };
-    const cancel = () => cleanup();
+    const cancel = (next: PointerEvent) => { if (next.pointerId === event.pointerId) cleanup(); };
+    const key = (next: KeyboardEvent) => { if (next.key === "Escape") { next.preventDefault(); cleanup(); } };
+    cancelTrim.current = cleanup;
     window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish); window.addEventListener("pointercancel", cancel);
+    window.addEventListener("keydown", key); window.addEventListener("blur", cleanup);
   };
 
   const startZoomDrag = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
     const bounds = event.currentTarget.getBoundingClientRect();
-    const update = (clientX: number) => changeZoom(minZoom * (maxZoom / minZoom) ** Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width)));
+    const update = (clientX: number) => changeZoomPosition(Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width)));
     event.preventDefault(); update(event.clientX);
     const move = (next: PointerEvent) => update(next.clientX);
     const finish = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); };
@@ -335,8 +353,16 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
         onClick={onReturnComposition}><ArrowLeft size={18} strokeWidth={1.6}/></IconButton>}
       <IconButton label={grouped ? "取消组合" : "组合"} className={grouped ? "active" : ""} disabled={busy || !canToggleGroup} onClick={onToggleGroup}><Group size={18} strokeWidth={1.6}/></IconButton><span className="nle-toolbar-space"/>
       <IconButton label="吸附" className={snap ? "active" : ""} onClick={() => setSnap(value => !value)}><Magnet size={18} strokeWidth={1.6}/></IconButton>
-      <IconButton label="适合时间线" onClick={() => changeZoom(((scroller.current?.clientWidth ?? 1000) - labelWidth - 40) / Math.max(1, scene.maximumFrame / fps), true)}><Scan size={18} strokeWidth={1.6}/></IconButton>
-      <div className="nle-zoom"><IconButton label="缩小" disabled={zoom <= minZoom} onClick={() => changeZoom(zoom / 1.25)}><CircleMinus size={18} strokeWidth={1.6}/></IconButton><div className="nle-zoom-slider" onPointerDown={startZoomDrag}><span className="nle-zoom-rail" aria-hidden="true" style={{ "--fill": `${zoomPosition}%` } as React.CSSProperties}/><input type="range" aria-label="时间线缩放" min="0" max="100" step="any" value={zoomPosition} onChange={event => changeZoom(minZoom * (maxZoom / minZoom) ** (Number(event.target.value) / 100))}/></div><IconButton label="放大" disabled={zoom >= maxZoom} onClick={() => changeZoom(zoom * 1.25)}><CirclePlus size={18} strokeWidth={1.6}/></IconButton></div>
+      <IconButton label="适合时间线" onClick={() => changeZoom((viewport.width - 40) / (lastClipEnd > 0 ? lastClipEnd / fps : 1), true)}><Scan size={18} strokeWidth={1.6}/></IconButton>
+      <div className="nle-zoom">
+        <IconButton label="缩小" disabled={zoom <= minZoom} onClick={() => stepZoom(-1)}><CircleMinus size={18} strokeWidth={1.6}/></IconButton>
+        <div className="nle-zoom-slider" onPointerDown={startZoomDrag}>
+          <span className="nle-zoom-rail" aria-hidden="true" style={{ "--fill": `${zoomPosition * 100}%` } as React.CSSProperties}/>
+          <input type="range" aria-label="时间线缩放" min="0" max="100" step="any" value={zoomPosition * 100}
+            onChange={event => changeZoomPosition(Number(event.target.value) / 100)}/>
+        </div>
+        <IconButton label="放大" disabled={zoom >= maxZoom} onClick={() => stepZoom(1)}><CirclePlus size={18} strokeWidth={1.6}/></IconButton>
+      </div>
     </div>
     <div data-frame-pixels={pixels} data-snap={snap} className={`nle-timeline-scroll${tool === "cut" ? " cut-mode" : tool === "left" || tool === "right" ? " direction-mode" : ""}`} ref={scroller} onPointerDown={event => {
       if (tool === "select") marquee.start(event);

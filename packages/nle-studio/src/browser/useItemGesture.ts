@@ -102,11 +102,6 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
 
     const locate = () => {
       if (!active) return;
-      const raw = Math.max(minimum, Math.round((pointer.x - startX + viewport.scrollLeft - scrollLeft) / pixels));
-      const aligned = snap && !pointer.alt
-        ? snapTimelineEdges(movingEdges.map(value => value + raw), frame, boundaries, pixels, delta => raw + delta >= minimum)
-        : undefined;
-      const delta = Math.max(Math.ceil(minimum), raw + Math.round(aligned?.correction ?? 0));
       const rows = Array.from(viewport.querySelectorAll<HTMLElement>(".nle-track[data-track-id]"));
       const bounds = viewport.getBoundingClientRect();
       const inside = pointer.x >= bounds.left + labelWidth && pointer.x < bounds.right
@@ -143,6 +138,11 @@ export function useItemGesture({ scene, scroller, pixels, frame, snap, busy, sel
         : lane === undefined ? undefined : { kind: "track", track: lane.id };
       const valid = inside && target !== undefined && (target.kind === "gap"
         || lane?.kind === track.kind && lane.role === track.role && !lane.locked);
+      const raw = Math.max(Math.ceil(minimum), Math.round((pointer.x - startX + viewport.scrollLeft - scrollLeft) / pixels));
+      const aligned = snap && !pointer.alt && (raw !== 0 || target?.kind !== "gap")
+        ? snapTimelineEdges(movingEdges.map(value => value + raw), frame, boundaries, pixels, delta => raw + delta >= minimum)
+        : undefined;
+      const delta = Math.max(Math.ceil(minimum), raw + Math.round(aligned?.correction ?? 0));
       const floating = members.flatMap((member): FloatingItem[] => {
         const origin = origins.get(member.item.id);
         return origin === undefined ? [] : [{ id: member.item.id, title: member.item.display.title,

@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
+import { snapTimelineEdges } from './timelineGeometry.js';
 
-export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixels: number, labelWidth: number, frame: number, endFrame: number, onSeek: (frame: number) => void) {
+export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixels: number, labelWidth: number, frame: number, endFrame: number,
+  snapBoundaries: readonly number[] | undefined, onSeek: (frame: number) => void) {
   const cancel = useRef<() => void>(() => {});
   const seeking = useRef(false), [active, setActive] = useState(false);
+  const [snapped, setSnapped] = useState(false);
   const seek = useRef(onSeek); seek.current = onSeek;
   useEffect(() => () => cancel.current(), [pixels, endFrame]);
   const previousFrame = useRef(frame);
@@ -25,19 +28,32 @@ export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixe
     // The arrow cursor stays while scrubbing, whatever the pointer passes over.
     document.documentElement.classList.add('nle-seeking');
     let x = event.clientX, animation = 0, last = -1;
+    let dragged = false, alt = event.altKey;
     const locate = () => {
       const bounds = viewport.getBoundingClientRect();
-      const at = Math.max(0, Math.min(endFrame, Math.round((Math.max(bounds.left + labelWidth, Math.min(bounds.left + viewport.clientWidth, x)) - bounds.left - labelWidth + viewport.scrollLeft) / pixels)));
+      const left = bounds.left + labelWidth;
+      const pointer = Math.max(left, Math.min(bounds.left + viewport.clientWidth, x));
+      const raw = Math.max(0, Math.min(endFrame, (pointer - left + viewport.scrollLeft) / pixels));
+      const aligned = dragged && !alt && snapBoundaries
+        ? snapTimelineEdges([raw], undefined, snapBoundaries, pixels, correction => raw + correction <= endFrame) : undefined;
+      const at = Math.round(aligned?.frame ?? raw);
+      setSnapped(aligned !== undefined);
       if (at !== last) { last = at; seek.current(at); }
     };
-    const move = (next: PointerEvent) => { if (next.pointerId === pointerId) { x = next.clientX; locate(); } };
+    const move = (next: PointerEvent) => {
+      if (next.pointerId !== pointerId) return;
+      dragged ||= x !== next.clientX;
+      x = next.clientX;
+      alt = next.altKey;
+      locate();
+    };
     const cleanup = () => {
       cancelAnimationFrame(animation);
       window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', abort);
       window.removeEventListener('keydown', key); window.removeEventListener('blur', cleanup);
       if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
       document.documentElement.classList.remove('nle-seeking');
-      seeking.current = false; setActive(false); cancel.current = () => {};
+      seeking.current = false; setActive(false); setSnapped(false); cancel.current = () => {};
     };
     const abort = (next: PointerEvent) => { if (next.pointerId === pointerId) cleanup(); };
     const up = (next: PointerEvent) => { if (next.pointerId === pointerId) { move(next); cleanup(); } };
@@ -54,5 +70,5 @@ export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixe
     window.addEventListener('keydown', key); window.addEventListener('blur', cleanup);
     locate(); animation = requestAnimationFrame(scroll);
   };
-  return { start, active };
+  return { start, active, snapped };
 }

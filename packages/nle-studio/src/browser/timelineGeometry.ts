@@ -7,20 +7,21 @@ export function componentTrackRole(category: NleStudioComponentCatalogEntry["cat
   return category === "graphic" ? undefined : category;
 }
 
-export const minZoom = 4, maxZoom = 4000;
+export const emptyTimelineMinZoom = 4, defaultMaxZoom = 4000, timelineEndPadding = 12;
 
 export function rowSize(row: NleTimelineSceneTrack | undefined): number {
   return row?.heightPx ?? rowHeight;
 }
 
 export function timelineSnapBoundaries(scene: NleTimelineScene, excluding?: ReadonlySet<string>): number[] {
-  return [0, ...scene.tracks.flatMap(track => track.items
+  return scene.tracks.flatMap(track => track.items
     .filter(item => !excluding?.has(item.id))
-    .flatMap(item => [Math.round(item.startFrame), Math.round(item.startFrame + item.durationFrames)]))];
+    .flatMap(item => [Math.round(item.startFrame), Math.round(item.startFrame + item.durationFrames)]))
+    .filter(frame => frame > 0);
 }
 
 export function snapTimelineEdges(
-  edges: readonly number[], playhead: number, boundaries: readonly number[], pixels: number,
+  edges: readonly number[], playhead: number | undefined, boundaries: readonly number[], pixels: number,
   allows: (correction: number) => boolean = () => true,
 ): { readonly frame: number; readonly correction: number } | undefined {
   const nearest = (targets: readonly number[]) => {
@@ -32,5 +33,5 @@ export function snapTimelineEdges(
     }
     return best;
   };
-  return nearest([playhead]) ?? nearest(boundaries);
+  return (playhead === undefined ? undefined : nearest([playhead])) ?? nearest(boundaries);
 }

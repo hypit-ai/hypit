@@ -103,9 +103,10 @@ Timeline dragging supplies selected Items, an anchor Item, a frame delta and a T
 down, `observe({ kind: "timeline-drop", drop })` runs the same planner against the current revisions and returns the
 destination Track or gap for the highlight. Releasing the pointer submits `timeline.drop` through `POST /api/operate`. Studio follows View Groups and connected Transition and Matte
 endpoints, computes one exact time displacement and keeps each source lane together in relative visual order.
-It searches compatible unlocked Tracks and allocates new ones for gaps or when needed. The drop planner avoids
-new Picture Present collisions as a Studio editing policy. Audio intervals can mix on the selected Track.
-The Editing Surface commits Track creation and Item movement in one guarded transaction.
+It searches compatible unlocked Tracks and allocates new ones when needed. A gap drop of every Item on a contiguous
+block of Tracks of one medium reorders those Tracks within their medium. Dropping inside the block keeps its order.
+The drop planner avoids new Picture Present collisions as a Studio editing policy. Audio intervals can mix on the
+selected Track. The Editing Surface commits Track changes and Item movement in one guarded transaction.
 
 The Timeline also submits trim, split and remove through `operate`. Split cuts the selected Items that cross
 the playhead and commits them together. Remove deletes the explicit selection and its incident audiovisual relations.

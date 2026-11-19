@@ -11,7 +11,7 @@ import {
   type ExactTemporalValue,
   type TemporalRate,
 } from "@hypit/temporal/algebra";
-import type { NleStudioTimelineDrop, NleStudioTimelineEdit } from "./protocol.js";
+import type { NleStudioDropDestination, NleStudioTimelineDrop, NleStudioTimelineEdit } from "./protocol.js";
 
 export function studioFrameTime(frame: number, rate: TemporalRate): ExactTemporalValue {
   if (!Number.isSafeInteger(frame)) throw new Error("NLE Studio frame must be a safe integer.");
@@ -324,7 +324,11 @@ function makeTrack(kind: NleTrack["kind"], role?: NleTrack["role"]): NleTrack {
 }
 
 /** Studio Timeline allocation policy over current Project and View facts. */
-export function planTimelineDrop(project: NleProject, view: NleView, drop: NleStudioTimelineDrop) {
+export function planTimelineDrop(project: NleProject, view: NleView, drop: NleStudioTimelineDrop): {
+  readonly commands: readonly NleCommand[];
+  readonly anchorTrack: string;
+  readonly destination: NleStudioDropDestination;
+} {
   const composition = project.compositions.find(entry => entry.id === drop.composition);
   if (composition === undefined || view.activeComposition !== composition.id) {
     throw new Error(`NLE Studio drop targets inactive Composition ${drop.composition}.`);
@@ -353,11 +357,39 @@ export function planTimelineDrop(project: NleProject, view: NleView, drop: NleSt
       delta = subtractExactTemporalValues(zero, item.start);
     }
   }
-  if (drop.target.kind === "track" && drop.target.track === anchorTrack.id
-    && compareExactTemporalValues(delta, zero) === 0) {
-    return { commands: [], anchorTrack: anchorTrack.id };
-  }
+  const changesTime = compareExactTemporalValues(delta, zero) !== 0;
+  const currentTrack = { track: anchorTrack.id };
   const commands: NleCommand[] = [];
+  if (drop.target.kind === "gap") {
+    const selectedTracks = new Set(entries.map(({ track }) => track));
+    const block = rows.filter(track => selectedTracks.has(track));
+    const first = rows.indexOf(block[0]!);
+    const end = first + block.length;
+    if (rows[end - 1] === block.at(-1)
+      && block.every(track => track.kind === anchorTrack.kind && track.items.every(item => ids.has(item.id)))) {
+      const mediumStart = rows.findIndex(track => track.kind === anchorTrack.kind);
+      const mediumEnd = rows.findLastIndex(track => track.kind === anchorTrack.kind) + 1;
+      const gap = Math.max(mediumStart, Math.min(mediumEnd, target));
+      let destination: NleStudioDropDestination = currentTrack;
+      if (gap < first || gap > end) {
+        const picture = anchorTrack.kind === "picture";
+        const adjacent = rows[picture ? gap - 1 : gap];
+        const remaining = composition.tracks.filter(track => !selectedTracks.has(track));
+        const before = adjacent?.kind === anchorTrack.kind ? adjacent.id
+          : remaining[remaining.findLastIndex(track => track.kind === anchorTrack.kind) + 1]?.id;
+        const authoredOrder = picture ? block.reverse() : block;
+        for (const track of authoredOrder) {
+          commands.push({ kind: "track.move", id: track.id, ...(before === undefined ? {} : { before }) });
+        }
+        const displayBefore = rows[gap]?.id;
+        destination = { gap: true, ...(displayBefore === undefined ? {} : { before: displayBefore }) };
+      }
+      if (changesTime) commands.push({ kind: "item.move", ids: [...ids], delta });
+      return { commands, anchorTrack: anchorTrack.id, destination };
+    }
+  } else if (drop.target.track === anchorTrack.id && !changesTime) {
+    return { commands, anchorTrack: anchorTrack.id, destination: currentTrack };
+  }
   const destinations: { item: string; track: string }[] = [];
   const sourceRows = [...rows];
   const sourceIndex = sourceRows.indexOf(anchorTrack);
@@ -404,15 +436,10 @@ export function planTimelineDrop(project: NleProject, view: NleView, drop: NleSt
     const desired = rows.indexOf(anchor) + index - sourceIndex;
     neighbor = placeLane(source, desired, limit, rows.length);
   }
-  if (destinations.length > 0 || compareExactTemporalValues(delta, zero) !== 0) {
+  if (destinations.length > 0 || changesTime) {
     commands.push({ kind: "item.move", ids: entries.map(({ item }) => item.id), delta, destinations });
   }
-  const row = rows.indexOf(anchor);
-  return {
-    commands,
-    anchorTrack: anchor.id,
-    ...(!composition.tracks.some(track => track.id === anchor.id) ? {
-      newTrack: { before: rows.slice(row + 1).find(candidate => composition.tracks.some(track => track.id === candidate.id))?.id },
-    } : {}),
-  };
+  if (sourceRows.includes(anchor)) return { commands, anchorTrack: anchor.id, destination: { track: anchor.id } };
+  const before = rows.slice(rows.indexOf(anchor) + 1).find(track => sourceRows.includes(track))?.id;
+  return { commands, anchorTrack: anchor.id, destination: { gap: true, ...(before === undefined ? {} : { before }) } };
 }

@@ -615,9 +615,7 @@ export class NleStudioProductSession {
         const plan = planTimelineDrop(project.project, view.view, request.drop);
         // Apply against an in-memory snapshot to validate the same owner rules used by the commit.
         if (plan.commands.length > 0) applyNleTransaction(project.project, { commands: plan.commands });
-        const before = plan.newTrack?.before;
-        return { kind: "timeline-drop", value: plan.newTrack === undefined ? { track: plan.anchorTrack }
-          : { gap: true, ...(before === undefined ? {} : { before }) } };
+        return { kind: "timeline-drop", value: plan.destination };
       }
       case "timeline-media": {
         const catalog = await this.#project.media.observe();
