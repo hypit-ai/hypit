@@ -316,7 +316,7 @@ export class ApplicationHost {
   closeProductFromCaller(handle: ApplicationProductSessionHandle): Promise<void> {
     const entry = this.#sessions.get(handle);
     if (entry?.browser && entry.session.retainWhenDisconnected?.()) {
-      throw new Error("Save or reload the open documents and let delivery finish or cancel it before closing this Session.");
+      throw new Error("Resolve any unsaved changes and let delivery finish or cancel it before closing this Session.");
     }
     return this.closeProduct(handle);
   }

@@ -173,7 +173,8 @@ project-relative Media Asset manifest path. This transport does not place the ac
 The browser requests a save after accepting an edit to a durable document. Studio serializes saves and reloads for
 the shared Project document. A save compares the file with the bytes last accepted by its Owner Provider, atomically
 replaces that file and marks the exact Service revision saved after the write succeeds. If another program modifies
-the file, Studio reports a save conflict and retains the open edit. Reload explicitly accepts current file bytes.
+the file, Studio retains the open edit and reports the save conflict. The notice offers to use the file version
+and asks for confirmation before discarding unsaved edits and clearing undo history.
 A View opened for the Session stays in memory. A View opened with an explicit document path is saved separately.
 
 The `operate` union also accepts Media, Component, Adjust, Transition and nested Composition materialization and

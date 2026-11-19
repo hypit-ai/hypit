@@ -357,4 +357,5 @@ export type NleStudioEventListener = (event: NleStudioEvent) => void;
 
 export type NleStudioErrorResponse = {
   readonly error: string;
+  readonly code?: "document-conflict";
 };

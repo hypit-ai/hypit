@@ -117,5 +117,6 @@ Timeline presentation resources use opaque `api/presentations/:resource` address
 process-local package contribution.
 
 Studio autosaves browser edits to the Project document and to a View opened with an explicit document path.
-When the file has changed on disk, Studio reports a save conflict. Reload accepts the current file explicitly.
+When the file has changed on disk, Studio keeps the unsaved edits and reports the conflict. The notice offers to use
+the file version and asks for confirmation before replacing the open edits.
 The Timeline uses the Host’s resolved drop destination, trim ranges, and guarded operations.

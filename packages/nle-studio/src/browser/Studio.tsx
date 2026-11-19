@@ -17,6 +17,7 @@ import type {
 import {
   connectStudioEvents,
   importMedia,
+  NleStudioSaveConflict,
   operate,
   readInspector,
   readOpen,
@@ -60,6 +61,7 @@ function readPanelWidths(): typeof defaultPanelWidths {
 export function Studio() {
   const [session, setSession] = useState<NleStudioOpenProjection>();
   const [failure, setFailure] = useState<string>();
+  const [saveConflict, setSaveConflict] = useState(false);
   const [busy, setBusy] = useState(false);
   const [selection, setSelection] = useState<readonly string[]>([]);
   const [processSelection, setProcessSelection] = useState<NleStudioProcessAddress>();
@@ -110,12 +112,17 @@ export function Studio() {
   const storeSession = useCallback((next: NleStudioOpenProjection) => {
     sessionRef.current = next;
     setSession(next);
+    if (!next.status.projectDirty && (next.viewDocument.persistence !== "document" || !next.status.viewDirty)) {
+      setSaveConflict(false);
+    }
   }, []);
 
   const enqueue = useCallback((operation: () => Promise<void>) => {
     const result = work.current.then(operation);
-    work.current = result.catch((error: unknown) =>
-      setFailure(error instanceof Error ? error.message : String(error)));
+    work.current = result.catch((error: unknown) => {
+      if (error instanceof NleStudioSaveConflict) setSaveConflict(true);
+      else setFailure(error instanceof Error ? error.message : String(error));
+    });
     return work.current;
   }, []);
 
@@ -447,6 +454,15 @@ export function Studio() {
   const spatialTranslate = (item: string, deltaX: number, deltaY: number) => command({
     kind: "spatial.edit", ...operationContext, item, edit: { kind: "frame.translate", deltaX, deltaY },
   });
+  const useFileVersion = () => {
+    if (!window.confirm("使用文件中的版本？当前未保存的改动会丢失，撤销记录也会清空。")) return;
+    void perform(async () => {
+      const receipt = await reloadSession();
+      setSaveConflict(false);
+      select([]);
+      await acceptReceipt(receipt);
+    }, false);
+  };
 
   return <div className="nle-workspace nle-active"><div className={classes} style={{
     "--nle-bin-preferred": `${panelWidths.bin}px`,
@@ -455,10 +471,12 @@ export function Studio() {
       <div className="nle-titlebar"><div className="nle-titlebar-side"><small>{session.status.projectDirty ? "未保存" : "已保存"}</small></div><strong>{projectName}</strong><div className="nle-titlebar-side end"><div className="nle-toolbar-actions">
         <IconButton label="撤销" disabled={busy || !session.status.projectHistory.canUndo} onClick={() => command({ kind: "project.undo", expectedProjectRevision: session.status.projectRevision })}><Undo2 size={16}/></IconButton>
         <IconButton label="重做" disabled={busy || !session.status.projectHistory.canRedo} onClick={() => command({ kind: "project.redo", expectedProjectRevision: session.status.projectRevision })}><Redo2 size={16}/></IconButton>
-        <button className="button" disabled={busy} onClick={() => void perform(async () => { await acceptReceipt(await reloadSession()); select([]); })}>重载</button>
         <button className="button primary" disabled={busy || !session.status.projectDirty && !session.status.viewDirty} onClick={() => void perform(async () => acceptReceipt(await saveSession()))}><Save size={14}/>保存</button>
       </div></div></div>
       <ErrorNotice message={failure ?? previewDiagnostic} onClose={() => setFailure(undefined)}/>
+      <ErrorNotice message={saveConflict ? "文件已被其他程序修改，当前改动尚未保存。" : undefined}>
+        <button type="button" className="button" disabled={busy} onClick={useFileVersion}>使用文件中的版本</button>
+      </ErrorNotice>
       {staleView && <div className="studio-error">当前 View 有失效引用。 <button className="button" disabled={busy}
         onClick={() => command({ kind: "view.reconcile", expectedProjectRevision: session.status.projectRevision,
           expectedViewRevision: session.status.viewRevision })}>整理 View 引用</button></div>}

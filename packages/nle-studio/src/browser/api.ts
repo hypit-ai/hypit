@@ -2,6 +2,7 @@ import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import type {
   NleStudioActionObservation,
   NleStudioActionRequest,
+  NleStudioErrorResponse,
   NleStudioEvent,
   NleStudioObservation,
   NleStudioObservationRequest,
@@ -29,14 +30,20 @@ export function connectStudioEvents(input: {
   return () => source.close();
 }
 
+export class NleStudioSaveConflict extends Error {}
+
 export async function request<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(path, body === undefined ? undefined : {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  const value = await response.json() as T & { error?: string };
-  if (!response.ok) throw new Error(value.error ?? `NLE Studio request failed with ${response.status}.`);
+  const value = await response.json() as T & Partial<NleStudioErrorResponse>;
+  if (!response.ok) {
+    const message = value.error ?? `NLE Studio request failed with ${response.status}.`;
+    if (path === "api/save" && value.code === "document-conflict") throw new NleStudioSaveConflict(message);
+    throw new Error(message);
+  }
   return value;
 }
 

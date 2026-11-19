@@ -15,7 +15,7 @@ export function NotificationScope({ children }: { readonly children: ReactNode }
 export function ErrorNotice({ message, children, onClose }: {
   readonly message: string | undefined;
   readonly children?: ReactNode;
-  readonly onClose: () => void;
+  readonly onClose?: () => void;
 }) {
   const reduced = useReducedMotion();
   const host = useContext(NoticeHost);
@@ -24,7 +24,7 @@ export function ErrorNotice({ message, children, onClose }: {
   const content = <AnimatePresence>{message && dismissed !== message && <motion.div key={message} role="alert" className="region-notice region-notice-error" {...enterMotion(reduced)}>
       <AlertCircle size={17}/><div className="region-notice-content"><div className="region-notice-message">{message}</div>
         {children && <div className="region-notice-actions">{children}</div>}
-      </div><button type="button" className="icon-button region-notice-close" aria-label="关闭错误提示" onClick={() => { setDismissed(message); onClose(); }}><X size={15}/></button>
+      </div>{onClose && <button type="button" className="icon-button region-notice-close" aria-label="关闭错误提示" onClick={() => { setDismissed(message); onClose(); }}><X size={15}/></button>}
     </motion.div>}</AnimatePresence>;
   if (host === null) return null;
   return host ? createPortal(content, host) : createPortal(<div className="region-notices region-notices-viewport">{content}</div>, document.body);

@@ -6,12 +6,14 @@ import { join, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 import { serveApplicationEventStream, type NodeApplicationProductAdapter } from "@hypit/application/node";
+import { NleDocumentConflict } from "@hypit/nle/node";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import { assertExactTemporalValue } from "@hypit/temporal/algebra";
 import { NleStudioProductSession, nleStudioProduct } from "./host.js";
 import type {
   NleStudioActionRequest,
   NleStudioCommandRequest,
+  NleStudioErrorResponse,
   NleStudioObservationRequest,
   NleStudioOperation,
   NleStudioOperationReceipt,
@@ -553,8 +555,12 @@ export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
       }
       return request.method === "GET" && await sendStatic(response, pathname);
     } catch (error) {
-      const conflict = error instanceof Error && (error.name.includes("RevisionConflict") || error.name === "NleDocumentConflict");
-      sendJson(response, conflict ? 409 : 400, { error: error instanceof Error ? error.message : String(error) });
+      const documentConflict = error instanceof NleDocumentConflict;
+      const conflict = documentConflict || error instanceof Error && error.name.includes("RevisionConflict");
+      sendJson(response, conflict ? 409 : 400, {
+        error: error instanceof Error ? error.message : String(error),
+        ...(documentConflict ? { code: "document-conflict" } : {}),
+      } satisfies NleStudioErrorResponse);
       return true;
     }
   },
