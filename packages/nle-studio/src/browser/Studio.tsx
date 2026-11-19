@@ -3,7 +3,7 @@ import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import { nleCompositionDuration, nleLinearTimeMapping, type NleCommand, type NleItem, type NleTrack } from "@hypit/nle";
 import type { NleInspectorScene, NleViewCommand } from "@hypit/nle/view";
 import { Dialog } from "@base-ui/react/dialog";
-import { Blend, Captions, Images, Maximize2, Minimize2, Pause, Play, Redo2, StepBack, StepForward, Type, Undo2, Volume2, VolumeX, Wand2 } from "lucide-react";
+import { Blend, Captions, Download, Images, LayoutPanelLeft, Maximize2, MessageSquareText, Minimize2, Pause, Play, SquarePlay, StepBack, StepForward, Type, Volume2, VolumeX, Wand2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 import type {
   NleStudioAdjustCatalogEntry,
@@ -51,6 +51,9 @@ import { useEditorPosition } from "./useEditorPosition.js";
 import { EditingHistory, type EditorFocus } from "./editingHistory.js";
 import { activeComposition as compositionOf, canFreezeItem, changeSpeed, closeTrackGaps, createCompound, duplicateCompound, editTransitionDuration, frameOf, frameTime, freezeItem, identity, magneticEdit, moveItemEditPlan, removeItems, reverseItems, rippleRemove, slipItems, trimItemCommand, unpackCompound, type EditPlan } from "./editPlans.js";
 import { TransitionInspector } from "./TransitionInspector.js";
+import { ReviewPanel, ReviewScrubber, ReviewStepButtons } from "./ReviewPanel.js";
+import { reviewStorageKey, reviewTime } from "./reviewComments.js";
+
 import { transitionCutAt, transitionCuts } from "./transitionCuts.js";
 import { TemporalInspector } from "./TemporalInspector.js";
 import { ProcessInspector } from "./ProcessInspector.js";
@@ -117,6 +120,8 @@ export function Studio() {
   const [propertiesTab, setPropertiesTab] = useState<"properties" | "text">("properties");
   const [compositionParents, setCompositionParents] = useState<readonly string[]>([]);
   const [previewExpanded, setPreviewExpanded] = useState(false);
+  /** Studio's top-level mode: the editing workspace, or review with an enlarged preview and comment column. */
+  const [workMode, setWorkMode] = useState<"edit" | "review">("edit");
   const [panelWidths, setPanelWidths] = useState(readPanelWidths);
   const [source, setSource] = useState<NleStudioMediaEntry>();
   const [canvasDraft, setCanvasDraft] = useState<CanvasDraft>();
@@ -270,6 +275,8 @@ export function Studio() {
     const key = (event: KeyboardEvent) => {
       if (event.defaultPrevented || session === undefined || (event.target as Element | null)?.closest("input,textarea,[role=combobox],[contenteditable=true]") || document.querySelector("[role=dialog],[role=menu],[role=listbox]")) return;
       if (source !== undefined) { if (event.key === "Escape") setSource(undefined); return; }
+      // Review mode only watches: playback and playhead keys work, editing shortcuts do not.
+      if (workMode === "review" && (event.metaKey || event.ctrlKey || (event.code !== "Space" && !["Home", "End", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)))) return;
       if (event.metaKey || event.ctrlKey) {
         if (event.code === "KeyA") { event.preventDefault(); select(editableSelection(session.open.timeline, session.open.timeline.tracks.flatMap(track => track.items.map(item => item.id)))); }
         if (event.code === "KeyG" && !busy) { event.preventDefault(); groupSelection(event.shiftKey); }
@@ -303,7 +310,7 @@ export function Studio() {
       }
     };
     window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key);
-  }, [selection, select, transact, session, frame, busy, source, command, perform, groupSelection, replayHistory, transitionId]);
+  }, [selection, select, transact, session, frame, busy, source, command, perform, groupSelection, replayHistory, transitionId, workMode]);
 
   const activeItems = useMemo(() => new Set(session?.open.timeline.tracks.filter(track => track.enabled).flatMap(track => track.items)
     .filter(item => frame >= item.startFrame && frame < item.startFrame + item.durationFrames && item.enabled)
@@ -368,7 +375,11 @@ export function Studio() {
     && selectedProjectItem.picture !== undefined && selectedProjectItem.audio !== undefined;
   const icons = { assets: Images, text: Type, subtitles: Captions, transitions: Blend, effects: Wand2 } as const;
   const tabNames = { assets: "素材", text: "文本", subtitles: "字幕", transitions: "转场", effects: "效果" } as const;
-  const classes = `nle-editor${previewExpanded ? " nle-preview-expanded" : ""}`;
+  const reviewing = workMode === "review";
+  const classes = `nle-editor${previewExpanded || reviewing ? " nle-preview-expanded" : ""}${reviewing ? " nle-feedback-open nle-review-mode" : ""}`;
+  const changeMode = (mode: "edit" | "review") => { if (mode === "review") { select([]); setSource(undefined); } setWorkMode(mode); };
+  const reviewKey = reviewStorageKey(session);
+  const playButton = <button className="nle-play" aria-label={playing ? "暂停" : "播放"} onClick={() => setPlaying(value => !value)}>{playing ? <Pause size={18}/> : <Play size={18}/>}</button>;
   const projectName = session.open.project.project.name;
   const canUndo = history.current.available(session, "undo"), canRedo = history.current.available(session, "redo");
   const selectedTransition = activeComposition.transitions.find(value => value.id === transitionId);
@@ -538,9 +549,10 @@ export function Studio() {
       <div className="nle-titlebar"><div className="nle-titlebar-side">{conflict
         ? <button type="button" className="button" onClick={() => setConflictOpen(true)}>自动保存暂停</button>
         : <small>{saveStatus}</small>}</div><button type="button" className="nle-titlebar-name" disabled={busy} onClick={() => setRenameProject(true)} title="重命名项目">{projectName}</button><div className="nle-titlebar-side end"><div className="nle-toolbar-actions">
-        <IconButton label="撤销" disabled={busy || !canUndo} onClick={() => replayHistory("undo")}><Undo2 size={16}/></IconButton>
-        <IconButton label="重做" disabled={busy || !canRedo} onClick={() => replayHistory("redo")}><Redo2 size={16}/></IconButton>
-        <button className="button" disabled={busy} onClick={() => { if (dirty && conflict) setConflictOpen(true); else reload(); }}>重载</button>
+        <button type="button" className="button primary nle-export-button" onClick={() => setFailure("导出视频还没有接入，暂时不能导出。")}><Download size={15} strokeWidth={1.8}/>导出视频</button>
+      </div><div className="nle-mode-switch" role="tablist" aria-label="Studio 模式">
+        <button type="button" role="tab" aria-selected={!reviewing} onClick={() => changeMode("edit")}><LayoutPanelLeft size={15} strokeWidth={1.6}/>工作台</button>
+        <button type="button" role="tab" aria-selected={reviewing} onClick={() => changeMode("review")}><MessageSquareText size={15} strokeWidth={1.6}/>评论</button>
       </div></div></div>
       <Dialog.Root open={conflictOpen} onOpenChange={setConflictOpen}>
         <Dialog.Portal><Dialog.Backdrop className="studio-dialog-backdrop"/><Dialog.Popup className="studio-dialog modal">
@@ -561,7 +573,7 @@ export function Studio() {
           ...(value.kind === "effect" ? { role: "effect" } : {}),
         })} onMaterialize={materialize} onMaterializeAdjust={materializeEffect} onMaterializeTransition={materializeSelectedTransition}/></motion.div></AnimatePresence></aside>
         <PanelResizeHandle side="bin" label="调整素材面板宽度" width={panelWidths.bin} onResize={(width, save) => resizePanel("bin", width, save)}/>
-        <section className="nle-monitor"><div className="nle-panel-header nle-monitor-title"><span>{projectName}</span><IconButton label={previewExpanded ? "恢复预览" : "放大预览"} onClick={() => setPreviewExpanded(value => !value)}>{previewExpanded ? <Minimize2 size={15}/> : <Maximize2 size={15}/>}</IconButton></div>
+        <section className="nle-monitor"><div className="nle-panel-header nle-monitor-title">{reviewing ? <span className="nle-review-title"><SquarePlay size={16} strokeWidth={1.6}/>预览</span> : <span>{projectName}</span>}{!reviewing && <IconButton label={previewExpanded ? "恢复预览" : "放大预览"} onClick={() => setPreviewExpanded(value => !value)}>{previewExpanded ? <Minimize2 size={15}/> : <Maximize2 size={15}/>}</IconButton>}</div>
           <SourcePreview entry={source} fps={fps} muted={muted} onMute={() => setMuted(value => !value)} onClose={() => setSource(undefined)}/><div className="nle-stage"><div className="nle-editable-preview" style={{ "--canvas-ratio": session.open.canvas.canvas.width / session.open.canvas.canvas.height } as React.CSSProperties}><div className="studio-canvas">
             {session.preview.state === "ready" && <img className="studio-preview-frame" src={session.preview.resource}/>}
             {session.preview.state !== "ready" && session.open.canvas.layers.map(layer => {
@@ -588,10 +600,13 @@ export function Studio() {
               onTranslate={translatePicture}
               onResize={(item, next) => command({ kind: "spatial.edit", expectedProjectRevision: session.open.status.projectRevision, expectedViewRevision: session.open.status.viewRevision, item, edit: { kind: "frame.resize", frame: next } })}/>}
           </div></div></div>
-          <div className="nle-transport"><span className="nle-transport-time"><span className="current">{timecode(frame, fps)}</span><span className="separator">/</span><span className="total">{timecode(scene.maximumFrame, fps)}</span></span><button className="nle-play" aria-label={playing ? "暂停" : "播放"} onClick={() => setPlaying(value => !value)}>{playing ? <Pause size={18}/> : <Play size={18}/>}</button><span className="nle-transport-actions"><IconButton label="上一帧" onClick={() => { setPlaying(false); setFrame(value => Math.max(0, value - 1)); }}><StepBack size={15}/></IconButton><IconButton label="下一帧" onClick={() => { setPlaying(false); setFrame(value => Math.min(scene.maximumFrame, value + 1)); }}><StepForward size={15}/></IconButton><IconButton label="静音" onClick={() => setMuted(value => !value)}>{muted ? <VolumeX size={15}/> : <Volume2 size={15}/>}</IconButton></span></div>
+          {reviewing && <ReviewScrubber frame={frame} end={scene.maximumFrame} onSeek={value => { setPlaying(false); setFrame(value); }}/>}
+          <div className="nle-transport"><span className="nle-transport-time"><span className="current">{reviewing ? reviewTime(frame, fps, false) : timecode(frame, fps)}</span><span className="separator">/</span><span className="total">{reviewing ? reviewTime(scene.maximumFrame, fps, false) : timecode(scene.maximumFrame, fps)}</span></span><span className="nle-transport-center">{reviewing
+            ? <ReviewStepButtons storageKey={reviewKey} composition={scene.composition} frame={frame} onJump={value => { setPlaying(false); setFrame(value); }}>{playButton}</ReviewStepButtons>
+            : <><IconButton label="上一帧" onClick={() => { setPlaying(false); setFrame(value => Math.max(0, value - 1)); }}><StepBack size={15}/></IconButton>{playButton}<IconButton label="下一帧" onClick={() => { setPlaying(false); setFrame(value => Math.min(scene.maximumFrame, value + 1)); }}><StepForward size={15}/></IconButton></>}</span><span className="nle-transport-actions"><IconButton label="静音" onClick={() => setMuted(value => !value)}>{muted ? <VolumeX size={15}/> : <Volume2 size={15}/>}</IconButton></span></div>
         </section>
         <PanelResizeHandle side="properties" label="调整属性面板宽度" width={panelWidths.properties} onResize={(width, save) => resizePanel("properties", width, save)}/>
-        <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist">
+        <aside className="nle-properties">{reviewing ? <ReviewPanel storageKey={reviewKey} scene={scene} frame={frame} onJump={value => { setPlaying(false); setFrame(value); }}/> : <><div className="nle-properties-tabs" role="tablist">
           <button role="tab" aria-selected={propertiesTab === "properties"} onClick={() => setPropertiesTab("properties")}>属性</button>
           <button role="tab" aria-selected={propertiesTab === "text"} onClick={() => setPropertiesTab("text")}>文本与字幕</button>
         </div><AnimatePresence mode="popLayout" initial={false}>{propertiesTab === "text"
@@ -612,7 +627,7 @@ export function Studio() {
             onSpeed={value => applyPlan(() => changeSpeed(session, selection, value))} onReverse={() => applyPlan(() => reverseItems(session, selection))}
             onSlipEarlier={slipEarlier && (() => transact(slipEarlier))}
             onSlipLater={slipLater && (() => transact(slipLater))}
-            canFreeze={canFreeze} onFreeze={freezeSelection}/><ProcessInspector item={selectedProjectItem} disabled={busy || selectionLocked} onEdit={transact}/></>}</motion.div>}</AnimatePresence></aside>
+            canFreeze={canFreeze} onFreeze={freezeSelection}/><ProcessInspector item={selectedProjectItem} disabled={busy || selectionLocked} onEdit={transact}/></>}</motion.div>}</AnimatePresence></>}</aside>
       </div>
       <AnimatePresence mode="popLayout" initial={false}><Timeline key={`${session.projectDocument.path}/${scene.composition}`} session={session} frame={frame} selection={selection} busy={busy} onSelectTransition={id => { setTransitionId(id); setPropertiesTab("properties"); }} selectedTransition={transitionId} onSeek={value => { setPlaying(false); setSource(undefined); setFrame(value); }} onSelect={select}
         draggedMedia={assetDrag.drag?.entry} mediaDrop={assetDrag.drag?.drop}

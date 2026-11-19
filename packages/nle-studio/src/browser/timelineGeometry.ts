@@ -2,8 +2,9 @@ import type { NleTimelineScene, NleTimelineSceneTrack, NleView } from "@hypit/nl
 import type { NleStudioComponentCatalogEntry } from "../protocol.js";
 
 export const labelWidth = 84, rulerHeight = 30, rowHeight = 62, rowInset = 3;
-const mainRowHeight = 86;
-const compactRowHeight = 36;
+const mainRowHeight = 96;
+export const compactRowHeight = 48;
+const pictureRowHeight = 80, audioRowHeight = 60;
 
 export function componentTrackRole(category: NleStudioComponentCatalogEntry["category"]): NleTimelineSceneTrack["role"] {
   return category === "graphic" ? undefined : category;
@@ -28,11 +29,13 @@ export const emptyTimelineMinZoom = 4, defaultMaxZoom = 4000, timelineEndPadding
 
 /** Compose the stable track heights with Studio's main-track height. */
 export function timelineRows(scene: NleTimelineScene, view: NleView, primaryTrack: string | undefined, destinations: ReadonlySet<string>): readonly NleTimelineSceneTrack[] {
-  const hasExplicitHeight = view.compositions.find(value => value.composition === scene.composition)?.tracks
-    .some(track => track.track === primaryTrack && track.heightPx !== undefined);
+  const explicit = new Set(view.compositions.find(value => value.composition === scene.composition)?.tracks
+    .filter(track => track.heightPx !== undefined).map(track => track.track));
   return scene.tracks.filter(track => track.items.length > 0 || destinations.has(track.id)).map(track => {
     if (track.role !== undefined) return { ...track, heightPx: compactRowHeight };
-    return track.id === primaryTrack && !hasExplicitHeight ? { ...track, heightPx: mainRowHeight } : track;
+    if (explicit.has(track.id)) return track;
+    if (track.id === primaryTrack) return { ...track, heightPx: mainRowHeight };
+    return { ...track, heightPx: track.kind === "audio" ? audioRowHeight : pictureRowHeight };
   });
 }
 

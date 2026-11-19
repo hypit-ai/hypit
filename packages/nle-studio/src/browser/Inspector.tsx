@@ -5,6 +5,25 @@ import type { NleInspectorField, NleInspectorScene } from "@hypit/nle/view";
 import { NumberField, Row, Section, Toggle } from "./controls.js";
 import { useRef, useState } from "react";
 
+/** Studio's Chinese labels for the NLE-owned Inspector sections and fields, keyed by their stable ids. */
+const sectionLabels: Readonly<Record<string, string>> = { "nle-occurrence": "片段", "nle-picture-layout": "画面布局" };
+const fieldLabels: Readonly<Record<string, string>> = {
+  name: "名称", track: "所在轨道", enabled: "启用", start: "开始", duration: "时长", mapping: "时间映射",
+  x: "X", y: "Y", width: "宽度", height: "高度", fit: "填充方式", contentX: "水平焦点", contentY: "垂直焦点",
+};
+const optionLabels: Readonly<Record<string, string>> = { fill: "拉伸", contain: "适应", cover: "填满" };
+const unitLabels: Readonly<Record<string, string>> = { frames: "帧" };
+
+function localized(field: NleInspectorField): NleInspectorField {
+  const value = field.id === "mapping" && typeof field.value === "string" ? field.value.replace(/^(\d+) pieces?$/u, "$1 段") : field.value;
+  return {
+    ...field, value,
+    label: fieldLabels[field.id] ?? field.label,
+    ...(field.unit === undefined ? {} : { unit: unitLabels[field.unit] ?? field.unit }),
+    ...(field.options === undefined ? {} : { options: field.options.map(option => ({ ...option, label: optionLabels[option.value] ?? option.label })) }),
+  };
+}
+
 function TextField({ field, disabled, onCommit }: {
   readonly field: NleInspectorField;
   readonly disabled: boolean;
@@ -70,7 +89,9 @@ export function Inspector({ scene, disabled, onEdit }: {
   readonly onEdit: (section: string, field: string, value: string | number | boolean) => void;
 }) {
   if (scene === undefined) return <p className="nle-empty">选择一个时间线项目以检查属性</p>;
-  return <AnimatePresence initial={false}>{scene.sections.map(section => <Section title={section.label} key={section.id}>
-    {section.fields.map(field => <Field key={`${scene.item}/${field.id}`} section={section.id} field={field} disabled={disabled} onEdit={onEdit}/>) }
-  </Section>)}</AnimatePresence>;
+  return <AnimatePresence initial={false}>{scene.sections.map(section => {
+    const owned = section.owner.kind !== "package";
+    return <Section title={owned ? sectionLabels[section.id] ?? section.label : section.label} key={section.id}>
+    {section.fields.map(field => <Field key={`${scene.item}/${field.id}`} section={section.id} field={owned ? localized(field) : field} disabled={disabled} onEdit={onEdit}/>) }
+  </Section>; })}</AnimatePresence>;
 }

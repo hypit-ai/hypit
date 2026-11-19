@@ -74,8 +74,6 @@
 .nle-bin-side button[aria-pressed=true], .library-editor .library-filters button[aria-selected=true] { background: var(--nle-pill); color: var(--pink); }
 .nle-bin-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow-y: auto; padding: 0 12px 16px; scrollbar-width: thin; }
 .nle-bin-toolbar { position: sticky; top: 0; z-index: 2; display: flex; flex: none; align-items: center; gap: 8px; height: 44px; padding: 0; background: var(--surface); }
-.nle-bin-label { flex: none; padding: 6px 0 14px; color: var(--text); font-size: var(--font-size-caption); line-height: 16px; }
-.nle-bin-main > .nle-bin-label:first-child { padding-top: 14px; }
 .nle-bin-actions { padding: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .nle-preset-search, .library-editor .library-search { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; height: 28px; padding: 0 10px; border: 1px solid transparent; border-radius: 6px; background: var(--nle-field); color: var(--muted); transition: border-color .15s; }
 .nle-preset-search:focus-within, .library-editor .library-search:focus-within { border-color: var(--pink); }
@@ -87,8 +85,10 @@
 .nle-preset:hover .nle-preset-preview { outline-color: var(--border-strong); }
 .nle-preset-preview:focus-visible { outline: 2px solid var(--pink); outline-offset: 0; }
 .nle-preset-name { display: block; margin-top: 6px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; color: var(--muted); font-size: var(--font-size-caption); line-height: 16px; }
-.nle-preset .nle-preset-add { position: absolute; right: 6px; top: 6px; width: 22px; height: 22px; min-width: 22px; border: 0; border-radius: 50%; background: var(--pink); color: #fff; opacity: 0; transform: scale(.8); transition: opacity .15s, transform .15s; }
+/* Matches the Media card action: bottom-right of the preview (above the 22px name row), dark translucent square. */
+.nle-preset .nle-preset-add { position: absolute; right: 4px; bottom: 30px; width: 28px; height: 28px; min-width: 28px; border: 0; border-radius: 6px; background: rgba(0,0,0,.6); color: #fff; opacity: 0; transform: translateY(-2px); transition: opacity .15s, transform .15s; }
 .nle-preset:hover .nle-preset-add, .nle-preset:focus-within .nle-preset-add { opacity: 1; transform: none; }
+.nle-preset .nle-preset-add:hover:not(:disabled) { box-shadow: inset 0 0 0 2px rgba(0,0,0,.6); }
 .nle-preset-sample { position: relative; width: 100%; height: 100%; background: #000; overflow: hidden; isolation: isolate; container-type: inline-size; pointer-events: none; }
 .nle-preset-picture, .nle-preset-picture img, .nle-preset-picture svg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .nle-preset-empty { color: var(--muted); font-size: var(--font-size-caption); line-height: 1.5; margin: 0; padding: 12px 0; }
@@ -99,8 +99,33 @@
 .nle-bin .project-library.library-editor { display: grid; flex: 1; width: 100%; max-width: 100%; min-height: 0; gap: 0; padding: 0; grid-template-columns: 104px minmax(0,max-content) minmax(0,1fr); grid-template-rows: auto auto minmax(0,1fr); grid-template-areas: "filters actions search" "filters heading heading" "filters grid grid"; }
 .library-editor .library-filters { grid-area: filters; display: flex; flex-direction: column; gap: 6px; padding: 8px 7px 10px 8px; border-right: 1px solid var(--border); }
 .library-editor .library-filters button { flex: none; }
+.library-editor .library-filters { overflow-y: auto; scrollbar-width: none; }
+.library-editor .library-filters > button { padding: 0 10px; }
+.library-editor .library-filters { border-right-color: var(--border-faint); }
+.library-editor > .library-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; align-self: stretch; gap: 6px; padding: 16px 16px 44px; text-align: center; transform: translateY(-10%); }
+.library-editor .library-empty-icon { display: flex; margin-bottom: 4px; color: var(--muted); }
+.library-editor .library-empty-title { color: var(--text); font-size: var(--font-size-body); font-weight: 600; }
+.library-editor .library-empty-hint { color: var(--muted); font-size: var(--font-size-caption); line-height: 18px; }.library-editor .library-import-card { grid-area: 1 / 2 / -1 / -1; align-self: start; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; height: 136px; margin: 12px; padding: 16px; border: 1px dashed transparent; border-radius: 10px; background: var(--nle-pill); color: var(--text); text-align: center; cursor: pointer; transition: background-color .15s, border-color .15s; }
+.library-editor .library-import-card:hover:not(:disabled) { background: var(--nle-hover-fill); }
+.library-editor.import-dragging .library-import-card { border-color: var(--pink); background: var(--pink-wash); }
+.library-editor .library-import-title { display: flex; align-items: center; gap: 10px; font-size: var(--font-size-body); font-weight: 600; }
+.library-editor .library-import-icon { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--pink); color: #fff; }
+.library-editor .library-import-hint { color: var(--muted); font-size: var(--font-size-caption); line-height: 18px; }
+.nle-bin .project-library.library-editor.import-dragging:has(.library-import-card) { outline: 0; }
+.library-editor .library-filter-group { display: flex; flex-direction: column; gap: 2px; }
+.library-editor .library-filter-row { position: relative; display: flex; }
+.library-editor .library-filter-row > button:first-child { flex: 1; min-width: 0; padding: 0 22px 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.library-editor .library-filters .library-filter-toggle { position: absolute; top: 5px; right: 3px; justify-content: center; width: 18px; height: 18px; padding: 0; border-radius: 4px; background: transparent; color: var(--muted); }
+.library-editor .library-filters .library-filter-toggle:hover { background: var(--nle-hover-fill); color: var(--text); }
+.library-editor .library-filter-toggle svg { transition: transform .15s; }
+.library-editor .library-filter-toggle[aria-expanded=true] svg { transform: rotate(90deg); }
+.library-editor .library-filter-children { display: flex; flex-direction: column; gap: 2px; padding: 2px 0 2px 10px; }
+.library-editor .library-filters .library-filter-children button { height: 26px; background: transparent; color: var(--muted); }
+.library-editor .library-filters .library-filter-children button:hover { background: var(--nle-hover-fill); color: var(--text); }
+.library-editor .library-filters .library-filter-children button[aria-selected=true] { background: var(--nle-pill); color: var(--pink); }
 .library-editor .library-actions { grid-area: actions; display: flex; align-items: center; height: 44px; padding: 0 0 0 12px; }
 .library-editor .library-actions .button { width: auto; }
+.library-editor .library-import-button { gap: 4px; }
 .library-editor .library-search { grid-area: search; align-self: center; box-sizing: border-box; width: auto; min-width: 0; max-width: calc(100% - 20px); height: 28px; margin: 0 12px 0 8px; overflow: hidden; }
 .library-editor .library-search > svg { flex: none; }
 @container nle-bin (max-width: 320px) {
@@ -157,10 +182,11 @@
 .nle-section { padding: 4px 16px 8px; border-bottom: 1px solid var(--border); }
 .nle-section:last-child { border-bottom: 0; }
 .nle-section-header { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 40px; }
-.nle-section-title { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; }
-.nle-section-title svg { color: var(--muted); transition: transform .2s cubic-bezier(.4,0,.2,1); }
-.nle-section-title svg { color: var(--muted); }
-.nle-section-title svg.collapsed { transform: rotate(180deg); }
+.nle-section-title { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; height: 28px; margin: 0 -8px; padding: 0 5px 0 8px; border: 0; border-radius: 6px; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; transition: background-color .15s; }
+.nle-section-title:hover { background: var(--nle-hover-fill); }
+.nle-section-title svg { flex: none; color: var(--muted); transition: transform .15s, color .15s; }
+.nle-section-title:hover svg { color: var(--text); }
+.nle-section-title[aria-expanded=true] svg { transform: rotate(90deg); }
 .nle-section-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; }
 .nle-section-actions .icon-button { width: 24px; min-width: 24px; height: 24px; color: var(--muted); }
 .nle-section-body { overflow: hidden; }
@@ -171,6 +197,7 @@
 .nle-row-content { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
 .nle-row.end .nle-row-content { justify-content: flex-end; }
 .nle-row-content > .select-trigger { flex: 1; min-width: 0; height: 28px; min-height: 28px; background: var(--nle-field); border-color: transparent; font-size: var(--font-size-caption); }
+.nle-row-content > output { display: inline-flex; align-items: center; max-width: 100%; height: 28px; padding: 0 10px; border-radius: 6px; background: var(--nle-field); font-size: var(--font-size-caption); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nle-slider { position: relative; display: flex; align-items: center; flex: 1; min-width: 40px; height: 20px; }
 .nle-slider-rail { position: absolute; left: 0; right: 0; height: 2px; border-radius: 1px; background: var(--nle-rail); pointer-events: none; }
 .nle-slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: var(--fill); border-radius: 1px; background: var(--nle-rail-fill); }
@@ -283,7 +310,7 @@
 .nle-ruler-scale > span::after { content: ''; position: absolute; left: var(--minor); top: 13px; height: 5px; width: 1px; background: var(--nle-tick-minor); }
 .nle-track { display: flex; flex-shrink: 0; height: 62px; padding: 3px 0; box-sizing: border-box; }
 .nle-track.main { height: 86px; }
-.nle-tracks > .nle-track-top { display: flex; flex: 0 0 var(--nle-track-padding, 62px); }
+.nle-tracks > .nle-track-top { display: flex; flex: 0 0 12px; }
 .nle-track-top .nle-track-space { min-height: 0; }
 .nle-track-label { display: flex; align-items: center; padding: 0; background: var(--nle-track-head); touch-action: none; transition: background-color .12s; }
 .nle-track-label.empty, .nle-ruler-label { background: var(--surface); }
@@ -529,3 +556,165 @@
 .nle-asset-drag.effect-attachment { display: flex; align-items: center; width: max-content; padding: 0 4px; }
 .nle-asset-drag.effect-attachment .nle-clip-title { position: static; transform: none; }
 .nle-clip.effect-target::after { opacity: 1; border-color: var(--pink); }
+.nle-transport-center { display: flex; align-items: center; gap: 6px; }
+.nle-transport-center .icon-button { width: 28px; min-width: 28px; height: 28px; }
+
+/* Timeline clips: rounded and pill shapes with one brand accent; type reads from the round icon. */
+.nle-clip { border-radius: 4px; color: var(--text); }
+.nle-track.compact .nle-clip { border-radius: 4px; }
+.nle-clip::after { border: 2px solid var(--pink); border-radius: inherit; }
+.nle-clip.visual, .nle-clip.compound { --clip: var(--nle-media-bg); }
+.nle-clip.audio { --clip: color-mix(in srgb, var(--pink) 10%, var(--surface)); color: var(--pink); }
+.nle-clip.effect { --clip: var(--nle-pill); }
+.nle-clip.text { --clip: var(--surface); }
+.nle-clip[data-clip-id].selected:has(> .nle-trim.start) { border-left-color: var(--clip); }
+.nle-clip.text[data-clip-id], .nle-clip.text[data-clip-id].selected:has(> .nle-trim.start) { border: 1.5px solid var(--pink); }
+.nle-clip-title { top: 4px; left: 6px; right: 6px; height: 22px; align-items: center; gap: 6px; }
+.nle-clip.selected .nle-clip-title { left: 10px; right: 10px; }
+.nle-track.compact .nle-clip-title { left: 4px; }
+.nle-clip-chip { height: 22px; padding: 0; background: transparent; color: inherit; font-size: 11px; line-height: 22px; }
+.nle-clip-chip + .nle-clip-chip { color: var(--muted); }
+.nle-clip-icon { display: flex; align-items: center; justify-content: center; flex: none; width: 22px; height: 22px; color: var(--pink); }
+.nle-clip.effect .nle-clip-icon, .nle-clip.compound .nle-clip-icon { color: var(--surface); }
+.nle-clip.audio .nle-clip-icon { color: #fff; }
+.nle-trim::before { top: 30%; bottom: 30%; width: 3px; border-radius: 2px; background: var(--pink); }
+.nle-trim.start::before { left: 3px; border-radius: 2px; } .nle-trim.end::before { right: 3px; border-radius: 2px; }
+.nle-trim::after { display: none; }
+.nle-transition-block { width: 22px; height: 22px; border: 2px solid var(--surface); border-radius: 50%; background: color-mix(in srgb, var(--pink) 16%, var(--surface)); color: var(--pink); opacity: 1; }
+.nle-transition-block.selected { border: 2px solid var(--surface); background: var(--pink); color: #fff; }
+
+/* Reference-sized pills, filmstrips and waveforms. */
+.nle-clip { border-radius: 4px; }
+.nle-track.compact .nle-clip-title { left: 10px; right: 12px; height: 34px; gap: 6px; }
+.nle-track.compact .nle-clip-icon { width: 17px; height: 34px; }
+.nle-track.compact .nle-clip-icon svg { width: 17px; height: 17px; }
+.nle-track.compact .nle-clip-chip { height: 34px; line-height: 34px; font-size: 13px; }
+.nle-clip.text[data-clip-id], .nle-clip.text[data-clip-id].selected:has(> .nle-trim.start) { border-width: 2px; }
+.nle-clip-film { position: absolute; inset: 0; display: flex; gap: 3px; padding: 3px; overflow: hidden; pointer-events: none; }
+.nle-clip-frame { flex: none; height: 100%; overflow: hidden; border-radius: 2px; background: color-mix(in srgb, var(--text) 8%, transparent); }
+.nle-clip-frame img { display: block; width: 100%; height: 100%; object-fit: cover; animation: var(--fade-in); }
+.nle-clip.visual:has(.nle-clip-film) .nle-clip-title { z-index: 2; left: 8px; right: auto; max-width: calc(100% - 16px); top: 6px; height: 20px; padding: 0 8px; border-radius: 999px; background: rgba(0,0,0,.45); color: #fff; }
+.nle-clip.visual:has(.nle-clip-film) .nle-clip-chip { height: 20px; line-height: 20px; color: #fff; }
+.nle-clip.visual:has(.nle-clip-film) .nle-clip-chip + .nle-clip-chip { color: rgba(255,255,255,.75); }
+.nle-clip.audio { border-radius: 4px; }
+.nle-clip-wave { position: absolute; left: 0; top: 0; height: 100%; color: var(--pink); pointer-events: none; }
+.nle-clip.audio:has(.nle-clip-wave) .nle-clip-title { display: none; }
+.nle-transition-block { width: 28px; height: 28px; border-width: 3px; }
+/* Lines 20% finer. */
+.nle-clip::after { border-width: 1.6px; }
+.nle-clip.text[data-clip-id], .nle-clip.text[data-clip-id].selected:has(> .nle-trim.start) { border-width: 1.6px; }
+.nle-trim::before { width: 2.4px; }
+.nle-transition-block { border-width: 2.4px; }
+.nle-transition-block svg { stroke-width: 1.6; }
+.nle-clip-icon svg { stroke-width: 1.6; }
+/* Timeline palette B: white lanes, colour-coded pills, tinted icon discs concentric with their pill. */
+.nle-timeline { --tl-pink: #f875aa; }
+/* Pills outline with an inset ring instead of a border, so the icon disc sits exactly 4px inside every edge. */
+.nle-clip.effect, .nle-clip.text[data-clip-id], .nle-clip.text[data-clip-id].selected:has(> .nle-trim.start), .nle-clip.compound, .nle-clip.audio { border: 0; }
+.nle-clip.visual { --clip: var(--surface); --select: var(--tl-pink); border: 0; }
+.nle-clip.effect { --clip: #d7f5de; --select: #5fb574; color: #2e6b3e; }
+.nle-clip.text.is-subtitle { --clip: #fde8eb; --select: var(--tl-pink); color: #9c2f5e; }
+.nle-clip.text.is-title { --clip: var(--tl-pink); --select: #c2457a; color: #fff; }
+.nle-clip.compound { --clip: #efefef; --select: #9a9a9a; color: #444; }
+.nle-clip.audio { --clip: #fcebf0; --select: var(--tl-pink); }
+.nle-clip.effect .nle-clip-icon { color: #2e6b3e; }
+.nle-clip.effect .nle-clip-chip + .nle-clip-chip { color: #5e9a6c; }
+.nle-clip.is-subtitle .nle-clip-icon { color: #c2457a; }
+.nle-clip.is-title .nle-clip-chip { font-weight: 500; }
+.nle-clip.is-title .nle-clip-icon { color: #fff; }
+.nle-clip.compound .nle-clip-icon { color: #555; }
+.nle-clip.audio .nle-clip-icon { color: #c2457a; }
+/* Compound clips are a 42px pill centred in their picture lane, like the other non-media clips. */
+.nle-clip.compound { top: calc(50% - 21px); bottom: auto; height: 42px; border-radius: 4px; }
+.nle-clip.compound .nle-clip-title, .nle-clip.audio .nle-clip-title { top: 50%; left: 10px; right: 12px; height: 34px; gap: 6px; transform: translateY(-50%); z-index: 2; }
+.nle-clip.compound .nle-clip-icon { width: 17px; height: 34px; }
+.nle-clip.compound .nle-clip-icon svg { width: 17px; height: 17px; }
+.nle-clip.compound .nle-clip-chip { height: 34px; line-height: 34px; font-size: 13px; }
+.nle-clip.audio { border-radius: 4px; }
+.nle-clip.audio .nle-clip-title { height: calc(100% - 8px); }
+.nle-clip.audio .nle-clip-icon { height: 100%; width: 20px; }
+.nle-clip.audio .nle-clip-icon svg { width: 20px; height: 20px; }
+.nle-clip.audio:has(.nle-clip-wave) .nle-clip-title { display: flex; }
+.nle-clip.audio:has(.nle-clip-wave) .nle-clip-chip { display: none; }
+/* Selection: a 2px ring in the clip's own hue; media clips keep the thicker pink frame and white handles. */
+.nle-clip.selected::after { border: 1.5px solid var(--select, var(--tl-pink)); }
+.nle-clip.visual.selected::after { border-width: 2.5px; }
+.nle-clip:not(.visual) .nle-trim::before { display: none; }
+.nle-clip.visual .nle-trim::before { width: 3px; background: #fff; }
+.nle-clip.visual .nle-trim.start::before { left: 8px; } .nle-clip.visual .nle-trim.end::before { right: 8px; }
+.nle-transition-block { top: 0; bottom: 0; height: auto; transform: none; z-index: 1; border: 0; border-left: 1px solid var(--tl-pink); border-right: 1px solid var(--tl-pink); border-radius: 0; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--tl-pink) 70%, transparent) 0 2px, transparent 2px 7px), rgba(255,255,255,.35); opacity: 1; }
+.nle-transition-block:hover { background: repeating-linear-gradient(135deg, var(--tl-pink) 0 2px, transparent 2px 7px), rgba(255,255,255,.35); }
+.nle-transition-block.selected { border: 0; border-left: 2px solid var(--tl-pink); border-right: 2px solid var(--tl-pink); background: repeating-linear-gradient(135deg, var(--tl-pink) 0 2px, transparent 2px 7px), color-mix(in srgb, var(--tl-pink) 22%, transparent); }
+.nle-playhead, .nle-playhead.adsorbed { width: 0; margin-left: -.25px; background: none; border-left: 1.5px solid var(--tl-pink); transition: border-width .12s, margin-left .12s; }
+.nle-playhead.adsorbed { margin-left: -.5px; border-left-width: 2px; }
+.nle-playhead-control > button::before, .nle-playhead-control.adsorbed > button::before { position: relative; z-index: 1; width: 11px; height: 11px; margin-top: 4px; border: 0; border-radius: 50%; background: var(--tl-pink); transition: width .12s, height .12s, margin-top .12s; }
+.nle-playhead-control.adsorbed > button::before { width: 13px; height: 13px; margin-top: 3px; }
+/* The line spans the whole scroll content; this sticky mask hides the stub above the knob centre at any scroll offset. */
+.nle-playhead-control > button::after { content: ''; position: absolute; top: 0; left: 50%; width: 3px; height: 9px; margin-left: -1.5px; background: var(--surface); }
+/* Compound clips with a preview film read as video: full-height white frame, pink selection, name pill over the frames. */
+.nle-clip.compound:has(.nle-clip-film) { top: 0; bottom: 0; height: auto; border-radius: 4px; --clip: var(--surface); --select: var(--tl-pink); color: #fff; }
+.nle-clip.compound:has(.nle-clip-film) .nle-clip-title { top: 6px; left: 8px; right: auto; max-width: calc(100% - 16px); height: 20px; gap: 4px; padding: 0 8px 0 6px; transform: none; border-radius: 999px; background: rgba(0,0,0,.45); color: #fff; }
+.nle-clip.compound:has(.nle-clip-film) .nle-clip-icon { width: 14px; height: 14px; background: transparent; color: #fff; }
+.nle-clip.compound:has(.nle-clip-film) .nle-clip-icon svg { width: 12px; height: 12px; }
+.nle-clip.compound:has(.nle-clip-film) .nle-clip-chip { height: 20px; line-height: 20px; font-size: 11px; color: #fff; }
+.nle-clip.compound:has(.nle-clip-film) .nle-clip-chip + .nle-clip-chip { color: rgba(255,255,255,.75); }
+.nle-clip.compound.selected:has(.nle-clip-film)::after { border-width: 2.5px; }
+.nle-clip.compound:has(.nle-clip-film) .nle-trim::before { display: block; width: 3px; background: #fff; }
+.nle-clip.compound:has(.nle-clip-film) .nle-trim.start::before { left: 8px; } .nle-clip.compound:has(.nle-clip-film) .nle-trim.end::before { right: 8px; }
+
+
+/* Studio mode switch (工作台 / 评论). */
+.nle-titlebar-side.end { align-items: center; gap: 10px; }
+.nle-mode-switch { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--nle-field); }
+.nle-mode-switch button { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: var(--font-size-caption); white-space: nowrap; transition: background-color .15s, color .15s, box-shadow .15s; }
+.nle-mode-switch button:hover { color: var(--text); }
+.nle-mode-switch button[aria-selected=true] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+/* Review mode — enlarged preview plus a comment column; comments are a browser-local prototype (reviewComments.ts). */
+.nle-review-mode .studio-canvas-layer { pointer-events: none; }
+.nle-review-title { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.nle-review-scrubber { flex: none; padding: 10px 24px 4px; }
+.nle-review-scrubber input { display: block; width: 100%; height: 16px; margin: 0; background: transparent; appearance: none; cursor: pointer; }
+.nle-review-scrubber input::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--border); }
+.nle-review-scrubber input::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: var(--text); transition: transform .12s; }
+.nle-review-scrubber input:hover::-webkit-slider-thumb { transform: scale(1.12); }
+.nle-review-mode .nle-transport-time .current { color: var(--text); }
+.nle-review { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.nle-review-header { display: flex; flex: 0 0 48px; align-items: center; gap: 8px; padding: 0 10px 0 16px; background: var(--nle-header); font-size: var(--font-size-caption); }
+.nle-review-header b { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.nle-review-header .icon-button { width: 28px; min-width: 28px; height: 28px; margin-left: auto; color: var(--muted); }
+.nle-review-filters { display: flex; flex: none; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.nle-review-filters button { height: 32px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent; color: var(--text); font-size: 13px; transition: background-color .15s; }
+.nle-review-filters button:hover { background: var(--nle-field); }
+.nle-review-filters button[aria-selected=true] { background: var(--nle-pill); font-weight: 600; }
+.nle-review-list { flex: 1; min-height: 0; margin: 0; padding: 0 16px; overflow-y: auto; list-style: none; scrollbar-width: thin; }
+.nle-review-list li { margin: 0 -8px; padding: 14px 8px; border-bottom: 1px solid var(--border); border-radius: 0; transition: background-color .15s; }
+.nle-review-list li.active { border-radius: 8px; background: color-mix(in srgb, var(--pink) 6%, var(--surface)); }
+.nle-review-card-head { display: flex; align-items: center; gap: 4px; }
+.nle-review-time, .nle-review-anchor { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border: 0; border-radius: 4px; background: color-mix(in srgb, var(--pink) 12%, var(--surface)); color: var(--pink); font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; font-variant-numeric: tabular-nums; }
+.nle-review-time { cursor: pointer; }
+.nle-review-number { margin: 0 6px 0 auto; color: var(--muted); font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; }
+.nle-review-card-head .icon-button { width: 28px; min-width: 28px; height: 28px; color: var(--muted); }
+.nle-review-card-head .icon-button:hover:not(:disabled) { color: var(--text); }
+.nle-review-card-head .nle-review-resolve, .nle-review-card-head .nle-review-resolve:hover:not(:disabled) { color: #3a9d63; }
+.nle-review-resolve[aria-pressed=true] svg { fill: #3a9d63; color: var(--surface); }
+.nle-review-text { margin: 10px 0 0; color: var(--text); font-size: 14px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; cursor: pointer; }
+.nle-review-list li.resolved .nle-review-text { color: var(--muted); }
+.nle-review-list li.resolved .nle-review-time { background: var(--nle-pill); color: var(--muted); }
+.nle-review-edit { display: block; width: 100%; margin-top: 10px; padding: 8px 10px; border: 1px solid var(--pink); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 14px; line-height: 1.6; resize: vertical; outline: none; }
+.nle-review-empty { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 32px 16px; color: var(--muted); text-align: center; transform: translateY(-10%); }
+.nle-review-empty strong { margin-top: 4px; color: var(--text); font-size: 13px; font-weight: 600; }
+.nle-review-empty span { font-size: var(--font-size-caption); }
+.nle-review-empty .nle-review-demo { margin-top: 8px; height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: var(--nle-pill); color: var(--text); font-size: var(--font-size-caption); transition: background-color .15s; }
+.nle-review-empty .nle-review-demo:hover { background: var(--nle-hover-fill); }
+.nle-review-compose { flex: none; padding: 12px 16px 16px; border-top: 1px solid var(--border); background: var(--nle-header); }
+.nle-review-anchor { height: 28px; margin-bottom: 10px; }
+.nle-review-input { position: relative; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); transition: border-color .15s; }
+.nle-review-input:focus-within { border-color: var(--pink); }
+.nle-review-input textarea { display: block; width: 100%; min-height: 104px; padding: 12px 14px 44px; border: 0; background: transparent; color: var(--text); font-size: 13px; line-height: 1.6; resize: none; outline: none; }
+.nle-review-send { position: absolute; right: 10px; bottom: 10px; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: var(--pink); color: #fff; transition: background-color .15s, opacity .15s; }
+.nle-review-send:disabled { background: var(--nle-pill); color: var(--muted); }
+.nle-export-button { gap: 6px; min-height: 30px; padding: 4px 14px; border-radius: 8px; }
+/* Ruler: labelled major ticks, a mid tick when the step halves evenly, and dense minor ticks that follow zoom. */
+.nle-ruler-scale > span::after { left: var(--half); top: 12px; height: 6px; }
+.nle-ruler-minor { position: absolute; left: 0; right: 0; top: 14px; height: 4px; pointer-events: none; background: repeating-linear-gradient(to right, var(--nle-tick-minor) 0 1px, transparent 1px var(--minor-step)); }
