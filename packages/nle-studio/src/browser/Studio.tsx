@@ -33,7 +33,7 @@ import { PictureAlignment } from "./PictureAlignment.js";
 import { TimelineTextList } from "./TimelineTextList.js";
 import { IconButton } from "./common.js";
 import { Inspector } from "./Inspector.js";
-import { PanelResizeHandle, defaultPanelWidths, type PanelSide } from "./PanelResizeHandle.js";
+import { PanelResizeHandle, TimelineResizeHandle, defaultPanelWidths, minimumTimelineHeight, type PanelSide } from "./PanelResizeHandle.js";
 import { StudioBin, type BinTab } from "./StudioBin.js";
 import { Timeline } from "./Timeline.js";
 import { timecode } from "./timecode.js";
@@ -59,12 +59,22 @@ import { TemporalInspector } from "./TemporalInspector.js";
 import { ProcessInspector } from "./ProcessInspector.js";
 import { catalogDragId, type CatalogDrag } from "./catalogDrag.js";
 import { EditorDialog } from "./EditorDialog.js";
+import { ExportDialog } from "./ExportDialog.js";
 
 const localSaveTime = new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
 
 function exactFrame(frame: number, session: NleStudioSession): ExactTemporalValue {
   const rate = session.open.timeline.editRate;
   return { ticks: String(frame * rate.denominator), timeBase: { numerator: 1, denominator: rate.numerator } };
+}
+
+const timelineHeightKey = "hypit:nle:timeline-height";
+
+function readTimelineHeight(): number | undefined {
+  try {
+    const value = Number(localStorage.getItem(timelineHeightKey));
+    return Number.isFinite(value) && value >= minimumTimelineHeight ? value : undefined;
+  } catch { return undefined; }
 }
 
 function readPanelWidths(): typeof defaultPanelWidths {
@@ -122,6 +132,7 @@ export function Studio() {
   const [previewExpanded, setPreviewExpanded] = useState(false);
   /** Studio's top-level mode: the editing workspace, or review with an enlarged preview and comment column. */
   const [workMode, setWorkMode] = useState<"edit" | "review">("edit");
+  const [exportOpen, setExportOpen] = useState(false);
   const [panelWidths, setPanelWidths] = useState(readPanelWidths);
   const [source, setSource] = useState<NleStudioMediaEntry>();
   const [canvasDraft, setCanvasDraft] = useState<CanvasDraft>();
@@ -133,6 +144,11 @@ export function Studio() {
   const inflight = useRef(false);
   const clipboard = useRef(new Map<string, ItemClipboard>());
 
+  const [timelineHeight, setTimelineHeight] = useState(readTimelineHeight);
+  const resizeTimeline = (height: number | undefined, save: boolean) => {
+    setTimelineHeight(height);
+    if (save) try { if (height === undefined) localStorage.removeItem(timelineHeightKey); else localStorage.setItem(timelineHeightKey, String(height)); } catch { /* the height still applies for this page */ }
+  };
   const resizePanel = (side: PanelSide, width: number, save: boolean) => {
     setPanelWidths(previous => {
       const next = { ...previous, [side]: width };
@@ -545,11 +561,12 @@ export function Studio() {
       onDrop={event => { if (!event.defaultPrevented && event.dataTransfer.files.length) { event.preventDefault(); event.stopPropagation(); importProjectMedia(Array.from(event.dataTransfer.files)); } }}><div className={classes} style={{
     "--nle-bin-preferred": `${panelWidths.bin}px`,
     "--nle-properties-preferred": `${panelWidths.properties}px`,
+    ...(timelineHeight === undefined ? {} : { "--nle-timeline-height": `${timelineHeight}px` }),
   } as React.CSSProperties}>
       <div className="nle-titlebar"><div className="nle-titlebar-side">{conflict
         ? <button type="button" className="button" onClick={() => setConflictOpen(true)}>自动保存暂停</button>
         : <small>{saveStatus}</small>}</div><button type="button" className="nle-titlebar-name" disabled={busy} onClick={() => setRenameProject(true)} title="重命名项目">{projectName}</button><div className="nle-titlebar-side end"><div className="nle-toolbar-actions">
-        <button type="button" className="button primary nle-export-button" onClick={() => setFailure("导出视频还没有接入，暂时不能导出。")}><Download size={15} strokeWidth={1.8}/>导出视频</button>
+        <button type="button" className="button primary nle-export-button" onClick={() => setExportOpen(true)}><Download size={15} strokeWidth={1.8}/>导出视频</button>
       </div><div className="nle-mode-switch" role="tablist" aria-label="Studio 模式">
         <button type="button" role="tab" aria-selected={!reviewing} onClick={() => changeMode("edit")}><LayoutPanelLeft size={15} strokeWidth={1.6}/>工作台</button>
         <button type="button" role="tab" aria-selected={reviewing} onClick={() => changeMode("review")}><MessageSquareText size={15} strokeWidth={1.6}/>评论</button>
@@ -562,7 +579,7 @@ export function Studio() {
           <footer><button type="button" className="button" disabled={busy} onClick={() => setConflictOpen(false)}>暂不处理</button><button type="button" className="button primary" disabled={busy} onClick={reload}>重载磁盘版本</button></footer>
         </Dialog.Popup></Dialog.Portal>
       </Dialog.Root>
-      <ErrorNotice message={failure} onClose={() => setFailure(undefined)}/>{renameProject && <EditorDialog title="重命名项目" initialName={projectName} onClose={() => setRenameProject(false)} onSubmit={name => transact([{ kind: "project.update", name }])}/>}
+      <ErrorNotice message={failure} onClose={() => setFailure(undefined)}/>{exportOpen && <ExportDialog projectName={projectName} canvas={session.open.canvas.canvas} fps={fps} onClose={() => setExportOpen(false)} onExport={() => setFailure("导出视频还没有接入，暂时不能导出。")}/>}{renameProject && <EditorDialog title="重命名项目" initialName={projectName} onClose={() => setRenameProject(false)} onSubmit={name => transact([{ kind: "project.update", name }])}/>}
       <div className="nle-upper">
         <aside className="nle-bin"><div className="nle-bin-tabs" role="tablist">{(Object.keys(icons) as BinTab[]).map(id => { const Icon = icons[id]; return <button type="button" role="tab" aria-selected={binTab === id} key={id} onClick={() => setBinTab(id)}><Icon size={18} strokeWidth={1.6}/><span>{tabNames[id]}</span></button>; })}</div><AnimatePresence mode="popLayout" initial={false}><motion.div key={binTab} className="nle-bin-body" {...enterMotion(reduced)}><StudioBin tab={binTab} catalog={session.catalog} media={session.media} disabled={busy} onImportMedia={importProjectMedia} onPlaceMedia={placeProjectMedia} selectedMedia={source?.id} onPreviewMedia={entry => { setPlaying(false); setSource(entry); }} onBeginMediaDrag={assetDrag.start} onBeginPresetDrag={(event, value) => assetDrag.start(event, {
           id: catalogDragId(value), name: value.entry.title, kind: value.kind === "effect" && value.entry.medium === "audio" ? "audio" : "picture", state: "available",
@@ -629,6 +646,7 @@ export function Studio() {
             onSlipLater={slipLater && (() => transact(slipLater))}
             canFreeze={canFreeze} onFreeze={freezeSelection}/><ProcessInspector item={selectedProjectItem} disabled={busy || selectionLocked} onEdit={transact}/></>}</motion.div>}</AnimatePresence></>}</aside>
       </div>
+      <TimelineResizeHandle height={timelineHeight} onResize={resizeTimeline}/>
       <AnimatePresence mode="popLayout" initial={false}><Timeline key={`${session.projectDocument.path}/${scene.composition}`} session={session} frame={frame} selection={selection} busy={busy} onSelectTransition={id => { setTransitionId(id); setPropertiesTab("properties"); }} selectedTransition={transitionId} onSeek={value => { setPlaying(false); setSource(undefined); setFrame(value); }} onSelect={select}
         draggedMedia={assetDrag.drag?.entry} mediaDrop={assetDrag.drag?.drop}
         mediaDurationForItem={id => { const item = projectItems.get(id); return item && mediaForItem(item)?.duration; }}

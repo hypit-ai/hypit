@@ -718,3 +718,12 @@
 /* Ruler: labelled major ticks, a mid tick when the step halves evenly, and dense minor ticks that follow zoom. */
 .nle-ruler-scale > span::after { left: var(--half); top: 12px; height: 6px; }
 .nle-ruler-minor { position: absolute; left: 0; right: 0; top: 14px; height: 4px; pointer-events: none; background: repeating-linear-gradient(to right, var(--nle-tick-minor) 0 1px, transparent 1px var(--minor-step)); }
+/* Upper panels / Timeline split: the Timeline height is user-dragged (default 44%); the upper panels keep at least 240px. */
+.nle-timeline { height: var(--nle-timeline-height, 44%); max-height: calc(100% - 256px); }
+.nle-timeline-resizer { position: relative; z-index: 21; flex: none; height: 8px; margin: -8px 0; cursor: row-resize; touch-action: none; outline: none; }
+.nle-timeline-resizer::after { content: ''; position: absolute; left: 8px; right: 8px; top: 3px; height: 2px; border-radius: 1px; background: var(--pink); opacity: 0; transition: opacity .15s; }
+.nle-timeline-resizer:hover::after, .nle-timeline-resizer:focus-visible::after, .nle-timeline-resizer.dragging::after { opacity: 1; }
+.nle-editor:has(> .nle-timeline-resizer.dragging) { user-select: none; cursor: row-resize; }
+.nle-editor:has(> .nle-timeline-resizer.dragging) .nle-timeline { transition: none; }
+.nle-editor:has(> .nle-timeline-resizer.dragging) iframe { pointer-events: none; }
+.nle-preview-expanded .nle-timeline-resizer { display: none; }
