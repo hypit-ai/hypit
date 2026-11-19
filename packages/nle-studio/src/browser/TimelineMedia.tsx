@@ -1,11 +1,30 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { NleStudioActionObservation, NleStudioOpenProjection, NleStudioTimelineMediaView } from "../protocol.js";
 import { cancelAction, readAction, readTimelineMedia, startAction } from "./api.js";
 
 type VisibleTracks = { readonly fromFrame: number; readonly toFrame: number; readonly tracks: readonly string[] };
 type TimelineMediaResult = NleStudioTimelineMediaView & {
-  readonly result: Extract<NleStudioActionObservation, { state: "complete" }>["result"];
+  readonly image: HTMLImageElement;
+  readonly atlas?: NonNullable<Extract<NleStudioActionObservation, { state: "complete" }>["result"]["atlas"]>;
 };
+
+const cachedViewLimit = 24;
+
+async function loadImage(resource: string, signal: AbortSignal): Promise<HTMLImageElement> {
+  const response = await fetch(resource, { signal });
+  if (!response.ok) throw new Error(`Timeline image request failed with ${response.status}.`);
+  const url = URL.createObjectURL(await response.blob());
+  try {
+    const image = new Image();
+    image.src = url;
+    await image.decode();
+    signal.throwIfAborted();
+    return image;
+  } catch (error) {
+    URL.revokeObjectURL(url);
+    throw error;
+  }
+}
 
 export function useTimelineMedia(
   scroller: React.RefObject<HTMLDivElement | null>,
@@ -17,7 +36,32 @@ export function useTimelineMedia(
   const { projectRevision, viewRevision } = session.status;
   const { generation, derivedViews } = session.media;
   const [visible, setVisible] = useState<VisibleTracks>();
-  const [results, setResults] = useState<readonly TimelineMediaResult[]>([]);
+  const scope = JSON.stringify([scene.composition, projectRevision, generation, scene.editRate.numerator, scene.editRate.denominator, derivedViews]);
+  const cache = useRef(new Map<string, TimelineMediaResult>());
+  const resources = useRef(new Set<string>());
+  const [shown, setShown] = useState<{ scope: string; views: readonly TimelineMediaResult[] }>();
+
+  useEffect(() => {
+    cache.current.clear();
+    setShown(undefined);
+  }, [scope]);
+
+  useEffect(() => {
+    const retained = new Set([...(shown?.views ?? []), ...cache.current.values()].map(view => view.image.src));
+    for (const url of resources.current) {
+      if (retained.has(url)) continue;
+      URL.revokeObjectURL(url);
+      resources.current.delete(url);
+    }
+  }, [shown]);
+
+  useEffect(() => {
+    const urls = resources.current;
+    return () => {
+      for (const url of urls) URL.revokeObjectURL(url);
+      urls.clear();
+    };
+  }, []);
 
   useEffect(() => {
     const element = scroller.current;
@@ -51,26 +95,39 @@ export function useTimelineMedia(
   }, [scroller, frameWidth, labelWidth, scene]);
 
   useEffect(() => {
-    setResults([]);
     if (!derivedViews || visible === undefined || visible.tracks.length === 0 || visible.toFrame <= visible.fromFrame) return;
-    let active = true;
+    const controller = new AbortController();
+    const { signal } = controller;
     const pending = new Set<string>();
     const run = async (view: NleStudioTimelineMediaView) => {
+      const key = JSON.stringify([view.item, view.action.kind]);
+      const previous = cache.current.get(key);
+      if (previous !== undefined && JSON.stringify(previous.action) === JSON.stringify(view.action)) {
+        cache.current.delete(key);
+        cache.current.set(key, previous);
+        return;
+      }
       let action = await startAction(view.action);
       try {
         pending.add(action.handle);
-        if (!active) {
+        if (signal.aborted) {
           if (action.state === "queued" || action.state === "running") await cancelAction(action.handle);
           return;
         }
-        while (active && (action.state === "queued" || action.state === "running")) {
+        while (!signal.aborted && (action.state === "queued" || action.state === "running")) {
           await new Promise<void>(resolve => window.setTimeout(resolve, 250));
-          if (!active) return;
+          if (signal.aborted) return;
           action = await readAction(action.handle);
         }
-        if (active && action.state === "complete") {
-          const result = action.result;
-          setResults(values => [...values, { ...view, result }]);
+        if (action.state === "complete" && !signal.aborted) {
+          const { resource, atlas } = action.result;
+          const image = await loadImage(resource, signal);
+          if (signal.aborted) { URL.revokeObjectURL(image.src); return; }
+          resources.current.add(image.src);
+          cache.current.delete(key);
+          cache.current.set(key, { ...view, image, ...(atlas === undefined ? {} : { atlas }) });
+          if (cache.current.size > cachedViewLimit) cache.current.delete(cache.current.keys().next().value!);
+          setShown({ scope, views: [...cache.current.values()] });
         }
       } finally {
         pending.delete(action.handle);
@@ -80,15 +137,15 @@ export function useTimelineMedia(
       kind: "timeline-media", composition: scene.composition, expectedProjectRevision: projectRevision,
       expectedViewRevision: viewRevision, expectedMediaGeneration: generation, ...visible,
     }).then(async views => {
-      if (active) await Promise.allSettled(views.map(run));
+      if (!signal.aborted) await Promise.allSettled(views.map(run));
     }).catch(() => undefined);
     return () => {
-      active = false;
+      controller.abort();
       for (const handle of pending) void cancelAction(handle).catch(() => undefined);
     };
-  }, [derivedViews, visible, scene.composition, projectRevision, viewRevision, generation]);
+  }, [derivedViews, visible, scene.composition, projectRevision, viewRevision, generation, scope]);
 
-  return results;
+  return shown?.scope === scope ? shown.views : [];
 }
 
 export function TimelineMedia({ views, item, start, frameWidth }: {
@@ -98,12 +155,14 @@ export function TimelineMedia({ views, item, start, frameWidth }: {
   readonly frameWidth: number;
 }) {
   return views.filter(view => view.item === item).map(view => {
-    const { atlas, resource } = view.result;
+    const { atlas } = view;
+    const resource = view.image.src;
     const left = (view.fromFrame - start) * frameWidth;
     const width = (view.toFrame - view.fromFrame) * frameWidth;
     const audio = view.action.kind === "media.waveform";
     return <span aria-hidden="true" key={view.action.kind}
-      className={audio ? "nle-clip-media waveform" : "nle-clip-media"} style={{ left, width }}>
+      className={audio ? "nle-clip-media waveform" : "nle-clip-media"}
+      style={view.action.kind === "media.thumbnail" ? { left: 0, width: "100%" } : { left, width }}>
       {atlas === undefined ? <img src={resource} alt=""/> : atlas.samples.map(({ tile }, index) => {
         const column = tile % atlas.columns, row = Math.floor(tile / atlas.columns);
         const x = atlas.columns === 1 ? 0 : column / (atlas.columns - 1) * 100;
