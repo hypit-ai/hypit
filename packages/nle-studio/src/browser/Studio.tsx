@@ -382,6 +382,8 @@ export function Studio() {
   });
   const slipEarlier = slipItems(slipTargets, frameTime(session, -1));
   const slipLater = slipItems(slipTargets, frameTime(session, 1));
+  const selectedTime = selectedProjectItem?.kind === "adjust" ? selectedProjectItem.controlTime : selectedProjectItem?.sourceTime;
+  const sourceStart = selectedTime?.pieces[0]?.sourceAtStart;
   const canFreeze = selection.length === 1 && !selectionLocked && !!selectedProjectItem && canFreezeItem(session, selectedProjectItem, frame);
   const freezeSelection = () => {
     if (canFreeze && selectedProjectItem) applyPlan(() => freezeItem(session, selectedProjectItem, frame));
@@ -604,6 +606,7 @@ export function Studio() {
             disabled={busy || !selectedLayer.affordances.translate}
             onTranslate={(x, y) => void translatePicture(selectedLayer.id, x, y)}/>}
           {!selectedTransition && selectedProjectItem && selectedSceneItem && <><TemporalInspector item={selectedProjectItem} start={selectedSceneItem.startFrame} duration={selectedSceneItem.durationFrames} disabled={busy || selectionLocked}
+            sourceOffset={sourceStart === undefined ? undefined : frameOf(session, sourceStart)}
             onStart={value => transact([{ kind: "item.move", ids: editableSelection(scene, selection), delta: frameTime(session, value - selectedSceneItem.startFrame) }])}
             onDuration={value => transact([{ kind: "item.trim", id: selectedProjectItem.id, edge: "end", at: frameTime(session, selectedSceneItem.startFrame + value) }])}
             onSpeed={value => applyPlan(() => changeSpeed(session, selection, value))} onReverse={() => applyPlan(() => reverseItems(session, selection))}

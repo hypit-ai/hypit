@@ -76,6 +76,7 @@ export function slipItems(
   const commands: NleCommand[] = [];
   for (const { item, sourceDuration } of targets) {
     const mapping = item.kind === "adjust" ? item.controlTime : item.sourceTime;
+    if (!mapping.pieces.length) return undefined;
     try {
       const shifted = shiftNleTimeMapping(mapping, item.duration, delta);
       if (sourceDuration !== undefined && compare(nleTimeMappingRequiredDuration(shifted), sourceDuration) > 0) return undefined;
