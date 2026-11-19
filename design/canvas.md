@@ -4,6 +4,10 @@
 
 ## Canvas 拥有的事实
 
+Canvas 面向制作图片、视频或音频素材。执行能力是否可用由所选 Environment 决定；模型是否作为卡片出现，
+由项目选择的 Canvas 目录决定。Canvas 通过 ProjectHost 提供的 Execution client 发送请求，不负责启动、
+调度或恢复执行部署。参见 [ExecutionHost 边界](explicit-programs-and-execution.md#executionhost-boundary)。
+
 Canvas 保存生成配方、带类型的输入关系、卡片布局、Invocation 附着和明确选中的 Publication
 输出。一次运行针对一张卡片。卡片运行时解析当下选中的上游值，并把一个完整请求交给选定的
 Execution Environment。Environment 管理账号、并发、运行状态、回执和产物字节。
@@ -23,7 +27,7 @@ Execution Environment。Environment 管理账号、并发、运行状态、回�
 | `@hypit/canvas` | Canvas Reader、序列化、事务和打开期 Service。 |
 | `@hypit/canvas/node` | 同一发行单元下的文件适配和 Project Owner Provider。通过 ProjectHost 打开共享 Service，使用 Media 读取和项目的 Execution client 实现单节点准备、历史和采用。 |
 | `@hypit/canvas-studio` | Canvas Product Provider、会话协议、本地 HTTP 适配和浏览器界面。 |
-| Model 包，如 `@hypit/gpt-image` 和 `@hypit/seedance` | 确切 Capability、请求验证和输出定义。需要用于 Canvas 时，通过现有 `./hypit` 发布创作目录项和端口描述，沿用现有模型配置中的选项、默认值、媒体角色和限制。 |
+| Model 包，如 `@hypit/gpt-image` 和 `@hypit/seedance` | 确切 Capability、请求验证和输出定义。需要用于 Canvas 时，通过独立的 `./hypit` 入口发布创作目录项和端口描述，沿用现有模型配置中的选项、默认值、媒体角色和限制。 |
 | `@hypit/execution` 和选定的 Provider | 报价、提交、观察、取消、Publication 和资源流。Provider 实现由应用或 worker 部署选择。 |
 | `@hypit/hypit` | 在发行版里组装 Canvas Product Session 所需后端，并给 CLI 和 API 接同一组类型化操作。 |
 
@@ -48,13 +52,13 @@ ApplicationHost
 │     ├─ NLE Project Service                edits/main.svml
 │     ├─ NLE View Service                   edits/main.nle-view.json
 │     └─ Canvas Service                     generation/opening.canvas.json
-└─ Execution Directory
-   └─ Execution Environment
-      └─ Invocation + Publication
+└─ Execution Directory ── 连接 ── ExecutionHost
+                                  └─ Execution Environment
+                                     └─ Invocation + Publication
 ```
 
-发行版注册 Canvas Product Provider 和相应的本地传输适配器。调用者先在共享 ApplicationHost 打开
-Project，再用项目 lease 和具体文档路径打开 Canvas Product Session。这条路径使用现有 Project
+发行版注册 Canvas Product Provider 和相应的本地传输适配器。界面调用者先在共享 ApplicationHost 打开
+Project，再用项目 lease 和具体文档路径打开 Canvas Product Session。CLI 编辑与生成使用项目 lease。这条路径使用现有 Project
 与 Product Session 的生命周期。Canvas 和 NLE 共享同一个 ProjectHost 的包环境、Media 和文档注册表。
 
 Canvas 的 Node Owner Provider 使用 ProjectHost 的文档注册表打开 Service。同一 Project 内，同一
@@ -137,10 +141,10 @@ project/
   "layout": { "still": { "x": 50, "y": 100 }, "motion": { "x": 460, "y": 100 } },
   "results": {
     "still": {
-      "invocations": [{ "environment": "hypihub", "invocation": "11111111-1111-4111-8111-111111111111" }],
+      "invocations": [{ "environment": "env.22222222-2222-4222-8222-222222222222", "invocation": "11111111-1111-4111-8111-111111111111" }],
       "selected": {
         "image": {
-          "address": { "environment": "hypihub", "invocation": "11111111-1111-4111-8111-111111111111" },
+          "address": { "environment": "env.22222222-2222-4222-8222-222222222222", "invocation": "11111111-1111-4111-8111-111111111111" },
           "output": "image",
           "resource": "image-1"
         }
@@ -167,8 +171,8 @@ project/
 3. **观察和选择。** 通过 `get`、`publication` 和 `openResource` 读取 Environment 的事实。
    Canvas 提供有限投影和会话可用的预览能力。选择结果单独提交一条 Canvas 事务。
 4. **采用。** 图片、视频和音频交给 Project Media 的接收动作。Node 端从 Publication 流到临时文件，
-   调用现有 `adoptFile`。完成后可以显式在 Canvas 新增 Media 卡片，或在 NLE 放置一个 Media
-   occurrence。转写由 Timed Transcript owner 序列化。现有 Media 卡片可以直接用于生成请求。
+   调用现有 `adoptFile`。Media Executor 负责探测生成文件。完成后可以显式在 Canvas 新增 Media 卡片，
+   或在 NLE 放置一个 Media occurrence。现有 Media 卡片可以直接用于生成请求。
 
 保存附着地址和 Execution 入队是两条持久化边界。Canvas 先保存可查询的地址，
 Execution 对同一地址只接受一次。重开时使用 [同地址查询](canvas-api.md#报价提交和恢复)。

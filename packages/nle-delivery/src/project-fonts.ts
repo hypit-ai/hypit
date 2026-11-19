@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { readFileSync, realpathSync, statSync } from "node:fs";
-import { createRequire } from "node:module";
-import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { extname, isAbsolute, relative, resolve, sep } from "node:path";
 import type { MediaResource } from "@hypit/media";
+import { createNodeProjectPackageResolver } from "@hypit/project/node";
 import { readNleTextFontSource, type ResolveNleTextFont } from "./text.js";
 
 const fontMediaTypes: Readonly<Record<string, string>> = {
@@ -24,12 +24,13 @@ function fontFile(address: string): MediaResource {
 
 /** The package CSS maps published styles and weights to local WOFF2 files and their Unicode subsets. */
 function fontsourceFiles(
-  installed: NodeJS.Require,
+  installed: ReturnType<typeof createNodeProjectPackageResolver>,
   name: string,
   weight: number,
   style: string,
 ): readonly FontFile[] {
-  const metadata = JSON.parse(readFileSync(installed.resolve(name + "/metadata.json"), "utf8")) as {
+  const asset = (path: string) => installed(name, path, `Font ${name}`);
+  const metadata = JSON.parse(readFileSync(asset("metadata.json"), "utf8")) as {
     readonly styles: readonly string[];
     readonly weights: readonly number[];
     readonly variable: false | { readonly wght?: { readonly min: string; readonly max: string } };
@@ -43,12 +44,12 @@ function fontsourceFiles(
     throw new Error("Package does not publish weight " + weight + ".");
   }
   const stylesheet = (metadata.variable === false ? String(weight) : "wght") + (style === "italic" ? "-italic" : "") + ".css";
-  const css = readFileSync(installed.resolve(name + "/" + stylesheet), "utf8");
+  const css = readFileSync(asset(stylesheet), "utf8");
   const faces = [...css.matchAll(/@font-face\s*\{([^}]*)\}/gu)].map(([, declaration]) => {
     const file = /src:\s*url\(\s*['"]?\.\/files\/([a-z0-9._-]+\.woff2)['"]?\s*\)/iu.exec(declaration!)?.[1];
     if (file === undefined) throw new Error(stylesheet + " has a face without a local WOFF2 source.");
     const unicodeRange = /unicode-range:\s*([^;]+)/u.exec(declaration!)?.[1]?.replace(/\s+/gu, "");
-    return { resource: fontFile(installed.resolve(name + "/files/" + file)),
+    return { resource: fontFile(asset("files/" + file)),
       ...(unicodeRange === undefined ? {} : { unicodeRange }) };
   });
   if (faces.length === 0) throw new Error(stylesheet + " declares no font faces.");
@@ -57,7 +58,7 @@ function fontsourceFiles(
 
 /** File access and the cache live inside one prepared compilation. */
 export function createProjectFontResolver(root: string): ResolveNleTextFont {
-  const installed = createRequire(join(root, "package.json"));
+  const installed = createNodeProjectPackageResolver(root);
   const cache = new Map<string, ReturnType<ResolveNleTextFont>>();
   const referenceRoot = realpathSync(root);
   function projectFile(path: string): FontFile {

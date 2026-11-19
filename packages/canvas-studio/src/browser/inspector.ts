@@ -264,7 +264,7 @@ function renderRecipe(
   environment.append(...environments.map(env => option(env.id)));
   const endpoints = () => {
     const available = environments.find(env => env.id === environment.value)?.capabilities.find(capability => capability.capability === model.id)?.endpoints ?? [];
-    endpoint.replaceChildren(option("", "Default endpoint"), ...available.map(value => option(value)));
+    endpoint.replaceChildren(option("", available.length > 1 ? "Select an endpoint" : "Use available endpoint"), ...available.map(value => option(value)));
   };
   environment.onchange = endpoints;
   endpoints();
@@ -330,14 +330,9 @@ export function renderHistory(
             if (selectionIs(results?.selected[name], selection)) buttons.append(button("Clear choice", () => actions.commit([{ kind: "result.clear", node: node.id, output: name }])));
             else buttons.append(button("Use output", () => actions.commit([{ kind: "result.select", node: node.id, output: name, selection }])));
           }
-          if (resource !== undefined) {
+                    if (resource !== undefined && /^(image|audio|video)\//u.test(output.resources[resource]?.mediaType ?? "")) {
             buttons.append(button("Preview", () => showPreview(preview, { node: node.id, selection }, actions)));
             buttons.append(button("Adopt media", () => actions.adopt({ node: node.id, selection, target: { kind: "media" } })));
-          } else if (output.type === "@hypit/timed-transcript/transcript") {
-            buttons.append(button("Save transcript", () => {
-              const path = window.prompt("Project-relative transcript path", `transcripts/${node.id}.transcript.json`);
-              if (path) actions.adopt({ node: node.id, selection, target: { kind: "transcript", path } });
-            }));
           }
           row.append(buttons);
           card.append(row);

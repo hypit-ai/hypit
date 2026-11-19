@@ -77,6 +77,11 @@ addresses for its invocation.
 Exact temporal domains and relations are compact neutral foundation values shared with NLE and audiovisual
 execution. Media owns their use for source members, not a second temporal algebra.
 
+`selectMediaSourceWindow` reads the accepted interpretation and chooses an exact positive window in the Media
+clock for a time-bearing member. A caller can select the full extent, or specify a source start and duration.
+The resulting `{ start, end, duration }` uses Media-local coordinates. The member's own sampling domain and
+possible presentation gaps remain represented by its map. A still Picture receives its duration from its placement.
+
 ## Media Asset document
 
 ### Address and file basis
@@ -90,9 +95,9 @@ Project Boundary + project-relative manifest path + Media Asset owner
 The manifest path is the object identity. The document has no second top-level asset id. Owner-local ids name
 subjects inside it, such as a Representation.
 
-Cross-owner Media Asset references use a project-relative manifest path. Files declared inside a Media Asset
-use portable paths relative to the manifest directory. Internal file declarations reject absolute paths,
-parent traversal and same-name discovery.
+Project Media operations and Canvas use the project-relative manifest identity. SVML stores a pointer relative
+to the SVML file and resolves it to that Project Media identity. Files declared inside a Media Asset use portable
+paths relative to the manifest directory and resolve below it.
 
 An illustrative document shape is:
 
@@ -275,8 +280,9 @@ Inspection has two separate operations:
 - **decoded-unit inspection** explicitly pays the cost of enumerating decoded units when the caller needs that
   evidence.
 
-Failure of container-index inspection never silently invokes decoded-unit inspection. Generated or delivered
-output verification may directly select decoded-unit inspection without changing the author-import policy.
+Author import uses the selected inspection mode. For generated Media adoption, the Media executor reads
+the container index and uses decoded units when the primary stream lacks exact bounds. Still images
+use a constant-picture interpretation. This is the generated-resource inspection policy.
 
 Derived Media views consume one resolved resource, its accepted interpretation and a request on the Media clock.
 Thumbnail and storyboard resolve Picture positions through the member mapping, then select exact decoded ordinals

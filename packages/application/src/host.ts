@@ -32,13 +32,17 @@ type SessionEntry = {
   readonly project: ProjectEntry;
   readonly product: string;
   readonly session: ApplicationProductSession;
+  readonly browser?: { connections: number; timer?: ReturnType<typeof setTimeout> };
   closing?: Promise<void>;
 };
+
+const browserReconnectMs = 60_000;
 
 export type OpenApplicationHostOptions = {
   readonly projects: ApplicationProjectProvider;
   readonly products?: readonly ApplicationProductProvider[];
   readonly execution?: ApplicationExecutionDirectory;
+  readonly closeExecution?: boolean;
 };
 
 function productIdentity(value: string): void {
@@ -65,6 +69,7 @@ function launchParameters(provider: ApplicationProductProvider): void {
 
 export class ApplicationHost {
   readonly execution: ApplicationExecutionDirectory;
+  readonly #closeExecution: boolean;
   readonly #projectProvider: ApplicationProjectProvider;
   readonly #products = new Map<string, ApplicationProductProvider>();
   readonly #projects = new Map<string, ProjectEntry>();
@@ -81,6 +86,7 @@ export class ApplicationHost {
   constructor(options: OpenApplicationHostOptions) {
     this.#projectProvider = options.projects;
     this.execution = options.execution ?? openApplicationExecutionDirectory();
+    this.#closeExecution = options.execution === undefined || options.closeExecution === true;
     for (const provider of options.products ?? []) {
       productIdentity(provider.product);
       if (this.#products.has(provider.product)) {
@@ -121,7 +127,7 @@ export class ApplicationHost {
         const clients = await this.execution.openProjectClients(identified.boundary);
         let host: ProjectHost;
         try {
-          host = await this.#projectProvider.open(identified.input, clients);
+          host = await this.#projectProvider.open(identified.input, clients, this.execution.discoveryFor(identified.boundary));
         } catch (error) {
           await Promise.allSettled([...clients].reverse().map(async (client) => await client.close()));
           throw error;
@@ -203,6 +209,7 @@ export class ApplicationHost {
     readonly project: ApplicationProjectLeaseHandle;
     readonly product: string;
     readonly input: unknown;
+    readonly browser?: boolean;
   }): Promise<ApplicationProductSessionLease<Session>> {
     this.#assertOpen();
     const project = this.#projectLeases.get(input.project);
@@ -222,9 +229,11 @@ export class ApplicationHost {
       throw new Error("Application Project closed while opening a Product Session.");
     }
     const handle = `session_${randomUUID()}`;
-    const entry: SessionEntry = { handle, project, product: input.product, session };
+    const entry: SessionEntry = { handle, project, product: input.product, session,
+      ...(input.browser ? { browser: { connections: 0 } } : {}) };
     this.#sessions.set(handle, entry);
     project.sessions.add(handle);
+    this.#scheduleBrowserRelease(entry);
     this.#emit({ kind: "product.opened", project: project.id, session: handle, invalidated: ["application"] });
     let released = false;
     return {
@@ -237,6 +246,34 @@ export class ApplicationHost {
         released = true;
         await this.closeProduct(handle);
       },
+    };
+  }
+
+  #scheduleBrowserRelease(entry: SessionEntry): void {
+    const browser = entry.browser;
+    if (browser === undefined || browser.connections !== 0 || browser.timer !== undefined || !this.#sessions.has(entry.handle)) return;
+    browser.timer = setTimeout(() => {
+      delete browser.timer;
+      if (entry.session.retainWhenDisconnected?.()) this.#scheduleBrowserRelease(entry);
+      else void this.closeProduct(entry.handle).catch(() => undefined);
+    }, browserReconnectMs).unref();
+  }
+
+  /** Keep browser sessions available while a transport connection or request is open. */
+  connectProduct(handle: ApplicationProductSessionHandle): () => void {
+    const entry = this.#sessions.get(handle);
+    if (entry === undefined) throw new Error(`Application Product Session ${handle} is not open.`);
+    const browser = entry.browser;
+    if (browser === undefined) return () => {};
+    browser.connections += 1;
+    if (browser.timer !== undefined) clearTimeout(browser.timer);
+    delete browser.timer;
+    let connected = true;
+    return () => {
+      if (!connected) return;
+      connected = false;
+      browser.connections -= 1;
+      this.#scheduleBrowserRelease(entry);
     };
   }
 
@@ -258,6 +295,7 @@ export class ApplicationHost {
     const entry = this.#sessions.get(handle);
     if (entry === undefined) return this.#closingSessions.get(handle) ?? Promise.resolve();
     entry.closing ??= (async () => {
+      if (entry.browser?.timer !== undefined) clearTimeout(entry.browser.timer);
       this.#sessions.delete(handle);
       entry.project.sessions.delete(handle);
       const event = {
@@ -273,6 +311,14 @@ export class ApplicationHost {
     })().finally(() => this.#closingSessions.delete(handle));
     this.#closingSessions.set(handle, entry.closing);
     return entry.closing;
+  }
+
+  closeProductFromCaller(handle: ApplicationProductSessionHandle): Promise<void> {
+    const entry = this.#sessions.get(handle);
+    if (entry?.browser && entry.session.retainWhenDisconnected?.()) {
+      throw new Error("Save or reload the open documents and let delivery finish or cancel it before closing this Session.");
+    }
+    return this.closeProduct(handle);
   }
 
   observe(): ApplicationProjection {
@@ -314,7 +360,7 @@ export class ApplicationHost {
         .map(async (entry) => await this.#closeUnusedProject(entry)));
       for (const result of projectResults) if (result.status === "rejected") failures.push(result.reason);
       await Promise.allSettled(this.#closingProjects.values());
-      await this.execution.close().catch((error) => failures.push(error));
+      if (this.#closeExecution) await this.execution.close().catch((error) => failures.push(error));
       if (failures.length > 0) throw failures[0];
     })();
     return this.#closePromise;

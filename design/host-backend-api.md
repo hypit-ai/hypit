@@ -5,8 +5,8 @@
 
 ## Purpose
 
-Hypit's interactive backend has one long-lived application root, three nested project/interface lifetimes and one
-orthogonal execution lifetime:
+Hypit has a long-lived application root for open projects and Product Sessions. An ExecutionHost serves
+recoverable Invocations on its own deployment lifetime.
 
 ```text
 Desktop · Agent · CLI · browser                  caller lifetimes
@@ -14,11 +14,9 @@ Desktop · Agent · CLI · browser                  caller lifetimes
 ApplicationHost                                  local/deployment service lifetime
 ├─ ProjectHost registry
 ├─ Product provider and Product Session registry
-├─ AIGC Execution Directory
-│  ├─ local Execution Environment                in-process deployment
-│  └─ ExecutionHost client                       worker or remote deployment
-│     └─ selected Environment
-│        └─ Action / Invocation                  recoverable execution lifetime
+├─ AIGC Execution Directory ── clients ── ExecutionHost
+│                                         └─ Execution Environment
+│                                            └─ Capability Invocation
 └─ ProjectHost                                   one Project Boundary
    ├─ Project Media Service
    ├─ Package Environment
@@ -37,7 +35,7 @@ These levels govern composition, identity and lifetime. They do not merge owner 
 - an Executor owns a long-running or platform-dependent Action.
 
 Desktop, Agent, CLI and browser adapters choose their own presentation and navigation. They attach to the same
-ApplicationHost and resolve projects, products and execution through its shared registries.
+ApplicationHost for projects and products. Direct execution callers connect to ExecutionHost.
 
 ## Scope and uniqueness
 
@@ -90,9 +88,11 @@ Product Sessions. Registration states which product kinds this application can l
 product's owner facts into application scope: every NLE Studio session still receives one selected ProjectHost, opens
 project-owned NLE and View Services and retains only interface-session state of its own.
 
-Opening the same canonical boundary returns a lease on the existing ProjectHost. Closing one caller, window or tab
-releases its leases and Product Sessions, not the shared ProjectHost while another lease remains. Starting an
-ApplicationHost when no endpoint is available is deployment bootstrap, not a domain operation.
+Opening the same canonical boundary returns a lease on the existing ProjectHost. A browser Product Session detaches
+when its last connection closes and has a one-minute reconnect window. Idle Sessions are released after the window.
+Unsaved NLE document changes and in-flight deliveries retain their Session until resolved. Headless callers release
+their bounded leases explicitly. An HTTP server borrows an injected ApplicationHost unless its creator transfers
+shutdown ownership. A borrowed server releases its own headless leases on shutdown.
 
 ### Caller relationship
 
@@ -167,6 +167,7 @@ interface ApplicationHost {
     readonly project: ApplicationProjectLeaseHandle;
     readonly product: string;
     readonly input: unknown;
+    readonly browser?: boolean;
   }): Promise<ApplicationProductSessionLease>;
   closeProduct(handle: ApplicationProductSessionHandle): Promise<void>;
   project(handle: ApplicationProjectLeaseHandle): ProjectHost;
@@ -326,6 +327,10 @@ The ApplicationHost Execution Directory exposes selected AIGC Provider/model Exe
 project-scoped Capability Invocation clients. A recoverable Invocation address remains observable after its initiating
 caller or Product Session disconnects.
 
+The Directory is the application-side connection and project-access boundary. ExecutionHost can serve these clients
+without opening a Project or any Product. A separately hosted Environment retains its own lifetime when an application
+connection closes. See [ExecutionHost boundary](explicit-programs-and-execution.md#executionhost-boundary).
+
 The first product-facing Action kinds are:
 
 ```ts
@@ -410,22 +415,10 @@ GET    /api/application/events
 POST   /api/application/projects
 GET    /api/application/project-leases/:lease
 GET    /api/application/project-leases/:lease/events
+POST   /api/application/project-leases/:lease/canvas/:operation
 DELETE /api/application/project-leases/:lease
 POST   /api/application/sessions
 DELETE /api/application/sessions/:session
-GET    /api/application/execution/:environment/capabilities
-GET    /api/application/execution/:environment/doctor
-POST   /api/application/execution/:environment/quote
-POST   /api/application/execution/:environment/invocations
-GET    /api/application/execution/:environment/invocations/:invocation
-POST   /api/application/execution/:environment/invocations/:invocation/cancel
-GET    /api/application/execution/:environment/invocations/:invocation/publication
-GET    /api/application/execution/:environment/auth
-DELETE /api/application/execution/:environment/auth
-POST   /api/application/execution/:environment/auth/attempt
-GET    /api/application/execution/:environment/auth/attempt/:attempt
-POST   /api/application/execution/:environment/auth/attempt/:attempt
-DELETE /api/application/execution/:environment/auth/attempt/:attempt
 
 GET    /home/:capability/
 *      /home/:capability/api/application/*
@@ -436,17 +429,16 @@ GET    /sessions/:session/
 
 Application control operations require the server's bearer token. A Product Session URL contains an opaque session
 capability and routes only to the adapter registered for that session's product kind. The Application Home capability
-mount projects project and session operations to its browser artifact. Execution routes require the bearer token
-on the direct loopback endpoint, and can select an existing project lease with `?project=<lease>`.
+mount projects project and session operations to its browser artifact. Project Canvas operations require the
+ApplicationHost bearer token and a Project lease. ExecutionHost publishes its own authenticated [loopback API](../packages/execution/README.md#local-executionhost).
 Resource capability tokens
 remain scoped to the Project or Product Session that issued them and are revoked with that scope. A browser URL,
 server port, iframe address or HTTP request body never becomes an owner fact.
 The Project stream closes when its lease is released. Within a Studio Session, `GET /api/events` closes with the
 Session.
 
-Desktop IPC, CLI and Agent adapters attach to the same ApplicationHost instance and invoke the same typed ProjectHost,
-Product Session and Action operations. An in-process adapter calls the typed contracts directly; a separate process
-uses the selected local transport.
+The browser and CLI use the local HTTP transport. The typed ProjectHost, Product Session and Action contracts are
+also the integration seam for in-process callers, Desktop IPC and Agent adapters.
 
 ## Capability audit
 
@@ -464,7 +456,8 @@ The current implementation already provides:
 - an Application Home capability route and browser artifact for product launch and active-session projection;
 - permission-restricted local endpoint publication and live Application instance validation;
 - an application AIGC Execution Directory that opens project-scoped clients from selected Provider/model Environments;
-- a typed Node project client for durable AIGC Invocation, cancellation, Publication manifests and resource streaming;
+- a standalone Node ExecutionHost and shared typed client for durable Invocation, cancellation, Publication manifests and resource streaming;
+- Project-scoped Canvas operations shared by bounded CLI leases and Canvas Studio;
 - Project Boundary manifest and package activation;
 - one ProjectHost with shared Media, package, document and resource services;
 - local Media inspection, atomic adoption, Catalog refresh and byte-range resource access;

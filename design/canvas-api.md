@@ -5,13 +5,12 @@
 ## 调用入口
 
 Canvas 操作以 Project 和明确的 `*.canvas.json` 路径寻址。ProjectHost 为这份文档提供一个共享的
-Canvas Service。界面、CLI、Agent 和项目程序使用同一组类型化操作。Node 程序可直接打开 owner
-lease。HTTP 和 CLI 沿用现有 ApplicationHost 的 Product Session 路径；一次终端操作租用一个
-短会话，完成后释放。Canvas 的界面会话可继续订阅同一个 Service。详见 [Host 和打开期](canvas.md#host-和打开期)。
+Canvas Service。界面、CLI、Agent 和项目程序使用同一组类型化操作。Node 程序可直接打开 owner lease。
+CLI 通过 ApplicationHost 的项目 lease 调用文档操作，Studio 通过 Product Session 订阅同一个 Service。
+详见 [Host 和打开期](canvas.md#host-和打开期)。
 
-`create` 是显式的 Project 文件创建动作。由 Product Session 入口发起时，调用者提交明确的创建
-请求，目标已存在就返回冲突。打开现有 Canvas 使用独立的打开输入。创建、编辑、报价和生成使用已选择
-的 Project 范围；项目包目录、Media 和可用 Execution client 直接来自这个 ProjectHost。
+`create` 是显式的 Project 文件创建动作。调用者提交目标文档路径和名称，目标已存在时返回冲突。
+项目包目录、Media 和可用的 Execution client 来自同一个 ProjectHost。
 
 ## 操作范围
 
@@ -22,15 +21,16 @@ lease。HTTP 和 CLI 沿用现有 ApplicationHost 的 Product Session 路径；�
 | `transact` | 传入预期修订和一组类型化命令。校验后一次原子保存，返回新修订和命令涉及的节点。 |
 | `quote` | 节点、Environment，可选预期修订与 Endpoint。解析当前输入并返回实际使用的修订、输入来源和 Execution 的报价。 |
 | `invoke` | 节点、Environment、预期修订，可选 Endpoint 和 Invocation ID。提交一个请求，返回 Invocation 地址和接受状态。 |
-| `adopt` | 某个已附着的具体 Publication 输出或资源及其目标 owner。Media 返回 `.media.json` 引用，Transcript 返回目标文档引用。 |
+| `adopt` | 某个已附着的具名媒体资源及其目标。返回 Project Media 的 `.media.json` 引用。 |
 
 会话的 `subscribe` 提示现有投影失效；调用者可重新读取。预览用会话期限内的资源地址，媒体字节直接由
-Project Media 或 Execution 提供。环境授权和诊断走 Application 的现有接口。等待、取消和读取
+Project Media 或 Execution 提供。环境授权和诊断走 ExecutionHost。等待、取消和读取
 Publication 也沿用 Execution 接口。画布上的停止按钮通过该卡片的 Invocation 地址调用 Execution 取消。
 
-HTTP 在 Canvas Session 路径下投影 `observe`、`command`、`quote`、`invocations`、
-`invocations/cancel`、`adoptions`、`events` 和 `resources`。Product Session 的启动请求携带文档路径和明确的打开或
-创建意图。这个路径同时服务一个短期 CLI 会话和持续订阅的界面会话。
+Canvas 提供项目和界面两个 HTTP 入口。项目入口是
+`POST /api/application/project-leases/:lease/canvas/:operation`，请求体为 `{ document, value }`，
+支持 `create`、`observe`、`command`、`quote`、`invoke`、`cancel` 和 `adopt`。
+Canvas Studio 会话提供相同的核心操作，以及事件流和短期预览 URL。Product Session 的启动参数指定文档路径。
 
 ## 编辑事务和结果选择
 
@@ -110,9 +110,9 @@ hypit canvas catalog generation/opening.canvas.json --json
 hypit canvas node generation/opening.canvas.json still --json
 hypit canvas apply generation/opening.canvas.json --input edit.json
 hypit canvas history generation/opening.canvas.json still --json
-hypit canvas quote generation/opening.canvas.json motion --environment hypihub --json
-hypit canvas invoke generation/opening.canvas.json motion --environment hypihub --if-revision "$revision"
-hypit execution wait "$invocation" --environment hypihub
+hypit canvas quote generation/opening.canvas.json motion --json
+hypit canvas invoke generation/opening.canvas.json motion --if-revision "$revision"
+hypit execution wait "$invocation" --environment "$environment"
 hypit canvas adopt generation/opening.canvas.json motion --input publication-selection.json
 ```
 
@@ -123,7 +123,8 @@ Product Session 启动方式。
 报价回执给出 `revision`，可传给 `invoke --if-revision`。提交回执给出 `address`，其
 `environment` 与 `invocation` 可传给现有 Execution 命令。脚本需要自行关联请求时，可以在
 `invoke` 时显式提供 `--invocation-id`。
+只有一个执行环境时，报价和提交可省略 `--environment`。
 
 `canvas adopt` 的输入是 `{ selection, target }`。Media 的 `target` 为 `{ "kind": "media" }`，
-可选 `path` 指定新 `.media.json` 文件。转写的目标为 `{ "kind": "transcript", "path": "transcripts/line.json" }`。
+可选 `path` 指定新 `.media.json` 文件。
 `selection` 使用 `address`、`output`，媒体资源额外指定 `resource`。

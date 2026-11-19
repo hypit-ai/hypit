@@ -31,15 +31,4 @@ export type Capability<Request extends JsonValue = JsonValue> = {
   readonly outputs: Readonly<Record<string, CapabilityOutput>>;
 };
 
-/** Project package contributions and separate palette selections for installed Models. */
-export function describeModelPackage(name: string, models: readonly Capability[]) {
-  return {
-    package: name,
-    contributions: models.map(model => ({ kind: "canvas.model", value: model })),
-    catalog: models.map(model => ({
-      id: model.id.slice(name.length + 1), kind: "canvas.model", title: model.title, value: model.id,
-    })),
-  };
-}
-
 export * from "./model-media.js";

@@ -1,15 +1,16 @@
 # @hypit/execution
 
-Capability Invocation and Publication contracts, with a local Node 24 Execution Environment.
+Capability Invocation and Publication contracts, with a local Node 24 Execution Environment and loopback Host.
 
 - `@hypit/execution` exposes the client, Invocation address, status, Publication and streamed resource contracts.
 - `@hypit/execution/model` lets a Model package declare a request reader and named typed output readers.
 - `@hypit/execution/provider` lets a Provider bind a Capability to job operations or a direct response.
-- `@hypit/execution/node` opens the local Environment over a dedicated data directory.
+- `@hypit/execution/node` opens the local Environment and serves it through the authenticated loopback ExecutionHost.
 
 ## Make a call
 
-A deployment supplies the Environment ID, its data root and explicit Endpoint bindings. It can associate
+A deployment supplies its data root and explicit Endpoint bindings. The local root owns the Environment ID
+in `environment.json`; reopening that root preserves the ID. A deployment can associate
 a binding with several named occupancy budgets, such as an account and a model. Every call acquires its
 budgets together. They are held through submission and remote polling, and released for collection.
 Recovered remote jobs keep their claims while they are polled. Use a common capacity name for Endpoint
@@ -30,7 +31,7 @@ in that Environment. It is intended for callers trusted to use that Environment'
    returns a byte stream, size and media type for a selected file. Feed its bytes to the target owner explicitly.
 
 Closing a client lease leaves accepted Invocations with the Environment. Closing the Environment stops its
-worker and releases its root. Reopening it with the same ID, directory and bindings resumes queued work and
+worker and releases its root. Reopening it with the same directory and bindings resumes queued work and
 active receipts. A Provider may implement read-only reconciliation by Invocation ID to recover an acknowledgement
 lost during submission. If it cannot establish the Provider outcome, the Invocation ends with
 `submission-unknown`. Check the Provider before starting a new Invocation.
@@ -41,6 +42,37 @@ receipt and reopen a previously accepted response through its read-only result l
 `cancel` confirms queued cancellation locally or records a running cancellation request for the Provider.
 The observation reports confirmed, accepted, unsupported, too late or failed cancellation. Accepted requests
 continue polling until the Provider reports a terminal outcome.
+
+## Local ExecutionHost
+
+`openNodeExecutionHost({ environments })` serves deployments on `127.0.0.1`. Each entry supplies an
+Environment and optional account authorization operations. `listen()` returns the origin and a bearer token.
+`new NodeExecutionHostClient(endpoint).environment(id)` exposes an Environment view with the same
+`connect()` and `ExecutionClient` types. Closing the view releases its caller lifetime. Closing the server
+closes deployments when constructed with `closeDeployments: true`. The client can use a local endpoint resolver when the deployment republishes
+its address after a restart.
+
+`GET /api/execution` lists the persisted Environment IDs at the selected endpoint. CLI commands can infer a sole
+Environment. Use the exact ID from an Invocation address to reopen its Publication.
+
+The loopback routes under `/api/execution/:environment` expose:
+
+| Method and suffix | Operation |
+| --- | --- |
+| `GET /` | Environment identity and available Capability and Endpoint IDs. |
+| `GET /doctor` | Deployment diagnostics with optional `capability` query. |
+| `POST /quote` | JSON request and named resource metadata. |
+| `POST /invocations` | Stream a typed request and named input bytes with the Node client. |
+| `GET /invocations/:invocation` | Invocation observation. |
+| `POST /invocations/:invocation/cancel` | Request cancellation. |
+| `GET /invocations/:invocation/publication` | Publication manifest. |
+| `GET /invocations/:invocation/resources/:output/:resource` | Stream a selected file. |
+| `GET, DELETE /auth` | Observe or disconnect deployment authorization. |
+| `POST /auth/attempt` and `GET, POST, DELETE /auth/attempt/:id` | Start, observe, complete or cancel authorization. |
+
+The bearer token authorizes use of the selected deployment. Clients stream resources by name and open local
+source and destination paths on their own side of the connection. The installed `hypit` CLI publishes and
+discovers the runtime endpoint and provides shell commands for these operations.
 
 ## Storage
 

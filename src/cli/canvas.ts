@@ -5,7 +5,7 @@ import {
   type CanvasAdoptionReceipt, type CanvasInvokeReceipt, type CanvasObservation, type CanvasQuoteReceipt,
 } from "@hypit/canvas-studio/protocol";
 import type { LocalHostClient } from "./client.js";
-import { readJsonInput, type CliResult } from "./execution.js";
+import { readJsonInput, type CliResult } from "./io.js";
 import { projectRoot } from "./nle.js";
 import { openBrowser } from "./terminal.js";
 
@@ -13,7 +13,7 @@ type Options = {
   readonly project?: string;
   readonly node?: string;
   readonly name?: string;
-  readonly environment: string;
+  readonly environment?: string;
   readonly input?: string;
   readonly expectedRevision?: string;
   readonly invocation?: string;
@@ -22,7 +22,7 @@ type Options = {
 };
 
 async function existingParent(path: string): Promise<string> {
-  try { return await realpath(path); }
+  try { await realpath(path); return path; }
   catch (error) {
     const parent = dirname(path);
     if (parent === path || !(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
@@ -41,36 +41,33 @@ export async function canvasCommand(
   if (action === "invoke" && options.expectedRevision === undefined) throw new Error("canvas invoke requires --if-revision.");
 
   const candidate = resolve(options.project ?? process.cwd(), document);
-  const absolute = action === "create" ? candidate : await realpath(candidate);
+  const parent = await existingParent(dirname(candidate));
+  const absolute = action === "create" ? resolve(await realpath(parent), relative(parent, candidate)) : await realpath(candidate);
   const root = options.project === undefined
-    ? await projectRoot(await existingParent(dirname(absolute))) : await realpath(options.project);
+    ? await projectRoot(action === "create" ? parent : dirname(absolute)) : await realpath(options.project);
   const local = relative(root, absolute);
   if (local === "" || local === ".." || local.startsWith(".." + sep) || isAbsolute(local)) {
     throw new Error("Choose a Canvas inside the selected Project Boundary.");
   }
   const path = local.split(sep).join("/");
   const project = await host.openProject(root, signal);
-  let session: { readonly handle: string; readonly url: string } | undefined;
-  let keepOpen = false;
   try {
-    session = await host.request("/api/application/sessions", {
-      method: "POST", body: { project: project.handle, product: canvasStudioProduct, input: {
-        document: path, ...(action === "create" ? { create: { name: options.name } } : {}),
-      } }, signal,
-    });
-    if (session === undefined) throw new Error("Canvas Host returned no Product Session.");
     if (action === "open") {
+      const session = await host.request<{ readonly handle: string; readonly url: string }>("/api/application/sessions", {
+        method: "POST", body: { project: project.handle, product: canvasStudioProduct, input: { document: path }, browser: true }, signal,
+      });
       if (!options.noOpen) openBrowser(session.url);
-      keepOpen = true;
       return { value: session, text: session.url };
     }
-    const prefix = new URL("api/", session.url).pathname;
-    const post = <T>(route: string, body: unknown) => host.request<T>(prefix + route, { method: "POST", body, signal });
+    const prefix = `/api/application/project-leases/${encodeURIComponent(project.handle)}/canvas/`;
+    const post = <T>(operation: string, value: unknown) => host.request<T>(prefix + operation,
+      { method: "POST", body: { document: path, value }, signal });
     const node = options.node;
     switch (action) {
       case "create":
       case "inspect": {
-        const board = await post<CanvasObservation>("observe", { kind: "board" });
+        const board = action === "create" ? await post<CanvasObservation>("create", { name: options.name })
+          : await post<CanvasObservation>("observe", { kind: "board" });
         if (board.kind !== "board") throw new Error("Canvas Host returned an unexpected observation.");
         const { revision, document } = board;
         return { value: { path, revision, document }, text: `${document.name} · ${document.nodes.length} cards\n${path}\nRevision ${revision}` };
@@ -84,11 +81,11 @@ export async function canvasCommand(
       }
       case "quote":
       case "invoke": {
-        const request = { node, environment: options.environment,
+        const request = { node, ...(options.environment === undefined ? {} : { environment: options.environment }),
           ...(options.expectedRevision === undefined ? {} : { expectedRevision: options.expectedRevision }),
           ...(options.endpoint === undefined ? {} : { endpoint: options.endpoint }) };
         if (action === "quote") return { value: await post<CanvasQuoteReceipt>("quote", request) };
-        const value = await post<CanvasInvokeReceipt>("invocations", { ...request,
+        const value = await post<CanvasInvokeReceipt>("invoke", { ...request,
           ...(options.invocation === undefined ? {} : { invocation: options.invocation }) });
         return { value, text: `${value.address.environment}/${value.address.invocation} · ${value.admission}${"issue" in value ? "\n" + value.issue : ""}`,
           failed: value.admission !== "accepted" };
@@ -96,14 +93,12 @@ export async function canvasCommand(
       case "adopt": {
         const body = await readJsonInput(options.input!);
         if (body === null || typeof body !== "object" || Array.isArray(body)) throw new Error("Adoption input must contain selection and target.");
-        const value = await post<CanvasAdoptionReceipt>("adoptions", { ...body, node });
-        return { value, text: value.kind === "media" ? value.reference.path : value.path };
+        const value = await post<CanvasAdoptionReceipt>("adopt", { ...body, node });
+        return { value, text: value.reference.path };
       }
       default: throw new Error("Unknown Canvas command.");
     }
   } finally {
-    try {
-      if (session !== undefined && !keepOpen) await host.request(`/api/application/sessions/${encodeURIComponent(session.handle)}`, { method: "DELETE" });
-    } finally { await host.closeProject(project.handle); }
+    await host.closeProject(project.handle);
   }
 }

@@ -1,5 +1,4 @@
 import {
-  openApplicationExecutionDirectory,
   openApplicationHost,
   type ApplicationExecutionDirectory,
   type ApplicationHost,
@@ -23,6 +22,8 @@ import {
   type LocalHtmlVideoTools,
 } from "@hypit/html-video-local";
 
+import { canvasProjectAdapter } from "./canvas-project.js";
+
 export * from "@hypit/application/node";
 export {
   findNodeHypitApplicationEndpoint,
@@ -35,6 +36,7 @@ export {
 
 export type OpenNodeHypitApplicationOptions = {
   readonly execution?: ApplicationExecutionDirectory;
+  readonly closeExecution?: boolean;
   /** Local audiovisual tools supplied to the default NLE Studio executors. */
   readonly localHtmlVideo?: LocalHtmlVideoTools;
   readonly products?: readonly ApplicationProductProvider[];
@@ -59,7 +61,8 @@ export function openNodeHypitApplication(
       frameExecutor: video,
       ...(options.localHtmlVideo === undefined ? {} : { mediaTools: options.localHtmlVideo }),
     }), createCanvasStudioProductProvider(options.localHtmlVideo), ...(options.products ?? [])],
-    execution: options.execution ?? openApplicationExecutionDirectory([]),
+    ...(options.execution === undefined ? {} : { execution: options.execution }),
+    ...(options.closeExecution === undefined ? {} : { closeExecution: options.closeExecution }),
   });
 }
 
@@ -69,7 +72,9 @@ export function openNodeHypitApplicationServer(
   const application = options.application ?? openNodeHypitApplication(options);
   return openNodeApplicationServer({
     application,
+    closeApplication: options.application === undefined,
     home: applicationHomeNodeAdapter,
+    projectAdapters: [canvasProjectAdapter(options.localHtmlVideo)],
     products: [nleStudioNodeProductAdapter, canvasStudioNodeProductAdapter, ...(options.productAdapters ?? [])],
     ...(options.hostname === undefined ? {} : { hostname: options.hostname }),
     ...(options.port === undefined ? {} : { port: options.port }),

@@ -28,6 +28,8 @@ Read the current system from authority toward implementation.
   Service and local media execution.
 - [Component authoring](authoring.md) — TSX author programs, NLE materialization, component expansion and the boundary
   between author source and the durable edit.
+- [Script and speech timing](script.md) — authored dialogue, caption correspondences, named source time and the
+  explicit binding to a prepared transcript.
 - [Canvas 后端和项目文件](canvas.md) — Canvas 的项目文档、npm 边界、生成操作和 Studio。
 - [Canvas 操作与终端接口](canvas-api.md) — 修订事务、报价、提交恢复、卡片历史和采用。
 - [HTML 视听执行与导出 API](html-video-delivery.md) — NLE 编译、HTML/Audio Program、视频
@@ -50,7 +52,6 @@ Read the current system from authority toward implementation.
 ### 5. Distribution and implementation growth
 
 - [Package architecture](package-architecture.md) — release boundaries for authoring, NLE compilation and Executors.
-- [Repository bootstrap](repository-bootstrap.md) — implementation birth sequence and selective code reuse.
 
 The constitution precedes package layout. The other pages project it into engineering decisions. Exact
 schemas, operations and adapters live beside their owner code.

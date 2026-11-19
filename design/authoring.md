@@ -157,9 +157,15 @@ Generation / Semantic / Scene owner
 ```
 
 Each peer result keeps its producing owner and enters NLE through the stated adoption or materialization operation.
-A preparation script or Canvas may submit and await Seedance or WhisperX ahead of time. The Composition Source
-receives selected Media and timing evidence; it does not initiate an Invocation. The caller may read local inputs
-asynchronously before invoking it. The duration of an edit occurrence is separate from a Model request duration.
+A preparation program can submit and await WhisperX, align the result against an authored script and write a
+completed transcript. The importer reads the selected Media, script and transcript as explicit inputs before
+calling the synchronous Composition Source. `selectMediaSourceWindow` selects an exact start and duration in the
+accepted Media's local clock. `bindScriptTiming` resolves [named Script boundaries and caption ranges](script.md)
+on the chosen source clock. `projectSourceInstant` and `projectSourceRange` place those times through one selected
+forward affine occurrence, including a trimmed or sped-up occurrence, before returning closed NLE declarations.
+The import's persistent output is the selected SVML. Media, script and transcript edits have their own explicit
+preparation or owner operations. A Model request duration and the duration of an edit occurrence are selected
+at their respective boundaries.
 
 ## Syntax decision rules
 

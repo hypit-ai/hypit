@@ -236,7 +236,7 @@ async function launch(rootValue: string, product: string, input: Record<string, 
     });
     const session = await request<LaunchProductReceipt>("api/application/sessions", {
       method: "POST",
-      body: JSON.stringify({ project: project.handle, product, input }),
+      body: JSON.stringify({ project: project.handle, product, input, browser: true }),
     });
     message = `${productTitle(product)} 已打开。`;
     window.open(session.url, "_blank");

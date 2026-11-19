@@ -80,7 +80,7 @@ const actions: InspectorActions = {
   },
   adopt(input) {
     void request<CanvasAdoptionReceipt>("adoptions", input).then(async result => {
-      message(result.kind === "media" ? "Added to Project Media · " + result.reference.path : "Saved · " + result.path);
+      message("Added to Project Media · " + result.reference.path);
       await refreshCatalog();
     }).catch(fail);
   },

@@ -56,8 +56,9 @@ accepted editing revision. The Action keeps its result for the Session until a n
 or Session close. A structural Canvas remains available during editing and while a preview is prepared.
 
 Video export is a Project-local `NleDeliveryService` Action. The Product Session starts it with the current
-accepted Project revision. The selected Executor owns its FFmpeg/browser process tree. Session close cancels its
-active Delivery Actions and revokes the Session resource addresses.
+accepted Project revision. The selected Executor owns its FFmpeg/browser process tree. An active delivery retains a
+disconnected browser Session until the Action ends or is explicitly cancelled. Explicit browser Session close
+requires any unsaved document changes and active deliveries to be resolved. Application shutdown closes its Actions.
 
 The browser's Media bin projects that shared catalog. Selecting an available entry explicitly places it at the current
 playhead on a compatible unlocked Track. Studio resolves or creates that Track in the same transaction as

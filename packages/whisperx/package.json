@@ -5,11 +5,6 @@
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "exports": {
-    "./hypit": {
-      "hypit-source": "./src/hypit.ts",
-      "types": "./dist/hypit.d.ts",
-      "default": "./dist/hypit.js"
-    },
     ".": {
       "hypit-source": "./src/index.ts",
       "types": "./dist/index.d.ts",

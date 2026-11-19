@@ -10,7 +10,6 @@ export * from "./hypihub-auth-node.js";
 export { nodeHypitDataRoot } from "./node-data-root.js";
 
 export type OpenNodeHypiHubEnvironmentOptions = Omit<HypiHubOptions, "id" | keyof HypiHubAuthentication> & HypiHubAuthentication & {
-  readonly id?: string;
   readonly dataRoot?: string;
   readonly accountConcurrency?: number;
   /** Optional configured capability subset, using exact Model Capability IDs. */
@@ -21,8 +20,7 @@ export type OpenNodeHypiHubEnvironmentOptions = Omit<HypiHubOptions, "id" | keyo
 
 /** Select the HypiHub account and capability subset for this environment deployment. */
 export async function openNodeHypiHubEnvironment(options: OpenNodeHypiHubEnvironmentOptions): Promise<ExecutionEnvironment> {
-  const { id = "hypihub", dataRoot, accountConcurrency = 1, modelConcurrency = {}, capabilities, ...provider } = options;
-  if (!/^[a-z][a-z0-9.-]{0,191}$/u.test(id)) throw new Error("HypiHub Environment id is invalid.");
+  const { dataRoot, accountConcurrency = 1, modelConcurrency = {}, capabilities, ...provider } = options;
   const hypihub = createHypiHubProvider({ ...provider, id: "hypihub" });
   const available = hypihub.endpoints;
   const selected = capabilities === undefined ? available : capabilities.map(capability => {
@@ -39,9 +37,8 @@ export async function openNodeHypiHubEnvironment(options: OpenNodeHypiHubEnviron
     capability, { id: capability.replace(/^@hypit\//u, "").replaceAll("/", "."), limit },
   ]));
   const environment = await openLocalExecutionEnvironment({
-    id,
     title: "HypiHub",
-    dataRoot: dataRoot ?? join(nodeHypitDataRoot(), "execution", id),
+    dataRoot: dataRoot ?? join(nodeHypitDataRoot(), "execution", "hypihub"),
     capacities: { account: accountConcurrency, ...Object.fromEntries([...claims.values()].map(claim => [claim.id, claim.limit])) },
     endpoints: selected.map(endpoint => {
       const model = claims.get(endpoint.capability.id);
@@ -55,7 +52,7 @@ export async function openNodeHypiHubEnvironment(options: OpenNodeHypiHubEnviron
     doctor: (capability, signal) => {
       if (capability !== undefined && !configured.has(capability)) {
         return Promise.resolve([{ severity: "error", code: "capability-unselected",
-          message: `Environment ${id} does not offer ${capability}.` }]);
+          message: `Environment ${environment.projection.id} does not offer ${capability}.` }]);
       }
       return hypihub.doctor(capability === undefined ? [...configured] : [capability], signal);
     },

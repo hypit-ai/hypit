@@ -12,7 +12,7 @@ import type {
   ProviderPending, ProviderReceipt, ProviderSubmission,
 } from "../provider.js";
 import { invocationId, observe, readInvocation, readPublication, readReceipt, terminal, type InvocationRecord } from "./records.js";
-import { InvocationStorage, lockEnvironment, openStoredResource, stageResource } from "./storage.js";
+import { InvocationStorage, lockEnvironment, openEnvironmentIdentity, openStoredResource, stageResource } from "./storage.js";
 import { identity, integer, json, object, text } from "./values.js";
 
 export type LocalEndpointBinding = {
@@ -22,7 +22,6 @@ export type LocalEndpointBinding = {
 };
 
 export type LocalExecutionEnvironmentOptions = {
-  readonly id: string;
   readonly title: string;
   /** Dedicated directory for this Environment, on the local filesystem. */
   readonly dataRoot: string;
@@ -69,7 +68,7 @@ class LocalExecutionEnvironment implements ExecutionEnvironment {
   #closePromise: Promise<void> | undefined;
 
   constructor(
-    options: LocalExecutionEnvironmentOptions, bindings: readonly BoundEndpoint[], capacity: ReadonlyMap<string, number>,
+    options: { readonly id: string; readonly title: string }, bindings: readonly BoundEndpoint[], capacity: ReadonlyMap<string, number>,
     storage: InvocationStorage, unlock: () => void, records: readonly InvocationRecord[],
   ) {
     this.projection = Object.freeze({ id: options.id, kind: "local", title: options.title });
@@ -530,7 +529,6 @@ class LocalExecutionEnvironment implements ExecutionEnvironment {
 }
 
 export async function openLocalExecutionEnvironment(options: LocalExecutionEnvironmentOptions): Promise<ExecutionEnvironment> {
-  const id = identity(options.id, "Execution Environment id");
   text(options.title, "Execution Environment title");
   const root = resolve(text(options.dataRoot, "Execution Environment data root"));
   const capacity = new Map(Object.entries(options.capacities ?? {}).map(([name, limit]) =>
@@ -556,6 +554,7 @@ export async function openLocalExecutionEnvironment(options: LocalExecutionEnvir
   });
   const unlock = await lockEnvironment(root);
   try {
+    const id = await openEnvironmentIdentity(root);
     const storage = new InvocationStorage(root, id);
     const records = await storage.open();
     for (const record of records) {
@@ -567,6 +566,6 @@ export async function openLocalExecutionEnvironment(options: LocalExecutionEnvir
       }
     }
     records.sort((first, second) => first.createdAt.localeCompare(second.createdAt));
-    return new LocalExecutionEnvironment(options, bindings, capacity, storage, unlock, records);
+    return new LocalExecutionEnvironment({ id, title: options.title }, bindings, capacity, storage, unlock, records);
   } catch (error) { unlock(); throw error; }
 }

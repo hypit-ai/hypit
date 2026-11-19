@@ -1,7 +1,15 @@
 import { modelObject, modelText, readModelReference, requireModelInputs, type Capability, type ModelReference } from "@hypit/execution/model";
-import { assertTimedTranscript } from "@hypit/timed-transcript";
+import { encodeTimedTranscript } from "@hypit/timed-transcript";
+
+import { interpretWhisperXTranscript, type WhisperXTranscriptResponse } from "./transcript.js";
 
 export { interpretWhisperXTranscript } from "./transcript.js";
+
+export const whisperXTranscriptResource = "transcript-json";
+export function whisperXTranscriptBytes(response: WhisperXTranscriptResponse, language?: string): Uint8Array {
+  const transcript = interpretWhisperXTranscript(response, language);
+  return new TextEncoder().encode(encodeTimedTranscript(transcript));
+}
 
 export type WhisperXRequest = {
   readonly audio: ModelReference;
@@ -12,11 +20,6 @@ export type WhisperXRequest = {
 export const whisperX: Capability<WhisperXRequest> = {
   id: "@hypit/whisperx/whisperx-transcription",
   title: "WhisperX transcription",
-  authoring: [
-    { name: "audio", kind: "resource", media: "audio", required: true },
-    { name: "language", kind: "text" },
-    { name: "prompt", kind: "text" },
-  ],
   readRequest(value) {
     const input = modelObject(value, "WhisperX request", ["audio", "language", "prompt"]);
     return { audio: readModelReference(input.audio, "audio"),
@@ -28,9 +31,10 @@ export const whisperX: Capability<WhisperXRequest> = {
     transcript: {
       type: "@hypit/timed-transcript/transcript",
       read(value, resources) {
-        if (Object.keys(resources).length !== 0) throw new Error("Transcript output contains timed values.");
-        assertTimedTranscript(value);
-        return value;
+        if (value !== null || Object.keys(resources).length !== 1 || resources[whisperXTranscriptResource]?.mediaType !== "application/json") {
+          throw new Error("Transcript output requires one named JSON resource.");
+        }
+        return null;
       },
     },
   },

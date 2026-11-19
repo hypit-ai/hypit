@@ -1,4 +1,12 @@
-import { describeModelPackage } from "@hypit/execution/model";
 import { grokImagineVideo, grokImagine15Preview } from "./index.js";
 
-export const hypitPackage = describeModelPackage("@hypit/grok-imagine", [grokImagineVideo, grokImagine15Preview]);
+const name = "@hypit/grok-imagine";
+const models = [grokImagineVideo, grokImagine15Preview];
+
+export const hypitPackage = {
+  package: name,
+  contributions: models.map(model => ({ kind: "canvas.model", value: model })),
+  catalog: models.map(model => ({
+    id: model.id.slice(name.length + 1), kind: "canvas.model", title: model.title, value: model.id,
+  })),
+};

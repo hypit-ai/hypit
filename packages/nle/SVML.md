@@ -50,7 +50,7 @@ name current Project objects directly. There are no query, expression or fallbac
 | --- | --- | --- | --- |
 | `svml` | `id`, `name`, `root` | none | `shared-value`, `composition` |
 | `composition` | `id`, `name`, `width`, `height` | none | `track`, `transition`, `matte` |
-| `track` | `id`, `name`, `kind`, `enabled` | none | `present`, `adjust` |
+| `track` | `id`, `name`, `kind`, `enabled` | `role` | `present`, `adjust` |
 
 `root` references one Project-owned Composition. `width` and `height` define its positive, unit-neutral Picture
 canvas. `track.kind` is `picture` or `audio`; `enabled` is `true` or `false`. Picture Track order is back-to-front.
@@ -82,7 +82,7 @@ Every Present has one source kind, exact Programme placement and one source-time
 
 | Element | Required attributes | Optional attributes | Children |
 | --- | --- | --- | --- |
-| `present` | `id`, `source`, `start`, `duration`, `enabled` | `name` | one source child, one `source-time`, optional `picture`, optional `audio` |
+| `present` | `id`, `source`, `start`, `duration`, `enabled` | `name`, `role` | one source child, one `source-time`, optional `picture`, optional `audio` |
 | `media` | `path` | none | none |
 | `component` | `package`, `symbol` | none | none |
 | `composition` inside a Present | `ref` | none | none |
@@ -128,8 +128,8 @@ cannot repeat within an occurrence.
 
 ## Exact time mappings
 
-Times use exact seconds rationals `numerator/denominator`; the denominator is positive. A mapping contains one or more
-contiguous pieces covering its target domain as required by the Project validator.
+Times use exact seconds rationals `numerator/denominator` with a positive denominator. A mapping contains ordered,
+non-overlapping pieces within its target domain. An uncovered region, including an empty map, contributes no source sample.
 
 ```xml
 <source-time>

@@ -72,7 +72,10 @@ import { planCompound, planExplodeComposition, planUniqueComposition } from "./c
 import {
   nleProjectOwnerProvider,
   nleViewOwnerProvider,
-} from "./owner-providers.js";
+  openNodeNleProject,
+  openNodeNleView,
+} from "@hypit/nle/node";
+import { resolveNodeProjectFile } from "@hypit/project/node";
 import {
   createNleStudioPackageBridge,
   type NleStudioPackageBridge,
@@ -141,16 +144,6 @@ class NleStudioMediaRevisionConflict extends Error {
   }
 }
 
-function context(project: ProjectHost): ProjectHostContext {
-  return {
-    boundary: project.boundary,
-    packages: project.packages,
-    media: project.media,
-    resources: project.resources,
-    executionClients: project.executionClients,
-  };
-}
-
 function mediaName(path: string): string {
   const name = posix.basename(path);
   return name.endsWith(".media.json") ? name.slice(0, -".media.json".length) : name;
@@ -170,16 +163,16 @@ function sessionView(projectService: NleProjectService, document: string, previo
   });
 }
 
-function assertViewDocumentTarget(
+async function assertViewDocumentTarget(
   project: ProjectHost,
   projectDocument: string,
   viewDocument: string,
   viewService: NleViewService,
-): void {
+): Promise<void> {
   const root = project.boundary.root;
-  const expected = resolve(root, projectDocument);
-  const actual = resolve(dirname(resolve(root, viewDocument)), viewService.snapshot().view.project.path);
-  if (actual !== expected) {
+  const reference = relative(root, resolve(dirname(resolve(root, viewDocument)), viewService.snapshot().view.project.path));
+  const actual = await resolveNodeProjectFile(root, reference.split(sep).join("/"), "NLE View Project reference");
+  if (actual.path !== projectDocument) {
     throw new Error(`NLE View ${viewDocument} does not reference Project document ${projectDocument}.`);
   }
 }
@@ -279,17 +272,17 @@ export class NleStudioProductSession {
   }
 
   static async open(options: OpenNleStudioProductSessionOptions): Promise<NleStudioProductSession> {
-    const projectContext = context(options.project);
-    const projectLease = await options.project.documents.open(nleProjectOwnerProvider, options.document);
+    const projectContext = options.project;
+    const projectLease = await openNodeNleProject(options.project, options.document);
     let viewLease: ProjectDocumentLease<NleViewService> | undefined;
     try {
       viewLease = options.viewDocument === undefined
         ? undefined
-        : await options.project.documents.open(nleViewOwnerProvider, options.viewDocument);
+        : await openNodeNleView(options.project, options.viewDocument);
       const viewService = viewLease?.service
-        ?? openNleViewService(sessionView(projectLease.service, options.document));
-      if (options.viewDocument !== undefined) {
-        assertViewDocumentTarget(options.project, options.document, options.viewDocument, viewService);
+        ?? openNleViewService(sessionView(projectLease.service, projectLease.path));
+      if (viewLease !== undefined) {
+        await assertViewDocumentTarget(options.project, projectLease.path, viewLease.path, viewService);
       }
       const packages = createNleStudioPackageBridge(projectContext.packages);
       const surface = openNleEditingSurface(projectLease.service, viewService, {
@@ -302,8 +295,8 @@ export class NleStudioProductSession {
       return new NleStudioProductSession({
         project: options.project,
         context: projectContext,
-        projectDocument: options.document,
-        viewDocument: options.viewDocument,
+        projectDocument: projectLease.path,
+        viewDocument: viewLease?.path,
         projectLease,
         viewLease,
         viewService,
@@ -1264,7 +1257,7 @@ export class NleStudioProductSession {
       await nleProjectOwnerProvider.reload(this.#context, this.#projectDocument, this.#projectLease.service);
       if (this.#viewDocument !== undefined && this.#viewLease !== undefined) {
         await nleViewOwnerProvider.reload(this.#context, this.#viewDocument, this.#viewLease.service);
-        assertViewDocumentTarget(this.#project, this.#projectDocument, this.#viewDocument, this.#viewLease.service);
+        await assertViewDocumentTarget(this.#project, this.#projectDocument, this.#viewDocument, this.#viewLease.service);
       } else {
         const before = this.#viewService.snapshot();
         this.#viewService.reload(
@@ -1278,6 +1271,11 @@ export class NleStudioProductSession {
         invalidated: ["project", "timeline", "canvas", "inspector", "media", "preview"],
       };
     });
+  }
+
+  retainWhenDisconnected(): boolean {
+    return this.#deliverySubscriptions.size > 0 || this.#projectLease.service.snapshot().dirty
+      || this.#viewLease?.service.snapshot().dirty === true;
   }
 
   async close(): Promise<void> {
@@ -1294,10 +1292,12 @@ export class NleStudioProductSession {
     this.#listeners.clear();
     this.#surface.close();
     this.#delivery?.close();
-    await Promise.all([this.#preview?.close(), this.#mediaViews?.close()]);
-    this.#clearMediaResources();
-    this.#viewLease?.close();
-    this.#projectLease.close();
+    try { await Promise.all([this.#preview?.close(), this.#mediaViews?.close()]); }
+    finally {
+      this.#clearMediaResources();
+      this.#viewLease?.close();
+      this.#projectLease.close();
+    }
   }
 }
 
@@ -1398,12 +1398,6 @@ export function createNleStudioProductProvider(
 
 export const nleStudioProductProvider = createNleStudioProductProvider();
 
-export {
-  nleProjectOwnerProvider,
-  nleViewOwnerProvider,
-  type NleProjectOwnerProvider,
-  type NleViewOwnerProvider,
-} from "./owner-providers.js";
 export {
   createNleStudioPackageBridge,
   nleStudioAdjustOfferingKind,

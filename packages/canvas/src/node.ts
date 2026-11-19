@@ -39,7 +39,7 @@ export async function openNodeCanvas(project: ProjectHost, path: string, options
     async observe(value: unknown) {
       const input = record(value, "Canvas observation", ["kind", "node"]);
       switch (input.kind) {
-        case "catalog": return { kind: "catalog" as const, ...operations.catalog(), media: await project.media.observe() };
+        case "catalog": return { kind: "catalog" as const, ...await operations.catalog(), media: await project.media.observe() };
         case "board": return { kind: "board" as const, ...await service.refresh() };
         case "node": {
           const snapshot = await service.refresh();

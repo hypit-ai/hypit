@@ -1,14 +1,11 @@
 import { randomUUID } from "node:crypto";
-import {
-  bindApplicationExecutionEnvironment, openApplicationExecutionDirectory,
-  type ApplicationAuthorizationAttempt, type ApplicationExecutionAuthorization,
-} from "@hypit/application";
+import type { ExecutionAuthorizationAttempt, ExecutionAuthorization, NodeExecutionDeployment } from "@hypit/execution/node";
 import { openNodeHypiHubEnvironment } from "./execution-node.js";
 import { beginNodeHypiHubAuthorization, openNodeHypiHubOAuthConnection, type NodeHypiHubAuthorization } from "./hypihub-auth-node.js";
 import type { HypiHubOAuthConnection } from "@hypit/provider-hypihub";
 
-function authorization(connection: HypiHubOAuthConnection): ApplicationExecutionAuthorization {
-  let attempt: { readonly transport: NodeHypiHubAuthorization; observation: ApplicationAuthorizationAttempt } | undefined;
+function authorization(connection: HypiHubOAuthConnection): ExecutionAuthorization {
+  let attempt: { readonly transport: NodeHypiHubAuthorization; observation: ExecutionAuthorizationAttempt } | undefined;
   let starting = false;
   let closed = false;
   function selected(id: string) {
@@ -53,12 +50,10 @@ function authorization(connection: HypiHubOAuthConnection): ApplicationExecution
 }
 
 /** Compose the user-level HypiHub account and durable Environment once in the local distribution. */
-export async function openLocalApplicationExecution({
+export async function openLocalHypiHubDeployment({
   credential = openNodeHypiHubOAuthConnection(), ...options
 }: { readonly credential?: HypiHubOAuthConnection; readonly dataRoot?: string;
-  readonly fetch?: typeof globalThis.fetch; readonly capabilities?: readonly string[] } = {}) {
+  readonly fetch?: typeof globalThis.fetch; readonly capabilities?: readonly string[] } = {}): Promise<NodeExecutionDeployment> {
   const environment = await openNodeHypiHubEnvironment({ ...options, credential, baseUrl: credential.origin });
-  return openApplicationExecutionDirectory([
-    bindApplicationExecutionEnvironment(environment, () => true, { authorization: authorization(credential) }),
-  ]);
+  return { environment, authorization: authorization(credential) };
 }

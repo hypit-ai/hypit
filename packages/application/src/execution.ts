@@ -1,62 +1,25 @@
-import type { ExecutionClientLease, ExecutionEnvironment } from "@hypit/execution";
-import type { ProjectBoundary, ProjectExecutionClient, ProjectExecutionClientLease } from "@hypit/project";
+import type { ExecutionEnvironment } from "@hypit/execution";
+import type { ProjectBoundary, ProjectExecutionClient, ProjectExecutionClientLease, ProjectExecutionDiscovery } from "@hypit/project";
 
 export type ApplicationExecutionEnvironmentProjection = ExecutionEnvironment["projection"];
-
-export type ApplicationAuthorizationStatus =
-  | { readonly status: "disconnected" }
-  | { readonly status: "connected" | "needs-refresh" | "reconnect"; readonly expiresAt: number;
-      readonly refreshExpiresAt?: number };
-
-export type ApplicationAuthorizationAttempt = {
-  readonly id: string;
-  readonly authorizationUrl: string;
-  readonly expiresAt: number;
-} & ({ readonly state: "pending" }
-  | { readonly state: "complete"; readonly connection: ApplicationAuthorizationStatus }
-  | { readonly state: "failed"; readonly error: string });
-
-export type ApplicationExecutionAuthorization = {
-  status(): Promise<ApplicationAuthorizationStatus>;
-  disconnect(): Promise<void>;
-  begin(manual: boolean): Promise<ApplicationAuthorizationAttempt>;
-  observe(id: string): ApplicationAuthorizationAttempt;
-  complete(id: string, proof: string): Promise<ApplicationAuthorizationAttempt>;
-  cancel(id: string): void;
-  close(): void;
-};
 
 /** Selected AIGC Provider/model deployment available to project-scoped Capability Invocation clients. */
 export type ApplicationExecutionEnvironment = {
   readonly projection: ApplicationExecutionEnvironmentProjection;
-  readonly local?: {
-    connect(): ExecutionClientLease;
-    readonly doctor?: NonNullable<ExecutionEnvironment["doctor"]>;
-    readonly authorization?: ApplicationExecutionAuthorization;
-  };
   openProjectClient(boundary: ProjectBoundary): ProjectExecutionClientLease | undefined
     | Promise<ProjectExecutionClientLease | undefined>;
   close(): void | Promise<void>;
 };
 
-/** Bind an Environment to the Projects selected by this application deployment. */
+/** Borrow an Environment and lease its clients to the Projects selected by this application deployment. */
 export function bindApplicationExecutionEnvironment(
   environment: ExecutionEnvironment,
   allowsProject: (boundary: ProjectBoundary) => boolean = () => true,
-  local?: { readonly authorization?: ApplicationExecutionAuthorization },
 ): ApplicationExecutionEnvironment {
   return {
     projection: environment.projection,
-    ...(local === undefined ? {} : { local: {
-      connect: () => environment.connect(),
-      ...(environment.doctor === undefined ? {} : { doctor: environment.doctor.bind(environment) }),
-      ...(local.authorization === undefined ? {} : { authorization: local.authorization }),
-    } }),
     openProjectClient: boundary => allowsProject(boundary) ? environment.connect() : undefined,
-    close: () => {
-      local?.authorization?.close();
-      return environment.close();
-    },
+    close() {},
   };
 }
 
@@ -68,9 +31,12 @@ function identity(value: string, label: string): void {
 
 export class ApplicationExecutionDirectory {
   readonly #environments: ReadonlyMap<string, ApplicationExecutionEnvironment>;
+  readonly #discover: ((boundary: ProjectBoundary) => ProjectExecutionDiscovery) | undefined;
   #closePromise: Promise<void> | undefined;
 
-  constructor(environments: readonly ApplicationExecutionEnvironment[] = []) {
+  constructor(environments: readonly ApplicationExecutionEnvironment[] = [],
+    discover?: (boundary: ProjectBoundary) => ProjectExecutionDiscovery) {
+    this.#discover = discover;
     const selected = new Map<string, ApplicationExecutionEnvironment>();
     for (const environment of environments) {
       identity(environment.projection.id, "Execution Environment id");
@@ -84,6 +50,10 @@ export class ApplicationExecutionDirectory {
       selected.set(environment.projection.id, environment);
     }
     this.#environments = selected;
+  }
+
+  discoveryFor(boundary: ProjectBoundary): ProjectExecutionDiscovery | undefined {
+    return this.#discover?.(boundary);
   }
 
   observe(): readonly ApplicationExecutionEnvironmentProjection[] {
@@ -128,6 +98,7 @@ export class ApplicationExecutionDirectory {
 
 export function openApplicationExecutionDirectory(
   environments: readonly ApplicationExecutionEnvironment[] = [],
+  discover?: (boundary: ProjectBoundary) => ProjectExecutionDiscovery,
 ): ApplicationExecutionDirectory {
-  return new ApplicationExecutionDirectory(environments);
+  return new ApplicationExecutionDirectory(environments, discover);
 }

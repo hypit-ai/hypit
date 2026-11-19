@@ -1,4 +1,12 @@
-import { describeModelPackage } from "@hypit/execution/model";
 import { nanoBanana2, nanoBanana2Lite, nanoBananaPro } from "./index.js";
 
-export const hypitPackage = describeModelPackage("@hypit/nano-banana", [nanoBanana2, nanoBanana2Lite, nanoBananaPro]);
+const name = "@hypit/nano-banana";
+const models = [nanoBanana2, nanoBanana2Lite, nanoBananaPro];
+
+export const hypitPackage = {
+  package: name,
+  contributions: models.map(model => ({ kind: "canvas.model", value: model })),
+  catalog: models.map(model => ({
+    id: model.id.slice(name.length + 1), kind: "canvas.model", title: model.title, value: model.id,
+  })),
+};

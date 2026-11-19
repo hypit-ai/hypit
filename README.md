@@ -22,7 +22,7 @@ AIGC, semantic and Scene results enter through explicit Publication, Adoption, R
 
 Ordinary project programs can call the NLE document and delivery APIs directly. The
 [Jensen example](examples/ranking-jensen/README.md#import-this-cut-from-tsx) uses the Composition Source materializer
-to create an editable SVML from accepted local inputs.
+to create an editable SVML from accepted Media, a [Script](packages/script/README.md) and aligned transcripts.
 
 ## Initial production paths
 
@@ -45,6 +45,8 @@ The working core covers Media, NLE editing, video delivery and recoverable local
 - `@hypit/temporal` provides exact clock-free temporal domains and relations;
 - `@hypit/media` inspects, selects and interprets picture and audio members;
 - `@hypit/media-asset` reads, validates, adopts and resolves portable Media Asset documents;
+- `@hypit/script` reads authored speech, captions and named boundaries, and binds them to an explicitly selected
+  `@hypit/timed-transcript` document through `@hypit/script/timing`;
 - `@hypit/application` provides the long-lived ProjectHost, Product Session and AIGC Execution Directory registries plus
   the loopback application adapter;
 - `@hypit/application-home` provides the application-level browser Surface for opening a Project Boundary and launching
@@ -91,6 +93,10 @@ hypit execution doctor
 hypit execution quote @hypit/gpt-image/gpt-image-2 --input request.json
 ```
 
+The execution service runs independently on the local machine. Use `hypit execution start` to run it
+in the foreground. ApplicationHost and the execution CLI connect to the same default HypiHub environment.
+Use `hypit execution resource <invocation> --output <name> --resource <name> --to <file>` to save an exact published file.
+
 For Canvas Model package selection, see [Canvas Studio setup](packages/canvas-studio/README.md).
 
 The Node Host uses ordinary `PATH` lookup for FFmpeg/FFprobe and the local browser
@@ -99,15 +105,18 @@ defaults. An embedding or launcher may select explicit executables with `HYPIT_F
 
 ## Run AIGC from a Node project program
 
-Supply a HypiHub API key or select a connected account, then explicitly select the Environment when
-opening the ApplicationHost. See [HypiHub account authorization](packages/provider-hypihub/README.md#connect-a-hypihub-account).
-This program generates a still, then supplies the selected still to a video Invocation as a first frame.
+`hypit execution start` opens the local deployment independently. The Application discovers the selected
+endpoint when a project needs generation. A fresh data root gets a new Environment ID. Save the exact
+address returned by `submit` or `canvas invoke` to reopen its Publication.
+
+Supply a HypiHub API key or select a connected account. This program owns a dedicated execution root and
+supplies the result of one image Invocation to a video Invocation as its first frame. To share the running
+distribution's capacity, connect to its Environment with `NodeExecutionHostClient`. See
+[HypiHub account authorization](packages/provider-hypihub/README.md#connect-a-hypihub-account).
 
 ```ts
 import { createWriteStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
-import { bindApplicationExecutionEnvironment, openApplicationExecutionDirectory } from "@hypit/hypit/application";
-import { openNodeHypitApplication } from "@hypit/hypit/application/node";
 import { openNodeHypiHubEnvironment } from "@hypit/hypit/execution/node";
 import type { ExecutionClient, InvocationRequest } from "@hypit/hypit/execution";
 
@@ -120,13 +129,10 @@ async function generate(
   return address;
 }
 
-const environment = await openNodeHypiHubEnvironment({ apiKey });
-const application = openNodeHypitApplication({
-  execution: openApplicationExecutionDirectory([bindApplicationExecutionEnvironment(environment)]),
-});
+const environment = await openNodeHypiHubEnvironment({ apiKey, dataRoot });
+const lease = environment.connect();
 try {
-  const project = await application.openProject({ root: projectRoot });
-  const client = project.host.executionClient("hypihub")!.client;
+  const { client } = lease;
   const still = await generate(client, {
     capability: "@hypit/gpt-image/gpt-image-2",
     input: { mode: "text", prompt: "A quiet mountain lake at dawn", aspectRatio: "16:9" },
@@ -143,7 +149,8 @@ try {
   const video = await client.openResource(shot, "video", "video-1");
   await pipeline(video.bytes, createWriteStream(destination, { flags: "wx" }));
 } finally {
-  await application.close();
+  await lease.close();
+  await environment.close();
 }
 ```
 

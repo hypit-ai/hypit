@@ -5,26 +5,26 @@
 ## Distribution and ownership
 
 `@hypit/hypit` ships the `hypit` executable. It groups a finite set of commands in ordinary source modules
-such as `project`, `nle`, `media`, `auth` and `execution`. Each command translates arguments into a typed
+such as `project`, `nle`, `transcript`, `auth` and `execution`. Each command translates arguments into a typed
 operation and presents its result. Project extensions run through their owner packages, npm scripts or
 executables. Those programs can use the same typed APIs as the bundled commands.
 
-The Node distribution assembles selected services and executors once at ApplicationHost startup.
-`hypit host start` is the process entry for this assembly. The CLI uses the local Host client and the
-published endpoint discovery. Help, version, and project bootstrapping use their own local operations.
-Commands that need live services attach to the running Host or start the same distribution and then attach.
-Concurrent starters converge on the advertised endpoint. The private endpoint record provides the loopback
-credential to local clients. Startup output reports the endpoint location.
+The Node distribution starts the authoring backend with `hypit host start` and the execution deployment
+with `hypit execution start`. Authoring commands attach to ApplicationHost. Execution and authorization commands
+attach directly to ExecutionHost. Each CLI group can start its default service as needed. ApplicationHost opens
+without waiting for ExecutionHost. Canvas discovers the selected execution endpoint on demand. Transcript alignment
+reads and writes local files directly. Concurrent starters converge on the advertised endpoint. Each service publishes
+a private runtime record that carries its loopback credential.
 
 ```text
-hypit argv -> local Host API client -> authenticated loopback adapter
-                                             |
-Desktop, browser or Agent -> typed API -------+
-                                             |
-                                      ApplicationHost
-                                /           |            \
-                          ProjectHost   Product Session   Execution Environment
+hypit project / nle / canvas -> ApplicationHost -> ProjectHost -> owner operations
+                                      └─ project clients ─┐
+hypit auth / execution ──────────────────────────────> ExecutionHost -> selected Environment
 ```
+
+`--endpoint-file` selects the endpoint record for the command's service. `hypit execution start --data-root <directory>`
+selects the durable Environment root. `hypit host start --execution-endpoint-file <file>` selects an explicitly
+started execution deployment for project clients.
 
 TypeScript callers with a trusted in-process Host use the same operation contract directly. The loopback adapter
 decodes its wire input. Domain validation, revision checks and receipts are shared at the operation boundary. A CLI exit
@@ -35,20 +35,23 @@ See [Host operation forms](host-backend-api.md#operation-forms).
 
 | Command | Authority and result |
 | --- | --- |
-| `host status/start` | Local endpoint discovery and distribution startup. |
+| `host status/start` | Application endpoint discovery and authoring backend startup. |
+| `execution status/start` | Execution endpoint discovery and independent deployment startup. |
 | `project inspect` | An existing ProjectHost's finite projection. |
 | `auth status/login/logout` | Selected Environment's account connection. The host retains PKCE and credentials. The terminal can open the authorization URL and collect the copied callback proof. |
 | `execution capabilities/doctor` | Selected Environment's enabled models and scoped readiness findings. |
 | `execution quote <capability> --input <file>` | Account-specific estimate or pricing scheme for one declared request. |
 | `execution submit <capability> --input <file>` | Start one recoverable Invocation and return its durable address. |
 | `execution inspect/wait/cancel <invocation>` | Observe or act on the address in the selected Environment. The shell owns sequence and concurrency. |
-| `execution publication <invocation>` | Read the completed Publication manifest. Reading a resource into a user-selected destination and adopting it into Project Media are explicit operations. |
+| `execution publication <invocation>` | Read the completed Publication manifest. |
+| `execution resource <invocation> --output <name> --resource <name> --to <file>` | Stream a named Publication resource into a new file at the caller-selected path. |
+| `transcript align <transcript> --words <file> --end <seconds> --to <file>` | Align the authored word list to recognized time evidence and save a new transcript. See [alignment options](../packages/timed-transcript/README.md#align-an-authored-script). |
 | `nle open` | Open an NLE Studio Product Session on the running ApplicationHost and present its URL. |
 | `nle inspect/export` | NLE snapshot or a Delivery Action with an explicit destination in the Project Boundary. |
 
 Resolve a Project from an explicit path or the current directory only for operations that use one. An Execution
-command selects a configured Environment by id. A Project command uses that Project's scoped client. Standalone
-execution uses a deployment explicitly available to the local Application caller. An explicit Environment or
+command selects a configured Environment by id or uses the sole available Environment. A Canvas command uses that Project's scoped client. Standalone
+execution uses the selected ExecutionHost endpoint. An explicit Environment or
 Endpoint selection has the same meaning in CLI and API.
 
 `--input` accepts a JSON request file or stdin. The Model validates its own input, and the selected Endpoint
@@ -100,7 +103,7 @@ delivery slice focuses on observation and export.
 
 ## Further terminal operations
 
-Canvas commands use the same local Host. See [Canvas operations and CLI](canvas-api.md#cli-投影).
+Canvas operations use a Project lease. `canvas open` launches the visual Product Session. See [Canvas operations and CLI](canvas-api.md#cli-投影).
 
 Project creation, Media import and single-frame review use the relevant Project, Media and NLE owner operations.
 Publication resource export uses the Environment's typed resource access. Acceptance of an output into Media

@@ -23,6 +23,11 @@ that product's implementation.
 same notifications at `GET /api/application/events`. A Project lease addresses its finite projection and event stream
 at `/api/application/project-leases/:lease` and `/api/application/project-leases/:lease/events`.
 
+Launch a visual Product with `browser: true`. Its HTTP connections keep the Session active. On disconnect it has
+one minute to reconnect. An unsaved document or active delivery can retain it until the work is resolved.
+An HTTP server borrows an injected ApplicationHost by default. Its creator can transfer shutdown with
+`closeApplication: true`.
+
 ```ts
 import { openApplicationHost } from "@hypit/application";
 import { createNodeApplicationProjectProvider } from "@hypit/application/node";

@@ -6,8 +6,8 @@ import type {
   ApplicationProductSession,
   ApplicationProductSessionHandle,
 } from "../index.js";
+import type { ProjectHost } from "@hypit/project";
 import { serveApplicationEventStream } from "./event-stream.js";
-import { executionHttp } from "./execution-http.js";
 
 export type NodeApplicationProductRequest = {
   readonly request: IncomingMessage;
@@ -35,9 +35,29 @@ export type NodeApplicationHomeAdapter = {
   handle(request: NodeApplicationHomeRequest): Promise<boolean>;
 };
 
+export type NodeApplicationProjectRequest = {
+  readonly project: ProjectHost;
+  readonly operation: string;
+  readonly input: unknown;
+  readonly signal: AbortSignal;
+};
+
+export class NodeApplicationProjectOperationError extends Error {
+  constructor(message: string, readonly status: number, readonly code: string, readonly subject?: unknown) {
+    super(message);
+  }
+}
+
+export type NodeApplicationProjectAdapter = {
+  readonly owner: string;
+  operate(request: NodeApplicationProjectRequest): Promise<unknown>;
+};
+
 export type OpenNodeApplicationServerOptions = {
   readonly application: ApplicationHost;
+  readonly closeApplication?: boolean;
   readonly products: readonly NodeApplicationProductAdapter[];
+  readonly projectAdapters?: readonly NodeApplicationProjectAdapter[];
   readonly home?: NodeApplicationHomeAdapter;
   readonly hostname?: string;
   readonly port?: number;
@@ -96,17 +116,22 @@ export class NodeApplicationServer {
   readonly token: string;
   readonly #hostname: string;
   readonly #port: number;
+  readonly #projectAdapters = new Map<string, NodeApplicationProjectAdapter>();
   readonly #products = new Map<string, NodeApplicationProductAdapter>();
   readonly #home: NodeApplicationHomeAdapter | undefined;
   readonly #homeHandle: string | undefined;
   readonly #server;
   readonly #shutdown = new AbortController();
+  readonly #closeApplication: boolean;
+  readonly #projectLeases = new Set<string>();
+  readonly #headlessSessions = new Set<ApplicationProductSessionHandle>();
   #address: NodeApplicationServerAddress | undefined;
   #listenPromise: Promise<NodeApplicationServerAddress> | undefined;
   #closePromise: Promise<void> | undefined;
 
   constructor(options: OpenNodeApplicationServerOptions) {
     this.application = options.application;
+    this.#closeApplication = options.closeApplication === true;
     this.instance = `application_${randomUUID()}`;
     this.#hostname = options.hostname ?? "127.0.0.1";
     this.#port = options.port ?? 0;
@@ -120,11 +145,21 @@ export class NodeApplicationServer {
       }
       this.#products.set(product.product, product);
     }
+    for (const adapter of options.projectAdapters ?? []) {
+      if (this.#projectAdapters.has(adapter.owner)) throw new Error(`Application server repeats Project adapter ${adapter.owner}.`);
+      this.#projectAdapters.set(adapter.owner, adapter);
+    }
     this.#server = createServer(async (request, response) => {
       try {
         await this.#handle(request, response);
       } catch (error) {
-        if (!response.destroyed) sendJson(response, 400, { error: error instanceof Error ? error.message : String(error) });
+        if (response.destroyed) return;
+        if (response.headersSent) { response.destroy(); return; }
+        if (error instanceof NodeApplicationProjectOperationError) {
+          sendJson(response, error.status, { error: error.message, code: error.code, subject: error.subject });
+        } else {
+          sendJson(response, 400, { error: error instanceof Error ? error.message : String(error) });
+        }
       }
     });
   }
@@ -144,18 +179,6 @@ export class NodeApplicationServer {
       sendJson(response, 401, { error: "Application authorization is required." });
       return true;
     }
-    if (url.pathname.startsWith("/api/application/execution/")) {
-      if (!this.#authorized(request) || !["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(request.socket.remoteAddress ?? "")) {
-        sendJson(response, 401, { error: "Application authorization is required." });
-        return true;
-      }
-      const disconnected = new AbortController();
-      response.once("close", () => disconnected.abort());
-      const signal = AbortSignal.any([this.#shutdown.signal, disconnected.signal]);
-      const result = await executionHttp(this.application, url, request.method, () => jsonBody(request), signal);
-      if (!response.destroyed) sendJson(response, result.status, result.value);
-      return true;
-    }
     if (request.method === "GET" && url.pathname === "/api/application") {
       sendJson(response, 200, this.application.observe());
       return true;
@@ -166,10 +189,31 @@ export class NodeApplicationServer {
     }
     if (request.method === "POST" && url.pathname === "/api/application/projects") {
       const project = await this.application.openProject(await jsonBody(request));
+      if (this.#shutdown.signal.aborted || response.destroyed) {
+        await project.close();
+        return true;
+      }
+      this.#projectLeases.add(project.handle);
       sendJson(response, 201, { handle: project.handle, project: project.project });
       return true;
     }
     const projectPrefix = "/api/application/project-leases/";
+    if (request.method === "POST" && this.#authorized(request) && url.pathname.startsWith(projectPrefix)) {
+      const [lease, owner, operation, ...extra] = url.pathname.slice(projectPrefix.length).split("/");
+      if (lease && owner && operation && extra.length === 0) {
+        const adapter = this.#projectAdapters.get(pathPart(owner, "Project operation owner"));
+        if (adapter !== undefined) {
+          const disconnected = new AbortController();
+          response.once("close", () => disconnected.abort());
+          const signal = AbortSignal.any([this.#shutdown.signal, disconnected.signal]);
+          const project = this.application.project(pathPart(lease, "Project lease handle"));
+          const result = await adapter.operate({ project, operation: pathPart(operation, "Project operation"),
+            input: await jsonBody(request), signal });
+          if (!response.destroyed) sendJson(response, 200, result);
+          return true;
+        }
+      }
+    }
     if (request.method === "GET" && url.pathname.startsWith(projectPrefix)) {
       const [encodedLease, projection, ...extra] = url.pathname.slice(projectPrefix.length).split("/");
       if (extra.length === 0 && (projection === undefined || projection === "events")) {
@@ -195,7 +239,9 @@ export class NodeApplicationServer {
       }
     }
     if (request.method === "DELETE" && url.pathname.startsWith(projectPrefix)) {
-      await this.application.closeProject(pathPart(url.pathname.slice(projectPrefix.length), "Project lease handle"));
+      const lease = pathPart(url.pathname.slice(projectPrefix.length), "Project lease handle");
+      this.#projectLeases.delete(lease);
+      await this.application.closeProject(lease);
       response.writeHead(204, { "cache-control": "no-store" });
       response.end();
       return true;
@@ -205,11 +251,18 @@ export class NodeApplicationServer {
       if (typeof body.project !== "string" || typeof body.product !== "string") {
         throw new Error("Product Session request requires project and product handles.");
       }
+      if (body.browser !== undefined && typeof body.browser !== "boolean") throw new Error("Product Session browser mode must be boolean.");
       const session = await this.application.launchProduct({
         project: body.project,
         product: body.product,
         input: body.input,
+        browser: body.browser === true,
       });
+      if (this.#shutdown.signal.aborted || response.destroyed) {
+        await session.close();
+        return true;
+      }
+      if (body.browser !== true) this.#headlessSessions.add(session.handle);
       sendJson(response, 201, {
         handle: session.handle,
         project: session.project,
@@ -220,7 +273,9 @@ export class NodeApplicationServer {
     }
     const sessionPrefix = "/api/application/sessions/";
     if (request.method === "DELETE" && url.pathname.startsWith(sessionPrefix)) {
-      await this.application.closeProduct(pathPart(url.pathname.slice(sessionPrefix.length), "Product Session handle"));
+      const session = pathPart(url.pathname.slice(sessionPrefix.length), "Product Session handle");
+      await this.application.closeProductFromCaller(session);
+      this.#headlessSessions.delete(session);
       response.writeHead(204, { "cache-control": "no-store" });
       response.end();
       return true;
@@ -251,6 +306,7 @@ export class NodeApplicationServer {
     const selected = this.application.session(handle);
     const adapter = this.#products.get(selected.product);
     if (adapter === undefined) throw new Error(`Product ${selected.product} has no local HTTP adapter.`);
+    response.once("close", this.application.connectProduct(handle));
     const handled = await adapter.handle({
       request,
       response,
@@ -277,6 +333,7 @@ export class NodeApplicationServer {
   }
 
   listen(): Promise<NodeApplicationServerAddress> {
+    this.#shutdown.signal.throwIfAborted();
     this.#listenPromise ??= new Promise<NodeApplicationServerAddress>((resolve, reject) => {
       const onError = (error: Error) => reject(error);
       this.#server.once("error", onError);
@@ -309,12 +366,23 @@ export class NodeApplicationServer {
       try {
         await this.#listenPromise?.catch(() => undefined);
         if (this.#server.listening) {
-          await new Promise<void>((resolve, reject) => {
+          const closed = new Promise<void>((resolve, reject) => {
             this.#server.close((error) => error === undefined ? resolve() : reject(error));
           });
+          this.#server.closeAllConnections();
+          await closed;
         }
       } finally {
-        await this.application.close();
+        if (this.#closeApplication) await this.application.close();
+        else {
+          const sessions = await Promise.allSettled([...this.#headlessSessions].map(session => this.application.closeProduct(session)));
+          const projects = await Promise.allSettled([...this.#projectLeases].map(lease => this.application.closeProject(lease)));
+          const results = [...sessions, ...projects];
+          const failure = results.find(result => result.status === "rejected");
+          if (failure !== undefined) throw failure.reason;
+        }
+        this.#projectLeases.clear();
+        this.#headlessSessions.clear();
       }
     })();
     return this.#closePromise;

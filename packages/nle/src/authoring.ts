@@ -122,11 +122,12 @@ export function projectSourceInstant(source: ExactTemporalValue, placement: Pick
     throw new Error(`${label}: choose a single forward affine placement for this source instant.`);
   }
   const offset = exactTemporalRational(subtractExactTemporalValues(source, piece.sourceAtStart));
-  const local = exactTemporalValue({
+  const elapsed = exactTemporalValue({
     numerator: offset.numerator * BigInt(piece.rate.denominator),
     denominator: offset.denominator * BigInt(piece.rate.numerator),
   });
-  if (compareExactTemporalValues(local, exactTemporalZero()) < 0 || compareExactTemporalValues(local, placement.duration) > 0) {
+  const local = addExactTemporalValues(piece.target.start, elapsed);
+  if (compareExactTemporalValues(local, piece.target.start) < 0 || compareExactTemporalValues(local, piece.target.end) > 0) {
     throw new Error(`${label}: source instant is outside the selected take window.`);
   }
   return addExactTemporalValues(placement.start, local);

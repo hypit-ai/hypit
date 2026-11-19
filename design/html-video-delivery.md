@@ -108,8 +108,8 @@ HTTP、CLI、Agent 与 NLE Studio 都是该 Service 的调用者或 Adapter，�
 
 默认 Node Application distribution 创建一个本机 `HtmlVideoExecutor`，把它作为普通构造依赖注入 NLE Studio
 Product Provider；每个 Product Session 用该依赖打开 Project 范围的 `NleDeliveryService`。Service 的 Action API
-由 Product adapter 直接投影，注入的 Executor 管理 FFmpeg 与 browser 进程，Product Session 关闭时取消其仍在
-运行的交付。
+由 Product adapter 直接投影，注入的 Executor 管理 FFmpeg 与 browser 进程。进行中的导出会保留断开连接的浏览器
+Session，直到导出完成、失败或显式取消。Application 关闭时会结束其交付服务。
 
 Studio 对当前接受的内存 revision 复用同一次编译准备。Frame preview 选择一帧精确范围，通过
 `HtmlFrameExecutor` 请求 PNG。Playback preview 选择一个精确范围，通过同一视频 Executor 生成有声 MP4。

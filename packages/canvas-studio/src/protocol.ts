@@ -10,7 +10,7 @@ export type {
 
 export const canvasStudioProduct = "hypit.canvas-studio";
 
-export type CanvasLaunch = { readonly document: string; readonly create?: { readonly name: string } };
+export type CanvasLaunch = { readonly document: string };
 export type CanvasObservationRequest =
   | { readonly kind: "board" | "catalog" }
   | { readonly kind: "node" | "history"; readonly node: string };

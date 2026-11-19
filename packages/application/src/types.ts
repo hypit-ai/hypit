@@ -1,4 +1,4 @@
-import type { ProjectBoundary, ProjectExecutionClient, ProjectHost } from "@hypit/project";
+import type { ProjectBoundary, ProjectExecutionClient, ProjectExecutionDiscovery, ProjectHost } from "@hypit/project";
 
 export type ApplicationProjectId = string;
 export type ApplicationProjectLeaseHandle = string;
@@ -18,10 +18,12 @@ export type IdentifiedApplicationProject = {
 
 export type ApplicationProjectProvider = {
   identify(input: unknown): Promise<IdentifiedApplicationProject>;
-  open(input: unknown, executionClients: readonly ProjectExecutionClient[]): Promise<ProjectHost>;
+  open(input: unknown, executionClients: readonly ProjectExecutionClient[], discoverExecutionClients?: ProjectExecutionDiscovery): Promise<ProjectHost>;
 };
 
 export type ApplicationProductSession = {
+  /** Work or drafts that retain this Session when its browser connection is idle. */
+  retainWhenDisconnected?(): boolean;
   close(): void | Promise<void>;
 };
 

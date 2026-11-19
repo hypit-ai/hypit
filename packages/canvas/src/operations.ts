@@ -11,27 +11,25 @@ import {
 import type { Capability, ModelField } from "@hypit/execution/model";
 import { defaultMediaSelection } from "@hypit/media";
 import { NodeProjectMediaService } from "@hypit/media-asset/service/node";
-import { inspectMediaFileByDecodedUnits, inspectMediaFileFromContainerIndex } from "@hypit/media-local";
+import { inspectGeneratedMediaFile, mediaFileExtension } from "@hypit/media-local";
 import type { ProjectHostContext } from "@hypit/project";
 import { createNodeProjectResourceResolver } from "@hypit/project/node";
-import { assertTimedTranscript, encodeTimedTranscript } from "@hypit/timed-transcript";
 import {
   CanvasError, bindingValues, identity, readAddress, readMediaReference, readSelection, record, sameAddress, text,
   type CanvasBinding, type CanvasDocument, type CanvasNode, type CanvasSelection, type CanvasValue, type MediaReference,
 } from "./document.js";
-import { prepareProjectDestination, writeNewDocument } from "./node-files.js";
 import type { CanvasService, CanvasSnapshot } from "./service.js";
 
 type RecipeNode = Extract<CanvasNode, { capability: string }>;
 type NodeResults = CanvasDocument["results"][string];
 type BindingSource = { readonly input: string; readonly index: number; readonly binding: CanvasValue; readonly selection?: CanvasSelection };
-type PrepareOptions = { readonly node: string; readonly environment: string; readonly expectedRevision?: string; readonly endpoint?: string };
+type PrepareOptions = { readonly node: string; readonly environment?: string; readonly expectedRevision?: string; readonly endpoint?: string };
 export type CanvasQuoteRequest = PrepareOptions;
 export type CanvasInvokeRequest = PrepareOptions & { readonly expectedRevision: string; readonly invocation?: string };
 export type CanvasAdoptionRequest = {
   readonly node: string;
   readonly selection: CanvasSelection;
-  readonly target: { readonly kind: "media"; readonly path?: string } | { readonly kind: "transcript"; readonly path: string };
+  readonly target: { readonly kind: "media"; readonly path?: string };
 };
 export type CanvasModel = {
   readonly id: string;
@@ -51,8 +49,15 @@ function recipe(document: CanvasDocument, id: string): RecipeNode {
   return node;
 }
 
-function client(context: ProjectHostContext, environment: string): ExecutionClient {
-  const found = context.executionClients.find(entry => entry.environment === environment)?.client;
+async function client(context: ProjectHostContext, environment?: string): Promise<ExecutionClient> {
+  if (environment === undefined) {
+    const available = await context.refreshExecutionClients();
+    if (available.length === 1) return available[0]!.client;
+    if (available.length === 0) throw new CanvasError("missing-environment", "No Execution Environment is connected to this Project.");
+    throw new CanvasError("missing-environment", "Choose one Execution Environment by id.");
+  }
+  const found = context.executionClients.find(entry => entry.environment === environment)?.client
+    ?? (await context.refreshExecutionClients()).find(entry => entry.environment === environment)?.client;
   if (found === undefined) throw new CanvasError("missing-environment", "Execution Environment " + environment + " is unavailable.");
   return found;
 }
@@ -73,6 +78,7 @@ export class CanvasOperations {
       const model = contribution.value as Capability | undefined;
       if (typeof model?.id !== "string" || !model.id.startsWith(contribution.package + "/")
         || typeof model.title !== "string" || typeof model.readRequest !== "function" || model.outputs == null
+        || !Object.values(model.outputs).some(output => output?.media === "image" || output?.media === "video" || output?.media === "audio")
         || this.#models.has(model.id)) {
         throw new CanvasError("invalid-model", "Invalid Canvas Model contribution from " + contribution.package + ".");
       }
@@ -95,7 +101,7 @@ export class CanvasOperations {
         [name, { type: output.type, ...(output.media === undefined ? {} : { media: output.media }) }])) };
   }
 
-  catalog() {
+  async catalog() {
     const palette = this.#context.packages.catalog("canvas.model").map(offering => {
       const model = typeof offering.value === "string" && this.#models.get(offering.value);
       if (!model || !model.id.startsWith(offering.package + "/")) {
@@ -105,7 +111,7 @@ export class CanvasOperations {
     });
     return {
       palette, models: [...this.#models.values()].map(model => this.#description(model)),
-      environments: this.#context.executionClients.map(({ client }) =>
+      environments: (await this.#context.refreshExecutionClients()).map(({ client }) =>
         ({ id: client.environment, capabilities: client.capabilities() })),
     };
   }
@@ -134,7 +140,7 @@ export class CanvasOperations {
   }
 
   async #output(selection: CanvasSelection) {
-    const execution = client(this.#context, selection.address.environment);
+    const execution = await client(this.#context, selection.address.environment);
     const publication = await execution.publication(selection.address);
     if (publication === undefined) throw new CanvasError("missing-publication", "This Invocation has no completed Publication.");
     const output = get(publication.outputs, selection.output);
@@ -201,7 +207,7 @@ export class CanvasOperations {
       const priorResults = get(before.results, node.id);
       for (const address of results?.invocations ?? []) {
         if (attached(priorResults, address)) continue;
-        const invocation = await client(this.#context, address.environment).get(address);
+        const invocation = await (await client(this.#context, address.environment)).get(address);
         if (invocation?.capability !== node.capability) {
           throw new CanvasError("incompatible-invocation", "Attach an existing Invocation for this Model.", { node: node.id });
         }
@@ -228,10 +234,9 @@ export class CanvasOperations {
       bytes: (async function* () { yield* createReadStream(resource.address); })() } satisfies ExecutionResourceSource & { durationSeconds?: number };
   }
 
-  async #prepare(snapshot: CanvasSnapshot, options: PrepareOptions) {
+  async #prepare(snapshot: CanvasSnapshot, options: PrepareOptions, execution: ExecutionClient) {
     const node = recipe(snapshot.document, options.node);
     const model = this.#model(node);
-    const execution = client(this.#context, options.environment);
     const supported = execution.capabilities().find(value => value.capability === model.id);
     if (supported === undefined || (options.endpoint !== undefined && !supported.endpoints.includes(options.endpoint))) {
       throw new CanvasError("unavailable-capability", `Environment ${execution.environment} cannot execute ${model.id} with this Endpoint.`, { node: node.id });
@@ -294,15 +299,15 @@ export class CanvasOperations {
   async quote(snapshot: CanvasSnapshot, value: unknown, signal?: AbortSignal) {
     const options = readPrepare(value);
     requireRevision(snapshot, options.expectedRevision);
-    const prepared = await this.#prepare(snapshot, options);
+    const prepared = await this.#prepare(snapshot, options, await client(this.#context, options.environment));
     return { revision: snapshot.revision, sources: prepared.sources,
       quote: await prepared.execution.quote(prepared.request, { inputs: prepared.metadata, ...(signal === undefined ? {} : { signal }) }) };
   }
 
   async invoke(service: CanvasService, value: unknown, signal?: AbortSignal) {
     const options = readPrepare(value, true);
-    const address = readAddress({ environment: options.environment, invocation: options.invocation ?? randomUUID() });
-    const execution = client(this.#context, address.environment);
+    const execution = await client(this.#context, options.environment);
+    const address = readAddress({ environment: execution.environment, invocation: options.invocation ?? randomUUID() });
     const snapshot = await service.refresh();
     const existing = () => execution.get(address);
     const status = (revision: string, observation: Awaited<ReturnType<typeof existing>>) => ({
@@ -311,7 +316,7 @@ export class CanvasOperations {
     });
     if (attached(get(snapshot.document.results, options.node), address)) return status(snapshot.revision, await existing());
     requireRevision(snapshot, text(options.expectedRevision, "Expected revision"));
-    const prepared = await this.#prepare(snapshot, options);
+    const prepared = await this.#prepare(snapshot, options, execution);
     const observation = await existing();
     if (observation !== undefined) {
       const latest = service.snapshot();
@@ -338,7 +343,7 @@ export class CanvasOperations {
     const addresses = get(document.results, node)?.invocations ?? [];
     return await Promise.all(addresses.map(async address => {
       try {
-        const execution = client(this.#context, address.environment);
+        const execution = await client(this.#context, address.environment);
         const observation = await execution.get(address);
         const publication = observation?.phase === "complete" ? await execution.publication(address) : undefined;
         return { address, phase: observation?.phase ?? "unconfirmed", observation,
@@ -349,7 +354,7 @@ export class CanvasOperations {
 
   async cancel(document: CanvasDocument, node: string, address: InvocationAddress) {
     if (!attached(get(document.results, node), address)) throw new CanvasError("missing-attachment", "Invocation is not attached to this recipe.");
-    return await client(this.#context, address.environment).cancel(address);
+    return await (await client(this.#context, address.environment)).cancel(address);
   }
 
   async openOutput(document: CanvasDocument, node: string, selection: CanvasSelection) {
@@ -365,22 +370,11 @@ export class CanvasOperations {
     const selection = readSelection(fields.selection);
     const target = record(fields.target, "Canvas adoption target", ["kind", "path"]);
     if (!attached(get(document.results, node), selection.address)) throw new CanvasError("missing-attachment", "Invocation is not attached to this recipe.");
-    const { output, resource, execution } = await this.#output(selection);
-    if (target.kind === "transcript") {
-      if (output.type !== "@hypit/timed-transcript/transcript" || selection.resource !== undefined) {
-        throw new CanvasError("incompatible-publication", "Transcript adoption requires a timed transcript output.");
-      }
-      const path = text(target.path, "Transcript path");
-      assertTimedTranscript(output.value);
-      const destination = await prepareProjectDestination(this.#context.boundary.root, path);
-      signal?.throwIfAborted();
-      await writeNewDocument(destination, encodeTimedTranscript(output.value));
-      return { kind: "transcript" as const, path };
-    }
+    const { resource, execution } = await this.#output(selection);
     if (target.kind !== "media" || selection.resource === undefined || resource === undefined) {
       throw new CanvasError("missing-resource", "Media adoption requires a named Publication resource.");
     }
-    const extension = mediaExtension(resource.mediaType);
+    const extension = mediaFileExtension(resource.mediaType);
     if (extension === undefined) throw new CanvasError("incompatible-publication", "Unsupported Media type " + resource.mediaType + ".");
     const media = this.#context.media;
     if (!(media instanceof NodeProjectMediaService)) throw new CanvasError("unavailable-owner", "Project Media file adoption is unavailable.");
@@ -393,31 +387,14 @@ export class CanvasOperations {
       await pipeline(source.bytes, createWriteStream(file, { flags: "wx" }), signal === undefined ? {} : { signal });
       const result = await media.adoptFile({ sourcePath: file, sourceName: name, mediaType: resource.mediaType,
         ...(destination === undefined ? {} : { target: destination }) }, {
-        inspect: async (path, context) => {
-          const options = { ...this.#inspectOptions, ...(context.signal === undefined ? {} : { signal: context.signal }) };
-          const still = resource.mediaType.startsWith("image/");
-          const indexed = await inspectMediaFileFromContainerIndex(path, { ...options, constantPicture: still });
-          const primary = resource.mediaType.startsWith("audio/") ? "audio" : "picture";
-          if (still || indexed.streams.some(stream =>
-            stream.kind === primary && !stream.disposition.attachedPicture && stream.startPts !== undefined && stream.endPts !== undefined)) {
-            return indexed;
-          }
-          return await inspectMediaFileByDecodedUnits(path, options);
-        },
+        inspect: (path, context) => inspectGeneratedMediaFile(path, resource.mediaType, {
+          ...this.#inspectOptions, ...(context.signal === undefined ? {} : { signal: context.signal }),
+        }),
         select: inspection => defaultMediaSelection(inspection, resource.mediaType),
       }, signal === undefined ? {} : { signal });
       return { kind: "media" as const, reference: result.reference };
     } finally { await rm(dir, { recursive: true, force: true }); }
   }
-}
-
-function mediaExtension(mediaType: string): string | undefined {
-  const extensions: Record<string, string> = {
-    "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif", "image/avif": "avif",
-    "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov", "video/x-matroska": "mkv",
-    "audio/mpeg": "mp3", "audio/opus": "opus", "audio/wav": "wav", "audio/x-wav": "wav", "audio/aac": "aac", "audio/mp4": "m4a", "audio/flac": "flac", "audio/ogg": "ogg",
-  };
-  return get(extensions, mediaType);
 }
 
 function projection(publication: Publication) {
@@ -434,7 +411,7 @@ function readPrepare(value: unknown, invoke = false) {
   const fields = record(value, "Canvas action", ["node", "environment", "expectedRevision", "endpoint", ...(invoke ? ["invocation"] : [])]);
   return {
     node: identity(fields.node, "Node ID"),
-    environment: identity(fields.environment, "Environment ID"),
+    ...(fields.environment === undefined ? {} : { environment: identity(fields.environment, "Environment ID") }),
     ...(fields.expectedRevision === undefined ? {} : { expectedRevision: text(fields.expectedRevision, "Expected revision") }),
     ...(fields.endpoint === undefined ? {} : { endpoint: text(fields.endpoint, "Endpoint") }),
     ...(fields.invocation === undefined ? {} : { invocation: text(fields.invocation, "Invocation ID") }),

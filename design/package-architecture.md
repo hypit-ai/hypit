@@ -21,6 +21,7 @@ The package graph remains small while separating platform execution from owner s
   └── @hypit/nle
 
 Composition Sources -> @hypit/nle/authoring
+@hypit/script/timing -> @hypit/temporal + @hypit/timed-transcript
 @hypit/project    -> @hypit/media-asset + @hypit/execution (client types)
 @hypit/html-render-local -> @hypit/html-program
 @hypit/html-chromium-local -> @hypit/html-render-local
@@ -57,6 +58,13 @@ operations. It does not own NLE placement, media selection, frame grids or rende
 `@hypit/media` owns execution-independent stream observations and interpretations. `@hypit/media-asset` owns
 portable accepted-media documents and adoption. Neither owns NLE placement or authoring components.
 
+### `@hypit/script` and `@hypit/timed-transcript`
+
+`@hypit/script` owns the Script Reader and its speech, caption and boundary projection. Its `timing` subpath
+binds a parsed Segment to measured word times in the caller-selected source window. Both entry points are in
+the same release. `@hypit/timed-transcript` owns the transcript format and explicit authored-word alignment.
+The project program selects both inputs, and the chosen subtitle component owns its parameter shape.
+
 ### `@hypit/nle`
 
 Owns the durable NLE Project document and SVML schema, Reader and serializer, Project Service, edit transactions,
@@ -65,6 +73,8 @@ Transitions, Mattes and shared values.
 
 The `authoring` subpath validates the declarations of a synchronous Composition Source into a new Project value.
 Local input resolution and file creation are responsibilities of the calling project program.
+The `node` subpath opens the canonical Project and View files through their shared owner Services and owns their
+revision-checked file persistence. Studio supplies the Product Session and borrows those Services.
 
 NLE Project serialization is the SVML representation of the edit. It contains no TSX source text, View
 selection, Service revision or execution plan.
@@ -105,14 +115,14 @@ absorbing their facts or execution state.
 
 `@hypit/canvas` owns the Canvas document, revision transactions and shared Service. Its `node` subpath
 provides Project file persistence, one-card request preparation, Invocation attachments and history observations,
-and explicit adoption into Project Media or a transcript document. It uses the Project's installed Model
+and explicit adoption into Project Media. It uses the Project's installed Model
 contributions and its scoped Execution clients.
 
-`@hypit/canvas-studio` owns the Canvas Product Provider, browser artifact and session protocol. The browser and
-CLI use the same Product Session adapter. Project programs can open the Canvas owner directly.
+`@hypit/canvas-studio` owns the Canvas Product Provider, browser artifact and session protocol. The browser
+uses a Canvas Product Session. The CLI and project programs can open the Canvas owner through Project leases.
 
 `@hypit/application` owns the generic ApplicationHost lifecycle, ProjectHost and Product Session registries,
-AIGC Execution Environment registry and Node loopback adapter. It knows Product Providers by stable product identity and opaque
+AIGC Execution connection directory and Node loopback adapter. It knows Product Providers by stable product identity and opaque
 session interface only. Product-specific protocols and browser artifacts remain in their product packages.
 
 `@hypit/application-home` owns the application-level browser Surface and its Node static adapter. It consumes the
@@ -151,7 +161,8 @@ with separate entry points:
 - `@hypit/execution/provider` supplies the Endpoint adapter contract consumed by Provider packages.
 - `@hypit/execution` exposes the Invocation and Publication client contract.
 - `@hypit/execution/node` implements the local Environment, capacity admission, durable Invocation recovery, and
-  Publication storage. Scheduler, journal and storage implementation details are modules inside this release.
+  Publication storage. Its Node ExecutionHost serves the same client contract across the process boundary.
+  Scheduler, journal, storage and transport are modules inside this release.
 
 The Model and Provider entry points load independently of the Node runtime and storage modules. The execution
 package consumes explicit Capability declarations and Endpoint adapters supplied by the deployment. The Environment
@@ -164,9 +175,9 @@ Node distribution -> @hypit/application + selected Environment implementations a
 ```
 
 `@hypit/application` retains environment registration, discovery and project client leases. `@hypit/hypit` selects
-the available Environment instances in its distribution. A local distribution may embed an Environment in the
-ApplicationHost process, and a worker deployment may host the same Environment independently. Both present the
-same client contract. Environment IDs, credential sources, capacity and the data root are deployment configuration.
+the available Environment instances in its distribution. The default Node distribution starts its
+local ExecutionHost independently. A program embedding the Environment directly uses the same client contract.
+Credential sources, capacity and the data root are deployment configuration. The local data root owns its persisted Environment ID.
 
 Project dependencies and the project lockfile select Model packages used by authoring. Deployment dependencies and
 its lockfile select the Environment and Provider implementations; deployment configuration explicitly enables the
@@ -209,7 +220,7 @@ The Jensen ranking Project establishes the current vertical slice:
 
 1. keep the current exact temporal foundation and NLE owner schemas;
 2. accept a 99-Item SVML Project containing Media, Components, Picture and Audio Processes and Transitions;
-3. resolve 41 Project Media Assets and four selected project packages;
+3. resolve 41 Project Media Assets and five selected project packages;
 4. compile the accepted snapshot to closed Picture and Audio programs;
 5. start one Project-scoped 720×1280, 24 fps Delivery Action with a local HTML Video Executor;
 6. close one `HtmlProgram` and one `AudioProgram`, then execute 1397 Picture frames and the Audio graph into

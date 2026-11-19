@@ -111,3 +111,17 @@ export async function inspectMediaFileByDecodedUnits(
   });
   return collector.finish();
 }
+
+/** Read the advertised primary stream of a generated resource for project adoption. */
+export async function inspectGeneratedMediaFile(
+  path: string, mediaType: string, options: InspectionOptions = {},
+): Promise<MediaInspection> {
+  const constantPicture = mediaType.startsWith("image/");
+  const inspection = await inspectMediaFileFromContainerIndex(path, { ...options, constantPicture });
+  const primary = mediaType.startsWith("audio/") ? "audio" : "picture";
+  if (constantPicture || inspection.streams.some(stream =>
+    stream.kind === primary && !stream.disposition.attachedPicture && stream.startPts !== undefined && stream.endPts !== undefined)) {
+    return inspection;
+  }
+  return await inspectMediaFileByDecodedUnits(path, options);
+}

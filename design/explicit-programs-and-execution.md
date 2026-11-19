@@ -72,6 +72,37 @@ that reconnects through Desktop, Agent, CLI or browser observes the same recover
 See [AIGC package and deployment boundaries](package-architecture.md#aigc-package-and-deployment-boundaries)
 for the npm ownership of the Model, Provider, client and Environment contracts.
 
+## ExecutionHost boundary
+
+The ExecutionHost is the deployment entry point for one or more selected Execution Environments. A deployment
+opens each Environment once with its Endpoint bindings, credential source, capacity policy and data root. It needs
+no Project Boundary, Project package activation, Product Session or browser. A direct caller supplies a typed
+request and named input resources; a project caller may first resolve those resources through its owner Services.
+
+- **Environment:** owns admission, provider receipts, the Invocation journal, recovery and Publications.
+- **ExecutionHost:** exposes Environment clients and the deployment's authorization and diagnostic operations.
+  The same client contract applies when embedded or served across a process boundary.
+- **ApplicationHost:** its Execution Directory selects connections, grants project-scoped access and releases
+  caller leases. An embedded deployment follows the process that owns it. Closing an ApplicationHost connected to
+  a separately owned deployment releases its connections; it does not shut down that deployment. The Execution
+  transport receives named bytes or explicitly authorized resource references; project paths and file dialogs
+  belong to the calling adapter.
+- **Canvas:** owns media recipes, input relationships, the chosen Invocation addresses and Publication selections.
+  It snapshots one recipe and submits it through the ProjectHost's Execution client. A Canvas model offering is
+  a product contribution, independent of which Capabilities an Environment provides. Canvas offers Capabilities
+  that produce image, video or audio assets.
+
+The Node distribution starts the loopback service with `hypit execution start`. The service and ApplicationHost
+publish separate runtime endpoints. The CLI attaches directly for execution and account operations. ApplicationHost
+starts independently and discovers scoped clients through the selected execution endpoint on demand. A Node program can
+open an Environment directly with `openLocalExecutionEnvironment` or connect with `NodeExecutionHostClient`.
+The transport streams named input and output bytes. The Environment retains one capacity pool, journal and data
+root across both caller paths. See [Execution HTTP API](../packages/execution/README.md#local-executionhost).
+
+Loading an Execution Capability or selecting it in a deployment does not publish a Canvas offering. Authoring
+packages may expose a separate media-recipe contribution through the Project package environment. Execution and
+Provider entries load only the Capability contract.
+
 Adoption gives the output author meaning:
 
 ```text
@@ -86,7 +117,7 @@ NLE export -> delivery file -> optional Media adoption
 The local Environment uses one durable directory per Invocation beneath its data root:
 
 ```text
-execution/<environment-id>/invocations/<invocation-id>/
+<environment-data-root>/invocations/<invocation-id>/
 ├─ invocation.json
 └─ publication/
    ├─ manifest.json
@@ -96,8 +127,38 @@ execution/<environment-id>/invocations/<invocation-id>/
 `invocation.json` holds the request, selected Endpoint and Capability, phase, persisted Provider
 receipt and private resume data. The Environment stores the receipt as soon as the Provider acknowledges the
 task. A closed Publication is addressed by Environment ID and Invocation ID, with a name for each output.
+The writer creates the Environment ID in `environment.json` at the data root and reuses it on reopen. A fresh
+data root gets a new ID. The marker moves with the Invocation records when moving the same deployment.
 The manifest records each output's type and value. Resource references resolve to Publication-owned files
 described by relative path, media type and size.
+
+The manifest is the commit marker and directory for typed outputs and named resources. Reusable files, including
+JSON documents, are named resources; compact typed values may remain inline. Looking up a Publication does not
+need to read the body of its resource files.
+
+### Transcription output
+
+WhisperX is an Execution Capability. Its selected Endpoint interprets the service response and publishes a named
+`application/json` TimedTranscript resource; the transcript body belongs in the resource file. The Transcript
+format is owned by `@hypit/timed-transcript`: `{ language, words }`, with one ordered list of
+`{ word, start?, end? }` records. Start and end are paired, in seconds on the supplied audio. Unlocated words
+retain text with no time fields; known silence can produce an empty list. The file has no segment list or duplicate
+word index. A caller retrieves the completed file by Invocation address, output and resource name. Selection of a
+Media track and temporal binding, correction against a script and subtitle placement are explicit downstream
+operations. A project can create a corrected transcript in the same format without editing the Publication.
+
+### Transcript alignment
+
+`@hypit/timed-transcript` aligns an ordered list of authored words against one TimedTranscript in an
+explicit audio window. Alignment assigns every authored word a start and end on that window's clock.
+Matched evidence anchors the timing. Group allocation and gap interpolation cover the remaining words,
+including input with no timed evidence. The corrected document keeps the same transcript schema.
+Timing source information is a return value for the calling program.
+
+The CLI and project scripts run this deterministic operation locally with already supplied evidence.
+The caller selects the window and where to save the corrected file. Associating a file with an
+accepted Media Asset uses its [Representation binding](media.md#independently-owned-representations).
+A project program can read the corrected word boundaries for both subtitles and authored time anchors.
 
 ## Provider authorization
 

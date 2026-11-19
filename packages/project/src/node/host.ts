@@ -8,6 +8,7 @@ import {
   openProjectHost,
   openProjectResourceGateway,
   type ProjectExecutionClient,
+  type ProjectExecutionDiscovery,
   type ProjectHost,
 } from "../index.js";
 import { readNodeProjectManifest } from "./manifest.js";
@@ -22,6 +23,7 @@ async function requireFile(path: string, label: string): Promise<void> {
 export type OpenNodeProjectHostOptions = {
   readonly root: string;
   readonly executionClients?: readonly ProjectExecutionClient[];
+  readonly discoverExecutionClients?: ProjectExecutionDiscovery;
 };
 
 export type NodeProjectHost = ProjectHost & {
@@ -45,5 +47,6 @@ export async function openNodeProjectHost(options: OpenNodeProjectHostOptions): 
     media,
     resources,
     executionClients: options.executionClients ?? [],
+    ...(options.discoverExecutionClients === undefined ? {} : { discoverExecutionClients: options.discoverExecutionClients }),
   }) as NodeProjectHost;
 }

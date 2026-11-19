@@ -16,20 +16,39 @@ pnpm import:composition
 HYPIT_DELIVERY_NAME=ranking-jensen-from-source.mp4 node deliver.mjs film.from-source.svml
 ```
 
-[`authors/main.tsx`](authors/main.tsx) is the Composition Source for the full edit. It places the five A-roll takes
-using their accepted Media durations; projects named source-local speech anchors onto those placements; and uses
-the same reveal point for the tier board, sound and flash. It assembles the B-roll groups, both cross-dissolves,
-background music, title, and individually editable caption cues. The existing package components own their renders.
+`<HOST>` starts a speaker turn in [`documents/jensen.script`](documents/jensen.script) and applies
+through that take until a new speaker turn. `||` explicitly closes a caption cue. Newlines format
+the source, and a speaker change or take close also ends the current cue. The cue keeps its speaker
+for the TSX to use when choosing a style. `@{ranked}tier. … @{/ranked~}` names the window from the word `tier`
+to the end of the take. `@{broll-01-1!}Forty` names a single word start for B-roll. [`documents/transcripts/`](documents/transcripts) holds the
+accepted word times for the selected takes, measured on their Media clocks.
 
-[`authors/speech.ts`](authors/speech.ts) holds the accepted timing edition: named speech landmarks in each selected
-take and the display words and timing units of its cues. [`authors/broll.ts`](authors/broll.ts) maps those names to media
-choices, layouts, and motion. No generation or transcription runs during import. Changing which source take to use
-requires matching its speech timing edition to that take first.
+The importer resolves explicit accepted Media references through Project Media and reads the script and aligned
+transcripts. It compiles and evaluates [`authors/main.tsx`](authors/main.tsx) in memory. The source selects exact
+A-roll, music and loop windows with `selectMediaSourceWindow`. `bindScriptTiming` gives the A-roll both named
+word boundaries and timed cues. The tier board consumes its named range, sound and flash share its start, and
+B-roll consumes named points. All are projected through their A-roll placements. `@hypit/caption-fine/authoring`
+supplies `captionItemFromScriptCue` to turn the
+timed cues into editable subtitle Items with cue-local word times. The project chooses styling and visible ranges.
 
-The importer resolves the already accepted Project Media, runs the TSX once and creates a new sibling
-`film.from-source.svml`. It refuses to overwrite a file at that path. It never reads or changes the checked-in
-`film.svml`. Open the new SVML in Studio with `hypit nle open film.from-source.svml`; it is an ordinary editable
-NLE Project independent of the TSX. The output is ignored by Git so it can be regenerated or moved aside.
+The import creates `film.from-source.svml`. To choose another new file in the project root, run
+`pnpm import:composition --to film.review.svml`. Open that file in Studio as an editable NLE Project.
+
+### Prepare a replacement transcript
+
+Transcribe the selected take separately and retrieve its raw transcript. Use the script's words to align it
+before the next import. For example, with a 12-second audio input:
+
+```sh
+node script-words.mjs trump | hypit transcript align raw.transcript.json \
+  --words - --end 12 --to trump.aligned.json --json
+```
+
+Review the timing and explicitly select the prepared document for that take in `documents/transcripts/`.
+The transcript supplied to the importer uses media-local seconds. Preparation applies any audio-excerpt
+offset when establishing that clock. A script edit that changes the word list requires a corresponding
+aligned transcript. Moving a Moment, moving a cue boundary or changing only the display side of a Dual can reuse
+the prepared transcript. See the [Script syntax](../../packages/script/README.md) for Dual text and named ranges.
 
 The ranking title is an `@hypit/text-fine#fine` Item with two editable text runs and an explicit line break.
 Its Picture layout places the banner on the canvas. Its text parameters set the font, spacing, fill and panel background.

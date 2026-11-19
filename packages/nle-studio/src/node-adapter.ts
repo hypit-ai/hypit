@@ -553,7 +553,7 @@ export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
       }
       return request.method === "GET" && await sendStatic(response, pathname);
     } catch (error) {
-      const conflict = error instanceof Error && (error.name.includes("RevisionConflict") || error.name === "NleStudioDocumentConflict");
+      const conflict = error instanceof Error && (error.name.includes("RevisionConflict") || error.name === "NleDocumentConflict");
       sendJson(response, conflict ? 409 : 400, { error: error instanceof Error ? error.message : String(error) });
       return true;
     }

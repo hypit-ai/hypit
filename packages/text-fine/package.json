@@ -11,7 +11,7 @@
       "default": "./dist/hypit.js"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": ["dist", "README.md", "LICENSE"],
   "scripts": { "build": "tsc -p tsconfig.build.json" },
   "dependencies": {
     "@hypit/html-program": "workspace:^0.1.0",

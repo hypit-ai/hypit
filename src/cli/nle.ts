@@ -3,7 +3,7 @@ import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import type { NleStudioActionObservation, NleStudioActionRequest, NleStudioObservation } from "@hypit/nle-studio/protocol";
 import type { LocalHostClient } from "./client.js";
-import { readJsonInput, type CliResult } from "./execution.js";
+import { readJsonInput, type CliResult } from "./io.js";
 import { openBrowser } from "./terminal.js";
 
 export async function projectRoot(start: string): Promise<string> {
@@ -41,7 +41,7 @@ export async function nleCommand(host: LocalHostClient, action: string, document
     const input = { document: projectPath(root, documentPath),
       ...(options.view === undefined ? {} : { viewDocument: projectPath(root, options.view) }) };
     session = await host.request("/api/application/sessions", {
-      method: "POST", body: { project: project.handle, product: nleStudioProduct, input }, signal,
+      method: "POST", body: { project: project.handle, product: nleStudioProduct, input, browser: action === "open" }, signal,
     });
     const routes = new URL("api/", session!.url).pathname;
     if (action === "open") {

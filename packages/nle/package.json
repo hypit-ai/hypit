@@ -15,6 +15,11 @@
       "types": "./dist/view/index.d.ts",
       "import": "./dist/view/index.js"
     },
+    "./node": {
+      "hypit-source": "./src/node/index.ts",
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js"
+    },
     "./surface": {
       "hypit-source": "./src/surface/index.ts",
       "types": "./dist/surface/index.d.ts",
@@ -26,12 +31,13 @@
       "import": "./dist/authoring.js"
     }
   },
-  "files": ["dist", "README.md", "SVML.md"],
+  "files": ["dist", "README.md", "SVML.md", "LICENSE"],
   "scripts": {
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
     "@hypit/media": "workspace:^0.1.0",
+    "@hypit/project": "workspace:^0.1.0",
     "@hypit/temporal": "workspace:^0.1.0"
   }
 }

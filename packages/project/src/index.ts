@@ -30,6 +30,7 @@ export {
   type ProjectHostEvent,
   type ProjectHostEventListener,
   type ProjectHostProjection,
+  type ProjectExecutionDiscovery,
 } from "./host.js";
 export {
   ProjectResourceGateway,

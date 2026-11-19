@@ -70,8 +70,9 @@ system so the user's redirected or relocated folder is honored.
 | Default parent for new projects | `~/Documents/Hypit/Projects/` | `<Documents>\Hypit\Projects\` |
 | Per-user Hypit data root | `~/Library/Application Support/Hypit/` | `%LOCALAPPDATA%\Hypit\` |
 | Application configuration | `application/` under the data root | `application\` under the data root |
-| Live backend endpoint | `runtime/application.json` under the data root | `runtime\application.json` under the data root |
-| Durable local AIGC work | `execution/<environment-id>/` under the data root | `execution\<environment-id>\` under the data root |
+| Live application endpoint | `runtime/application.json` under the data root | `runtime\application.json` under the data root |
+| Live execution endpoint | `runtime/execution.json` under the data root | `runtime\execution.json` under the data root |
+| Default HypiHub deployment data | `execution/hypihub/` under the data root | `execution\hypihub\` under the data root |
 | Per-user rebuildable cache | `~/Library/Caches/Hypit/` | `%LOCALAPPDATA%\Hypit\cache\` |
 | Request staging | OS temporary directory | OS temporary directory |
 
@@ -88,7 +89,7 @@ system locations used by these defaults.
   The endpoint record and lock coordinate the running backend. Open Projects, leases and Product Sessions are
   in-memory ApplicationHost state.
 - **Execution.** Each local AIGC Environment owns a persistent data root, which may be set explicitly on its
-  deployment. It stores Invocation state, Provider receipts and Publication manifests and bytes. A remote
+  deployment. It stores its stable Environment ID, Invocation state, Provider receipts and Publication manifests and bytes. A remote
   Environment owns these on its deployment. The Application retains its connection selection. Closing a project,
   caller or local process preserves durable Environment data for reopening. Receiving a Publication as Project
   Media copies its selected bytes into that Project Boundary through the Media owner.
@@ -140,7 +141,7 @@ The resulting interactive hierarchy is:
 ```text
 ApplicationHost scope
 ├─ AIGC Execution Directory
-│  └─ selected Provider/model Execution Environments
+│  └─ connections to selected Execution Environments
 └─ ProjectHost scope
    ├─ owner collection and document Service scopes
    └─ interface Product Session scopes
@@ -148,7 +149,7 @@ ApplicationHost scope
 
 An AIGC ExecutionHost is shared across ProjectHosts according to deployment and account policy. ProjectHosts receive
 scoped Capability Invocation clients. Product Sessions lease typed owner Services and retain only current interaction state. Desktop,
-Codex and other callers resolve projects and execution through the ApplicationHost's shared registries.
+Codex and other callers open projects through ApplicationHost and can connect to ExecutionHost for standalone execution.
 
 ## Product operation forms
 

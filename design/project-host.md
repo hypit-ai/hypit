@@ -123,10 +123,11 @@ package-manager lockfile    exact installed implementation selection
 hypit.project.json          explicitly activated packages and visible offerings
 ```
 
-The Host never scans `node_modules` and activates arbitrary code. For every activated package it resolves one
-conventional exported Hypit module from the project package environment, imports it and verifies that the module
-declares the selected npm package name. The package exposes this module through a Node-resolvable `./hypit` export
-with the named value `hypitPackage`.
+The Node ProjectHost requires `pnpm-lock.yaml` and reads the project's installed `node_modules` layout. Every
+activated package is declared as a direct dependency in the Project's `package.json`. The loader matches the resolved
+export against that project's installed package directory, following the package manager's workspace and store
+links. It loads an explicit `./hypit` export with the named value `hypitPackage` and verifies the declared name.
+Fontsource package references use the same installed dependency lookup.
 
 A Hypit package module may publish many technical contributions and many catalog offerings:
 
@@ -214,13 +215,12 @@ state; the shared Service remains open while any lease exists.
 
 ## Lifecycle scopes
 
-The interactive backend follows four nested scopes, with recoverable AIGC execution beside them:
+The interactive backend opens shared project Services and product interfaces. Execution has a deployment lifetime:
 
 ```text
 ApplicationHost                              local/deployment service scope
-├─ AIGC Execution Directory                  shared Capability Invocation access
-│  └─ selected Execution Environment          Provider/model deployment scope
-│     └─ Capability Invocation                recoverable execution lifetime
+├─ AIGC Execution Directory ── clients ── ExecutionHost
+│                                         └─ Environment and Invocations
 └─ ProjectHost                               project scope
    ├─ ProjectMediaService                    owner collection scope
    ├─ PackageEnvironment                     project package scope
@@ -245,16 +245,14 @@ worker or execution-deployment lifetime. The ApplicationHost exposes selected En
 Directory, and each ProjectHost receives scoped clients to them.
 
 ```text
-ApplicationHost
-├─ AIGC Execution Directory
-│  ├─ cloud Environment
-│  │  ├─ Seedance Endpoint Adapter
-│  │  └─ another Provider Endpoint Adapter
-│  └─ local GPU Environment
-│     └─ local model Endpoint Adapter
-└─ ProjectHost
-   ├─ Generation owner Services
-   └─ scoped Execution clients
+ExecutionHost
+├─ cloud Environment
+│  ├─ Seedance Endpoint Adapter
+│  └─ another Provider Endpoint Adapter
+└─ local GPU Environment
+   └─ local model Endpoint Adapter
+
+ApplicationHost ── Execution Directory ── scoped clients for open projects
 ```
 
 The ApplicationHost explicitly registers selected Environments and their clients. An Environment publishes a finite
@@ -290,9 +288,8 @@ More concretely, it is constructed and closed by the corresponding ProjectHost. 
 surfaces in that project observe the same catalog instance.
 
 The shared Media identity is the portable project-relative Media Asset manifest path, for example
-`media/interview/interview.media.json`. Byte equality does not participate in that identity. Two NLE documents use the
-same accepted media by storing the same explicit Media Asset Reference. Their frontends offer the same project media panel;
-dragging one catalog entry into either Timeline creates an occurrence referencing that manifest path.
+`media/interview/interview.media.json`. Each SVML document stores a pointer relative to its own file and resolves it
+to that identity. Two documents in different directories may spell their pointers differently and share the asset.
 
 Different Hypit Project Boundaries do not share a Media identity. Moving material across them is an explicit adoption
 or materialization Action into the target Project Media Service. Physical storage deduplication, if ever supplied by a
@@ -314,6 +311,9 @@ owner kind + canonical project-relative document path
 Opening the same NLE document from two tabs returns leases on one `NleProjectService`; opening two `.svml` files opens
 two Services. An NLE View remains an independent owner document and Service even when one Product Session composes it
 with an NLE Project.
+
+The Node Project file adapter resolves existing paths and containment before leasing owner documents. Aliases
+inside one Project resolve to one file identity. New files and delivery targets validate their containing directories.
 
 The generic registry owns identity, lease count and close behavior. The NLE session backend calls
 `NleProjectService`, the Media adapter calls `ProjectMediaService`, and future owners preserve their own typed

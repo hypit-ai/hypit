@@ -32,7 +32,7 @@ The Hypit distribution exposes this connection on its shared local Host.
 
 ```sh
 hypit auth login
-hypit execution doctor --environment hypihub
+hypit execution doctor
 hypit execution quote @hypit/gpt-image/gpt-image-2 --input request.json --json
 ```
 

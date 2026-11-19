@@ -36,6 +36,10 @@ implementation for its exact source read.
 Project. The Project file contains none of those session facts. Saving and reload remain explicit Host operations;
 the Service does not hash or monitor files in the background.
 
+`@hypit/nle/node` opens SVML and View documents in a Node ProjectHost through `openNodeNleProject` and
+`openNodeNleView`. Their leases expose a canonical file path and the shared owner Service. The Node owner
+providers handle revision-checked save and reload for scripts and Studio.
+
 Pure Project commands cover direct move, trim, slip and retime as well as exact split, roll, explicit-scope ripple
 trim and attached-Audio detachment. Magnetic editing, selection and durable edit grouping remain outside the Project.
 Pure materialization, spatial-authoring and Process-parameter planners produce those same transactions, while the

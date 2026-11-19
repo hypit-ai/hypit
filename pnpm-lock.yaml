@@ -17,6 +17,9 @@ importers:
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:packages/audio-program
+      '@hypit/canvas':
+        specifier: workspace:^0.1.0
+        version: link:packages/canvas
       '@hypit/canvas-studio':
         specifier: workspace:^0.1.0
         version: link:packages/canvas-studio
@@ -65,6 +68,9 @@ importers:
       '@hypit/provider-hypihub':
         specifier: workspace:^0.1.0
         version: link:packages/provider-hypihub
+      '@hypit/timed-transcript':
+        specifier: workspace:^0.1.0
+        version: link:packages/timed-transcript
     devDependencies:
       '@types/node':
         specifier: 24.10.1
@@ -124,9 +130,6 @@ importers:
       '@hypit/project':
         specifier: workspace:^0.1.0
         version: link:../project
-      '@hypit/timed-transcript':
-        specifier: workspace:^0.1.0
-        version: link:../timed-transcript
 
   packages/canvas-studio:
     dependencies:
@@ -332,6 +335,9 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.1.0
         version: link:../media
+      '@hypit/project':
+        specifier: workspace:^0.1.0
+        version: link:../project
       '@hypit/temporal':
         specifier: workspace:^0.1.0
         version: link:../temporal
@@ -477,6 +483,15 @@ importers:
       '@hypit/whisperx':
         specifier: workspace:^0.1.0
         version: link:../whisperx
+
+  packages/script:
+    dependencies:
+      '@hypit/temporal':
+        specifier: workspace:^0.1.0
+        version: link:../temporal
+      '@hypit/timed-transcript':
+        specifier: workspace:^0.1.0
+        version: link:../timed-transcript
 
   packages/seedance:
     dependencies:

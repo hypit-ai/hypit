@@ -33,7 +33,7 @@ Each domain owns the meaning, validation, editing and persistence of its facts. 
 - NLE Project and NLE View;
 - Canvas documents;
 - Scene Project and Scene View;
-- Script, Narrative, Transcript and semantic evidence;
+- Script, Transcript and semantic evidence;
 - Feedback;
 - project packages and their owner-specific symbols.
 
@@ -108,11 +108,11 @@ Host levels govern composition and lifetime rather than domain meaning. An owner
 and revision even when several products share it. Several Services may share a process, and a heavy Executor may use a
 dedicated process.
 
-The interactive backend has four nested scopes: ApplicationHost, Project Boundary, open owner document or collection,
-and Product Session. A Product Session leases the owner Services it presents, so several sessions may share one
-document Service and one session may compose several Services. AIGC execution is an orthogonal deployment scope: the
-ApplicationHost's Execution Directory exposes selected Environments, an ExecutionHost may serve several ProjectHosts,
-and a recoverable Capability Invocation may outlive the caller connection, Product Session and ProjectHost that started it.
+ApplicationHost holds Product Session leases. Each session is associated with one ProjectHost and leases the
+owner Services it presents. Several sessions may share one Service and one session may compose several Services.
+An ExecutionHost serves one or more independent Environments. ApplicationHost exposes its selected Environments
+through the Execution Directory. One Environment can serve several ProjectHosts and direct callers. A recoverable
+Capability Invocation can outlive the caller connection, Product Session and ProjectHost that started it.
 
 An application operation has one of four forms:
 

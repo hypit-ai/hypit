@@ -1,0 +1,64 @@
+<wife>
+  <HOST> My wife is D @{ranked}tier. ||
+  @{broll-01-1!}Forty years. ||
+  @{broll-01-2!}Same version. ||
+  @{broll-01-3!}Zero updates. ||
+  @{broll-02-1!}Divorce gets her ||
+  @{broll-02-2!}seventy-five billion. ||
+  @{broll-03-1!}That's ||
+  @{broll-03-2!}five million a day! ||
+  @{broll-04-1!}Highest-paid job ||
+  in history. @{/ranked~}
+</wife>
+
+<trump>
+  <HOST> Trump is B @{ranked}tier. ||
+  @{broll-05-1!}Heard my affair ||
+  with a Chinese spy ||
+  @{broll-05-2!}and called me ||
+  an honorable guy. ||
+  @{broll-06-1!}Told him ||
+  I cheated on ||
+  my wife. ||
+  @{broll-06-2!}He said, ||
+  'No big deal. ||
+  @{broll-06-3!}But which one?' @{/ranked~}
+</trump>
+
+<kimberly>
+  <HOST> Kimberly is C @{ranked}tier. ||
+  @{broll-07-1!}VP of healthcare. ||
+  @{broll-08-1!}Well, ||
+  she did give me ||
+  @{broll-08-2!}hands-on healthcare. ||
+  @{broll-09-1!}Side effects were ||
+  @{broll-09-2!}losing my wife ||
+  and my job. @{/ranked~}
+</kimberly>
+
+<alice>
+  <HOST> Alice is A @{ranked}tier. ||
+  @{broll-10-1!}She's not like ||
+  other women. ||
+  @{broll-11-1!}Other women want ||Hermes. ||
+  @{broll-11-2!}She wanted H100s. ||
+  @{broll-12-1!}Sadly, ||
+  she's too busy ||
+  extracting my source code ||
+  @{broll-12-2!}and sending it to ||
+  Deepseek. @{/ranked~}
+</alice>
+
+<jacket>
+  <HOST> My jacket is S @{ranked}tier. ||
+  @{broll-13-1!}Didn't you guys know ||
+  it's DLSS 5? ||
+  @{broll-14-1!}Forty years, ||
+  not a single glitch. ||
+  @{broll-15-1!}Honestly, ||
+  every human being ||
+  @{broll-15-2!}should seriously consider ||
+  dating a GPU ||
+  @{broll-15-3!}before it becomes AGI ||
+  @{broll-15-4!}and replaces you. @{/ranked~}
+</jacket>

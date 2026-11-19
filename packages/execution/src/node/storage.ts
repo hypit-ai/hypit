@@ -6,7 +6,7 @@ import { pipeline } from "node:stream/promises";
 import { setTimeout as pause } from "node:timers/promises";
 import type { ExecutionResourceSource, InvocationAddress, Publication, PublicationResource } from "../index.js";
 import { invocationId, readInvocation, readPublication, terminal, type InvocationRecord } from "./records.js";
-import { errno, object } from "./values.js";
+import { errno, identity, object } from "./values.js";
 
 async function readJson(path: string): Promise<unknown> {
   try { return JSON.parse(await readFile(path, "utf8")) as unknown; }
@@ -56,6 +56,20 @@ export function openStoredResource(directory: string, resource: PublicationResou
   };
 }
 
+/** Called under the data root's writer lock. The marker moves with the deployment's records. */
+export async function openEnvironmentIdentity(root: string): Promise<string> {
+  const path = join(root, "environment.json");
+  const saved = await readJson(path);
+  if (saved !== undefined) {
+    const marker = object(saved, "Execution Environment", ["format", "id"]);
+    if (marker.format !== "hypit.execution-environment") throw new Error(`Invalid Execution Environment at ${root}.`);
+    return identity(marker.id, "Execution Environment id");
+  }
+  const id = `env.${randomUUID()}`;
+  await writeJson(path, { format: "hypit.execution-environment", id });
+  return id;
+}
+
 export class InvocationStorage {
   readonly #root: string;
   readonly #environment: string;
@@ -70,15 +84,6 @@ export class InvocationStorage {
   }
 
   async open(): Promise<InvocationRecord[]> {
-    const identity = join(this.#root, "environment.json");
-    const saved = await readJson(identity);
-    if (saved === undefined) await writeJson(identity, { format: "hypit.execution-environment", id: this.#environment });
-    else {
-      const marker = object(saved, "Execution Environment", ["format", "id"]);
-      if (marker.format !== "hypit.execution-environment" || marker.id !== this.#environment) {
-        throw new Error(`Execution data root ${this.#root} belongs to a different Environment.`);
-      }
-    }
     const directory = join(this.#root, "invocations");
     await mkdir(directory, { recursive: true, mode: 0o700 });
     const records: InvocationRecord[] = [];

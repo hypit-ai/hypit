@@ -21,7 +21,7 @@
       "import": "./dist/node-adapter.js"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": ["dist", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.browser.json --noEmit && vite build"
   },

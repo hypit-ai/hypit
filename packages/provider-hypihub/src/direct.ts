@@ -1,9 +1,9 @@
 import type { JsonValue } from "@hypit/execution";
 import type { Capability } from "@hypit/execution/model";
-import { bindProviderEndpoint, type ProviderDirectContext, type ProviderOutputs } from "@hypit/execution/provider";
+import { bindProviderEndpoint, type ProviderDirectContext, type ProviderOutputs, type ProviderOutputWriter } from "@hypit/execution/provider";
 import { fishS21ProFree, fishVoiceClone, fishVoiceDesign } from "@hypit/fishaudio-speech";
 import { miMoVoiceClone, miMoVoiceDesign } from "@hypit/mimo-speech";
-import { interpretWhisperXTranscript, whisperX } from "@hypit/whisperx";
+import { whisperX, whisperXTranscriptBytes, whisperXTranscriptResource } from "@hypit/whisperx";
 import { failed, record, rejectedSubmission, transient, type HypiHubClient, type HypiHubInputs } from "./client.js";
 import { verifyOffering, type ReportOffering } from "./catalog.js";
 import { HypiHubHttpError } from "./errors.js";
@@ -78,8 +78,12 @@ function bindSpeech<Request extends JsonValue & { readonly text?: string; readon
   });
 }
 
-function transcript(value: Record<string, unknown>, language: string | undefined): ProviderOutputs {
-  return { status: "complete", values: { transcript: interpretWhisperXTranscript(value, language) } };
+async function transcript(value: Record<string, unknown>, language: string | undefined, writer: ProviderOutputWriter): Promise<ProviderOutputs> {
+  const bytes = whisperXTranscriptBytes(value, language);
+  await writer.writeResource("transcript", whisperXTranscriptResource, {
+    mediaType: "application/json", size: bytes.byteLength, bytes: [bytes],
+  });
+  return { status: "complete", values: { transcript: null } };
 }
 
 const transcriptionModel = "victor-upmeet/whisperx";
@@ -122,13 +126,13 @@ function bindWhisperX(id: string, client: HypiHubClient, report: ReportOffering)
             acknowledged = true;
           }
         });
-        return transcript(result, request.language);
+        return await transcript(result, request.language, context);
       } catch (error) {
         if (!acknowledged && rejectedSubmission(error)) return failed(error, "hypihub-submission-rejected");
         throw error;
       }
     },
-    async recover({ receipt, signal, request }) {
+    async recover({ receipt, signal, request, writeResource }) {
       const startedAt = record(receipt.resume, "transcription receipt").startedAt;
       if (typeof startedAt !== "number") throw new Error("Invalid HypiHub transcription receipt.");
       if (Date.now() - startedAt >= client.operationTimeout) {
@@ -136,7 +140,7 @@ function bindWhisperX(id: string, client: HypiHubClient, report: ReportOffering)
       }
       try {
         const saved = await client.json(`${transcriptionPath}/${encodeURIComponent(receipt.id)}`, signal);
-        if (saved.status === "completed") return transcript(record(saved.result, "saved transcription"), request.language);
+        if (saved.status === "completed") return await transcript(record(saved.result, "saved transcription"), request.language, { writeResource });
         if (saved.status === "failed" || saved.status === "cancelled" || saved.status === "expired") {
           return failed(new Error(`HypiHub transcription ${saved.status}.`), "hypihub-transcription-failed");
         }

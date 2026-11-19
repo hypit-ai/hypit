@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { ApplicationProductProvider } from "@hypit/application";
 import { CanvasError, identity, readSelection, record, text } from "@hypit/canvas";
-import { createNodeCanvas, openNodeCanvas, type NodeCanvas } from "@hypit/canvas/node";
+import { openNodeCanvas, type NodeCanvas } from "@hypit/canvas/node";
 import type { ProjectHost } from "@hypit/project";
 import { canvasStudioProduct, type CanvasPreviewRequest, type CanvasStudioEvent } from "./protocol.js";
 
@@ -65,12 +65,8 @@ export function createCanvasStudioProductProvider(options: { readonly ffprobePat
     title: "Canvas",
     launchParameters: [{ name: "document", title: "Canvas document", required: true, initial: "generation/opening.canvas.json" }],
     async open(project, value) {
-      const input = record(value, "Canvas launch", ["document", "create"]);
+      const input = record(value, "Canvas launch", ["document"]);
       const document = text(input.document, "Canvas document path");
-      if (input.create !== undefined) {
-        const creation = record(input.create, "Create Canvas", ["name"]);
-        await createNodeCanvas(project, document, text(creation.name, "Canvas name"));
-      }
       return new CanvasStudioProductSession(project, await openNodeCanvas(project, document, options));
     },
   };

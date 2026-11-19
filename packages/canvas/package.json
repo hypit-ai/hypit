@@ -15,7 +15,6 @@
     "@hypit/media": "workspace:^0.1.0",
     "@hypit/media-asset": "workspace:^0.1.0",
     "@hypit/media-local": "workspace:^0.1.0",
-    "@hypit/project": "workspace:^0.1.0",
-    "@hypit/timed-transcript": "workspace:^0.1.0"
+    "@hypit/project": "workspace:^0.1.0"
   }
 }

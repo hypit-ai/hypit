@@ -4,7 +4,13 @@
   "type": "module",
   "dependencies": {
     "@hypit/html-program": "link:../../../../packages/html-program",
-    "@hypit/nle-delivery": "link:../../../../packages/nle-delivery"
+    "@hypit/nle": "link:../../../../packages/nle",
+    "@hypit/nle-delivery": "link:../../../../packages/nle-delivery",
+    "@hypit/script": "link:../../../../packages/script",
+    "@hypit/temporal": "link:../../../../packages/temporal"
   },
-  "exports": { "./hypit": "./hypit.js" }
+  "exports": {
+    "./hypit": "./hypit.js",
+    "./authoring": { "types": "./authoring.d.ts", "import": "./authoring.js" }
+  }
 }

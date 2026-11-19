@@ -1,5 +1,5 @@
 import type { NlePictureLayout } from "@hypit/nle";
-import type { Take } from "./speech.js";
+import type { Take } from "./takes.js";
 
 type Shot = { readonly id: string; readonly at: string; readonly media: string; readonly layout: NlePictureLayout;
   readonly motion: "pop" | "rise" | "wide" | "edge"; readonly loop?: string };

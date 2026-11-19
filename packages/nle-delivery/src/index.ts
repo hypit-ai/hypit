@@ -31,19 +31,9 @@ import {
 } from "@hypit/nle";
 import type { MediaResource, ResolvedMedia } from "@hypit/media";
 import type { ProjectHost } from "@hypit/project";
-import { createNodeProjectResourceResolver } from "@hypit/project/node";
+import { createNodeProjectResourceResolver, prepareNodeProjectFile, resolveNodeProjectFile } from "@hypit/project/node";
 
 function portable(path: string): string { return path.split(sep).join("/"); }
-
-function projectPath(root: string, value: string, subject: string): string {
-  if (value.length === 0 || isAbsolute(value)) throw new Error(`${subject} must be a portable Project path.`);
-  const absolute = resolve(root, value);
-  const local = relative(root, absolute);
-  if (local === "" || local === ".." || local.startsWith(`..${sep}`) || isAbsolute(local)) {
-    throw new Error(`${subject} leaves the Project Boundary.`);
-  }
-  return absolute;
-}
 
 function projectReference(root: string, document: string, reference: NleMediaReference): { readonly path: string } {
   const absolute = resolve(dirname(document), reference.path);
@@ -61,8 +51,10 @@ function mediaReferences(project: NleProject): readonly NleMediaReference[] {
   const visit = (id: string) => {
     if (visited.has(id)) return;
     visited.add(id);
-    for (const track of compositions.get(id)!.tracks) for (const item of track.items) {
-      if (item.kind !== "present" || !item.enabled) continue;
+    const composition = compositions.get(id)!;
+    const matteSources = new Set(composition.mattes.map(relation => relation.matte));
+    for (const track of composition.tracks) for (const item of track.items) {
+      if (item.kind !== "present" || !item.enabled || (!track.enabled && !matteSources.has(item.id))) continue;
       if (item.source === "media") references.push(item.asset);
       else if (item.source === "component") references.push(...Object.values(item.media ?? {}));
       else visit(item.composition);
@@ -87,7 +79,7 @@ export async function prepareNleCompilation(input: {
   readonly signal?: AbortSignal;
 }): Promise<PreparedNleCompilation> {
   input.signal?.throwIfAborted();
-  const document = projectPath(input.host.boundary.root, input.document, "NLE delivery document");
+  const { address: document } = await resolveNodeProjectFile(input.host.boundary.root, input.document, "NLE delivery document");
   const selected = input.snapshot === undefined ? readNleProject(await readFile(document, "utf8")) : structuredClone(input.snapshot);
   const project = input.composition === undefined ? selected : { ...selected, rootComposition: input.composition };
   if (!project.compositions.some(composition => composition.id === project.rootComposition)) {
@@ -200,8 +192,12 @@ class ProjectNleDeliveryService implements NleDeliveryService {
 
   async start(request: NleDeliveryRequest): Promise<string> {
     if (this.#closed) throw new Error("NLE Delivery Service is closed.");
-    projectPath(this.#host.boundary.root, request.document, "NLE delivery document");
-    const destination = projectPath(this.#host.boundary.root, request.destination, "NLE delivery destination");
+    const root = this.#host.boundary.root;
+    const { path: document } = await resolveNodeProjectFile(root, request.document, "NLE delivery document");
+    const { address: destination } = await prepareNodeProjectFile(root, request.destination, {
+      label: "NLE delivery destination", createDirectories: true,
+    });
+    if (this.#closed) throw new Error("NLE Delivery Service is closed.");
     const handle = randomUUID();
     const action: Action = {
       observation: { handle, state: "queued", progress: 0 },
@@ -209,7 +205,7 @@ class ProjectNleDeliveryService implements NleDeliveryService {
       listeners: new Set(),
     };
     this.#actions.set(handle, action);
-    void this.#run(action, request, destination);
+    void this.#run(action, { ...request, document }, destination);
     return handle;
   }
 

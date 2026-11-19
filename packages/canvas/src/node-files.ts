@@ -1,40 +1,19 @@
 import { createHash, randomUUID } from "node:crypto";
-import { link, mkdir, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
-import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { assertProjectRelativePath } from "@hypit/project";
+import { link, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, resolve } from "node:path";
+import { prepareNodeProjectFile, resolveNodeProjectFile } from "@hypit/project/node";
 import { CanvasError, decodeCanvas, encodeCanvas, type CanvasDocument } from "./document.js";
 import type { CanvasSnapshot, CanvasStore } from "./service.js";
 
-function inside(root: string, target: string): string {
-  const path = relative(root, target);
-  if (path === ".." || path.startsWith(`..${sep}`) || isAbsolute(path)) {
-    throw new CanvasError("invalid-path", "Destination leaves the Project Boundary.");
-  }
-  return path.split(sep).join("/");
-}
-
 export async function canvasPath(root: string, path: string): Promise<string> {
-  assertProjectRelativePath(path, "Canvas path");
   if (!path.endsWith(".canvas.json")) throw new CanvasError("invalid-path", "Canvas path must end in .canvas.json.");
-  const canonical = inside(root, await realpath(resolve(root, path)));
+  const { path: canonical } = await resolveNodeProjectFile(root, path, "Canvas document");
   if (!canonical.endsWith(".canvas.json")) throw new CanvasError("invalid-path", "Canvas path must address a .canvas.json file.");
   return canonical;
 }
 
 export async function prepareProjectDestination(root: string, path: string): Promise<string> {
-  assertProjectRelativePath(path);
-  const parts = path.split("/");
-  const name = parts.pop()!;
-  let parent = root;
-  for (const part of parts) {
-    const child = resolve(parent, part);
-    await mkdir(child).catch(error => {
-      if (error?.code !== "EEXIST") throw error;
-    });
-    parent = await realpath(child);
-    inside(root, parent);
-  }
-  return resolve(parent, name);
+  return (await prepareNodeProjectFile(root, path, { label: "Canvas destination", createDirectories: true })).address;
 }
 
 function temporary(path: string): string {

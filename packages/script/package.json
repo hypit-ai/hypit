@@ -1,0 +1,25 @@
+{
+  "name": "@hypit/script",
+  "version": "0.1.0",
+  "description": "Script authoring, caption projection and transcript binding",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    ".": {
+      "hypit-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./timing": {
+      "hypit-source": "./src/timing.ts",
+      "types": "./dist/timing.d.ts",
+      "import": "./dist/timing.js"
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": { "build": "tsc -p tsconfig.build.json" },
+  "dependencies": {
+    "@hypit/temporal": "workspace:^0.1.0",
+    "@hypit/timed-transcript": "workspace:^0.1.0"
+  }
+}

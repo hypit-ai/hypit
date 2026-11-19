@@ -23,6 +23,9 @@ importers:
       '@hypit/html-video-local':
         specifier: link:../../packages/html-video-local
         version: link:../../packages/html-video-local
+      '@hypit/media':
+        specifier: link:../../packages/media
+        version: link:../../packages/media
       '@hypit/nle':
         specifier: link:../../packages/nle
         version: link:../../packages/nle
@@ -35,12 +38,18 @@ importers:
       '@hypit/project':
         specifier: link:../../packages/project
         version: link:../../packages/project
+      '@hypit/script':
+        specifier: link:../../packages/script
+        version: link:../../packages/script
       '@hypit/temporal':
         specifier: link:../../packages/temporal
         version: link:../../packages/temporal
       '@hypit/text-fine':
         specifier: link:../../packages/text-fine
         version: link:../../packages/text-fine
+      '@hypit/timed-transcript':
+        specifier: link:../../packages/timed-transcript
+        version: link:../../packages/timed-transcript
     devDependencies:
       typescript:
         specifier: 5.9.3
@@ -53,9 +62,18 @@ importers:
       '@hypit/html-program':
         specifier: link:../../../../packages/html-program
         version: link:../../../../packages/html-program
+      '@hypit/nle':
+        specifier: link:../../../../packages/nle
+        version: link:../../../../packages/nle
       '@hypit/nle-delivery':
         specifier: link:../../../../packages/nle-delivery
         version: link:../../../../packages/nle-delivery
+      '@hypit/script':
+        specifier: link:../../../../packages/script
+        version: link:../../../../packages/script
+      '@hypit/temporal':
+        specifier: link:../../../../packages/temporal
+        version: link:../../../../packages/temporal
 
   packages/picture-effects: {}
 

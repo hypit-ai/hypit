@@ -1,24 +1,24 @@
+import { captionItemFromScriptCue } from "@hypit/caption-fine/authoring";
+import { selectMediaSourceWindow, type MediaInterpretation } from "@hypit/media";
 import { nleLinearTimeMapping, type NleMediaItem, type NlePictureLayout, type NleProcess } from "@hypit/nle";
 import {
-  Component, Composition, Item, Media, SharedValue, Track, Transition, componentItem, defineComposition, jsx, mediaItem,
+  Component, Composition, Item, Media, SharedValue, Track, Transition, defineComposition, jsx, mediaItem,
   projectSourceInstant, projectSourceRange, seconds,
 } from "@hypit/nle/authoring";
 import {
-  addExactTemporalValues as add, compareExactTemporalValues as compare, subtractExactTemporalValues as subtract,
+  addExactTemporalValues as add, subtractExactTemporalValues as subtract,
   type ExactTemporalValue as Time,
 } from "@hypit/temporal/algebra";
+import type { ScriptDocument } from "@hypit/script";
+import { bindScriptTiming, type ScriptTiming } from "@hypit/script/timing";
+import type { TimedTranscript } from "@hypit/timed-transcript";
 import { groups } from "./broll.js";
 import { captionStyle, revealFlash, titleStyle } from "./look.js";
-import { speech, type Cue, type Speech, type Take } from "./speech.js";
+import { subjects, type Take } from "./takes.js";
+import { captionVisibility, type Cue } from "./speech.js";
 
 export const project = { id: "ranking-jensen", name: "Ranking the best person Jensen ever dated", rootComposition: "main" };
-const subjects = [
-  { take: "wife", label: "My wife", tier: "d" },
-  { take: "trump", label: "Trump", tier: "b" },
-  { take: "kimberly", label: "Kimberly", tier: "c" },
-  { take: "alice", label: "Alice", tier: "a" },
-  { take: "jacket", label: "My jacket", tier: "s" },
-] as const;
+export const takes = subjects.map(({ take }) => take);
 const zero = seconds("0"), frames = (n: number): Time => ({ ticks: String(n), timeBase: { numerator: 1, denominator: 24 } });
 const fill: NlePictureLayout = { x: 0, y: 0, width: 720, height: 1280, fit: "fill" };
 const asset = (name: string) => ({ path: `media/${name}/${name}.media.json` });
@@ -34,11 +34,16 @@ export const mediaInputs = [...new Set([
   ...groups.flatMap(group => group.shots.map(shot => shot.media)), music.path, revealSound.path,
 ])];
 
-type Inputs = ReadonlyMap<string, { readonly duration?: Time; readonly picture: boolean; readonly audio: boolean }>;
-function extent(inputs: Inputs, path: string, signal: "audio" | "picture"): Time {
-  const value = inputs.get(path);
-  if (!value?.[signal] || value.duration === undefined) throw new Error(`Expected timed ${signal} in ${path}.`);
-  return value.duration;
+type MediaInputs = ReadonlyMap<string, MediaInterpretation>;
+type Inputs = {
+  readonly media: MediaInputs;
+  readonly script: ScriptDocument;
+  readonly transcripts: ReadonlyMap<Take, TimedTranscript>;
+};
+function mediaWindow(inputs: MediaInputs, path: string, member: "audio" | "picture", range?: { start?: Time; duration?: Time }) {
+  const interpretation = inputs.get(path);
+  if (!interpretation) throw new Error(`Jensen source is missing ${path}.`);
+  return selectMediaSourceWindow(interpretation, { member, label: path, ...range });
 }
 
 function process(id: string, operator: NleProcess["operator"], value: Readonly<Record<string, unknown>>,
@@ -76,44 +81,38 @@ function motion(id: string, duration: Time, style: "pop" | "rise" | "wide" | "ed
   return style === "wide" ? [frame, enter, leave] : [frame, enter, opacity, leave];
 }
 
-function caption(take: Take, placement: NleMediaItem, [ordinal, cueStart, cueDuration, words]: Cue) {
-  const cueId = `${captionDocument}:cue:${ordinal}`;
-  const wordId = (unit: number) => `${captionDocument}:unit:${unit}:word:1`;
-  const unitId = (unit: number) => `${captionDocument}:unit:${unit}`;
-  const start = seconds(cueStart);
-  const range = projectSourceRange({ start, end: add(start, seconds(cueDuration)) }, placement, cueId);
-  return componentItem({
-    id: `${take}-captions:${cueId}`, at: range.start, duration: subtract(range.end, range.start), component: captionComponent,
-    picture: { layout: { ref: "caption-bottom" } }, valueBindings: [{ kind: "shared", slot: "style", ref: "caption-style:nvidia" }],
-    parameters: { caption: { cueId, documentId: captionDocument, role: "HOST",
-      units: words.map(([id, , , from, to]) => ({ id: unitId(id), wordIds: [wordId(id)], start: seconds(from), end: seconds(to) })),
-      words: words.map(([id, text, separatorBefore]) => ({ id: wordId(id), unitId: unitId(id), text, separatorBefore, attributes: [] })),
-    } },
+function caption(take: Take, placement: NleMediaItem, cue: Cue) {
+  return captionItemFromScriptCue(cue, placement, {
+    id: `${take}-captions:${captionDocument}:cue:${cue.id}`, documentId: captionDocument,
+    picture: { layout: { ref: "caption-bottom" } }, style: { kind: "shared", ref: "caption-style:nvidia" }, window: cue,
   });
 }
 
-export default defineComposition((inputs: Inputs) => {
+export default defineComposition(({ media, script, transcripts }: Inputs) => {
   let end = zero;
   const shots = new Map<Take, NleMediaItem>();
+  const speech = new Map<Take, { timing: ScriptTiming; cues: readonly Cue[] }>();
   for (const subject of subjects) {
     const id = `aroll-${subject.take}`;
     const source = asset(id);
-    const duration = extent(inputs, source.path, "audio");
-    const placement = mediaItem({ id: `${id}-use`, name: `${subject.label} A-roll`, asset: source, at: end, duration,
+    const window = mediaWindow(media, source.path, "audio");
+    const cueScript = script.segments.get(subject.take), transcript = transcripts.get(subject.take);
+    if (!cueScript || !transcript) throw new Error(`Jensen ${subject.take}: expected a script and aligned transcript.`);
+    const timing = bindScriptTiming(cueScript, transcript, { window });
+    speech.set(subject.take, { timing, cues: captionVisibility(timing.cues, window) });
+    const placement = mediaItem({ id: `${id}-use`, name: `${subject.label} A-roll`, asset: source, at: end, duration: window.duration,
       picture: { layout: { ...fill, fit: "cover" } }, audio: {} });
     shots.set(subject.take, placement);
-    end = add(end, duration);
+    end = add(end, window.duration);
   }
   const anchor = (take: Take, name: string) => {
-    const { anchors }: Speech = speech[take];
-    const instant = anchors[name];
-    if (instant === undefined) throw new Error(`Jensen take ${take} has no anchor ${name}.`);
-    return projectSourceInstant(seconds(instant), shots.get(take)!, `${take}:${name}`);
+    const instant = speech.get(take)!.timing.moment(name);
+    return projectSourceInstant(instant, shots.get(take)!, `${take}:${name}`);
   };
   const entries = subjects.map(({ take, label, tier }) => {
-    const shot = shots.get(take)!;
+    const ranked = speech.get(take)!.timing.selection("ranked");
     return { id: take, label, tier, input: `subject.${take}`, preset: false,
-      window: { start: anchor(take, "reveal"), end: add(shot.start, shot.duration) } };
+      window: projectSourceRange(ranked, shots.get(take)!, `${take}:ranked`) };
   });
   const allBroll = groups.flatMap((group, groupIndex) => {
     const next = groups[groupIndex + 1];
@@ -126,9 +125,9 @@ export default defineComposition((inputs: Inputs) => {
       const until = group.crossfadeFrames !== undefined && following !== undefined
         ? add(anchor(group.take, following.at), frames(group.crossfadeFrames)) : groupEnd;
       const duration = subtract(until, at);
-      const loop = shot.loop === undefined ? undefined : seconds(shot.loop);
-      if (loop && compare(loop, extent(inputs, shot.media, "picture")) > 0) throw new Error(`${id}: loop is longer than ${shot.media}.`);
-      const sourceTime = loop ? nleLinearTimeMapping(duration, zero, { numerator: 1, denominator: 1 }, { start: zero, end: loop }) : hold(duration);
+      const loop = shot.loop === undefined ? undefined : mediaWindow(media, shot.media, "picture", { duration: seconds(shot.loop) });
+      const sourceTime = loop ? nleLinearTimeMapping(duration, loop.start, { numerator: 1, denominator: 1 },
+        { start: loop.start, end: loop.end }) : hold(duration);
       return <Media id={id} name={`B-roll ${group.id}.${index + 1} · ${shot.id}`} asset={{ path: shot.media }} at={at}
         duration={duration} sourceTime={sourceTime} picture={{ layout: shot.layout, processes: motion(id, duration, shot.motion) }} />;
     });
@@ -140,8 +139,9 @@ export default defineComposition((inputs: Inputs) => {
   const envelope = (id: string, duration: Time, keyframes: readonly ReturnType<typeof gainPoint>[]) => ({
     processes: [process(id, audioGain, { kind: "keyframes", keyframes, interpolation: { kind: "linear" } }, nleLinearTimeMapping(duration))],
   });
-  if (compare(add(musicIn, secondMusic), extent(inputs, music.path, "audio")) > 0) throw new Error("The music asset cannot cover the second cue.");
-  const soundDuration = extent(inputs, revealSound.path, "audio"), flashDuration = frames(9);
+  const openingMusic = mediaWindow(media, music.path, "audio", { duration: firstMusic });
+  const returnMusic = mediaWindow(media, music.path, "audio", { start: musicIn, duration: secondMusic });
+  const soundDuration = mediaWindow(media, revealSound.path, "audio").duration, flashDuration = frames(9);
 
   return [
     <SharedValue value={{ id: "caption-style:nvidia", name: "nvidia",
@@ -151,11 +151,11 @@ export default defineComposition((inputs: Inputs) => {
     <Composition id="main" name={project.name} width={fill.width} height={fill.height}>
       <Track id="performance" name="Jensen A-roll" kind="picture">{[...shots.values()].map(value => <Item value={value} />)}</Track>
       <Track id="music" name="Music bed" kind="audio">
-        <Media id="thank-you-instrumental-opening" name="THANK YOU instrumental — opening" asset={music} at={zero} duration={firstMusic}
+        <Media id="thank-you-instrumental-opening" name="THANK YOU instrumental — opening" asset={music} at={zero} duration={openingMusic.duration}
           audio={envelope("thank-you-opening-envelope", firstMusic,
             [gainPoint(zero, 0.14), gainPoint(musicCut, 0.14), gainPoint(subtract(firstMusic, sample), 0)])} />
-        <Media id="thank-you-instrumental-return" name="THANK YOU instrumental — return" asset={music} at={musicCut} duration={secondMusic}
-          sourceTime={nleLinearTimeMapping(secondMusic, musicIn)} audio={envelope("thank-you-return-envelope", secondMusic, [
+        <Media id="thank-you-instrumental-return" name="THANK YOU instrumental — return" asset={music} at={musicCut} duration={returnMusic.duration}
+          sourceTime={nleLinearTimeMapping(returnMusic.duration, returnMusic.start)} audio={envelope("thank-you-return-envelope", returnMusic.duration, [
             gainPoint(zero, 0), gainPoint({ ticks: "200000", timeBase: { numerator: 1, denominator: 1_000_000 } }, 0.14),
             gainPoint(subtract(secondMusic, seconds("0.6")), 0.14), gainPoint(subtract(secondMusic, sample), 0),
           ])} />
@@ -180,8 +180,8 @@ export default defineComposition((inputs: Inputs) => {
           component={{ package: "@hypit/text-fine", symbol: "fine" }} parameters={titleStyle}
           picture={{ layout: { ...fill, y: 74, height: 94 } }} />
       </Track>
-      <Track id="captions" name="Captions" kind="picture">
-        {subjects.flatMap(({ take }) => speech[take].cues.map(cue => <Item value={caption(take, shots.get(take)!, cue)} />))}
+      <Track id="captions" name="Captions" kind="picture" role="subtitle">
+        {subjects.flatMap(({ take }) => speech.get(take)!.cues.map(cue => <Item value={caption(take, shots.get(take)!, cue)} />))}
       </Track>
       <Track id="reveal-flash" name="Tier reveal flash" kind="picture">
         {entries.map(({ id, label, window }) => <Component id={`${id}-tier-reveal-flash`} name={`${label} full-frame reveal flash`}
