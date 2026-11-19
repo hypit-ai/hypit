@@ -1,16 +1,34 @@
+import type { MediaStoryboardAtlas } from "@hypit/media";
 import { useEffect, useRef, useState } from "react";
-import type { NleStudioActionObservation, NleStudioOpenProjection, NleStudioTimelineMediaView } from "../protocol.js";
+import type { NleStudioOpenProjection, NleStudioTimelineMediaView } from "../protocol.js";
 import { cancelAction, readAction, readTimelineMedia, startAction } from "./api.js";
 
 type VisibleTracks = { readonly fromFrame: number; readonly toFrame: number; readonly tracks: readonly string[] };
-type TimelineMediaResult = NleStudioTimelineMediaView & {
-  readonly image: HTMLImageElement;
-  readonly atlas?: NonNullable<Extract<NleStudioActionObservation, { state: "complete" }>["result"]["atlas"]>;
-};
+type TimelinePreview = { readonly image: HTMLImageElement; readonly frames?: readonly HTMLImageElement[] };
+type TimelineMediaResult = NleStudioTimelineMediaView & TimelinePreview;
 
 const cachedViewLimit = 24;
 
-async function loadImage(resource: string, signal: AbortSignal): Promise<HTMLImageElement> {
+async function loadStoryboardFrames(image: HTMLImageElement, atlas: MediaStoryboardAtlas) {
+  const { tileWidth, tileHeight, columns } = atlas;
+  const canvas = document.createElement("canvas");
+  canvas.width = tileWidth;
+  canvas.height = tileHeight;
+  const context = canvas.getContext("2d");
+  if (context === null) throw new Error("Timeline storyboard requires a 2D canvas.");
+  const tiles = Array.from({ length: atlas.count }, (_, tile) => {
+    context.clearRect(0, 0, tileWidth, tileHeight);
+    context.drawImage(image, (tile % columns) * tileWidth, Math.floor(tile / columns) * tileHeight,
+      tileWidth, tileHeight, 0, 0, tileWidth, tileHeight);
+    const frame = new Image();
+    frame.src = canvas.toDataURL();
+    return frame;
+  });
+  await Promise.all(tiles.map(tile => tile.decode()));
+  return atlas.samples.map(sample => tiles[sample.tile]!);
+}
+
+async function loadPreview(resource: string, atlas: MediaStoryboardAtlas | undefined, signal: AbortSignal): Promise<TimelinePreview> {
   const response = await fetch(resource, { signal });
   if (!response.ok) throw new Error(`Timeline image request failed with ${response.status}.`);
   const url = URL.createObjectURL(await response.blob());
@@ -19,7 +37,10 @@ async function loadImage(resource: string, signal: AbortSignal): Promise<HTMLIma
     image.src = url;
     await image.decode();
     signal.throwIfAborted();
-    return image;
+    if (atlas === undefined) return { image };
+    const frames = await loadStoryboardFrames(image, atlas);
+    signal.throwIfAborted();
+    return { image, frames };
   } catch (error) {
     URL.revokeObjectURL(url);
     throw error;
@@ -121,11 +142,11 @@ export function useTimelineMedia(
         }
         if (action.state === "complete" && !signal.aborted) {
           const { resource, atlas } = action.result;
-          const image = await loadImage(resource, signal);
-          if (signal.aborted) { URL.revokeObjectURL(image.src); return; }
-          resources.current.add(image.src);
+          const preview = await loadPreview(resource, atlas, signal);
+          if (signal.aborted) { URL.revokeObjectURL(preview.image.src); return; }
+          resources.current.add(preview.image.src);
           cache.current.delete(key);
-          cache.current.set(key, { ...view, image, ...(atlas === undefined ? {} : { atlas }) });
+          cache.current.set(key, { ...view, ...preview });
           if (cache.current.size > cachedViewLimit) cache.current.delete(cache.current.keys().next().value!);
           setShown({ scope, views: [...cache.current.values()] });
         }
@@ -155,7 +176,7 @@ export function TimelineMedia({ views, item, start, frameWidth }: {
   readonly frameWidth: number;
 }) {
   return views.filter(view => view.item === item).map(view => {
-    const { atlas } = view;
+    const { frames } = view;
     const resource = view.image.src;
     if (view.action.kind === "media.thumbnail") {
       return <span aria-hidden="true" key={view.action.kind} className="nle-clip-media still"
@@ -167,15 +188,9 @@ export function TimelineMedia({ views, item, start, frameWidth }: {
     return <span aria-hidden="true" key={view.action.kind}
       className={audio ? "nle-clip-media waveform" : "nle-clip-media"}
       style={{ left, width }}>
-      {atlas === undefined ? <img src={resource} alt=""/> : atlas.samples.map(({ tile }, index) => {
-        const column = tile % atlas.columns, row = Math.floor(tile / atlas.columns);
-        const x = atlas.columns === 1 ? 0 : column / (atlas.columns - 1) * 100;
-        const y = atlas.rows === 1 ? 0 : row / (atlas.rows - 1) * 100;
-        return <span key={index} style={{
-          backgroundImage: `url("${resource}")`, backgroundSize: `${atlas.columns * 100}% ${atlas.rows * 100}%`,
-          backgroundPosition: `${x}% ${y}%`,
-        }}/>;
-      })}
+      {frames === undefined ? <img src={resource} alt=""/> : frames.map((frame, index) => (
+        <span key={index} style={{ backgroundImage: `url("${frame.src}")` }}/>
+      ))}
     </span>;
   });
 }
