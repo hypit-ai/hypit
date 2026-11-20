@@ -312,7 +312,8 @@
 .nle-track-insertion { left: 0; right: 0; height: var(--nle-guide-thickness); margin-top: calc(var(--nle-guide-thickness) / -2); }
 .nle-snap-line { top: 0; bottom: 0; width: var(--nle-guide-thickness); margin-left: calc(var(--nle-guide-thickness) / -2); }
 .nle-clip { --clip: #1f4c51; position: absolute; top: 0; bottom: 0; overflow: hidden; border: 1px solid transparent; border-radius: 4px; background: var(--clip); color: #fff; cursor: grab; touch-action: none; }
-.nle-clip[data-clip-id] { overflow: visible; background-clip: padding-box; border-left-color: var(--clip); }
+.nle-clip[data-clip-id] { overflow: visible; background: transparent; }
+.nle-clip[data-clip-id]::before { content: ""; position: absolute; inset: 0 0 0 -1px; border-radius: 3px; background: var(--clip); pointer-events: none; }
 .nle-clip-content { position: absolute; inset: 0; overflow: hidden; border-radius: 3px; }
 .nle-clip.visual { --clip: #1f4c51; }
 .nle-clip.audio { --clip: #1c4f4a; }
