@@ -167,6 +167,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
     ? Math.max(1, viewport.width - timelineEndPadding) * fps / (4 * lastClipEnd) : emptyTimelineMinZoom;
   const maxZoom = Math.max(defaultMaxZoom, 4 * minZoom);
   const { zoom, zoomPosition, changeZoom, changeZoomPosition, stepZoom } = useTimelineZoom(scroller, labelWidth, JSON.stringify([session.project.name, session.project.document, scene.composition]), minZoom, maxZoom);
+  const [atTimelineStart, setAtTimelineStart] = useState(true);
+  useLayoutEffect(() => setAtTimelineStart((scroller.current?.scrollLeft ?? 0) <= 0), []);
   const pixels = zoom / fps;
   const mediaViews = useTimelineMedia(scroller, session, pixels, labelWidth);
   const width = Math.max(viewport.width, (scene.maximumFrame + Math.ceil(fps * 15)) * pixels + timelineEndPadding);
@@ -355,7 +357,8 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
         <IconButton label="放大" disabled={zoom >= maxZoom} onClick={() => stepZoom(1)}><CirclePlus size={18} strokeWidth={1.6}/></IconButton>
       </div>
     </div>
-    <motion.div layoutScroll data-frame-pixels={pixels} data-snap={snap} className={`nle-timeline-scroll${tool === "cut" ? " cut-mode" : tool === "left" || tool === "right" ? " direction-mode" : ""}`} ref={scroller} onPointerDown={event => {
+    <motion.div layoutScroll data-frame-pixels={pixels} data-snap={snap} data-at-start={atTimelineStart} className={`nle-timeline-scroll${tool === "cut" ? " cut-mode" : tool === "left" || tool === "right" ? " direction-mode" : ""}`} ref={scroller}
+      onScroll={event => setAtTimelineStart(event.currentTarget.scrollLeft <= 0)} onPointerDown={event => {
       if (tool === "select") marquee.start(event);
       else if ((tool === "left" || tool === "right") && !(event.target as Element).closest(".nle-clip,.nle-track-label,.nle-ruler,button")) {
         const bounds = event.currentTarget.getBoundingClientRect(); onSelect(directionalSelection(scene, Math.max(0, Math.round((event.clientX - bounds.left - labelWidth + event.currentTarget.scrollLeft) / pixels)), tool));
@@ -426,16 +429,20 @@ export function Timeline({ session, frame, selection, busy, onSeek, onSelect, on
                   onPointerMove={event => {
               if (tool !== "cut" || busy || track.locked) return; const at = item.startFrame + Math.round((event.clientX - event.currentTarget.getBoundingClientRect().left) / pixels); setCutCursor(item.affordances.split && at > item.startFrame && at < item.startFrame + item.durationFrames ? { track: track.id, frame: at } : undefined);
             }} onPointerLeave={() => setCutCursor(undefined)}>
-              <span className="nle-clip-title"><span className="nle-clip-chip">{item.group && <Group size={11}/>} {scene.mattes.some(matte => matte.content === item.id || matte.matte === item.id) && <Link2 size={11}/>} {item.source === "composition" && <Layers size={11}/>} {item.display.title}</span>{kind !== "text" && <span className="nle-clip-chip">{timecode(current.duration, fps)}</span>}</span>
-              {preview?.kind === "preview" && preview.state === "ready" && <span className="nle-clip-thumbnails"><img src={preview.resource} style={{ left: 0, width: "100%" }}/></span>}
-              {item.source === "media"
-                && <TimelineMedia views={mediaViews} item={item.id} start={current.start} frameWidth={pixels}/>}
-              {text?.kind === "text" && <span className="nle-clip-text">{text.text}</span>}
-              {trimRanges[item.id]?.start && <div className="nle-trim start" aria-label="裁剪开头" onPointerDown={event => begin(event, item, "trim-start", track)}/>} {trimRanges[item.id]?.end && <div className="nle-trim end" aria-label="裁剪结尾" onPointerDown={event => begin(event, item, "trim-end", track)}/>}<div className={`nle-cut-line${tool === "cut" && cutCursor?.track === track.id && cutCursor.frame >= item.startFrame && cutCursor.frame <= item.startFrame + item.durationFrames ? " visible" : ""}`} style={{ left: ((cutCursor?.frame ?? item.startFrame) - item.startFrame) * pixels }}/>
-              {timing !== undefined && selectedProcess !== undefined && <ProcessTimingHandle key={`${timing.medium}:${timing.id}`}
-                timing={timing} duration={current.duration} pixels={pixels} disabled={busy || track.locked}
-                onSelect={() => onSelectProcess(selectedProcess)}
-                onResize={durationFrames => onProcessTiming({ kind: "process.timing", ...selectedProcess, edge: timing.edge, durationFrames })}/>}
+              <div className="nle-clip-content">
+                <span className="nle-clip-title"><span className="nle-clip-chip">{item.group && <Group size={11}/>} {scene.mattes.some(matte => matte.content === item.id || matte.matte === item.id) && <Link2 size={11}/>} {item.source === "composition" && <Layers size={11}/>} {item.display.title}</span>{kind !== "text" && <span className="nle-clip-chip">{timecode(current.duration, fps)}</span>}</span>
+                {preview?.kind === "preview" && preview.state === "ready" && <span className="nle-clip-thumbnails"><img src={preview.resource} style={{ left: 0, width: "100%" }}/></span>}
+                {item.source === "media"
+                  && <TimelineMedia views={mediaViews} item={item.id} start={current.start} frameWidth={pixels}/>}
+                {text?.kind === "text" && <span className="nle-clip-text">{text.text}</span>}
+                <div className={`nle-cut-line${tool === "cut" && cutCursor?.track === track.id && cutCursor.frame >= item.startFrame && cutCursor.frame <= item.startFrame + item.durationFrames ? " visible" : ""}`} style={{ left: ((cutCursor?.frame ?? item.startFrame) - item.startFrame) * pixels }}/>
+                {timing !== undefined && selectedProcess !== undefined && <ProcessTimingHandle key={`${timing.medium}:${timing.id}`}
+                  timing={timing} duration={current.duration} pixels={pixels} disabled={busy || track.locked}
+                  onSelect={() => onSelectProcess(selectedProcess)}
+                  onResize={durationFrames => onProcessTiming({ kind: "process.timing", ...selectedProcess, edge: timing.edge, durationFrames })}/>}
+              </div>
+              {trimRanges[item.id]?.start && <div className="nle-trim start" aria-label="裁剪开头" onPointerDown={event => begin(event, item, "trim-start", track)}/>}
+              {trimRanges[item.id]?.end && <div className="nle-trim end" aria-label="裁剪结尾" onPointerDown={event => begin(event, item, "trim-end", track)}/>}
             </motion.div></ClipMenu>; })}</AnimatePresence>
             <AnimatePresence initial={false}>{scene.transitions.flatMap(transition => {
               const outgoing = sceneItems.get(transition.outgoing), incoming = sceneItems.get(transition.incoming);
