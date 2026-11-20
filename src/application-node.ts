@@ -23,6 +23,7 @@ import {
 } from "@hypit/html-video-local";
 
 import { canvasProjectAdapter } from "./canvas-project.js";
+import { openCanvasTimeline } from "./canvas-timeline.js";
 
 export * from "@hypit/application/node";
 export {
@@ -60,7 +61,7 @@ export function openNodeHypitApplication(
       deliveryExecutor: video,
       frameExecutor: video,
       ...(options.localHtmlVideo === undefined ? {} : { mediaTools: options.localHtmlVideo }),
-    }), createCanvasStudioProductProvider(options.localHtmlVideo), ...(options.products ?? [])],
+    }), createCanvasStudioProductProvider({ ...options.localHtmlVideo, openTimeline: openCanvasTimeline }), ...(options.products ?? [])],
     ...(options.execution === undefined ? {} : { execution: options.execution }),
     ...(options.closeExecution === undefined ? {} : { closeExecution: options.closeExecution }),
   });

@@ -1,10 +1,11 @@
 import { fadeMotion, popupMotion } from './motion.js';
-import { Fragment, useEffect, useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 import { Background, BackgroundVariant, NodeToolbar, Position, ViewportPortal, useStore } from '@xyflow/react';
 import type { LucideIcon } from 'lucide-react';
 import type { SnapGuide } from './snapping.js';
+import { t } from './locale.js';
 
 const zoomOf = (state: { transform: [number, number, number] }) => state.transform[2];
 
@@ -38,7 +39,9 @@ export function SnapGuides({ guides }: { guides: SnapGuide[] }) {
 export type AddNodeItem = { key: string; label: string; detail?: string; icon: LucideIcon; disabled?: boolean; separatorBefore?: boolean; run(): void };
 
 /** The add-node menu opens with its corner at the point it was asked for, kept 8px inside the window. */
-export function AddNodeMenu({ x, y, title, items, empty, onClose }: { x: number; y: number; title: string; items: AddNodeItem[]; empty: string; onClose(): void }) {
+export function AddNodeMenu({ x, y, title, items, empty, onClose, filterable = false }: { x: number; y: number; title: string; items: AddNodeItem[]; empty: string; onClose(): void; filterable?: boolean }) {
+  const [query, setQuery] = useState("");
+  const rows = items.filter(item => (item.label + " " + (item.detail ?? "")).toLowerCase().includes(query.trim().toLowerCase()));
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const element = ref.current;
@@ -73,20 +76,22 @@ export function AddNodeMenu({ x, y, title, items, empty, onClose }: { x: number;
   return createPortal(<motion.div ref={ref} role="menu" aria-label={title} className="graph-add-menu" style={{ left: x, top: y }}
     {...popupMotion(null)}>
     <div className="graph-add-menu-title">{title}</div>
+    {filterable && <input className="canvas-process-search" type="search" value={query} onChange={event => setQuery(event.target.value)}
+      placeholder={t("Search models", "搜索模型")} aria-label={t("Search models", "搜索模型")}/>}
     <div className="graph-add-menu-items">
-      {items.map(item => <Fragment key={item.key}>{item.separatorBefore && <div role="separator" className="graph-add-menu-separator"/>}<div role="menuitem" tabIndex={item.disabled ? -1 : 0} aria-disabled={item.disabled || undefined} title={item.detail ?? item.label}
+      {rows.map(item => <Fragment key={item.key}>{item.separatorBefore && <div role="separator" className="graph-add-menu-separator"/>}<div role="menuitem" tabIndex={item.disabled ? -1 : 0} aria-disabled={item.disabled || undefined} title={item.detail ?? item.label}
         className="graph-add-menu-item" onClick={() => { if (!item.disabled) item.run(); }}
         onKeyDown={event => { if ((event.key === 'Enter' || event.key === ' ') && !item.disabled) { event.preventDefault(); item.run(); } }}>
-        <item.icon size={16}/><span>{item.label}</span>
+        <item.icon size={16}/><span>{item.label}{filterable && item.detail && <small>{item.detail}</small>}</span>
       </div></Fragment>)}
-      {!items.length && <div role="menuitem" aria-disabled="true" className="graph-add-menu-item"><span>{empty}</span></div>}
+      {!rows.length && <div role="menuitem" aria-disabled="true" className="graph-add-menu-item"><span>{empty}</span></div>}
     </div>
   </motion.div>, document.body);
 }
 
 /** Actions for the single selected node, centred 36px above its card. */
 export function NodeActions({ nodeId, hidden, children }: { nodeId: string; hidden: boolean; children: ReactNode }) {
-  return <NodeToolbar nodeId={nodeId} isVisible position={Position.Top} offset={36} className="graph-node-actions-host nodrag nopan">
+  return <NodeToolbar nodeId={nodeId} isVisible position={Position.Top} offset={36} style={{ zIndex: 21 }} className="graph-node-actions-host nodrag nopan">
     <motion.div className="graph-node-actions" role="toolbar" {...fadeMotion(hidden)}
       style={{ pointerEvents: hidden ? 'none' : undefined }}>{children}</motion.div>
   </NodeToolbar>;

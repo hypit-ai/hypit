@@ -88,3 +88,16 @@ strong { font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .canvas-loading svg { animation: none; } }
 .graph-catalog > button > .reference-thumbnail { flex: 0 0 36px; display: grid; place-items: center; }
 .graph-catalog .canvas-catalog-title { flex: 1; }
+.canvas-dialog-actions, .canvas-result-choice { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.canvas-result-choice { justify-content: space-between; border-top: 1px solid var(--border); padding: 8px 0; animation: var(--enter); }
+.canvas-result-choice small { display: block; color: var(--muted); }
+.canvas-replacement { display: grid; gap: 6px; border-top: 1px solid var(--border); padding-top: 10px; }
+.canvas-replacement ul { color: var(--muted); }
+.canvas-timeline-fields { display: grid; gap: 10px; }
+.canvas-timeline-time { display: flex; align-items: center; justify-content: space-between; color: var(--muted); }
+.canvas-dialog-form .canvas-inline-checkbox { display: flex; align-items: center; gap: 7px; }
+.canvas-inline-checkbox input { width: auto; margin: 0; accent-color: var(--pink); }
+.canvas-process-search { width: calc(100% - 16px); margin: 4px 8px 6px; }
+.graph-add-menu:has(.canvas-process-search) { width: 260px; }
+.graph-add-menu:has(.canvas-process-search) .graph-add-menu-item { height: auto; min-height: 42px; }
+.graph-add-menu-item small { display: block; color: var(--muted); line-height: 1.3; }

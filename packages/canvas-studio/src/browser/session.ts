@@ -4,6 +4,7 @@ import type { InvocationAddress } from "@hypit/execution";
 import type {
   CanvasAdoptionReceipt, CanvasAdoptionRequest, CanvasCancelReceipt, CanvasCommandReceipt, CanvasInvokeReceipt, CanvasObservation,
   CanvasObservationRequest, CanvasPreviewReceipt, CanvasPreviewRequest, CanvasQuoteReceipt, CanvasQuoteRequest, CanvasStudioEvent,
+  CanvasTimelineRequest, CanvasTimelineResponse,
 } from "../protocol.js";
 import { t } from "./locale.js";
 import { nodeSize, nodeTitle } from "./wiring.js";
@@ -46,6 +47,8 @@ async function request<Result>(route: string, body: unknown): Promise<Result> {
   if (!response.ok) throw new RequestError(value.error ?? t("Canvas request failed.", "画布请求失败。"), value.code);
   return value;
 }
+
+export function timelineRequest(input: CanvasTimelineRequest) { return request<CanvasTimelineResponse>("timeline", input); }
 
 export function observe(input: CanvasObservationRequest) { return request<CanvasObservation>("observe", input); }
 

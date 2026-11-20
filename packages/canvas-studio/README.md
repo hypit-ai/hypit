@@ -35,4 +35,6 @@ on empty space to add and connect a card in one edit. Select a completed result 
 available when quoting or submitting a downstream recipe.
 
 Open generation history to inspect and cancel runs, choose results, preview or export assets, and add generated media
-to Project Media. Project Media is available in both Canvas and NLE through the shared Project catalog.
+to Project Media. Use **Add to editing** on a Media card or generated result to place it in a composition
+and track of a saved project editing document. A generated result is adopted into Project Media before placement.
+Project Media is available in both Canvas and NLE through the shared Project catalog.

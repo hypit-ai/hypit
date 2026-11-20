@@ -114,6 +114,8 @@ export type OpenNleStudioProductSessionOptions = {
   readonly project: ProjectHost;
   readonly document: string;
   readonly viewDocument?: string;
+  /** Seed the session view from a saved arrangement. */
+  readonly initialViewDocument?: string;
   readonly frameExecutor?: HtmlFrameExecutor;
   readonly playbackExecutor?: HtmlVideoExecutor;
   readonly mediaViews?: LocalMediaToolchainOptions;
@@ -279,13 +281,16 @@ export class NleStudioProductSession {
     const projectLease = await openNodeNleProject(options.project, options.document);
     let viewLease: ProjectDocumentLease<NleViewService> | undefined;
     try {
-      viewLease = options.viewDocument === undefined
-        ? undefined
-        : await openNodeNleView(options.project, options.viewDocument);
-      const viewService = viewLease?.service
-        ?? openNleViewService(sessionView(projectLease.service, projectLease.path));
+      const viewPath = options.viewDocument ?? options.initialViewDocument;
+      viewLease = viewPath === undefined ? undefined : await openNodeNleView(options.project, viewPath);
       if (viewLease !== undefined) {
-        await assertViewDocumentTarget(options.project, projectLease.path, viewLease.path, viewService);
+        await assertViewDocumentTarget(options.project, projectLease.path, viewLease.path, viewLease.service);
+      }
+      const viewService = viewLease === undefined ? openNleViewService(sessionView(projectLease.service, projectLease.path))
+        : options.viewDocument === undefined ? openNleViewService(viewLease.service.snapshot().view) : viewLease.service;
+      if (options.viewDocument === undefined && viewLease !== undefined) {
+        viewLease.close();
+        viewLease = undefined;
       }
       const packages = createNleStudioPackageBridge(projectContext.packages);
       const surface = openNleEditingSurface(projectLease.service, viewService, {

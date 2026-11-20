@@ -5,6 +5,7 @@ import type { InvocationAddress } from "@hypit/execution";
 import type { CanvasModel } from "../protocol.js";
 import { fieldLabel, MediaPreview, usePreview } from "./presentation.js";
 import { adopt, cancel, commit, invoke, notify, observe, preview, report, selectionIs, type History, type Recipe } from "./session.js";
+import { publicationPlacement, type PlacementSource } from "./PlaceMediaDialog.js";
 import { Dialog, IconButton, t } from "./ui.js";
 
 export type RunEntries = History["entries"];
@@ -50,11 +51,13 @@ function displayEntry(node: Recipe, model: CanvasModel | undefined, entries: Run
   return entries.toReversed().map(run => {
     const outputs: Entry[] = !("publication" in run) ? [] : Object.entries(run.publication?.outputs ?? {}).flatMap(([output, value]) => {
       const target = Object.entries(model?.outputs ?? {}).filter(([, expected]) => expected.type === value.type);
-      const port = target.find(([name]) => name === output)?.[0] ?? (target.length === 1 ? target[0]?.[0] : undefined);
-      const resources = Object.entries(value.resources);
-      return (resources.length ? resources.map(([resource, info]) => ({
-        name: resource, mediaType: info.mediaType, selection: { address: run.address, output, resource }, output: port,
-      })) : [{ name: output, selection: { address: run.address, output }, output: port }]) satisfies Entry[];
+      const port = target.find(([name]) => name === output) ?? (target.length === 1 ? target[0] : undefined);
+      const resources: Entry[] = Object.entries(value.resources).map(([resource, info]) => ({
+        name: resource, mediaType: info.mediaType, selection: { address: run.address, output, resource },
+        output: port?.[1].media && info.mediaType.startsWith(port[1].media + "/") ? port[0] : undefined,
+      }));
+      return !resources.length || port?.[1].media === undefined && port !== undefined
+        ? [{ name: output, selection: { address: run.address, output }, output: port?.[0] }, ...resources] : resources;
     });
     return { run, outputs, key: node.id + "/" + runKey(run.address) };
   });
@@ -66,16 +69,20 @@ function CandidatePreview({ node, entry, thumbnail = false }: { node: string; en
     : <span className="candidate-media-fallback">{error || (entry.mediaType?.startsWith("video/") ? <Film size={20}/> : <Image size={20}/>)}</span>;
 }
 
-export function RunHistory({ node, model, document: board, entries, revision, busy, refresh }: {
+export function RunHistory({ node, model, document: board, entries, revision, busy, refresh, onPlace }: {
   node: Recipe; model?: CanvasModel | undefined; document: CanvasDocument; entries: RunEntries;
-  revision: string; busy: boolean; refresh: () => void;
+  revision: string; busy: boolean; refresh: () => void; onPlace: (source: PlacementSource) => void;
 }) {
   const [viewer, setViewer] = useState<string>();
   const [attach, setAttach] = useState(false);
   const [adoption, setAdoption] = useState<Entry>();
   const results = board.results[node.id];
   const runs = displayEntry(node, model, entries);
-  const candidates = runs.flatMap(item => item.outputs).filter(entry => entry.selection.resource !== undefined);
+  const outputs = runs.flatMap(item => item.outputs);
+  const playable = (entry: Entry) => publicationPlacement(entry.name, node.id, entry.selection, entry.mediaType) !== undefined;
+  const candidates = outputs.filter(playable);
+  const unavailableChoices = Object.entries(results?.selected ?? {}).filter(([output, selection]) =>
+    !outputs.some(entry => entry.output === output && selectionIs(selection, entry.selection)));
   const itemKey = (entry: Entry) => JSON.stringify(entry.selection);
   const viewerIndex = candidates.findIndex(entry => itemKey(entry) === viewer);
   const viewed = candidates[viewerIndex];
@@ -97,18 +104,33 @@ export function RunHistory({ node, model, document: board, entries, revision, bu
       anchor.click();
     } catch (error) { report(error); }
   }
-  const actionButtons = (entry: Entry) => <div className="canvas-run-actions">
-    {entry.output && <button type="button" className="button" disabled={busy} onClick={() => choose(entry)}>
-      <Check size={14}/>{selectionIs(results?.selected[entry.output], entry.selection) ? t("Clear choice", "取消选用") : t("Use output", "选用结果")}
-    </button>}
-    {entry.selection.resource && <><button type="button" className="button" onClick={() => void download(entry)}><Download size={14}/>{t("Export asset", "导出素材")}</button>
-      {/^(image|audio|video)\//u.test(entry.mediaType ?? "") && <button type="button" className="button" disabled={busy} onClick={() => setAdoption(entry)}>{t("Add to Project Media", "加入项目素材")}</button>}</>}
-  </div>;
+  const actionButtons = (entry: Entry) => {
+    const source = publicationPlacement(entry.name, node.id, entry.selection, entry.mediaType);
+    return <div className="canvas-run-actions">
+      {entry.output && <button type="button" className="button" disabled={busy} onClick={() => choose(entry)}>
+        <Check size={14}/>{selectionIs(results?.selected[entry.output], entry.selection) ? t("Clear choice", "取消选用") : t("Use output", "选用结果")}
+      </button>}
+      {source && <>
+        <button type="button" className="button" onClick={() => void download(entry)}><Download size={14}/>{t("Export asset", "导出素材")}</button>
+        <button type="button" className="button" disabled={busy} onClick={() => setAdoption(entry)}>{t("Add to Project Media", "加入项目素材")}</button>
+        <button type="button" className="button" disabled={busy} onClick={() => { setViewer(undefined); onPlace(source); }}>
+          <Film size={14}/>{t("Add to editing", "加入剪辑")}
+        </button>
+      </>}
+    </div>;
+  };
   return <section className="graph-candidates canvas-run-history">
     <div className="candidate-gallery-heading"><strong>{t("Generation history", "生成记录")}</strong>
       <IconButton label={t("Refresh history", "刷新记录")} onClick={refresh}><RefreshCw size={14}/></IconButton>
       <IconButton label={t("Attach invocation", "附上任务")} disabled={busy} onClick={() => setAttach(true)}><Plus size={15}/></IconButton>
     </div>
+    {unavailableChoices.map(([output, selection]) => <div className="canvas-result-choice" key={output}>
+      <span>{fieldLabel(output)} / {selection.resource ?? fieldLabel(selection.output)}<small>{t("Selected result unavailable", "已选结果不可用")}</small></span>
+      <button type="button" className="button" disabled={busy}
+        onClick={() => void commit([{ kind: "result.clear", node: node.id, output }], revision).catch(() => {})}>
+        {t("Clear choice", "取消选用")}
+      </button>
+    </div>)}
     {runs.length === 0 && <p className="candidate-empty">{t("Results appear here after you generate.", "生成结果会显示在这里。")}</p>}
     {runs.map(({ run, outputs, key }) => {
       const issue = "issue" in run ? run.issue : run.observation?.failure?.message;
@@ -126,7 +148,7 @@ export function RunHistory({ node, model, document: board, entries, revision, bu
         <div className="candidate-grid">{outputs.map(entry => {
           const selected = entry.output !== undefined && selectionIs(results?.selected[entry.output], entry.selection);
           return <div key={itemKey(entry)} className="canvas-candidate">
-            {entry.selection.resource ? <button type="button" className="candidate-tile" aria-label={entry.name} onClick={() => setViewer(itemKey(entry))}>
+            {playable(entry) ? <button type="button" className="candidate-tile" aria-label={entry.name} onClick={() => setViewer(itemKey(entry))}>
               <span className="candidate-tile-media"><CandidatePreview node={node.id} entry={entry} thumbnail/></span>
               {selected && <span className="candidate-selected"><Check size={12}/>{t("In use", "已选用")}</span>}<span className="candidate-resource-name">{entry.name}</span>
             </button> : <strong>{entry.name}</strong>}

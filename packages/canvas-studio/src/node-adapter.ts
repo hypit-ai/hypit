@@ -143,6 +143,7 @@ export const canvasStudioNodeProductAdapter: NodeApplicationProductAdapter = {
         case "/api/invocations/cancel": send(response, 200, await canvas.cancel(await json(request))); break;
         case "/api/adoptions": send(response, 201, await canvas.adopt(await json(request), signal)); break;
         case "/api/media/import": send(response, 201, await receiveMedia(session, request, url.searchParams.get("name") ?? "", signal)); break;
+        case "/api/timeline": send(response, 200, await session.timeline(await json(request))); break;
         case "/api/resources": send(response, 200, await session.createPreview(await json(request))); break;
         default: return false;
       }

@@ -6,17 +6,19 @@ import { Menu } from "@base-ui/react/menu";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent as ReactMouseEvent } from "react";
 import {
-  ArrowLeft, Box, Copy, GitBranch, Group, Hand, Images, MousePointer2, Plus, Redo2, RefreshCw, SlidersHorizontal,
-  Trash2, Undo2, Upload, X,
+  ArrowLeft, Box, Copy, Film, GitBranch, Group, Hand, Images, MousePointer2, Plus, Redo2, RefreshCw, SlidersHorizontal,
+  Trash2, Workflow, Undo2, Upload, X,
 } from "lucide-react";
 import type { CanvasCommand, CanvasDocument, CanvasNode, CanvasValue } from "@hypit/canvas";
 import { ArrivalLayer, announceArrival } from "./ArrivalLayer.js";
 import { ConnectionPreview, ConnectionPreviewContext, PendingConnection, ReferenceEdge, type ReferenceCanvasEdge } from "./CanvasEdges.js";
 import { AddNodeMenu, CanvasDots, CanvasZoom, NodeActions, SnapGuides, type AddNodeItem } from "./CanvasOverlays.js";
-import { Composer, GenerateDialog, bindingCommand, outputsFor, type PickTarget } from "./Composer.js";
+import { Composer, GenerateDialog, bindingCommand, type PickTarget } from "./Composer.js";
 import { FlowLayer } from "./FlowLayer.js";
 import { AssemblyNode, ConnectorMenuContext, ObjectNode, type CanvasGroup, type GroupNode, type ObjectCanvasNode } from "./ObjectNode.js";
 import { useRunEntries } from "./RunHistory.js";
+import { PlaceMediaDialog, publicationPlacement, type PlacementSource } from "./PlaceMediaDialog.js";
+import { RemoveObjectsDialog } from "./RemoveObjectsDialog.js";
 import { ZoomControl, type ZoomCommand } from "./ZoomControl.js";
 import { ReceivingMotion, confirmConnection, rejectConnection, settleSurface } from "./connectionMotion.js";
 import type { ConnectorSide } from "./connectorGlyph.js";
@@ -27,7 +29,7 @@ import { commit, editHistory, importMedia, notify, refresh, report, type Recipe 
 import { resolveSnap, type SnapGuide, type SnapState } from "./snapping.js";
 import { Dialog, IconButton, t } from "./ui.js";
 import { maxZoom, minZoom, viewportCommands, zoomAround, zoomStep, type Rect } from "./viewport.js";
-import { activeFields, connect, disconnect, nodeSize, nodeTitle, resourceField, supplies, wires, type Catalog, type Wire } from "./wiring.js";
+import { activeFields, connect, disconnect, nodeSize, nodeTitle, outputsFor, resourceField, supplies, wires, type Catalog, type Wire } from "./wiring.js";
 import "@xyflow/react/dist/style.css";
 import "./canvas.css";
 
@@ -49,7 +51,7 @@ const mediaDragType = "application/x-hypit-canvas-media";
 
 type BoardView = { viewport?: Viewport | undefined; trace?: string | undefined; groups: CanvasGroup[]; snap?: boolean };
 type Anchor = { id: string; side: ConnectorSide };
-type CreationMenu = { x: number; y: number; at: XYPosition; connector?: Anchor; start?: XYPosition; centred?: boolean };
+type CreationMenu = { x: number; y: number; at: XYPosition; connector?: Anchor; start?: XYPosition; centred?: boolean; process?: boolean };
 type ChoiceMenu = { x: number; y: number; title: string; items: AddNodeItem[]; cancelled?: (() => void) | undefined };
 
 const storageKey = (canvas: string) => "hypit:canvas:" + canvas;
@@ -75,7 +77,8 @@ function bounds(boxes: Area[]): Area | undefined {
 function modelFor(node: Recipe, catalog: Catalog) { return catalog.models.find(model => model.id === node.capability); }
 function inputsFor(node: CanvasNode, catalog: Catalog) {
   const model = "capability" in node ? modelFor(node, catalog) : undefined;
-  return model && "capability" in node ? activeFields(node, model).filter(resourceField) : [];
+  return model && "capability" in node ? activeFields(node, model).filter(field => resourceField(field) || catalog.models.some(candidate =>
+    Object.values(candidate.outputs).some(output => output.media === undefined))) : [];
 }
 function linksFor(board: CanvasDocument, catalog: Catalog, source: CanvasNode, target: CanvasNode) {
   return outputsFor(source, catalog).flatMap(output => inputsFor(target, catalog).flatMap(field => {
@@ -117,6 +120,7 @@ function Canvas({ board, catalog, revision, busy, canUndo, canRedo }: BoardProps
   const [choices, setChoices] = useState<ChoiceMenu>();
   const [pick, setPick] = useState<PickTarget>();
   const [removing, setRemoving] = useState<string[]>();
+  const [placing, setPlacing] = useState<PlacementSource>();
   const [groupName, setGroupName] = useState<string>();
   const [batch, setBatch] = useState<Recipe[]>();
   const [dragging, setDragging] = useState<string>();
@@ -402,11 +406,11 @@ function Canvas({ board, catalog, revision, busy, canUndo, canRedo }: BoardProps
       start: { x: rectangle.x + (anchor.side === "source" ? rectangle.width : 0), y: rectangle.y + rectangle.height / 2 } };
     setConnecting(true);
   }
-  function openConnector(id: string, side: ConnectorSide, x: number, y: number) {
+  function openConnector(id: string, side: ConnectorSide, x: number, y: number, process = false) {
     if (busy || pick) return;
     const rectangle = view.rect([id]);
     if (!rectangle) return;
-    setMenu({ x, y, at: pointOf(x, y), connector: { id, side }, centred: true,
+    setMenu({ x, y, at: pointOf(x, y), connector: { id, side }, centred: true, process,
       start: { x: rectangle.x + (side === "source" ? rectangle.width : 0), y: rectangle.y + rectangle.height / 2 } });
   }
   function endConnector(event: MouseEvent | TouchEvent) {
@@ -579,10 +583,26 @@ function Canvas({ board, catalog, revision, busy, canUndo, canRedo }: BoardProps
   });
 
   const creationCategories = [...categories, { id: "all", icon: Box, label: t("Components", "组件") }] as const;
+  const selectedPlacement = () => {
+    if (!object) return undefined;
+    const name = nodeTitle(object, catalog.models);
+    if ("media" in object) {
+      const asset = catalog.media.entries.find(entry => entry.reference.path === object.media.path);
+      return asset?.state === "available" ? { name, media: asset.reference, picture: asset.picture !== undefined, audio: asset.audio } : undefined;
+    }
+    for (const selection of Object.values(board.results[object.id]?.selected ?? {})) {
+      const run = entries[object.id]?.find(item => item.address.environment === selection.address.environment
+        && item.address.invocation === selection.address.invocation);
+      const resource = run && "publication" in run && selection.resource
+        ? run.publication?.outputs[selection.output]?.resources[selection.resource] : undefined;
+      const source = publicationPlacement(name, object.id, selection, resource?.mediaType);
+      if (source) return source;
+    }
+  };
+  const placeSource = selectedPlacement();
   const filtered = (rail === "media" ? assets : cards.filter(({ model }) => rail === "all" || modelCategory(model)?.id === rail)
     .map(({ node, model }) => ({ node, label: model.title, detail: model.id.split("/").slice(0,2).join("/") })))
     .filter(item => (item.label + " " + item.detail).toLowerCase().includes(query.toLowerCase()));
-  const removeLinks = removing ? links.filter(link => removing.includes(link.source.node) || removing.includes(link.target)) : [];
 
   return <ConnectorMenuContext.Provider value={openConnector}><ConnectionPreviewContext.Provider value={previewEnd}>
     <section ref={section} className={`generation-canvas${pick ? " picking-reference" : ""}${connecting ? " is-connecting" : ""}`}
@@ -696,18 +716,24 @@ function Canvas({ board, catalog, revision, busy, canUndo, canRedo }: BoardProps
           <MousePointer2 size={15}/><span>{t("Select a reference on the canvas", "选择画布上的参考素材")}</span>
           <button type="button" className="button" onClick={() => setPick(undefined)}>{t("Cancel", "取消")}</button>
         </motion.div>}</AnimatePresence>
-        <AnimatePresence>{menu && <AddNodeMenu key="new" x={menu.x} y={menu.y} title={menu.connector ? t("Add node", "添加节点") : t("New node", "新建节点")}
+        <AnimatePresence>{menu && <AddNodeMenu key="new" x={menu.x} y={menu.y} title={menu.process ? t("Process output", "处理输出") : menu.connector ? t("Add node", "添加节点") : t("New node", "新建节点")} filterable={menu.process ?? false}
           items={menuItems} empty={t("Nothing to add", "没有可添加的项")} onClose={() => setMenu(undefined)}/>}
           {choices && <AddNodeMenu key="choices" x={choices.x} y={choices.y} title={choices.title} items={choices.items} empty=""
             onClose={() => { choices.cancelled?.(); setChoices(undefined); }}/>}</AnimatePresence>
         {!pick && object && selectedIds.length === 1 && <NodeActions nodeId={object.id} hidden={dragging === object.id || connecting}>
           <button type="button" className="graph-node-action text" onClick={() => traceInputs(object.id)}><GitBranch size={16}/><span>{t("Trace inputs", "追溯输入")}</span></button>
           <hr className="graph-node-action-divider"/>
+          {outputsFor(object, catalog).length > 0 && <IconButton className="graph-node-action" label={t("Process output", "处理输出")}
+            disabled={busy} onClick={event => { const rect = event.currentTarget.getBoundingClientRect(); openConnector(object.id, "source", rect.left, rect.bottom, true); }}>
+            <Workflow size={16}/>
+          </IconButton>}
+          {placeSource && <IconButton className="graph-node-action" label={t("Add to editing", "加入剪辑")} disabled={busy}
+            onClick={() => setPlacing(placeSource)}><Film size={16}/></IconButton>}
           <IconButton className="graph-node-action" label={t("Delete object", "删除对象")} disabled={busy} onClick={() => setRemoving([object.id])}><Trash2 size={16}/></IconButton>
         </NodeActions>}
         <AnimatePresence>{!pick && !connecting && object && selectedIds.length <= 1 && <Composer key={object.id}
           node={object} catalog={catalog} board={board} revision={revision} entries={entries[object.id] ?? []} refresh={refreshRuns} busy={busy}
-          close={clear} locate={focus} pick={setPick} wire={selectedWire}/>}</AnimatePresence>
+          close={clear} locate={focus} pick={setPick} wire={selectedWire} onPlace={setPlacing}/>}</AnimatePresence>
       </div>
       {groupName !== undefined && <Dialog title={t("Group objects", "组合对象")} close={() => setGroupName(undefined)}>
         <form className="canvas-dialog-form" onSubmit={event => {
@@ -721,14 +747,9 @@ function Canvas({ board, catalog, revision, busy, canUndo, canRedo }: BoardProps
           <button type="submit" className="button primary" disabled={!groupName.trim()}>{t("Save", "保存")}</button>
         </form>
       </Dialog>}
-      {removing && <Dialog title={t("Delete objects", "删除对象")} close={() => setRemoving(undefined)}>
-        <div className="canvas-dialog-form"><ul>{removing.flatMap(id => byId.has(id) ? [<li key={id}>{nodeTitle(byId.get(id)!, catalog.models)}</li>] : [])}</ul>
-          {!!removeLinks.length && <p>{t("Connections to these objects will be removed.", "这些对象的连线也会移除。")}</p>}
-          <button type="button" className="button danger" disabled={busy} onClick={() => {
-            void commit(removing.map(node => ({ kind: "node.remove", node })), revision).then(() => { clear(); setRemoving(undefined); }).catch(() => {});
-          }}><Trash2 size={15}/>{t("Delete", "删除")}</button>
-        </div>
-      </Dialog>}
+      {removing && <RemoveObjectsDialog ids={removing} board={board} catalog={catalog} revision={revision} busy={busy}
+        close={() => setRemoving(undefined)} onRemoved={() => { clear(); setRemoving(undefined); }}/>}
+      {placing && <PlaceMediaDialog source={placing} close={() => setPlacing(undefined)}/>}
       {batch && <GenerateDialog nodes={batch} catalog={catalog} done={refreshRuns} close={() => setBatch(undefined)}/>}
     </section>
   </ConnectionPreviewContext.Provider></ConnectorMenuContext.Provider>;

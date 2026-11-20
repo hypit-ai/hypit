@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { AlertCircle, X } from "lucide-react";
+import { Menu } from "@base-ui/react/menu";
+import { AlertCircle, Check, ChevronDown, X } from "lucide-react";
 import { enterMotion, popupMotion } from "./motion.js";
 
 import { t } from "./locale.js";
@@ -69,4 +70,28 @@ export function DraftField({ value, revision, label, placeholder, multiline, num
       <button type="button" onClick={() => { base.current = { value, revision }; setDraft(value); setError(""); }}>{t("Use current value", "使用当前值")}</button>
     </div>}
   </div>;
+}
+
+type Option = { value: string; label: string };
+
+export function Picker({ label, value, options, onChange, disabled = false }: {
+  label: string; value: string; options: Option[]; onChange: (value: string) => void; disabled?: boolean;
+}) {
+  const trigger = useRef<HTMLButtonElement>(null);
+  const [portal, setPortal] = useState<HTMLElement>();
+  return <Menu.Root modal={false} onOpenChange={open => { if (open) setPortal(trigger.current?.closest("dialog") ?? undefined); }}>
+    <Menu.Trigger ref={trigger} disabled={disabled} className="select-trigger" aria-label={label}>
+      <span>{options.find(option => option.value === value)?.label ?? value}</span><ChevronDown size={13}/>
+    </Menu.Trigger>
+    <Menu.Portal {...(portal ? { container: portal } : {})}><Menu.Positioner className="dropdown-positioner" sideOffset={5} collisionPadding={12}>
+      <Menu.Popup className="dropdown-content dropdown-menu">
+        <Menu.RadioGroup value={value} onValueChange={onChange}>
+          {options.map(option => <Menu.RadioItem key={option.value} value={option.value} closeOnClick
+            className="dropdown-item" aria-current={value === option.value ? "true" : undefined}>
+            <span className="dropdown-item-label">{option.label}</span>{value === option.value && <Check size={14}/>}
+          </Menu.RadioItem>)}
+        </Menu.RadioGroup>
+      </Menu.Popup>
+    </Menu.Positioner></Menu.Portal>
+  </Menu.Root>;
 }

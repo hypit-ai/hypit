@@ -4,7 +4,17 @@ import { CanvasError, identity, readMediaReference, readSelection, record, text 
 import { openNodeCanvas, type NodeCanvas } from "@hypit/canvas/node";
 import type { ProjectHost } from "@hypit/project";
 import { importProjectMedia, openProjectMedia } from "./media.js";
-import { canvasStudioProduct, type CanvasPreviewRequest, type CanvasStudioEvent } from "./protocol.js";
+import { canvasStudioProduct, type CanvasPreviewRequest, type CanvasStudioEvent, type CanvasTimelineResponse } from "./protocol.js";
+
+export type CanvasTimelinePort = {
+  handle(value: unknown): Promise<CanvasTimelineResponse>;
+  close(): Promise<void>;
+};
+
+type CanvasStudioOptions = {
+  readonly ffprobePath?: string;
+  readonly openTimeline?: (project: ProjectHost) => CanvasTimelinePort;
+};
 
 export { canvasStudioProduct } from "./protocol.js";
 
@@ -15,18 +25,27 @@ export class CanvasStudioProductSession {
   readonly #project: ProjectHost;
   readonly canvas: NodeCanvas;
 
-  constructor(project: ProjectHost, canvas: NodeCanvas, private readonly mediaOptions: { readonly ffprobePath?: string } = {}) {
+  readonly #timeline: CanvasTimelinePort | undefined;
+
+  constructor(project: ProjectHost, canvas: NodeCanvas, private readonly mediaOptions: CanvasStudioOptions = {}) {
     this.#project = project;
     this.canvas = canvas;
+    this.#timeline = mediaOptions.openTimeline?.(project);
   }
 
   get closed(): AbortSignal { return this.#lifetime.signal; }
 
-  close(): void {
+  async close(): Promise<void> {
     this.#lifetime.abort();
     this.#previews.clear();
     this.#tokens.clear();
     this.canvas.close();
+    await this.#timeline?.close();
+  }
+
+  timeline(value: unknown) {
+    if (!this.#timeline) throw new CanvasError("editing-unavailable", "Timeline placement is unavailable in this Application.");
+    return this.#timeline.handle(value);
   }
 
   subscribe(listener: (event: CanvasStudioEvent) => void): () => void {
@@ -70,7 +89,7 @@ export class CanvasStudioProductSession {
   }
 }
 
-export function createCanvasStudioProductProvider(options: { readonly ffprobePath?: string } = {}): ApplicationProductProvider {
+export function createCanvasStudioProductProvider(options: CanvasStudioOptions = {}): ApplicationProductProvider {
   return {
     product: canvasStudioProduct,
     title: "Canvas",

@@ -1,58 +1,28 @@
 import { useEffect, useRef, useState } from "react";
 import { Menu } from "@base-ui/react/menu";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowUp, Check, ChevronDown, GitBranch, GripVertical, History, MousePointer2, Plus, Settings2, Unlink, X } from "lucide-react";
+import { ArrowUp, GitBranch, GripVertical, History, MousePointer2, Plus, Settings2, Unlink, X } from "lucide-react";
 import type { CanvasBinding, CanvasCommand, CanvasDocument, CanvasNode, CanvasValue } from "@hypit/canvas";
 import type { JsonValue } from "@hypit/execution";
 import type { CanvasModel, CanvasQuoteReceipt } from "../protocol.js";
 import { NodePanel } from "./NodePanel.js";
 import { GenerationSettings } from "./GenerationSettings.js";
+import type { PlacementSource } from "./PlaceMediaDialog.js";
 import { RunHistory, type RunEntries } from "./RunHistory.js";
 import { expandMotion, popupMotion } from "./motion.js";
 import { cardIcon, fieldLabel, mediaName, MediaPreview, MediaThumbnail, usePreview } from "./presentation.js";
 import { commit, invoke, notify, observe, quote, report, type Recipe } from "./session.js";
-import { Dialog, DraftField, IconButton, t, zh } from "./ui.js";
-import { activeFields, disconnect, nodeSize, nodeTitle, resourceField, supplies, values, type Catalog, type Wire } from "./wiring.js";
+import { Dialog, DraftField, IconButton, Picker, t, zh } from "./ui.js";
+import { activeFields, disconnect, inputCommand, nodeSize, nodeTitle, outputsFor, resourceField, supplies, values, type Catalog, type Wire } from "./wiring.js";
 
 type Field = CanvasModel["fields"][number];
-type Option = { value: string; label: string };
 export type PickTarget = { node: string; field: string; index?: number };
-
-function Picker({ label, value, options, onChange, disabled = false }: {
-  label: string; value: string; options: Option[]; onChange: (value: string) => void; disabled?: boolean;
-}) {
-  const trigger = useRef<HTMLButtonElement>(null);
-  const [portal, setPortal] = useState<HTMLElement>();
-  return <Menu.Root modal={false} onOpenChange={open => { if (open) setPortal(trigger.current?.closest("dialog") ?? undefined); }}>
-    <Menu.Trigger ref={trigger} disabled={disabled} className="select-trigger" aria-label={label}>
-      <span>{options.find(option => option.value === value)?.label ?? value}</span><ChevronDown size={13}/>
-    </Menu.Trigger>
-    <Menu.Portal {...(portal ? { container: portal } : {})}><Menu.Positioner className="dropdown-positioner" sideOffset={5} collisionPadding={12}>
-      <Menu.Popup className="dropdown-content dropdown-menu">
-        <Menu.RadioGroup value={value} onValueChange={onChange}>
-          {options.map(option => <Menu.RadioItem key={option.value} value={option.value} closeOnClick
-            className="dropdown-item" aria-current={value === option.value ? "true" : undefined}>
-            <span className="dropdown-item-label">{option.label}</span>{value === option.value && <Check size={14}/>}
-          </Menu.RadioItem>)}
-        </Menu.RadioGroup>
-      </Menu.Popup>
-    </Menu.Positioner></Menu.Portal>
-  </Menu.Root>;
-}
-
-export function inputCommand(node: string, input: string, binding?: CanvasBinding): CanvasCommand {
-  return binding === undefined ? { kind: "input.clear", node, input } : { kind: "input.set", node, input, binding };
-}
 
 export function bindingCommand(node: Recipe, field: Field, value: CanvasValue, index?: number) {
   if (field.kind !== "resources") return inputCommand(node.id, field.name, value);
   const next = [...values(node.inputs[field.name])];
   next[index ?? next.length] = value;
   return inputCommand(node.id, field.name, { items: next });
-}
-
-export function outputsFor(node: CanvasNode, catalog: Catalog) {
-  return "media" in node ? ["media"] : Object.keys(catalog.models.find(model => model.id === node.capability)?.outputs ?? {});
 }
 
 export function referenceOptions(board: CanvasDocument, catalog: Catalog, target: string, field: Field) {
@@ -272,18 +242,18 @@ export function GenerateDialog({ nodes, catalog, done, close }: { nodes: Recipe[
   </Dialog>;
 }
 
-export function Composer({ node, board, catalog, entries, revision, busy, close, locate, pick, refresh, wire }: {
+export function Composer({ node, board, catalog, entries, revision, busy, close, locate, pick, refresh, wire, onPlace }: {
   node: CanvasNode; board: CanvasDocument; catalog: Catalog; entries: RunEntries; revision: string; busy: boolean;
-  close: () => void; locate: (id: string) => void; pick: (target: PickTarget) => void; refresh: () => void; wire?: Wire | undefined;
+  close: () => void; locate: (id: string) => void; pick: (target: PickTarget) => void; refresh: () => void; wire?: Wire | undefined; onPlace: (source: PlacementSource) => void;
 }) {
   return <NodePanel nodeId={node.id}>{"media" in node ? <MediaInspector node={node} board={board} catalog={catalog} revision={revision} close={close}/>
     : <RecipeComposer node={node} board={board} catalog={catalog} entries={entries} revision={revision} busy={busy}
-      close={close} locate={locate} pick={pick} refresh={refresh} wire={wire}/>}</NodePanel>;
+      close={close} locate={locate} pick={pick} refresh={refresh} wire={wire} onPlace={onPlace}/>}</NodePanel>;
 }
 
-function RecipeComposer({ node, board, catalog, entries, revision, busy, close, locate, pick, refresh, wire }: {
+function RecipeComposer({ node, board, catalog, entries, revision, busy, close, locate, pick, refresh, wire, onPlace }: {
   node: Recipe; board: CanvasDocument; catalog: Catalog; entries: RunEntries; revision: string; busy: boolean;
-  close: () => void; locate: (id: string) => void; pick: (target: PickTarget) => void; refresh: () => void; wire?: Wire | undefined;
+  close: () => void; locate: (id: string) => void; pick: (target: PickTarget) => void; refresh: () => void; wire?: Wire | undefined; onPlace: (source: PlacementSource) => void;
 }) {
   const [history, setHistory] = useState(false);
   const [advanced, setAdvanced] = useState(false);
@@ -293,7 +263,7 @@ function RecipeComposer({ node, board, catalog, entries, revision, busy, close, 
   const fields = model ? activeFields(node, model) : [];
   const references = fields.filter(resourceField);
   const prompts = fields.filter(field => field.kind === "text" && /prompt|^(text|description)$/i.test(field.name));
-  const settingFields = fields.filter(field => /^(mode|aspectRatio|resolution|size|duration|quality|width|height|model)$/u.test(field.name));
+  const settingFields = fields.filter(field => !values(node.inputs[field.name]).some(item => "from" in item) && /^(mode|aspectRatio|resolution|size|duration|quality|width|height|model)$/u.test(field.name));
   const otherFields = fields.filter(field => !references.includes(field) && !prompts.includes(field) && !settingFields.includes(field));
   const value = (field: Field) => {
     const binding = node.inputs[field.name];
@@ -335,14 +305,20 @@ function RecipeComposer({ node, board, catalog, entries, revision, busy, close, 
       <button type="button" className="button" onClick={() => locate(linked.node)}><GitBranch size={14}/>{linked.node}</button>
       <IconButton label={t("Disconnect reference", "断开引用")} onClick={() => void commit([inputCommand(node.id, field.name)], revision).catch(() => {})}><Unlink size={14}/></IconButton>
     </div>;
+    const optionsForReference = referenceOptions(board, catalog, node.id, field);
+    const picker = optionsForReference.length > 0 && <ReferencePicker title={t("Link input", "关联输入") + " / " + fieldLabel(field.name)}
+      options={optionsForReference} choose={value => void commit([bindingCommand(node, field, value)], revision).catch(() => {})}
+      pick={() => pick({ node: node.id, field: field.name })}/>;
     if (field.kind === "choice" || field.kind === "boolean") {
       const options = field.kind === "choice" ? (field.choices ?? []).map(choice => ({ value: choice, label: fieldLabel(choice) }))
         : [{ value: "true", label: t("Yes", "是") }, { value: "false", label: t("No", "否") }];
-      return <Picker label={fieldLabel(field.name)} value={value(field)} options={[{ value: "", label: t("Default", "默认") }, ...options]}
-        onChange={next => void write(field, next, revision).catch(() => {})}/>;
+      return <div className="graph-reference-input"><Picker label={fieldLabel(field.name)} value={value(field)}
+        options={[{ value: "", label: t("Default", "默认") }, ...options]}
+        onChange={next => void write(field, next, revision).catch(() => {})}/>{picker}</div>;
     }
-    return <DraftField label={fieldLabel(field.name)} value={value(field)} revision={revision} multiline={multiline}
-      numeric={field.kind === "number"} placeholder={multiline ? fieldLabel(field.name) : undefined} onSave={(next, at) => write(field, next, at)}/>;
+    return <div className="graph-reference-input"><DraftField label={fieldLabel(field.name)} value={value(field)} revision={revision}
+      multiline={multiline} numeric={field.kind === "number"} placeholder={multiline ? fieldLabel(field.name) : undefined}
+      onSave={(next, at) => write(field, next, at)}/>{picker}</div>;
   };
   useEffect(() => { if (wire) setHistory(false); }, [wire]);
   return <motion.section className={`generation-composer${history ? " graph-inspector" : ""}`} aria-label={tip}
@@ -353,7 +329,7 @@ function RecipeComposer({ node, board, catalog, entries, revision, busy, close, 
       <IconButton label={t("Close", "关闭")} onClick={close}><X size={15}/></IconButton>
     </div></header>
     <div className="generation-composer-scroll">
-      {history ? <RunHistory node={node} model={model} document={board} entries={entries} revision={revision} busy={busy} refresh={refresh}/>
+      {history ? <RunHistory node={node} model={model} document={board} entries={entries} revision={revision} busy={busy} refresh={refresh} onPlace={onPlace}/>
         : <div className="generation-compose-form">
           {wire && <div className="graph-reference-heading">
             <button type="button" className="button" onClick={() => locate(wire.source.node)}><GitBranch size={14}/>{fieldLabel(wire.source.output)} / {fieldLabel(wire.input)}</button>
