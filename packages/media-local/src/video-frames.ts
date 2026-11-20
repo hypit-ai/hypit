@@ -27,7 +27,7 @@ export async function indexLocalVideoFrames(input: {
     maxLineBytes: 8192,
     ...(input.signal === undefined ? {} : { signal: input.signal }),
     onLine(line) {
-      const frame = /^frame\|best_effort_timestamp=(-?\d+)(?:\||$)/u.exec(line);
+      const frame = /^frame\|best_effort_timestamp=(-?\d+)(?:\||side_data\||$)/u.exec(line);
       if (frame !== null) {
         const tick = BigInt(frame[1]!);
         const previous = timestamps.at(-1);

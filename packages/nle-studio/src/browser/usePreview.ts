@@ -13,11 +13,12 @@ export function usePreview(input: {
   const project = session?.status.projectRevision;
   const view = session?.status.viewRevision;
   const maximum = session?.timeline.scene.maximumFrame ?? 0;
+  const hasTimedItems = session?.timeline.scene.tracks.some(track => track.items.length > 0) ?? false;
   const rate = session?.timeline.scene.editRate;
   const framesPerSecond = rate === undefined ? 0 : rate.numerator / rate.denominator;
   const available = session?.preview.state === "available";
   const generation = session?.preview.state === "available" ? session.preview.generation : undefined;
-  const playback = session?.preview.state === "available" && session.preview.playback;
+  const playback = hasTimedItems && session?.preview.state === "available" && session.preview.playback;
   const [state, setState] = useState<NleStudioActionObservation>();
   const [failure, setFailure] = useState<string>();
   const starts = useRef<Promise<unknown>>(Promise.resolve());
@@ -25,7 +26,7 @@ export function usePreview(input: {
   useEffect(() => {
     setState(undefined);
     setFailure(undefined);
-    if (!available || blocked || composition === undefined || project === undefined || view === undefined
+    if (!available || !hasTimedItems || blocked || composition === undefined || project === undefined || view === undefined
       || maximum < 1 || (playing && !playback)) return;
     let active = true;
     let latest: NleStudioActionObservation | undefined;
@@ -63,7 +64,7 @@ export function usePreview(input: {
         void cancelAction(latest.handle).catch(() => undefined);
       }
     };
-  }, [available, generation, playback, composition, project, view, atFrame, playing, blocked, maximum, framesPerSecond]);
+  }, [available, hasTimedItems, generation, playback, composition, project, view, atFrame, playing, blocked, maximum, framesPerSecond]);
 
   return { state, failure, playback };
 }
