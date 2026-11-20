@@ -25,8 +25,14 @@ hypit canvas open generation/opening.canvas.json
 hypit canvas catalog generation/opening.canvas.json --json
 ```
 
-Use **Add card**, or double-click blank space, to search the installed model palette and Project Media. Move or resize cards directly. Moving cards snaps to nearby edges and centres. Use the hand tool or middle mouse button to pan, and the zoom controls to frame the board. Card placement is saved with the document; the camera and current selection belong to the open tab.
+Use the tool rail or double-click empty space to add a model or place Project Media on the board. Import local media
+from the rail or drop files onto the canvas. Use search to locate a card and double-click it to trace its inputs.
+Drag cards to move them, use the resize handle on the selected card, and use the hand tool or middle mouse button
+to pan. Card placement is saved with the document. The viewport and groups are browser view settings.
 
-Drag between compatible ports to link cards. Dropping a port on blank space offers compatible new cards and saves the card and its connection together. Select a wire to disconnect it, or edit inputs by name in **Parameters**. Select an exact completed result on the source card before using its output in a downstream quote or Invocation.
+Select a card to open its composer. Edit inputs there, drag connectors between compatible cards, or drop a connector
+on empty space to add and connect a card in one edit. Select a completed result on an upstream card to make it
+available when quoting or submitting a downstream recipe.
 
-**Results** shows attached Invocations and their published outputs. Preview a media resource, select it for downstream use, or adopt it into Project Media. The board previews image and video Media cards and explicitly selected image or video results. Adopted Media is available to Canvas and NLE through the shared Project catalog.
+Open generation history to inspect and cancel runs, choose results, preview or export assets, and add generated media
+to Project Media. Project Media is available in both Canvas and NLE through the shared Project catalog.

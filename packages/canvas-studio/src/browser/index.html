@@ -3,35 +3,8 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Canvas · Hypit</title>
+    <title>Hypit Canvas</title>
     <script type="module" src="./main.tsx"></script>
   </head>
-  <body>
-    <header class="masthead">
-      <div class="product"><span class="product-icon" aria-hidden="true">◇</span> Hypit Canvas</div>
-      <span class="divider" aria-hidden="true"></span>
-      <h1 id="board-name">Opening canvas…</h1>
-      <span id="save-state" role="status"></span>
-    </header>
-    <div id="notice" class="notice" role="status" hidden></div>
-    <main class="workspace">
-      <section class="board-pane" aria-label="Canvas board">
-        <div class="toolbar">
-          <button id="add-card" class="primary" disabled>+ Add card</button>
-          <p class="board-hint">Drag between ports to connect cards</p>
-          <button id="refresh" class="refresh">Refresh</button>
-        </div>
-        <div class="board-area">
-          <div id="viewport" class="viewport" aria-label="Card workspace"></div>
-          <div id="empty" class="empty" hidden>
-            <h2>This canvas is empty</h2>
-            <p id="empty-copy">Add a model or Project Media to start.</p>
-          </div>
-        </div>
-      </section>
-      <aside class="side" aria-label="Card inspector">
-        <div id="inspector" class="inspector"><p>Select a card to edit its inputs and results.</p></div>
-      </aside>
-    </main>
-  </body>
+  <body><div id="root"></div></body>
 </html>

@@ -150,6 +150,12 @@ export function viewportCommands(flow: () => Flow | null, element: () => HTMLEle
   };
   const view = () => flow()?.getViewport();
   return {
+    rect,
+    /** The canvas rectangle in view now, used as the origin of a later `reveal`. */
+    origin() {
+      const current = view(), safe = area();
+      return current && safe ? visibleCanvas(current, safe) : undefined;
+    },
     zoomTo(zoom: number, point = centre()) {
       const current = view();
       return current ? move(zoomAround(current, point, zoom)) : false;
@@ -173,6 +179,10 @@ export function viewportCommands(flow: () => Flow | null, element: () => HTMLEle
       }
       return move(incrementalFit(target, origin ?? visibleCanvas(current, safe), safe, current), true);
     },
+    locate(ids: readonly string[]) {
+      const current = view(), safe = area(), target = rect(ids);
+      return current && safe && target ? move(locateContent(target, safe, current)) : false;
+    },
     /** An activated node keeps its toolbar, `above` screen pixels over its card, in view. */
     activate(id: string, above = 0) {
       const current = view(), safe = area(), target = rect([id]);
@@ -183,3 +193,4 @@ export function viewportCommands(flow: () => Flow | null, element: () => HTMLEle
     },
   };
 }
+export type ViewportCommands = ReturnType<typeof viewportCommands>;

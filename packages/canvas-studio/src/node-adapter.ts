@@ -1,5 +1,7 @@
-import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
+import { createReadStream, createWriteStream } from "node:fs";
+import { mkdtemp, rm, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { pipeline } from "node:stream/promises";
 import { serveApplicationEventStream, type NodeApplicationProductAdapter } from "@hypit/application/node";
@@ -29,7 +31,7 @@ function send(response: ServerResponse, status: number, body: unknown): void {
 }
 
 async function sendStatic(response: ServerResponse, pathname: string): Promise<boolean> {
-  const file = pathname === "/" ? "index.html" : /^\/assets\/[\w.-]+\.(?:js|css)$/u.test(pathname) ? pathname.slice(1) : undefined;
+  const file = pathname === "/" ? "index.html" : /^\/assets\/[\w.-]+\.(?:js|css|woff2)$/u.test(pathname) ? pathname.slice(1) : undefined;
   if (file === undefined) return false;
   const path = new URL("./browser/" + file, import.meta.url);
   const info = await stat(path).catch((error: NodeJS.ErrnoException) => {
@@ -37,9 +39,10 @@ async function sendStatic(response: ServerResponse, pathname: string): Promise<b
     throw error;
   });
   if (info === undefined) return false;
-  const mediaType = file.endsWith(".html") ? "text/html" : file.endsWith(".css") ? "text/css" : "text/javascript";
+  const mediaType = file.endsWith(".html") ? "text/html; charset=utf-8" : file.endsWith(".css") ? "text/css; charset=utf-8"
+    : file.endsWith(".woff2") ? "font/woff2" : "text/javascript; charset=utf-8";
   response.writeHead(200, {
-    "content-type": mediaType + "; charset=utf-8",
+    "content-type": mediaType,
     "content-length": info.size,
     "cache-control": "no-store",
     "referrer-policy": "no-referrer",
@@ -104,9 +107,22 @@ async function sendPreview(request: IncomingMessage, response: ServerResponse, s
   else await pipeline(selected === undefined ? source.bytes : slice(source.bytes, selected), response);
 }
 
+async function receiveMedia(session: CanvasStudioProductSession, request: IncomingMessage, name: string, signal: AbortSignal) {
+  if (!name.trim()) throw new CanvasError("missing-filename", "Media import requires a filename.");
+  const directory = await mkdtemp(join(tmpdir(), "hypit-canvas-media-"));
+  const sourcePath = join(directory, "upload");
+  try {
+    await pipeline(request, createWriteStream(sourcePath, { flags: "wx" }), { signal });
+    if (!(await stat(sourcePath)).size) throw new CanvasError("empty-media", "The uploaded Media file is empty.");
+    return await session.importMedia({ sourcePath, sourceName: name }, signal);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
 export const canvasStudioNodeProductAdapter: NodeApplicationProductAdapter = {
   product: canvasStudioProduct,
-  async handle({ request, response, session, pathname, signal }) {
+  async handle({ request, response, session, pathname, url, signal }) {
     if (!(session instanceof CanvasStudioProductSession)) throw new Error("Canvas adapter requires a Canvas Product Session.");
     try {
       if (request.method === "GET" && pathname === "/api/events") {
@@ -126,6 +142,7 @@ export const canvasStudioNodeProductAdapter: NodeApplicationProductAdapter = {
         case "/api/invocations": send(response, 202, await canvas.invoke(await json(request), signal)); break;
         case "/api/invocations/cancel": send(response, 200, await canvas.cancel(await json(request))); break;
         case "/api/adoptions": send(response, 201, await canvas.adopt(await json(request), signal)); break;
+        case "/api/media/import": send(response, 201, await receiveMedia(session, request, url.searchParams.get("name") ?? "", signal)); break;
         case "/api/resources": send(response, 200, await session.createPreview(await json(request))); break;
         default: return false;
       }

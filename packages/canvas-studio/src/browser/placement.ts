@@ -1,10 +1,22 @@
-/** Place a new card near the requested point, keeping a margin around existing cards. */
-export const cardSize = { width: 236, height: 154 };
-type Box = { x: number; y: number; width: number; height: number };
+/**
+ * Where new nodes go so they do not cover existing ones. Each rule starts from a preferred spot and, when that
+ * overlaps something, steps away from it:
+ * - `placeAround` (the left rail): centred on a point; tries eight directions in 24px steps (200 steps in all)
+ *   and keeps the spot reached in the fewest steps. Other nodes count with a 12px margin.
+ * - `placeRightOf` (a node made from another's output): 80px right of the source, top-aligned, then as above.
+ * - `placeLeftOf` (a node made for another's input): 80px left of the target, centred on it, stepping up, down
+ *   or left; other nodes count with an 80px margin.
+ * - `placeRightward` (a node dropped at the end of a connection from an output): moves right past whatever it
+ *   covers, keeping 80px from it. `placeFrom` with `before` does the same for one feeding an input, stepping as
+ *   `placeLeftOf` does.
+ * - `pasteOffset`: copies land 20px down and right, then 40px further for each edge they share with a node they cover.
+ */
+export type Box = { x: number; y: number; width: number; height: number };
 type Size = { width: number; height: number };
 type Step = { x: number; y: number };
 
 const all: Step[] = [{ x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }, { x: -1, y: 1 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: -1 }, { x: 1, y: -1 }];
+const beforeTarget: Step[] = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: -1, y: 1 }];
 
 const overlaps = (a: Box, b: Box) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 const pad = (boxes: Box[], margin: number) => boxes.map(box => ({ x: box.x - margin, y: box.y - margin, width: box.width + 2 * margin, height: box.height + 2 * margin }));
@@ -44,3 +56,42 @@ function nearestFree(box: Box, obstacles: Box[], directions: Step[], size = 24, 
 export function placeAround(centre: { x: number; y: number }, size: Size, obstacles: Box[]) {
   return nearestFree({ x: centre.x - size.width / 2, y: centre.y - size.height / 2, ...size }, pad(obstacles, 12), all);
 }
+
+/** A box already positioned (a drop point), moved to the nearest free spot; `before` keeps it left of its target. */
+export function placeFrom(box: Box, obstacles: Box[], before = false) {
+  return before ? nearestFree(box, pad(obstacles, 80), beforeTarget) : nearestFree(box, pad(obstacles, 12), all);
+}
+
+export function placeRightOf(source: Box, size: Size, obstacles: Box[]) {
+  return nearestFree({ x: source.x + source.width + 80, y: source.y, ...size }, pad(obstacles, 12), all);
+}
+
+export function placeLeftOf(target: Box, size: Size, obstacles: Box[]) {
+  return nearestFree({ x: target.x - 80 - size.width, y: target.y + (target.height - size.height) / 2, ...size }, pad(obstacles, 80), beforeTarget);
+}
+
+export function placeRightward(at: { x: number; y: number }, size: Size, obstacles: Box[]) {
+  const box = { ...at, ...size }, widened = obstacles.map(obstacle => ({ ...obstacle, width: obstacle.width + 80 }));
+  const found = directional(box, widened, { x: 1, y: 0 }, Math.max(1, widened.length));
+  return found ? shift(box, found.dx, 0) : box;
+}
+
+/** The offset for pasted copies whose originals span `frame`. */
+export function pasteOffset(frame: Box, obstacles: Box[]) {
+  let dx = 20, dy = 20;
+  for (let round = 0; round < 100; round++) {
+    const box = shift(frame, dx, dy);
+    let sameColumn = false, sameRow = false;
+    for (const obstacle of obstacles) {
+      if (!overlaps(box, obstacle)) continue;
+      sameColumn ||= Math.abs(box.x - obstacle.x) < 10 || Math.abs(box.x + box.width - (obstacle.x + obstacle.width)) < 10;
+      sameRow ||= Math.abs(box.y - obstacle.y) < 10 || Math.abs(box.y + box.height - (obstacle.y + obstacle.height)) < 10;
+    }
+    if (!sameColumn && !sameRow) break;
+    if (sameColumn) dx += 40;
+    if (sameRow) dy += 40;
+  }
+  return { x: dx, y: dy };
+}
+
+export const cardSize = { width: 320, height: 320 };

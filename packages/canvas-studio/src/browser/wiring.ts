@@ -1,13 +1,25 @@
 import type { CanvasBinding, CanvasCommand, CanvasDocument, CanvasNode, CanvasSource, CanvasValue } from "@hypit/canvas";
 import type { Connection } from "@xyflow/react";
 import type { CanvasModel, CanvasObservation } from "../protocol.js";
-import { filename } from "./dom.js";
+import { cardSize } from "./placement.js";
 
 export type Catalog = Extract<CanvasObservation, { kind: "catalog" }>;
 type Recipe = Extract<CanvasNode, { capability: string }>;
 type Field = CanvasModel["fields"][number];
 export type Wire = { source: CanvasSource; target: string; input: string; index: number };
-export type PortOrigin = { node: string; port: string; side: "source" | "target" };
+
+export function filename(path: string) { return (path.split("/").at(-1) ?? path).replace(/\.media\.json$/u, ""); }
+
+export function nodeSize(node: CanvasNode, catalog?: Catalog) {
+  if (!("media" in node) || !catalog) return cardSize;
+  const asset = catalog.media.entries.find(entry => entry.reference.path === node.media.path);
+  if (!asset || asset.state !== "available") return cardSize;
+  const picture = asset.picture;
+  if (!picture) return asset.mediaType.startsWith("audio/") ? { width: cardSize.width, height: 96 } : cardSize;
+  const rotated = picture.rotationDegrees === 90 || picture.rotationDegrees === 270;
+  const ratio = rotated ? picture.codedWidth / picture.codedHeight : picture.codedHeight / picture.codedWidth;
+  return { width: cardSize.width, height: Math.max(96, Math.min(640, cardSize.width * ratio)) };
+}
 
 export function nodeTitle(node: CanvasNode, models: readonly CanvasModel[]) {
   return node.name ?? ("media" in node ? filename(node.media.path) : models.find(model => model.id === node.capability)?.title ?? node.capability);
@@ -74,23 +86,4 @@ export function disconnect(document: CanvasDocument, wire: Wire): CanvasCommand 
       || value.from.node !== wire.source.node || value.from.output !== wire.source.output) return;
   const items = previous.filter((_, index) => index !== wire.index);
   return inputCommand(target, wire.input, "items" in binding && items.length > 0 ? { items } : undefined);
-}
-
-export function creationPorts(document: CanvasDocument, catalog: Catalog, origin: PortOrigin, candidate: CanvasNode) {
-  if (origin.side === "target") {
-    const outputNames = "media" in candidate ? ["media"] : Object.keys(catalog.models.find(model => model.id === candidate.capability)?.outputs ?? {});
-    return outputNames.filter(port => connectNew(document, catalog, origin, candidate, port) !== undefined);
-  }
-  if (!("capability" in candidate)) return [];
-  const model = catalog.models.find(model => model.id === candidate.capability);
-  return model === undefined ? [] : activeFields(candidate, model).filter(resourceField).map(field => field.name)
-    .filter(port => connectNew(document, catalog, origin, candidate, port) !== undefined);
-}
-
-export function connectNew(document: CanvasDocument, catalog: Catalog, origin: PortOrigin, candidate: CanvasNode, port: string) {
-  const fromCandidate = origin.side === "target";
-  return connect({ ...document, nodes: [...document.nodes, candidate] }, catalog, {
-    source: fromCandidate ? candidate.id : origin.node, sourceHandle: fromCandidate ? port : origin.port,
-    target: fromCandidate ? origin.node : candidate.id, targetHandle: fromCandidate ? origin.port : port,
-  });
 }

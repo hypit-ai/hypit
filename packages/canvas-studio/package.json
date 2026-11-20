@@ -14,12 +14,18 @@
     "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.browser.json && vite build"
   },
   "dependencies": {
+    "@base-ui/react": "^1.9.0",
+    "@fontsource-variable/hanken-grotesk": "^5.2.0",
     "@hypit/application": "workspace:^0.1.0",
     "@hypit/canvas": "workspace:^0.1.0",
     "@hypit/execution": "workspace:^0.1.0",
+    "@hypit/media": "workspace:^0.1.0",
+    "@hypit/media-asset": "workspace:^0.1.0",
+    "@hypit/media-local": "workspace:^0.1.0",
     "@hypit/project": "workspace:^0.1.0",
     "@xyflow/react": "12.11.1",
     "lucide-react": "^0.468.0",
+    "motion": "^12.23.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

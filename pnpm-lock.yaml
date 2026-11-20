@@ -133,6 +133,12 @@ importers:
 
   packages/canvas-studio:
     dependencies:
+      '@base-ui/react':
+        specifier: ^1.9.0
+        version: 1.9.0(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@fontsource-variable/hanken-grotesk':
+        specifier: ^5.2.0
+        version: 5.3.0
       '@hypit/application':
         specifier: workspace:^0.1.0
         version: link:../application
@@ -142,6 +148,15 @@ importers:
       '@hypit/execution':
         specifier: workspace:^0.1.0
         version: link:../execution
+      '@hypit/media':
+        specifier: workspace:^0.1.0
+        version: link:../media
+      '@hypit/media-asset':
+        specifier: workspace:^0.1.0
+        version: link:../media-asset
+      '@hypit/media-local':
+        specifier: workspace:^0.1.0
+        version: link:../media-local
       '@hypit/project':
         specifier: workspace:^0.1.0
         version: link:../project
@@ -151,6 +166,9 @@ importers:
       lucide-react:
         specifier: ^0.468.0
         version: 0.468.0(react@19.3.1)
+      motion:
+        specifier: ^12.23.0
+        version: 12.43.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react:
         specifier: ^19.2.0
         version: 19.3.1

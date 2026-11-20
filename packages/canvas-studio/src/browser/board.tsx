@@ -1,377 +1,735 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { createRoot } from "react-dom/client";
 import {
-  Background, BaseEdge, Handle, NodeResizeControl, Position, ReactFlow, SelectionMode, ViewportPortal,
-  applyNodeChanges, getBezierPath, useNodesInitialized, useUpdateNodeInternals,
-  type Edge, type EdgeProps, type Node, type NodeProps, type OnNodesChange, type ReactFlowInstance, type XYPosition,
+  applyNodeChanges, ReactFlow, ReactFlowProvider, SelectionMode, useNodesInitialized, ViewportPortal,
+  type NodeChange, type ReactFlowInstance, type Viewport, type XYPosition,
 } from "@xyflow/react";
-import { Film, Focus, Hand, Image, Minus, MousePointer2, Plus, Unlink, X } from "lucide-react";
-import type { CanvasCommand, CanvasDocument, CanvasNode, CanvasPlacement } from "@hypit/canvas";
-import type { CanvasPreviewRequest } from "../protocol.js";
-import { filename, titleFor } from "./dom.js";
-import { cardSize, placeAround } from "./placement.js";
+import { Menu } from "@base-ui/react/menu";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent as ReactMouseEvent } from "react";
+import {
+  ArrowLeft, Box, Copy, GitBranch, Group, Hand, Images, MousePointer2, Plus, Redo2, RefreshCw, SlidersHorizontal,
+  Trash2, Undo2, Upload, X,
+} from "lucide-react";
+import type { CanvasCommand, CanvasDocument, CanvasNode, CanvasValue } from "@hypit/canvas";
+import { ArrivalLayer, announceArrival } from "./ArrivalLayer.js";
+import { ConnectionPreview, ConnectionPreviewContext, PendingConnection, ReferenceEdge, type ReferenceCanvasEdge } from "./CanvasEdges.js";
+import { AddNodeMenu, CanvasDots, CanvasZoom, NodeActions, SnapGuides, type AddNodeItem } from "./CanvasOverlays.js";
+import { Composer, GenerateDialog, bindingCommand, outputsFor, type PickTarget } from "./Composer.js";
+import { FlowLayer } from "./FlowLayer.js";
+import { AssemblyNode, ConnectorMenuContext, ObjectNode, type CanvasGroup, type GroupNode, type ObjectCanvasNode } from "./ObjectNode.js";
+import { useRunEntries } from "./RunHistory.js";
+import { ZoomControl, type ZoomCommand } from "./ZoomControl.js";
+import { ReceivingMotion, confirmConnection, rejectConnection, settleSurface } from "./connectionMotion.js";
+import type { ConnectorSide } from "./connectorGlyph.js";
+import { enterMotion, popupMotion } from "./motion.js";
+import { cardSize, pasteOffset, placeAround, placeFrom, placeLeftOf, placeRightOf, placeRightward, type Box as Area } from "./placement.js";
+import { cardIcon, categories, fieldLabel, mediaName, MediaThumbnail, modelCategory, ObjectSearch, type Category } from "./presentation.js";
+import { commit, editHistory, importMedia, notify, refresh, report, type Recipe } from "./session.js";
 import { resolveSnap, type SnapGuide, type SnapState } from "./snapping.js";
-import { maxZoom, minZoom, viewportCommands, zoomStep } from "./viewport.js";
-import { activeFields, connect, connectNew, creationPorts, disconnect, nodeTitle, resourceField, wires,
-  type Catalog, type PortOrigin, type Wire } from "./wiring.js";
+import { Dialog, IconButton, t } from "./ui.js";
+import { maxZoom, minZoom, viewportCommands, zoomAround, zoomStep, type Rect } from "./viewport.js";
+import { activeFields, connect, disconnect, nodeSize, nodeTitle, resourceField, supplies, wires, type Catalog, type Wire } from "./wiring.js";
 import "@xyflow/react/dist/style.css";
-import "./board.css";
+import "./canvas.css";
 
-type Preview = (input: CanvasPreviewRequest) => Promise<{ url: string; mediaType: string }>;
-type Port = { name: string; connectable: boolean; label: string };
-type CardOption = { key: string; title: string; node: CanvasNode };
-type CardData = {
-  title: string; subtitle: string; prompt: string; media: boolean; inputs: Port[]; outputs: Port[];
-  previewKey?: string; preview: Preview; request: CanvasPreviewRequest;
-  beginResize: () => void; finishResize: (placement: CanvasPlacement) => void;
-};
-type FlowNode = Node<CardData, "card">;
-type ModelEdge = Edge<Wire, "reference">;
-type BoardData = { document: CanvasDocument; revision: string; catalog: Catalog; selected: string | undefined; reveal: string | undefined };
-type BoardActions = {
-  select: (id?: string) => void;
-  commit: (commands: CanvasCommand[], expectedRevision: string) => void;
-  preview: Preview;
-  settled: () => void;
+type FlowNode = ObjectCanvasNode | GroupNode;
+type BoardProps = {
+  board: CanvasDocument;
+  revision: string;
+  catalog: Catalog;
+  busy: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
 };
 
-export class Board {
-  readonly #root = createRoot(window.document.getElementById("viewport")!);
-  readonly #actions: BoardActions;
-  #data: BoardData | undefined;
-  api: { placement: (position?: XYPosition) => CanvasPlacement; openAdd: () => void } | undefined;
-  dragging = false;
-
-  constructor(actions: BoardActions) { this.#actions = actions; }
-
-  update(document: CanvasDocument, revision: string, catalog: Catalog, selected?: string, reveal?: string) {
-    this.#data = { document, revision, catalog, selected, reveal };
-    this.#render();
-  }
-
-  select(selected?: string) {
-    if (this.#data === undefined || this.#data.selected === selected) return;
-    this.#data = { ...this.#data, selected, reveal: undefined };
-    this.#render();
-  }
-
-  placement(position?: XYPosition): CanvasPlacement { return this.api?.placement(position) ?? { x: 0, y: 0 }; }
-  openAdd() { this.api?.openAdd(); }
-
-  #render() {
-    if (this.#data !== undefined) this.#root.render(<CanvasBoard {...this.#data} actions={this.#actions} board={this} />);
-  }
-}
-
-function CardPreview({ previewKey, preview, request }: Pick<CardData, "previewKey" | "preview" | "request">) {
-  const anchor = useRef<HTMLDivElement>(null);
-  const [resource, setResource] = useState<Awaited<ReturnType<Preview>>>();
-  // A card without a selected Publication stays a recipe. Load only previews that scroll into view.
-  useEffect(() => {
-    if (previewKey === undefined || anchor.current === null) return;
-    let active = true;
-    const observer = new IntersectionObserver(entries => {
-      if (!entries.some(entry => entry.isIntersecting)) return;
-      observer.disconnect();
-      void preview(request).then(value => { if (active) setResource(value); }).catch(() => {});
-    });
-    observer.observe(anchor.current);
-    return () => { active = false; observer.disconnect(); };
-  }, [previewKey, preview, request]);
-  return <div className="canvas-card-preview" ref={anchor}>
-    {resource?.mediaType.startsWith("image/") ? <img src={resource.url} alt="" draggable={false} />
-      : resource?.mediaType.startsWith("video/") ? <video src={resource.url} preload="metadata" muted playsInline aria-hidden="true" />
-      : <div className="canvas-preview-placeholder" aria-hidden="true"><Image size={24} /></div>}
-  </div>;
-}
-
-function Card({ id, data, selected }: NodeProps<FlowNode>) {
-  const updatePorts = useUpdateNodeInternals();
-  const portSignature = JSON.stringify([data.inputs.map(item => item.name), data.outputs.map(item => item.name)]);
-  useEffect(() => { updatePorts(id); }, [id, portSignature, updatePorts]);
-  // Keep the preview request stable through unrelated layout and input changes.
-  const request = useMemo(() => data.request, [data.previewKey, id]);
-  return <article className="canvas-card" data-kind={data.media ? "media" : "recipe"}>
-    <header className="canvas-card-heading"><strong>{data.title}</strong><small>{data.subtitle}</small></header>
-    <div className="canvas-card-body">
-      {data.previewKey !== undefined ? <CardPreview key={data.previewKey} previewKey={data.previewKey} preview={data.preview} request={request} />
-        : <div className="canvas-card-copy"><Film size={19} aria-hidden="true" /><p>{data.prompt || "No selected result"}</p></div>}
-    </div>
-    {([ ["target", Position.Left, data.inputs], ["source", Position.Right, data.outputs] ] as const).flatMap(([type, side, ports]) => (
-      ports.map((port, index) => <Handle key={type + port.name} id={port.name} className="canvas-port nodrag"
-        type={type} position={side} isConnectable={port.connectable} title={port.label} aria-label={port.label}
-        style={{ top: `${28 + 64 * (index + 0.5) / ports.length}%` }} />)
-    ))}
-    {selected && <NodeResizeControl className="canvas-resize" position="bottom-right" minWidth={160} minHeight={96}
-      onResizeStart={data.beginResize} onResizeEnd={(_, placement) => data.finishResize(placement)} />}
-  </article>;
-}
-
-function ReferenceEdge({ id, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, markerEnd }: EdgeProps<ModelEdge>) {
-  const [path] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, curvature: 0.35 });
-  return <BaseEdge id={id} path={path} {...(markerEnd === undefined ? {} : { markerEnd })} />;
-}
-
-const nodeTypes = { card: Card };
+const nodeTypes = { object: ObjectNode, assembly: AssemblyNode };
 const edgeTypes = { reference: ReferenceEdge };
-const selectionKeys = ["Meta", "Control", "Shift"];
-const selectPan = [1, 2];
-const handPan = [0, 1, 2];
+const multiSelection = ["Meta", "Control", "Shift"];
+const groupTopInset = 76;
+const mediaDragType = "application/x-hypit-canvas-media";
 
-function round(value: number) { return Math.round(value * 100) / 100; }
-function position({ x, y }: XYPosition) { return { x: round(x), y: round(y) }; }
+type BoardView = { viewport?: Viewport | undefined; trace?: string | undefined; groups: CanvasGroup[]; snap?: boolean };
+type Anchor = { id: string; side: ConnectorSide };
+type CreationMenu = { x: number; y: number; at: XYPosition; connector?: Anchor; start?: XYPosition; centred?: boolean };
+type ChoiceMenu = { x: number; y: number; title: string; items: AddNodeItem[]; cancelled?: (() => void) | undefined };
 
-function CanvasBoard({ document, revision, catalog, selected, reveal, actions, board }: BoardData & { actions: BoardActions; board: Board }) {
-  const container = useRef<HTMLDivElement>(null);
-  const instance = useRef<ReactFlowInstance<FlowNode, ModelEdge> | null>(null);
-  const [nodes, setNodes] = useState<FlowNode[]>([]);
-  const [activeWire, setActiveWire] = useState<string>();
-  const [hand, setHand] = useState(false);
-  const [flowReady, setFlowReady] = useState(false);
-  const [zoom, setZoom] = useState(1);
-  const [guides, setGuides] = useState<SnapGuide[]>([]);
-  const [menu, setMenu] = useState<{ x: number; y: number; at: XYPosition; origin?: PortOrigin }>();
-  const [search, setSearch] = useState("");
-  const snap = useRef<SnapState>({});
-  const moved = useRef(new Map<string, XYPosition>());
-  const framed = useRef(false);
-  const lastReveal = useRef<string | undefined>(undefined);
-  const view = useMemo(() => viewportCommands(() => instance.current, () => container.current), []);
-  const links = useMemo(() => wires(document), [document]);
-  const edges = useMemo<ModelEdge[]>(() => links.map(wire => {
-    const id = JSON.stringify([wire.source.node, wire.source.output, wire.target, wire.input, wire.index]);
-    return { id, type: "reference", data: wire, source: wire.source.node, sourceHandle: wire.source.output,
-      target: wire.target, targetHandle: wire.input, selected: activeWire === id,
-      ariaLabel: `${wire.source.node} ${wire.source.output} to ${wire.target} ${wire.input}` };
-  }), [links, activeWire]);
-
-  const end = (commands: CanvasCommand[]) => {
-    board.dragging = false;
-    actions.commit(commands, revision);
-    actions.settled();
-  };
-
-  useLayoutEffect(() => {
-    if (board.dragging) return;
-    setNodes(current => {
-      const local = new Map(current.map(item => [item.id, item]));
-      const linkedInputs = new Map<string, Set<string>>();
-      const linkedOutputs = new Map<string, Set<string>>();
-      const recordPort = (ports: Map<string, Set<string>>, node: string, port: string) => {
-        const names = ports.get(node);
-        if (names === undefined) ports.set(node, new Set([port]));
-        else names.add(port);
-      };
-      for (const link of links) {
-        recordPort(linkedInputs, link.target, link.input);
-        recordPort(linkedOutputs, link.source.node, link.source.output);
-      }
-      return document.nodes.map(node => {
-        const box = document.layout[node.id]!;
-        const media = "media" in node;
-        const model = media ? undefined : catalog.models.find(model => model.id === node.capability);
-        const inputs = new Map((!media && model !== undefined ? activeFields(node, model) : []).filter(resourceField)
-          .map(field => [field.name, { name: field.name, label: `Input: ${titleFor(field.name)}`, connectable: true }]));
-        const outputs = new Map((media ? ["media"] : Object.keys(model?.outputs ?? {})).map(name =>
-          [name, { name, label: `Output: ${titleFor(name)}`, connectable: media || model?.outputs[name]?.media !== undefined }]));
-        for (const name of linkedInputs.get(node.id) ?? []) if (!inputs.has(name)) inputs.set(name, { name, label: `Input: ${name}`, connectable: false });
-        for (const name of linkedOutputs.get(node.id) ?? []) if (!outputs.has(name)) outputs.set(name, { name, label: `Output: ${name}`, connectable: false });
-        const selectedResource = Object.values(document.results[node.id]?.selected ?? {}).find(item => item.resource !== undefined);
-        const mediaEntry = media ? catalog.media.entries.find(entry => entry.reference.path === node.media.path) : undefined;
-        const previewKey = media ? mediaEntry?.state === "available" ? node.media.path : undefined
-          : selectedResource === undefined ? undefined : JSON.stringify(selectedResource);
-        const prompt = media ? undefined : node.inputs.prompt;
-        return { ...local.get(node.id), id: node.id, type: "card", position: { x: box.x, y: box.y },
-          ariaLabel: nodeTitle(node, catalog.models), width: box.width ?? cardSize.width, height: box.height ?? cardSize.height,
-          selected: node.id === selected || selected !== undefined && local.get(node.id)?.selected === true,
-          data: { title: nodeTitle(node, catalog.models), subtitle: media ? "Project Media" : model?.title ?? node.capability,
-            prompt: prompt !== undefined && "value" in prompt && typeof prompt.value === "string" ? prompt.value : "",
-            media, inputs: [...inputs.values()], outputs: [...outputs.values()], preview: actions.preview,
-            request: { node: node.id, ...(selectedResource === undefined ? {} : { selection: selectedResource }) },
-            ...(previewKey === undefined ? {} : { previewKey }),
-            beginResize: () => { board.dragging = true; },
-            finishResize: next => end([{ kind: "node.resize", node: node.id, width: round(next.width!), height: round(next.height!) }]),
-          } };
-      });
-    });
-  }, [document, revision, catalog, selected, links]);
-
-  useLayoutEffect(() => {
-    board.api = { placement(at) {
-      const element = container.current?.getBoundingClientRect();
-      const centre = at ?? (element === undefined ? undefined : instance.current?.screenToFlowPosition(
-        { x: element.left + element.width / 2, y: element.top + element.height / 2 }));
-      const boxes = document.nodes.map(node => {
-        const box = document.layout[node.id]!;
-        return { ...box, width: box.width ?? cardSize.width, height: box.height ?? cardSize.height };
-      });
-      return position(placeAround(centre ?? { x: 0, y: 0 }, cardSize, boxes));
-    }, openAdd() {
-      const element = container.current?.getBoundingClientRect();
-      if (element === undefined || instance.current === null) return;
-      setSearch("");
-      setMenu({ x: 12, y: 12, at: instance.current.screenToFlowPosition({ x: element.left + element.width / 2, y: element.top + element.height / 2 }) });
-    } };
-  }, [document]);
-
-  const changeNodes: OnNodesChange<FlowNode> = changes => {
-    const movement = changes.flatMap(change => change.type === "position" && change.position !== undefined && change.dragging
-      ? [{ id: change.id, ...change.position }] : []);
-    if (movement.length > 0) {
-      const ids = new Set(movement.map(item => item.id));
-      const subjects = movement.flatMap(item => {
-        const node = nodes.find(node => node.id === item.id);
-        return node === undefined ? [] : [{ ...item, width: node.width ?? cardSize.width, height: node.height ?? cardSize.height }];
-      });
-      const targets = nodes.filter(node => !ids.has(node.id)).map(node => ({ id: node.id, ...node.position,
-        width: node.width ?? cardSize.width, height: node.height ?? cardSize.height }));
-      const result = resolveSnap(subjects, targets, instance.current?.getZoom() ?? 1, snap.current);
-      snap.current = result.state;
-      setGuides(result.guides);
-      for (const item of movement) moved.current.set(item.id, { x: item.x + result.offset.x, y: item.y + result.offset.y });
-      changes = changes.map(change => change.type === "position" && change.dragging && ids.has(change.id)
-        ? { ...change, position: moved.current.get(change.id)! } : change);
-    } else if (board.dragging) {
-      // React Flow reports the raw pointer position once more on release; keep the snapped position.
-      changes = changes.map(change => change.type === "position" && moved.current.has(change.id)
-        ? { ...change, position: moved.current.get(change.id)! } : change);
-    } else {
-      const commands = changes.flatMap((change): CanvasCommand[] => change.type === "position" && change.position !== undefined
-        ? [{ kind: "node.move", node: change.id, ...position(change.position) }] : []);
-      if (commands.length > 0) actions.commit(commands, revision);
-    }
-    setNodes(current => applyNodeChanges(changes, current));
-  };
-
-  function openMenuAt(x: number, y: number, origin?: PortOrigin) {
-    const canvas = container.current?.getBoundingClientRect();
-    if (canvas === undefined || instance.current === null) return;
-    const at = instance.current.screenToFlowPosition({ x, y });
-    setSearch("");
-    setMenu({ x: Math.max(8, Math.min(x - canvas.left, canvas.width - 284)),
-      y: Math.max(8, Math.min(y - canvas.top, canvas.height - 275)), at, ...(origin === undefined ? {} : { origin }) });
-  }
-
-  function openMenu(event: MouseEvent | globalThis.MouseEvent) {
-    event.preventDefault();
-    openMenuAt(event.clientX, event.clientY);
-  }
-
-  const removeLink = () => {
-    const wire = edges.find(edge => edge.id === activeWire)?.data;
-    const edit = wire === undefined ? undefined : disconnect(document, wire);
-    if (edit !== undefined) actions.commit([edit], revision);
-    setActiveWire(undefined);
-  };
-
-  function add(candidate: CanvasNode, port?: string) {
-    const node = { ...candidate, id: ("media" in candidate ? "media-" : "recipe-") + crypto.randomUUID().slice(0, 12) };
-    const commands: CanvasCommand[] = [{ kind: "node.add", node, placement: board.placement(menu?.at) }];
-    if (menu?.origin !== undefined && port !== undefined) {
-      const connection = connectNew(document, catalog, menu.origin, node, port);
-      if (connection === undefined) return;
-      commands.push(connection);
-    }
-    actions.commit(commands, revision);
-    setMenu(undefined);
-  }
-
-  const includesSearch = (title: string) => title.toLowerCase().includes(search.trim().toLowerCase());
-  const choices = (candidates: CardOption[]) => candidates.flatMap<CardOption & { port?: string }>(candidate => {
-    if (menu?.origin === undefined) return includesSearch(candidate.title) ? [candidate] : [];
-    return creationPorts(document, catalog, menu.origin, candidate.node).flatMap(port => {
-      const title = `${candidate.title} · ${titleFor(port)}`;
-      return includesSearch(title) ? [{ ...candidate, title, key: JSON.stringify([candidate.key, port]), port }] : [];
-    });
-  });
-  const draft = { id: "" }; // Menu candidates become real cards only when chosen.
-  const matchingModels = menu === undefined ? [] : choices(catalog.palette.map(model => ({ key: model.id, title: model.title,
-    node: { ...draft, capability: model.id, inputs: {} } })));
-  const matchingMedia = menu === undefined ? [] : choices(catalog.media.entries.flatMap(entry => entry.state === "available"
-    ? [{ key: entry.reference.path, title: filename(entry.reference.path), node: { ...draft, media: entry.reference } }] : []));
-  return <div className="canvas-flow" ref={container}>
-    <ReactFlow<FlowNode, ModelEdge> nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
-      onInit={flow => { instance.current = flow; setFlowReady(true); }} onNodesChange={changeNodes}
-      minZoom={minZoom} maxZoom={maxZoom} panOnScroll zoomOnScroll={false} zoomOnDoubleClick={false}
-      panOnDrag={hand ? handPan : selectPan} selectionOnDrag={!hand} selectionMode={SelectionMode.Partial}
-      multiSelectionKeyCode={selectionKeys} nodesDraggable={!hand} nodeDragThreshold={4} deleteKeyCode={null}
-      elevateEdgesOnSelect onMove={(_, viewport) => setZoom(viewport.zoom)}
-      onPaneClick={() => { actions.select(undefined); setActiveWire(undefined); setMenu(undefined); }}
-      onPaneContextMenu={openMenu} onDoubleClick={event => {
-        if (event.target instanceof Element && event.target.classList.contains("react-flow__pane")) openMenu(event);
-      }}
-      onNodeClick={(_, node) => { actions.select(node.id); setActiveWire(undefined); setMenu(undefined); }}
-      onNodeDoubleClick={(_, node) => view.activate(node.id)}
-      onEdgeClick={(_, edge) => { setActiveWire(edge.id); setMenu(undefined); }}
-      onNodeDragStart={() => { moved.current.clear(); board.dragging = true; setMenu(undefined); }}
-      onNodeDragStop={() => {
-        const commands = [...moved.current.entries()].flatMap(([id, point]): CanvasCommand[] => {
-          const next = position(point);
-          const previous = document.layout[id];
-          return previous?.x === next.x && previous.y === next.y ? [] : [{ kind: "node.move", node: id, ...next }];
-        });
-        moved.current.clear(); snap.current = {}; setGuides([]);
-        end(commands);
-      }}
-      isValidConnection={link => !hand && connect(document, catalog, link) !== undefined}
-      nodesConnectable={!hand} connectOnClick={false}
-      onConnectStart={() => { board.dragging = true; setMenu(undefined); }}
-      onConnect={link => { const edit = connect(document, catalog, link); if (edit !== undefined) actions.commit([edit], revision); }}
-      onConnectEnd={(event, state) => {
-        board.dragging = false;
-        actions.settled();
-        const handle = state.fromHandle;
-        const point = "changedTouches" in event ? event.changedTouches.item(0) : event;
-        if (point === null || state.isValid || handle?.id == null || !window.document.elementFromPoint(point.clientX, point.clientY)
-            ?.classList.contains("react-flow__pane")) return;
-        openMenuAt(point.clientX, point.clientY, { node: handle.nodeId, port: handle.id, side: handle.type });
-      }}
-      proOptions={{ hideAttribution: true }}>
-      <Background gap={20} size={1.2} color="#c9ccd8" />
-      {flowReady && <InitialView ids={nodes.map(node => node.id)} reveal={reveal} framed={framed} lastReveal={lastReveal} view={view} />}
-      <ViewportPortal>{guides.map(guide => <div key={guide.id} aria-hidden="true" className="canvas-guide" style={guide.axis === "x"
-        ? { left: guide.coordinate, top: guide.start, height: guide.end - guide.start, width: 1 / zoom }
-        : { top: guide.coordinate, left: guide.start, width: guide.end - guide.start, height: 1 / zoom }} />)}</ViewportPortal>
-    </ReactFlow>
-    <div className="canvas-nav" aria-label="Canvas navigation">
-      <button type="button" aria-label="Select cards" title="Select cards" aria-pressed={!hand} onClick={() => setHand(false)}><MousePointer2 size={16} /></button>
-      <button type="button" aria-label="Pan canvas" title="Pan canvas" aria-pressed={hand} onClick={() => setHand(true)}><Hand size={16} /></button>
-      <span className="canvas-nav-divider" />
-      <button type="button" aria-label="Zoom out" title="Zoom out" onClick={() => view.zoomBy(1 / zoomStep)}><Minus size={16} /></button>
-      <button className="canvas-zoom" type="button" title="Reset zoom" onClick={() => view.zoomTo(1)}>{Math.round(zoom * 100)}%</button>
-      <button type="button" aria-label="Zoom in" title="Zoom in" onClick={() => view.zoomBy(zoomStep)}><Plus size={16} /></button>
-      <button type="button" aria-label="Fit cards" title="Fit cards" onClick={() => view.fit(nodes.map(node => node.id))}><Focus size={17} /></button>
-      {edges.some(edge => edge.id === activeWire) && <button type="button" title="Disconnect selected wire" onClick={removeLink}><Unlink size={16} />Disconnect</button>}
-    </div>
-    {menu && <div className="canvas-add-menu" role="dialog" aria-label="Add card" style={{ left: menu.x, top: menu.y }}
-      onKeyDown={event => { if (event.key === "Escape") setMenu(undefined); }}>
-      <header><strong>{menu.origin === undefined ? "Add card" : "Add connected card"}</strong><button type="button" aria-label="Close add card" onClick={() => setMenu(undefined)}><X size={16} /></button></header>
-      <input autoFocus type="search" placeholder="Search models and media…" aria-label="Search models and media" value={search} onChange={event => setSearch(event.target.value)} />
-      <div className="canvas-add-options">
-        {matchingModels.length > 0 && <small>Models</small>}
-        {matchingModels.map(model => <button key={model.key} type="button" onClick={() => add(model.node, model.port)}><Film size={15} />{model.title}</button>)}
-        {matchingMedia.length > 0 && <small>Project Media</small>}
-        {matchingMedia.map(entry => <button key={entry.key} type="button" onClick={() => add(entry.node, entry.port)}><Image size={15} />{entry.title}</button>)}
-        {matchingModels.length + matchingMedia.length === 0 && <p className="muted">{menu.origin === undefined
-          ? "No matching models or Project Media." : "No compatible models or Project Media match this port."}</p>}
-      </div>
-    </div>}
-  </div>;
+const storageKey = (canvas: string) => "hypit:canvas:" + canvas;
+function readView(canvas: string): BoardView {
+  try { const value = JSON.parse(localStorage.getItem(storageKey(canvas)) ?? "{}") as BoardView; return { ...value, groups: value.groups ?? [] }; }
+  catch { return { groups: [] }; }
+}
+function persist(canvas: string, view: BoardView) {
+  try { localStorage.setItem(storageKey(canvas), JSON.stringify(view)); } catch {}
 }
 
-function InitialView({ ids, reveal, framed, lastReveal, view }: { ids: string[]; reveal: string | undefined;
-  framed: { current: boolean }; lastReveal: { current: string | undefined }; view: ReturnType<typeof viewportCommands> }) {
+const wireId = (wire: Wire) => JSON.stringify([wire.source.node, wire.source.output, wire.target, wire.input, wire.index]);
+const newId = () => "card-" + crypto.randomUUID();
+const rounded = ({ x, y }: XYPosition) => ({ x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 });
+const boxOf = (node: FlowNode) => ({ id: node.id, ...node.position, width: node.measured?.width ?? node.width ?? cardSize.width,
+  height: node.measured?.height ?? node.height ?? cardSize.height });
+function bounds(boxes: Area[]): Area | undefined {
+  if (!boxes.length) return;
+  const x = Math.min(...boxes.map(box => box.x)), y = Math.min(...boxes.map(box => box.y));
+  return { x, y, width: Math.max(...boxes.map(box => box.x + box.width)) - x, height: Math.max(...boxes.map(box => box.y + box.height)) - y };
+}
+
+function modelFor(node: Recipe, catalog: Catalog) { return catalog.models.find(model => model.id === node.capability); }
+function inputsFor(node: CanvasNode, catalog: Catalog) {
+  const model = "capability" in node ? modelFor(node, catalog) : undefined;
+  return model && "capability" in node ? activeFields(node, model).filter(resourceField) : [];
+}
+function linksFor(board: CanvasDocument, catalog: Catalog, source: CanvasNode, target: CanvasNode) {
+  return outputsFor(source, catalog).flatMap(output => inputsFor(target, catalog).flatMap(field => {
+    const command = connect(board, catalog, { source: source.id, sourceHandle: output, target: target.id, targetHandle: field.name });
+    return command === undefined ? [] : [{ label: fieldLabel(field.name), detail: fieldLabel(output), command }];
+  }));
+}
+
+function upstream(root: string, links: Wire[]) {
+  const nodes = new Set([root]), edges = new Set<string>(), queue = [root];
+  for (const target of queue) for (const wire of links) {
+    if (wire.target !== target) continue;
+    edges.add(wireId(wire));
+    if (nodes.has(wire.source.node)) continue;
+    nodes.add(wire.source.node); queue.push(wire.source.node);
+  }
+  return { nodes, edges };
+}
+
+export function CanvasBoard(props: BoardProps) {
+  return <ReactFlowProvider><Canvas {...props}/></ReactFlowProvider>;
+}
+
+function Canvas({ board, catalog, revision, busy, canUndo, canRedo }: BoardProps) {
+  const reduced = useReducedMotion();
+  const [initial] = useState(() => readView(board.id));
+  const [groups, setGroups] = useState(initial.groups);
+  const [trace, setTrace] = useState(initial.trace);
+  const [snap, setSnap] = useState(initial.snap ?? true);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [inspecting, setInspecting] = useState<string>();
+  const [wire, setWire] = useState<string>();
+  const [tool, setTool] = useState<"select" | "hand">("select");
+  const [importing, setImporting] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [rail, setRail] = useState<Category | "media" | "all">();
+  const [query, setQuery] = useState("");
+  const [menu, setMenu] = useState<CreationMenu>();
+  const [choices, setChoices] = useState<ChoiceMenu>();
+  const [pick, setPick] = useState<PickTarget>();
+  const [removing, setRemoving] = useState<string[]>();
+  const [groupName, setGroupName] = useState<string>();
+  const [batch, setBatch] = useState<Recipe[]>();
+  const [dragging, setDragging] = useState<string>();
+  const [connecting, setConnecting] = useState(false);
+  const [guides, setGuides] = useState<SnapGuide[]>([]);
+  const [nodes, setNodes] = useState<FlowNode[]>([]);
+  const [layoutEpoch, setLayoutEpoch] = useState(0);
+  const [flowReady, setFlowReady] = useState(false);
+  const [locating, setLocating] = useState<{ ids: string[]; fresh?: boolean; origin?: Rect | undefined; first?: boolean }>();
+  const flow = useRef<ReactFlowInstance<FlowNode, ReferenceCanvasEdge> | null>(null);
+  const stage = useRef<HTMLDivElement>(null);
+  const section = useRef<HTMLElement>(null);
+  const viewport = useRef(initial.viewport);
+  const activeRevision = useRef<string | undefined>(undefined);
+  const dragPositions = useRef(new Map<string, XYPosition>());
+  const groupDrag = useRef<{ origin: XYPosition; members: Map<string, XYPosition> } | undefined>(undefined);
+  const snapState = useRef<SnapState>({});
+  const bypassSnap = useRef(false);
+  const connection = useRef<{ anchor: Anchor; point: XYPosition; start: XYPosition; revision: string } | undefined>(undefined);
+  const receiving = useRef(new ReceivingMotion());
+  const clipboard = useRef<{ nodes: CanvasNode[]; layouts: CanvasDocument["layout"] } | undefined>(undefined);
+  const framed = useRef(Boolean(initial.viewport));
+  const view = useMemo(() => viewportCommands(() => flow.current, () => stage.current), []);
   const initialized = useNodesInitialized();
+  const links = useMemo(() => wires(board), [board]);
+  const tracing = trace && board.nodes.some(node => node.id === trace) ? upstream(trace, links) : undefined;
+  const byId = useMemo(() => new Map(board.nodes.map(node => [node.id, node])), [board.nodes]);
+  const object = byId.get(inspecting ?? "");
+  const selectedWire = links.find(link => wireId(link) === wire);
+  const { entries, refresh: refreshRuns } = useRunEntries(board, revision, inspecting);
+
+  function storeView(nextViewport = viewport.current) {
+    persist(board.id, { viewport: nextViewport, groups, trace, snap });
+  }
+  useEffect(() => { storeView(); }, [board.id, groups, trace, snap]);
+
+  function mayPick(node: CanvasNode) {
+    if (!pick || node.id === pick.node) return false;
+    const target = byId.get(pick.node);
+    const field = target && inputsFor(target, catalog).find(field => field.name === pick.field);
+    return field !== undefined && outputsFor(node, catalog).some(output => supplies(node, output, field, catalog));
+  }
+
+  const collapsed = new Map(groups.filter(group => group.collapsed).flatMap(group => group.members.map(id => [id, group.id] as const)));
   useEffect(() => {
-    if (!initialized || ids.length === 0) return;
-    if (reveal !== undefined && ids.includes(reveal) && lastReveal.current !== reveal) {
-      lastReveal.current = reveal;
-      view.reveal([reveal], undefined, !framed.current);
-      framed.current = true;
-    } else if (!framed.current) {
-      view.fit(ids);
-      framed.current = true;
+    if (activeRevision.current !== undefined) return;
+    const cards = board.nodes.map<ObjectCanvasNode>(node => {
+      const position = board.layout[node.id]!;
+      const size = nodeSize(node, catalog);
+      const run = entries[node.id]?.at(-1);
+      const phase = run?.phase;
+      const issue = run && ("issue" in run ? run.issue : run.observation?.failure?.message);
+      return {
+        id: node.id, type: "object", position: { x: position.x, y: position.y }, selected: picked.includes(node.id),
+        width: position.width ?? size.width, height: position.height ?? size.height, hidden: collapsed.has(node.id),
+        ariaLabel: nodeTitle(node, catalog.models),
+        className: [trace === node.id ? "graph-trace-terminal" : tracing?.nodes.has(node.id) ? "graph-trace-member" : tracing ? "graph-trace-ghost" : "",
+          pick ? mayPick(node) ? "graph-pick-eligible" : "graph-pick-ineligible" : ""].join(" "),
+        data: { node, catalog, phase, issue, accepts: inputsFor(node, catalog).length > 0, supplies: outputsFor(node, catalog).length > 0,
+          result: Object.values(board.results[node.id]?.selected ?? {}).find(item => item.resource !== undefined),
+          resizeStart: () => { activeRevision.current = revision; setDragging(node.id); },
+          resizeFinish: size => {
+            const at = activeRevision.current ?? revision;
+            activeRevision.current = undefined; setDragging(undefined);
+            if (size.width !== undefined && size.height !== undefined) void commit(
+              [{ kind: "node.resize", node: node.id, width: size.width, height: size.height }], at).catch(() => setLayoutEpoch(value => value + 1));
+          } },
+      };
+    });
+    const assemblies = groups.flatMap<GroupNode>(group => {
+      const members = group.members.filter(id => byId.has(id));
+      const frame = bounds(members.map(id => ({ ...nodeSize(byId.get(id)!, catalog), ...board.layout[id]! })));
+      if (!frame) return [];
+      return [{ id: group.id, type: "assembly", position: { x: frame.x - 20, y: frame.y - groupTopInset },
+        width: group.collapsed ? cardSize.width : frame.width + 40, height: group.collapsed ? 64 : frame.height + groupTopInset + 35, zIndex: -1,
+        dragHandle: ".graph-assembly header", selectable: false,
+        data: { group: { ...group, members }, toggle: () => {
+          if (!group.collapsed && members.some(id => picked.includes(id))) clear();
+          setGroups(current => current.map(item => item.id === group.id ? { ...item, collapsed: !item.collapsed } : item));
+        }, remove: () => setGroups(current => current.filter(item => item.id !== group.id)) },
+      }];
+    });
+    setNodes([...cards, ...assemblies]);
+  }, [board, catalog, revision, groups, trace, pick, entries, picked, layoutEpoch]);
+
+  const edges: ReferenceCanvasEdge[] = links.flatMap(link => {
+    const id = wireId(link);
+    const source = collapsed.get(link.source.node) ?? link.source.node, target = collapsed.get(link.target) ?? link.target;
+    if (source === target) return [];
+    return [{ id, source, target, type: "reference", selected: wire === id,
+      sourceHandle: source === link.source.node ? "out" : null, targetHandle: target === link.target ? "in" : null,
+      ariaLabel: fieldLabel(link.source.output) + " → " + fieldLabel(link.input),
+      data: { endpointActive: picked.includes(link.source.node) || picked.includes(link.target) || Boolean(tracing?.edges.has(id)) },
+      className: tracing ? tracing.edges.has(id) ? "graph-trace-edge" : "graph-trace-ghost" : "" }];
+  });
+
+  useEffect(() => {
+    if (!flowReady || !initialized) return;
+    if (locating) {
+      const move = locating.fresh ? view.reveal(locating.ids, locating.origin, locating.first, 76) : view.locate(locating.ids);
+      if (move || view.rect(locating.ids)) {
+        setLocating(undefined);
+        if (locating.fresh) announceArrival(locating.ids[0]!);
+      }
+    } else if (!framed.current && nodes.length) {
+      framed.current = true; view.fit(nodes.filter(node => !node.hidden && node.type === "object").map(node => node.id));
     }
-  }, [initialized, ids, reveal, view]);
-  return null;
+  }, [flowReady, initialized, locating, nodes, view]);
+
+  useEffect(() => {
+    const area = section.current;
+    if (!area) return;
+    let frame = 0, delta = 0, point = { x: 0, y: 0 };
+    const wheel = (event: WheelEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || (event.target as Element).closest(".nowheel")) return;
+      const surface = stage.current?.getBoundingClientRect();
+      if (!surface || !stage.current?.contains(event.target as Node)) return;
+      event.preventDefault(); event.stopPropagation();
+      point = { x: event.clientX - surface.left, y: event.clientY - surface.top };
+      delta += event.deltaY * (event.deltaMode === 1 ? 20 : event.deltaMode === 2 ? surface.height : 1);
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const instance = flow.current, current = instance?.getViewport();
+        if (instance && current) void instance.setViewport(zoomAround(current, point, current.zoom * zoomStep ** (-delta / 100)));
+        delta = 0;
+      });
+    };
+    area.addEventListener("wheel", wheel, { capture: true, passive: false });
+    return () => { area.removeEventListener("wheel", wheel, { capture: true }); cancelAnimationFrame(frame); };
+  }, []);
+  useEffect(() => () => receiving.current.cancel(), []);
+
+  function focus(id: string) {
+    setGroups(current => current.map(group => group.collapsed && group.members.includes(id) ? { ...group, collapsed: false } : group));
+    setPicked([id]); setInspecting(id); setWire(undefined); setLocating({ ids: [id] });
+  }
+  function traceInputs(id: string) {
+    const subjects = upstream(id, links).nodes;
+    setGroups(current => current.map(group => group.collapsed && group.members.some(member => subjects.has(member)) ? { ...group, collapsed: false } : group));
+    setTrace(id); setLocating({ ids: [id] });
+  }
+  function clear() { setPicked([]); setInspecting(undefined); setWire(undefined); }
+
+  function positions(changes: NodeChange<FlowNode>[]) {
+    const selections = changes.filter(change => change.type === "select");
+    if (selections.length && !pick) {
+      const current = new Set(picked);
+      for (const change of selections) {
+        if (!byId.has(change.id)) continue;
+        if (change.selected) current.add(change.id); else current.delete(change.id);
+      }
+      const next = [...current];
+      if (next.length !== picked.length || next.some(id => !picked.includes(id))) {
+        setPicked(next);
+        if (next.length === 1) setInspecting(next[0]);
+        else if (next.length === 0) setInspecting(undefined);
+      }
+    }
+    const moves = changes.flatMap(change => change.type === "position" && change.dragging && change.position ? [change] : []);
+    let next = changes;
+    if (moves.length && !groupDrag.current) {
+      const moving = new Set(moves.map(item => item.id));
+      const subjects = moves.flatMap(change => {
+        const node = nodes.find(item => item.id === change.id);
+        return node?.type === "object" ? [{ ...boxOf(node), ...change.position! }] : [];
+      });
+      const result = snap && !bypassSnap.current ? resolveSnap(subjects,
+        nodes.filter(node => node.type === "object" && !node.hidden && !moving.has(node.id)).map(boxOf),
+        flow.current?.getViewport().zoom ?? 1, snapState.current) : undefined;
+      snapState.current = result?.state ?? {}; setGuides(result?.guides ?? []);
+      next = changes.map(change => {
+        if (change.type !== "position" || !change.position || !moving.has(change.id)) return change;
+        const position = { x: change.position.x + (result?.offset.x ?? 0), y: change.position.y + (result?.offset.y ?? 0) };
+        dragPositions.current.set(change.id, position);
+        return { ...change, position };
+      });
+    }
+    setNodes(current => applyNodeChanges(next, current));
+  }
+
+  function beginMove(node: FlowNode) {
+    activeRevision.current = revision;
+    dragPositions.current.clear();
+    setDragging(node.id);
+    groupDrag.current = node.type === "assembly" ? { origin: node.position, members: new Map(node.data.group.members.map(id => [id, board.layout[id]!])) } : undefined;
+  }
+  function moveGroup(node: FlowNode) {
+    const group = groupDrag.current;
+    if (!group) return;
+    const dx = node.position.x - group.origin.x, dy = node.position.y - group.origin.y;
+    for (const [id, origin] of group.members) dragPositions.current.set(id, { x: origin.x + dx, y: origin.y + dy });
+    setNodes(current => current.map(item => dragPositions.current.has(item.id) ? { ...item, position: dragPositions.current.get(item.id)! } : item));
+  }
+  function finishMove(changed: FlowNode[]) {
+    const at = activeRevision.current;
+    const moved = groupDrag.current ? [...dragPositions.current] : changed.flatMap<[string, XYPosition]>(node =>
+      node.type === "object" ? [[node.id, dragPositions.current.get(node.id) ?? node.position]] : []);
+    groupDrag.current = undefined; activeRevision.current = undefined;
+    setDragging(undefined); snapState.current = {}; setGuides([]);
+    const commands = moved.flatMap<CanvasCommand>(([id, raw]) => {
+      const old = board.layout[id], position = rounded(raw);
+      return !old || old.x === position.x && old.y === position.y ? [] : [{ kind: "node.move", node: id, ...position }];
+    });
+    void commit(commands, at).catch(() => setLayoutEpoch(value => value + 1));
+  }
+  const pointOf = (x: number, y: number) => flow.current?.screenToFlowPosition({ x, y }) ?? { x, y };
+  const obstacles = () => nodes.filter(node => !node.hidden && node.type === "object").map(boxOf);
+  const centre = () => {
+    const rectangle = stage.current?.getBoundingClientRect();
+    return rectangle ? pointOf(rectangle.left + rectangle.width / 2, rectangle.top + rectangle.height / 2) : { x: 160, y: 160 };
+  };
+  const selectedIds = picked.filter(id => byId.has(id));
+  const selectedRecipes = selectedIds.flatMap(id => { const node = byId.get(id)!; return "capability" in node ? [node] : []; });
+
+  function candidateModels() {
+    return catalog.palette.map(model => ({ node: { id: newId(), capability: model.id, inputs: {} } as Recipe, model }));
+  }
+  function candidateMedia() {
+    return catalog.media.entries.flatMap(entry => entry.state !== "available" ? [] : [{
+      node: { id: newId(), media: entry.reference } satisfies CanvasNode, label: mediaName(entry.reference.path), detail: entry.mediaType,
+    }]);
+  }
+  function create(node: CanvasNode, at: XYPosition, options: { centered?: boolean; anchor?: Anchor; command?: CanvasCommand } = {}) {
+    const source = options.anchor && view.rect([options.anchor.id]);
+    const before = options.anchor?.side === "target", others = obstacles(), size = nodeSize(node, catalog);
+    const placement = options.centered ? placeAround(at, size, others)
+      : source && menu?.centred ? before ? placeLeftOf(source, size, others) : placeRightOf(source, size, others)
+      : options.anchor?.side === "source" ? placeRightward(at, size, others) : placeFrom({ ...at, ...size }, others, before);
+    const origin = view.origin(), first = !board.nodes.length;
+    const commands: CanvasCommand[] = [{ kind: "node.add", node, placement: rounded(placement) }];
+    if (options.command) commands.push(options.command);
+    setMenu(undefined); setChoices(undefined);
+    void commit(commands, revision).then(() => {
+      setRail(undefined); setTrace(undefined); setPicked([node.id]); setInspecting(node.id);
+      setLocating({ ids: [node.id], fresh: true, origin, first });
+    }).catch(() => {});
+  }
+
+  function chooseOnCanvas(node: CanvasNode) {
+    if (!pick || !mayPick(node)) return;
+    const target = byId.get(pick.node) as Recipe;
+    const field = inputsFor(target, catalog).find(field => field.name === pick.field)!;
+    const options = outputsFor(node, catalog).filter(output => supplies(node, output, field, catalog));
+    const apply = (output: string) => {
+      void commit([bindingCommand(target, field, { from: { node: node.id, output } }, pick.index)], revision)
+        .then(() => { setPick(undefined); setChoices(undefined); focus(target.id); }).catch(() => {});
+    };
+    if (options.length === 1) { apply(options[0]!); return; }
+    const rect = view.rect([node.id]);
+    const anchor = rect && flow.current?.flowToScreenPosition({ x: rect.x + rect.width, y: rect.y });
+    setChoices({ x: anchor?.x ?? 100, y: anchor?.y ?? 100, title: t("Choose output", "选择输出"),
+      items: options.map(output => ({ key: output, label: fieldLabel(output), icon: GitBranch, run: () => apply(output) })) });
+  }
+
+  function connectionOptions(anchor: Anchor, other: CanvasNode, document = board) {
+    const start = byId.get(anchor.id);
+    if (!start || start.id === other.id) return [];
+    return linksFor(document, catalog, anchor.side === "source" ? start : other, anchor.side === "source" ? other : start);
+  }
+  function cardUnder(x: number, y: number) {
+    const surface = document.elementsFromPoint(x, y).map(element => element.closest<HTMLElement>("[data-graph-node]")).find(Boolean);
+    const node = surface && byId.get(surface.dataset.graphNode ?? "");
+    return node && surface ? { node, surface } : undefined;
+  }
+  function previewEnd(x: number, y: number) {
+    const current = connection.current, screen = flow.current?.flowToScreenPosition({ x, y });
+    if (!current || !screen) return { x, y };
+    const target = cardUnder(screen.x, screen.y);
+    const valid = target && connectionOptions(current.anchor, target.node).length > 0;
+    receiving.current.track(valid ? target.surface : null, screen.x, screen.y);
+    if (!valid) return { x, y };
+    const rectangle = view.rect([target.node.id]);
+    if (!rectangle) return { x, y };
+    return { x: x * .62 + (rectangle.x + (current.anchor.side === "source" ? 0 : rectangle.width)) * .38,
+      y: y * .62 + (rectangle.y + rectangle.height / 2) * .38 };
+  }
+  function startConnector(event: MouseEvent | TouchEvent, anchor: Anchor) {
+    const point = "touches" in event ? event.touches[0] : event;
+    const rectangle = view.rect([anchor.id]);
+    if (!point || !rectangle || busy || pick) return;
+    connection.current = { anchor, point: { x: point.clientX, y: point.clientY }, revision,
+      start: { x: rectangle.x + (anchor.side === "source" ? rectangle.width : 0), y: rectangle.y + rectangle.height / 2 } };
+    setConnecting(true);
+  }
+  function openConnector(id: string, side: ConnectorSide, x: number, y: number) {
+    if (busy || pick) return;
+    const rectangle = view.rect([id]);
+    if (!rectangle) return;
+    setMenu({ x, y, at: pointOf(x, y), connector: { id, side }, centred: true,
+      start: { x: rectangle.x + (side === "source" ? rectangle.width : 0), y: rectangle.y + rectangle.height / 2 } });
+  }
+  function endConnector(event: MouseEvent | TouchEvent) {
+    const current = connection.current;
+    connection.current = undefined;
+    setConnecting(false);
+    const released = receiving.current.release();
+    const point = "changedTouches" in event ? event.changedTouches[0] : event;
+    if (!current || !point || Math.hypot(point.clientX - current.point.x, point.clientY - current.point.y) <= 4) {
+      if (released) settleSurface(released.surface, released.transform);
+      return;
+    }
+    const x = point.clientX, y = point.clientY;
+    const target = cardUnder(x, y);
+    if (!target && document.elementFromPoint(x, y)?.classList.contains("react-flow__pane")) {
+      setMenu({ x, y, at: pointOf(x, y), connector: current.anchor, start: current.start });
+      if (released) settleSurface(released.surface, released.transform);
+      return;
+    }
+    const options = target ? connectionOptions(current.anchor, target.node) : [];
+    const apply = (command: CanvasCommand) => {
+      setChoices(undefined);
+      void commit([command], current.revision).then(() => { if (target) confirmConnection(target.surface, released?.transform); })
+        .catch(() => { if (target) rejectConnection(target.surface, released?.transform); });
+    };
+    if (!options.length) {
+      if (target) rejectConnection(target.surface, released?.transform);
+      else if (released) settleSurface(released.surface, released.transform);
+      return;
+    }
+    if (options.length === 1) { apply(options[0]!.command); return; }
+    setChoices({ x, y, title: t("Connect to", "连接到"),
+      items: options.map(({ label, detail, command }, index) => ({ key: String(index), label, detail, icon: GitBranch, run: () => apply(command) })),
+      cancelled: released ? () => settleSurface(released.surface, released.transform) : undefined });
+  }
+  function openPane(event: ReactMouseEvent | MouseEvent) {
+    if (busy || pick || !(event.target as Element).classList.contains("react-flow__pane")) return;
+    event.preventDefault();
+    setMenu({ x: event.clientX, y: event.clientY, at: pointOf(event.clientX, event.clientY) });
+  }
+
+  const cards = candidateModels();
+  const assets = candidateMedia();
+  const menuItems: AddNodeItem[] = menu ? [...cards.map(({ node, model }) => ({
+    node, label: model.title, detail: fieldLabel(modelCategory(model)?.id ?? ""), model,
+  })), ...assets.map(asset => ({ ...asset, model: undefined }))].flatMap(item => {
+    const anchor = menu.connector;
+    const icon = cardIcon(item.node, catalog);
+    if (!anchor) return [{ key: item.label + item.detail, label: item.label, detail: item.detail, icon, run: () => create(item.node, menu.at) }];
+    const modes = item.model?.fields.find(field => field.name === "mode")?.choices ?? [];
+    const variants = anchor.side === "source" && "capability" in item.node && modes.length
+      ? modes.map(mode => ({ node: { ...item.node, inputs: { mode: { value: mode } } }, mode }))
+      : [{ node: item.node, mode: undefined }];
+    return variants.flatMap(({ node, mode }) => connectionOptions(anchor, node, { ...board, nodes: [...board.nodes, node] })
+      .map(({ command, label, detail }, index) => ({
+        key: `${item.label}/${mode ?? ""}/${index}`, label: item.label,
+        detail: [mode && fieldLabel(mode), label, detail].filter(Boolean).join(" / "), icon,
+        run: () => create(node, menu.at, { anchor, command }),
+      })));
+  }) : [];
+  async function importFiles(files: File[], at?: XYPosition) {
+    if (!files.length || importing) return;
+    setImporting(true);
+    const entries = await Promise.allSettled(files.map(file => importMedia(file)));
+    try {
+      const failures = entries.flatMap(item => item.status === "rejected" ? [String(item.reason)] : []);
+      const references = entries.flatMap(item => item.status === "fulfilled" ? [item.value] : []);
+      if (at && references.length) {
+        const occupied = obstacles();
+        const commands: CanvasCommand[] = references.map((media, index) => {
+          const node = { id: newId(), media };
+          const placement = placeFrom({ ...at, x: at.x + index * 24, y: at.y + index * 24, ...nodeSize(node, catalog) }, occupied);
+          occupied.push({ ...placement, id: media.path });
+          return { kind: "node.add", node, placement };
+        });
+        await commit(commands);
+        const ids = commands.flatMap(command => command.kind === "node.add" ? [command.node.id] : []);
+        setPicked(ids); setInspecting(ids.length === 1 ? ids[0] : undefined); setLocating({ ids, fresh: true, origin: view.origin() });
+      }
+      await refresh();
+      setRail(at ? undefined : "media");
+      if (failures.length) notify(failures.join("\n"), true);
+    } catch (error) { report(error); }
+    finally { setImporting(false); }
+  }
+
+  function dropMedia(event: DragEvent<HTMLDivElement>) {
+    if (event.dataTransfer.files.length && !busy && !importing) {
+      event.preventDefault();
+      void importFiles(Array.from(event.dataTransfer.files), pointOf(event.clientX, event.clientY));
+      return;
+    }
+    const path = event.dataTransfer.getData(mediaDragType);
+    if (!path || busy || !assets.some(asset => asset.node.media.path === path)) return;
+    event.preventDefault();
+    const existing = board.nodes.find(node => "media" in node && node.media.path === path);
+    const point = pointOf(event.clientX, event.clientY);
+    if (existing) void commit([{ kind: "node.move", node: existing.id, ...rounded(point) }], revision).then(() => focus(existing.id)).catch(() => {});
+    else create({ id: newId(), media: { path } }, point);
+  }
+
+  function copy() {
+    if (!selectedIds.length) return;
+    clipboard.current = { nodes: board.nodes.filter(node => selectedIds.includes(node.id)), layouts: board.layout };
+  }
+  function paste() {
+    const source = clipboard.current;
+    if (!source || busy) return;
+    const copies = new Map(source.nodes.map(node => [node.id, newId()]));
+    const frame = bounds(source.nodes.map(node => ({ ...nodeSize(node, catalog), ...source.layouts[node.id]! })));
+    if (!frame) return;
+    const offset = pasteOffset(frame, obstacles()), origin = view.origin();
+    const commands: CanvasCommand[] = source.nodes.map(node => {
+      const id = copies.get(node.id)!;
+      const placement = source.layouts[node.id]!;
+      const copyNode: CanvasNode = "media" in node ? { ...node, id } : { ...node, id,
+        inputs: Object.fromEntries(Object.entries(node.inputs).map(([field, binding]) => {
+          const remap = (value: CanvasValue) =>
+            "from" in value ? { ...value, from: { ...value.from, node: copies.get(value.from.node) ?? value.from.node } } : value;
+          return [field, "items" in binding ? { items: binding.items.map(remap) } : remap(binding)];
+        })) };
+      return { kind: "node.add", node: copyNode, placement: { ...placement, x: placement.x + offset.x, y: placement.y + offset.y } };
+    });
+    void commit(commands, revision).then(() => {
+      const ids = [...copies.values()];
+      setPicked(ids); setInspecting(ids.length === 1 ? ids[0] : undefined);
+      setLocating({ ids, origin, fresh: true });
+    }).catch(() => {});
+  }
+
+  const modifier = /Mac|iPhone|iPad/u.test(navigator.platform) ? "⌘" : "Ctrl";
+  const visibleIds = nodes.filter(node => !node.hidden).map(node => node.id);
+  const zoomCommands: ZoomCommand[] = [
+    { id: "in", label: t("Zoom in", "放大视图"), shortcut: modifier + " +", run: () => view.zoomBy(zoomStep) },
+    { id: "out", label: t("Zoom out", "缩小视图"), shortcut: modifier + " -", run: () => view.zoomBy(1 / zoomStep) },
+    { id: "fit", label: t("Fit canvas", "适配画布"), shortcut: "⇧ 1", disabled: !visibleIds.length, run: () => view.fit(visibleIds) },
+    { id: "selected", label: t("Zoom to selection", "缩放至选中项"), shortcut: "⇧ 2", disabled: !selectedIds.length, run: () => view.fit(selectedIds) },
+    ...[50, 100, 200].map(percent => ({ id: String(percent), label: t("Zoom to", "缩放至") + ` ${percent}%`,
+      shortcut: percent === 100 ? modifier + " 1" : "", separatorBefore: percent === 50, run: () => view.zoomTo(percent / 100) })),
+  ];
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      bypassSnap.current = event.altKey;
+      if (event.defaultPrevented || (event.target as Element | null)?.closest("input, textarea, [contenteditable], [role=menu], dialog")) return;
+      const meta = event.metaKey || event.ctrlKey, key = event.key.toLowerCase();
+      const run = (id: string) => { const action = zoomCommands.find(command => command.id === id); if (action && !action.disabled) { event.preventDefault(); action.run(); } };
+      if (key === "escape") { setPick(undefined); setRail(undefined); if (!menu && !choices) clear(); }
+      if (meta && ["=", "+"].includes(key)) run("in");
+      if (meta && ["-", "_"].includes(key)) run("out");
+      if (meta && event.code === "Digit1") run("100");
+      if (!meta && event.shiftKey && event.code === "Digit1") run("fit");
+      if (!meta && event.shiftKey && event.code === "Digit2") run("selected");
+      if (busy || pick) return;
+      if (meta && key === "z") { event.preventDefault(); void editHistory(event.shiftKey ? "redo" : "undo").catch(() => {}); }
+      if (meta && key === "y") { event.preventDefault(); void editHistory("redo").catch(() => {}); }
+      if (meta && key === "c" && selectedIds.length) { event.preventDefault(); copy(); }
+      if (meta && key === "v" && clipboard.current) { event.preventDefault(); paste(); }
+      if (meta && key === "a") { event.preventDefault(); setPicked(nodes.filter(node => !node.hidden && node.type === "object").map(node => node.id)); }
+      if (key === "backspace" || key === "delete") {
+        if (selectedWire) {
+          const command = disconnect(board, selectedWire);
+          if (command) { event.preventDefault(); void commit([command], revision).catch(() => {}); }
+        } else if (selectedIds.length) { event.preventDefault(); setRemoving(selectedIds); }
+      }
+    };
+    const keyup = (event: KeyboardEvent) => { bypassSnap.current = event.altKey; };
+    const blur = () => { bypassSnap.current = false; };
+    window.addEventListener("keydown", keydown); window.addEventListener("keyup", keyup); window.addEventListener("blur", blur);
+    return () => { window.removeEventListener("keydown", keydown); window.removeEventListener("keyup", keyup); window.removeEventListener("blur", blur); };
+  });
+
+  const creationCategories = [...categories, { id: "all", icon: Box, label: t("Components", "组件") }] as const;
+  const filtered = (rail === "media" ? assets : cards.filter(({ model }) => rail === "all" || modelCategory(model)?.id === rail)
+    .map(({ node, model }) => ({ node, label: model.title, detail: model.id.split("/").slice(0,2).join("/") })))
+    .filter(item => (item.label + " " + item.detail).toLowerCase().includes(query.toLowerCase()));
+  const removeLinks = removing ? links.filter(link => removing.includes(link.source.node) || removing.includes(link.target)) : [];
+
+  return <ConnectorMenuContext.Provider value={openConnector}><ConnectionPreviewContext.Provider value={previewEnd}>
+    <section ref={section} className={`generation-canvas${pick ? " picking-reference" : ""}${connecting ? " is-connecting" : ""}`}
+      aria-label={t("Generation canvas", "生成画布")}>
+      <CanvasZoom target={section}/>
+      <div className="graph-body">
+        <nav className="graph-create-rail" aria-label={t("Create and media", "创建与素材")}>
+          {creationCategories.map(item => <button type="button" key={item.id} disabled={busy} aria-label={t("Add", "添加") + " " + item.label}
+            title={item.label} aria-pressed={rail === item.id} onClick={() => { setRail(rail === item.id ? undefined : item.id); setQuery(""); }}>
+            <item.icon size={20}/><span>{item.label}</span>
+          </button>)}
+          <div className="graph-rail-divider"/>
+          <button type="button" aria-label={t("Media", "素材")} aria-pressed={rail === "media"} onClick={() => { setRail(rail === "media" ? undefined : "media"); setQuery(""); }}>
+            <Images size={20}/><span>{t("Media", "素材")}</span>
+          </button>
+          <button type="button" aria-label={t("Import", "导入")} disabled={importing || busy} onClick={() => fileInput.current?.click()}>
+            <Upload size={20}/><span>{t("Import", "导入")}</span>
+          </button>
+          <input ref={fileInput} type="file" accept="image/*,video/*,audio/*" multiple hidden onChange={event => {
+            const files = Array.from(event.currentTarget.files ?? []);
+            event.currentTarget.value = "";
+            void importFiles(files);
+          }}/>
+        </nav>
+        <AnimatePresence>{rail && <motion.aside key={rail} className="graph-library nowheel" style={{ transformOrigin: "0% 50%" }} {...popupMotion(reduced, .8)}>
+          <div className="graph-library-heading"><strong>{rail === "media" ? t("Project Media", "项目素材") : creationCategories.find(item => item.id === rail)?.label}</strong>
+            <IconButton label={t("Close", "关闭")} onClick={() => setRail(undefined)}><X size={15}/></IconButton></div>
+          <div className="graph-catalog-panel"><div className="graph-catalog-search"><input value={query} onChange={event => setQuery(event.target.value)}
+            aria-label={t("Search components or models", "搜索组件或模型")} placeholder={rail === "media" ? t("Search media", "搜索素材") : t("Search components or models", "搜索组件或模型")}/></div>
+            <div className="graph-catalog">{filtered.map(item => <button type="button" disabled={busy} key={item.label + item.detail}
+              draggable={"media" in item.node} onDragStart={event => { if ("media" in item.node) event.dataTransfer.setData(mediaDragType, item.node.media.path); }}
+              onClick={() => {
+                const media = "media" in item.node ? item.node.media.path : undefined;
+                const existing = media && board.nodes.find(node => "media" in node && node.media.path === media);
+                if (existing) { setRail(undefined); focus(existing.id); }
+                else create(item.node, centre(), { centered: true });
+              }}>
+              {"media" in item.node && <MediaThumbnail path={item.node.media.path} title={item.label}/>}
+              <span className="canvas-catalog-title"><strong>{item.label}</strong><small>{item.detail}</small></span><Plus size={15}/>
+            </button>)}
+              {!filtered.length && <p className="library-empty">{t("No matches", "没有匹配项")}</p>}
+            </div>
+          </div>
+        </motion.aside>}</AnimatePresence>
+        <div className="graph-surface" ref={stage} onDragOver={event => { if ((event.dataTransfer.types.includes(mediaDragType) || event.dataTransfer.types.includes("Files"))) event.preventDefault(); }} onDrop={dropMedia}>
+          <AnimatePresence>{tracing && <motion.div className="graph-navigation" {...enterMotion(reduced)}>
+            <IconButton label={t("All objects", "全部对象")} onClick={() => setTrace(undefined)}><ArrowLeft size={15}/></IconButton>
+            <span className="graph-trace-title"><GitBranch size={14}/>{nodeTitle(byId.get(trace!)!, catalog.models)}</span>
+          </motion.div>}</AnimatePresence>
+          <div className="graph-toolbar">
+            <ObjectSearch nodes={pick ? board.nodes.filter(mayPick) : board.nodes} catalog={catalog}
+              choose={id => { if (pick) chooseOnCanvas(byId.get(id)!); else { setRail(undefined); focus(id); } }}/>
+            <div className="graph-history">
+              <IconButton label={t("Undo", "撤销")} disabled={!canUndo || busy} onClick={() => void editHistory("undo").catch(() => {})}><Undo2 size={16}/></IconButton>
+              <IconButton label={t("Redo", "重做")} disabled={!canRedo || busy} onClick={() => void editHistory("redo").catch(() => {})}><Redo2 size={16}/></IconButton>
+              <Menu.Root modal={false}>
+                <Menu.Trigger className="icon-button" aria-label={t("View options", "视图选项")}><SlidersHorizontal size={16}/></Menu.Trigger>
+                <Menu.Portal><Menu.Positioner className="dropdown-positioner" sideOffset={8} align="end" collisionPadding={12}>
+                  <Menu.Popup className="dropdown-content dropdown-menu">
+                    <Menu.CheckboxItem className="dropdown-item" checked={snap} onCheckedChange={setSnap}>{t("Snap to objects", "吸附到对象")}</Menu.CheckboxItem>
+                    <Menu.Item className="dropdown-item" onClick={() => void refresh()}><RefreshCw size={14}/>{t("Refresh", "重载")}</Menu.Item>
+                  </Menu.Popup></Menu.Positioner></Menu.Portal>
+              </Menu.Root>
+            </div>
+          </div>
+          <ReactFlow<FlowNode, ReferenceCanvasEdge>
+            proOptions={{ hideAttribution: true }}
+            nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} connectionLineComponent={ConnectionPreview}
+            onInit={value => { flow.current = value; setFlowReady(true); }} defaultViewport={initial.viewport ?? { x: 0, y: 0, zoom: 1 }}
+            minZoom={minZoom} maxZoom={maxZoom} panOnScroll panOnScrollSpeed={1} zoomOnScroll={false} zoomOnPinch={false}
+            zoomOnDoubleClick={false} zoomActivationKeyCode={null} panActivationKeyCode="Space" autoPanOnNodeDrag={false}
+            autoPanOnConnect={false} autoPanOnNodeFocus={false} elevateNodesOnSelect={false} selectionMode={SelectionMode.Partial}
+            selectionKeyCode="Shift" panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select" && !pick}
+            elementsSelectable={tool === "select" && !pick} multiSelectionKeyCode={multiSelection} deleteKeyCode={null}
+            nodesDraggable={!busy && !pick && tool === "select"} nodeDragThreshold={4} nodeClickDistance={4}
+            connectOnClick={false} connectionRadius={0} onNodesChange={positions}
+            onNodeDragStart={(_event, node) => beginMove(node)} onNodeDrag={(_event, node) => moveGroup(node)}
+            onNodeDragStop={(_event, _node, changed) => finishMove(changed)}
+            onSelectionDragStart={(_event, changed) => { if (changed[0]) beginMove(changed[0]); }}
+            onSelectionDragStop={(_event, changed) => finishMove(changed)}
+            onNodeClick={(_event, node) => {
+              if (node.type !== "object") return;
+              if (pick) { chooseOnCanvas(node.data.node); return; }
+              if (tool === "select") { setInspecting(node.id); setWire(undefined); view.activate(node.id, 76); }
+            }}
+            onNodeDoubleClick={(_event, node) => { if (node.type === "object" && !pick) traceInputs(node.id); }}
+            onDoubleClick={openPane} onPaneContextMenu={openPane} onPaneClick={() => { if (!pick) clear(); }}
+            onMoveEnd={(_event, next) => { viewport.current = next; storeView(next); }}
+            onConnectStart={(event, { nodeId, handleType }) => { if (nodeId && handleType) startConnector(event, { id: nodeId, side: handleType }); }}
+            onConnectEnd={endConnector}
+            onEdgeClick={(_event, edge) => { const link = links.find(link => wireId(link) === edge.id); if (link) { focus(link.target); setWire(edge.id); } }}>
+            <CanvasDots/><ArrivalLayer/><FlowLayer/><SnapGuides guides={guides}/>
+            {menu?.start && menu.connector && <ViewportPortal><PendingConnection from={menu.start} to={menu.at} side={menu.connector.side}/></ViewportPortal>}
+          </ReactFlow>
+          <div className="graph-navigation-controls">
+            <IconButton label={tool === "select" ? t("Switch to hand tool", "切换到抓手工具") : t("Switch to select tool", "切换到选择工具")}
+              aria-pressed={tool === "hand"} onClick={() => setTool(tool === "select" ? "hand" : "select")}>
+              {tool === "select" ? <MousePointer2 size={16}/> : <Hand size={16}/>}
+            </IconButton>
+            <span className="graph-dock-divider" aria-hidden="true"/>
+            <ZoomControl label={t("Zoom options", "缩放选项")} commands={zoomCommands} onZoomTo={percent => view.zoomTo(percent / 100)}/>
+          </div>
+        </div>
+        <AnimatePresence>{selectedIds.length > 1 && !pick && <motion.div className="graph-selection-tools" {...enterMotion(reduced)}>
+          <button type="button" className="button" onClick={() => setGroupName(t("Group", "分组"))}><Group size={15}/>{t("Group", "组合")}</button>
+          {!!selectedRecipes.length && <button type="button" className="button" disabled={busy} onClick={() => setBatch(selectedRecipes)}>{t("Batch generate", "批量生成")}</button>}
+          <IconButton label={t("Copy", "复制")} onClick={copy}><Copy size={15}/></IconButton>
+          <IconButton label={t("Delete objects", "删除对象")} disabled={busy} onClick={() => setRemoving(selectedIds)}><Trash2 size={15}/></IconButton>
+        </motion.div>}</AnimatePresence>
+        <AnimatePresence>{pick && <motion.div {...enterMotion(reduced)} className="graph-reference-picking" role="status">
+          <MousePointer2 size={15}/><span>{t("Select a reference on the canvas", "选择画布上的参考素材")}</span>
+          <button type="button" className="button" onClick={() => setPick(undefined)}>{t("Cancel", "取消")}</button>
+        </motion.div>}</AnimatePresence>
+        <AnimatePresence>{menu && <AddNodeMenu key="new" x={menu.x} y={menu.y} title={menu.connector ? t("Add node", "添加节点") : t("New node", "新建节点")}
+          items={menuItems} empty={t("Nothing to add", "没有可添加的项")} onClose={() => setMenu(undefined)}/>}
+          {choices && <AddNodeMenu key="choices" x={choices.x} y={choices.y} title={choices.title} items={choices.items} empty=""
+            onClose={() => { choices.cancelled?.(); setChoices(undefined); }}/>}</AnimatePresence>
+        {!pick && object && selectedIds.length === 1 && <NodeActions nodeId={object.id} hidden={dragging === object.id || connecting}>
+          <button type="button" className="graph-node-action text" onClick={() => traceInputs(object.id)}><GitBranch size={16}/><span>{t("Trace inputs", "追溯输入")}</span></button>
+          <hr className="graph-node-action-divider"/>
+          <IconButton className="graph-node-action" label={t("Delete object", "删除对象")} disabled={busy} onClick={() => setRemoving([object.id])}><Trash2 size={16}/></IconButton>
+        </NodeActions>}
+        <AnimatePresence>{!pick && !connecting && object && selectedIds.length <= 1 && <Composer key={object.id}
+          node={object} catalog={catalog} board={board} revision={revision} entries={entries[object.id] ?? []} refresh={refreshRuns} busy={busy}
+          close={clear} locate={focus} pick={setPick} wire={selectedWire}/>}</AnimatePresence>
+      </div>
+      {groupName !== undefined && <Dialog title={t("Group objects", "组合对象")} close={() => setGroupName(undefined)}>
+        <form className="canvas-dialog-form" onSubmit={event => {
+          event.preventDefault();
+          if (!groupName.trim()) return;
+          setGroups(current => [...current.map(group => ({ ...group, members: group.members.filter(id => !selectedIds.includes(id)) })).filter(group => group.members.length),
+            { id: "group-" + crypto.randomUUID(), name: groupName.trim(), members: selectedIds, collapsed: false }]);
+          setGroupName(undefined); clear();
+        }}>
+          <label>{t("Group name", "分组名称")}<input autoFocus value={groupName} onChange={event => setGroupName(event.target.value)}/></label>
+          <button type="submit" className="button primary" disabled={!groupName.trim()}>{t("Save", "保存")}</button>
+        </form>
+      </Dialog>}
+      {removing && <Dialog title={t("Delete objects", "删除对象")} close={() => setRemoving(undefined)}>
+        <div className="canvas-dialog-form"><ul>{removing.flatMap(id => byId.has(id) ? [<li key={id}>{nodeTitle(byId.get(id)!, catalog.models)}</li>] : [])}</ul>
+          {!!removeLinks.length && <p>{t("Connections to these objects will be removed.", "这些对象的连线也会移除。")}</p>}
+          <button type="button" className="button danger" disabled={busy} onClick={() => {
+            void commit(removing.map(node => ({ kind: "node.remove", node })), revision).then(() => { clear(); setRemoving(undefined); }).catch(() => {});
+          }}><Trash2 size={15}/>{t("Delete", "删除")}</button>
+        </div>
+      </Dialog>}
+      {batch && <GenerateDialog nodes={batch} catalog={catalog} done={refreshRuns} close={() => setBatch(undefined)}/>}
+    </section>
+  </ConnectionPreviewContext.Provider></ConnectorMenuContext.Provider>;
 }

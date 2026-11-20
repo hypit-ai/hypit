@@ -1,4 +1,4 @@
-import type { CanvasSelection, CanvasTransaction } from "@hypit/canvas";
+import type { CanvasSelection, CanvasTransaction, MediaReference } from "@hypit/canvas";
 import type {
   CanvasAdoptionRequest, CanvasInvokeRequest, CanvasModel, CanvasObservation, CanvasQuoteRequest, NodeCanvas,
 } from "@hypit/canvas/node";
@@ -15,7 +15,9 @@ export type CanvasObservationRequest =
   | { readonly kind: "board" | "catalog" }
   | { readonly kind: "node" | "history"; readonly node: string };
 export type CanvasCancelRequest = { readonly node: string; readonly address: InvocationAddress };
-export type CanvasPreviewRequest = { readonly node: string; readonly selection?: CanvasSelection };
+export type CanvasPreviewRequest =
+  | { readonly node: string; readonly selection?: CanvasSelection }
+  | { readonly media: MediaReference };
 
 export type CanvasCommandReceipt = Awaited<ReturnType<NodeCanvas["transact"]>>;
 export type CanvasQuoteReceipt = Awaited<ReturnType<NodeCanvas["quote"]>>;
