@@ -11,6 +11,8 @@ export type OpenNodeHypiHubOAuthConnectionOptions = {
   readonly id?: string;
   readonly store?: HypiHubOAuthStore;
   readonly baseUrl?: string;
+  readonly clientId?: string;
+  readonly scopes?: readonly string[];
   readonly fetch?: typeof globalThis.fetch;
   readonly requestTimeoutMs?: number;
 };
@@ -21,7 +23,9 @@ export function openNodeHypiHubOAuthConnection({
 }: OpenNodeHypiHubOAuthConnectionOptions = {}): HypiHubOAuthConnection {
   if (!/^[a-z][a-z0-9.-]{0,191}$/u.test(id)) throw new Error("HypiHub OAuth credential slot id is invalid.");
   const origin = new URL(options.baseUrl ?? "https://hypit.ai").origin;
-  const slot = createHash("sha256").update(JSON.stringify([origin, id])).digest("hex");
+  const slot = createHash("sha256").update(JSON.stringify(
+    options.clientId === undefined ? [origin, id] : [origin, id, options.clientId],
+  )).digest("hex");
   return createHypiHubOAuthConnection({ ...options, id: `oauth:${slot}`, store: store ?? openLocalHypiHubCredentialSlot(slot) });
 }
 

@@ -4,9 +4,14 @@ import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { NodeExecutionHostClient, openNodeExecutionHost, type NodeExecutionDeployment } from "@hypit/execution/node";
 import type { ProjectExecutionClient, ProjectExecutionDiscovery } from "@hypit/project";
+import type { OpenNodeHypiHubOAuthConnectionOptions } from "./hypihub-auth-node.js";
 import { findLocalServiceEndpoint, readLocalServiceEndpoint, reserveLocalServiceEndpoint, waitForLocalService, type LocalServiceEndpointOptions } from "./local-endpoint.js";
 
-export async function startLocalExecution(options: LocalServiceEndpointOptions & { readonly port: number; readonly dataRoot?: string }) {
+export async function startLocalExecution(options: LocalServiceEndpointOptions & {
+  readonly port: number;
+  readonly dataRoot?: string;
+  readonly oauth?: OpenNodeHypiHubOAuthConnectionOptions;
+}) {
   const deadline = Date.now() + 8_000;
   let reservation;
   do {
@@ -25,7 +30,12 @@ export async function startLocalExecution(options: LocalServiceEndpointOptions &
   let server: ReturnType<typeof openNodeExecutionHost> | undefined;
   try {
     const { openLocalHypiHubDeployment } = await import("./execution-hypihub.js");
-    deployment = await openLocalHypiHubDeployment(options.dataRoot === undefined ? {} : { dataRoot: options.dataRoot });
+    const credential = options.oauth === undefined ? undefined
+      : (await import("./hypihub-auth-node.js")).openNodeHypiHubOAuthConnection(options.oauth);
+    deployment = await openLocalHypiHubDeployment({
+      ...(options.dataRoot === undefined ? {} : { dataRoot: options.dataRoot }),
+      ...(credential === undefined ? {} : { credential }),
+    });
     server = openNodeExecutionHost({ environments: [deployment], port: options.port, closeDeployments: true });
     const selected = server;
     const { endpoint } = await reservation.publish(await selected.listen());

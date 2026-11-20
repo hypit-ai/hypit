@@ -91,6 +91,8 @@ export function createHypiHubOAuthConnection(options: {
   readonly id: string;
   readonly store: HypiHubOAuthStore;
   readonly baseUrl?: string;
+  readonly clientId?: string;
+  readonly scopes?: readonly string[];
   readonly fetch?: typeof globalThis.fetch;
   readonly requestTimeoutMs?: number;
 }): HypiHubOAuthConnection {
@@ -98,7 +100,7 @@ export function createHypiHubOAuthConnection(options: {
   const redirectUri = new URL("/oauth/callback", origin).href;
   const fetcher = options.fetch ?? globalThis.fetch;
   const timeout = duration(options.requestTimeoutMs ?? 30_000, "OAuth request timeout");
-  const { store } = options;
+  const { store, clientId = CLIENT_ID, scopes = SCOPES } = options;
   let active: HypiHubOAuthAttempt | undefined;
   let refreshing: Promise<string> | undefined;
 
@@ -125,7 +127,7 @@ export function createHypiHubOAuthConnection(options: {
     const requestSignal = signal === undefined ? deadline : AbortSignal.any([signal, deadline]);
     try {
       return await fetcher(new URL(path, origin), {
-        method: "POST", body: new URLSearchParams({ client_id: CLIENT_ID, ...input }),
+        method: "POST", body: new URLSearchParams({ client_id: clientId, ...input }),
         redirect: "error", signal: requestSignal,
       });
     } catch {
@@ -150,7 +152,7 @@ export function createHypiHubOAuthConnection(options: {
       || typeof token_type !== "string" || token_type.toLowerCase() !== "bearer") {
       throw new Error("HypiHub returned an incomplete OAuth token pair.");
     }
-    if (scope !== undefined && (typeof scope !== "string" || SCOPES.some(required => !scope.split(/\s+/u).includes(required)))) {
+    if (scope !== undefined && (typeof scope !== "string" || scopes.some(required => !scope.split(/\s+/u).includes(required)))) {
       throw new HypiHubOAuthError("hypihub-oauth-rejected", "The HypiHub grant is missing required permissions.");
     }
     return readHypiHubOAuthRecord({
@@ -173,7 +175,7 @@ export function createHypiHubOAuthConnection(options: {
       const state = callbackPort === undefined ? nonce : `${nonce}.${callbackPort}`;
       const url = new URL("/oauth/consent", origin);
       url.search = new URLSearchParams({
-        response_type: "code", client_id: CLIENT_ID, redirect_uri: redirectUri, scope: SCOPES.join(" "),
+        response_type: "code", client_id: clientId, redirect_uri: redirectUri, scope: scopes.join(" "),
         state, code_challenge: createHash("sha256").update(verifier).digest("base64url"), code_challenge_method: "S256",
       }).toString();
       let used = false;

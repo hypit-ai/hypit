@@ -51,7 +51,12 @@ function argumentsFor(raw: string[], group: string, action: string) {
     } as const : {}),
     ...(action === "start" ? { port: { type: "string" } } as const : {}),
     ...(group === "host" && action === "start" ? { "execution-endpoint-file": { type: "string" } } as const : {}),
-    ...(group === "execution" && action === "start" ? { "data-root": { type: "string" } } as const : {}),
+    ...(group === "execution" && action === "start" ? {
+      "data-root": { type: "string" },
+      "hypihub-credential-slot": { type: "string" },
+      "hypihub-client-id": { type: "string" },
+      "hypihub-scopes": { type: "string" },
+    } as const : {}),
     ...(group === "execution" || group === "auth" || group === "canvas" && ["quote", "invoke"].includes(action) ? { environment: { type: "string" } } as const : {}),
     ...(group === "auth" && action === "login" ? { manual: { type: "boolean" }, "no-open": { type: "boolean" } } as const : {}),
     ...(group === "nle" || group === "canvas" ? { project: { type: "string" } } as const : {}),
@@ -126,10 +131,19 @@ async function command(args: string[]): Promise<void> {
     const port = text("port") === undefined ? 0 : Number(values.port);
     if (!Number.isSafeInteger(port) || port < 0 || port > 65535) throw new Error("--port must be an integer from 0 to 65535.");
     const dataRoot = text("data-root");
+    const credentialSlot = text("hypihub-credential-slot");
+    const clientId = text("hypihub-client-id");
+    const scopes = text("hypihub-scopes")?.trim().split(/\s+/u).filter(Boolean);
+    const oauth = {
+      ...(credentialSlot === undefined ? {} : { id: credentialSlot }),
+      ...(clientId === undefined ? {} : { clientId }),
+      ...(scopes === undefined ? {} : { scopes }),
+    };
     const executionEndpointFile = text("execution-endpoint-file");
     const started = service === "execution"
       ? await (await import("./local-execution.js")).startLocalExecution({ ...endpoint, port,
-          ...(dataRoot === undefined ? {} : { dataRoot: resolve(dataRoot) }) })
+          ...(dataRoot === undefined ? {} : { dataRoot: resolve(dataRoot) }),
+          ...(Object.keys(oauth).length ? { oauth } : {}) })
       : await (await import("./local-application.js")).startLocalApplication({ ...endpoint, port,
           ...(executionEndpointFile === undefined ? {} : { executionEndpointFile: resolve(executionEndpointFile) }) });
     const close = started.close;
