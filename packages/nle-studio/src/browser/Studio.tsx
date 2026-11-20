@@ -55,6 +55,7 @@ import { catalogDragId, type CatalogDrag } from "./catalogDrag.js";
 import { mediaTrackCompatible, trackHasRoom, transitionCuts, type MediaDrop } from "./mediaDrag.js";
 import { componentTrackRole } from "./timelineGeometry.js";
 import { useEditorPosition } from "./useEditorPosition.js";
+import { ExportVideo } from "./ExportVideo.js";
 
 function readPanelWidths(): typeof defaultPanelWidths {
   try {
@@ -691,6 +692,7 @@ export function Studio() {
         <button type="button" className="nle-titlebar-name" disabled={editingDisabled} onClick={() => setRenameProject(true)} title="重命名项目">{projectName}</button>
         <div className="nle-titlebar-side end">
           <button type="button" className="button" disabled={busy} onClick={() => dirty ? setConflictOpen(true) : useFileVersion()}>重载</button>
+          <ExportVideo session={session} disabled={editingDisabled || dirty || !!saveConflict}/>
         </div>
       </div>
       <Dialog.Root open={conflictOpen} onOpenChange={setConflictOpen}>

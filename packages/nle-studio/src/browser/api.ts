@@ -98,7 +98,7 @@ export async function refreshOpen(
     ...(requested.has("media") ? [observe({ kind: "media" })] : []),
     ...(requested.has("catalog") ? [observe({ kind: "catalog" })] : []),
     ...(requested.has("preview") ? [observe({ kind: "preview" })] : []),
-    ...(requested.has("delivery") ? [observe({ kind: "delivery" })] : []),
+    ...(requested.has("delivery") || requested.has("project") ? [observe({ kind: "delivery" })] : []),
     ...(requested.has("clipboard") ? [observe({ kind: "clipboard" })] : []),
     ...(change.status === undefined ? [observe({ kind: "status" })] : []),
   ]);

@@ -71,7 +71,9 @@ export type NleStudioPreviewProjection =
   | { readonly state: "unavailable" }
   | { readonly state: "available"; readonly playback: boolean; readonly waveform: boolean; readonly generation: number };
 
-export type NleStudioDeliveryProjection = { readonly state: "available" | "unavailable" };
+export type NleStudioDeliveryProjection =
+  | { readonly state: "available"; readonly width: number; readonly height: number; readonly hasItems: boolean }
+  | { readonly state: "unavailable" };
 
 export type NleStudioClipboardProjection = {
   readonly items: number;

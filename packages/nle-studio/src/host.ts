@@ -595,9 +595,17 @@ export class NleStudioProductSession {
       media,
       catalog: this.#catalog(),
       preview: this.#previewProjection(),
-      delivery: { state: this.#delivery === undefined ? "unavailable" : "available" },
+      delivery: this.#deliveryProjection(),
       clipboard: this.#clipboardProjection(),
     };
+  }
+
+  #deliveryProjection(): NleStudioOpenProjection["delivery"] {
+    if (this.#delivery === undefined) return { state: "unavailable" };
+    const project = this.#projectLease.service.snapshot().project;
+    const root = project.compositions.find(composition => composition.id === project.rootComposition)!;
+    return { state: "available", width: root.canvas.width, height: root.canvas.height,
+      hasItems: root.tracks.some(track => track.items.length > 0) };
   }
 
   #projectProjection(): NleStudioOpenProjection["project"] {
@@ -680,7 +688,7 @@ export class NleStudioProductSession {
       case "action": return { kind: "action", value: this.observeAction(request.handle) };
       case "delivery": return {
         kind: "delivery",
-        value: { state: this.#delivery === undefined ? "unavailable" : "available" },
+        value: this.#deliveryProjection(),
       };
     }
   }
