@@ -340,11 +340,11 @@
 .nle-trim { position: absolute; z-index: 4; width: 8px; top: 0; bottom: 0; cursor: ew-resize; }
 .nle-trim.start { left: 0; } .nle-trim.end { right: 0; }
 .nle-trim::before, .nle-trim::after { content: ""; position: absolute; opacity: 0; pointer-events: none; transition: opacity .12s; }
-.nle-trim::before { top: 0; bottom: 0; width: 6px; background: #fff; }
-.nle-trim.start::before { left: 0; border-radius: 3px 0 0 3px; }
-.nle-trim.end::before { right: 0; border-radius: 0 3px 3px 0; }
+.nle-trim::before { top: 0; bottom: 0; width: 4px; background: #fff; }
+.nle-trim.start::before { left: 0; border-radius: 2px 0 0 2px; }
+.nle-trim.end::before { right: 0; border-radius: 0 2px 2px 0; }
 .nle-trim::after { top: calc(50% - 1px); width: 2px; height: 2px; border-radius: 50%; background: #666; box-shadow: 0 -4px #666, 0 4px #666; }
-.nle-trim.start::after { left: 2px; } .nle-trim.end::after { right: 2px; }
+.nle-trim.start::after { left: 1px; } .nle-trim.end::after { right: 1px; }
 .nle-clip.selected .nle-trim::before, .nle-clip.selected .nle-trim::after { opacity: 1; }
 .nle-process-range { position: absolute; z-index: 5; bottom: 2px; height: 10px; min-width: 2px; pointer-events: none; }
 .nle-process-range.start { left: 0; }
