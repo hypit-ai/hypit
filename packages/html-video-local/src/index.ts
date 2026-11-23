@@ -137,7 +137,9 @@ class LocalHtmlVideoExecutor implements HtmlVideoExecutor, HtmlFrameExecutor {
           total: value.totalFrames,
         }),
       };
-      if (options.renderer === "electron") {
+      const preferElectron = options.renderer === "electron"
+        || (this.#chromium === undefined && this.#electron !== undefined);
+      if (preferElectron) {
         const primary = this.#electron ?? (() => { throw new Error("Electron HTML rendering requires an explicit electronPath."); })();
         try {
           return await renderHtmlVisualLocally({ backend: primary, request: plan.visual, destination: visualPath, options: renderOptions });
@@ -147,7 +149,7 @@ class LocalHtmlVideoExecutor implements HtmlVideoExecutor, HtmlFrameExecutor {
           return await renderHtmlVisualLocally({ backend: this.#electronFrame, request: plan.visual, destination: visualPath, options: renderOptions });
         }
       }
-      const backend = this.#chromium ?? this.#electronFrame ?? chromiumHtmlBackend();
+      const backend = this.#chromium ?? chromiumHtmlBackend();
       return await renderHtmlVisualLocally({ backend, request: plan.visual, destination: visualPath, options: renderOptions });
     };
     try {

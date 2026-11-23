@@ -46,6 +46,7 @@ async function run() {
     fail(new Error(`Electron capture renderer exited: ${detail.reason}.`));
   });
 
+  await win.loadURL(config.url);
   const dbg = win.webContents.debugger;
   dbg.attach("1.3");
   await dbg.sendCommand("Page.enable");
@@ -57,7 +58,6 @@ async function run() {
     mobile: false,
   });
 
-  await win.loadURL(config.url);
   await evaluate(dbg, "window.__hypitUsePreparedSourceFrames('/__hypit_source')");
   await evaluate(dbg, `window.__hypitFrameProgram.prepare(${JSON.stringify(config.selection)})`);
 
