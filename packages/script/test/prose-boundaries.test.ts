@@ -57,6 +57,18 @@ test("Dual display spelling does not require speech characters", () => {
   ]) assert.equal(caption(body!), expected, body);
 });
 
+test("Spanish opening punctuation stays with the word it opens", () => {
+  for (const [prose, expected] of [
+    ["¿Cuál tienes tú?", ["¿Cuál", "tienes", "tú?"]],
+    ["¡Mira esto!", ["¡Mira", "esto!"]],
+  ] as const) {
+    for (const prefix of ["Antes.", "<Antes.|Antes.>"]) {
+      const document = captionDocument(parse(`${prefix} ${prose}`), "caption", "story");
+      assert.deepEqual(document.words.map(word => word.text), ["Antes.", ...expected]);
+    }
+  }
+});
+
 test("explicit and shared Dual attributes address visible words, not prior attribute syntax", () => {
   for (const body of ['<one{emphasis} two{strong}|one two>', '<one{emphasis} two{strong}|>',
     '<하나{emphasis} 둘{strong}|하나 둘>']) {
