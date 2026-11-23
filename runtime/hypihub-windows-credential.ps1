@@ -13,7 +13,6 @@ Add-Type -TypeDefinition @'
 using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
 
 public static class HypitCredentialManager
 {
@@ -29,7 +28,7 @@ public static class HypitCredentialManager
         public uint Type;
         public string TargetName;
         public string Comment;
-        public FILETIME LastWritten;
+        public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten;
         public uint CredentialBlobSize;
         public IntPtr CredentialBlob;
         public uint Persist;
