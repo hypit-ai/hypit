@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svml id="demo" name="Sample Production" root="main" edit-rate="30/1">
+  <composition id="main" name="Main" width="1920" height="1080">
+    <track id="picture" name="Picture" kind="picture" role="picture" enabled="true">
+      <present id="opening" name="Opening Shot" source="media" start="0/1" duration="6/1" enabled="true">
+        <media path="media/opening.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="6/1" source-start="0/1" rate="1/1" />
+        </source-time>
+        <picture>
+          <layout x="0" y="0" width="1920" height="1080" fit="cover" content-x="0.5" content-y="0.5" />
+        </picture>
+        <audio />
+      </present>
+    </track>
+    <track id="titles" name="Titles" kind="picture" role="text" enabled="true">
+      <present id="headline" name="Headline" source="component" start="1/2" duration="4/1" enabled="true">
+        <component package="@hypit/text-fine" symbol="text" />
+        <parameters>{"text":"Sample Production"}</parameters>
+        <source-time>
+          <linear target-start="0/1" target-end="4/1" source-start="0/1" rate="1/1" />
+        </source-time>
+        <picture>
+          <layout x="120" y="820" width="1680" height="180" fit="contain" />
+        </picture>
+      </present>
+    </track>
+  </composition>
+</svml>
