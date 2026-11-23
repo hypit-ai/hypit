@@ -4,46 +4,46 @@ Read this when placing speech, music, ambience, or sound effects on Audio Tracks
 
 ## Place an Audio Present
 
-Audio lives on `<track kind="audio" role="audio">` elements. Speech, music, ambience, and sound effects all use the same `<present>` element:
+Dedicated audio lives on `<track kind="audio" role="audio">` elements. Speech, music, ambience, and sound effects all use `<present>` with an `<audio>` appearance (and no `<picture>`):
 
 ```xml
 <track id="voice" name="Voice" kind="audio" role="audio" enabled="true">
   <present id="narration" name="Narration" source="media" start="0/1" duration="15/2" enabled="true">
-    <media path="./media/narration.media.json"/>
+    <media path="./media/narration.media.json" />
     <source-time>
-      <linear start="0/1" duration="15/2" source-start="0/1" source-duration="15/2"/>
+      <linear target-start="0/1" target-end="15/2" source-start="0/1" rate="1/1" />
     </source-time>
-    <audio>
-      <gain value="1/1"/>
-    </audio>
+    <audio />
   </present>
 </track>
 
 <track id="music" name="Music" kind="audio" role="audio" enabled="true">
   <present id="bed" name="Music Bed" source="media" start="0/1" duration="15/2" enabled="true">
-    <media path="./media/music.media.json"/>
+    <media path="./media/music.media.json" />
     <source-time>
-      <linear start="0/1" duration="15/2" source-start="0/1" source-duration="15/2"/>
+      <linear target-start="0/1" target-end="15/2" source-start="0/1" rate="1/1" wrap-start="0/1" wrap-end="30/1" />
     </source-time>
     <audio>
-      <gain value="9/50"/>
-      <fade-in duration="2/5"/>
-      <fade-out duration="3/5"/>
+      <process id="music-level" package="@project/audio-effects" symbol="gain" enabled="true">
+        <parameters>{"gain":0.18}</parameters>
+        <control-time>
+          <linear target-start="0/1" target-end="15/2" source-start="0/1" rate="1/1" />
+        </control-time>
+      </process>
     </audio>
   </present>
 </track>
 ```
 
-A video file with embedded sound does **not** play audio merely by being placed on a Picture Track ([Picture Presents](visual-clips.md)). To hear its sound, place a corresponding `<present>` on an Audio Track referencing the same `*.media.json` (or an extracted audio asset). This prevents accidental audio duplication when reusing footage across picture layers.
+Media and Composition Presents on a Picture Track may also include `<audio />` directly when you want their embedded audio to play in lockstep with picture. Avoid placing `<audio />` on a Picture Present *and* duplicating the same clip on an Audio Track—choose one audio path per clip so speech is never double-tracked.
 
-## Sampling, Gain, and Mixing
+## Sampling, Audio Processes, and Mixing
 
-- **Exact timing**: `start`, `duration`, and `<source-time>` use exact rational seconds (`numerator/denominator`). See [Timing](timing.md).
-- **Gain**: `<gain value="..."/>` is a linear amplitude multiplier expressed as a rational number (for example, `1/1` for unity, `1/5` for -14 dB background bed).
-- **Fades**: `<fade-in duration="..."/>` and `<fade-out duration="..."/>` apply across the boundaries of the Present.
+- **Exact timing**: `start`, `duration`, and `<source-time>` use exact rational seconds (`numerator/denominator`). Supply `wrap-start` and `wrap-end` on `<linear>` to loop a background bed cleanly. See [Timing](timing.md).
+- **Audio treatments are package `<process>` operators**: SVML does not hardcode individual effect elements; gain, fades, EQ, and ducking envelopes are authored as ordered `<process id="..." package="..." symbol="..." enabled="true">` children inside `<audio>` (or `<adjust>` items on a `<track kind="audio" role="effect">`).
 - **Additive mixing**: overlapping Audio Presents across tracks mix additively into the stereo program bus.
-- **Ducking and envelopes**: when music must duck under speech or follow complex gain curves, compute the rational automation segments in TSX ([TSX Authoring](authoring.md)) or split/shape the music Present cleanly around spoken windows.
+- **Edge-aligned fades**: use `<control-time edge="start" duration="..." control-duration="..." />` or `edge="end"` on a fade Process so fades stay locked to the Present's head or tail even after trimming.
 
 ## Syncing Voice and Picture
 
-When voice and picture come from the same recorded or generated video clip, place both Presents with matching `start`, `duration`, and `<source-time>` values (or group them in a `<group>` so NLE Studio moves them together). When voice is generated separately via speech synthesis (`@hypit/fishaudio-speech`, `@hypit/mimo-speech`, `@hypit/minimax-h3`), place the voice track first, align its transcript with `hypit transcript align` ([Timed Transcripts](script-syntax.md)), and cut picture tracks to those exact word timestamps.
+When voice and picture come from the same recorded or generated video clip, either include `<audio />` on the Picture Present, or place matching Picture and Audio Presents inside a `<group>` so NLE Studio moves them together. When voice is generated separately via speech synthesis (`@hypit/fishaudio-speech`, `@hypit/mimo-speech`, `@hypit/minimax-h3`), place the voice track first, align its transcript with `hypit transcript align` ([Timed Transcripts](script-syntax.md)), and cut picture tracks to those exact word timestamps.

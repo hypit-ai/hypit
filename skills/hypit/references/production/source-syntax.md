@@ -59,8 +59,8 @@ The authoritative specification lives in `packages/nle/SVML.md`.
 
 <!-- Component Present -->
 <present id="title" name="Hero Title" source="component" start="1/1" duration="4/1" enabled="true">
-  <component package="@hypit/text-fine" symbol="text" />
-  <parameters>{"text":"Hello Hypit"}</parameters>
+  <component package="@hypit/text-fine" symbol="fine" />
+  <parameters>{"typography":{"fonts":["Inter","sans-serif"],"fontSizePx":64,"fontWeight":700,"lineHeight":1.15,"letterSpacingPx":0,"wordSpacingPx":0},"paints":[{"kind":"fill","paint":{"kind":"solid","color":"#ffffff"}}],"children":[{"kind":"text","id":"text","text":"Hello Hypit"}],"placement":{"kind":"flow","paddingPx":{"top":0,"right":0,"bottom":0,"left":0},"inlineAlign":"center","blockAlign":"center","wrap":"word","overflow":"visible","columns":1,"columnGapPx":0}}</parameters>
   <source-time>
     <linear target-start="0/1" target-end="4/1" source-start="0/1" rate="1/1" />
   </source-time>

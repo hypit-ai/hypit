@@ -214,8 +214,11 @@ UGC, podcast and interview work can start directly with `@hypit/text-fine` on a 
   <present id="cue-1" name="Host cue" source="component" start="0/1" duration="2/1" enabled="true">
     <component package="@hypit/text-fine" symbol="fine"/>
     <parameters>{"typography":{"fonts":["Inter","Noto Sans SC","sans-serif"],"fontSizePx":52,"fontWeight":700,"lineHeight":1.2,"letterSpacingPx":0,"wordSpacingPx":0},"paints":[{"kind":"fill","paint":{"kind":"solid","color":"#FFFFFF"}}],"children":[{"kind":"text","id":"t1","text":"Let's look closely."}],"placement":{"kind":"flow","paddingPx":{"top":12,"right":24,"bottom":12,"left":24},"inlineAlign":"center","blockAlign":"end","wrap":"word","overflow":"visible","columns":1,"columnGapPx":0}}</parameters>
+    <source-time>
+      <linear target-start="0/1" target-end="2/1" source-start="0/1" rate="1/1" />
+    </source-time>
     <picture>
-      <layout x="80/1" y="1380/1" width="920/1" height="220/1" fit="fill"/>
+      <layout x="80" y="1380" width="920" height="220" fit="fill" />
     </picture>
   </present>
 </track>

@@ -15,8 +15,8 @@
     </track>
     <track id="titles" name="Titles" kind="picture" role="text" enabled="true">
       <present id="headline" name="Headline" source="component" start="1/2" duration="4/1" enabled="true">
-        <component package="@hypit/text-fine" symbol="text" />
-        <parameters>{"text":"Sample Production"}</parameters>
+        <component package="@hypit/text-fine" symbol="fine" />
+        <parameters>{"typography":{"fonts":["Inter","Noto Sans SC","sans-serif"],"fontSizePx":64,"fontWeight":700,"lineHeight":1.15,"letterSpacingPx":0,"wordSpacingPx":0},"paints":[{"kind":"fill","paint":{"kind":"solid","color":"#ffffff"}}],"children":[{"kind":"text","id":"text","text":"Sample Production"}],"placement":{"kind":"flow","paddingPx":{"top":0,"right":0,"bottom":0,"left":0},"inlineAlign":"center","blockAlign":"center","wrap":"word","overflow":"visible","columns":1,"columnGapPx":0}}</parameters>
         <source-time>
           <linear target-start="0/1" target-end="4/1" source-start="0/1" rate="1/1" />
         </source-time>

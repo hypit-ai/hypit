@@ -39,8 +39,11 @@ Using `@hypit/text-fine` (or a custom caption component) with TSX authoring ([TS
         "columnGapPx": 0
       }
     }</parameters>
+    <source-time>
+      <linear target-start="0/1" target-end="43/25" source-start="0/1" rate="1/1" />
+    </source-time>
     <picture>
-      <layout x="80/1" y="1380/1" width="920/1" height="220/1" fit="fill"/>
+      <layout x="80" y="1380" width="920" height="220" fit="fill" />
     </picture>
   </present>
 </track>

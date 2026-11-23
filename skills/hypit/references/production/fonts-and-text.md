@@ -36,8 +36,11 @@ Read this when choosing fonts, loading local font files, handling multilingual t
         "columnGapPx": 0
       }
     }</parameters>
+    <source-time>
+      <linear target-start="0/1" target-end="3/1" source-start="0/1" rate="1/1" />
+    </source-time>
     <picture>
-      <layout x="90/1" y="240/1" width="900/1" height="220/1" fit="fill"/>
+      <layout x="90" y="240" width="900" height="220" fit="fill" />
     </picture>
   </present>
 </track>

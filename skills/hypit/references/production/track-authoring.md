@@ -26,9 +26,12 @@ Once registered in `hypit.project.json`, place the component on any matching `<t
   <present id="score-board" name="Score Board" source="component" start="3/1" duration="6/1" enabled="true">
     <component package="@studio/score-strip" symbol="scoreStrip"/>
     <parameters>{"title":"Final Score","revealAtSec":[0.8,2.1,3.5]}</parameters>
-    <media-input name="badge" path="./media/badge.media.json"/>
+    <media-input name="badge" path="./media/badge.media.json" />
+    <source-time>
+      <linear target-start="0/1" target-end="6/1" source-start="0/1" rate="1/1" />
+    </source-time>
     <picture>
-      <layout x="120/1" y="1400/1" width="840/1" height="220/1" fit="fill"/>
+      <layout x="120" y="1400" width="840" height="220" fit="fill" />
     </picture>
   </present>
 </track>
