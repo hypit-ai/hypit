@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { addAbortSignal } from "node:stream";
 import { buffer } from "node:stream/consumers";
 import { chromiumHtmlBackend } from "@hypit/html-chromium-local";
-import { electronHtmlBackend } from "@hypit/html-electron-local";
+import { electronHtmlBackend, electronHtmlFrameBackend } from "@hypit/html-electron-local";
 import { captureHtmlFramesLocally, createHtmlSourceFrameIndexReader, createPreparedSourceFrames, openHtmlFrameCaptureLocally,
   renderHtmlVisualLocally, type HtmlCaptureBackend } from "@hypit/html-render-local";
 import type {
@@ -33,14 +33,20 @@ export type LocalHtmlVideoTools = LocalMediaToolchainOptions & {
 class LocalHtmlVideoExecutor implements HtmlVideoExecutor, HtmlFrameExecutor {
   readonly #media: LocalMediaToolchain;
   #mediaReady: Promise<void> | undefined;
-  readonly #chromium: HtmlCaptureBackend;
+  readonly #chromium: HtmlCaptureBackend | undefined;
   readonly #electron: HtmlCaptureBackend | undefined;
+  readonly #electronFrame: HtmlCaptureBackend | undefined;
   readonly #indexVideoFrames = createHtmlSourceFrameIndexReader();
 
   constructor(tools: LocalHtmlVideoTools) {
     this.#media = resolveLocalMediaToolchain(tools);
-    this.#chromium = chromiumHtmlBackend(tools.chromePath);
+    this.#chromium = tools.chromePath === undefined ? undefined : chromiumHtmlBackend(tools.chromePath);
     this.#electron = tools.electronPath === undefined ? undefined : electronHtmlBackend(tools.electronPath);
+    this.#electronFrame = tools.electronPath === undefined ? undefined : electronHtmlFrameBackend(tools.electronPath);
+  }
+
+  #frameBackend(): HtmlCaptureBackend {
+    return this.#chromium ?? this.#electronFrame ?? chromiumHtmlBackend();
   }
 
   async #checkMedia(): Promise<void> {
@@ -61,7 +67,7 @@ class LocalHtmlVideoExecutor implements HtmlVideoExecutor, HtmlFrameExecutor {
   async captureFrames(request: Parameters<HtmlFrameExecutor["capture"]>[0], signal?: AbortSignal): Promise<readonly Uint8Array[]> {
     if (request.program.videoSources.length > 0) await this.#checkMedia();
     return await captureHtmlFramesLocally({
-      backend: this.#chromium, request, options: {
+      backend: this.#frameBackend(), request, options: {
         ffmpegPath: this.#media.ffmpegPath, ffprobePath: this.#media.ffprobePath,
         indexVideoFrames: this.#indexVideoFrames,
         ...(signal === undefined ? {} : { signal }),
@@ -71,7 +77,7 @@ class LocalHtmlVideoExecutor implements HtmlVideoExecutor, HtmlFrameExecutor {
 
   async openCapture(request: Parameters<NonNullable<HtmlFrameExecutor["openCapture"]>>[0], signal?: AbortSignal): Promise<HtmlFrameCapture> {
     if (request.program.videoSources.length > 0) await this.#checkMedia();
-    return await openHtmlFrameCaptureLocally({ backend: this.#chromium, request, options: {
+    return await openHtmlFrameCaptureLocally({ backend: this.#frameBackend(), request, options: {
       ffmpegPath: this.#media.ffmpegPath, ffprobePath: this.#media.ffprobePath, indexVideoFrames: this.#indexVideoFrames,
       maxDecodedSourceBytes: 64 * 1024 * 1024, ...(signal === undefined ? {} : { signal }),
     } });
@@ -119,27 +125,34 @@ class LocalHtmlVideoExecutor implements HtmlVideoExecutor, HtmlFrameExecutor {
     const visualPath = join(directory, "visual.mp4");
     const audioPath = join(directory, "audio.wav");
     const outputPath = join(directory, "delivery.mp4");
-    const backend = options.renderer === "electron"
-      ? this.#electron ?? (() => { throw new Error("Electron HTML rendering requires an explicit electronPath."); })()
-      : this.#chromium;
+    const renderVisual = async () => {
+      const renderOptions = {
+        ffmpegPath: this.#media.ffmpegPath,
+        ffprobePath: this.#media.ffprobePath,
+        indexVideoFrames: this.#indexVideoFrames,
+        ...(options.signal === undefined ? {} : { signal: options.signal }),
+        onProgress: (value: { completedFrames: number; totalFrames: number }) => options.onProgress?.({
+          phase: "visual",
+          completed: value.completedFrames,
+          total: value.totalFrames,
+        }),
+      };
+      if (options.renderer === "electron") {
+        const primary = this.#electron ?? (() => { throw new Error("Electron HTML rendering requires an explicit electronPath."); })();
+        try {
+          return await renderHtmlVisualLocally({ backend: primary, request: plan.visual, destination: visualPath, options: renderOptions });
+        } catch (error) {
+          if (options.signal?.aborted || this.#electronFrame === undefined) throw error;
+          await rm(visualPath, { force: true });
+          return await renderHtmlVisualLocally({ backend: this.#electronFrame, request: plan.visual, destination: visualPath, options: renderOptions });
+        }
+      }
+      const backend = this.#chromium ?? this.#electronFrame ?? chromiumHtmlBackend();
+      return await renderHtmlVisualLocally({ backend, request: plan.visual, destination: visualPath, options: renderOptions });
+    };
     try {
       const [visual, audio] = await Promise.all([
-        renderHtmlVisualLocally({
-          backend,
-          request: plan.visual,
-          destination: visualPath,
-          options: {
-            ffmpegPath: this.#media.ffmpegPath,
-            ffprobePath: this.#media.ffprobePath,
-            indexVideoFrames: this.#indexVideoFrames,
-            ...(options.signal === undefined ? {} : { signal: options.signal }),
-            onProgress: value => options.onProgress?.({
-              phase: "visual",
-              completed: value.completedFrames,
-              total: value.totalFrames,
-            }),
-          },
-        }),
+        renderVisual(),
         plan.audio === undefined ? Promise.resolve(undefined) : renderAudioProgramLocally({
           program: plan.audio,
           destination: audioPath,

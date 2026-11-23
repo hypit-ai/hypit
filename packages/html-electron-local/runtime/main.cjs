@@ -3,7 +3,7 @@ const { createWriteStream, readFileSync, writeFileSync } = require("node:fs");
 const { dirname, join } = require("node:path");
 const { app, BrowserWindow, ipcMain, sharedTexture } = require("electron");
 
-const config = JSON.parse(readFileSync(process.argv[2], "utf8"));
+const config = JSON.parse(readFileSync(process.env.HYPIT_ELECTRON_CONFIG || process.argv[2], "utf8"));
 const markerWidth = 32;
 const markerHeight = 2;
 let failed = false;
