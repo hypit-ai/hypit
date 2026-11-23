@@ -74,11 +74,16 @@ function windowsSlot(slot: string): CredentialSlot {
     if (contents !== undefined && contents.byteLength > 2560) {
       throw unavailable("The HypiHub credential exceeds the Windows Credential Manager limit of 2560 bytes.");
     }
-    const { code, stdout } = await run(powershell, [
+    const { code, stdout, stderr } = await run(powershell, [
       "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
       "-File", windowsBridge, "-Operation", operation,
     ], JSON.stringify({ target, ...(contents === undefined ? {} : { secret: contents.toString("base64") }) }));
-    if (code !== 0) throw unavailable(`Could not ${operation} the HypiHub credential in Windows Credential Manager.`);
+    if (code !== 0) {
+      const detail = stderr.trim().split(/\r?\n/)[0]?.slice(0, 200);
+      throw unavailable(detail
+        ? `Could not ${operation} the HypiHub credential in Windows Credential Manager (${detail}).`
+        : `Could not ${operation} the HypiHub credential in Windows Credential Manager.`);
+    }
     return stdout.trim();
   }
   return {

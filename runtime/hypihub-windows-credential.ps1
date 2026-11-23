@@ -5,8 +5,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
-$request = [Console]::In.ReadToEnd() | ConvertFrom-Json
+try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false) } catch {}
+$reader = New-Object System.IO.StreamReader([Console]::OpenStandardInput(), [System.Text.Encoding]::UTF8)
+$request = $reader.ReadToEnd() | ConvertFrom-Json
 
 Add-Type -TypeDefinition @'
 using System;
