@@ -1,11 +1,11 @@
 import {
   addExactTemporalValues, compareExactTemporalValues, exactTemporalRational, exactTemporalValue, exactTemporalZero,
-  subtractExactTemporalValues, type ExactTemporalValue, type TemporalRange,
+  subtractExactTemporalValues, type ExactTemporalValue, type TemporalRange, type TemporalRate,
 } from "@hypit/temporal/algebra";
 import { sealNleProject } from "./project.js";
 import { nleLinearTimeMapping } from "./source-time.js";
 import {
-  nleProjectFormat, type NleComposition, type NleItem, type NleMatte, type NleMediaItem, type NleComponentItem,
+  defaultNleEditRate, nleProjectFormat, type NleComposition, type NleEditGroup, type NleItem, type NleMatte, type NleMediaItem, type NleComponentItem,
   type NlePresentItem, type NleProject, type NleSharedValue, type NleTrack, type NleTransition,
 } from "./types.js";
 
@@ -15,6 +15,7 @@ type Declaration =
   | { readonly kind: "item"; readonly value: NleItem }
   | { readonly kind: "transition"; readonly value: NleTransition }
   | { readonly kind: "matte"; readonly value: NleMatte }
+  | { readonly kind: "group"; readonly value: NleEditGroup }
   | { readonly kind: "shared"; readonly value: NleSharedValue };
 type Children = Declaration | readonly Children[] | null | undefined | false;
 
@@ -38,16 +39,17 @@ export namespace jsx {
 
 export function Composition({ children, id, name = id, width, height }:
   ElementProps & { readonly id: string; readonly name?: string; readonly width: number; readonly height: number }): Declaration {
-  const tracks: NleTrack[] = [], transitions: NleTransition[] = [], mattes: NleMatte[] = [];
+  const tracks: NleTrack[] = [], transitions: NleTransition[] = [], mattes: NleMatte[] = [], groups: NleEditGroup[] = [];
   for (const entry of collect(children)) {
     switch (entry.kind) {
       case "track": tracks.push(entry.value); break;
       case "transition": transitions.push(entry.value); break;
       case "matte": mattes.push(entry.value); break;
+      case "group": groups.push(entry.value); break;
       default: throw new Error(`Composition ${id} cannot contain ${entry.kind}.`);
     }
   }
-  return { kind: "composition", value: { id, name, canvas: { width, height }, tracks, transitions, mattes } };
+  return { kind: "composition", value: { id, name, canvas: { width, height }, tracks, transitions, mattes, groups } };
 }
 
 export function Track({ children, id, name = id, enabled = true, ...properties }:
@@ -62,6 +64,7 @@ export function Track({ children, id, name = id, enabled = true, ...properties }
 export function Item({ value }: { readonly value: NleItem }): Declaration { return { kind: "item", value }; }
 export function Transition({ value }: { readonly value: NleTransition }): Declaration { return { kind: "transition", value }; }
 export function Matte({ value }: { readonly value: NleMatte }): Declaration { return { kind: "matte", value }; }
+export function Group({ value }: { readonly value: NleEditGroup }): Declaration { return { kind: "group", value }; }
 export function SharedValue({ value }: { readonly value: NleSharedValue }): Declaration { return { kind: "shared", value }; }
 
 type PresentProperties<T extends NlePresentItem> = Omit<T, "kind" | "source" | "start" | "duration" | "enabled" | "sourceTime"> & {
@@ -86,7 +89,7 @@ export function defineComposition<Inputs>(compose: CompositionSource<Inputs>): C
 
 /** Take a finite set of declarations through the normal NLE validator. No I/O or execution. */
 export function materializeComposition<Inputs>(
-  project: { readonly id: string; readonly name: string; readonly rootComposition: string },
+  project: { readonly id: string; readonly name: string; readonly rootComposition: string; readonly editRate?: TemporalRate },
   compose: CompositionSource<Inputs>, inputs: Inputs,
 ): NleProject {
   const compositions: NleComposition[] = [], sharedValues: NleSharedValue[] = [];
@@ -99,7 +102,7 @@ export function materializeComposition<Inputs>(
     else if (entry.kind === "shared") sharedValues.push(entry.value);
     else throw new Error(`Project ${project.id} cannot contain ${entry.kind}.`);
   }
-  return sealNleProject({ ...project, format: nleProjectFormat, compositions, sharedValues });
+  return sealNleProject({ ...project, editRate: project.editRate ?? defaultNleEditRate, format: nleProjectFormat, compositions, sharedValues });
 }
 
 /** Exact seconds, either an integer/decimal string or an explicit rational. */

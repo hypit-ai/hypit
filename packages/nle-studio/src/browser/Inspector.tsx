@@ -1,6 +1,6 @@
 import { Select } from "@base-ui/react/select";
 import { useRef, useState } from "react";
-import type { NleInspectorCollection, NleInspectorField, NleInspectorScene, NleTransitionInspectorScene } from "@hypit/nle/view";
+import type { NleInspectorCollection, NleInspectorField, NleInspectorScene, NleTransitionInspectorScene } from "@hypit/nle/surface";
 import { ArrowDown, ArrowUp, Check, ChevronDown, Trash2 } from "lucide-react";
 import type { NleStudioComponentInputsProjection, NleStudioMediaEntry, NleStudioProcessAddress, NleStudioProcessEdit } from "../protocol.js";
 import { IconButton } from "./common.js";

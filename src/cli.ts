@@ -23,7 +23,7 @@ const usage = `Usage: hypit <command> [options]
   execution inspect|wait|cancel|publication <invocation>
   execution resource <invocation> --output <name> --resource <name> --to <file>
   transcript align <transcript.json|-> --words <words.json|-> --end <seconds> [--start <seconds>] --to <file>
-  nle open|inspect <file.svml> [--project <directory>] [--view <file>]
+  nle open|inspect <file.svml> [--project <directory>]
   nle export <file.svml> --to <project-relative.mp4> [--profile <file>]
   canvas create <file.canvas.json> --name <name>
   canvas open|inspect|catalog <file.canvas.json> [--project <directory>]
@@ -65,7 +65,6 @@ function argumentsFor(raw: string[], group: string, action: string) {
     } as const : {}),
     ...(group === "execution" && action === "submit" ? { "invocation-id": { type: "string" } } as const : {}),
     ...(group === "execution" && action === "resource" ? { output: { type: "string" }, resource: { type: "string" }, to: { type: "string" } } as const : {}),
-    ...(group === "nle" && action !== "export" ? { view: { type: "string" } } as const : {}),
     ...((group === "nle" || group === "canvas") && action === "open" ? { "no-open": { type: "boolean" } } as const : {}),
     ...(group === "canvas" && action === "create" ? { name: { type: "string" } } as const : {}),
     ...(group === "canvas" && ["apply", "adopt"].includes(action) ? { input: { type: "string" } } as const : {}),
@@ -214,12 +213,10 @@ async function command(args: string[]): Promise<void> {
         ...(endpoint === undefined ? {} : { endpoint }),
       }, signal));
     } else if (group === "nle") {
-      const view = text("view");
       const to = text("to");
       const profile = text("profile");
       output(await nleCommand(host, action, subject!, {
         ...project, progress: !values.json && process.stderr.isTTY === true,
-        ...(view === undefined ? {} : { view }),
         ...(to === undefined ? {} : { to }),
         ...(profile === undefined ? {} : { profile }),
         noOpen: values["no-open"] === true,

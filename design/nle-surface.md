@@ -1,92 +1,83 @@
 # NLE Editing Surface
 
-> Status: current application-composition design over NLE Project and NLE View owner Services.
-
-## Purpose
-
-An NLE Editing Surface is the typed application port used by a Studio, Agent tool or another interactive Host. It
-composes one already-open `NleProjectService`, one already-open `NleViewService`, explicitly
-selected package contributions and finite NLE projections.
-
-It composes the two owner Services for one editing interaction:
+The NLE Editing Surface exposes Project transactions and finite Timeline, Canvas and Inspector projections.
+It composes one open `NleProjectService`, selected package contributions and an editing context supplied by the caller.
 
 ```text
-NleEditingSurface
-├─ NleProjectService       Project facts and revision
-├─ NleViewService          View facts and revision
-├─ installed contributions
-├─ Timeline / Canvas / Inspector observations
-└─ guarded Commands routed to the owning Service
+NLE Editing Surface
+├─ NLE Project Service        SVML facts, revision, history and savepoint
+├─ Editing context            active Composition and locked Track IDs
+├─ Selected package contributions
+└─ Timeline, Canvas and Inspector projections
 ```
 
-## Observation
+A Studio Product Session owns its editing context. A new session starts at the SVML root with an empty set of locks.
+When a Project edit removes the active Composition, Studio returns to the current root. It discards locks for removed
+Tracks. The direct Surface API defaults to the root Composition and unlocked Tracks when the caller supplies no context.
 
-The Surface exposes typed observations for status, open, Timeline, Canvas and one Item Inspector. Open returns the two
-owner snapshots, semantic capabilities and the initial Timeline and Canvas scenes. Package and Host observations are
-invocation-local inputs; they are merged into projections and never written into either owner document.
+## Commands and observations
 
-Project revision and View revision remain independent. Surface status reports both, their individual dirty and
-history state, and whether the View still references the accepted Project snapshot. It invents no combined revision,
-generation or persistent format marker.
+The Surface exposes status, open, Timeline, Canvas, Item Inspector and Transition Inspector observations. It projects
+frame coordinates using the Project's edit rate. Observation resources and package projections are invocation-local.
 
-## Command
+Every mutation checks the expected Project revision. The Surface resolves current capabilities and checks session
+locks against the touched Tracks before and after the complete transaction. This lets one transaction introduce a
+Transition and its overlap together. Project undo and redo replay the one owner history. A lock or navigation change
+affects the current session and invalidates its relevant projections.
 
-Surface Commands cover:
+Receipts report the current Project revision, dirty and history state, whether the Project changed and the
+invalidated projections. The Surface forwards Project Service changes and releases its subscription when closed.
+File writes, transports, Media catalogs and audiovisual Executors belong to the caller's composition.
 
-- guarded Project and View transactions;
-- Inspector field edits replanned against the current Inspector contribution;
-- spatial edits replanned against current Canvas capabilities;
-- Project and View undo or redo;
-- explicit View reconciliation after an independently accepted Project change.
+## Presentation and authoring facets
 
-Any operation whose validity depends on both owners carries both expected revisions. The Surface re-resolves View
-locks and semantic capabilities immediately before forwarding the resulting ordinary transaction to the Project
-Service. Inspector functions and client observations are never trusted as direct JSON paths or complete replacement
-objects.
+Explicitly selected installed component packages may contribute bounded presentation and authoring facets. Timeline
+presentation supplies readable titles and text from the Item and its authored values. Inspector presentation can
+provide finite fields and process-local operation projectors.
+Neither can inject markup, create Track structure, persist UI state or acquire Project authority. A separate
+authoring contribution must accept an Inspector operation and plan an ordinary Project transaction before an edit is
+possible. npm installation and the selected Host decide which contributions exist; a missing or duplicate symbol is
+observable.
 
-The View guard validates the completed Project transaction as one atomic result, then checks touched Tracks against
-the before and completed snapshots. It does not require each command prefix to be a separately valid Project; atomic
-owner operations such as creating a Transition overlap and relation remain expressible without exposing an invalid
-intermediate snapshot.
+Presentation and authoring remain separate facets even when one package supplies both. Studio owns Timeline styling
+and reads source previews from the Media or audiovisual executor. An Inspector contribution uses the product's finite control vocabulary;
+its process-local operation projector is removed from the Scene before transport. The browser returns a stable
+section/field address and scalar value, then the Host recomputes the operation from the current snapshot. It never
+submits a package JSON path or executes package code.
 
-A Project Command may leave independently persisted View references stale. The successful Project mutation remains
-accepted and status reports `stale`; reconciliation is a separate explicit View mutation. There is deliberately no
-cross-file distributed transaction or silent cleanup.
+The Inspector vocabulary includes scalar fields and finite collections. A collection contains package-owned stable
+row ids, finite row fields and optional actions. Field ids are unique in their section. A row action is addressed
+by section, collection, row and action ids and is resolved from a fresh projection at the expected revisions. The
+browser receives data and action availability. The owner reducer replaces the current closed value. Canvas remains
+Item-level until a selected package proves a need for bounded semantic handles.
 
-Finite observations can still render a stale View. For projection only, the Surface filters stale references and
-selects the Project root if the active Composition was removed. Status and owner snapshots retain the actual View.
-The caller can explicitly reconcile it or use Project history to restore the referenced facts.
+### Field display and writeback
 
-## Receipt and subscription
+NLE binds structural controls to the fields selected by the SVML Item's kind and source and its Track's role. For Component and
+Operator values, the selected package binds its field and row ids to the explicit parameters and value slots it
+owns. The binding defines what to read, how to format it in a finite control and which authored value to replace
+when edited. A field keeps the owner of its value when displayed through a reference. The Host resolves the
+current target and applies the write through the revisioned Project transaction.
 
-A Command receipt reports current owner revisions and dirty/history state, which owner changed and which rebuildable
-projections were invalidated. It is transient application feedback, not an event log or persistent protocol format.
+An Item name is an authored label. Text and subtitle Components provide a pure `readText` function over their
+authored parameters. The Surface projects the result as plain text for the Timeline. Filter and effect Tracks
+display Item names. Names and text content retain independent editing targets.
 
-The Surface forwards Project and View Service observations through one subscription while preserving the producing
-owner and change kind. An adapter may project this port to HTTP, IPC or an Agent tool, but transport routes and
-serialization envelopes do not become NLE semantics.
+A Component value Inspector section uses the same exact installed `(Component, slot)` contribution for inline and
+shared ownership. Inline ownership projects the selected Item; shared ownership additionally projects the one
+Project-owned resource and its current Item users. The NLE `picture.layout` declaration is projected directly by the
+Canvas and Inspector. Shared ownership uses the same owner identity and reverse-user index in both cases.
 
-## Exclusions
+A shared-value edit is offered only when every affected user's Track is writable; the resulting command
+replaces the one Project Shared Value through the Project Service. Editing an inline value, linking or unlinking one
+Item changes only that occurrence and checks only its own Track. Unlinking copies the resolved value inline into the Item.
 
-The Surface does not own:
+The Canvas projection exposes only Item-level Picture frames owned by NLE. It does not inspect a Component's private
+render tree merely because the renderer can expose pixels or DOM. Source extent is an invocation-local observation;
+the authored frame, fit and focus stay Project facts. Session track locks constrain the spatial capabilities offered through
+that editing surface.
 
-- file paths, file watching, atomic writes or external-change policy;
-- selection, playhead, zoom, pointer drafts or optimistic UI state;
-- delivery execution, preview generations, export/review Actions or cancellation;
-- HTTP, IPC, CLI or browser resource URLs;
-- Media catalogs or package discovery.
+## Package
 
-A local Host may connect persistence adapters and HTML video Executor clients beside this Surface. Those adapters
-call owner savepoints only after their own writes complete and retain their own conflict and Action lifecycles.
-
-## Package and evidence
-
-The first implementation is the `@hypit/nle/surface` subpath in the existing NLE release unit. Evidence establishes
-that one open Surface:
-
-- produces coherent finite observations from both owner snapshots;
-- rejects stale Project or View revisions before mutation;
-- replans Inspector and spatial edits through current package semantics and View guards;
-- reports projection invalidation without creating another authority;
-- makes stale cross-owner references observable and repairs them only through explicit reconciliation;
-- forwards owner changes and releases subscriptions when closed.
+`@hypit/nle/surface` is the NLE release's typed editing port and the entry point for Timeline, Canvas and Inspector
+projections and their authoring and presentation contributions.

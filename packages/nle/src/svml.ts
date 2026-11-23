@@ -4,6 +4,7 @@ import {
   type TemporalMapPiece,
 } from "@hypit/temporal/algebra";
 import {
+  defaultNleEditRate,
   nleProjectFormat,
   type NleAudioAppearance,
   type NleComponentItem,
@@ -513,7 +514,7 @@ function readAudio(value: XmlElement): NleAudioAppearance {
 }
 
 function readPresent(value: XmlElement): NlePresentItem {
-  attributes(value, ["id", "source", "start", "duration", "enabled"], ["name", "role"]);
+  attributes(value, ["id", "source", "start", "duration", "enabled"], ["name"]);
   assertChildren(value, [
     "source-time", "media", "component", "composition", "parameters", "value", "media-input", "picture", "audio",
   ]);
@@ -530,8 +531,6 @@ function readPresent(value: XmlElement): NlePresentItem {
     ...(picture === undefined ? {} : { picture: readPicture(picture, source === "media") }),
   };
   const audio = optionalChild(value, "audio");
-  const role = optionalAttr(value, "role");
-  if (role !== undefined && (source !== "component" || role !== "subtitle")) fail("<present> role requires a subtitle Component.");
   if (source === "media") {
     assertChildren(value, ["source-time", "media", "picture", "audio"]);
     const media = onlyChild(value, "media");
@@ -571,7 +570,6 @@ function readPresent(value: XmlElement): NlePresentItem {
       ...base,
       source,
       component: packageSymbol(component),
-      ...(role === "subtitle" ? { role } : {}),
       parameters: jsonObject(onlyChild(value, "parameters")),
       ...(bindings.length === 0 ? {} : { valueBindings: bindings }),
       ...(media.length === 0 ? {} : { media: Object.fromEntries(media) }),
@@ -607,17 +605,18 @@ function readAdjust(value: XmlElement): NleItem {
 }
 
 function readTrack(value: XmlElement): NleTrack {
-  attributes(value, ["id", "name", "kind", "enabled"], ["role"]);
+  attributes(value, ["id", "name", "kind", "role", "enabled"]);
   assertChildren(value, ["present", "adjust"]);
-  const role = optionalAttr(value, "role");
-  if (role !== undefined && role !== "subtitle" && role !== "text" && role !== "effect") {
+  const role = attr(value, "role");
+  if (role !== "picture" && role !== "audio" && role !== "subtitle"
+      && role !== "text" && role !== "filter" && role !== "effect") {
     fail(`<track> role ${role} is invalid.`);
   }
   return {
     id: attr(value, "id"),
     name: attr(value, "name"),
     kind: attr(value, "kind") as NleTrack["kind"],
-    ...(role === undefined ? {} : { role }),
+    role,
     enabled: booleanAttr(value, "enabled"),
     items: value.children.map((child) => child.name === "present" ? readPresent(child) : readAdjust(child)),
   };
@@ -638,7 +637,7 @@ function readRelation(value: XmlElement): NleTransition | NleMatte {
 
 function readComposition(value: XmlElement): NleComposition {
   attributes(value, ["id", "name", "width", "height"]);
-  assertChildren(value, ["track", "transition", "matte"]);
+  assertChildren(value, ["track", "transition", "matte", "group"]);
   return {
     id: attr(value, "id"),
     name: attr(value, "name"),
@@ -648,6 +647,15 @@ function readComposition(value: XmlElement): NleComposition {
       .map((child) => readRelation(child) as NleTransition),
     mattes: value.children.filter((child) => child.name === "matte")
       .map((child) => readRelation(child) as NleMatte),
+    groups: value.children.filter((child) => child.name === "group").map(group => {
+      attributes(group, ["id"]);
+      assertChildren(group, ["member"]);
+      return { id: attr(group, "id"), items: group.children.map(member => {
+        attributes(member, ["item"]);
+        assertChildren(member, []);
+        return attr(member, "item");
+      }) };
+    }),
   };
 }
 
@@ -693,13 +701,15 @@ function readSharedValue(value: XmlElement): NleSharedValue {
 export function parseSvml(source: string): NleProject {
   const root = new XmlReader(source).read();
   element(root, "svml");
-  attributes(root, ["id", "name", "root"]);
+  attributes(root, ["id", "name", "root"], ["edit-rate"]);
   assertChildren(root, ["shared-value", "composition"]);
+  const editRate = optionalAttr(root, "edit-rate");
   return {
     format: nleProjectFormat,
     id: attr(root, "id"),
     name: attr(root, "name"),
     rootComposition: attr(root, "root"),
+    editRate: editRate === undefined ? defaultNleEditRate : rate(editRate, "SVML edit-rate"),
     sharedValues: root.children.filter((child) => child.name === "shared-value").map(readSharedValue),
     compositions: root.children.filter((child) => child.name === "composition").map(readComposition),
   };
@@ -803,7 +813,6 @@ function audio(value: NleAudioAppearance, depth: number): string {
 function present(value: NlePresentItem, depth: number): string {
   const indent = "  ".repeat(depth);
   let result = `${indent}<present${a("id", value.id)}${a("name", value.name)}${a("source", value.source)}`
-    + `${a("role", value.source === "component" ? value.role : undefined)}`
     + `${a("start", exact(value.start))}${a("duration", exact(value.duration))}${a("enabled", value.enabled)}>\n`;
   if (value.source === "media") result += `${indent}  <media${a("path", value.asset.path)} />\n`;
   else if (value.source === "component") {
@@ -862,6 +871,11 @@ function composition(value: NleComposition, depth: number): string {
   for (const valueTrack of value.tracks) result += track(valueTrack, depth + 1);
   for (const transition of value.transitions) result += relation(transition, depth + 1);
   for (const matte of value.mattes) result += relation(matte, depth + 1);
+  for (const group of value.groups) {
+    result += `${indent}  <group${a("id", group.id)}>\n`;
+    for (const item of group.items) result += `${indent}    <member${a("item", item)} />\n`;
+    result += `${indent}  </group>\n`;
+  }
   return `${result}${indent}</composition>\n`;
 }
 
@@ -883,7 +897,10 @@ function sharedValue(value: NleSharedValue, depth: number): string {
 
 export function printSvml(value: NleProject): string {
   let result = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-  result += `<svml${a("id", value.id)}${a("name", value.name)}${a("root", value.rootComposition)}>\n`;
+  const { numerator, denominator } = value.editRate;
+  const grid = numerator === defaultNleEditRate.numerator && denominator === defaultNleEditRate.denominator
+    ? "" : a("edit-rate", `${numerator}/${denominator}`);
+  result += `<svml${a("id", value.id)}${a("name", value.name)}${a("root", value.rootComposition)}${grid}>\n`;
   for (const shared of value.sharedValues) result += sharedValue(shared, 1);
   for (const valueComposition of value.compositions) result += composition(valueComposition, 1);
   return `${result}</svml>\n`;

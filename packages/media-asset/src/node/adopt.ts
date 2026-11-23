@@ -1,12 +1,12 @@
 import { copyFile, link, mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { createMediaAssetDocumentFromInspection } from "../index.js";
+import { createMediaAssetDocument } from "../index.js";
 import type {
   MediaAdoptionContext,
   MediaAssetDocument,
   MediaAssetFile,
 } from "../index.js";
-import type { MediaInspection, MediaSelectionRequest } from "@hypit/media";
+import { interpretMedia, selectMediaStreams, type MediaInspection, type MediaSelectionRequest } from "@hypit/media";
 import { writeMediaAssetDocumentFile } from "./store.js";
 
 export type AdoptMediaFileRequest = {
@@ -75,7 +75,8 @@ export async function adoptMediaFile(
   const inspection = await host.inspect(source, context);
   checkCancelled(context);
   report(context, "interpret", source);
-  const selection = host.select(inspection);
+  const selection = selectMediaStreams(inspection, host.select(inspection));
+  const interpretation = interpretMedia({ mediaType: request.mediaType, inspection, selection });
 
   const declaredPath = policy === "link"
     ? portableRelative(base, source)
@@ -86,8 +87,8 @@ export async function adoptMediaFile(
     throw new Error(`Media adoption file ${declaredPath} is not a canonical portable relative path.`);
   }
   const file: MediaAssetFile = { path: canonical, mediaType: request.mediaType };
-  const document = createMediaAssetDocumentFromInspection({ file, inspection, selection });
 
+  let document: MediaAssetDocument;
   let createdMedia = false;
   try {
     if (policy === "copy" && mediaPath !== source) {
@@ -108,6 +109,7 @@ export async function adoptMediaFile(
     }
     checkCancelled(context);
     report(context, "publish", source, asset);
+    document = createMediaAssetDocument({ file, interpretation, adoptedAt: new Date().toISOString() });
     await writeMediaAssetDocumentFile(asset, document);
   } catch (error) {
     if (createdMedia) await rm(mediaPath, { force: true });

@@ -1,4 +1,4 @@
-import type { NleTimelineSceneTrack } from "@hypit/nle/view";
+import type { NleTimelineSceneTrack } from "@hypit/nle/surface";
 import { useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
 import { rulerHeight } from "./timelineGeometry.js";
 
@@ -7,7 +7,7 @@ type DropPosition = { readonly trackId: string; readonly top: number };
 export function useTrackReorder(
   scroller: RefObject<HTMLDivElement | null>,
   displayRows: readonly NleTimelineSceneTrack[],
-  revision: string,
+  revision: number,
   busy: boolean,
   onMove: (track: string, before: string | undefined) => void,
 ) {

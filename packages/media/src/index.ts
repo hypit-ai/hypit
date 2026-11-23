@@ -17,4 +17,7 @@ export function sealMediaInterpretation(value: MediaInterpretation): MediaInterp
   verifyMediaInterpretation(value);
   return structuredClone(value);
 }
-export type { MediaStoryboardAtlas, MediaViewRequest } from "./views.js";
+export {
+  isPicturePreviewRate, isWaveformPreviewResolution, mediaPreviewSampleRate, picturePreviewRates, waveformPeaksPerBlock, waveformPreviewResolution,
+  type MediaAudioPeaks, type MediaSourcePreviewBlock, type MediaSourcePreviewRequest, type MediaStoryboardAtlas, type MediaViewRequest, type PicturePreviewRate,
+} from "./views.js";

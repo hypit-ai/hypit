@@ -11,6 +11,7 @@ import type { ProjectHost } from "@hypit/project";
 import { compareExactTemporalValues, type TemporalRate } from "@hypit/temporal/algebra";
 import type { NleStudioActionObservation, NleStudioActionRequest } from "./protocol.js";
 import { studioFrameTime } from "./timeline-planning.js";
+import { previewCanvas } from "./programme.js";
 
 type PreviewRequest = Extract<NleStudioActionRequest, { kind: "frame-preview" | "playback-preview" | "programme-waveform" }>;
 type PreviewChannel = "visual" | "waveform";
@@ -165,9 +166,7 @@ export class NleStudioPreview {
       if (compareExactTemporalValues(start, duration) >= 0) throw new Error("NLE Studio preview frame is outside the Programme.");
       const range = { start, end: compareExactTemporalValues(desired, duration) > 0 ? duration : desired };
       const source = project.compositions.find(value => value.id === request.composition)!.canvas;
-      const scale = Math.min(1, 960 / Math.max(source.width, source.height));
-      const even = (value: number) => Math.max(2, Math.floor(value * scale / 2) * 2);
-      const canvas = { width: even(source.width), height: even(source.height), background: "#15161b" };
+      const canvas = previewCanvas(source);
       action.directory = await mkdtemp(join(tmpdir(), "hypit-nle-preview-"));
       signal.throwIfAborted();
       progress(0.1);

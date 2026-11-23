@@ -1,8 +1,9 @@
 import type { PackageSymbol } from "./implementation.js";
 import type { MediaInterpretation } from "@hypit/media";
-import type { ExactTemporalValue, TemporalMapPiece } from "@hypit/temporal/algebra";
+import type { ExactTemporalValue, TemporalMapPiece, TemporalRate } from "@hypit/temporal/algebra";
 
 export const nleProjectFormat = "hypit.nle-project";
+export const defaultNleEditRate: TemporalRate = Object.freeze({ numerator: 30, denominator: 1 });
 
 /** Unit-neutral finite Picture domain. Output pixels and background policy are not Project facts. */
 export type NleCanvas = {
@@ -163,7 +164,6 @@ export type NleMediaItem = NlePresentBase & {
 export type NleComponentItem = NlePresentBase & {
   readonly source: "component";
   readonly audio?: never;
-  readonly role?: "subtitle";
   readonly component: PackageSymbol;
   /** Package-defined values remain distinct from occurrence-local parameters and may be inline or shared. */
   readonly valueBindings?: readonly NleComponentValueBinding[];
@@ -188,11 +188,13 @@ export type NleAdjustItem = NleTimelineItemBase & Omit<NleProcess, "controlTime"
 
 export type NleItem = NlePresentItem | NleAdjustItem;
 
+export type NleTrackRole = "picture" | "audio" | "text" | "subtitle" | "filter" | "effect";
+
 export type NleTrack = {
   readonly id: string;
   readonly name: string;
   readonly kind: "picture" | "audio";
-  readonly role?: "subtitle" | "text" | "effect";
+  readonly role: NleTrackRole;
   readonly enabled: boolean;
   /** Picture Tracks and their Items are ordered back-to-front. */
   readonly items: readonly NleItem[];
@@ -216,6 +218,12 @@ export type NleMatte = {
   readonly parameters: Readonly<Record<string, unknown>>;
 };
 
+/** Composition-local membership for linked Item movement. */
+export type NleEditGroup = {
+  readonly id: string;
+  readonly items: readonly string[];
+};
+
 export type NleComposition = {
   readonly id: string;
   readonly name: string;
@@ -223,6 +231,7 @@ export type NleComposition = {
   readonly tracks: readonly NleTrack[];
   readonly transitions: readonly NleTransition[];
   readonly mattes: readonly NleMatte[];
+  readonly groups: readonly NleEditGroup[];
 };
 
 export type NleProject = {
@@ -231,6 +240,8 @@ export type NleProject = {
   readonly name: string;
   /** Default preview, lowering and delivery entry. */
   readonly rootComposition: string;
+  /** Frame grid for addressing edits and sampling the editor preview. Item times remain exact. */
+  readonly editRate: TemporalRate;
   /** Typed Project-wide values addressable from explicit slots in any Composition. */
   readonly sharedValues: readonly NleSharedValue[];
   readonly compositions: readonly NleComposition[];

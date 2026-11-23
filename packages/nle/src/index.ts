@@ -1,6 +1,6 @@
 export type * from "./types.js";
 export { assertIdentity, assertImplementationBinding, assertPackageSymbol, type PackageSymbol } from "./implementation.js";
-export { nleProjectFormat } from "./types.js";
+export { defaultNleEditRate, nleProjectFormat } from "./types.js";
 export {
   assertNleProject,
   createNleProject,
@@ -10,6 +10,7 @@ export {
   findNlePictureLayoutSharedValue,
   findNleSharedValue,
   nleCompositionDuration,
+  nleGroupMoveItems,
   nleItemEnd,
   nleProjectDuration,
   readNleProject,

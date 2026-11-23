@@ -10,11 +10,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./view": {
-      "hypit-source": "./src/view/index.ts",
-      "types": "./dist/view/index.d.ts",
-      "import": "./dist/view/index.js"
-    },
     "./node": {
       "hypit-source": "./src/node/index.ts",
       "types": "./dist/node/index.d.ts",

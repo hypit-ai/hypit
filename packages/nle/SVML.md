@@ -48,18 +48,20 @@ name current Project objects directly. There are no query, expression or fallbac
 
 | Element | Required attributes | Optional attributes | Children |
 | --- | --- | --- | --- |
-| `svml` | `id`, `name`, `root` | none | `shared-value`, `composition` |
-| `composition` | `id`, `name`, `width`, `height` | none | `track`, `transition`, `matte` |
-| `track` | `id`, `name`, `kind`, `enabled` | `role` | `present`, `adjust` |
+| `svml` | `id`, `name`, `root` | `edit-rate` | `shared-value`, `composition` |
+| `composition` | `id`, `name`, `width`, `height` | none | `track`, `transition`, `matte`, `group` |
+| `track` | `id`, `name`, `kind`, `role`, `enabled` | none | `present`, `adjust` |
 
-`root` references one Project-owned Composition. `width` and `height` define its positive, unit-neutral Picture
-canvas. `track.kind` is `picture` or `audio`; `enabled` is `true` or `false`. Picture Track order is back-to-front.
+`root` references one Project-owned Composition. `edit-rate` is a positive rational frame grid such as
+`24000/1001`, defaulting to `30/1`. It is shared by all Compositions. Item times stay exact and delivery has its own rate. `width` and `height` define its positive, unit-neutral Picture
+canvas. `track.kind` is `picture` or `audio`; `enabled` is `true` or `false`. Tracks are authored bottom-to-top in one list.
 Picture Item order is the direct back-to-front paint order within its Track, including overlapping Items. Audio
 contributions mix.
 
-A `track` can declare `role="effect"` for Picture or Audio, or `role="text"` or `role="subtitle"` for Picture.
-Subtitle Tracks contain Component Presents carrying `role="subtitle"`. Other Presents follow their track's
-ordinary Picture or Audio placement rules. The authored Track order determines Picture paint order.
+Picture Tracks declare a `picture`, `text`, `subtitle`, `filter` or `effect` role. Audio Tracks declare an `audio`
+or `effect` role. Text and subtitle Tracks contain Component Presents. Filter Tracks contain Adjust Items.
+Adjust Items use a filter or effect Track. Items on either of these roles carry a name.
+The authored Track order determines Picture paint order and the signal available to each Adjust.
 
 ## Present Items
 
@@ -82,7 +84,7 @@ Every Present has one source kind, exact Programme placement and one source-time
 
 | Element | Required attributes | Optional attributes | Children |
 | --- | --- | --- | --- |
-| `present` | `id`, `source`, `start`, `duration`, `enabled` | `name`, `role` | one source child, one `source-time`, optional `picture`, optional `audio` |
+| `present` | `id`, `source`, `start`, `duration`, `enabled` | `name` | one source child, one `source-time`, optional `picture`, optional `audio` |
 | `media` | `path` | none | none |
 | `component` | `package`, `symbol` | none | none |
 | `composition` inside a Present | `ref` | none | none |
@@ -234,6 +236,19 @@ SVML does not add one element per effect or animated property.
 
 Both are Composition-local relations between Present ids. Transition time is the validated canonical overlap of its
 endpoints. Matte time is the content range. Package Controls use the implicit local relation domain.
+
+## Edit Groups
+
+```xml
+<group id="reveal">
+  <member item="reveal-picture" />
+  <member item="reveal-sound" />
+</group>
+```
+
+A Group contains at least two distinct Item IDs in its Composition. An Item belongs to at most one Group.
+Members can occupy different Tracks and time ranges. A move supplies all members and one shared time displacement.
+A split adds the right piece to the same Group. Removing members discards a Group once it has fewer than two.
 
 ## Shared Values
 

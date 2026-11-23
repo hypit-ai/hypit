@@ -1,13 +1,13 @@
-import type { NleInspectorScene, NleTimelineScene, NleTimelineSceneItem } from "@hypit/nle/view";
+import type { NleInspectorScene, NleTimelineScene, NleTimelineSceneItem } from "@hypit/nle/surface";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { enterMotion, expandMotion } from "./motion.js";
 import { timecode } from "./timecode.js";
 import { InspectorSections } from "./Inspector.js";
+import { timelineItemLabel } from "./timelineGeometry.js";
 
-export function TimelineTextList({ scene, selection, textItems, inspector, disabled, onSelect, onEdit, onInvoke }: {
+export function TimelineTextList({ scene, selection, inspector, disabled, onSelect, onEdit, onInvoke }: {
   readonly scene: NleTimelineScene;
   readonly selection: readonly string[];
-  readonly textItems: ReadonlySet<string>;
   readonly inspector: NleInspectorScene | undefined;
   readonly disabled: boolean;
   readonly onSelect: (item: NleTimelineSceneItem) => void;
@@ -20,17 +20,15 @@ export function TimelineTextList({ scene, selection, textItems, inspector, disab
     sections: inspector.sections.filter(section => section.owner.kind === "package"
       || section.owner.kind === "shared-value" && section.owner.declaration.kind === "component"),
   } : undefined;
-  const entries = scene.tracks.flatMap(track => track.items.flatMap(item => {
-    const text = item.display.layers.flatMap(layer => layer.kind === "text" ? [layer.text] : []);
-    return item.source === "component" && (text.length || textItems.has(item.id)) ? [{ item, text }] : [];
-  })).sort((a, b) => a.item.startFrame - b.item.startFrame);
+  const entries = scene.tracks.filter(track => track.role === "text" || track.role === "subtitle")
+    .flatMap(track => track.items.map(item => ({ item, label: timelineItemLabel(item, track.role) })))
+    .sort((a, b) => a.item.startFrame - b.item.startFrame);
   if (!entries.length) return <p className="nle-empty">当前时间线暂无文本条目</p>;
   return <ol className="nle-caption-list studio-text-list"><AnimatePresence initial={false}>
-    {entries.map(({ item, text }) => <motion.li key={item.id} {...enterMotion(reduced)} className={selection.includes(item.id) ? "selected" : undefined}>
+    {entries.map(({ item, label }) => <motion.li key={item.id} {...enterMotion(reduced)} className={selection.includes(item.id) ? "selected" : undefined}>
       <button type="button" className="studio-text-entry" aria-current={selection.includes(item.id) || undefined} onClick={() => onSelect(item)}>
         <time>{timecode(item.startFrame, fps)}</time>
-        <span>{item.display.title}</span>
-        {text.some(line => line !== item.display.title) && <span className="studio-text-entry-content">{text.filter(line => line !== item.display.title).join("\n")}</span>}
+        <span className="studio-text-entry-content">{label}</span>
       </button>
       <AnimatePresence initial={false}>{active?.item === item.id && active.sections.length > 0 &&
         <motion.div key={item.id} className="studio-text-entry-fields" {...expandMotion(reduced)}>

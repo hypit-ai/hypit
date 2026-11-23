@@ -94,8 +94,9 @@ export async function runBoundedMediaProcess(options: {
   readonly maxStdoutBytes: number;
   readonly sharedLibraryPath?: string;
   readonly signal?: AbortSignal;
+  readonly onStderrLine?: (line: string) => void;
 }): Promise<Uint8Array> {
-  return (await run(options.executable, options.argv, undefined, options.timeoutMs, undefined,
+  return (await run(options.executable, options.argv, undefined, options.timeoutMs, options.onStderrLine,
     options.maxStdoutBytes,
     mediaProcessEnv(options.sharedLibraryPath === undefined ? undefined : {
       LD_LIBRARY_PATH: options.sharedLibraryPath,

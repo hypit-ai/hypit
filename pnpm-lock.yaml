@@ -395,6 +395,9 @@ importers:
       '@hypit/application':
         specifier: workspace:^0.1.0
         version: link:../application
+      '@hypit/html-program':
+        specifier: workspace:^0.1.0
+        version: link:../html-program
       '@hypit/html-video':
         specifier: workspace:^0.1.0
         version: link:../html-video

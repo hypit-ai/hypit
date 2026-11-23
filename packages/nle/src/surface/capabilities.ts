@@ -1,3 +1,5 @@
+import { findNleComposition } from "../project.js";
+import type { NleEditingContext } from "./types.js";
 import { indexNleComposition } from "../indexing.js";
 import { resolveNleOperatorParameters } from "../project.js";
 import type { NleItem, NleProject } from "../types.js";
@@ -5,9 +7,7 @@ import type { NleAuthoringHost, NleProcessAuthoringContext } from "./authoring.j
 import type {
   NleTimelineAffordancePolicy,
   NleTimelineItemCapabilities,
-  NleView,
-} from "./types.js";
-import { assertNleViewForProject, nleViewTrackLocked } from "./view.js";
+} from "./projection-types.js";
 
 export const allNleTimelineAffordances: NleTimelineAffordancePolicy = {
   move: true,
@@ -34,11 +34,6 @@ function itemTimeWindow(
       scope: { kind: "adjust" },
     }) === true;
   }
-  const sourceWindow = item.source === "media" || item.source === "composition"
-    ? true
-    : authoring?.componentTimeWindow({ project, composition, track, item }) === true;
-  if (!sourceWindow) return false;
-
   const contexts: NleProcessAuthoringContext[] = [
     ...(item.picture?.processes ?? []).map((process) => ({
       project, composition, track, item, process,
@@ -57,14 +52,13 @@ function itemTimeWindow(
 /** Resolve semantic Timeline editing support for the active Composition. */
 export function resolveNleTimelineItemCapabilities(
   project: NleProject,
-  view: NleView,
+  editing: NleEditingContext,
   authoring?: NleAuthoringHost,
 ): readonly NleTimelineItemCapabilities[] {
-  assertNleViewForProject(view, project);
-  const composition = project.compositions.find((candidate) => candidate.id === view.activeComposition)!;
+  const composition = findNleComposition(project, editing.activeComposition);
   const index = indexNleComposition(composition);
   return composition.tracks.flatMap((track) => track.items.map((item) => {
-    const writable = !nleViewTrackLocked(view, composition.id, track.id);
+    const writable = !editing.lockedTracks.has(track.id);
     const timeWindow = writable && itemTimeWindow(project, composition, track, item, authoring);
     const related = index.transitionParticipants(item.id).length > 0
       || index.matteParticipants(item.id).length > 0;

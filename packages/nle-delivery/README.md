@@ -5,6 +5,10 @@ Compiles an accepted NLE snapshot using Project Media and the project’s select
 exact programme duration and compiles one-frame capture requests, audio programs and video delivery plans for
 the selected output profile. Studio can reuse preparation across requests for one revision and Composition.
 
+`prepareNleComponentPicture` selects one placed Component by Composition and Item identity. It compiles the
+Component within its own Picture region, using sample indices on the owning Composition's edit grid and the
+same source and Item time mapping used in the programme. It resolves the selected Component's Media inputs.
+
 The Project-scoped delivery Service owns Action handles, destination validation, progress and cancellation.
 It submits closed plans to the injected HTML Video Executor. A completed Action returns a Media resource.
 

@@ -23,6 +23,19 @@ export type HtmlVideoDeliveryPlan = {
 
 export interface HtmlFrameExecutor {
   capture(request: HtmlFrameRequest, signal?: AbortSignal): Promise<Uint8Array>;
+  captureFrames?(request: HtmlFrameRequest, signal?: AbortSignal): Promise<readonly Uint8Array[]>;
+  openCapture?(request: Pick<HtmlRasterRequest, "program" | "picture">, signal?: AbortSignal): Promise<HtmlFrameCapture>;
+  openSourceFrames?(program: HtmlFrameRequest["program"], signal: AbortSignal): Promise<HtmlSourceFrames>;
+}
+
+export interface HtmlFrameCapture {
+  captureFrames(frames: readonly number[], signal?: AbortSignal): Promise<readonly Uint8Array[]>;
+  close(): Promise<void>;
+}
+
+export interface HtmlSourceFrames {
+  read(source: string, frame: number, signal?: AbortSignal): Promise<Uint8Array>;
+  close(): Promise<void>;
 }
 
 export type HtmlVideoRenderer = "chromium" | "electron";

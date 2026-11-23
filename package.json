@@ -107,11 +107,6 @@
       "types": "./dist/nle.d.ts",
       "import": "./dist/nle.js"
     },
-    "./nle/view": {
-      "hypit-source": "./src/nle-view.ts",
-      "types": "./dist/nle-view.d.ts",
-      "import": "./dist/nle-view.js"
-    },
     "./nle/surface": {
       "hypit-source": "./src/nle-surface.ts",
       "types": "./dist/nle-surface.d.ts",
@@ -144,7 +139,7 @@
     "build:root": "tsc -p tsconfig.build.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "application": "node dist/cli.js host start",
-    "studio": "node dist/cli.js nle open project.svml --project examples/nle-studio --view project.nle-view.json",
+    "studio": "node dist/cli.js nle open project.svml --project examples/nle-studio",
     "prepack": "pnpm build"
   },
   "dependencies": {

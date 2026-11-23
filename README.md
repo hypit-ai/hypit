@@ -65,12 +65,10 @@ The working core covers Media, NLE editing, video delivery and recoverable local
 - `@hypit/html-video-local` provides an operating-system `HtmlVideoExecutor` using explicitly selected browser and
   local media tools;
 - `@hypit/nle` owns durable direct composition, exact Project transactions and the
-  independent `@hypit/nle/view` editing-arrangement and `@hypit/nle/surface` application-composition subpaths while
-  keeping renderer execution outside both documents; one Project-owned typed Shared Value registry lets explicit
+  `@hypit/nle/surface` editing port. One Project-owned typed Shared Value registry lets explicit
   Component slots, package Operator parameters and NLE-owned Picture layout slots share values across occurrences and
-  Compositions without entering View state or becoming arbitrary document-path relations;
-- `@hypit/nle-studio` registers an NLE Product Provider, leases NLE Project and View Services from its selected
-  ProjectHost, and projects shared Project Media through its session adapter;
+  Compositions through typed bindings;
+- `@hypit/nle-studio` registers an NLE Product Provider, leases one NLE Project Service from its selected ProjectHost, and projects shared Project Media through its session adapter;
 - `@hypit/canvas` owns recipe cards, their input links and result selection. `@hypit/canvas-studio` opens them through
   the same ProjectHost and exposes the board, generation history and explicit adoption into Project Media;
 - `@hypit/hypit` composes the default ApplicationHost distribution, publishes its local endpoint and supplies the local

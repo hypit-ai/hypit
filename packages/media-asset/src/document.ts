@@ -5,6 +5,7 @@ import {
   verifyMediaInterpretation,
 } from "@hypit/media";
 import { assertTemporalMap, compareExactTemporalValues } from "@hypit/temporal/algebra";
+import { assertUtcTimestamp } from "./timestamp.js";
 import type {
   MediaAssetDocument,
   MediaAssetFile,
@@ -54,6 +55,13 @@ export function verifyMediaAssetReference(value: unknown): asserts value is Medi
   exactFields(item, ["path"], "MediaAssetReference");
   portablePath(item.path, "MediaAssetReference.path");
   assert((item.path as string).endsWith(".media.json"), "MediaAssetReference.path must name a .media.json manifest.");
+}
+
+export function normalizeMediaAssetDisplayName(value: unknown): string {
+  const name = typeof value === "string" ? value.trim().normalize("NFC") : "";
+  assert(name.length > 0 && name.length <= 160 && !/\p{Cc}/u.test(name),
+    "Media Asset display name must be 1–160 characters without control characters.");
+  return name;
 }
 
 function verifyFile(value: unknown, subject: string): asserts value is MediaAssetFile {
@@ -124,9 +132,11 @@ export function verifyMediaAssetDocument(value: unknown): asserts value is Media
   exactFields(document, ["format", "media", "representations"], "MediaAssetDocument");
   assert(document.format === "hypit.media-asset", "Unsupported Media Asset document format.");
   const media = object(document.media, "MediaAssetDocument.media");
-  exactFields(media, ["file", "interpretation"], "MediaAssetDocument.media");
+  exactFields(media, ["file", "interpretation", "adoptedAt", "displayName"], "MediaAssetDocument.media");
   verifyFile(media.file, "MediaAssetDocument.media.file");
   verifyMediaInterpretation(media.interpretation);
+  assertUtcTimestamp(media.adoptedAt, "MediaAssetDocument.media.adoptedAt");
+  if (media.displayName !== undefined) normalizeMediaAssetDisplayName(media.displayName);
   assert(Array.isArray(document.representations), "MediaAssetDocument.representations must be an array.");
   const ids = new Set<string>();
   document.representations.forEach((representation, index) => {
@@ -151,15 +161,20 @@ export function serializeMediaAssetDocument(value: MediaAssetDocument): string {
   return `${JSON.stringify(value, undefined, 2)}\n`;
 }
 
-export function createMediaAssetDocumentFromInspection(input: MediaAssetInterpretationInput): MediaAssetDocument {
-  const selection = selectMediaStreams(input.inspection, input.selection);
+export function createMediaAssetDocument(media: MediaAssetDocument["media"]): MediaAssetDocument {
   return sealMediaAssetDocument({
     format: "hypit.media-asset",
-    media: {
-      file: structuredClone(input.file),
-      interpretation: interpretMedia({ mediaType: input.file.mediaType, inspection: input.inspection, selection }),
-    },
+    media,
     representations: [],
+  });
+}
+
+export function createMediaAssetDocumentFromInspection(input: MediaAssetInterpretationInput): MediaAssetDocument {
+  const selection = selectMediaStreams(input.inspection, input.selection);
+  return createMediaAssetDocument({
+    file: input.file,
+    interpretation: interpretMedia({ mediaType: input.file.mediaType, inspection: input.inspection, selection }),
+    adoptedAt: input.adoptedAt,
   });
 }
 

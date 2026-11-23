@@ -1,10 +1,10 @@
 # `@hypit/nle-studio`
 
-The Hypit NLE Product Session backend and browser client. An NLE Product Session leases an SVML Project and optional
-NLE View through its `ProjectHost`, then exposes a finite same-origin projection to the browser client.
+The Hypit NLE Product Session backend and browser client. A session leases one SVML Project through its
+`ProjectHost` and exposes finite same-origin projections to the browser client.
 
 The package is an NLE product adapter, not another document owner. Project edits pass through `NleEditingSurface` to the
-Project Service. Durable editor arrangement passes to the View Service. Selection, playhead and zoom stay in the
+Project Service. The session owns Composition navigation and Track locks. Selection, playhead and zoom stay in the
 browser session. File reads, atomic writes and explicit reload belong to owner Providers in the local product adapter.
 The Media catalog is the ProjectHost's shared Project Media Service; preview state arrives through its selected
 Executor port.
@@ -24,9 +24,8 @@ Use the distribution's `hypit` command to select another project.
 hypit nle open edits/main.svml --project /absolute/path/to/project
 ```
 
-`--view` and the given document are paths inside the selected Project Boundary. Pass `--view
-edits/main.nle-view.json` when durable View state is wanted. Without it, the Product Session creates a session-only
-View from the Project's root Composition. The shared Host publishes its loopback address on startup.
+Select an SVML document inside the Project Boundary. The session starts at the root Composition, with the document's edit rate.
+The shared Host publishes its loopback address on startup.
 
 Current production behavior opens a finite Product projection, renders the Timeline, Canvas and Inspector, accepts
 guarded commands, explicitly saves or reloads owner documents, imports local browser files, projects the shared Media
@@ -37,29 +36,35 @@ Studio reads the current open projection.
 Timeline drops use `POST /api/operate`. Studio resolves the selected Items, compatible unlocked Tracks, collisions
 and Track creation in one guarded edit.
 Dragging the full contents of contiguous Tracks into a gap moves those Tracks together. Track headers and gaps
-can be used to interleave Picture and Audio Tracks, with the display order recorded in the View.
+can be used to interleave Picture and Audio Tracks in the SVML Composition's Track order.
 The same endpoint applies trim, multi-Item split, and removal. Callers can close a gap or ripple-remove a
-contiguous interval by selecting an explicit Track scope. Studio offers a separate View reconciliation command
-if a Project edit invalidates a View reference.
+contiguous interval by selecting an explicit Track scope.
 The Timeline reports the legal edit-frame range of each trim handle. Both projection and mutation use the resolved
-source time and the Item's time maps. The endpoint also supports timed source slip, direct-cut roll and end-edge
+source time and the Item's time maps. Move keeps those maps intact. Trim changes the visible window, and split
+preserves its source coordinates in both pieces. The endpoint also supports timed source slip, direct-cut roll and end-edge
 ripple trim. Media, Component and
 Composition materialization can insert at a boundary by supplying an explicit destination and `insertTracks`.
 Callers can retime a single affine Picture-only source window or create a new held Media Picture from a
 selected forward sample with `media.freeze`.
 Studio handles Cmd/Ctrl+C, X and V through the session clipboard. Paste preserves relative timing and complete
-audiovisual relations within the open NLE document. The Timeline exposes a separate action for pasted View Groups.
+audiovisual relations and Groups within the open NLE document. Dragging a Group member moves the whole Group.
+The Group control can create a Group, remove selected members or dissolve the selected Group.
 Studio can compound a contiguous single-Track selection and enter or return from a nested Composition. Returning
 restores the parent playhead. The backend also supports making a nested definition unique and exploding a
 full-duration, unmodified single-Track occurrence.
-The local distribution renders single-frame previews and bounded playback with the selected Chromium and Media
-toolchain.
+Paused scrubbing and frame stepping reuse the active Composition's Picture Programme in a sandboxed browser
+frame. Source media load on demand. When an accepted edit replaces the Programme, Studio waits for the new
+document to paint at the current playhead before switching. Play advances the same document using native video
+decoding where the source mapping permits it. The browser queues bounded PCM mixes on its audio clock. Exact
+single-frame PNG and MP4 review Actions use the selected Chromium and Media toolchain.
+During playback, the Timeline turns a page at the right edge. Horizontal scrolling or zoom disables following
+for the current run, and pausing leaves the viewport where it is.
 
 Available entries in the browser Media bin can be placed at the current playhead. Studio chooses a compatible Track,
 creates one when needed, and returns the new Item identity. The structural Canvas displays accepted image and video
 resources in their Present Item layout.
 
-At session open, the backend assembles the selected packages' NLE authoring, Timeline presentation and Inspector
+At session open, the backend assembles the selected packages' NLE Component definitions, authoring and Inspector
 presentation contributions into the existing Editing Surface contracts. The browser creation bin projects selected
 Component, Process, Adjust and Transition offerings. Creating one sends an explicit
 guarded materialization request; subsequent Component and Operator parameter edits use the package's Inspector and
@@ -103,7 +108,9 @@ are independent operations.
 
 `POST /api/actions` starts frame preview, playback preview or delivery at the accepted Project revision. `GET
 /api/actions/:handle` observes the Action and `DELETE /api/actions/:handle` requests cancellation. Completed
-results have Session-owned resource URLs. The Hypit Host accepts
+results have Session-owned resource URLs. The Preview observation supplies the Session Programme document URL
+for seeking and continuous playback. Media, exact source frames, and audio buffers use generation-scoped URLs.
+The Hypit Host accepts
 `HYPIT_FFMPEG_PATH`, `HYPIT_FFPROBE_PATH`, `HYPIT_CHROME_PATH` and `HYPIT_ELECTRON_PATH` for explicit executable
 selection and otherwise uses the local implementations' ordinary defaults.
 
@@ -112,13 +119,23 @@ and the current Media Catalog generation. Timed views take positions on the Asse
 The `programme-waveform` Action takes the active Composition, both revisions and a Programme frame range up
 to two minutes. It returns the peak PNG of the same mix used for playback and delivery. A waveform request can
 run alongside a frame or playback request.
-Studio's Timeline uses the `timeline-media` observation on scroll or resize and requests bounded thumbnail,
-storyboard and raw waveform resources for the visible portion of Media Presents.
+The Media list, audio source monitor and Media clips call `media.source-preview` through the same
+project-local cache. The list and monitor use the full Media clock. Studio maps visible Timeline cells and audio
+intervals through each Item's source-time projection. Filmstrip blocks supply frame tiles. Waveform blocks
+supply peak data at the requested resolution and Studio draws it at the current display scale.
+Composition and visual Component clips use `picture.source-preview` to draw transparent frames on fixed source-time grids.
+Composition clips with Audio use `audio.source-preview` to read cached numeric peaks from the child mix. The
+Timeline maps the visible interval through the clip's source time and paints these blocks with the Media waveform renderer.
+Studio can request a denser grid while displaying the coarse samples. The Product Session reuses frames when the compiled
+HTML program and resources are equivalent. Composition samples use the child clock and are shared across occurrences.
+Component samples use the placed Item window on the owning Composition's edit grid. They retain the Component's Picture
+extent, source mapping and Item-local controls.
 
-Timeline presentation resources use opaque `api/presentations/:resource` addresses and remain owned by the
-process-local package contribution.
+Each SVML Track declares its role. Text and subtitle Tracks read the plain text supplied by their Component
+definitions. Filter and effect Tracks show authored Item names. Studio chooses the appearance by Track role and
+draws source previews for Picture and Audio from Media and compiled Composition or Component outputs.
 
-Studio autosaves browser edits to the Project document and to a View opened with an explicit document path.
+Studio autosaves Project edits to the SVML file.
 When the file has changed on disk, Studio keeps the unsaved edits and reports the conflict. The notice offers to use
 the file version and asks for confirmation before replacing the open edits.
 The Timeline uses the Host’s resolved drop destination, trim ranges, and guarded operations.

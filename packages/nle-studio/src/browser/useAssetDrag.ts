@@ -1,32 +1,42 @@
-import type { NleTimelineScene, NleTimelineSceneTrack } from "@hypit/nle/view";
+import type { NleTimelineScene, NleTimelineSceneTrack } from "@hypit/nle/surface";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
 import type { NleStudioMediaEntry } from "../protocol.js";
-import { mediaTrackCompatible, trackHasRoom, transitionCutAt, type MediaDrop, type TransitionCut } from "./mediaDrag.js";
-import { labelWidth, rulerHeight, snapTimelineEdges, timelineSnapBoundaries } from "./timelineGeometry.js";
+import { acceptsTimelinePlacement, trackHasRoom, transitionCutAt, type MediaDrop, type TransitionCut } from "./mediaDrag.js";
+import { labelWidth, rulerHeight, snapTimelineEdges, timelineOrigin, timelineSnapBoundaries } from "./timelineGeometry.js";
 
 export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObject<HTMLElement | null>, frame: number, busy: boolean,
-  place: (drop: MediaDrop) => void, select: (entry: NleStudioMediaEntry) => void) {
-  const [drag, setDrag] = useState<{ entry: NleStudioMediaEntry; x: number; y: number; drop?: MediaDrop }>();
+  place: (drop: MediaDrop) => void, select: (entry: NleStudioMediaEntry) => void,
+  moveToFolder: (asset: string, folder: string | null) => void) {
+  const [drag, setDrag] = useState<{ entry: NleStudioMediaEntry; x: number; y: number; drop?: MediaDrop; folder?: string | null }>();
   const cancel = useRef<() => void>(() => undefined);
   useEffect(() => () => cancel.current(), [scene, busy]);
-  const start = (event: ReactPointerEvent, entry: NleStudioMediaEntry, { cuts, role, component, process }: {
+  const start = (event: ReactPointerEvent, entry: NleStudioMediaEntry, { cuts, role, component, adjust, process, onClick }: {
     cuts?: readonly TransitionCut[];
-    role?: NleTimelineSceneTrack["role"] | undefined;
+    role?: NleTimelineSceneTrack["role"];
     component?: boolean;
+    adjust?: boolean;
     process?: boolean;
+    onClick?: (entry: NleStudioMediaEntry) => void;
   } = {}) => {
     if (event.button !== 0 || !scene || busy || entry.state !== "available") return;
     cancel.current(); event.preventDefault();
     const handle = event.currentTarget, pointerId = event.pointerId, x = event.clientX, y = event.clientY;
     handle.setPointerCapture(pointerId);
     let moved = false, drop: MediaDrop | undefined, animation = 0;
+    let folder: string | null | undefined;
     let pointer = { x, y, alt: event.altKey }, viewport: HTMLElement | undefined;
     const boundaries = timelineSnapBoundaries(scene);
-    const media = !cuts && !component && role !== "effect";
-    const duration = media ? entry.durationFrames ?? Math.max(1, Math.round(5 * scene.editRate.numerator / scene.editRate.denominator)) : undefined;
+    const media = !cuts && !component && !adjust;
+    const medium = entry.kind === "audio" ? "audio" : "picture";
+    const destinationRole = role ?? medium;
+    const duration = cuts === undefined
+      ? entry.durationFrames ?? Math.max(1, Math.round(5 * scene.editRate.numerator / scene.editRate.denominator))
+      : undefined;
     const locate = () => {
       if (!moved) return;
       const hit = document.elementFromPoint(pointer.x, pointer.y);
+      const folderId = media ? hit?.closest<HTMLElement>("[data-media-folder-drop]")?.dataset.mediaFolderDrop : undefined;
+      folder = folderId === "" ? null : folderId;
       const target = hit?.closest<HTMLElement>("[data-nle-drop]");
       viewport = target && root.current?.contains(target) ? target.closest<HTMLElement>(".nle-timeline-scroll") ?? undefined : undefined;
       drop = undefined;
@@ -34,7 +44,7 @@ export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObjec
         const pixels = Number(viewport.dataset.framePixels), bounds = viewport.getBoundingClientRect();
         const track = scene.tracks.find(track => track.id === target.dataset.nleDrop);
         if (pixels > 0 && pointer.x >= bounds.left + labelWidth && pointer.y >= bounds.top + rulerHeight) {
-          const position = (pointer.x - bounds.left - labelWidth + viewport.scrollLeft) / pixels;
+          const position = (pointer.x - bounds.left - timelineOrigin + viewport.scrollLeft) / pixels;
           if (cuts !== undefined && track) {
             const transitionCut = transitionCutAt(cuts, position, track.id, 32 / pixels);
             if (transitionCut) drop = { id: entry.id, frame: transitionCut.frame, track: track.id, transitionCut };
@@ -44,23 +54,21 @@ export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObjec
               ? snapTimelineEdges([at], frame, boundaries, pixels) : undefined;
             const dropFrame = Math.round(aligned?.frame ?? at);
             const item = hit?.closest<HTMLElement>("[data-clip-id]")?.dataset.clipId;
-            const medium = entry.kind === "audio" ? "audio" : "picture";
-            const compatible = track === undefined || (role === "effect"
-              ? track.enabled && !track.locked && (track.kind === medium && (track.role === "effect" || track.role === undefined && track.items.length === 0)
-                || process && track.items.some(clip => clip.id === item && clip.role === "present" && clip.signals[medium]))
-              : mediaTrackCompatible(track, entry.kind, role));
+            const attachment = process === true && track?.enabled === true && !track.locked
+              && track.items.some(clip => clip.id === item && clip.kind === "present" && clip.signals[medium]);
+            const compatible = track === undefined || acceptsTimelinePlacement(track, medium, destinationRole) || attachment;
             // Picture insertion at a direct cut shifts the following clips. Other media drops need a vacant range.
-            const insert = track?.kind === "picture" && track.items.some(clip => clip.startFrame === dropFrame)
+            const insert = media && track?.role === "picture" && track.items.some(clip => clip.startFrame === dropFrame)
               && !track.items.some(clip => clip.startFrame < dropFrame && clip.startFrame + clip.durationFrames > dropFrame);
-            const vacant = track === undefined || (duration === undefined ? !component || track.items.length === 0
-              : insert || trackHasRoom(track, dropFrame, duration));
+            const vacant = track === undefined || attachment || adjust || insert
+              || duration !== undefined && trackHasRoom(track, dropFrame, duration);
             if (compatible && vacant) drop = { id: entry.id, frame: dropFrame,
               ...(aligned ? { snapFrame: aligned.frame } : {}), ...(track ? { track: track.id } : {}),
-              ...(item ? { item } : {}), ...(duration === undefined ? {} : { durationFrames: duration }) };
+              ...(item ? { item } : {}), ...(duration === undefined || attachment ? {} : { durationFrames: duration }) };
           }
         }
       }
-      setDrag({ entry, x: pointer.x, y: pointer.y, ...(drop ? { drop } : {}) });
+      setDrag({ entry, x: pointer.x, y: pointer.y, ...(drop ? { drop } : {}), ...(folder === undefined ? {} : { folder }) });
     };
     const move = (next: PointerEvent) => {
       if (next.pointerId !== pointerId) return;
@@ -87,7 +95,9 @@ export function useAssetDrag(scene: NleTimelineScene | undefined, root: RefObjec
     const up = (next: PointerEvent) => {
       if (next.pointerId !== pointerId) return;
       move(next); const accepted = drop; clean();
-      if (!moved) select(entry); else if (accepted) place(accepted);
+      if (!moved) (onClick ?? select)(entry);
+      else if (accepted) place(accepted);
+      else if (folder !== undefined) moveToFolder(entry.id, folder);
     };
     cancel.current = clean;
     window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);

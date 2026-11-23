@@ -1,12 +1,5 @@
-import { readFile } from "node:fs/promises";
-
 const packageName = "@hypit-example/ranking-football-components";
 const componentSymbol = symbol => ({ package: packageName, symbol });
-const tierPoster = {
-  mediaType: "image/png",
-  layout: "repeat-x",
-  open: () => readFile(new URL("./tier-board-poster.png", import.meta.url)),
-};
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -59,7 +52,7 @@ function renderComponent(item, context, render) {
   const { width, height } = resolveLayout(item, context.project);
   return {
     region: { x: 0, y: 0, width, height },
-    duration: item.duration,
+    duration: context.sourceDuration,
     visual: render({
       id: `${item.id}:source`,
       parameters: {
@@ -229,14 +222,6 @@ function flashVisual(source) {
   };
 }
 
-function boardTimeline(context) {
-  const value = boardParameters(context.item.parameters, `Football Tier Board ${context.item.id}`);
-  return {
-    title: context.item.name ?? "Tier board",
-    layers: [{ kind: "text", text: `${value.entries.length} entries · ${value.rows.length} tiers` }],
-  };
-}
-
 function boardInspector(context) {
   const value = boardParameters(context.item.parameters, `Football Tier Board ${context.item.id}`);
   const tierOptions = value.rows.map(row => ({ value: row.id, label: row.label }));
@@ -386,17 +371,14 @@ export const hypitPackage = {
   package: packageName,
   contributions: [
     {
-      kind: "hypit.nle-timeline-presentation",
+      kind: "hypit.nle-component-definition",
       value: {
-        kind: "hypit.nle-timeline-presentation",
+        kind: "hypit.nle-component-definition",
         package: packageName,
         components: [
-          { component: componentSymbol("tier-board"), displayName: "Tier board", tone: "violet",
-            chrome: "group", heightPx: 72, project: boardTimeline, poster: tierPoster },
-          { component: componentSymbol("reveal-flash"), displayName: "Reveal flash", tone: "orange",
-            chrome: "compact" },
+          { component: componentSymbol("tier-board"), role: "picture", sourceTime: () => ({ kind: "timed" }) },
+          { component: componentSymbol("reveal-flash"), role: "effect", sourceTime: () => ({ kind: "timed" }) },
         ],
-        adjusts: [],
       },
     },
     {
@@ -443,7 +425,6 @@ export const hypitPackage = {
     kind: "hypit.nle-component",
     title: "Tier board",
     value: {
-      category: "graphic",
       component: componentSymbol("tier-board"),
       duration: { ticks: "5", timeBase: { numerator: 1, denominator: 1 } },
       parameters: {
@@ -453,6 +434,15 @@ export const hypitPackage = {
         ],
         entries: [{ id: "first", input: "subject.first", label: "First entry", tier: "s", preset: true }],
       },
+    },
+  }, {
+    id: "reveal-flash",
+    kind: "hypit.nle-component",
+    title: "Reveal flash",
+    value: {
+      component: componentSymbol("reveal-flash"),
+      duration: { ticks: "3", timeBase: { numerator: 1, denominator: 8 } },
+      parameters: { intensity: 0.72, attackFrames: 2, holdFrames: 1, decayFrames: 5, color: "#78ff18", glowColor: "#f1ffe8" },
     },
   }],
 };

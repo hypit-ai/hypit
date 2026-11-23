@@ -36,16 +36,15 @@ Read the current system from authority toward implementation.
   Delivery Action 与 npm 执行边界。
 - [NLE](nle.md) — direct audiovisual composition, the SVML Project document, per-document Service transactions and
   exact composition semantics.
-- [NLE View](nle-view.md) — durable editing arrangement, per-Composition guards, independent Service lifetime and the
-  finite projection seam.
 
 ### 4. Product and Surface designs
 
 - [Application Home](application-home.md) — the application-level browser Surface, product launcher and shared local
   endpoint discovery.
-- [NLE Editing Surface](nle-surface.md) — application composition over Project and View Services, guarded operations,
+- [NLE Editing Surface](nle-surface.md) — guarded Project edits and caller-supplied editing context,
   finite observations and projection invalidation.
 - [NLE Studio](nle-studio.md) — NLE Product Provider, browser-session boundary, persistence and Media/preview ports.
+- [NLE Studio 后端 API](nle-studio-api.md) — 现有接口总览，从左上角素材区开始逐项联调。
 - [NLE 后端能力审计](nle-backend-capability-audit.md) — 把产品验收能力映射到当前 Owner 事实、Product Operation、
   Executor Action 与实现缺口。
 

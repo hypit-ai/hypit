@@ -37,7 +37,6 @@ export type CanvasTimelineTarget = {
   readonly editRate: { readonly numerator: number; readonly denominator: number };
   readonly endFrame: number;
   readonly projectRevision: number;
-  readonly viewRevision: number;
 };
 
 export type CanvasTimelinePlacement = {
@@ -46,7 +45,6 @@ export type CanvasTimelinePlacement = {
   readonly request: string;
   readonly composition: string;
   readonly expectedProjectRevision: number;
-  readonly expectedViewRevision: number;
   readonly media: MediaReference;
   readonly track?: string;
   readonly atFrame: number;
@@ -57,7 +55,7 @@ export type CanvasTimelinePlacement = {
 
 export type CanvasTimelineRequest =
   | { readonly kind: "documents" }
-  | { readonly kind: "open"; readonly document: string; readonly view?: string }
+  | { readonly kind: "open"; readonly document: string }
   | { readonly kind: "select"; readonly target: string; readonly composition: string }
   | CanvasTimelinePlacement
   | { readonly kind: "close"; readonly target: string };

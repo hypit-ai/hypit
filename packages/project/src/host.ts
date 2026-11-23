@@ -24,6 +24,7 @@ export type OpenProjectHostOptions = Omit<ProjectHostContext, "refreshExecutionC
 
 export type ProjectHostEvent =
   | { readonly kind: "media.catalog"; readonly generation: number; readonly invalidated: readonly ["media"] }
+  | { readonly kind: "media.library"; readonly revision: string; readonly invalidated: readonly ["media-library"] }
   | { readonly kind: "documents.changed"; readonly invalidated: readonly ["documents"] };
 
 export type ProjectHostEventListener = (event: ProjectHostEvent) => void;
@@ -74,8 +75,11 @@ export class ProjectHost {
     this.#initialExecutionClients = [...options.executionClients];
     this.#discoverExecutionClients = options.discoverExecutionClients;
     this.documents = new ProjectDocumentRegistry<ProjectHostContext>(this);
-    this.#unsubscribeMedia = this.media.subscribe(({ generation }) =>
+    const unsubscribeCatalog = this.media.subscribe(({ generation }) =>
       this.#emit({ kind: "media.catalog", generation, invalidated: ["media"] }));
+    const unsubscribeLibrary = this.media.subscribeLibrary(revision =>
+      this.#emit({ kind: "media.library", revision, invalidated: ["media-library"] }));
+    this.#unsubscribeMedia = () => { unsubscribeCatalog(); unsubscribeLibrary(); };
     this.#unsubscribeDocuments = this.documents.subscribe(() =>
       this.#emit({ kind: "documents.changed", invalidated: ["documents"] }));
   }
@@ -136,6 +140,7 @@ export class ProjectHost {
       const failures: unknown[] = [];
       await this.documents.close().catch((error) => failures.push(error));
       this.resources.close();
+      await this.media.views?.close().catch((error) => failures.push(error));
       this.media.close();
       await this.#refreshingExecution?.catch(() => undefined);
       for (const entry of [...this.executionClients].reverse()) {

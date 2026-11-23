@@ -30,7 +30,7 @@ them, and ordinary package-manager files select installed implementations.
 Each domain owns the meaning, validation, editing and persistence of its facts. Primary owners include:
 
 - Media Asset and its accepted representations;
-- NLE Project and NLE View;
+- NLE Project;
 - Canvas documents;
 - Scene Project and Scene View;
 - Script, Transcript and semantic evidence;

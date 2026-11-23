@@ -10,24 +10,23 @@ import type {
   NleTimelineItemObservation,
   NleTimelineScene,
   NleTransitionInspectorScene,
-  NleViewCommand,
-  NleViewServiceSnapshot,
-} from "../view/index.js";
+} from "./projection-types.js";
+
+/** Caller-owned state for one editing interaction. Track IDs are unique within the Project. */
+export type NleEditingContext = {
+  readonly activeComposition: string;
+  readonly lockedTracks: ReadonlySet<string>;
+};
 
 export type NleEditingSurfaceStatus = {
   readonly projectRevision: number;
-  readonly viewRevision: number;
   readonly projectDirty: boolean;
-  readonly viewDirty: boolean;
   readonly projectHistory: { readonly canUndo: boolean; readonly canRedo: boolean };
-  readonly viewHistory: { readonly canUndo: boolean; readonly canRedo: boolean };
-  readonly viewCompatibility: "compatible" | "stale";
 };
 
 export type NleEditingSurfaceOpen = {
   readonly status: NleEditingSurfaceStatus;
   readonly project: NleServiceSnapshot;
-  readonly view: NleViewServiceSnapshot;
   readonly timelineCapabilities: readonly NleTimelineItemCapabilities[];
   readonly spatialCapabilities: readonly NleSpatialItemCapabilities[];
   readonly timeline: NleTimelineScene;
@@ -54,28 +53,23 @@ export type NleEditingSurfaceObservation =
   | { readonly kind: "transition-inspector"; readonly value: NleTransitionInspectorScene }
   | { readonly kind: "inspector"; readonly value: NleInspectorScene };
 
-type ProjectAndViewRevision = {
+type ProjectRevision = {
   readonly expectedProjectRevision: number;
-  readonly expectedViewRevision: number;
 };
 
 export type NleEditingSurfaceCommand =
-  | (ProjectAndViewRevision & {
+  | (ProjectRevision & {
       readonly kind: "project.transact";
       readonly commands: readonly NleCommand[];
     })
-  | (ProjectAndViewRevision & {
-      readonly kind: "view.transact";
-      readonly commands: readonly NleViewCommand[];
-    })
-  | (ProjectAndViewRevision & {
+  | (ProjectRevision & {
       readonly kind: "inspector.edit";
       readonly item: string;
       readonly section: string;
       readonly field: string;
       readonly value: string | number | boolean;
     })
-  | (ProjectAndViewRevision & {
+  | (ProjectRevision & {
       readonly kind: "inspector.invoke";
       readonly item: string;
       readonly section: string;
@@ -83,26 +77,25 @@ export type NleEditingSurfaceCommand =
       readonly row: string;
       readonly action: string;
     })
-  | (ProjectAndViewRevision & {
+  | (ProjectRevision & {
       readonly kind: "transition-inspector.edit";
       readonly transition: string;
       readonly section: string;
       readonly field: string;
       readonly value: string | number | boolean;
     })
-  | (ProjectAndViewRevision & {
+  | (ProjectRevision & {
       readonly kind: "spatial.edit";
       readonly item: string;
       readonly edit: NleSpatialEdit;
     })
-  | (ProjectAndViewRevision & {
+  | (ProjectRevision & {
       readonly kind: "component-value.edit";
       readonly item: string;
       readonly edit: NleComponentValueEdit;
     })
-  | { readonly kind: "project.undo" | "project.redo"; readonly expectedProjectRevision: number }
-  | { readonly kind: "view.undo" | "view.redo"; readonly expectedViewRevision: number }
-  | (ProjectAndViewRevision & { readonly kind: "view.reconcile" });
+  | (ProjectRevision & { readonly kind: "project.undo" })
+  | (ProjectRevision & { readonly kind: "project.redo" });
 
 export type NleEditingSurfaceInvalidation =
   | "timeline"
@@ -112,12 +105,11 @@ export type NleEditingSurfaceInvalidation =
 
 export type NleEditingSurfaceReceipt = {
   readonly status: NleEditingSurfaceStatus;
-  readonly changed: { readonly project: boolean; readonly view: boolean };
+  readonly projectChanged: boolean;
   readonly invalidated: readonly NleEditingSurfaceInvalidation[];
 };
 
 export type NleEditingSurfaceChange = {
-  readonly owner: "project" | "view";
   readonly kind: string;
   readonly status: NleEditingSurfaceStatus;
 };

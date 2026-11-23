@@ -1,3 +1,5 @@
+import { findNleComposition } from "../project.js";
+import type { NleEditingContext } from "./types.js";
 import type { PackageSymbol } from "../implementation.js";
 import { exactTemporalRational, subtractExactTemporalValues } from "@hypit/temporal/algebra";
 import { nleProcessControlDuration } from "../process-time.js";
@@ -32,9 +34,7 @@ import type {
   NleInspectorSectionDraft,
   NleTimelineItemObservation,
   NleTransitionInspectorScene,
-  NleView,
-} from "./types.js";
-import { assertNleViewForProject, nleViewTrackLocked } from "./view.js";
+} from "./projection-types.js";
 
 export const nleInspectorPresentationContributionKind = "hypit.nle-inspector-presentation";
 
@@ -71,13 +71,13 @@ export type NleInspectorPresentationContribution = {
 export type NleInspectorPresentationHost = {
   readonly scene: (
     project: NleProject,
-    view: NleView,
+    editing: NleEditingContext,
     item: string,
     observations?: readonly NleTimelineItemObservation[],
   ) => NleInspectorScene;
   readonly planEdit: (
     project: NleProject,
-    view: NleView,
+    editing: NleEditingContext,
     item: string,
     section: string,
     field: string,
@@ -85,13 +85,13 @@ export type NleInspectorPresentationHost = {
   ) => NleTransaction;
   readonly planRowAction: (
     project: NleProject,
-    view: NleView,
+    editing: NleEditingContext,
     item: string,
     address: { readonly section: string; readonly collection: string; readonly row: string; readonly action: string },
   ) => NleTransaction;
-  readonly transitionScene: (project: NleProject, view: NleView, transition: string) => NleTransitionInspectorScene;
+  readonly transitionScene: (project: NleProject, editing: NleEditingContext, transition: string) => NleTransitionInspectorScene;
   readonly planTransitionEdit: (
-    project: NleProject, view: NleView, transition: string, section: string, field: string, value: string | number | boolean,
+    project: NleProject, editing: NleEditingContext, transition: string, section: string, field: string, value: string | number | boolean,
   ) => NleTransaction;
 };
 
@@ -247,14 +247,14 @@ export function createNleInspectorPresentationContribution(value: {
   return contribution;
 }
 
-function frames(value: NleItem["start"], view: NleView): number {
+function frames(value: NleItem["start"], project: NleProject): number {
   const exact = exactTemporalRational(value);
   return Number(exact.numerator) / Number(exact.denominator)
-    * view.editRate.numerator / view.editRate.denominator;
+    * project.editRate.numerator / project.editRate.denominator;
 }
 
-function locatedItem(project: NleProject, view: NleView, id: string) {
-  const composition = project.compositions.find((candidate) => candidate.id === view.activeComposition)!;
+function locatedItem(project: NleProject, editing: NleEditingContext, id: string) {
+  const composition = findNleComposition(project, editing.activeComposition);
   for (const track of composition.tracks) {
     const item = track.items.find((candidate) => candidate.id === id);
     if (item !== undefined) return { composition, track, item };
@@ -415,11 +415,11 @@ export function createNleInspectorPresentationHost(
 
   const packageSections = (
     project: NleProject,
-    view: NleView,
+    editing: NleEditingContext,
     itemId: string,
   ): readonly ProjectedPackageSection[] => {
-    const { composition, track, item } = locatedItem(project, view, itemId);
-    const writable = !nleViewTrackLocked(view, composition.id, track.id);
+    const { composition, track, item } = locatedItem(project, editing, itemId);
+    const writable = !editing.lockedTracks.has(track.id);
     const sections: ProjectedPackageSection[] = [];
     if (item.kind === "present" && item.source === "component") {
       const presentation = components.get(packageSymbolKey(item.component));
@@ -442,7 +442,7 @@ export function createNleInspectorPresentationHost(
         const presentation = componentValues.get(componentValueKey(component, binding.slot));
         if (presentation === undefined) continue;
         const allWritable = context.users.every((user) =>
-          !nleViewTrackLocked(view, user.composition.id, user.track.id));
+          !editing.lockedTracks.has(user.track.id));
         const editable = allWritable
           && authoring?.hasComponentValueAuthoring(component, binding.slot) === true;
         for (const draft of presentation.project(context)) {
@@ -474,7 +474,7 @@ export function createNleInspectorPresentationHost(
       const users = shared === undefined ? [] : indexNleProject(project).sharedValueUsers(shared.id);
       const operatorWritable = shared === undefined
         ? writable
-        : users.every((user) => !nleViewTrackLocked(view, user.composition.id, user.track.id));
+        : users.every((user) => !editing.lockedTracks.has(user.track.id));
       for (const draft of presentation.project(context)) {
         const scope = address.kind === "adjust"
           ? "adjust"
@@ -517,14 +517,13 @@ export function createNleInspectorPresentationHost(
     return authoring.planProcessParameterEdit(section.context as NleProcessAuthoringContext, section.address, operation);
   };
 
-  const transitionSections = (project: NleProject, view: NleView, id: string) => {
-    assertNleViewForProject(view, project);
-    const composition = project.compositions.find(value => value.id === view.activeComposition)!;
+  const transitionSections = (project: NleProject, editing: NleEditingContext, id: string) => {
+    const composition = findNleComposition(project, editing.activeComposition);
     const transition = composition.transitions.find(value => value.id === id);
     assert(transition !== undefined, `NLE Transition ${id} is not in active Composition ${composition.id}.`);
-    const { track, item: outgoing } = locatedItem(project, view, transition.outgoing);
-    const { item: incoming } = locatedItem(project, view, transition.incoming);
-    const editable = !nleViewTrackLocked(view, composition.id, track.id);
+    const { track, item: outgoing } = locatedItem(project, editing, transition.outgoing);
+    const { item: incoming } = locatedItem(project, editing, transition.incoming);
+    const editable = !editing.lockedTracks.has(track.id);
     const context = { project, composition, track, transition };
     const drafts = transitions.get(packageSymbolKey(transition.operator))?.project(context) ?? [];
     const writeParameters = editable && authoring?.hasTransitionParameterAuthoring(transition.operator) === true;
@@ -534,28 +533,27 @@ export function createNleInspectorPresentationHost(
       seen.add(draft.id);
       return sceneSection(draft.id, draft, { kind: "package", symbol: transition.operator }, writeParameters);
     });
-    const durationFrames = frames(subtractExactTemporalValues(nleItemEnd(outgoing), incoming.start), view);
+    const durationFrames = frames(subtractExactTemporalValues(nleItemEnd(outgoing), incoming.start), project);
     return { context, editable, sections, drafts, writeParameters, durationFrames };
   };
 
   return {
-    transitionScene(project, view, id) {
-      const { context: { track, transition }, editable, sections, durationFrames } = transitionSections(project, view, id);
+    transitionScene(project, editing, id) {
+      const { context: { track, transition }, editable, sections, durationFrames } = transitionSections(project, editing, id);
       return { id, track: track.id, editable, sections, durationFrames, operator: transition.operator,
         outgoing: transition.outgoing, incoming: transition.incoming };
     },
-    planTransitionEdit(project, view, id, section, field, value) {
-      const { context, drafts, writeParameters } = transitionSections(project, view, id);
-      assert(writeParameters && authoring !== undefined, `NLE Transition ${id} parameters are not editable in this View.`);
+    planTransitionEdit(project, editing, id, section, field, value) {
+      const { context, drafts, writeParameters } = transitionSections(project, editing, id);
+      assert(writeParameters && authoring !== undefined, `NLE Transition ${id} parameters are not editable in this session.`);
       const selected = drafts.find(draft => draft.id === section)?.fields.find(candidate => candidate.id === field);
       assert(selected?.operation !== undefined, `NLE Transition field ${section}.${field} is read-only.`);
       validateEdit(selected, value);
       return authoring.planTransitionParameterEdit(context, selected.operation(value));
     },
-    scene(project, view, id, observations = []) {
-      assertNleViewForProject(view, project);
-      const { composition, track, item } = locatedItem(project, view, id);
-      const writable = !nleViewTrackLocked(view, composition.id, track.id);
+    scene(project, editing, id, observations = []) {
+      const { composition, track, item } = locatedItem(project, editing, id);
+      const writable = !editing.lockedTracks.has(track.id);
       const observedTitle = observations.find((observation) => observation.item === id)?.title;
       const displayedTitle = item.name ?? observedTitle ?? itemTitle(project, item);
       const sections: NleInspectorSection[] = [{
@@ -572,9 +570,9 @@ export function createNleInspectorPresentationHost(
           id: "enabled", label: "Enabled", control: "boolean", value: item.enabled,
           ...(writable ? { editable: true as const } : {}),
         }, {
-          id: "start", label: "Start", control: "number", value: frames(item.start, view), unit: "frames",
+          id: "start", label: "Start", control: "number", value: frames(item.start, project), unit: "frames",
         }, {
-          id: "duration", label: "Duration", control: "number", value: frames(item.duration, view), unit: "frames",
+          id: "duration", label: "Duration", control: "number", value: frames(item.duration, project), unit: "frames",
         }, {
           id: "mapping", label: "Time mapping", control: "readout",
           value: `${(item.kind === "present" ? item.sourceTime : item.controlTime).pieces.length} pieces`,
@@ -586,7 +584,7 @@ export function createNleInspectorPresentationHost(
           ? findNlePictureLayoutSharedValue(project, item.picture.layout.ref) : undefined;
         const users = shared === undefined ? [] : indexNleProject(project).sharedValueUsers(shared.id);
         const layoutWritable = writable && users.every((user) =>
-          !nleViewTrackLocked(view, user.composition.id, user.track.id));
+          !editing.lockedTracks.has(user.track.id));
         sections.push({
           id: "nle-picture-layout",
           label: "Picture layout",
@@ -653,22 +651,21 @@ export function createNleInspectorPresentationHost(
           });
         }
       }
-      sections.push(...packageSections(project, view, id).map((entry) => entry.section));
+      sections.push(...packageSections(project, editing, id).map((entry) => entry.section));
       const processes = item.kind !== "present" ? [] : (["picture", "audio"] as const).flatMap(medium =>
         (item[medium]?.processes ?? []).map(process => ({
           medium, id: process.id, label: process.operator.symbol, enabled: process.enabled, editable: writable,
-          timing: projectNleProcessEdge(process.controlTime, view.editRate) ?? {
+          timing: projectNleProcessEdge(process.controlTime, project.editRate) ?? {
             edge: "mapping" as const,
             canAlign: exactTemporalRational(nleProcessControlDuration(process.controlTime)).numerator > 0n,
           },
         })));
       return { item: id, title: displayedTitle, sections, processes };
     },
-    planEdit(project, view, id, sectionId, fieldId, value) {
-      assertNleViewForProject(view, project);
-      const { composition, track, item } = locatedItem(project, view, id);
-      assert(!nleViewTrackLocked(view, composition.id, track.id),
-        `NLE View Track ${track.id} in Composition ${composition.id} is locked.`);
+    planEdit(project, editing, id, sectionId, fieldId, value) {
+      const { composition, track, item } = locatedItem(project, editing, id);
+      assert(!editing.lockedTracks.has(track.id),
+        `NLE Track ${track.id} in Composition ${composition.id} is locked.`);
       if (sectionId === "nle-occurrence") {
         if (fieldId === "name") {
           assert(typeof value === "string", "NLE Inspector name requires text.");
@@ -686,8 +683,8 @@ export function createNleInspectorPresentationHost(
         const layout = resolveNlePictureLayout(project, item.picture.layout);
         if ("ref" in item.picture.layout) {
           for (const user of indexNleProject(project).sharedValueUsers(item.picture.layout.ref)) {
-            assert(!nleViewTrackLocked(view, user.composition.id, user.track.id),
-              `NLE View Track ${user.track.id} in Composition ${user.composition.id} is locked.`);
+            assert(!editing.lockedTracks.has(user.track.id),
+              `NLE Track ${user.track.id} in Composition ${user.composition.id} is locked.`);
           }
         }
         if (fieldId === "x" || fieldId === "y" || fieldId === "width" || fieldId === "height") {
@@ -726,7 +723,7 @@ export function createNleInspectorPresentationHost(
             ? planNleComponentValueEdit(project, id, { kind: "link", slot, ref: value.slice("shared:".length) })
             : (() => { throw new Error(`NLE Inspector Component value selection ${value} is invalid.`); })();
       }
-      const packageSection = packageSections(project, view, id)
+      const packageSection = packageSections(project, editing, id)
         .find((entry) => entry.section.id === sectionId);
       assert(packageSection !== undefined, `Unknown NLE Inspector section: ${sectionId}.`);
       const field = packageSection.draft.fields.find((candidate) => candidate.id === fieldId)
@@ -734,17 +731,16 @@ export function createNleInspectorPresentationHost(
           .flatMap((row) => row.fields).find((candidate) => candidate.id === fieldId);
       assert(field !== undefined && field.operation !== undefined,
         `NLE Inspector field ${sectionId}.${fieldId} is read-only.`);
-      assert(packageSection.editable, `NLE Inspector section ${sectionId} is not editable in this View.`);
+      assert(packageSection.editable, `NLE Inspector section ${sectionId} is not editable in this session.`);
       validateEdit(field, value);
       return planPackageEdit(packageSection, field.operation(value));
     },
-    planRowAction(project, view, id, address) {
-      assertNleViewForProject(view, project);
-      const { composition, track } = locatedItem(project, view, id);
-      assert(!nleViewTrackLocked(view, composition.id, track.id),
-        `NLE View Track ${track.id} in Composition ${composition.id} is locked.`);
-      const section = packageSections(project, view, id).find(entry => entry.section.id === address.section);
-      assert(section?.editable === true, `NLE Inspector section ${address.section} is not editable in this View.`);
+    planRowAction(project, editing, id, address) {
+      const { composition, track } = locatedItem(project, editing, id);
+      assert(!editing.lockedTracks.has(track.id),
+        `NLE Track ${track.id} in Composition ${composition.id} is locked.`);
+      const section = packageSections(project, editing, id).find(entry => entry.section.id === address.section);
+      assert(section?.editable === true, `NLE Inspector section ${address.section} is not editable in this session.`);
       const action = section.draft.collections?.find(collection => collection.id === address.collection)
         ?.rows.find(row => row.id === address.row)?.actions?.find(action => action.id === address.action);
       assert(action !== undefined, `Unknown NLE Inspector action ${address.action} on row ${address.row}.`);

@@ -27,6 +27,7 @@ its own owner even when a Media Asset explicitly associates it with the accepted
 | stream and container observation | one inspection Action | selected Media Executor |
 | picture and audio selection | adoption or replacement Action | explicit caller |
 | media interpretation | durable | Media Asset document |
+| project adoption time | durable | Media Asset document |
 | primary media and Representation files | durable ordinary files | Project Boundary and their declared owners |
 | resolved byte/resource address | one Host or invocation lifetime | resolving Host |
 | Media Catalog and open generation | ProjectHost lifetime | Project Media Service |
@@ -105,6 +106,7 @@ An illustrative document shape is:
 {
   "format": "hypit.media-asset",
   "media": {
+    "adoptedAt": "2026-11-20T03:00:00.000Z",
     "file": {
       "path": "interview.mp4",
       "mediaType": "video/mp4"
@@ -117,6 +119,10 @@ An illustrative document shape is:
 
 The exact schema lives beside the owner Reader. The format kind does not carry an assumed natural-number ABI.
 The Media Asset Reader defines the current owner shape.
+The required `media.adoptedAt` field records the Asset's acceptance into the project as a UTC timestamp
+with millisecond precision.
+An optional `media.displayName` provides the authored name of the Asset. A rename updates this field in place.
+The manifest path continues to address the same Asset.
 
 The document does not contain absolute paths, runtime resource handles, content hashes, Provider facts,
 Invocation state, NLE occurrences or derived catalog data.
@@ -191,8 +197,8 @@ selected a separate replacement operation.
 
 The action may expose cancellation and finite `inspect`, `interpret`, `copy`, `publish` and `complete` progress
 to its caller. Those values have invocation or frontend-session lifetime and never enter the Media Asset.
-Files are staged before the manifest is published so a failed or cancelled action leaves no half-published
-Media Asset.
+Files are staged before the manifest is published. The adoption Action stamps `media.adoptedAt` and publishes it
+with the Asset in the same atomic manifest write.
 
 The Node Project Media Service exposes the project-scoped local-file adoption Action. It chooses or validates a
 portable manifest path below `media/`, serializes concurrent adoptions, invokes a caller-supplied Media Executor,
@@ -248,6 +254,7 @@ The Service may provide:
 
 - one finite Catalog projection of the current `media/` collection;
 - observation and subscription to completed Catalog generations;
+- observation, revision-guarded edits and subscription for the project Media library tree;
 - opening and resolving an explicit Media Asset;
 - serialization of commands submitted through that Service;
 - file watching and rebuildable in-memory caches;
@@ -257,10 +264,30 @@ Commands may use an open-session generation to give a caller useful conflict fee
 not a content hash, document version or durable author identity. The Service serializes its own callers; direct
 external file edits remain valid author actions and are not brought under a distributed transaction.
 
-The Catalog is a rebuildable projection. It may show references, declared media family, dimensions, duration,
-audio presence, availability and direct parse/read errors. It contains no consumer usage, reverse references,
+The Catalog is a rebuildable projection. It may show references, adoption time, declared media family,
+dimensions, duration, audio presence, availability and direct parse/read errors. It contains no consumer usage, reverse references,
 NLE items, Canvas nodes, analysis state, execution history, version history or asset hashes. Deleting all
 Media Service state and reopening the project must reconstruct the projection from ordinary project files.
+
+### Project Media library
+
+`media/library.json` owns the organization of accepted Project Media. Its root contains a tree of folders.
+Folders have stable local IDs, names, required UTC creation times `createdAt`, children and Media Asset references.
+Sibling folder names are unique. The Service sets the creation time in the folder creation command.
+Each asset has at most one explicit placement; Catalog assets without a placement appear at the library root.
+Empty folders persist. A reference whose manifest is absent remains visible in its folder as missing.
+
+The Project Media Service reads the library from disk and serializes edits with adoption. Folder creation,
+rename, reparenting, removal and asset placement each commit one library revision. Removing a folder moves its
+direct contents to its parent and preserves nested folders. A name collision in the parent blocks the entire edit.
+An adoption
+may select a folder; after publishing the Asset, the Service places its reference there. The asset address,
+signal interpretation and Catalog generation are independent of library edits. Library subscriptions
+publish their own revision.
+
+Asset edits use the current Catalog generation and run through the same Project Media Service write queue.
+Asset removal requires a reference check from the composing caller. It removes the manifest and its library
+placement, then refreshes the Catalog. Primary media files and Representation files remain in the Project.
 
 The first Media implementation does not require a watcher, HTTP adapter, SQLite index, lease pool or resident
 daemon. Direct Readers and Actions establish the first production path. The Service grows when a real Product
@@ -286,10 +313,41 @@ use a constant-picture interpretation. This is the generated-resource inspection
 
 Derived Media views consume one resolved resource, its accepted interpretation and a request on the Media clock.
 Thumbnail and storyboard resolve Picture positions through the member mapping, then select exact decoded ordinals
-against the stream's container timestamps. A storyboard returns a PNG atlas and a mapping from requested Media
-samples to tiles. Waveform and short WAV audition consume the selected Audio member and preserve silence outside
+against the stream's container timestamps. Local decoding can seek to an earlier keyframe and verifies every
+output timestamp before returning the result. When verification cannot establish the selected frames, decoding uses
+the original ordinals from the beginning. A storyboard returns a PNG atlas and a mapping from requested Media
+samples to tiles. It samples the center of each equal time bucket. A picture request can specify a cover width
+along with its height to render a centered crop at the requested dimensions. Waveform and short WAV audition consume the selected Audio member and preserve silence outside
 its active interval. The local executor limits output size, work time and range. Studio supplies Catalog identity,
 generation and temporary resource lifetime.
+
+### Source preview cache
+
+The Project Media Service accepts `media.source-preview` requests against a Media Asset identity and Catalog
+generation. The local distribution binds one executor per open project. The executor receives the resolved
+resource and accepted Picture or Audio interpretation. In-process callers can obtain a view lease directly.
+Studio forwards the same operation over the project-bound Session transport. The lease exposes read-only resource
+handles while the caller reads the results. Cache paths stay with Media Local.
+
+Media Local stores disposable blocks under `.hypit/cache/media/`. Both presets use a grid anchored at zero on
+the accepted Media clock:
+
+- `filmstrip` takes sample positions and an optional density of 2, 4, 8, 16, 32 or 64 samples per second.
+  The default is 2. Video blocks cover eight consecutive intervals at that density, clipped at the Media end.
+  Each interval has a representative sample time and a tile address when the accepted Picture covers the sample.
+  A still has one constant image. Picture blocks report the interpreted display aspect ratio.
+- `waveform` takes block indices and a power-of-two PCM resolution. At each resolution, a block contains
+  up to 512 numeric peaks on a 48 kHz clock. Callers choose the resolution from their display scale. Wider
+  views of the same interval can read finer peaks. Contiguous misses at one resolution share one extraction.
+
+A key includes file identity and change metadata, the selected stream and interpretation, the source duration,
+the preset, the resolution, the block address and the encoding version. Source
+replacement or an interpretation change selects fresh entries. Library organization, Item edits and viewport
+position affect which blocks are read and leave their stored samples reusable.
+
+Media Local coalesces in-flight requests for a key, verifies the source version and atomically stages complete
+entries. A shared byte budget bounds retention. A miss can be rebuilt on demand. ProjectHost closure ends the
+executor and resource handles. Completed cache entries can be read by the next ProjectHost.
 
 ## Cross-owner seams
 

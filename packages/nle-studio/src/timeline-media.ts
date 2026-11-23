@@ -1,78 +1,100 @@
+import { createHash } from "node:crypto";
 import type { ProjectMediaCatalog } from "@hypit/media-asset/service";
-import { nleItemEnd, type NleComposition, type NleMediaItem } from "@hypit/nle";
-import {
-  compareExactTemporalValues, exactTemporalRational, extrapolateTemporalAffineMapPiece, isAffineTemporalMapPiece,
-  subtractExactTemporalValues, type ExactTemporalValue, type TemporalRate, type TemporalRange,
-} from "@hypit/temporal/algebra";
-import type { NleStudioTimelineMediaRequest, NleStudioTimelineMediaView } from "./protocol.js";
-import { studioFrameTime } from "./timeline-planning.js";
+import { nleCompositionDuration, nleItemEnd, nleTimeMappingRequiredDuration,
+  type NleComposition, type NlePresentItem, type NleProject } from "@hypit/nle";
+import { compareExactTemporalValues, type ExactTemporalValue, type TemporalMap } from "@hypit/temporal/algebra";
+import type { NleStudioRenderedPictureTarget, NleStudioTimelinePreview } from "./protocol.js";
 
-const compare = compareExactTemporalValues;
-
-function visibleMediaRange(item: NleMediaItem, range: TemporalRange): TemporalRange | undefined {
-  const from = subtractExactTemporalValues(range.start, item.start);
-  const until = subtractExactTemporalValues(range.end, item.start);
-  const piece = item.sourceTime.pieces.find(value => compare(value.target.start, from) <= 0
-    && compare(value.target.end, until) >= 0);
-  if (piece === undefined || !isAffineTemporalMapPiece(piece) || piece.wrap !== undefined || piece.rate.numerator <= 0) {
-    return undefined;
-  }
-  return {
-    start: extrapolateTemporalAffineMapPiece(piece, from),
-    end: extrapolateTemporalAffineMapPiece(piece, until),
-  };
+function sourceClock(item: NlePresentItem, duration: ExactTemporalValue): TemporalMap {
+  const required = nleTimeMappingRequiredDuration(item.sourceTime);
+  return { stages: [{
+    target: { id: "item", duration: item.duration },
+    source: { id: "source", duration: compareExactTemporalValues(required, duration) > 0 ? required : duration },
+    pieces: item.sourceTime.pieces,
+  }] };
 }
 
-export function observeTimelineMedia(input: {
-  readonly composition: NleComposition;
-  readonly rate: TemporalRate;
-  readonly catalog: ProjectMediaCatalog;
-  readonly request: NleStudioTimelineMediaRequest;
-  readonly mediaIdentity: (item: NleMediaItem) => string;
-}): readonly NleStudioTimelineMediaView[] {
-  const { composition, rate, catalog, request } = input;
-  const ids = new Set(request.tracks);
-  if (ids.size !== request.tracks.length || ids.size > 64
-    || composition.tracks.filter(track => ids.has(track.id)).length !== ids.size
-    || request.fromFrame < 0 || request.toFrame <= request.fromFrame) {
-    throw new Error(`NLE Studio Timeline Media requires active Tracks and a positive range in ${composition.id}.`);
-  }
-  const from = studioFrameTime(request.fromFrame, rate);
-  const to = studioFrameTime(request.toFrame, rate);
-  const frames = (time: ExactTemporalValue) => {
-    const value = exactTemporalRational(time);
-    return Number(value.numerator) / Number(value.denominator) * rate.numerator / rate.denominator;
+type MediaIdentity = (path: string, item: string) => string;
+
+/** Snapshot freshness. Sample reuse is decided using the compiled program. */
+export function renderedPreviewVersion(revision: number, generation: number, target: NleStudioRenderedPictureTarget): string {
+  return createHash("sha256").update(JSON.stringify([revision, generation, target])).digest("hex");
+}
+
+export function timelinePreviewSources(
+  project: NleProject,
+  composition: NleComposition,
+  catalog: ProjectMediaCatalog,
+  mediaIdentity: MediaIdentity,
+  options: {
+    readonly media: boolean; readonly renderedPicture: boolean; readonly renderedAudio: boolean; readonly revision: number;
+  },
+): Readonly<Record<string, NleStudioTimelinePreview>> {
+  const entries = new Map(catalog.entries.map(entry => [entry.reference.path, entry]));
+  const children = new Map(project.compositions.map(child => [child.id, child]));
+  const versions = new Map<string, string>();
+  const audioOutputs = new Map<string, boolean>();
+  const hasAudio = (child: NleComposition): boolean => {
+    const cached = audioOutputs.get(child.id);
+    if (cached !== undefined) return cached;
+    const audible = child.tracks.some(track => track.enabled && track.items.some(item => {
+      if (!item.enabled) return false;
+      if (item.kind === "adjust") return track.kind === "audio";
+      if (item.audio === undefined) return false;
+      return item.source !== "composition" || hasAudio(children.get(item.composition)!)
+        || item.audio.processes?.some(process => process.enabled) === true;
+    }));
+    audioOutputs.set(child.id, audible);
+    return audible;
   };
-  const catalogEntries = new Map(catalog.entries.map(entry => [entry.reference.path, entry]));
-  const candidates = composition.tracks.filter(track => ids.has(track.id)).flatMap(track => track.items)
-    .filter((item): item is NleMediaItem => item.kind === "present" && item.source === "media"
-      && compare(item.start, to) < 0 && compare(nleItemEnd(item), from) > 0)
-    .sort((left, right) => compare(left.start, right.start));
-  const views: NleStudioTimelineMediaView[] = [];
-  for (const item of candidates) {
-    if (views.length >= 8) break;
-    const media = input.mediaIdentity(item);
-    const entry = catalogEntries.get(media);
-    if (entry?.state !== "available") continue;
-    const end = nleItemEnd(item);
-    const start = compare(item.start, from) < 0 ? from : item.start;
-    const until = compare(end, to) > 0 ? to : end;
-    const display = { item: item.id, fromFrame: frames(start), toFrame: frames(until) };
-    const source = { media, expectedMediaGeneration: catalog.generation };
-    if (item.picture !== undefined && entry.picture?.kind === "constant") {
-      views.push({ ...display, action: { ...source, kind: "media.thumbnail", height: 64 } });
-      continue;
-    }
-    const range = visibleMediaRange(item, { start, end: until });
-    if (range === undefined || entry.duration === undefined || compare(range.end, entry.duration) > 0) continue;
-    const length = subtractExactTemporalValues(range.end, range.start);
-    if (item.picture !== undefined && entry.picture?.kind === "signal" && compare(length, studioFrameTime(7200, { numerator: 1, denominator: 1 })) <= 0) {
-      views.push({ ...display, action: { ...source, kind: "media.storyboard", range, frames: 6, height: 64 } });
-    }
-    if (views.length < 8 && item.audio !== undefined && entry.audio
-      && compare(length, studioFrameTime(600, { numerator: 1, denominator: 1 })) <= 0) {
-      views.push({ ...display, action: { ...source, kind: "media.waveform", range, width: 512, height: 48 } });
+  const result: [string, NleStudioTimelinePreview][] = [];
+  for (const track of composition.tracks) {
+    if (track.role !== "picture" && track.role !== "audio") continue;
+    for (const item of track.items) {
+      if (item.kind !== "present") continue;
+      if (item.source === "composition") {
+        const child = children.get(item.composition)!;
+        const duration = nleCompositionDuration(child);
+        if (duration.ticks === "0") continue;
+        const target = { kind: "composition", composition: child.id } as const;
+        const version = versions.get(child.id) ?? renderedPreviewVersion(options.revision, catalog.generation, target);
+        versions.set(child.id, version);
+        const clock = { duration, sourceTime: sourceClock(item, duration) };
+        const picture = options.renderedPicture && item.picture !== undefined
+          ? { target, version, ...clock, displayAspectRatio: child.canvas.width / child.canvas.height } : undefined;
+        const audio = options.renderedAudio && item.audio !== undefined && hasAudio(child)
+          ? { target, version, ...clock } : undefined;
+        if (picture !== undefined || audio !== undefined) result.push([item.id, {
+          ...(picture === undefined ? {} : { picture }), ...(audio === undefined ? {} : { audio }),
+        }]);
+        continue;
+      }
+      if (item.source === "component" && options.renderedPicture && track.role === "picture" && item.picture !== undefined) {
+        const target = { kind: "component", composition: composition.id, item: item.id } as const;
+        result.push([item.id, { picture: { target,
+          version: renderedPreviewVersion(options.revision, catalog.generation, target),
+          range: { start: item.start, end: nleItemEnd(item) } } }]);
+        continue;
+      }
+      if (!options.media || item.source !== "media") continue;
+      const media = mediaIdentity(item.asset.path, item.id);
+      const entry = entries.get(media);
+      if (entry?.state !== "available") continue;
+      const { picture, duration } = entry;
+      const clock = duration === undefined ? undefined : { duration, sourceTime: sourceClock(item, duration) };
+      const picturePreview = item.picture !== undefined && picture !== undefined && (picture.kind === "constant" || clock !== undefined)
+        ? { media, displayAspectRatio: picture.displayAspectRatio,
+          ...(picture.version === undefined ? {} : { version: picture.version }),
+          ...(picture.kind === "constant" ? {} : clock) }
+        : undefined;
+      const audioPreview = item.audio !== undefined && entry.audio && clock !== undefined ? {
+        media, ...clock, ...(entry.audioVersion === undefined ? {} : { version: entry.audioVersion }),
+      } : undefined;
+      if (picturePreview !== undefined || audioPreview !== undefined) result.push([item.id, {
+        ...(picturePreview === undefined ? {} : { picture: picturePreview }),
+        ...(audioPreview === undefined ? {} : { audio: audioPreview }),
+      }]);
     }
   }
-  return views;
+  return Object.fromEntries(result);
 }

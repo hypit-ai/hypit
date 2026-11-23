@@ -1,7 +1,7 @@
 import { realpath, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { ApplicationProjectProvider, IdentifiedApplicationProject } from "../index.js";
-import { openNodeProjectHost, readNodeProjectManifest } from "@hypit/project/node";
+import { openNodeProjectHost, readNodeProjectManifest, type OpenNodeProjectHostOptions } from "@hypit/project/node";
 
 type NodeApplicationProjectInput = {
   readonly root: string;
@@ -29,12 +29,12 @@ async function identifyNodeApplicationProject(value: unknown): Promise<Identifie
   };
 }
 
-export function createNodeApplicationProjectProvider(): ApplicationProjectProvider {
+export function createNodeApplicationProjectProvider(options: Pick<OpenNodeProjectHostOptions, "mediaViewExecutor"> = {}): ApplicationProjectProvider {
   return {
     identify: identifyNodeApplicationProject,
     open: async (value, executionClients, discoverExecutionClients) => {
       const selected = input(value);
-      return await openNodeProjectHost({ root: selected.root, executionClients,
+      return await openNodeProjectHost({ ...options, root: selected.root, executionClients,
         ...(discoverExecutionClients === undefined ? {} : { discoverExecutionClients }) });
     },
   };

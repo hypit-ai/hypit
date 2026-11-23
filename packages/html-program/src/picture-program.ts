@@ -47,6 +47,8 @@ export type HtmlPictureProgramInput = {
   readonly id: string;
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
   readonly frameCount: number;
+  /** Logical output frames represented by this compact batch, in observed order. */
+  readonly outputFrames?: readonly number[];
   readonly canvas: { readonly width: number; readonly height: number; readonly background: string };
   readonly root: HtmlPictureElement;
 };
@@ -149,6 +151,9 @@ export function compileHtmlPictureProgram(input: HtmlPictureProgramInput): HtmlP
     && Number.isSafeInteger(input.canvas.width) && input.canvas.width > 0
     && Number.isSafeInteger(input.canvas.height) && input.canvas.height > 0
     && input.canvas.background.length > 0, "HTML Picture Programme output is invalid.");
+  assert(input.outputFrames === undefined || (input.outputFrames.length === input.frameCount
+    && input.outputFrames.every((frame, index, frames) => Number.isSafeInteger(frame) && frame >= 0
+      && (index === 0 || frame > frames[index - 1]!))), "HTML Picture Programme output indices are invalid.");
   const validate = (element: HtmlPictureElement): void => {
     let previousEnd = -1;
     for (const span of element.spans) {
@@ -245,6 +250,8 @@ export function compileHtmlPictureProgram(input: HtmlPictureProgramInput): HtmlP
   const picture = render(input.root);
   const runtime = `
 const entries=${scriptJson(programs)};
+const outputFrames=${scriptJson(input.outputFrames ?? null)};
+const sampleIndices=outputFrames===null?null:new Map(outputFrames.map((frame,index)=>[frame,index]));
 const sourcePlans=${scriptJson(videoSources.map((source) => ({ id: source.id, frames: source.sourceFrames })))};
 const failures=[];
 const seconds=value=>Number(value.ticks)*value.timeBase.numerator/value.timeBase.denominator;
@@ -253,9 +260,8 @@ Object.defineProperty(window,'__hypitUsePreparedSourceFrames',{configurable:fals
 const spans=element=>(element.dataset.hypitSpans||'').split(',').filter(Boolean).map(value=>{const [start,end]=value.split(':').map(Number);return{start,end}});
 const contributions=[...document.querySelectorAll('[data-hypit-spans]')].map(element=>({element,spans:spans(element)}));
 let renders=[];
-const prepareRenders=selection=>entries.flatMap(entry=>{
+const prepareRender=entry=>{
   const root=document.getElementById(entry.id);
-  if(!selected(root,selection))return [];
   try{
     const context={
       width:root.offsetWidth,height:root.offsetHeight,frameRate:${input.frameRate.numerator / input.frameRate.denominator},
@@ -263,17 +269,20 @@ const prepareRenders=selection=>entries.flatMap(entry=>{
       controlPosition(name,frame){
         const values=entry.controls?.[name];
         if(values===undefined)throw new Error('Undeclared Control '+name);
-        return values[Math.max(0,Math.min(values.length-1,Math.floor(frame)))]??undefined;
+        const index=sampleIndices===null?Math.max(0,Math.min(values.length-1,Math.floor(frame))):sampleIndices.get(Math.floor(frame));
+        return index===undefined?undefined:values[index]??undefined;
       }
     };
     const render=new Function('root','data','context',entry.setup)(root,entry.data,context);
     if(typeof render!=='function')throw new Error('HTML visual setup must return render(localFrame, outputFrame).');
-    return [{...entry,root,render}];
+    return {...entry,root,render};
   }catch(error){
     failures.push(error);
-    return [];
+    return undefined;
   }
-});
+};
+const prepareRenders=selection=>entries.filter(entry=>selected(document.getElementById(entry.id),selection))
+  .map(prepareRender).filter(Boolean);
 const videos=sourcePlans.map(plan=>{const element=document.querySelector('[data-hypit-video-source="'+plan.id+'"]');const slot=element.parentElement.querySelector(':scope>[data-hypit-decoded-media-slot]');const image=document.createElement('img');image.dataset.hypitSourceFrameImage=plan.id;image.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:inherit;object-position:inherit;pointer-events:none;display:none';slot.append(image);return{...plan,element,image};});
 const selected=(element,selection)=>{if(selection===undefined)return true;const values=spans(element.closest('[data-hypit-spans]')||element);return values.some(left=>selection.some(right=>left.start<right.endFrameExclusive&&right.startFrame<left.end));};
 const activate=selection=>{for(const element of document.querySelectorAll('[data-hypit-artifact-src]')){if(!selected(element,selection)||preparedSourceFrameBase!==undefined&&element.hasAttribute('data-hypit-video-source'))continue;element.src=element.dataset.hypitArtifactSrc;element.removeAttribute('data-hypit-artifact-src');}};
@@ -298,7 +307,241 @@ async function prepare(selection){
   renders=prepareRenders(selection);
   if(failures.length)throw failures[0];
 }
-window.__hypitFrameProgram={frameCount:${input.frameCount},prepare,async applyFrame(frame){if(!Number.isSafeInteger(frame)||frame<0||frame>=${input.frameCount})throw new Error('HTML frame is outside Programme.');for(const contribution of contributions)contribution.element.style.display=contribution.spans.some(span=>frame>=span.start&&frame<span.end)?'':'none';for(const entry of renders){const local=entry.renderFrames===undefined?frame:entry.renderFrames[frame];if(local!==null)entry.render(local,frame);}const pending=[];window.dispatchEvent(new CustomEvent('hypit-frame',{detail:{frame,waitUntil(value){pending.push(Promise.resolve(value));}}}));await Promise.all([...pending,...videos.map(entry=>drawSourceFrame(entry,frame))]);await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));if(window.__hypitHtmlVisualError)throw new Error(window.__hypitHtmlVisualError);}};`;
+const inFrame=(spans,frame)=>spans.some(span=>frame>=span.start&&frame<span.end);
+function assertFrame(frame){
+  if(!Number.isSafeInteger(frame)||frame<0||frame>=${input.frameCount})throw new Error('HTML frame is outside Programme.');
+}
+function showFrame(frame){
+  document.getElementById('hypit-program').style.display='';
+  for(const contribution of contributions)contribution.element.style.display=inFrame(contribution.spans,frame)?'':'none';
+}
+function renderEntry(entry,frame){
+  const output=outputFrames===null?frame:outputFrames[frame];
+  const local=entry.renderFrames===undefined?output:entry.renderFrames[frame];
+  if(local!==null)entry.render(local,output);
+}
+function frameEvents(frame){
+  const pending=[];
+  window.dispatchEvent(new CustomEvent('hypit-frame',{detail:{frame:outputFrames===null?frame:outputFrames[frame],waitUntil(value){pending.push(Promise.resolve(value));}}}));
+  return pending;
+}
+function checkVisual(){
+  if(failures.length)throw failures[0];
+  if(window.__hypitHtmlVisualError)throw new Error(window.__hypitHtmlVisualError);
+}
+const paint=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+
+const seekRenders=new Map();
+const seekEntries=entries.map(entry=>({entry,spans:spans(document.getElementById(entry.id))}));
+function decodeImages(frame,signal){
+  const images=[...document.querySelectorAll('img[src]:not([src=""]),img[data-hypit-artifact-src]')];
+  return Promise.all(images.filter(element=>inFrame(spans(element.closest('[data-hypit-spans]')||element),frame))
+    .map(element=>{
+      if(!element.hasAttribute('src'))element.src=element.dataset.hypitArtifactSrc;
+      if(element.complete&&element.naturalWidth>0)return;
+      return new Promise((resolve,reject)=>{
+        const abort=()=>reject(signal.reason);
+        if(signal.aborted){abort();return;}
+        signal.addEventListener('abort',abort,{once:true});
+        void element.decode().then(resolve,reject).finally(()=>signal.removeEventListener('abort',abort));
+      });
+    }));
+}
+function seekVideo(element,time,signal){
+  return new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>finish(new Error('Media seek timed out.')),3500);
+    let target;
+    const finish=error=>{
+      clearTimeout(timer);
+      element.removeEventListener('loadedmetadata',start);
+      element.removeEventListener('loadeddata',decoded);
+      element.removeEventListener('seeked',decoded);
+      element.removeEventListener('error',failed);
+      signal.removeEventListener('abort',abort);
+      if(error)reject(error); else resolve();
+    };
+    const abort=()=>finish(signal.reason);
+    const failed=()=>finish(new Error('Cannot decode preview media.'));
+    const decoded=()=>{
+      if(target!==undefined&&!element.seeking&&element.readyState>=2&&Math.abs(element.currentTime-target)<.002)finish();
+    };
+    const start=()=>{
+      target=Math.max(0,Math.min(time,Math.max(0,element.duration-.000001)));
+      if(!Number.isFinite(target)){failed();return;}
+      try{
+        if(Math.abs(element.currentTime-target)>.000001)element.currentTime=target;
+      }catch(error){finish(error);return;}
+      decoded();
+    };
+    signal.addEventListener('abort',abort,{once:true});
+    element.addEventListener('loadedmetadata',start);
+    element.addEventListener('loadeddata',decoded);
+    element.addEventListener('seeked',decoded);
+    element.addEventListener('error',failed);
+    if(signal.aborted)abort();
+    else if(element.error)failed();
+    else if(element.readyState>=1)start();
+  });
+}
+function startDecoder(entry){
+  if(entry.element.hasAttribute('src'))return;
+  entry.element.style.display='none';
+  entry.element.src=entry.element.dataset.hypitArtifactSrc;
+}
+async function prepareSeekSource(entry,frame,options,signal){
+  const sample=entry.frames[frame];
+  if(sample===null)return;
+  if(options.nativeSources.includes(entry.id)&&sample.side==='after'&&!entry.nativeFailed){
+    startDecoder(entry);
+    try{
+      await seekVideo(entry.element,seconds(sample.position),signal);
+      return {entry,source:entry.element,width:entry.element.videoWidth,height:entry.element.videoHeight};
+    }catch(error){
+      signal.throwIfAborted();
+      entry.nativeFailed=true;
+      releaseDecoder(entry);
+    }
+  }
+  const response=await fetch(options.frameBase+'/'+encodeURIComponent(entry.id)+'/'+frame+'.png',{signal});
+  if(!response.ok)throw new Error('Cannot read preview source '+entry.id+' at frame '+frame+'.');
+  const source=await createImageBitmap(await response.blob());
+  return {entry,source,width:source.width,height:source.height,release:()=>source.close()};
+}
+function showSeekSource({entry,source,width,height}){
+  if(!entry.canvas){
+    entry.canvas=document.createElement('canvas');
+    entry.canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:inherit;object-position:inherit;pointer-events:none';
+    entry.image.parentElement.append(entry.canvas);
+  }
+  if(entry.canvas.width!==width)entry.canvas.width=width;
+  if(entry.canvas.height!==height)entry.canvas.height=height;
+  entry.element.style.display='none';
+  entry.canvas.style.display='block';
+  const context=entry.canvas.getContext('2d');
+  context.clearRect(0,0,width,height);
+  context.drawImage(source,0,0);
+}
+function releaseDecoder(entry){
+  entry.warming?.controller.abort();
+  entry.warming=undefined;
+  if(!entry.element.hasAttribute('src'))return;
+  entry.element.removeAttribute('src');
+  entry.element.load();
+}
+function warmDecoder(frame,options){
+  let warm;
+  let nextFrame=frame+options.lookAhead+1;
+  for(const entry of videos){
+    if(entry.frames[frame]!==null||entry.nativeFailed||!options.nativeSources.includes(entry.id))continue;
+    for(let future=frame+1;future<Math.min(nextFrame,entry.frames.length);future++){
+      if(entry.frames[future]?.side!=='after')continue;
+      warm=entry;
+      nextFrame=future;
+      break;
+    }
+  }
+  for(const entry of videos){
+    if(entry.frames[frame]!==null)continue;
+    if(entry===warm){
+      if(entry.warming?.frame!==nextFrame){
+        entry.warming?.controller.abort();
+        startDecoder(entry);
+        const controller=new AbortController();
+        entry.warming={frame:nextFrame,controller};
+        void seekVideo(entry.element,seconds(entry.frames[nextFrame].position),controller.signal).catch(()=>{});
+      }
+    }else releaseDecoder(entry);
+    if(entry.canvas){entry.canvas.width=0;entry.canvas.height=0;}
+  }
+}
+function pauseVideo(entry){
+  entry.element.pause();
+  entry.liveFrame=undefined;
+}
+async function preparePlayingSource(entry,frame,options,signal){
+  const sample=entry.frames[frame];
+  const next=entry.frames[frame+1];
+  const rate=sample?.side==='after'&&next?.side==='after'
+    ? (seconds(next.position)-seconds(sample.position))*${input.frameRate.numerator / input.frameRate.denominator} : 0;
+  if(rate>=.25&&rate<=4&&options.nativeSources.includes(entry.id)&&!entry.nativeFailed){
+    const element=entry.element;
+    entry.warming?.controller.abort();
+    entry.warming=undefined;
+    startDecoder(entry);
+    const time=seconds(sample.position);
+    try{
+      if(entry.liveFrame===undefined||element.seeking||Math.abs(element.currentTime-time)>.08){
+        await seekVideo(element,time,signal);
+      }
+      signal.throwIfAborted();
+      return {entry,video:true,rate,frame};
+    }catch(error){
+      signal.throwIfAborted();
+      entry.nativeFailed=true;
+      releaseDecoder(entry);
+    }
+  }
+  pauseVideo(entry);
+  return prepareSeekSource(entry,frame,options,signal);
+}
+function showPlayingSource(value){
+  if(!value.video){showSeekSource(value);return;}
+  const {entry,frame,rate}=value;
+  const element=entry.element;
+  if(entry.canvas)entry.canvas.style.display='none';
+  element.style.display='block';
+  if(Math.abs(element.playbackRate-rate)>.0001)element.playbackRate=rate;
+  entry.liveFrame=frame;
+  if(element.paused)void element.play().catch(()=>{
+    if(entry.liveFrame!==undefined)entry.nativeFailed=true;
+  });
+}
+async function presentFrame(frame,options,signal,playing){
+  assertFrame(frame);
+  const prepared=[];
+  try{
+    const results=await Promise.allSettled([
+      decodeImages(frame,signal),
+      ...videos.map(async entry=>{
+        const value=await (playing ? preparePlayingSource(entry,frame,options,signal) : prepareSeekSource(entry,frame,options,signal));
+        if(value)prepared.push(value);
+      })
+    ]);
+    signal.throwIfAborted();
+    const failed=results.find(result=>result.status==='rejected');
+    if(failed)throw failed.reason;
+    showFrame(frame);
+    for(const value of prepared)showPlayingSource(value);
+    for(const {entry,spans:coverage} of seekEntries){
+      if(!inFrame(coverage,frame))continue;
+      if(!seekRenders.has(entry.id))seekRenders.set(entry.id,prepareRender(entry));
+      const render=seekRenders.get(entry.id);
+      if(render)renderEntry(render,frame);
+    }
+    warmDecoder(frame,options);
+    await Promise.all(frameEvents(frame));
+    await Promise.all([decodeImages(frame,signal),document.fonts.ready]);
+    if(!playing)await paint();
+    signal.throwIfAborted();
+    checkVisual();
+  }finally{
+    for(const value of prepared)value.release?.();
+  }
+}
+window.__hypitFrameProgram={
+  frameCount:${input.frameCount},prepare,
+  pausePlayback(){for(const entry of videos)pauseVideo(entry);},
+  seekFrame(frame,options,signal){return presentFrame(frame,options,signal,false);},
+  playFrame(frame,options,signal){return presentFrame(frame,options,signal,true);},
+  async applyFrame(frame){
+    assertFrame(frame);
+    showFrame(frame);
+    for(const entry of renders)renderEntry(entry,frame);
+    await Promise.all([...frameEvents(frame),...videos.map(entry=>drawSourceFrame(entry,frame))]);
+    await paint();
+    checkVisual();
+  }
+};`;
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;width:${input.canvas.width}px;height:${input.canvas.height}px;overflow:hidden;background:${input.canvas.background}}*{box-sizing:border-box}#hypit-program{position:relative;width:100%;height:100%;overflow:hidden}${[...fontRules].join("")}${styles.join("")}</style></head><body><div id="hypit-program" style="display:none">${picture}</div><script>${runtime}</script></body></html>`;
   const program: HtmlProgram = {
     frameRate: structuredClone(input.frameRate),

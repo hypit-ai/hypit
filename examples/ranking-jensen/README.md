@@ -70,15 +70,23 @@ Fine Caption cues can be trimmed and split in Studio. Their timing units stay in
 while each visible Item has its own entrance and exit. The left edge can extend to cue time zero. The right edge
 can extend past the final timing unit, leaving the caption visible until the Item's exit.
 
+Tier board entries also keep their windows in the board's source clock. Moving the board moves all of its internal
+reveals with it. Trimming or splitting preserves when entries appear within that source, and extending the board
+past its last reveal keeps the settled ranking visible. A split reveal flash continues its existing pulse at the cut.
+
 Caption layout follows the authored order of timing units. Playback orders them by exact source start time.
 In `current` mode a later start takes over the highlight, underline and active box. The current emphasis ends
 when that unit ends or the next one starts, whichever comes first. Units on the same source frame hand off
 according to exact start time, with later display order taking precedence when their starts are equal. `trail`
 accumulates units as they start. A point unit with equal start and end occupies its containing source frame.
 
-Studio's Effects bin offers Transform and Filter for a selected Picture Present, and Gain for a selected Audio
+Studio's Effects bin offers Transform and Picture adjustments for a selected Picture Present, and Gain for a selected Audio
 Present. The Inspector enables, reorders and removes occurrences of these effects. Gain exposes its constant value
 or the values of existing linear envelope points. Preview and Delivery consume the edited Process chain.
+
+The Filters bin offers 淡暖胶片, a mild warm film look with slightly brighter midtones, more contrast and lower
+saturation. The cut uses the look as one full-length Adjust above the A-roll, ranking board and B-roll. Titles,
+captions and reveal flashes are composited above the filter. The Item Inspector exposes the four authored controls.
 
 `@hypit/caption-fine` projects stable word and timing collections plus its inline/shared typography slot. Word text,
 exact rational unit edges and typography fields reduce to replacement closed values in the backend. The ranking package projects stable

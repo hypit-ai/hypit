@@ -13,11 +13,20 @@ import {
 import {
   ProjectMediaService,
   type ProjectMediaCatalog,
+  type ProjectMediaResourceResolver,
+  type ProjectMediaViewExecutor,
+  type ProjectMediaViews,
 } from "../index.js";
+import { moveProjectMediaAsset, requireProjectMediaFolder } from "../library.js";
 import {
   createNodeProjectMediaCollection,
   type NodeProjectMediaCollectionOptions,
 } from "./collection.js";
+import { NodeProjectMediaViews } from "./views.js";
+
+type NodeProjectMediaServiceOptions = NodeProjectMediaCollectionOptions & {
+  readonly previews?: { readonly resolver: ProjectMediaResourceResolver; readonly executor: ProjectMediaViewExecutor };
+};
 
 export type AdoptProjectMediaFileRequest = {
   readonly sourcePath: string;
@@ -26,6 +35,7 @@ export type AdoptProjectMediaFileRequest = {
   readonly target?: MediaAssetReference;
   readonly filePolicy?: "copy" | "link";
   readonly mediaFile?: string;
+  readonly folder?: string;
 };
 
 export type AdoptProjectMediaFileResult = AdoptMediaFileResult & {
@@ -73,14 +83,16 @@ async function exists(path: string): Promise<boolean> {
 
 /** Node facet of the one Project Media Service owned by a ProjectHost. */
 export class NodeProjectMediaService extends ProjectMediaService {
+  override readonly views: ProjectMediaViews | undefined;
   readonly #root: string;
   readonly #directory: string;
-  #actions: Promise<void> = Promise.resolve();
 
-  constructor(options: NodeProjectMediaCollectionOptions) {
+  constructor(options: NodeProjectMediaServiceOptions) {
     super(createNodeProjectMediaCollection(options));
     this.#root = resolve(options.root);
     this.#directory = inside(this.#root, resolve(this.#root, options.directory ?? "media"), "Project Media collection");
+    this.views = options.previews === undefined ? undefined
+      : new NodeProjectMediaViews(this, options.previews.resolver, options.previews.executor);
   }
 
   async #target(request: AdoptProjectMediaFileRequest, sourceName: string): Promise<MediaAssetReference> {
@@ -105,8 +117,10 @@ export class NodeProjectMediaService extends ProjectMediaService {
     host: AdoptMediaFileHost,
     context: MediaAdoptionContext = {},
   ): Promise<AdoptProjectMediaFileResult> {
-    const run = async (): Promise<AdoptProjectMediaFileResult> => {
+    return this.serializeWrite(async () => {
       context.signal?.throwIfAborted();
+      const placement = request.folder === undefined ? undefined : { folder: request.folder, library: await this.readLibrary() };
+      if (placement !== undefined) requireProjectMediaFolder(placement.library.document.root, placement.folder);
       const sourceName = sourceFileName(request);
       const reference = await this.#target(request, sourceName);
       const result = await adoptMediaFile({
@@ -116,15 +130,23 @@ export class NodeProjectMediaService extends ProjectMediaService {
         filePolicy: request.filePolicy ?? "copy",
         mediaFile: request.mediaFile ?? safeMediaFile(sourceName),
       }, host, context);
+      let revision: string | undefined;
+      if (placement !== undefined) {
+        const { library, folder } = placement;
+        try {
+          if (moveProjectMediaAsset(library.document.root, reference, folder)) revision = await this.writeLibrary(library);
+        } catch (error) {
+          await this.refresh();
+          throw new Error(`Media was adopted at ${reference.path}, but could not be placed in folder ${folder}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+        }
+      }
       const catalog = await this.refresh();
+      if (revision !== undefined) this.publishLibrary(revision);
       return { ...result, reference, catalog };
-    };
-    const action = this.#actions.then(run, run);
-    this.#actions = action.then(() => undefined, () => undefined);
-    return action;
+    });
   }
 }
 
-export function openNodeProjectMediaService(options: NodeProjectMediaCollectionOptions): NodeProjectMediaService {
+export function openNodeProjectMediaService(options: NodeProjectMediaServiceOptions): NodeProjectMediaService {
   return new NodeProjectMediaService(options);
 }

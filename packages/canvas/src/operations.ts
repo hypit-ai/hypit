@@ -11,7 +11,7 @@ import {
 import type { Capability, ModelField } from "@hypit/execution/model";
 import { defaultMediaSelection } from "@hypit/media";
 import { NodeProjectMediaService } from "@hypit/media-asset/service/node";
-import { inspectGeneratedMediaFile, mediaFileExtension } from "@hypit/media-local";
+import { inspectMediaFileForAdoption, mediaFileExtension } from "@hypit/media-local";
 import type { ProjectHostContext } from "@hypit/project";
 import { createNodeProjectResourceResolver } from "@hypit/project/node";
 import {
@@ -387,7 +387,7 @@ export class CanvasOperations {
       await pipeline(source.bytes, createWriteStream(file, { flags: "wx" }), signal === undefined ? {} : { signal });
       const result = await media.adoptFile({ sourcePath: file, sourceName: name, mediaType: resource.mediaType,
         ...(destination === undefined ? {} : { target: destination }) }, {
-        inspect: (path, context) => inspectGeneratedMediaFile(path, resource.mediaType, {
+        inspect: (path, context) => inspectMediaFileForAdoption(path, resource.mediaType, {
           ...this.#inspectOptions, ...(context.signal === undefined ? {} : { signal: context.signal }),
         }),
         select: inspection => defaultMediaSelection(inspection, resource.mediaType),

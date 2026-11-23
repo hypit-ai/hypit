@@ -104,6 +104,12 @@ export class ProjectDocumentRegistry<Context> {
     });
   }
 
+  current<Service>(provider: ProjectOwnerProvider<Service, Context>, path: string): Service | undefined {
+    this.#assertOpen();
+    const entry = this.#entries.get(`${provider.owner}\u0000${path}`);
+    return entry?.provider === provider ? entry.service as Service : undefined;
+  }
+
   subscribe(listener: () => void): () => void {
     this.#assertOpen();
     this.#listeners.add(listener);

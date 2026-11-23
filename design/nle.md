@@ -1,7 +1,6 @@
 # NLE Project
 
-> Status: current owner design for direct audiovisual composition. Durable editing arrangement and guards are owned
-> by the separate [NLE View design](nle-view.md).
+> Status: current owner design for direct audiovisual composition and its persisted editing grid.
 
 ## Purpose
 
@@ -34,17 +33,18 @@ The initial SVML surface is deliberately small:
 - `Composition` is a reusable local time and Picture-canvas definition;
 - a `Present` is a temporal Item for a Media, Component or another Composition;
 - a Composition Present is the parent timeline's one Item for the nested Composition;
-- a `Track` is an ordered Picture or Audio editing row;
-- a Picture Track with the subtitle role contains subtitle Component Presents;
-  a subtitle Component Present belongs to a Track with that role;
+- a `Track` is an ordered Picture or Audio editing row with a required role;
+- text and subtitle Tracks contain Component Presents and display their authored text;
+- a Picture Track with the filter role contains timed Adjust Items for named Picture looks;
 - Item-local source-time mappings and Processes are stored on the Present;
 - an `Adjust` is a timed Process over the signal accumulated below its Track position;
 - a Transition is an explicit relation around an adjacent Picture cut.
 
 Composition extent is zero or the latest Item end across its Tracks. Item and Track enablement control the signal
 and preserve that extent. A timed black picture at the tail is an ordinary Item and contributes its end to the extent.
-A positive extent with no active Picture produces the requested output background. A nested Composition with no
-active Audio supplies silence to an occurrence that requests Audio.
+A positive extent with no active Picture produces the requested output background at delivery. A nested Composition
+with an empty Picture canvas can be placed on a Picture Track and contributes transparency to its parent. A nested
+Composition with no active Audio supplies silence to an occurrence that requests Audio.
 
 The current SVML shape includes:
 
@@ -55,7 +55,7 @@ The current SVML shape includes:
     <value>{"contrast":1.1}</value>
   </shared-value>
   <composition id="root" name="Main" width="1920" height="1080">
-    <track id="picture" name="Picture" kind="picture" enabled="true">
+    <track id="picture" name="Picture" kind="picture" role="picture" enabled="true">
       <present id="take" source="media" start="0/1" duration="10/1" enabled="true">
         <media path="media/take.media.json" />
         <source-time>
@@ -97,7 +97,8 @@ Editing a binding changes one occurrence. An unbound required slot is an editabl
 reports the missing input when evaluated.
 
 SVML does not persist a second Display tree. The Host derives a frame-local display from the active Composition,
-Track order, active Items, Item-local Processes and explicit relations. Picture Track order is the local paint order;
+Track order, active Items, Item-local Processes and explicit audiovisual relations. The Composition owns one Track
+order from bottom to top. Its Picture Tracks define local paint order;
 there is no global `z` field. A nested Composition starts a new local ordering and appears in its parent as one
 Present. The minimal syntax therefore does not need a generic stack or scope language. Lowering may build private
 evaluation structures, but those are not NLE author facts.
@@ -118,29 +119,19 @@ frame decoration and animated variants are package Operators. Audio gain, fades,
 Audio Operators. A product may install standard packages and present their fields as ordinary editing controls without
 giving those fields central SVML meaning.
 
-## Project, View, Session and Projection
+## Project, session and projections
 
-The four layers are independent:
-
-| Layer | Question | Persistence |
+| Layer | Responsibility | Lifetime |
 | --- | --- | --- |
-| NLE Project | what is the audiovisual work? | durable author document |
-| NLE View | how should one editor arrange and guard editing? | optional durable editor document |
-| Host Session | what is happening in this open Surface now? | Product Session lifetime |
-| Projection | what finite Timeline, Canvas or Inspector read model is shown? | rebuildable |
+| NLE Project | Composition, tracks, Items, relations and the edit frame grid | SVML document |
+| Product Session | Active Composition, navigation and track locks | Open editing session |
+| Browser | Selection, playhead, zoom, scroll, tools and pointer gestures | Editor interaction |
+| Projection | Timeline, Canvas and Inspector scenes | Rebuilt from current inputs |
 
-Selection, playhead, zoom, scroll, hover, current tool, pointer drafts, thumbnails and waveform resources are
-not Project facts. Track locks, durable edit Groups, editor grid and Track row height belong to NLE
-View. Track enablement, Track order, Item placement and Picture layout belong to the Project because they describe the
-work or its author structure.
-
-Delivery compilation reads the accepted NLE Project and explicitly selected implementations. For every two Views over the same Project:
-
-```text
-lower(project, host) == lower(project, host)
-```
-
-There is deliberately no View argument whose value could change the Programme.
+The SVML root declares a positive rational edit rate through `edit-rate`, with a default of 30 frames per second.
+Every Composition in the file uses that grid for frame addressing. Item placement, duration and source-time mapping
+remain exact across grid changes. Delivery compiles the accepted Project with selected implementations and uses the
+requested output rate.
 
 ## Bounded decentralized editability
 
@@ -151,20 +142,34 @@ operation: package Components and Operators render from their owned closed value
 functions and renderer graphs therefore belong on opposite sides of the Project document rather than becoming its
 syntax.
 
+### Document fields and editor bindings
+
+The NLE Reader uses the document's discriminants, including `kind`, `source` and `role`, to identify the applicable
+fields and their meaning. A `Present` reads the reference and source time for its declared source. An `Adjust`
+reads its Operator, parameters and control time. A Track's signal and role determine the editing lane and its
+presentation. The exact Component or Operator symbol selects the implementation for the package-owned values.
+
+Every authored value displayed or edited in an NLE panel comes from an explicit SVML field or a referenced
+SVML declaration. This includes occurrence names, text content, parameters and inline or shared values. A finite
+editor projection can format those values, and it can follow explicit references for read-only observations such
+as a Media Asset's dimensions. The referenced owner's facts, the form's control definitions and computed display
+summaries retain their respective owners. The [NLE Editing Surface](nle-surface.md#field-display-and-writeback)
+defines how forms bind back to SVML.
+
 Editable package behavior is decentralized by the exact unversioned `(package, symbol)` already present in the
 Project. The Project manifest and lockfile select the installed module; the Host indexes only that module's bounded
 facets for symbols it owns. That selected module is the lookup authority for editing and lowering facets. A package
 may contribute independently:
 
 - lowering and terminal behavior for the real audiovisual result;
-- finite Timeline title, factual text and artwork plus product-owned presentation tokens;
+- a fixed Track role and readable source time for each Component symbol, plus a reader for authored text on text and subtitle Tracks;
 - finite Inspector sections for Component parameters, exact inline/shared Component value slots and Operator parameters;
 - pure authoring reducers that turn semantic operations into replacement closed values;
-- a conservative declaration that ordinary NLE time-window slicing preserves one Component or Operator's meaning.
+- a conservative declaration that ordinary NLE time-window slicing preserves an Operator's meaning.
 
-These facets never grant Project authority. They cannot inject product markup, create Tracks, persist View or Session
+These facets never grant Project authority. They cannot inject product markup, create Tracks, persist session
 state, choose transaction boundaries or mutate the Project directly. The Host recreates a facet from the current
-snapshot, checks revisions and View guards, asks the owning package to reduce only its closed value, wraps the result
+snapshot, checks the Project revision and session locks, asks the owning package to reduce only its closed value, wraps the result
 in an ordinary NLE transaction and submits it to the Project Service.
 
 The three product surfaces retain different authority:
@@ -173,11 +178,12 @@ The three product surfaces retain different authority:
 | --- | --- | --- | --- |
 | Canvas | Picture frame, fit, focus and occurrence selection | actual rendered pixels; a future proven need may add bounded semantic handles | selection outlines, guides and preview resource addresses |
 | Inspector | occurrence, layout, source, Process timing and relationship structure | Component, Shared Value, Process and Reconstruction fields plus semantic reducers | control chrome and open/closed panel state |
-| Timeline | placement, Track structure, move/trim/split and duration handles for edge-aligned Processes | factual labels/artwork and whether generic trim/split preserve meaning | tone, chrome, thumbnails, waveform, playhead and pointer drafts |
+| Timeline | placement, Track structure, Item names, move/trim/split and duration handles for edge-aligned Processes | Component Track role, readable source time and factual text, plus Operator slicing support | color, row height, thumbnails, waveform, playhead and pointer drafts |
 
-Moving an unlocked occurrence is NLE placement. Generic trim and split are exposed only when the Source and every
-occurrence-local Process explicitly declare that the NLE time-window operations preserve their meaning. An
-edge-aligned Process follows the NLE rules below. The package still owns the values sampled in its Control domain.
+Moving an unlocked occurrence is NLE placement. Media, Components and local Compositions share the same trim and
+split operations. Attached Processes and standalone Adjusts declare whether slicing their Control relation preserves
+their meaning. Splitting also requires the Item to be free of Transition and Matte endpoint relationships. An edge-aligned
+Process follows the NLE rules below. The package owns the values sampled in its Control domain.
 
 ## First Project document
 
@@ -224,11 +230,13 @@ relation that reads outside it. Move changes Programme placement; trim slices an
 source coordinates; retime replaces the explicit relation.
 
 A Source supplies readable time independently of the Present's placement. Timed Media and Compositions supply a
-finite duration. A Component that supports time-window edits can declare its readable source time as constant,
-timed with a finite duration, or timed from zero onward. Trim preserves the source position of the retained time
+finite duration. Each Component definition declares readable source time as constant, timed with a finite duration,
+or timed from zero onward. Trim preserves the source position of the retained time
 and can expose more source where the boundary mapping has a valid extension. Constant sources continue to supply
-the same picture while a window extends. A timed Component that can evaluate beyond its last authored event
-receives the finite span required by each compiled occurrence.
+the same picture while a window extends. A split creates two windows into the same authored source. Internal words,
+animation events and other parameter values keep their original source coordinates. A Component can independently use
+the Item's visible edges for occurrence-local animation. A timed Component that can evaluate beyond its last authored
+event receives the finite span required by each compiled occurrence.
 
 Media Present Items reference portable Media Asset documents. Opening and saving the Project performs no Media
 inspection. The Host resolves a used reference only while lowering and supplies invocation-local `ResolvedMedia`.
@@ -248,10 +256,10 @@ package's parameter structure.
 A Project owns one top-level registry of typed reusable Shared Values. Each value has one local id, author-facing
 name, declaration and closed value. A declaration is an exact package Component slot, one exact package Operator's
 parameter value, or an NLE-owned semantic slot such as `picture.layout`. The registry supplies common identity, add/replace/remove,
-reverse-user indexing, deletion protection, Inspector ownership and View guarding without erasing the declaration
+reverse-user indexing, deletion protection, Inspector ownership and session lock checks without erasing the declaration
 owner's meaning.
 
-The registry belongs to the Project rather than a Composition or View. Items in any Composition may share one value,
+The registry is scoped to the NLE Project. Items in any Composition may share one value,
 all bindings participate in the same Project revision and save lifetime, and current reverse users are derived by one
 disposable Project index. Shared Values do not reference other Shared Values, contain expressions or identify arbitrary
 document paths. Only an explicit owner-defined parameter position may reference one, and its declaration must match
@@ -276,9 +284,7 @@ appearance stores either one inline layout or one reference to a compatible Shar
 promote an inline layout, link another Picture Item, edit the shared owner, or unlink an Item by copying the resolved
 layout back inline. Canvas, Inspector and delivery compilation resolve the reference before using its geometry.
 
-An Inspector identifies one Shared Value owner, its declaration and all current users. Editing the owner through a
-View requires every user's Track to be writable. Link and unlink remain occurrence-local edits. The View stores
-neither Shared Values nor bindings. A package preset or copied value is materialization and creates no reference;
+An Inspector identifies one Shared Value owner, its declaration and all current users. Editing the owner through a session requires every user's Track to be writable. Link and unlink remain occurrence-local edits. A package preset or copied value is materialization and creates no reference;
 it is deliberately distinct from persistent sharing.
 
 For an Operator declaration, any Present-local Process or Adjust using that exact package symbol may bind its whole
@@ -324,6 +330,10 @@ An Adjust is an independently timed Timeline Item applying one Operator to the P
 its ordered Track position. The Track kind selects its medium. Outside the Adjust range, the accumulated signal
 passes through unchanged. Compilation limits the Adjust to its authored range.
 
+A programme look is a Picture Adjust spanning the desired section. Its position in the Track order selects the
+Picture it grades. Tracks above it compose onto the graded Picture. A look scoped to one Present instead uses a
+Process with the same Operator and parameters in that Present's Picture appearance.
+
 The selected package Process or Adjust uses the `signal` input. The compiler maps Item-local Control time into
 programme time. A Process can store explicit map pieces or align a fixed-duration interval to the Present's start
 or end. Alignment maps that interval linearly to the stable Control domain and holds its boundary values outside
@@ -365,6 +375,11 @@ detach-audio/replace/remove. Ripple scope is always an explicit Item set supplie
 not infer a hidden selection, Track suffix or magnetic Timeline policy. Processes have direct ordered
 add/move/replace/retime/remove commands rather than generic graph mutation. Transitions and Mattes each have direct
 add/replace/remove commands; edits that invalidate their referenced Items reject the complete transaction.
+Composition Groups record authored linked movement by Item identity. A Group has at least two distinct Items
+from the same Composition, and each Item belongs to at most one Group. Group commands add, replace or remove
+the membership. A move or ripple displacement supplies the entire Group with one delta. Trimming and other
+Item-local edits address their chosen Item. Splitting adds the new piece to the same Group, and removal shrinks
+the Group or drops it when fewer than two members remain.
 Shared Values have one direct add/replace/remove command family. Component Items retain explicit value-binding
 set/remove commands, while pure Component-value, Process-parameter and Picture-layout planners own share, link and
 unlink. Complete-result validation permits one atomic rebind-and-remove gesture without exposing an invalid state.
@@ -384,8 +399,7 @@ component and local Composition Presents, Adjust Items and Transitions. Transiti
 one direct Picture cut into its explicit overlap and relation; no invalid intermediate overlap becomes an accepted
 Project snapshot. The planners perform no file access, package evaluation or Service mutation. A direct spatial
 planner similarly translates frame, fit and focal-alignment plus explicit
-share/link/unlink intentions into Item or Shared Value transactions; editor pointer drafts and snapping remain View
-or Host Session behavior. Component-value and Process-parameter planners likewise translate explicit share, link and
+share/link/unlink intentions into Item or Shared Value transactions; editor pointer drafts and snapping remain Product Session interaction. Component-value and Process-parameter planners likewise translate explicit share, link and
 unlink intentions into ordinary binding, Item and Shared Value commands. All three unlink operations preserve the
 resolved value by copying it inline.
 
@@ -419,9 +433,8 @@ The following capabilities are outside the current implementation:
 ## Package shape and required behavior
 
 `@hypit/nle` is the first release boundary. Project schema, the current document Reader and serializer, exact time
-editing, Picture fitting and the per-document Project and View Services share one owner and release lifecycle.
-The TSX materializer is exposed through `@hypit/nle/authoring`. View modules begin at the
-`@hypit/nle/view` subpath. The application composition over both Services begins at `@hypit/nle/surface`. Platform
+editing, Picture fitting and the per-document Project Service share one owner and release lifecycle.
+The TSX materializer is exposed through `@hypit/nle/authoring`. The editing port and its projections begin at `@hypit/nle/surface`. Platform
 file I/O and audiovisual execution remain outside it.
 
 The implementation preserves these invariants:
@@ -441,7 +454,7 @@ The implementation preserves these invariants:
 - Project Shared Values use one typed registry and lifecycle while exact Component, Operator and NLE declarations validate every
   binding, derive cross-Composition users and retain their own lowering meaning;
 - package Component values lower separately from local parameters, with symmetric inline/shared ownership, explicit
-  linking, View guards and one Inspector/lowering meaning; `picture.layout` preserves the same ownership behavior for
+  linking, session locks and one Inspector/lowering meaning; `picture.layout` preserves the same ownership behavior for
   NLE-owned geometry;
 - materialization and direct spatial planners produce ordinary atomic Project transactions;
 - disposable indexes derive reverse references from canonical Project facts;
@@ -449,4 +462,4 @@ The implementation preserves these invariants:
   wrap and edit pullback;
 - Picture contain, cover, fill and focal placement lower to the expected spatial maps;
 - disabled Tracks, Items and Processes and missing materials produce precise observable behavior;
-- no View or Session fact participates in lowering.
+- lowering consumes SVML facts and selected implementations.

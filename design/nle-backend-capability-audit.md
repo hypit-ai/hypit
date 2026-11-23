@@ -41,7 +41,7 @@ ApplicationHost
 │  └─ Owner document registry
 ├─ NLE Studio Product Session
 │  ├─ NLE Project Service
-│  ├─ NLE View Service
+│  ├─ Studio 会话轨锁与导航
 │  ├─ NLE Editing Surface
 │  └─ package contributions
 └─ AIGC Execution Directory
@@ -58,9 +58,9 @@ NLE Studio 在 ApplicationHost 打开的 ProjectHost 上建立 Product Session�
 | 产品能力 | 当前主要所有者 | 审计结论 |
 | --- | --- | --- |
 | 文件和媒体显示 | Project Media Service、Media Executor | 接受、目录、资源读取、派生视图、素材试听和可见范围请求已具备 |
-| 轨道和拖放 | NLE Project、NLE View、NLE Studio planner | Studio 后端规划最终落点、锁、关联成员与补轨 |
+| 轨道和拖放 | NLE Project、NLE Studio planner | Studio 后端规划最终落点、锁、关联成员与补轨 |
 | 插入和磁吸 | NLE Project、产品编辑策略 | 显式范围插入和闭合已具备；连续主轨和自动磁吸待定 |
-| 片段剪辑和关联 | NLE Project、NLE View | move、trim、split、slip、roll、ripple 和 detach 已具备生产路径 |
+| 片段剪辑和关联 | NLE Project | move、trim、split、slip、roll、ripple 和 detach 已具备生产路径 |
 | 复制和复合片段 | Product Session clipboard、NLE Composition | 同一文档内 clipboard、单轨 compound/explode、独立副本和 Session 导航已具备 |
 | 画面和动画 | NLE Picture layout、package Operator | frame、fit、focus、Transform 和 Filter 已具备；Crop 和关键点新增/移动规则待定 |
 | 变速和定格 | NLE source time、Reconstruction | 单段画面变速、倒放和正向 Media 定格已具备；非单位速率音频仍需终端支持 |
@@ -69,7 +69,7 @@ NLE Studio 在 ApplicationHost 打开的 ProjectHost 上建立 Product Session�
 | 文字和字幕 | package Component、Shared Value、NLE materialization | 文字、字幕和 ranking 已跑通物化、有限编辑、绑定和预览；字幕来源与批量导入待定 |
 | 声音 | NLE Audio Process、Reconstruction | 片段增益、已有包络点编辑与混音波形已具备；淡化与保音调变速待定 |
 | 播放和导出 | Audiovisual Executor | 单帧、有限音画播放区间、混音波形、导出与统一 Action 观察已具备 |
-| 保存和撤销 | NLE Project/View Services、Owner Providers | revision、事务、历史、显式保存、compact receipt 与变化事件已具备 |
+| 保存和撤销 | NLE Project Service、Node Owner Provider | revision、事务、历史、显式保存、compact receipt 与变化事件已具备 |
 
 ## 1. 文件和媒体显示
 
@@ -92,13 +92,13 @@ NLE Studio 在 ApplicationHost 打开的 ProjectHost 上建立 Product Session�
 | --- | --- | --- | --- |
 | Item 移动与换轨 | Product Operation -> NLE transaction | `timeline.drop` 依据锚点、落点和选区统一计算精确 delta 和逐 Item destination | **已具备** |
 | 空白区域补轨 | Product Operation -> `track.add` + `item.move` | 后端生成身份与轨道顺序，新增 Track 和移动 Item 作为一次 NLE 事务提交 | **已具备** |
-| 兼容轨道与锁 | NLE Studio planner + NLE View guard | 后端跳过锁定及异类目标，并拒绝从锁定源轨道移动 | **已具备** |
+| 兼容轨道与锁 | NLE Studio planner + Surface guard | 后端跳过锁定及异类目标，并拒绝从锁定源轨道移动 | **已具备** |
 | 落点冲突分配 | NLE Studio planner | 按 Studio 交互策略为新 Picture Present 冲突寻找邻轨或补轨，保留已移动成员间的画面关系和 Audio mix | **已具备** |
-| 多选保持相对布局 | NLE Studio planner | 同源轨道成员作为一个批次；View Group、Transition 和 Matte 端点闭包共享时间位移，保留轨道相对显示顺序 | **已具备** |
-| 默认时长 | Materialization planner | Studio 采用 Interpretation 或 offering 的 duration，常量媒体采用 View 帧网格上的五秒默认时长 | **已具备** |
+| 多选保持相对布局 | NLE Studio planner | 同源轨道成员作为一个批次；Group、Transition 和 Matte 端点闭包共享时间位移，保留轨道相对显示顺序 | **已具备** |
+| 默认时长 | Materialization planner | Studio 采用 Interpretation 或 offering 的 duration，常量媒体采用 SVML 帧网格上的五秒默认时长 | **已具备** |
 | Track 层级排序 | NLE Command | `track.move` 修改 Composition 中 Track 顺序；lowering 按 Picture Track 后到前组合 | **已具备**，当前浏览器直接发底层命令 |
 | Track 类型兼容 | NLE fact + product planner | 拖动沿用源轨道的输出域，物化使用各 offering 或 Media 的输出域 | **已具备** |
-| Track 锁定 | NLE View Command | `track-lock.set` 与 Surface guard 已实现 | **已具备**，但多成员 Operation 必须在后端一次检查所有触达 Track |
+| Track 锁定 | Studio 会话操作 | `track-lock.set` 与 Surface guard 已实现 | **已具备**，但多成员 Operation 必须在后端一次检查所有触达 Track |
 | Track 启用与音频静音 | NLE Project Command | `track.update.enabled` 参与 lowering | **已具备**。当前是领域统一的 Track enablement，而非额外静音状态 |
 
 ## 3. 插入和磁吸
@@ -106,8 +106,8 @@ NLE Studio 在 ApplicationHost 打开的 ProjectHost 上建立 Product Session�
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
 | 在播放头插入并后移范围 | NLE Studio Operation | Media、Component 和 Composition 物化接受显式目标 Track 和 `insertTracks`，后移和插入一次提交 | **已具备**边界与空隙内的插入 |
-| 关联成员随插入移动 | NLE Studio planner | 后移验证 View Group、Transition、Matte 成员均在同一受影响范围，提交守卫所有触达轨道 | **已具备**显式范围 |
-| 连续主轨和自动磁吸 | Product Session policy | 当前产品 planner 没有稳定的主轨选择、插入和闭合策略 | **产品缺口**。只有用户明确保存一种编辑安排时才进入 View，不进入视听 Project |
+| 关联成员随插入移动 | NLE Studio planner | 后移验证 Group、Transition、Matte 成员均在同一受影响范围，提交守卫所有触达轨道 | **已具备**显式范围 |
+| 连续主轨和自动磁吸 | Product Session policy | 当前产品 planner 没有稳定的主轨选择、插入和闭合策略 | **产品缺口**。规则由 Studio 手势与编辑规划定义 |
 | 关闭空隙 | NLE Studio Operation | `timeline.close-gap` 从播放头及指定 Tracks 求精确空隙边，整体位移后段，并守卫关系范围 | **已具备**单个显式空隙 |
 
 ## 4. 片段剪辑和关联
@@ -121,16 +121,16 @@ NLE Studio 在 ApplicationHost 打开的 ProjectHost 上建立 Product Session�
 | 删除并闭合空隙 | NLE Studio Operation | `timeline.ripple-remove` 删除连续选区，在显式 Tracks 内整体移动后段 | **已具备**显式范围 |
 | Picture/Audio 协调编辑 | NLE Present | 一个 Present 可同时拥有 Picture 与 Audio appearance，共享 occurrence 时间和 source-time | **已具备** |
 | 分离音频 | NLE Studio Operation + NLE Command | `audio.detach` 分配目标轨后，和 `item.detach-audio` 一起原子提交 | **已具备** |
-| 编辑分组 | NLE View | View Group 持久表达同一 Composition 内的 linked-edit 意图；Timeline drop 在后端展开成员 | **已具备**分组移动，其他组合操作需各自确定作用范围 |
+| 编辑分组 | NLE Project | Group 引用同一 Composition 内的 Item，移动统一位移，分割和删除维护成员关系 | **已具备** |
 
 ## 5. 复制和复合片段
 
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
 | 复制、剪切和粘贴 | Product Session clipboard + NLE Studio Operation | Session 保存选区；粘贴重建身份、精确时间和轨道分配 | **已具备**同一 NLE 文档内 |
-| 复制 Transition、Matte 和 Group | NLE Studio paste planner | 完整端点的 Transition/Matte 与 Project 一起粘贴；完整 Group 由一次显式 View 操作恢复 | **已具备** |
+| 复制 Transition、Matte 和 Group | NLE Studio paste planner | 完整的 Transition、Matte 和 Group 与新 Item 在同一次 Project 事务中粘贴 | **已具备** |
 | 建立复合片段 | NLE Composition + Operation | `composition.compound` 把单轨连续 Present 和完整关系移动到 child，在原画面层级留下父 occurrence | **已具备**单轨路径 |
-| 进入与返回复合片段 | NLE View + Product Session interaction | enter/return 修改 active View，返回时恢复 Session 保存的父播放头位置 | **已具备** |
+| 进入与返回复合片段 | Product Session | enter/return 切换正在编辑的 Composition，返回时恢复 Session 保存的父播放头位置 | **已具备** |
 | 复合片段独立副本 | NLE Studio Operation | make-unique 深复制本地定义关系并重绑当前 occurrence；保留显式 Project Media 和 Shared Value 引用 | **已具备** |
 | 外层移动、裁剪和变速 | Composition Present | occurrence 拥有独立 placement 与 source-time；Nested lowering 已实现 | **已具备**底层语义 |
 | 解除复合 | NLE Studio Operation | explode 将单轨、全长、无额外时空变换或处理的 child 内容提升到原 parent 位置 | **已具备**可无歧义提升的路径 |
@@ -178,7 +178,7 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | occurrence-local 处理 | Present Process | Picture/Audio appearance、Reader、Serializer、validator 与 lowering 使用同一 `processes` 事实 | **已具备** |
 | Programme-scope 处理 | Adjust Item | Adjust 是独立 Timeline Item，对同层以下累计信号生效 | **已具备**事实和求值 |
 | 添加片段效果 | NLE Studio catalog + Operation | `hypit.nle-process` 物化到已有 Present 对应的信号处理链；Jensen 选择 Transform、Filter、Gain | **已具备** |
-| 启用、停用、排序、删除 | Studio Operations + NLE Commands | 有限 Inspector 投影各信号处理链；操作寻址当前 Process 并检查 Project、View revision 和轨道锁 | **已具备** |
+| 启用、停用、排序、删除 | Studio Operations + NLE Commands | 有限 Inspector 投影各信号处理链；操作寻址当前 Process 并检查 Project revision 和会话轨道锁 | **已具备** |
 | 独立效果创建与长度编辑 | Adjust offering + Timeline edit | Adjust catalog/materialization 已实现；普通 move/trim 依赖 Operator `timeWindow` 声明 | **已具备**基础路径 |
 | 参数编辑与共享 | package authoring + Inspector + Shared Value | Operator authoring、Inspector 和 Project-owned Operator Shared Value 已实现 | **已具备**基础路径 |
 | 效果预览 | NLE Preview Action | 单帧和播放区间消费含 Process/Adjust 的同一 NLE Programme | **已具备** |
@@ -191,7 +191,7 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | --- | --- | --- | --- |
 | 从 catalog 创建文字或字幕 | Component offering + materialization | Jensen 选择 Reference title 和 Fine Caption，初始时长、布局与值由 offering 提供 | **已具备** |
 | 参数显示和编辑 | package Inspector + authoring contribution | Host 投影有限标量、稳定 row collection 和可用行操作，提交时重新解析地址并调用 reducer | **已具备**有限结构化路径 |
-| 时间线标题、文本和海报 | package Timeline presentation | Component 可贡献 title、tone、chrome、text layer 和资源 poster | **已具备** |
+| 时间线标题与正文 | Track 角色、Item 名称、Component 正文读取 | 文字和字幕轨读取组件投影的正文，滤镜和特效轨显示 Item 名称。画面和音频轨消费对应预览。 | **已具备** |
 | Component Media inputs | Component occurrence + package declaration | Package 声明当前 slot 与信号要求，Studio 投影 Inspector、验证物化 seeds 并接受 bind/unbind；`ranking` 使用逐条目静态图片 slot | **已具备** |
 | Component value ownership | NLE Project + package slot owner | 创建时可用 offering 默认值内联、选择兼容共享值或原子创建命名共享值；同一 Inspector、reducer 和反向用户索引用于后续编辑 | **已具备** |
 | 字幕逐词和内部时间 | caption Component parameters、NLE source time | `caption-fine` 投影逐词内容和 timing unit 的精确有理时间。Trim 和 split 切分读取窗口，词时间沿用 cue 源坐标，整条字幕的出入场跟随 Item 边缘 | **已具备** Jensen 编辑路径 |
@@ -229,8 +229,9 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | --- | --- | --- | --- |
 | 确定性 Programme 构造 | NLE lowering | accepted NLE snapshot 可编译为闭合的 Picture 与 Audio 程序，包括 Nested、Process、Adjust、Transition 和 Matte | **已具备** |
 | 结构 Canvas | NLE projection | 无 Preview Executor 时可显示 Item frame 与直接 Media identification | **已具备**，它不是渲染结果 |
-| 单帧预览 | HTML frame Action | Studio 以当前 revision 和 Composition 请求精确一帧并返回 PNG capability | **已具备** |
-| 播放和 seek | HTML playback Action + Session transport | seek 请求单帧；播放请求有声 MP4 区间，结束后请求下一段 | **已具备**有限区间；区间接缝存在渲染等待 |
+| 单帧预览 | HTML frame Action | 调用方以当前 revision 和 Composition 请求精确一帧并获得 PNG capability | **已具备** |
+| 暂停定位与逐帧 | Studio Session Picture Programme | 浏览器复用当前 Composition 的文档，在同一个播放头位置交接编辑后的新版本 | **已具备** |
+| 播放 | Studio Session Programme 与浏览器 transport | 在原预览页连续播放画面，提前排程同一 Audio Programme 的短 PCM 缓冲 | **已具备**；超出原生路径的源按闭合采样逐帧请求 |
 | 导出 | HTML video Delivery Action | Project 范围的 `NleDeliveryService` 已提供启动、观察、取消与资源交付，并调用注入的 `HtmlVideoExecutor`；Jensen Project 已完成生产路径 | **已具备**后端路径 |
 | Action 恢复与结果生命周期 | Delivery Service + selected Executor | 当前 Service 保存打开进程内的 Action；跨进程重启恢复尚未实现 | **执行缺口** |
 
@@ -242,15 +243,14 @@ Preview 与 Export 消费同一 accepted Project revision、NLE 编译 和 `Html
 | 能力 | 形态与所有者 | 当前证据 | 状态与缺口 |
 | --- | --- | --- | --- |
 | Project 保存与重开 | Owner Provider + NLE Project Service | 显式 save、savepoint 与 reload 已实现；Media、Component、Process 和 Adjust 均经同一 SVML Reader/serializer 往返 | **已具备** |
-| View 保存与重开 | Owner Provider + NLE View Service | JSON Reader/serializer、独立 revision/history/savepoint 已实现；无 View 文档时使用 session-only View | **已具备** |
 | 原子用户编辑 | NLE transaction + Editing Surface | 一次 transaction 完整校验后提交；失败不改变 Service state | **已具备** |
-| revision 冲突 | Owner Services | Project 与 View 分别检查 expected revision；Surface 对跨 Owner 依赖操作同时检查两者 | **已具备** |
-| undo/redo | Owner Services | Project 与 View 有独立历史；新 transaction 清空对应 redo 分支 | **已具备** |
-| Session 状态恢复 | Product Session | selection、playhead、zoom 和 pointer draft 当前在浏览器；不属于 Project/View undo | **产品缺口**仅限产品体验，不进入作者历史 |
+| revision 冲突 | Owner Services | Surface 检查 Project expected revision 与当前会话轨锁 | **已具备** |
+| undo/redo | Owner Services | Project Service 保留剪辑历史；新 transaction 清空 redo 分支 | **已具备** |
+| Session 状态恢复 | Product Session | selection、playhead、zoom 和 pointer draft 当前在浏览器；不属于 剪辑撤销 | **产品缺口**仅限产品体验，不进入作者历史 |
 | compact receipt | Product Session | Studio command、物化、Media import、save 和 reload 均返回 status、changed、invalidated 与有限 result；浏览器按 invalidation 重读有限 observation | **已具备** |
 | change event | Application/Project/Product/Action event projection | Application lease/session、Project Media generation 与 document inventory、Studio owner invalidation 和 Delivery progress 均可订阅并经 loopback SSE 投影 | **已具备** |
 
-Project 时间保持精确有理值。View 的 edit rate 定义工作台帧网格，Studio Operation 在边界把帧位置转换为精确
+Project 时间保持精确有理值。SVML 的 edit rate 定义工作台帧网格，Studio Operation 在边界把帧位置转换为精确
 时间；持久文档不把 Programme 时间降格为某一界面的整数帧。
 
 ## 目标 API 族
@@ -275,7 +275,7 @@ interface NleStudioProductSession {
 }
 ```
 
-`command` 服务已经闭合的 Owner 命令。`operate` 服务需要根据当前 Project、View、Package 与 Session 上下文
+`command` 服务已经闭合的 Owner 命令。`operate` 服务需要根据当前 Project、Package 与 Session 上下文
 规划事务的用户意图。浏览器可以保留 pointer draft，但不能决定最终轨道分配或事务边界。
 
 ### Observation
@@ -283,17 +283,16 @@ interface NleStudioProductSession {
 第一组有限 Observation 是：
 
 - `open`：首屏所需 status、Timeline、Canvas、Media、Catalog 与 Preview 状态；
-- `timeline`：当前 Composition 的有限 Timeline scene 与 affordances；
+- `timeline`：当前 Composition 的有限 Timeline scene、affordances 与 Media 源时间映射；
 - `canvas`：NLE-owned Item frames；
 - `inspector`：一个 Item 及其 Process 和已绑定 Shared Value 的有限编辑表面；
 - `transition-inspector`：一个 Transition 的端点、重叠时长和有限字段；
-- `timeline-media`：指定可见轨道与时段的有界 Media Action 计划；
 - `media`：Project Media Catalog；
 - `catalog`：Project manifest 选中的 author-facing offerings；
 - `component-inputs`：一个 Component occurrence 的 Media slots 与当前绑定；
 - `action`：一个 Action handle 的有限状态。
 
-Observation 不向不可信前端发布完整 Project/View 文档、package 函数、绝对路径或 Executor 私有状态。
+Observation 不向不可信前端发布完整 Project 文档、package 函数、绝对路径或 Executor 私有状态。
 
 ### Operation
 
@@ -305,11 +304,11 @@ Observation 不向不可信前端发布完整 Project/View 文档、package 函�
 - Component Media bind/unbind；
 - Component value share、link 与 unlink/make-unique；
 - Inspector finite edit/action；
-- Track add、move、enable 与 View lock/height；
+- Track add、move、enable 与 会话轨锁；
 - Group create/replace/remove；
 - detach audio。
 
-每个 Operation 接受 expected Project/View revisions，重新读取当前 package declarations 与 View guards，生成
+每个 Operation 接受 expected Project revision，重新读取当前 package declarations 与 会话轨锁，生成
 一个完整 owner transaction，再返回 revisions、结果地址和 invalidated projection names。
 
 ### Action
@@ -350,7 +349,7 @@ POST       /api/reload
 ## 待讨论的产品策略
 
 - 自动磁吸和连续主轨需要明确主轨归属、何时联动侧轨，以及锁轨冲突时的结果。
-- 穿过已有 Item 的插入需要确定切分时 Transition、Matte 和 View Group 的处理。头部 ripple trim 需要确定移动的侧和保留的基准边。
+- 穿过已有 Item 的插入需要确定切分时 Transition、Matte 和 Group 的处理。头部 ripple trim 需要确定移动的侧和保留的基准边。
 - 一次压缩多个不相交空隙需要明确各段的联动范围和处理顺序。当前单空隙操作使用调用者提供的 Tracks。
 - 字幕源需要先确定引用和寿命，再开放导入和批量分轨。
 - 跨 NLE 文档或 OS 剪贴板需要明确 Media、Shared Value 和 Composition 引用的导入与重绑边界。
@@ -366,7 +365,7 @@ POST       /api/reload
 ## 待补执行能力
 
 - 变速音频需要定义输出采样、方向与音调策略。本机执行器当前支持单位速率 Media。
-- 连续预览仍按有限区间渲染，区间接缝可能等待下一段产出。
+- 需要精确源帧的媒体映射逐帧取样，复杂素材的连续预览吞吐仍取决于本机解码能力。
 - Delivery Action 保持打开进程内的状态。进程重启后的恢复需要持久计划、结果提交与清理协议。
 
 ## 闭合标准
@@ -377,7 +376,7 @@ POST       /api/reload
 2. Owner Reader 和 Service 能验证并原子接受它；
 3. Product Session/owner Service 暴露有限 Observation 与语义 Operation/Action；AIGC Capability Invocation
    由选中的 Execution Environment 暴露；
-4. View guards、revision 和 package selection 在提交时重新验证；
+4. 会话轨锁、revision 和 package selection 在提交时重新验证；
 5. mutation 返回 compact receipt，事件只发布 invalidation 和当前地址；
 6. Preview 与 Export 消费同一 accepted NLE meaning；
 7. 浏览器无需解释完整作者文档、执行 package 代码或重建事务规划。

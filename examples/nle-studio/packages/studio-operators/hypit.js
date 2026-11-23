@@ -72,19 +72,6 @@ export const hypitPackage = {
       operators: [{ operator: colour, timeWindow: () => true, editParameters: editColour }],
     },
   }, {
-    kind: "hypit.nle-timeline-presentation",
-    value: {
-      kind: "hypit.nle-timeline-presentation",
-      package: packageName,
-      components: [],
-      adjusts: [{
-        operator: colour,
-        displayName: "Colour look",
-        tone: "violet",
-        chrome: "compact",
-      }],
-    },
-  }, {
     kind: "hypit.nle-inspector-presentation",
     value: {
       kind: "hypit.nle-inspector-presentation",
@@ -141,6 +128,7 @@ export const hypitPackage = {
     title: "Colour look",
     value: {
       medium: "picture",
+      role: "filter",
       operator: colour,
       parameters: { contrast: 1.08, saturation: 0.94, temperature: -2 },
       duration: { ticks: "5", timeBase: { numerator: 1, denominator: 1 } }

@@ -14,16 +14,6 @@ type Target = {
   readonly placements: Map<string, CanvasTimelinePlaced>;
 };
 
-async function siblingView(root: string, document: string) {
-  const path = document.replace(/\.svml$/u, ".nle-view.json");
-  if (path === document) return undefined;
-  try { return (await resolveNodeProjectFile(root, path, "NLE View document")).path; }
-  catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
-    throw error;
-  }
-}
-
 async function observeTarget(target: Target): Promise<CanvasTimelineTarget> {
   const [project, timeline, status] = await Promise.all([
     target.editor.observe({ kind: "project" }), target.editor.observe({ kind: "timeline" }), target.editor.observe({ kind: "status" }),
@@ -34,10 +24,10 @@ async function observeTarget(target: Target): Promise<CanvasTimelineTarget> {
   const scene = timeline.value.scene;
   return {
     target: target.id, document: project.value.document, name: project.value.name, composition: scene.composition,
-    compositions: timeline.value.compositions, tracks: scene.tracks.filter(track => !track.locked && track.role === undefined)
+    compositions: timeline.value.compositions, tracks: scene.tracks.filter(track => !track.locked && track.role === track.kind)
       .map(({ id, name, kind, enabled }) => ({ id, name, kind, enabled })),
     editRate: scene.editRate, endFrame: scene.maximumFrame,
-    projectRevision: status.value.projectRevision, viewRevision: status.value.viewRevision,
+    projectRevision: status.value.projectRevision,
   };
 }
 
@@ -80,14 +70,13 @@ export function openCanvasTimeline(project: ProjectHost): CanvasTimelinePort {
     if (request.kind === "documents") {
       exact();
       const paths: string[] = [];
-      for await (const path of glob("**/*.svml", { cwd: root, exclude: ["**/node_modules/**", "**/.git/**"] })) paths.push(path);
+      for await (const path of glob("**/*.svml", { cwd: root, exclude: ["**/node_modules/**", "**/.git/**", "**/.hypit/**"] })) paths.push(path);
       return { kind: "documents", paths: paths.sort((a, b) => a.localeCompare(b)) };
     }
     if (request.kind === "open") {
-      exact("document", "view");
+      exact("document");
       const { path: document } = await resolveNodeProjectFile(root, text(request.document, "NLE document"), "NLE document");
-      const view = request.view === undefined ? await siblingView(root, document) : text(request.view, "NLE View document");
-      const editor = await openNleStudioProductSession({ project, document, ...(view === undefined ? {} : { initialViewDocument: view }) });
+      const editor = await openNleStudioProductSession({ project, document });
       const next: Target = { id: randomUUID(), editor, placements: new Map() };
       try {
         const observation = await observeTarget(next);
@@ -111,12 +100,12 @@ export function openCanvasTimeline(project: ProjectHost): CanvasTimelinePort {
       const current = await observeTarget(selected);
       await selected.editor.operate({
         kind: "composition.select", target: text(request.composition, "Composition"),
-        composition: current.composition, expectedProjectRevision: current.projectRevision, expectedViewRevision: current.viewRevision,
+        composition: current.composition, expectedProjectRevision: current.projectRevision,
       });
       return { kind: "target", value: await observeTarget(selected) };
     }
     if (request.kind === "place") {
-      exact("target", "request", "composition", "expectedProjectRevision", "expectedViewRevision", "media", "track", "atFrame", "durationFrames", "insert", "includeAudio");
+      exact("target", "request", "composition", "expectedProjectRevision", "media", "track", "atFrame", "durationFrames", "insert", "includeAudio");
       const id = identity("placement-" + text(request.request, "Placement request"), "Placement request");
       const prior = selected.placements.get(id);
       if (prior) return prior.saveIssue === undefined ? prior : await save(selected, id, prior);
@@ -131,7 +120,6 @@ export function openCanvasTimeline(project: ProjectHost): CanvasTimelinePort {
           kind: "media.materialize", composition, media: media.path,
           atFrame: frameNumber(request.atFrame, "Timeline frame"),
           expectedProjectRevision: frameNumber(request.expectedProjectRevision, "Project revision"),
-          expectedViewRevision: frameNumber(request.expectedViewRevision, "View revision"),
           ...(trackId === undefined ? {} : request.insert ? { track: trackId, insertTracks: [trackId] } : { track: trackId }),
           ...(request.durationFrames === undefined ? {} : { durationFrames: frameNumber(request.durationFrames, "Duration") }),
           ...(request.includeAudio === undefined ? {} : { includeAudio: request.includeAudio }),

@@ -3,11 +3,12 @@ import { readNleTextFontSource, type NleRenderContribution, type NleTextNode, ty
 import {
   createNleAuthoringContribution,
   createNleInspectorPresentationContribution,
-  createNleTimelinePresentationContribution,
+  nleComponentDefinitionKind,
+  type NleComponentDefinitionContribution,
   type NleComponentAuthoringContext,
   type NleInspectorFieldDraft,
   type NleInspectorSectionDraft,
-} from "@hypit/nle/view";
+} from "@hypit/nle/surface";
 import { assertTextFineParameters, textFineHasMotion } from "./parameters.js";
 import { renderTextFine } from "./render.js";
 import type { TextFineParameters } from "./types.js";
@@ -27,6 +28,10 @@ const typographyFields = {
 
 function textRuns(nodes: readonly NleTextNode[]): readonly Extract<NleTextNode, { kind: "text" }>[] {
   return nodes.flatMap(node => node.kind === "group" ? textRuns(node.children) : node.kind === "text" ? [node] : []);
+}
+
+function plainText(nodes: readonly NleTextNode[]): string {
+  return nodes.map(node => node.kind === "text" ? node.text : node.kind === "break" ? "\n" : plainText(node.children)).join("");
 }
 
 function solidFillIndex(parameters: TextFineParameters): number {
@@ -124,22 +129,19 @@ function editParameters(operation: unknown, { item }: NleComponentAuthoringConte
 }
 
 const authoring = createNleAuthoringContribution({ package: packageName, components: [{
-  component, timeWindow: () => true, editParameters,
-  sourceTime: ({ item }) => {
-    const parameters = item.parameters;
+  component, editParameters,
+}] });
+const definition = { kind: nleComponentDefinitionKind, package: packageName, components: [{
+  component, role: "text",
+  sourceTime: parameters => {
     assertTextFineParameters(parameters);
     return { kind: textFineHasMotion(parameters) ? "timed" : "constant" };
   },
-}] });
-const presentation = createNleTimelinePresentationContribution({ package: packageName, components: [{
-  component, displayName: "Fine Text", tone: "magenta", chrome: "standard",
-  project: ({ item }) => {
-    const parameters = item.parameters;
+  readText: parameters => {
     assertTextFineParameters(parameters);
-    const text = textRuns(parameters.children).map(run => run.text).join(" ").trim();
-    return text.length === 0 ? {} : { title: text, layers: [{ kind: "text", text }] };
+    return plainText(parameters.children);
   },
-}] });
+}] } satisfies NleComponentDefinitionContribution;
 const inspectorContribution = createNleInspectorPresentationContribution({
   package: packageName, components: [{ component, project: inspector }],
 });
@@ -157,10 +159,10 @@ const starter: TextFineParameters = {
 export const hypitPackage = {
   package: packageName,
   contributions: [
-    ...[authoring, presentation, inspectorContribution].map(value => ({ kind: value.kind, value })),
+    ...[authoring, definition, inspectorContribution].map(value => ({ kind: value.kind, value })),
     { kind: "hypit.nle-render", value: render },
   ],
   catalog: [{ id: "text", kind: "hypit.nle-component", title: "Fine Text", value: {
-    category: "text", component, parameters: starter, duration: { ticks: "3", timeBase: { numerator: 1, denominator: 1 } },
+    component, parameters: starter, duration: { ticks: "3", timeBase: { numerator: 1, denominator: 1 } },
   } }],
 };

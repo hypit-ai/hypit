@@ -29,17 +29,18 @@ import {
   assertNleProject,
   findNleComposition,
   nleCompositionDuration,
+  nleItemEnd,
   nleLinearTimeMapping,
   nleTimeMappingRequiredDuration,
   resolveNleOperatorParameters,
   resolveNleComponentValue,
   resolveNlePictureLayout,
-  rootNleComposition,
   nleProcessControlDuration,
   resolveNleProcessTime,
 } from "@hypit/nle";
 import type {
   NleAdjustItem,
+  NleComponentItem,
   NleComposition,
   NleItem,
   NleProcess,
@@ -1009,8 +1010,28 @@ function lowerComposition(
   };
 }
 
-/** Deterministically project the Root Composition into one closed compilation graph. */
-export function lowerNleProject(project: NleProject, host: NleRenderResolver): CompilationGraph {
+/** Deterministically project the selected Composition into one closed compilation graph. */
+export function lowerNleProject(project: NleProject, host: NleRenderResolver,
+  entry: NleComposition, outputs: { readonly picture: boolean; readonly audio: boolean }): CompilationGraph {
   assertNleProject(project);
-  return sealCompilationGraph(lowerComposition(project, rootNleComposition(project), host, { picture: true, audio: true }));
+  return sealCompilationGraph(lowerComposition(project, entry, host, outputs));
+}
+
+/** Read one Component Picture on the owning Composition's clock, inside its own Picture extent. */
+export function lowerNleComponentPicture(project: NleProject, composition: NleComposition, track: NleTrack,
+  item: NleComponentItem, host: NleRenderResolver): CompilationGraph {
+  const source = resolveItem(project, composition, track, item, host);
+  assert(source.picture !== undefined, `NLE Component ${item.id} requires a Picture source.`);
+  const domain = sealLocalTemporalDomain({ id: `${composition.id}:time`, duration: nleItemEnd(item) });
+  const localTime = sealLocalTemporalDomain({ id: `${item.id}:time`, duration: item.duration });
+  const occurrence = {
+    id: item.id, domain: localTime, content: source.content,
+    placement: { parent: domain, start: item.start, active: { start: exactTemporalZero(), end: item.duration } },
+    picture: pictureRead(item, localTime, source.picture, undefined),
+  };
+  return sealCompilationGraph({
+    id: `${project.id}:${composition.id}:${item.id}`,
+    domain, pictureDomain: source.picture.spatialDomain, occurrences: { [item.id]: occurrence },
+    picture: { root: "component-picture", nodes: { "component-picture": { kind: "use", occurrence: item.id } } },
+  });
 }

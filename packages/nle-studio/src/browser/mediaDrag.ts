@@ -1,5 +1,4 @@
-import type { NleTimelineScene, NleTimelineSceneTrack } from "@hypit/nle/view";
-import type { NleStudioMediaEntry } from "../protocol.js";
+import type { NleTimelineScene, NleTimelineSceneTrack } from "@hypit/nle/surface";
 
 export type TransitionCut = {
   readonly frame: number;
@@ -19,8 +18,9 @@ export type MediaDrop = {
   readonly transitionCut?: TransitionCut;
 };
 
-export function mediaTrackCompatible(track: NleTimelineSceneTrack, kind: NleStudioMediaEntry["kind"], role?: NleTimelineSceneTrack["role"]): boolean {
-  return track.kind === (kind === "audio" ? "audio" : "picture") && track.enabled && !track.locked && track.role === role;
+export function acceptsTimelinePlacement(track: NleTimelineSceneTrack, kind: NleTimelineSceneTrack["kind"],
+  role: NleTimelineSceneTrack["role"]): boolean {
+  return track.kind === kind && track.role === role && track.enabled && !track.locked;
 }
 
 export function trackHasRoom(track: NleTimelineSceneTrack, start: number, duration: number): boolean {
@@ -30,7 +30,7 @@ export function trackHasRoom(track: NleTimelineSceneTrack, start: number, durati
 export function transitionCuts(scene: NleTimelineScene): TransitionCut[] {
   return scene.tracks.flatMap(track => {
     if (track.kind !== "picture" || track.locked || !track.enabled) return [];
-    const items = track.items.filter(item => item.role === "present" && item.enabled);
+    const items = track.items.filter(item => item.kind === "present" && item.enabled);
     const transitions = scene.transitions.flatMap(transition => {
       const incoming = items.find(item => item.id === transition.incoming);
       return incoming === undefined ? [] : [{ frame: incoming.startFrame, track: track.id,

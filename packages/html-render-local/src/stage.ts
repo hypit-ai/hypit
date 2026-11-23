@@ -1,6 +1,8 @@
+import { constants } from "node:fs";
 import { copyFile, mkdir, stat, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { materializeHtmlProgram, selectHtmlArtifacts, type HtmlFrameSpan, type HtmlProgram } from "@hypit/html-program";
+import { localVideoSourceVersion } from "./source-frames.js";
 import type { StagedHtmlFiles } from "./types.js";
 
 const extensions: Readonly<Record<string, string>> = {
@@ -23,15 +25,21 @@ export async function stageHtmlProgram(
   const selected = new Set(selectHtmlArtifacts(program, frameSelection).map((artifact) => artifact.id));
   const paths = new Map<string, string>();
   const artifactPaths = new Map<string, string>();
+  const videoPaths = new Set(program.videoSources.map(source => source.resource.address));
+  const videoVersions = new Map<string, string>();
   for (const [index, artifact] of program.artifacts.entries()) {
     const relative = `artifacts/asset-${index}${extension(artifact.resource.address, artifact.resource.mediaType)}`;
     paths.set(artifact.id, `./${relative}`);
     if (!selected.has(artifact.id)) continue;
     const destination = join(directory, relative);
     artifactPaths.set(artifact.resource.address, destination);
-    await copyFile(artifact.resource.address, destination);
+    const version = videoPaths.has(artifact.resource.address) ? await localVideoSourceVersion(artifact.resource.address) : undefined;
+    await copyFile(artifact.resource.address, destination, constants.COPYFILE_FICLONE);
     if (artifact.resource.size !== undefined && (await stat(destination)).size !== artifact.resource.size) {
       throw new Error(`HTML Programme Artifact ${artifact.id} size differs from its declared resource.`);
+    }
+    if (version !== undefined && version === await localVideoSourceVersion(artifact.resource.address)) {
+      videoVersions.set(artifact.resource.address, version);
     }
   }
   const html = materializeHtmlProgram(program, (_resource, id) => {
@@ -41,5 +49,5 @@ export async function stageHtmlProgram(
   });
   const document = join(directory, "index.html");
   await writeFile(document, html, "utf8");
-  return { directory, document, artifactPaths };
+  return { directory, document, artifactPaths, videoVersions };
 }

@@ -1,16 +1,19 @@
-import type { NleTimelineScene, NleTimelineSceneTrack } from "@hypit/nle/view";
-import type { NleStudioComponentCatalogEntry } from "../protocol.js";
+import type { NleTimelineScene, NleTimelineSceneItem, NleTimelineSceneTrack } from "@hypit/nle/surface";
 
 export const labelWidth = 84, rulerHeight = 30, rowHeight = 62;
+export const timelineStartPadding = 8, timelineEndPadding = 12;
+export const timelineOrigin = labelWidth + timelineStartPadding;
 
-export function componentTrackRole(category: NleStudioComponentCatalogEntry["category"]): NleTimelineSceneTrack["role"] {
-  return category === "graphic" ? undefined : category;
-}
-
-export const emptyTimelineMinZoom = 4, defaultMaxZoom = 4000, timelineEndPadding = 12;
+export const emptyTimelineMinZoom = 4, defaultMaxZoom = 4000;
 
 export function rowSize(row: NleTimelineSceneTrack | undefined): number {
-  return row?.heightPx ?? rowHeight;
+  return row === undefined || row.role === "picture" || row.role === "audio" ? rowHeight : 36;
+}
+
+export function timelineItemLabel(item: NleTimelineSceneItem, role: NleTimelineSceneTrack["role"]): string {
+  if (role !== "text" && role !== "subtitle") return item.display.title;
+  if (item.display.text?.trim()) return item.display.text;
+  return role === "text" ? "空文字" : "空字幕";
 }
 
 export function timelineSnapBoundaries(scene: NleTimelineScene, excluding?: ReadonlySet<string>): number[] {

@@ -8,12 +8,14 @@ import {
   sealTemporalMap,
   type ExactTemporalValue,
   type TemporalMapPiece,
+  type TemporalRate,
 } from "@hypit/temporal/algebra";
 import { resolveNleProcessTime } from "./process-time.js";
 import { assertNleTimeMapping, nleTimeMappingRequiredDuration } from "./source-time.js";
 import { parseSvml, printSvml } from "./svml.js";
 import {
   nleProjectFormat,
+  defaultNleEditRate,
   type NleCanvas,
   type NleComponentItem,
   type NleComponentSharedValue,
@@ -305,23 +307,25 @@ function assertItem(value: unknown, track: NleTrack, ids: Set<string>): asserts 
     onlyKeys(value, value.source === "media"
       ? [...present, "asset", "audio"]
       : value.source === "component"
-        ? [...present, "component", "role", "valueBindings", "parameters", "media"]
+        ? [...present, "component", "valueBindings", "parameters", "media"]
         : [...present, "composition", "audio"], label);
   }
-  if (value.role !== undefined) {
-    assert(value.role === "subtitle", `${label}.role is invalid.`);
+  if (track.role === "text" || track.role === "subtitle") {
+    assert(value.kind === "present" && value.source === "component",
+      `${label} must be a Component Present on Track ${track.id}.`);
   }
-  const subtitle = value.kind === "present" && value.source === "component" && value.role === "subtitle";
-  assert(subtitle === (track.role === "subtitle"),
-    `${label} must use a Track with a matching subtitle role.`);
+  assert(track.role !== "filter" || value.kind === "adjust",
+    `${label} must be an Adjust on a filter Track.`);
   identity(value.id, `${label}.id`);
   assert(!ids.has(value.id), `NLE Project repeats Item ${value.id}.`);
   ids.add(value.id);
-  if (value.name !== undefined) text(value.name, `${label}.name`);
+  if (value.name !== undefined || track.role === "filter" || track.role === "effect") text(value.name, `${label}.name`);
   assertNonNegativeTime(value.start, `${label}.start`);
   assertPositiveTime(value.duration, `${label}.duration`);
   assert(typeof value.enabled === "boolean", `${label}.enabled must be boolean.`);
   if (value.kind === "adjust") {
+    assert(track.role === "filter" || track.role === "effect",
+      `${label} requires a filter or effect Track.`);
     record(value.operator, `${label}.operator`);
     onlyKeys(value.operator, ["package", "symbol"], `${label}.operator`);
     assertPackageSymbol(value.operator as NleProcess["operator"], `${label}.operator`);
@@ -399,8 +403,8 @@ function assertTrack(value: unknown, trackIds: Set<string>, itemIds: Set<string>
   trackIds.add(value.id);
   text(value.name, `NLE Track ${value.id}.name`);
   assert(value.kind === "picture" || value.kind === "audio", `NLE Track ${value.id}.kind is invalid.`);
-  assert(value.role === undefined || value.role === "effect"
-    || value.kind === "picture" && (value.role === "subtitle" || value.role === "text"),
+  assert(value.role === "effect" || (value.kind === "audio" ? value.role === "audio"
+    : value.role === "picture" || value.role === "subtitle" || value.role === "text" || value.role === "filter"),
     `NLE Track ${value.id}.role is invalid for its Track kind.`);
   assert(typeof value.enabled === "boolean", `NLE Track ${value.id}.enabled must be boolean.`);
   assert(Array.isArray(value.items), `NLE Track ${value.id}.items must be an array.`);
@@ -433,6 +437,20 @@ function assertRelations(composition: NleComposition, itemIds: Set<string>): voi
     assert(!identities.has(id), `${label} ${id} is duplicated in the NLE Project.`);
     identities.add(id);
   };
+
+  const grouped = new Set<string>();
+  for (const group of composition.groups) {
+    record(group, "NLE Group");
+    onlyKeys(group, ["id", "items"], "NLE Group");
+    addIdentity(group.id, "NLE Group id");
+    assert(Array.isArray(group.items) && group.items.length >= 2, `NLE Group ${group.id} requires at least two Items.`);
+    for (const item of group.items) {
+      identity(item, `NLE Group ${group.id} member`);
+      assert(itemIds.has(item), `NLE Group ${group.id} references missing Item ${item} in Composition ${composition.id}.`);
+      assert(!grouped.has(item), `NLE Item ${item} must occur only once across the Groups of Composition ${composition.id}.`);
+      grouped.add(item);
+    }
+  }
 
   const outgoing = new Set<string>();
   const incoming = new Set<string>();
@@ -513,12 +531,14 @@ function assertRelations(composition: NleComposition, itemIds: Set<string>): voi
 
 export function assertNleProject(value: unknown): asserts value is NleProject {
   record(value, "NLE Project");
-  onlyKeys(value, ["format", "id", "name", "rootComposition", "sharedValues", "compositions"],
+  onlyKeys(value, ["format", "id", "name", "rootComposition", "editRate", "sharedValues", "compositions"],
     "NLE Project");
   assert(value.format === nleProjectFormat, `Unsupported NLE Project format: ${String(value.format)}.`);
   identity(value.id, "NLE Project.id");
   text(value.name, "NLE Project.name");
   identity(value.rootComposition, "NLE Project.rootComposition");
+  assertRateShape(value.editRate, "NLE Project.editRate");
+  assert((value.editRate as TemporalRate).numerator > 0, "NLE Project.editRate.numerator must be positive.");
   assert(Array.isArray(value.sharedValues), "NLE Project.sharedValues must be an array.");
   const sharedValueIds = new Set<string>();
   for (const sharedValue of value.sharedValues) assertSharedValue(sharedValue, sharedValueIds);
@@ -530,7 +550,7 @@ export function assertNleProject(value: unknown): asserts value is NleProject {
   const relationIds = new Set<string>();
   for (const candidate of value.compositions) {
     record(candidate, "NLE Composition");
-    onlyKeys(candidate, ["id", "name", "canvas", "tracks", "transitions", "mattes"], "NLE Composition");
+    onlyKeys(candidate, ["id", "name", "canvas", "tracks", "transitions", "mattes", "groups"], "NLE Composition");
     identity(candidate.id, "NLE Composition.id");
     assert(!compositionIds.has(candidate.id), `NLE Project repeats Composition ${candidate.id}.`);
     compositionIds.add(candidate.id);
@@ -539,11 +559,12 @@ export function assertNleProject(value: unknown): asserts value is NleProject {
     assert(Array.isArray(candidate.tracks), `NLE Composition ${candidate.id}.tracks must be an array.`);
     assert(Array.isArray(candidate.transitions), `NLE Composition ${candidate.id}.transitions must be an array.`);
     assert(Array.isArray(candidate.mattes), `NLE Composition ${candidate.id}.mattes must be an array.`);
+    assert(Array.isArray(candidate.groups), `NLE Composition ${candidate.id}.groups must be an array.`);
     const beforeItems = new Set(itemIds);
     for (const track of candidate.tracks) assertTrack(track, trackIds, itemIds);
     const localItemIds = new Set([...itemIds].filter((id) => !beforeItems.has(id)));
     assertRelations(candidate as unknown as NleComposition, localItemIds);
-    for (const relation of [...candidate.transitions, ...candidate.mattes]) {
+    for (const relation of [...candidate.transitions, ...candidate.mattes, ...candidate.groups]) {
       assert(!relationIds.has(relation.id), `NLE Project repeats relation ${relation.id}.`);
       relationIds.add(relation.id);
     }
@@ -662,6 +683,7 @@ export function createNleProject(value: {
   readonly id: string;
   readonly name: string;
   readonly compositionId?: string;
+  readonly editRate?: TemporalRate;
   readonly canvas: NleCanvas;
 }): NleProject {
   const compositionId = value.compositionId ?? `${value.id}:composition`;
@@ -670,6 +692,7 @@ export function createNleProject(value: {
     id: value.id,
     name: value.name,
     rootComposition: compositionId,
+    editRate: value.editRate ?? defaultNleEditRate,
     sharedValues: [],
     compositions: [{
       id: compositionId,
@@ -678,6 +701,7 @@ export function createNleProject(value: {
       tracks: [],
       transitions: [],
       mattes: [],
+      groups: [],
     }],
   });
 }
@@ -705,6 +729,17 @@ export function findNleComposition(value: NleProject, id: string): NleCompositio
 
 export function rootNleComposition(value: NleProject): NleComposition {
   return findNleComposition(value, value.rootComposition);
+}
+
+/** Resolve the complete set of members to pass to an explicit Item move. */
+export function nleGroupMoveItems(composition: Pick<NleComposition, "groups">, ids: Iterable<string>): Set<string> {
+  const moving = new Set(ids);
+  for (const group of composition.groups) {
+    if (group.items.some(id => moving.has(id))) {
+      for (const id of group.items) moving.add(id);
+    }
+  }
+  return moving;
 }
 
 export function findNleSharedValue(value: NleProject, id: string): NleSharedValue {

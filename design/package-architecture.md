@@ -69,14 +69,13 @@ The project program selects both inputs, and the chosen subtitle component owns 
 
 Owns the durable NLE Project document and SVML schema, Reader and serializer, Project Service, edit transactions,
 Composition and Track facts, Present occurrences, source-time relations, Present-local Processes and timed Adjusts,
-Transitions, Mattes and shared values.
+Transitions, Mattes, linked-edit Groups and shared values.
 
 The `authoring` subpath validates the declarations of a synchronous Composition Source into a new Project value.
 Local input resolution and file creation are responsibilities of the calling project program.
-The `node` subpath opens the canonical Project and View files through their shared owner Services and owns their
-revision-checked file persistence. Studio supplies the Product Session and borrows those Services.
+The `node` subpath opens the canonical Project file through its owner Service and owns revision-checked file persistence. Studio leases the Service and owns its session.
 
-NLE Project serialization is the SVML representation of the edit. It contains no TSX source text, View
+NLE Project serialization is the SVML representation of the edit. It contains no TSX source text, editor
 selection, Service revision or execution plan.
 
 `@hypit/text-fine` is a selectable component package. It supplies rich text layout, text motion and editing facets.
@@ -109,8 +108,7 @@ Service submits a `HtmlVideoDeliveryPlan` to its injected Executor. Its Service 
 owns neither the document nor the exported resource.
 
 `@hypit/nle-studio` supplies the NLE Product Provider and browser artifact registered by ApplicationHost. Its product
-lifecycle and visual consumer justify a release boundary outside headless `@hypit/nle`. It composes Project and View
-Services through the NLE Editing Surface, and accepts Project Media Service and preview Executor ports without
+lifecycle and visual consumer justify a release boundary outside headless `@hypit/nle`. It composes the Project Service with its session navigation and locks through the NLE Editing Surface, and accepts Project Media Service and preview Executor ports without
 absorbing their facts or execution state.
 
 `@hypit/canvas` owns the Canvas document, revision transactions and shared Service. Its `node` subpath

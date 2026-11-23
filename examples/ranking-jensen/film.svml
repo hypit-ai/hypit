@@ -8,166 +8,20 @@
     <picture-layout x="43" y="653" width="634" height="230" fit="fill" />
   </shared-value>
   <composition id="main" name="Ranking the best person Jensen ever dated" width="720" height="1280">
-    <track id="performance" name="Jensen A-roll" kind="picture" enabled="true">
-      <present id="aroll-wife-use" name="My wife A-roll" source="media" start="0/1" duration="265/24" enabled="true">
-        <media path="media/aroll-wife/aroll-wife.media.json" />
+    <track id="performance-compound-track" name="A-roll + BGM" kind="picture" role="picture" enabled="true">
+      <present id="performance-compound" name="Jensen A-roll + BGM" source="composition" start="0/1" duration="1397/24" enabled="true">
+        <composition ref="performance-composition" />
         <source-time>
-          <linear target-start="0/1" target-end="265/24" source-start="0/1" rate="1/1" />
+          <linear target-start="0/1" target-end="1397/24" source-start="0/1" rate="1/1" />
         </source-time>
         <picture>
-          <layout x="0" y="0" width="720" height="1280" fit="cover" />
-        </picture>
-        <audio>
-        </audio>
-      </present>
-      <present id="aroll-trump-use" name="Trump A-roll" source="media" start="265/24" duration="265/24" enabled="true">
-        <media path="media/aroll-trump/aroll-trump.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="265/24" source-start="0/1" rate="1/1" />
-        </source-time>
-        <picture>
-          <layout x="0" y="0" width="720" height="1280" fit="cover" />
-        </picture>
-        <audio>
-        </audio>
-      </present>
-      <present id="aroll-kimberly-use" name="Kimberly A-roll" source="media" start="265/12" duration="265/24" enabled="true">
-        <media path="media/aroll-kimberly/aroll-kimberly.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="265/24" source-start="0/1" rate="1/1" />
-        </source-time>
-        <picture>
-          <layout x="0" y="0" width="720" height="1280" fit="cover" />
-        </picture>
-        <audio>
-        </audio>
-      </present>
-      <present id="aroll-alice-use" name="Alice A-roll" source="media" start="265/8" duration="265/24" enabled="true">
-        <media path="media/aroll-alice/aroll-alice.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="265/24" source-start="0/1" rate="1/1" />
-        </source-time>
-        <picture>
-          <layout x="0" y="0" width="720" height="1280" fit="cover" />
-        </picture>
-        <audio>
-        </audio>
-      </present>
-      <present id="aroll-jacket-use" name="My jacket A-roll" source="media" start="265/6" duration="337/24" enabled="true">
-        <media path="media/aroll-jacket/aroll-jacket.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="337/24" source-start="0/1" rate="1/1" />
-        </source-time>
-        <picture>
-          <layout x="0" y="0" width="720" height="1280" fit="cover" />
+          <layout x="0" y="0" width="720" height="1280" fit="contain" />
         </picture>
         <audio>
         </audio>
       </present>
     </track>
-    <track id="music" name="Music bed" kind="audio" enabled="true">
-      <present id="thank-you-instrumental-opening" name="THANK YOU instrumental — opening" source="media" start="0/1" duration="188/5" enabled="true">
-        <media path="media/bgm-thank-you/bgm-thank-you.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="188/5" source-start="0/1" rate="1/1" />
-        </source-time>
-        <audio>
-          <process id="thank-you-opening-envelope" package="@hypit/audio-effects" symbol="gain" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"gain":0.14},{"at":{"ticks":"187","timeBase":{"numerator":1,"denominator":5}},"gain":0.14},{"at":{"ticks":"1804799","timeBase":{"numerator":1,"denominator":48000}},"gain":0}],"interpolation":{"kind":"linear"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="188/5" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </audio>
-      </present>
-      <present id="thank-you-instrumental-return" name="THANK YOU instrumental — return" source="media" start="187/5" duration="2497/120" enabled="true">
-        <media path="media/bgm-thank-you/bgm-thank-you.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="2497/120" source-start="499/10" rate="1/1" />
-        </source-time>
-        <audio>
-          <process id="thank-you-return-envelope" package="@hypit/audio-effects" symbol="gain" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"gain":0},{"at":{"ticks":"200000","timeBase":{"numerator":1,"denominator":1000000}},"gain":0.14},{"at":{"ticks":"485","timeBase":{"numerator":1,"denominator":24}},"gain":0.14},{"at":{"ticks":"332933","timeBase":{"numerator":1,"denominator":16000}},"gain":0}],"interpolation":{"kind":"linear"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="2497/120" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </audio>
-      </present>
-    </track>
-    <track id="reveal-sfx" name="Tier reveal sound" kind="audio" enabled="true">
-      <present id="wife-tier-reveal-sfx" name="My wife tier reveal" source="media" start="10693/8000" duration="33/50" enabled="true">
-        <media path="media/ranking-reveal-sfx/ranking-reveal-sfx.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
-        </source-time>
-        <audio>
-          <process id="wife-tier-reveal-gain" package="@hypit/audio-effects" symbol="gain" enabled="true">
-            <parameters>{"kind":"constant","gain":0.2}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </audio>
-      </present>
-      <present id="trump-tier-reveal-sfx" name="Trump tier reveal" source="media" start="1135627/93750" duration="33/50" enabled="true">
-        <media path="media/ranking-reveal-sfx/ranking-reveal-sfx.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
-        </source-time>
-        <audio>
-          <process id="trump-tier-reveal-gain" package="@hypit/audio-effects" symbol="gain" enabled="true">
-            <parameters>{"kind":"constant","gain":0.2}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </audio>
-      </present>
-      <present id="kimberly-tier-reveal-sfx" name="Kimberly tier reveal" source="media" start="560447/24000" duration="33/50" enabled="true">
-        <media path="media/ranking-reveal-sfx/ranking-reveal-sfx.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
-        </source-time>
-        <audio>
-          <process id="kimberly-tier-reveal-gain" package="@hypit/audio-effects" symbol="gain" enabled="true">
-            <parameters>{"kind":"constant","gain":0.2}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </audio>
-      </present>
-      <present id="alice-tier-reveal-sfx" name="Alice tier reveal" source="media" start="34046313/1000000" duration="33/50" enabled="true">
-        <media path="media/ranking-reveal-sfx/ranking-reveal-sfx.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
-        </source-time>
-        <audio>
-          <process id="alice-tier-reveal-gain" package="@hypit/audio-effects" symbol="gain" enabled="true">
-            <parameters>{"kind":"constant","gain":0.2}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </audio>
-      </present>
-      <present id="jacket-tier-reveal-sfx" name="My jacket tier reveal" source="media" start="68071/1500" duration="33/50" enabled="true">
-        <media path="media/ranking-reveal-sfx/ranking-reveal-sfx.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
-        </source-time>
-        <audio>
-          <process id="jacket-tier-reveal-gain" package="@hypit/audio-effects" symbol="gain" enabled="true">
-            <parameters>{"kind":"constant","gain":0.2}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </audio>
-      </present>
-    </track>
-    <track id="ranking" name="Date ranking board" kind="picture" enabled="true">
+    <track id="ranking" name="Date ranking board" kind="picture" role="picture" enabled="true">
       <present id="jensen-date-tier-board" name="Jensen date tier list" source="component" start="0/1" duration="1397/24" enabled="true">
         <component package="@hypit-example/ranking-football-components" symbol="tier-board" />
         <parameters>{"boardHeightRatio":0.4,"entryMotion":"pop-in-place","rows":[{"id":"s","label":"S","color":"#ee5f52"},{"id":"a","label":"A","color":"#f0a04c"},{"id":"b","label":"B","color":"#f0c84d"},{"id":"c","label":"C","color":"#ede356"},{"id":"d","label":"D","color":"#a6da7b"}],"entries":[{"id":"wife","label":"My wife","tier":"d","input":"subject.wife","preset":false,"window":{"start":{"ticks":"10693","timeBase":{"numerator":1,"denominator":8000}},"end":{"ticks":"265","timeBase":{"numerator":1,"denominator":24}}}},{"id":"trump","label":"Trump","tier":"b","input":"subject.trump","preset":false,"window":{"start":{"ticks":"1135627","timeBase":{"numerator":1,"denominator":93750}},"end":{"ticks":"265","timeBase":{"numerator":1,"denominator":12}}}},{"id":"kimberly","label":"Kimberly","tier":"c","input":"subject.kimberly","preset":false,"window":{"start":{"ticks":"560447","timeBase":{"numerator":1,"denominator":24000}},"end":{"ticks":"265","timeBase":{"numerator":1,"denominator":8}}}},{"id":"alice","label":"Alice","tier":"a","input":"subject.alice","preset":false,"window":{"start":{"ticks":"34046313","timeBase":{"numerator":1,"denominator":1000000}},"end":{"ticks":"265","timeBase":{"numerator":1,"denominator":6}}}},{"id":"jacket","label":"My jacket","tier":"s","input":"subject.jacket","preset":false,"window":{"start":{"ticks":"68071","timeBase":{"numerator":1,"denominator":1500}},"end":{"ticks":"1397","timeBase":{"numerator":1,"denominator":24}}}}]}</parameters>
@@ -184,7 +38,7 @@
         </picture>
       </present>
     </track>
-    <track id="broll" name="B-roll groups" kind="picture" enabled="true">
+    <track id="broll" name="B-roll 1" kind="picture" role="picture" enabled="true">
       <present id="broll-01-forty-years" name="B-roll 01.1 · forty-years" source="media" start="1181/500" duration="3073/1000" enabled="true">
         <media path="media/broll-wife-84-years/reference.media.json" />
         <source-time>
@@ -218,62 +72,6 @@
           </process>
         </picture>
       </present>
-      <present id="broll-01-same-version" name="B-roll 01.2 · same-version" source="media" start="49883/16000" duration="37077/16000" enabled="true">
-        <media path="media/broll-wife-version-update/same-version-png.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="37077/16000" source-start="0/1" rate="0/1" />
-        </source-time>
-        <picture>
-          <layout x="386" y="668" width="306" height="306" fit="contain" />
-          <process id="broll-01-same-version-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
-            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="37077/16000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-01-same-version-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":80,"scaleX":0.92,"scaleY":0.92,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="37077/16000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-01-same-version-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="37077/16000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-01-same-version-exit-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"103231","timeBase":{"numerator":1,"denominator":48000}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"109231","timeBase":{"numerator":1,"denominator":48000}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="37077/16000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </picture>
-      </present>
-      <present id="broll-01-zero-updates" name="B-roll 01.3 · zero-updates" source="media" start="17/4" duration="237/200" enabled="true">
-        <media path="media/broll-wife-version-update/zero-updates-png.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="237/200" source-start="0/1" rate="0/1" />
-        </source-time>
-        <picture>
-          <layout x="134" y="894" width="557" height="353.647" fit="contain" />
-          <process id="broll-01-zero-updates-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
-            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="237/200" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-01-zero-updates-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":0.9,"scaleY":0.9,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time edge="start" duration="1/4" control-duration="1/4" />
-          </process>
-          <process id="broll-01-zero-updates-exit-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"1","timeBase":{"numerator":1,"denominator":8}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
-            <control-time edge="end" duration="1/6" control-duration="1/6" />
-          </process>
-        </picture>
-      </present>
       <present id="broll-02-loris-lawyer" name="B-roll 02.1 · loris-lawyer" source="media" start="1087/200" duration="34293/16000" enabled="true">
         <media path="media/broll-wife-divorce-lawyer/final-loris-lawyer-v3.media.json" />
         <source-time>
@@ -303,33 +101,6 @@
             <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"94879","timeBase":{"numerator":1,"denominator":48000}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"100879","timeBase":{"numerator":1,"denominator":48000}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
             <control-time>
               <linear target-start="0/1" target-end="34293/16000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </picture>
-      </present>
-      <present id="broll-02-lori-after-divorce" name="B-roll 02.2 · lori-after-divorce" source="media" start="6279/1000" duration="20789/16000" enabled="true">
-        <media path="media/broll-wife-huell-money/final-lori-after-divorce-v3.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="20789/16000" source-start="0/1" rate="0/1" />
-        </source-time>
-        <picture>
-          <layout x="56" y="873" width="636" height="358.464" fit="contain" />
-          <process id="broll-02-lori-after-divorce-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
-            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="20789/16000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-02-lori-after-divorce-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":0.9,"scaleY":0.9,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="20789/16000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-02-lori-after-divorce-exit-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"54367","timeBase":{"numerator":1,"denominator":48000}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"60367","timeBase":{"numerator":1,"denominator":48000}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="20789/16000" source-start="0/1" rate="1/1" />
             </control-time>
           </process>
         </picture>
@@ -367,68 +138,35 @@
           </process>
         </picture>
       </present>
-      <present id="broll-03-five-million" name="B-roll 03.2 · five-million" source="media" start="31757/4000" duration="223/160" enabled="true">
-        <media path="media/broll-wife-five-million/money-reference-png.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="223/160" source-start="0/1" rate="0/1" />
-        </source-time>
-        <picture>
-          <layout x="30" y="808" width="587" height="379.639" fit="contain" />
-          <process id="broll-03-five-million-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
-            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="223/160" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-03-five-million-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":80,"scaleX":0.92,"scaleY":0.92,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="223/160" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-03-five-million-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="223/160" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-03-five-million-exit-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"589","timeBase":{"numerator":1,"denominator":480}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"649","timeBase":{"numerator":1,"denominator":480}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="223/160" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </picture>
-      </present>
-      <present id="broll-04-linkedin-job" name="B-roll 04.1 · linkedin-job" source="media" start="9333/1000" duration="2563/1500" enabled="true">
+      <present id="broll-04-linkedin-job" name="B-roll 04.1 · linkedin-job" source="media" start="9333/1000" duration="5101/3000" enabled="true">
         <media path="media/broll-wife-linkedin-job/source-user.media.json" />
         <source-time>
-          <linear target-start="0/1" target-end="2563/1500" source-start="0/1" rate="0/1" />
+          <linear target-start="0/1" target-end="5101/3000" source-start="0/1" rate="0/1" />
         </source-time>
         <picture>
           <layout x="17" y="328" width="691" height="518.25" fit="contain" />
           <process id="broll-04-linkedin-job-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
             <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
             <control-time>
-              <linear target-start="0/1" target-end="2563/1500" source-start="0/1" rate="1/1" />
+              <linear target-start="0/1" target-end="5101/3000" source-start="0/1" rate="1/1" />
             </control-time>
           </process>
           <process id="broll-04-linkedin-job-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
             <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":0.7,"scaleY":0.7,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
             <control-time>
-              <linear target-start="0/1" target-end="2563/1500" source-start="0/1" rate="1/1" />
+              <linear target-start="0/1" target-end="5101/3000" source-start="0/1" rate="1/1" />
             </control-time>
           </process>
           <process id="broll-04-linkedin-job-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
             <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
             <control-time>
-              <linear target-start="0/1" target-end="2563/1500" source-start="0/1" rate="1/1" />
+              <linear target-start="0/1" target-end="5101/3000" source-start="0/1" rate="1/1" />
             </control-time>
           </process>
           <process id="broll-04-linkedin-job-exit-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
             <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"771","timeBase":{"numerator":1,"denominator":500}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"1667","timeBase":{"numerator":1,"denominator":1000}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
             <control-time>
-              <linear target-start="0/1" target-end="2563/1500" source-start="0/1" rate="1/1" />
+              <linear target-start="0/1" target-end="5101/3000" source-start="0/1" rate="1/1" />
             </control-time>
           </process>
         </picture>
@@ -466,40 +204,13 @@
           </process>
         </picture>
       </present>
-      <present id="broll-05-honorable" name="B-roll 05.2 · honorable" source="media" start="23389/1500" duration="2451/1000" enabled="true">
-        <media path="media/broll-trump-honorable/source-user.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="2451/1000" source-start="0/1" rate="0/1" />
-        </source-time>
-        <picture>
-          <layout x="25" y="846" width="638" height="358.882" fit="contain" />
-          <process id="broll-05-honorable-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
-            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="2451/1000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-05-honorable-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":0.9,"scaleY":0.9,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="2451/1000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-05-honorable-exit-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"6853","timeBase":{"numerator":1,"denominator":3000}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"1807","timeBase":{"numerator":1,"denominator":750}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="2451/1000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </picture>
-      </present>
       <present id="broll-06-trump-jensen" name="B-roll 06.1 · trump-jensen" source="media" start="54131/3000" duration="12119/3000" enabled="true">
         <media path="media/broll-trump-pointing/final-trump-jensen-v3.media.json" />
         <source-time>
           <linear target-start="0/1" target-end="12119/3000" source-start="0/1" rate="0/1" />
         </source-time>
         <picture>
-          <layout x="11" y="760" width="382" height="286.5" fit="contain" />
+          <layout x="0" y="768" width="382" height="286.5" fit="contain" />
           <process id="broll-06-trump-jensen-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
             <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
             <control-time>
@@ -522,66 +233,6 @@
             <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"3873","timeBase":{"numerator":1,"denominator":1000}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"1999","timeBase":{"numerator":1,"denominator":500}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
             <control-time>
               <linear target-start="0/1" target-end="12119/3000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </picture>
-      </present>
-      <present id="broll-06-no-big-deal" name="B-roll 06.2 · no-big-deal" source="media" start="11863/600" duration="1387/600" enabled="true">
-        <media path="media/broll-trump-no-big-deal/final-wife-ranking-v2.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="1387/600" source-start="0/1" rate="0/1" />
-        </source-time>
-        <picture>
-          <layout x="34" y="524" width="644" height="429.331" fit="contain" />
-          <process id="broll-06-no-big-deal-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
-            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="1387/600" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-06-no-big-deal-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":80,"scaleX":0.92,"scaleY":0.92,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="1387/600" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-06-no-big-deal-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="1387/600" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-06-no-big-deal-exit-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"429","timeBase":{"numerator":1,"denominator":200}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"227","timeBase":{"numerator":1,"denominator":100}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="1387/600" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </picture>
-      </present>
-      <present id="broll-06-which-one" name="B-roll 06.3 · which-one" source="media" start="63413/3000" duration="2837/3000" enabled="true">
-        <media path="media/broll-trump-which-one/final-which-one-v2.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="2837/3000" source-start="0/1" rate="0/1" />
-        </source-time>
-        <picture>
-          <layout x="16" y="825" width="687" height="366.737" fit="contain" />
-          <process id="broll-06-which-one-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
-            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="2837/3000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-06-which-one-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":0.9,"scaleY":0.9,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="2837/3000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-06-which-one-exit-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"779","timeBase":{"numerator":1,"denominator":1000}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"113","timeBase":{"numerator":1,"denominator":125}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="2837/3000" source-start="0/1" rate="1/1" />
             </control-time>
           </process>
         </picture>
@@ -652,103 +303,13 @@
           </process>
         </picture>
       </present>
-      <present id="broll-08-heart-rate" name="B-roll 08.2 · heart-rate" source="media" start="1362619/48000" duration="27879/16000" enabled="true">
-        <media path="media/broll-kimberly-heart-rate/source-user.media.json" />
+      <present id="broll-09-crossfade-clip" name="B-roll 09 · Side effects → Wife lost" source="composition" start="90391/3000" duration="1123/375" enabled="true">
+        <composition ref="broll-09-crossfade-composition" />
         <source-time>
-          <linear target-start="0/1" target-end="27879/16000" source-start="0/1" rate="0/1" />
+          <linear target-start="0/1" target-end="1123/375" source-start="0/1" rate="1/1" />
         </source-time>
         <picture>
-          <layout x="63" y="703" width="632" height="474" fit="contain" />
-          <process id="broll-08-heart-rate-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
-            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="27879/16000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-08-heart-rate-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":80,"scaleX":0.92,"scaleY":0.92,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="27879/16000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-08-heart-rate-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="27879/16000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-08-heart-rate-exit-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"75637","timeBase":{"numerator":1,"denominator":48000}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"81637","timeBase":{"numerator":1,"denominator":48000}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="27879/16000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </picture>
-      </present>
-      <present id="broll-09-side-effects" name="B-roll 09.1 · side-effects" source="media" start="90391/3000" duration="88/75" enabled="true">
-        <media path="media/broll-kimberly-side-effects/final-no-wife-no-job-v3.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="88/75" source-start="0/1" rate="0/1" />
-        </source-time>
-        <picture>
-          <layout x="280" y="506" width="393" height="594.749" fit="contain" />
-          <process id="broll-09-side-effects-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
-            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="88/75" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-09-side-effects-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":0.7,"scaleY":0.7,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="88/75" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-09-side-effects-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="88/75" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-09-side-effects-exit-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"151","timeBase":{"numerator":1,"denominator":150}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"679","timeBase":{"numerator":1,"denominator":600}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="88/75" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </picture>
-      </present>
-      <present id="broll-09-wife-lost" name="B-roll 09.2 · wife-lost" source="media" start="46643/1500" duration="6089/3000" enabled="true">
-        <media path="media/broll-kimberly-wife-lost/final-no-wife-no-job-both-v3.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="6089/3000" source-start="0/1" rate="0/1" />
-        </source-time>
-        <picture>
-          <layout x="280" y="506" width="393" height="594.749" fit="contain" />
-          <process id="broll-09-wife-lost-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
-            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="6089/3000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-09-wife-lost-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":80,"scaleX":0.92,"scaleY":0.92,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="6089/3000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-09-wife-lost-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="6089/3000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-09-wife-lost-exit-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"1863","timeBase":{"numerator":1,"denominator":1000}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"497","timeBase":{"numerator":1,"denominator":250}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="6089/3000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
+          <layout x="0" y="0" width="720" height="1280" fit="contain" />
         </picture>
       </present>
       <present id="broll-10-not-like-others" name="B-roll 10.1 · not-like-others" source="media" start="552891/16000" duration="28709/16000" enabled="true">
@@ -784,70 +345,13 @@
           </process>
         </picture>
       </present>
-      <present id="broll-11-hermes" name="B-roll 11.1 · hermes" source="media" start="727/20" duration="4603/3000" enabled="true">
-        <media path="media/broll-alice-hermes-h100/final-hermes-stage.media.json" />
+      <present id="broll-11-crossfade-clip" name="B-roll 11 · Hermès → H100" source="composition" start="727/20" duration="3577/1000" enabled="true">
+        <composition ref="broll-11-crossfade-composition" />
         <source-time>
-          <linear target-start="0/1" target-end="4603/3000" source-start="0/1" rate="0/1" />
+          <linear target-start="0/1" target-end="3577/1000" source-start="0/1" rate="1/1" />
         </source-time>
         <picture>
-          <layout x="63" y="491" width="600" height="600" fit="contain" />
-          <process id="broll-11-hermes-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
-            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="4603/3000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-11-hermes-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":0.7,"scaleY":0.7,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="4603/3000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-11-hermes-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="4603/3000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-11-hermes-exit-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"4103","timeBase":{"numerator":1,"denominator":3000}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"2239","timeBase":{"numerator":1,"denominator":1500}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="4603/3000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </picture>
-      </present>
-      <present id="broll-11-h100" name="B-roll 11.2 · h100" source="media" start="9419/250" duration="2251/1000" enabled="true">
-        <media path="media/broll-alice-hermes-h100/final-h100-stage.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="2251/1000" source-start="0/1" rate="0/1" />
-        </source-time>
-        <picture>
-          <layout x="63" y="491" width="600" height="600" fit="contain" />
-          <process id="broll-11-h100-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
-            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="2251/1000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-11-h100-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":80,"scaleX":0.92,"scaleY":0.92,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="2251/1000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-11-h100-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="2251/1000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-11-h100-exit-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6253","timeBase":{"numerator":1,"denominator":3000}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"1657","timeBase":{"numerator":1,"denominator":750}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="2251/1000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
+          <layout x="0" y="0" width="720" height="1280" fit="contain" />
         </picture>
       </present>
       <present id="broll-12-source-extraction" name="B-roll 12.1 · source-extraction" source="media" start="39927/1000" duration="12719/3000" enabled="true">
@@ -879,39 +383,6 @@
             <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"4073","timeBase":{"numerator":1,"denominator":1000}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"2099","timeBase":{"numerator":1,"denominator":500}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
             <control-time>
               <linear target-start="0/1" target-end="12719/3000" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-        </picture>
-      </present>
-      <present id="broll-12-deepseek-transfer" name="B-roll 12.2 · deepseek-transfer" source="media" start="214/5" duration="41/30" enabled="true">
-        <media path="media/broll-alice-deepseek-transfer/source-user.media.json" />
-        <source-time>
-          <linear target-start="0/1" target-end="41/30" source-start="0/1" rate="0/1" />
-        </source-time>
-        <picture>
-          <layout x="26" y="448" width="615" height="615" fit="contain" />
-          <process id="broll-12-deepseek-transfer-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
-            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="41/30" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-12-deepseek-transfer-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":80,"scaleX":0.92,"scaleY":0.92,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="41/30" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-12-deepseek-transfer-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="41/30" source-start="0/1" rate="1/1" />
-            </control-time>
-          </process>
-          <process id="broll-12-deepseek-transfer-exit-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
-            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":5}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"53","timeBase":{"numerator":1,"denominator":40}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
-            <control-time>
-              <linear target-start="0/1" target-end="41/30" source-start="0/1" rate="1/1" />
             </control-time>
           </process>
         </picture>
@@ -1015,6 +486,227 @@
           </process>
         </picture>
       </present>
+    </track>
+    <track id="broll-2" name="B-roll 2" kind="picture" role="picture" enabled="true">
+      <present id="broll-01-same-version" name="B-roll 01.2 · same-version" source="media" start="49883/16000" duration="37077/16000" enabled="true">
+        <media path="media/broll-wife-version-update/same-version-png.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="37077/16000" source-start="0/1" rate="0/1" />
+        </source-time>
+        <picture>
+          <layout x="386" y="668" width="306" height="306" fit="contain" />
+          <process id="broll-01-same-version-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
+            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="37077/16000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-01-same-version-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":80,"scaleX":0.92,"scaleY":0.92,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="37077/16000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-01-same-version-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="37077/16000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-01-same-version-exit-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"103231","timeBase":{"numerator":1,"denominator":48000}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"109231","timeBase":{"numerator":1,"denominator":48000}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="37077/16000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </picture>
+      </present>
+      <present id="broll-02-lori-after-divorce" name="B-roll 02.2 · lori-after-divorce" source="media" start="6279/1000" duration="20789/16000" enabled="true">
+        <media path="media/broll-wife-huell-money/final-lori-after-divorce-v3.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="20789/16000" source-start="0/1" rate="0/1" />
+        </source-time>
+        <picture>
+          <layout x="56" y="873" width="636" height="358.464" fit="contain" />
+          <process id="broll-02-lori-after-divorce-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
+            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="20789/16000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-02-lori-after-divorce-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":0.9,"scaleY":0.9,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="20789/16000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-02-lori-after-divorce-exit-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"54367","timeBase":{"numerator":1,"denominator":48000}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"60367","timeBase":{"numerator":1,"denominator":48000}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="20789/16000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </picture>
+      </present>
+      <present id="broll-03-five-million" name="B-roll 03.2 · five-million" source="media" start="31757/4000" duration="223/160" enabled="true">
+        <media path="media/broll-wife-five-million/money-reference-png.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="223/160" source-start="0/1" rate="0/1" />
+        </source-time>
+        <picture>
+          <layout x="34" y="807" width="587" height="379.639" fit="contain" />
+          <process id="broll-03-five-million-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
+            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="223/160" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-03-five-million-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":80,"scaleX":0.92,"scaleY":0.92,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="223/160" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-03-five-million-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="223/160" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-03-five-million-exit-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"589","timeBase":{"numerator":1,"denominator":480}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"649","timeBase":{"numerator":1,"denominator":480}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="223/160" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </picture>
+      </present>
+      <present id="broll-05-honorable" name="B-roll 05.2 · honorable" source="media" start="23389/1500" duration="2451/1000" enabled="true">
+        <media path="media/broll-trump-honorable/source-user.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="2451/1000" source-start="0/1" rate="0/1" />
+        </source-time>
+        <picture>
+          <layout x="25" y="846" width="638" height="358.882" fit="contain" />
+          <process id="broll-05-honorable-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
+            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="2451/1000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-05-honorable-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":0.9,"scaleY":0.9,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="2451/1000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-05-honorable-exit-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"6853","timeBase":{"numerator":1,"denominator":3000}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"1807","timeBase":{"numerator":1,"denominator":750}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="2451/1000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </picture>
+      </present>
+      <present id="broll-06-no-big-deal" name="B-roll 06.2 · no-big-deal" source="media" start="11863/600" duration="1387/600" enabled="true">
+        <media path="media/broll-trump-no-big-deal/final-wife-ranking-v2.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="1387/600" source-start="0/1" rate="0/1" />
+        </source-time>
+        <picture>
+          <layout x="33" y="524" width="644" height="429.331" fit="contain" />
+          <process id="broll-06-no-big-deal-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
+            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="1387/600" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-06-no-big-deal-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":80,"scaleX":0.92,"scaleY":0.92,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="1387/600" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-06-no-big-deal-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="1387/600" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-06-no-big-deal-exit-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"429","timeBase":{"numerator":1,"denominator":200}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"227","timeBase":{"numerator":1,"denominator":100}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="1387/600" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </picture>
+      </present>
+      <present id="broll-08-heart-rate" name="B-roll 08.2 · heart-rate" source="media" start="1362619/48000" duration="27879/16000" enabled="true">
+        <media path="media/broll-kimberly-heart-rate/source-user.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="27879/16000" source-start="0/1" rate="0/1" />
+        </source-time>
+        <picture>
+          <layout x="63" y="703" width="632" height="474" fit="contain" />
+          <process id="broll-08-heart-rate-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
+            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="27879/16000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-08-heart-rate-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":80,"scaleX":0.92,"scaleY":0.92,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="27879/16000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-08-heart-rate-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="27879/16000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-08-heart-rate-exit-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"75637","timeBase":{"numerator":1,"denominator":48000}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"81637","timeBase":{"numerator":1,"denominator":48000}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="27879/16000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </picture>
+      </present>
+      <present id="broll-12-deepseek-transfer" name="B-roll 12.2 · deepseek-transfer" source="media" start="214/5" duration="41/30" enabled="true">
+        <media path="media/broll-alice-deepseek-transfer/source-user.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="41/30" source-start="0/1" rate="0/1" />
+        </source-time>
+        <picture>
+          <layout x="26" y="448" width="615" height="615" fit="contain" />
+          <process id="broll-12-deepseek-transfer-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
+            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="41/30" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-12-deepseek-transfer-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":80,"scaleX":0.92,"scaleY":0.92,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="41/30" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-12-deepseek-transfer-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="41/30" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-12-deepseek-transfer-exit-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":5}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"53","timeBase":{"numerator":1,"denominator":40}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="41/30" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </picture>
+      </present>
       <present id="broll-15-gpu-date" name="B-roll 15.2 · gpu-date" source="media" start="39677/750" duration="15917/3000" enabled="true">
         <media path="media/broll-jacket-gpu-date/source-user.media.json" />
         <source-time>
@@ -1044,6 +736,58 @@
             <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"5139","timeBase":{"numerator":1,"denominator":1000}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"658","timeBase":{"numerator":1,"denominator":125}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
             <control-time>
               <linear target-start="0/1" target-end="15917/3000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </picture>
+      </present>
+    </track>
+    <track id="broll-3" name="B-roll 3" kind="picture" role="picture" enabled="true">
+      <present id="broll-01-zero-updates" name="B-roll 01.3 · zero-updates" source="media" start="17/4" duration="237/200" enabled="true">
+        <media path="media/broll-wife-version-update/zero-updates-png.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="237/200" source-start="0/1" rate="0/1" />
+        </source-time>
+        <picture>
+          <layout x="134" y="894" width="557" height="353.647" fit="contain" />
+          <process id="broll-01-zero-updates-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
+            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="237/200" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-01-zero-updates-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":0.9,"scaleY":0.9,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time edge="start" duration="1/4" control-duration="1/4" />
+          </process>
+          <process id="broll-01-zero-updates-exit-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"1","timeBase":{"numerator":1,"denominator":8}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
+            <control-time edge="end" duration="1/6" control-duration="1/6" />
+          </process>
+        </picture>
+      </present>
+      <present id="broll-06-which-one" name="B-roll 06.3 · which-one" source="media" start="63413/3000" duration="2837/3000" enabled="true">
+        <media path="media/broll-trump-which-one/final-which-one-v2.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="2837/3000" source-start="0/1" rate="0/1" />
+        </source-time>
+        <picture>
+          <layout x="16" y="825" width="687" height="366.737" fit="contain" />
+          <process id="broll-06-which-one-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
+            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="2837/3000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-06-which-one-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":0.9,"scaleY":0.9,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="2837/3000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-06-which-one-exit-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"779","timeBase":{"numerator":1,"denominator":1000}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"113","timeBase":{"numerator":1,"denominator":125}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="2837/3000" source-start="0/1" rate="1/1" />
             </control-time>
           </process>
         </picture>
@@ -1081,6 +825,8 @@
           </process>
         </picture>
       </present>
+    </track>
+    <track id="broll-4" name="B-roll 4" kind="picture" role="picture" enabled="true">
       <present id="broll-15-new-ceo" name="B-roll 15.4 · new-ceo" source="media" start="21478/375" duration="2801/3000" enabled="true">
         <media path="media/broll-jacket-ceo/source-user.media.json" />
         <source-time>
@@ -1115,7 +861,15 @@
         </picture>
       </present>
     </track>
-    <track id="title" name="Title" kind="picture" enabled="true">
+    <track id="programme-filters" name="滤镜轨道" kind="picture" role="filter" enabled="true">
+      <adjust id="programme-warm-film" name="淡暖胶片" package="@hypit/picture-effects" symbol="filter" start="0/1" duration="1397/24" enabled="true">
+        <parameters>{"kind":"constant","state":{"brightness":1.025,"contrast":1.055,"saturation":0.9,"sepia":0.12}}</parameters>
+        <control-time>
+          <linear target-start="0/1" target-end="1397/24" source-start="0/1" rate="1/1" />
+        </control-time>
+      </adjust>
+    </track>
+    <track id="title" name="Title" kind="picture" role="text" enabled="true">
       <present id="jensen-ranking-title" name="Ranking the best person Jensen ever dated" source="component" start="0/1" duration="1397/24" enabled="true">
         <component package="@hypit/text-fine" symbol="fine" />
         <parameters>{"typography":{"fontWeight":900,"lineHeight":1.02,"fonts":["Arial Black","@fontsource-variable/montserrat","Arial","Apple Color Emoji","Segoe UI Emoji","sans-serif"],"fontSizePx":42,"letterSpacingPx":-1.2},"paints":[{"kind":"fill","paint":{"kind":"solid","color":"#070707"}}],"children":[{"kind":"text","id":"title-first","text":"RANKING THE BEST PERSON"},{"kind":"break","id":"title-break"},{"kind":"text","id":"title-second","text":"JENSEN EVER DATED 🔥💦🍑"}],"placement":{"kind":"flow","paddingPx":{"top":5,"right":20,"bottom":4,"left":20},"inlineAlign":"center","blockAlign":"start","wrap":"none","overflow":"visible","columns":1,"columnGapPx":0,"background":"#f4f2e8"}}</parameters>
@@ -1127,7 +881,7 @@
         </picture>
       </present>
     </track>
-    <track id="captions" name="Captions" kind="picture" enabled="true">
+    <track id="captions" name="Captions" kind="picture" role="subtitle" enabled="true">
       <present id="wife-captions:ranking-jensen.caption:cue:1" source="component" start="1409/3000" duration="2029/1500" enabled="true">
         <component package="@hypit/caption-fine" symbol="fine" />
         <parameters>{"caption":{"cueId":"ranking-jensen.caption:cue:1","documentId":"ranking-jensen.caption","role":"HOST","units":[{"end":{"ticks":"613","timeBase":{"denominator":3000,"numerator":1}},"id":"ranking-jensen.caption:unit:1","start":{"ticks":"1","timeBase":{"denominator":12,"numerator":1}},"wordIds":["ranking-jensen.caption:unit:1:word:1"]},{"end":{"ticks":"182","timeBase":{"denominator":375,"numerator":1}},"id":"ranking-jensen.caption:unit:2","start":{"ticks":"793","timeBase":{"denominator":3000,"numerator":1}},"wordIds":["ranking-jensen.caption:unit:2:word:1"]},{"end":{"ticks":"2059","timeBase":{"denominator":3000,"numerator":1}},"id":"ranking-jensen.caption:unit:3","start":{"ticks":"1819","timeBase":{"denominator":3000,"numerator":1}},"wordIds":["ranking-jensen.caption:unit:3:word:1"]},{"end":{"ticks":"20807","timeBase":{"denominator":24000,"numerator":1}},"id":"ranking-jensen.caption:unit:4","start":{"ticks":"2299","timeBase":{"denominator":3000,"numerator":1}},"wordIds":["ranking-jensen.caption:unit:4:word:1"]},{"end":{"ticks":"476","timeBase":{"denominator":375,"numerator":1}},"id":"ranking-jensen.caption:unit:5","start":{"ticks":"20807","timeBase":{"denominator":24000,"numerator":1}},"wordIds":["ranking-jensen.caption:unit:5:word:1"]}],"words":[{"attributes":[],"id":"ranking-jensen.caption:unit:1:word:1","separatorBefore":"","text":"My","unitId":"ranking-jensen.caption:unit:1"},{"attributes":[],"id":"ranking-jensen.caption:unit:2:word:1","separatorBefore":" ","text":"wife","unitId":"ranking-jensen.caption:unit:2"},{"attributes":[],"id":"ranking-jensen.caption:unit:3:word:1","separatorBefore":" ","text":"is","unitId":"ranking-jensen.caption:unit:3"},{"attributes":[],"id":"ranking-jensen.caption:unit:4:word:1","separatorBefore":" ","text":"D","unitId":"ranking-jensen.caption:unit:4"},{"attributes":[],"id":"ranking-jensen.caption:unit:5:word:1","separatorBefore":" ","text":"tier.","unitId":"ranking-jensen.caption:unit:5"}]}}</parameters>
@@ -1161,12 +915,12 @@
           <layout ref="caption-bottom" />
         </picture>
       </present>
-      <present id="wife-captions:ranking-jensen.caption:cue:4" source="component" start="25/6" duration="379/375" enabled="true">
+      <present id="wife-captions:ranking-jensen.caption:cue:4" source="component" start="25/6" duration="23/30" enabled="true">
         <component package="@hypit/caption-fine" symbol="fine" />
         <parameters>{"caption":{"cueId":"ranking-jensen.caption:cue:4","documentId":"ranking-jensen.caption","role":"HOST","units":[{"end":{"ticks":"167","timeBase":{"denominator":375,"numerator":1}},"id":"ranking-jensen.caption:unit:10","start":{"ticks":"1","timeBase":{"denominator":12,"numerator":1}},"wordIds":["ranking-jensen.caption:unit:10:word:1"]},{"end":{"ticks":"1391","timeBase":{"denominator":1500,"numerator":1}},"id":"ranking-jensen.caption:unit:11","start":{"ticks":"197","timeBase":{"denominator":375,"numerator":1}},"wordIds":["ranking-jensen.caption:unit:11:word:1"]}],"words":[{"attributes":[],"id":"ranking-jensen.caption:unit:10:word:1","separatorBefore":"","text":"Zero","unitId":"ranking-jensen.caption:unit:10"},{"attributes":[],"id":"ranking-jensen.caption:unit:11:word:1","separatorBefore":" ","text":"updates.","unitId":"ranking-jensen.caption:unit:11"}]}}</parameters>
         <value slot="style" ref="caption-style:nvidia" />
         <source-time>
-          <linear target-start="0/1" target-end="379/375" source-start="0/1" rate="1/1" />
+          <linear target-start="0/1" target-end="23/30" source-start="0/1" rate="1/1" />
         </source-time>
         <picture>
           <layout ref="caption-bottom" />
@@ -1690,7 +1444,7 @@
         </picture>
       </present>
     </track>
-    <track id="reveal-flash" name="Tier reveal flash" kind="picture" enabled="true">
+    <track id="reveal-flash" name="Tier reveal flash" kind="picture" role="effect" enabled="true">
       <present id="wife-tier-reveal-flash" name="My wife full-frame reveal flash" source="component" start="10693/8000" duration="3/8" enabled="true">
         <component package="@hypit-example/ranking-football-components" symbol="reveal-flash" />
         <parameters>{"intensity":0.72,"attackFrames":2,"holdFrames":1,"decayFrames":5,"color":"#78ff18","glowColor":"#f1ffe8"}</parameters>
@@ -1742,11 +1496,385 @@
         </picture>
       </present>
     </track>
+    <track id="reveal-sfx" name="Tier reveal sound" kind="audio" role="audio" enabled="true">
+      <present id="wife-tier-reveal-sfx" name="My wife tier reveal" source="media" start="10693/8000" duration="33/50" enabled="true">
+        <media path="media/ranking-reveal-sfx/ranking-reveal-sfx.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
+        </source-time>
+        <audio>
+          <process id="wife-tier-reveal-gain" package="@hypit/audio-effects" symbol="gain" enabled="true">
+            <parameters>{"kind":"constant","gain":0.2}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </audio>
+      </present>
+      <present id="trump-tier-reveal-sfx" name="Trump tier reveal" source="media" start="1135627/93750" duration="33/50" enabled="true">
+        <media path="media/ranking-reveal-sfx/ranking-reveal-sfx.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
+        </source-time>
+        <audio>
+          <process id="trump-tier-reveal-gain" package="@hypit/audio-effects" symbol="gain" enabled="true">
+            <parameters>{"kind":"constant","gain":0.2}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </audio>
+      </present>
+      <present id="kimberly-tier-reveal-sfx" name="Kimberly tier reveal" source="media" start="560447/24000" duration="33/50" enabled="true">
+        <media path="media/ranking-reveal-sfx/ranking-reveal-sfx.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
+        </source-time>
+        <audio>
+          <process id="kimberly-tier-reveal-gain" package="@hypit/audio-effects" symbol="gain" enabled="true">
+            <parameters>{"kind":"constant","gain":0.2}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </audio>
+      </present>
+      <present id="alice-tier-reveal-sfx" name="Alice tier reveal" source="media" start="34046313/1000000" duration="33/50" enabled="true">
+        <media path="media/ranking-reveal-sfx/ranking-reveal-sfx.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
+        </source-time>
+        <audio>
+          <process id="alice-tier-reveal-gain" package="@hypit/audio-effects" symbol="gain" enabled="true">
+            <parameters>{"kind":"constant","gain":0.2}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </audio>
+      </present>
+      <present id="jacket-tier-reveal-sfx" name="My jacket tier reveal" source="media" start="68071/1500" duration="33/50" enabled="true">
+        <media path="media/ranking-reveal-sfx/ranking-reveal-sfx.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
+        </source-time>
+        <audio>
+          <process id="jacket-tier-reveal-gain" package="@hypit/audio-effects" symbol="gain" enabled="true">
+            <parameters>{"kind":"constant","gain":0.2}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="33/50" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </audio>
+      </present>
+    </track>
+    <track id="track-b2f4c420" name="新轨道" kind="picture" role="picture" enabled="true">
+    </track>
+    <track id="track-da94ed15" name="新轨道" kind="picture" role="picture" enabled="true">
+    </track>
+    <group id="broll-beat-01">
+      <member item="broll-01-forty-years" />
+      <member item="broll-01-same-version" />
+      <member item="broll-01-zero-updates" />
+    </group>
+    <group id="broll-beat-02">
+      <member item="broll-02-loris-lawyer" />
+      <member item="broll-02-lori-after-divorce" />
+    </group>
+    <group id="broll-beat-03">
+      <member item="broll-03-math-lady" />
+      <member item="broll-03-five-million" />
+    </group>
+    <group id="broll-beat-05">
+      <member item="broll-05-honeytrap" />
+      <member item="broll-05-honorable" />
+    </group>
+    <group id="broll-beat-06">
+      <member item="broll-06-trump-jensen" />
+      <member item="broll-06-which-one" />
+    </group>
+    <group id="broll-beat-08">
+      <member item="broll-08-training" />
+      <member item="broll-08-heart-rate" />
+    </group>
+    <group id="broll-beat-12">
+      <member item="broll-12-source-extraction" />
+      <member item="broll-12-deepseek-transfer" />
+    </group>
+    <group id="broll-beat-15">
+      <member item="broll-15-galaxy-brain" />
+      <member item="broll-15-gpu-date" />
+      <member item="broll-15-agi" />
+      <member item="broll-15-new-ceo" />
+    </group>
+    <group id="wife-tier-reveal">
+      <member item="wife-tier-reveal-sfx" />
+      <member item="wife-tier-reveal-flash" />
+    </group>
+    <group id="trump-tier-reveal">
+      <member item="trump-tier-reveal-sfx" />
+      <member item="trump-tier-reveal-flash" />
+    </group>
+    <group id="kimberly-tier-reveal">
+      <member item="kimberly-tier-reveal-sfx" />
+      <member item="kimberly-tier-reveal-flash" />
+    </group>
+    <group id="alice-tier-reveal">
+      <member item="alice-tier-reveal-sfx" />
+      <member item="alice-tier-reveal-flash" />
+    </group>
+    <group id="jacket-tier-reveal">
+      <member item="jacket-tier-reveal-sfx" />
+      <member item="jacket-tier-reveal-flash" />
+    </group>
+  </composition>
+  <composition id="performance-composition" name="Jensen A-roll + BGM" width="720" height="1280">
+    <track id="music" name="Music bed 1" kind="audio" role="audio" enabled="true">
+      <present id="thank-you-instrumental-opening" name="THANK YOU instrumental — opening" source="media" start="0/1" duration="188/5" enabled="true">
+        <media path="media/bgm-thank-you/bgm-thank-you.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="188/5" source-start="0/1" rate="1/1" />
+        </source-time>
+        <audio>
+          <process id="thank-you-opening-envelope" package="@hypit/audio-effects" symbol="gain" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"gain":0.14},{"at":{"ticks":"187","timeBase":{"numerator":1,"denominator":5}},"gain":0.14},{"at":{"ticks":"1804799","timeBase":{"numerator":1,"denominator":48000}},"gain":0}],"interpolation":{"kind":"linear"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="188/5" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </audio>
+      </present>
+    </track>
+    <track id="music-return" name="Music bed 2" kind="audio" role="audio" enabled="true">
+      <present id="thank-you-instrumental-return" name="THANK YOU instrumental — return" source="media" start="187/5" duration="2497/120" enabled="true">
+        <media path="media/bgm-thank-you/bgm-thank-you.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="2497/120" source-start="499/10" rate="1/1" />
+        </source-time>
+        <audio>
+          <process id="thank-you-return-envelope" package="@hypit/audio-effects" symbol="gain" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"gain":0},{"at":{"ticks":"200000","timeBase":{"numerator":1,"denominator":1000000}},"gain":0.14},{"at":{"ticks":"485","timeBase":{"numerator":1,"denominator":24}},"gain":0.14},{"at":{"ticks":"332933","timeBase":{"numerator":1,"denominator":16000}},"gain":0}],"interpolation":{"kind":"linear"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="2497/120" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </audio>
+      </present>
+    </track>
+    <track id="performance" name="Jensen A-roll" kind="picture" role="picture" enabled="true">
+      <present id="aroll-wife-use" name="My wife A-roll" source="media" start="0/1" duration="265/24" enabled="true">
+        <media path="media/aroll-wife/aroll-wife.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="265/24" source-start="0/1" rate="1/1" />
+        </source-time>
+        <picture>
+          <layout x="0" y="0" width="720" height="1280" fit="cover" />
+        </picture>
+        <audio>
+        </audio>
+      </present>
+      <present id="aroll-trump-use" name="Trump A-roll" source="media" start="265/24" duration="265/24" enabled="true">
+        <media path="media/aroll-trump/aroll-trump.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="265/24" source-start="0/1" rate="1/1" />
+        </source-time>
+        <picture>
+          <layout x="0" y="0" width="720" height="1280" fit="cover" />
+        </picture>
+        <audio>
+        </audio>
+      </present>
+      <present id="aroll-kimberly-use" name="Kimberly A-roll" source="media" start="265/12" duration="265/24" enabled="true">
+        <media path="media/aroll-kimberly/aroll-kimberly.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="265/24" source-start="0/1" rate="1/1" />
+        </source-time>
+        <picture>
+          <layout x="0" y="0" width="720" height="1280" fit="cover" />
+        </picture>
+        <audio>
+        </audio>
+      </present>
+      <present id="aroll-alice-use" name="Alice A-roll" source="media" start="265/8" duration="265/24" enabled="true">
+        <media path="media/aroll-alice/aroll-alice.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="265/24" source-start="0/1" rate="1/1" />
+        </source-time>
+        <picture>
+          <layout x="0" y="0" width="720" height="1280" fit="cover" />
+        </picture>
+        <audio>
+        </audio>
+      </present>
+      <present id="aroll-jacket-use" name="My jacket A-roll" source="media" start="265/6" duration="337/24" enabled="true">
+        <media path="media/aroll-jacket/aroll-jacket.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="337/24" source-start="0/1" rate="1/1" />
+        </source-time>
+        <picture>
+          <layout x="0" y="0" width="720" height="1280" fit="cover" />
+        </picture>
+        <audio>
+        </audio>
+      </present>
+    </track>
+    <group id="music-bed-crossfade">
+      <member item="thank-you-instrumental-opening" />
+      <member item="thank-you-instrumental-return" />
+    </group>
+  </composition>
+  <composition id="broll-09-crossfade-composition" name="B-roll 09 · Side effects → Wife lost" width="720" height="1280">
+    <track id="broll-09-crossfade-shots" name="Transition shots" kind="picture" role="picture" enabled="true">
+      <present id="broll-09-side-effects" name="B-roll 09.1 · side-effects" source="media" start="0/1" duration="88/75" enabled="true">
+        <media path="media/broll-kimberly-side-effects/final-no-wife-no-job-v3.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="88/75" source-start="0/1" rate="0/1" />
+        </source-time>
+        <picture>
+          <layout x="280" y="506" width="393" height="594.749" fit="contain" />
+          <process id="broll-09-side-effects-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
+            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="88/75" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-09-side-effects-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":0.7,"scaleY":0.7,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="88/75" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-09-side-effects-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="88/75" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-09-side-effects-exit-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"151","timeBase":{"numerator":1,"denominator":150}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"679","timeBase":{"numerator":1,"denominator":600}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="88/75" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </picture>
+      </present>
+      <present id="broll-09-wife-lost" name="B-roll 09.2 · wife-lost" source="media" start="193/200" duration="6089/3000" enabled="true">
+        <media path="media/broll-kimberly-wife-lost/final-no-wife-no-job-both-v3.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="6089/3000" source-start="0/1" rate="0/1" />
+        </source-time>
+        <picture>
+          <layout x="280" y="506" width="393" height="594.749" fit="contain" />
+          <process id="broll-09-wife-lost-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
+            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="6089/3000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-09-wife-lost-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":80,"scaleX":0.92,"scaleY":0.92,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="6089/3000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-09-wife-lost-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="6089/3000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-09-wife-lost-exit-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"1863","timeBase":{"numerator":1,"denominator":1000}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"497","timeBase":{"numerator":1,"denominator":250}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="6089/3000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </picture>
+      </present>
+    </track>
     <transition id="broll-09-crossfade" outgoing="broll-09-side-effects" incoming="broll-09-wife-lost" package="@hypit/picture-effects" symbol="transition">
       <parameters>{"kind":"cross-dissolve","easing":"ease-in-out"}</parameters>
     </transition>
+    <group id="broll-beat-09">
+      <member item="broll-09-side-effects" />
+      <member item="broll-09-wife-lost" />
+    </group>
+  </composition>
+  <composition id="broll-11-crossfade-composition" name="B-roll 11 · Hermès → H100" width="720" height="1280">
+    <track id="broll-11-crossfade-shots" name="Transition shots" kind="picture" role="picture" enabled="true">
+      <present id="broll-11-hermes" name="B-roll 11.1 · hermes" source="media" start="0/1" duration="4603/3000" enabled="true">
+        <media path="media/broll-alice-hermes-h100/final-hermes-stage.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="4603/3000" source-start="0/1" rate="0/1" />
+        </source-time>
+        <picture>
+          <layout x="63" y="491" width="600" height="600" fit="contain" />
+          <process id="broll-11-hermes-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
+            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="4603/3000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-11-hermes-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":0.7,"scaleY":0.7,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="4603/3000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-11-hermes-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"6","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="4603/3000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-11-hermes-exit-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"4103","timeBase":{"numerator":1,"denominator":3000}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"2239","timeBase":{"numerator":1,"denominator":1500}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-in"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="4603/3000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </picture>
+      </present>
+      <present id="broll-11-h100" name="B-roll 11.2 · h100" source="media" start="663/500" duration="2251/1000" enabled="true">
+        <media path="media/broll-alice-hermes-h100/final-h100-stage.media.json" />
+        <source-time>
+          <linear target-start="0/1" target-end="2251/1000" source-start="0/1" rate="0/1" />
+        </source-time>
+        <picture>
+          <layout x="63" y="491" width="600" height="600" fit="contain" />
+          <process id="broll-11-h100-frame" package="@hypit/picture-effects" symbol="frame" enabled="true">
+            <parameters>{"treatment":{"clip":{"kind":"frame"},"padding":{"topPx":0,"rightPx":0,"bottomPx":0,"leftPx":0},"shadows":[{"offsetX":0,"offsetY":18,"blurPx":34,"spreadPx":-8,"color":"#000000D9"}]}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="2251/1000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-11-h100-entry-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":80,"scaleX":0.92,"scaleY":0.92,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="2251/1000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-11-h100-entry-opacity" package="@hypit/picture-effects" symbol="filter" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"opacity":0,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}},{"at":{"ticks":"7","timeBase":{"numerator":1,"denominator":24}},"state":{"opacity":1,"blurRadius":0,"brightness":1,"contrast":1,"saturation":1,"hue":0,"grayscale":0,"sepia":0,"invert":0}}],"interpolation":{"kind":"ease-out"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="2251/1000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+          <process id="broll-11-h100-exit-transform" package="@hypit/picture-effects" symbol="transform" enabled="true">
+            <parameters>{"kind":"keyframes","keyframes":[{"at":{"ticks":"0","timeBase":{"numerator":1,"denominator":1}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"6253","timeBase":{"numerator":1,"denominator":3000}},"state":{"translateX":0,"translateY":0,"scaleX":1,"scaleY":1,"rotationDegrees":0,"originX":0.5,"originY":0.5}},{"at":{"ticks":"1657","timeBase":{"numerator":1,"denominator":750}},"state":{"translateX":0,"translateY":0,"scaleX":0.94,"scaleY":0.94,"rotationDegrees":0,"originX":0.5,"originY":0.5}}],"interpolation":{"kind":"ease-in"}}</parameters>
+            <control-time>
+              <linear target-start="0/1" target-end="2251/1000" source-start="0/1" rate="1/1" />
+            </control-time>
+          </process>
+        </picture>
+      </present>
+    </track>
     <transition id="broll-11-crossfade" outgoing="broll-11-hermes" incoming="broll-11-h100" package="@hypit/picture-effects" symbol="transition">
       <parameters>{"kind":"cross-dissolve","easing":"ease-in-out"}</parameters>
     </transition>
+    <group id="broll-beat-11">
+      <member item="broll-11-hermes" />
+      <member item="broll-11-h100" />
+    </group>
   </composition>
 </svml>

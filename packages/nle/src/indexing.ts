@@ -26,6 +26,7 @@ export type NleCompositionIndex = {
 export type NleProjectIndex = NleCompositionIndex & {
   readonly composition: (id: string) => NleComposition | undefined;
   readonly compositionUsers: (id: string) => readonly NleIndexedItem[];
+  readonly mediaAssetPaths: () => readonly string[];
 };
 
 function symbolKey(value: PackageSymbol): string {
@@ -146,6 +147,7 @@ export function indexNleProject(project: NleProject): NleProjectIndex {
   return {
     composition: (id) => compositions.get(id),
     item: (id) => items.get(id),
+    mediaAssetPaths: () => [...mediaAssets.keys()],
     mediaAssetUsers: (path) => values(mediaAssets, path),
     componentUsers: (component) => values(components, symbolKey(component)),
     sharedValueUsers: (id) => indexedValues(sharedValues, id),

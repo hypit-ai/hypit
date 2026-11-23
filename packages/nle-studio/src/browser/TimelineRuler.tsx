@@ -1,11 +1,11 @@
-import { useEffect, useState, type CSSProperties, type PointerEvent, type RefObject } from "react";
+import type { CSSProperties, PointerEvent } from "react";
 import { timecode } from "./timecode.js";
 
 const frameIntervals = [1, 2, 5, 10, 15];
 const secondIntervals = [1, 2, 5, 10, 30, 60, 120, 300, 600];
 
-export function TimelineRuler({ scroller, width, viewportWidth, endFrame, pixels, fps, frame, onSeek }: {
-  readonly scroller: RefObject<HTMLDivElement | null>;
+export function TimelineRuler({ width, viewportLeft, viewportWidth, endFrame, pixels, fps, frame, onSeek }: {
+  readonly viewportLeft: number;
   readonly width: number;
   readonly viewportWidth: number;
   readonly endFrame: number;
@@ -14,32 +14,14 @@ export function TimelineRuler({ scroller, width, viewportWidth, endFrame, pixels
   readonly frame: number;
   readonly onSeek: (event: PointerEvent<HTMLDivElement>) => void;
 }) {
-  const [scrollLeft, setScrollLeft] = useState(0);
-  useEffect(() => {
-    const element = scroller.current;
-    if (!element) return;
-    let animation = 0;
-    const measure = () => {
-      animation = 0;
-      setScrollLeft(element.scrollLeft);
-    };
-    const scroll = () => { if (!animation) animation = requestAnimationFrame(measure); };
-    element.addEventListener("scroll", scroll, { passive: true });
-    measure();
-    return () => {
-      element.removeEventListener("scroll", scroll);
-      cancelAnimationFrame(animation);
-    };
-  }, [scroller]);
-
   const rate = Math.max(1, Math.round(fps));
   const frameStep = frameIntervals.find(step => step < rate && step * pixels >= 64);
   const tickSeconds = 78 / (pixels * fps);
   const seconds = secondIntervals.find(step => step >= tickSeconds) ?? Math.ceil(tickSeconds / 600) * 600;
   const step = frameStep ?? Math.max(1, Math.round(seconds * fps));
   const tickWidth = step * pixels;
-  const first = Math.max(0, Math.floor(scrollLeft / tickWidth) - 1);
-  const last = Math.min(Math.floor(endFrame / step), Math.ceil((scrollLeft + viewportWidth) / tickWidth) + 1);
+  const first = Math.max(0, Math.floor((viewportLeft - viewportWidth) / tickWidth) - 1);
+  const last = Math.min(Math.floor(endFrame / step), Math.ceil((viewportLeft + 2 * viewportWidth) / tickWidth) + 1);
   const label = (value: number) => {
     if (frameStep === undefined) return timecode(value, fps);
     const offset = value % rate;

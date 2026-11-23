@@ -1,4 +1,5 @@
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
+import type { ProjectMediaAssetEdit, ProjectMediaLibraryEdit } from "@hypit/media-asset/service";
 import type {
   NleStudioActionObservation,
   NleStudioActionRequest,
@@ -9,7 +10,6 @@ import type {
   NleStudioOpenProjection,
   NleStudioOperation,
   NleStudioOperationReceipt,
-  NleStudioTimelineMediaRequest,
 } from "../protocol.js";
 
 export function connectStudioEvents(input: {
@@ -60,6 +60,10 @@ async function observe(value: NleStudioObservationRequest): Promise<NleStudioObs
 export async function readOpen(): Promise<NleStudioOpenProjection> {
   const result = await observe({ kind: "open" });
   if (result.kind !== "open") throw new Error("NLE Studio returned another observation kind for open.");
+  const library = result.value.mediaLibrary;
+  if (library?.state !== "available" && library?.state !== "invalid") {
+    throw new Error("当前 Studio 页面和 Host 的会话数据不一致。请用当前构建重新启动 Host，再打开 Studio。");
+  }
   return result.value;
 }
 
@@ -72,12 +76,6 @@ export async function readInspector(item: string) {
     throw new Error("NLE Studio returned an unexpected Inspector observation.");
   }
   return { scene: scene.value, component: component.value };
-}
-
-export async function readTimelineMedia(value: NleStudioTimelineMediaRequest) {
-  const result = await observe(value);
-  if (result.kind !== "timeline-media") throw new Error("NLE Studio returned another observation kind for Timeline Media.");
-  return result.value;
 }
 
 export async function readTransitionInspector(transition: string) {
@@ -96,9 +94,10 @@ export async function refreshOpen(
     ...(requested.has("timeline") ? [observe({ kind: "timeline" })] : []),
     ...(requested.has("canvas") ? [observe({ kind: "canvas" })] : []),
     ...(requested.has("media") ? [observe({ kind: "media" })] : []),
+    ...(requested.has("media-library") ? [observe({ kind: "media-library" })] : []),
     ...(requested.has("catalog") ? [observe({ kind: "catalog" })] : []),
     ...(requested.has("preview") ? [observe({ kind: "preview" })] : []),
-    ...(requested.has("delivery") || requested.has("project") ? [observe({ kind: "delivery" })] : []),
+    ...(requested.has("delivery") ? [observe({ kind: "delivery" })] : []),
     ...(requested.has("clipboard") ? [observe({ kind: "clipboard" })] : []),
     ...(change.status === undefined ? [observe({ kind: "status" })] : []),
   ]);
@@ -109,6 +108,7 @@ export async function refreshOpen(
       case "timeline": next = { ...next, timeline: observation.value }; break;
       case "canvas": next = { ...next, canvas: observation.value }; break;
       case "media": next = { ...next, media: observation.value }; break;
+      case "media-library": next = { ...next, mediaLibrary: observation.value }; break;
       case "catalog": next = { ...next, catalog: observation.value }; break;
       case "preview": next = { ...next, preview: observation.value }; break;
       case "delivery": next = { ...next, delivery: observation.value }; break;
@@ -117,11 +117,16 @@ export async function refreshOpen(
       case "open":
       case "component-inputs":
       case "timeline-drop":
-      case "timeline-media":
       case "transition-inspector":
       case "action":
       case "inspector": throw new Error(`NLE Studio returned unexpected ${observation.kind} observation.`);
     }
+  }
+  const previousRate = current.timeline.scene.editRate;
+  const nextRate = next.timeline.scene.editRate;
+  if (!requested.has("media") && (previousRate.numerator !== nextRate.numerator || previousRate.denominator !== nextRate.denominator)) {
+    const media = await observe({ kind: "media" });
+    if (media.kind === "media") next = { ...next, media: media.value };
   }
   return next;
 }
@@ -134,8 +139,18 @@ export function operate(value: NleStudioOperation): Promise<NleStudioOperationRe
   return request("api/operate", value);
 }
 
-export async function importMedia(file: File): Promise<NleStudioOperationReceipt> {
-  const response = await fetch(`api/media/import?name=${encodeURIComponent(file.name)}`, {
+export function editMediaLibrary(value: ProjectMediaLibraryEdit): Promise<NleStudioOperationReceipt> {
+  return request("api/media/library", value);
+}
+
+export function editMediaAsset(value: ProjectMediaAssetEdit): Promise<NleStudioOperationReceipt> {
+  return request("api/media/asset", value);
+}
+
+export async function importMedia(file: File, folder: string | null): Promise<NleStudioOperationReceipt> {
+  const query = new URLSearchParams({ name: file.name });
+  if (folder !== null) query.set("folder", folder);
+  const response = await fetch(`api/media/import?${query}`, {
     method: "POST",
     headers: { "content-type": file.type || "application/octet-stream" },
     body: file,

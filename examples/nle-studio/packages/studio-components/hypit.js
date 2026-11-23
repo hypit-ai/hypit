@@ -1,5 +1,6 @@
 const packageName = "@hypit/studio-components";
 const title = { package: packageName, symbol: "Title" };
+const subtitle = { package: packageName, symbol: "Subtitle" };
 
 function stringParameter(parameters, name, fallback) {
   const value = parameters[name];
@@ -17,18 +18,17 @@ function parameterEdit(operation, context) {
   return { ...context.item.parameters, [field]: value };
 }
 
-function renderTitle(item, { project }) {
+function renderTitle(item, { project }, alignment) {
   const layout = item.picture.layout;
   const { width, height } = "ref" in layout
     ? project.sharedValues.find(value => value.id === layout.ref).value : layout;
-  const subtitle = item.role === "subtitle";
   return {
     region: { x: 0, y: 0, width, height },
     visual: {
       html: '<div data-title><div data-eyebrow></div><div data-heading></div></div>',
       css: `:scope > [data-title] {
         position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
-        align-items: ${subtitle ? "center" : "flex-start"}; gap: ${height * .06}px;
+        align-items: ${alignment}; gap: ${height * .06}px;
         color: white; font: 700 ${height * .34}px/1.05 system-ui, sans-serif;
         text-shadow: 0 2px 10px #0d191e;
       }
@@ -52,6 +52,11 @@ function renderTitle(item, { project }) {
   };
 }
 
+function readText(parameters) {
+  return [stringParameter(parameters, "eyebrow", "TITLE"), stringParameter(parameters, "title", "Editorial title")]
+    .filter(Boolean).join("\n");
+}
+
 export const hypitPackage = {
   package: packageName,
   contributions: [{
@@ -59,35 +64,27 @@ export const hypitPackage = {
     value: {
       kind: "hypit.nle-authoring",
       package: packageName,
-      components: [{ component: title, timeWindow: () => true, sourceTime: () => ({ kind: "constant" }),
-        editParameters: parameterEdit }],
+      components: [title, subtitle].map(component => ({ component, editParameters: parameterEdit })),
       componentValues: [],
       operators: [],
     },
   }, {
-    kind: "hypit.nle-timeline-presentation",
+    kind: "hypit.nle-component-definition",
     value: {
-      kind: "hypit.nle-timeline-presentation",
+      kind: "hypit.nle-component-definition",
       package: packageName,
-      components: [{
-        component: title,
-        displayName: "Editorial title",
-        tone: "magenta",
-        chrome: "standard",
-        project: ({ item }) => ({
-          title: stringParameter(item.parameters, "title", "Editorial title"),
-          layers: [{ kind: "text", text: stringParameter(item.parameters, "eyebrow", "TITLE") }],
-        }),
-      }],
-      adjusts: [],
+      components: [
+        { component: title, role: "text", sourceTime: () => ({ kind: "constant" }), readText },
+        { component: subtitle, role: "subtitle", sourceTime: () => ({ kind: "constant" }), readText },
+      ],
     },
   }, {
     kind: "hypit.nle-inspector-presentation",
     value: {
       kind: "hypit.nle-inspector-presentation",
       package: packageName,
-      components: [{
-        component: title,
+      components: [title, subtitle].map(component => ({
+        component,
         project: ({ item }) => [{
           id: "content",
           label: "Title content",
@@ -112,20 +109,22 @@ export const hypitPackage = {
             operation: (value) => ({ field: "accent", value }),
           }],
         }],
-      }],
+      })),
       componentValues: [],
       operators: [],
     },
   }, {
     kind: "hypit.nle-render",
-    value: { components: [{ symbol: title.symbol, render: renderTitle }] },
+    value: { components: [
+      { symbol: title.symbol, render: (item, context) => renderTitle(item, context, "flex-start") },
+      { symbol: subtitle.symbol, render: (item, context) => renderTitle(item, context, "center") },
+    ] },
   }],
   catalog: [{
     id: "editorial-title",
     kind: "hypit.nle-component",
     title: "Editorial title",
     value: {
-      category: "text",
       component: title,
       parameters: {
         eyebrow: "HYPIT",
@@ -140,8 +139,7 @@ export const hypitPackage = {
     kind: "hypit.nle-component",
     title: "Subtitle",
     value: {
-      category: "subtitle",
-      component: title,
+      component: subtitle,
       parameters: { eyebrow: "", title: "Subtitle", accent: "#ffffff" },
       duration: { ticks: "3", timeBase: { numerator: 1, denominator: 1 } },
       layout: { x: 120, y: 860, width: 1680, height: 140, fit: "contain" }

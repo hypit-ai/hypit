@@ -6,7 +6,7 @@ import type { HtmlCanvas, HtmlFrameRate, HtmlFrameRequest } from "@hypit/html-pr
 import type { ExactTemporalValue, TemporalRange } from "@hypit/temporal/algebra";
 import { compileAudio } from "./compiler/compile-audio.js";
 import { compilePicture } from "./compiler/compile-picture.js";
-import { lowerNleProject } from "./compiler/lower.js";
+import { lowerNleComponentPicture, lowerNleProject } from "./compiler/lower.js";
 import { createNleRenderResolver } from "./compiler/resolve.js";
 import { createProjectFontResolver } from "./project-fonts.js";
 export { assertNleTextFragment, assertNleTextTypography, nleTextFragment, readNleTextFontSource } from "./text.js";
@@ -44,50 +44,62 @@ function projectReference(root: string, document: string, reference: NleMediaRef
   return { path: portable(local) };
 }
 
-function mediaReferences(project: NleProject): readonly NleMediaReference[] {
+type CompositionOutputs = { readonly picture: boolean; readonly audio: boolean };
+
+function mediaReferences(project: NleProject, entry: string, outputs: CompositionOutputs): readonly NleMediaReference[] {
   const compositions = new Map(project.compositions.map(value => [value.id, value] as const));
   const visited = new Set<string>();
   const references: NleMediaReference[] = [];
-  const visit = (id: string) => {
-    if (visited.has(id)) return;
-    visited.add(id);
+  const visit = (id: string, { picture, audio }: CompositionOutputs) => {
+    const key = JSON.stringify([id, picture, audio]);
+    if (visited.has(key)) return;
+    visited.add(key);
     const composition = compositions.get(id)!;
     const matteSources = new Set(composition.mattes.map(relation => relation.matte));
     for (const track of composition.tracks) for (const item of track.items) {
-      if (item.kind !== "present" || !item.enabled || (!track.enabled && !matteSources.has(item.id))) continue;
+      if (item.kind !== "present") continue;
+      const isMatte = matteSources.has(item.id);
+      const needsPicture = picture && item.picture !== undefined && ((track.enabled && item.enabled) || isMatte);
+      const needsAudio = audio && item.audio !== undefined && track.enabled && item.enabled;
+      if (!needsPicture && !needsAudio) continue;
       if (item.source === "media") references.push(item.asset);
       else if (item.source === "component") references.push(...Object.values(item.media ?? {}));
-      else visit(item.composition);
+      else visit(item.composition, { picture: needsPicture, audio: needsAudio });
     }
   };
-  visit(project.rootComposition);
+  visit(entry, outputs);
   return references;
 }
 
 export type PreparedNleCompilation = {
   readonly duration: ExactTemporalValue;
+  compilePicture(output: { readonly canvas: HtmlCanvas; readonly frameRate: HtmlFrameRate;
+    readonly frames?: readonly number[] }): HtmlFrameRequest["program"];
   compileFrame(output: { readonly canvas: HtmlCanvas; readonly frameRate: HtmlFrameRate; readonly range: TemporalRange }): HtmlFrameRequest;
   compileAudio(profile?: HtmlVideoDeliveryProfile["audio"]): AudioProgram | undefined;
   compileVideo(profile: HtmlVideoDeliveryProfile, range?: TemporalRange): HtmlVideoDeliveryPlan;
 };
 
-export async function prepareNleCompilation(input: {
+type NleCompilationInput = {
   readonly host: ProjectHost;
   readonly document: string;
   readonly snapshot?: NleProject;
   readonly composition?: string;
+  readonly pictureOnly?: boolean;
   readonly signal?: AbortSignal;
-}): Promise<PreparedNleCompilation> {
+};
+
+async function readCompilationProject(input: NleCompilationInput) {
   input.signal?.throwIfAborted();
   const { address: document } = await resolveNodeProjectFile(input.host.boundary.root, input.document, "NLE delivery document");
-  const selected = input.snapshot === undefined ? readNleProject(await readFile(document, "utf8")) : structuredClone(input.snapshot);
-  const project = input.composition === undefined ? selected : { ...selected, rootComposition: input.composition };
-  if (!project.compositions.some(composition => composition.id === project.rootComposition)) {
-    throw new Error(`NLE Project ${project.id} has no Composition ${project.rootComposition}.`);
-  }
+  const project = input.snapshot === undefined ? readNleProject(await readFile(document, "utf8")) : structuredClone(input.snapshot);
+  return { project, document };
+}
+
+async function prepareRenderResolver(input: NleCompilationInput, document: string, references: readonly NleMediaReference[]) {
   const resolver = createNodeProjectResourceResolver(input.host.boundary.root);
   const resolved = new Map<string, ResolvedMedia>();
-  for (const reference of mediaReferences(project)) {
+  for (const reference of references) {
     input.signal?.throwIfAborted();
     if (!resolved.has(reference.path)) resolved.set(reference.path, await input.host.media.resolveMedia(
       projectReference(input.host.boundary.root, document, reference), resolver));
@@ -98,13 +110,57 @@ export async function prepareNleCompilation(input: {
     }
     return { package: entry.package, value: entry.value as NleRenderContribution };
   });
-  const resolverForCompilation = createNleRenderResolver(contributions, reference => {
+  input.signal?.throwIfAborted();
+  return createNleRenderResolver(contributions, reference => {
     const value = resolved.get(reference.path);
     if (value === undefined) throw new Error(`NLE delivery did not resolve Media ${reference.path}.`);
     return structuredClone(value);
   }, createProjectFontResolver(input.host.boundary.root));
-  input.signal?.throwIfAborted();
-  const program = lowerNleProject(project, resolverForCompilation);
+}
+
+export async function prepareNleComponentPicture(input: NleCompilationInput & {
+  readonly composition: string;
+  readonly item: string;
+}): Promise<{ readonly region: { readonly width: number; readonly height: number };
+  readonly constant: boolean; readonly compilePicture: PreparedNleCompilation["compilePicture"] }> {
+  const { project, document } = await readCompilationProject(input);
+  const composition = project.compositions.find(value => value.id === input.composition);
+  const track = composition?.tracks.find(value => value.items.some(item => item.id === input.item));
+  const item = track?.items.find(value => value.id === input.item);
+  if (composition === undefined || track === undefined || item?.kind !== "present" || item.source !== "component"
+    || item.picture === undefined) throw new Error(`NLE Composition ${input.composition} has no Picture Component ${input.item}.`);
+  const resolver = await prepareRenderResolver(input, document, Object.values(item.media ?? {}));
+  const program = lowerNleComponentPicture(project, composition, track, item, resolver);
+  const occurrence = program.occurrences[item.id]!;
+  return {
+    region: program.pictureDomain!.region,
+    constant: occurrence.picture?.kind === "constant" && occurrence.content.kind === "visual"
+      && occurrence.content.visual.setup === undefined,
+    compilePicture: output => compilePicture(program, output),
+  };
+}
+
+async function prepareCompositionGraph(input: NleCompilationInput, outputs: CompositionOutputs) {
+  const { project, document } = await readCompilationProject(input);
+  const selected = input.composition ?? project.rootComposition;
+  const composition = project.compositions.find(value => value.id === selected);
+  if (composition === undefined) {
+    throw new Error(`NLE Project ${project.id} has no Composition ${selected}.`);
+  }
+  const resolver = await prepareRenderResolver(input, document, mediaReferences(project, selected, outputs));
+  return lowerNleProject(project, resolver, composition, outputs);
+}
+
+/** Compile a Composition's mix independently of its Picture programme. */
+export async function prepareNleCompositionAudio(input: Omit<NleCompilationInput, "pictureOnly"> & {
+  readonly profile: NonNullable<HtmlVideoDeliveryProfile["audio"]>;
+}): Promise<AudioProgram | undefined> {
+  const program = await prepareCompositionGraph(input, { picture: false, audio: true });
+  return program.audio === undefined ? undefined : compileAudio({ program, ...input.profile });
+}
+
+export async function prepareNleCompilation(input: NleCompilationInput): Promise<PreparedNleCompilation> {
+  const program = await prepareCompositionGraph(input, { picture: true, audio: input.pictureOnly !== true });
   function audioProgram(profile?: HtmlVideoDeliveryProfile["audio"]): AudioProgram | undefined {
     return program.audio === undefined ? undefined : compileAudio({
       program,
@@ -114,6 +170,9 @@ export async function prepareNleCompilation(input: {
   }
   return {
     duration: structuredClone(program.domain.duration),
+    compilePicture(output) {
+      return compilePicture(program, output);
+    },
     compileFrame(output) {
       return {
         program: compilePicture(program, output),

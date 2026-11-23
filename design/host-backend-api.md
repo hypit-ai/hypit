@@ -86,7 +86,7 @@ documents.
 The distribution registers Product Providers once at this application scope because they are factories for creating
 Product Sessions. Registration states which product kinds this application can launch. It does not move the launched
 product's owner facts into application scope: every NLE Studio session still receives one selected ProjectHost, opens
-project-owned NLE and View Services and retains only interface-session state of its own.
+project-owned NLE Project Service and retains only interface-session state of its own.
 
 Opening the same canonical boundary returns a lease on the existing ProjectHost. A browser Product Session detaches
 when its last connection closes and has a one-minute reconnect window. Idle Sessions are released after the window.
@@ -266,8 +266,7 @@ pointer drafts remains session-local and does not enter ProjectHost or owner doc
 
 ### NLE Studio session
 
-An NLE Studio Product Session leases one NLE Project Service and one optional durable NLE View Service from its
-ProjectHost. It exposes the Project Media Catalog and selected package offerings alongside the NLE Editing Surface.
+An NLE Studio Product Session leases one NLE Project Service from its ProjectHost and owns its navigation and Track locks. It exposes the Project Media Catalog and selected package offerings alongside the NLE Editing Surface.
 
 Its stable application contract is grouped by meaning instead of one route for every button:
 
@@ -287,8 +286,7 @@ interface NleStudioProductSession {
 }
 ```
 
-`command` exposes already closed owner commands. `operate` accepts one product-level user intent, validates the active
-Project and View revisions, plans all required owner commands and commits the operation once. It is the correct seam
+`command` exposes already closed owner commands. `operate` accepts one product-level user intent, validates the active Composition, Project revision and session locks, plans all required owner commands and commits the operation once. It is the correct seam
 for interactions whose authoritative result must not be reconstructed independently by each frontend.
 
 The [Studio protocol](../packages/nle-studio/src/protocol.ts) defines the exact union. Timeline operations cover
@@ -302,7 +300,7 @@ Composition navigation and edits, Process and Transition edits, Component Media 
 Timeline drop is the first required planner. The request identifies:
 
 - the selected existing Items and their anchor;
-- the active Composition and observed Project/View revisions;
+- the active Composition and observed Project revision;
 - signed frame-grid displacement;
 - vertical drop position or an explicit destination Track;
 - whether the pointer targets an existing Track or a new-track boundary.
@@ -397,7 +395,7 @@ Event scopes are:
 
 - ApplicationHost: Project lease and Product Session lifecycle;
 - ProjectHost: Media Catalog generation and open-service inventory;
-- Product Session: NLE Project and View revisions, savepoints and projection invalidations, plus Project Media changes;
+- Product Session: NLE Project revisions, savepoints and session projection invalidations, plus Project Media changes;
 - Action: Preview, Media views and Delivery handles, state and progress in the Studio stream.
 
 The selected package environment and execution directory are fixed for their open lifetimes. On opening or
@@ -461,7 +459,7 @@ The current implementation already provides:
 - Project Boundary manifest and package activation;
 - one ProjectHost with shared Media, package, document and resource services;
 - local Media inspection, atomic adoption, Catalog refresh and byte-range resource access;
-- NLE Project and View Services with independent revisions, transactions, undo, redo, savepoints and explicit reload;
+- NLE Project Service with revisions, transactions, undo, redo, savepoints and explicit reload;
 - NLE Editing Surface observations, guards, Inspector and spatial plans;
 - direct commands for Track, Item, source-time, Process, Transition, Matte and shared-value editing;
 - Media, Component, Process, Adjust, Transition and nested Composition materialization;

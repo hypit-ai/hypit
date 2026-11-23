@@ -24,6 +24,8 @@ import {
 
 import { canvasProjectAdapter } from "./canvas-project.js";
 import { openCanvasTimeline } from "./canvas-timeline.js";
+import { assertProjectMediaUnused } from "./project-media.js";
+import { LocalMediaSourcePreviews, renderLocalMediaView } from "@hypit/media-local";
 
 export * from "@hypit/application/node";
 export {
@@ -56,10 +58,18 @@ export function openNodeHypitApplication(
 ): ApplicationHost {
   const video = createLocalHtmlVideoExecutor(options.localHtmlVideo ?? {});
   return openApplicationHost({
-    projects: createNodeApplicationProjectProvider(),
+    projects: createNodeApplicationProjectProvider({ mediaViewExecutor: directory => {
+      const source = new LocalMediaSourcePreviews(directory, options.localHtmlVideo);
+      return {
+        render: (media, request, signal) => renderLocalMediaView({ media, request, tools: source.tools, signal }),
+        sourcePreview: (media, request, signal) => source.read(media, request, signal),
+        close: () => source.close(),
+      };
+    } }),
     products: [createNleStudioProductProvider({
       deliveryExecutor: video,
       frameExecutor: video,
+      assertMediaUnused: assertProjectMediaUnused,
       ...(options.localHtmlVideo === undefined ? {} : { mediaTools: options.localHtmlVideo }),
     }), createCanvasStudioProductProvider({ ...options.localHtmlVideo, openTimeline: openCanvasTimeline }), ...(options.products ?? [])],
     ...(options.execution === undefined ? {} : { execution: options.execution }),

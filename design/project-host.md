@@ -41,8 +41,7 @@ documentary/
 │     └─ interview.mp4
 ├─ edits/
 │  ├─ full-version.svml
-│  ├─ trailer.svml
-│  └─ trailer.nle-view.json
+│  └─ trailer.svml
 ├─ generation/
 ├─ scenes/
 ├─ scripts/
@@ -153,11 +152,11 @@ future capabilities. It provides exact package selection, module provenance and 
 registries interpret selected contributions.
 
 One author-facing offering may assemble several technical facets. A caption offering may use one Component Source,
-one parameter authoring contribution, one Inspector projection, one Timeline presentation and package resources.
+one Component definition with a Track role and text reader, parameter authoring, an Inspector projection and package resources.
 Those facets do not need separate installation records. Conversely, one package can expose caption offerings,
 Operators and transitions without being split merely for taxonomy.
 
-For example, NLE Studio consumes `hypit.nle-authoring`, `hypit.nle-timeline-presentation` and
+For example, NLE Studio consumes `hypit.nle-authoring`, `hypit.nle-component-definition` and
 `hypit.nle-inspector-presentation` contributions using the public NLE Host contracts. Its creation browser consumes
 selected `hypit.nle-component`, `hypit.nle-adjust` and `hypit.nle-transition` offerings. These names and values remain NLE product contracts; ProjectHost merely
 preserves their selected package provenance and does not acquire an NLE dependency.
@@ -187,7 +186,6 @@ ApplicationHost                         local/deployment service lifetime
    ├─ Project Media Service              one shared collection
    ├─ Open Owner Service Registry
    │  ├─ NLE Project Service             one per open .svml document
-   │  ├─ NLE View Service                one per open View document
    │  └─ future owner Services
    ├─ selected AIGC Environment clients
    ├─ Host resource gateway
@@ -206,7 +204,7 @@ The ProjectHost is the project-scoped composition root. It closes all project-sc
 child Services retain their owner-specific APIs and revisions.
 
 A product adapter supplies one product's transport and frontend composition. An NLE session backend opens or leases
-an NLE Project Service and optional View Service, combines them through the NLE Editing Surface, and receives the same
+an NLE Project Service, passes its navigation and Track locks to the NLE Editing Surface, and receives the same
 Project Media Service and Package Environment used by other products.
 
 A Product Session is one open product Surface presented by a browser page, Desktop tab, window or Agent view. Several
@@ -296,8 +294,13 @@ or materialization Action into the target Project Media Service. Physical storag
 storage implementation, cannot decide author identity.
 
 The ProjectHost does not duplicate a Media list in the Project manifest. The Media Catalog is reconstructed from the
-owner manifests in `media/`. Media bins, tags or durable library arrangements, when required, are Media-owned
-documents rather than ProjectHost fields.
+owner manifests in `media/`. The Project Media Service opens the organization of those assets from its
+[Media library document](media.md#project-media-library), `media/library.json`.
+
+For [source previews](media.md#source-preview-cache), the local distribution binds the Media
+executor to the open Project Media Service and supplies the project's cache directory. ProjectHost shares this
+port with its product sessions and direct project callers. It manages the open binding and resource leases.
+Media Local owns cache addressing, generation and retention.
 
 ## Open owner documents
 
@@ -309,8 +312,7 @@ owner kind + canonical project-relative document path
 ```
 
 Opening the same NLE document from two tabs returns leases on one `NleProjectService`; opening two `.svml` files opens
-two Services. An NLE View remains an independent owner document and Service even when one Product Session composes it
-with an NLE Project.
+two Services. Each tab keeps its own active Composition and Track locks.
 
 The Node Project file adapter resolves existing paths and containment before leasing owner documents. Aliases
 inside one Project resolve to one file identity. New files and delivery targets validate their containing directories.

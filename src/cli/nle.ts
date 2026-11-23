@@ -28,7 +28,7 @@ function projectPath(root: string, path: string) {
 }
 
 export async function nleCommand(host: LocalHostClient, action: string, document: string, options: {
-  readonly project?: string; readonly view?: string; readonly to?: string; readonly profile?: string;
+  readonly project?: string; readonly to?: string; readonly profile?: string;
   readonly noOpen?: boolean; readonly progress: boolean;
 }, signal: AbortSignal): Promise<CliResult> {
   const documentPath = await realpath(resolve(options.project ?? process.cwd(), document));
@@ -38,8 +38,7 @@ export async function nleCommand(host: LocalHostClient, action: string, document
   let session: { readonly handle: string; readonly project: string; readonly url: string } | undefined;
   let visual = false;
   try {
-    const input = { document: projectPath(root, documentPath),
-      ...(options.view === undefined ? {} : { viewDocument: projectPath(root, options.view) }) };
+    const input = { document: projectPath(root, documentPath) };
     session = await host.request("/api/application/sessions", {
       method: "POST", body: { project: project.handle, product: nleStudioProduct, input, browser: action === "open" }, signal,
     });

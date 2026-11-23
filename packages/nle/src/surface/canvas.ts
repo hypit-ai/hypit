@@ -1,3 +1,5 @@
+import { findNleComposition } from "../project.js";
+import type { NleEditingContext } from "./types.js";
 import { fitNlePictureContent } from "../picture.js";
 import { indexNleProject } from "../indexing.js";
 import { resolveNlePictureLayout } from "../project.js";
@@ -10,9 +12,7 @@ import type {
   NleCanvasSceneLayer,
   NleSpatialItemCapabilities,
   NleTimelineItemObservation,
-  NleView,
-} from "./types.js";
-import { assertNleViewForProject, nleViewTrackLocked } from "./view.js";
+} from "./projection-types.js";
 
 export const allNleCanvasAffordances: NleCanvasAffordancePolicy = {
   translateFrame: true,
@@ -35,18 +35,17 @@ function title(project: NleProject, item: NleItem): string {
 
 export function resolveNleSpatialItemCapabilities(
   project: NleProject,
-  view: NleView,
+  editing: NleEditingContext,
 ): readonly NleSpatialItemCapabilities[] {
-  assertNleViewForProject(view, project);
-  const composition = project.compositions.find((candidate) => candidate.id === view.activeComposition)!;
+  const composition = findNleComposition(project, editing.activeComposition);
   const index = indexNleProject(project);
   return composition.tracks.flatMap((track) => track.items.flatMap((item) => {
     if (item.kind !== "present" || item.picture === undefined) return [];
-    const writable = !nleViewTrackLocked(view, composition.id, track.id);
+    const writable = !editing.lockedTracks.has(track.id);
     const sharedUsers = "ref" in item.picture.layout
       ? index.sharedValueUsers(item.picture.layout.ref) : [];
     const sharedWritable = writable && sharedUsers.every((user) =>
-      !nleViewTrackLocked(view, user.composition.id, user.track.id));
+      !editing.lockedTracks.has(user.track.id));
     const editsLayout = "ref" in item.picture.layout ? sharedWritable : writable;
     return [{
       item: item.id,
@@ -83,13 +82,12 @@ export function assertNleSpatialEditAllowed(
 /** Project only Item-level Picture ownership; package-internal visual trees remain private. */
 export function projectNleCanvas(
   project: NleProject,
-  view: NleView,
+  editing: NleEditingContext,
   observations: readonly NleTimelineItemObservation[] = [],
   capabilities: readonly NleSpatialItemCapabilities[] = [],
   policy: NleCanvasAffordancePolicy = { translateFrame: false, resizeFrame: false },
 ): NleCanvasScene {
-  assertNleViewForProject(view, project);
-  const composition = project.compositions.find((candidate) => candidate.id === view.activeComposition)!;
+  const composition = findNleComposition(project, editing.activeComposition);
   const itemIds = new Set(composition.tracks.flatMap((track) => track.items.map((item) => item.id)));
   const byItem = new Map<string, NleTimelineItemObservation>();
   for (const observation of mergeNleTimelineItemObservations(observations)) {

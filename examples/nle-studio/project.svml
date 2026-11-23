@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svml id="studio-demo" name="Hypit NLE Studio" root="main">
   <composition id="main" name="Main Programme" width="1920" height="1080">
-    <track id="picture-base" name="Picture · Base" kind="picture" enabled="true">
+    <track id="picture-base" name="Picture · Base" kind="picture" role="picture" enabled="true">
       <present id="interview" name="Interview" source="media" start="0/1" duration="18/1" enabled="true">
         <media path="media/interview.media.json" />
         <source-time>
@@ -13,7 +13,7 @@
         <audio />
       </present>
     </track>
-    <track id="picture-overlay" name="Picture · Overlay" kind="picture" enabled="true">
+    <track id="picture-overlay" name="Picture · Overlay" kind="picture" role="picture" enabled="true">
       <present id="b-roll" name="Editing detail" source="media" start="7/1" duration="7/1" enabled="true">
         <media path="media/media-20261115222651_656_168/media-20261115222651_656_168.media.json" />
         <source-time>
@@ -36,7 +36,7 @@
         </picture>
       </present>
     </track>
-    <track id="picture-adjust" name="Adjust · Programme" kind="picture" role="effect" enabled="true">
+    <track id="picture-adjust" name="Filter · Programme" kind="picture" role="filter" enabled="true">
       <adjust id="programme-look" name="Programme Look" package="@hypit/studio-operators" symbol="Colour" start="0/1" duration="18/1" enabled="true">
         <parameters>{"contrast":1.08,"saturation":0.94,"temperature":-2}</parameters>
         <control-time>
@@ -44,7 +44,7 @@
         </control-time>
       </adjust>
     </track>
-    <track id="audio-main" name="Audio · Main" kind="audio" enabled="true">
+    <track id="audio-main" name="Audio · Main" kind="audio" role="audio" enabled="true">
       <present id="music" name="Room tone and music" source="media" start="0/1" duration="18/1" enabled="true">
         <media path="media/music.media.json" />
         <source-time>

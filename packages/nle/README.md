@@ -36,12 +36,11 @@ implementation for its exact source read.
 Project. The Project file contains none of those session facts. Saving and reload remain explicit Host operations;
 the Service does not hash or monitor files in the background.
 
-`@hypit/nle/node` opens SVML and View documents in a Node ProjectHost through `openNodeNleProject` and
-`openNodeNleView`. Their leases expose a canonical file path and the shared owner Service. The Node owner
-providers handle revision-checked save and reload for scripts and Studio.
+`@hypit/nle/node` opens SVML in a Node ProjectHost through `openNodeNleProject`. The lease exposes the canonical
+file path and the shared Project Service. The Node owner provider handles revision-checked save and reload.
 
 Pure Project commands cover direct move, trim, slip and retime as well as exact split, roll, explicit-scope ripple
-trim and attached-Audio detachment. Magnetic editing, selection and durable edit grouping remain outside the Project.
+trim and attached-Audio detachment. A Composition Group records the author's linked-movement intent across Items.
 Pure materialization, spatial-authoring and Process-parameter planners produce those same transactions, while the
 disposable Composition index derives reverse lookups without adding persistent facts.
 
@@ -73,37 +72,27 @@ accepted inputs and passes them to the synchronous Composition Source. The resul
 write to an existing edit. `projectSourceInstant` and `projectSourceRange` map exact source-local evidence through
 a selected finite forward affine placement.
 
-## View subpath
+## Editing projections
 
-`@hypit/nle/view` owns the optional durable editing arrangement for one Project. Its
-`hypit.nle-view` document stores a portable Project reference, active Composition, edit grid and per-Composition
-Track locks, row heights and linked-edit Groups. Selection, playhead, viewport state and preview caches remain
-outside it.
+`projectNleTimeline` joins the active Composition with session Track locks and finite invocation-local Item
+observations. Each Track exposes its required SVML role. Component definitions declare a fixed role and readable
+source time per symbol. Text and subtitle definitions read plain text from the authored Item parameters.
 
-One open View document has one independent `NleViewService`; revision, undo/redo and savepoints are process-local.
-Project changes do not silently rewrite a View. The Host may explicitly reconcile stale references. A Track lock is
-checked only for Project transactions initiated through that View and never changes Project composition.
-
-`projectNleTimeline` joins the active Composition with those durable View choices and finite invocation-local Item
-observations. Component packages and preview caches may contribute bounded titles, layers and presentation tokens;
-the projection accepts no markup and persists none of those observations.
-
-Package authoring contributions declare whether ordinary time-window edits preserve Component and Operator meaning;
-the View combines those declarations with Track locks and relation safety before exposing Timeline capabilities.
-Presentation remains separate: package Timeline contributions can provide finite text and Host-backed artwork, while
+The Surface exposes trim and split for Present sources with the applicable Track locks and relation constraints.
+Package Operator authoring contributions declare whether ordinary time-window edits preserve their meaning.
 Inspector contributions provide finite fields whose process-local operation projectors are stripped from the Scene.
 Only a separately installed authoring contribution can turn such an operation into an ordinary Project transaction.
 Component packages may independently contribute authoring and Inspector presentation for an exact value slot. The
 same contribution edits occurrence-inline and Project-shared ownership. The Inspector reports a shared resource and
-all current users only for shared ownership; an edit through one View then requires every affected Track to be
+all current users only for shared ownership; an edit through one session requires every affected Track to be
 writable and replaces the one Project value. `planNleComponentValueEdit` performs symmetric share, link and unlink;
 unlink copies the resolved value inline so output does not change.
 
 This is bounded decentralized editability rather than package-owned UI. The Project's `(package, symbol)` resolves
-facets only from explicitly selected installed packages. Timeline facets provide finite factual presentation and a
-conservative time-window declaration; Inspector facets provide finite controls whose operation functions never cross
+facets only from explicitly selected installed packages. Component definitions provide placement, readable source time
+and plain text. Authoring declares Operator time-window capabilities, and Inspector fields expose controls whose functions stay behind
 the transport boundary. An authoring reducer replaces only its owned closed value, after which the Host submits an
-ordinary guarded Project transaction. Packages cannot inject markup, invent Track commands or persist View/Session
+ordinary guarded Project transaction. Packages cannot inject markup, invent Track commands or persist session
 state.
 
 Inspector sections may also contain finite collections. Rows retain stable package-owned identities, while their
@@ -111,7 +100,7 @@ finite fields reuse the same backend-projected operation and guarded transaction
 never addresses a closed value by array index or arbitrary JSON path.
 
 `projectNleCanvas` exposes active-Composition Item frames and fitted Source rectangles without inspecting package
-render trees. Spatial handles follow View locks and a product affordance policy. Inspector and Canvas scenes remain
+render trees. Spatial handles follow session locks and a product affordance policy. Inspector and Canvas scenes remain
 rebuildable projections and carry neither persistent format markers nor Service revisions.
 
 ## Editing Surface subpath
@@ -120,7 +109,5 @@ rebuildable projections and carry neither persistent format markers nor Service 
 contributions and the finite Timeline, Canvas and Inspector projections. Its typed `observe` and `command` ports are
 the shared application boundary for a frontend, local product adapter or Agent tool.
 
-The Surface preserves independent Project and View revisions, rechecks guards before mutation and returns transient
-projection-invalidation receipts. It owns no combined document or revision. A Project mutation that makes View
-references stale remains accepted and observable until the caller explicitly reconciles the View. File persistence,
+The Surface checks the Project revision and current session locks before mutation and returns transient projection-invalidation receipts. File persistence,
 preview/export Actions and transport adapters remain Host responsibilities.

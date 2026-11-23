@@ -1,94 +1,18 @@
 import type { TemporalRate } from "@hypit/temporal/algebra";
 import type { NlePictureExtent, NlePictureRect } from "../picture.js";
 import type { NleSpatialEdit } from "../spatial-authoring.js";
-import type { NleCanvas, NlePictureLayout, NleSharedValue, NleTrack } from "../types.js";
-
-export const nleViewFormat = "hypit.nle-view";
-
-export type NleViewProjectReference = {
-  /** Portable path relative to the NLE View document. */
-  readonly path: string;
-};
-
-export type NleViewTrackState = {
-  readonly track: string;
-  /** Editing guard only. It never changes Programme evaluation. */
-  readonly locked: boolean;
-  /** Optional durable row height. Absence lets a projection choose its default. */
-  readonly heightPx?: number;
-};
-
-/** Durable linked-editing relation with no audiovisual meaning. */
-export type NleEditGroup = {
-  readonly id: string;
-  readonly name: string;
-  readonly items: readonly string[];
-};
-
-/** Durable editor choices scoped to one Project-owned Composition. */
-export type NleViewCompositionState = {
-  readonly composition: string;
-  readonly tracks: readonly NleViewTrackState[];
-  readonly groups: readonly NleEditGroup[];
-  readonly trackOrder?: readonly string[];
-};
-
-/** Persistent editing arrangement for one NLE Project document. */
-export type NleView = {
-  readonly format: typeof nleViewFormat;
-  readonly id: string;
-  readonly name: string;
-  readonly project: NleViewProjectReference;
-  /** Composition initially opened by an editor using this View. */
-  readonly activeComposition: string;
-  /** Display and editing grid only. Programme time remains exact. */
-  readonly editRate: TemporalRate;
-  /** Sparse durable state for Composition timelines used by this View. */
-  readonly compositions: readonly NleViewCompositionState[];
-};
-
-/** Product-owned finite visual vocabulary; package names never become CSS selectors. */
-export type NleTimelineTone =
-  | "blue"
-  | "blue-muted"
-  | "green"
-  | "green-muted"
-  | "violet"
-  | "magenta"
-  | "orange"
-  | "neutral";
-
-export type NleTimelineDisplayLayer =
-  | { readonly kind: "text"; readonly text: string }
-  | {
-      readonly kind: "preview";
-      readonly media: "image" | "video" | "audio";
-      readonly state: "pending" | "unavailable";
-      readonly layout: "filmstrip" | "repeat-x" | "cover" | "contain" | "waveform";
-    }
-  | {
-      readonly kind: "preview";
-      readonly media: "image" | "video" | "audio";
-      readonly state: "ready";
-      /** Invocation-local Host resource address; never persisted in the View. */
-      readonly resource: string;
-      readonly layout: "filmstrip" | "repeat-x" | "cover" | "contain" | "waveform";
-    };
+import type { NleCanvas, NleEditGroup, NlePictureLayout, NleSharedValue, NleTrack } from "../types.js";
 
 /** Invocation-local package or Host description for one exact Item. */
 export type NleTimelineItemObservation = {
   readonly item: string;
   readonly title?: string;
-  readonly layers?: readonly NleTimelineDisplayLayer[];
+  readonly text?: string;
   /** Host-observed Source geometry used only by the Canvas projection. */
   readonly picture?: { readonly sourceExtent: NlePictureExtent };
-  readonly presentation?: {
-    readonly tone: NleTimelineTone;
-    readonly chrome: "standard" | "group" | "compact";
-  };
 };
 
-/** Semantic edit support after package declarations and current View guards are applied. */
+/** Semantic edit support after package declarations and current session locks are applied. */
 export type NleTimelineItemCapabilities = {
   readonly item: string;
   readonly move: boolean;
@@ -107,7 +31,7 @@ export type NleTimelineItemAffordances = NleTimelineAffordancePolicy & {
 export type NleTimelineSceneItem = {
   readonly id: string;
   readonly track: string;
-  readonly role: "present" | "adjust";
+  readonly kind: "present" | "adjust";
   readonly source: "media" | "component" | "composition" | "adjust";
   readonly signals: { readonly picture: boolean; readonly audio: boolean };
   readonly nestedComposition?: string;
@@ -118,11 +42,7 @@ export type NleTimelineSceneItem = {
   readonly group?: string;
   readonly display: {
     readonly title: string;
-    readonly layers: readonly NleTimelineDisplayLayer[];
-  };
-  readonly presentation: {
-    readonly tone: NleTimelineTone;
-    readonly chrome: "standard" | "group" | "compact";
+    readonly text?: string;
   };
   readonly affordances: NleTimelineItemAffordances;
 };
@@ -131,11 +51,9 @@ export type NleTimelineSceneTrack = {
   readonly id: string;
   readonly name: string;
   readonly kind: NleTrack["kind"];
-  readonly role?: NleTrack["role"];
+  readonly role: NleTrack["role"];
   readonly enabled: boolean;
   readonly locked: boolean;
-  readonly heightPx: number;
-  readonly tone: NleTimelineTone;
   readonly items: readonly NleTimelineSceneItem[];
 };
 
@@ -200,7 +118,7 @@ export type NleCanvasScene = {
   readonly layers: readonly NleCanvasSceneLayer[];
 };
 
-/** Type-only assertion that the View guard vocabulary stays aligned with Project spatial plans. */
+/** Type-only assertion that the guard vocabulary stays aligned with Project spatial plans. */
 export type NleSpatialEditKind = NleSpatialEdit["kind"];
 
 export type NleInspectorDomain = "where" | "when" | "how";

@@ -47,6 +47,7 @@ export function pictureFramePositions(
   program: CompilationGraph,
   rate: HtmlFrameRate,
   range: TemporalRange = { start: exactTemporalZero(), end: structuredClone(program.domain.duration) },
+  frames?: readonly number[],
 ): readonly ExactTemporalValue[] {
   assertFrameRate(rate);
   assert(program.picture !== undefined && program.pictureDomain !== undefined,
@@ -55,5 +56,11 @@ export function pictureFramePositions(
   assert(compareExactTemporalValues(range.start, range.end) < 0,
     "Picture output range must be positive.");
   const count = frameCount(subtractExactTemporalValues(range.end, range.start), rate);
+  if (frames !== undefined) {
+    assert(frames.length > 0 && frames.every((frame, index) => Number.isSafeInteger(frame)
+      && frame >= 0 && frame < count && (index === 0 || frame > frames[index - 1]!)),
+    "Picture samples require increasing frame indices inside the selected range.");
+    return frames.map(frame => addExactTemporalValues(range.start, framePosition(frame, rate)));
+  }
   return Array.from({ length: count }, (_, frame) => addExactTemporalValues(range.start, framePosition(frame, rate)));
 }

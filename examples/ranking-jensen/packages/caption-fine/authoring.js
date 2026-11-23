@@ -22,7 +22,7 @@ export function captionItemFromScriptCue(cue, placement, { id, documentId, pictu
     ...word, id: wordId(unit, index), unitId: unitId(unit),
     separatorBefore: unitIndex === 0 && index === 0 ? "" : word.separatorBefore,
   })));
-  return componentItem({ id, at: range.start, duration, role: "subtitle", component, picture,
+  return componentItem({ id, at: range.start, duration, component, picture,
     valueBindings: [{ ...style, slot: "style" }],
     parameters: { caption: { cueId, documentId, role: cue.role ?? "caption", units, words } } });
 }

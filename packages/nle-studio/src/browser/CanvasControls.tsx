@@ -1,4 +1,4 @@
-import type { NleCanvasScene, NleCanvasSceneLayer } from "@hypit/nle/view";
+import type { NleCanvasScene, NleCanvasSceneLayer } from "@hypit/nle/surface";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef } from "react";
 import { fadeMotion } from "./motion.js";

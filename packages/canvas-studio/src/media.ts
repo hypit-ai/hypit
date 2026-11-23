@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import type { NodeProjectMediaService } from "@hypit/media-asset/service/node";
 import { defaultMediaSelection } from "@hypit/media";
-import { inspectMediaFileFromContainerIndex, mediaTypeFromFile } from "@hypit/media-local";
+import { inspectMediaFileForAdoption, mediaTypeFromFile } from "@hypit/media-local";
 import type { ProjectHost } from "@hypit/project";
 import { createNodeProjectResourceResolver } from "@hypit/project/node";
 import type { MediaReference } from "@hypit/canvas";
@@ -22,10 +22,9 @@ export async function importProjectMedia(
   if (typeof service.adoptFile !== "function") throw new Error("This Project has no Media import port.");
   const mediaType = mediaTypeFromFile(request.sourceName);
   const result = await service.adoptFile({ ...request, mediaType }, {
-    inspect: async (path, context) => inspectMediaFileFromContainerIndex(path, {
+    inspect: (path, context) => inspectMediaFileForAdoption(path, mediaType, {
       ...options,
       ...(context.signal === undefined ? {} : { signal: context.signal }),
-      ...(mediaType.startsWith("image/") ? { constantPicture: true } : {}),
     }),
     select: inspection => defaultMediaSelection(inspection, mediaType),
   }, { signal });

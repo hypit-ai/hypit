@@ -1,16 +1,16 @@
 import { assertImplementationBinding, assertPackageSymbol, type NlePictureLayout, type PackageSymbol } from "@hypit/nle";
 import {
   createNleAuthoringHost,
-  createNleTimelinePresentationHost,
+  createNleComponentDefinitions,
   nleAuthoringContributionKind,
   nleInspectorPresentationContributionKind,
-  nleTimelinePresentationContributionKind,
+  nleComponentDefinitionKind,
   type NleAuthoringContribution,
   type NleAuthoringHost,
   type NleInspectorPresentationContribution,
-  type NleTimelinePresentationContribution,
-  type NleTimelinePresentationHost,
-} from "@hypit/nle/view";
+  type NleComponentDefinitionContribution,
+  type NleComponentDefinitions,
+} from "@hypit/nle/surface";
 import {
   assertExactTemporalValue,
   compareExactTemporalValues,
@@ -18,16 +18,14 @@ import {
   type ExactTemporalValue,
 } from "@hypit/temporal/algebra";
 import type { ProjectPackageCatalogResolution, ProjectPackageEnvironment } from "@hypit/project";
+import type { NleStudioAdjustCatalogEntry, NleStudioComponentCatalogEntry } from "./protocol.js";
 
 export const nleStudioComponentOfferingKind = "hypit.nle-component";
 export const nleStudioAdjustOfferingKind = "hypit.nle-adjust";
 export const nleStudioProcessOfferingKind = "hypit.nle-process";
 export const nleStudioTransitionOfferingKind = "hypit.nle-transition";
 
-export type NleStudioComponentCategory = "text" | "subtitle" | "graphic";
-
 export type NleStudioComponentOfferingValue = {
-  readonly category: NleStudioComponentCategory;
   readonly component: PackageSymbol;
   readonly parameters: Readonly<Record<string, unknown>>;
   readonly values?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
@@ -39,6 +37,7 @@ export type NleStudioComponentOffering = {
   readonly package: string;
   readonly id: string;
   readonly title: string;
+  readonly role: NleStudioComponentCatalogEntry["role"];
   readonly value: NleStudioComponentOfferingValue;
 };
 
@@ -48,7 +47,10 @@ export type NleStudioProcessOfferingValue = {
   readonly parameters: Readonly<Record<string, unknown>>;
 };
 
-export type NleStudioAdjustOfferingValue = NleStudioProcessOfferingValue & { readonly duration: ExactTemporalValue };
+export type NleStudioAdjustOfferingValue = NleStudioProcessOfferingValue & {
+  readonly role: NleStudioAdjustCatalogEntry["role"];
+  readonly duration: ExactTemporalValue;
+};
 
 export type NleStudioProcessOffering = {
   readonly package: string;
@@ -79,7 +81,7 @@ export type NleStudioTransitionOffering = {
 
 export type NleStudioPackageBridge = {
   readonly authoring: NleAuthoringHost;
-  readonly timelinePresentation: NleTimelinePresentationHost;
+  readonly componentDefinitions: NleComponentDefinitions;
   readonly inspectorPresentations: readonly NleInspectorPresentationContribution[];
   readonly components: readonly NleStudioComponentOffering[];
   readonly adjusts: readonly NleStudioAdjustOffering[];
@@ -131,16 +133,14 @@ function contribution<Value extends { readonly kind: string; readonly package: s
   });
 }
 
-function componentOffering(entry: ProjectPackageCatalogResolution): NleStudioComponentOffering {
+function componentOffering(entry: ProjectPackageCatalogResolution, definitions: NleComponentDefinitions): NleStudioComponentOffering {
   const label = `NLE Studio Component offering ${entry.package}#${entry.id}`;
   assert(entry.value !== null && typeof entry.value === "object" && !Array.isArray(entry.value),
     `${label} value must be an object.`);
   const value = entry.value as Readonly<Record<string, unknown>>;
-  assert(Object.keys(value).every((field) => ["category", "component", "parameters", "duration", "layout", "values"].includes(field))
-    && ["category", "component", "parameters", "duration"].every((field) => Object.hasOwn(value, field)),
+  assert(Object.keys(value).every((field) => ["component", "parameters", "duration", "layout", "values"].includes(field))
+    && ["component", "parameters", "duration"].every((field) => Object.hasOwn(value, field)),
   `${label} fields are invalid.`);
-  assert(value.category === "text" || value.category === "subtitle" || value.category === "graphic",
-    `${label} category is invalid.`);
   assertPackageSymbol(value.component as PackageSymbol, `${label} Component`);
   const symbol = value.component as PackageSymbol;
   assert(symbol.package === entry.package, `${label} Component must be owned by its package.`);
@@ -164,8 +164,8 @@ function componentOffering(entry: ProjectPackageCatalogResolution): NleStudioCom
     package: entry.package,
     id: entry.id,
     title: entry.title,
+    role: definitions.definition(symbol).role,
     value: {
-      category: value.category,
       component: structuredClone(symbol),
       parameters: structuredClone(value.parameters),
       duration: structuredClone(value.duration as ExactTemporalValue),
@@ -180,10 +180,12 @@ function adjustOffering(entry: ProjectPackageCatalogResolution): NleStudioAdjust
   assert(entry.value !== null && typeof entry.value === "object" && !Array.isArray(entry.value),
     `${label} value must be an object.`);
   const value = entry.value as Readonly<Record<string, unknown>>;
-  assert(Object.keys(value).length === 4
-    && ["medium", "operator", "parameters", "duration"].every((field) => Object.hasOwn(value, field)),
+  assert(Object.keys(value).length === 5
+    && ["medium", "role", "operator", "parameters", "duration"].every((field) => Object.hasOwn(value, field)),
   `${label} fields are invalid.`);
   assert(value.medium === "picture" || value.medium === "audio", `${label} medium is invalid.`);
+  assert(value.role === "effect" || (value.role === "filter" && value.medium === "picture"),
+    `${label} role is invalid for its medium.`);
   assertPackageSymbol(value.operator as PackageSymbol, `${label} Operator`);
   const operator = value.operator as PackageSymbol;
   assert(operator.package === entry.package, `${label} Operator must be owned by its package.`);
@@ -198,6 +200,7 @@ function adjustOffering(entry: ProjectPackageCatalogResolution): NleStudioAdjust
     title: entry.title,
     value: {
       medium: value.medium,
+      role: value.role,
       operator: structuredClone(operator),
       parameters: structuredClone(value.parameters),
       duration: structuredClone(value.duration as ExactTemporalValue),
@@ -254,13 +257,13 @@ function transitionOffering(entry: ProjectPackageCatalogResolution): NleStudioTr
 /** Assemble the NLE-facing capabilities of only the packages selected by this Project Boundary. */
 export function createNleStudioPackageBridge(packages: ProjectPackageEnvironment): NleStudioPackageBridge {
   const authoringContributions = contribution<NleAuthoringContribution>(packages, nleAuthoringContributionKind);
-  const timelineContributions = contribution<NleTimelinePresentationContribution>(
-    packages, nleTimelinePresentationContributionKind,
-  );
+  const componentDefinitions = createNleComponentDefinitions(contribution<NleComponentDefinitionContribution>(
+    packages, nleComponentDefinitionKind,
+  ));
   const inspectorPresentations = contribution<NleInspectorPresentationContribution>(
     packages, nleInspectorPresentationContributionKind,
   );
-  const components = packages.catalog(nleStudioComponentOfferingKind).map(componentOffering);
+  const components = packages.catalog(nleStudioComponentOfferingKind).map(entry => componentOffering(entry, componentDefinitions));
   const adjusts = packages.catalog(nleStudioAdjustOfferingKind).map(adjustOffering);
   const processes = packages.catalog(nleStudioProcessOfferingKind).map(processOffering);
   const transitions = packages.catalog(nleStudioTransitionOfferingKind).map(transitionOffering);
@@ -272,7 +275,7 @@ export function createNleStudioPackageBridge(packages: ProjectPackageEnvironment
   }
   return {
     authoring: createNleAuthoringHost(authoringContributions),
-    timelinePresentation: createNleTimelinePresentationHost(timelineContributions),
+    componentDefinitions,
     inspectorPresentations,
     components,
     adjusts,
@@ -285,7 +288,8 @@ export function createNleStudioPackageBridge(packages: ProjectPackageEnvironment
       return adjusts.find((entry) => entry.package === packageName && entry.id === offering);
     },
     process(packageName, offering) {
-      return processes.find((entry) => entry.package === packageName && entry.id === offering);
+      return processes.find((entry) => entry.package === packageName && entry.id === offering)
+        ?? adjusts.find((entry) => entry.value.role === "filter" && entry.package === packageName && entry.id === offering);
     },
     transition(packageName, offering) {
       return transitions.find((entry) => entry.package === packageName && entry.id === offering);

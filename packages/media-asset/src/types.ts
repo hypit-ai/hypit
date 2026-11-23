@@ -44,6 +44,8 @@ export type MediaAssetDocument = {
   readonly media: {
     readonly file: MediaAssetFile;
     readonly interpretation: MediaInterpretation;
+    readonly adoptedAt: string;
+    readonly displayName?: string;
   };
   readonly representations: readonly MediaRepresentationDeclaration[];
 };
@@ -88,4 +90,5 @@ export type MediaAssetInterpretationInput = {
   readonly file: MediaAssetFile;
   readonly inspection: MediaInspection;
   readonly selection: MediaSelectionRequest;
+  readonly adoptedAt: string;
 };

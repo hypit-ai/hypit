@@ -5,6 +5,7 @@ import {
   exactTemporalZero,
   subtractExactTemporalValues,
   type ExactTemporalValue,
+  type TemporalRate,
 } from "@hypit/temporal/algebra";
 import { assertNleProject } from "./project.js";
 import { sliceNleProcessTime } from "./process-time.js";
@@ -14,6 +15,7 @@ import type {
   NleComponentItem,
   NleComponentValueBinding,
   NleComposition,
+  NleEditGroup,
   NleItem,
   NleMatte,
   NleProcess,
@@ -27,7 +29,7 @@ import type {
 } from "./types.js";
 
 export type NleCommand =
-  | { readonly kind: "project.update"; readonly name?: string; readonly rootComposition?: string }
+  | { readonly kind: "project.update"; readonly name?: string; readonly rootComposition?: string; readonly editRate?: TemporalRate }
   | { readonly kind: "shared-value.add"; readonly value: NleSharedValue; readonly before?: string }
   | { readonly kind: "shared-value.replace"; readonly value: NleSharedValue }
   | { readonly kind: "shared-value.remove"; readonly id: string }
@@ -141,6 +143,9 @@ export type NleCommand =
   | { readonly kind: "matte.add"; readonly composition: string; readonly matte: NleMatte }
   | { readonly kind: "matte.replace"; readonly matte: NleMatte }
   | { readonly kind: "matte.remove"; readonly id: string }
+  | { readonly kind: "group.add"; readonly composition: string; readonly group: NleEditGroup }
+  | { readonly kind: "group.replace"; readonly composition: string; readonly group: NleEditGroup }
+  | { readonly kind: "group.remove"; readonly composition: string; readonly id: string }
   | { readonly kind: "item.replace"; readonly item: NleItem }
   | { readonly kind: "item.remove"; readonly ids: readonly string[] };
 
@@ -161,17 +166,19 @@ type MutableTrack = Omit<NleTrack, "name" | "enabled" | "items"> & {
   items: MutableItem[];
 };
 
-type MutableComposition = Omit<NleComposition, "canvas" | "tracks" | "transitions" | "mattes"> & {
+type MutableComposition = Omit<NleComposition, "canvas" | "tracks" | "transitions" | "mattes" | "groups"> & {
   canvas: NleCanvas;
   tracks: MutableTrack[];
   transitions: NleTransition[];
   mattes: NleMatte[];
+  groups: NleEditGroup[];
 };
 
 type MutableProject = Omit<NleProject,
-  "name" | "rootComposition" | "sharedValues" | "compositions"> & {
+  "name" | "rootComposition" | "editRate" | "sharedValues" | "compositions"> & {
   name: string;
   rootComposition: string;
+  editRate: TemporalRate;
   sharedValues: NleSharedValue[];
   compositions: MutableComposition[];
 };
@@ -180,6 +187,16 @@ function mutableComposition(project: MutableProject, id: string): MutableComposi
   const composition = project.compositions.find((candidate) => candidate.id === id);
   if (composition === undefined) throw new Error(`Unknown NLE Composition: ${id}.`);
   return composition;
+}
+
+function assertCompleteGroupMove(project: MutableProject, moving: ReadonlySet<string>): void {
+  for (const composition of project.compositions) {
+    for (const group of composition.groups) {
+      if (group.items.some(id => moving.has(id)) && !group.items.every(id => moving.has(id))) {
+        throw new Error(`NLE Item move must include all members of Group ${group.id}.`);
+      }
+    }
+  }
 }
 
 function mutableTrackLocation(project: MutableProject, id: string): {
@@ -312,6 +329,7 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       case "project.update":
         if (command.name !== undefined) next.name = command.name;
         if (command.rootComposition !== undefined) next.rootComposition = command.rootComposition;
+        if (command.editRate !== undefined) next.editRate = structuredClone(command.editRate);
         break;
       case "shared-value.add":
         next.sharedValues = insert(next.sharedValues, structuredClone(command.value), command.before);
@@ -407,6 +425,7 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         const ids = [...new Set<string>(command.ids)];
         if (ids.length === 0) throw new Error("NLE Item move requires at least one Item.");
         const selected = new Set(ids);
+        assertCompleteGroupMove(next, selected);
         const destinations = new Map<string, MutableTrack>();
         for (const destination of command.destinations ?? []) {
           if (!selected.has(destination.item)) {
@@ -422,6 +441,9 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
           item.start = addExactTemporalValues(item.start, command.delta);
           const destination = destinations.get(id);
           if (destination !== undefined && destination.id !== track.id) {
+            if (destination.kind !== track.kind || destination.role !== track.role) {
+              throw new Error(`NLE Item ${id} requires a ${track.kind} Track with role ${track.role}.`);
+            }
             track.items = track.items.filter((candidate) => candidate.id !== id);
             destination.items.push(item);
           }
@@ -491,6 +513,7 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         trimItem(target, command.edge, command.at);
         const after = command.edge === "start" ? target.start : itemEnd(target);
         const delta = subtractExactTemporalValues(after, before);
+        if (compareExactTemporalValues(after, before) !== 0) assertCompleteGroupMove(next, scope);
         for (const id of scope) {
           const item = mutableItem(next, id).item;
           item.start = addExactTemporalValues(item.start, delta);
@@ -499,7 +522,7 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       }
       case "item.split": {
         assertExactTemporalValue(command.at, "NLE Item split position");
-        const { track, item } = mutableItem(next, command.id);
+        const { composition, track, item } = mutableItem(next, command.id);
         const offset = subtractExactTemporalValues(command.at, item.start);
         const oldDuration = structuredClone(item.duration);
         if (compareExactTemporalValues(offset, exactTemporalZero()) <= 0
@@ -520,6 +543,11 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
           end: offset,
         }, "start");
         track.items.splice(track.items.indexOf(item) + 1, 0, right);
+        const groupIndex = composition.groups.findIndex(group => group.items.includes(item.id));
+        if (groupIndex >= 0) {
+          const group = composition.groups[groupIndex]!;
+          composition.groups[groupIndex] = { ...group, items: [...group.items, right.id] };
+        }
         break;
       }
       case "item.detach-audio": {
@@ -527,7 +555,9 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         const destination = mutableTrack(next, command.track);
         if (item.kind !== "present") throw new Error(`NLE Item ${item.id} is not a Present.`);
         if (track.kind !== "picture") throw new Error(`NLE Item ${item.id} is not on a Picture Track.`);
-        if (destination.kind !== "audio") throw new Error(`NLE Track ${destination.id} is not an Audio Track.`);
+        if (destination.kind !== "audio" || destination.role !== "audio") {
+          throw new Error(`NLE audio detachment requires an Audio Track with role audio.`);
+        }
         if (item.picture === undefined || item.audio === undefined) {
           throw new Error(`NLE Item ${item.id} does not have attached Picture and Audio.`);
         }
@@ -617,17 +647,39 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         composition.mattes.splice(index, 1);
         break;
       }
+      case "group.add":
+        mutableComposition(next, command.composition).groups.push(structuredClone(command.group));
+        break;
+      case "group.replace":
+      case "group.remove": {
+        const { groups } = mutableComposition(next, command.composition);
+        const id = command.kind === "group.replace" ? command.group.id : command.id;
+        const index = groups.findIndex(group => group.id === id);
+        if (index < 0) throw new Error(`Unknown NLE Group: ${id}.`);
+        if (command.kind === "group.replace") groups[index] = structuredClone(command.group);
+        else groups.splice(index, 1);
+        break;
+      }
       case "item.replace": {
         const { track, item } = mutableItem(next, command.item.id);
         track.items.splice(track.items.indexOf(item), 1, structuredClone(command.item) as MutableItem);
         break;
       }
       case "item.remove": {
-        const ids = [...new Set<string>(command.ids)];
-        if (ids.length === 0) throw new Error("NLE Item remove requires at least one Item.");
+        const ids = new Set<string>(command.ids);
+        if (ids.size === 0) throw new Error("NLE Item remove requires at least one Item.");
+        const affected = new Set<MutableComposition>();
         for (const id of ids) {
-          const { track, item } = mutableItem(next, id);
+          const { composition, track, item } = mutableItem(next, id);
+          affected.add(composition);
           track.items.splice(track.items.indexOf(item), 1);
+        }
+        for (const composition of affected) {
+          composition.groups = composition.groups.flatMap(group => {
+            const items = group.items.filter(id => !ids.has(id));
+            if (items.length === group.items.length) return [group];
+            return items.length >= 2 ? [{ ...group, items }] : [];
+          });
         }
         break;
       }

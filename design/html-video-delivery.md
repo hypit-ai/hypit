@@ -64,7 +64,14 @@ interface HypitFrameProgram {
 
 全片交付选择完整节目范围，frame preview 选择一帧对应的精确范围。编译器按输出帧率确定节目采样点，
 并为每个采样点计算素材取帧位置。空间变换与裁剪关闭为静态布局，组件局部时间、媒体取帧和 controls 随帧求值。
-一个 `HtmlProgram` 执行整个已选画面。
+一个 `HtmlProgram` 执行整个已选画面。Studio 的暂停定位发布当前 Composition 的画面 Programme，
+连续定位复用同一个浏览器文档和组件运行实例。浏览器按目标帧加载参与合成的素材，兼容的视频流通过
+原生媒体解码器取图，其余按 Programme 已关闭的 Source position、stream、Picture interpretation 和
+采样边请求精确源帧。目标帧就绪后，这两条路径都将图像交给同一个 Picture 合成平面。
+
+Studio 连续播放驱动同一页面。兼容的正向映射使用浏览器连续解码、切点预读和漂移纠正，其他映射按
+已关闭的样本逐帧求值。音频执行器按 Programme 的样本边界提供短 PCM 缓冲，浏览器通过 Web Audio
+连续排程，并用同一音频时钟驱动节目时间。
 
 `applyFrame(frame)` 的完成是截图屏障，不只是一次同步 DOM 写入。HTML Visual 可以监听 `hypit-frame`，并通过
 事件 detail 的 `waitUntil(promise)` 把当前帧所需的异步就绪工作加入屏障。这个协议只等待当前输出帧的资源与
@@ -72,8 +79,8 @@ interface HypitFrameProgram {
 
 Video Source 为每个输出帧保存精确的 Source position、`before`／`after` 边、selected stream 与 Media owner
 关闭的 Picture interpretation。本地执行在请求私有目录中建立 selected stream 时间戳索引，以 FFmpeg 按解码
-序号准备准确 PNG，再通过同源私有 HTTP slot 交给页面。浏览器不负责解释容器默认流，也不以
-`<video>.currentTime` 是否变化作为像素就绪证据。第 0 帧、随机帧、稀疏帧和连续交付服从同一采样规则。
+序号准备准确 PNG，再通过同源私有 HTTP slot 交给页面。离线捕获使用显式流和解码帧。交互浏览器等待
+原生媒体解码完成和合成绘制。第 0 帧、随机帧、稀疏帧和连续离线交付服从同一精确采样规则。
 映射读取显式选择 nearest-picture reconstruction 时，本地准备器以精确有理距离选择最近的已解码帧；其他未实现
 的 reconstruction 在 terminal closing 时被准确拒绝，不能退化为默认 sided sampling。
 
@@ -81,10 +88,11 @@ Chromium/Electron 只负责页面合成与捕获。解码帧拥有有界字节�
 `@hypit/html-render-local`，不进入 `HtmlProgram` 或 Project。普通浏览器播放可以使用 native video 路径；离线
 执行器通过显式的 prepared-source-frame ABI 选择精确 bitmap 路径。
 
-本机取帧先索引 selected stream 的精确时间戳并确定 Source ordinal；它不以时间 seek 近似该事实。首个缺失
-ordinal 才启动最多 16 帧的顺序解码窗口；当前截图所需帧持有 lease，邻近帧只是 soft prefetch，并由字节上限
-内的 LRU 驱逐。FFmpeg 只对该窗口执行 Picture conversion 与 PNG 编码。相同资源、stream 与 Picture
-interpretation 的多个 HTML Source 共享 probe、解码需求和驻留像素。
+本机取帧先索引所选流的呈现时间戳及关键帧，确定精确的 Source ordinal。有合适的入口时，FFmpeg 从较早的关键帧
+开始解码，用所需帧的绝对呈现时间戳筛选。整组输出的时间戳与索引逐帧核对后才发布。无法核对时，从流起点按序号
+解码。首个缺失 ordinal 启动最多 16 帧的解码窗口。当前截图所需帧持有 lease，邻近帧可预取，缓存按字节上限
+驱逐。FFmpeg 对所选帧做 Picture conversion 和 PNG 编码。相同资源、stream 与 Picture interpretation 的多个
+HTML Source 共享 probe、解码需求和驻留像素。
 
 `HtmlProgram` 携带所选流的 presentation start。执行层把 Source-local 精确位置换算成容器时间戳，
 与素材缩略图和 storyboard 共用 Media 的帧索引及 sided 选帧逻辑。
@@ -113,8 +121,17 @@ Session，直到导出完成、失败或显式取消。Application 关闭时会�
 
 Studio 对当前接受的内存 revision 复用同一次编译准备。Frame preview 选择一帧精确范围，通过
 `HtmlFrameExecutor` 请求 PNG。Playback preview 选择一个精确范围，通过同一视频 Executor 生成有声 MP4。
-Audio executor 在完整节目时钟上执行图，在输出边界按样本裁切并重置时间戳，Picture 使用同一范围内的帧采样。
+Picture lowering 将完整的 Composition 等比居中适配输出画布。组件仍在各自的局部坐标中求值。
+Audio executor 将 Item 的读取、嵌套 Composition 和所选 Media Audio member 的映射合成为同一条分段线性关系，
+在 PCM 采样网格上关闭读取和落点。支持正向恒速和多级无回绕映射。FFmpeg 对非 1× 的正向读取保音高，
+每段仍以目标 PCM 样本数为准。Control 同样求值多级分段线性映射，并在间隙沿用最近经过的边界值。
+混音在完整节目时钟执行，裁切后的段保留节目落点。播放、交付和 Programme 波形从这同一张图按样本裁切，
+Picture 使用同一范围内的帧采样。
+本机 Executor 在视频文件保持一致时复用有限数量的源帧时间戳索引。取帧继续使用本次 Action 的精确采样计划。
 Studio 持有临时结果并发布会话资源 URL。
+
+时间线画面条通过 `HtmlFrameExecutor.openCapture` 对同一份 HTML Program 多次读取帧。Executor 在打开时准备
+页面和资源，视频源帧按读取位置解码。关闭时释放 Chromium 页面、资源服务和临时文件。
 
 Programme 波形使用相同的 Audio lowering、混音图和输出采样区间，将已裁切的混音转换为峰值 PNG。该 Action
 不需要启动浏览器。它与画面预览分别保留各自最新结果，两者都随接受的编辑 revision 或 Media Catalog 变化失效。

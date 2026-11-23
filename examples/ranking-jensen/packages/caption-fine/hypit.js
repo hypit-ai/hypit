@@ -19,17 +19,16 @@ function captionValue(parameters, label) {
   return record(selected.caption, `${label}.caption`);
 }
 
-function captionTimeline(context) {
-  const caption = captionValue(context.item.parameters, `Caption ${context.item.id}`);
-  if (!Array.isArray(caption.words)) throw new Error(`Caption ${context.item.id} words are invalid.`);
-  const text = caption.words.map((entry) => {
-    const word = record(entry, `Caption ${context.item.id} word`);
-    return `${typeof word.separatorBefore === "string" ? word.separatorBefore : ""}${String(word.text)}`;
+function readCaptionText(parameters) {
+  const caption = captionValue(parameters, "Fine Caption");
+  if (!Array.isArray(caption.words)) throw new Error("Fine Caption words are invalid.");
+  return caption.words.map((entry) => {
+    const word = record(entry, "Fine Caption word");
+    if (typeof word.text !== "string" || typeof word.separatorBefore !== "string") {
+      throw new Error("Fine Caption word text and separator must be strings.");
+    }
+    return word.separatorBefore + word.text;
   }).join("");
-  return {
-    title: text.length === 0 ? "Caption" : text,
-    layers: text.length === 0 ? [] : [{ kind: "text", text }],
-  };
 }
 
 function captionInspector(context) {
@@ -236,19 +235,11 @@ export const hypitPackage = {
   package: packageName,
   contributions: [
     {
-      kind: "hypit.nle-timeline-presentation",
+      kind: "hypit.nle-component-definition",
       value: {
-        kind: "hypit.nle-timeline-presentation",
+        kind: "hypit.nle-component-definition",
         package: packageName,
-        components: [{
-          component,
-          displayName: "Fine Caption",
-          tone: "magenta",
-          chrome: "standard",
-          heightPx: 52,
-          project: captionTimeline,
-        }],
-        adjusts: [],
+        components: [{ component, role: "subtitle", sourceTime: () => ({ kind: "timed" }), readText: readCaptionText }],
       },
     },
     {
@@ -266,8 +257,7 @@ export const hypitPackage = {
       value: {
         kind: "hypit.nle-authoring",
         package: packageName,
-        components: [{ component, timeWindow: () => true, sourceTime: () => ({ kind: "timed" }),
-          editParameters: editCaptionParameters }],
+        components: [{ component, editParameters: editCaptionParameters }],
         componentValues: [{ component, slot: "style", editValue: editStyle }],
         operators: [],
       },
@@ -278,7 +268,7 @@ export const hypitPackage = {
     },
   ],
   catalog: [{ id: "caption", title: "Fine Caption", kind: "hypit.nle-component", value: {
-    category: "subtitle", component, duration: captionDuration,
+    component, duration: captionDuration,
     parameters: { caption: {
       cueId: "caption", documentId: "inline", role: "caption",
       words: [{ id: "word", text: "Subtitle", separatorBefore: "", attributes: [], unitId: "unit" }],

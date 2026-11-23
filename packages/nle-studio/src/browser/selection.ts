@@ -1,24 +1,8 @@
-import type { NleTimelineScene, NleTimelineSceneItem } from "@hypit/nle/view";
-
-export function linkedSelection(scene: NleTimelineScene, ids: readonly string[]): string[] {
-  const available = new Set(scene.tracks.flatMap(track => track.items.map(item => item.id)));
-  const selected = new Set(ids.filter(id => available.has(id)));
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const group of scene.groups) {
-      if (!group.items.some(id => selected.has(id))) continue;
-      for (const id of group.items) {
-        if (available.has(id) && !selected.has(id)) { selected.add(id); changed = true; }
-      }
-    }
-  }
-  return [...selected];
-}
+import type { NleTimelineScene, NleTimelineSceneItem } from "@hypit/nle/surface";
 
 export function editableSelection(scene: NleTimelineScene, ids: readonly string[]): string[] {
-  const locked = new Set(scene.tracks.filter(track => track.locked).flatMap(track => track.items.map(item => item.id)));
-  return linkedSelection(scene, ids).filter(id => !linkedSelection(scene, [id]).some(member => locked.has(member)));
+  const available = new Set(scene.tracks.filter(track => !track.locked).flatMap(track => track.items.map(item => item.id)));
+  return [...new Set(ids)].filter(id => available.has(id));
 }
 
 export function directionalSelection(scene: NleTimelineScene, frame: number, direction: "left" | "right"): string[] {
@@ -41,5 +25,5 @@ export function selectionAtFrame(
     return item !== undefined && item.affordances[capability] && accepts(item)
       && frame > item.startFrame && frame < item.startFrame + item.durationFrames;
   };
-  return [...selected].filter(id => linkedSelection(scene, [id]).every(eligible)).map(id => items.get(id)!);
+  return [...selected].filter(eligible).map(id => items.get(id)!);
 }

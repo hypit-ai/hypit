@@ -1,18 +1,19 @@
-import { createReadStream, createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream, readdirSync, readFileSync } from "node:fs";
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { extname, join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 import { serveApplicationEventStream, type NodeApplicationProductAdapter } from "@hypit/application/node";
+import { isPicturePreviewRate, isWaveformPreviewResolution, type MediaResource } from "@hypit/media";
+import { readProjectMediaAssetEdit, readProjectMediaLibraryEdit } from "@hypit/media-asset/service";
 import { NleDocumentConflict } from "@hypit/nle/node";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import { assertExactTemporalValue } from "@hypit/temporal/algebra";
 import { NleStudioProductSession, nleStudioProduct } from "./host.js";
 import type {
   NleStudioActionRequest,
-  NleStudioCommandRequest,
   NleStudioErrorResponse,
   NleStudioObservationRequest,
   NleStudioOperation,
@@ -53,18 +54,6 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
     if (keys.length !== 2 || drop.kind !== "timeline.drop") throw new Error("NLE Studio Timeline drop observation is invalid.");
     return { kind: "timeline-drop", drop };
   }
-  if (request.kind === "timeline-media") {
-    const fields = ["kind", "composition", "expectedProjectRevision", "expectedViewRevision", "expectedMediaGeneration",
-      "tracks", "fromFrame", "toFrame"];
-    if (keys.some(key => !fields.includes(key)) || !identity(request.composition) || !Array.isArray(request.tracks)
-      || !request.tracks.every(identity) || request.tracks.length > 64
-      || ![request.expectedProjectRevision, request.expectedViewRevision, request.expectedMediaGeneration, request.fromFrame, request.toFrame]
-        .every(value => typeof value === "number" && Number.isSafeInteger(value) && value >= 0)
-      || Number(request.toFrame) <= Number(request.fromFrame)) {
-      throw new Error("NLE Studio Timeline Media observation requires revisions, Tracks and a positive visible range.");
-    }
-    return request as NleStudioObservationRequest;
-  }
   if (request.kind === "inspector" || request.kind === "component-inputs") {
     if (keys.some((key) => key !== "kind" && key !== "item") || typeof request.item !== "string"
       || request.item.length === 0) {
@@ -78,12 +67,12 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
     }
     return { kind: request.kind, transition: request.transition };
   }
-  const kinds = new Set(["open", "project", "status", "timeline", "canvas", "media", "catalog", "preview", "delivery", "clipboard"]);
+  const kinds = new Set(["open", "project", "status", "timeline", "canvas", "media", "media-library", "catalog", "preview", "delivery", "clipboard"]);
   if (keys.length !== 1 || typeof request.kind !== "string" || !kinds.has(request.kind)) {
     throw new Error("NLE Studio observation kind is invalid.");
   }
   return { kind: request.kind as Exclude<NleStudioObservationRequest["kind"],
-    "inspector" | "component-inputs" | "action" | "timeline-drop" | "timeline-media" | "transition-inspector"> };
+    "inspector" | "component-inputs" | "action" | "timeline-drop" | "transition-inspector"> };
 }
 
 function record(value: unknown, subject: string): Readonly<Record<string, unknown>> {
@@ -95,6 +84,34 @@ function record(value: unknown, subject: string): Readonly<Record<string, unknow
 
 function identity(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
+}
+
+const commandFields = {
+  "project.transact": ["commands"],
+  "project.undo": [],
+  "project.redo": [],
+  "inspector.edit": ["item", "section", "field", "value"],
+  "inspector.invoke": ["item", "section", "collection", "row", "action"],
+  "transition-inspector.edit": ["transition", "section", "field", "value"],
+  "spatial.edit": ["item", "edit"],
+  "component-value.edit": ["item", "edit"],
+} satisfies Record<NleEditingSurfaceCommand["kind"], readonly string[]>;
+
+function commandRequest(value: unknown): NleEditingSurfaceCommand {
+  const envelope = record(value, "NLE Studio Command envelope");
+  if (Object.keys(envelope).length !== 1) throw new Error("NLE Studio Command requires one command.");
+  const request = record(envelope.command, "NLE Studio Command");
+  const kind = request.kind;
+  const revision = request.expectedProjectRevision;
+  if (typeof kind !== "string" || !Object.hasOwn(commandFields, kind)
+    || typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 0) {
+    throw new Error("NLE Studio Command requires a current kind and a Project revision.");
+  }
+  const fields = commandFields[kind as keyof typeof commandFields];
+  if (Object.keys(request).length !== fields.length + 2 || !fields.every(field => Object.hasOwn(request, field))) {
+    throw new Error(`NLE Studio Command ${kind} fields are invalid.`);
+  }
+  return request as NleEditingSurfaceCommand;
 }
 
 function validPictureLayout(value: unknown): boolean {
@@ -110,12 +127,12 @@ function validPictureLayout(value: unknown): boolean {
 function operationRequest(value: unknown): NleStudioOperation {
   const request = record(value, "NLE Studio Operation");
   const integer = (entry: unknown, minimum: number) => typeof entry === "number" && Number.isSafeInteger(entry) && entry >= minimum;
-  if (!integer(request.expectedProjectRevision, 0) || !integer(request.expectedViewRevision, 0)
+  if (!integer(request.expectedProjectRevision, 0)
     || !identity(request.composition)) {
     throw new Error("NLE Studio Operation requires revisions and a Composition.");
   }
   const currentFields = (...fields: readonly string[]) => Object.keys(request).every(key =>
-    ["kind", "expectedProjectRevision", "expectedViewRevision", "composition", ...fields].includes(key));
+    ["kind", "expectedProjectRevision", "composition", ...fields].includes(key));
   const items = Array.isArray(request.items) && request.items.every(identity) ? request.items : undefined;
   const tracks = Array.isArray(request.tracks) && request.tracks.every(identity) ? request.tracks : undefined;
   const track = request.track === undefined || identity(request.track);
@@ -140,6 +157,9 @@ function operationRequest(value: unknown): NleStudioOperation {
         && Number.isSafeInteger(request.deltaFrames) && location;
       break;
     }
+    case "track-lock.set":
+      valid = currentFields("track", "locked") && identity(request.track) && typeof request.locked === "boolean";
+      break;
     case "timeline.track-reorder":
       valid = currentFields("track", "before") && identity(request.track) && before;
       break;
@@ -181,9 +201,6 @@ function operationRequest(value: unknown): NleStudioOperation {
       break;
     case "clipboard.paste":
       valid = currentFields("atFrame") && integer(request.atFrame, 0);
-      break;
-    case "clipboard.apply-groups":
-      valid = currentFields();
       break;
     case "media.materialize":
       valid = currentFields("media", "includeAudio", "layout", "insertTracks", ...timedFields) && placement && duration && insertion
@@ -250,6 +267,9 @@ function operationRequest(value: unknown): NleStudioOperation {
       valid = currentFields("items", "name") && items !== undefined && items.length > 0
         && typeof request.name === "string" && request.name.trim().length > 0;
       break;
+    case "composition.duplicate":
+      valid = currentFields("source") && identity(request.source);
+      break;
     case "composition.make-unique":
     case "composition.explode":
       valid = currentFields("item") && identity(request.item);
@@ -303,18 +323,32 @@ function actionRequest(value: unknown): NleStudioActionRequest {
       throw new Error("NLE Studio Media view requires a Media identity and Catalog generation.");
     }
     if (request.kind === "media.thumbnail") {
-      if (!fields(request, ...common, "at", "height") || (request.height !== undefined && !integer(request.height, 1))) {
+      if (!fields(request, ...common, "at", "height", "coverWidth") || (request.height !== undefined && !integer(request.height, 1))
+        || (request.coverWidth !== undefined && !integer(request.coverWidth, 1))) {
         throw new Error("NLE Studio thumbnail Action fields are invalid.");
       }
       if (request.at !== undefined) exact(request.at);
+    } else if (request.kind === "media.source-preview") {
+      if (request.preset === "filmstrip" && fields(request, ...common, "positions", "preset", "samplesPerSecond")
+        && (request.samplesPerSecond === undefined || isPicturePreviewRate(request.samplesPerSecond))
+        && Array.isArray(request.positions) && request.positions.length >= 1 && request.positions.length <= 64) {
+        request.positions.forEach(exact);
+      } else if (request.preset !== "waveform" || !fields(request, ...common, "preset", "blocks", "samplesPerPeak")
+        || !isWaveformPreviewResolution(request.samplesPerPeak) || !Array.isArray(request.blocks)
+        || request.blocks.length < 1 || request.blocks.length > 64 || !request.blocks.every(block => integer(block))) {
+        throw new Error("Project Media source preview fields do not match a filmstrip or waveform request.");
+      }
     } else {
-      const range = record(request.range, "NLE Studio Media view range");
-      if (!fields(range, "start", "end")) throw new Error("NLE Studio Media view range fields are invalid.");
-      exact(range.start);
-      exact(range.end);
+      if (request.kind !== "media.storyboard" || request.range !== undefined) {
+        const range = record(request.range, "NLE Studio Media view range");
+        if (!fields(range, "start", "end")) throw new Error("NLE Studio Media view range fields are invalid.");
+        exact(range.start);
+        exact(range.end);
+      }
       if (request.kind === "media.storyboard") {
-        if (!fields(request, ...common, "range", "frames", "height") || !integer(request.frames, 1)
-          || (request.height !== undefined && !integer(request.height, 1))) {
+        if (!fields(request, ...common, "range", "frames", "height", "coverWidth") || !integer(request.frames, 1)
+          || (request.height !== undefined && !integer(request.height, 1))
+          || (request.coverWidth !== undefined && !integer(request.coverWidth, 1))) {
           throw new Error("NLE Studio storyboard Action fields are invalid.");
         }
       } else if (request.kind === "media.waveform") {
@@ -329,16 +363,40 @@ function actionRequest(value: unknown): NleStudioActionRequest {
     }
     return request as NleStudioActionRequest;
   }
+  if (request.kind === "audio.source-preview") {
+    const target = record(request.target, "NLE Studio Audio preview target");
+    if (!fields(request, "kind", "target", "version", "blocks", "samplesPerPeak")
+      || !fields(target, "kind", "composition") || target.kind !== "composition" || !identity(target.composition)
+      || typeof request.version !== "string" || !/^[a-f0-9]{64}$/u.test(request.version)
+      || !isWaveformPreviewResolution(request.samplesPerPeak) || !Array.isArray(request.blocks)
+      || request.blocks.length < 1 || request.blocks.length > 64 || !request.blocks.every(block => integer(block))) {
+      throw new Error("Audio source preview requires a Composition, version, PCM resolution and one to 64 block indices.");
+    }
+    return request as NleStudioActionRequest;
+  }
+  if (request.kind === "picture.source-preview") {
+    const target = record(request.target, "NLE Studio Picture preview target");
+    if (!fields(request, "kind", "target", "version", "positions", "samplesPerSecond")
+      || (request.samplesPerSecond !== undefined && !isPicturePreviewRate(request.samplesPerSecond)) || !identity(target.composition)
+      || (target.kind === "composition" ? !fields(target, "kind", "composition")
+        : target.kind !== "component" || !fields(target, "kind", "composition", "item") || !identity(target.item))
+      || typeof request.version !== "string" || !/^[a-f0-9]{64}$/u.test(request.version)
+      || !Array.isArray(request.positions) || request.positions.length < 1 || request.positions.length > 24) {
+      throw new Error("Picture source preview requires a target, version and one to 24 positions.");
+    }
+    request.positions.forEach(exact);
+    return request as NleStudioActionRequest;
+  }
   if (!integer(request.expectedProjectRevision)) throw new Error("NLE Studio Action requires a Project revision.");
   if (request.kind === "frame-preview" || request.kind === "playback-preview" || request.kind === "programme-waveform") {
-    const common = ["kind", "expectedProjectRevision", "expectedViewRevision", "composition", "atFrame"];
+    const common = ["kind", "expectedProjectRevision", "composition", "atFrame"];
     const range = request.kind === "frame-preview" ? fields(request, ...common)
       : integer(request.durationFrames, 1) && (request.kind === "playback-preview"
         ? fields(request, ...common, "durationFrames")
         : fields(request, ...common, "durationFrames", "width", "height")
           && (request.width === undefined || integer(request.width, 16) && Number(request.width) <= 2048)
           && (request.height === undefined || integer(request.height, 16) && Number(request.height) <= 512));
-    if (!range || !integer(request.expectedViewRevision) || !identity(request.composition) || !integer(request.atFrame)) {
+    if (!range || !identity(request.composition) || !integer(request.atFrame)) {
       throw new Error(`NLE Studio ${request.kind} fields are invalid.`);
     }
     return request as NleStudioActionRequest;
@@ -373,23 +431,45 @@ function sendJson(response: ServerResponse, status: number, value: unknown): voi
 }
 
 const browserDirectory = fileURLToPath(new URL("./browser/", import.meta.url));
-const staticFiles: Readonly<Record<string, { readonly file: string; readonly type: string }>> = {
-  "/": { file: "index.html", type: "text/html; charset=utf-8" },
+const browserContentTypes = {
+  ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".woff2": "font/woff2",
 };
 
-async function sendStatic(response: ServerResponse, pathname: string): Promise<boolean> {
-  const selected = staticFiles[pathname] ?? (pathname.startsWith("/assets/")
-    ? { file: pathname.slice(1), type: pathname.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8" }
-    : undefined);
-  if (selected === undefined || selected.file.includes("..")) return false;
-  const path = resolve(browserDirectory, selected.file);
-  const info = await stat(path);
+// Open the browser build with the adapter so later builds on disk cannot change a running Host's client.
+const browserBuild = (() => {
+  const files = new Map<string, { readonly bytes: Buffer; readonly type: string }>();
+  try {
+    files.set("/", {
+      bytes: readFileSync(join(browserDirectory, "index.html")),
+      type: "text/html; charset=utf-8",
+    });
+    const assets = join(browserDirectory, "assets");
+    for (const entry of readdirSync(assets, { withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      const extension = extname(entry.name);
+      if (!Object.hasOwn(browserContentTypes, extension)) continue;
+      const type = browserContentTypes[extension as keyof typeof browserContentTypes];
+      files.set(`/assets/${entry.name}`, { bytes: readFileSync(join(assets, entry.name)), type });
+    }
+    return { files };
+  } catch (error) {
+    return { error: new Error("The NLE Studio browser build is unavailable. Build NLE Studio and restart the Host.", { cause: error }) };
+  }
+})();
+
+function sendStatic(response: ServerResponse, pathname: string): boolean {
+  if (pathname !== "/" && !pathname.startsWith("/assets/")) return false;
+  if (browserBuild.error !== undefined) throw browserBuild.error;
+  const selected = browserBuild.files.get(pathname);
+  if (selected === undefined) return false;
   response.writeHead(200, {
     "content-type": selected.type,
-    "content-length": info.size,
+    "content-length": selected.bytes.byteLength,
     "cache-control": "no-store",
   });
-  createReadStream(path).pipe(response);
+  response.end(selected.bytes);
   return true;
 }
 
@@ -420,12 +500,11 @@ function byteRange(value: string | undefined, size: number): ByteRange | undefin
 }
 
 async function sendResource(
-  studio: NleStudioProductSession,
+  resource: MediaResource,
   request: IncomingMessage,
   response: ServerResponse,
-  token: string,
+  cors = false,
 ): Promise<void> {
-  const resource = studio.resource(token);
   const information = await stat(resource.address);
   if (!information.isFile()) throw new Error("NLE Studio resource is not a file.");
   let range: ByteRange | undefined;
@@ -448,6 +527,7 @@ async function sendResource(
     "content-length": length,
     "accept-ranges": "bytes",
     "cache-control": "no-store",
+    ...(cors ? { "access-control-allow-origin": "*" } : {}),
     ...(range === undefined ? {} : { "content-range": `bytes ${range.start}-${range.end}/${information.size}` }),
   });
   if (request.method === "HEAD") {
@@ -458,28 +538,97 @@ async function sendResource(
     start: range.start,
     end: range.end,
   });
+  response.once("close", () => stream.destroy());
   stream.on("error", (error) => response.destroy(error));
   stream.pipe(response);
 }
 
-async function sendPresentation(
-  studio: NleStudioProductSession,
-  response: ServerResponse,
-  resource: string,
-): Promise<void> {
-  const value = await studio.presentationResource(resource);
-  response.writeHead(200, {
-    "content-type": value.mediaType,
-    "content-length": value.bytes.byteLength,
-    "cache-control": "no-store",
-  });
-  response.end(value.bytes);
+async function sendProgramme(
+  studio: NleStudioProductSession, request: IncomingMessage, response: ServerResponse, url: URL, pathname: string,
+): Promise<boolean> {
+  const programme = studio.programme;
+  const match = /^\/api\/programme\/([0-9a-f-]{36})\/(.+)$/u.exec(pathname);
+  if (programme === undefined || match === null) return false;
+  const generation = match[1]!;
+  const route = match[2]!;
+  if (request.method === "POST" && route === "activate") {
+    programme.activate(generation);
+    response.writeHead(204).end();
+    return true;
+  }
+  if (request.method === "GET" && route === "index.html") {
+    const assets = new URL("./assets/", url).href;
+    const sources = new URL("./source/", url).href;
+    let html: string;
+    try { html = await programme.document(generation); }
+    catch (error) {
+      const message = JSON.stringify(error instanceof Error ? error.message : String(error)).replaceAll("<", "\\u003c");
+      html = `<!doctype html><script>addEventListener('message',event=>{
+        if(event.source===parent&&event.origin===location.origin&&event.data?.kind==='programme-seek'
+          &&event.data.generation===${JSON.stringify(generation)})parent.postMessage({
+            kind:'programme-error',generation:event.data.generation,sequence:event.data.sequence,message:${message}
+          },location.origin);
+      });</script>`;
+    }
+    response.writeHead(200, {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "content-security-policy": `sandbox allow-scripts; default-src 'none'; frame-ancestors 'self'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src ${assets} data: blob:; font-src ${assets} data:; media-src ${assets}; connect-src ${assets} ${sources}`,
+    }).end(html);
+    return true;
+  }
+  const artifact = /^assets\/([a-zA-Z0-9._:-]+)$/u.exec(route)?.[1];
+  if (artifact !== undefined && (request.method === "GET" || request.method === "HEAD")) {
+    await sendResource(await programme.resource(generation, artifact), request, response, true);
+    return true;
+  }
+  const audio = /^audio\/([0-9]+)\.wav$/u.exec(route);
+  if (request.method === "GET" && audio !== null) {
+    const frame = Number(audio[1]);
+    if (!Number.isSafeInteger(frame)) throw new Error("Invalid Programme audio frame.");
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    response.once("close", abort);
+    try {
+      const bytes = await programme.audioBuffer(generation, frame, controller.signal);
+      if (bytes === undefined) response.writeHead(204, { "cache-control": "no-store" }).end();
+      else response.writeHead(200, { "content-type": "audio/wav", "content-length": bytes.byteLength,
+        "cache-control": "no-store" }).end(bytes);
+    } catch (error) {
+      if (!controller.signal.aborted) throw error;
+    } finally {
+      response.off("close", abort);
+    }
+    return true;
+  }
+  const source = /^source\/([a-zA-Z0-9._:-]+)\/([0-9]+)\.png$/u.exec(route);
+  if (request.method === "GET" && source !== null) {
+    const frame = Number(source[2]);
+    if (!Number.isSafeInteger(frame)) throw new Error("Invalid Programme source frame.");
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    response.once("close", abort);
+    try {
+      const bytes = await programme.sourceFrame(generation, source[1]!, frame, controller.signal);
+      response.writeHead(200, {
+        "content-type": "image/png", "content-length": bytes.byteLength,
+        "cache-control": "no-store", "access-control-allow-origin": "*",
+      }).end(bytes);
+    } catch (error) {
+      if (!controller.signal.aborted) throw error;
+    } finally {
+      response.off("close", abort);
+    }
+    return true;
+  }
+  return false;
 }
 
 async function receiveMediaFile(
   studio: NleStudioProductSession,
   request: IncomingMessage,
   name: string,
+  folder: string | null,
 ): Promise<NleStudioOperationReceipt> {
   if (name.length === 0) throw new Error("NLE Studio Media import requires a filename.");
   const directory = await mkdtemp(join(tmpdir(), "hypit-media-upload-"));
@@ -488,7 +637,7 @@ async function receiveMediaFile(
     await pipeline(request, createWriteStream(source, { flags: "wx" }));
     const information = await stat(source);
     if (information.size === 0) throw new Error(`NLE Studio Media import ${name} is empty.`);
-    return await studio.importMediaFile({ sourcePath: source, sourceName: name });
+    return await studio.importMediaFile({ sourcePath: source, sourceName: name, ...(folder === null ? {} : { folder }) });
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
@@ -511,8 +660,7 @@ export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
         return true;
       }
       if (request.method === "POST" && pathname === "/api/command") {
-        const body = await jsonBody(request) as NleStudioCommandRequest;
-        sendJson(response, 200, await studio.command(body.command as NleEditingSurfaceCommand));
+        sendJson(response, 200, await studio.command(commandRequest(await jsonBody(request))));
         return true;
       }
       if (request.method === "POST" && pathname === "/api/operate") {
@@ -520,7 +668,15 @@ export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
         return true;
       }
       if (request.method === "POST" && pathname === "/api/media/import") {
-        sendJson(response, 200, await receiveMediaFile(studio, request, url.searchParams.get("name") ?? ""));
+        sendJson(response, 200, await receiveMediaFile(studio, request, url.searchParams.get("name") ?? "", url.searchParams.get("folder")));
+        return true;
+      }
+      if (request.method === "POST" && pathname === "/api/media/library") {
+        sendJson(response, 200, await studio.editMediaLibrary(readProjectMediaLibraryEdit(await jsonBody(request))));
+        return true;
+      }
+      if (request.method === "POST" && pathname === "/api/media/asset") {
+        sendJson(response, 200, await studio.editMediaAsset(readProjectMediaAssetEdit(await jsonBody(request))));
         return true;
       }
       if (request.method === "POST" && pathname === "/api/actions") {
@@ -547,16 +703,11 @@ export const nleStudioNodeProductAdapter: NodeApplicationProductAdapter = {
       if ((request.method === "GET" || request.method === "HEAD") && pathname.startsWith("/api/resources/")) {
         const token = decodeURIComponent(pathname.slice("/api/resources/".length));
         if (token.length === 0 || token.includes("/")) throw new Error("NLE Studio resource token is invalid.");
-        await sendResource(studio, request, response, token);
+        await sendResource(studio.resource(token), request, response);
         return true;
       }
-      if (request.method === "GET" && pathname.startsWith("/api/presentations/")) {
-        const resource = decodeURIComponent(pathname.slice("/api/presentations/".length));
-        if (resource.length === 0) throw new Error("NLE Studio presentation resource is invalid.");
-        await sendPresentation(studio, response, resource);
-        return true;
-      }
-      return request.method === "GET" && await sendStatic(response, pathname);
+      if (pathname.startsWith("/api/programme/") && await sendProgramme(studio, request, response, url, pathname)) return true;
+      return request.method === "GET" && sendStatic(response, pathname);
     } catch (error) {
       const documentConflict = error instanceof NleDocumentConflict;
       const conflict = documentConflict || error instanceof Error && error.name.includes("RevisionConflict");

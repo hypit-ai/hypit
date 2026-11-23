@@ -113,9 +113,9 @@ export function createMediaAssetMaterialization(project: NleProject, input: {
 /** Plan one package Component occurrence without evaluating the Component Source. */
 export function createComponentMaterialization(project: NleProject, input: {
   readonly id: string;
+  readonly name?: string;
   readonly track: string;
   readonly component: PackageSymbol;
-  readonly role?: NleComponentItem["role"];
   readonly parameters: Readonly<Record<string, unknown>>;
   readonly valueBindings?: readonly NleComponentValueBinding[];
   readonly media?: Readonly<Record<string, NleMediaReference>>;
@@ -129,16 +129,14 @@ export function createComponentMaterialization(project: NleProject, input: {
   const destination = location.track;
   assert(destination.kind === "picture",
     `NLE Component ${input.id} requires a Picture Track.`);
-  assert((destination.role === "subtitle") === (input.role === "subtitle"),
-    `NLE Component ${input.id} requires a Track with a matching subtitle role.`);
   return { commands: [{
     kind: "item.add",
     track: destination.id,
     item: {
       id: input.id,
+      ...(input.name === undefined ? {} : { name: input.name }),
       kind: "present",
       source: "component",
-      ...(input.role === undefined ? {} : { role: input.role }),
       component: structuredClone(input.component),
       parameters: structuredClone(input.parameters),
       ...(input.valueBindings === undefined
@@ -156,6 +154,7 @@ export function createComponentMaterialization(project: NleProject, input: {
 /** Plan one independently timed Programme-scoped Process. */
 export function createAdjustMaterialization(project: NleProject, input: {
   readonly id: string;
+  readonly name?: string;
   readonly track: string;
   readonly operator: PackageSymbol;
   readonly parameters: NleParameterBinding;
@@ -168,6 +167,7 @@ export function createAdjustMaterialization(project: NleProject, input: {
   const item: NleAdjustItem = {
     id: input.id,
     kind: "adjust",
+    ...(input.name === undefined ? {} : { name: input.name }),
     operator: structuredClone(input.operator),
     parameters: structuredClone(input.parameters),
     start: structuredClone(input.at),
@@ -249,8 +249,8 @@ export function createCompositionMaterialization(project: NleProject, input: {
     item.enabled && item.kind === "present" && item.picture !== undefined));
   const hasAudio = source.tracks.some((candidate) => candidate.enabled && candidate.items.some((item) =>
     item.enabled && item.kind === "present" && item.audio !== undefined));
-  assert(location.track.kind !== "picture" || hasPicture,
-    `NLE Composition ${source.id} has no Picture for Track ${location.track.id}.`);
+  assert(location.track.kind !== "picture" || hasPicture || hasAudio,
+    `NLE Composition ${source.id} has no enabled content for Track ${location.track.id}.`);
   assert(location.track.kind !== "audio" || hasAudio,
     `NLE Composition ${source.id} has no Audio for Track ${location.track.id}.`);
   assert(location.track.kind !== "audio" || input.audio !== false,

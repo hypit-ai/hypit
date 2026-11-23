@@ -1,39 +1,31 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
-import { snapTimelineEdges } from './timelineGeometry.js';
+import { labelWidth, snapTimelineEdges, timelineOrigin } from './timelineGeometry.js';
 
-export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixels: number, labelWidth: number, frame: number, endFrame: number,
+export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixels: number, endFrame: number,
   snapBoundaries: readonly number[] | undefined, onSeek: (frame: number) => void) {
   const cancel = useRef<() => void>(() => {});
-  const seeking = useRef(false), [active, setActive] = useState(false);
+  const [active, setActive] = useState(false);
   const [snapped, setSnapped] = useState(false);
   const seek = useRef(onSeek); seek.current = onSeek;
   useEffect(() => () => cancel.current(), [pixels, endFrame]);
-  const previousFrame = useRef(frame);
-  useEffect(() => {
-    if (previousFrame.current === frame) return;
-    previousFrame.current = frame;
-    const viewport = scroller.current;
-    if (!viewport || seeking.current) return;
-    const x = frame * pixels, width = viewport.clientWidth - labelWidth;
-    if (x < viewport.scrollLeft || x > viewport.scrollLeft + width - 12) viewport.scrollLeft = Math.max(0, x - width * .2);
-  }, [frame, pixels, scroller, labelWidth]);
 
-  const start = (event: ReactPointerEvent<HTMLElement>) => {
+  const start = (event: ReactPointerEvent<HTMLElement>, anchorFrame?: number) => {
     const viewport = scroller.current;
     if (!viewport || event.button !== 0) return;
     cancel.current(); event.preventDefault(); event.stopPropagation();
     const handle = event.currentTarget, pointerId = event.pointerId;
     handle.setPointerCapture(pointerId);
-    seeking.current = true; setActive(true);
+    setActive(true);
     // The arrow cursor stays while scrubbing, whatever the pointer passes over.
     document.documentElement.classList.add('nle-seeking');
     let x = event.clientX, animation = 0, last = -1;
+    const grabOffset = anchorFrame === undefined ? 0
+      : anchorFrame * pixels - (x - viewport.getBoundingClientRect().left - timelineOrigin + viewport.scrollLeft);
     let dragged = false, alt = event.altKey;
     const locate = () => {
       const bounds = viewport.getBoundingClientRect();
-      const left = bounds.left + labelWidth;
-      const pointer = Math.max(left, Math.min(bounds.left + viewport.clientWidth, x));
-      const raw = Math.max(0, Math.min(endFrame, (pointer - left + viewport.scrollLeft) / pixels));
+      const pointer = Math.max(bounds.left + labelWidth, Math.min(bounds.left + viewport.clientWidth, x));
+      const raw = Math.max(0, Math.min(endFrame, (pointer - bounds.left - timelineOrigin + viewport.scrollLeft + grabOffset) / pixels));
       const aligned = dragged && !alt && snapBoundaries
         ? snapTimelineEdges([raw], undefined, snapBoundaries, pixels, correction => raw + correction <= endFrame) : undefined;
       const at = Math.round(aligned?.frame ?? raw);
@@ -53,7 +45,7 @@ export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixe
       window.removeEventListener('keydown', key); window.removeEventListener('blur', cleanup);
       if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
       document.documentElement.classList.remove('nle-seeking');
-      seeking.current = false; setActive(false); setSnapped(false); cancel.current = () => {};
+      setActive(false); setSnapped(false); cancel.current = () => {};
     };
     const abort = (next: PointerEvent) => { if (next.pointerId === pointerId) cleanup(); };
     const up = (next: PointerEvent) => { if (next.pointerId === pointerId) { move(next); cleanup(); } };
@@ -62,7 +54,7 @@ export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixe
       const bounds = viewport.getBoundingClientRect(), right = bounds.left + viewport.clientWidth;
       const delta = x < bounds.left + labelWidth + 16 ? -Math.min(12, (bounds.left + labelWidth + 16 - x) / 3)
         : x > right - 16 ? Math.min(12, (x - right + 16) / 3) : 0;
-      if (delta) { viewport.scrollLeft += delta; locate(); }
+      if (dragged && delta) { viewport.scrollLeft += delta; locate(); }
       animation = requestAnimationFrame(scroll);
     };
     cancel.current = cleanup;

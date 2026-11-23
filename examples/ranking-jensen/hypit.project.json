@@ -2,10 +2,10 @@
   "format": "hypit.project",
   "name": "Jensen ranking",
   "packages": [
-    { "name": "@hypit-example/ranking-football-components", "catalog": ["tier-board"] },
+    { "name": "@hypit-example/ranking-football-components", "catalog": ["tier-board", "reveal-flash"] },
     { "name": "@hypit/text-fine", "catalog": ["text"] },
     { "name": "@hypit/caption-fine", "catalog": ["caption"] },
-    { "name": "@hypit/picture-effects", "catalog": ["transform", "filter", "crossfade"] },
+    { "name": "@hypit/picture-effects", "catalog": ["transform", "filter", "warm-film", "crossfade"] },
     { "name": "@hypit/audio-effects", "catalog": ["gain"] }
   ]
 }

@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { nleItemEnd, type NleCommand, type NleComposition, type NleItem, type NleMatte, type NleTrack, type NleTransition } from "@hypit/nle";
-import { nleViewCompositionState, nleViewTrackLocked, type NleEditGroup, type NleView } from "@hypit/nle/view";
+import { nleItemEnd, type NleCommand, type NleComposition, type NleEditGroup, type NleItem, type NleMatte, type NleTrack, type NleTransition } from "@hypit/nle";
 import { addExactTemporalValues, compareExactTemporalValues, subtractExactTemporalValues, type ExactTemporalValue } from "@hypit/temporal/algebra";
 
 export type StudioClipboard = {
@@ -12,7 +11,7 @@ export type StudioClipboard = {
   readonly count: number;
 };
 
-export function captureStudioClipboard(composition: NleComposition, view: NleView, items: readonly string[]): StudioClipboard {
+export function captureStudioClipboard(composition: NleComposition, items: readonly string[]): StudioClipboard {
   const ids = new Set(items);
   const tracks = composition.tracks.flatMap(track => {
     const selected = track.items.filter(item => ids.has(item.id));
@@ -28,8 +27,7 @@ export function captureStudioClipboard(composition: NleComposition, view: NleVie
     tracks, origin, count: selection.length,
     transitions: composition.transitions.filter(relation => ids.has(relation.outgoing) && ids.has(relation.incoming)),
     mattes: composition.mattes.filter(relation => ids.has(relation.content) && ids.has(relation.matte)),
-    groups: (nleViewCompositionState(view, composition.id)?.groups ?? [])
-      .filter(group => group.items.every(item => ids.has(item))),
+    groups: composition.groups.filter(group => group.items.every(item => ids.has(item))),
   });
 }
 
@@ -38,7 +36,7 @@ function overlaps(left: NleItem, right: NleItem): boolean {
     && compareExactTemporalValues(right.start, nleItemEnd(left)) < 0;
 }
 
-export function planStudioPaste(clipboard: StudioClipboard, destination: NleComposition, view: NleView, at: ExactTemporalValue) {
+export function planStudioPaste(clipboard: StudioClipboard, destination: NleComposition, lockedTracks: ReadonlySet<string>, at: ExactTemporalValue) {
   const delta = subtractExactTemporalValues(at, clipboard.origin);
   const ids = new Map<string, string>();
   const shifted = clipboard.tracks.map(track => ({
@@ -54,7 +52,7 @@ export function planStudioPaste(clipboard: StudioClipboard, destination: NleComp
   const reusable = shifted.every((source, index) => {
     const current = matched[index];
     if (current === undefined || current.track.kind !== source.kind || current.track.role !== source.role || current.track.enabled !== source.enabled
-      || nleViewTrackLocked(view, destination.id, current.track.id)) return false;
+      || lockedTracks.has(current.track.id)) return false;
     if (index > 0 && (matched[index - 1]?.index ?? Infinity) >= current.index) return false;
     if (source.kind === "audio") return true;
     if (source.items.some(item => item.kind === "adjust") || current.track.items.some(item => item.kind === "adjust")) return false;
@@ -82,8 +80,9 @@ export function planStudioPaste(clipboard: StudioClipboard, destination: NleComp
       },
     });
   }
-  const groups = clipboard.groups.map(group => ({
-    id: `group-${randomUUID()}`, name: group.name, items: group.items.map(item => ids.get(item)!),
-  }));
-  return { commands, items: [...ids.values()], groups };
+  for (const group of clipboard.groups) {
+    commands.push({ kind: "group.add", composition: destination.id,
+      group: { id: `group-${randomUUID()}`, items: group.items.map(item => ids.get(item)!) } });
+  }
+  return { commands, items: [...ids.values()] };
 }

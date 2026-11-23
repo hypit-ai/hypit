@@ -1,6 +1,7 @@
 {
   "format": "hypit.media-asset",
   "media": {
+    "adoptedAt": "2026-11-18T02:04:00.000Z",
     "file": {
       "path": "title.svg",
       "mediaType": "image/svg+xml"

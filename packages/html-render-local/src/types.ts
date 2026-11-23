@@ -1,9 +1,14 @@
 import type { HtmlFrameRequest, HtmlRasterRequest, RenderedVisual } from "@hypit/html-program";
+import type { indexLocalVideoFrames } from "@hypit/media-local";
 
 export type HtmlRenderProgress = {
   readonly completedFrames: number;
   readonly totalFrames: number;
 };
+
+export type HtmlSourceFrameIndexReader = (
+  input: Parameters<typeof indexLocalVideoFrames>[0], sourceVersion?: string,
+) => ReturnType<typeof indexLocalVideoFrames>;
 
 export type LocalHtmlRenderOptions = {
   readonly ffmpegPath?: string;
@@ -12,6 +17,7 @@ export type LocalHtmlRenderOptions = {
   readonly maxWorkers?: number;
   readonly maxPendingFrameBytes?: number;
   readonly maxDecodedSourceBytes?: number;
+  readonly indexVideoFrames?: HtmlSourceFrameIndexReader;
   readonly signal?: AbortSignal;
   readonly onProgress?: (progress: HtmlRenderProgress) => void;
 };
@@ -21,6 +27,7 @@ export type StagedHtmlFiles = {
   readonly document: string;
   /** Absolute staged path keyed by the closed invocation-local resource address. */
   readonly artifactPaths: ReadonlyMap<string, string>;
+  readonly videoVersions?: ReadonlyMap<string, string>;
 };
 
 export type StagedHtmlProgram = StagedHtmlFiles & {

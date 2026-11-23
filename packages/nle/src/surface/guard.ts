@@ -1,9 +1,9 @@
+import type { NleEditingContext } from "./types.js";
 import type { NleCommand, NleTransaction } from "../transaction.js";
 import { applyNleTransaction } from "../transaction.js";
 import { indexNleProject } from "../indexing.js";
 import type { NleComposition, NleItem, NleProject, NleTrack } from "../types.js";
-import type { NleTimelineItemCapabilities, NleView } from "./types.js";
-import { assertNleViewForProject, nleViewTrackLocked } from "./view.js";
+import type { NleTimelineItemCapabilities } from "./projection-types.js";
 
 type LocatedTrack = {
   readonly composition: NleComposition;
@@ -117,6 +117,14 @@ function commandTracks(project: NleProject, command: NleCommand): readonly Locat
       ]);
     case "matte.remove":
       return items(relationItems(project, "matte", command.id));
+    case "group.add":
+      return items(command.group.items);
+    case "group.replace":
+    case "group.remove": {
+      const id = command.kind === "group.replace" ? command.group.id : command.id;
+      const group = project.compositions.find(value => value.id === command.composition)?.groups.find(value => value.id === id);
+      return group === undefined ? [] : items(group.items);
+    }
     case "item.replace":
       return items([command.item.id]);
     case "item.remove":
@@ -127,16 +135,15 @@ function commandTracks(project: NleProject, command: NleCommand): readonly Locat
 }
 
 /**
- * Host-surface guard for Project edits initiated through this View.
+ * Check a completed Project transaction against the current session locks.
  * The Project Service remains authoritative and can still be called by another explicit caller.
  */
-export function assertNleViewAllowsProjectTransaction(
-  view: NleView,
+export function assertNleProjectEditAllowed(
+  editing: NleEditingContext,
   project: NleProject,
   transaction: NleTransaction,
   capabilities?: readonly NleTimelineItemCapabilities[],
-): void {
-  assertNleViewForProject(view, project);
+): NleProject {
   const capabilityByItem = capabilities === undefined
     ? undefined
     : new Map(capabilities.map((value) => [value.item, value] as const));
@@ -174,11 +181,12 @@ export function assertNleViewAllowsProjectTransaction(
       const key = `${composition.id}\0${track.id}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      if (nleViewTrackLocked(view, composition.id, track.id)) {
+      if (editing.lockedTracks.has(track.id)) {
         throw new Error(
-          `NLE View Track ${track.id} in Composition ${composition.id} is locked for ${command.kind}.`,
+          `NLE Track ${track.id} in Composition ${composition.id} is locked for ${command.kind}.`,
         );
       }
     }
   }
+  return completed;
 }

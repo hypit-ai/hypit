@@ -1,196 +1,161 @@
-import type { MediaStoryboardAtlas } from "@hypit/media";
-import { useEffect, useRef, useState } from "react";
-import type { NleStudioOpenProjection, NleStudioTimelineMediaView } from "../protocol.js";
-import { cancelAction, readAction, readTimelineMedia, startAction } from "./api.js";
+import { addExactTemporalValues, compareExactTemporalValues, createTemporalMapEvaluator, exactTemporalZero, isAffineTemporalMapPiece,
+  type TemporalRate } from "@hypit/temporal/algebra";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { NleTimelineSceneTrack } from "@hypit/nle/surface";
+import type { NleStudioTimelineAudioPreviewSource, NleStudioTimelinePreview, NleStudioTimelineProjection } from "../protocol.js";
+import { SourceWaveform } from "./SourceWaveform.js";
+import { SourceFilmstrip } from "./SourceFilmstrip.js";
+import { mediaSeconds, sampleTime } from "./source-preview.js";
+import { rowSize, rulerHeight } from "./timelineGeometry.js";
+import type { TimelineViewport } from "./useTimelineViewport.js";
 
-type VisibleTracks = { readonly fromFrame: number; readonly toFrame: number; readonly tracks: readonly string[] };
-type TimelinePreview = { readonly image: HTMLImageElement; readonly frames?: readonly HTMLImageElement[] };
-type TimelineMediaResult = NleStudioTimelineMediaView & TimelinePreview;
-
-const cachedViewLimit = 24;
-
-async function loadStoryboardFrames(image: HTMLImageElement, atlas: MediaStoryboardAtlas) {
-  const { tileWidth, tileHeight, columns } = atlas;
-  const canvas = document.createElement("canvas");
-  canvas.width = tileWidth;
-  canvas.height = tileHeight;
-  const context = canvas.getContext("2d");
-  if (context === null) throw new Error("Timeline storyboard requires a 2D canvas.");
-  const tiles = Array.from({ length: atlas.count }, (_, tile) => {
-    context.clearRect(0, 0, tileWidth, tileHeight);
-    context.drawImage(image, (tile % columns) * tileWidth, Math.floor(tile / columns) * tileHeight,
-      tileWidth, tileHeight, 0, 0, tileWidth, tileHeight);
-    const frame = new Image();
-    frame.src = canvas.toDataURL();
-    return frame;
-  });
-  await Promise.all(tiles.map(tile => tile.decode()));
-  return atlas.samples.map(sample => tiles[sample.tile]!);
-}
-
-async function loadPreview(resource: string, atlas: MediaStoryboardAtlas | undefined, signal: AbortSignal): Promise<TimelinePreview> {
-  const response = await fetch(resource, { signal });
-  if (!response.ok) throw new Error(`Timeline image request failed with ${response.status}.`);
-  const url = URL.createObjectURL(await response.blob());
-  try {
-    const image = new Image();
-    image.src = url;
-    await image.decode();
-    signal.throwIfAborted();
-    if (atlas === undefined) return { image };
-    const frames = await loadStoryboardFrames(image, atlas);
-    signal.throwIfAborted();
-    return { image, frames };
-  } catch (error) {
-    URL.revokeObjectURL(url);
-    throw error;
-  }
-}
+type PreviewWindow = { readonly left: number; readonly right: number };
+const overscan = 108;
+const retainedPreviews = 32;
 
 export function useTimelineMedia(
-  scroller: React.RefObject<HTMLDivElement | null>,
-  session: NleStudioOpenProjection,
+  { previewSources, scene }: NleStudioTimelineProjection,
+  tracks: readonly NleTimelineSceneTrack[],
   frameWidth: number,
-  labelWidth: number,
+  viewport: TimelineViewport,
+  trackPadding: number,
 ) {
-  const { scene } = session.timeline;
-  const { projectRevision, viewRevision } = session.status;
-  const { generation, derivedViews } = session.media;
-  const [visible, setVisible] = useState<VisibleTracks>();
-  const scope = JSON.stringify([scene.composition, projectRevision, generation, scene.editRate.numerator, scene.editRate.denominator, derivedViews]);
-  const cache = useRef(new Map<string, TimelineMediaResult>());
-  const resources = useRef(new Set<string>());
-  const [shown, setShown] = useState<{ scope: string; views: readonly TimelineMediaResult[] }>();
-
-  useEffect(() => {
-    cache.current.clear();
-    setShown(undefined);
-  }, [scope]);
-
-  useEffect(() => {
-    const retained = new Set([...(shown?.views ?? []), ...cache.current.values()].map(view => view.image.src));
-    for (const url of resources.current) {
-      if (retained.has(url)) continue;
-      URL.revokeObjectURL(url);
-      resources.current.delete(url);
+  const left = Math.max(0, viewport.left - overscan);
+  const right = viewport.left + viewport.width + overscan;
+  const top = viewport.top + rulerHeight - overscan;
+  const bottom = viewport.top + viewport.height + overscan;
+  const active = useMemo(() => {
+    const items = new Set<string>();
+    if (viewport.height === 0) return items;
+    let y = rulerHeight + trackPadding;
+    for (const track of tracks) {
+      const end = y + rowSize(track);
+      if (y >= bottom) break;
+      if (end > top) {
+        for (const item of track.items) {
+          if (previewSources[item.id] !== undefined && item.startFrame * frameWidth < right
+            && (item.startFrame + item.durationFrames) * frameWidth > left) items.add(item.id);
+        }
+      }
+      y = end;
     }
-  }, [shown]);
+    return items;
+  }, [previewSources, tracks, frameWidth, viewport.height, trackPadding, left, right, top, bottom]);
 
-  useEffect(() => {
-    const urls = resources.current;
-    return () => {
-      for (const url of urls) URL.revokeObjectURL(url);
-      urls.clear();
-    };
-  }, []);
-
-  useEffect(() => {
-    const element = scroller.current;
-    if (element === null) return;
-    let timer: number | undefined;
-    const measure = () => {
-      const viewport = element.getBoundingClientRect();
-      const top = element.querySelector(".nle-ruler")?.getBoundingClientRect().bottom ?? viewport.top;
-      const tracks = Array.from(element.querySelectorAll<HTMLElement>(".nle-track[data-track-id]")).filter(row => {
-        const box = row.getBoundingClientRect();
-        return box.top < viewport.bottom && box.bottom > top;
-      }).slice(0, 64).map(row => row.dataset.trackId!);
-      const fromFrame = Math.max(0, Math.floor(element.scrollLeft / frameWidth));
-      const toFrame = Math.ceil((element.scrollLeft + element.clientWidth - labelWidth) / frameWidth);
-      setVisible(previous => previous?.fromFrame === fromFrame && previous.toFrame === toFrame
-        && previous.tracks.join("\u0000") === tracks.join("\u0000") ? previous : { fromFrame, toFrame, tracks });
-    };
-    const schedule = () => {
-      window.clearTimeout(timer);
-      timer = window.setTimeout(measure, 180);
-    };
-    const resize = new ResizeObserver(schedule);
-    resize.observe(element);
-    element.addEventListener("scroll", schedule, { passive: true });
-    schedule();
-    return () => {
-      resize.disconnect();
-      element.removeEventListener("scroll", schedule);
-      window.clearTimeout(timer);
-    };
-  }, [scroller, frameWidth, labelWidth, scene]);
-
-  useEffect(() => {
-    if (!derivedViews || visible === undefined || visible.tracks.length === 0 || visible.toFrame <= visible.fromFrame) return;
-    const controller = new AbortController();
-    const { signal } = controller;
-    const pending = new Set<string>();
-    const run = async (view: NleStudioTimelineMediaView) => {
-      const key = JSON.stringify([view.item, view.action.kind]);
-      const previous = cache.current.get(key);
-      if (previous !== undefined && JSON.stringify(previous.action) === JSON.stringify(view.action)) {
-        cache.current.delete(key);
-        cache.current.set(key, previous);
-        return;
-      }
-      let action = await startAction(view.action);
-      try {
-        pending.add(action.handle);
-        if (signal.aborted) {
-          if (action.state === "queued" || action.state === "running") await cancelAction(action.handle);
-          return;
-        }
-        while (!signal.aborted && (action.state === "queued" || action.state === "running")) {
-          await new Promise<void>(resolve => window.setTimeout(resolve, 250));
-          if (signal.aborted) return;
-          action = await readAction(action.handle);
-        }
-        if (action.state === "complete" && !signal.aborted) {
-          const { resource, atlas } = action.result;
-          const preview = await loadPreview(resource, atlas, signal);
-          if (signal.aborted) { URL.revokeObjectURL(preview.image.src); return; }
-          resources.current.add(preview.image.src);
-          cache.current.delete(key);
-          cache.current.set(key, { ...view, ...preview });
-          if (cache.current.size > cachedViewLimit) cache.current.delete(cache.current.keys().next().value!);
-          setShown({ scope, views: [...cache.current.values()] });
-        }
-      } finally {
-        pending.delete(action.handle);
-      }
-    };
-    void readTimelineMedia({
-      kind: "timeline-media", composition: scene.composition, expectedProjectRevision: projectRevision,
-      expectedViewRevision: viewRevision, expectedMediaGeneration: generation, ...visible,
-    }).then(async views => {
-      if (!signal.aborted) await Promise.allSettled(views.map(run));
-    }).catch(() => undefined);
-    return () => {
-      controller.abort();
-      for (const handle of pending) void cancelAction(handle).catch(() => undefined);
-    };
-  }, [derivedViews, visible, scene.composition, projectRevision, viewRevision, generation, scope]);
-
-  return shown?.scope === scope ? shown.views : [];
+  const [held, setHeld] = useState<{ composition: string; items: ReadonlySet<string> }>();
+  const composition = scene.composition;
+  useLayoutEffect(() => {
+    setHeld(previous => {
+      const recent = previous?.composition === composition
+        ? [...previous.items].filter(id => !active.has(id) && previewSources[id] !== undefined) : [];
+      const items = new Set([...recent.slice(-retainedPreviews), ...active]);
+      if (previous?.composition === composition && previous.items.size === items.size
+        && [...items].every(id => previous.items.has(id))) return previous;
+      return { composition, items };
+    });
+  }, [active, composition, previewSources]);
+  return { left, right, active, retained: held?.composition === composition ? held.items : active };
 }
 
-export function TimelineMedia({ views, item, start, frameWidth }: {
-  readonly views: readonly TimelineMediaResult[];
-  readonly item: string;
-  readonly start: number;
-  readonly frameWidth: number;
+function TimelineAudio({ source, generation, pixelsPerSecond, from, until, active }: {
+  readonly source: NleStudioTimelineAudioPreviewSource;
+  readonly generation: number;
+  readonly pixelsPerSecond: number;
+  readonly from: number;
+  readonly until: number;
+  readonly active: boolean;
 }) {
-  return views.filter(view => view.item === item).map(view => {
-    const { frames } = view;
-    const resource = view.image.src;
-    if (view.action.kind === "media.thumbnail") {
-      return <span aria-hidden="true" key={view.action.kind} className="nle-clip-media still"
-        style={{ backgroundImage: `url("${resource}")` }}/>;
-    }
-    const left = (view.fromFrame - start) * frameWidth;
-    const width = (view.toFrame - view.fromFrame) * frameWidth;
-    const audio = view.action.kind === "media.waveform";
-    return <span aria-hidden="true" key={view.action.kind}
-      className={audio ? "nle-clip-media waveform" : "nle-clip-media"}
-      style={{ left, width }}>
-      {frames === undefined ? <img src={resource} alt=""/> : frames.map((frame, index) => (
-        <span key={index} style={{ backgroundImage: `url("${frame.src}")` }}/>
-      ))}
+  const duration = mediaSeconds(source.duration);
+  return source.sourceTime.stages[0]!.pieces.map((piece, index) => {
+    if (!isAffineTemporalMapPiece(piece) || piece.wrap !== undefined || piece.rate.numerator === 0) return null;
+    const itemStart = mediaSeconds(piece.target.start);
+    const sourceStart = mediaSeconds(piece.sourceAtStart);
+    const rate = piece.rate.numerator / piece.rate.denominator;
+    const zeroAt = itemStart - sourceStart / rate;
+    const endAt = itemStart + (duration - sourceStart) / rate;
+    const start = Math.max(from / pixelsPerSecond, itemStart, Math.min(zeroAt, endAt));
+    const end = Math.min(until / pixelsPerSecond, mediaSeconds(piece.target.end), Math.max(zeroAt, endAt));
+    if (!(end > start)) return null;
+    return <span key={index} className="nle-clip-media waveform"
+      style={{ left: start * pixelsPerSecond - from, width: (end - start) * pixelsPerSecond }}>
+      <SourceWaveform source={"target" in source ? source : { media: source.media, generation, version: source.version }} duration={duration}
+        active={active} fromSeconds={sourceStart + (start - itemStart) * rate} toSeconds={sourceStart + (end - itemStart) * rate}/>
     </span>;
   });
+}
+
+export function TimelineSourcePreview({ source: { picture, audio }, pictureItem, generation, origin, duration, start, frameWidth, editRate,
+  viewport, active }: {
+  readonly source: NleStudioTimelinePreview;
+  readonly pictureItem: boolean;
+  readonly generation: number;
+  readonly origin: number;
+  readonly duration: number;
+  readonly start: number;
+  readonly frameWidth: number;
+  readonly editRate: TemporalRate;
+  readonly viewport: PreviewWindow;
+  readonly active: boolean;
+}) {
+  const strip = useRef<HTMLSpanElement>(null);
+  const [height, setHeight] = useState(0);
+  useLayoutEffect(() => {
+    const element = strip.current;
+    if (element === null) return;
+    const measure = () => setHeight(element.getBoundingClientRect().height);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const sourceTime = picture?.sourceTime;
+  const sourceDuration = picture?.duration;
+  const evaluate = useMemo(() => sourceTime === undefined ? undefined
+    : createTemporalMapEvaluator(sourceTime), [sourceTime]);
+  const targetKey = picture !== undefined && "target" in picture ? JSON.stringify(picture.target) : undefined;
+  const [extent, setExtent] = useState<{ readonly target: string; readonly aspect: number }>();
+  const onPictureAspect = useCallback((aspect: number) => {
+    if (targetKey === undefined || !Number.isFinite(aspect) || aspect <= 0) return;
+    setExtent(previous => previous?.target === targetKey && previous.aspect === aspect ? previous : { target: targetKey, aspect });
+  }, [targetKey]);
+  const aspect = picture?.displayAspectRatio ?? (extent?.target === targetKey ? extent?.aspect : undefined);
+  const tileRatio = Math.min(2, Math.max(1 / 2, aspect ?? 1));
+  const cellWidth = picture === undefined ? 64 : height * tileRatio;
+  const from = cellWidth === 0 ? 0 : Math.max(0, Math.floor((viewport.left - origin * frameWidth) / cellWidth) * cellWidth);
+  const until = cellWidth === 0 ? 0 : Math.min(duration * frameWidth,
+    Math.ceil((viewport.right - origin * frameWidth) / cellWidth) * cellWidth);
+  const drawing = active && from < until;
+  const [lastWindow, setLastWindow] = useState<readonly [number, number]>();
+  useLayoutEffect(() => {
+    if (!drawing) return;
+    setLastWindow(previous => previous?.[0] === from && previous[1] === until ? previous : [from, until]);
+  }, [drawing, from, until]);
+  const drawFrom = drawing ? from : lastWindow?.[0] ?? 0;
+  const drawUntil = drawing ? until : lastWindow?.[1] ?? 0;
+  const { numerator, denominator } = editRate;
+  const pixelsPerSecond = frameWidth * numerator / denominator;
+  const range = picture !== undefined && "range" in picture ? picture.range : undefined;
+  const sourceAt = useCallback((pixels: number) => {
+    if (range !== undefined) {
+      const time = addExactTemporalValues(range.start, sampleTime((drawFrom + pixels) / pixelsPerSecond));
+      return compareExactTemporalValues(time, range.end) < 0 ? time : undefined;
+    }
+    if (evaluate === undefined) return exactTemporalZero();
+    const time = evaluate(sampleTime((drawFrom + pixels) / pixelsPerSecond), "after")?.position;
+    return time !== undefined && sourceDuration !== undefined && compareExactTemporalValues(time, sourceDuration) < 0 ? time : undefined;
+  }, [evaluate, pixelsPerSecond, drawFrom, sourceDuration, range]);
+  const stripWidth = Math.max(0, drawUntil - drawFrom);
+  const pictureLayout = { width: stripWidth, height };
+  const waveform = drawFrom < drawUntil && audio !== undefined
+    ? <TimelineAudio source={audio} generation={generation} pixelsPerSecond={pixelsPerSecond}
+        from={drawFrom} until={drawUntil} active={drawing}/>
+    : undefined;
+  return <span ref={strip} className="nle-clip-media" aria-hidden="true"
+    style={{ left: (origin - start) * frameWidth + drawFrom, width: stripWidth }}>
+    {drawFrom < drawUntil && picture !== undefined && <SourceFilmstrip className="nle-clip-filmstrip" active={drawing}
+      source={"target" in picture ? picture : { media: picture.media, generation, version: picture.version }}
+      sourceAt={sourceAt} tileRatio={tileRatio} layout={pictureLayout}
+      timed={range !== undefined || sourceTime !== undefined} onPictureAspect={onPictureAspect}/>}
+    {pictureItem && waveform !== undefined ? <span className="nle-clip-audio-band">{waveform}</span> : waveform}
+  </span>;
 }

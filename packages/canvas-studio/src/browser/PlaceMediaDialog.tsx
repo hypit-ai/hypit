@@ -21,7 +21,6 @@ const message = (error: unknown) => error instanceof Error ? error.message : Str
 export function PlaceMediaDialog({ source, close }: { source: PlacementSource; close: () => void }) {
   const [paths, setPaths] = useState<readonly string[]>();
   const [documentPath, setDocumentPath] = useState("");
-  const [viewPath, setViewPath] = useState("");
   const [target, setTarget] = useState<CanvasTimelineTarget>();
   const [track, setTrack] = useState("");
   const [frame, setFrame] = useState("0");
@@ -63,7 +62,7 @@ export function PlaceMediaDialog({ source, close }: { source: PlacementSource; c
   async function open(keepFrame = false) {
     setBusy(true); setError("");
     try {
-      const result = await timelineRequest({ kind: "open", document: documentPath.trim(), ...(viewPath.trim() ? { view: viewPath.trim() } : {}) });
+      const result = await timelineRequest({ kind: "open", document: documentPath.trim() });
       if (result.kind !== "target") throw new Error(t("Could not open the timeline.", "无法打开时间线。"));
       if (!active.current) { await timelineRequest({ kind: "close", target: result.value.target }); return; }
       if (keepFrame && target && result.value.composition !== target.composition && result.value.compositions.some(item => item.id === target.composition)) {
@@ -99,7 +98,7 @@ export function PlaceMediaDialog({ source, close }: { source: PlacementSource; c
       const request = runtime.current.request ??= crypto.randomUUID();
       const current = await timelineRequest({
         kind: "place", target: target.target, request, composition: target.composition,
-        expectedProjectRevision: target.projectRevision, expectedViewRevision: target.viewRevision,
+        expectedProjectRevision: target.projectRevision,
         media, atFrame: Number(frame),
         ...(duration === "" ? {} : { durationFrames: Number(duration) }),
         ...(track ? { track, ...(insert ? { insert: true } : {}) } : {}),
@@ -132,16 +131,10 @@ export function PlaceMediaDialog({ source, close }: { source: PlacementSource; c
       <label>{t("Editing document", "剪辑工程")}
         {paths && paths.length > 0 && <Picker label={t("Editing document", "剪辑工程")} value={paths.includes(documentPath) ? documentPath : ""}
           disabled={!canEdit} options={[{ value: "", label: t("Choose an editing document", "选择剪辑工程") }, ...paths.map(path => ({ value: path, label: path }))]}
-          onChange={path => { setDocumentPath(path); setViewPath(""); setTarget(undefined); setError(""); }}/>}
+          onChange={path => { setDocumentPath(path); setTarget(undefined); setError(""); }}/>}
         <input aria-label={t("Editing document path", "剪辑工程路径")} placeholder="edits/main.svml" value={documentPath} disabled={!canEdit}
           onChange={event => { setDocumentPath(event.target.value); setTarget(undefined); }}/>
       </label>
-      <details>
-        <summary>{t("View settings", "视图设置")}</summary>
-        <label>{t("View document path", "视图文件路径")}<input aria-label={t("View document path", "视图文件路径")}
-          disabled={!canEdit} value={viewPath} placeholder={t("Matching project view", "同名剪辑视图")}
-          onChange={event => { setViewPath(event.target.value); setTarget(undefined); }}/></label>
-      </details>
       {target && <section className="canvas-timeline-fields" aria-label={shownDocument}>
         <label>{t("Composition", "作品")}<Picker label={t("Composition", "作品")} value={target.composition}
           disabled={!canEdit} options={target.compositions.map(item => ({ value: item.id, label: item.name }))}
@@ -176,11 +169,13 @@ export function PlaceMediaDialog({ source, close }: { source: PlacementSource; c
       {error && <p role="alert" className="canvas-error-text">{error}</p>}
       <div className="canvas-dialog-actions">
         {target && error && !savePending && <button type="button" className="button" disabled={busy} onClick={() => void open(true)}>
-          <RefreshCw size={14}/>{t("Reload timeline", "重载时间线")}
+          <RefreshCw size={14}/>{t("Refresh timeline", "刷新时间线")}
         </button>}
         <button type="submit" className="button primary" disabled={busy || (target ? !validFrame || !validDuration : !documentPath.trim())}>
           {target && <Film size={15}/>}
-          {busy ? t("Working…", "处理中…") : savePending ? t("Retry save", "重新保存") : target ? t("Add to editing", "加入剪辑") : t("Open timeline", "打开时间线")}
+          {busy ? t("Working…", "处理中…") : savePending ? t("Retry save", "重新保存") : !target ? t("Open timeline", "打开时间线")
+            : "selection" in source && runtime.current.media === undefined ? t("Import and add to editing", "导入素材并加入剪辑")
+              : t("Add to editing", "加入剪辑")}
         </button>
       </div>
     </form>

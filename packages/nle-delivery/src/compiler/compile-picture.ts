@@ -57,13 +57,14 @@ function activeSpans(active: readonly boolean[]): readonly { readonly startFrame
 
 export function compilePicture(
   program: CompilationGraph,
-  output: { readonly frameRate: HtmlFrameRate; readonly canvas: HtmlCanvas; readonly range?: TemporalRange },
+  output: { readonly frameRate: HtmlFrameRate; readonly canvas: HtmlCanvas;
+    readonly range?: TemporalRange; readonly frames?: readonly number[] },
 ): HtmlProgram {
   if (program.picture === undefined || program.pictureDomain === undefined) {
     throw new Error("HTML compilation requires Picture output.");
   }
   const rate = output.frameRate.numerator / output.frameRate.denominator;
-  const positions = pictureFramePositions(program, output.frameRate, output.range);
+  const positions = pictureFramePositions(program, output.frameRate, output.range, output.frames);
   const frameCount = positions.length;
   if (!Number.isSafeInteger(frameCount) || frameCount <= 0) throw new Error("HTML output frame count is invalid.");
   const domains = pictureNodeSpatialDomains(program.picture, program);
@@ -260,11 +261,31 @@ export function compilePicture(
       Object.entries(node.inputs).map(([name, input]) => ({ name, element: build(input) })),
       Object.fromEntries(controls.map(control => [control.name, control.positions])));
   };
+  const root = build(program.picture.root);
+  const { width, height } = program.pictureDomain.region;
+  const scale = Math.min(output.canvas.width / width, output.canvas.height / height);
+  const left = (output.canvas.width - width * scale) / 2;
+  const top = (output.canvas.height - height * scale) / 2;
+  const fitted: HtmlPictureElement = scale === 1 && left === 0 && top === 0 ? root : {
+    kind: "box", id: id("output"), spans: whole,
+    style: [
+      { name: "position", value: "absolute" },
+      { name: "left", value: `${left}px` },
+      { name: "top", value: `${top}px` },
+      { name: "width", value: `${width}px` },
+      { name: "height", value: `${height}px` },
+      { name: "overflow", value: "hidden" },
+      { name: "transform-origin", value: "0 0" },
+      { name: "transform", value: `scale(${scale})` },
+    ],
+    children: [root],
+  };
   return compileHtmlPictureProgram({
     id: program.id,
     frameRate: output.frameRate,
     frameCount,
+    ...(output.frames === undefined ? {} : { outputFrames: output.frames }),
     canvas: output.canvas,
-    root: build(program.picture.root),
+    root: fitted,
   });
 }

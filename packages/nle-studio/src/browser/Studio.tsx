@@ -1,10 +1,10 @@
 import { Dialog } from "@base-ui/react/dialog";
+import type { ProjectMediaAssetChange, ProjectMediaLibraryChange } from "@hypit/media-asset/service";
 import type { NleCommand } from "@hypit/nle";
-import type { NleTimelineSceneItem } from "@hypit/nle/view";
+import type { NleTimelineSceneItem } from "@hypit/nle/surface";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
-import { Blend, Captions, Images, Maximize2, Minimize2, Pause, Play, StepBack, StepForward, Type, Volume2, VolumeX, Wand2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type {
   NleStudioAdjustCatalogEntry,
   NleStudioComponentCatalogEntry,
@@ -20,7 +20,9 @@ import type {
 } from "../protocol.js";
 import {
   connectStudioEvents,
+  editMediaLibrary,
   importMedia,
+  editMediaAsset,
   NleStudioSaveConflict,
   operate,
   readInspector,
@@ -34,14 +36,13 @@ import {
 import { CanvasControls, type CanvasDraft } from "./CanvasControls.js";
 import { IconButton } from "./common.js";
 import { Inspector, TransitionInspector } from "./Inspector.js";
-import { PanelResizeHandle, defaultPanelWidths, type PanelSide } from "./PanelResizeHandle.js";
+import { PanelResizeHandle, TimelineResizeHandle, defaultPanelWidths, minimumPanelWidths, maximumPanelWidths, type PanelSide } from "./PanelResizeHandle.js";
 import { StudioBin, type BinTab } from "./StudioBin.js";
 import { Timeline } from "./Timeline.js";
 import { NumberField, Row, Section } from "./controls.js";
-import { timecode } from "./timecode.js";
-import { usePreview } from "./usePreview.js";
+import { useProgrammePreview } from "./useProgrammePreview.js";
 
-import { SourcePreview } from "./SourcePreview.js";
+import { PreviewMonitor } from "./PreviewMonitor.js";
 import { PictureAlignment } from "./PictureAlignment.js";
 import { EditorDialog } from "./EditorDialog.js";
 import { enterMotion, fadeMotion } from "./motion.js";
@@ -52,25 +53,38 @@ import { MediaThumbnail } from "./MediaThumbnail.js";
 import { TimelineTextList } from "./TimelineTextList.js";
 import { useAssetDrag } from "./useAssetDrag.js";
 import { catalogDragId, type CatalogDrag } from "./catalogDrag.js";
-import { mediaTrackCompatible, trackHasRoom, transitionCuts, type MediaDrop } from "./mediaDrag.js";
-import { componentTrackRole } from "./timelineGeometry.js";
+import { transitionCuts, type MediaDrop } from "./mediaDrag.js";
+import { studioIcons } from "./studio-icons.js";
 import { useEditorPosition } from "./useEditorPosition.js";
 import { ExportVideo } from "./ExportVideo.js";
+import { HypitBrand } from "./HypitBrand.js";
 
 function readPanelWidths(): typeof defaultPanelWidths {
   try {
     const saved = JSON.parse(localStorage.getItem("hypit:nle:panel-sizes") ?? "null") as Partial<typeof defaultPanelWidths> | null;
     return Object.fromEntries(Object.entries(defaultPanelWidths).map(([side, fallback]) => {
-      const value = saved?.[side as PanelSide];
-      return [side, Number.isFinite(value) ? Math.max(180, Math.min(900, value!)) : fallback];
+      const panel = side as PanelSide;
+      const value = saved?.[panel];
+      return [panel, Number.isFinite(value)
+        ? Math.max(minimumPanelWidths[panel], Math.min(maximumPanelWidths[panel], value!)) : fallback];
     })) as typeof defaultPanelWidths;
   } catch { return defaultPanelWidths; }
 }
 
+const timelineShareKey = "hypit:nle:timeline-share";
+function readTimelineShare(): number {
+  try {
+    const share = Number(localStorage.getItem(timelineShareKey));
+    if (share > 0 && share < 1) return share;
+  } catch { /* Layout remains usable without storage. */ }
+  return .44;
+}
+
 const saveTime = new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+const saveDateTime = new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "medium", hourCycle: "h23" });
 type EditPosition = { readonly frame: number; readonly selection: readonly string[]; readonly transition: string | undefined };
 type EditHistoryEntry = {
-  readonly steps: readonly NleStudioOperationReceipt["changed"][];
+  readonly steps: number;
   readonly before: EditPosition;
   readonly after: EditPosition;
 };
@@ -78,14 +92,14 @@ type EditHistoryEntry = {
 export function Studio() {
   const reduced = useReducedMotion();
   const history = useRef<{ undo: EditHistoryEntry[]; redo: EditHistoryEntry[] }>({ undo: [], redo: [] });
-  const editSteps = useRef<NleStudioOperationReceipt["changed"][]>([]);
+  const editSteps = useRef(0);
   const [session, setSession] = useState<NleStudioOpenProjection>();
   const [failure, setFailure] = useState<string>();
   const [saveConflict, setSaveConflict] = useState(false);
   const [conflictOpen, setConflictOpen] = useState(false);
-  const [savedAt, setSavedAt] = useState<Date>();
   const [renameProject, setRenameProject] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [timelineBlocked, setTimelineBlocked] = useState(false);
   const [selection, setSelection] = useState<readonly string[]>([]);
   const [transition, setTransition] = useState<string>();
   const transitionRef = useRef<string | undefined>(undefined);
@@ -97,6 +111,7 @@ export function Studio() {
   const [inspector, setInspector] = useState<Awaited<ReturnType<typeof readInspector>>>();
   const [transitionInspector, setTransitionInspector] = useState<Awaited<ReturnType<typeof readTransitionInspector>>>();
   const [frame, updateFrame] = useState(0);
+  const [timelineReveal, setTimelineReveal] = useState<{ frame: number }>();
   const frameRef = useRef(0);
   const setFrame = useCallback((value: number | ((previous: number) => number)) => {
     const next = typeof value === "function" ? value(frameRef.current) : value;
@@ -105,34 +120,54 @@ export function Studio() {
   }, []);
   const navigationFrame = useRef<number | undefined>(undefined);
   const clipboardToken = useRef<string | undefined>(undefined);
-  const [source, setSource] = useState<NleStudioMediaEntry>();
+  const [sourceId, setSourceId] = useState<string>();
+  const source = sourceId === undefined ? undefined : session?.media.entries.find(entry => entry.id === sourceId && entry.state === "available");
+  const showProgramme = () => setSourceId(undefined);
   const [canvasDraft, setCanvasDraft] = useState<CanvasDraft>();
   const [propertiesTab, setPropertiesTab] = useState<"properties" | "text">("properties");
   const timelineRoot = useRef<HTMLDivElement>(null);
+  const timelineRegionId = useId();
   const dropAsset = useRef<(drop: MediaDrop) => void>(() => {});
+  const moveDraggedMedia = useRef<(asset: string, folder: string | null) => void>(() => {});
   const dragSelect = useRef<(asset: NleStudioMediaEntry) => void>(() => {});
   const assetDrag = useAssetDrag(session?.timeline.scene, timelineRoot, frame, busy,
-    drop => dropAsset.current(drop), asset => dragSelect.current(asset));
+    drop => dropAsset.current(drop), asset => dragSelect.current(asset),
+    (asset, folder) => moveDraggedMedia.current(asset, folder));
 
   const [playing, setPlaying] = useState(false);
-  const [previewFrom, setPreviewFrom] = useState(0);
+  const [playFrom, setPlayFrom] = useState<{ generation: string; frame: number }>();
   const [muted, setMuted] = useState(false);
   const [binTab, setBinTab] = useState<BinTab>("assets");
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [panelWidths, setPanelWidths] = useState(readPanelWidths);
+  const [timelineShare, setTimelineShare] = useState(readTimelineShare);
   const sessionRef = useRef<NleStudioOpenProjection | undefined>(undefined);
   const selectionRef = useRef<readonly string[]>([]);
+  const inspectorRead = useRef(0);
   const work = useRef<Promise<void>>(Promise.resolve());
-  const busyRef = useRef(false);
+  const editsInFlight = useRef(0);
+  const timelineBlockedRef = useRef(false);
+  const externalEdit = useRef(0);
   const activeTransition = session?.timeline.scene.transitions.find(value => value.id === transition)?.id;
-  const projectRevision = session?.status.projectRevision;
-  const viewRevision = session?.status.viewRevision;
-  const preview = usePreview({
-    session, atFrame: previewFrom, playing,
-    blocked: busy || session?.status.viewCompatibility === "stale",
-  });
+  const picture = session?.preview.state === "available" ? session.preview.programme : undefined;
+  const playbackEnd = session?.timeline.scene.maximumFrame ?? 0;
+  const editRate = session?.timeline.scene.editRate;
+  const canPreview = source === undefined && session !== undefined;
+  const requested = playing && !busy && canPreview && picture?.generation === playFrom?.generation ? playFrom : undefined;
+  const programme = useProgrammePreview(
+    picture, Math.min(frame, Math.max(0, Math.ceil(playbackEnd) - 1)), canPreview,
+    {
+      from: requested?.frame, fps: editRate === undefined ? 0 : editRate.numerator / editRate.denominator,
+      muted, onFrame: setFrame,
+      onEnd: () => { setFrame(playbackEnd); setPlaying(false); },
+      onError: message => { setFailure(message); setPlaying(false); },
+    },
+  );
 
-  useEffect(() => { if (!playing) setPreviewFrom(frame); }, [frame, playing]);
+  useEffect(() => {
+    if (!playing) return;
+    if (requested === undefined || programme.failure !== undefined) setPlaying(false);
+  }, [playing, requested, programme.failure]);
   useEffect(() => {
     setTransitionInspector(undefined);
     if (activeTransition === undefined) return;
@@ -143,15 +178,22 @@ export function Studio() {
       if (active) setFailure(error instanceof Error ? error.message : String(error));
     });
     return () => { active = false; };
-  }, [activeTransition, projectRevision, viewRevision]);
+  }, [activeTransition, session?.timeline.scene]);
 
   const storeSession = useCallback((next: NleStudioOpenProjection) => {
+    const previous = sessionRef.current?.timeline.scene;
+    const timeline = next.timeline.scene;
+    if (previous?.composition === timeline.composition) {
+      const previousRate = previous.editRate.numerator / previous.editRate.denominator;
+      const nextRate = timeline.editRate.numerator / timeline.editRate.denominator;
+      if (previousRate !== nextRate) setFrame(Math.min(timeline.maximumFrame, Math.round(frameRef.current * nextRate / previousRate)));
+    }
     sessionRef.current = next;
     setSession(next);
-    if (!next.status.projectDirty && (next.viewDocument.persistence !== "document" || !next.status.viewDirty)) {
+    if (!next.status.projectDirty) {
       setSaveConflict(false);
     }
-  }, []);
+  }, [setFrame]);
 
   const enqueue = useCallback((operation: () => Promise<void>) => {
     const result = work.current.then(operation);
@@ -172,51 +214,80 @@ export function Studio() {
   }, [setTransitionSelection]);
 
   const refreshInspector = useCallback(async (current: NleStudioOpenProjection) => {
+    const read = ++inspectorRead.current;
     const item = selectionRef.current[0];
-    if (item === undefined || current.status.viewCompatibility === "stale") return;
+    if (item === undefined) return;
     if (!current.timeline.scene.tracks.some(track => track.items.some(entry => entry.id === item))) {
       selectItems([]);
       return;
     }
-    const next = await readInspector(item);
-    if (selectionRef.current[0] === item) setInspector(next);
+    const isCurrent = () => inspectorRead.current === read && selectionRef.current[0] === item
+      && sessionRef.current?.status.projectRevision === current.status.projectRevision
+      && sessionRef.current.timeline.scene.composition === current.timeline.scene.composition;
+    try {
+      const next = await readInspector(item);
+      if (isCurrent()) setInspector(next);
+    } catch (error) {
+      if (isCurrent()) setFailure(error instanceof Error ? error.message : String(error));
+    }
   }, [selectItems]);
 
-  const resizePanel = (side: PanelSide, width: number, save: boolean) => {
+  const resizePanel = (side: PanelSide, width: number) => {
     setPanelWidths(previous => {
       const next = { ...previous, [side]: width };
-      if (save) localStorage.setItem("hypit:nle:panel-sizes", JSON.stringify(next));
+      localStorage.setItem("hypit:nle:panel-sizes", JSON.stringify(next));
       return next;
     });
   };
 
-  const perform = useCallback(async (operation: () => Promise<void>, autosave = true) => {
-    if (busyRef.current) return;
-    busyRef.current = true;
+  const resizeTimeline = (share: number) => {
+    setTimelineShare(share);
+    try { localStorage.setItem(timelineShareKey, String(share)); } catch { /* The current layout has already been applied. */ }
+  };
+
+  const perform = useCallback(async (operation: () => Promise<void>, {
+    autosave = true, timelineGesture = false,
+  }: { readonly autosave?: boolean; readonly timelineGesture?: boolean } = {}) => {
+    if (!timelineGesture && editsInFlight.current > 0) return;
+    if (timelineGesture && timelineBlockedRef.current) {
+      setFailure("当前操作还在提交，请完成后再编辑时间线。");
+      return;
+    }
+    if (!timelineGesture) {
+      timelineBlockedRef.current = true;
+      setTimelineBlocked(true);
+    }
+    editsInFlight.current += 1;
     setBusy(true); setFailure(undefined); setPlaying(false);
     try {
       await enqueue(async () => {
         const position = (): EditPosition => ({ frame: frameRef.current, selection: selectionRef.current, transition: transitionRef.current });
         const before = position();
-        editSteps.current = [];
+        const startingRevision = sessionRef.current?.status.projectRevision;
+        editSteps.current = 0;
         try {
           await operation();
         } finally {
           const steps = editSteps.current;
-          editSteps.current = [];
-          if (steps.length > 0) {
+          editSteps.current = 0;
+          if (steps > 0) {
             history.current.undo.push({ steps, before, after: position() });
             history.current.redo = [];
           }
           const current = sessionRef.current;
-          if (autosave && current !== undefined
-            && (current.status.projectDirty || current.viewDocument.persistence === "document" && current.status.viewDirty)) {
+          if (autosave && current?.status.projectDirty && current.status.projectRevision !== startingRevision) {
             storeSession(await refreshOpen(current, await saveSession()));
-            setSavedAt(new Date());
           }
         }
       });
-    } finally { busyRef.current = false; setBusy(false); }
+    } finally {
+      editsInFlight.current -= 1;
+      if (!timelineGesture) {
+        timelineBlockedRef.current = false;
+        setTimelineBlocked(false);
+      }
+      if (editsInFlight.current === 0) setBusy(false);
+    }
   }, [enqueue, storeSession]);
 
   useEffect(() => {
@@ -237,10 +308,12 @@ export function Studio() {
         open = false;
         const projection = reread ? await readOpen() : await refreshOpen(previous!, { invalidated });
         if (!active) return;
-        if (previous !== undefined && (projection.status.projectRevision !== previous.status.projectRevision
-          || projection.status.viewRevision !== previous.status.viewRevision)) history.current = { undo: [], redo: [] };
+        if (previous !== undefined && projection.status.projectRevision !== previous.status.projectRevision) {
+          externalEdit.current += 1;
+          history.current = { undo: [], redo: [] };
+        }
         storeSession(projection);
-        if (reread || invalidated.includes("inspector")) await refreshInspector(projection);
+        if (reread || invalidated.includes("inspector")) void refreshInspector(projection);
       });
     };
     const disconnect = connectStudioEvents({
@@ -259,10 +332,8 @@ export function Studio() {
     const previous = selectionRef.current;
     selectItems(ids);
     if (previous === selectionRef.current) return;
-    if (ids.length > 0) void enqueue(async () => {
-      if (sessionRef.current !== undefined) await refreshInspector(sessionRef.current);
-    });
-  }, [enqueue, refreshInspector, selectItems]);
+    if (sessionRef.current !== undefined) void refreshInspector(sessionRef.current);
+  }, [refreshInspector, selectItems]);
 
   useEditorPosition(session, { frame, selection, previewExpanded }, navigationFrame, value => {
     setFrame(value.frame); select(value.selection); setPreviewExpanded(value.previewExpanded);
@@ -272,42 +343,26 @@ export function Studio() {
     const current = sessionRef.current;
     if (current === undefined) return;
     const next = await refreshOpen(current, receipt);
-    if (recordHistory && (receipt.changed.project || receipt.changed.view)) editSteps.current.push(receipt.changed);
+    if (recordHistory && receipt.projectChanged) editSteps.current += 1;
     storeSession(next);
     if (item !== undefined) selectItems([item]);
-    if (next.status.viewCompatibility === "compatible"
-      && (item !== undefined || receipt.invalidated.includes("inspector"))) await refreshInspector(next);
+    if (item !== undefined || receipt.invalidated.includes("inspector")) void refreshInspector(next);
   }, [refreshInspector, selectItems, storeSession]);
 
-  const reconcileView = useCallback(async () => {
-    const current = sessionRef.current;
-    if (current?.status.viewCompatibility !== "stale") return;
-    await acceptReceipt(await sendCommand({ kind: "view.reconcile",
-      expectedProjectRevision: current.status.projectRevision, expectedViewRevision: current.status.viewRevision }));
-  }, [acceptReceipt]);
-
-  const command = useCallback((value: NleEditingSurfaceCommand, reconcile = false) => perform(async () => {
+  const command = useCallback((value: NleEditingSurfaceCommand) => perform(async () => {
     await acceptReceipt(await sendCommand(value));
-    if (reconcile) await reconcileView();
-  }), [acceptReceipt, perform, reconcileView]);
+  }), [acceptReceipt, perform]);
 
-  const transact = useCallback((commands: Extract<NleEditingSurfaceCommand, { kind: "project.transact" }>["commands"], reconcile = false) => {
+  const transact = useCallback((commands: readonly NleCommand[]) => {
     if (session === undefined) return;
-    command({ kind: "project.transact", expectedProjectRevision: session.status.projectRevision,
-      expectedViewRevision: session.status.viewRevision, commands }, reconcile);
-  }, [command, session]);
-
-  const viewTransact = useCallback((commands: Extract<NleEditingSurfaceCommand, { kind: "view.transact" }>["commands"]) => {
-    if (session === undefined) return;
-    command({ kind: "view.transact", expectedProjectRevision: session.status.projectRevision,
-      expectedViewRevision: session.status.viewRevision, commands });
+    command({ kind: "project.transact", expectedProjectRevision: session.status.projectRevision, commands });
   }, [command, session]);
 
   const removeSelection = useCallback(() => {
-    if (session?.status.viewCompatibility !== "compatible" || (selection.length === 0 && activeTransition === undefined)) return;
+    if (session === undefined || (selection.length === 0 && activeTransition === undefined)) return;
     const context = {
       composition: session.timeline.scene.composition,
-      expectedProjectRevision: session.status.projectRevision, expectedViewRevision: session.status.viewRevision,
+      expectedProjectRevision: session.status.projectRevision,
     };
     void perform(async () => {
       const receipt = await operate(activeTransition === undefined
@@ -315,41 +370,32 @@ export function Studio() {
         : { ...context, kind: "transition.remove", transition: activeTransition });
       selectItems([]);
       await acceptReceipt(receipt);
-      if (activeTransition === undefined) await reconcileView();
     });
-  }, [acceptReceipt, activeTransition, perform, reconcileView, selection, selectItems, session]);
+  }, [acceptReceipt, activeTransition, perform, selection, selectItems, session]);
 
-  const editClipboard = useCallback((kind: "clipboard.copy" | "clipboard.cut" | "clipboard.paste" | "clipboard.apply-groups", token?: string) => {
-    if (session?.status.viewCompatibility !== "compatible") return;
+  const editClipboard = useCallback((kind: "clipboard.copy" | "clipboard.cut" | "clipboard.paste", token?: string) => {
+    if (session === undefined) return;
     const target = {
       composition: session.timeline.scene.composition,
       expectedProjectRevision: session.status.projectRevision,
-      expectedViewRevision: session.status.viewRevision,
     };
     void perform(async () => {
       if (kind === "clipboard.paste") {
         const receipt = await operate({ ...target, kind, atFrame: frame });
         const item = receipt.result?.item;
         await acceptReceipt(receipt, typeof item === "string" ? item : undefined);
-        if ((sessionRef.current?.clipboard.pendingGroups ?? 0) > 0) {
-          await acceptReceipt(await operate({ ...target, kind: "clipboard.apply-groups",
-            expectedProjectRevision: receipt.status.projectRevision, expectedViewRevision: receipt.status.viewRevision }));
-        }
-      } else if (kind === "clipboard.apply-groups") {
-        await acceptReceipt(await operate({ ...target, kind }));
       } else {
         await acceptReceipt(await operate({ ...target, kind, items: selection }));
         clipboardToken.current = token;
         if (kind === "clipboard.cut") {
           selectItems([]);
-          await reconcileView();
         }
       }
     });
-  }, [acceptReceipt, frame, perform, reconcileView, selection, selectItems, session]);
+  }, [acceptReceipt, frame, perform, selection, selectItems, session]);
 
   useClipClipboard({
-    available: session?.status.viewCompatibility === "compatible" && !busy && source === undefined,
+    available: session !== undefined && !busy && source === undefined,
     canCopy: selection.length > 0,
     copy: (token, cut) => editClipboard(cut ? "clipboard.cut" : "clipboard.copy", token),
     paste: token => {
@@ -359,27 +405,13 @@ export function Studio() {
 
   const togglePlayback = useCallback(() => {
     if (playing) { setPlaying(false); return; }
-    const maximum = session?.timeline.scene.maximumFrame ?? 0;
-    if (busyRef.current || maximum < 1) return;
-    const start = frame >= maximum ? 0 : frame;
+    if (editsInFlight.current > 0 || !canPreview || playbackEnd <= 0 || picture === undefined) return;
+    const start = frameRef.current >= playbackEnd ? 0 : Math.floor(frameRef.current);
+    programme.unlockAudio();
     setFrame(start);
-    setPreviewFrom(start);
+    setPlayFrom({ generation: picture.generation, frame: start });
     setPlaying(true);
-  }, [frame, playing, session]);
-
-  useEffect(() => {
-    if (!playing || session === undefined || preview.playback) return;
-    const fps = session.timeline.scene.editRate.numerator / session.timeline.scene.editRate.denominator;
-    const startFrame = frame >= session.timeline.scene.maximumFrame - 1 ? 0 : frame;
-    const started = performance.now(); let animation = 0;
-    const tick = (now: number) => {
-      const next = startFrame + Math.floor((now - started) * fps / 1000);
-      if (next >= session.timeline.scene.maximumFrame) { setFrame(session.timeline.scene.maximumFrame); setPlaying(false); return; }
-      setFrame(next); animation = requestAnimationFrame(tick);
-    };
-    setFrame(startFrame); animation = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(animation);
-  }, [playing, preview.playback]);
+  }, [canPreview, picture, playbackEnd, playing, programme.unlockAudio, setFrame]);
 
   const keyboard = useRef<(event: KeyboardEvent) => void>(() => {});
   useEffect(() => {
@@ -394,11 +426,9 @@ export function Studio() {
 
   if (session === undefined) return <div className="nle-editor nle-loading">{failure ?? "正在打开 NLE Studio…"}</div>;
   const scene = session.timeline.scene;
-  const staleView = session.status.viewCompatibility === "stale";
-  const editingDisabled = busy || staleView;
+  const editingDisabled = busy;
   const fps = scene.editRate.numerator / scene.editRate.denominator;
-  const renderedPreview = preview.state?.state === "complete" ? preview.state.result : undefined;
-  const previewDiagnostic = preview.state?.state === "failed" ? preview.state.diagnostic : preview.failure;
+  const previewDiagnostic = programme.failure;
   const mediaByPath = new Map(session.media.entries.map(entry => [entry.id, entry] as const));
   const mediaByItem = new Map(session.timeline.itemMedia.map(entry => [entry.item, entry.media] as const));
   const mediaForItem = (itemId: string) => mediaByPath.get(mediaByItem.get(itemId) ?? "");
@@ -415,25 +445,38 @@ export function Studio() {
     }
   }
   const selectedGroups = scene.groups.filter(group => group.items.some(item => selection.includes(item)));
-  const grouped = selectedGroups.length === 1 && selectedGroups[0]!.items.every(item => selection.includes(item))
-    && selection.every(item => selectedGroups[0]!.items.includes(item));
-  const canToggleGroup = selection.length > 1 || selectedGroups.length > 0;
-  const canDetachAudio = selection.length === 1 && selectedProjectItem?.role === "present"
+  const grouped = selectedGroups.length === 1 && selection.every(item => selectedGroups[0]!.items.includes(item));
+  const groupLabel = !grouped ? "组合" : selectedGroups[0]!.items.length === selection.length ? "取消组合" : "移出组合";
+  const groupMembers = [...new Set([...selection, ...selectedGroups.flatMap(group => group.items)])];
+  const canEditGroups = editableSelection(scene, groupMembers).length === groupMembers.length;
+  const canToggleGroup = canEditGroups && (selection.length > 1 || selectedGroups.length > 0);
+  const canDetachAudio = selection.length === 1 && selectedProjectItem?.kind === "present"
     && selectedProjectItem.signals.picture && selectedProjectItem.signals.audio;
-  const icons = { assets: Images, text: Type, subtitles: Captions, transitions: Blend, effects: Wand2 } as const;
-  const tabNames = { assets: "素材", text: "文本", subtitles: "字幕", transitions: "转场", effects: "效果" } as const;
+  const icons = { assets: studioIcons.assets, text: studioIcons.text, subtitles: studioIcons.subtitle,
+    transitions: studioIcons.transition, filters: studioIcons.filter, effects: studioIcons.effect } as const;
+  const tabNames = { assets: "素材", text: "文本", subtitles: "字幕", transitions: "转场", filters: "滤镜", effects: "特效" } as const;
   const classes = `nle-editor${previewExpanded ? " nle-preview-expanded" : ""}`;
   const projectName = session.project.name;
   const inspectorEdit = (section: string, field: string, value: string | number | boolean) => {
     if (selection[0] === undefined) return;
     command({ kind: "inspector.edit", expectedProjectRevision: session.status.projectRevision,
-      expectedViewRevision: session.status.viewRevision, item: selection[0], section, field, value });
+      item: selection[0], section, field, value });
   };
   const operationContext = {
     composition: scene.composition,
     expectedProjectRevision: session.status.projectRevision,
-    expectedViewRevision: session.status.viewRevision,
   };
+  const editVersion = externalEdit.current;
+  const commitTimelineGesture = (operation: NleStudioOperation) => perform(async () => {
+    const current = sessionRef.current;
+    if (current === undefined || editVersion !== externalEdit.current
+      || current.timeline.scene.composition !== operation.composition
+      || current.timeline.scene.editRate.numerator !== scene.editRate.numerator
+      || current.timeline.scene.editRate.denominator !== scene.editRate.denominator) {
+      throw new Error("拖动期间时间线已更新，请重新操作。");
+    }
+    await acceptReceipt(await operate({ ...operation, expectedProjectRevision: current.status.projectRevision }));
+  }, { timelineGesture: true });
   const place = (operation: NleStudioOperation) => void perform(async () => {
     const receipt = await operate(operation);
     await acceptReceipt(receipt, typeof receipt.result?.item === "string" ? receipt.result.item : undefined);
@@ -444,51 +487,65 @@ export function Studio() {
     await acceptReceipt(await operate({ ...operationContext, ...edit }));
   });
   const navigate = (operation: NleStudioOperation) => void perform(async () => {
+    showProgramme();
     const receipt = await operate(operation);
     const moved = receipt.result?.composition !== scene.composition;
     navigationFrame.current = moved && operation.kind !== "composition.select" && typeof receipt.result?.frame === "number"
       ? receipt.result.frame : undefined;
     await acceptReceipt(receipt);
   });
+  const openCreatedComposition = async (id: string, receipt: NleStudioOperationReceipt) => {
+    await acceptReceipt(receipt);
+    await acceptReceipt(await operate({ kind: "composition.select", target: id, composition: scene.composition,
+      expectedProjectRevision: receipt.status.projectRevision }));
+    showProgramme();
+    selectItems([]);
+    setFrame(0);
+  };
   const placement = (drop?: MediaDrop) => ({ ...operationContext, atFrame: drop?.frame ?? frame,
     ...(drop?.track === undefined ? {} : { track: drop.track }) });
   const materialize = (entry: NleStudioComponentCatalogEntry, drop?: MediaDrop) => place({
     ...placement(drop), kind: "component.materialize", package: entry.package, offering: entry.offering,
   });
-  const freeAudioTrack = (start: number, duration: number) => scene.tracks.find(track =>
-    mediaTrackCompatible(track, "audio") && trackHasRoom(track, start, duration));
-  const audioTrack = () => ({ id: `audio-${crypto.randomUUID()}`, name: "音频轨道", kind: "audio" as const, enabled: true, items: [] });
   const placeProjectMedia = (entry: NleStudioMediaEntry, drop?: MediaDrop) => {
     const track = drop?.track === undefined ? undefined : scene.tracks.find(item => item.id === drop.track);
     const at = drop?.frame ?? frame;
     const insert = track?.items.some(item => item.startFrame === at)
       && !track.items.some(item => item.startFrame < at && item.startFrame + item.durationFrames > at);
     const request = { ...placement(drop), kind: "media.materialize" as const, media: entry.id };
-    if (track === undefined && entry.kind === "audio") {
-      const available = freeAudioTrack(at, entry.durationFrames ?? Math.max(1, Math.round(5 * fps)));
-      if (available !== undefined) place({ ...request, track: available.id });
-      else void perform(async () => {
-        const created = audioTrack();
-        const added = await sendCommand({ ...operationContext, kind: "project.transact",
-          commands: [{ kind: "track.add", composition: scene.composition, track: created }] });
-        await acceptReceipt(added);
-        const receipt = await operate({ ...request, track: created.id,
-          expectedProjectRevision: added.status.projectRevision, expectedViewRevision: added.status.viewRevision });
-        await acceptReceipt(receipt, typeof receipt.result?.item === "string" ? receipt.result.item : undefined);
-      });
-    } else place(insert && track !== undefined && track.kind === "picture"
+    place(insert && track?.role === "picture"
       ? { ...request, track: track.id, insertTracks: [track.id] } : request);
-    setSource(undefined);
+    showProgramme();
   };
-  const importProjectMedia = (files: readonly File[]) => void perform(async () => {
-    for (const file of files) await acceptReceipt(await importMedia(file));
-  }, false);
-  const clipEffect = (entry: NleStudioAdjustCatalogEntry) => session.catalog.processes.find(process =>
-    process.package === entry.package && process.offering === entry.offering && process.medium === entry.medium);
+  const importProjectMedia = (files: readonly File[], folder: string | null) => void perform(async () => {
+    for (const file of files) await acceptReceipt(await importMedia(file, folder));
+  }, { autosave: false });
+  const changeMediaLibrary = (change: ProjectMediaLibraryChange) => {
+    const library = sessionRef.current?.mediaLibrary;
+    if (library?.state !== "available") return;
+    void enqueue(async () => {
+      setFailure(undefined);
+      try {
+        await acceptReceipt(await editMediaLibrary({ ...change, expectedRevision: library.revision }));
+      } catch (error) {
+        const current = sessionRef.current;
+        if (current) storeSession(await refreshOpen(current, { status: current.status, invalidated: ["media-library"] }));
+        throw error;
+      }
+    });
+  };
+  const changeMediaAsset = (change: ProjectMediaAssetChange) => void enqueue(async () => {
+    const current = sessionRef.current;
+    if (current === undefined) return;
+    setFailure(undefined);
+    await acceptReceipt(await editMediaAsset({ ...change, expectedGeneration: current.media.generation }));
+    if (change.kind === "asset.remove") setSourceId(previous => previous === change.asset.path ? undefined : previous);
+  });
+  moveDraggedMedia.current = (asset, folder) => changeMediaLibrary({ kind: "asset.move", asset: { path: asset }, folder });
   const processTargets = (medium: "audio" | "picture", ids: readonly string[]) => {
     const candidates = new Set(editableSelection(scene, ids));
     return scene.tracks.flatMap(track => track.items.filter(item =>
-      candidates.has(item.id) && item.role === "present" && item.signals[medium]));
+      candidates.has(item.id) && item.kind === "present" && item.signals[medium]));
   };
   const materializeProcess = (entry: NleStudioProcessCatalogEntry, items = processTargets(entry.medium, selection)) => {
     if (items.length === 0) return;
@@ -496,18 +553,17 @@ export function Studio() {
       for (const item of items) {
         const status = sessionRef.current!.status;
         await acceptReceipt(await operate({ ...operationContext, kind: "process.materialize", package: entry.package, offering: entry.offering,
-          item: item.id, expectedProjectRevision: status.projectRevision, expectedViewRevision: status.viewRevision }));
+          item: item.id, expectedProjectRevision: status.projectRevision }));
       }
     });
   };
-  const materializeEffect = (entry: NleStudioAdjustCatalogEntry, drop?: MediaDrop) => {
-    const process = clipEffect(entry);
-    const items = process === undefined ? [] : processTargets(entry.medium, drop === undefined ? selection : drop.item ? [drop.item] : []);
-    if (process !== undefined && items.length > 0) materializeProcess(process, items);
+  const materializeAdjust = (entry: NleStudioAdjustCatalogEntry, drop?: MediaDrop) => {
+    const items = entry.role === "filter" && drop?.item ? processTargets(entry.medium, [drop.item]) : [];
+    if (items.length > 0) materializeProcess(entry, items);
     else place({ ...placement(drop), kind: "adjust.materialize", package: entry.package, offering: entry.offering });
   };
   const selectTransition = (id: string) => {
-    setSource(undefined);
+    showProgramme();
     selectItems([]);
     setTransitionSelection(id);
     setPropertiesTab("properties");
@@ -527,17 +583,25 @@ export function Studio() {
   };
   const presets: CatalogDrag[] = [
     ...session.catalog.components.map(entry => ({ kind: "component" as const, entry })),
-    ...session.catalog.adjusts.map(entry => ({ kind: "effect" as const, entry })),
+    ...session.catalog.adjusts.map(entry => ({ kind: "adjust" as const, entry })),
     ...session.catalog.transitions.map(entry => ({ kind: "transition" as const, entry })),
   ];
   const pickPreset = (id: string, drop?: MediaDrop) => {
     const preset = presets.find(item => catalogDragId(item) === id);
     if (preset?.kind === "component") materialize(preset.entry, drop);
-    else if (preset?.kind === "effect") materializeEffect(preset.entry, drop);
+    else if (preset?.kind === "adjust") materializeAdjust(preset.entry, drop);
     else if (preset?.kind === "transition") materializeSelectedTransition(preset.entry, drop);
     return preset !== undefined;
   };
-  const previewAsset = (entry: NleStudioMediaEntry) => { setPlaying(false); setSource(entry); };
+  const previewAsset = (entry: NleStudioMediaEntry) => { setPlaying(false); setSourceId(entry.id); };
+  const revealProgrammeFrame = (value: number) => { setFrame(value); setTimelineReveal({ frame: value }); };
+  const seekProgramme = (value: number, reveal = true) => {
+    setPlaying(false);
+    showProgramme();
+    if (reveal) revealProgrammeFrame(value);
+    else setFrame(value);
+  };
+  const selectTimeline = (ids: readonly string[]) => { showProgramme(); select(ids); };
   dropAsset.current = drop => {
     if (pickPreset(drop.id, drop)) return;
     const asset = mediaByPath.get(drop.id);
@@ -552,40 +616,30 @@ export function Studio() {
   const spatialTranslate = (item: string, deltaX: number, deltaY: number) => command({
     kind: "spatial.edit", ...operationContext, item, edit: { kind: "frame.translate", deltaX, deltaY },
   });
-  const dirty = session.status.projectDirty || session.viewDocument.persistence === "document" && session.status.viewDirty;
+  const dirty = session.status.projectDirty;
+  const savedAt = new Date(session.status.savedAt);
+  const showSaveConflict = saveConflict && !conflictOpen;
   const useFileVersion = () => void perform(async () => {
     const receipt = await reloadSession();
     history.current = { undo: [], redo: [] };
     clipboardToken.current = undefined;
     setSaveConflict(false);
     setConflictOpen(false);
-    setSavedAt(undefined);
     select([]);
     await acceptReceipt(receipt, undefined, false);
-  }, false);
+  }, { autosave: false });
 
-  const canReplay = (direction: "undo" | "redo") => {
-    const key = direction === "undo" ? "canUndo" : "canRedo";
-    const entry = history.current[direction].at(-1);
-    const step = direction === "undo" ? entry?.steps.at(-1) : entry?.steps[0];
-    return step === undefined ? session.status.projectHistory[key]
-      : (!step.project || session.status.projectHistory[key]) && (!step.view || session.status.viewHistory[key]);
-  };
+  const canReplay = (direction: "undo" | "redo") =>
+    session.status.projectHistory[direction === "undo" ? "canUndo" : "canRedo"];
   const replay = (direction: "undo" | "redo") => void perform(async () => {
     const stack = history.current[direction];
     const entry = stack.at(-1);
-    const owners = direction === "undo" ? ["view", "project"] as const : ["project", "view"] as const;
-    const steps = direction === "undo" ? entry?.steps.toReversed() : entry?.steps;
     try {
-      for (const step of steps ?? [{ project: true, view: false }]) {
-        for (const owner of owners) {
-          if (!step[owner]) continue;
-          const status = sessionRef.current!.status;
-          const receipt = await sendCommand(owner === "project"
-            ? { kind: direction === "undo" ? "project.undo" : "project.redo", expectedProjectRevision: status.projectRevision }
-            : { kind: direction === "undo" ? "view.undo" : "view.redo", expectedViewRevision: status.viewRevision });
-          await acceptReceipt(receipt, undefined, false);
-        }
+      for (let step = 0; step < (entry?.steps ?? 1); step++) {
+        const { projectRevision } = sessionRef.current!.status;
+        const receipt = await sendCommand({ kind: direction === "undo" ? "project.undo" : "project.redo",
+          expectedProjectRevision: projectRevision });
+        await acceptReceipt(receipt, undefined, false);
       }
       if (entry !== undefined) {
         stack.pop();
@@ -602,19 +656,30 @@ export function Studio() {
     }
   });
 
+  const unlinkSelection = () => {
+    if (!canEditGroups || selectedGroups.length === 0) return;
+    transact(selectedGroups.map((group): NleCommand => {
+      const remaining = group.items.filter(item => !selection.includes(item));
+      return remaining.length < 2 ? { kind: "group.remove", composition: scene.composition, id: group.id }
+        : { kind: "group.replace", composition: scene.composition, group: { ...group, items: remaining } };
+    }));
+  };
   const toggleGroup = () => {
     if (!canToggleGroup) return;
-    const removals = selectedGroups.map(group => ({ kind: "group.remove" as const, composition: scene.composition, id: group.id }));
-    if (grouped) { viewTransact(removals); return; }
-    const members = editableSelection(scene, [...selection, ...selectedGroups.flatMap(group => group.items)]);
-    if (members.length > 1) viewTransact([...removals, { kind: "group.add", composition: scene.composition,
-      group: { id: `group-${crypto.randomUUID()}`, name: "组合", items: members } }]);
+    if (grouped) { unlinkSelection(); return; }
+    transact([
+      ...selectedGroups.map(group => ({ kind: "group.remove" as const, composition: scene.composition, id: group.id })),
+      { kind: "group.add", composition: scene.composition, group: { id: `group-${crypto.randomUUID()}`, items: groupMembers } },
+    ]);
   };
   const split = (items: readonly string[], atFrame: number) => place({ ...operationContext, kind: "timeline.split", items, atFrame });
   keyboard.current = event => {
-    if (source !== undefined || event.defaultPrevented
-      || (event.target as Element | null)?.closest("input,textarea,select,[contenteditable=true],[role=combobox]")
+    if (event.defaultPrevented
+      || (event.target as Element | null)?.closest("input:not([type=range]),textarea,select,[contenteditable=true],[role=combobox]")
       || document.querySelector("[role=menu],[role=dialog],[role=listbox]")) return;
+    if (source !== undefined && event.key === "Escape") { event.preventDefault(); showProgramme(); return; }
+    if (event.key === "Escape") setPreviewExpanded(false);
+    if (source !== undefined || (event.target as Element | null)?.closest("input,.library-grid")) return;
     if (event.metaKey || event.ctrlKey) {
       if (event.altKey || event.repeat) return;
       if (event.code === "KeyS") event.preventDefault();
@@ -631,9 +696,8 @@ export function Studio() {
         if (items.length > 0) split(items.map(item => item.id), frame);
       } else if (event.code === "KeyG") {
         event.preventDefault();
-        if (event.shiftKey) { if (selectedGroups.length > 0) viewTransact(selectedGroups.map(group => ({
-          kind: "group.remove", composition: scene.composition, id: group.id,
-        }))); } else if (!grouped) toggleGroup();
+        if (event.shiftKey) unlinkSelection();
+        else if (!grouped) toggleGroup();
       }
       return;
     }
@@ -641,17 +705,17 @@ export function Studio() {
     if (event.code === "Space" && !(event.target as Element | null)?.closest("button")) {
       event.preventDefault(); if (!event.repeat) togglePlayback();
     }
-    if (event.key === "Escape") setPreviewExpanded(false);
     if (["ArrowLeft", "ArrowRight", "Home", "End", "ArrowUp", "ArrowDown"].includes(event.key)) {
       event.preventDefault();
       setPlaying(false);
+      const current = frameRef.current;
       const maximum = scene.maximumFrame;
       if (event.key === "ArrowUp" || event.key === "ArrowDown") {
         const edges = scene.tracks.flatMap(track => track.items.flatMap(item => [item.startFrame, item.startFrame + item.durationFrames]))
           .map(value => Math.round(value)).sort((left, right) => left - right);
-        setFrame(event.key === "ArrowUp" ? edges.findLast(value => value < frame) ?? 0 : edges.find(value => value > frame) ?? maximum);
+        revealProgrammeFrame(event.key === "ArrowUp" ? edges.findLast(value => value < current) ?? 0 : edges.find(value => value > current) ?? maximum);
       } else {
-        setFrame(current => event.key === "Home" ? 0 : event.key === "End" ? Math.max(0, maximum - 1)
+        revealProgrammeFrame(event.key === "Home" ? 0 : event.key === "End" ? Math.max(0, Math.ceil(maximum) - 1)
           : Math.max(0, Math.min(maximum, current + (event.key === "ArrowRight" ? 1 : -1) * (event.shiftKey ? 10 : 1))));
       }
     }
@@ -680,71 +744,76 @@ export function Studio() {
   }} onDrop={event => {
     if (!event.defaultPrevented && event.dataTransfer.files.length > 0) {
       event.preventDefault();
-      if (!editingDisabled) importProjectMedia(Array.from(event.dataTransfer.files));
+      if (!editingDisabled) importProjectMedia(Array.from(event.dataTransfer.files), null);
     }
   }}><div className={classes} style={{
+    "--nle-bin-minimum": `${minimumPanelWidths.bin}px`,
     "--nle-bin-preferred": `${panelWidths.bin}px`,
     "--nle-properties-preferred": `${panelWidths.properties}px`,
   } as React.CSSProperties}>
-      <div className="nle-titlebar"><div className="nle-titlebar-side">{saveConflict
-        ? <button type="button" className="button" onClick={() => setConflictOpen(true)}>自动保存暂停</button>
-        : <small>{dirty ? busy ? "正在自动保存" : "有未保存的修改" : savedAt ? `${saveTime.format(savedAt)} 已自动保存` : "已自动保存"}</small>}</div>
+      <div className="nle-titlebar">
+        <div className="nle-titlebar-side nle-titlebar-start">
+          <HypitBrand/>
+          <small className="nle-save-status" role="status" title={saveDateTime.format(savedAt)}>
+            <time dateTime={session.status.savedAt}>{saveTime.format(savedAt)}</time>{" 已自动保存"}
+          </small>
+        </div>
         <button type="button" className="nle-titlebar-name" disabled={editingDisabled} onClick={() => setRenameProject(true)} title="重命名项目">{projectName}</button>
         <div className="nle-titlebar-side end">
-          <button type="button" className="button" disabled={busy} onClick={() => dirty ? setConflictOpen(true) : useFileVersion()}>重载</button>
           <ExportVideo session={session} disabled={editingDisabled || dirty || !!saveConflict}/>
         </div>
       </div>
-      <Dialog.Root open={conflictOpen} onOpenChange={setConflictOpen}>
+      <Dialog.Root open={saveConflict && conflictOpen} onOpenChange={setConflictOpen}>
         <Dialog.Portal><Dialog.Backdrop className="studio-dialog-backdrop"/><Dialog.Popup className="studio-dialog modal">
-          <Dialog.Title>{saveConflict ? "检测到编辑冲突" : "重载项目"}</Dialog.Title>
-          <Dialog.Description>{saveConflict ? "项目文件已被其他程序修改。" : ""}{dirty ? "重载会丢弃 Studio 中尚未保存的修改。" : "重载后可继续编辑。"}</Dialog.Description>
+          <Dialog.Title>文件已被其他程序修改</Dialog.Title>
+          <Dialog.Description>当前改动尚未保存。使用文件中的版本会丢弃未保存的改动，并清空撤销记录。</Dialog.Description>
           <footer><button type="button" className="button" disabled={busy} onClick={() => setConflictOpen(false)}>暂不处理</button>
-            <button type="button" className="button primary" disabled={busy} onClick={useFileVersion}>重载磁盘版本</button></footer>
+            <button type="button" className="button primary" disabled={busy} onClick={useFileVersion}>使用文件中的版本</button></footer>
         </Dialog.Popup></Dialog.Portal>
       </Dialog.Root>
       {renameProject && <EditorDialog title="重命名项目" initialName={projectName} onClose={() => setRenameProject(false)}
         onSubmit={name => { if (name !== projectName) transact([{ kind: "project.update", name }]); }}/>}
-      <ErrorNotice message={failure ?? previewDiagnostic} onClose={() => setFailure(undefined)}/>
-      {staleView && <div className="studio-error">当前 View 有失效引用。 <button className="button" disabled={busy}
-        onClick={() => command({ kind: "view.reconcile", expectedProjectRevision: session.status.projectRevision,
-          expectedViewRevision: session.status.viewRevision })}>整理 View 引用</button></div>}
+      <ErrorNotice message={showSaveConflict ? "自动保存失败，文件已被其他程序修改。" : failure ?? previewDiagnostic}
+        {...(showSaveConflict ? {} : { onClose: () => setFailure(undefined) })}>
+        {showSaveConflict && <button type="button" className="button" onClick={() => setConflictOpen(true)}>处理冲突</button>}
+      </ErrorNotice>
+      <div className="nle-split-layout" style={{ "--nle-timeline-share": timelineShare } as React.CSSProperties}>
       <div className="nle-upper">
-        <aside className="nle-bin"><div className="nle-bin-tabs" role="tablist">{(Object.keys(icons) as BinTab[]).map(id => { const Icon = icons[id]; return <button type="button" role="tab" aria-selected={binTab === id} key={id} onClick={() => setBinTab(id)}><Icon size={18} strokeWidth={1.6}/><span>{tabNames[id]}</span></button>; })}</div><AnimatePresence mode="popLayout" initial={false}><motion.div key={binTab} className="nle-bin-body" {...enterMotion(reduced)}><StudioBin tab={binTab} catalog={session.catalog} media={session.media} disabled={editingDisabled}
+        <aside className="nle-bin"><div className="nle-bin-tabs" role="tablist">{(Object.keys(icons) as BinTab[]).map(id => { const Icon = icons[id]; return <button type="button" role="tab" aria-selected={binTab === id} key={id} onClick={() => setBinTab(id)}><Icon size={18} strokeWidth={1.6}/><span>{tabNames[id]}</span></button>; })}</div><AnimatePresence mode="popLayout" initial={false}><motion.div key={binTab} className="nle-bin-body" {...enterMotion(reduced)}><StudioBin tab={binTab} catalog={session.catalog} media={session.media} mediaLibrary={session.mediaLibrary} usedMedia={session.project.usedMedia} disabled={editingDisabled} folderDrop={assetDrag.drag?.folder}
           processSignals={selection.length === 0 ? undefined : {
             audio: processTargets("audio", selection).length > 0,
             picture: processTargets("picture", selection).length > 0,
           }}
-          onImportMedia={importProjectMedia} onPlaceMedia={placeProjectMedia} onMaterialize={materialize}
-          onMaterializeAdjust={materializeEffect} onMaterializeProcess={entry => materializeProcess(entry)} onMaterializeTransition={materializeSelectedTransition}
-          selectedMedia={source?.id} onPreviewMedia={previewAsset} onBeginMediaDrag={assetDrag.start}
+          onImportMedia={importProjectMedia} onEditLibrary={changeMediaLibrary} onEditMedia={changeMediaAsset} onPlaceMedia={placeProjectMedia} onMaterialize={materialize}
+          onMaterializeAdjust={materializeAdjust} onMaterializeProcess={entry => materializeProcess(entry)} onMaterializeTransition={materializeSelectedTransition}
+          onPreviewMedia={previewAsset} onOpenMediaFolder={showProgramme}
+          onBeginMediaDrag={(event, entry, onClick) => assetDrag.start(event, entry, { onClick })}
           onBeginPresetDrag={(event, preset) => assetDrag.start(event, {
             id: catalogDragId(preset), name: preset.entry.title, state: "available",
-            kind: preset.kind === "effect" ? preset.entry.medium : "picture",
-          }, preset.kind === "component" ? { role: componentTrackRole(preset.entry.category) ?? undefined, component: true }
-            : preset.kind === "effect" ? { role: "effect", process: clipEffect(preset.entry) !== undefined } : { cuts: transitionCuts(scene) })}/></motion.div></AnimatePresence></aside>
-        <PanelResizeHandle side="bin" label="调整素材面板宽度" width={panelWidths.bin} onResize={(width, save) => resizePanel("bin", width, save)}/>
-        <section className="nle-monitor"><div className="nle-panel-header nle-monitor-title"><span>{projectName}</span><IconButton label={previewExpanded ? "恢复预览" : "放大预览"} onClick={() => setPreviewExpanded(value => !value)}>{previewExpanded ? <Minimize2 size={15}/> : <Maximize2 size={15}/>}</IconButton></div>
-          <SourcePreview entry={source} fps={fps} muted={muted} onMute={() => setMuted(value => !value)} onClose={() => setSource(undefined)}/>
-          <div className="nle-stage"><div className="nle-editable-preview" style={{ "--canvas-ratio": session.canvas.canvas.width / session.canvas.canvas.height } as React.CSSProperties}><div className="studio-canvas">
-            {canvasDraft === undefined && renderedPreview?.mediaType === "image/png" && <img className="studio-preview-frame" src={renderedPreview.resource}/>}
-            {renderedPreview?.mediaType === "video/mp4" && playing && <video className="studio-preview-frame"
-              key={renderedPreview.resource} src={renderedPreview.resource} muted={muted} autoPlay playsInline
-              onTimeUpdate={event => setFrame(Math.min(scene.maximumFrame, previewFrom + Math.floor(event.currentTarget.currentTime * fps)))}
-              onEnded={() => {
-                const next = previewFrom + (renderedPreview.frameCount ?? 1);
-                setFrame(Math.min(next, scene.maximumFrame));
-                if (next >= scene.maximumFrame) setPlaying(false);
-                else setPreviewFrom(next);
-              }}/>}
-            {(renderedPreview === undefined || canvasDraft !== undefined) && session.canvas.layers.filter(layer => activeItems.has(layer.id) && layer.layout !== undefined).map(layer => { const layout = canvasDraft?.id === layer.id ? { ...layer.layout!, ...canvasDraft.frame } : layer.layout!; const canvas = session.canvas.canvas; const media = mediaForItem(layer.id); return <button type="button" key={layer.id} className={`studio-canvas-layer${selection.includes(layer.id) ? " selected" : ""}`} onClick={() => select([layer.id])} style={{ left: `${layout.x / canvas.width * 100}%`, top: `${layout.y / canvas.height * 100}%`, width: `${layout.width / canvas.width * 100}%`, height: `${layout.height / canvas.height * 100}%` }}>{media?.resource && media.mediaType?.startsWith("image/") ? <img src={media.resource} style={{ objectFit: layout.fit }}/> : media?.resource && media.mediaType?.startsWith("video/") ? <video src={media.resource} muted playsInline style={{ objectFit: layout.fit }}/> : undefined}<span>{layer.title}</span></button>; })}
+            kind: preset.kind === "adjust" ? preset.entry.medium : "picture",
+            ...(preset.kind === "transition" ? {} : { durationFrames: preset.entry.durationFrames }),
+          }, preset.kind === "component" ? { role: preset.entry.role, component: true }
+            : preset.kind === "adjust" ? { role: preset.entry.role, adjust: true, process: preset.entry.role === "filter" } : { cuts: transitionCuts(scene) })}/></motion.div></AnimatePresence></aside>
+        <PanelResizeHandle side="bin" label="调整素材面板宽度" width={panelWidths.bin} onResize={width => resizePanel("bin", width)}/>
+        <PreviewMonitor projectName={projectName} source={source} mediaGeneration={session.media.derivedViews ? session.media.generation : undefined}
+          muted={muted} onMute={() => setMuted(value => !value)} expanded={previewExpanded} onExpand={() => setPreviewExpanded(value => !value)}
+          programme={{ frame, end: scene.maximumFrame, fps, playing, canPlay: canPreview && !busy && picture !== undefined,
+            toggle: togglePlayback, seek: seekProgramme,
+            step: delta => seekProgramme(Math.max(0, Math.min(scene.maximumFrame, frameRef.current + delta))) }}>
+          <div className="nle-editable-preview" style={{ "--canvas-ratio": session.canvas.canvas.width / session.canvas.canvas.height } as React.CSSProperties}><div className="studio-canvas">
+            {programme.documents.map(entry => <iframe key={entry.generation} title="节目预览" sandbox="allow-scripts" tabIndex={-1}
+              className="studio-programme-preview" src={entry.document}
+              data-active={entry.generation === programme.visible?.generation && canvasDraft === undefined}
+              onLoad={event => programme.loaded(entry, event.currentTarget)}/>)}
+            {(programme.visible === undefined || canvasDraft !== undefined)
+              && session.canvas.layers.filter(layer => layer.enabled && layer.trackEnabled && activeItems.has(layer.id) && layer.layout !== undefined)
+                .map(layer => { const layout = canvasDraft?.id === layer.id ? { ...layer.layout!, ...canvasDraft.frame } : layer.layout!; const canvas = session.canvas.canvas; const media = mediaForItem(layer.id); return <button type="button" key={layer.id} className={`studio-canvas-layer${selection.includes(layer.id) ? " selected" : ""}`} onClick={() => select([layer.id])} style={{ left: `${layout.x / canvas.width * 100}%`, top: `${layout.y / canvas.height * 100}%`, width: `${layout.width / canvas.width * 100}%`, height: `${layout.height / canvas.height * 100}%` }}>{media?.resource && media.mediaType?.startsWith("image/") ? <img src={media.resource} style={{ objectFit: layout.fit }}/> : media?.resource && media.mediaType?.startsWith("video/") ? <video src={media.resource} muted playsInline style={{ objectFit: layout.fit }}/> : undefined}<span>{layer.title}</span></button>; })}
             {!playing && source === undefined && <CanvasControls scene={session.canvas} active={activeItems} selection={selection} disabled={editingDisabled} onSelect={select}
               draft={canvasDraft} onDraft={setCanvasDraft} onTranslate={spatialTranslate}
-              onResize={(item, next) => command({ kind: "spatial.edit", expectedProjectRevision: session.status.projectRevision, expectedViewRevision: session.status.viewRevision, item, edit: { kind: "frame.resize", frame: next } })}/>}
-          </div></div></div>
-          <div className="nle-transport"><span className="nle-transport-time"><span className="current">{timecode(frame, fps)}</span><span className="separator">/</span><span className="total">{timecode(scene.maximumFrame, fps)}</span></span><button className="nle-play" aria-label={playing ? "暂停" : "播放"} onClick={togglePlayback}>{playing ? <Pause size={18}/> : <Play size={18}/>}</button><span className="nle-transport-actions"><IconButton label="上一帧" onClick={() => { setPlaying(false); setFrame(value => Math.max(0, value - 1)); }}><StepBack size={15}/></IconButton><IconButton label="下一帧" onClick={() => { setPlaying(false); setFrame(value => Math.min(scene.maximumFrame, value + 1)); }}><StepForward size={15}/></IconButton><IconButton label="静音" onClick={() => setMuted(value => !value)}>{muted ? <VolumeX size={15}/> : <Volume2 size={15}/>}</IconButton></span></div>
-        </section>
-        <PanelResizeHandle side="properties" label="调整属性面板宽度" width={panelWidths.properties} onResize={(width, save) => resizePanel("properties", width, save)}/>
+              onResize={(item, next) => command({ kind: "spatial.edit", expectedProjectRevision: session.status.projectRevision, item, edit: { kind: "frame.resize", frame: next } })}/>}
+          </div></div>
+        </PreviewMonitor>
+        <PanelResizeHandle side="properties" label="调整属性面板宽度" width={panelWidths.properties} onResize={width => resizePanel("properties", width)}/>
         <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist"><button role="tab" aria-selected={propertiesTab === "properties"} onClick={() => setPropertiesTab("properties")}>属性</button>
           <button role="tab" aria-selected={propertiesTab === "text"} onClick={() => setPropertiesTab("text")}>文本</button></div>
           <AnimatePresence mode="popLayout" initial={false}><motion.div key={JSON.stringify([propertiesTab, propertiesTab === "properties" ? activeTransition ?? selection[0] : null])} className="nle-panel-body" {...enterMotion(reduced)}>{propertiesTab === "properties" && selection.length === 1 && selectionLayer?.layout !== undefined
@@ -773,82 +842,90 @@ export function Studio() {
             <Row label="速度"><NumberField key={selectedProjectItem.id} label="速度倍率" value={Math.abs(rate.numerator / rate.denominator)}
               min={0.01} max={100} step={0.1} disabled={editingDisabled} onCommit={speed => place({
                 ...operationContext, kind: "timeline.retime", item: selectedProjectItem.id,
-                rate: { numerator: Math.sign(rate.numerator) * Math.round(speed * 100), denominator: 100 },
+                rate: { numerator: (rate.numerator < 0 && !selectedProjectItem.signals.audio ? -1 : 1) * Math.round(speed * 100), denominator: 100 },
               })}/></Row>
-            <button type="button" className="button" disabled={editingDisabled} onClick={() => place({
-              ...operationContext, kind: "timeline.retime", item: selectedProjectItem.id,
-              rate: { numerator: -rate.numerator, denominator: rate.denominator },
-            })}>{rate.numerator < 0 ? "恢复正放" : "倒放"}</button>
+            {selectedProjectItem.signals.picture && !selectedProjectItem.signals.audio && <button type="button"
+              className="button" disabled={editingDisabled} onClick={() => place({
+                ...operationContext, kind: "timeline.retime", item: selectedProjectItem.id,
+                rate: { numerator: -rate.numerator, denominator: rate.denominator },
+              })}>{rate.numerator < 0 ? "恢复正放" : "倒放"}</button>}
           </Section>}
           {propertiesTab === "text" ? <TimelineTextList scene={scene} selection={selection}
-            textItems={new Set([...session.timeline.textItems,
-              ...scene.tracks.filter(track => track.role === "subtitle").flatMap(track => track.items.map(item => item.id))])}
             inspector={inspector?.scene} disabled={editingDisabled} onSelect={item => {
-              setPlaying(false); setSource(undefined); setFrame(Math.round(item.startFrame)); select([item.id]);
+              seekProgramme(Math.round(item.startFrame)); select([item.id]);
             }} onEdit={(item, section, field, value) => { void command({ ...operationContext, kind: "inspector.edit", item, section, field, value }); }}
               onInvoke={(item, section, collection, row, action) => { void command({ ...operationContext, kind: "inspector.invoke", item, section, collection, row, action }); }}/> : activeTransition !== undefined
           ? <TransitionInspector scene={transitionInspector?.id === activeTransition ? transitionInspector : undefined} disabled={editingDisabled}
             onEdit={(section, field, value) => command({ kind: "transition-inspector.edit", transition: activeTransition,
-              section, field, value, expectedProjectRevision: session.status.projectRevision,
-              expectedViewRevision: session.status.viewRevision })}
+              section, field, value, expectedProjectRevision: session.status.projectRevision, })}
             onResize={durationFrames => place({ ...operationContext, kind: "transition.resize", transition: activeTransition, durationFrames })}
             onRemove={removeSelection}/>
           : <Inspector scene={inspector?.scene} component={inspector?.component} media={session.media.entries}
           disabled={editingDisabled} selectedProcess={selectedProcess} onSelectProcess={setProcessSelection} onEdit={inspectorEdit}
           onInvoke={(item, section, collection, row, action) => command({
             kind: "inspector.invoke", item, section, collection, row, action,
-            expectedProjectRevision: session.status.projectRevision, expectedViewRevision: session.status.viewRevision,
+            expectedProjectRevision: session.status.projectRevision,
           })} onMedia={(item, slot, media) => void perform(async () => {
             await acceptReceipt(await operate(media === ""
               ? { ...operationContext, kind: "component-media.unbind", item, slot }
               : { ...operationContext, kind: "component-media.bind", item, slot, media }));
           })} onProcessEdit={editProcess}/>}</motion.div></AnimatePresence></aside>
       </div>
-      <div className="nle-timeline-mount" ref={timelineRoot}><AnimatePresence mode="popLayout" initial={false}><Timeline key={scene.composition} session={session} frame={frame} selection={selection} busy={editingDisabled} canUndo={canReplay("undo")} canRedo={canReplay("redo")} onSeek={value => { setPlaying(false); setSource(undefined); setFrame(value); }} onSelect={select}
+      {!previewExpanded && <TimelineResizeHandle controls={timelineRegionId} onResize={resizeTimeline}/>}
+      <div className="nle-timeline-mount" id={timelineRegionId} ref={timelineRoot}><AnimatePresence mode="popLayout" initial={false}><Timeline key={scene.composition} session={session} frame={frame} playing={playing} reveal={timelineReveal} selection={selection} busy={editingDisabled} gestureBlocked={timelineBlocked} canUndo={canReplay("undo")} canRedo={canReplay("redo")} onSeek={value => seekProgramme(value, false)} onSelect={selectTimeline}
         selectedTransition={activeTransition} onSelectTransition={selectTransition}
         drop={assetDrag.drag?.drop} canFreeze={canFreeze} onFreeze={() => selectedProjectItem && place({
           ...operationContext, kind: "media.freeze", item: selectedProjectItem.id, sampleFrame: frame,
           atFrame: frame, durationFrames: Math.max(1, Math.round(fps * 3)),
         })}
         selectedProcess={selectedProcess} onSelectProcess={setProcessSelection}
-        onProcessTiming={editProcess}
-        onMove={intent => void perform(async () => acceptReceipt(await operate({
-          ...operationContext, kind: "timeline.drop", ...intent,
-        })))}
+        onProcessTiming={edit => commitTimelineGesture({ ...operationContext, ...edit })}
+        onMove={intent => commitTimelineGesture({ ...operationContext, kind: "timeline.drop", ...intent })}
+        onTrimGesture={(item, edge, atFrame) => commitTimelineGesture({
+          ...operationContext, kind: "timeline.trim", item, edge, atFrame,
+        })}
         onTrim={(items, edge, atFrame) => {
           if (items.length === 1) editTime(items[0]!, edge, atFrame);
           else if (items.length > 1) transact(items.map(item => ({ kind: "item.trim", id: item.id, edge, at: toTime(atFrame) })));
         }}
         onSplit={split}
         onRemove={removeSelection}
-        onApplyPastedGroups={() => editClipboard("clipboard.apply-groups")}
         onTrackEnabled={(track, enabled) => transact([{ kind: "track.update", id: track, enabled }])}
-        onTrackLocked={(track, locked) => viewTransact([{ kind: "track-lock.set", composition: scene.composition, track, locked }])}
+        onTrackLocked={(track, locked) => place({ ...operationContext, kind: "track-lock.set", track, locked })}
         onCompositionCreate={(name, canvas) => void perform(async () => {
           const id = `composition-${crypto.randomUUID()}`;
-          const result = await sendCommand({ ...operationContext, kind: "project.transact",
-            commands: [{ kind: "composition.add", composition: { id, name, canvas, tracks: [], transitions: [], mattes: [] } }] });
-          await acceptReceipt(result);
-          await acceptReceipt(await operate({ kind: "composition.select", target: id, composition: scene.composition,
-            expectedProjectRevision: result.status.projectRevision, expectedViewRevision: result.status.viewRevision }));
-          selectItems([]); setFrame(0);
+          const result = await sendCommand({ kind: "project.transact", expectedProjectRevision: session.status.projectRevision,
+            commands: [{ kind: "composition.add", composition: { id, name, canvas, tracks: [], transitions: [], mattes: [], groups: [] } }] });
+          await openCreatedComposition(id, result);
         })}
-        onCompositionEdit={(name, canvas) => transact([{ kind: "composition.update", id: scene.composition, name, canvas }])}
-        onCompositionRoot={() => transact([{ kind: "project.update", rootComposition: scene.composition }])}
-        onCompositionRemove={() => void perform(async () => {
-          const result = await operate({ ...operationContext, kind: "composition.select", target: session.project.rootComposition });
-          await acceptReceipt(result);
-          await acceptReceipt(await sendCommand({ kind: "project.transact",
-            expectedProjectRevision: result.status.projectRevision, expectedViewRevision: result.status.viewRevision,
-            commands: [{ kind: "composition.remove", id: scene.composition }] }));
-          selectItems([]); setFrame(0);
+        onCompositionEdit={(id, fields) => transact([{ kind: "composition.update", id, ...fields }])}
+        onCompositionInsert={source => place({ ...operationContext, kind: "composition.materialize", source, atFrame: frame })}
+        onCompositionCopy={source => void perform(async () => {
+          const result = await operate({ ...operationContext, kind: "composition.duplicate", source });
+          const copy = result.result?.composition;
+          if (typeof copy !== "string") throw new Error("未收到时间线副本。");
+          await openCreatedComposition(copy, result);
         })}
+        onCompositionRoot={id => transact([{ kind: "project.update", rootComposition: id }])}
+        onCompositionRemove={id => {
+          const commands = [{ kind: "composition.remove", id }] satisfies readonly NleCommand[];
+          if (id !== scene.composition) {
+            transact(commands);
+            return;
+          }
+          void perform(async () => {
+            const result = await operate({ ...operationContext, kind: "composition.select", target: session.project.rootComposition });
+            await acceptReceipt(result);
+            await acceptReceipt(await sendCommand({ kind: "project.transact",
+              expectedProjectRevision: result.status.projectRevision, commands }));
+            selectItems([]); setFrame(0);
+          });
+        }}
         onRippleRemove={items => void perform(async () => {
           if (items.length === 0) return;
           await acceptReceipt(await operate({ ...operationContext, kind: "timeline.ripple-remove",
             items: items.map(item => item.id), tracks: [...new Set(items.map(item => item.track))] }));
           selectItems([]);
-          await reconcileView();
         })}
         onTrackRename={(id, name) => transact([{ kind: "track.update", id, name }])}
         onTrackRemove={id => {
@@ -863,14 +940,13 @@ export function Studio() {
             ...(ids.size === 0 ? [] : [{ kind: "item.remove" as const, ids: [...ids] }]),
             { kind: "track.remove", id },
           ];
-          transact(commands, true);
+          transact(commands);
         }}
-        onTrackHeight={(track, heightPx) => viewTransact([{ kind: "track-height.set", composition: scene.composition, track, heightPx }])}
         onCloseGap={(track, atFrames) => void perform(async () => {
           for (const atFrame of atFrames) {
             const status = sessionRef.current!.status;
             await acceptReceipt(await operate({ ...operationContext, kind: "timeline.close-gap", tracks: [track], atFrame,
-              expectedProjectRevision: status.projectRevision, expectedViewRevision: status.viewRevision }));
+              expectedProjectRevision: status.projectRevision }));
           }
         })}
         onCompoundUnique={item => void perform(async () => {
@@ -880,7 +956,7 @@ export function Studio() {
           const copy = created.result?.item;
           await acceptReceipt(created, typeof copy === "string" ? copy : undefined);
           if (typeof copy === "string") await acceptReceipt(await operate({ ...operationContext, kind: "composition.make-unique", item: copy,
-            expectedProjectRevision: created.status.projectRevision, expectedViewRevision: created.status.viewRevision }));
+            expectedProjectRevision: created.status.projectRevision }));
         })}
         onCompoundExplode={item => place({ ...operationContext, kind: "composition.explode", item })}
         onTrackMove={(track, before) => place({ ...operationContext, kind: "timeline.track-reorder", track, ...(before === undefined ? {} : { before }) })}
@@ -888,25 +964,14 @@ export function Studio() {
         onEnterComposition={item => navigate({ ...operationContext, kind: "composition.enter", item, atFrame: frame })}
         onReturnComposition={() => navigate({ ...operationContext, kind: "composition.return" })}
         onCompound={() => place({ ...operationContext, kind: "composition.compound", items: selection, name: "复合片段" })}
-        onAddTrack={() => transact([{ kind: "track.add", composition: scene.composition, track: { id: `track-${crypto.randomUUID().slice(0, 8)}`, name: "新轨道", kind: "picture", enabled: true, items: [] } }])}
-        canToggleGroup={canToggleGroup} grouped={grouped} onToggleGroup={toggleGroup}
-        canDetachAudio={canDetachAudio} onDetachAudio={() => void perform(async () => {
+        canToggleGroup={canToggleGroup} groupLabel={groupLabel} onToggleGroup={toggleGroup}
+        canDetachAudio={canDetachAudio} onDetachAudio={() => {
           if (!canDetachAudio || selectedProjectItem === undefined) return;
-          const available = freeAudioTrack(selectedProjectItem.startFrame, selectedProjectItem.durationFrames);
-          if (available !== undefined) {
-            const receipt = await operate({ ...operationContext, kind: "audio.detach", item: selectedProjectItem.id, track: available.id });
-            await acceptReceipt(receipt, typeof receipt.result?.item === "string" ? receipt.result.item : undefined);
-          } else {
-            const track = audioTrack(), audioItemId = `audio-item-${crypto.randomUUID()}`;
-            const receipt = await sendCommand({ ...operationContext, kind: "project.transact", commands: [
-              { kind: "track.add", composition: scene.composition, track },
-              { kind: "item.detach-audio", id: selectedProjectItem.id, track: track.id, audioItemId },
-            ] });
-            await acceptReceipt(receipt, audioItemId);
-          }
-        })}
+          place({ ...operationContext, kind: "audio.detach", item: selectedProjectItem.id });
+        }}
         onUndo={() => replay("undo")}
         onRedo={() => replay("redo")}/></AnimatePresence></div>
+      </div>
       <AnimatePresence>{assetDrag.drag !== undefined && <motion.div {...fadeMotion(reduced)} className="nle-floating-preview" style={{ position: "fixed", left: assetDrag.drag.x + 12, top: assetDrag.drag.y + 12, pointerEvents: "none" }}>
         <MediaThumbnail entry={assetDrag.drag.entry}/><span>{assetDrag.drag.entry.name}</span>
       </motion.div>}</AnimatePresence>

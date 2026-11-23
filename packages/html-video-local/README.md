@@ -5,5 +5,5 @@ request-local temporary resources, the explicitly selected HTML backend, AudioPr
 handles and Project paths belong to the calling delivery Service.
 
 Application distributions may construct one operating-system Executor and inject it into several delivery Services so
-they share tool selection and readiness checks. FFmpeg and browser processes are invocation-local children owned by
-that Executor.
+they share tool selection, readiness checks and a bounded cache of exact frame indexes for unchanged videos.
+FFmpeg and browser processes are invocation-local children owned by that Executor.

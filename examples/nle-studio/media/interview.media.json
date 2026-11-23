@@ -1,6 +1,7 @@
 {
   "format": "hypit.media-asset",
   "media": {
+    "adoptedAt": "2026-11-16T01:00:00.000Z",
     "file": {
       "path": "interview.mp4",
       "mediaType": "video/mp4"

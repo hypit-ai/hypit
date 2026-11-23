@@ -1,19 +1,43 @@
 import { randomUUID } from "node:crypto";
 import {
-  applyNleTransaction, createCompositionMaterialization, indexNleComposition, nleCompositionDuration,
-  type NleCommand, type NleComposition, type NleCompositionItem, type NleProject,
+  applyNleTransaction, createCompositionMaterialization, indexNleComposition, nleCompositionDuration, nleItemEnd,
+  type NleCommand, type NleComposition, type NleCompositionItem, type NleProject, type NleTrack,
 } from "@hypit/nle";
 import { addExactTemporalValues, compareExactTemporalValues, exactTemporalZero, subtractExactTemporalValues } from "@hypit/temporal/algebra";
+import { resolveCompoundSelection } from "./compound-selection.js";
 
-function copyDefinition(source: NleComposition, id: string, definitions: ReadonlyMap<string, string>): NleComposition {
+export function projectCompositionTabs(project: NleProject, active: string) {
+  const parents = new Map<string, Set<string>>();
+  for (const composition of project.compositions) for (const track of composition.tracks) for (const item of track.items) {
+    if (item.kind !== "present" || item.source !== "composition") continue;
+    const sources = parents.get(item.composition) ?? new Set<string>();
+    sources.add(composition.id);
+    parents.set(item.composition, sources);
+  }
+  // Inserting an ancestor into the active Composition would close a reference cycle.
+  const blocked = new Set<string>();
+  const visit = (id: string) => {
+    if (blocked.has(id)) return;
+    blocked.add(id);
+    for (const parent of parents.get(id) ?? []) visit(parent);
+  };
+  visit(active);
+  return project.compositions.map(({ id, name, canvas, tracks }) => ({
+    id, name, canvas, referenced: parents.has(id),
+    canInsert: !blocked.has(id) && tracks.some(track => track.enabled && track.items.some(item =>
+      item.kind === "present" && item.enabled && (item.picture !== undefined || item.audio !== undefined))),
+  }));
+}
+
+function copyDefinition(source: NleComposition, id: string, definitions?: ReadonlyMap<string, string>): NleComposition {
   const ids = new Map(source.tracks.flatMap(track => track.items.map(item => [item.id, `item-${randomUUID()}`] as const)));
   return {
     ...structuredClone(source), id,
     tracks: source.tracks.map(track => ({
       ...structuredClone(track), id: `track-${randomUUID()}`, items: track.items.map(item => ({
         ...structuredClone(item), id: ids.get(item.id)!,
-        ...(item.kind === "present" && item.source === "composition"
-          ? { composition: definitions.get(item.composition) ?? item.composition } : {}),
+        ...(definitions !== undefined && item.kind === "present" && item.source === "composition"
+          ? { composition: definitions.get(item.composition)! } : {}),
       })),
     })),
     transitions: source.transitions.map(relation => ({
@@ -24,27 +48,39 @@ function copyDefinition(source: NleComposition, id: string, definitions: Readonl
       ...structuredClone(relation), id: `matte-${randomUUID()}`,
       content: ids.get(relation.content)!, matte: ids.get(relation.matte)!,
     })),
+    groups: source.groups.map(group => ({
+      id: `group-${randomUUID()}`, items: group.items.map(item => ids.get(item)!),
+    })),
   };
 }
 
+function trackForReplacement(parent: NleComposition, source: NleTrack, target: Pick<NleTrack, "name" | "role">,
+  first: number, count: number, start: NleCompositionItem["start"], duration: NleCompositionItem["duration"]) {
+  if (source.role === target.role) return { track: source.id, commands: [] as readonly NleCommand[] };
+  const end = addExactTemporalValues(start, duration);
+  const overlaps = (items: NleTrack["items"]) => items.some(item =>
+    compareExactTemporalValues(item.start, end) < 0 && compareExactTemporalValues(start, nleItemEnd(item)) < 0);
+  const above = !overlaps(source.items.slice(first + count));
+  if (!above && overlaps(source.items.slice(0, first))) {
+    throw new Error("NLE Studio needs a replacement Track that preserves the order of overlapping Items.");
+  }
+  const before = above ? parent.tracks[parent.tracks.indexOf(source) + 1]?.id : source.id;
+  const track: NleTrack = {
+    id: `track-${randomUUID()}`, name: target.name, kind: source.kind, role: target.role, enabled: true, items: [],
+  };
+  return { track: track.id, commands: [{
+    kind: "track.add", composition: parent.id, track, ...(before === undefined ? {} : { before }),
+  }] satisfies readonly NleCommand[] };
+}
+
 export function planCompound(project: NleProject, parent: NleComposition, ids: readonly string[], name: string) {
-  const selected = new Set(ids);
-  const track = parent.tracks.find(entry => entry.items.some(item => selected.has(item.id)));
-  const items = track?.items.filter(item => selected.has(item.id)) ?? [];
-  if (track === undefined || !track.enabled || items.length !== selected.size || items.length === 0
-    || items.some(item => item.kind !== "present")) {
-    throw new Error("NLE Studio compound requires selected Present Items in one enabled Track.");
-  }
-  const first = track.items.indexOf(items[0]!);
-  if (!track.items.slice(first, first + items.length).every(item => selected.has(item.id))) {
-    throw new Error("NLE Studio compound requires a contiguous selection in Track Item order.");
-  }
-  const transitions = parent.transitions.filter(relation => selected.has(relation.outgoing) || selected.has(relation.incoming));
-  const mattes = parent.mattes.filter(relation => selected.has(relation.content) || selected.has(relation.matte));
-  if (transitions.some(relation => !selected.has(relation.outgoing) || !selected.has(relation.incoming))
-    || mattes.some(relation => !selected.has(relation.content) || !selected.has(relation.matte))) {
-    throw new Error("NLE Studio compound requires both endpoints of every selected audiovisual relation.");
-  }
+  const selection = resolveCompoundSelection(parent, ids);
+  if ("error" in selection) throw new Error(selection.error);
+  const { track, first, count, selected } = selection;
+  const items = track.items.slice(first, first + count);
+  const transitions = parent.transitions.filter(relation => selected.has(relation.outgoing));
+  const mattes = parent.mattes.filter(relation => selected.has(relation.content));
+  const groups = parent.groups.filter(group => group.items.some(item => selected.has(item)));
   const start = items.reduce((earliest, item) =>
     compareExactTemporalValues(item.start, earliest) < 0 ? item.start : earliest, items[0]!.start);
   const child: NleComposition = {
@@ -56,8 +92,12 @@ export function planCompound(project: NleProject, parent: NleComposition, ids: r
     }],
     transitions: structuredClone(transitions),
     mattes: structuredClone(mattes),
+    groups: structuredClone(groups),
   };
+  const placement = trackForReplacement(parent, track, { name, role: track.kind }, first, items.length,
+    start, nleCompositionDuration(child));
   const commands: NleCommand[] = [
+    ...placement.commands,
     ...transitions.map(relation => ({ kind: "transition.remove" as const, id: relation.id })),
     ...mattes.map(relation => ({ kind: "matte.remove" as const, id: relation.id })),
     { kind: "item.remove", ids: [...selected] },
@@ -66,9 +106,9 @@ export function planCompound(project: NleProject, parent: NleComposition, ids: r
   const prepared = applyNleTransaction(project, { commands });
   const item = `compound-${randomUUID()}`;
   const materialized = createCompositionMaterialization(prepared, {
-    id: item, track: track.id, composition: child.id, at: start,
+    id: item, track: placement.track, composition: child.id, at: start,
   });
-  const after = track.items[first + items.length];
+  const after = placement.track === track.id ? track.items[first + items.length] : undefined;
   for (const command of materialized.commands) {
     commands.push(command.kind === "item.add"
       ? { ...command, item: { ...command.item, name }, ...(after === undefined ? {} : { before: after.id }) }
@@ -85,9 +125,9 @@ function nestedItem(parent: NleComposition, id: string) {
   return { ...located, item: located.item };
 }
 
-export function planUniqueComposition(project: NleProject, parent: NleComposition, id: string) {
-  const { item } = nestedItem(parent, id);
+export function planCopyComposition(project: NleProject, id: string) {
   const sources = new Map(project.compositions.map(composition => [composition.id, composition] as const));
+  if (!sources.has(id)) throw new Error(`Unknown NLE Composition ${id}.`);
   const ids = new Map<string, string>();
   const collect = (source: string) => {
     if (ids.has(source)) return;
@@ -98,15 +138,25 @@ export function planUniqueComposition(project: NleProject, parent: NleCompositio
       }
     }
   };
-  collect(item.composition);
-  const composition = ids.get(item.composition)!;
+  collect(id);
+  const composition = ids.get(id)!;
+  const names = new Set(project.compositions.map(entry => entry.name));
   const commands: NleCommand[] = [...ids].map(([source, copy]) => {
     const definition = copyDefinition(sources.get(source)!, copy, ids);
-    return { kind: "composition.add", composition: source === item.composition
-      ? { ...definition, name: `${definition.name} · 副本` } : definition };
+    const base = `${definition.name} · 副本`;
+    let name = base;
+    for (let number = 2; names.has(name); number++) name = `${base} ${number}`;
+    names.add(name);
+    return { kind: "composition.add", composition: { ...definition, name } };
   });
-  commands.push({ kind: "item.replace", item: { ...structuredClone(item), composition } });
-  return { commands, composition, item: item.id };
+  return { commands, composition };
+}
+
+export function planUniqueComposition(project: NleProject, parent: NleComposition, id: string) {
+  const { item } = nestedItem(parent, id);
+  const { commands, composition } = planCopyComposition(project, item.composition);
+  return { commands: [...commands, { kind: "item.replace" as const, item: { ...structuredClone(item), composition } }],
+    composition, item: item.id };
 }
 
 function identityPlacement(item: NleCompositionItem, parent: NleComposition, source: NleComposition): boolean {
@@ -143,15 +193,28 @@ export function planExplodeComposition(project: NleProject, parent: NleCompositi
   if (index.transitionParticipants(id).length > 0 || index.matteParticipants(id).length > 0) {
     throw new Error(`NLE Studio cannot explode Composition Item ${id} while it participates in a Transition or Matte.`);
   }
-  const copy = copyDefinition(source, source.id, new Map());
+  const copy = copyDefinition(source, source.id);
   const items = copy.tracks[0]!.items.map(member => ({
     ...member, start: addExactTemporalValues(member.start, item.start),
   }));
+  const group = parent.groups.find(group => group.items.includes(item.id));
+  const placement = trackForReplacement(parent, track, childTrack, track.items.indexOf(item), 1, item.start, item.duration);
   const commands: NleCommand[] = [
-    ...items.map(member => ({ kind: "item.add" as const, track: track.id, item: member, before: item.id })),
+    ...placement.commands,
+    ...items.map(member => ({ kind: "item.add" as const, track: placement.track, item: member,
+      ...(placement.track === track.id ? { before: item.id } : {}) })),
+  ];
+  if (group !== undefined) {
+    commands.push({ kind: "group.replace", composition: parent.id, group: {
+      ...group, items: group.items.flatMap(member => member === item.id ? items.map(value => value.id) : [member]),
+    } });
+  } else {
+    for (const childGroup of copy.groups) commands.push({ kind: "group.add", composition: parent.id, group: childGroup });
+  }
+  commands.push(
     { kind: "item.remove", ids: [item.id] },
     ...copy.transitions.map(transition => ({ kind: "transition.add" as const, composition: parent.id, transition })),
     ...copy.mattes.map(matte => ({ kind: "matte.add" as const, composition: parent.id, matte })),
-  ];
+  );
   return { commands, item: items[0]!.id, count: items.length };
 }

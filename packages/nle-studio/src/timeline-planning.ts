@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { applyNleTransaction, nleItemEnd, nleLinearTimeMapping, type NleCommand, type NleComposition, type NleItem, type NleProject, type NleTrack } from "@hypit/nle";
-import { nleViewCompositionState, nleViewTrackLocked, orderNleTimelineTracks, type NleView } from "@hypit/nle/view";
+import { applyNleTransaction, indexNleComposition, nleGroupMoveItems, nleItemEnd, nleLinearTimeMapping, type NleCommand, type NleComposition, type NleItem, type NleProject, type NleTrack } from "@hypit/nle";
+import { orderNleTimelineTracks } from "@hypit/nle/surface";
 import {
   addExactTemporalValues,
   compareExactTemporalValues,
@@ -12,24 +12,23 @@ import {
   type TemporalRate,
 } from "@hypit/temporal/algebra";
 import type { NleStudioDropDestination, NleStudioTimelineDrop, NleStudioTimelineEdit } from "./protocol.js";
-import type { NleStudioPackageBridge } from "./packages.js";
 
 export function studioFrameTime(frame: number, rate: TemporalRate): ExactTemporalValue {
   if (!Number.isSafeInteger(frame)) throw new Error("NLE Studio frame must be a safe integer.");
   return { ticks: String(BigInt(frame) * BigInt(rate.denominator)), timeBase: { numerator: 1, denominator: rate.numerator } };
 }
 
-function relatedItems(composition: NleComposition, view: NleView, seeds: readonly string[], exceptTransition?: string): Set<string> {
+function relatedItems(composition: NleComposition, seeds: readonly string[], exceptTransition?: string): Set<string> {
   const relations = [
-    ...(nleViewCompositionState(view, composition.id)?.groups.map(group => group.items) ?? []),
     ...composition.transitions.filter(transition => transition.id !== exceptTransition)
       .map(transition => [transition.outgoing, transition.incoming]),
     ...composition.mattes.map(matte => [matte.content, matte.matte]),
   ];
-  const selected = new Set(seeds);
+  let selected = new Set(seeds);
   let previousSize: number;
   do {
     previousSize = selected.size;
+    selected = nleGroupMoveItems(composition, selected);
     for (const members of relations) {
       if (members.some(item => selected.has(item))) for (const item of members) selected.add(item);
     }
@@ -42,25 +41,7 @@ function overlapsAfterMove(item: NleItem, other: NleItem, delta: ExactTemporalVa
     && compareExactTemporalValues(other.start, addExactTemporalValues(nleItemEnd(item), delta)) < 0;
 }
 
-type ActiveTimeline = { readonly project: NleProject; readonly composition: NleComposition; readonly view: NleView };
-
-export function studioTextItems(composition: NleComposition, offerings: NleStudioPackageBridge["components"]) {
-  const componentKey = ({ package: name, symbol }: { readonly package: string; readonly symbol: string }) => `${name}\0${symbol}`;
-  const graphics = new Set(offerings.filter(entry => entry.value.category === "graphic").map(entry => componentKey(entry.value.component)));
-  const text = new Set(offerings.filter(entry => entry.value.category === "text").map(entry => componentKey(entry.value.component)));
-  const ids = composition.tracks.flatMap(track => track.items.flatMap(item => {
-    if (item.kind !== "present" || item.source !== "component" || item.role === "subtitle") return [];
-    const key = componentKey(item.component);
-    return track.role === "text" || (text.has(key) && !graphics.has(key)) ? [item.id] : [];
-  }));
-  return new Set(ids);
-}
-
-export function studioTrackRole(track: NleTrack, textItems: ReadonlySet<string>): NleTrack["role"] {
-  if (track.role !== undefined || track.items.length === 0) return track.role;
-  if (track.items.every(item => item.kind === "adjust")) return "effect";
-  if (track.kind === "picture" && track.items.every(item => textItems.has(item.id))) return "text";
-}
+type ActiveTimeline = { readonly project: NleProject; readonly composition: NleComposition; readonly lockedTracks: ReadonlySet<string> };
 
 export function resolveTransitionCut(composition: NleComposition, trackId: string, at: ExactTemporalValue) {
   const track = composition.tracks.find(track => track.id === trackId && track.kind === "picture");
@@ -74,7 +55,7 @@ export function resolveTransitionCut(composition: NleComposition, trackId: strin
 }
 
 export function planTransitionWindow(
-  { composition, view }: ActiveTimeline,
+  { composition }: ActiveTimeline,
   transition: NleComposition["transitions"][number],
   duration: ExactTemporalValue,
 ): readonly NleCommand[] {
@@ -83,12 +64,12 @@ export function planTransitionWindow(
   const right = items.find(item => item.id === transition.incoming)!;
   const delta = subtractExactTemporalValues(subtractExactTemporalValues(nleItemEnd(left), right.start), duration);
   if (compareExactTemporalValues(delta, exactTemporalZero()) === 0) return [];
-  assertTransitionMove(composition, view, right.id, transition.id);
+  assertTransitionMove(composition, right.id, transition.id);
   return [{ kind: "item.move", ids: [right.id], delta }];
 }
 
-export function assertTransitionMove(composition: NleComposition, view: NleView, incoming: string, transition?: string) {
-  if (relatedItems(composition, view, [incoming], transition).size > 1) {
+export function assertTransitionMove(composition: NleComposition, incoming: string, transition?: string) {
+  if (relatedItems(composition, [incoming], transition).size > 1) {
     throw new Error(`NLE Studio Transition cannot displace linked Item ${incoming}.`);
   }
 }
@@ -103,7 +84,7 @@ function timelineScope(composition: NleComposition, tracks: readonly string[]) {
 }
 
 function scopedTail(
-  { composition, view }: ActiveTimeline,
+  { composition }: ActiveTimeline,
   tracks: readonly NleTrack[],
   start: ExactTemporalValue,
   boundary: ExactTemporalValue,
@@ -116,7 +97,7 @@ function scopedTail(
   }
   const next = candidates.filter(item => compareExactTemporalValues(item.start, boundary) >= 0).map(item => item.id);
   const moving = new Set(next);
-  for (const linked of relatedItems(composition, view, next)) {
+  for (const linked of relatedItems(composition, next)) {
     if (!moving.has(linked) && !excluded.has(linked)) {
       throw new Error(`NLE Studio scoped edit cannot move linked Item ${linked} within the chosen range and Tracks.`);
     }
@@ -140,7 +121,7 @@ export function planTimelineInsertion(
 
 /** The one source window whose rate the Studio can author directly. */
 export function nleRetimeWindow(item: NleItem) {
-  if (item.kind !== "present" || item.source === "component" || item.picture === undefined || item.audio !== undefined) return undefined;
+  if (item.kind !== "present" || item.source === "component" || (item.picture === undefined && item.audio === undefined)) return undefined;
   const piece = item.sourceTime.pieces[0];
   return item.sourceTime.pieces.length === 1 && piece !== undefined && isAffineTemporalMapPiece(piece)
     && piece.wrap === undefined && compareExactTemporalValues(piece.target.start, exactTemporalZero()) === 0
@@ -148,7 +129,7 @@ export function nleRetimeWindow(item: NleItem) {
 }
 
 export function planTimelineEdit(context: ActiveTimeline, edit: NleStudioTimelineEdit) {
-  const { composition, view } = context;
+  const { project, composition } = context;
   const entries = composition.tracks.flatMap(track => track.items.map(item => ({ track, item })));
   const selection = (ids: readonly string[]) => {
     const selected = new Set(ids);
@@ -158,7 +139,7 @@ export function planTimelineEdit(context: ActiveTimeline, edit: NleStudioTimelin
     }
     return found;
   };
-  const time = (frame: number) => studioFrameTime(frame, view.editRate);
+  const time = (frame: number) => studioFrameTime(frame, project.editRate);
   const compare = compareExactTemporalValues;
   const commands: NleCommand[] = [];
   let count = 0;
@@ -204,7 +185,12 @@ export function planTimelineEdit(context: ActiveTimeline, edit: NleStudioTimelin
     case "timeline.retime": {
       const { item } = selection([edit.item])[0]!;
       const piece = nleRetimeWindow(item);
-      if (piece === undefined) throw new Error(`NLE Item ${item.id} retime requires one affine source window on a Picture-only Media or Composition Present.`);
+      if (item.kind !== "present" || piece === undefined) {
+        throw new Error(`NLE Item ${item.id} retime requires one affine source window on a Media or Composition Present.`);
+      }
+      if (item.audio !== undefined && edit.rate.numerator <= 0) {
+        throw new Error(`NLE Item ${item.id} Audio retime requires a positive rate.`);
+      }
       if (edit.rate.numerator === 0) throw new Error("NLE Studio speed rate must be nonzero.");
       const previousEnd = extrapolateTemporalAffineMapPiece(piece, item.duration);
       const previousDirection = Math.sign(piece.rate.numerator);
@@ -297,41 +283,35 @@ export function planTimelineEdit(context: ActiveTimeline, edit: NleStudioTimelin
   return { commands, count };
 }
 
-export function allocateTimelinePlacement(context: ActiveTimeline, textItems: ReadonlySet<string>, input: {
+export function allocateTimelinePlacement(context: ActiveTimeline, input: {
   readonly medium: NleTrack["kind"];
-  readonly role?: NleTrack["role"];
+  readonly role: NleTrack["role"];
   readonly track: string | undefined;
   readonly purpose:
     | { readonly kind: "present"; readonly start: ExactTemporalValue; readonly duration: ExactTemporalValue }
     | { readonly kind: "adjust" };
 }) {
-  const { project, composition, view } = context;
-  const { medium, purpose } = input;
-  const role = input.role ?? (purpose.kind === "adjust" ? "effect" : undefined);
+  const { project, composition, lockedTracks } = context;
+  const { medium, role, purpose } = input;
   const tracks = composition.tracks.filter(track => track.kind === medium);
-  const trackRole = (track: NleTrack) => studioTrackRole(track, textItems);
-  const locked = (track: NleTrack) => nleViewTrackLocked(view, composition.id, track.id);
+  const locked = (track: NleTrack) => lockedTracks.has(track.id);
   const available = (track: NleTrack) => track.enabled && !locked(track);
   let selected: NleTrack | undefined;
   if (input.track !== undefined) {
     selected = tracks.find(track => track.id === input.track);
     if (selected === undefined) throw new Error(`NLE Studio placement requires a ${medium} Track in ${composition.id}.`);
-    const selectedRole = trackRole(selected);
-    if (selectedRole !== role && !(purpose.kind === "adjust" && selectedRole === undefined)) {
-      throw new Error("NLE Studio placement requires a compatible Track role.");
-    }
+    if (selected.role !== role) throw new Error(`NLE Studio placement requires Track role ${role}.`);
     if (locked(selected)) throw new Error(`NLE Studio placement Track ${input.track} is locked.`);
+    if (!selected.enabled) throw new Error(`NLE Studio placement Track ${input.track} is disabled.`);
   } else if (purpose.kind === "adjust") {
     const last = tracks.at(-1);
-    if (last && trackRole(last) === role && available(last)) selected = last;
-  } else if (medium === "audio") {
-    selected = tracks.find(track => trackRole(track) === role && available(track));
+    if (last && last.role === role && available(last)) selected = last;
   } else {
     const end = addExactTemporalValues(purpose.start, purpose.duration);
-    selected = tracks.reverse().find(track => trackRole(track) === role && available(track) && track.items.every(item =>
-      item.kind === "present" && (
-        compareExactTemporalValues(end, item.start) <= 0 || compareExactTemporalValues(nleItemEnd(item), purpose.start) <= 0
-      )));
+    const candidates = medium === "picture" ? tracks.reverse() : tracks;
+    selected = candidates.find(track => track.role === role && available(track) && track.items.every(item =>
+      compareExactTemporalValues(end, item.start) <= 0 || compareExactTemporalValues(nleItemEnd(item), purpose.start) <= 0
+    ));
   }
   if (selected !== undefined) return { project, track: selected.id, commands: [] as readonly NleCommand[] };
   const track = makeTrack(medium, role);
@@ -339,87 +319,81 @@ export function allocateTimelinePlacement(context: ActiveTimeline, textItems: Re
   return { project: applyNleTransaction(project, { commands }), track: track.id, commands };
 }
 
-function makeTrack(kind: NleTrack["kind"], role?: NleTrack["role"]): NleTrack {
-  const name = role === "subtitle" ? "字幕轨道" : role === "text" ? "文字轨道" : role === "effect" ? "效果轨道"
-    : kind === "picture" ? "视频轨道" : "音频轨道";
-  return { id: `track-${randomUUID()}`, name, kind, ...(role === undefined ? {} : { role }), enabled: true, items: [] };
+function makeTrack(kind: NleTrack["kind"], role: NleTrack["role"]): NleTrack {
+  const names = { picture: "画面轨道", audio: "音频轨道", text: "文字轨道", subtitle: "字幕轨道", filter: "滤镜轨道", effect: "特效轨道" };
+  return { id: `track-${randomUUID()}`, name: names[role], kind, role, enabled: true, items: [] };
 }
 
-type TrackArrangement = {
-  readonly commands: readonly NleCommand[];
-  readonly trackOrder?: readonly string[];
-};
+export function planAudioDetachment(context: ActiveTimeline, id: string, destination?: string) {
+  const { composition } = context;
+  const source = indexNleComposition(composition).item(id);
+  if (source === undefined) throw new Error(`Unknown NLE Item ${id} in Composition ${composition.id}.`);
 
-function preferredTrackOrder(composition: NleComposition, view: NleView, rows: readonly NleTrack[]) {
-  const firstAudio = rows.findIndex(track => track.kind === "audio");
-  const mixed = firstAudio >= 0 && rows.slice(firstAudio + 1).some(track => track.kind === "picture");
-  return mixed || nleViewCompositionState(view, composition.id)?.trackOrder !== undefined
-    ? { trackOrder: rows.map(track => track.id) } : {};
+  const commands: NleCommand[] = [];
+  let target: string;
+  if (destination === undefined) {
+    const track = { ...makeTrack("audio", "audio"), enabled: source.track.enabled };
+    commands.push({ kind: "track.add", composition: composition.id, track, before: source.track.id });
+    target = track.id;
+  } else {
+    const placement = allocateTimelinePlacement(context, {
+      medium: "audio", role: "audio", track: destination,
+      purpose: { kind: "present", start: source.item.start, duration: source.item.duration },
+    });
+    commands.push(...placement.commands);
+    target = placement.track;
+  }
+  const item = `audio-${randomUUID()}`;
+  commands.push({ kind: "item.detach-audio", id, track: target, audioItemId: item });
+  return { commands, item, track: target };
 }
 
-function planTrackArrangement(composition: NleComposition, view: NleView, rows: readonly NleTrack[],
-  block: readonly NleTrack[], gap: number): TrackArrangement {
+function planTrackArrangement(rows: readonly NleTrack[], block: readonly NleTrack[], gap: number): readonly NleCommand[] {
   const moved = new Set(block);
   const ordered = rows.filter(track => !moved.has(track));
   const index = rows.slice(0, gap).filter(track => !moved.has(track)).length;
   ordered.splice(index, 0, ...block);
-  if (ordered.every((track, index) => track === rows[index])) return { commands: [] };
+  if (ordered.every((track, index) => track === rows[index])) return [];
 
-  const commands: NleCommand[] = [];
-  for (const kind of ["picture", "audio"] as const) {
-    const previous = rows.filter(track => track.kind === kind);
-    const next = ordered.filter(track => track.kind === kind);
-    if (next.every((track, index) => track === previous[index])) continue;
-    if (kind === "picture") next.reverse();
-    for (let index = next.length - 1; index >= 0; index--) {
-      const track = next[index]!;
-      if (!moved.has(track)) continue;
-      const before = next[index + 1]?.id;
-      commands.push({ kind: "track.move", id: track.id, ...(before === undefined ? {} : { before }) });
-    }
-  }
-  return { commands, ...preferredTrackOrder(composition, view, ordered) };
+  return ordered.flatMap((track, index): NleCommand[] => {
+    const before = ordered[index - 1]?.id;
+    return moved.has(track) ? [{ kind: "track.move", id: track.id, ...(before === undefined ? {} : { before }) }] : [];
+  });
 }
 
-export function planTimelineTrackReorder(composition: NleComposition, view: NleView, track: string,
-  before: string | undefined): TrackArrangement {
-  const rows = orderNleTimelineTracks(composition.tracks, nleViewCompositionState(view, composition.id)?.trackOrder);
+export function planTimelineTrackReorder(composition: NleComposition, lockedTracks: ReadonlySet<string>, track: string,
+  before: string | undefined): readonly NleCommand[] {
+  const rows = orderNleTimelineTracks(composition.tracks);
   const moved = rows.find(row => row.id === track);
   if (moved === undefined) throw new Error(`NLE Studio cannot reorder unknown Track ${track}.`);
-  if (nleViewTrackLocked(view, composition.id, track)) throw new Error(`NLE Studio cannot reorder locked Track ${track}.`);
+  if (lockedTracks.has(track)) throw new Error(`NLE Studio cannot reorder locked Track ${track}.`);
   const target = before === undefined ? rows.length : rows.findIndex(row => row.id === before);
   if (target < 0) throw new Error(`NLE Studio reorder targets unknown Track ${before}.`);
-  return planTrackArrangement(composition, view, rows, [moved], target);
+  return planTrackArrangement(rows, [moved], target);
 }
 
-/** Studio Timeline allocation policy over current Project and View facts. */
-export function planTimelineDrop(context: ActiveTimeline, textItems: ReadonlySet<string>, drop: NleStudioTimelineDrop): TrackArrangement & {
+/** Studio Timeline allocation policy over current Project and session locks. */
+export function planTimelineDrop(context: ActiveTimeline, drop: NleStudioTimelineDrop): {
+  readonly commands: readonly NleCommand[];
   readonly anchorTrack: string;
   readonly destination: NleStudioDropDestination;
 } {
-  const { composition, view } = context;
-  const rows = [...orderNleTimelineTracks(composition.tracks, nleViewCompositionState(view, composition.id)?.trackOrder)];
-  const ids = relatedItems(composition, view, drop.items);
+  const { project, composition, lockedTracks } = context;
+  const rows = [...orderNleTimelineTracks(composition.tracks)];
+  const ids = relatedItems(composition, drop.items);
   const entries = rows.flatMap(track => track.items.filter(item => ids.has(item.id)).map(item => ({ track, item })));
   if (!drop.items.includes(drop.anchor) || entries.length !== ids.size) {
     throw new Error("NLE Studio drop requires an anchor and selected Items in the active Composition.");
   }
   const anchorTrack = entries.find(entry => entry.item.id === drop.anchor)!.track;
-  const trackRole = (track: NleTrack) => studioTrackRole(track, textItems);
-  const itemRole = (track: NleTrack, id: string) => {
-    if (textItems.has(id)) return "text";
-    const role = trackRole(track);
-    return role === "text" ? undefined : role;
-  };
-  const anchorRole = itemRole(anchorTrack, drop.anchor);
-  const locked = (track: NleTrack) => nleViewTrackLocked(view, composition.id, track.id);
+  const locked = (track: NleTrack) => lockedTracks.has(track.id);
   for (const { track } of entries) {
     if (locked(track)) throw new Error(`NLE Studio drop includes locked Track ${track.id}.`);
   }
   const targetTrack = drop.target.kind === "track" ? drop.target.track : drop.target.before;
   const target = targetTrack === undefined ? rows.length : rows.findIndex(track => track.id === targetTrack);
   if (target < 0) throw new Error(`NLE Studio drop targets unknown Track ${targetTrack}.`);
-  let delta = studioFrameTime(drop.deltaFrames, view.editRate);
+  let delta = studioFrameTime(drop.deltaFrames, project.editRate);
   const zero = exactTemporalZero();
   for (const { item } of entries) {
     if (compareExactTemporalValues(addExactTemporalValues(item.start, delta), zero) < 0) {
@@ -435,20 +409,19 @@ export function planTimelineDrop(context: ActiveTimeline, textItems: ReadonlySet
     const first = rows.indexOf(block[0]!);
     const end = first + block.length;
     if (rows[end - 1] === block.at(-1) && block.every(track => track.items.every(item => ids.has(item.id)))) {
-      const arrangement = planTrackArrangement(composition, view, rows, block, target);
-      const reordered = arrangement.commands.length > 0 || arrangement.trackOrder !== undefined;
+      const trackMoves = planTrackArrangement(rows, block, target);
       let destination: NleStudioDropDestination = currentTrack;
-      if (reordered) {
+      if (trackMoves.length > 0) {
         const before = rows[target]?.id;
         destination = { gap: true, ...(before === undefined ? {} : { before }) };
       }
-      commands.push(...arrangement.commands);
+      commands.push(...trackMoves);
       if (changesTime) commands.push({ kind: "item.move", ids: [...ids], delta });
-      return { ...arrangement, commands, anchorTrack: anchorTrack.id, destination };
+      return { commands, anchorTrack: anchorTrack.id, destination };
     }
   } else {
     const lane = rows[target]!;
-    if (lane.kind !== anchorTrack.kind || trackRole(lane) !== anchorRole || locked(lane)
+    if (lane.kind !== anchorTrack.kind || lane.role !== anchorTrack.role || locked(lane)
       || (lane.id === anchorTrack.id && !changesTime)) {
       return { commands, anchorTrack: anchorTrack.id, destination: currentTrack };
     }
@@ -462,28 +435,19 @@ export function planTimelineDrop(context: ActiveTimeline, textItems: ReadonlySet
     members.push(item);
     membersByTrack.set(track, members);
   }
-  for (const members of membersByTrack.values()) {
-    if (members.some(item => textItems.has(item.id)) && !members.every(item => textItems.has(item.id))) {
-      return { commands, anchorTrack: anchorTrack.id, destination: currentTrack };
-    }
-  }
-
   const placeLane = (source: NleTrack, desired: number, minimum: number, maximum: number, forceNew = false) => {
     const members = membersByTrack.get(source)!;
-    const role = itemRole(source, members[0]!.id);
     const candidates = rows.map((track, index) => ({ track, index }))
       .filter(({ track, index }) => index >= minimum && index < maximum
-        && track.kind === source.kind && trackRole(track) === role && !locked(track)
+        && track.kind === source.kind && track.role === source.role && !locked(track)
         && track.items.every(other => ids.has(other.id)
           || members.every(item => !overlapsAfterMove(item, other, delta))))
       .sort((left, right) => Math.abs(left.index - desired) - Math.abs(right.index - desired));
     let destination = forceNew ? undefined : candidates[0]?.track;
     if (destination === undefined) {
       const index = Math.max(minimum, Math.min(maximum, desired));
-      const neighbor = source.kind === "picture" ? rows.slice(0, index).findLast(track => track.kind === source.kind)
-        : rows.slice(index).find(track => track.kind === source.kind);
-      const before = neighbor?.id;
-      destination = makeTrack(source.kind, role);
+      const before = rows[index - 1]?.id;
+      destination = makeTrack(source.kind, source.role);
       commands.push({ kind: "track.add", composition: composition.id, track: destination, ...(before === undefined ? {} : { before }) });
       rows.splice(index, 0, destination);
     }
@@ -512,8 +476,7 @@ export function planTimelineDrop(context: ActiveTimeline, textItems: ReadonlySet
   if (destinations.length > 0 || changesTime) {
     commands.push({ kind: "item.move", ids: entries.map(({ item }) => item.id), delta, destinations });
   }
-  const arrangement = rows.length === sourceRows.length ? {} : preferredTrackOrder(composition, view, rows);
-  if (sourceRows.includes(anchor)) return { ...arrangement, commands, anchorTrack: anchor.id, destination: { track: anchor.id } };
+  if (sourceRows.includes(anchor)) return { commands, anchorTrack: anchor.id, destination: { track: anchor.id } };
   const before = rows.slice(rows.indexOf(anchor) + 1).find(track => sourceRows.includes(track))?.id;
-  return { ...arrangement, commands, anchorTrack: anchor.id, destination: { gap: true, ...(before === undefined ? {} : { before }) } };
+  return { commands, anchorTrack: anchor.id, destination: { gap: true, ...(before === undefined ? {} : { before }) } };
 }

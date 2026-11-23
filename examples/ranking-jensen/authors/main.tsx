@@ -114,6 +114,11 @@ export default defineComposition(({ media, script, transcripts }: Inputs) => {
     return { id: take, label, tier, input: `subject.${take}`, preset: false,
       window: projectSourceRange(ranked, shots.get(take)!, `${take}:ranked`) };
   });
+  const boardAt = zero;
+  const boardEntries = entries.map(entry => ({
+    ...entry,
+    window: { start: subtract(entry.window.start, boardAt), end: subtract(entry.window.end, boardAt) },
+  }));
   const allBroll = groups.flatMap((group, groupIndex) => {
     const next = groups[groupIndex + 1];
     const groupEnd = next === undefined ? end : next.take === group.take
@@ -149,8 +154,8 @@ export default defineComposition(({ media, script, transcripts }: Inputs) => {
     <SharedValue value={{ id: "caption-bottom", name: "Caption bottom",
       declaration: { kind: "nle", slot: "picture.layout" }, value: { x: 43, y: 653, width: 634, height: 230, fit: "fill" } }} />,
     <Composition id="main" name={project.name} width={fill.width} height={fill.height}>
-      <Track id="performance" name="Jensen A-roll" kind="picture">{[...shots.values()].map(value => <Item value={value} />)}</Track>
-      <Track id="music" name="Music bed" kind="audio">
+      <Track id="performance" name="Jensen A-roll" kind="picture" role="picture">{[...shots.values()].map(value => <Item value={value} />)}</Track>
+      <Track id="music" name="Music bed" kind="audio" role="audio">
         <Media id="thank-you-instrumental-opening" name="THANK YOU instrumental — opening" asset={music} at={zero} duration={openingMusic.duration}
           audio={envelope("thank-you-opening-envelope", firstMusic,
             [gainPoint(zero, 0.14), gainPoint(musicCut, 0.14), gainPoint(subtract(firstMusic, sample), 0)])} />
@@ -160,22 +165,30 @@ export default defineComposition(({ media, script, transcripts }: Inputs) => {
             gainPoint(subtract(secondMusic, seconds("0.6")), 0.14), gainPoint(subtract(secondMusic, sample), 0),
           ])} />
       </Track>
-      <Track id="reveal-sfx" name="Tier reveal sound" kind="audio">
+      <Track id="reveal-sfx" name="Tier reveal sound" kind="audio" role="audio">
         {entries.map(({ id, label, window }) => <Media id={`${id}-tier-reveal-sfx`} name={`${label} tier reveal`}
           asset={revealSound} at={window.start} duration={soundDuration} audio={{
             processes: [process(`${id}-tier-reveal-gain`, audioGain, { kind: "constant", gain: 0.2 }, nleLinearTimeMapping(soundDuration))],
           }} />)}
       </Track>
-      <Track id="ranking" name="Date ranking board" kind="picture">
-        <Component id="jensen-date-tier-board" name="Jensen date tier list" at={zero} duration={end}
-          component={rankingComponent("tier-board")} media={Object.fromEntries(entries.map(({ id, input }) => [input, asset(`icon-${id}`)]))}
+      <Track id="ranking" name="Date ranking board" kind="picture" role="picture">
+        <Component id="jensen-date-tier-board" name="Jensen date tier list" at={boardAt} duration={subtract(end, boardAt)}
+          component={rankingComponent("tier-board")} media={Object.fromEntries(boardEntries.map(({ id, input }) => [input, asset(`icon-${id}`)]))}
           parameters={{ boardHeightRatio: 0.4, entryMotion: "pop-in-place", rows: [
             { id: "s", label: "S", color: "#ee5f52" }, { id: "a", label: "A", color: "#f0a04c" },
             { id: "b", label: "B", color: "#f0c84d" }, { id: "c", label: "C", color: "#ede356" }, { id: "d", label: "D", color: "#a6da7b" },
-          ], entries }} picture={{ layout: fill }} />
+          ], entries: boardEntries }} picture={{ layout: fill }} />
       </Track>
-      <Track id="broll" name="B-roll groups" kind="picture">{allBroll}</Track>
-      <Track id="title" name="Title" kind="picture">
+      <Track id="broll" name="B-roll groups" kind="picture" role="picture">{allBroll}</Track>
+      <Track id="programme-filters" name="滤镜轨道" kind="picture" role="filter">
+        <Item value={{ kind: "adjust", id: "programme-warm-film", name: "淡暖胶片", enabled: true,
+          start: zero, duration: end, controlTime: nleLinearTimeMapping(end), operator: pictureEffect("filter"),
+          parameters: { kind: "inline", value: {
+            kind: "constant", state: { brightness: 1.025, contrast: 1.055, saturation: 0.9, sepia: 0.12 },
+          } },
+        }} />
+      </Track>
+      <Track id="title" name="Title" kind="picture" role="text">
         <Component id="jensen-ranking-title" name={project.name} at={zero} duration={end} sourceTime={hold(end)}
           component={{ package: "@hypit/text-fine", symbol: "fine" }} parameters={titleStyle}
           picture={{ layout: { ...fill, y: 74, height: 94 } }} />
@@ -183,7 +196,7 @@ export default defineComposition(({ media, script, transcripts }: Inputs) => {
       <Track id="captions" name="Captions" kind="picture" role="subtitle">
         {subjects.flatMap(({ take }) => speech.get(take)!.cues.map(cue => <Item value={caption(take, shots.get(take)!, cue)} />))}
       </Track>
-      <Track id="reveal-flash" name="Tier reveal flash" kind="picture">
+      <Track id="reveal-flash" name="Tier reveal flash" kind="picture" role="effect">
         {entries.map(({ id, label, window }) => <Component id={`${id}-tier-reveal-flash`} name={`${label} full-frame reveal flash`}
           at={window.start} duration={flashDuration} component={rankingComponent("reveal-flash")} parameters={revealFlash}
           picture={{ layout: fill }} />)}

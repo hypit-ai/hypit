@@ -50,7 +50,6 @@ ApplicationHost
 │  ├─ Package Environment + Project Media
 │  └─ Document Registry
 │     ├─ NLE Project Service                edits/main.svml
-│     ├─ NLE View Service                   edits/main.nle-view.json
 │     └─ Canvas Service                     generation/opening.canvas.json
 └─ Execution Directory ── 连接 ── ExecutionHost
                                   └─ Execution Environment
@@ -80,7 +79,7 @@ Publication 资源。
 提供的依赖，Canvas Product Session、CLI 和项目程序都可以调用。Product Session 负责观察、会话资源和
 交互投影。Media 采用经现有 Media Service 独立提交，接受后的引用可被 Canvas 和 NLE 分别显式使用。
 
-时间线和 Canvas 共享这套 Host 边界。时间线用 NLE Project 和可选 View 的修订规划编辑，预览和交付
+时间线和 Canvas 共享这套 Host 边界。时间线用 NLE Project 的修订和当前会话的轨锁规划编辑，预览和交付
 调用本地影音执行器。Canvas 用一份 Canvas 的修订和明确选中的产物准备一张卡片，将生成交给
 Execution Environment。两种 Product Session 可以同时打开，同一项目的素材采用会进入两边共享的
 Media Catalog。
@@ -179,6 +178,10 @@ Execution 对同一地址只接受一次。重开时使用 [同地址查询](can
 
 ## 在 Studio 工作
 
-在 Application Home 选择 Canvas，输入项目中的画布路径，或运行 `hypit canvas open <path>`。通过卡片
-右侧面板编辑配方和输入来源，拖动或调整尺寸后保存位置。生成历史可以预览、选择和采用。选择一个输出后，
-连到该输出的下游配方会在下一次报价或提交时读取这一选择。
+在 Application Home 选择 Canvas，输入项目中的画布路径，或运行 `hypit canvas open <path>`。通过工具栏
+添加模型、导入素材，选中卡片后编辑配方和输入。拖动或调整尺寸后保存卡片位置。生成历史可以预览、选择和
+采用。选择一个输出后，连到该输出的下游配方会在下一次报价或提交时读取这一选择。
+
+「加入剪辑」可以将 Project Media 放入明确选择的 NLE 文档、Composition 和位置。对于生成结果，操作先采用
+所选产物，再把得到的 Media 引用交给 NLE 的放置操作。放置会话默认打开 SVML 的根 Composition，
+切换 Composition 只更新本次放置的视图。放置回执给出 Item 和 Track。

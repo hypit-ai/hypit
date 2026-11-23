@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readFile, rename, rm, writeFile } from "node:fs/promises";
+import { open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import {
   openNleProjectService,
@@ -8,13 +8,6 @@ import {
   NleRevisionConflict,
   NleProjectService,
 } from "../index.js";
-import {
-  openNleViewService,
-  readNleView,
-  serializeNleView,
-  NleViewRevisionConflict,
-  type NleViewService,
-} from "../view/index.js";
 import type {
   ProjectHost,
   ProjectHostContext,
@@ -31,9 +24,40 @@ async function projectFile(context: ProjectHostContext, path: string): Promise<s
   return file.address;
 }
 
-type NleDocumentService = NleProjectService | NleViewService;
-const savedContents = new WeakMap<NleDocumentService, string>();
-const fileOperations = new WeakMap<NleDocumentService, Promise<unknown>>();
+type SavedFile = { readonly contents: string; readonly modifiedAt: number };
+const savedFiles = new WeakMap<NleProjectService, SavedFile>();
+const fileOperations = new WeakMap<NleProjectService, Promise<unknown>>();
+
+function savedFile(service: NleProjectService): SavedFile {
+  const file = savedFiles.get(service);
+  if (file === undefined) throw new Error("NLE Service has no open document file.");
+  return file;
+}
+
+export function nodeNleProjectSavedAt(service: NleProjectService): number {
+  return savedFile(service).modifiedAt;
+}
+
+async function readDocumentFile(context: ProjectHostContext, path: string): Promise<SavedFile> {
+  const file = await open(await projectFile(context, path), "r");
+  try {
+    const contents = await file.readFile("utf8");
+    return { contents, modifiedAt: (await file.stat()).mtimeMs };
+  } finally {
+    await file.close();
+  }
+}
+
+function acceptReload(service: NleProjectService, file: SavedFile, reload: () => void): void {
+  const previous = savedFile(service);
+  savedFiles.set(service, file);
+  try {
+    reload();
+  } catch (error) {
+    savedFiles.set(service, previous);
+    throw error;
+  }
+}
 
 export class NleDocumentConflict extends Error {
   constructor(readonly path: string) {
@@ -42,7 +66,7 @@ export class NleDocumentConflict extends Error {
   }
 }
 
-function serializeFileOperation(service: NleDocumentService, operate: () => Promise<void>): Promise<void> {
+function serializeFileOperation(service: NleProjectService, operate: () => Promise<void>): Promise<void> {
   const next = (fileOperations.get(service) ?? Promise.resolve()).then(operate);
   fileOperations.set(service, next.catch(() => undefined));
   return next;
@@ -51,7 +75,7 @@ function serializeFileOperation(service: NleDocumentService, operate: () => Prom
 async function saveDocument(
   context: ProjectHostContext,
   file: string,
-  service: NleDocumentService,
+  service: NleProjectService,
   revision: number,
   contents: string,
 ): Promise<void> {
@@ -59,22 +83,21 @@ async function saveDocument(
   const temporary = resolve(dirname(path), `.${basename(path)}.${randomUUID()}.writing`);
   try {
     await writeFile(temporary, contents, { encoding: "utf8", flag: "wx" });
+    const { mtimeMs } = await stat(temporary);
     const current = await projectFile(context, file);
-    if (current !== path || await readFile(current, "utf8") !== savedContents.get(service)) {
+    if (current !== path || await readFile(current, "utf8") !== savedFile(service).contents) {
       throw new NleDocumentConflict(file);
     }
     const currentRevision = service.snapshot().revision;
     if (currentRevision !== revision) {
-      throw service instanceof NleProjectService
-        ? new NleRevisionConflict(revision, currentRevision)
-        : new NleViewRevisionConflict(revision, currentRevision);
+      throw new NleRevisionConflict(revision, currentRevision);
     }
     await rename(temporary, path);
+    savedFiles.set(service, { contents, modifiedAt: mtimeMs });
+    service.markSaved(revision);
   } finally {
     await rm(temporary, { force: true });
   }
-  savedContents.set(service, contents);
-  service.markSaved(revision);
 }
 
 export type NleProjectOwnerProvider = ProjectOwnerProvider<NleProjectService, ProjectHostContext> & {
@@ -82,17 +105,12 @@ export type NleProjectOwnerProvider = ProjectOwnerProvider<NleProjectService, Pr
   reload(context: ProjectHostContext, path: string, service: NleProjectService): Promise<void>;
 };
 
-export type NleViewOwnerProvider = ProjectOwnerProvider<NleViewService, ProjectHostContext> & {
-  save(context: ProjectHostContext, path: string, service: NleViewService): Promise<void>;
-  reload(context: ProjectHostContext, path: string, service: NleViewService): Promise<void>;
-};
-
 export const nleProjectOwnerProvider: NleProjectOwnerProvider = {
   owner: "nle.project",
   async open(context, path) {
-    const contents = await readFile(await projectFile(context, path), "utf8");
-    const service = openNleProjectService(readNleProject(contents));
-    savedContents.set(service, contents);
+    const file = await readDocumentFile(context, path);
+    const service = openNleProjectService(readNleProject(file.contents));
+    savedFiles.set(service, file);
     return service;
   },
   close() {},
@@ -105,34 +123,9 @@ export const nleProjectOwnerProvider: NleProjectOwnerProvider = {
   reload(context, path, service) {
     return serializeFileOperation(service, async () => {
       const snapshot = service.snapshot();
-      const contents = await readFile(await projectFile(context, path), "utf8");
-      service.reload(readNleProject(contents), snapshot.revision);
-      savedContents.set(service, contents);
-    });
-  },
-};
-
-export const nleViewOwnerProvider: NleViewOwnerProvider = {
-  owner: "nle.view",
-  async open(context, path) {
-    const contents = await readFile(await projectFile(context, path), "utf8");
-    const service = openNleViewService(readNleView(contents));
-    savedContents.set(service, contents);
-    return service;
-  },
-  close() {},
-  save(context, path, service) {
-    return serializeFileOperation(service, async () => {
-      const snapshot = service.snapshot();
-      await saveDocument(context, path, service, snapshot.revision, serializeNleView(snapshot.view));
-    });
-  },
-  reload(context, path, service) {
-    return serializeFileOperation(service, async () => {
-      const snapshot = service.snapshot();
-      const contents = await readFile(await projectFile(context, path), "utf8");
-      service.reload(readNleView(contents), snapshot.revision);
-      savedContents.set(service, contents);
+      const file = await readDocumentFile(context, path);
+      const project = readNleProject(file.contents);
+      acceptReload(service, file, () => service.reload(project, snapshot.revision));
     });
   },
 };
@@ -140,9 +133,4 @@ export const nleViewOwnerProvider: NleViewOwnerProvider = {
 export async function openNodeNleProject(project: ProjectHost, document: string) {
   const { path } = await resolveNodeProjectFile(project.boundary.root, document, "NLE document");
   return await project.documents.open(nleProjectOwnerProvider, path);
-}
-
-export async function openNodeNleView(project: ProjectHost, document: string) {
-  const { path } = await resolveNodeProjectFile(project.boundary.root, document, "NLE View document");
-  return await project.documents.open(nleViewOwnerProvider, path);
 }

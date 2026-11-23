@@ -1,13 +1,19 @@
 import { mkdir, mkdtemp, rename, rm, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { addAbortSignal } from "node:stream";
+import { buffer } from "node:stream/consumers";
 import { chromiumHtmlBackend } from "@hypit/html-chromium-local";
 import { electronHtmlBackend } from "@hypit/html-electron-local";
-import { captureHtmlFrameLocally, renderHtmlVisualLocally, type HtmlCaptureBackend } from "@hypit/html-render-local";
+import { captureHtmlFramesLocally, createHtmlSourceFrameIndexReader, createPreparedSourceFrames, openHtmlFrameCaptureLocally,
+  renderHtmlVisualLocally, type HtmlCaptureBackend } from "@hypit/html-render-local";
 import type {
   HtmlVideoExecutionOptions,
   HtmlVideoExecutor,
   HtmlVideoDeliveryPlan,
   HtmlFrameExecutor,
+  HtmlFrameCapture,
+  HtmlSourceFrames,
 } from "@hypit/html-video";
 import {
   inspectLocalMediaToolchain,
@@ -29,6 +35,7 @@ class LocalHtmlVideoExecutor implements HtmlVideoExecutor, HtmlFrameExecutor {
   #mediaReady: Promise<void> | undefined;
   readonly #chromium: HtmlCaptureBackend;
   readonly #electron: HtmlCaptureBackend | undefined;
+  readonly #indexVideoFrames = createHtmlSourceFrameIndexReader();
 
   constructor(tools: LocalHtmlVideoTools) {
     this.#media = resolveLocalMediaToolchain(tools);
@@ -46,13 +53,59 @@ class LocalHtmlVideoExecutor implements HtmlVideoExecutor, HtmlFrameExecutor {
   }
 
   async capture(request: Parameters<HtmlFrameExecutor["capture"]>[0], signal?: AbortSignal): Promise<Uint8Array> {
+    if (request.frames.length !== 1) throw new Error("HTML capture requires one frame.");
+    const [frame] = await this.captureFrames(request, signal);
+    return frame!;
+  }
+
+  async captureFrames(request: Parameters<HtmlFrameExecutor["capture"]>[0], signal?: AbortSignal): Promise<readonly Uint8Array[]> {
     if (request.program.videoSources.length > 0) await this.#checkMedia();
-    return await captureHtmlFrameLocally({
+    return await captureHtmlFramesLocally({
       backend: this.#chromium, request, options: {
         ffmpegPath: this.#media.ffmpegPath, ffprobePath: this.#media.ffprobePath,
+        indexVideoFrames: this.#indexVideoFrames,
         ...(signal === undefined ? {} : { signal }),
       },
     });
+  }
+
+  async openCapture(request: Parameters<NonNullable<HtmlFrameExecutor["openCapture"]>>[0], signal?: AbortSignal): Promise<HtmlFrameCapture> {
+    if (request.program.videoSources.length > 0) await this.#checkMedia();
+    return await openHtmlFrameCaptureLocally({ backend: this.#chromium, request, options: {
+      ffmpegPath: this.#media.ffmpegPath, ffprobePath: this.#media.ffprobePath, indexVideoFrames: this.#indexVideoFrames,
+      maxDecodedSourceBytes: 64 * 1024 * 1024, ...(signal === undefined ? {} : { signal }),
+    } });
+  }
+
+  async openSourceFrames(program: Parameters<NonNullable<HtmlFrameExecutor["openSourceFrames"]>>[0],
+    signal: AbortSignal): Promise<HtmlSourceFrames> {
+    signal.throwIfAborted();
+    await this.#checkMedia();
+    const directory = await mkdtemp(join(tmpdir(), "hypit-preview-sources-"));
+    try {
+      const frames = await createPreparedSourceFrames({
+        program, directory, signal, lazy: true,
+        selection: [{ startFrame: 0, endFrameExclusive: program.frameCount }],
+        artifactPaths: new Map(program.videoSources.map(({ resource }) => [resource.address, resource.address])),
+        ffmpegPath: this.#media.ffmpegPath, ffprobePath: this.#media.ffprobePath, maxBytes: 128 * 1024 * 1024,
+        indexVideoFrames: this.#indexVideoFrames,
+      });
+      return {
+        read: async (source, frame, requestSignal) => {
+          const value = await frames.read(source, frame, requestSignal);
+          const readSignal = requestSignal === undefined ? signal : AbortSignal.any([signal, requestSignal]);
+          try { return await buffer(addAbortSignal(readSignal, value.stream)); }
+          finally { await value.release(); }
+        },
+        close: async () => {
+          try { await frames.close(); }
+          finally { await rm(directory, { recursive: true, force: true }); }
+        },
+      };
+    } catch (error) {
+      await rm(directory, { recursive: true, force: true });
+      throw error;
+    }
   }
 
   async execute(plan: HtmlVideoDeliveryPlan, options: HtmlVideoExecutionOptions): Promise<MediaResource> {
@@ -78,6 +131,7 @@ class LocalHtmlVideoExecutor implements HtmlVideoExecutor, HtmlFrameExecutor {
           options: {
             ffmpegPath: this.#media.ffmpegPath,
             ffprobePath: this.#media.ffprobePath,
+            indexVideoFrames: this.#indexVideoFrames,
             ...(options.signal === undefined ? {} : { signal: options.signal }),
             onProgress: value => options.onProgress?.({
               phase: "visual",

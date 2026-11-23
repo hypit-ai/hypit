@@ -1,5 +1,6 @@
 import {
-  mediaPictureExtent, verifyMediaInterpretation, type MediaStoryboardAtlas, type MediaViewRequest, type ResolvedMedia,
+  mediaPictureExtent, mediaPreviewSampleRate, verifyMediaInterpretation,
+  type MediaAudioPeaks, type MediaStoryboardAtlas, type MediaViewRequest, type ResolvedMedia,
 } from "@hypit/media";
 import {
   addExactTemporalValues,
@@ -14,8 +15,8 @@ import {
 import { runBoundedMediaProcess } from "./process.js";
 import { pcmSampleIndex } from "./pcm-clock.js";
 import { resolveLocalMediaToolchain, type LocalMediaToolchainOptions } from "./toolchain.js";
-import { indexLocalVideoFrames, localVideoFrameOrdinal } from "./video-frames.js";
-import { peakWaveformFilter } from "./waveform.js";
+import { indexLocalVideoFrames, localVideoFrameOrdinal, planLocalVideoFrameSeek } from "./video-frames.js";
+import { peakWaveformFilter, readWaveformPeaks } from "./waveform.js";
 
 export type LocalMediaViewResult = {
   readonly bytes: Uint8Array;
@@ -30,7 +31,13 @@ function boundedInteger(value: number, minimum: number, maximum: number, subject
   return value;
 }
 
-function mediaRange(media: ResolvedMedia, range: TemporalRange, maxSeconds: number): ExactTemporalValue {
+function wholeMediaRange(media: ResolvedMedia): TemporalRange {
+  const end = media.interpretation.domain?.duration;
+  if (end === undefined) throw new Error("Media view requires a timed Media clock.");
+  return { start: exactTemporalZero(), end };
+}
+
+function mediaRange(media: ResolvedMedia, range: TemporalRange, maxSeconds?: number): ExactTemporalValue {
   const duration = media.interpretation.domain?.duration;
   const length = subtractExactTemporalValues(range.end, range.start);
   const zero = exactTemporalZero();
@@ -38,7 +45,8 @@ function mediaRange(media: ResolvedMedia, range: TemporalRange, maxSeconds: numb
     || compareExactTemporalValues(range.end, duration) > 0 || compareExactTemporalValues(length, zero) <= 0) {
     throw new Error("Media view range must lie inside the accepted Media clock.");
   }
-  if (compareExactTemporalValues(length, { ticks: String(maxSeconds), timeBase: { numerator: 1, denominator: 1 } }) > 0) {
+  if (maxSeconds !== undefined
+    && compareExactTemporalValues(length, { ticks: String(maxSeconds), timeBase: { numerator: 1, denominator: 1 } }) > 0) {
     throw new Error(`Media view range exceeds ${maxSeconds} seconds.`);
   }
   return length;
@@ -61,21 +69,67 @@ function wav(pcm: Uint8Array): Uint8Array {
   return Buffer.concat([header, pcm]);
 }
 
+const ffmpegPrefix = ["-hide_banner", "-loglevel", "error", "-nostdin"];
+
+function audioWindow(media: ResolvedMedia, range: TemporalRange) {
+  const audio = media.interpretation.audio;
+  if (audio === undefined) throw new Error("Media audio view requires an accepted Audio stream.");
+  const [stage] = audio.map.stages;
+  const [piece] = stage?.pieces ?? [];
+  if (audio.map.stages.length !== 1 || stage?.pieces.length !== 1 || piece === undefined || !("rate" in piece)
+    || piece.rate.numerator !== piece.rate.denominator || piece.wrap !== undefined) {
+    throw new Error("Media audio view requires one unwrapped unit-rate stream mapping.");
+  }
+  const first = pcmSampleIndex(range.start, 48_000);
+  const last = pcmSampleIndex(range.end, 48_000);
+  const targetStart = pcmSampleIndex(piece.target.start, 48_000);
+  const targetEnd = pcmSampleIndex(piece.target.end, 48_000);
+  const sourceStart = pcmSampleIndex(piece.sourceAtStart, 48_000);
+  if (last <= first || targetEnd <= targetStart) throw new Error("Media audio view range has no PCM samples.");
+  const filter = [
+    "asetpts=PTS-STARTPTS", "aresample=48000:first_pts=0",
+    `atrim=start_sample=${sourceStart}:end_sample=${sourceStart + targetEnd - targetStart}`, "asetpts=PTS-STARTPTS",
+    `adelay=${targetStart}S:all=1`, "apad", `atrim=start_sample=${first}:end_sample=${last}`, "asetpts=PTS-STARTPTS",
+  ].join(",");
+  return { audio, first, last, filter };
+}
+
+export async function readLocalWaveformPeaks({ media, range, samplesPerPeak, tools, signal }: {
+  readonly media: ResolvedMedia;
+  readonly range: TemporalRange;
+  readonly samplesPerPeak: number;
+  readonly tools: LocalMediaToolchainOptions;
+  readonly signal: AbortSignal;
+}): Promise<MediaAudioPeaks> {
+  verifyMediaInterpretation(media.interpretation);
+  mediaRange(media, range);
+  const { audio, first, last, filter } = audioWindow(media, range);
+  return await readWaveformPeaks({
+    executable: resolveLocalMediaToolchain(tools).ffmpegPath, signal,
+    sampleRate: mediaPreviewSampleRate, sampleCount: last - first, samplesPerPeak,
+    argumentsForFilter: envelope => [...ffmpegPrefix, "-i", media.resource.address, "-map", `0:${audio.streamIndex}`,
+      "-af", `${filter},${envelope}`, "-f", "null", "-"],
+  });
+}
+
 export async function renderLocalMediaView(input: {
   readonly media: ResolvedMedia;
   readonly request: MediaViewRequest;
   readonly tools?: LocalMediaToolchainOptions;
   readonly signal?: AbortSignal;
+  readonly indexVideoFrames?: typeof indexLocalVideoFrames;
+  readonly storyboardPositions?: readonly ExactTemporalValue[];
 }): Promise<LocalMediaViewResult> {
   const { media, request, signal } = input;
   verifyMediaInterpretation(media.interpretation);
   const tools = resolveLocalMediaToolchain(input.tools);
   const source = media.resource.address;
-  const ffmpeg = (argv: readonly string[], maxStdoutBytes: number) => runBoundedMediaProcess({
+  const ffmpegOptions = {
     executable: tools.ffmpegPath,
-    argv: ["-hide_banner", "-loglevel", "error", "-nostdin", ...argv],
-    timeoutMs: 90_000, maxStdoutBytes,
     ...(signal === undefined ? {} : { signal }),
+  };
+  const ffmpeg = (argv: readonly string[], maxStdoutBytes: number) => runBoundedMediaProcess({
+    ...ffmpegOptions, argv: [...ffmpegPrefix, ...argv], timeoutMs: 90_000, maxStdoutBytes,
   });
   if (request.kind === "media.thumbnail" || request.kind === "media.storyboard") {
     const picture = media.interpretation.picture;
@@ -87,23 +141,35 @@ export async function renderLocalMediaView(input: {
     const height = boundedInteger(request.height ?? (request.kind === "media.thumbnail" ? 240 : 96), 16, 480, "Media view height");
     const extent = mediaPictureExtent(picture);
     const maximumWidth = request.kind === "media.thumbnail" ? 1280 : 320;
-    const width = Math.max(1, Math.min(maximumWidth, Math.round(height * extent.widthPx / extent.heightPx)));
-    const fittedHeight = Math.max(1, Math.min(height, Math.round(width * extent.heightPx / extent.widthPx)));
+    const width = request.coverWidth === undefined
+      ? Math.max(1, Math.min(maximumWidth, Math.round(height * extent.widthPx / extent.heightPx)))
+      : boundedInteger(request.coverWidth, 16, maximumWidth, "Media view cover width");
+    const fittedHeight = request.coverWidth === undefined
+      ? Math.max(1, Math.min(height, Math.round(width * extent.heightPx / extent.widthPx))) : height;
     const rotation = picture.interpretation.rotationDegrees;
     const filters = rotation === 90 ? ["transpose=clock"] : rotation === 180 ? ["hflip", "vflip"]
       : rotation === 270 ? ["transpose=cclock"] : [];
-    filters.push(`scale=${width}:${fittedHeight}`, "setsar=1");
+    if (request.coverWidth !== undefined) {
+      const relativeAspect = (width / height) / (extent.widthPx / extent.heightPx);
+      const cropWidth = Math.min(1, relativeAspect);
+      const cropHeight = Math.min(1, 1 / relativeAspect);
+      filters.push(`crop=w='max(1,iw*${cropWidth})':h='max(1,ih*${cropHeight})':exact=1`);
+    }
+    filters.push(`scale=${width}:${fittedHeight}:flags=lanczos`, "setsar=1");
     let ordinals = [0];
+    let seek: ReturnType<typeof planLocalVideoFrameSeek>;
     let samples: MediaStoryboardAtlas["samples"] = [];
     if (picture.kind === "signal") {
       const first = picture.map.stages[0]?.pieces[0]?.target.start ?? exactTemporalZero();
       const positions = request.kind === "media.thumbnail"
         ? [{ at: request.at ?? first }]
         : (() => {
-            const length = mediaRange(media, request.range, 7200);
-            const count = boundedInteger(request.frames, 1, 30, "Storyboard frames");
+            const range = request.range ?? wholeMediaRange(media);
+            const length = mediaRange(media, range, request.range === undefined ? undefined : 7200);
+            const count = boundedInteger(request.frames, 1, 96, "Storyboard frames");
+            if (input.storyboardPositions !== undefined) return input.storyboardPositions.map(at => ({ at }));
             return Array.from({ length: count }, (_, i) => ({
-              at: addExactTemporalValues(request.range.start, scaleExactTemporalValue(length, { numerator: i, denominator: count })),
+              at: addExactTemporalValues(range.start, scaleExactTemporalValue(length, { numerator: i * 2 + 1, denominator: count * 2 })),
             }));
           })();
       const resolved = positions.flatMap(({ at }) => {
@@ -111,7 +177,7 @@ export async function renderLocalMediaView(input: {
         return sample === undefined ? [] : [{ at, sample }];
       });
       if (resolved.length === 0) throw new Error("The selected Media range has no Picture samples.");
-      const index = await indexLocalVideoFrames({
+      const index = await (input.indexVideoFrames ?? indexLocalVideoFrames)({
         address: source, stream: picture.streamIndex, ffprobePath: tools.ffprobePath,
         ...(signal === undefined ? {} : { signal }),
       });
@@ -120,43 +186,42 @@ export async function renderLocalMediaView(input: {
       }));
       ordinals = [...new Set(indexed.map(value => value.ordinal))].sort((left, right) => left - right);
       samples = indexed.map(({ at, ordinal }) => ({ at, tile: ordinals.indexOf(ordinal) }));
-      filters.unshift(`select=${ordinals.map(value => `eq(n\\,${value})`).join("+")}`);
+      seek = planLocalVideoFrameSeek(index, ordinals);
     } else if (request.kind === "media.storyboard") {
       throw new Error("A storyboard requires a timed Picture stream.");
     }
     const columns = Math.min(6, ordinals.length);
     const rows = Math.ceil(ordinals.length / columns);
     if (request.kind === "media.storyboard") filters.push(`tile=${columns}x${rows}:nb_frames=${ordinals.length}`);
-    const bytes = await ffmpeg([
-      "-noautorotate", "-i", source, "-map", `0:${picture.streamIndex}`, "-vf", filters.join(","),
+    const args = (prefix: readonly string[], selection: readonly string[]) => [
+      ...prefix, "-noautorotate", "-i", source, "-map", `0:${picture.streamIndex}`,
+      "-vf", [...selection, ...filters].join(","),
       "-fps_mode", "passthrough", "-frames:v", "1", "-an", "-f", "image2pipe", "-vcodec", "png", "pipe:1",
-    ], 24 * 1024 * 1024);
+    ];
+    const maxStdoutBytes = 24 * 1024 * 1024;
+    let bytes: Uint8Array | undefined;
+    if (seek !== undefined) {
+      const attempted = await runBoundedMediaProcess({
+        ...ffmpegOptions,
+        argv: [...ffmpegPrefix, "-loglevel", "info", ...args(seek.inputArgs, [`select=${seek.selection}`, "showinfo"])],
+        timeoutMs: 90_000, maxStdoutBytes, onStderrLine: seek.observe,
+      }).catch(() => undefined);
+      signal?.throwIfAborted();
+      if (seek.verified() && attempted !== undefined && attempted.byteLength > 0) bytes = attempted;
+    }
+    const exactSelection = picture.kind === "signal" ? [
+      `select=${ordinals.map(ordinal => `eq(n\\,${ordinal})`).join("+")}`,
+    ] : [];
+    bytes ??= await ffmpeg(args([], exactSelection), maxStdoutBytes);
     if (bytes.byteLength === 0) throw new Error("Media picture view produced no image.");
     return { bytes, mediaType: "image/png", ...(request.kind === "media.storyboard" ? { atlas: {
       count: ordinals.length, columns, rows, tileWidth: width, tileHeight: fittedHeight, samples,
     } } : {}) };
   }
 
-  const audio = media.interpretation.audio;
-  if (audio === undefined) throw new Error("Media audio view requires an accepted Audio stream.");
-  mediaRange(media, request.range, request.kind === "media.audio-preview" ? 30 : 600);
-  const [stage] = audio.map.stages;
-  const [piece] = stage?.pieces ?? [];
-  if (audio.map.stages.length !== 1 || stage?.pieces.length !== 1 || piece === undefined || !("rate" in piece)
-    || piece.rate.numerator !== piece.rate.denominator || piece.wrap !== undefined) {
-    throw new Error("Media audio view requires one unwrapped unit-rate stream mapping.");
-  }
-  const first = pcmSampleIndex(request.range.start, 48_000);
-  const last = pcmSampleIndex(request.range.end, 48_000);
-  const targetStart = pcmSampleIndex(piece.target.start, 48_000);
-  const targetEnd = pcmSampleIndex(piece.target.end, 48_000);
-  const sourceStart = pcmSampleIndex(piece.sourceAtStart, 48_000);
-  if (last <= first || targetEnd <= targetStart) throw new Error("Media audio view range has no PCM samples.");
-  const filter = [
-    "asetpts=PTS-STARTPTS", "aresample=48000:first_pts=0",
-    `atrim=start_sample=${sourceStart}:end_sample=${sourceStart + targetEnd - targetStart}`, "asetpts=PTS-STARTPTS",
-    `adelay=${targetStart}S:all=1`, "apad", `atrim=start_sample=${first}:end_sample=${last}`, "asetpts=PTS-STARTPTS",
-  ].join(",");
+  const range = request.range;
+  mediaRange(media, range, request.kind === "media.audio-preview" ? 30 : 600);
+  const { audio, first, last, filter } = audioWindow(media, range);
   if (request.kind === "media.audio-preview") {
     const pcm = await ffmpeg(["-i", source, "-map", `0:${audio.streamIndex}`, "-af", filter,
       "-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2", "-f", "s16le", "pipe:1"], 6 * 1024 * 1024);

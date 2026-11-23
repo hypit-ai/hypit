@@ -4,15 +4,17 @@ import type {
 } from "@hypit/nle/surface";
 import type {
   NleCanvasScene,
+  NleComponentDefinition,
   NleComponentMediaInput,
   NleInspectorScene,
   NleTimelineScene,
   NleTransitionInspectorScene,
-} from "@hypit/nle/view";
+} from "@hypit/nle/surface";
 import type { HtmlVideoDeliveryProfile, HtmlVideoRenderer } from "@hypit/html-video";
-import type { NlePictureLayout } from "@hypit/nle";
-import type { MediaStoryboardAtlas, MediaViewRequest } from "@hypit/media";
-import type { TemporalRate } from "@hypit/temporal/algebra";
+import type { PicturePreviewRate } from "@hypit/media";
+import type { NleComposition, NlePictureLayout } from "@hypit/nle";
+import type { ProjectMediaLibrarySnapshot, ProjectMediaViewRequest, ProjectMediaViewResult } from "@hypit/media-asset/service";
+import type { ExactTemporalValue, TemporalMap, TemporalRange, TemporalRate } from "@hypit/temporal/algebra";
 
 export type NleStudioMediaEntry = {
   readonly id: string;
@@ -20,7 +22,13 @@ export type NleStudioMediaEntry = {
   readonly kind: "picture" | "audio" | "audiovisual" | "unknown";
   readonly state: "available" | "missing" | "invalid";
   readonly mediaType?: string;
+  readonly fileExtension?: string;
+  /** Present when the Media Asset manifest was read successfully. */
+  readonly adoptedAt?: string;
   readonly pictureKind?: "constant" | "signal";
+  readonly pictureVersion?: string;
+  readonly audioVersion?: string;
+  readonly duration?: ExactTemporalValue;
   readonly durationFrames?: number;
   readonly resource?: string;
   readonly diagnostic?: string;
@@ -35,24 +43,33 @@ export type NleStudioComponentInputsProjection = {
 export type NleStudioMediaProjection = {
   readonly generation: number;
   readonly derivedViews: boolean;
+  readonly removeAssets: boolean;
   readonly entries: readonly NleStudioMediaEntry[];
 };
+
+export type NleStudioMediaLibraryProjection =
+  | ({ readonly state: "available" } & ProjectMediaLibrarySnapshot)
+  | { readonly state: "invalid"; readonly diagnostic: string };
 
 export type NleStudioComponentCatalogEntry = {
   readonly package: string;
   readonly offering: string;
   readonly title: string;
-  readonly category: "text" | "subtitle" | "graphic";
+  readonly role: NleComponentDefinition["role"];
+  readonly durationFrames: number;
 };
 
-export type NleStudioAdjustCatalogEntry = {
+export type NleStudioProcessCatalogEntry = {
   readonly package: string;
   readonly offering: string;
   readonly title: string;
   readonly medium: "picture" | "audio";
 };
 
-export type NleStudioProcessCatalogEntry = NleStudioAdjustCatalogEntry;
+export type NleStudioAdjustCatalogEntry = NleStudioProcessCatalogEntry & {
+  readonly role: "filter" | "effect";
+  readonly durationFrames: number;
+};
 
 export type NleStudioTransitionCatalogEntry = {
   readonly package: string;
@@ -69,7 +86,14 @@ export type NleStudioCatalogProjection = {
 
 export type NleStudioPreviewProjection =
   | { readonly state: "unavailable" }
-  | { readonly state: "available"; readonly playback: boolean; readonly waveform: boolean; readonly generation: number };
+  | { readonly state: "available"; readonly playback: boolean; readonly waveform: boolean; readonly generation: number;
+      readonly programme?: NleStudioProgrammeProjection };
+
+export type NleStudioProgrammeProjection = {
+  readonly generation: string;
+  readonly composition: string;
+  readonly document: string;
+};
 
 export type NleStudioDeliveryProjection =
   | { readonly state: "available"; readonly width: number; readonly height: number; readonly hasItems: boolean }
@@ -78,7 +102,6 @@ export type NleStudioDeliveryProjection =
 export type NleStudioClipboardProjection = {
   readonly items: number;
   readonly groups: number;
-  readonly pendingGroups: number;
 };
 
 export type NleStudioDropDestination =
@@ -89,40 +112,75 @@ export type NleStudioTrimRange = { readonly minimum: number; readonly maximum: n
 
 export type NleStudioTimelineProjection = {
   readonly scene: NleTimelineScene;
-  readonly textItems: readonly string[];
   readonly canReturn: boolean;
-  readonly compositions: readonly { readonly id: string; readonly name: string; readonly referenced: boolean }[];
+  readonly compositions: readonly (Pick<NleComposition, "id" | "name" | "canvas"> & {
+    readonly referenced: boolean;
+    readonly canInsert: boolean;
+  })[];
   readonly retimeRates: Readonly<Record<string, TemporalRate>>;
   /** Active-Composition Media Items resolved to Project Media Catalog identities by the Product backend. */
   readonly itemMedia: readonly { readonly item: string; readonly media: string }[];
+  readonly previewSources: Readonly<Record<string, NleStudioTimelinePreview>>;
   readonly trimRanges: Readonly<Record<string, Partial<Record<"start" | "end", NleStudioTrimRange>>>>;
 };
 
-export type NleStudioTimelineMediaRequest = NleStudioCompositionOperation & {
-  readonly kind: "timeline-media";
-  readonly expectedMediaGeneration: number;
-  readonly tracks: readonly string[];
-  readonly fromFrame: number;
-  readonly toFrame: number;
+type TimelineSourceClock = { readonly sourceTime: TemporalMap; readonly duration: ExactTemporalValue };
+
+type TimelineMediaPictureSource = {
+  readonly media: string;
+  readonly version?: string;
+  readonly displayAspectRatio: number;
+} & Partial<TimelineSourceClock>;
+
+export type NleStudioRenderedAudioSource = {
+  readonly target: { readonly kind: "composition"; readonly composition: string };
+  readonly version: string;
 };
 
-export type NleStudioTimelineMediaView = {
-  readonly item: string;
-  readonly fromFrame: number;
-  readonly toFrame: number;
-  readonly action: NleStudioMediaActionRequest;
+export type NleStudioTimelineAudioPreviewSource = TimelineSourceClock & (
+  | { readonly media: string; readonly version?: string }
+  | NleStudioRenderedAudioSource
+);
+
+export type NleStudioRenderedPictureTarget =
+  | { readonly kind: "composition"; readonly composition: string }
+  | { readonly kind: "component"; readonly composition: string; readonly item: string };
+
+type TimelineRenderedPictureSource = {
+  readonly version: string;
+  readonly displayAspectRatio?: number;
+} & (
+  | (TimelineSourceClock & { readonly target: Extract<NleStudioRenderedPictureTarget, { kind: "composition" }> })
+  | { readonly target: Extract<NleStudioRenderedPictureTarget, { kind: "component" }>; readonly range: TemporalRange;
+      readonly duration?: never; readonly sourceTime?: never }
+);
+
+export type NleStudioTimelinePicturePreviewSource = TimelineMediaPictureSource | TimelineRenderedPictureSource;
+
+export type NleStudioTimelinePreview = {
+  readonly picture?: NleStudioTimelinePicturePreviewSource;
+  readonly audio?: NleStudioTimelineAudioPreviewSource;
+};
+
+export type NleStudioStatus = NleEditingSurfaceStatus & {
+  /** Last write time of the accepted SVML document. */
+  readonly savedAt: string;
 };
 
 /** Complete finite projection used to open one NLE Studio Product Session. */
 export type NleStudioOpenProjection = {
-  readonly project: { readonly name: string; readonly document: string; readonly rootComposition: string };
-  readonly viewDocument:
-    | { readonly persistence: "session" }
-    | { readonly persistence: "document"; readonly path: string };
-  readonly status: NleEditingSurfaceStatus;
+  readonly project: {
+    readonly name: string;
+    readonly document: string;
+    readonly rootComposition: string;
+    /** Project Media identities referenced anywhere in this NLE document. */
+    readonly usedMedia: readonly string[];
+  };
+  readonly status: NleStudioStatus;
   readonly timeline: NleStudioTimelineProjection;
   readonly canvas: NleCanvasScene;
   readonly media: NleStudioMediaProjection;
+  readonly mediaLibrary: NleStudioMediaLibraryProjection;
   readonly catalog: NleStudioCatalogProjection;
   readonly preview: NleStudioPreviewProjection;
   readonly delivery: NleStudioDeliveryProjection;
@@ -135,12 +193,12 @@ export type NleStudioObservationRequest =
   | { readonly kind: "status" }
   | { readonly kind: "timeline" }
   | { readonly kind: "timeline-drop"; readonly drop: NleStudioTimelineDrop }
-  | NleStudioTimelineMediaRequest
   | { readonly kind: "canvas" }
   | { readonly kind: "inspector"; readonly item: string }
   | { readonly kind: "transition-inspector"; readonly transition: string }
   | { readonly kind: "component-inputs"; readonly item: string }
   | { readonly kind: "media" }
+  | { readonly kind: "media-library" }
   | { readonly kind: "catalog" }
   | { readonly kind: "preview" }
   | { readonly kind: "delivery" }
@@ -150,15 +208,15 @@ export type NleStudioObservationRequest =
 export type NleStudioObservation =
   | { readonly kind: "open"; readonly value: NleStudioOpenProjection }
   | { readonly kind: "project"; readonly value: NleStudioOpenProjection["project"] }
-  | { readonly kind: "status"; readonly value: NleEditingSurfaceStatus }
+  | { readonly kind: "status"; readonly value: NleStudioStatus }
   | { readonly kind: "timeline"; readonly value: NleStudioTimelineProjection }
   | { readonly kind: "timeline-drop"; readonly value: NleStudioDropDestination }
-  | { readonly kind: "timeline-media"; readonly value: readonly NleStudioTimelineMediaView[] }
   | { readonly kind: "canvas"; readonly value: NleCanvasScene }
   | { readonly kind: "inspector"; readonly value: NleInspectorScene }
   | { readonly kind: "transition-inspector"; readonly value: NleTransitionInspectorScene }
   | { readonly kind: "component-inputs"; readonly value: NleStudioComponentInputsProjection }
   | { readonly kind: "media"; readonly value: NleStudioMediaProjection }
+  | { readonly kind: "media-library"; readonly value: NleStudioMediaLibraryProjection }
   | { readonly kind: "catalog"; readonly value: NleStudioCatalogProjection }
   | { readonly kind: "preview"; readonly value: NleStudioPreviewProjection }
   | { readonly kind: "delivery"; readonly value: NleStudioDeliveryProjection }
@@ -171,6 +229,7 @@ export type NleStudioInvalidation =
   | "canvas"
   | "inspector"
   | "media"
+  | "media-library"
   | "catalog"
   | "preview"
   | "delivery"
@@ -178,8 +237,8 @@ export type NleStudioInvalidation =
 
 export type NleStudioOperationReceipt = {
   readonly operation: string;
-  readonly status: NleEditingSurfaceStatus;
-  readonly changed: { readonly project: boolean; readonly view: boolean };
+  readonly status: NleStudioStatus;
+  readonly projectChanged: boolean;
   readonly invalidated: readonly NleStudioInvalidation[];
   readonly result?: Readonly<Record<string, string | number | boolean>>;
 };
@@ -187,7 +246,7 @@ export type NleStudioOperationReceipt = {
 export type NleStudioProjectionEvent = {
   readonly scope: "product" | "project";
   readonly kind: string;
-  readonly status: NleEditingSurfaceStatus;
+  readonly status: NleStudioStatus;
   readonly invalidated: readonly NleStudioInvalidation[];
   readonly generation?: number;
 };
@@ -199,7 +258,6 @@ export type NleStudioCommandRequest = {
 export type NleStudioTimelineDrop = {
   readonly kind: "timeline.drop";
   readonly expectedProjectRevision: number;
-  readonly expectedViewRevision: number;
   readonly composition: string;
   readonly anchor: string;
   readonly items: readonly string[];
@@ -211,7 +269,6 @@ export type NleStudioTimelineDrop = {
 
 type NleStudioCompositionOperation = {
   readonly expectedProjectRevision: number;
-  readonly expectedViewRevision: number;
   readonly composition: string;
 };
 
@@ -246,10 +303,10 @@ export type NleStudioTimelineEdit = NleStudioCompositionOperation & (
 export type NleStudioOperation =
   | NleStudioTimelineDrop
   | NleStudioTimelineEdit
+  | (NleStudioCompositionOperation & { readonly kind: "track-lock.set"; readonly track: string; readonly locked: boolean })
   | (NleStudioCompositionOperation & { readonly kind: "timeline.track-reorder"; readonly track: string; readonly before?: string })
   | (NleStudioCompositionOperation & { readonly kind: "clipboard.copy" | "clipboard.cut"; readonly items: readonly string[] })
   | (NleStudioCompositionOperation & { readonly kind: "clipboard.paste"; readonly atFrame: number })
-  | (NleStudioCompositionOperation & { readonly kind: "clipboard.apply-groups" })
   | (NleStudioPresentPlacement & {
       readonly kind: "media.materialize";
       readonly media: string;
@@ -293,6 +350,7 @@ export type NleStudioOperation =
       readonly durationFrames?: never;
     })
   | (NleStudioCompositionOperation & { readonly kind: "composition.compound"; readonly items: readonly string[]; readonly name: string })
+  | (NleStudioCompositionOperation & { readonly kind: "composition.duplicate"; readonly source: string })
   | (NleStudioCompositionOperation & { readonly kind: "composition.make-unique" | "composition.explode"; readonly item: string })
   | (NleStudioCompositionOperation & { readonly kind: "composition.enter"; readonly item: string; readonly atFrame: number })
   | (NleStudioCompositionOperation & { readonly kind: "composition.select"; readonly target: string })
@@ -315,13 +373,26 @@ export type NleStudioProcessEdit = NleStudioProcessAddress & (
   | { readonly kind: "process.timing"; readonly edge: "mapping" }
 );
 
-export type NleStudioMediaActionRequest = MediaViewRequest & {
-  readonly media: string;
-  readonly expectedMediaGeneration: number;
+export type NleStudioMediaActionRequest = ProjectMediaViewRequest;
+
+export type NleStudioRenderedPicturePreviewRequest = {
+  readonly kind: "picture.source-preview";
+  readonly target: NleStudioRenderedPictureTarget;
+  readonly version: string;
+  readonly positions: readonly ExactTemporalValue[];
+  readonly samplesPerSecond?: PicturePreviewRate;
+};
+
+export type NleStudioRenderedAudioPreviewRequest = NleStudioRenderedAudioSource & {
+  readonly kind: "audio.source-preview";
+  readonly samplesPerPeak: number;
+  readonly blocks: readonly number[];
 };
 
 export type NleStudioActionRequest =
   | NleStudioMediaActionRequest
+  | NleStudioRenderedPicturePreviewRequest
+  | NleStudioRenderedAudioPreviewRequest
   | (NleStudioCompositionOperation & { readonly kind: "frame-preview"; readonly atFrame: number })
   | (NleStudioCompositionOperation & { readonly kind: "playback-preview"; readonly atFrame: number; readonly durationFrames: number })
   | (NleStudioCompositionOperation & {
@@ -340,12 +411,7 @@ export type NleStudioActionKind = NleStudioActionRequest["kind"];
 type NleStudioActionBase = { readonly handle: string; readonly kind: NleStudioActionKind; readonly progress: number };
 export type NleStudioActionObservation = NleStudioActionBase & (
   | { readonly state: "queued" | "running" }
-  | { readonly state: "complete"; readonly result: {
-      readonly resource: string;
-      readonly mediaType: string;
-      readonly frameCount?: number;
-      readonly atlas?: MediaStoryboardAtlas;
-    } }
+  | { readonly state: "complete"; readonly result: ProjectMediaViewResult & { readonly frameCount?: number } }
   | { readonly state: "failed"; readonly diagnostic: string }
   | { readonly state: "cancelled" }
 );

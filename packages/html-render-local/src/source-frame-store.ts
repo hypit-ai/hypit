@@ -26,6 +26,7 @@ type FrameSets = Map<string, Set<number>>;
 type Waiter = {
   readonly required: FrameSets;
   readonly preferred: FrameSets;
+  readonly signal: AbortSignal | undefined;
   readonly resolve: (lease: SourceFrameLease) => void;
   readonly reject: (error: unknown) => void;
 };
@@ -73,13 +74,27 @@ export class SourceFrameStore {
     return this.#resident.get(source)?.get(frame)?.path;
   }
 
-  acquire(requiredWindows: readonly SourceFrameWindow[], preferredWindows: readonly SourceFrameWindow[] = []): Promise<SourceFrameLease> {
+  acquire(requiredWindows: readonly SourceFrameWindow[], preferredWindows: readonly SourceFrameWindow[] = [],
+    signal?: AbortSignal): Promise<SourceFrameLease> {
     this.#throwIfStopped();
+    signal?.throwIfAborted();
     const required = frameSets(requiredWindows);
     if (required.size === 0) return Promise.resolve({ release: () => {} });
     const preferred = frameSets(preferredWindows);
     return new Promise<SourceFrameLease>((resolve, reject) => {
-      this.#waiters.push({ required, preferred, resolve, reject });
+      const abort = () => {
+        const index = this.#waiters.indexOf(waiter);
+        if (index !== -1) this.#waiters.splice(index, 1);
+        reject(signal?.reason);
+        this.#notify();
+      };
+      const waiter: Waiter = {
+        required, preferred, signal,
+        resolve: lease => { signal?.removeEventListener("abort", abort); resolve(lease); },
+        reject: error => { signal?.removeEventListener("abort", abort); reject(error); },
+      };
+      signal?.addEventListener("abort", abort, { once: true });
+      this.#waiters.push(waiter);
       this.#startPump();
     });
   }
@@ -127,6 +142,7 @@ export class SourceFrameStore {
         let retained = false;
         try {
           this.#throwIfStopped();
+          if (target.signal?.aborted) break;
           assert(frame.frame === expected, `Prepared Source decoder returned frame ${frame.frame}, expected ${expected}.`);
           expected += 1;
           assert(Number.isSafeInteger(frame.bytes) && frame.bytes > 0, "Prepared Source decoder emitted an empty frame.");
@@ -166,7 +182,9 @@ export class SourceFrameStore {
   async #admit(source: string, frame: DecodedSourceFrame, required: FrameSets,
     preferred: FrameSets, target: Waiter, hard: boolean): Promise<boolean> {
     while (true) {
+      if (target.signal?.aborted) return false;
       await this.#evictFor(frame.bytes, required, hard ? undefined : preferred);
+      if (target.signal?.aborted) return false;
       let capacity = this.#bytes.tryAcquire(frame.bytes);
       if (capacity === undefined) {
         if (!hard) return false;

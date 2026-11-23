@@ -112,8 +112,8 @@ export async function inspectMediaFileByDecodedUnits(
   return collector.finish();
 }
 
-/** Read the advertised primary stream of a generated resource for project adoption. */
-export async function inspectGeneratedMediaFile(
+/** Inspect the primary signal and establish its timing for project adoption. */
+export async function inspectMediaFileForAdoption(
   path: string, mediaType: string, options: InspectionOptions = {},
 ): Promise<MediaInspection> {
   const constantPicture = mediaType.startsWith("image/");

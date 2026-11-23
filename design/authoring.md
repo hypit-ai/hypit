@@ -66,7 +66,7 @@ import { Composition, Media, Track, defineComposition, jsx, seconds } from "@hyp
 
 export default defineComposition((input: { opening: { path: string } }) => (
   <Composition id="main" width={720} height={1280}>
-    <Track id="picture" kind="picture">
+    <Track id="picture" kind="picture" role="picture">
       <Media id="opening" asset={input.opening} at={seconds("0")} duration={seconds("13")}
         picture={{ layout: { x: 0, y: 0, width: 720, height: 1280, fit: "cover" } }} />
     </Track>
