@@ -1,0 +1,20 @@
+{
+  "expectedRevision": "<revision-from-canvas-inspect>",
+  "commands": [
+    {
+      "kind": "node.move",
+      "node": "motion",
+      "x": 460,
+      "y": 100
+    },
+    {
+      "kind": "input.set",
+      "node": "motion",
+      "input": "firstFrame",
+      "binding": {
+        "from": { "node": "still", "output": "image" },
+        "personReference": false
+      }
+    }
+  ]
+}
