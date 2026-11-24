@@ -209,6 +209,9 @@ reference to produce independent speech. All of them use `POST /v1/audio/speech`
 | `@hypit/fishaudio-speech` | `voice-design-1` | `fishaudio/voice-design-1` | `input`, `voice_description` |
 | `@hypit/fishaudio-speech` | `voice-clone` | `fishaudio/voice-clone` | `input`, `reference_audio`, constant `voice_description` title |
 | `@hypit/elevenlabs-speech` | `eleven_ttv_v3` | `eleven_ttv_v3` | `input`, `voice_description` |
+| `@hypit/noiz-audio` | `noiz-text-to-sound` | `noiz-text-to-sound` | `input`, optional `duration_seconds`, `response_format` (`POST /v1/audio/speech`) |
+| `@hypit/noiz-audio` | `noiz-yue2-music` | `noiz-yue2-music` | `prompt`, `lyrics` or `lyrics_prompt`, optional `abc`, `cot`, `title`, `tags`, `negative_tags`, `vocal_gender`, `lyric_timestamps` (`POST /v1/audio/music`) |
+| `@hypit/noiz-audio` | `noiz-yue2-cover` | `noiz-yue2-cover` | `reference_audio`, `lyrics`, `melody_adherence`, `music_description` or `style`, optional `title`, `vocal_gender`, `lyric_timestamps` (`POST /v1/audio/music`) |
 
 Each returned preview becomes one member of the audio set. These Model packages do not expose preset
 voices. When another selected Endpoint offers the same capability (such as local WhisperX or a project-owned speech

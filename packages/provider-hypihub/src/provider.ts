@@ -472,7 +472,7 @@ async function prepareGeneration(client: HypiHubClient, context: EndpointInvocat
 
 async function synthesizeAudio(client: HypiHubClient, context: EndpointInvocationContext, publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"]): Promise<EndpointFulfillment> {
   const { route, auth, compiled, operation } = await prepareGeneration(client, context, publicAssetUrl);
-  assert(route.media === "audio", "HypiHub audio capabilities use an immediate endpoint");
+  assert(route.lifecycle === "immediate" && route.media === "audio", "HypiHub immediate audio capabilities use /audio/speech");
   await context.reportProgress?.({ phase: `Submitting HypiHub request: ${compiled.model} (${operation})` });
   const audio = await client.speech(auth, { model: compiled.model, ...(compiled.input as Record<string, unknown>) });
   const artifacts = await Promise.all(audio.map(async (item) => await context.resources.put(item.bytes, item.mediaType)));
@@ -484,10 +484,12 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
     async start(context: EndpointStartContext) {
       try {
         const { route, auth, compiled, operation } = await prepareGeneration(client, context, publicAssetUrl);
-        assert(route.media !== "audio", "HypiHub audio capabilities use an immediate endpoint");
+        assert(route.lifecycle === "asynchronous", "HypiHub immediate audio capabilities use /audio/speech");
         const input = compiled.input as Record<string, unknown>;
         const path = operation === "image_edits" ? "/images/edits"
-          : operation === "images" ? "/images/generations" : "/videos";
+          : operation === "images" ? "/images/generations"
+          : operation === "audio_music" ? "/audio/music"
+          : "/videos";
         await context.reportProgress?.({ phase: `Submitting HypiHub request: ${compiled.model} (${operation})` });
         let response: Record<string, unknown>;
         try {
@@ -650,7 +652,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     ...(options.actionLimits === undefined ? {} : { actionLimits: options.actionLimits }),
     capabilities: [
       ...hypiHubRoutes
-      .map((route) => route.media === "audio"
+      .map((route) => route.lifecycle === "immediate"
         ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, capacity: route.capability.name, ...(route.supports === undefined ? {} : { supports: route.supports }), ...(capabilityConcurrency[route.capability.name] === undefined ? {} : { maxConcurrency: capabilityConcurrency[route.capability.name]! }) }
         : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, capacity: route.capability.name, ...(route.supports === undefined ? {} : { supports: route.supports }), ...(capabilityConcurrency[route.capability.name] === undefined ? {} : { maxConcurrency: capabilityConcurrency[route.capability.name]! }) }),
       {
