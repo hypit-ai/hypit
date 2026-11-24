@@ -168,6 +168,9 @@ importers:
       '@hypit/narrative-temporal':
         specifier: workspace:*
         version: link:packages/narrative-temporal
+      '@hypit/noiz-audio':
+        specifier: workspace:*
+        version: link:packages/noiz-audio
       '@hypit/pixverse':
         specifier: workspace:*
         version: link:packages/pixverse
@@ -1803,6 +1806,28 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  packages/noiz-audio:
+    dependencies:
+      '@hypit/generation':
+        specifier: workspace:^0.1.0
+        version: link:../generation
+    devDependencies:
+      '@hypit/blob':
+        specifier: workspace:*
+        version: link:../blob
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
+
   packages/pixverse:
     dependencies:
       '@hypit/generation':
@@ -2870,6 +2895,9 @@ importers:
       '@hypit/narrative-temporal':
         specifier: workspace:^0.1.0
         version: link:../narrative-temporal
+      '@hypit/noiz-audio':
+        specifier: workspace:^0.1.0
+        version: link:../noiz-audio
       '@hypit/pixverse':
         specifier: workspace:^0.2.1
         version: link:../pixverse

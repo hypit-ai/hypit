@@ -271,6 +271,7 @@
     "@hypit/narrative": "workspace:*",
     "@hypit/narrative-caption": "workspace:*",
     "@hypit/narrative-temporal": "workspace:*",
+    "@hypit/noiz-audio": "workspace:*",
     "@hypit/pixverse": "workspace:*",
     "@hypit/project": "workspace:*",
     "@hypit/producer": "workspace:*",
