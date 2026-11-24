@@ -1,6 +1,6 @@
 {
   "name": "@hypit/video",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -43,7 +43,7 @@
     "@hypit/noiz-audio": "workspace:^0.1.0",
     "@hypit/pixverse": "workspace:^0.2.1",
     "@hypit/provider-html-local": "workspace:^0.2.0",
-    "@hypit/provider-hypihub": "workspace:^0.2.2",
+    "@hypit/provider-hypihub": "workspace:^0.2.3",
     "@hypit/provider-image-opencv-local": "workspace:^0.2.0",
     "@hypit/provider-whisperx-local": "workspace:^0.2.0",
     "@hypit/region-evidence": "workspace:^0.1.0",
