@@ -37,7 +37,7 @@ export function timelinePreviewSources(
   const hasAudio = (child: NleComposition): boolean => {
     const cached = audioOutputs.get(child.id);
     if (cached !== undefined) return cached;
-    const audible = child.tracks.some(track => track.enabled && track.items.some(item => {
+    const audible = child.tracks.some(track => track.audioEnabled && track.items.some(item => {
       if (!item.enabled) return false;
       if (item.kind === "adjust") return track.kind === "audio";
       if (item.audio === undefined) return false;
@@ -65,13 +65,14 @@ export function timelinePreviewSources(
         const audio = options.renderedAudio && item.audio !== undefined && hasAudio(child)
           ? { target, version, ...clock } : undefined;
         if (picture !== undefined || audio !== undefined) result.push([item.id, {
+          start: item.start,
           ...(picture === undefined ? {} : { picture }), ...(audio === undefined ? {} : { audio }),
         }]);
         continue;
       }
       if (item.source === "component" && options.renderedPicture && track.role === "picture" && item.picture !== undefined) {
         const target = { kind: "component", composition: composition.id, item: item.id } as const;
-        result.push([item.id, { picture: { target,
+        result.push([item.id, { start: item.start, picture: { target,
           version: renderedPreviewVersion(options.revision, catalog.generation, target),
           range: { start: item.start, end: nleItemEnd(item) } } }]);
         continue;
@@ -91,6 +92,7 @@ export function timelinePreviewSources(
         media, ...clock, ...(entry.audioVersion === undefined ? {} : { version: entry.audioVersion }),
       } : undefined;
       if (picturePreview !== undefined || audioPreview !== undefined) result.push([item.id, {
+        start: item.start,
         ...(picturePreview === undefined ? {} : { picture: picturePreview }),
         ...(audioPreview === undefined ? {} : { audio: audioPreview }),
       }]);

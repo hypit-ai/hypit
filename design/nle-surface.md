@@ -74,8 +74,9 @@ Item changes only that occurrence and checks only its own Track. Unlinking copie
 
 The Canvas projection exposes only Item-level Picture frames owned by NLE. It does not inspect a Component's private
 render tree merely because the renderer can expose pixels or DOM. Source extent is an invocation-local observation;
-the authored frame, fit and focus stay Project facts. Session track locks constrain the spatial capabilities offered through
-that editing surface.
+the authored crop, frame, fit and focus stay Project facts. The projected fitted content uses the selected Source
+extent. Session track locks constrain the spatial capabilities offered through that editing surface. Editing a crop
+checks the Item's Track, including when its layout is shared.
 
 ## Package
 

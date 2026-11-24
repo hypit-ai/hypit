@@ -1,5 +1,6 @@
 import type { MediaResource, PictureInterpretation } from "@hypit/media";
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
+import { alphaMaskRuntime } from "./alpha-mask-runtime.js";
 import { assertHtmlProgram, htmlArtifactUrl } from "./program.js";
 import type { HtmlPictureReconstruction } from "./reconstruction.js";
 import { assertHtmlVisual, placeHtmlVisualInputs } from "./visual.js";
@@ -21,6 +22,13 @@ type HtmlPictureElementBase = {
 
 export type HtmlPictureElement =
   | (HtmlPictureElementBase & { readonly kind: "box"; readonly children: readonly HtmlPictureElement[] })
+  | (HtmlPictureElementBase & {
+      readonly kind: "alpha-mask";
+      readonly size: { readonly width: number; readonly height: number };
+      readonly raster: { readonly width: number; readonly height: number };
+      readonly content: HtmlPictureElement;
+      readonly matte: HtmlPictureElement;
+    })
   | (HtmlPictureElementBase & {
       readonly kind: "program";
       readonly program: HtmlVisual;
@@ -114,6 +122,7 @@ function collectArtifacts(root: HtmlPictureElement): {
   };
   const visit = (element: HtmlPictureElement): void => {
     if (element.kind === "box") element.children.forEach(visit);
+    else if (element.kind === "alpha-mask") { visit(element.content); visit(element.matte); }
     else if (element.kind === "program") {
       assertHtmlVisual(element.program);
       for (const dependency of element.program.dependencies ?? []) {
@@ -164,6 +173,13 @@ export function compileHtmlPictureProgram(input: HtmlPictureProgramInput): HtmlP
       previousEnd = span.endFrameExclusive;
     }
     if (element.kind === "box") element.children.forEach(validate);
+    else if (element.kind === "alpha-mask") {
+      const { size, raster } = element;
+      assert([size.width, size.height].every(value => Number.isFinite(value) && value > 0)
+        && [raster.width, raster.height].every(value => Number.isSafeInteger(value) && value > 0),
+      `HTML Picture ${element.id} alpha mask extent is invalid.`);
+      validate(element.content); validate(element.matte);
+    }
     else if (element.kind === "program") {
       assertHtmlVisual(element.program);
       element.slots.forEach((slot) => validate(slot.element));
@@ -187,6 +203,7 @@ export function compileHtmlPictureProgram(input: HtmlPictureProgramInput): HtmlP
     return htmlArtifactUrl(id);
   };
   const videoSources: HtmlVideoSource[] = [];
+  const alphaVisualAssets: { readonly id: string; readonly urls: readonly string[] }[] = [];
   const programs: {
     readonly id: string;
     readonly renderFrames?: readonly (number | null)[];
@@ -198,17 +215,26 @@ export function compileHtmlPictureProgram(input: HtmlPictureProgramInput): HtmlP
   const styles: string[] = [];
   const fontRules = new Set<string>();
   let serial = 0;
-  const render = (element: HtmlPictureElement): string => {
+  const render = (element: HtmlPictureElement, alphaInput = false): string => {
     const domId = `hypit-picture-${++serial}`;
     const encodedSpans = element.spans.map((span) => `${span.startFrame}:${span.endFrameExclusive}`).join(",");
     const common = `id="${domId}" data-hypit-element-id="${escapeHtml(element.id)}" data-hypit-spans="${encodedSpans}" style="${escapeHtml(cssStyle(element.style, `HTML Picture ${element.id}`))}"`;
     if (element.spans.length === 0) return `<div ${common}></div>`;
-    if (element.kind === "box") return `<div ${common}>${element.children.map(render).join("")}</div>`;
+    if (element.kind === "box") return `<div ${common}>${element.children.map(child => render(child, alphaInput)).join("")}</div>`;
+    if (element.kind === "alpha-mask") {
+      const drawable = (child: HtmlPictureElement) => `<div drawable aria-hidden="true" style="position:relative;overflow:hidden;width:${element.size.width}px;height:${element.size.height}px">${render(child, true)}</div>`;
+      return `<canvas ${common} data-hypit-alpha-mask content="drawable" width="${element.raster.width}" height="${element.raster.height}">${drawable(element.content)}${drawable(element.matte)}</canvas>`;
+    }
     if (element.kind === "program") {
-      const slots = Object.fromEntries(element.slots.map((slot) => [slot.name, render(slot.element)]));
+      const slots = Object.fromEntries(element.slots.map((slot) => [slot.name, render(slot.element, alphaInput)]));
       if (element.program.css !== undefined) styles.push(`@scope (#${domId}) {${element.program.css}}`);
       const resources = Object.fromEntries((element.program.dependencies ?? []).map((dependency) =>
         [dependency.id, artifactUrl(dependency.resource)]));
+      if (alphaInput) {
+        const urls = [...new Set((element.program.dependencies ?? []).filter(dependency =>
+          dependency.resource.mediaType.startsWith("image/")).map(dependency => resources[dependency.id]!))];
+        if (urls.length > 0) alphaVisualAssets.push({ id: domId, urls });
+      }
       for (const dependency of element.program.dependencies ?? []) if (dependency.kind === "font") {
         const coverage = dependency.unicodeRange === undefined ? "" : `;unicode-range:${dependency.unicodeRange}`;
         fontRules.add(`@font-face{font-family:${JSON.stringify(dependency.family)};src:url(${JSON.stringify(artifactUrl(dependency.resource))});font-weight:${dependency.weight ?? "normal"};font-style:${dependency.style ?? "normal"}${coverage}}`);
@@ -231,7 +257,8 @@ export function compileHtmlPictureProgram(input: HtmlPictureProgramInput): HtmlP
       );
       return `<div ${common}>${fragment}</div>`;
     }
-    if (element.kind === "image") return `<img ${common} data-hypit-artifact-src="${artifactUrl(element.resource)}"/>`;
+    const cors = alphaInput ? ' crossorigin="anonymous"' : "";
+    if (element.kind === "image") return `<img ${common}${cors} data-hypit-artifact-src="${artifactUrl(element.resource)}"/>`;
     videoSources.push({
       id: `video-source-${videoSources.length + 1}`,
       elementId: domId,
@@ -245,7 +272,7 @@ export function compileHtmlPictureProgram(input: HtmlPictureProgramInput): HtmlP
         reconstruction: structuredClone(element.reconstruction),
       }),
     });
-    return `<span ${common} data-hypit-media-display-plane><span data-hypit-media-payload-host style="position:relative;display:block;width:100%;height:100%;object-fit:inherit;object-position:inherit"><video data-hypit-video-source="${videoSources.at(-1)!.id}" data-hypit-artifact-src="${artifactUrl(element.resource)}" muted playsinline preload="auto" style="position:absolute;inset:0;width:100%;height:100%;object-fit:inherit;object-position:inherit;pointer-events:none"></video><span data-hypit-decoded-media-slot style="position:absolute;inset:0;overflow:hidden;object-fit:inherit;object-position:inherit;pointer-events:none"></span></span></span>`;
+    return `<span ${common} data-hypit-media-display-plane><span data-hypit-media-payload-host style="position:relative;display:block;width:100%;height:100%;object-fit:inherit;object-position:inherit"><video${cors} data-hypit-video-source="${videoSources.at(-1)!.id}" data-hypit-artifact-src="${artifactUrl(element.resource)}" muted playsinline preload="auto" style="position:absolute;inset:0;width:100%;height:100%;object-fit:inherit;object-position:inherit;pointer-events:none"></video><span data-hypit-decoded-media-slot style="position:absolute;inset:0;overflow:hidden;object-fit:inherit;object-position:inherit;pointer-events:none"></span></span></span>`;
   };
   const picture = render(input.root);
   const runtime = `
@@ -254,6 +281,8 @@ const outputFrames=${scriptJson(input.outputFrames ?? null)};
 const sampleIndices=outputFrames===null?null:new Map(outputFrames.map((frame,index)=>[frame,index]));
 const sourcePlans=${scriptJson(videoSources.map((source) => ({ id: source.id, frames: source.sourceFrames })))};
 const failures=[];
+const alphaVisualAssets=${scriptJson(alphaVisualAssets)};
+${alphaMaskRuntime}
 const seconds=value=>Number(value.ticks)*value.timeBase.numerator/value.timeBase.denominator;
 let preparedSourceFrameBase;
 Object.defineProperty(window,'__hypitUsePreparedSourceFrames',{configurable:false,writable:false,value:base=>{if(typeof base!=='string'||base.length===0)throw new Error('Prepared Source Frame base is invalid.');preparedSourceFrameBase=base.replace(/\\\/$/u,'');}});
@@ -265,7 +294,7 @@ const prepareRender=entry=>{
   try{
     const context={
       width:root.offsetWidth,height:root.offsetHeight,frameRate:${input.frameRate.numerator / input.frameRate.denominator},
-      durationFrames:${input.frameCount},resource:id=>entry.resources[id],
+      durationFrames:${input.frameCount},resource:id=>drawableImageURLs.get(entry.resources[id])??entry.resources[id],
       controlPosition(name,frame){
         const values=entry.controls?.[name];
         if(values===undefined)throw new Error('Undeclared Control '+name);
@@ -292,6 +321,7 @@ async function prepare(selection){
   for(const {element} of contributions)element.style.display=selected(element,selection)?'':'none';
   document.getElementById('hypit-program').style.display='';
   activate(selection);
+  if(alphaVisualAssets.length)await prepareDrawableVisuals(element=>selected(element,selection));
   const liveVideos=preparedSourceFrameBase===undefined?videos.filter(({element})=>element.hasAttribute('src')):[];
   await Promise.all([...document.images].filter(image=>image.hasAttribute('src')).map(image=>image.complete?Promise.resolve():image.decode()));
   await Promise.all(liveVideos.map(({element})=>element.readyState>=2?Promise.resolve():new Promise((resolve,reject)=>{
@@ -500,6 +530,7 @@ async function presentFrame(frame,options,signal,playing){
   assertFrame(frame);
   const prepared=[];
   try{
+    if(alphaVisualAssets.length)await prepareDrawableVisuals(element=>inFrame(spans(element),frame));
     const results=await Promise.allSettled([
       decodeImages(frame,signal),
       ...videos.map(async entry=>{
@@ -521,6 +552,7 @@ async function presentFrame(frame,options,signal,playing){
     warmDecoder(frame,options);
     await Promise.all(frameEvents(frame));
     await Promise.all([decodeImages(frame,signal),document.fonts.ready]);
+    if(alphaMasks.length)await paintAlphaMasks(signal);
     if(!playing)await paint();
     signal.throwIfAborted();
     checkVisual();
@@ -538,6 +570,7 @@ window.__hypitFrameProgram={
     showFrame(frame);
     for(const entry of renders)renderEntry(entry,frame);
     await Promise.all([...frameEvents(frame),...videos.map(entry=>drawSourceFrame(entry,frame))]);
+    if(alphaMasks.length)await paintAlphaMasks();
     await paint();
     checkVisual();
   }

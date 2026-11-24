@@ -121,9 +121,7 @@ export class NleEditingSurface {
     const project = this.#projectService.snapshot();
     const editing = this.#context(project.project);
     const merged = this.#observations(project.project, editing, observations);
-    const timelineCapabilities = resolveNleTimelineItemCapabilities(
-      project.project, editing, this.#options.authoring,
-    );
+    const timelineCapabilities = resolveNleTimelineItemCapabilities(project.project, editing);
     const spatialCapabilities = resolveNleSpatialItemCapabilities(project.project, editing);
     return {
       status: this.status(),
@@ -159,7 +157,7 @@ export class NleEditingSurface {
     }
     const observations = this.#observations(project, editing, extra);
     if (request.kind === "timeline") {
-      const capabilities = resolveNleTimelineItemCapabilities(project, editing, this.#options.authoring);
+      const capabilities = resolveNleTimelineItemCapabilities(project, editing);
       return { kind: "timeline", value: projectNleTimeline(
         project, editing, observations, capabilities,
         this.#options.timelinePolicy ?? allNleTimelineAffordances,
@@ -221,7 +219,7 @@ export class NleEditingSurface {
     }
 
     const completed = assertNleProjectEditAllowed(editing, project, transaction, command.kind === "project.transact"
-      ? resolveNleTimelineItemCapabilities(project, editing, this.#options.authoring) : undefined);
+      ? resolveNleTimelineItemCapabilities(project, editing) : undefined);
     this.#options.componentDefinitions?.assertProject(completed);
     this.#projectService.transact({ expectedRevision: command.expectedProjectRevision, commands: transaction.commands });
     return { status: this.status(), projectChanged: true, invalidated };

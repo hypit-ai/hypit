@@ -61,7 +61,7 @@ NLE Studio 在 ApplicationHost 打开的 ProjectHost 上建立 Product Session�
 | 轨道和拖放 | NLE Project、NLE Studio planner | Studio 后端规划最终落点、锁、关联成员与补轨 |
 | 插入和磁吸 | NLE Project、产品编辑策略 | 显式范围插入和闭合已具备；连续主轨和自动磁吸待定 |
 | 片段剪辑和关联 | NLE Project | move、trim、split、slip、roll、ripple 和 detach 已具备生产路径 |
-| 复制和复合片段 | Product Session clipboard、NLE Composition | 同一文档内 clipboard、单轨 compound/explode、独立副本和 Session 导航已具备 |
+| 复制和复合片段 | Product Session clipboard、NLE Composition | 同一文档内 clipboard、多轨复合与拆解、原地独立化和 Session 导航已具备 |
 | 画面和动画 | NLE Picture layout、package Operator | frame、fit、focus、Transform 和 Filter 已具备；Crop 和关键点新增/移动规则待定 |
 | 变速和定格 | NLE source time、Reconstruction | 单段画面变速、倒放和正向 Media 定格已具备；非单位速率音频仍需终端支持 |
 | 转场 | NLE Transition、package Operator | 显式切点物化、类型替换、参数、时长和移除已具备；复杂编辑后的关系策略待定 |
@@ -99,7 +99,7 @@ NLE Studio 在 ApplicationHost 打开的 ProjectHost 上建立 Product Session�
 | Track 层级排序 | NLE Command | `track.move` 修改 Composition 中 Track 顺序；lowering 按 Picture Track 后到前组合 | **已具备**，当前浏览器直接发底层命令 |
 | Track 类型兼容 | NLE fact + product planner | 拖动沿用源轨道的输出域，物化使用各 offering 或 Media 的输出域 | **已具备** |
 | Track 锁定 | Studio 会话操作 | `track-lock.set` 与 Surface guard 已实现 | **已具备**，但多成员 Operation 必须在后端一次检查所有触达 Track |
-| Track 启用与音频静音 | NLE Project Command | `track.update.enabled` 参与 lowering | **已具备**。当前是领域统一的 Track enablement，而非额外静音状态 |
+| Track 画面与声音开关 | NLE Project Command | `track.update` 分别写入 `pictureEnabled` 和 `audioEnabled` | **已具备**。分别控制画面和混音贡献 |
 
 ## 3. 插入和磁吸
 
@@ -129,11 +129,11 @@ NLE Studio 在 ApplicationHost 打开的 ProjectHost 上建立 Product Session�
 | --- | --- | --- | --- |
 | 复制、剪切和粘贴 | Product Session clipboard + NLE Studio Operation | Session 保存选区；粘贴重建身份、精确时间和轨道分配 | **已具备**同一 NLE 文档内 |
 | 复制 Transition、Matte 和 Group | NLE Studio paste planner | 完整的 Transition、Matte 和 Group 与新 Item 在同一次 Project 事务中粘贴 | **已具备** |
-| 建立复合片段 | NLE Composition + Operation | `composition.compound` 把单轨连续 Present 和完整关系移动到 child，在原画面层级留下父 occurrence | **已具备**单轨路径 |
-| 进入与返回复合片段 | Product Session | enter/return 切换正在编辑的 Composition，返回时恢复 Session 保存的父播放头位置 | **已具备** |
-| 复合片段独立副本 | NLE Studio Operation | make-unique 深复制本地定义关系并重绑当前 occurrence；保留显式 Project Media 和 Shared Value 引用 | **已具备** |
+| 建立复合片段 | NLE Composition + Operation | `composition.compound` 将选中的多轨 Present 和完整关系收进子 Composition，校验父时间线的画面层级和音频调节顺序 | **已具备**可等价替换的选区 |
+| 进入与返回复合片段 | Product Session | 进入按源时间映射定位内部播放头，返回时恢复 Session 保存的父播放头位置 | **已具备** |
+| 使内部时间线独立 | NLE Studio Operation | `composition.make-unique` 深复制本地定义并在原位重绑当前 Item，保留原有 Media 和 Shared Value 引用 | **已具备** |
 | 外层移动、裁剪和变速 | Composition Present | occurrence 拥有独立 placement 与 source-time；Nested lowering 已实现 | **已具备**底层语义 |
-| 解除复合 | NLE Studio Operation | explode 将单轨、全长、无额外时空变换或处理的 child 内容提升到原 parent 位置 | **已具备**可无歧义提升的路径 |
+| 拆解复合片段 | NLE Studio Operation | `composition.explode` 将全长、原速、原布局的复合片段展开为父时间线上的有序轨道和关系 | **已具备**可等价展开的实例 |
 
 ## 6. 画面和动画
 
@@ -156,7 +156,7 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | 恒定速度、倒放和分段映射 | NLE source-time + Studio Operation | `timeline.retime` 以精确有理速度修改单段 Picture-only Media 或 Composition 的源时间，保留 Item 位置和长度 | **已具备**单段画面速率与倒放后端；分段产品编辑待讨论 |
 | 音画协调变速 | NLE Present + Audio Executor | 同一 Present 的 Picture/Audio 共用 source-time。本机 AudioProgram 执行当前接受单位速率的直接 Media 映射 | **执行缺口**。需为选定重采样策略闭合变速音频 |
 | 保持音调策略 | Audio Executor | 变速音频需要确定音调是否随速度变化 | **执行缺口**。随音频变速一起验证 |
-| 定格 occurrence | Picture-only Present + source-time | `media.freeze` 将选定帧映射到 Media 时刻后物化新的零速 Picture Present；Jensen 验证首尾帧和原样本一致 | **已具备**无活跃 Picture Process 的正向 Media 采样 |
+| 定格 occurrence | Picture-only Present + source-time | `media.freeze` 在采样帧原轨插入零速 Picture Present，分割和联动后移同一笔提交 | **已具备**无活跃 Picture Process 的正向 Media 采样 |
 | 变速重定时动画与音量点 | Process Control time + package parameters | occurrence 编辑已切片、重基 Process Control relation；点值仍由各 package 拥有 | **产品缺口**。需要 package 参数操作与产品级 speed planner 协同 |
 
 ## 8. 转场
@@ -169,7 +169,7 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | 修改类型、参数和时长 | Studio Operation + package Inspector | 可替换 offering、改变 canonical overlap，或编辑 Transition package 投影的有限字段；Jensen 实测缓动影响真实帧 | **已具备** |
 | 素材边界补帧 | source-time + Reconstruction + product policy | Project 已能选择 Reconstruction；Transition planner 可检查可用 source range | **产品缺口**。需要明确补帧 package/policy 与失败诊断 |
 | move、trim、split 后维护关系 | NLE Studio planners | Project 最终校验会拒绝失效 relation，但不会替调用者重新计算或删除关系 | **产品缺口** |
-| 删除 Transition | NLE Studio Operation | `transition.remove` 删除关系，保留两端当前时间位置 | **已具备** |
+| 删除 Transition | NLE Studio Operation | `transition.remove` 将入场侧闭包后移至相接，并原子删除关系；锁定、固定前缀和新增碰撞会阻止操作 | **已具备** |
 
 ## 9. 滤镜和效果
 
@@ -179,7 +179,7 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | Programme-scope 处理 | Adjust Item | Adjust 是独立 Timeline Item，对同层以下累计信号生效 | **已具备**事实和求值 |
 | 添加片段效果 | NLE Studio catalog + Operation | `hypit.nle-process` 物化到已有 Present 对应的信号处理链；Jensen 选择 Transform、Filter、Gain | **已具备** |
 | 启用、停用、排序、删除 | Studio Operations + NLE Commands | 有限 Inspector 投影各信号处理链；操作寻址当前 Process 并检查 Project revision 和会话轨道锁 | **已具备** |
-| 独立效果创建与长度编辑 | Adjust offering + Timeline edit | Adjust catalog/materialization 已实现；普通 move/trim 依赖 Operator `timeWindow` 声明 | **已具备**基础路径 |
+| 独立效果创建与长度编辑 | Adjust offering + Timeline edit | Adjust 通过目录放置，沿用通用 move/trim，裁剪由 NLE 切片 Control 时间 | **已具备**基础路径 |
 | 参数编辑与共享 | package authoring + Inspector + Shared Value | Operator authoring、Inspector 和 Project-owned Operator Shared Value 已实现 | **已具备**基础路径 |
 | 效果预览 | NLE Preview Action | 单帧和播放区间消费含 Process/Adjust 的同一 NLE Programme | **已具备** |
 
@@ -217,7 +217,7 @@ Operator package 拥有；产品通过 package authoring contribution 显示并�
 | 片段增益 | Audio Process + package Operator | Jensen 选择 Gain offering，通过 Inspector 编辑倍数，播放与交付消费同一 AudioProgram | **已具备** Jensen 路径 |
 | 淡入淡出 | Audio Process + package Operator | fade 是 Audio Operator 的时间化 closed value | **产品缺口**。需要标准 envelope package 与 Timeline 手势 |
 | 音量包络与关键点 | package Operator parameters | Gain 投影已有线性关键点的精确时间和可编辑增益；NLE 保存其 Process 与 Control relation | **已具备**已有点的增益编辑；创建、移动和移除点仍缺 |
-| Track 混音开关 | NLE Track | Track enabled 参与 lowering | **已具备** |
+| Track 混音开关 | NLE Track | Track 的 `audioEnabled` 参与 lowering | **已具备** |
 | 混合播放、导出与波形一致性 | AudioProgram / Media Actions | 播放、交付和 Programme 波形共用 Audio lowering 与本机混音图；Jensen 验证停用轨道只改变 Programme 波形 | **已具备** |
 
 音量、淡化和包络可以成为官方标准 Audio Operator，但不因此成为 NLE 中央字段。NLE 产品可以为标准 package

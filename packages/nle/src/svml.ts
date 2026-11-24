@@ -16,6 +16,7 @@ import {
   type NleParameterBinding,
   type NlePictureAppearance,
   type NleMediaPictureAppearance,
+  type NlePictureCrop,
   type NlePictureLayout,
   type NlePresentItem,
   type NleProject,
@@ -495,15 +496,24 @@ function readProcessTime(value: XmlElement): NleProcessControlTime {
 
 function readPicture(value: XmlElement, media: boolean): NleMediaPictureAppearance {
   attributes(value, []);
-  assertChildren(value, media ? ["layout", "reconstruction", "process"] : ["layout", "process"]);
+  assertChildren(value, media ? ["crop", "layout", "reconstruction", "process"] : ["crop", "layout", "process"]);
+  const crop = optionalChild(value, "crop");
   const sampling = media ? optionalChild(value, "reconstruction") : undefined;
   return {
     layout: readLayout(onlyChild(value, "layout")),
+    ...(crop === undefined ? {} : { crop: readCrop(crop) }),
     ...(sampling === undefined ? {} : { reconstruction: readReconstruction(sampling) }),
     ...(value.children.some((child) => child.name === "process") ? {
       processes: value.children.filter((child) => child.name === "process").map(readProcess),
     } : {}),
   };
+}
+
+function readCrop(value: XmlElement): NlePictureCrop {
+  const sides = ["left", "top", "right", "bottom"] as const;
+  attributes(value, [], sides);
+  assertChildren(value, []);
+  return Object.fromEntries(sides.flatMap(side => optionalAttr(value, side) === undefined ? [] : [[side, numberAttr(value, side)]]));
 }
 
 function readAudio(value: XmlElement): NleAudioAppearance {
@@ -605,7 +615,7 @@ function readAdjust(value: XmlElement): NleItem {
 }
 
 function readTrack(value: XmlElement): NleTrack {
-  attributes(value, ["id", "name", "kind", "role", "enabled"]);
+  attributes(value, ["id", "name", "kind", "role", "picture-enabled", "audio-enabled"]);
   assertChildren(value, ["present", "adjust"]);
   const role = attr(value, "role");
   if (role !== "picture" && role !== "audio" && role !== "subtitle"
@@ -617,22 +627,23 @@ function readTrack(value: XmlElement): NleTrack {
     name: attr(value, "name"),
     kind: attr(value, "kind") as NleTrack["kind"],
     role,
-    enabled: booleanAttr(value, "enabled"),
+    pictureEnabled: booleanAttr(value, "picture-enabled"),
+    audioEnabled: booleanAttr(value, "audio-enabled"),
     items: value.children.map((child) => child.name === "present" ? readPresent(child) : readAdjust(child)),
   };
 }
 
-function readRelation(value: XmlElement): NleTransition | NleMatte {
-  const transition = value.name === "transition";
-  attributes(value,
-    transition
-      ? ["id", "outgoing", "incoming", "package", "symbol"]
-      : ["id", "content", "matte", "package", "symbol"]);
+function readTransition(value: XmlElement): NleTransition {
+  attributes(value, ["id", "outgoing", "incoming", "package", "symbol"]);
   assertChildren(value, ["parameters"]);
-  const common = { id: attr(value, "id"), operator: packageSymbol(value), parameters: jsonObject(onlyChild(value, "parameters")) };
-  return transition
-    ? { ...common, outgoing: attr(value, "outgoing"), incoming: attr(value, "incoming") }
-    : { ...common, content: attr(value, "content"), matte: attr(value, "matte") };
+  return { id: attr(value, "id"), outgoing: attr(value, "outgoing"), incoming: attr(value, "incoming"),
+    operator: packageSymbol(value), parameters: jsonObject(onlyChild(value, "parameters")) };
+}
+
+function readMatte(value: XmlElement): NleMatte {
+  attributes(value, ["id", "content", "matte"]);
+  assertChildren(value, []);
+  return { id: attr(value, "id"), content: attr(value, "content"), matte: attr(value, "matte") };
 }
 
 function readComposition(value: XmlElement): NleComposition {
@@ -643,10 +654,8 @@ function readComposition(value: XmlElement): NleComposition {
     name: attr(value, "name"),
     canvas: { width: numberAttr(value, "width"), height: numberAttr(value, "height") },
     tracks: value.children.filter((child) => child.name === "track").map(readTrack),
-    transitions: value.children.filter((child) => child.name === "transition")
-      .map((child) => readRelation(child) as NleTransition),
-    mattes: value.children.filter((child) => child.name === "matte")
-      .map((child) => readRelation(child) as NleMatte),
+    transitions: value.children.filter((child) => child.name === "transition").map(readTransition),
+    mattes: value.children.filter((child) => child.name === "matte").map(readMatte),
     groups: value.children.filter((child) => child.name === "group").map(group => {
       attributes(group, ["id"]);
       assertChildren(group, ["member"]);
@@ -797,7 +806,12 @@ function printProcessTime(value: NleProcessControlTime, depth: number): string {
 
 function picture(value: NleMediaPictureAppearance, depth: number): string {
   const indent = "  ".repeat(depth);
-  let result = `${indent}<picture>\n${layout(value.layout, depth + 1)}`;
+  let result = `${indent}<picture>\n`;
+  const crop = value.crop;
+  if (crop !== undefined) {
+    result += `${indent}  <crop${a("left", crop.left)}${a("top", crop.top)}${a("right", crop.right)}${a("bottom", crop.bottom)} />\n`;
+  }
+  result += layout(value.layout, depth + 1);
   if (value.reconstruction !== undefined) result += reconstruction(value.reconstruction, depth + 1);
   for (const valueProcess of value.processes ?? []) result += printProcess(valueProcess, depth + 1);
   return `${result}${indent}</picture>\n`;
@@ -846,22 +860,16 @@ function adjust(value: Extract<NleItem, { readonly kind: "adjust" }>, depth: num
 function track(value: NleTrack, depth: number): string {
   const indent = "  ".repeat(depth);
   let result = `${indent}<track${a("id", value.id)}${a("name", value.name)}${a("kind", value.kind)}`
-    + `${a("role", value.role)}${a("enabled", value.enabled)}>\n`;
+    + `${a("role", value.role)}${a("picture-enabled", value.pictureEnabled)}${a("audio-enabled", value.audioEnabled)}>\n`;
   for (const item of value.items) result += item.kind === "present" ? present(item, depth + 1) : adjust(item, depth + 1);
   return `${result}${indent}</track>\n`;
 }
 
-function relation(value: NleTransition | NleMatte, depth: number): string {
+function transition(value: NleTransition, depth: number): string {
   const indent = "  ".repeat(depth);
-  const transition = "outgoing" in value;
-  const name = transition ? "transition" : "matte";
-  let result = `${indent}<${name}${a("id", value.id)}`;
-  result += transition
-    ? `${a("outgoing", value.outgoing)}${a("incoming", value.incoming)}`
-    : `${a("content", value.content)}${a("matte", value.matte)}`;
-  result += `${a("package", value.operator.package)}${a("symbol", value.operator.symbol)}>\n`;
-  result += json(value.parameters, depth + 1);
-  return `${result}${indent}</${name}>\n`;
+  return `${indent}<transition${a("id", value.id)}${a("outgoing", value.outgoing)}${a("incoming", value.incoming)}`
+    + `${a("package", value.operator.package)}${a("symbol", value.operator.symbol)}>\n`
+    + json(value.parameters, depth + 1) + `${indent}</transition>\n`;
 }
 
 function composition(value: NleComposition, depth: number): string {
@@ -869,8 +877,8 @@ function composition(value: NleComposition, depth: number): string {
   let result = `${indent}<composition${a("id", value.id)}${a("name", value.name)}`
     + `${a("width", value.canvas.width)}${a("height", value.canvas.height)}>\n`;
   for (const valueTrack of value.tracks) result += track(valueTrack, depth + 1);
-  for (const transition of value.transitions) result += relation(transition, depth + 1);
-  for (const matte of value.mattes) result += relation(matte, depth + 1);
+  for (const entry of value.transitions) result += transition(entry, depth + 1);
+  for (const matte of value.mattes) result += `${indent}  <matte${a("id", matte.id)}${a("content", matte.content)}${a("matte", matte.matte)} />\n`;
   for (const group of value.groups) {
     result += `${indent}  <group${a("id", group.id)}>\n`;
     for (const item of group.items) result += `${indent}    <member${a("item", item)} />\n`;

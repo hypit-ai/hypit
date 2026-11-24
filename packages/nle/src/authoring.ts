@@ -52,13 +52,14 @@ export function Composition({ children, id, name = id, width, height }:
   return { kind: "composition", value: { id, name, canvas: { width, height }, tracks, transitions, mattes, groups } };
 }
 
-export function Track({ children, id, name = id, enabled = true, ...properties }:
-  ElementProps & Omit<NleTrack, "items" | "name" | "enabled"> & { readonly name?: string; readonly enabled?: boolean }): Declaration {
+export function Track({ children, id, kind, role, name = id, pictureEnabled = kind === "picture", audioEnabled = true }:
+  ElementProps & Pick<NleTrack, "id" | "kind" | "role">
+  & Partial<Pick<NleTrack, "name" | "pictureEnabled" | "audioEnabled">>): Declaration {
   const items = collect(children).map(entry => {
     if (entry.kind !== "item") throw new Error(`Track ${id} cannot contain ${entry.kind}.`);
     return entry.value;
   });
-  return { kind: "track", value: { id, name, enabled, ...properties, items } };
+  return { kind: "track", value: { id, name, kind, role, pictureEnabled, audioEnabled, items } };
 }
 
 export function Item({ value }: { readonly value: NleItem }): Declaration { return { kind: "item", value }; }

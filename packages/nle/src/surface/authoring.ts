@@ -97,11 +97,9 @@ export type NleComponentAuthoring = {
   readonly mediaInputs?: (context: NleComponentAuthoringContext) => readonly NleComponentMediaInput[];
 };
 
-export type NleOperatorTemporalAuthoring = {
+export type NleOperatorParameterAuthoring = {
   readonly operator: PackageSymbol;
-  /** Whether ordinary trim and split preserve this Process by slicing only its existing Control relation. */
-  readonly timeWindow?: (context: NleProcessAuthoringContext) => boolean;
-  readonly editParameters?: (
+  readonly editParameters: (
     operation: unknown,
     context: NleProcessAuthoringContext,
   ) => Readonly<Record<string, unknown>>;
@@ -132,13 +130,12 @@ export type NleAuthoringContribution = {
   readonly package: string;
   readonly components: readonly NleComponentAuthoring[];
   readonly componentValues: readonly NleComponentValueAuthoring[];
-  readonly operators: readonly NleOperatorTemporalAuthoring[];
+  readonly operators: readonly NleOperatorParameterAuthoring[];
   readonly transitions?: readonly NleTransitionAuthoring[];
 };
 
 export type NleAuthoringHost = {
   readonly componentMediaInputs: (context: NleComponentAuthoringContext) => readonly NleComponentMediaInput[];
-  readonly operatorTimeWindow: (context: NleProcessAuthoringContext) => boolean | undefined;
   readonly hasComponentParameterAuthoring: (component: PackageSymbol) => boolean;
   readonly hasComponentValueAuthoring: (component: PackageSymbol, slot: string) => boolean;
   readonly hasOperatorParameterAuthoring: (operator: PackageSymbol) => boolean;
@@ -252,12 +249,12 @@ function assertContribution(value: NleAuthoringContribution): void {
   }
   for (const entry of value.operators) {
     const key = `operator:${packageSymbolKey(entry.operator)}`;
+    if (Object.keys(entry).some(field => !["operator", "editParameters"].includes(field))) {
+      throw new Error(`NLE authoring contribution ${key} has invalid fields.`);
+    }
     if (keys.has(key)) throw new Error(`NLE authoring contribution repeats ${key}.`);
     keys.add(key);
-    if (entry.timeWindow !== undefined && typeof entry.timeWindow !== "function") {
-      throw new Error(`NLE authoring contribution ${key} timeWindow is not callable.`);
-    }
-    if (entry.editParameters !== undefined && typeof entry.editParameters !== "function") {
+    if (typeof entry.editParameters !== "function") {
       throw new Error(`NLE authoring contribution ${key} editParameters is not callable.`);
     }
   }
@@ -284,7 +281,7 @@ export function createNleAuthoringContribution(value: {
   readonly package: string;
   readonly components?: readonly NleComponentAuthoring[];
   readonly componentValues?: readonly NleComponentValueAuthoring[];
-  readonly operators?: readonly NleOperatorTemporalAuthoring[];
+  readonly operators?: readonly NleOperatorParameterAuthoring[];
   readonly transitions?: readonly NleTransitionAuthoring[];
 }): NleAuthoringContribution {
   const contribution: NleAuthoringContribution = {
@@ -305,7 +302,7 @@ export function createNleAuthoringHost(
 ): NleAuthoringHost {
   const components = new Map<string, NleComponentAuthoring>();
   const componentValues = new Map<string, NleComponentValueAuthoring>();
-  const operators = new Map<string, NleOperatorTemporalAuthoring>();
+  const operators = new Map<string, NleOperatorParameterAuthoring>();
   const transitions = new Map<string, NleTransitionAuthoring>();
   for (const contribution of contributions) {
     assertContribution(contribution);
@@ -354,9 +351,6 @@ export function createNleAuthoringHost(
       }
       return structuredClone(inputs);
     },
-    operatorTimeWindow(context) {
-      return operators.get(packageSymbolKey(context.process.operator))?.timeWindow?.(context);
-    },
     hasComponentParameterAuthoring(component) {
       return components.get(packageSymbolKey(component))?.editParameters !== undefined;
     },
@@ -364,7 +358,7 @@ export function createNleAuthoringHost(
       return componentValues.has(componentValueKey(component, slot));
     },
     hasOperatorParameterAuthoring(operator) {
-      return operators.get(packageSymbolKey(operator))?.editParameters !== undefined;
+      return operators.has(packageSymbolKey(operator));
     },
     hasTransitionParameterAuthoring(operator) {
       return transitions.has(packageSymbolKey(operator));

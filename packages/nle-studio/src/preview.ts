@@ -10,7 +10,7 @@ import { prepareNleCompilation, type PreparedNleCompilation } from "@hypit/nle-d
 import type { ProjectHost } from "@hypit/project";
 import { compareExactTemporalValues, type TemporalRate } from "@hypit/temporal/algebra";
 import type { NleStudioActionObservation, NleStudioActionRequest } from "./protocol.js";
-import { studioFrameTime } from "./timeline-planning.js";
+import { studioFrameTime } from "./timeline-time.js";
 import { previewCanvas } from "./programme.js";
 
 type PreviewRequest = Extract<NleStudioActionRequest, { kind: "frame-preview" | "playback-preview" | "programme-waveform" }>;

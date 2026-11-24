@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { materializeHtmlProgram, type HtmlProgram } from "@hypit/html-program";
-import type { HtmlFrameExecutor, HtmlSourceFrames } from "@hypit/html-video";
+import type { HtmlFrameCapture, HtmlFrameExecutor, HtmlSourceFrames } from "@hypit/html-video";
 import type { MediaResource } from "@hypit/media";
 import { renderAudioProgramBufferLocally, type LocalMediaToolchainOptions } from "@hypit/media-local";
 import type { NleProject } from "@hypit/nle";
@@ -9,7 +9,7 @@ import type { ProjectHost } from "@hypit/project";
 import { compareExactTemporalValues, type TemporalRate } from "@hypit/temporal/algebra";
 import { programmeAudioFrames, programmeAudioSampleRate } from "./programme-transport.js";
 import type { NleStudioProgrammeProjection } from "./protocol.js";
-import { studioFrameTime } from "./timeline-planning.js";
+import { studioFrameTime } from "./timeline-time.js";
 
 type Programme = {
   readonly key: string;
@@ -20,9 +20,18 @@ type Programme = {
   readonly rate: TemporalRate;
   compilation?: Promise<PreparedNleCompilation>;
   program?: Promise<HtmlProgram>;
+  readonly placementElements: Map<string, string[]>;
   audio?: ReturnType<PreparedNleCompilation["compileAudio"]> | null;
   sources?: Promise<HtmlSourceFrames>;
+  rendered?: {
+    capture?: Promise<HtmlFrameCapture>;
+    tail: Promise<void>;
+    readonly frames: Map<number, Uint8Array>;
+    bytes: number;
+  };
 };
+
+const renderedFrameCacheBytes = 16 * 1024 * 1024;
 
 export function previewCanvas(source: { readonly width: number; readonly height: number }, maximumEdge = 960) {
   const scale = Math.min(1, maximumEdge / Math.max(source.width, source.height));
@@ -30,7 +39,7 @@ export function previewCanvas(source: { readonly width: number; readonly height:
   return { width: even(source.width), height: even(source.height), background: "#15161b" };
 }
 
-function programmeDriver(generation: string, program: HtmlProgram) {
+function programmeDriver(generation: string, program: HtmlProgram, placements: ReadonlyMap<string, readonly string[]>) {
   const { width, height } = program.canvas;
   const nativeSources = program.videoSources.filter(source => source.streamIndex === 0
     && source.presentationStart.ticks === "0" && source.reconstruction === undefined
@@ -44,6 +53,33 @@ function programmeDriver(generation: string, program: HtmlProgram) {
   const generation=${JSON.stringify(generation)};
   const options={nativeSources:${JSON.stringify(nativeSources)},lookAhead:${lookAhead},frameBase:'./source'};
   const root=document.getElementById('hypit-program');
+  const alphaMask=root.querySelector('canvas[data-hypit-alpha-mask]');
+  const player=window.__hypitFrameProgram;
+  const placements=new Map(${JSON.stringify([...placements])});
+  let useHostFrame=alphaMask!==null&&(typeof alphaMask.requestPaint!=='function'
+    ||typeof globalThis.CanvasRenderingContext2D?.prototype.drawElementImage!=='function');
+  const drafted=new Set();
+  const placementElements=new Map();
+  for(const element of root.querySelectorAll('[data-hypit-element-id]')){
+    placementElements.set(element.dataset.hypitElementId,element);
+  }
+  const draftPlacement=draft=>{
+    for(const element of drafted)element.style.removeProperty('transform');
+    drafted.clear();
+    if(!draft||useHostFrame)return;
+    const {initial,frame,items}=draft;
+    if(!initial||!frame||!Array.isArray(items)||![initial,frame].every(value=>
+      [value.x,value.y,value.width,value.height].every(Number.isFinite)&&value.width>0&&value.height>0))return;
+    const sx=frame.width/initial.width,sy=frame.height/initial.height;
+    const tx=frame.x-initial.x*sx,ty=frame.y-initial.y*sy;
+    for(const item of items)for(const id of placements.get(item)??[]){
+      const element=placementElements.get(id);
+      if(!element||element.closest('canvas[data-hypit-alpha-mask]'))continue;
+      element.style.transform='matrix('+sx+',0,0,'+sy+','+tx+','+ty+')';
+      drafted.add(element);
+    }
+  };
+  let rendered;
   for(const element of [document.documentElement,document.body]){
     element.style.width='100%';element.style.height='100%';
   }
@@ -52,8 +88,30 @@ function programmeDriver(generation: string, program: HtmlProgram) {
     const scale=Math.min(innerWidth/${width},innerHeight/${height});
     const x=(innerWidth-${width}*scale)/2,y=(innerHeight-${height}*scale)/2;
     root.style.transform='translate('+x+'px,'+y+'px) scale('+scale+')';
+    if(rendered)rendered.style.transform=root.style.transform;
   };
   fit();addEventListener('resize',fit);
+  async function presentHostFrame(frame,signal){
+    const response=await fetch('./frame/'+frame+'.png',{signal});
+    if(!response.ok){
+      const issue=await response.json().catch(()=>undefined);
+      throw new Error(typeof issue?.error==='string'?issue.error:'无法准备节目画面。');
+    }
+    const url=URL.createObjectURL(await response.blob());
+    const image=new Image();
+    try{
+      image.src=url;
+      await image.decode();
+      signal.throwIfAborted();
+      image.alt='';
+      image.style.cssText='position:absolute;left:0;top:0;width:${width}px;height:${height}px;transform-origin:0 0';
+      image.style.transform=root.style.transform;
+      root.after(image);
+      root.style.display='none';
+      if(rendered){URL.revokeObjectURL(rendered.src);rendered.remove();}
+      rendered=image;
+    }catch(error){URL.revokeObjectURL(url);throw error;}
+  }
   let pending, active, sequence=0;
   const report=value=>parent.postMessage({...value,generation},location.origin);
   async function presentLatest(){
@@ -64,13 +122,20 @@ function programmeDriver(generation: string, program: HtmlProgram) {
     active={controller,request};
     try{
       const frame=Math.max(0,Math.min(request.frame,${program.frameCount - 1}));
-      const player=window.__hypitFrameProgram;
-      if(request.kind==='programme-play')await player.playFrame(frame,options,controller.signal);
-      else{
-        await player.seekFrame(frame,options,controller.signal);
-        if(!controller.signal.aborted)report({kind:'programme-presented',sequence:request.sequence,frame,
-          frameCount:player.frameCount,transport:request.transport});
+      if(!useHostFrame){
+        const signal=alphaMask===null?controller.signal:AbortSignal.any([controller.signal,AbortSignal.timeout(2500)]);
+        try{
+          const present=request.kind==='programme-play'?player.playFrame:player.seekFrame;
+          await present(frame,options,signal);
+        }catch(error){
+          if(controller.signal.aborted)throw error;
+          useHostFrame=true;
+          player.pausePlayback();
+        }
       }
+      if(useHostFrame)await presentHostFrame(frame,controller.signal);
+      if(request.kind==='programme-seek'&&!controller.signal.aborted)report({kind:'programme-presented',sequence:request.sequence,frame,
+        frameCount:player.frameCount,transport:request.transport});
     }catch(error){
       if(!controller.signal.aborted)report({kind:'programme-error',sequence:request.sequence,
         transport:request.transport,message:String(error.message??error)});
@@ -81,13 +146,14 @@ function programmeDriver(generation: string, program: HtmlProgram) {
   }
   addEventListener('message',event=>{
     const request=event.data;
-    if(event.source!==parent||event.origin!==location.origin
-      ||(request?.kind!=='programme-seek'&&request?.kind!=='programme-play')
-      ||request.generation!==generation||!Number.isSafeInteger(request.sequence)||request.sequence<=sequence
+    if(event.source!==parent||event.origin!==location.origin||request?.generation!==generation)return;
+    if(request.kind==='programme-placement-draft'){draftPlacement(request.draft);return;}
+    if((request.kind!=='programme-seek'&&request.kind!=='programme-play')
+      ||!Number.isSafeInteger(request.sequence)||request.sequence<=sequence
       ||!Number.isSafeInteger(request.frame))return;
     sequence=request.sequence;
     pending=request;
-    if(request.kind==='programme-seek')window.__hypitFrameProgram.pausePlayback();
+    if(request.kind==='programme-seek')player.pausePlayback();
     if(active&&(request.kind!=='programme-play'||active.request.kind!=='programme-play'
       ||active.request.transport!==request.transport))active.controller.abort();
     void presentLatest();
@@ -115,7 +181,7 @@ export class NleStudioProgramme {
     }
     const generation = randomUUID();
     const projection = { generation, composition, document: `api/programme/${generation}/index.html` };
-    this.#current = { key, revision: ++this.#revision, projection, snapshot, rate, controller: new AbortController() };
+    this.#current = { key, revision: ++this.#revision, projection, snapshot, rate, controller: new AbortController(), placementElements: new Map() };
     return projection;
   }
 
@@ -136,8 +202,10 @@ export class NleStudioProgramme {
     value.controller.abort();
     const closed = (async () => {
       await value.program?.catch(() => undefined);
-      const frames = await value.sources?.catch(() => undefined);
-      await frames?.close();
+      const [sources, capture] = await Promise.all([
+        value.sources?.catch(() => undefined), value.rendered?.capture?.catch(() => undefined),
+      ]);
+      await Promise.all([sources?.close(), capture?.close()]);
     })();
     this.#retiring.add(closed);
     void closed.finally(() => this.#retiring.delete(closed)).catch(() => undefined);
@@ -162,8 +230,14 @@ export class NleStudioProgramme {
     const { snapshot, rate, projection: { composition }, controller: { signal } } = value;
     const canvas = previewCanvas(snapshot.compositions.find(entry => entry.id === composition)!.canvas);
     value.compilation ??= prepareNleCompilation({ host: this.host, document: this.documentPath, snapshot, composition, signal });
-    return value.program ??= value.compilation
-      .then(compilation => { signal.throwIfAborted(); return compilation.compilePicture({ frameRate: rate, canvas }); });
+    return value.program ??= value.compilation.then(compilation => {
+      signal.throwIfAborted();
+      return compilation.compilePicture({ frameRate: rate, canvas, onItemPlacement(item, element) {
+        const elements = value.placementElements.get(item);
+        if (elements === undefined) value.placementElements.set(item, [element]);
+        else elements.push(element);
+      } });
+    });
   }
 
   async document(generation: string): Promise<string> {
@@ -172,7 +246,7 @@ export class NleStudioProgramme {
     value.controller.signal.throwIfAborted();
     const html = materializeHtmlProgram(program, (_resource, id) => `./assets/${encodeURIComponent(id)}`);
     const bodyEnd = html.lastIndexOf("</body>");
-    return html.slice(0, bodyEnd) + programmeDriver(generation, program) + html.slice(bodyEnd);
+    return html.slice(0, bodyEnd) + programmeDriver(generation, program, value.placementElements) + html.slice(bodyEnd);
   }
 
   async resource(generation: string, id: string): Promise<MediaResource> {
@@ -211,5 +285,57 @@ export class NleStudioProgramme {
     if (open === undefined) throw new Error("Studio Programme exact source frames are unavailable.");
     const reader = await (value.sources ??= open.call(this.executor, program, value.controller.signal));
     return await reader.read(source, frame, signal);
+  }
+
+  async renderedFrame(generation: string, frame: number, requestSignal: AbortSignal): Promise<Uint8Array> {
+    const value = this.#find(generation);
+    const signal = AbortSignal.any([value.controller.signal, requestSignal]);
+    const program = await this.#prepare(value);
+    signal.throwIfAborted();
+    if (!Number.isSafeInteger(frame) || frame < 0 || frame >= program.frameCount) {
+      throw new Error("Studio Programme frame is outside the Programme.");
+    }
+    const rendered = value.rendered ??= { tail: Promise.resolve(), frames: new Map(), bytes: 0 };
+    const task = rendered.tail.then(async () => {
+      signal.throwIfAborted();
+      const cached = rendered.frames.get(frame);
+      if (cached !== undefined) {
+        rendered.frames.delete(frame);
+        rendered.frames.set(frame, cached);
+        return cached;
+      }
+      const picture = { alpha: "opaque" as const, matte: program.canvas.background };
+      let bytes: Uint8Array;
+      if (this.executor.openCapture === undefined) {
+        bytes = await this.executor.capture({ program, picture, frames: [frame] }, value.controller.signal);
+      } else {
+        const capture = await (rendered.capture ??= this.executor.openCapture({ program, picture }, value.controller.signal)
+          .catch(error => { delete rendered.capture; throw error; }));
+        signal.throwIfAborted();
+        try {
+          const [sample] = await capture.captureFrames([frame]);
+          if (sample === undefined) throw new Error("Studio Programme renderer returned no frame.");
+          bytes = sample;
+        } catch (error) {
+          delete rendered.capture;
+          await capture.close().catch(() => undefined);
+          throw error;
+        }
+      }
+      if (bytes.byteLength <= renderedFrameCacheBytes) {
+        rendered.frames.set(frame, bytes);
+        rendered.bytes += bytes.byteLength;
+        for (const [oldest, data] of rendered.frames) {
+          if (rendered.bytes <= renderedFrameCacheBytes) break;
+          rendered.frames.delete(oldest);
+          rendered.bytes -= data.byteLength;
+        }
+      }
+      return bytes;
+    });
+    rendered.tail = task.then(() => undefined, () => undefined);
+    const bytes = await task;
+    signal.throwIfAborted();
+    return bytes;
   }
 }

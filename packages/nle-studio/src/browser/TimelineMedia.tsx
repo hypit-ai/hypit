@@ -1,8 +1,10 @@
+import { sliceNleTimeMapping } from "@hypit/nle";
 import { addExactTemporalValues, compareExactTemporalValues, createTemporalMapEvaluator, exactTemporalZero, isAffineTemporalMapPiece,
-  type TemporalRate } from "@hypit/temporal/algebra";
+  subtractExactTemporalValues, type ExactTemporalValue, type TemporalMap, type TemporalRate } from "@hypit/temporal/algebra";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { NleTimelineSceneTrack } from "@hypit/nle/surface";
 import type { NleStudioTimelineAudioPreviewSource, NleStudioTimelinePreview, NleStudioTimelineProjection } from "../protocol.js";
+import { studioFrameTime } from "../timeline-time.js";
 import { SourceWaveform } from "./SourceWaveform.js";
 import { SourceFilmstrip } from "./SourceFilmstrip.js";
 import { mediaSeconds, sampleTime } from "./source-preview.js";
@@ -10,6 +12,7 @@ import { rowSize, rulerHeight } from "./timelineGeometry.js";
 import type { TimelineViewport } from "./useTimelineViewport.js";
 
 type PreviewWindow = { readonly left: number; readonly right: number };
+export type TimelinePreviewTrim = { readonly edge: "start" | "end"; readonly atFrame: number };
 const overscan = 108;
 const retainedPreviews = 32;
 
@@ -57,8 +60,27 @@ export function useTimelineMedia(
   return { left, right, active, retained: held?.composition === composition ? held.items : active };
 }
 
-function TimelineAudio({ source, generation, pixelsPerSecond, from, until, active }: {
+function trimSourceTime(source: TemporalMap | undefined, start: ExactTemporalValue,
+  trims: readonly TimelinePreviewTrim[] | undefined, rate: TemporalRate) {
+  let stage = source?.stages[0];
+  for (const { edge, atFrame } of trims ?? []) {
+    const at = studioFrameTime(atFrame, rate);
+    const offset = subtractExactTemporalValues(at, start);
+    if (stage !== undefined) {
+      const range = edge === "start"
+        ? { start: offset, end: stage.target.duration }
+        : { start: exactTemporalZero(), end: offset };
+      const { pieces } = sliceNleTimeMapping({ pieces: stage.pieces }, stage.target.duration, range);
+      stage = { ...stage, target: { ...stage.target, duration: subtractExactTemporalValues(range.end, range.start) }, pieces };
+    }
+    if (edge === "start") start = at;
+  }
+  return { start, clock: stage === undefined ? undefined : { stages: [stage] } };
+}
+
+function TimelineAudio({ source, clock, generation, pixelsPerSecond, from, until, active }: {
   readonly source: NleStudioTimelineAudioPreviewSource;
+  readonly clock: TemporalMap;
   readonly generation: number;
   readonly pixelsPerSecond: number;
   readonly from: number;
@@ -66,7 +88,7 @@ function TimelineAudio({ source, generation, pixelsPerSecond, from, until, activ
   readonly active: boolean;
 }) {
   const duration = mediaSeconds(source.duration);
-  return source.sourceTime.stages[0]!.pieces.map((piece, index) => {
+  return clock.stages[0]!.pieces.map((piece, index) => {
     if (!isAffineTemporalMapPiece(piece) || piece.wrap !== undefined || piece.rate.numerator === 0) return null;
     const itemStart = mediaSeconds(piece.target.start);
     const sourceStart = mediaSeconds(piece.sourceAtStart);
@@ -84,19 +106,19 @@ function TimelineAudio({ source, generation, pixelsPerSecond, from, until, activ
   });
 }
 
-export function TimelineSourcePreview({ source: { picture, audio }, pictureItem, generation, origin, duration, start, frameWidth, editRate,
-  viewport, active }: {
+export function TimelineSourcePreview({ source, pictureItem, generation, authored, window, trims, frameWidth, editRate, viewport, active }: {
   readonly source: NleStudioTimelinePreview;
   readonly pictureItem: boolean;
   readonly generation: number;
-  readonly origin: number;
-  readonly duration: number;
-  readonly start: number;
+  readonly authored: { readonly startFrame: number; readonly durationFrames: number };
+  readonly window: { readonly start: number; readonly duration: number };
+  readonly trims?: readonly TimelinePreviewTrim[] | undefined;
   readonly frameWidth: number;
   readonly editRate: TemporalRate;
   readonly viewport: PreviewWindow;
   readonly active: boolean;
 }) {
+  const { picture, audio } = source;
   const strip = useRef<HTMLSpanElement>(null);
   const [height, setHeight] = useState(0);
   useLayoutEffect(() => {
@@ -108,10 +130,21 @@ export function TimelineSourcePreview({ source: { picture, audio }, pictureItem,
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  const sourceTime = picture?.sourceTime;
+  const sourceTime = picture?.sourceTime ?? audio?.sourceTime;
   const sourceDuration = picture?.duration;
-  const evaluate = useMemo(() => sourceTime === undefined ? undefined
-    : createTemporalMapEvaluator(sourceTime), [sourceTime]);
+  const sample = useMemo(() => {
+    try {
+      const { start, clock } = trimSourceTime(sourceTime, source.start, trims, editRate);
+      return { start, clock, evaluate: clock === undefined ? undefined : createTemporalMapEvaluator(clock), drafted: true };
+    } catch (error) {
+      // A queued trim can briefly outlive the accepted window it was planned against.
+      if (trims === undefined) throw error;
+      return { start: source.start, clock: sourceTime,
+        evaluate: sourceTime === undefined ? undefined : createTemporalMapEvaluator(sourceTime), drafted: false };
+    }
+  }, [sourceTime, source.start, trims, editRate]);
+  const origin = sample.drafted ? window.start : authored.startFrame;
+  const duration = sample.drafted ? window.duration : authored.durationFrames;
   const targetKey = picture !== undefined && "target" in picture ? JSON.stringify(picture.target) : undefined;
   const [extent, setExtent] = useState<{ readonly target: string; readonly aspect: number }>();
   const onPictureAspect = useCallback((aspect: number) => {
@@ -135,23 +168,34 @@ export function TimelineSourcePreview({ source: { picture, audio }, pictureItem,
   const { numerator, denominator } = editRate;
   const pixelsPerSecond = frameWidth * numerator / denominator;
   const range = picture !== undefined && "range" in picture ? picture.range : undefined;
+  const lastComponentFrame = useMemo(() => {
+    if (range === undefined) return undefined;
+    const last = subtractExactTemporalValues(range.end, studioFrameTime(1, editRate));
+    return compareExactTemporalValues(last, range.start) > 0 ? last : range.start;
+  }, [range, editRate]);
   const sourceAt = useCallback((pixels: number) => {
+    const local = sampleTime((drawFrom + pixels) / pixelsPerSecond);
     if (range !== undefined) {
-      const time = addExactTemporalValues(range.start, sampleTime((drawFrom + pixels) / pixelsPerSecond));
+      const time = addExactTemporalValues(sample.start, local);
+      if (trims !== undefined && sample.drafted) {
+        // Component frames outside the committed window do not exist until the edit is published.
+        if (compareExactTemporalValues(time, range.start) < 0) return range.start;
+        if (compareExactTemporalValues(time, range.end) >= 0) return lastComponentFrame;
+      }
       return compareExactTemporalValues(time, range.end) < 0 ? time : undefined;
     }
-    if (evaluate === undefined) return exactTemporalZero();
-    const time = evaluate(sampleTime((drawFrom + pixels) / pixelsPerSecond), "after")?.position;
+    if (picture?.sourceTime === undefined) return exactTemporalZero();
+    const time = sample.evaluate?.(local, "after")?.position;
     return time !== undefined && sourceDuration !== undefined && compareExactTemporalValues(time, sourceDuration) < 0 ? time : undefined;
-  }, [evaluate, pixelsPerSecond, drawFrom, sourceDuration, range]);
+  }, [sample, pixelsPerSecond, drawFrom, sourceDuration, picture?.sourceTime, range, lastComponentFrame, trims]);
   const stripWidth = Math.max(0, drawUntil - drawFrom);
   const pictureLayout = { width: stripWidth, height };
-  const waveform = drawFrom < drawUntil && audio !== undefined
-    ? <TimelineAudio source={audio} generation={generation} pixelsPerSecond={pixelsPerSecond}
+  const waveform = drawFrom < drawUntil && audio !== undefined && sample.clock !== undefined
+    ? <TimelineAudio source={audio} clock={sample.clock} generation={generation} pixelsPerSecond={pixelsPerSecond}
         from={drawFrom} until={drawUntil} active={drawing}/>
     : undefined;
   return <span ref={strip} className="nle-clip-media" aria-hidden="true"
-    style={{ left: (origin - start) * frameWidth + drawFrom, width: stripWidth }}>
+    style={{ left: (origin - window.start) * frameWidth + drawFrom, width: stripWidth }}>
     {drawFrom < drawUntil && picture !== undefined && <SourceFilmstrip className="nle-clip-filmstrip" active={drawing}
       source={"target" in picture ? picture : { media: picture.media, generation, version: picture.version }}
       sourceAt={sourceAt} tileRatio={tileRatio} layout={pictureLayout}

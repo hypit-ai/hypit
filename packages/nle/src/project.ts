@@ -25,9 +25,11 @@ import {
   type NleProcess,
   type NleOperatorSharedValue,
   type NleParameterBinding,
+  type NlePictureCrop,
   type NlePictureLayout,
   type NlePictureLayoutReference,
   type NlePictureLayoutSharedValue,
+  type NlePresentItem,
   type NleProject,
   type NleSharedValue,
   type NleTimeMapping,
@@ -131,6 +133,22 @@ function assertLayout(value: unknown, label: string): asserts value is NlePictur
     assert(coordinate === undefined || typeof coordinate === "number" && Number.isFinite(coordinate)
       && coordinate >= 0 && coordinate <= 1, `${label}.${name} must lie between zero and one.`);
   }
+}
+
+export function assertNlePictureCrop(value: unknown, label = "NLE Picture crop"): asserts value is NlePictureCrop {
+  record(value, label);
+  const keys = ["left", "top", "right", "bottom"] as const;
+  onlyKeys(value, keys, label);
+  const inset = (key: typeof keys[number]): number => {
+    const coordinate = value[key];
+    if (coordinate === undefined) return 0;
+    assert(typeof coordinate === "number" && Number.isFinite(coordinate) && coordinate >= 0 && coordinate < 1,
+      `${label}.${key} must be at least zero and below one.`);
+    return coordinate;
+  };
+  const horizontal = inset("left") + inset("right");
+  const vertical = inset("top") + inset("bottom");
+  assert(horizontal < 1 && vertical < 1, `${label} must leave a positive source area.`);
 }
 
 function assertMediaReference(value: unknown, label: string): void {
@@ -271,7 +289,8 @@ function assertPictureAppearance(
   label: string,
 ): void {
   record(value, label);
-  onlyKeys(value, media ? ["layout", "reconstruction", "processes"] : ["layout", "processes"], label);
+  onlyKeys(value, media ? ["crop", "layout", "reconstruction", "processes"] : ["crop", "layout", "processes"], label);
+  if (value.crop !== undefined) assertNlePictureCrop(value.crop, `${label}.crop`);
   record(value.layout, `${label}.layout`);
   if (Object.hasOwn(value.layout, "ref")) {
     onlyKeys(value.layout, ["ref"], `${label}.layout`);
@@ -397,7 +416,7 @@ function assertItem(value: unknown, track: NleTrack, ids: Set<string>): asserts 
 
 function assertTrack(value: unknown, trackIds: Set<string>, itemIds: Set<string>): asserts value is NleTrack {
   record(value, "NLE Track");
-  onlyKeys(value, ["id", "name", "kind", "role", "enabled", "items"], "NLE Track");
+  onlyKeys(value, ["id", "name", "kind", "role", "pictureEnabled", "audioEnabled", "items"], "NLE Track");
   identity(value.id, "NLE Track.id");
   assert(!trackIds.has(value.id), `NLE Composition repeats Track ${value.id}.`);
   trackIds.add(value.id);
@@ -406,7 +425,9 @@ function assertTrack(value: unknown, trackIds: Set<string>, itemIds: Set<string>
   assert(value.role === "effect" || (value.kind === "audio" ? value.role === "audio"
     : value.role === "picture" || value.role === "subtitle" || value.role === "text" || value.role === "filter"),
     `NLE Track ${value.id}.role is invalid for its Track kind.`);
-  assert(typeof value.enabled === "boolean", `NLE Track ${value.id}.enabled must be boolean.`);
+  assert(typeof value.pictureEnabled === "boolean", `NLE Track ${value.id}.pictureEnabled must be boolean.`);
+  assert(value.kind === "picture" || !value.pictureEnabled, `NLE Audio Track ${value.id} cannot enable Picture.`);
+  assert(typeof value.audioEnabled === "boolean", `NLE Track ${value.id}.audioEnabled must be boolean.`);
   assert(Array.isArray(value.items), `NLE Track ${value.id}.items must be an array.`);
   for (const item of value.items) assertItem(item, value as unknown as NleTrack, itemIds);
 }
@@ -465,8 +486,8 @@ function assertRelations(composition: NleComposition, itemIds: Set<string>): voi
     assert(left !== undefined && right !== undefined, `NLE Transition ${value.id} references a missing Item.`);
     assert(left.track.id === right.track.id && left.track.kind === "picture",
       `NLE Transition ${value.id} Items must belong to one Picture Track.`);
-    assert(left.item.kind === "present" && right.item.kind === "present",
-      `NLE Transition ${value.id} requires Present Items.`);
+    assert(isNlePicturePresent(left.item) && isNlePicturePresent(right.item),
+      `NLE Transition ${value.id} requires Present Items with Picture output.`);
     assert(left.item.enabled && right.item.enabled, `NLE Transition ${value.id} cannot use a disabled Item.`);
     assert(!outgoing.has(left.item.id), `NLE Item ${left.item.id} has multiple outgoing Transitions.`);
     assert(!incoming.has(right.item.id), `NLE Item ${right.item.id} has multiple incoming Transitions.`);
@@ -493,7 +514,7 @@ function assertRelations(composition: NleComposition, itemIds: Set<string>): voi
   const matteSources = new Set<string>();
   for (const value of composition.mattes) {
     record(value, "NLE Matte");
-    onlyKeys(value, ["id", "content", "matte", "operator", "parameters"], "NLE Matte");
+    onlyKeys(value, ["id", "content", "matte"], "NLE Matte");
     addIdentity(value.id, "NLE Matte id");
     identity(value.content, `NLE Matte ${value.id}.content`);
     identity(value.matte, `NLE Matte ${value.id}.matte`);
@@ -502,15 +523,12 @@ function assertRelations(composition: NleComposition, itemIds: Set<string>): voi
     assert(content !== undefined && source !== undefined, `NLE Matte ${value.id} references a missing Item.`);
     assert(content.track.kind === "picture" && source.track.kind === "picture",
       `NLE Matte ${value.id} requires Picture Items.`);
-    assert(content.item.kind === "present" && source.item.kind === "present",
-      `NLE Matte ${value.id} requires Present Items.`);
+    assert(isNlePicturePresent(content.item) && isNlePicturePresent(source.item),
+      `NLE Matte ${value.id} requires Present Items with Picture output.`);
     assert(content.item.enabled && source.item.enabled, `NLE Matte ${value.id} cannot use a disabled Item.`);
     assert(content.item.id !== source.item.id, `NLE Matte ${value.id} cannot sample itself.`);
     assert(!matteByContent.has(content.item.id), `NLE Item ${content.item.id} has multiple Mattes.`);
-    assert(compareExactTemporalValues(source.item.start, content.item.start) <= 0
-      && compareExactTemporalValues(nleItemEnd(source.item), nleItemEnd(content.item)) >= 0,
-    `NLE Matte ${value.id} does not cover content Item ${content.item.id}.`);
-    assertRelationBinding(value.operator, value.parameters, `NLE Matte ${value.id}`);
+    assert(nleItemCovers(source.item, content.item), `NLE Matte ${value.id} does not cover content Item ${content.item.id}.`);
     matteByContent.set(content.item.id, source.item.id);
     matteSources.add(source.item.id);
   }
@@ -719,6 +737,15 @@ export function serializeNleProject(value: NleProject): string {
 
 export function nleItemEnd(value: NleItem): ExactTemporalValue {
   return addExactTemporalValues(value.start, value.duration);
+}
+
+export function isNlePicturePresent(item: NleItem): item is NlePresentItem & { readonly picture: NonNullable<NlePresentItem["picture"]> } {
+  return item.kind === "present" && item.picture !== undefined;
+}
+
+export function nleItemCovers(outer: NleItem, inner: NleItem): boolean {
+  return compareExactTemporalValues(outer.start, inner.start) <= 0
+    && compareExactTemporalValues(nleItemEnd(outer), nleItemEnd(inner)) >= 0;
 }
 
 export function findNleComposition(value: NleProject, id: string): NleComposition {

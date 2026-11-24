@@ -54,6 +54,7 @@ export type PictureNode =
   | { readonly kind: "crop"; readonly input: PictureNodeId; readonly region: SpatialRegion }
   | { readonly kind: "remap"; readonly input: PictureNodeId; readonly mapping: SpatialMap }
   | { readonly kind: "over"; readonly inputs: readonly PictureNodeId[] }
+  | { readonly kind: "alpha-mask"; readonly content: PictureNodeId; readonly matte: PictureNodeId }
   | {
       readonly kind: "apply";
       readonly visual: HtmlVisual;
@@ -64,6 +65,7 @@ export type PictureNode =
 export type PictureGraph = {
   readonly nodes: Readonly<Record<PictureNodeId, PictureNode>>;
   readonly root: PictureNodeId;
+  readonly placements?: Readonly<Record<PictureNodeId, string>>;
 };
 
 export type AudioNodeId = string;

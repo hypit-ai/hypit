@@ -58,7 +58,7 @@ function reachableGraph<Node>(
 
 export function sealCompilationGraph(value: CompilationGraph): CompilationGraph {
   const picture = value.picture === undefined ? undefined
-    : reachableGraph(value.picture, pictureInputs, `Programme ${value.id} Picture`);
+    : { ...value.picture, ...reachableGraph(value.picture, pictureInputs, `Programme ${value.id} Picture`) };
   const audio = value.audio === undefined ? undefined
     : reachableGraph(value.audio, audioInputs, `Programme ${value.id} Audio`);
   const pictureUses = picture === undefined ? new Set<string>() : pictureGraphUses(picture);

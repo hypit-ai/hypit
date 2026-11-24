@@ -1,4 +1,6 @@
 import type { NleTimelineScene, NleTimelineSceneTrack } from "@hypit/nle/surface";
+import { exactTemporalZero, identityTemporalMap } from "@hypit/temporal/algebra";
+import type { NleStudioDropDestination, NleStudioMediaEntry, NleStudioTimelinePreview } from "../protocol.js";
 
 export type TransitionCut = {
   readonly frame: number;
@@ -6,6 +8,7 @@ export type TransitionCut = {
   readonly outgoing: string;
   readonly incoming: string;
   readonly transition?: string;
+  readonly endFrame?: number;
 };
 
 export type MediaDrop = {
@@ -14,13 +17,48 @@ export type MediaDrop = {
   readonly snapFrame?: number;
   readonly durationFrames?: number;
   readonly track?: string;
+  readonly mediaTarget?: NleStudioDropDestination;
+  readonly mediaPosition?: MediaDragPosition;
   readonly item?: string;
   readonly transitionCut?: TransitionCut;
 };
 
+export type MediaDragPosition = {
+  readonly left: number;
+  readonly top: number;
+  readonly pixels: number;
+  readonly frame: number;
+  readonly durationFrames: number;
+};
+
+export type MediaPlacementDraft = {
+  readonly position: MediaDragPosition;
+  readonly role: "picture" | "audio";
+  readonly label: string;
+  readonly target?: NleStudioDropDestination;
+  readonly preview?: NleStudioTimelinePreview;
+  readonly shifted?: readonly string[];
+  readonly snapFrame?: number;
+  readonly blocked?: boolean;
+};
+
+export function mediaDragSource(entry: NleStudioMediaEntry): NleStudioTimelinePreview {
+  const duration = entry.duration;
+  const clock = duration === undefined ? undefined : { duration, sourceTime: identityTemporalMap({ id: "source", duration }) };
+  const picture = entry.pictureKind === undefined ? undefined : {
+    media: entry.id, displayAspectRatio: entry.displayAspectRatio ?? 1,
+    ...(entry.pictureVersion === undefined ? {} : { version: entry.pictureVersion }),
+    ...(entry.pictureKind === "signal" ? clock : undefined),
+  };
+  const audio = (entry.kind === "audio" || entry.kind === "audiovisual") && clock !== undefined ? {
+    media: entry.id, ...clock, ...(entry.audioVersion === undefined ? {} : { version: entry.audioVersion }),
+  } : undefined;
+  return { start: exactTemporalZero(), ...(picture === undefined ? {} : { picture }), ...(audio === undefined ? {} : { audio }) };
+}
+
 export function acceptsTimelinePlacement(track: NleTimelineSceneTrack, kind: NleTimelineSceneTrack["kind"],
   role: NleTimelineSceneTrack["role"]): boolean {
-  return track.kind === kind && track.role === role && track.enabled && !track.locked;
+  return track.kind === kind && track.role === role && !track.locked;
 }
 
 export function trackHasRoom(track: NleTimelineSceneTrack, start: number, duration: number): boolean {
@@ -28,23 +66,20 @@ export function trackHasRoom(track: NleTimelineSceneTrack, start: number, durati
 }
 
 export function transitionCuts(scene: NleTimelineScene): TransitionCut[] {
-  return scene.tracks.flatMap(track => {
-    if (track.kind !== "picture" || track.locked || !track.enabled) return [];
-    const items = track.items.filter(item => item.kind === "present" && item.enabled);
-    const transitions = scene.transitions.flatMap(transition => {
-      const incoming = items.find(item => item.id === transition.incoming);
-      return incoming === undefined ? [] : [{ frame: incoming.startFrame, track: track.id,
-        outgoing: transition.outgoing, incoming: incoming.id, transition: transition.id }];
-    });
-    const direct = items.flatMap(incoming => {
-      const previous = items.filter(item => item.id !== incoming.id && item.startFrame + item.durationFrames === incoming.startFrame);
-      return previous.length !== 1 ? [] : [{ frame: incoming.startFrame, track: track.id, outgoing: previous[0]!.id, incoming: incoming.id }];
-    });
-    return [...transitions, ...direct];
-  });
+  const editable = new Map(scene.tracks.filter(track => !track.locked)
+    .flatMap(track => track.items.map(item => [item.id, item] as const)));
+  return [...scene.transitionCuts, ...scene.transitions.flatMap(transition => {
+    const outgoing = editable.get(transition.outgoing);
+    const incoming = editable.get(transition.incoming);
+    return !outgoing || !incoming ? [] : [{ frame: incoming.startFrame, track: incoming.track,
+      endFrame: outgoing.startFrame + outgoing.durationFrames,
+      outgoing: outgoing.id, incoming: incoming.id, transition: transition.id }];
+  })];
 }
 
 export function transitionCutAt(cuts: readonly TransitionCut[], at: number, track: string, radius: number) {
-  return cuts.filter(cut => cut.track === track && Math.abs(cut.frame - at) <= radius)
+  const onTrack = cuts.filter(cut => cut.track === track);
+  return onTrack.find(cut => cut.endFrame !== undefined && at >= cut.frame && at < cut.endFrame)
+    ?? onTrack.filter(cut => cut.transition === undefined && Math.abs(cut.frame - at) <= radius)
     .sort((left, right) => Math.abs(left.frame - at) - Math.abs(right.frame - at))[0];
 }

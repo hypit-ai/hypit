@@ -13,7 +13,7 @@ import { addExactTemporalValues, compareExactTemporalValues, exactTemporalRation
   type ExactTemporalValue, type TemporalRange } from "@hypit/temporal/algebra";
 import { previewCanvas } from "./programme.js";
 import type { NleStudioActionObservation, NleStudioRenderedPicturePreviewRequest } from "./protocol.js";
-import { studioFrameTime } from "./timeline-planning.js";
+import { studioFrameTime } from "./timeline-time.js";
 
 type OpenCapture = NonNullable<HtmlFrameExecutor["openCapture"]>;
 type Sample = { readonly slot: number; readonly frame: number; readonly block: ProjectMediaPreviewResource };

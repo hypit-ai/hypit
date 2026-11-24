@@ -88,6 +88,10 @@ The Filters bin offers 淡暖胶片, a mild warm film look with slightly brighte
 saturation. The cut uses the look as one full-length Adjust above the A-roll, ranking board and B-roll. Titles,
 captions and reveal flashes are composited above the filter. The Item Inspector exposes the four authored controls.
 
+The spy B-roll at about 12.74 seconds uses a Picture Matte. Its source is an ordinary Picture Item named
+椭圆遮罩 on the neighboring track. The project package draws the ellipse. NLE uses the resulting alpha to reveal the
+spy image. Moving or resizing the ellipse Item changes where the spy image appears in the programme preview.
+
 `@hypit/caption-fine` projects stable word and timing collections plus its inline/shared typography slot. Word text,
 exact rational unit edges and typography fields reduce to replacement closed values in the backend. The ranking package projects stable
 tier and entry collections and accepts semantic label and tier edits. Studio offers a starter Tier board and

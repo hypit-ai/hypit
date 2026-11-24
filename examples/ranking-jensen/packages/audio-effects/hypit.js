@@ -55,7 +55,7 @@ export const hypitPackage = {
   contributions: [
     { kind: "hypit.nle-authoring", value: {
       kind: "hypit.nle-authoring", package: packageName, components: [], componentValues: [],
-      operators: [{ operator: gainSymbol, timeWindow: () => true, editParameters: editGain }],
+      operators: [{ operator: gainSymbol, editParameters: editGain }],
     } },
     { kind: "hypit.nle-inspector-presentation", value: {
       kind: "hypit.nle-inspector-presentation", package: packageName, components: [], componentValues: [],

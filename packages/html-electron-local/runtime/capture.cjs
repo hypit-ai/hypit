@@ -39,6 +39,7 @@ async function run() {
     webPreferences: {
       offscreen: true,
       backgroundThrottling: false,
+      enableBlinkFeatures: "CanvasDrawElement",
     },
   });
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));

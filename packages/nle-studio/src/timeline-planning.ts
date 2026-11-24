@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { applyNleTransaction, indexNleComposition, nleGroupMoveItems, nleItemEnd, nleLinearTimeMapping, type NleCommand, type NleComposition, type NleItem, type NleProject, type NleTrack } from "@hypit/nle";
-import { orderNleTimelineTracks } from "@hypit/nle/surface";
+import { applyNleTransaction, createMediaAssetMaterialization, createTransitionMaterialization, indexNleComposition, nleDirectTransitionCuts, nleGroupMoveItems, nleItemEnd, nleLinearTimeMapping, type NleCommand, type NleComposition, type NleIndexedItem, type NleItem, type NleProject, type NleTrack } from "@hypit/nle";
+import { nleTrackStackingNeighbors, orderNleTimelineTracks, resolveNleTimelineItemCapabilities } from "@hypit/nle/surface";
 import {
   addExactTemporalValues,
   compareExactTemporalValues,
@@ -9,14 +9,9 @@ import {
   isAffineTemporalMapPiece,
   subtractExactTemporalValues,
   type ExactTemporalValue,
-  type TemporalRate,
 } from "@hypit/temporal/algebra";
 import type { NleStudioDropDestination, NleStudioTimelineDrop, NleStudioTimelineEdit } from "./protocol.js";
-
-export function studioFrameTime(frame: number, rate: TemporalRate): ExactTemporalValue {
-  if (!Number.isSafeInteger(frame)) throw new Error("NLE Studio frame must be a safe integer.");
-  return { ticks: String(BigInt(frame) * BigInt(rate.denominator)), timeBase: { numerator: 1, denominator: rate.numerator } };
-}
+import { studioFrameTime } from "./timeline-time.js";
 
 function relatedItems(composition: NleComposition, seeds: readonly string[], exceptTransition?: string): Set<string> {
   const relations = [
@@ -44,14 +39,103 @@ function overlapsAfterMove(item: NleItem, other: NleItem, delta: ExactTemporalVa
 type ActiveTimeline = { readonly project: NleProject; readonly composition: NleComposition; readonly lockedTracks: ReadonlySet<string> };
 
 export function resolveTransitionCut(composition: NleComposition, trackId: string, at: ExactTemporalValue) {
-  const track = composition.tracks.find(track => track.id === trackId && track.kind === "picture");
-  const pictures = track?.items.filter(item => item.kind === "present" && item.enabled) ?? [];
-  const left = pictures.filter(item => compareExactTemporalValues(nleItemEnd(item), at) === 0);
-  const right = pictures.filter(item => compareExactTemporalValues(item.start, at) === 0);
-  if (left.length !== 1 || right.length !== 1) {
+  const track = composition.tracks.find(track => track.id === trackId);
+  const cut = track && nleDirectTransitionCuts(composition, track).find(cut => compareExactTemporalValues(cut.at, at) === 0);
+  if (cut === undefined) {
     throw new Error(`NLE Studio Transition requires one Picture cut on Track ${trackId} at the selected frame.`);
   }
-  return [left[0]!, right[0]!] as const;
+  return [cut.outgoing, cut.incoming] as const;
+}
+
+function timelineTail(composition: NleComposition, track: NleTrack, at: ExactTemporalValue, exceptTransition?: string): Set<string> {
+  const tail = track.items.filter(item => compareExactTemporalValues(item.start, at) >= 0);
+  return relatedItems(composition, tail.map(item => item.id), exceptTransition);
+}
+
+function assertTailDisplacement({ composition, lockedTracks }: ActiveTimeline, sourceTrack: NleTrack, cut: ExactTemporalValue,
+  moving: ReadonlySet<string>, delta: ExactTemporalValue, edit: string,
+  overlap?: { readonly moving: string; readonly stationary: string }): void {
+  const fixedPrefix = sourceTrack.items.find(item => moving.has(item.id) && compareExactTemporalValues(item.start, cut) < 0);
+  if (fixedPrefix !== undefined) {
+    throw new Error(`NLE Studio ${edit} cannot move fixed Item ${fixedPrefix.name ?? fixedPrefix.id} before the cut.`);
+  }
+
+  const zero = exactTemporalZero();
+  const leftward = compareExactTemporalValues(delta, zero) < 0;
+  for (const track of composition.tracks) {
+    const members = track.items.filter(item => moving.has(item.id));
+    if (members.length === 0) continue;
+    if (lockedTracks.has(track.id)) throw new Error(`NLE Studio ${edit} would move Items on locked Track ${track.name}.`);
+    const stationary = track.items.filter(item => !moving.has(item.id)).map(item => ({ item, end: nleItemEnd(item) }));
+    for (const item of members) {
+      const start = addExactTemporalValues(item.start, delta);
+      if (compareExactTemporalValues(start, zero) < 0) {
+        throw new Error(`NLE Studio ${edit} would move Item ${item.name ?? item.id} before Programme time zero.`);
+      }
+      const oldEnd = nleItemEnd(item);
+      const end = addExactTemporalValues(oldEnd, delta);
+      // Only the part of the final window outside the old window introduces new overlap.
+      const addedStart = !leftward && compareExactTemporalValues(start, oldEnd) < 0 ? oldEnd : start;
+      const addedEnd = leftward && compareExactTemporalValues(end, item.start) > 0 ? item.start : end;
+      const blocker = stationary.find(other => !(item.id === overlap?.moving && other.item.id === overlap.stationary)
+        && compareExactTemporalValues(other.item.start, addedEnd) < 0 && compareExactTemporalValues(addedStart, other.end) < 0);
+      if (blocker !== undefined) {
+        throw new Error(`NLE Studio ${edit} would move Item ${item.name ?? item.id} over ${blocker.item.name ?? blocker.item.id} on Track ${track.name}.`);
+      }
+    }
+  }
+}
+
+export function planTimelineTransitionMaterialization(
+  context: ActiveTimeline,
+  input: Omit<Parameters<typeof createTransitionMaterialization>[1], "composition" | "movingItems">,
+): readonly NleCommand[] {
+  const { project, composition } = context;
+  const incoming = indexNleComposition(composition).item(input.incoming);
+  if (incoming === undefined) throw new Error(`Unknown NLE Transition incoming Item ${input.incoming} in ${composition.id}.`);
+  const moving = timelineTail(composition, incoming.track, incoming.item.start);
+  const materialization = createTransitionMaterialization(project, { ...input, composition: composition.id, movingItems: [...moving] });
+  assertTailDisplacement(context, incoming.track, incoming.item.start, moving, subtractExactTemporalValues(exactTemporalZero(), input.duration),
+    "Transition", { moving: input.incoming, stationary: input.outgoing });
+  return materialization.commands;
+}
+
+export function planTimelineTransitionRemoval(
+  context: ActiveTimeline,
+  transition: NleComposition["transitions"][number],
+): readonly NleCommand[] {
+  const { composition } = context;
+  const index = indexNleComposition(composition);
+  const outgoing = index.item(transition.outgoing)!.item;
+  const incoming = index.item(transition.incoming)!;
+  const overlap = subtractExactTemporalValues(nleItemEnd(outgoing), incoming.item.start);
+  const moving = timelineTail(composition, incoming.track, incoming.item.start, transition.id);
+  assertTailDisplacement(context, incoming.track, incoming.item.start, moving, overlap, "Transition");
+  return [{ kind: "transition.remove", id: transition.id }, { kind: "item.move", ids: [...moving], delta: overlap }];
+}
+
+export function planFreezeInsertion(context: ActiveTimeline, source: NleIndexedItem, hold: NleItem): readonly NleCommand[] {
+  const { project, composition, lockedTracks } = context;
+  const { track, item } = source;
+  const at = hold.start;
+  const crossing = track.items.find(other => other.id !== item.id && compareExactTemporalValues(other.start, at) < 0
+    && compareExactTemporalValues(at, nleItemEnd(other)) < 0);
+  if (crossing !== undefined) {
+    throw new Error(`NLE Studio Freeze cut crosses Item ${crossing.name ?? crossing.id} on Track ${track.name}.`);
+  }
+  const splits = compareExactTemporalValues(item.start, at) < 0 ? planTimelineSplits(context, [item.id], at) : [];
+  const split = splits[0];
+  // The split's right piece already inherits its Group when the moving set is resolved.
+  const sliced = split === undefined ? project : applyNleTransaction(project, { commands: splits });
+  const slicedComposition = sliced.compositions.find(entry => entry.id === composition.id)!;
+  const slicedTrack = slicedComposition.tracks.find(entry => entry.id === track.id)!;
+  const moving = timelineTail(slicedComposition, slicedTrack, at);
+  assertTailDisplacement({ project: sliced, composition: slicedComposition, lockedTracks }, slicedTrack, at, moving, hold.duration, "Freeze");
+  return [
+    ...splits,
+    { kind: "item.move", ids: [...moving], delta: hold.duration },
+    { kind: "item.add", track: track.id, item: hold, before: split?.rightId ?? item.id },
+  ];
 }
 
 export function planTransitionWindow(
@@ -68,7 +152,7 @@ export function planTransitionWindow(
   return [{ kind: "item.move", ids: [right.id], delta }];
 }
 
-export function assertTransitionMove(composition: NleComposition, incoming: string, transition?: string) {
+function assertTransitionMove(composition: NleComposition, incoming: string, transition: string) {
   if (relatedItems(composition, [incoming], transition).size > 1) {
     throw new Error(`NLE Studio Transition cannot displace linked Item ${incoming}.`);
   }
@@ -128,6 +212,26 @@ export function nleRetimeWindow(item: NleItem) {
     && compareExactTemporalValues(piece.target.end, item.duration) === 0 ? piece : undefined;
 }
 
+export function timelineCutItems(composition: NleComposition, ids: readonly string[], at: ExactTemporalValue): string[] {
+  const selected = new Set(ids);
+  return composition.tracks.flatMap(track => track.items
+    .filter(item => selected.has(item.id)
+      && compareExactTemporalValues(item.start, at) < 0 && compareExactTemporalValues(at, nleItemEnd(item)) < 0)
+    .map(item => item.id));
+}
+
+function planTimelineSplits(context: ActiveTimeline, ids: readonly string[], at: ExactTemporalValue): Extract<NleCommand, { kind: "item.split" }>[] {
+  const { project, composition, lockedTracks } = context;
+  const available = new Set(resolveNleTimelineItemCapabilities(project, { activeComposition: composition.id, lockedTracks })
+    .filter(capability => capability.split).map(capability => capability.item));
+  const targets = new Set(timelineCutItems(composition, ids, at));
+  return ids.map(id => {
+    if (!targets.has(id)) throw new Error(`NLE Studio split must lie inside Item ${id}.`);
+    if (!available.has(id)) throw new Error(`NLE Studio cannot split Item ${id} on a locked Track or with a Transition or Matte.`);
+    return { kind: "item.split", id, at, rightId: `split-${randomUUID()}` };
+  });
+}
+
 export function planTimelineEdit(context: ActiveTimeline, edit: NleStudioTimelineEdit) {
   const { project, composition } = context;
   const entries = composition.tracks.flatMap(track => track.items.map(item => ({ track, item })));
@@ -161,13 +265,26 @@ export function planTimelineEdit(context: ActiveTimeline, edit: NleStudioTimelin
     return next.length;
   };
   switch (edit.kind) {
-    case "timeline.trim": {
-      const { item } = selection([edit.item])[0]!;
-      const at = time(edit.atFrame);
-      const edge = edit.edge === "start" ? item.start : nleItemEnd(item);
-      if (compare(edge, at) !== 0) {
-        commands.push({ kind: "item.trim", id: item.id, edge: edit.edge, at });
+    case "timeline.item-reorder": {
+      const { track, item } = selection([edit.item])[0]!;
+      if (context.lockedTracks.has(track.id)) throw new Error(`NLE Studio Track ${track.id} is locked.`);
+      const transitionItems = new Set(composition.transitions.flatMap(({ outgoing, incoming }) => [outgoing, incoming]));
+      const neighbor = nleTrackStackingNeighbors(track, transitionItems).get(item.id)?.[edit.direction];
+      if (neighbor !== undefined) {
+        const before = edit.direction === "up" ? track.items[track.items.findIndex(entry => entry.id === neighbor) + 1]?.id : neighbor;
+        commands.push({ kind: "item.reorder", id: item.id, ...(before === undefined ? {} : { before }) });
         count = 1;
+      }
+      break;
+    }
+    case "timeline.trim": {
+      const at = time(edit.atFrame);
+      for (const { item } of selection(edit.items)) {
+        const edge = edit.edge === "start" ? item.start : nleItemEnd(item);
+        if (compare(edge, at) !== 0) {
+          commands.push({ kind: "item.trim", id: item.id, edge: edit.edge, at });
+          count += 1;
+        }
       }
       break;
     }
@@ -230,13 +347,8 @@ export function planTimelineEdit(context: ActiveTimeline, edit: NleStudioTimelin
       break;
     }
     case "timeline.split": {
-      const at = time(edit.atFrame);
-      for (const { item } of selection(edit.items)) {
-        if (compare(item.start, at) < 0 && compare(at, nleItemEnd(item)) < 0) {
-          commands.push({ kind: "item.split", id: item.id, at, rightId: `split-${randomUUID()}` });
-          count += 1;
-        }
-      }
+      commands.push(...planTimelineSplits(context, selection(edit.items).map(({ item }) => item.id), time(edit.atFrame)));
+      count = commands.length;
       break;
     }
     case "timeline.remove":
@@ -295,14 +407,13 @@ export function allocateTimelinePlacement(context: ActiveTimeline, input: {
   const { medium, role, purpose } = input;
   const tracks = composition.tracks.filter(track => track.kind === medium);
   const locked = (track: NleTrack) => lockedTracks.has(track.id);
-  const available = (track: NleTrack) => track.enabled && !locked(track);
+  const available = (track: NleTrack) => !locked(track);
   let selected: NleTrack | undefined;
   if (input.track !== undefined) {
     selected = tracks.find(track => track.id === input.track);
     if (selected === undefined) throw new Error(`NLE Studio placement requires a ${medium} Track in ${composition.id}.`);
     if (selected.role !== role) throw new Error(`NLE Studio placement requires Track role ${role}.`);
     if (locked(selected)) throw new Error(`NLE Studio placement Track ${input.track} is locked.`);
-    if (!selected.enabled) throw new Error(`NLE Studio placement Track ${input.track} is disabled.`);
   } else if (purpose.kind === "adjust") {
     const last = tracks.at(-1);
     if (last && last.role === role && available(last)) selected = last;
@@ -321,7 +432,73 @@ export function allocateTimelinePlacement(context: ActiveTimeline, input: {
 
 function makeTrack(kind: NleTrack["kind"], role: NleTrack["role"]): NleTrack {
   const names = { picture: "画面轨道", audio: "音频轨道", text: "文字轨道", subtitle: "字幕轨道", filter: "滤镜轨道", effect: "特效轨道" };
-  return { id: `track-${randomUUID()}`, name: names[role], kind, role, enabled: true, items: [] };
+  return { id: `track-${randomUUID()}`, name: names[role], kind, role, pictureEnabled: kind === "picture", audioEnabled: true, items: [] };
+}
+
+type MediaPlacementSource = Pick<Parameters<typeof createMediaAssetMaterialization>[1], "asset" | "interpretation">;
+
+export function defaultMediaPlacementDuration(project: NleProject, interpretation: MediaPlacementSource["interpretation"]) {
+  const { numerator, denominator } = project.editRate;
+  return interpretation.domain?.duration ?? studioFrameTime(Math.max(1, Math.round(5 * numerator / denominator)), project.editRate);
+}
+
+export function planMediaOnNewTracks(project: NleProject, composition: NleComposition,
+  media: readonly MediaPlacementSource[], start: ExactTemporalValue) {
+  if (media.length === 0) throw new Error("NLE Studio placement requires at least one Media Asset.");
+  const roleOf = ({ interpretation }: MediaPlacementSource) => interpretation.picture === undefined ? "audio" : "picture";
+  const roles = new Set(media.map(roleOf));
+  const destinations = new Map<"audio" | "picture", { track: string; next: ExactTemporalValue }>();
+  const commands: NleCommand[] = [];
+  // Appending to the authored track list places each new track at the top of the Timeline.
+  for (const role of ["audio", "picture"] as const) {
+    if (!roles.has(role)) continue;
+    const track = makeTrack(role, role);
+    commands.push({ kind: "track.add", composition: composition.id, track });
+    destinations.set(role, { track: track.id, next: start });
+  }
+  const withTracks = applyNleTransaction(project, { commands });
+  const items = media.map(source => {
+    const destination = destinations.get(roleOf(source))!;
+    const duration = defaultMediaPlacementDuration(project, source.interpretation);
+    const itemId = `media-${randomUUID()}`;
+    commands.push(...createMediaAssetMaterialization(withTracks, {
+      ...source, itemId, track: destination.track, at: destination.next, duration,
+    }).commands);
+    destination.next = addExactTemporalValues(destination.next, duration);
+    return itemId;
+  });
+  return { commands, item: items[0]!, count: items.length };
+}
+
+export function planMediaDropPlacement(context: ActiveTimeline, target: NleStudioDropDestination,
+  medium: "picture" | "audio", start: ExactTemporalValue, duration: ExactTemporalValue) {
+  const { project, composition } = context;
+  if ("gap" in target) {
+    const rows = orderNleTimelineTracks(composition.tracks);
+    const index = target.before === undefined ? rows.length : rows.findIndex(track => track.id === target.before);
+    if (index < 0) throw new Error(`Unknown NLE Studio Media drop boundary ${target.before}.`);
+    const track = makeTrack(medium, medium);
+    const before = rows[index - 1]?.id;
+    const commands: readonly NleCommand[] = [
+      { kind: "track.add", composition: composition.id, track, ...(before === undefined ? {} : { before }) },
+    ];
+    return { project: applyNleTransaction(project, { commands }), track: track.id, commands, shifted: [] as readonly string[] };
+  }
+  const placement = allocateTimelinePlacement(context, {
+    medium, role: medium, track: target.track, purpose: { kind: "present", start, duration },
+  });
+  const track = composition.tracks.find(entry => entry.id === target.track)!;
+  const compare = compareExactTemporalValues;
+  const end = addExactTemporalValues(start, duration);
+  const occupied = track.items.some(item => compare(item.start, end) < 0 && compare(start, nleItemEnd(item)) < 0);
+  const insert = medium === "picture" && track.items.some(item => compare(item.start, start) === 0);
+  if (insert) {
+    const commands = planTimelineInsertion(context, track.id, [track.id], start, duration);
+    const shifted = commands.flatMap(command => command.kind === "item.move" ? command.ids : []);
+    return { ...placement, commands, shifted };
+  }
+  if (occupied) throw new Error("目标轨道没有足够的空白放入素材");
+  return { ...placement, shifted: [] as readonly string[] };
 }
 
 export function planAudioDetachment(context: ActiveTimeline, id: string, destination?: string) {
@@ -332,7 +509,7 @@ export function planAudioDetachment(context: ActiveTimeline, id: string, destina
   const commands: NleCommand[] = [];
   let target: string;
   if (destination === undefined) {
-    const track = { ...makeTrack("audio", "audio"), enabled: source.track.enabled };
+    const track = { ...makeTrack("audio", "audio"), audioEnabled: source.track.audioEnabled };
     commands.push({ kind: "track.add", composition: composition.id, track, before: source.track.id });
     target = track.id;
   } else {
@@ -394,6 +571,15 @@ export function planTimelineDrop(context: ActiveTimeline, drop: NleStudioTimelin
   const target = targetTrack === undefined ? rows.length : rows.findIndex(track => track.id === targetTrack);
   if (target < 0) throw new Error(`NLE Studio drop targets unknown Track ${targetTrack}.`);
   let delta = studioFrameTime(drop.deltaFrames, project.editRate);
+  if (drop.alignment !== undefined) {
+    const { item, edge, neighbor } = drop.alignment;
+    const moving = anchorTrack.items.find(candidate => candidate.id === item && ids.has(candidate.id));
+    const stationary = drop.target.kind === "track" && !ids.has(neighbor)
+      ? rows[target]?.items.find(candidate => candidate.id === neighbor) : undefined;
+    if (!moving || !stationary) throw new Error("NLE Studio edge alignment requires a moved Item and a stationary neighbor on the destination Track.");
+    delta = edge === "start" ? subtractExactTemporalValues(nleItemEnd(stationary), moving.start)
+      : subtractExactTemporalValues(stationary.start, nleItemEnd(moving));
+  }
   const zero = exactTemporalZero();
   for (const { item } of entries) {
     if (compareExactTemporalValues(addExactTemporalValues(item.start, delta), zero) < 0) {
@@ -447,7 +633,7 @@ export function planTimelineDrop(context: ActiveTimeline, drop: NleStudioTimelin
     if (destination === undefined) {
       const index = Math.max(minimum, Math.min(maximum, desired));
       const before = rows[index - 1]?.id;
-      destination = makeTrack(source.kind, source.role);
+      destination = { ...makeTrack(source.kind, source.role), pictureEnabled: source.pictureEnabled, audioEnabled: source.audioEnabled };
       commands.push({ kind: "track.add", composition: composition.id, track: destination, ...(before === undefined ? {} : { before }) });
       rows.splice(index, 0, destination);
     }

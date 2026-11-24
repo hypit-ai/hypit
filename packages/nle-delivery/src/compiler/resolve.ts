@@ -1,11 +1,11 @@
 import { assertHtmlPictureReconstruction, assertHtmlVisual } from "@hypit/html-program";
 import {
   assertPackageSymbol,
-  type NleComponentItem, type NleMatte, type NleProcess, type NlePictureReconstruction,
+  type NleComponentItem, type NleProcess, type NlePictureReconstruction,
   type NleTransition, type PackageSymbol,
 } from "@hypit/nle";
 import type {
-  NleComponentRenderContext, NleMatteRenderContext, NlePictureReconstructionContext, NleProcessRenderContext,
+  NleComponentRenderContext, NlePictureReconstructionContext, NleProcessRenderContext,
   NleRenderContribution, NleTransitionRenderContext, ResolveNleMedia, SelectedNleRenderContribution,
 } from "../render-contribution.js";
 import type { ResolveNleTextFont } from "../text.js";
@@ -53,7 +53,6 @@ export function createNleRenderResolver(
   const pictureProcess = select(contributions, value => value.pictureProcesses, "Picture Process");
   const audioProcess = select(contributions, value => value.audioProcesses, "Audio Process");
   const transition = select(contributions, value => value.transitions, "Transition");
-  const matte = select(contributions, value => value.mattes, "Matte");
   const pictureReconstruction = select(contributions, value => value.pictureReconstructions, "Picture Reconstruction");
 
   return {
@@ -83,9 +82,6 @@ export function createNleRenderResolver(
     },
     resolveTransition(value: NleTransition, context: NleTransitionRenderContext) {
       return transition(value.operator, `Transition ${value.id}`).render(value, context);
-    },
-    resolveMatte(value: NleMatte, context: NleMatteRenderContext) {
-      return matte(value.operator, `Matte ${value.id}`).render(value, context);
     },
     resolvePictureReconstruction(value: NlePictureReconstruction,
       context: NlePictureReconstructionContext) {

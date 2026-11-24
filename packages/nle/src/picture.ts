@@ -1,4 +1,4 @@
-import type { NleCanvas, NlePictureLayout } from "./types.js";
+import type { NleCanvas, NlePictureCrop, NlePictureLayout } from "./types.js";
 
 export type NlePictureExtent = {
   readonly width: number;
@@ -41,10 +41,24 @@ export function fitNlePictureContent(
   };
 }
 
-/** Create a centred frame preserving Source aspect inside the Project canvas. */
-export function containNlePictureLayout(
+/** Resolve an authored crop in the original source coordinate system. */
+export function cropNlePictureSource(source: NlePictureRect, crop?: NlePictureCrop): NlePictureRect {
+  const { left = 0, top = 0, right = 0, bottom = 0 } = crop ?? {};
+  if (left === 0 && top === 0 && right === 0 && bottom === 0) return source;
+  const x = source.x + left * source.width;
+  const y = source.y + top * source.height;
+  return {
+    x, y,
+    width: (1 - right) * source.width - (x - source.x),
+    height: (1 - bottom) * source.height - (y - source.y),
+  };
+}
+
+/** Create a centred frame preserving the selected Source aspect inside the Composition canvas. */
+export function centeredNlePictureLayout(
   canvas: NleCanvas,
   source: NlePictureExtent,
+  crop?: NlePictureCrop,
 ): NlePictureLayout {
   const content = fitNlePictureContent({
     x: 0,
@@ -52,6 +66,6 @@ export function containNlePictureLayout(
     width: canvas.width,
     height: canvas.height,
     fit: "contain",
-  }, source);
-  return { ...content, fit: "contain" };
+  }, cropNlePictureSource({ x: 0, y: 0, width: source.width, height: source.height }, crop));
+  return { ...content, fit: "fill" };
 }

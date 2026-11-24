@@ -24,6 +24,7 @@
   transition: opacity .2s var(--overlay-ease), scale .2s var(--overlay-ease);
 }
 .dropdown-content.dropdown-list, .dropdown-content:has(> .dropdown-list) { --dropdown-radius: 16px; }
+:is(.dropdown-content, .dropdown-item):focus-visible { outline: none; }
 .dropdown-content[data-starting-style],
 .dropdown-content[data-ending-style] {
   opacity: 0;

@@ -256,8 +256,11 @@ function Assets({ media, library, usedMedia, disabled, folderDrop, onImport, onE
             aria-pressed={selected.has(entry.id)}
             onPointerDown={event => {
               if (event.button !== 0 || event.metaKey || event.ctrlKey) return;
-              event.currentTarget.focus({ preventScroll: true });
-              onBeginDrag(event, entry, () => selectMedia(entry));
+              const card = event.currentTarget;
+              onBeginDrag(event, entry, () => {
+                card.focus({ preventScroll: true });
+                selectMedia(entry);
+              });
             }}
             onClick={event => {
               if (event.metaKey || event.ctrlKey) toggleSelection(entry.id);
@@ -271,7 +274,7 @@ function Assets({ media, library, usedMedia, disabled, folderDrop, onImport, onE
             <MediaCardName name={label} extensionLength={entry.fileExtension?.length ?? 0}/>
           </button>
           {entry.state === "available" && <span className="library-card-actions">
-            <IconButton label="添加到时间线" disabled={disabled} onClick={() => onPlace(entry)}><Plus size={14}/></IconButton>
+            <IconButton label="添加到播放头" disabled={disabled} onClick={() => onPlace(entry)}><Plus size={14}/></IconButton>
           </span>}
         </ContextMenu.Trigger>
         <LibraryItemMenu target={{ kind: "asset", value: entry }} canRename={entry.adoptedAt !== undefined}

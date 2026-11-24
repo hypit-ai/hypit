@@ -5,6 +5,7 @@ import type { AudioProgram } from "@hypit/audio-program";
 import type { HtmlCanvas, HtmlFrameRate, HtmlFrameRequest } from "@hypit/html-program";
 import type { ExactTemporalValue, TemporalRange } from "@hypit/temporal/algebra";
 import { compileAudio } from "./compiler/compile-audio.js";
+import { selectCompositionOutputs, type CompositionOutputs } from "./compiler/composition-outputs.js";
 import { compilePicture } from "./compiler/compile-picture.js";
 import { lowerNleComponentPicture, lowerNleProject } from "./compiler/lower.js";
 import { createNleRenderResolver } from "./compiler/resolve.js";
@@ -14,7 +15,7 @@ export type { NleTextNode, NleTextTypography, ResolveNleTextFont } from "./text.
 import { nleRenderContributionKind, type NleRenderContribution } from "./render-contribution.js";
 export { nleRenderContributionKind } from "./render-contribution.js";
 export type {
-  NleAudioEffect, NleComponentPicture, NleComponentRenderContext, NleMatteRenderContext,
+  NleAudioEffect, NleComponentPicture, NleComponentRenderContext,
   NlePictureEffect, NlePictureReconstructionContext, NleProcessRenderContext, NleRenderContribution,
   NleRenderContext, NleTransitionRenderContext,
 } from "./render-contribution.js";
@@ -44,8 +45,6 @@ function projectReference(root: string, document: string, reference: NleMediaRef
   return { path: portable(local) };
 }
 
-type CompositionOutputs = { readonly picture: boolean; readonly audio: boolean };
-
 function mediaReferences(project: NleProject, entry: string, outputs: CompositionOutputs): readonly NleMediaReference[] {
   const compositions = new Map(project.compositions.map(value => [value.id, value] as const));
   const visited = new Set<string>();
@@ -55,12 +54,11 @@ function mediaReferences(project: NleProject, entry: string, outputs: Compositio
     if (visited.has(key)) return;
     visited.add(key);
     const composition = compositions.get(id)!;
-    const matteSources = new Set(composition.mattes.map(relation => relation.matte));
-    for (const track of composition.tracks) for (const item of track.items) {
+    const { located, requiredPicture, requiredAudio } = selectCompositionOutputs(composition, { picture, audio });
+    for (const { item } of located.values()) {
       if (item.kind !== "present") continue;
-      const isMatte = matteSources.has(item.id);
-      const needsPicture = picture && item.picture !== undefined && ((track.enabled && item.enabled) || isMatte);
-      const needsAudio = audio && item.audio !== undefined && track.enabled && item.enabled;
+      const needsPicture = requiredPicture.has(item.id);
+      const needsAudio = requiredAudio.has(item.id);
       if (!needsPicture && !needsAudio) continue;
       if (item.source === "media") references.push(item.asset);
       else if (item.source === "component") references.push(...Object.values(item.media ?? {}));
@@ -74,7 +72,7 @@ function mediaReferences(project: NleProject, entry: string, outputs: Compositio
 export type PreparedNleCompilation = {
   readonly duration: ExactTemporalValue;
   compilePicture(output: { readonly canvas: HtmlCanvas; readonly frameRate: HtmlFrameRate;
-    readonly frames?: readonly number[] }): HtmlFrameRequest["program"];
+    readonly frames?: readonly number[]; readonly onItemPlacement?: (item: string, element: string) => void }): HtmlFrameRequest["program"];
   compileFrame(output: { readonly canvas: HtmlCanvas; readonly frameRate: HtmlFrameRate; readonly range: TemporalRange }): HtmlFrameRequest;
   compileAudio(profile?: HtmlVideoDeliveryProfile["audio"]): AudioProgram | undefined;
   compileVideo(profile: HtmlVideoDeliveryProfile, range?: TemporalRange): HtmlVideoDeliveryPlan;

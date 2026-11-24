@@ -1,5 +1,6 @@
 import {
   applyNleTransaction,
+  indexNleComposition,
   nleCompositionDuration,
   nleItemEnd,
   nleLinearTimeMapping,
@@ -10,6 +11,7 @@ import {
   type NleItem,
   type NleProject,
   type NleSourceTimeBounds,
+  type NleTrack,
 } from "@hypit/nle";
 import {
   addExactTemporalValues,
@@ -22,11 +24,72 @@ import {
   type ExactTemporalValue,
   type TemporalRate,
 } from "@hypit/temporal/algebra";
-import { studioFrameTime } from "./timeline-planning.js";
+import { studioFrameTime } from "./timeline-time.js";
 import type { NleStudioTrimRange } from "./protocol.js";
 
 type TrimEdge = "start" | "end";
 const compare = compareExactTemporalValues;
+
+function transitionOwnsEdge(composition: NleComposition, item: NleItem, edge: TrimEdge): boolean {
+  return composition.transitions.some(value => (edge === "start" ? value.incoming : value.outgoing) === item.id);
+}
+
+/** First occupied time outward from each edge, using exact half-open Item windows. */
+export function trimTrackNeighborLimits(track: NleTrack) {
+  const windows = track.items.map(item => ({
+    id: item.id, start: item.start, end: nleItemEnd(item), limits: {} as Partial<Record<TrimEdge, ExactTemporalValue>>,
+  }));
+  const sweep = (edge: TrimEdge, opposite: TrimEdge, direction: 1 | -1) => {
+    const ordered = windows.toSorted((left, right) => direction * compare(left[edge], right[edge]));
+    let at: ExactTemporalValue | undefined;
+    let priorLimit: ExactTemporalValue | undefined;
+    let runningLimit: ExactTemporalValue | undefined;
+    for (const window of ordered) {
+      const current = window[edge];
+      if (at === undefined || compare(at, current) !== 0) {
+        at = current;
+        // Use only intervals whose corresponding edge lies strictly on the outward side.
+        priorLimit = runningLimit;
+      }
+      if (priorLimit !== undefined) {
+        window.limits[edge] = direction * compare(priorLimit, current) > 0 ? current : priorLimit;
+      }
+      const otherEdge = window[opposite];
+      if (runningLimit === undefined || direction * compare(otherEdge, runningLimit) > 0) runningLimit = otherEdge;
+    }
+  };
+  sweep("start", "end", 1);
+  sweep("end", "start", -1);
+  return new Map(windows.map(({ id, limits }) => [id, limits]));
+}
+
+export function assertOrdinaryTrim(composition: NleComposition, track: NleTrack, item: NleItem, edge: TrimEdge,
+  at: ExactTemporalValue, neighbor: ExactTemporalValue | undefined): void {
+  if (transitionOwnsEdge(composition, item, edge)) {
+    throw new Error(`NLE Item ${item.id} ${edge} edge is controlled by its Transition.`);
+  }
+  if (neighbor !== undefined && (edge === "start" ? compare(at, neighbor) < 0 : compare(at, neighbor) > 0)) {
+    throw new Error(`NLE Item ${item.id} ${edge} edge reaches another Item on Track ${track.id}.`);
+  }
+}
+
+export function prepareOrdinaryTrims(
+  project: NleProject, composition: NleComposition, lockedTracks: ReadonlySet<string>,
+  trims: readonly Extract<NleCommand, { kind: "item.trim" }>[],
+  sourceForItem: (item: NleItem) => NleSourceTimeBounds | undefined = () => undefined,
+): NleCommand[] {
+  const index = indexNleComposition(composition);
+  const neighborsByTrack = new Map<string, ReturnType<typeof trimTrackNeighborLimits>>();
+  return trims.flatMap(({ id, edge, at }) => {
+    const { item, track } = index.item(id)!;
+    if (lockedTracks.has(track.id)) throw new Error(`NLE Studio Track ${track.name} is locked.`);
+    const neighbors = neighborsByTrack.get(track.id) ?? trimTrackNeighborLimits(track);
+    neighborsByTrack.set(track.id, neighbors);
+    assertOrdinaryTrim(composition, track, item, edge, at, neighbors.get(id)?.[edge]);
+    const prepare = planTrimEdge(item, edge, at, project.editRate, sourceForItem(item));
+    return prepare === undefined ? [] : [prepare];
+  });
+}
 
 /** Validate one edge's window and supply any source preparation for the atomic edit. */
 export function planTrimEdge(
@@ -88,12 +151,14 @@ function farthestFrame(anchor: number, limit: number, accepts: (frame: number) =
 /** Project the connected legal range around the current edge onto Studio's edit-frame grid. */
 export function projectTrimRange(
   project: NleProject, composition: NleComposition, item: NleItem, edge: TrimEdge, rate: TemporalRate,
-  source: NleSourceTimeBounds | undefined,
+  source: NleSourceTimeBounds | undefined, neighbor: ExactTemporalValue | undefined,
 ): NleStudioTrimRange | undefined {
+  if (transitionOwnsEdge(composition, item, edge)) return;
   const end = nleItemEnd(item);
   const oneFrame = studioFrameTime(1, rate);
-  const minimum = edge === "start" ? 0 : editFrame(addExactTemporalValues(item.start, oneFrame), rate, true);
-  const maximum = edge === "end" ? Number.MAX_SAFE_INTEGER
+  const minimum = edge === "start" ? editFrame(neighbor ?? exactTemporalZero(), rate, true)
+    : editFrame(addExactTemporalValues(item.start, oneFrame), rate, true);
+  const maximum = edge === "end" ? (neighbor === undefined ? Number.MAX_SAFE_INTEGER : editFrame(neighbor, rate, false))
     : editFrame(subtractExactTemporalValues(end, oneFrame), rate, false);
   if (maximum < minimum || !Number.isSafeInteger(minimum) || !Number.isSafeInteger(maximum)) return;
   const current = edge === "start" ? item.start : end;
@@ -120,5 +185,7 @@ export function projectTrimRange(
   const left = before >= minimum && accepts(before) ? farthestFrame(before, minimum, accepts) : undefined;
   const right = after <= maximum && accepts(after) ? farthestFrame(after, maximum, accepts) : undefined;
   if (left === undefined && right === undefined) return;
-  return { minimum: left ?? after, maximum: right ?? before };
+  const range = { minimum: left ?? after, maximum: right ?? before };
+  if (range.minimum === range.maximum && compare(studioFrameTime(range.minimum, rate), current) === 0) return;
+  return range;
 }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svml id="studio-trailer" name="Hypit NLE Studio Trailer" root="trailer">
   <composition id="trailer" name="Trailer" width="1920" height="1080">
-    <track id="picture" name="Picture" kind="picture" role="picture" enabled="true">
+    <track id="picture" name="Picture" kind="picture" role="picture" picture-enabled="true" audio-enabled="true">
       <present id="title" name="Hypit Project" source="media" start="0/1" duration="5/1" enabled="true">
         <media path="media/title/title.media.json" />
         <source-time>

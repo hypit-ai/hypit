@@ -51,7 +51,8 @@ export function planStudioPaste(clipboard: StudioClipboard, destination: NleComp
   const matched = shifted.map(source => original.get(source.id));
   const reusable = shifted.every((source, index) => {
     const current = matched[index];
-    if (current === undefined || current.track.kind !== source.kind || current.track.role !== source.role || current.track.enabled !== source.enabled
+    if (current === undefined || current.track.kind !== source.kind || current.track.role !== source.role || current.track.pictureEnabled !== source.pictureEnabled
+      || current.track.audioEnabled !== source.audioEnabled
       || lockedTracks.has(current.track.id)) return false;
     if (index > 0 && (matched[index - 1]?.index ?? Infinity) >= current.index) return false;
     if (source.kind === "audio") return true;

@@ -1,5 +1,6 @@
 import { resolvedMediaSource } from "./media.js";
 import { occurrenceParentRange } from "./occurrence.js";
+import { selectCompositionOutputs, type CompositionOutputs } from "./composition-outputs.js";
 import { sealCompilationGraph } from "./program.js";
 import { pictureNodeSpatialDomains } from "./picture.js";
 import { sealLocalSpatialDomain, sealSpatialMap, type LocalSpatialDomain, type SpatialMap } from "./spatial.js";
@@ -24,6 +25,7 @@ import {
   type TemporalMapPiece,
 } from "@hypit/temporal/algebra";
 import {
+  cropNlePictureSource,
   fitNlePictureContent,
   assertIdentity,
   assertNleProject,
@@ -42,7 +44,6 @@ import type {
   NleAdjustItem,
   NleComponentItem,
   NleComposition,
-  NleItem,
   NleProcess,
   NlePresentItem,
   NleProject,
@@ -77,13 +78,20 @@ function itemSpace(project: NleProject, item: NlePresentItem): LocalSpatialDomai
   });
 }
 
-function fitMap(project: NleProject, item: NlePresentItem,
-  target: LocalSpatialDomain, source: LocalSpatialDomain): SpatialMap {
-  const layout = resolveNlePictureLayout(project, item.picture!.layout);
-  const content = fitNlePictureContent({ ...layout, x: 0, y: 0 }, source.region);
-  const xx = source.region.width / content.width;
-  const yy = source.region.height / content.height;
-  return sealSpatialMap({
+function fitItemPicture(nodes: Record<string, PictureNode>, project: NleProject, item: NlePresentItem,
+  input: string, fitted: string, target: LocalSpatialDomain, source: LocalSpatialDomain): string {
+  const { crop, layout: declaredLayout } = item.picture!;
+  const layout = resolveNlePictureLayout(project, declaredLayout);
+  const sampled = cropNlePictureSource(source.region, crop);
+  let root = input;
+  if (sampled !== source.region) {
+    root = `${fitted}:source-crop`;
+    nodes[root] = { kind: "crop", input, region: sampled };
+  }
+  const content = fitNlePictureContent({ ...layout, x: 0, y: 0 }, sampled);
+  const xx = sampled.width / content.width;
+  const yy = sampled.height / content.height;
+  const mapping = sealSpatialMap({
     target,
     source,
     transform: {
@@ -92,10 +100,15 @@ function fitMap(project: NleProject, item: NlePresentItem,
       xy: 0,
       yx: 0,
       yy,
-      tx: source.region.x - content.x * xx,
-      ty: source.region.y - content.y * yy,
+      tx: sampled.x - content.x * xx,
+      ty: sampled.y - content.y * yy,
     },
   });
+  nodes[fitted] = { kind: "remap", input: root, mapping };
+  if (layout.fit !== "cover") return fitted;
+  const frameClip = `${fitted}:frame-clip`;
+  nodes[frameClip] = { kind: "crop", input: fitted, region: target.region };
+  return frameClip;
 }
 
 function placementMap(
@@ -541,6 +554,7 @@ function importNestedProgram(
           mapping: namespaceSpatialMap(prefix, node.mapping),
         };
         case "over": return { kind: "over", inputs: node.inputs.map((input) => namespaced(prefix, input)) };
+        case "alpha-mask": return { kind: "alpha-mask", content: namespaced(prefix, node.content), matte: namespaced(prefix, node.matte) };
         case "apply": return {
           ...node,
           inputs: Object.fromEntries(Object.entries(node.inputs)
@@ -620,7 +634,7 @@ function lowerComposition(
   project: NleProject,
   composition: NleComposition,
   host: NleRenderResolver,
-  outputs: { readonly picture: boolean; readonly audio: boolean },
+  outputs: CompositionOutputs,
 ): CompilationGraph {
   const duration = nleCompositionDuration(composition);
   assert(compareExactTemporalValues(duration, exactTemporalZero()) > 0,
@@ -630,38 +644,12 @@ function lowerComposition(
   const occurrences: Record<string, Occurrence> = {};
   const pictureNodes: Record<string, PictureNode> = {};
   const audioNodes: Record<string, AudioNode> = {};
-  const located = new Map<string, { readonly item: NleItem; readonly track: NleTrack }>();
-  const matteByContent = new Map(composition.mattes.map((value) => [value.content, value] as const));
-  const matteSources = new Set(composition.mattes.map((value) => value.matte));
-  const pictureOrder: string[] = [];
-  const audioOrder: string[] = [];
-  for (const track of composition.tracks) {
-    for (const item of track.items) located.set(item.id, { item, track });
-    if (!track.enabled) continue;
-    for (const item of track.items) {
-      if (!item.enabled) continue;
-      if (track.kind === "picture") {
-        if (outputs.picture && !matteSources.has(item.id)) pictureOrder.push(item.id);
-        if (outputs.audio && item.kind === "present" && item.audio !== undefined) audioOrder.push(item.id);
-      } else if (outputs.audio) audioOrder.push(item.id);
-    }
-  }
-
-  const requiredPicture = new Set(pictureOrder.filter((id) => located.get(id)!.item.kind === "present"));
-  const requireMatte = (id: string): void => {
-    const relation = matteByContent.get(id);
-    if (relation === undefined || requiredPicture.has(relation.matte)) return;
-    requiredPicture.add(relation.matte);
-    requireMatte(relation.matte);
-  };
-  for (const id of [...requiredPicture]) requireMatte(id);
-  const requiredAudio = new Set(audioOrder.filter((id) => {
-    const item = located.get(id)!.item;
-    return item.kind === "present" && item.audio !== undefined;
-  }));
+  const { located, matteByContent, pictureOrder, audioOrder, requiredPicture, requiredAudio } =
+    selectCompositionOutputs(composition, outputs);
 
   const itemPictureRoots = new Map<string, string>();
   const itemAudioRoots = new Map<string, string>();
+  const placements = new Map<string, string>();
   for (const [id, { item, track }] of located) {
     const needsPicture = requiredPicture.has(id);
     const needsAudio = requiredAudio.has(id);
@@ -686,12 +674,7 @@ function lowerComposition(
         const fitted = `${item.id}:composition-fitted`;
         const placed = `${item.id}:composition-placed`;
         const restricted = `${item.id}:picture-range`;
-        pictureNodes[fitted] = {
-          kind: "remap",
-          input: nested.pictureRoot,
-          mapping: fitMap(project, item, localPicture, nested.pictureDomain),
-        };
-        let localRoot = fitted;
+        let localRoot = fitItemPicture(pictureNodes, project, item, nested.pictureRoot, fitted, localPicture, nested.pictureDomain);
         for (const process of item.picture!.processes ?? []) {
           if (!process.enabled) continue;
           localRoot = pictureProcessNode(
@@ -708,6 +691,7 @@ function lowerComposition(
           input: localRoot,
           mapping: placementMap(project, pictureDomain, localPicture, item),
         };
+        placements.set(placed, id);
         pictureNodes[restricted] = { kind: "restrict", input: placed, range };
         itemPictureRoots.set(id, restricted);
       }
@@ -757,10 +741,7 @@ function lowerComposition(
       const placed = `${item.id}:placed`;
       const restricted = `${item.id}:picture-range`;
       pictureNodes[use] = { kind: "use", occurrence: item.id };
-      pictureNodes[fitted] = {
-        kind: "remap", input: use, mapping: fitMap(project, item, localPicture, picture.spatialDomain),
-      };
-      let localRoot = fitted;
+      let localRoot = fitItemPicture(pictureNodes, project, item, use, fitted, localPicture, picture.spatialDomain);
       for (const process of item.picture!.processes ?? []) {
         if (!process.enabled) continue;
         localRoot = pictureProcessNode(
@@ -777,6 +758,7 @@ function lowerComposition(
         input: localRoot,
         mapping: placementMap(project, pictureDomain, localPicture, item),
       };
+      placements.set(placed, id);
       pictureNodes[restricted] = { kind: "restrict", input: placed, range };
       itemPictureRoots.set(id, restricted);
     }
@@ -830,22 +812,13 @@ function lowerComposition(
     }
     const source = resolveMatteRoot(relation.matte);
     const content = located.get(id)!;
-    const matte = located.get(relation.matte)!;
-    assert(content.item.kind === "present" && matte.item.kind === "present",
-      `NLE Matte ${relation.id} requires Present Items.`);
-    const effect = host.resolveMatte(relation, {
-      project,
-      composition,
-      track: content.track,
-      content: content.item,
-      matte: matte.item,
-    });
     const node = `${relation.content}:matte:${relation.id}`;
+    const masked = `${node}:alpha`;
+    pictureNodes[masked] = { kind: "alpha-mask", content: input, matte: source };
     pictureNodes[node] = {
-      kind: "apply",
-      visual: effect.visual,
-      inputs: { content: input, matte: source },
-      controlMappings: linearControlMappings(relation.id, effect.controls, content.item.start, content.item.duration),
+      kind: "restrict",
+      input: masked,
+      range: { start: content.item.start, end: nleItemEnd(content.item) },
     };
     matteRoots.set(id, node);
     return node;
@@ -1004,7 +977,7 @@ function lowerComposition(
     occurrences,
     ...(pictureRoot === undefined ? {} : {
       pictureDomain,
-      picture: { nodes: pictureNodes, root: pictureRoot },
+      picture: { nodes: pictureNodes, root: pictureRoot, placements: Object.fromEntries(placements) },
     }),
     ...(audioRoot === undefined ? {} : { audio: { nodes: audioNodes, root: audioRoot } }),
   };
@@ -1012,7 +985,7 @@ function lowerComposition(
 
 /** Deterministically project the selected Composition into one closed compilation graph. */
 export function lowerNleProject(project: NleProject, host: NleRenderResolver,
-  entry: NleComposition, outputs: { readonly picture: boolean; readonly audio: boolean }): CompilationGraph {
+  entry: NleComposition, outputs: CompositionOutputs): CompilationGraph {
   assertNleProject(project);
   return sealCompilationGraph(lowerComposition(project, entry, host, outputs));
 }

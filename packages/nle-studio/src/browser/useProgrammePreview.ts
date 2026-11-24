@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { programmeAudioSampleRate } from "../programme-transport.js";
+import { programmeAudioSampleRate, type ProgrammePlacementDraft } from "../programme-transport.js";
 import type { NleStudioProgrammeProjection } from "../protocol.js";
 import { playProgramme } from "./programme-playback.js";
 
@@ -20,6 +20,8 @@ export function useProgrammePreview(programme: NleStudioProgrammeProjection | un
   const [presented, setPresented] = useState<{ generation: string; target: number; frame: number; frameCount: number }>();
   const [error, setError] = useState<{ generation: string; frame: number; message: string }>();
   const mounted = useRef(new Map<string, Mounted>());
+  const placement = useRef<ProgrammePlacementDraft>(undefined);
+  const placementTick = useRef<number>(undefined);
   const sequence = useRef(0);
   const audio = useRef<{ context: AudioContext; output: GainNode }>(undefined);
   const running = useRef<{ generation: string; transport: number; stop: () => void }>(undefined);
@@ -91,6 +93,27 @@ export function useProgrammePreview(programme: NleStudioProgrammeProjection | un
     return () => cancelAnimationFrame(pending);
   }, [generation, visibleGeneration, target, seeking, from, send]);
 
+  const drawPlacement = useCallback((draft: ProgrammePlacementDraft | undefined) => {
+    placement.current = draft;
+    if (placementTick.current !== undefined) return;
+    placementTick.current = requestAnimationFrame(() => {
+      placementTick.current = undefined;
+      const generation = current.current.visible?.generation;
+      if (generation !== undefined) {
+        const next = placement.current;
+        mounted.current.get(generation)?.element.contentWindow?.postMessage({
+          kind: "programme-placement-draft", generation, draft: next?.generation === generation ? next : null,
+        }, "*");
+      }
+    });
+  }, []);
+  useEffect(() => {
+    if (placement.current?.generation !== visibleGeneration) drawPlacement(undefined);
+  }, [visibleGeneration, drawPlacement]);
+  useEffect(() => () => {
+    if (placementTick.current !== undefined) cancelAnimationFrame(placementTick.current);
+  }, []);
+
   useEffect(() => {
     if (visibleGeneration === undefined || visible === undefined) return;
     void fetch(new URL("activate", new URL(visible.document, location.href)), { method: "POST" }).catch(() => undefined);
@@ -156,7 +179,7 @@ export function useProgrammePreview(programme: NleStudioProgrammeProjection | un
 
   const failure = error?.generation === generation && error?.frame === target ? error.message : undefined;
   return {
-    visible, loaded, unlockAudio, failure,
+    visible, loaded, unlockAudio, failure, drawPlacement,
     documents: [...(visible === undefined ? [] : [visible]),
       ...(programme === undefined || programme.generation === visibleGeneration ? [] : [programme])],
   };

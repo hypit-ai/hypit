@@ -50,11 +50,14 @@ name current Project objects directly. There are no query, expression or fallbac
 | --- | --- | --- | --- |
 | `svml` | `id`, `name`, `root` | `edit-rate` | `shared-value`, `composition` |
 | `composition` | `id`, `name`, `width`, `height` | none | `track`, `transition`, `matte`, `group` |
-| `track` | `id`, `name`, `kind`, `role`, `enabled` | none | `present`, `adjust` |
+| `track` | `id`, `name`, `kind`, `role`, `picture-enabled`, `audio-enabled` | none | `present`, `adjust` |
 
-`root` references one Project-owned Composition. `edit-rate` is a positive rational frame grid such as
+`root` references one Project-owned Composition. Sibling `composition` elements are listed in authored order.
+Root selection and nested Composition references resolve by ID. `edit-rate` is a positive rational frame grid such as
 `24000/1001`, defaulting to `30/1`. It is shared by all Compositions. Item times stay exact and delivery has its own rate. `width` and `height` define its positive, unit-neutral Picture
-canvas. `track.kind` is `picture` or `audio`; `enabled` is `true` or `false`. Tracks are authored bottom-to-top in one list.
+canvas. `track.kind` is `picture` or `audio`. The independent `picture-enabled` and `audio-enabled` booleans
+gate the Track's contributions in each signal. Audio Tracks set `picture-enabled="false"`. A Picture Track can
+carry Audio from its Presents. Tracks are authored bottom-to-top in one list.
 Picture Item order is the direct back-to-front paint order within its Track, including overlapping Items. Audio
 contributions mix.
 
@@ -155,6 +158,7 @@ one package Operator's stable Control domain.
 
 ```xml
 <picture>
+  <crop left="0.25" />
   <layout x="0" y="0" width="1920" height="1080"
           fit="cover" content-x="0.5" content-y="0.5" />
   <reconstruction package="@project/picture" symbol="nearest">
@@ -170,7 +174,15 @@ one package Operator's stable Control domain.
 <layout ref="hero-layout" />
 ```
 
+An optional `crop` selects a rectangle from the original displayed Source before `layout` fits it to the frame.
+The `left`, `top`, `right` and `bottom` insets are fractions of the Source width or height. Each defaults to zero,
+and opposing insets must sum to less than one. For Media the Source uses its display interpretation. For a
+Component or a nested Composition it uses the extent of the published Picture. The crop belongs to the Item
+and remains independent of a linked layout.
+
 Inline `fit` is `fill`, `contain` or `cover`. `content-x` and `content-y` are optional normalized focal coordinates.
+`cover` clips its fitted Picture at the frame edges before local Processes. New Media and nested Composition
+materialization use a centered frame with the selected Source aspect and `fit="fill"` when no layout is supplied.
 Media and Composition Presents may have Audio appearances. Component Presents supply Picture appearances.
 Each appearance may contain ordered `process` elements. A Media Picture may select a package
 `reconstruction` for its mapped read. The selected implementation samples a timed Picture.
@@ -228,14 +240,12 @@ SVML does not add one element per effect or animated property.
   <parameters>{"softness":0.5}</parameters>
 </transition>
 
-<matte id="mask" content="title" matte="shape"
-       package="@project/mattes" symbol="alpha">
-  <parameters>{}</parameters>
-</matte>
+<matte id="mask" content="title" matte="shape" />
 ```
 
-Both are Composition-local relations between Present ids. Transition time is the validated canonical overlap of its
-endpoints. Matte time is the content range. Package Controls use the implicit local relation domain.
+Both are Composition-local relations between enabled Presents with Picture output. Transition time is the validated
+canonical overlap of its endpoints. Its package Controls use that local domain. A Matte uses the source Picture's
+alpha over the full content time range, in Composition coordinates.
 
 ## Edit Groups
 
@@ -248,7 +258,8 @@ endpoints. Matte time is the content range. Package Controls use the implicit lo
 
 A Group contains at least two distinct Item IDs in its Composition. An Item belongs to at most one Group.
 Members can occupy different Tracks and time ranges. A move supplies all members and one shared time displacement.
-A split adds the right piece to the same Group. Removing members discards a Group once it has fewer than two.
+A split adds the right piece to the same Group. Unlinking members or deleting their Items retains the Group ID
+while at least two members remain and removes the Group otherwise.
 
 ## Shared Values
 

@@ -1,6 +1,6 @@
 import { findNleComposition } from "../project.js";
 import type { NleEditingContext } from "./types.js";
-import { fitNlePictureContent } from "../picture.js";
+import { cropNlePictureSource, fitNlePictureContent } from "../picture.js";
 import { indexNleProject } from "../indexing.js";
 import { resolveNlePictureLayout } from "../project.js";
 import type { NleItem, NleProject } from "../types.js";
@@ -54,6 +54,7 @@ export function resolveNleSpatialItemCapabilities(
       resizeFrame: editsLayout,
       setFit: editsLayout,
       setFocus: editsLayout,
+      setCrop: writable,
       shareLayout: writable && !("ref" in item.picture.layout),
       linkLayout: writable,
       unlinkLayout: writable && "ref" in item.picture.layout,
@@ -73,9 +74,10 @@ export function assertNleSpatialEditAllowed(
       : edit.kind === "frame.resize" ? capability.resizeFrame
         : edit.kind === "fit.set" ? capability.setFit
           : edit.kind === "focus.set" ? capability.setFocus
-            : edit.kind === "layout.share" ? capability.shareLayout
-              : edit.kind === "layout.link" ? capability.linkLayout
-                : capability.unlinkLayout;
+            : edit.kind === "crop.set" ? capability.setCrop
+              : edit.kind === "layout.share" ? capability.shareLayout
+                : edit.kind === "layout.link" ? capability.linkLayout
+                  : capability.unlinkLayout;
   if (!allowed) throw new Error(`NLE Item ${item} does not allow spatial edit ${edit.kind}.`);
 }
 
@@ -122,7 +124,7 @@ export function projectNleCanvas(
         role: item.kind,
         source: source(item),
         enabled: item.enabled,
-        trackEnabled: track.enabled,
+        trackPictureEnabled: track.pictureEnabled,
       } as const;
       if (item.kind === "adjust") {
         layers.push({
@@ -133,12 +135,15 @@ export function projectNleCanvas(
       }
       if (item.picture === undefined) continue;
       const layout = resolveNlePictureLayout(project, item.picture.layout);
+      const crop = item.picture.crop;
       const extent = observation?.picture?.sourceExtent;
       const capability = byCapability.get(item.id);
       layers.push({
         ...common,
         layout,
-        ...(extent === undefined ? {} : { content: fitNlePictureContent(layout, extent) }),
+        ...("ref" in item.picture.layout ? { layoutRef: item.picture.layout.ref } : {}),
+        ...(crop === undefined ? {} : { crop }),
+        ...(extent === undefined ? {} : { content: fitNlePictureContent(layout, cropNlePictureSource({ x: 0, y: 0, ...extent }, crop)) }),
         affordances: {
           select: true,
           translate: capability?.translateFrame === true && policy.translateFrame,

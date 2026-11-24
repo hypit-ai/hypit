@@ -6,6 +6,7 @@ export {
   type NleEditingSurfaceOptions,
 } from "./surface.js";
 export { mergeNleTimelineItemObservations, orderNleTimelineTracks, projectNleTimeline } from "./projection.js";
+export { nleTrackStackingNeighbors } from "./stacking.js";
 export {
   createNleAuthoringContribution,
   createNleAuthoringHost,
@@ -21,7 +22,7 @@ export {
   type NleComponentMediaInput,
   type NleComponentValueAuthoring,
   type NleComponentValueAuthoringContext,
-  type NleOperatorTemporalAuthoring,
+  type NleOperatorParameterAuthoring,
   type NleProcessAuthoringContext,
   type NleProcessAddress,
   type NleTransitionAuthoring,

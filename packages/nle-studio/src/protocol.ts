@@ -26,6 +26,7 @@ export type NleStudioMediaEntry = {
   /** Present when the Media Asset manifest was read successfully. */
   readonly adoptedAt?: string;
   readonly pictureKind?: "constant" | "signal";
+  readonly displayAspectRatio?: number;
   readonly pictureVersion?: string;
   readonly audioVersion?: string;
   readonly duration?: ExactTemporalValue;
@@ -121,6 +122,7 @@ export type NleStudioTimelineProjection = {
   /** Active-Composition Media Items resolved to Project Media Catalog identities by the Product backend. */
   readonly itemMedia: readonly { readonly item: string; readonly media: string }[];
   readonly previewSources: Readonly<Record<string, NleStudioTimelinePreview>>;
+  readonly transitionTitles: Readonly<Record<string, string>>;
   readonly trimRanges: Readonly<Record<string, Partial<Record<"start" | "end", NleStudioTrimRange>>>>;
 };
 
@@ -158,6 +160,7 @@ type TimelineRenderedPictureSource = {
 export type NleStudioTimelinePicturePreviewSource = TimelineMediaPictureSource | TimelineRenderedPictureSource;
 
 export type NleStudioTimelinePreview = {
+  readonly start: ExactTemporalValue;
   readonly picture?: NleStudioTimelinePicturePreviewSource;
   readonly audio?: NleStudioTimelineAudioPreviewSource;
 };
@@ -193,9 +196,13 @@ export type NleStudioObservationRequest =
   | { readonly kind: "status" }
   | { readonly kind: "timeline" }
   | { readonly kind: "timeline-drop"; readonly drop: NleStudioTimelineDrop }
+  | { readonly kind: "media-drop"; readonly drop: NleStudioMediaDrop }
+  | { readonly kind: "timeline-cuts"; readonly cut: NleStudioTimelineCut }
+  | { readonly kind: "composition-actions"; readonly selection: NleStudioCompositionSelection }
   | { readonly kind: "canvas" }
   | { readonly kind: "inspector"; readonly item: string }
   | { readonly kind: "transition-inspector"; readonly transition: string }
+  | { readonly kind: "matte-sources"; readonly item: string }
   | { readonly kind: "component-inputs"; readonly item: string }
   | { readonly kind: "media" }
   | { readonly kind: "media-library" }
@@ -211,9 +218,13 @@ export type NleStudioObservation =
   | { readonly kind: "status"; readonly value: NleStudioStatus }
   | { readonly kind: "timeline"; readonly value: NleStudioTimelineProjection }
   | { readonly kind: "timeline-drop"; readonly value: NleStudioDropDestination }
+  | { readonly kind: "media-drop"; readonly value: NleStudioMediaDropPreview }
+  | { readonly kind: "timeline-cuts"; readonly value: NleStudioTimelineCutsProjection }
+  | { readonly kind: "composition-actions"; readonly value: NleStudioCompositionActionsProjection }
   | { readonly kind: "canvas"; readonly value: NleCanvasScene }
   | { readonly kind: "inspector"; readonly value: NleInspectorScene }
   | { readonly kind: "transition-inspector"; readonly value: NleTransitionInspectorScene }
+  | { readonly kind: "matte-sources"; readonly value: NleStudioMatteSourcesProjection }
   | { readonly kind: "component-inputs"; readonly value: NleStudioComponentInputsProjection }
   | { readonly kind: "media"; readonly value: NleStudioMediaProjection }
   | { readonly kind: "media-library"; readonly value: NleStudioMediaLibraryProjection }
@@ -262,6 +273,7 @@ export type NleStudioTimelineDrop = {
   readonly anchor: string;
   readonly items: readonly string[];
   readonly deltaFrames: number;
+  readonly alignment?: { readonly item: string; readonly edge: "start" | "end"; readonly neighbor: string };
   readonly target:
     | { readonly kind: "track"; readonly track: string }
     | { readonly kind: "gap"; readonly before?: string };
@@ -270,6 +282,53 @@ export type NleStudioTimelineDrop = {
 type NleStudioCompositionOperation = {
   readonly expectedProjectRevision: number;
   readonly composition: string;
+};
+
+export type NleStudioCompositionSelection = NleStudioCompositionOperation & {
+  readonly items: readonly string[];
+};
+
+export type NleStudioMediaDrop = NleStudioCompositionOperation & {
+  readonly kind: "media.drop";
+  readonly media: string;
+  readonly atFrame: number;
+  readonly target: NleStudioDropDestination;
+};
+
+export type NleStudioMediaDropPreview = {
+  readonly target: NleStudioDropDestination;
+  readonly role: "picture" | "audio";
+  readonly startFrame: number;
+  readonly durationFrames: number;
+  readonly preview?: NleStudioTimelinePreview;
+  readonly shifted: readonly string[];
+};
+
+type CompositionActionAvailability = { readonly available: true }
+  | { readonly available: false; readonly diagnostic: string };
+
+export type NleStudioCompositionActionsProjection = {
+  readonly compound: CompositionActionAvailability;
+  readonly nested?: {
+    readonly item: string;
+    readonly makeUnique: CompositionActionAvailability;
+    readonly explode: CompositionActionAvailability;
+  };
+};
+
+export type NleStudioTimelineCut = NleStudioCompositionOperation & {
+  readonly items: readonly string[];
+  readonly atFrame: number;
+};
+
+export type NleStudioTimelineCutsProjection = {
+  readonly items: readonly string[];
+  readonly split: boolean;
+  readonly trimStart: boolean;
+  readonly trimEnd: boolean;
+  readonly freeze?: { readonly item: string } & (
+    { readonly available: true } | { readonly available: false; readonly diagnostic: string }
+  );
 };
 
 type NleStudioTimedPlacement = NleStudioCompositionOperation & {
@@ -288,8 +347,14 @@ type NleStudioOfferingReference = {
   readonly offering: string;
 };
 
+export type NleStudioMatteSourcesProjection = {
+  readonly sources: readonly string[];
+  readonly unavailable?: "no-source" | "no-alternative" | "outside-range" | "locked" | "ineligible";
+};
+
 export type NleStudioTimelineEdit = NleStudioCompositionOperation & (
-  | { readonly kind: "timeline.trim"; readonly item: string; readonly edge: "start" | "end"; readonly atFrame: number }
+  | { readonly kind: "timeline.item-reorder"; readonly item: string; readonly direction: "up" | "down" }
+  | { readonly kind: "timeline.trim"; readonly items: readonly string[]; readonly edge: "start" | "end"; readonly atFrame: number }
   | { readonly kind: "timeline.slip"; readonly item: string; readonly deltaFrames: number }
   | { readonly kind: "timeline.retime"; readonly item: string; readonly rate: TemporalRate }
   | { readonly kind: "timeline.roll"; readonly left: string; readonly right: string; readonly atFrame: number }
@@ -302,7 +367,13 @@ export type NleStudioTimelineEdit = NleStudioCompositionOperation & (
 
 export type NleStudioOperation =
   | NleStudioTimelineDrop
+  | NleStudioMediaDrop
   | NleStudioTimelineEdit
+  | (NleStudioCompositionOperation & {
+      readonly kind: "media.place-on-new-tracks";
+      readonly media: readonly string[];
+      readonly atFrame: number;
+    })
   | (NleStudioCompositionOperation & { readonly kind: "track-lock.set"; readonly track: string; readonly locked: boolean })
   | (NleStudioCompositionOperation & { readonly kind: "timeline.track-reorder"; readonly track: string; readonly before?: string })
   | (NleStudioCompositionOperation & { readonly kind: "clipboard.copy" | "clipboard.cut"; readonly items: readonly string[] })
@@ -313,11 +384,11 @@ export type NleStudioOperation =
       readonly includeAudio?: boolean;
       readonly layout?: NlePictureLayout;
     })
-  | (NleStudioPresentPlacement & {
+  | (NleStudioCompositionOperation & {
       readonly kind: "media.freeze";
       readonly item: string;
-      readonly sampleFrame: number;
-      readonly durationFrames: number;
+      readonly atFrame: number;
+      readonly durationFrames?: number;
     })
   | (NleStudioPresentPlacement & NleStudioOfferingReference & {
       readonly kind: "component.materialize";
@@ -344,6 +415,10 @@ export type NleStudioOperation =
       readonly kind: "transition.resize"; readonly transition: string; readonly durationFrames: number;
     })
   | (NleStudioCompositionOperation & { readonly kind: "transition.remove"; readonly transition: string })
+  | (NleStudioCompositionOperation & {
+      readonly kind: "matte.bind"; readonly content: string; readonly source: string;
+    })
+  | (NleStudioCompositionOperation & { readonly kind: "matte.remove"; readonly matte: string })
   | (NleStudioPresentPlacement & {
       readonly kind: "composition.materialize";
       readonly source: string;

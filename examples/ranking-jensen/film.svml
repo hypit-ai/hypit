@@ -8,7 +8,7 @@
     <picture-layout x="43" y="653" width="634" height="230" fit="fill" />
   </shared-value>
   <composition id="main" name="Ranking the best person Jensen ever dated" width="720" height="1280">
-    <track id="performance-compound-track" name="A-roll + BGM" kind="picture" role="picture" enabled="true">
+    <track id="performance-compound-track" name="A-roll + BGM" kind="picture" role="picture" picture-enabled="true" audio-enabled="true">
       <present id="performance-compound" name="Jensen A-roll + BGM" source="composition" start="0/1" duration="1397/24" enabled="true">
         <composition ref="performance-composition" />
         <source-time>
@@ -21,7 +21,7 @@
         </audio>
       </present>
     </track>
-    <track id="ranking" name="Date ranking board" kind="picture" role="picture" enabled="true">
+    <track id="ranking" name="Date ranking board" kind="picture" role="picture" picture-enabled="true" audio-enabled="true">
       <present id="jensen-date-tier-board" name="Jensen date tier list" source="component" start="0/1" duration="1397/24" enabled="true">
         <component package="@hypit-example/ranking-football-components" symbol="tier-board" />
         <parameters>{"boardHeightRatio":0.4,"entryMotion":"pop-in-place","rows":[{"id":"s","label":"S","color":"#ee5f52"},{"id":"a","label":"A","color":"#f0a04c"},{"id":"b","label":"B","color":"#f0c84d"},{"id":"c","label":"C","color":"#ede356"},{"id":"d","label":"D","color":"#a6da7b"}],"entries":[{"id":"wife","label":"My wife","tier":"d","input":"subject.wife","preset":false,"window":{"start":{"ticks":"10693","timeBase":{"numerator":1,"denominator":8000}},"end":{"ticks":"265","timeBase":{"numerator":1,"denominator":24}}}},{"id":"trump","label":"Trump","tier":"b","input":"subject.trump","preset":false,"window":{"start":{"ticks":"1135627","timeBase":{"numerator":1,"denominator":93750}},"end":{"ticks":"265","timeBase":{"numerator":1,"denominator":12}}}},{"id":"kimberly","label":"Kimberly","tier":"c","input":"subject.kimberly","preset":false,"window":{"start":{"ticks":"560447","timeBase":{"numerator":1,"denominator":24000}},"end":{"ticks":"265","timeBase":{"numerator":1,"denominator":8}}}},{"id":"alice","label":"Alice","tier":"a","input":"subject.alice","preset":false,"window":{"start":{"ticks":"34046313","timeBase":{"numerator":1,"denominator":1000000}},"end":{"ticks":"265","timeBase":{"numerator":1,"denominator":6}}}},{"id":"jacket","label":"My jacket","tier":"s","input":"subject.jacket","preset":false,"window":{"start":{"ticks":"68071","timeBase":{"numerator":1,"denominator":1500}},"end":{"ticks":"1397","timeBase":{"numerator":1,"denominator":24}}}}]}</parameters>
@@ -38,7 +38,7 @@
         </picture>
       </present>
     </track>
-    <track id="broll" name="B-roll 1" kind="picture" role="picture" enabled="true">
+    <track id="broll" name="B-roll 1" kind="picture" role="picture" picture-enabled="true" audio-enabled="true">
       <present id="broll-01-forty-years" name="B-roll 01.1 · forty-years" source="media" start="1181/500" duration="3073/1000" enabled="true">
         <media path="media/broll-wife-84-years/reference.media.json" />
         <source-time>
@@ -487,7 +487,19 @@
         </picture>
       </present>
     </track>
-    <track id="broll-2" name="B-roll 2" kind="picture" role="picture" enabled="true">
+    <track id="honeytrap-matte-track" name="遮罩源" kind="picture" role="picture" picture-enabled="true" audio-enabled="true">
+      <present id="honeytrap-matte-ellipse" name="椭圆遮罩" source="component" start="76441/6000" duration="10607/2000" enabled="true">
+        <component package="@hypit/picture-effects" symbol="matte-ellipse" />
+        <parameters>{}</parameters>
+        <source-time>
+          <linear target-start="0/1" target-end="10607/2000" source-start="0/1" rate="0/1" />
+        </source-time>
+        <picture>
+          <layout x="382" y="588" width="300" height="318" fit="fill" />
+        </picture>
+      </present>
+    </track>
+    <track id="broll-2" name="B-roll 2" kind="picture" role="picture" picture-enabled="true" audio-enabled="true">
       <present id="broll-01-same-version" name="B-roll 01.2 · same-version" source="media" start="49883/16000" duration="37077/16000" enabled="true">
         <media path="media/broll-wife-version-update/same-version-png.media.json" />
         <source-time>
@@ -741,7 +753,7 @@
         </picture>
       </present>
     </track>
-    <track id="broll-3" name="B-roll 3" kind="picture" role="picture" enabled="true">
+    <track id="broll-3" name="B-roll 3" kind="picture" role="picture" picture-enabled="true" audio-enabled="true">
       <present id="broll-01-zero-updates" name="B-roll 01.3 · zero-updates" source="media" start="17/4" duration="237/200" enabled="true">
         <media path="media/broll-wife-version-update/zero-updates-png.media.json" />
         <source-time>
@@ -826,7 +838,7 @@
         </picture>
       </present>
     </track>
-    <track id="broll-4" name="B-roll 4" kind="picture" role="picture" enabled="true">
+    <track id="broll-4" name="B-roll 4" kind="picture" role="picture" picture-enabled="true" audio-enabled="true">
       <present id="broll-15-new-ceo" name="B-roll 15.4 · new-ceo" source="media" start="21478/375" duration="2801/3000" enabled="true">
         <media path="media/broll-jacket-ceo/source-user.media.json" />
         <source-time>
@@ -861,7 +873,7 @@
         </picture>
       </present>
     </track>
-    <track id="programme-filters" name="滤镜轨道" kind="picture" role="filter" enabled="true">
+    <track id="programme-filters" name="滤镜轨道" kind="picture" role="filter" picture-enabled="true" audio-enabled="true">
       <adjust id="programme-warm-film" name="淡暖胶片" package="@hypit/picture-effects" symbol="filter" start="0/1" duration="1397/24" enabled="true">
         <parameters>{"kind":"constant","state":{"brightness":1.025,"contrast":1.055,"saturation":0.9,"sepia":0.12}}</parameters>
         <control-time>
@@ -869,7 +881,7 @@
         </control-time>
       </adjust>
     </track>
-    <track id="title" name="Title" kind="picture" role="text" enabled="true">
+    <track id="title" name="Title" kind="picture" role="text" picture-enabled="true" audio-enabled="true">
       <present id="jensen-ranking-title" name="Ranking the best person Jensen ever dated" source="component" start="0/1" duration="1397/24" enabled="true">
         <component package="@hypit/text-fine" symbol="fine" />
         <parameters>{"typography":{"fontWeight":900,"lineHeight":1.02,"fonts":["Arial Black","@fontsource-variable/montserrat","Arial","Apple Color Emoji","Segoe UI Emoji","sans-serif"],"fontSizePx":42,"letterSpacingPx":-1.2},"paints":[{"kind":"fill","paint":{"kind":"solid","color":"#070707"}}],"children":[{"kind":"text","id":"title-first","text":"RANKING THE BEST PERSON"},{"kind":"break","id":"title-break"},{"kind":"text","id":"title-second","text":"JENSEN EVER DATED 🔥💦🍑"}],"placement":{"kind":"flow","paddingPx":{"top":5,"right":20,"bottom":4,"left":20},"inlineAlign":"center","blockAlign":"start","wrap":"none","overflow":"visible","columns":1,"columnGapPx":0,"background":"#f4f2e8"}}</parameters>
@@ -881,7 +893,7 @@
         </picture>
       </present>
     </track>
-    <track id="captions" name="Captions" kind="picture" role="subtitle" enabled="true">
+    <track id="captions" name="Captions" kind="picture" role="subtitle" picture-enabled="true" audio-enabled="true">
       <present id="wife-captions:ranking-jensen.caption:cue:1" source="component" start="1409/3000" duration="2029/1500" enabled="true">
         <component package="@hypit/caption-fine" symbol="fine" />
         <parameters>{"caption":{"cueId":"ranking-jensen.caption:cue:1","documentId":"ranking-jensen.caption","role":"HOST","units":[{"end":{"ticks":"613","timeBase":{"denominator":3000,"numerator":1}},"id":"ranking-jensen.caption:unit:1","start":{"ticks":"1","timeBase":{"denominator":12,"numerator":1}},"wordIds":["ranking-jensen.caption:unit:1:word:1"]},{"end":{"ticks":"182","timeBase":{"denominator":375,"numerator":1}},"id":"ranking-jensen.caption:unit:2","start":{"ticks":"793","timeBase":{"denominator":3000,"numerator":1}},"wordIds":["ranking-jensen.caption:unit:2:word:1"]},{"end":{"ticks":"2059","timeBase":{"denominator":3000,"numerator":1}},"id":"ranking-jensen.caption:unit:3","start":{"ticks":"1819","timeBase":{"denominator":3000,"numerator":1}},"wordIds":["ranking-jensen.caption:unit:3:word:1"]},{"end":{"ticks":"20807","timeBase":{"denominator":24000,"numerator":1}},"id":"ranking-jensen.caption:unit:4","start":{"ticks":"2299","timeBase":{"denominator":3000,"numerator":1}},"wordIds":["ranking-jensen.caption:unit:4:word:1"]},{"end":{"ticks":"476","timeBase":{"denominator":375,"numerator":1}},"id":"ranking-jensen.caption:unit:5","start":{"ticks":"20807","timeBase":{"denominator":24000,"numerator":1}},"wordIds":["ranking-jensen.caption:unit:5:word:1"]}],"words":[{"attributes":[],"id":"ranking-jensen.caption:unit:1:word:1","separatorBefore":"","text":"My","unitId":"ranking-jensen.caption:unit:1"},{"attributes":[],"id":"ranking-jensen.caption:unit:2:word:1","separatorBefore":" ","text":"wife","unitId":"ranking-jensen.caption:unit:2"},{"attributes":[],"id":"ranking-jensen.caption:unit:3:word:1","separatorBefore":" ","text":"is","unitId":"ranking-jensen.caption:unit:3"},{"attributes":[],"id":"ranking-jensen.caption:unit:4:word:1","separatorBefore":" ","text":"D","unitId":"ranking-jensen.caption:unit:4"},{"attributes":[],"id":"ranking-jensen.caption:unit:5:word:1","separatorBefore":" ","text":"tier.","unitId":"ranking-jensen.caption:unit:5"}]}}</parameters>
@@ -1444,7 +1456,7 @@
         </picture>
       </present>
     </track>
-    <track id="reveal-flash" name="Tier reveal flash" kind="picture" role="effect" enabled="true">
+    <track id="reveal-flash" name="Tier reveal flash" kind="picture" role="effect" picture-enabled="true" audio-enabled="true">
       <present id="wife-tier-reveal-flash" name="My wife full-frame reveal flash" source="component" start="10693/8000" duration="3/8" enabled="true">
         <component package="@hypit-example/ranking-football-components" symbol="reveal-flash" />
         <parameters>{"intensity":0.72,"attackFrames":2,"holdFrames":1,"decayFrames":5,"color":"#78ff18","glowColor":"#f1ffe8"}</parameters>
@@ -1496,7 +1508,7 @@
         </picture>
       </present>
     </track>
-    <track id="reveal-sfx" name="Tier reveal sound" kind="audio" role="audio" enabled="true">
+    <track id="reveal-sfx" name="Tier reveal sound" kind="audio" role="audio" picture-enabled="false" audio-enabled="true">
       <present id="wife-tier-reveal-sfx" name="My wife tier reveal" source="media" start="10693/8000" duration="33/50" enabled="true">
         <media path="media/ranking-reveal-sfx/ranking-reveal-sfx.media.json" />
         <source-time>
@@ -1568,10 +1580,11 @@
         </audio>
       </present>
     </track>
-    <track id="track-b2f4c420" name="新轨道" kind="picture" role="picture" enabled="true">
+    <track id="track-b2f4c420" name="新轨道" kind="picture" role="picture" picture-enabled="true" audio-enabled="true">
     </track>
-    <track id="track-da94ed15" name="新轨道" kind="picture" role="picture" enabled="true">
+    <track id="track-da94ed15" name="新轨道" kind="picture" role="picture" picture-enabled="true" audio-enabled="true">
     </track>
+    <matte id="honeytrap-ellipse-matte" content="broll-05-honeytrap" matte="honeytrap-matte-ellipse" />
     <group id="broll-beat-01">
       <member item="broll-01-forty-years" />
       <member item="broll-01-same-version" />
@@ -1629,7 +1642,7 @@
     </group>
   </composition>
   <composition id="performance-composition" name="Jensen A-roll + BGM" width="720" height="1280">
-    <track id="music" name="Music bed 1" kind="audio" role="audio" enabled="true">
+    <track id="music" name="Music bed 1" kind="audio" role="audio" picture-enabled="false" audio-enabled="true">
       <present id="thank-you-instrumental-opening" name="THANK YOU instrumental — opening" source="media" start="0/1" duration="188/5" enabled="true">
         <media path="media/bgm-thank-you/bgm-thank-you.media.json" />
         <source-time>
@@ -1645,7 +1658,7 @@
         </audio>
       </present>
     </track>
-    <track id="music-return" name="Music bed 2" kind="audio" role="audio" enabled="true">
+    <track id="music-return" name="Music bed 2" kind="audio" role="audio" picture-enabled="false" audio-enabled="true">
       <present id="thank-you-instrumental-return" name="THANK YOU instrumental — return" source="media" start="187/5" duration="2497/120" enabled="true">
         <media path="media/bgm-thank-you/bgm-thank-you.media.json" />
         <source-time>
@@ -1661,7 +1674,7 @@
         </audio>
       </present>
     </track>
-    <track id="performance" name="Jensen A-roll" kind="picture" role="picture" enabled="true">
+    <track id="performance" name="Jensen A-roll" kind="picture" role="picture" picture-enabled="true" audio-enabled="true">
       <present id="aroll-wife-use" name="My wife A-roll" source="media" start="0/1" duration="265/24" enabled="true">
         <media path="media/aroll-wife/aroll-wife.media.json" />
         <source-time>
@@ -1724,7 +1737,7 @@
     </group>
   </composition>
   <composition id="broll-09-crossfade-composition" name="B-roll 09 · Side effects → Wife lost" width="720" height="1280">
-    <track id="broll-09-crossfade-shots" name="Transition shots" kind="picture" role="picture" enabled="true">
+    <track id="broll-09-crossfade-shots" name="Transition shots" kind="picture" role="picture" picture-enabled="true" audio-enabled="true">
       <present id="broll-09-side-effects" name="B-roll 09.1 · side-effects" source="media" start="0/1" duration="88/75" enabled="true">
         <media path="media/broll-kimberly-side-effects/final-no-wife-no-job-v3.media.json" />
         <source-time>
@@ -1801,7 +1814,7 @@
     </group>
   </composition>
   <composition id="broll-11-crossfade-composition" name="B-roll 11 · Hermès → H100" width="720" height="1280">
-    <track id="broll-11-crossfade-shots" name="Transition shots" kind="picture" role="picture" enabled="true">
+    <track id="broll-11-crossfade-shots" name="Transition shots" kind="picture" role="picture" picture-enabled="true" audio-enabled="true">
       <present id="broll-11-hermes" name="B-roll 11.1 · hermes" source="media" start="0/1" duration="4603/3000" enabled="true">
         <media path="media/broll-alice-hermes-h100/final-hermes-stage.media.json" />
         <source-time>

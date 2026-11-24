@@ -40,6 +40,7 @@ export type NleCommand =
     }
   | { readonly kind: "component-value-binding.remove"; readonly item: string; readonly slot: string }
   | { readonly kind: "composition.add"; readonly composition: NleComposition; readonly before?: string }
+  | { readonly kind: "composition.move"; readonly id: string; readonly before?: string }
   | {
       readonly kind: "composition.update";
       readonly id: string;
@@ -53,10 +54,12 @@ export type NleCommand =
       readonly kind: "track.update";
       readonly id: string;
       readonly name?: string;
-      readonly enabled?: boolean;
+      readonly pictureEnabled?: boolean;
+      readonly audioEnabled?: boolean;
     }
   | { readonly kind: "track.remove"; readonly id: string }
   | { readonly kind: "item.add"; readonly track: string; readonly item: NleItem; readonly before?: string }
+  | { readonly kind: "item.reorder"; readonly id: string; readonly before?: string }
   | {
       readonly kind: "item.update";
       readonly id: string;
@@ -146,6 +149,8 @@ export type NleCommand =
   | { readonly kind: "group.add"; readonly composition: string; readonly group: NleEditGroup }
   | { readonly kind: "group.replace"; readonly composition: string; readonly group: NleEditGroup }
   | { readonly kind: "group.remove"; readonly composition: string; readonly id: string }
+  | { readonly kind: "group.link"; readonly composition: string; readonly group: NleEditGroup }
+  | { readonly kind: "group.unlink"; readonly composition: string; readonly id: string; readonly items: readonly string[] }
   | { readonly kind: "item.replace"; readonly item: NleItem }
   | { readonly kind: "item.remove"; readonly ids: readonly string[] };
 
@@ -160,9 +165,10 @@ type MutableItem = NleItem & {
   enabled: boolean;
 };
 
-type MutableTrack = Omit<NleTrack, "name" | "enabled" | "items"> & {
+type MutableTrack = Omit<NleTrack, "name" | "pictureEnabled" | "audioEnabled" | "items"> & {
   name: string;
-  enabled: boolean;
+  pictureEnabled: boolean;
+  audioEnabled: boolean;
   items: MutableItem[];
 };
 
@@ -197,6 +203,12 @@ function assertCompleteGroupMove(project: MutableProject, moving: ReadonlySet<st
       }
     }
   }
+}
+
+function removeGroupMembers(group: NleEditGroup, leaving: ReadonlySet<string>): NleEditGroup[] {
+  const items = group.items.filter(item => !leaving.has(item));
+  if (items.length === group.items.length) return [group];
+  return items.length >= 2 ? [{ ...group, items }] : [];
 }
 
 function mutableTrackLocation(project: MutableProject, id: string): {
@@ -324,6 +336,7 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
     throw new Error("NLE Transaction must contain at least one command.");
   }
   const next = structuredClone(project) as MutableProject;
+  const occupiedTracks = new Set(next.compositions.flatMap(composition => composition.tracks.filter(track => track.items.length > 0)));
   for (const command of transaction.commands) {
     switch (command.kind) {
       case "project.update":
@@ -369,6 +382,13 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         next.compositions = insert(next.compositions, structuredClone(command.composition) as MutableComposition,
           command.before);
         break;
+      case "composition.move": {
+        const composition = mutableComposition(next, command.id);
+        if (command.before === composition.id) break;
+        const remaining = next.compositions.filter(candidate => candidate.id !== composition.id);
+        next.compositions = insert(remaining, composition, command.before);
+        break;
+      }
       case "composition.update": {
         const composition = mutableComposition(next, command.id);
         if (command.name !== undefined) (composition as { name: string }).name = command.name;
@@ -397,9 +417,12 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
         break;
       }
       case "track.update": {
+        const fields = Object.keys(command).filter(key => !["kind", "id", "name", "pictureEnabled", "audioEnabled"].includes(key));
+        if (fields.length > 0) throw new Error(`NLE Track update contains unknown fields: ${fields.join(", ")}.`);
         const track = mutableTrack(next, command.id);
         if (command.name !== undefined) track.name = command.name;
-        if (command.enabled !== undefined) track.enabled = command.enabled;
+        if (command.pictureEnabled !== undefined) track.pictureEnabled = command.pictureEnabled;
+        if (command.audioEnabled !== undefined) track.audioEnabled = command.audioEnabled;
         break;
       }
       case "track.remove": {
@@ -411,6 +434,14 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       case "item.add": {
         const track = mutableTrack(next, command.track);
         track.items = insert(track.items, structuredClone(command.item) as MutableItem, command.before);
+        break;
+      }
+      case "item.reorder": {
+        const { track, item } = mutableItem(next, command.id);
+        if (command.before !== item.id) {
+          const remaining = track.items.filter(candidate => candidate !== item);
+          track.items = insert(remaining, item, command.before);
+        }
         break;
       }
       case "item.update": {
@@ -650,13 +681,44 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
       case "group.add":
         mutableComposition(next, command.composition).groups.push(structuredClone(command.group));
         break;
+      case "group.link": {
+        const composition = mutableComposition(next, command.composition);
+        const requested = command.group.items;
+        const items = new Set<string>(Array.isArray(requested) ? requested : []);
+        if (items.size < 2 || items.size !== requested.length) {
+          throw new Error("NLE Group link requires at least two distinct Items.");
+        }
+        const affected = composition.groups.filter(group => group.items.some(item => items.has(item)));
+        for (const group of affected) {
+          if (!group.items.every(item => items.has(item))) {
+            throw new Error(`NLE Group link requires all members of Group ${group.id}.`);
+          }
+        }
+        const existing = affected.length === 1 ? affected[0] : undefined;
+        if (existing !== undefined) {
+          composition.groups[composition.groups.indexOf(existing)] = { ...existing, items: [...items] };
+        } else {
+          composition.groups = composition.groups.filter(group => !affected.includes(group));
+          composition.groups.push(structuredClone(command.group));
+        }
+        break;
+      }
       case "group.replace":
-      case "group.remove": {
+      case "group.remove":
+      case "group.unlink": {
         const { groups } = mutableComposition(next, command.composition);
         const id = command.kind === "group.replace" ? command.group.id : command.id;
         const index = groups.findIndex(group => group.id === id);
         if (index < 0) throw new Error(`Unknown NLE Group: ${id}.`);
-        if (command.kind === "group.replace") groups[index] = structuredClone(command.group);
+        const group = groups[index]!;
+        if (command.kind === "group.unlink") {
+          const requested = command.items;
+          const items = new Set<string>(Array.isArray(requested) ? requested : []);
+          if (items.size === 0 || items.size !== requested.length || [...items].some(item => !group.items.includes(item))) {
+            throw new Error(`NLE Group unlink requires distinct members of Group ${id}.`);
+          }
+          groups.splice(index, 1, ...removeGroupMembers(group, items));
+        } else if (command.kind === "group.replace") groups[index] = structuredClone(command.group);
         else groups.splice(index, 1);
         break;
       }
@@ -675,17 +737,16 @@ export function applyNleTransaction(project: NleProject, transaction: NleTransac
           track.items.splice(track.items.indexOf(item), 1);
         }
         for (const composition of affected) {
-          composition.groups = composition.groups.flatMap(group => {
-            const items = group.items.filter(id => !ids.has(id));
-            if (items.length === group.items.length) return [group];
-            return items.length >= 2 ? [{ ...group, items }] : [];
-          });
+          composition.groups = composition.groups.flatMap(group => removeGroupMembers(group, ids));
         }
         break;
       }
       default:
         throw new Error(`Unknown NLE command: ${String((command as { readonly kind?: unknown }).kind)}.`);
     }
+  }
+  for (const composition of next.compositions) {
+    composition.tracks = composition.tracks.filter(track => track.items.length > 0 || !occupiedTracks.has(track));
   }
   assertNleProject(next);
   return structuredClone(next);

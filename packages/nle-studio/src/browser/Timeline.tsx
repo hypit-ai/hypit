@@ -1,39 +1,53 @@
-import type { NleTimelineSceneItem, NleTimelineSceneTrack } from "@hypit/nle/surface";
+import type { NleTimelineScene, NleTimelineSceneItem, NleTimelineSceneTrack } from "@hypit/nle/surface";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import {
-  ArrowLeft, AudioLines, CircleMinus, CirclePlus, Group, Layers, Link2, Lock, Magnet,
-  PanelLeftClose, PanelRightClose, Redo2, Scan, Scissors, Snowflake, Trash2, Undo2, Unlock,
-  Volume2, VolumeX,
+  ArrowLeft, AudioLines, CircleMinus, CirclePlus, Copy, Eye, EyeOff, Group, Layers, Lock, LogIn, Magnet,
+  PanelLeftClose, PanelRightClose, Redo2, Scan, Scissors, Snowflake, Trash2, Undo2, Unlink2, Unlock,
+  Ungroup, Volume2, VolumeX, X,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
-import type { NleStudioOpenProjection, NleStudioProcessAddress, NleStudioProcessEdit } from "../protocol.js";
+import type { NleStudioCompositionActionsProjection, NleStudioMatteSourcesProjection, NleStudioOpenProjection, NleStudioProcessAddress, NleStudioProcessEdit,
+  NleStudioTimelineCutsProjection } from "../protocol.js";
 import { IconButton } from "./common.js";
 import { timecode } from "./timecode.js";
-import { studioIcons } from "./studio-icons.js";
+import { studioIcons, timelineBadgeIcons, unavailableTrackIcons } from "./studio-icons.js";
 import { labelWidth, rowHeight, rowSize, rulerHeight, snapTimelineEdges, timelineItemLabel, timelineEndPadding,
-  timelineOrigin, timelineSnapBoundaries, timelineStartPadding } from "./timelineGeometry.js";
+  timelineOrigin, timelineSnapBoundaries, timelineStartPadding, type TimelineSnap } from "./timelineGeometry.js";
 import { ToolSelector, type TimelineTool } from "./ToolSelector.js";
 import { useTimelineSeek } from "./useTimelineSeek.js";
 import { useTrackReorder } from "./useTrackReorder.js";
-import { useItemGesture, type ItemDropIntent } from "./useItemGesture.js";
-import { TimelineSourcePreview, useTimelineMedia } from "./TimelineMedia.js";
+import { useItemGesture, type ItemDropContinuation, type ItemDropIntent } from "./useItemGesture.js";
+import { TimelineSourcePreview, useTimelineMedia, type TimelinePreviewTrim } from "./TimelineMedia.js";
 import { TimelineRuler } from "./TimelineRuler.js";
 
-import { readDropDestination } from "./api.js";
+import { readCompositionActions, readDropDestination, readMatteSources, readTimelineCuts } from "./api.js";
 import { useTimelineViewport } from "./useTimelineViewport.js";
-import type { MediaDrop } from "./mediaDrag.js";
+import type { MediaDrop, MediaPlacementDraft } from "./mediaDrag.js";
 import type { NleStudioDropDestination } from "../protocol.js";
-import { CompositionActions, NewCompositionButton } from "./CompositionActions.js";
-import { resolveCompoundSelection } from "../compound-selection.js";
+import { CompositionTabs } from "./CompositionTabs.js";
 import { TrackMenu } from "./TrackMenu.js";
-import { ClipMenu } from "./ClipMenu.js";
-import { directionalSelection, editableSelection, selectionAtFrame } from "./selection.js";
+import { ClipMenu, type ClipMenuAction } from "./ClipMenu.js";
+import { directionalSelection, editableSelection, resolveGroupSelection, selectionAtFrame } from "./selection.js";
 import { fadeMotion, softEase } from "./motion.js";
 
 import { useMarqueeSelection } from "./useMarqueeSelection.js";
 
 type TrimEdge = "start" | "end";
-type PendingTrim = { readonly item: string; readonly edge: TrimEdge; readonly atFrame: number };
+
+const matteSourceMessages = {
+  "no-source": "时间线里没有其他画面片段",
+  "no-alternative": "已绑定遮罩，暂无其他来源",
+  "outside-range": "遮罩源须覆盖片段的完整时段",
+  locked: "解锁相关轨道后才能选源",
+  ineligible: "当前片段和遮罩源无法配对",
+} satisfies Record<NonNullable<NleStudioMatteSourcesProjection["unavailable"]>, string>;
+type PendingTrim = TimelinePreviewTrim & { readonly item: string };
+type TransitionWindow = { readonly id: string; readonly start: number; readonly end: number; readonly middle: number };
+type ClipTransitions = { readonly incoming?: TransitionWindow; readonly outgoing?: TransitionWindow };
+
+function canBindMatte(item: NleTimelineSceneItem | undefined): boolean {
+  return item?.kind === "present" && item.enabled && item.signals.picture && item.affordances.move;
+}
 
 function itemWindow(item: NleTimelineSceneItem, pending: readonly PendingTrim[]) {
   let start = item.startFrame, end = start + item.durationFrames;
@@ -103,6 +117,13 @@ function ProcessTimingHandle({ timing, duration, pixels, disabled, onSelect, onR
       }}
       onLostPointerCapture={stop} onPointerCancel={stop}
       onKeyDown={event => {
+        if (event.key === "Escape" && drag.current !== undefined) {
+          event.preventDefault();
+          const pointer = drag.current.pointer;
+          stop();
+          if (event.currentTarget.hasPointerCapture(pointer)) event.currentTarget.releasePointerCapture(pointer);
+          return;
+        }
         const delta = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
         if (delta === 0) return;
         event.preventDefault();
@@ -113,18 +134,20 @@ function ProcessTimingHandle({ timing, duration, pixels, disabled, onSelect, onR
   </div>;
 }
 
-export function Timeline({ session, frame, playing, reveal, selection, busy, gestureBlocked, onSeek, onSelect, onMove, onTrim, onTrimGesture, onSplit, onRemove,
-  onTrackEnabled, onTrackLocked, onTrackMove, onTrackRename, onTrackRemove, onCloseGap, onRippleRemove, onComposition,
+export function Timeline({ session, frame, playing, reveal, selection, busy, gestureBlocked, onSeek, onSelect, onMove, onItemReorder, onTrim, onTrimGesture, onSplit, onRemove,
+  onTrackSignal, onTrackLocked, onTrackMove, onCloseGap, onRippleRemove, onComposition, onCompositionMove,
   onCompositionCreate, onCompositionEdit, onCompositionInsert, onCompositionCopy, onCompositionRoot, onCompositionRemove, onEnterComposition, onReturnComposition,
-  onCompound, onCompoundUnique, onCompoundExplode, onToggleGroup, canToggleGroup, groupLabel,
-  onDetachAudio, canDetachAudio, canUndo, canRedo, onUndo, onRedo, drop, canFreeze, onFreeze, selectedProcess, onSelectProcess, onProcessTiming, selectedTransition, onSelectTransition, ref }: {
+  onCompound, onCompoundUnique, onCompoundExplode, onEditGroup,
+  onBindMatte, onRemoveMatte, onDetachAudio, canUndo, canRedo, onUndo, onRedo, drop, mediaPlacement, fileDrop, isSampledMedia, onFreeze, selectedProcess, onSelectProcess, onProcessTiming, selectedTransition, onSelectTransition, ref }: {
   readonly ref?: Ref<HTMLElement>;
   readonly selectedTransition: string | undefined;
   readonly onSelectTransition: (id: string) => void;
   readonly session: NleStudioOpenProjection;
   readonly drop: MediaDrop | undefined;
-  readonly canFreeze: boolean;
-  readonly onFreeze: () => void;
+  readonly mediaPlacement: MediaPlacementDraft | undefined;
+  readonly fileDrop: { readonly frame: number; readonly pending: boolean } | undefined;
+  readonly isSampledMedia: (item: string) => boolean;
+  readonly onFreeze: (item: string, atFrame: number) => void;
   readonly onCompositionCreate: (name: string, canvas: { width: number; height: number }) => void;
   readonly onCompositionEdit: (id: string, fields: { name?: string; canvas?: { width: number; height: number } }) => void;
   readonly onCompositionInsert: (id: string) => void;
@@ -132,8 +155,6 @@ export function Timeline({ session, frame, playing, reveal, selection, busy, ges
   readonly onCompositionRoot: (id: string) => void;
   readonly onCompositionRemove: (id: string) => void;
   readonly onRippleRemove: (items: readonly NleTimelineSceneItem[]) => void;
-  readonly onTrackRename: (track: string, name: string) => void;
-  readonly onTrackRemove: (track: string) => void;
   readonly onCloseGap: (track: string, atFrames: readonly number[]) => void;
   readonly onCompoundUnique: (item: string) => void;
   readonly onCompoundExplode: (item: string) => void;
@@ -145,23 +166,24 @@ export function Timeline({ session, frame, playing, reveal, selection, busy, ges
   readonly gestureBlocked: boolean;
   readonly onSeek: (frame: number) => void;
   readonly onSelect: (ids: readonly string[]) => void;
-  readonly onMove: (intent: ItemDropIntent) => Promise<void>;
-  readonly onTrim: (items: readonly NleTimelineSceneItem[], edge: "start" | "end", atFrame: number) => void;
+  readonly onMove: (intent: ItemDropIntent, continuation?: ItemDropContinuation) => Promise<void>;
+  readonly onItemReorder: (item: string, direction: "up" | "down") => void;
+  readonly onTrim: (items: readonly string[], edge: "start" | "end", atFrame: number) => void;
   readonly onTrimGesture: (item: string, edge: TrimEdge, atFrame: number) => Promise<void>;
   readonly onSplit: (items: readonly string[], atFrame: number) => void;
   readonly onRemove: () => void;
-  readonly onTrackEnabled: (track: string, enabled: boolean) => void;
+  readonly onTrackSignal: (track: string, signal: "picture" | "audio", enabled: boolean) => void;
   readonly onTrackLocked: (track: string, locked: boolean) => void;
-  readonly onTrackMove: (track: string, before?: string) => void;
+  readonly onTrackMove: (track: string, before?: string) => Promise<void>;
   readonly onComposition: (composition: string) => void;
+  readonly onCompositionMove: (composition: string, before?: string) => Promise<void>;
   readonly onEnterComposition: (item: string) => void;
   readonly onReturnComposition: () => void;
-  readonly onCompound: () => void;
-  readonly onToggleGroup: () => void;
-  readonly canToggleGroup: boolean;
-  readonly groupLabel: "组合" | "取消组合" | "移出组合";
-  readonly onDetachAudio: () => void;
-  readonly canDetachAudio: boolean;
+  readonly onCompound: (items: readonly string[]) => void;
+  readonly onEditGroup: (items: readonly string[]) => void;
+  readonly onBindMatte: (content: string, source: string) => void;
+  readonly onRemoveMatte: (matte: string) => void;
+  readonly onDetachAudio: (item: string) => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
   readonly canUndo: boolean;
@@ -174,19 +196,21 @@ export function Timeline({ session, frame, playing, reveal, selection, busy, ges
   const reduced = useReducedMotion();
   const present = useIsPresent();
   const scroller = useRef<HTMLDivElement>(null);
-  const tabList = useRef<HTMLDivElement>(null);
   const lastClipEnd = useMemo(() => scene.tracks.reduce((latest, track) => track.items.reduce(
     (end, item) => Math.max(end, item.startFrame + item.durationFrames), latest), 0), [scene.tracks]);
   const { viewport, zoom, minZoom, maxZoom, zoomPosition, fit, changeZoomPosition, stepZoom, contentWidth: width } = useTimelineViewport(
     scroller, labelWidth, JSON.stringify([session.project.name, session.project.document, scene.composition]),
-    lastClipEnd, scene.maximumFrame, fps, { frame, playing, reveal });
+    lastClipEnd, scene.maximumFrame,
+    fps, { frame, playing, reveal });
   const pixels = zoom / fps;
   const playheadPosition = timelineStartPadding + frame * pixels;
   const playheadVisible = playheadPosition >= viewport.left && playheadPosition < viewport.left + viewport.width;
   const timeViewport = { ...viewport, left: viewport.left - timelineStartPadding };
   const endFrame = Math.floor((width - timelineEndPadding) / pixels);
   const [snap, setSnap] = useState(true), [tool, setTool] = useState<TimelineTool>("select");
-  const [draft, setDraft] = useState<{ readonly id: string; readonly start: number; readonly duration: number; readonly snapFrame?: number }>();
+  const [draft, setDraft] = useState<TimelinePreviewTrim & {
+    readonly id: string; readonly start: number; readonly duration: number; readonly snapFrame?: number;
+  }>();
   const [pendingTrims, setPendingTrims] = useState<readonly PendingTrim[]>([]);
   const [cutCursor, setCutCursor] = useState<{ readonly track: string; readonly frame: number }>();
   const cancelTrim = useRef<() => void>(() => undefined);
@@ -214,10 +238,15 @@ export function Timeline({ session, frame, playing, reveal, selection, busy, ges
       return next.size === previous.size && [...next].every(id => previous.has(id)) ? previous : next;
     });
   }, [scene.tracks]);
-  const visibleTracks = useMemo(() => scene.tracks.filter(track => track.items.length > 0 || emptyDestinations.has(track.id)),
+  const displayedTracks = useMemo(() => scene.tracks.filter(track => track.items.length > 0 || emptyDestinations.has(track.id)),
     [scene.tracks, emptyDestinations]);
+  const reorder = useTrackReorder(scroller, displayedTracks, busy || gestureBlocked, onTrackMove);
+  const visibleTracks = reorder.ordered;
+  const mediaTarget = mediaPlacement?.target;
+  const mediaGap = mediaTarget !== undefined && "gap" in mediaTarget ? mediaTarget : undefined;
+  const shiftedByMedia = useMemo(() => new Set(mediaPlacement?.shifted), [mediaPlacement?.shifted]);
+  const shift = mediaPlacement?.position.durationFrames ?? 0;
   const trackLayout = useMemo(() => JSON.stringify(visibleTracks.map(track => [track.id, rowSize(track)])), [visibleTracks]);
-  const reorder = useTrackReorder(scroller, scene.tracks, session.status.projectRevision, busy, onTrackMove);
   const itemGesture = useItemGesture({ scene, scroller, pixels, frame, snap, busy: gestureBlocked, selection, onSelect, onMove });
   const [resolvedDrop, setResolvedDrop] = useState<{ key: string; value: NleStudioDropDestination }>();
   const itemDrag = itemGesture.gesture;
@@ -236,42 +265,212 @@ export function Timeline({ session, frame, playing, reveal, selection, busy, ges
     return () => { active = false; cancelAnimationFrame(animation); };
   }, [dropIntent]);
   const resolved = resolvedDrop?.key === dropIntent ? resolvedDrop?.value : undefined;
-  const highlightedTrack = drop?.track ?? (resolved === undefined ? itemDrag?.sourceTrack : "track" in resolved ? resolved.track : undefined);
+  const itemTarget = resolved ?? (intent?.target.kind === "track" ? { track: intent.target.track }
+    : intent?.target.kind === "gap" ? { gap: true, before: intent.target.before } : undefined);
+  const highlightedTrack = (mediaTarget !== undefined && "track" in mediaTarget ? mediaTarget.track : undefined)
+    ?? drop?.track ?? (itemTarget !== undefined && "track" in itemTarget ? itemTarget.track : undefined);
   const rows = Array.from(scroller.current?.querySelectorAll<HTMLElement>(".nle-track[data-track-id]") ?? [])
     .filter(row => visibleTracks.some(track => track.id === row.dataset.trackId));
-  const resolvedGap = resolved && "gap" in resolved ? resolved : undefined;
+  const resolvedGap = mediaGap ?? (itemTarget && "gap" in itemTarget ? itemTarget : undefined);
   const after = rows.at(-1);
-  const insertion = reorder.position?.top ?? (resolvedGap === undefined ? undefined
-    : resolvedGap.before === undefined ? (after === undefined ? undefined : after.offsetTop + after.offsetHeight)
-      : rows.find(row => row.dataset.trackId === resolvedGap.before)?.offsetTop);
-  const guide = (resolved === undefined ? undefined : itemDrag?.snapFrame) ?? draft?.snapFrame ?? drop?.snapFrame ?? drop?.transitionCut?.frame;
-  const playheadSnap = guide === frame || seek.snapped ? " adsorbed" : "";
   const trackPadding = Math.max(rowHeight, (viewport.height - rulerHeight - visibleTracks.reduce((height, track) => height + rowSize(track), 0)) / 2);
+  const insertion = reorder.position?.top ?? (resolvedGap === undefined ? undefined
+    : resolvedGap.before === undefined ? (after === undefined ? rulerHeight + trackPadding : after.offsetTop + after.offsetHeight)
+      : rows.find(row => row.dataset.trackId === resolvedGap.before)?.offsetTop);
+  const guide = itemDrag?.snapFrame ?? draft?.snapFrame ?? mediaPlacement?.snapFrame ?? drop?.snapFrame ?? drop?.transitionCut?.frame;
+  const playheadSnap = guide === frame || seek.snapped ? " adsorbed" : "";
   const previewViewport = useTimelineMedia(session.timeline, visibleTracks, pixels, timeViewport, trackPadding);
+  const previewTrims = useMemo(() => {
+    const edits = new Map<string, TimelinePreviewTrim[]>();
+    for (const trim of pendingTrims) {
+      const list = edits.get(trim.item) ?? [];
+      list.push(trim);
+      edits.set(trim.item, list);
+    }
+    if (draft !== undefined) edits.set(draft.id, [...(edits.get(draft.id) ?? []), draft]);
+    return edits;
+  }, [pendingTrims, draft]);
   const selected = scene.tracks.flatMap(track => track.items).find(item => selection.includes(item.id));
   const trimRanges = session.timeline.trimRanges;
-  const trimAtFrame = (ids: readonly string[], edge: "start" | "end") =>
-    selectionAtFrame(scene, ids, frame, edge === "start" ? "trimStart" : "trimEnd", item => {
-      const range = trimRanges[item.id]?.[edge];
-      return range !== undefined && frame >= range.minimum && frame <= range.maximum;
+  const cutIntent = playing || selection.length === 0 ? undefined : JSON.stringify({
+    composition: scene.composition, expectedProjectRevision: session.status.projectRevision,
+    items: selection, atFrame: frame,
+  });
+  const [resolvedCuts, setResolvedCuts] = useState<{ key: string; scene: typeof scene; value: NleStudioTimelineCutsProjection }>();
+  useEffect(() => {
+    if (cutIntent === undefined) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      void readTimelineCuts(JSON.parse(cutIntent)).then(value => {
+        if (active) setResolvedCuts({ key: cutIntent, scene, value });
+      }).catch(() => {
+        if (active) setResolvedCuts(undefined);
+      });
+    }, 40);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [cutIntent, scene]);
+  const playbackTargets = playing ? selectionAtFrame(scene, selection, frame) : [];
+  const cuts: NleStudioTimelineCutsProjection | undefined = playbackTargets.length > 0 ? {
+    items: playbackTargets.map(item => item.id),
+    split: playbackTargets.every(item => item.affordances.split),
+    trimStart: playbackTargets.every(item => item.affordances.trimStart),
+    trimEnd: playbackTargets.every(item => item.affordances.trimEnd),
+  } : resolvedCuts?.key === cutIntent && resolvedCuts?.scene === scene ? resolvedCuts.value : undefined;
+  const splitAtPlayhead = () => { if (cuts?.split) onSplit(cuts.items, frame); };
+  const trimAtPlayhead = (edge: TrimEdge) => {
+    if (cuts?.[edge === "start" ? "trimStart" : "trimEnd"]) onTrim(cuts.items, edge, frame);
+  };
+  const sceneItems = useMemo(() => new Map(scene.tracks.flatMap(track => track.items.map(item => [item.id, item] as const))), [scene.tracks]);
+  const compositionIntent = selection.length === 0 ? undefined : JSON.stringify({
+    composition: scene.composition, expectedProjectRevision: session.status.projectRevision, items: selection,
+  });
+  const [resolvedCompositionActions, setResolvedCompositionActions] = useState<{
+    key: string; scene: typeof scene; value: NleStudioCompositionActionsProjection;
+  }>();
+  useEffect(() => {
+    if (compositionIntent === undefined) return;
+    let active = true;
+    void readCompositionActions(JSON.parse(compositionIntent)).then(value => {
+      if (active) setResolvedCompositionActions({ key: compositionIntent, scene, value });
+    }).catch(() => {
+      if (active) setResolvedCompositionActions(undefined);
     });
-  const trimStartItems = trimAtFrame(selection, "start"), trimEndItems = trimAtFrame(selection, "end");
-  const sceneItems = new Map(scene.tracks.flatMap(track => track.items.map(item => [item.id, item] as const)));
-  const splitItems = selectionAtFrame(scene, selection, frame, "split");
-  const compound = useMemo(() => resolveCompoundSelection(scene, selection), [scene, selection]);
-  const canCompound = "track" in compound && !compound.track.locked;
-  const compositions = session.timeline.compositions;
-
-  useLayoutEffect(() => {
-    const list = tabList.current;
-    if (list === null) return;
-    const tab = list.querySelector<HTMLElement>(".nle-timeline-tab.current");
-    if (tab === null) return;
-    const start = tab.offsetLeft, end = start + tab.offsetWidth;
-    if (start < list.scrollLeft) list.scrollLeft = start;
-    else if (end > list.scrollLeft + list.clientWidth) list.scrollLeft = end - list.clientWidth;
-  }, [scene.composition]);
-
+    return () => { active = false; };
+  }, [compositionIntent, scene]);
+  const compositionActions = resolvedCompositionActions?.key === compositionIntent && resolvedCompositionActions?.scene === scene
+    ? resolvedCompositionActions.value : undefined;
+  const selectedItemId = selection.length === 1 ? selection[0] : undefined;
+  const matteTrackLocks = JSON.stringify(scene.tracks.filter(track => track.locked).map(track => track.id));
+  const [matteTarget, setMatteTarget] = useState<string>();
+  const [matteSourcesProjection, setMatteSourcesProjection] = useState<NleStudioMatteSourcesProjection>();
+  const [matteReadError, setMatteReadError] = useState<string>();
+  const pickMatte = (item: string) => {
+    setMatteSourcesProjection(undefined);
+    setMatteReadError(undefined);
+    setMatteTarget(item);
+  };
+  const matteCandidates = useMemo(() => new Set(matteSourcesProjection?.sources), [matteSourcesProjection]);
+  const timelineObject = (id: string) => ({
+    "data-timeline-object": id,
+    "data-matte-state": matteTarget === undefined ? undefined
+      : id === matteTarget ? "content" : matteCandidates.has(id) ? "candidate" : "ineligible",
+  });
+  const mattePrompt = matteReadError ?? (matteSourcesProjection?.unavailable === undefined
+    ? `为「${matteTarget === undefined ? "" : sceneItems.get(matteTarget)?.display.title ?? matteTarget}」选择遮罩源`
+    : matteSourceMessages[matteSourcesProjection.unavailable]);
+  useEffect(() => { setMatteTarget(undefined); }, [selectedItemId, session.status.projectRevision, matteTrackLocks]);
+  useEffect(() => {
+    if (matteTarget === undefined) return;
+    let active = true;
+    void readMatteSources(matteTarget).then(projection => {
+      if (active) setMatteSourcesProjection(projection);
+    }).catch((error: unknown) => {
+      if (active) setMatteReadError(error instanceof Error ? error.message : String(error));
+    });
+    const key = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault(); setMatteTarget(undefined);
+    };
+    const outside = (event: PointerEvent) => {
+      const target = event.target;
+      if (event.button !== 0 || !(target instanceof Element) || scroller.current?.contains(target)
+        || target.closest(".nle-matte-prompt")) return;
+      setMatteTarget(undefined);
+    };
+    window.addEventListener("keydown", key, true);
+    window.addEventListener("pointerdown", outside, true);
+    return () => {
+      active = false;
+      window.removeEventListener("keydown", key, true);
+      window.removeEventListener("pointerdown", outside, true);
+    };
+  }, [matteTarget]);
+  const chooseMatte = (item?: string) => {
+    if (matteTarget === undefined) return;
+    if (item !== undefined && matteCandidates.has(item)) {
+      if (busy) return;
+      onBindMatte(matteTarget, item);
+    }
+    setMatteTarget(undefined);
+  };
+  const { matteByContent, matteSources, focusedMatteItems } = useMemo(() => {
+    const selectedItems = new Set(selection);
+    const matteByContent = new Map<string, typeof scene.mattes[number]>();
+    const matteSources = new Set<string>(), focusedMatteItems = new Set<string>();
+    for (const relation of scene.mattes) {
+      const { content, matte } = relation;
+      matteByContent.set(content, relation);
+      matteSources.add(matte);
+      if (selectedItems.has(content) || selectedItems.has(matte)) {
+        focusedMatteItems.add(content);
+        focusedMatteItems.add(matte);
+      }
+    }
+    return { matteByContent, matteSources, focusedMatteItems };
+  }, [scene.mattes, selection]);
+  const clipActions = (ids: readonly string[], track: NleTimelineSceneTrack): ClipMenuAction[] => {
+    const actions: ClipMenuAction[] = [];
+    const single = ids.length === 1 ? sceneItems.get(ids[0]!) : undefined;
+    if (single?.kind === "present" && single.signals.picture) {
+      if (single.signals.audio) actions.push({ label: "分离音频", Icon: AudioLines, run: () => onDetachAudio(single.id) });
+      if (single.source === "media" && single.enabled && isSampledMedia(single.id)) {
+        const outside = frame < single.startFrame || frame >= single.startFrame + single.durationFrames;
+        const freeze = cuts?.freeze?.item === single.id ? cuts.freeze : undefined;
+        const hint = outside ? "将播放头移到片段内" : freeze?.available === false ? freeze.diagnostic
+          : freeze === undefined && !playing ? "正在检查能否插入定格" : undefined;
+        actions.push({ label: "定格", Icon: Snowflake, disabled: hint !== undefined, hint,
+          run: () => onFreeze(single.id, frame) });
+      }
+    }
+    const group = resolveGroupSelection(scene, ids);
+    if (group !== undefined) actions.push({ ...group, Icon: Group, run: () => onEditGroup(ids) });
+    if (single !== undefined && canBindMatte(single)) {
+      const matte = matteByContent.get(single.id);
+      const sourceLocked = matte !== undefined && sceneItems.get(matte.matte)?.affordances.move !== true;
+      const hint = sourceLocked ? "请先解锁遮罩源所在轨道" : undefined;
+      actions.push({ label: matte === undefined ? "设置遮罩" : "更换遮罩源",
+        Icon: timelineBadgeIcons.matteContent.Icon, disabled: sourceLocked, hint, run: () => pickMatte(single.id) });
+      if (matte !== undefined) {
+        actions.push({ label: "删除遮罩", Icon: Unlink2, disabled: sourceLocked, hint,
+          run: () => onRemoveMatte(matte.id) });
+      }
+    }
+    const placement = ids.length === selection.length && ids.every(id => selection.includes(id)) ? compositionActions : undefined;
+    const action = (label: string, Icon: ClipMenuAction["Icon"], run: () => void,
+      availability: NleStudioCompositionActionsProjection["compound"] | undefined): ClipMenuAction => ({
+      label, Icon, run, disabled: availability?.available !== true,
+      hint: availability === undefined ? "正在检查片段关系" : availability.available ? undefined : availability.diagnostic,
+    });
+    if (ids.some(id => sceneItems.get(id)?.kind === "present")) {
+      actions.push(action("创建复合片段", Layers, () => onCompound(ids), placement?.compound));
+    }
+    if (single?.nestedComposition !== undefined) {
+      const nested = placement?.nested?.item === single.id ? placement.nested : undefined;
+      actions.push(
+        { label: "进入内部时间线", Icon: LogIn, run: () => onEnterComposition(single.id) },
+        action("使内部时间线独立", Copy, () => onCompoundUnique(single.id), nested?.makeUnique),
+        action("拆解复合片段", Ungroup, () => onCompoundExplode(single.id), nested?.explode),
+      );
+    }
+    return actions;
+  };
+  const { trackTransitions, clipTransitions } = useMemo(() => {
+    const trackTransitions = new Map<string, TransitionWindow[]>();
+    const clipTransitions = new Map<string, ClipTransitions>();
+    for (const { id, outgoing, incoming } of scene.transitions) {
+      const left = sceneItems.get(outgoing), right = sceneItems.get(incoming);
+      if (left === undefined || right === undefined) continue;
+      const start = right.startFrame + (shiftedByMedia.has(right.id) ? shift : 0);
+      const end = left.startFrame + left.durationFrames + (shiftedByMedia.has(left.id) ? shift : 0);
+      const transition = { id, start, end, middle: (start + end) / 2 };
+      const windows = trackTransitions.get(left.track) ?? [];
+      windows.push(transition);
+      trackTransitions.set(left.track, windows);
+      clipTransitions.set(outgoing, { ...clipTransitions.get(outgoing), outgoing: transition });
+      clipTransitions.set(incoming, { ...clipTransitions.get(incoming), incoming: transition });
+    }
+    return { trackTransitions, clipTransitions };
+  }, [sceneItems, scene.transitions, shift, shiftedByMedia]);
   useEffect(() => () => cancelTrim.current(), [pixels, gestureBlocked, scene.composition]);
 
   useEffect(() => {
@@ -320,26 +519,31 @@ export function Timeline({ session, frame, playing, reveal, selection, busy, ges
       boundaries.push(Math.round(start + duration));
     }
     const clamp = (value: number) => Math.max(minimum, Math.min(maximum, Math.round(value)));
+    let heldSnap: TimelineSnap | undefined;
     const proposal = (next: PointerEvent) => {
-      const delta = Math.round((next.clientX - clientX + viewport.scrollLeft - scrollLeft) / pixels);
-      const at = clamp(origin + delta);
-      const advances = (candidate: number) => candidate !== Math.round(origin) && (candidate - origin) * delta > 0;
-      if (!advances(at)) return;
-      const aligned = snap && !next.altKey ? snapTimelineEdges([at], frame, boundaries, pixels, correction =>
-        at + correction >= minimum && at + correction <= maximum && advances(at + correction)) : undefined;
-      return { atFrame: aligned?.frame ?? at, snapFrame: aligned?.frame };
+      const delta = (next.clientX - clientX + viewport.scrollLeft - scrollLeft) / pixels;
+      const raw = origin + delta;
+      const at = clamp(raw);
+      const advances = (candidate: number) => (candidate - origin) * delta > 0;
+      if (!advances(at)) { heldSnap = undefined; return; }
+      heldSnap = snap && !next.altKey ? snapTimelineEdges([raw], frame, boundaries, pixels, {
+        held: heldSnap,
+        allows: value => value.frame >= minimum && value.frame <= maximum && advances(value.frame),
+      }) : undefined;
+      return { atFrame: heldSnap?.frame ?? at, snapFrame: heldSnap?.frame };
     };
     const move = (next: PointerEvent) => {
       if (next.pointerId !== pointerId) return;
       const nextEdge = proposal(next);
       if (nextEdge === undefined) { setDraft(undefined); return; }
-      const guide = nextEdge.snapFrame === undefined ? {} : { snapFrame: nextEdge.snapFrame };
-      setDraft(mode === "start" ? { id: item.id, start: nextEdge.atFrame, duration: end - nextEdge.atFrame, ...guide }
-        : { id: item.id, start, duration: nextEdge.atFrame - start, ...guide });
+      const edit = { id: item.id, edge: mode, atFrame: nextEdge.atFrame,
+        ...(nextEdge.snapFrame === undefined ? {} : { snapFrame: nextEdge.snapFrame }) };
+      setDraft(mode === "start" ? { ...edit, start: nextEdge.atFrame, duration: end - nextEdge.atFrame }
+        : { ...edit, start, duration: nextEdge.atFrame - start });
     };
     const cleanup = () => {
       window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish);
-      window.removeEventListener("pointercancel", cancel); window.removeEventListener("keydown", key);
+      window.removeEventListener("pointercancel", cancel); window.removeEventListener("keydown", key, true);
       window.removeEventListener("blur", cleanup); element.removeEventListener("lostpointercapture", cancel);
       if (element.hasPointerCapture(pointerId)) element.releasePointerCapture(pointerId);
       cancelTrim.current = () => undefined;
@@ -359,46 +563,32 @@ export function Timeline({ session, frame, playing, reveal, selection, busy, ges
     const key = (next: KeyboardEvent) => { if (next.key === "Escape") { next.preventDefault(); cleanup(); } };
     cancelTrim.current = cleanup;
     window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish);
-    window.addEventListener("pointercancel", cancel); window.addEventListener("keydown", key);
+    window.addEventListener("pointercancel", cancel); window.addEventListener("keydown", key, true);
     window.addEventListener("blur", cleanup); element.addEventListener("lostpointercapture", cancel);
   };
 
   return <motion.section ref={ref} className="nle-timeline" {...fadeMotion(reduced)} inert={!present}>
-    <div className="nle-timeline-tabbar">
-      <div className="nle-timeline-tabs" ref={tabList} role="tablist" aria-label="项目时间线">
-        <AnimatePresence initial={false}>{compositions.map(composition => {
-          const current = composition.id === scene.composition;
-          return <motion.div {...fadeMotion(reduced)} className={`nle-timeline-tab${current ? " current" : ""}`} key={composition.id}>
-            <button type="button" role="tab" disabled={busy} aria-selected={current} title={composition.name}
-              onClick={() => onComposition(composition.id)}>{composition.name}</button>
-            <CompositionActions composition={composition} disabled={busy}
-              root={composition.id === session.project.rootComposition} referenced={composition.referenced}
-              canInsert={composition.canInsert}
-              onRename={name => onCompositionEdit(composition.id, { name })}
-              onResize={canvas => onCompositionEdit(composition.id, { canvas })}
-              onInsert={() => onCompositionInsert(composition.id)} onCopy={() => onCompositionCopy(composition.id)}
-              onRoot={() => onCompositionRoot(composition.id)} onRemove={() => onCompositionRemove(composition.id)}/>
-          </motion.div>;
-        })}</AnimatePresence>
-      </div>
-      <NewCompositionButton canvas={session.canvas.canvas} disabled={busy} onCreate={onCompositionCreate}/>
-    </div>
+    <CompositionTabs tabs={session.timeline.compositions} active={scene.composition} root={session.project.rootComposition}
+      canvas={session.canvas.canvas} busy={busy || gestureBlocked}
+      onSelect={onComposition} onMove={onCompositionMove} onCreate={onCompositionCreate} onEdit={onCompositionEdit}
+      onInsert={onCompositionInsert} onCopy={onCompositionCopy} onRoot={onCompositionRoot} onRemove={onCompositionRemove}/>
     <div className="nle-timeline-toolbar">
       <ToolSelector value={tool} onChange={value => { setTool(value); setCutCursor(undefined); }}/>
-      <span className="nle-toolbar-separator"/>
+      <span className="nle-toolbar-separator" aria-hidden="true"/>
       <IconButton label="撤销" disabled={busy || !canUndo} onClick={onUndo}><Undo2 size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="重做" disabled={busy || !canRedo} onClick={onRedo}><Redo2 size={18} strokeWidth={1.6}/></IconButton>
-      <IconButton label="分割" disabled={busy || splitItems.length === 0} onClick={() => onSplit(splitItems.map(item => item.id), frame)}><Scissors size={18} strokeWidth={1.6}/></IconButton>
-      <IconButton label="向左裁剪" disabled={busy || trimStartItems.length === 0} onClick={() => onTrim(trimStartItems, "start", frame)}><PanelLeftClose size={18} strokeWidth={1.6}/></IconButton>
-      <IconButton label="向右裁剪" disabled={busy || trimEndItems.length === 0} onClick={() => onTrim(trimEndItems, "end", frame)}><PanelRightClose size={18} strokeWidth={1.6}/></IconButton>
+      <span className="nle-toolbar-separator" aria-hidden="true"/>
+      <IconButton label="分割" disabled={busy || !cuts?.split} onClick={splitAtPlayhead}><Scissors size={18} strokeWidth={1.6}/></IconButton>
+      <IconButton label="向左裁剪" disabled={busy || !cuts?.trimStart} onClick={() => trimAtPlayhead("start")}><PanelLeftClose size={18} strokeWidth={1.6}/></IconButton>
+      <IconButton label="向右裁剪" disabled={busy || !cuts?.trimEnd} onClick={() => trimAtPlayhead("end")}><PanelRightClose size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="删除" disabled={busy || (selected === undefined && selectedTransition === undefined)} onClick={onRemove}><Trash2 size={18} strokeWidth={1.6}/></IconButton>
-      <IconButton label="分离音频" disabled={busy || !canDetachAudio} onClick={onDetachAudio}><AudioLines size={18} strokeWidth={1.6}/></IconButton>
-      <IconButton label="定格" disabled={busy || !canFreeze} onClick={onFreeze}><Snowflake size={18} strokeWidth={1.6}/></IconButton>
-      <IconButton label="创建复合片段" disabled={busy || !canCompound} onClick={onCompound}><Layers size={18} strokeWidth={1.6}/></IconButton>
-      <IconButton label={groupLabel} className={groupLabel === "组合" ? "" : "active"} disabled={busy || !canToggleGroup} onClick={onToggleGroup}><Group size={18} strokeWidth={1.6}/></IconButton>
       <AnimatePresence initial={false}>{session.timeline.canReturn && <motion.span {...fadeMotion(reduced)} key="parent"><IconButton label="返回父时间线" disabled={busy}
         onClick={onReturnComposition}><ArrowLeft size={18} strokeWidth={1.6}/></IconButton></motion.span>}</AnimatePresence>
       <span className="nle-toolbar-space"/>
+      {matteTarget !== undefined && <div className="nle-matte-prompt">
+        <span role="status" title={mattePrompt}>{mattePrompt}</span>
+        <IconButton label="取消选择遮罩源" onClick={() => setMatteTarget(undefined)}><X size={14}/></IconButton>
+      </div>}
       <IconButton label="吸附" className={snap ? "active" : ""} onClick={() => setSnap(value => !value)}><Magnet size={18} strokeWidth={1.6}/></IconButton>
       <IconButton label="适合时间线" onClick={fit}><Scan size={18} strokeWidth={1.6}/></IconButton>
       <div className="nle-zoom">
@@ -411,10 +601,22 @@ export function Timeline({ session, frame, playing, reveal, selection, busy, ges
         <IconButton label="放大" disabled={zoom >= maxZoom} onClick={() => stepZoom(1, frame)}><CirclePlus size={18} strokeWidth={1.6}/></IconButton>
       </div>
     </div>
-    <motion.div layoutScroll data-frame-pixels={pixels} data-snap={snap} data-at-start={viewport.left <= 0} className={`nle-timeline-scroll${tool === "cut" ? " cut-mode" : tool === "left" || tool === "right" ? " direction-mode" : ""}`} ref={scroller}
-      onPointerDownCapture={() => {
+    <motion.div layoutScroll data-frame-pixels={pixels} data-snap={snap} className={`nle-timeline-scroll${tool === "cut" ? " cut-mode" : tool === "left" || tool === "right" ? " direction-mode" : ""}`} ref={scroller}
+      tabIndex={-1} role="region" aria-label="时间线编辑区" data-matte-pick={matteTarget !== undefined ? "" : undefined}
+      onClickCapture={event => {
+        if (matteTarget === undefined || !(event.target instanceof Element)) return;
+        event.stopPropagation();
+        chooseMatte(event.target.closest<HTMLElement>("[data-timeline-object]")?.dataset.timelineObject);
+      }} onPointerDownCapture={event => {
+      if (matteTarget !== undefined) {
+        event.preventDefault(); event.stopPropagation(); return;
+      }
       const focused = document.activeElement;
       if (focused instanceof HTMLElement && focused.closest(".library-grid")) focused.blur();
+      if (event.button === 0 && event.target instanceof Element
+        && !event.target.closest("button,input,textarea,select,a[href],[contenteditable=true]")) {
+        event.currentTarget.focus({ preventScroll: true });
+      }
     }} onPointerDown={event => {
       if (tool === "select") startMarquee(event);
       else if ((tool === "left" || tool === "right") && !(event.target as Element).closest(".nle-clip,.nle-track-label,.nle-ruler,button")) {
@@ -428,6 +630,12 @@ export function Timeline({ session, frame, playing, reveal, selection, busy, ges
         <div className="nle-track-top" data-nle-drop=""><div className="nle-track-label empty"/><div className="nle-track-space" style={{ width }}/></div>
         <AnimatePresence initial={false} mode="popLayout">{visibleTracks.map(track => {
           const TrackIcon = studioIcons[track.role];
+          const picture = track.kind === "picture";
+          const audio = track.kind === "audio" || track.items.some(item => item.signals.audio);
+          const PictureIcon = !picture ? unavailableTrackIcons.picture : track.pictureEnabled ? Eye : EyeOff;
+          const AudioIcon = !audio ? unavailableTrackIcons.audio : track.audioEnabled ? Volume2 : VolumeX;
+          const adjustment = track.role === "filter" || track.role === "effect";
+          const reordering = reorder.position?.trackId === track.id;
           const intervals = [...track.items].sort((left, right) => left.startFrame - right.startFrame);
           let end = 0;
           const gaps = intervals.flatMap(item => {
@@ -436,27 +644,64 @@ export function Timeline({ session, frame, playing, reveal, selection, busy, ges
             return gap;
           });
           const fade = fadeMotion(reduced);
-          return <motion.div {...fade} layout={reduced ? false : "position"} layoutDependency={trackLayout}
+          return <motion.div {...fade} layout={reduced || reordering || reorder.pending ? false : "position"} layoutDependency={trackLayout}
             transition={{ ...fade.transition, layout: { duration: reduced ? 0 : .22, ease: softEase } }}
             className={`nle-track${rowSize(track) === 36 ? " compact" : ""}${track.locked ? " locked" : ""}`}
-            data-track-id={track.id} key={track.id} style={{ height: rowSize(track) }}>
-          <TrackMenu name={track.name} disabled={busy || track.locked} pixels={pixels} gaps={gaps}
-            onCloseGap={frames => onCloseGap(track.id, frames)} onRename={name => onTrackRename(track.id, name)}
-            onRemove={() => onTrackRemove(track.id)}>
-          <div className={`nle-track-label${reorder.position?.trackId === track.id ? " reordering" : ""}`} data-reorderable={!track.locked && !busy} title={track.name} onPointerDown={event => reorder.start(event, track)}><span className="nle-track-icons"><span className="nle-track-kind"><TrackIcon size={14}/></span>
-            <IconButton label={track.locked ? "解锁轨道" : "锁定轨道"} className="nle-track-lock" disabled={busy} aria-pressed={track.locked} onClick={() => onTrackLocked(track.id, !track.locked)}>{track.locked ? <Lock size={14}/> : <Unlock size={14}/>}</IconButton>
-            <IconButton label={track.enabled ? "停用轨道" : "启用轨道"} disabled={busy} onClick={() => onTrackEnabled(track.id, !track.enabled)}>{track.enabled ? <Volume2 size={14}/> : <VolumeX size={14}/>}</IconButton></span></div>
+            data-track-id={track.id} data-reordering={reordering ? "" : undefined} key={track.id} style={{ height: rowSize(track) }}>
+          <TrackMenu disabled={busy || track.locked} pixels={pixels} gaps={gaps}
+            onCloseGap={frames => onCloseGap(track.id, frames)}>
+          <div className="nle-track-label" data-reorderable={!track.locked && !busy && !gestureBlocked && visibleTracks.length > 1}
+            title={track.name} onPointerDown={event => reorder.start(event, track)}>
+            <span className="nle-track-icons">
+              <span className="nle-track-kind"><TrackIcon size={14} strokeWidth={1.75}/></span>
+              <IconButton label={track.locked ? "解锁轨道" : "锁定轨道"} className="nle-track-lock" disabled={busy}
+                aria-pressed={track.locked} onClick={() => onTrackLocked(track.id, !track.locked)}>
+                {track.locked ? <Lock size={14} strokeWidth={1.75}/> : <Unlock size={14} strokeWidth={1.75}/>}
+              </IconButton>
+              <IconButton className="nle-track-signal" label={!picture ? "此轨道无画面" : adjustment ? (track.pictureEnabled ? "停用轨道效果" : "启用轨道效果")
+                : (track.pictureEnabled ? "隐藏轨道画面" : "显示轨道画面")} disabled={!picture || busy || track.locked}
+                aria-pressed={picture ? !track.pictureEnabled : undefined} onClick={() => onTrackSignal(track.id, "picture", !track.pictureEnabled)}>
+                <PictureIcon size={14} strokeWidth={1.75}/>
+              </IconButton>
+              <IconButton className="nle-track-signal" label={!audio ? "此轨道无声音" : track.audioEnabled ? "静音轨道" : "取消轨道静音"}
+                disabled={!audio || busy || track.locked}
+                aria-pressed={audio ? !track.audioEnabled : undefined} onClick={() => onTrackSignal(track.id, "audio", !track.audioEnabled)}>
+                <AudioIcon size={14} strokeWidth={1.75}/>
+              </IconButton>
+            </span>
+          </div>
           <div className="nle-track-content" data-drop-target={highlightedTrack === track.id ? "" : undefined} data-nle-drop={track.id} style={{ width }}>
             <AnimatePresence initial={false}>{track.items.map(item => {
-              const current = draft?.id === item.id ? draft : itemWindow(item, pendingTrims);
+              const unshifted = draft?.id === item.id ? draft : itemWindow(item, pendingTrims);
+              const current = shiftedByMedia.has(item.id) ? { ...unshifted, start: unshifted.start + shift } : unshifted;
+              const clipLeft = current.start * pixels;
+              const span = current.duration * pixels;
+              const clipWidth = Math.max(8, span);
+              const selected = selection.includes(item.id), moving = itemGesture.moving.has(item.id);
+              const trim = trimRanges[item.id];
+              const transitions = clipTransitions.get(item.id);
+              const clipStyle = { left: clipLeft, width: clipWidth,
+                ...(transitions?.incoming === undefined ? {} : {
+                  "--nle-transition-leading": `${Math.max(0, transitions.incoming.middle * pixels - clipLeft)}px`,
+                  "--nle-transition-title-start": `${Math.max(0, transitions.incoming.end * pixels - clipLeft)}px`,
+                }),
+                ...(transitions?.outgoing === undefined ? {} : {
+                  "--nle-transition-trailing": `${Math.max(0, clipLeft + clipWidth - transitions.outgoing.middle * pixels)}px`,
+                }) };
               const label = timelineItemLabel(item, track.role);
+              const badges: (keyof typeof timelineBadgeIcons)[] = [];
+              if (item.nestedComposition !== undefined) badges.push("composition");
+              if (matteByContent.has(item.id)) badges.push("matteContent");
+              if (matteSources.has(item.id)) badges.push("matteSource");
+              if (item.group !== undefined) badges.push("group");
               const previewSource = session.timeline.previewSources[item.id];
+              const edits = previewTrims.get(item.id);
+              const previewActive = edits !== undefined || previewViewport.active.has(item.id);
               const timing = tool === "select" && selectedProcess?.item === item.id
                 ? item.anchoredProcesses.find(process => process.medium === selectedProcess.medium && process.id === selectedProcess.process)
                 : undefined;
               const menuIds = editableSelection(scene, selection.includes(item.id) ? selection : [item.id]);
-              const splits = selectionAtFrame(scene, menuIds, frame, "split");
-              const starts = trimAtFrame(menuIds, "start"), ends = trimAtFrame(menuIds, "end");
+              const menuCuts = selection.includes(item.id) ? cuts : undefined;
               const rippleItems = menuIds.flatMap(id => {
                 const selected = sceneItems.get(id);
                 return selected === undefined ? [] : [selected];
@@ -467,62 +712,96 @@ export function Timeline({ session, frame, playing, reveal, selection, busy, ges
                 rippleEnd = Math.max(rippleEnd, entry.startFrame + entry.durationFrames);
                 return next;
               });
-              return <ClipMenu key={item.id} disabled={busy || track.locked}
+              return <ClipMenu key={item.id} disabled={busy || track.locked || matteTarget !== undefined}
+                readActions={() => clipActions(menuIds, track)}
                 canRippleRemove={rippleItems.length > 0 && contiguous}
-                canSplit={splits.length > 0} canTrimStart={starts.length > 0} canTrimEnd={ends.length > 0}
-                onSelect={() => onSelect(menuIds)} onSplit={() => onSplit(splits.map(entry => entry.id), frame)}
-                onTrimStart={() => onTrim(starts, "start", frame)} onTrimEnd={() => onTrim(ends, "end", frame)}
+                canSplit={menuCuts?.split === true} canTrimStart={menuCuts?.trimStart === true} canTrimEnd={menuCuts?.trimEnd === true}
+                onSelect={() => onSelect(menuIds)} onSplit={splitAtPlayhead}
+                onTrimStart={() => trimAtPlayhead("start")} onTrimEnd={() => trimAtPlayhead("end")}
                 onRemove={onRemove} onRippleRemove={() => onRippleRemove(rippleItems)}
-                {...(item.nestedComposition === undefined ? {} : { onOpen: () => onEnterComposition(item.id),
-                  onDuplicate: () => onCompoundUnique(item.id), onUnpack: () => onCompoundExplode(item.id) })}>
-                <motion.div {...fadeMotion(reduced)}
-                  data-clip-id={item.id} data-source={item.source} role="button" tabIndex={0}
-                  aria-label={label} aria-pressed={selection.includes(item.id)}
+                {...(item.stacking?.up === undefined ? {} : { onRaise: () => onItemReorder(item.id, "up") })}
+                {...(item.stacking?.down === undefined ? {} : { onLower: () => onItemReorder(item.id, "down") })}>
+                <motion.div {...fadeMotion(reduced)} {...timelineObject(item.id)}
+                  data-clip-id={item.id} data-source={item.source} data-transition-endpoint={transitions === undefined ? undefined : ""}
+                  data-pending-move={itemGesture.pendingItems.has(item.id) ? "" : undefined}
+                  data-matte-related={focusedMatteItems.has(item.id) ? "" : undefined}
+                  role="button" tabIndex={0}
+                  aria-label={label} aria-pressed={selected}
+                  aria-description={badges.length > 0 ? badges.map(badge => timelineBadgeIcons[badge].label).join("，") : undefined}
                   title={track.role === "audio" ? label : undefined}
-                  className={`nle-clip ${track.role}${selection.includes(item.id) ? " selected" : ""}${itemGesture.moving.has(item.id) ? " drag-origin" : ""}`}
-                  style={{ left: current.start * pixels, width: Math.max(8, current.duration * pixels) }}
+                  className={`nle-clip ${track.role}${selected ? " selected" : ""}${moving ? " drag-origin" : ""}`}
+                  style={clipStyle}
                   onPointerDown={event => begin(event, item, "move", track)}
                   onDoubleClick={() => { if (!busy && item.nestedComposition !== undefined) onEnterComposition(item.id); }}
-                  onKeyDown={event => { if (event.key === "Enter" && !busy) { event.preventDefault(); onSelect(editableSelection(scene, [item.id])); } }}
+                  onKeyDown={event => {
+                    if (event.key !== "Enter" || busy) return;
+                    event.preventDefault();
+                    if (matteTarget !== undefined) chooseMatte(item.id);
+                    else onSelect(editableSelection(scene, [item.id]));
+                  }}
                   onPointerMove={event => {
               if (tool !== "cut" || busy || track.locked) return; const at = item.startFrame + Math.round((event.clientX - event.currentTarget.getBoundingClientRect().left) / pixels); setCutCursor(item.affordances.split && at > item.startFrame && at < item.startFrame + item.durationFrames ? { track: track.id, frame: at } : undefined);
             }} onPointerLeave={() => setCutCursor(undefined)}>
               <div className="nle-clip-content">
                 <span className="nle-clip-title">
-                  {item.group && <span className="nle-clip-chip nle-clip-icon" aria-hidden="true"><Group size={11}/></span>}
-                  {item.nestedComposition !== undefined && <span className="nle-clip-chip nle-clip-icon" aria-hidden="true"><Layers size={11}/></span>}
-                  <span className="nle-clip-chip">{scene.mattes.some(matte => matte.content === item.id || matte.matte === item.id) && <Link2 size={11}/>} {label}</span>
+                  {badges.map(badge => {
+                    const { Icon, label } = timelineBadgeIcons[badge];
+                    return <span key={badge} className="nle-clip-chip nle-clip-badge" data-clip-badge={badge}
+                      title={label} aria-hidden="true"><Icon size={12}/></span>;
+                  })}
+                  <span className="nle-clip-chip">{label}</span>
                   {(track.role === "picture" || track.role === "audio") && <span className="nle-clip-chip">{timecode(current.duration, fps)}</span>}
                 </span>
-                {previewSource !== undefined && (previewViewport.active.has(item.id) || previewViewport.retained.has(item.id)) && <TimelineSourcePreview source={previewSource} pictureItem={item.signals.picture}
-                  generation={session.media.generation} origin={item.startFrame} duration={item.durationFrames} start={current.start}
-                  frameWidth={pixels} editRate={scene.editRate} viewport={previewViewport} active={previewViewport.active.has(item.id)}/>}
+                {previewSource !== undefined && (previewActive || previewViewport.retained.has(item.id)) && <TimelineSourcePreview source={previewSource} pictureItem={item.signals.picture}
+                  generation={session.media.generation} authored={item} window={current} trims={edits}
+                  frameWidth={pixels} editRate={scene.editRate} viewport={previewViewport} active={previewActive}/>}
                 <div className={`nle-cut-line${tool === "cut" && cutCursor?.track === track.id && cutCursor.frame >= item.startFrame && cutCursor.frame <= item.startFrame + item.durationFrames ? " visible" : ""}`} style={{ left: ((cutCursor?.frame ?? item.startFrame) - item.startFrame) * pixels }}/>
                 {timing !== undefined && selectedProcess !== undefined && <ProcessTimingHandle key={`${timing.medium}:${timing.id}`}
                   timing={timing} duration={current.duration} pixels={pixels} disabled={gestureBlocked || track.locked}
                   onSelect={() => onSelectProcess(selectedProcess)}
                   onResize={durationFrames => onProcessTiming({ kind: "process.timing", ...selectedProcess, edge: timing.edge, durationFrames })}/>}
               </div>
-              {trimRanges[item.id]?.start && <div className="nle-trim start" aria-label="裁剪开头" onPointerDown={event => begin(event, item, "start", track)}/>}
-              {trimRanges[item.id]?.end && <div className="nle-trim end" aria-label="裁剪结尾" onPointerDown={event => begin(event, item, "end", track)}/>}
+              {selected && !moving && (trim?.start || trim?.end) &&
+                <div className="nle-clip-trims" data-narrow={span < 8 ? "" : undefined} style={{ width: span }}>
+                  {trim.start && <div className="nle-trim start" aria-label="裁剪开头" onPointerDown={event => begin(event, item, "start", track)}/>}
+                  {trim.end && <div className="nle-trim end" aria-label="裁剪结尾" onPointerDown={event => begin(event, item, "end", track)}/>}
+                </div>}
             </motion.div></ClipMenu>; })}</AnimatePresence>
-            <AnimatePresence initial={false}>{scene.transitions.flatMap(transition => {
-              const outgoing = sceneItems.get(transition.outgoing), incoming = sceneItems.get(transition.incoming);
-              if (outgoing?.track !== track.id || incoming === undefined) return [];
-              const start = incoming.startFrame, end = outgoing.startFrame + outgoing.durationFrames;
-              return end <= start ? [] : [<motion.button {...fadeMotion(reduced)} key={transition.id} aria-pressed={selectedTransition === transition.id} className={`nle-transition-block${selectedTransition === transition.id ? " selected" : ""}`} style={{ left: start * pixels, width: Math.max(10, (end - start) * pixels) }} title={transition.operator.symbol} onPointerDown={event => event.stopPropagation()} onClick={() => { onSeek(Math.floor((start + end) / 2)); onSelectTransition(transition.id); }}><studioIcons.transition size={12}/></motion.button>];
+            <AnimatePresence initial={false}>{(trackTransitions.get(track.id) ?? []).map(({ id, start, end }) => {
+              const transitionWidth = (end - start) * pixels;
+              const title = session.timeline.transitionTitles[id] ?? "转场";
+              const duration = timecode(end - start, fps);
+              const label = `${title} · ${duration}`;
+              const selected = selectedTransition === id;
+              return <motion.button {...fadeMotion(reduced)} {...timelineObject(id)} key={id} type="button" data-transition-id={id}
+                aria-label={label} aria-pressed={selected} className={`nle-transition-block${selected ? " selected" : ""}`}
+                style={{ left: start * pixels, width: transitionWidth }} title={label}
+                onPointerDown={event => event.stopPropagation()}
+                onClick={() => onSelectTransition(id)}>
+                <span className="nle-transition-divider" aria-hidden="true"/>
+                <span className="nle-clip-title" aria-hidden="true">
+                  <span className="nle-clip-chip">{title}</span>
+                  <span className="nle-clip-chip">{duration}</span>
+                </span>
+              </motion.button>;
             })}</AnimatePresence>
             <div className={`nle-clip studio-media-drop${drop?.track === track.id && drop.durationFrames !== undefined ? " visible" : ""}`}
               style={{ left: (drop?.frame ?? 0) * pixels, width: Math.max(8, (drop?.durationFrames ?? 0) * pixels) }} aria-hidden="true"/>
           </div>
         </TrackMenu></motion.div>; })}</AnimatePresence>
         <div className="nle-track-space-row" data-nle-drop=""><div className="nle-track-label empty"/><div className="nle-track-space" style={{ width }}/></div>
-        <div className={`nle-timeline-empty${visibleTracks.length ? "" : " visible"}`} style={{ left: timelineOrigin, width, height: trackPadding }}>从素材区拖入文件，开始剪辑</div>
+        <div className={`nle-timeline-empty${visibleTracks.length || fileDrop !== undefined ? "" : " visible"}`} style={{ left: timelineOrigin, width, height: trackPadding }}>从素材区或文件系统拖入素材</div>
         {marqueeBox && <div className="nle-marquee" style={marqueeBox} aria-hidden="true"/>}
         <AnimatePresence initial={false}>{insertion !== undefined && <motion.div {...fadeMotion(reduced)}
           className="nle-track-insertion" style={{ top: insertion }} />}</AnimatePresence>
         <div className="nle-timeline-guides" style={{ "--nle-playhead-x": `${labelWidth + playheadPosition}px` } as React.CSSProperties}>
-          {guide !== undefined && guide !== frame && <div className="nle-snap-line" style={{ left: timelineOrigin + guide * pixels }}/>}
+          {fileDrop !== undefined && <span className="nle-file-drop-hint" role="status" style={{
+            left: Math.max(labelWidth + viewport.left + 8, Math.min(
+              timelineOrigin + fileDrop.frame * pixels + 10, labelWidth + viewport.left + viewport.width - 172,
+            )),
+            top: viewport.top + rulerHeight + 8,
+          }}>{fileDrop.pending ? "正在导入并添加到播放头…" : "导入并添加到播放头"}</span>}
+          {guide !== undefined && guide !== frame && <div className="nle-snap-line" style={{ left: Math.round(timelineOrigin + guide * pixels - viewport.left) + viewport.left }}/>}
           <div className={`nle-playhead${playheadSnap}`}/>
           <div className={`nle-playhead-control${playheadSnap}`} style={{ visibility: playheadVisible ? undefined : "hidden" }}>
             <button className={seek.active ? "active" : ""} aria-label="播放头" onPointerDown={event => seek.start(event, frame)}/>
@@ -530,12 +809,46 @@ export function Timeline({ session, frame, playing, reveal, selection, busy, ges
         </div>
       </div>
     </motion.div>
-    {itemGesture.floating.map(item => <div key={item.id} className="nle-floating-preview" aria-hidden="true"
-      style={{ position: "fixed", left: item.left, top: item.top, width: item.width, height: item.height, pointerEvents: "none" }}>
-      <div className={`nle-clip nle-clip-ghost ${item.role}`} style={{ inset: 0, height: item.height }}>
-        {item.picture !== undefined && <FloatingFilmstrip picture={item.picture}/>}
-        <span className="nle-clip-title"><span className="nle-clip-chip">{item.title}</span></span>
-      </div>
-    </div>)}
+    {mediaPlacement !== undefined && <MediaPlacementPreview draft={mediaPlacement} editRate={scene.editRate} generation={session.media.generation}/>}
+    {itemGesture.floating.map(item => {
+      const entry = item.pending ? sceneItems.get(item.id) : undefined;
+      const track = entry === undefined ? undefined : scene.tracks.find(row => row.id === entry.track);
+      const canDrag = tool === "select" && matteTarget === undefined && !gestureBlocked && entry !== undefined && track !== undefined;
+      const bounds = item.pending ? scroller.current?.getBoundingClientRect() : undefined;
+      const clipPath = bounds === undefined ? undefined : `inset(${Math.max(0, bounds.top + rulerHeight - item.top)}px ${
+        Math.max(0, item.left + item.width - bounds.right)}px ${Math.max(0, item.top + item.height - bounds.bottom)}px ${
+        Math.max(0, bounds.left + labelWidth - item.left)}px)`;
+      return <div key={item.id} className="nle-floating-preview" aria-hidden="true"
+        data-pending-clip-id={item.pending ? item.id : undefined} data-drop-invalid={!item.pending && intent === undefined ? "" : undefined}
+        onPointerDown={canDrag ? event => itemGesture.start(event, entry, track) : undefined}
+        style={{ position: "fixed", left: item.left, top: item.top, width: item.width, height: item.height,
+          clipPath, pointerEvents: canDrag ? "auto" : "none", cursor: canDrag ? "grab" : undefined }}>
+        <div className={`nle-clip nle-clip-ghost ${item.role}`} style={{ inset: 0, height: item.height }}>
+          {item.picture !== undefined && <FloatingFilmstrip picture={item.picture}/>}
+          <span className="nle-clip-title"><span className="nle-clip-chip">{item.title}</span></span>
+        </div>
+      </div>;
+    })}
   </motion.section>;
+}
+
+function MediaPlacementPreview({ draft, editRate, generation }: {
+  readonly draft: MediaPlacementDraft;
+  readonly editRate: NleTimelineScene["editRate"];
+  readonly generation: number;
+}) {
+  const { left, top, pixels, frame, durationFrames } = draft.position;
+  const origin = frame * pixels - left;
+  return <div className="nle-floating-preview nle-media-placement" data-media-placement="" data-blocked={draft.blocked || undefined}
+    aria-hidden="true" style={{ left, top, height: rowHeight - 6, width: Math.max(8, durationFrames * pixels) }}>
+    <div className={`nle-clip ${draft.role}`} style={{ inset: 0 }}>
+      <div className="nle-clip-content">
+        {draft.preview !== undefined && <TimelineSourcePreview source={draft.preview} pictureItem={draft.role === "picture"}
+          generation={generation} authored={{ startFrame: frame, durationFrames }} window={{ start: frame, duration: durationFrames }}
+          frameWidth={pixels} editRate={editRate} viewport={{ left: origin, right: origin + window.innerWidth }} active/>}
+        <span className="nle-clip-title"><span className="nle-clip-chip">{draft.label}</span>
+          <span className="nle-clip-chip">{timecode(durationFrames, editRate.numerator / editRate.denominator)}</span></span>
+      </div>
+    </div>
+  </div>;
 }

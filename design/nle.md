@@ -40,8 +40,8 @@ The initial SVML surface is deliberately small:
 - an `Adjust` is a timed Process over the signal accumulated below its Track position;
 - a Transition is an explicit relation around an adjacent Picture cut.
 
-Composition extent is zero or the latest Item end across its Tracks. Item and Track enablement control the signal
-and preserve that extent. A timed black picture at the tail is an ordinary Item and contributes its end to the extent.
+Composition extent is zero or the latest Item end across its Tracks. An Item switch controls its participation.
+The Track Picture and Audio switches gate their respective contributions and preserve the Composition extent. A timed black picture at the tail is an ordinary Item and contributes its end to the extent.
 A positive extent with no active Picture produces the requested output background at delivery. A nested Composition
 with an empty Picture canvas can be placed on a Picture Track and contributes transparency to its parent. A nested
 Composition with no active Audio supplies silence to an occurrence that requests Audio.
@@ -55,7 +55,7 @@ The current SVML shape includes:
     <value>{"contrast":1.1}</value>
   </shared-value>
   <composition id="root" name="Main" width="1920" height="1080">
-    <track id="picture" name="Picture" kind="picture" role="picture" enabled="true">
+    <track id="picture" name="Picture" kind="picture" role="picture" picture-enabled="true" audio-enabled="true">
       <present id="take" source="media" start="0/1" duration="10/1" enabled="true">
         <media path="media/take.media.json" />
         <source-time>
@@ -113,8 +113,10 @@ A Present-local Process uses exact Item-local Control time. A Process can align 
 its Present. Processing that covers several Presents uses a timed Adjust Item on a real Track; wrapping
 the Presents in a nested Composition and applying an outer Process remains another explicit authoring choice.
 
-Picture layout is deliberately the small NLE-owned spatial substrate: every Picture occurrence needs a frame, fit and
-focal alignment before a package can process it. Post-layout translation, scale, rotation, opacity, colour treatment,
+NLE owns the Picture's source crop and layout. A crop selects a rectangle in the Source's display coordinates.
+The layout fits that rectangle into an Item frame with focal alignment and places the frame in the parent
+Composition. Source selection and placement are independent. Picture Processes receive the fitted result in
+Item coordinates before it is placed in the parent Composition. Post-layout translation, scale, rotation, opacity, colour treatment,
 frame decoration and animated variants are package Operators. Audio gain, fades, envelopes and similar treatments are
 Audio Operators. A product may install standard packages and present their fields as ordinary editing controls without
 giving those fields central SVML meaning.
@@ -164,8 +166,7 @@ may contribute independently:
 - lowering and terminal behavior for the real audiovisual result;
 - a fixed Track role and readable source time for each Component symbol, plus a reader for authored text on text and subtitle Tracks;
 - finite Inspector sections for Component parameters, exact inline/shared Component value slots and Operator parameters;
-- pure authoring reducers that turn semantic operations into replacement closed values;
-- a conservative declaration that ordinary NLE time-window slicing preserves an Operator's meaning.
+- pure authoring reducers that turn semantic operations into replacement closed values.
 
 These facets never grant Project authority. They cannot inject product markup, create Tracks, persist session
 state, choose transaction boundaries or mutate the Project directly. The Host recreates a facet from the current
@@ -178,11 +179,11 @@ The three product surfaces retain different authority:
 | --- | --- | --- | --- |
 | Canvas | Picture frame, fit, focus and occurrence selection | actual rendered pixels; a future proven need may add bounded semantic handles | selection outlines, guides and preview resource addresses |
 | Inspector | occurrence, layout, source, Process timing and relationship structure | Component, Shared Value, Process and Reconstruction fields plus semantic reducers | control chrome and open/closed panel state |
-| Timeline | placement, Track structure, Item names, move/trim/split and duration handles for edge-aligned Processes | Component Track role, readable source time and factual text, plus Operator slicing support | color, row height, thumbnails, waveform, playhead and pointer drafts |
+| Timeline | placement, Track structure, Item names, move/trim/split and duration handles for edge-aligned Processes | Component Track role, readable source time and factual text | color, row height, thumbnails, waveform, playhead and pointer drafts |
 
-Moving an unlocked occurrence is NLE placement. Media, Components and local Compositions share the same trim and
-split operations. Attached Processes and standalone Adjusts declare whether slicing their Control relation preserves
-their meaning. Splitting also requires the Item to be free of Transition and Matte endpoint relationships. An edge-aligned
+Moving an unlocked Item is NLE placement. Media, Components, local Compositions and Adjusts share the same trim
+and split operations. NLE slices each Source or Control relation and the occurrence's attached Processes.
+Splitting also requires the Item to be free of Transition and Matte endpoint relationships. An edge-aligned
 Process follows the NLE rules below. The package owns the values sampled in its Control domain.
 
 ## First Project document
@@ -190,13 +191,14 @@ Process follows the NLE rules below. The package owns the values sampled in its 
 The first document format is the SVML representation of the NLE Project. npm and the project lockfile select its
 implementation. The Reader and serializer operate on the current owner shape.
 
-One Project contains a non-empty registry of named Composition definitions and selects one by id as its Root. Every
-Composition is an equal definition owned by the same document; Root is only the default preview, lowering and delivery
-entry. A Composition owns:
+One Project contains an ordered, non-empty list of named Composition definitions and selects one by ID as its Root.
+SVML sibling order is the Project's presentation order for listing definitions. The Root is the default preview,
+lowering and delivery entry. Nested occurrences reference definitions by ID. `composition.move` changes the list
+order by moving a definition before another definition or to the end. A Composition owns:
 
 - a finite logical Picture canvas extent;
 - ordered Picture and Audio Tracks;
-- Track name and enablement;
+- Track name and independent Picture and Audio switches;
 - ordered Media and component Present Items plus optional explicitly timed Adjust Items;
 - occurrences referencing other Composition definitions in the same Project;
 - exact Programme-local start and visible duration;
@@ -280,7 +282,8 @@ absent slot is meaningful. Editing inline ownership changes one Item; editing sh
 value and guards every current user's Track.
 
 `picture.layout` is the first NLE declaration because frame, fit and focal alignment are NLE meanings. A Picture
-appearance stores either one inline layout or one reference to a compatible Shared Value. Spatial authoring can
+appearance stores either one inline layout or one reference to a compatible Shared Value. The crop belongs to
+the occurrence. Spatial authoring can
 promote an inline layout, link another Picture Item, edit the shared owner, or unlink an Item by copying the resolved
 layout back inline. Canvas, Inspector and delivery compilation resolve the reference before using its geometry.
 
@@ -345,19 +348,20 @@ fragment keeps an explicit slice of the original map with the same Control durat
 
 ## Transitions and Mattes
 
-A Picture Transition is an explicit relationship between two enabled Present Items on one Picture Track. The
+Transition and Matte are explicit relationships between enabled Presents with Picture output in one Composition.
+A Picture Transition places its two endpoints on one Track. The
 outgoing Item begins first, the incoming Item begins before the outgoing Item ends, and the incoming Item ends after
 the outgoing Item. Their overlap is evaluated by one package Operator with exact `outgoing` and `incoming` inputs;
 outside that overlap, each Item remains directly visible. Transition chains forbid ambiguous incoming/outgoing
 branches and overlapping transition ranges.
 
-A Matte is an explicit Picture dependency from one content Present to one matte-source Present. The matte source
-must cover the complete content range, participates in evaluation, and is not independently painted. One content
-has at most one direct Matte, dependencies must be acyclic, and a Transition cannot consume an Item reserved as a
-matte source. The package Operator exposes exact `content` and `matte` inputs.
+A Matte uses the alpha of the source Picture to multiply the content Picture's alpha at the same Composition time
+and coordinates. The source must cover the complete content range. Its Picture is drawn only as an input to the
+relationship. One content has at most one direct Matte, dependencies must be acyclic, and a Transition cannot
+consume an Item reserved as a matte source. Audio evaluation follows each Item's Audio settings.
 
-Both relations store stable package symbols and closed parameters. Their package Controls receive implicit linear
-mappings over the overlap or content range. Compilation resolves Matte dependencies before Transition chains.
+Transition Controls receive implicit linear mappings over the overlap. Compilation resolves Matte dependencies
+before Transition chains.
 
 ## Transactions and open lifetime
 
@@ -370,16 +374,22 @@ One user or Agent gesture submits one revisioned Service transaction. Its comman
 clone, the complete result is validated once, and either the Service publishes one new snapshot and revision or its
 state remains untouched. A stale expected revision is rejected before mutation. The first command vocabulary covers
 Project metadata, Composition add/update/remove, Track add/move/update/remove and Item
-add/update/move/trim/slip/retime/split/roll/ripple-trim/
-detach-audio/replace/remove. Ripple scope is always an explicit Item set supplied by the caller; Project editing does
-not infer a hidden selection, Track suffix or magnetic Timeline policy. Processes have direct ordered
+add/update/move/reorder/trim/slip/retime/split/roll/ripple-trim/
+detach-audio/replace/remove. Item reorder inserts one Item before another on its Track, or at the end, and changes
+only the Track's Item order. The transaction removes Tracks that had Items before the edit and are empty after all
+commands run. Empty Tracks authored explicitly are valid, and a Track refilled within the same edit keeps its identity.
+Undo restores the original Track together with its Items. Ripple scope is always an explicit Item set supplied by
+the caller; Project editing does not infer a hidden selection, Track suffix or magnetic Timeline policy. Processes have direct ordered
 add/move/replace/retime/remove commands rather than generic graph mutation. Transitions and Mattes each have direct
 add/replace/remove commands; edits that invalidate their referenced Items reject the complete transaction.
 Composition Groups record authored linked movement by Item identity. A Group has at least two distinct Items
-from the same Composition, and each Item belongs to at most one Group. Group commands add, replace or remove
-the membership. A move or ripple displacement supplies the entire Group with one delta. Trimming and other
-Item-local edits address their chosen Item. Splitting adds the new piece to the same Group, and removal shrinks
-the Group or drops it when fewer than two members remain.
+from the same Composition, and each Item belongs to at most one Group. `group.link` links the given Items and
+requires every member of any Group they touch. Extending one Group preserves its ID. Creating a Group or merging
+several Groups uses the supplied ID. `group.unlink` takes a Group ID and its departing members. Both unlinking
+and Item deletion retain the Group ID while at least two members remain and remove the Group otherwise.
+Add, replace and remove commands address complete Group records. A move or ripple displacement supplies the
+entire Group with one delta. Trimming and other Item-local edits address their chosen Item. Splitting adds the
+new piece to the same Group.
 Shared Values have one direct add/replace/remove command family. Component Items retain explicit value-binding
 set/remove commands, while pure Component-value, Process-parameter and Picture-layout planners own share, link and
 unlink. Complete-result validation permits one atomic rebind-and-remove gesture without exposing an invalid state.
@@ -395,10 +405,11 @@ background hash comparison. File watching and platform file I/O remain Host or a
 ## Authoring planners and disposable indexes
 
 Pure materialization planners translate explicit caller choices into ordinary Project transactions for Media Asset,
-component and local Composition Presents, Adjust Items and Transitions. Transition materialization atomically turns
-one direct Picture cut into its explicit overlap and relation; no invalid intermediate overlap becomes an accepted
-Project snapshot. The planners perform no file access, package evaluation or Service mutation. A direct spatial
-planner similarly translates frame, fit and focal-alignment plus explicit
+component and local Composition Presents, Adjust Items and Transitions. At a direct Picture cut, exactly one Item
+ends, exactly one Item begins, and no other Item spans that boundary. Transition materialization takes an explicit
+set of Items to displace, including the incoming Item, and atomically creates the endpoint overlap and its relation.
+The outgoing Item anchors the cut. The planners perform no file access, package evaluation or Service mutation. A direct spatial
+planner similarly translates source crop, frame, fit and focal-alignment plus explicit
 share/link/unlink intentions into Item or Shared Value transactions; editor pointer drafts and snapping remain Product Session interaction. Component-value and Process-parameter planners likewise translate explicit share, link and
 unlink intentions into ordinary binding, Item and Shared Value commands. All three unlink operations preserve the
 resolved value by copying it inline.
@@ -415,7 +426,10 @@ never serialized or treated as another authority.
 ## Delivery compilation
 
 The delivery compiler reads one accepted NLE snapshot, its resolved Media and selected npm render contributions.
-The Root programme ends at the latest enabled Item edge. Picture fitting places source content in the Item's local
+The Root programme ends at the latest Item edge. Each Track's Picture switch gates its Presents, Picture Adjusts
+and Matte source contributions. A disabled Matte source bypasses its alpha mask while retaining the relation.
+The Audio switch gates the Track's Audio Presents and Adjusts, including Audio carried by Picture Presents.
+Picture fitting places source content in the Item's local
 frame, then places that frame on the Composition canvas. Picture and Audio of one Media Present share exact placement
 and source-time mapping. The compilation request selects how the resulting programme is sampled.
 
@@ -427,7 +441,6 @@ and a continuous `AudioProgram` as requested. See [delivery compilation](html-vi
 
 The following capabilities are outside the current implementation:
 
-- Transition and Matte Inspector authoring beyond the current Component, Shared Value and Operator slice;
 - local file/process implementations.
 
 ## Package shape and required behavior

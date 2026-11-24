@@ -27,8 +27,6 @@
 .library-grid { display: grid; grid-template-columns: repeat(auto-fill, 136px); justify-content: start; gap: 16px 12px; }
 .dropdown-menu.library-context-menu { min-width: min(124px, var(--available-width)); }
 .library-context-menu .dropdown-item { padding-inline: 10px; white-space: nowrap; }
-.library-context-menu:focus-visible,
-.library-context-menu .dropdown-item:focus-visible { outline: none; }
 .library-card { position: relative; min-width: 0; }
 .library-card-main { display: flex; flex-direction: column; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: grab; }
 .library-thumbnail { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; border-radius: var(--control-radius, 7px); background: var(--hover); color: var(--muted); outline: 1px solid transparent; outline-offset: 0; transition: outline-color .15s; }

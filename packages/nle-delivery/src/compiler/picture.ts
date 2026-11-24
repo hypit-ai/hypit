@@ -33,6 +33,7 @@ export function pictureInputs(node: PictureNode): readonly string[] {
     case "transparent": case "use": return [];
     case "restrict": case "crop": case "remap": return [node.input];
     case "over": return node.inputs;
+    case "alpha-mask": return [node.content, node.matte];
     case "apply": return Object.values(node.inputs);
   }
 }
@@ -51,14 +52,15 @@ function assertNode(id: string, node: PictureNode, program: CompilationGraph): v
     case "remap": assertSpatialMap(node.mapping); return;
 
     case "over": assert(node.inputs.length > 0, `Picture over ${id} has no inputs.`); return;
+    case "alpha-mask": return;
     case "apply": assert(Object.keys(node.inputs).length > 0, `Picture apply ${id} has no inputs.`); return;
   }
 }
 
 function regionInside(region: SpatialRegion, domain: LocalSpatialDomain): boolean {
-  return region.x >= domain.region.x && region.y >= domain.region.y
-    && region.x + region.width <= domain.region.x + domain.region.width
-    && region.y + region.height <= domain.region.y + domain.region.height;
+  const x = region.x - domain.region.x;
+  const y = region.y - domain.region.y;
+  return x >= 0 && y >= 0 && region.width <= domain.region.width - x && region.height <= domain.region.height - y;
 }
 
 function commonDomain(domains: readonly LocalSpatialDomain[], label: string): LocalSpatialDomain {
@@ -94,6 +96,7 @@ export function pictureNodeSpatialDomains(
         domain = node.mapping.target;
         break;
       case "over": domain = commonDomain(node.inputs.map(domainOf), `Picture over ${id}`); break;
+      case "alpha-mask": domain = commonDomain([domainOf(node.content), domainOf(node.matte)], `Picture alpha mask ${id}`); break;
       case "apply": domain = commonDomain(Object.values(node.inputs).map(domainOf), `Picture apply ${id}`); break;
     }
     domains.set(id, domain);

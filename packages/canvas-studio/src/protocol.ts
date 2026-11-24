@@ -33,7 +33,7 @@ export type CanvasTimelineTarget = {
   readonly name: string;
   readonly composition: string;
   readonly compositions: readonly { readonly id: string; readonly name: string }[];
-  readonly tracks: readonly { readonly id: string; readonly name: string; readonly kind: "picture" | "audio"; readonly enabled: boolean }[];
+  readonly tracks: readonly { readonly id: string; readonly name: string; readonly kind: "picture" | "audio" }[];
   readonly editRate: { readonly numerator: number; readonly denominator: number };
   readonly endFrame: number;
   readonly projectRevision: number;

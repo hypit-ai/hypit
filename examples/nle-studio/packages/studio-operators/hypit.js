@@ -69,7 +69,7 @@ export const hypitPackage = {
       package: packageName,
       components: [],
       componentValues: [],
-      operators: [{ operator: colour, timeWindow: () => true, editParameters: editColour }],
+      operators: [{ operator: colour, editParameters: editColour }],
     },
   }, {
     kind: "hypit.nle-inspector-presentation",

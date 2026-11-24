@@ -119,6 +119,7 @@ window.__hypitCaptureCommit=token=>{for(let bit=0;bit<32;bit++){const white=((to
     backgroundColor: "#000000",
     webPreferences: {
       backgroundThrottling: false,
+      enableBlinkFeatures: "CanvasDrawElement",
       offscreen: { useSharedTexture: true, sharedTexturePixelFormat: "argb", deviceScaleFactor: 1 },
     },
   });

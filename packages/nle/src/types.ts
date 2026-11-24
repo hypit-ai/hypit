@@ -77,6 +77,14 @@ export type NlePictureLayout = {
   readonly contentY?: number;
 };
 
+/** Insets in the interpreted source Picture, normalized independently on each axis. */
+export type NlePictureCrop = {
+  readonly left?: number;
+  readonly top?: number;
+  readonly right?: number;
+  readonly bottom?: number;
+};
+
 export type NlePictureLayoutSharedValue = {
   readonly id: string;
   readonly name: string;
@@ -103,6 +111,8 @@ export type NlePictureLayoutReference = {
 };
 
 export type NlePictureAppearance = {
+  /** Occurrence-local selection of the source Picture before fitting. */
+  readonly crop?: NlePictureCrop;
   /** Inline occurrence layout or one explicit Project-owned linked layout. */
   readonly layout: NlePictureLayout | NlePictureLayoutReference;
   /** Occurrence-local Picture processing, ordered inner-to-outer. */
@@ -195,7 +205,8 @@ export type NleTrack = {
   readonly name: string;
   readonly kind: "picture" | "audio";
   readonly role: NleTrackRole;
-  readonly enabled: boolean;
+  readonly pictureEnabled: boolean;
+  readonly audioEnabled: boolean;
   /** Picture Tracks and their Items are ordered back-to-front. */
   readonly items: readonly NleItem[];
 };
@@ -214,8 +225,6 @@ export type NleMatte = {
   readonly id: string;
   readonly content: string;
   readonly matte: string;
-  readonly operator: PackageSymbol;
-  readonly parameters: Readonly<Record<string, unknown>>;
 };
 
 /** Composition-local membership for linked Item movement. */

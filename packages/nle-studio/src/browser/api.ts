@@ -53,6 +53,24 @@ export async function readDropDestination(drop: import("../protocol.js").NleStud
   return result.value;
 }
 
+export async function readMediaDrop(drop: import("../protocol.js").NleStudioMediaDrop) {
+  const result = await observe({ kind: "media-drop", drop });
+  if (result.kind !== "media-drop") throw new Error("NLE Studio returned an invalid Media drop observation.");
+  return result.value;
+}
+
+export async function readTimelineCuts(cut: import("../protocol.js").NleStudioTimelineCut) {
+  const result = await observe({ kind: "timeline-cuts", cut });
+  if (result.kind !== "timeline-cuts") throw new Error("NLE Studio returned an invalid Timeline cuts observation.");
+  return result.value;
+}
+
+export async function readCompositionActions(selection: import("../protocol.js").NleStudioCompositionSelection) {
+  const result = await observe({ kind: "composition-actions", selection });
+  if (result.kind !== "composition-actions") throw new Error("NLE Studio returned an invalid Composition actions observation.");
+  return result.value;
+}
+
 async function observe(value: NleStudioObservationRequest): Promise<NleStudioObservation> {
   return await request("api/observe", value);
 }
@@ -81,6 +99,12 @@ export async function readInspector(item: string) {
 export async function readTransitionInspector(transition: string) {
   const result = await observe({ kind: "transition-inspector", transition });
   if (result.kind !== "transition-inspector") throw new Error("NLE Studio returned another observation kind for Transition Inspector.");
+  return result.value;
+}
+
+export async function readMatteSources(item: string) {
+  const result = await observe({ kind: "matte-sources", item });
+  if (result.kind !== "matte-sources") throw new Error("NLE Studio returned another observation kind for Matte sources.");
   return result.value;
 }
 
@@ -117,6 +141,9 @@ export async function refreshOpen(
       case "open":
       case "component-inputs":
       case "timeline-drop":
+      case "media-drop":
+      case "timeline-cuts":
+      case "composition-actions":
       case "transition-inspector":
       case "action":
       case "inspector": throw new Error(`NLE Studio returned unexpected ${observation.kind} observation.`);

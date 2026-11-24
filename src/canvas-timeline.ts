@@ -25,7 +25,7 @@ async function observeTarget(target: Target): Promise<CanvasTimelineTarget> {
   return {
     target: target.id, document: project.value.document, name: project.value.name, composition: scene.composition,
     compositions: timeline.value.compositions, tracks: scene.tracks.filter(track => !track.locked && track.role === track.kind)
-      .map(({ id, name, kind, enabled }) => ({ id, name, kind, enabled })),
+      .map(({ id, name, kind }) => ({ id, name, kind })),
     editRate: scene.editRate, endFrame: scene.maximumFrame,
     projectRevision: status.value.projectRevision,
   };

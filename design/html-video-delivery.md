@@ -27,7 +27,7 @@ SVML / NLE Project snapshot + Project Media + selected render contributions
 - `@hypit/html-render-local` 拥有本机 staging、请求私有 HTTP、精确 Source-frame preparation、worker 调度、
   有界顺序合流和 `HtmlCaptureBackend` 契约；
 - `@hypit/html-chromium-local` 提供 Chromium frame-buffer worker；
-- `@hypit/html-electron-local` 提供 Electron encoded-stream worker；
+- `@hypit/html-electron-local` 提供 Electron encoded-stream 和 frame-buffer worker；
 - `@hypit/media-local` 执行 `AudioProgram` 并封装最终视频；
 - `@hypit/html-video-local` 装配浏览器、Audio 执行和 mux，成为本机 `HtmlVideoExecutor`；
 - `@hypit/nle-delivery` 从 snapshot、Media 和 render contributions 编译终端程序，并拥有 Project 范围的
@@ -63,7 +63,8 @@ interface HypitFrameProgram {
 两个 renderer 使用同一组件逐帧语义。
 
 全片交付选择完整节目范围，frame preview 选择一帧对应的精确范围。编译器按输出帧率确定节目采样点，
-并为每个采样点计算素材取帧位置。空间变换与裁剪关闭为静态布局，组件局部时间、媒体取帧和 controls 随帧求值。
+并为每个采样点计算素材取帧位置。空间编译先在源画面坐标里应用 Item 的裁剪，再按布局适配到 Item 外框。
+`cover` 的越界部分在外框截住，局部 Process 使用适配后的 Item 坐标。组件局部时间、媒体取帧和 controls 随帧求值。
 一个 `HtmlProgram` 执行整个已选画面。Studio 的暂停定位发布当前 Composition 的画面 Programme，
 连续定位复用同一个浏览器文档和组件运行实例。浏览器按目标帧加载参与合成的素材，兼容的视频流通过
 原生媒体解码器取图，其余按 Programme 已关闭的 Source position、stream、Picture interpretation 和
@@ -76,6 +77,12 @@ Studio 连续播放驱动同一页面。兼容的正向映射使用浏览器连�
 `applyFrame(frame)` 的完成是截图屏障，不只是一次同步 DOM 写入。HTML Visual 可以监听 `hypit-frame`，并通过
 事件 detail 的 `waitUntil(promise)` 把当前帧所需的异步就绪工作加入屏障。这个协议只等待当前输出帧的资源与
 状态；它不把前后帧执行顺序写进 Programme。
+
+Alpha 合成在同一画面 Programme 中绘制两路透明画面，再以遮罩源的 Alpha 乘上内容的 Alpha。Programme
+用 HTML-in-Canvas 绘制两个输入，等待当前帧的视频、图片及组件状态就绪后完成合成。随机定位、播放和导出
+都在该帧的合成完成后交付画面。Electron 场景窗口显式启用 HTML-in-Canvas。Studio 在浏览器缺少合成能力或
+画面合成失败时，让本机画面执行器运行同一个 Programme，把完成合成的帧交回预览页。
+沙盒 Programme 将输入组件声明的图片资源绑定到自己的文档来源。组件引用媒体时沿用同一套资源声明。
 
 Video Source 为每个输出帧保存精确的 Source position、`before`／`after` 边、selected stream 与 Media owner
 关闭的 Picture interpretation。本地执行在请求私有目录中建立 selected stream 时间戳索引，以 FFmpeg 按解码

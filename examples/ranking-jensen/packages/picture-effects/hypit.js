@@ -174,18 +174,27 @@ const frameVisual = parameters => {const t=parameters.treatment||parameters;cons
 const transitionVisual = (parameters, duration) => ({html:'<div data-outgoing>{{input:outgoing}}</div><div data-incoming>{{input:incoming}}</div>',data:{...parameters,domainDuration:duration},css:':scope>[data-outgoing],:scope>[data-incoming]{position:absolute;inset:0}',setup:helpers+`
 const outgoing=root.querySelector('[data-outgoing]'),incoming=root.querySelector('[data-incoming]'),duration=seconds(data.domainDuration);return frame=>{let p=Math.max(0,Math.min(1,control('progress',frame)/Math.max(.000001,duration)));p=ease(p,data.easing);outgoing.style.opacity=String(1-p);incoming.style.opacity=String(p);};`});
 
+const matteEllipse = symbol("matte-ellipse");
+const ellipseImage = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="50" fill="white"/></svg>',
+)}`;
+
 export const hypitPackage = {
   package: packageName,
   contributions: [
+    { kind: "hypit.nle-component-definition", value: {
+      kind: "hypit.nle-component-definition",
+      package: packageName,
+      components: [{ component: matteEllipse, role: "picture", sourceTime: () => ({ kind: "constant" }) }],
+    } },
     { kind: "hypit.nle-authoring", value: {
       kind: "hypit.nle-authoring",
       package: packageName,
       components: [],
       componentValues: [],
       operators: [
-        { operator: symbol("frame"), timeWindow: () => true },
-        { operator: symbol("transform"), timeWindow: () => true, editParameters: editControlledParameters },
-        { operator: symbol("filter"), timeWindow: () => true, editParameters: editControlledParameters },
+        { operator: symbol("transform"), editParameters: editControlledParameters },
+        { operator: symbol("filter"), editParameters: editControlledParameters },
       ],
       transitions: [{ operator: symbol("transition"), editParameters(operation, { transition }) {
         if (operation.kind !== "easing.set" || !interpolationOptions.some(option => option.value === operation.value)) {
@@ -211,6 +220,13 @@ export const hypitPackage = {
       }] }],
     } },
     { kind: "hypit.nle-render", value: {
+      components: [{ symbol: matteEllipse.symbol, render: () => ({
+        region: { x: 0, y: 0, width: 100, height: 100 },
+        visual: {
+          html: `<img src="${ellipseImage}" alt="">`,
+          css: ':scope > img { position: absolute; inset: 0; width: 100%; height: 100%; }',
+        },
+      }) }],
       pictureProcesses: [
         { symbol: "frame", render: (_process, { parameters }) => ({ visual: frameVisual(parameters) }) },
         { symbol: "transform", render: (_process, { parameters }) => ({

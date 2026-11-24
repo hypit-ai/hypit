@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
-import { labelWidth, snapTimelineEdges, timelineOrigin } from './timelineGeometry.js';
+import { labelWidth, snapTimelineEdges, timelineOrigin, type TimelineSnap } from './timelineGeometry.js';
 
 export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixels: number, endFrame: number,
   snapBoundaries: readonly number[] | undefined, onSeek: (frame: number) => void) {
@@ -22,14 +22,16 @@ export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixe
     const grabOffset = anchorFrame === undefined ? 0
       : anchorFrame * pixels - (x - viewport.getBoundingClientRect().left - timelineOrigin + viewport.scrollLeft);
     let dragged = false, alt = event.altKey;
+    let heldSnap: TimelineSnap | undefined;
     const locate = () => {
       const bounds = viewport.getBoundingClientRect();
       const pointer = Math.max(bounds.left + labelWidth, Math.min(bounds.left + viewport.clientWidth, x));
       const raw = Math.max(0, Math.min(endFrame, (pointer - bounds.left - timelineOrigin + viewport.scrollLeft + grabOffset) / pixels));
-      const aligned = dragged && !alt && snapBoundaries
-        ? snapTimelineEdges([raw], undefined, snapBoundaries, pixels, correction => raw + correction <= endFrame) : undefined;
-      const at = Math.round(aligned?.frame ?? raw);
-      setSnapped(aligned !== undefined);
+      heldSnap = dragged && !alt && snapBoundaries
+        ? snapTimelineEdges([raw], undefined, snapBoundaries, pixels, { held: heldSnap, allows: value => value.frame <= endFrame })
+        : undefined;
+      const at = Math.round(heldSnap?.frame ?? raw);
+      setSnapped(heldSnap !== undefined);
       if (at !== last) { last = at; seek.current(at); }
     };
     const move = (next: PointerEvent) => {
@@ -42,7 +44,7 @@ export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixe
     const cleanup = () => {
       cancelAnimationFrame(animation);
       window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', abort);
-      window.removeEventListener('keydown', key); window.removeEventListener('blur', cleanup);
+      window.removeEventListener('keydown', key, true); window.removeEventListener('blur', cleanup);
       if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
       document.documentElement.classList.remove('nle-seeking');
       setActive(false); setSnapped(false); cancel.current = () => {};
@@ -59,7 +61,7 @@ export function useTimelineSeek(scroller: RefObject<HTMLDivElement | null>, pixe
     };
     cancel.current = cleanup;
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', abort);
-    window.addEventListener('keydown', key); window.addEventListener('blur', cleanup);
+    window.addEventListener('keydown', key, true); window.addEventListener('blur', cleanup);
     locate(); animation = requestAnimationFrame(scroll);
   };
   return { start, active, snapped };

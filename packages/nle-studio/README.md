@@ -39,19 +39,23 @@ Dragging the full contents of contiguous Tracks into a gap moves those Tracks to
 can be used to interleave Picture and Audio Tracks in the SVML Composition's Track order.
 The same endpoint applies trim, multi-Item split, and removal. Callers can close a gap or ripple-remove a
 contiguous interval by selecting an explicit Track scope.
+The `timeline-cuts` observation reports which selected Items the playhead crosses and which cuts can apply to
+that entire set. Trim keeps Group membership, and split leaves both pieces in the original Group.
 The Timeline reports the legal edit-frame range of each trim handle. Both projection and mutation use the resolved
 source time and the Item's time maps. Move keeps those maps intact. Trim changes the visible window, and split
 preserves its source coordinates in both pieces. The endpoint also supports timed source slip, direct-cut roll and end-edge
 ripple trim. Media, Component and
 Composition materialization can insert at a boundary by supplying an explicit destination and `insertTracks`.
-Callers can retime a single affine Picture-only source window or create a new held Media Picture from a
-selected forward sample with `media.freeze`.
+Callers can retime a single affine Picture-only source window or insert a held Picture from a sampled Media Item
+with `media.freeze`. Freeze samples and inserts at the same frame on the Item's Track. It moves the right piece and
+the linked suffix by the hold duration in the same transaction.
 Studio handles Cmd/Ctrl+C, X and V through the session clipboard. Paste preserves relative timing and complete
 audiovisual relations and Groups within the open NLE document. Dragging a Group member moves the whole Group.
 The Group control can create a Group, remove selected members or dissolve the selected Group.
-Studio can compound a contiguous single-Track selection and enter or return from a nested Composition. Returning
-restores the parent playhead. The backend also supports making a nested definition unique and exploding a
-full-duration, unmodified single-Track occurrence.
+Studio can compound a selection across Tracks when its replacement preserves Picture order and Audio processing.
+Entering a nested Composition follows the Item's source time. Returning restores the parent playhead. Making the
+inner Timeline independent retargets the same Item to a copied definition. Exploding a full-duration occurrence
+with identity time and layout restores its inner Tracks and relationships at the parent position.
 Paused scrubbing and frame stepping reuse the active Composition's Picture Programme in a sandboxed browser
 frame. Source media load on demand. When an accepted edit replaces the Programme, Studio waits for the new
 document to paint at the current playhead before switching. Play advances the same document using native video
@@ -60,9 +64,12 @@ single-frame PNG and MP4 review Actions use the selected Chromium and Media tool
 During playback, the Timeline turns a page at the right edge. Horizontal scrolling or zoom disables following
 for the current run, and pausing leaves the viewport where it is.
 
-Available entries in the browser Media bin can be placed at the current playhead. Studio chooses a compatible Track,
-creates one when needed, and returns the new Item identity. The structural Canvas displays accepted image and video
-resources in their Present Item layout.
+The Media card's add button and double-click place the accepted asset at the playhead on a new top Track. The
+structural Canvas displays accepted image and video resources in their Present Item layout.
+
+Dropping files from the operating system into the Media bin imports them into the open folder. Dropping them into the
+Timeline imports them into the library root and places them at the playhead. One Timeline edit creates separate new
+Picture and pure Audio Tracks at the top as needed. Picture appears above Audio, with each Track's media in drop order.
 
 At session open, the backend assembles the selected packages' NLE Component definitions, authoring and Inspector
 presentation contributions into the existing Editing Surface contracts. The browser creation bin projects selected

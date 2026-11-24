@@ -12,6 +12,30 @@ type PictureSample = {
 };
 type TimedPictureSample = PictureSample & { readonly at: number };
 
+const checkerSize = 6;
+let checkerTile: { readonly base: string; readonly contrast: string; readonly canvas: HTMLCanvasElement } | undefined;
+
+function transparencyPattern(context: CanvasRenderingContext2D, element: HTMLCanvasElement, scaleX: number, scaleY: number) {
+  const style = getComputedStyle(element);
+  const base = style.getPropertyValue("--nle-media-bg");
+  const contrast = style.getPropertyValue("--nle-alpha-checker");
+  if (checkerTile?.base !== base || checkerTile.contrast !== contrast) {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = checkerSize * 2;
+    const tile = canvas.getContext("2d");
+    if (tile === null) return null;
+    tile.fillStyle = base;
+    tile.fillRect(0, 0, canvas.width, canvas.height);
+    tile.fillStyle = contrast;
+    tile.fillRect(0, 0, checkerSize, checkerSize);
+    tile.fillRect(checkerSize, checkerSize, checkerSize, checkerSize);
+    checkerTile = { base, contrast, canvas };
+  }
+  const pattern = context.createPattern(checkerTile.canvas, "repeat");
+  pattern?.setTransform(new DOMMatrix([scaleX, 0, 0, scaleY, 0, 0]));
+  return pattern;
+}
+
 function sampleAt(sources: readonly FilmstripSamples[], seconds: number): PictureSample | undefined {
   for (const { blocks, density } of sources) {
     const block = sourceBlock(blocks, seconds);
@@ -141,6 +165,8 @@ export function SourceFilmstrip({ source, sourceAt, tileRatio, layout,
     context.clearRect(0, 0, pixelWidth, pixelHeight);
     context.imageSmoothingQuality = "high";
     const pixelScale = pixelWidth / spanWidth;
+    const backdrop = transparencyPattern(context, element, pixelScale, pixelHeight / spanHeight);
+    if (backdrop !== null) context.fillStyle = backdrop;
     const aspect = width / spanHeight;
     const previous = retained.current?.identity === sourceIdentity ? retained.current.samples : [];
     const sources = [{ density, blocks: fine }, { density: 2 as const, blocks: coarse }, ...previous];
@@ -167,6 +193,7 @@ export function SourceFilmstrip({ source, sourceAt, tileRatio, layout,
       const sourceHeight = atlas?.tileHeight ?? image.naturalHeight;
       const cropWidth = Math.min(sourceWidth, sourceHeight * aspect);
       const cropHeight = Math.min(sourceHeight, sourceWidth / aspect);
+      if (backdrop !== null) context.fillRect(left, 0, right - left, pixelHeight);
       context.drawImage(image, (tile % columns) * sourceWidth + (sourceWidth - cropWidth) / 2,
         Math.floor(tile / columns) * sourceHeight + (sourceHeight - cropHeight) / 2, cropWidth, cropHeight,
         left, 0, right - left, pixelHeight);

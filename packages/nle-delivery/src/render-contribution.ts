@@ -2,7 +2,7 @@ import type { AudioFilterProgram } from "@hypit/audio-program";
 import type { HtmlPictureReconstruction, HtmlVisual } from "@hypit/html-program";
 import type { ResolvedMedia } from "@hypit/media";
 import type {
-  NleAdjustItem, NleComponentItem, NleComposition, NleMatte, NleMediaReference,
+  NleAdjustItem, NleComponentItem, NleComposition, NleMediaReference,
   NlePictureRect, NlePresentItem, NleProcess, NleProject, NlePictureReconstruction, NleTrack, NleTransition,
 } from "@hypit/nle";
 import type { ExactTemporalValue } from "@hypit/temporal/algebra";
@@ -47,11 +47,6 @@ export type NleTransitionRenderContext = NleRenderContext & {
   readonly domain: import("@hypit/temporal/algebra").LocalTemporalDomain;
 };
 
-export type NleMatteRenderContext = NleRenderContext & {
-  readonly content: NlePresentItem;
-  readonly matte: NlePresentItem;
-};
-
 export type NleComponentPicture = {
   readonly region: NlePictureRect;
   /** A Picture without a source duration is constant. */
@@ -83,7 +78,6 @@ export type NleRenderContribution = {
   readonly pictureProcesses?: readonly RenderImplementation<NleProcess, NleProcessRenderContext, NlePictureEffect>[];
   readonly audioProcesses?: readonly RenderImplementation<NleProcess, NleProcessRenderContext, NleAudioEffect>[];
   readonly transitions?: readonly RenderImplementation<NleTransition, NleTransitionRenderContext, NlePictureEffect>[];
-  readonly mattes?: readonly RenderImplementation<NleMatte, NleMatteRenderContext, NlePictureEffect>[];
   readonly pictureReconstructions?: readonly RenderImplementation<
     NlePictureReconstruction, NlePictureReconstructionContext, HtmlPictureReconstruction
   >[];

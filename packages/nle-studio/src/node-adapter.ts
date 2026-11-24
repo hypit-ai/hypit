@@ -54,7 +54,30 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
     if (keys.length !== 2 || drop.kind !== "timeline.drop") throw new Error("NLE Studio Timeline drop observation is invalid.");
     return { kind: "timeline-drop", drop };
   }
-  if (request.kind === "inspector" || request.kind === "component-inputs") {
+  if (request.kind === "media-drop") {
+    const drop = operationRequest(request.drop);
+    if (keys.length !== 2 || drop.kind !== "media.drop") throw new Error("NLE Studio Media drop observation is invalid.");
+    return { kind: "media-drop", drop };
+  }
+  if (request.kind === "timeline-cuts") {
+    const input = record(request.cut, "NLE Studio Timeline cuts");
+    const operation = operationRequest({ ...input, kind: "timeline.split" });
+    if (keys.length !== 2 || "kind" in input || operation.kind !== "timeline.split") {
+      throw new Error("NLE Studio Timeline cuts observation is invalid.");
+    }
+    const { composition, expectedProjectRevision, items, atFrame } = operation;
+    return { kind: "timeline-cuts", cut: { composition, expectedProjectRevision, items, atFrame } };
+  }
+  if (request.kind === "composition-actions") {
+    const input = record(request.selection, "NLE Studio Composition selection");
+    const operation = operationRequest({ ...input, kind: "composition.compound", name: "复合片段" });
+    if (keys.length !== 2 || "kind" in input || "name" in input || operation.kind !== "composition.compound") {
+      throw new Error("NLE Studio Composition actions observation is invalid.");
+    }
+    const { composition, expectedProjectRevision, items } = operation;
+    return { kind: "composition-actions", selection: { composition, expectedProjectRevision, items } };
+  }
+  if (request.kind === "inspector" || request.kind === "component-inputs" || request.kind === "matte-sources") {
     if (keys.some((key) => key !== "kind" && key !== "item") || typeof request.item !== "string"
       || request.item.length === 0) {
       throw new Error(`NLE Studio ${request.kind} observation requires one Item id.`);
@@ -72,7 +95,7 @@ function observationRequest(value: unknown): NleStudioObservationRequest {
     throw new Error("NLE Studio observation kind is invalid.");
   }
   return { kind: request.kind as Exclude<NleStudioObservationRequest["kind"],
-    "inspector" | "component-inputs" | "action" | "timeline-drop" | "transition-inspector"> };
+    "inspector" | "component-inputs" | "matte-sources" | "action" | "timeline-drop" | "media-drop" | "timeline-cuts" | "composition-actions" | "transition-inspector"> };
 }
 
 function record(value: unknown, subject: string): Readonly<Record<string, unknown>> {
@@ -152,9 +175,12 @@ function operationRequest(value: unknown): NleStudioOperation {
         ? identity(target.track) && Object.keys(target).length === 2
         : target.kind === "gap" && (target.before === undefined || identity(target.before))
           && Object.keys(target).every(key => key === "kind" || key === "before");
-      valid = currentFields("anchor", "items", "deltaFrames", "target")
+      const alignment = request.alignment === undefined ? undefined : record(request.alignment, "NLE Studio Timeline edge alignment");
+      valid = currentFields("anchor", "items", "deltaFrames", "target", "alignment")
         && identity(request.anchor) && items?.includes(request.anchor) === true
-        && Number.isSafeInteger(request.deltaFrames) && location;
+        && Number.isSafeInteger(request.deltaFrames) && location
+        && (alignment === undefined || target.kind === "track" && Object.keys(alignment).length === 3
+          && identity(alignment.item) && identity(alignment.neighbor) && (alignment.edge === "start" || alignment.edge === "end"));
       break;
     }
     case "track-lock.set":
@@ -163,8 +189,12 @@ function operationRequest(value: unknown): NleStudioOperation {
     case "timeline.track-reorder":
       valid = currentFields("track", "before") && identity(request.track) && before;
       break;
+    case "timeline.item-reorder":
+      valid = currentFields("item", "direction") && identity(request.item)
+        && (request.direction === "up" || request.direction === "down");
+      break;
     case "timeline.trim":
-      valid = currentFields("item", "edge", "atFrame") && identity(request.item) && integer(request.atFrame, 0)
+      valid = currentFields("items", "edge", "atFrame") && items !== undefined && items.length > 0 && integer(request.atFrame, 0)
         && (request.edge === "start" || request.edge === "end");
       break;
     case "timeline.slip":
@@ -202,14 +232,26 @@ function operationRequest(value: unknown): NleStudioOperation {
     case "clipboard.paste":
       valid = currentFields("atFrame") && integer(request.atFrame, 0);
       break;
+    case "media.drop": {
+      const target = record(request.target, "NLE Studio Media drop target");
+      const destination = identity(target.track) && Object.keys(target).length === 1
+        || target.gap === true && (target.before === undefined || identity(target.before))
+          && Object.keys(target).every(key => key === "gap" || key === "before");
+      valid = currentFields("media", "atFrame", "target") && identity(request.media) && integer(request.atFrame, 0) && destination;
+      break;
+    }
+    case "media.place-on-new-tracks":
+      valid = currentFields("media", "atFrame") && integer(request.atFrame, 0)
+        && Array.isArray(request.media) && request.media.length > 0 && request.media.every(identity);
+      break;
     case "media.materialize":
       valid = currentFields("media", "includeAudio", "layout", "insertTracks", ...timedFields) && placement && duration && insertion
         && identity(request.media) && (request.includeAudio === undefined || typeof request.includeAudio === "boolean")
         && (request.layout === undefined || validPictureLayout(request.layout));
       break;
     case "media.freeze":
-      valid = currentFields("item", "sampleFrame", "insertTracks", ...timedFields) && placement && insertion
-        && identity(request.item) && integer(request.sampleFrame, 0) && integer(request.durationFrames, 1);
+      valid = currentFields("item", "atFrame", "durationFrames") && identity(request.item)
+        && integer(request.atFrame, 0) && duration;
       break;
     case "component.materialize": {
       const media = request.media === undefined ? {} : record(request.media, "Component Media seeds");
@@ -259,6 +301,12 @@ function operationRequest(value: unknown): NleStudioOperation {
       break;
     case "transition.remove":
       valid = currentFields("transition") && identity(request.transition);
+      break;
+    case "matte.bind":
+      valid = currentFields("content", "source") && identity(request.content) && identity(request.source);
+      break;
+    case "matte.remove":
+      valid = currentFields("matte") && identity(request.matte);
       break;
     case "composition.materialize":
       valid = currentFields("source", "atFrame", "track", "insertTracks") && placement && insertion && identity(request.source);
@@ -559,6 +607,7 @@ async function sendProgramme(
   if (request.method === "GET" && route === "index.html") {
     const assets = new URL("./assets/", url).href;
     const sources = new URL("./source/", url).href;
+    const frames = new URL("./frame/", url).href;
     let html: string;
     try { html = await programme.document(generation); }
     catch (error) {
@@ -573,7 +622,7 @@ async function sendProgramme(
     response.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
       "cache-control": "no-store",
-      "content-security-policy": `sandbox allow-scripts; default-src 'none'; frame-ancestors 'self'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src ${assets} data: blob:; font-src ${assets} data:; media-src ${assets}; connect-src ${assets} ${sources}`,
+      "content-security-policy": `sandbox allow-scripts; default-src 'none'; frame-ancestors 'self'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src ${assets} data: blob:; font-src ${assets} data:; media-src ${assets}; connect-src ${assets} ${sources} ${frames}`,
     }).end(html);
     return true;
   }
@@ -601,15 +650,17 @@ async function sendProgramme(
     }
     return true;
   }
-  const source = /^source\/([a-zA-Z0-9._:-]+)\/([0-9]+)\.png$/u.exec(route);
-  if (request.method === "GET" && source !== null) {
-    const frame = Number(source[2]);
-    if (!Number.isSafeInteger(frame)) throw new Error("Invalid Programme source frame.");
+  const picture = /^(?:source\/([a-zA-Z0-9._:-]+)\/|frame\/)([0-9]+)\.png$/u.exec(route);
+  if (request.method === "GET" && picture !== null) {
+    const frame = Number(picture[2]);
+    if (!Number.isSafeInteger(frame)) throw new Error("Invalid Programme Picture frame.");
     const controller = new AbortController();
     const abort = () => controller.abort();
     response.once("close", abort);
     try {
-      const bytes = await programme.sourceFrame(generation, source[1]!, frame, controller.signal);
+      const bytes = picture[1] === undefined
+        ? await programme.renderedFrame(generation, frame, controller.signal)
+        : await programme.sourceFrame(generation, picture[1], frame, controller.signal);
       response.writeHead(200, {
         "content-type": "image/png", "content-length": bytes.byteLength,
         "cache-control": "no-store", "access-control-allow-origin": "*",

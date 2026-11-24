@@ -58,7 +58,8 @@ function activeSpans(active: readonly boolean[]): readonly { readonly startFrame
 export function compilePicture(
   program: CompilationGraph,
   output: { readonly frameRate: HtmlFrameRate; readonly canvas: HtmlCanvas;
-    readonly range?: TemporalRange; readonly frames?: readonly number[] },
+    readonly range?: TemporalRange; readonly frames?: readonly number[];
+    readonly onItemPlacement?: (item: string, element: string) => void },
 ): HtmlProgram {
   if (program.picture === undefined || program.pictureDomain === undefined) {
     throw new Error("HTML compilation requires Picture output.");
@@ -68,6 +69,8 @@ export function compilePicture(
   const frameCount = positions.length;
   if (!Number.isSafeInteger(frameCount) || frameCount <= 0) throw new Error("HTML output frame count is invalid.");
   const domains = pictureNodeSpatialDomains(program.picture, program);
+  const { width, height } = program.pictureDomain.region;
+  const scale = Math.min(output.canvas.width / width, output.canvas.height / height);
   let serial = 0;
   const id = (kind: string): string => `${kind}-${++serial}`;
   const whole: readonly HtmlFrameSpan[] = [{ startFrame: 0, endFrameExclusive: frameCount }];
@@ -173,7 +176,7 @@ export function compilePicture(
     };
   };
   const graph = program.picture;
-  const build = (nodeId: string): HtmlPictureElement => {
+  const build = (nodeId: string, density: number): HtmlPictureElement => {
     const node = graph.nodes[nodeId]!;
     const domain = domains.get(nodeId)!;
     const elementId = id(`picture-${node.kind}`);
@@ -204,10 +207,10 @@ export function compilePicture(
         itemTime === undefined ? undefined : { [itemTime.name]: itemPositions! }, frames);
     }
     if (node.kind === "over") return {
-      kind: "box", id: elementId, spans: whole, style: domainStyle(domain), children: node.inputs.map(build),
+      kind: "box", id: elementId, spans: whole, style: domainStyle(domain), children: node.inputs.map(input => build(input, density)),
     };
     if (node.kind === "restrict") return {
-      kind: "box", id: elementId, spans: spansForRange(node.range), style: domainStyle(domain), children: [build(node.input)],
+      kind: "box", id: elementId, spans: spansForRange(node.range), style: domainStyle(domain), children: [build(node.input, density)],
     };
     if (node.kind === "crop") {
       const source = domains.get(node.input)!.region;
@@ -228,24 +231,36 @@ export function compilePicture(
             style: [
               { name: "position", value: "absolute" }, { name: "left", value: `${-x}px` }, { name: "top", value: `${-y}px` },
               { name: "width", value: `${source.width}px` }, { name: "height", value: `${source.height}px` },
-            ], children: [build(node.input)],
+            ], children: [build(node.input, density)],
           }],
         }],
       };
     }
-    if (node.kind === "remap") return {
-      kind: "box", id: elementId, spans: whole, style: domainStyle(domain),
-      children: [{
-        kind: "box", id: `${elementId}:transform`, spans: whole,
-        style: [
-          { name: "position", value: "absolute" },
-          { name: "left", value: "0" },
-          { name: "top", value: "0" },
-          { name: "transform-origin", value: "0 0" },
-          { name: "transform", value: cssTransform(node.mapping) },
-        ],
-        children: [build(node.input)],
-      }],
+    if (node.kind === "remap") {
+      const item = program.picture?.placements?.[nodeId];
+      if (item !== undefined) output.onItemPlacement?.(item, elementId);
+      const { xx, xy, yx, yy } = invertSpatialMap(node.mapping).transform;
+      const sourceDensity = density * Math.max(Math.hypot(xx, yx), Math.hypot(xy, yy));
+      return {
+        kind: "box", id: elementId, spans: whole, style: domainStyle(domain),
+        children: [{
+          kind: "box", id: `${elementId}:transform`, spans: whole,
+          style: [
+            { name: "position", value: "absolute" },
+            { name: "left", value: "0" },
+            { name: "top", value: "0" },
+            { name: "transform-origin", value: "0 0" },
+            { name: "transform", value: cssTransform(node.mapping) },
+          ],
+          children: [build(node.input, sourceDensity)],
+        }],
+      };
+    }
+    if (node.kind === "alpha-mask") return {
+      kind: "alpha-mask", id: elementId, spans: whole, style: domainStyle(domain),
+      size: { width: domain.region.width, height: domain.region.height },
+      raster: { width: Math.max(1, Math.round(domain.region.width * density)), height: Math.max(1, Math.round(domain.region.height * density)) },
+      content: build(node.content, density), matte: build(node.matte, density),
     };
     const controls = Object.entries(node.controlMappings).map(([name, mapping]) => ({
       name, evaluate: createTemporalMapEvaluator(mapping), positions: Array<ExactTemporalValue | null>(frameCount).fill(null),
@@ -258,12 +273,10 @@ export function compilePicture(
       }
     }
     return visualElement(elementId, node.visual, domain, whole,
-      Object.entries(node.inputs).map(([name, input]) => ({ name, element: build(input) })),
+      Object.entries(node.inputs).map(([name, input]) => ({ name, element: build(input, density) })),
       Object.fromEntries(controls.map(control => [control.name, control.positions])));
   };
-  const root = build(program.picture.root);
-  const { width, height } = program.pictureDomain.region;
-  const scale = Math.min(output.canvas.width / width, output.canvas.height / height);
+  const root = build(program.picture.root, scale);
   const left = (output.canvas.width - width * scale) / 2;
   const top = (output.canvas.height - height * scale) / 2;
   const fitted: HtmlPictureElement = scale === 1 && left === 0 && top === 0 ? root : {

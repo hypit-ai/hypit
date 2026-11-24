@@ -1,4 +1,6 @@
-import { findNleComposition } from "../project.js";
+import { findNleComposition, isNlePicturePresent } from "../project.js";
+import { nleDirectTransitionCuts } from "../transition-cut.js";
+import { nleTrackStackingNeighbors } from "./stacking.js";
 import type { NleEditingContext } from "./types.js";
 import { exactTemporalRational, type ExactTemporalValue, type TemporalRate } from "@hypit/temporal/algebra";
 import type { NleItem, NleProcessControlTime, NleProject, NleTrack } from "../types.js";
@@ -141,7 +143,10 @@ export function projectNleTimeline(
 
   let maximumFrame = 1;
   const timelineTracks = orderNleTimelineTracks(composition.tracks);
+  const transitionItems = new Set(composition.transitions.flatMap(({ outgoing, incoming }) => [outgoing, incoming]));
   const tracks = timelineTracks.map((track) => {
+    const locked = editing.lockedTracks.has(track.id);
+    const stacking = locked ? undefined : nleTrackStackingNeighbors(track, transitionItems);
     const items = track.items.map((item): NleTimelineSceneItem => {
       const startFrame = frames(item.start, project.editRate);
       const durationFrames = frames(item.duration, project.editRate);
@@ -149,13 +154,14 @@ export function projectNleTimeline(
       const observation = byItem.get(item.id);
       const group = groupByItem.get(item.id);
       const capability = capabilitiesByItem.get(item.id);
+      const neighbors = stacking?.get(item.id);
       return {
         id: item.id,
         track: track.id,
         kind: item.kind,
         source: source(item),
         signals: {
-          picture: item.kind === "present" && item.picture !== undefined,
+          picture: isNlePicturePresent(item),
           audio: item.kind === "present" && item.audio !== undefined,
         },
         ...(item.kind === "present" && item.source === "composition"
@@ -170,6 +176,7 @@ export function projectNleTimeline(
             return timing === undefined ? [] : [{ ...timing, medium, id: process.id, label: process.operator.symbol }];
           })),
         ...(group === undefined ? {} : { group }),
+        ...(neighbors === undefined ? {} : { stacking: neighbors }),
         display: {
           title: item.name ?? observation?.title ?? defaultTitle(project, item),
           ...(observation?.text === undefined ? {} : { text: observation.text }),
@@ -188,8 +195,9 @@ export function projectNleTimeline(
       name: track.name,
       kind: track.kind,
       role: track.role,
-      enabled: track.enabled,
-      locked: editing.lockedTracks.has(track.id),
+      pictureEnabled: track.pictureEnabled,
+      audioEnabled: track.audioEnabled,
+      locked,
       items,
     };
   });
@@ -203,6 +211,10 @@ export function projectNleTimeline(
       incoming: value.incoming,
       operator: structuredClone(value.operator),
     })),
+    transitionCuts: timelineTracks.flatMap(track => editing.lockedTracks.has(track.id) ? []
+      : nleDirectTransitionCuts(composition, track).map(({ at, outgoing, incoming }) => ({
+        frame: frames(at, project.editRate), track: track.id, outgoing, incoming,
+      }))),
     mattes: composition.mattes.map((value) => ({
       id: value.id,
       content: value.content,

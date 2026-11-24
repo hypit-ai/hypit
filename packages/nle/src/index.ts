@@ -3,15 +3,18 @@ export { assertIdentity, assertImplementationBinding, assertPackageSymbol, type 
 export { defaultNleEditRate, nleProjectFormat } from "./types.js";
 export {
   assertNleProject,
+  assertNlePictureCrop,
   createNleProject,
   findNleComponentSharedValue,
   findNleComposition,
   findNleOperatorSharedValue,
   findNlePictureLayoutSharedValue,
   findNleSharedValue,
+  isNlePicturePresent,
   nleCompositionDuration,
   nleGroupMoveItems,
   nleItemEnd,
+  nleItemCovers,
   nleProjectDuration,
   readNleProject,
   rootNleComposition,
@@ -31,7 +34,8 @@ export {
 } from "./source-time.js";
 export { nleProcessControlDuration, resolveNleProcessTime, sliceNleProcessTime } from "./process-time.js";
 export {
-  containNlePictureLayout,
+  centeredNlePictureLayout,
+  cropNlePictureSource,
   fitNlePictureContent,
   type NlePictureExtent,
   type NlePictureRect,
@@ -64,6 +68,7 @@ export {
   createMediaAssetMaterialization,
   createTransitionMaterialization,
 } from "./materialize.js";
+export { nleDirectTransitionCuts } from "./transition-cut.js";
 export {
   planNleComponentValueEdit,
   type NleComponentValueEdit,

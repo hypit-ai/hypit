@@ -52,6 +52,7 @@ function commandTracks(project: NleProject, command: NleCommand): readonly Locat
     case "project.update":
     case "shared-value.add":
     case "composition.add":
+    case "composition.move":
     case "composition.update":
     case "track.add":
       return [];
@@ -74,6 +75,7 @@ function commandTracks(project: NleProject, command: NleCommand): readonly Locat
     case "item.add":
       return tracks([command.track]);
     case "item.update":
+    case "item.reorder":
     case "item.trim":
     case "item.slip":
     case "item.retime":
@@ -118,8 +120,10 @@ function commandTracks(project: NleProject, command: NleCommand): readonly Locat
     case "matte.remove":
       return items(relationItems(project, "matte", command.id));
     case "group.add":
+    case "group.link":
       return items(command.group.items);
     case "group.replace":
+    case "group.unlink":
     case "group.remove": {
       const id = command.kind === "group.replace" ? command.group.id : command.id;
       const group = project.compositions.find(value => value.id === command.composition)?.groups.find(value => value.id === id);
@@ -167,7 +171,11 @@ export function assertNleProjectEditAllowed(
     } else if (command.kind === "item.roll") {
       requireCapability([command.left], "trimEnd");
       requireCapability([command.right], "trimStart");
-    } else if (command.kind === "item.split") requireCapability([command.id], "split");
+    } else if (command.kind === "item.split") {
+      requireCapability([command.id], "split");
+      const source = capabilityByItem?.get(command.id);
+      if (source !== undefined) capabilityByItem?.set(command.rightId, { ...source, item: command.rightId });
+    }
     const touched: LocatedTrack[] = [];
     for (const snapshot of [project, completed]) {
       try {

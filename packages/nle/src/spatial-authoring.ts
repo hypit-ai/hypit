@@ -1,16 +1,17 @@
-import { assertNleProject, findNlePictureLayoutSharedValue, resolveNlePictureLayout } from "./project.js";
+import { assertNlePictureCrop, assertNleProject, findNlePictureLayoutSharedValue, resolveNlePictureLayout } from "./project.js";
 import type { NleTransaction } from "./transaction.js";
-import type { NlePictureLayout, NlePresentItem, NleProject } from "./types.js";
+import type { NlePictureCrop, NlePictureLayout, NlePresentItem, NleProject } from "./types.js";
 
 export type NlePictureFrame = Pick<NlePictureLayout, "x" | "y" | "width" | "height">;
 
-/** Direct spatial intentions over inline placement facts owned by NLE. */
+/** Direct spatial intentions over the source window and placement facts owned by NLE. */
 export type NleSpatialEdit =
   | { readonly kind: "layout.replace"; readonly layout: NlePictureLayout }
   | { readonly kind: "frame.translate"; readonly deltaX: number; readonly deltaY: number }
   | { readonly kind: "frame.resize"; readonly frame: NlePictureFrame }
   | { readonly kind: "fit.set"; readonly fit: NlePictureLayout["fit"] }
   | { readonly kind: "focus.set"; readonly contentX: number; readonly contentY: number }
+  | { readonly kind: "crop.set"; readonly crop: NlePictureCrop | null }
   | { readonly kind: "layout.share"; readonly id: string; readonly name: string }
   | { readonly kind: "layout.link"; readonly ref: string }
   | { readonly kind: "layout.unlink" };
@@ -84,6 +85,15 @@ export function planNleSpatialEdit(
 ): NleTransaction {
   assertNleProject(project);
   const item = pictureItem(project, itemId);
+  if (edit.kind === "crop.set") {
+    if (edit.crop !== null) assertNlePictureCrop(edit.crop);
+    const copy = structuredClone(item);
+    const { crop: _previous, ...picture } = copy.picture;
+    return { commands: [{ kind: "item.replace", item: {
+      ...copy,
+      picture: { ...picture, ...(edit.crop === null ? {} : { crop: structuredClone(edit.crop) }) },
+    } }] };
+  }
   const current = resolveNlePictureLayout(project, item.picture.layout);
   switch (edit.kind) {
     case "layout.replace":

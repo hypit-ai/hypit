@@ -24,7 +24,7 @@ import {
   createComponentMaterialization,
   createCompositionMaterialization,
   createMediaAssetMaterialization,
-  createTransitionMaterialization,
+  indexNleComposition,
   indexNleProject,
   nleCompositionDuration,
   nleItemEnd,
@@ -63,7 +63,7 @@ import type {
   ProjectHostResourceResolution,
 } from "@hypit/project";
 import { captureStudioClipboard, planStudioPaste, type StudioClipboard } from "./clipboard.js";
-import { planCompound, planCopyComposition, planExplodeComposition, planUniqueComposition, projectCompositionTabs } from "./composition-planning.js";
+import { compositionEntry, planCompound, planCopyComposition, planExplodeComposition, planUniqueComposition, projectCompositionTabs } from "./composition-planning.js";
 import {
   nleProjectOwnerProvider,
   nodeNleProjectSavedAt,
@@ -75,13 +75,16 @@ import {
   type NleStudioPackageBridge,
 } from "./packages.js";
 import {
-  allocateTimelinePlacement, assertTransitionMove, nleRetimeWindow, planAudioDetachment, planTimelineDrop, planTimelineEdit,
-  planTimelineInsertion, planTimelineTrackReorder, planTransitionWindow, resolveTransitionCut, studioFrameTime,
+  allocateTimelinePlacement, defaultMediaPlacementDuration, nleRetimeWindow, planAudioDetachment, planMediaOnNewTracks, planTimelineDrop, planTimelineEdit,
+  planFreezeInsertion, planMediaDropPlacement, planTimelineInsertion, planTimelineTrackReorder, planTimelineTransitionMaterialization, planTimelineTransitionRemoval,
+  planTransitionWindow, resolveTransitionCut, timelineCutItems,
 } from "./timeline-planning.js";
+import { studioFrameTime } from "./timeline-time.js";
 import { renderedPreviewVersion, timelinePreviewSources } from "./timeline-media.js";
 import { RenderedPicturePreviews } from "./rendered-picture-previews.js";
 import { RenderedAudioPreviews } from "./rendered-audio-previews.js";
-import { planTrimEdge, projectTrimRange } from "./trim-planning.js";
+import { planMatteBinding, projectMatteSources } from "./matte-planning.js";
+import { planTrimEdge, prepareOrdinaryTrims, projectTrimRange, trimTrackNeighborLimits } from "./trim-planning.js";
 import { NleStudioPreview } from "./preview.js";
 import { NleStudioProgramme } from "./programme.js";
 import type {
@@ -90,9 +93,12 @@ import type {
   NleStudioCatalogProjection,
   NleStudioClipboardProjection,
   NleStudioComponentInputsProjection,
+  NleStudioCompositionActionsProjection,
   NleStudioEvent,
   NleStudioEventListener,
   NleStudioInvalidation,
+  NleStudioMediaDrop,
+  NleStudioMediaDropPreview,
   NleStudioMediaProjection,
   NleStudioObservation,
   NleStudioObservationRequest,
@@ -101,6 +107,8 @@ import type {
   NleStudioOperationReceipt,
   NleStudioPreviewProjection,
   NleStudioStatus,
+  NleStudioTimelineCutsProjection,
+  NleStudioTimelineEdit,
   NleStudioTimelineProjection,
 } from "./protocol.js";
 
@@ -379,7 +387,7 @@ export class NleStudioProductSession {
         const media = {
           id: entry.reference.path, name, kind, mediaType: entry.mediaType, adoptedAt: entry.adoptedAt,
           ...(entry.fileExtension === undefined ? {} : { fileExtension: entry.fileExtension }),
-          ...(entry.picture === undefined ? {} : { pictureKind: entry.picture.kind }),
+          ...(entry.picture === undefined ? {} : { pictureKind: entry.picture.kind, displayAspectRatio: entry.picture.displayAspectRatio }),
           ...(entry.picture?.version === undefined ? {} : { pictureVersion: entry.picture.version }),
           ...(entry.audioVersion === undefined ? {} : { audioVersion: entry.audioVersion }),
           ...(entry.duration === undefined ? {} : { duration: entry.duration }),
@@ -471,28 +479,42 @@ export class NleStudioProductSession {
     const tracksById = new Map(composition.tracks.map(track => [track.id, track]));
     const visit = this.#navigation.at(-1);
     const ranges: [string, NleStudioTimelineProjection["trimRanges"][string]][] = [];
-    for (const track of observation.value.tracks) for (const scene of track.items) {
-      if (!scene.affordances.trimStart && !scene.affordances.trimEnd) continue;
+    for (const track of observation.value.tracks) {
+      if (track.locked) continue;
       const subjectTrack = tracksById.get(track.id)!;
-      const item = subjectTrack.items.find(value => value.id === scene.id)!;
-      const source = this.#trimSource(project, item, entries);
-      const rate = observation.value.editRate;
-      const start = scene.affordances.trimStart ? projectTrimRange(project, composition, item, "start", rate, source) : undefined;
-      const end = scene.affordances.trimEnd ? projectTrimRange(project, composition, item, "end", rate, source) : undefined;
-      ranges.push([item.id, { ...(start === undefined ? {} : { start }), ...(end === undefined ? {} : { end }) }]);
+      const items = new Map(subjectTrack.items.map(item => [item.id, item]));
+      const neighbors = trimTrackNeighborLimits(subjectTrack);
+      for (const scene of track.items) {
+        if (!scene.affordances.trimStart && !scene.affordances.trimEnd) continue;
+        const item = items.get(scene.id)!;
+        const source = this.#trimSource(project, item, entries);
+        const rate = observation.value.editRate;
+        const limit = neighbors.get(item.id);
+        const start = scene.affordances.trimStart ? projectTrimRange(project, composition, item, "start", rate, source, limit?.start) : undefined;
+        const end = scene.affordances.trimEnd ? projectTrimRange(project, composition, item, "end", rate, source, limit?.end) : undefined;
+        ranges.push([item.id, { ...(start === undefined ? {} : { start }), ...(end === undefined ? {} : { end }) }]);
+      }
     }
     return {
       scene: observation.value,
       previewSources: timelinePreviewSources(project, composition, catalog, (path, item) => this.#mediaIdentity(path, item),
         { media: this.#mediaViews !== undefined, renderedPicture: this.#renderedPreviews !== undefined,
           renderedAudio: this.#renderedAudio !== undefined, revision }),
+      transitionTitles: Object.fromEntries(composition.transitions.flatMap(transition => {
+        const offerings = this.#packages.transitions.filter(({ value: { operator } }) =>
+          operator.package === transition.operator.package && operator.symbol === transition.operator.symbol);
+        return offerings.length === 1 ? [[transition.id, offerings[0]!.title]] : [];
+      })),
       trimRanges: Object.fromEntries(ranges),
       canReturn: visit?.child === composition.id && project.compositions.some(entry => entry.id === visit.parent),
       compositions: projectCompositionTabs(project, composition.id),
       retimeRates: Object.fromEntries(composition.tracks.flatMap(track => this.#editing.lockedTracks.has(track.id) ? []
         : track.items.flatMap(item => {
           const rate = nleRetimeWindow(item)?.rate;
-          return rate === undefined || rate.numerator === 0 ? [] : [[item.id, rate]];
+          if (rate === undefined) return [];
+          if (rate.numerator === 0 && (item.kind !== "present" || item.picture === undefined || item.audio !== undefined
+            || this.#trimSource(project, item, entries)?.kind !== "timed")) return [];
+          return [[item.id, rate]];
         }))),
       itemMedia,
     };
@@ -522,14 +544,81 @@ export class NleStudioProductSession {
     return local.split(sep).join("/");
   }
 
-  async #resolveMediaBinding(media: string) {
-    const catalog = await this.#project.media.observe();
+  async #resolveMediaBinding(media: string, observed?: ProjectMediaCatalog) {
+    const catalog = observed ?? await this.#project.media.observe();
     const entry = catalog.entries.find(candidate => candidate.reference.path === media);
     if (entry?.state !== "available") throw new Error(`Project Media ${media} is unavailable.`);
     const { media: { interpretation } } = await this.#project.media.open(entry.reference);
     const root = this.#project.boundary.root;
     const path = relative(dirname(resolve(root, this.#projectDocument)), resolve(root, media)).split(sep).join("/");
-    return { asset: { path }, interpretation };
+    return { asset: { path }, interpretation, catalog };
+  }
+
+  async #planMediaDrop(project: NleProject, composition: NleComposition, drop: NleStudioMediaDrop) {
+    const { asset, interpretation, catalog } = await this.#resolveMediaBinding(drop.media);
+    const at = studioFrameTime(drop.atFrame, project.editRate);
+    const { numerator, denominator } = project.editRate;
+    const duration = defaultMediaPlacementDuration(project, interpretation);
+    const role = interpretation.picture === undefined ? "audio" : "picture";
+    const placement = planMediaDropPlacement({ project, composition, lockedTracks: this.#editing.lockedTracks },
+      drop.target, role, at, duration);
+    const item = `media-${randomUUID()}`;
+    const { commands } = createMediaAssetMaterialization(placement.project, {
+      itemId: item, asset, interpretation, track: placement.track, at, duration,
+    });
+    const placed = commands.find(command => command.kind === "item.add")!;
+    const track = placement.project.compositions.find(entry => entry.id === composition.id)!
+      .tracks.find(entry => entry.id === placement.track)!;
+    const preview = timelinePreviewSources(placement.project, { ...composition, tracks: [{ ...track, items: [placed.item] }] },
+      catalog, (path, id) => this.#mediaIdentity(path, id),
+      { media: this.#mediaViews !== undefined, renderedPicture: false, renderedAudio: false, revision: drop.expectedProjectRevision })[item];
+    const { numerator: ticks, denominator: unit } = exactTemporalRational(duration);
+    const projection: NleStudioMediaDropPreview = {
+      target: drop.target, role, startFrame: drop.atFrame, durationFrames: Number(ticks * BigInt(numerator)) / Number(unit * BigInt(denominator)),
+      ...(preview === undefined ? {} : { preview }), shifted: placement.shifted,
+    };
+    return { commands: [...placement.commands, ...commands], result: { item, track: placement.track }, projection };
+  }
+
+  async #planMediaFreeze(
+    project: NleProject, composition: NleComposition,
+    location: Pick<Extract<NleStudioOperation, { kind: "media.freeze" }>, "item" | "atFrame" | "durationFrames">,
+  ) {
+    const source = indexNleComposition(composition).item(location.item);
+    const item = source?.item;
+    if (source === undefined || item?.kind !== "present" || !item.enabled
+        || item.source !== "media" || item.picture === undefined) {
+      throw new Error("NLE Studio Freeze requires an enabled Media Picture.");
+    }
+    if (item.picture.processes?.some(process => process.enabled)) {
+      throw new Error(`NLE Item ${item.name ?? item.id} has an active Picture Process.`);
+    }
+    const at = studioFrameTime(location.atFrame, project.editRate);
+    if (compareExactTemporalValues(at, item.start) < 0 || compareExactTemporalValues(at, nleItemEnd(item)) >= 0) {
+      throw new Error(`NLE Studio sample frame is outside Item ${item.name ?? item.id}.`);
+    }
+    const { interpretation } = await this.#resolveMediaBinding(this.#mediaIdentity(item.asset.path, item.id));
+    if (interpretation.domain === undefined || interpretation.picture?.kind !== "signal") {
+      throw new Error(`NLE Item ${item.name ?? item.id} requires a sampled Media Picture for freeze.`);
+    }
+    const sample = evaluateTemporalMap({ stages: [{
+      target: sealLocalTemporalDomain({ id: `${item.id}:time`, duration: item.duration }),
+      source: interpretation.domain,
+      pieces: item.sourceTime.pieces,
+    }] }, subtractExactTemporalValues(at, item.start), "after");
+    if (sample?.sourceSide !== "after" || evaluateTemporalMap(interpretation.picture.map, sample.position, "after") === undefined) {
+      throw new Error(`NLE Item ${item.name ?? item.id} sample frame must select a forward Picture sample.`);
+    }
+    const { numerator, denominator } = project.editRate;
+    const frames = location.durationFrames ?? Math.max(1, Math.round(3 * numerator / denominator));
+    const duration = studioFrameTime(frames, project.editRate);
+    const id = `freeze-${randomUUID()}`;
+    const commands = planFreezeInsertion({ project, composition, lockedTracks: this.#editing.lockedTracks }, source, {
+      id, kind: "present", source: "media", asset: item.asset, start: at, duration, enabled: true,
+      picture: { layout: item.picture.layout, ...(item.picture.crop === undefined ? {} : { crop: item.picture.crop }) },
+      sourceTime: nleLinearTimeMapping(duration, sample.position, { numerator: 0, denominator: 1 }),
+    });
+    return { commands, result: { item: id, track: source.track.id } };
   }
 
   #componentInputs(id: string): NleStudioComponentInputsProjection {
@@ -670,6 +759,92 @@ export class NleStudioProductSession {
         if (plan.commands.length > 0) applyNleTransaction(project.project, { commands: plan.commands });
         return { kind: "timeline-drop", value: plan.destination };
       }
+      case "media-drop": {
+        const { drop } = request;
+        const { project, revision } = this.#projectLease.service.snapshot();
+        if (revision !== drop.expectedProjectRevision) throw new NleEditingSurfaceRevisionConflict(drop.expectedProjectRevision, revision);
+        const composition = project.compositions.find(value => value.id === drop.composition);
+        if (composition === undefined || this.#editing.activeComposition !== composition.id) {
+          throw new Error(`NLE Studio Media drop targets inactive Composition ${drop.composition}.`);
+        }
+        const plan = await this.#planMediaDrop(project, composition, drop);
+        applyNleTransaction(project, { commands: plan.commands });
+        return { kind: request.kind, value: plan.projection };
+      }
+      case "timeline-cuts": {
+        const { cut } = request;
+        const { project, revision } = this.#projectLease.service.snapshot();
+        if (revision !== cut.expectedProjectRevision) {
+          throw new NleEditingSurfaceRevisionConflict(cut.expectedProjectRevision, revision);
+        }
+        const composition = project.compositions.find(value => value.id === cut.composition);
+        if (composition === undefined || this.#editing.activeComposition !== composition.id) {
+          throw new Error(`NLE Studio Timeline cuts target inactive Composition ${cut.composition}.`);
+        }
+        const lockedTracks = this.#editing.lockedTracks;
+        const items = timelineCutItems(composition, cut.items, studioFrameTime(cut.atFrame, project.editRate));
+        const canApply = (edit: NleStudioTimelineEdit) => {
+          if (items.length === 0) return false;
+          try {
+            const { commands } = planTimelineEdit({ project, composition, lockedTracks }, edit);
+            const trims = commands.filter(command => command.kind === "item.trim");
+            const preparation = prepareOrdinaryTrims(project, composition, lockedTracks, trims);
+            applyNleTransaction(project, { commands: [...preparation, ...commands] });
+            return true;
+          } catch {
+            return false;
+          }
+        };
+        const target = { ...cut, items };
+        const value: NleStudioTimelineCutsProjection = {
+          items,
+          split: canApply({ ...target, kind: "timeline.split" }),
+          trimStart: canApply({ ...target, kind: "timeline.trim", edge: "start" }),
+          trimEnd: canApply({ ...target, kind: "timeline.trim", edge: "end" }),
+        };
+        const selected = cut.items.length === 1 ? indexNleComposition(composition).item(cut.items[0]!)?.item : undefined;
+        if (selected?.kind !== "present" || selected.source !== "media" || selected.picture === undefined) {
+          return { kind: request.kind, value };
+        }
+        let freeze: NonNullable<NleStudioTimelineCutsProjection["freeze"]>;
+        try {
+          const { commands } = await this.#planMediaFreeze(project, composition, { item: selected.id, atFrame: cut.atFrame });
+          applyNleTransaction(project, { commands });
+          freeze = { item: selected.id, available: true };
+        } catch (error) {
+          freeze = { item: selected.id, available: false, diagnostic: error instanceof Error ? error.message : String(error) };
+        }
+        return { kind: request.kind, value: { ...value, freeze } };
+      }
+      case "composition-actions": {
+        const { selection } = request;
+        const { project, revision } = this.#projectLease.service.snapshot();
+        if (revision !== selection.expectedProjectRevision) {
+          throw new NleEditingSurfaceRevisionConflict(selection.expectedProjectRevision, revision);
+        }
+        const composition = project.compositions.find(value => value.id === selection.composition);
+        if (composition === undefined || this.#editing.activeComposition !== composition.id) {
+          throw new Error(`NLE Studio Composition actions target inactive Composition ${selection.composition}.`);
+        }
+        const locks = this.#editing.lockedTracks;
+        const available = (plan: () => { readonly commands: readonly NleCommand[] }): NleStudioCompositionActionsProjection["compound"] => {
+          try {
+            applyNleTransaction(project, { commands: plan().commands });
+            return { available: true };
+          } catch (error) {
+            return { available: false, diagnostic: error instanceof Error ? error.message : String(error) };
+          }
+        };
+        const compound = available(() => planCompound(project, composition, selection.items, "复合片段", locks));
+        const item = selection.items.length === 1 ? indexNleComposition(composition).item(selection.items[0]!)?.item : undefined;
+        return { kind: request.kind, value: {
+          compound, ...(item?.kind !== "present" || item.source !== "composition" ? {} : {
+            nested: { item: item.id,
+              makeUnique: available(() => planUniqueComposition(project, composition, item.id, locks)),
+              explode: available(() => planExplodeComposition(project, composition, item.id, locks)) },
+          }),
+        } };
+      }
       case "canvas": return { kind: "canvas", value: this.#canvas() };
       case "inspector": {
         const observation = this.#surface.observe({ kind: "inspector", item: request.item });
@@ -680,6 +855,12 @@ export class NleStudioProductSession {
         const observation = this.#surface.observe(request);
         if (observation.kind !== request.kind) throw new Error("NLE Studio received an invalid Transition Inspector projection.");
         return observation;
+      }
+      case "matte-sources": {
+        const { project } = this.#projectLease.service.snapshot();
+        const composition = project.compositions.find(value => value.id === this.#editing.activeComposition)!;
+        return { kind: request.kind, value: projectMatteSources({ project, composition, lockedTracks: this.#editing.lockedTracks },
+          request.item) };
       }
       case "component-inputs": return { kind: "component-inputs", value: this.#componentInputs(request.item) };
       case "clipboard": return { kind: "clipboard", value: this.#clipboardProjection() };
@@ -832,6 +1013,7 @@ export class NleStudioProductSession {
       }
       case "timeline.track-reorder":
         return commit(planTimelineTrackReorder(composition, lockedTracks, operation.track, operation.before), { track: operation.track });
+      case "timeline.item-reorder":
       case "timeline.trim":
       case "timeline.slip":
       case "timeline.retime":
@@ -842,10 +1024,17 @@ export class NleStudioProductSession {
       case "timeline.ripple-remove":
       case "timeline.close-gap": {
         const plan = planTimelineEdit(context, operation);
+        if (operation.kind === "timeline.trim" && plan.commands.length > 0) {
+          const catalog = await this.#project.media.observe();
+          const entries = new Map(catalog.entries.map(entry => [entry.reference.path, entry] as const));
+          const trims = plan.commands.filter(command => command.kind === "item.trim");
+          const preparation = prepareOrdinaryTrims(project, composition, lockedTracks, trims, item => this.#trimSource(project, item, entries));
+          return commit([...preparation, ...plan.commands], { count: plan.count });
+        }
         const trims = plan.commands.flatMap(command => command.kind === "item.roll" ? [
           { id: command.left, edge: "end" as const, at: command.at },
           { id: command.right, edge: "start" as const, at: command.at },
-        ] : command.kind === "item.trim" || command.kind === "item.ripple-trim" ? [command] : []);
+        ] : command.kind === "item.ripple-trim" ? [command] : []);
         if (trims.length > 0) {
           const catalog = await this.#project.media.observe();
           const entries = new Map(catalog.entries.map(entry => [entry.reference.path, entry] as const));
@@ -886,11 +1075,20 @@ export class NleStudioProductSession {
         const plan = planStudioPaste(this.#clipboard, composition, lockedTracks, frameTime(operation.atFrame));
         return commit(plan.commands, { item: plan.items[0]!, count: plan.items.length });
       }
+      case "media.drop": {
+        const plan = await this.#planMediaDrop(project, composition, operation);
+        return commit(plan.commands, plan.result);
+      }
+      case "media.place-on-new-tracks": {
+        const catalog = await this.#project.media.observe();
+        const sources = await Promise.all(operation.media.map(media => this.#resolveMediaBinding(media, catalog)));
+        const { commands, item, count } = planMediaOnNewTracks(project, composition, sources, frameTime(operation.atFrame));
+        return commit(commands, { item, count });
+      }
       case "media.materialize": {
         const { asset, interpretation } = await this.#resolveMediaBinding(operation.media);
         const at = frameTime(operation.atFrame);
-        const length = duration ?? interpretation.domain?.duration
-          ?? frameTime(Math.max(1, Math.round(5 * project.editRate.numerator / project.editRate.denominator)));
+        const length = duration ?? defaultMediaPlacementDuration(project, interpretation);
         if (interpretation.domain !== undefined && compareExactTemporalValues(length, interpretation.domain.duration) > 0) {
           throw new Error(`NLE Studio placement duration exceeds Project Media ${operation.media}.`);
         }
@@ -906,37 +1104,8 @@ export class NleStudioProductSession {
         return commit([...placement.commands, ...materialization.commands], { item, track: placement.track });
       }
       case "media.freeze": {
-        const item = currentItems().find(entry => entry.id === operation.item);
-        if (item?.kind !== "present" || item.source !== "media" || item.picture === undefined
-            || item.picture.processes?.some(process => process.enabled)) {
-          throw new Error("NLE Studio freeze requires a Media Picture Present without enabled Picture Processes.");
-        }
-        const at = frameTime(operation.sampleFrame);
-        if (compareExactTemporalValues(at, item.start) < 0 || compareExactTemporalValues(at, nleItemEnd(item)) >= 0) {
-          throw new Error(`NLE Studio sample frame is outside Item ${item.id}.`);
-        }
-        const { interpretation } = await this.#resolveMediaBinding(this.#mediaIdentity(item.asset.path, item.id));
-        if (interpretation.domain === undefined || interpretation.picture?.kind !== "signal") {
-          throw new Error(`NLE Item ${item.id} requires a sampled Media Picture for freeze.`);
-        }
-        const sample = evaluateTemporalMap({ stages: [{
-          target: sealLocalTemporalDomain({ id: `${item.id}:time`, duration: item.duration }),
-          source: interpretation.domain,
-          pieces: item.sourceTime.pieces,
-        }] }, subtractExactTemporalValues(at, item.start), "after");
-        if (sample?.sourceSide !== "after" || evaluateTemporalMap(interpretation.picture.map, sample.position, "after") === undefined) {
-          throw new Error(`NLE Item ${item.id} sample frame must select a forward Picture sample.`);
-        }
-        const start = frameTime(operation.atFrame);
-        const length = duration!;
-        const placement = placePresent(operation, "picture", start, length);
-        const id = identity("freeze");
-        return commit([...placement.commands, {
-          kind: "item.add", track: placement.track, item: {
-            id, kind: "present", source: "media", asset: item.asset, start, duration: length, enabled: true,
-            picture: item.picture, sourceTime: nleLinearTimeMapping(length, sample.position, { numerator: 0, denominator: 1 }),
-          },
-        }], { item: id, track: placement.track });
+        const plan = await this.#planMediaFreeze(project, composition, operation);
+        return commit(plan.commands, plan.result);
       }
       case "component.materialize": {
         const offering = this.#packages.component(operation.package, operation.offering);
@@ -1064,17 +1233,17 @@ export class NleStudioProductSession {
           throw new Error(`NLE Studio Transition offering ${operation.package}#${operation.offering} is not selected.`);
         }
         const items = "items" in operation ? currentItems().filter(item => operation.items.includes(item.id))
-          .sort((left, right) => compareExactTemporalValues(left.start, right.start))
+          .sort((left, right) => compareExactTemporalValues(left.start, right.start)).map(item => item.id)
           : resolveTransitionCut(composition, operation.track, frameTime(operation.atFrame));
-        if (items.length !== 2) throw new Error("NLE Studio Transition requires two Items in the active Composition.");
-        assertTransitionMove(composition, items[1]!.id);
+        const [outgoing, incoming] = items;
+        if (!outgoing || !incoming || items.length !== 2) throw new Error("NLE Studio Transition requires two Items in the active Composition.");
         const transition = identity("transition");
-        const materialization = createTransitionMaterialization(project, {
-          id: transition, composition: composition.id, outgoing: items[0]!.id, incoming: items[1]!.id,
+        const commands = planTimelineTransitionMaterialization(context, {
+          id: transition, outgoing, incoming,
           operator: offering.value.operator, parameters: offering.value.parameters,
           duration: duration ?? offering.value.duration,
         });
-        return commit(materialization.commands, { transition });
+        return commit(commands, { transition });
       }
       case "transition.replace":
       case "transition.resize":
@@ -1082,7 +1251,7 @@ export class NleStudioProductSession {
         const transition = composition.transitions.find(value => value.id === operation.transition);
         if (transition === undefined) throw new Error(`Unknown NLE Transition ${operation.transition} in ${composition.id}.`);
         const result = { transition: transition.id };
-        if (operation.kind === "transition.remove") return commit([{ kind: "transition.remove", id: transition.id }], result);
+        if (operation.kind === "transition.remove") return commit(planTimelineTransitionRemoval(context, transition), result);
         const timeCommands = duration === undefined ? [] : planTransitionWindow(context, transition, duration);
         if (operation.kind === "transition.resize") return commit(timeCommands, result);
         const offering = this.#packages.transition(operation.package, operation.offering);
@@ -1095,12 +1264,19 @@ export class NleStudioProductSession {
           },
         }], result);
       }
+      case "matte.bind": return commit([planMatteBinding(composition, operation.content, operation.source)], undefined);
+      case "matte.remove": {
+        if (!composition.mattes.some(value => value.id === operation.matte)) {
+          throw new Error(`Unknown NLE Matte ${operation.matte} in ${composition.id}.`);
+        }
+        return commit([{ kind: "matte.remove", id: operation.matte }], undefined);
+      }
       case "composition.materialize": {
         const source = project.compositions.find(entry => entry.id === operation.source);
         if (source === undefined) throw new Error(`Unknown NLE Composition ${operation.source}.`);
         const at = frameTime(operation.atFrame);
         const requested = composition.tracks.find(track => track.id === operation.track);
-        const picture = source.tracks.some(track => track.enabled && track.items.some(item =>
+        const picture = source.tracks.some(track => track.items.some(item =>
           item.kind === "present" && item.enabled && item.picture !== undefined));
         const medium = picture && requested?.kind !== "audio" ? "picture" : "audio";
         const placement = placePresent(operation, medium, at, nleCompositionDuration(source));
@@ -1111,7 +1287,7 @@ export class NleStudioProductSession {
         return commit([...placement.commands, ...materialization.commands], { item, track: placement.track });
       }
       case "composition.compound": {
-        const plan = planCompound(project, composition, operation.items, operation.name);
+        const plan = planCompound(project, composition, operation.items, operation.name, lockedTracks);
         return commit(plan.commands, { item: plan.item, composition: plan.composition });
       }
       case "composition.duplicate": {
@@ -1119,11 +1295,11 @@ export class NleStudioProductSession {
         return commit(plan.commands, { composition: plan.composition });
       }
       case "composition.make-unique": {
-        const plan = planUniqueComposition(project, composition, operation.item);
+        const plan = planUniqueComposition(project, composition, operation.item, lockedTracks);
         return commit(plan.commands, { item: plan.item, composition: plan.composition });
       }
       case "composition.explode": {
-        const plan = planExplodeComposition(project, composition, operation.item);
+        const plan = planExplodeComposition(project, composition, operation.item, lockedTracks);
         return commit(plan.commands, { item: plan.item, count: plan.count });
       }
       case "composition.select":
@@ -1131,13 +1307,11 @@ export class NleStudioProductSession {
           ? commit([], { composition: composition.id })
           : navigate(operation.target, 0, []);
       case "composition.enter": {
-        const item = currentItems().find(entry => entry.id === operation.item);
-        if (item?.kind !== "present" || item.source !== "composition") {
-          throw new Error(`NLE Item ${operation.item} is not a Composition Present in ${composition.id}.`);
-        }
+        const at = frameTime(operation.atFrame);
+        const entry = compositionEntry(project, composition, operation.item, at);
         const previous = this.#navigation.at(-1)?.child === composition.id ? this.#navigation : [];
-        return navigate(item.composition, 0, [
-          ...previous, { parent: composition.id, child: item.composition, at: frameTime(operation.atFrame) },
+        return navigate(entry.composition, entry.frame, [
+          ...previous, { parent: composition.id, child: entry.composition, at },
         ]);
       }
       case "composition.return": {

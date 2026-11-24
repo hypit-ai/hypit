@@ -6,6 +6,8 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { NleEditingSurfaceCommand } from "@hypit/nle/surface";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type {
+  NleStudioMediaDrop,
+  NleStudioMediaDropPreview,
   NleStudioAdjustCatalogEntry,
   NleStudioComponentCatalogEntry,
   NleStudioInvalidation,
@@ -26,6 +28,7 @@ import {
   NleStudioSaveConflict,
   operate,
   readInspector,
+  readMediaDrop,
   readOpen,
   readTransitionInspector,
   refreshOpen,
@@ -41,19 +44,20 @@ import { StudioBin, type BinTab } from "./StudioBin.js";
 import { Timeline } from "./Timeline.js";
 import { NumberField, Row, Section } from "./controls.js";
 import { useProgrammePreview } from "./useProgrammePreview.js";
+import type { ProgrammePlacementDraft } from "../programme-transport.js";
 
 import { PreviewMonitor } from "./PreviewMonitor.js";
 import { PictureAlignment } from "./PictureAlignment.js";
 import { EditorDialog } from "./EditorDialog.js";
 import { enterMotion, fadeMotion } from "./motion.js";
-import { editableSelection, selectionAtFrame } from "./selection.js";
+import { editableSelection, resolveGroupSelection, selectionAtFrame } from "./selection.js";
 import { useClipClipboard } from "./useClipClipboard.js";
 import { ErrorNotice } from "./ErrorNotice.js";
 import { MediaThumbnail } from "./MediaThumbnail.js";
 import { TimelineTextList } from "./TimelineTextList.js";
 import { useAssetDrag } from "./useAssetDrag.js";
 import { catalogDragId, type CatalogDrag } from "./catalogDrag.js";
-import { transitionCuts, type MediaDrop } from "./mediaDrag.js";
+import { mediaDragSource, transitionCuts, type MediaDrop, type MediaPlacementDraft } from "./mediaDrag.js";
 import { studioIcons } from "./studio-icons.js";
 import { useEditorPosition } from "./useEditorPosition.js";
 import { ExportVideo } from "./ExportVideo.js";
@@ -88,6 +92,11 @@ type EditHistoryEntry = {
   readonly before: EditPosition;
   readonly after: EditPosition;
 };
+type CanvasPlacement = CanvasDraft & ProgrammePlacementDraft;
+type MediaPlacementAt = Omit<Extract<NleStudioOperation, { kind: "media.place-on-new-tracks" }>, "kind" | "media">;
+function mediaDropScope(drop: NleStudioMediaDrop, mediaGeneration: number): string {
+  return JSON.stringify([drop.composition, drop.expectedProjectRevision, mediaGeneration, drop.media, drop.target]);
+}
 
 export function Studio() {
   const reduced = useReducedMotion();
@@ -123,16 +132,68 @@ export function Studio() {
   const [sourceId, setSourceId] = useState<string>();
   const source = sourceId === undefined ? undefined : session?.media.entries.find(entry => entry.id === sourceId && entry.state === "available");
   const showProgramme = () => setSourceId(undefined);
-  const [canvasDraft, setCanvasDraft] = useState<CanvasDraft>();
+  const [canvasDraft, setCanvasDraft] = useState<CanvasPlacement>();
   const [propertiesTab, setPropertiesTab] = useState<"properties" | "text">("properties");
   const timelineRoot = useRef<HTMLDivElement>(null);
   const timelineRegionId = useId();
+  const [fileDragOverTimeline, setFileDragOverTimeline] = useState(false);
+  const [filePlacement, setFilePlacement] = useState<{ composition: string; atFrame: number }>();
   const dropAsset = useRef<(drop: MediaDrop) => void>(() => {});
   const moveDraggedMedia = useRef<(asset: string, folder: string | null) => void>(() => {});
   const dragSelect = useRef<(asset: NleStudioMediaEntry) => void>(() => {});
   const assetDrag = useAssetDrag(session?.timeline.scene, timelineRoot, frame, busy,
     drop => dropAsset.current(drop), asset => dragSelect.current(asset),
     (asset, folder) => moveDraggedMedia.current(asset, folder));
+  const mediaDrag = assetDrag.drag?.media ? assetDrag.drag : undefined;
+  const candidate = mediaDrag?.drop;
+  const mediaDropRequest: NleStudioMediaDrop | undefined = session === undefined || candidate?.mediaTarget === undefined
+    ? undefined : { kind: "media.drop", composition: session.timeline.scene.composition,
+      expectedProjectRevision: session.status.projectRevision, media: candidate.id, atFrame: candidate.frame, target: candidate.mediaTarget };
+  const mediaKey = mediaDropRequest === undefined ? undefined : JSON.stringify(mediaDropRequest);
+  const mediaScope = session === undefined || mediaDropRequest === undefined
+    ? undefined : mediaDropScope(mediaDropRequest, session.media.generation);
+  const [resolvedMediaDrop, setResolvedMediaDrop] = useState<{
+    key: string; scope: string; preview: NleStudioMediaDropPreview | undefined;
+  }>();
+  const waitingMediaDrop = useRef<{ key: string; scope: string } | undefined>(undefined);
+  const readingMediaDrop = useRef(false);
+  useEffect(() => {
+    waitingMediaDrop.current = mediaKey === undefined || mediaScope === undefined ? undefined : { key: mediaKey, scope: mediaScope };
+    if (readingMediaDrop.current || waitingMediaDrop.current === undefined) return;
+    readingMediaDrop.current = true;
+    void (async () => {
+      try {
+        // Pointer movement can outpace the Host. Only the most recent waiting position matters.
+        while (waitingMediaDrop.current !== undefined) {
+          const request = waitingMediaDrop.current;
+          waitingMediaDrop.current = undefined;
+          const preview = await readMediaDrop(JSON.parse(request.key)).catch(() => undefined);
+          setResolvedMediaDrop({ ...request, preview });
+        }
+      } finally {
+        readingMediaDrop.current = false;
+      }
+    })();
+  }, [mediaKey, mediaScope]);
+  const exactPlacement = mediaKey !== undefined && resolvedMediaDrop?.key === mediaKey && resolvedMediaDrop.scope === mediaScope
+    ? resolvedMediaDrop : undefined;
+  const lastPlacement = mediaScope !== undefined && resolvedMediaDrop?.scope === mediaScope ? resolvedMediaDrop.preview : undefined;
+  const dragEntry = mediaDrag?.mediaPosition === undefined ? undefined : mediaDrag.entry;
+  const mediaPreview = useMemo(() => session?.media.derivedViews && dragEntry !== undefined
+    ? mediaDragSource(dragEntry) : undefined, [session?.media.derivedViews, dragEntry]);
+  const [pendingMediaDrop, setPendingMediaDrop] = useState<{ composition: string; draft: MediaPlacementDraft; item?: string }>();
+  const acceptedMediaDrop = pendingMediaDrop?.item !== undefined && session?.timeline.scene.tracks.some(track =>
+    track.items.some(item => item.id === pendingMediaDrop.item));
+  const mediaDropBlocked = mediaDrag?.overTimeline === true
+    && (candidate === undefined || (exactPlacement !== undefined && exactPlacement.preview === undefined));
+  const placementDraft: MediaPlacementDraft | undefined = mediaDrag?.mediaPosition !== undefined
+    ? { position: mediaDrag.mediaPosition, label: mediaDrag.entry.name,
+      role: mediaDrag.entry.kind === "audio" ? "audio" : "picture", blocked: mediaDropBlocked,
+      ...(mediaPreview === undefined ? {} : { preview: mediaPreview }),
+      ...(mediaDropBlocked || candidate?.mediaTarget === undefined ? {} : { target: candidate.mediaTarget }),
+      ...(lastPlacement === undefined ? {} : { shifted: lastPlacement.shifted }),
+      ...(candidate?.snapFrame === undefined || mediaDropBlocked ? {} : { snapFrame: candidate.snapFrame }) }
+    : pendingMediaDrop?.composition === session?.timeline.scene.composition && !acceptedMediaDrop ? pendingMediaDrop?.draft : undefined;
 
   const [playing, setPlaying] = useState(false);
   const [playFrom, setPlayFrom] = useState<{ generation: string; frame: number }>();
@@ -163,6 +224,20 @@ export function Studio() {
       onError: message => { setFailure(message); setPlaying(false); },
     },
   );
+  const visibleGeneration = programme.visible?.generation;
+  const makeCanvasDraft = useCallback((draft: CanvasDraft): CanvasPlacement | undefined => {
+    if (visibleGeneration === undefined || session === undefined) return;
+    const layers = session.canvas.layers;
+    const ref = layers.find(layer => layer.id === draft.id)?.layoutRef;
+    const items = ref === undefined ? [draft.id] : layers.filter(layer => layer.layoutRef === ref).map(layer => layer.id);
+    return { ...draft, generation: visibleGeneration, items };
+  }, [visibleGeneration, session?.canvas.layers]);
+  const drawCanvasDraft = useCallback((draft: CanvasDraft | undefined) => {
+    programme.drawPlacement(draft === undefined ? undefined : makeCanvasDraft(draft));
+  }, [makeCanvasDraft, programme.drawPlacement]);
+  useEffect(() => {
+    setCanvasDraft(current => current?.generation === visibleGeneration ? current : undefined);
+  }, [visibleGeneration]);
 
   useEffect(() => {
     if (!playing) return;
@@ -246,8 +321,9 @@ export function Studio() {
   };
 
   const perform = useCallback(async (operation: () => Promise<void>, {
-    autosave = true, timelineGesture = false,
-  }: { readonly autosave?: boolean; readonly timelineGesture?: boolean } = {}) => {
+    autosave = true, gesture,
+  }: { readonly autosave?: boolean; readonly gesture?: "timeline" | "canvas" } = {}) => {
+    const timelineGesture = gesture === "timeline";
     if (!timelineGesture && editsInFlight.current > 0) return;
     if (timelineGesture && timelineBlockedRef.current) {
       setFailure("当前操作还在提交，请完成后再编辑时间线。");
@@ -258,7 +334,8 @@ export function Studio() {
       setTimelineBlocked(true);
     }
     editsInFlight.current += 1;
-    setBusy(true); setFailure(undefined); setPlaying(false);
+    if (gesture === undefined) setBusy(true);
+    setFailure(undefined); setPlaying(false);
     try {
       await enqueue(async () => {
         const position = (): EditPosition => ({ frame: frameRef.current, selection: selectionRef.current, transition: transitionRef.current });
@@ -286,7 +363,7 @@ export function Studio() {
         timelineBlockedRef.current = false;
         setTimelineBlocked(false);
       }
-      if (editsInFlight.current === 0) setBusy(false);
+      if (gesture === undefined) setBusy(false);
     }
   }, [enqueue, storeSession]);
 
@@ -444,14 +521,6 @@ export function Studio() {
       selectedProcess = { item: selectedProjectItem.id, medium: firstProcess.medium, process: firstProcess.id };
     }
   }
-  const selectedGroups = scene.groups.filter(group => group.items.some(item => selection.includes(item)));
-  const grouped = selectedGroups.length === 1 && selection.every(item => selectedGroups[0]!.items.includes(item));
-  const groupLabel = !grouped ? "组合" : selectedGroups[0]!.items.length === selection.length ? "取消组合" : "移出组合";
-  const groupMembers = [...new Set([...selection, ...selectedGroups.flatMap(group => group.items)])];
-  const canEditGroups = editableSelection(scene, groupMembers).length === groupMembers.length;
-  const canToggleGroup = canEditGroups && (selection.length > 1 || selectedGroups.length > 0);
-  const canDetachAudio = selection.length === 1 && selectedProjectItem?.kind === "present"
-    && selectedProjectItem.signals.picture && selectedProjectItem.signals.audio;
   const icons = { assets: studioIcons.assets, text: studioIcons.text, subtitles: studioIcons.subtitle,
     transitions: studioIcons.transition, filters: studioIcons.filter, effects: studioIcons.effect } as const;
   const tabNames = { assets: "素材", text: "文本", subtitles: "字幕", transitions: "转场", filters: "滤镜", effects: "特效" } as const;
@@ -467,16 +536,22 @@ export function Studio() {
     expectedProjectRevision: session.status.projectRevision,
   };
   const editVersion = externalEdit.current;
-  const commitTimelineGesture = (operation: NleStudioOperation) => perform(async () => {
-    const current = sessionRef.current;
-    if (current === undefined || editVersion !== externalEdit.current
-      || current.timeline.scene.composition !== operation.composition
-      || current.timeline.scene.editRate.numerator !== scene.editRate.numerator
-      || current.timeline.scene.editRate.denominator !== scene.editRate.denominator) {
-      throw new Error("拖动期间时间线已更新，请重新操作。");
-    }
-    await acceptReceipt(await operate({ ...operation, expectedProjectRevision: current.status.projectRevision }));
-  }, { timelineGesture: true });
+  const commitTimelineEdit = (submit: (current: NleStudioOpenProjection) => Promise<NleStudioOperationReceipt>) =>
+    new Promise<void>(settle => {
+      void perform(async () => {
+        const current = sessionRef.current;
+        if (current === undefined || editVersion !== externalEdit.current
+          || current.timeline.scene.composition !== scene.composition
+          || current.timeline.scene.editRate.numerator !== scene.editRate.numerator
+          || current.timeline.scene.editRate.denominator !== scene.editRate.denominator) {
+          throw new Error("拖动期间时间线已更新，请重新操作。");
+        }
+        await acceptReceipt(await submit(current));
+        settle();
+      }, { gesture: "timeline" }).then(settle, settle);
+    });
+  const commitTimelineGesture = (operation: NleStudioOperation) => commitTimelineEdit(current =>
+    operate({ ...operation, expectedProjectRevision: current.status.projectRevision }));
   const place = (operation: NleStudioOperation) => void perform(async () => {
     const receipt = await operate(operation);
     await acceptReceipt(receipt, typeof receipt.result?.item === "string" ? receipt.result.item : undefined);
@@ -507,19 +582,83 @@ export function Studio() {
   const materialize = (entry: NleStudioComponentCatalogEntry, drop?: MediaDrop) => place({
     ...placement(drop), kind: "component.materialize", package: entry.package, offering: entry.offering,
   });
-  const placeProjectMedia = (entry: NleStudioMediaEntry, drop?: MediaDrop) => {
-    const track = drop?.track === undefined ? undefined : scene.tracks.find(item => item.id === drop.track);
-    const at = drop?.frame ?? frame;
-    const insert = track?.items.some(item => item.startFrame === at)
-      && !track.items.some(item => item.startFrame < at && item.startFrame + item.durationFrames > at);
-    const request = { ...placement(drop), kind: "media.materialize" as const, media: entry.id };
-    place(insert && track?.role === "picture"
-      ? { ...request, track: track.id, insertTracks: [track.id] } : request);
+  const mediaPlacementAtPlayhead = (): MediaPlacementAt => ({ ...operationContext, atFrame: Math.max(0, Math.round(frameRef.current)) });
+  const placeMediaOnNewTracks = (media: readonly string[], at: MediaPlacementAt) => operate({
+    kind: "media.place-on-new-tracks", ...at, media,
+  });
+  const acceptMediaPlacement = (receipt: NleStudioOperationReceipt) => {
     showProgramme();
+    const item = receipt.result?.item;
+    return acceptReceipt(receipt, typeof item === "string" ? item : undefined);
   };
-  const importProjectMedia = (files: readonly File[], folder: string | null) => void perform(async () => {
-    for (const file of files) await acceptReceipt(await importMedia(file, folder));
-  }, { autosave: false });
+  const addProjectMedia = (entry: NleStudioMediaEntry) => {
+    const at = mediaPlacementAtPlayhead();
+    void perform(async () => acceptMediaPlacement(await placeMediaOnNewTracks([entry.id], at)));
+  };
+  const dropProjectMedia = (entry: NleStudioMediaEntry, drop: MediaDrop) => {
+    if (drop.mediaTarget === undefined || drop.mediaPosition === undefined || editsInFlight.current > 0) return;
+    const request: NleStudioMediaDrop = { kind: "media.drop", ...operationContext, media: entry.id,
+      atFrame: drop.frame, target: drop.mediaTarget };
+    const key = JSON.stringify(request);
+    const previewForTarget = resolvedMediaDrop?.scope === mediaDropScope(request, session.media.generation)
+      ? resolvedMediaDrop : undefined;
+    const confirmed = previewForTarget?.key === key ? previewForTarget : undefined;
+    if (confirmed !== undefined && confirmed.preview === undefined) return;
+    const position = drop.mediaPosition;
+    const source = mediaPreview ?? (session.media.derivedViews ? mediaDragSource(entry) : undefined);
+    const draft: MediaPlacementDraft = { position, role: entry.kind === "audio" ? "audio" : "picture", label: entry.name,
+      target: drop.mediaTarget, ...(source === undefined ? {} : { preview: source }),
+      ...(drop.snapFrame === undefined ? {} : { snapFrame: drop.snapFrame }) };
+    setPendingMediaDrop({ composition: request.composition, draft });
+    void perform(async () => {
+      try {
+        const preview = confirmed?.preview ?? await readMediaDrop(request).catch(() => undefined);
+        if (preview === undefined) return;
+        const pending = { composition: request.composition, draft: { ...draft, shifted: preview.shifted,
+          position: { ...position, durationFrames: preview.durationFrames } } };
+        setPendingMediaDrop(pending);
+        const receipt = await operate(request);
+        const item = receipt.result?.item;
+        if (typeof item === "string") setPendingMediaDrop({ ...pending, item });
+        await acceptMediaPlacement(receipt);
+      } finally {
+        setPendingMediaDrop(undefined);
+      }
+    });
+  };
+  const importProjectMedia = (files: readonly File[], folder: string | null, placement?: MediaPlacementAt) => void perform(async () => {
+    if (placement !== undefined) setFilePlacement(placement);
+    const media: string[] = [];
+    const failures: string[] = [];
+    let latest: NleStudioOperationReceipt | undefined;
+    try {
+      for (const file of files) {
+        try {
+          latest = await importMedia(file, folder);
+          const id = latest.result?.media;
+          if (typeof id !== "string") throw new Error("导入服务未返回素材引用。");
+          media.push(id);
+        } catch (error) {
+          failures.push(`${file.name}：${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      if (latest !== undefined) await acceptReceipt(latest);
+      if (placement !== undefined && media.length > 0) {
+        let receipt: NleStudioOperationReceipt;
+        try {
+          receipt = await placeMediaOnNewTracks(media, placement);
+        } catch (error) {
+          failures.push(`已导入 ${media.length} 个素材，未添加到时间线：${error instanceof Error ? error.message : String(error)}`);
+          setFailure(failures.join("；"));
+          return;
+        }
+        await acceptMediaPlacement(receipt);
+      }
+      if (failures.length > 0) setFailure(failures.join("；"));
+    } finally {
+      setFilePlacement(undefined);
+    }
+  }, { autosave: placement !== undefined });
   const changeMediaLibrary = (change: ProjectMediaLibraryChange) => {
     const library = sessionRef.current?.mediaLibrary;
     if (library?.state !== "available") return;
@@ -570,11 +709,11 @@ export function Studio() {
   };
   const materializeSelectedTransition = (entry: NleStudioTransitionCatalogEntry, drop?: MediaDrop) => {
     const cuts = transitionCuts(scene);
-    const selectedCuts = cuts.filter(cut => selection.includes(cut.outgoing) || selection.includes(cut.incoming));
-    const nearest = (selectedCuts.length > 0 ? selectedCuts : cuts)
-      .sort((left, right) => Math.abs(frame - left.frame) - Math.abs(frame - right.frame))[0];
-    const cut = drop?.transitionCut ?? (selection.length === 2
-      ? selectedCuts.find(value => selection.includes(value.outgoing) && selection.includes(value.incoming)) : undefined) ?? nearest;
+    const atPlayhead = cuts.filter(cut => cut.transition === undefined && Math.round(cut.frame) === frame
+      && (selection.length === 0 || selection.includes(cut.outgoing) || selection.includes(cut.incoming)));
+    const cut = drop !== undefined ? drop.transitionCut : selection.length === 2
+      ? cuts.find(value => selection.includes(value.outgoing) && selection.includes(value.incoming))
+      : selection.length <= 1 && atPlayhead.length === 1 ? atPlayhead[0] : undefined;
     const transitionId = drop === undefined ? activeTransition ?? cut?.transition : cut?.transition;
     const offering = { ...operationContext, package: entry.package, offering: entry.offering };
     if (transitionId !== undefined) place({ ...offering, kind: "transition.replace", transition: transitionId });
@@ -605,17 +744,46 @@ export function Studio() {
   dropAsset.current = drop => {
     if (pickPreset(drop.id, drop)) return;
     const asset = mediaByPath.get(drop.id);
-    if (asset !== undefined) placeProjectMedia(asset, drop);
+    if (asset !== undefined) dropProjectMedia(asset, drop);
   };
   dragSelect.current = entry => { if (!pickPreset(entry.id)) previewAsset(entry); };
   const selectionLayer = session.canvas.layers.find(layer => layer.id === selection[0]);
   const rate = selection.length === 1 && selectedProjectItem !== undefined ? session.timeline.retimeRates[selectedProjectItem.id] : undefined;
-  const canFreeze = selectedProjectItem?.source === "media" && selectedProjectItem.signals.picture
-    && mediaForItem(selectedProjectItem.id)?.pictureKind === "signal"
-    && frame >= selectedProjectItem.startFrame && frame < selectedProjectItem.startFrame + selectedProjectItem.durationFrames;
-  const spatialTranslate = (item: string, deltaX: number, deltaY: number) => command({
-    kind: "spatial.edit", ...operationContext, item, edit: { kind: "frame.translate", deltaX, deltaY },
-  });
+  const spatialTranslate = (item: string, deltaX: number, deltaY: number) => perform(async () => {
+    await acceptReceipt(await sendCommand({
+      kind: "spatial.edit", expectedProjectRevision: operationContext.expectedProjectRevision,
+      item, edit: { kind: "frame.translate", deltaX, deltaY },
+    }));
+  }, { gesture: "canvas" });
+  const commitCanvasDraft = (draft: CanvasDraft) => {
+    const submitted = makeCanvasDraft({ id: draft.id, initial: draft.initial, frame: draft.frame });
+    if (submitted === undefined || editsInFlight.current > 0) {
+      programme.drawPlacement(undefined);
+      return;
+    }
+    setCanvasDraft(submitted);
+    programme.drawPlacement(submitted);
+    void perform(async () => {
+      const clearDraft = () => {
+        programme.drawPlacement(undefined);
+        setCanvasDraft(undefined);
+      };
+      try {
+        const { frame, initial } = draft;
+        const edit = frame.width === initial.width && frame.height === initial.height
+          ? { kind: "frame.translate" as const, deltaX: frame.x - initial.x, deltaY: frame.y - initial.y }
+          : { kind: "frame.resize" as const, frame };
+        const receipt = await sendCommand({ kind: "spatial.edit", expectedProjectRevision: operationContext.expectedProjectRevision,
+          item: draft.id, edit });
+        await acceptReceipt(receipt);
+        if (!receipt.projectChanged) clearDraft();
+      } catch (error) {
+        clearDraft();
+        throw error;
+      }
+    }, { gesture: "canvas" });
+  };
+  const visibleCanvasDraft = canvasDraft?.generation === visibleGeneration ? canvasDraft : undefined;
   const dirty = session.status.projectDirty;
   const savedAt = new Date(session.status.savedAt);
   const showSaveConflict = saveConflict && !conflictOpen;
@@ -656,29 +824,31 @@ export function Studio() {
     }
   });
 
-  const unlinkSelection = () => {
-    if (!canEditGroups || selectedGroups.length === 0) return;
-    transact(selectedGroups.map((group): NleCommand => {
-      const remaining = group.items.filter(item => !selection.includes(item));
-      return remaining.length < 2 ? { kind: "group.remove", composition: scene.composition, id: group.id }
-        : { kind: "group.replace", composition: scene.composition, group: { ...group, items: remaining } };
-    }));
-  };
-  const toggleGroup = () => {
-    if (!canToggleGroup) return;
-    if (grouped) { unlinkSelection(); return; }
-    transact([
-      ...selectedGroups.map(group => ({ kind: "group.remove" as const, composition: scene.composition, id: group.id })),
-      { kind: "group.add", composition: scene.composition, group: { id: `group-${crypto.randomUUID()}`, items: groupMembers } },
-    ]);
+  const editGroup = (items: readonly string[], intent?: "link" | "unlink") => {
+    const action = resolveGroupSelection(scene, items);
+    if (action === undefined || action.disabled || (intent !== undefined && action.kind !== intent)) return;
+    transact([action.kind === "unlink"
+      ? { kind: "group.unlink", composition: scene.composition, id: action.id, items }
+      : { kind: "group.link", composition: scene.composition, group: { id: `group-${crypto.randomUUID()}`, items } }]);
   };
   const split = (items: readonly string[], atFrame: number) => place({ ...operationContext, kind: "timeline.split", items, atFrame });
   keyboard.current = event => {
     if (event.defaultPrevented
       || (event.target as Element | null)?.closest("input:not([type=range]),textarea,select,[contenteditable=true],[role=combobox]")
       || document.querySelector("[role=menu],[role=dialog],[role=listbox]")) return;
-    if (source !== undefined && event.key === "Escape") { event.preventDefault(); showProgramme(); return; }
-    if (event.key === "Escape") setPreviewExpanded(false);
+    if (event.key === "Escape") {
+      if (event.repeat) return;
+      if (source !== undefined) { event.preventDefault(); showProgramme(); return; }
+      if (previewExpanded) { event.preventDefault(); setPreviewExpanded(false); return; }
+      if (selection.length > 0 || activeTransition !== undefined) {
+        const focused = document.activeElement;
+        if (focused?.matches("[data-clip-id],[data-transition-id]")) {
+          focused.closest<HTMLElement>(".nle-timeline-scroll")?.focus({ preventScroll: true });
+        }
+        select([]);
+      }
+      return;
+    }
     if (source !== undefined || (event.target as Element | null)?.closest("input,.library-grid")) return;
     if (event.metaKey || event.ctrlKey) {
       if (event.altKey || event.repeat) return;
@@ -692,12 +862,11 @@ export function Studio() {
         if (canReplay(direction)) replay(direction);
       } else if (event.code === "KeyB") {
         event.preventDefault();
-        const items = selectionAtFrame(scene, selection, frame, "split");
-        if (items.length > 0) split(items.map(item => item.id), frame);
+        const items = selectionAtFrame(scene, selection, frame);
+        if (items.length > 0 && items.every(item => item.affordances.split)) split(items.map(item => item.id), frame);
       } else if (event.code === "KeyG") {
         event.preventDefault();
-        if (event.shiftKey) unlinkSelection();
-        else if (!grouped) toggleGroup();
+        editGroup(selection, event.shiftKey ? "unlink" : "link");
       }
       return;
     }
@@ -724,27 +893,34 @@ export function Studio() {
     }
   };
 
-  const toTime = (frames: number) => ({
-    ticks: String(BigInt(frames) * BigInt(scene.editRate.denominator)),
-    timeBase: { numerator: 1, denominator: scene.editRate.numerator },
-  });
   const start = selectedProjectItem?.startFrame;
   const end = start === undefined ? undefined : start + selectedProjectItem!.durationFrames;
   const trimRanges = selectedProjectItem === undefined ? undefined : session.timeline.trimRanges[selectedProjectItem.id];
   const slipAvailable = selectedProjectItem?.source === "composition" || selectedProjectItem?.source === "media"
     && mediaForItem(selectedProjectItem.id)?.durationFrames !== undefined;
   const editTime = (item: NleTimelineSceneItem, edge: "start" | "end", atFrame: number) =>
-    place({ ...operationContext, kind: "timeline.trim", item: item.id, edge, atFrame });
+    place({ ...operationContext, kind: "timeline.trim", items: [item.id], edge, atFrame });
+  const isTimelineFileTarget = (target: EventTarget | null) => target instanceof Element && timelineRoot.current?.contains(target) === true
+    && target.closest(".nle-timeline-scroll") !== null;
 
-  return <div className="nle-workspace nle-active" onDragOver={event => {
-    if (!editingDisabled && event.dataTransfer.types.includes("Files")) {
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "copy";
+  return <div className="nle-workspace nle-active" data-media-drop-blocked={mediaDropBlocked || undefined} onDragOver={event => {
+    if (!event.dataTransfer.types.includes("Files")) return;
+    const intoTimeline = !editingDisabled && isTimelineFileTarget(event.target);
+    const intoLibrary = !editingDisabled && event.defaultPrevented;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = intoTimeline || intoLibrary ? "copy" : "none";
+    setFileDragOverTimeline(intoTimeline);
+  }} onDragLeave={event => {
+    if (!event.dataTransfer.types.includes("Files")) return;
+    if (!isTimelineFileTarget(event.relatedTarget ?? document.elementFromPoint(event.clientX, event.clientY))) {
+      setFileDragOverTimeline(false);
     }
   }} onDrop={event => {
-    if (!event.defaultPrevented && event.dataTransfer.files.length > 0) {
-      event.preventDefault();
-      if (!editingDisabled) importProjectMedia(Array.from(event.dataTransfer.files), null);
+    setFileDragOverTimeline(false);
+    if (event.defaultPrevented || event.dataTransfer.files.length === 0) return;
+    event.preventDefault();
+    if (!editingDisabled && isTimelineFileTarget(event.target)) {
+      importProjectMedia(Array.from(event.dataTransfer.files), null, mediaPlacementAtPlayhead());
     }
   }}><div className={classes} style={{
     "--nle-bin-minimum": `${minimumPanelWidths.bin}px`,
@@ -784,7 +960,7 @@ export function Studio() {
             audio: processTargets("audio", selection).length > 0,
             picture: processTargets("picture", selection).length > 0,
           }}
-          onImportMedia={importProjectMedia} onEditLibrary={changeMediaLibrary} onEditMedia={changeMediaAsset} onPlaceMedia={placeProjectMedia} onMaterialize={materialize}
+          onImportMedia={importProjectMedia} onEditLibrary={changeMediaLibrary} onEditMedia={changeMediaAsset} onPlaceMedia={addProjectMedia} onMaterialize={materialize}
           onMaterializeAdjust={materializeAdjust} onMaterializeProcess={entry => materializeProcess(entry)} onMaterializeTransition={materializeSelectedTransition}
           onPreviewMedia={previewAsset} onOpenMediaFolder={showProgramme}
           onBeginMediaDrag={(event, entry, onClick) => assetDrag.start(event, entry, { onClick })}
@@ -803,22 +979,24 @@ export function Studio() {
           <div className="nle-editable-preview" style={{ "--canvas-ratio": session.canvas.canvas.width / session.canvas.canvas.height } as React.CSSProperties}><div className="studio-canvas">
             {programme.documents.map(entry => <iframe key={entry.generation} title="节目预览" sandbox="allow-scripts" tabIndex={-1}
               className="studio-programme-preview" src={entry.document}
-              data-active={entry.generation === programme.visible?.generation && canvasDraft === undefined}
+              data-active={entry.generation === visibleGeneration}
               onLoad={event => programme.loaded(entry, event.currentTarget)}/>)}
-            {(programme.visible === undefined || canvasDraft !== undefined)
-              && session.canvas.layers.filter(layer => layer.enabled && layer.trackEnabled && activeItems.has(layer.id) && layer.layout !== undefined)
-                .map(layer => { const layout = canvasDraft?.id === layer.id ? { ...layer.layout!, ...canvasDraft.frame } : layer.layout!; const canvas = session.canvas.canvas; const media = mediaForItem(layer.id); return <button type="button" key={layer.id} className={`studio-canvas-layer${selection.includes(layer.id) ? " selected" : ""}`} onClick={() => select([layer.id])} style={{ left: `${layout.x / canvas.width * 100}%`, top: `${layout.y / canvas.height * 100}%`, width: `${layout.width / canvas.width * 100}%`, height: `${layout.height / canvas.height * 100}%` }}>{media?.resource && media.mediaType?.startsWith("image/") ? <img src={media.resource} style={{ objectFit: layout.fit }}/> : media?.resource && media.mediaType?.startsWith("video/") ? <video src={media.resource} muted playsInline style={{ objectFit: layout.fit }}/> : undefined}<span>{layer.title}</span></button>; })}
-            {!playing && source === undefined && <CanvasControls scene={session.canvas} active={activeItems} selection={selection} disabled={editingDisabled} onSelect={select}
-              draft={canvasDraft} onDraft={setCanvasDraft} onTranslate={spatialTranslate}
-              onResize={(item, next) => command({ kind: "spatial.edit", expectedProjectRevision: session.status.projectRevision, item, edit: { kind: "frame.resize", frame: next } })}/>}
-          </div></div>
+            {visibleGeneration === undefined
+              && session.canvas.layers.filter(layer => layer.enabled && layer.trackPictureEnabled && activeItems.has(layer.id) && layer.layout !== undefined)
+                .map(layer => { const layout = layer.layout!; const canvas = session.canvas.canvas; const media = mediaForItem(layer.id); return <button type="button" key={layer.id} className={`studio-canvas-layer${selection.includes(layer.id) ? " selected" : ""}`} onClick={() => select([layer.id])} style={{ left: `${layout.x / canvas.width * 100}%`, top: `${layout.y / canvas.height * 100}%`, width: `${layout.width / canvas.width * 100}%`, height: `${layout.height / canvas.height * 100}%` }}>{media?.resource && media.mediaType?.startsWith("image/") ? <img src={media.resource} style={{ objectFit: layout.fit }}/> : media?.resource && media.mediaType?.startsWith("video/") ? <video src={media.resource} muted playsInline style={{ objectFit: layout.fit }}/> : undefined}<span>{layer.title}</span></button>; })}
+          </div>
+            {!playing && source === undefined && <CanvasControls scene={session.canvas} active={activeItems} selection={selection}
+              disabled={editingDisabled || visibleCanvasDraft !== undefined || visibleGeneration === undefined || visibleGeneration !== picture?.generation} onSelect={select}
+              draft={visibleCanvasDraft} onDraft={drawCanvasDraft} onCommit={commitCanvasDraft}/>}
+          </div>
         </PreviewMonitor>
         <PanelResizeHandle side="properties" label="调整属性面板宽度" width={panelWidths.properties} onResize={width => resizePanel("properties", width)}/>
         <aside className="nle-properties"><div className="nle-properties-tabs" role="tablist"><button role="tab" aria-selected={propertiesTab === "properties"} onClick={() => setPropertiesTab("properties")}>属性</button>
           <button role="tab" aria-selected={propertiesTab === "text"} onClick={() => setPropertiesTab("text")}>文本</button></div>
           <AnimatePresence mode="popLayout" initial={false}><motion.div key={JSON.stringify([propertiesTab, propertiesTab === "properties" ? activeTransition ?? selection[0] : null])} className="nle-panel-body" {...enterMotion(reduced)}>{propertiesTab === "properties" && selection.length === 1 && selectionLayer?.layout !== undefined
-            && <PictureAlignment canvas={session.canvas.canvas} frame={canvasDraft?.id === selectionLayer.id ? canvasDraft.frame : selectionLayer.layout}
-              disabled={editingDisabled || !selectionLayer.affordances.translate} onTranslate={(x, y) => spatialTranslate(selectionLayer.id, x, y)}/>}
+            && <PictureAlignment canvas={session.canvas.canvas} frame={visibleCanvasDraft?.id === selectionLayer.id ? visibleCanvasDraft.frame : selectionLayer.layout}
+              disabled={editingDisabled || visibleCanvasDraft !== undefined || !selectionLayer.affordances.translate}
+              onTranslate={(x, y) => spatialTranslate(selectionLayer.id, x, y)}/>}
           {propertiesTab === "properties" && selectedProjectItem !== undefined && selection.length === 1 && activeTransition === undefined && <Section title="时间">
             {Number.isSafeInteger(start) && <Row label="起始帧"><NumberField key={`${selectedProjectItem.id}-start`} label="起始帧"
               value={start!} min={0} max={Number.MAX_SAFE_INTEGER} precision={0} disabled={editingDisabled || !selectedProjectItem.affordances.move}
@@ -838,13 +1016,13 @@ export function Studio() {
               {delta < 0 ? "前移一帧" : "后移一帧"}
             </button>)}</Row>}
           </Section>}
-          {propertiesTab === "properties" && rate !== undefined && selectedProjectItem !== undefined && <Section title="变速">
+          {propertiesTab === "properties" && rate !== undefined && selectedProjectItem !== undefined && <Section title={rate.numerator === 0 ? "定格" : "变速"}>
             <Row label="速度"><NumberField key={selectedProjectItem.id} label="速度倍率" value={Math.abs(rate.numerator / rate.denominator)}
-              min={0.01} max={100} step={0.1} disabled={editingDisabled} onCommit={speed => place({
+              min={rate.numerator === 0 ? 0 : 0.01} max={100} step={0.1} disabled={editingDisabled} onCommit={speed => place({
                 ...operationContext, kind: "timeline.retime", item: selectedProjectItem.id,
-                rate: { numerator: (rate.numerator < 0 && !selectedProjectItem.signals.audio ? -1 : 1) * Math.round(speed * 100), denominator: 100 },
+                rate: { numerator: (rate.numerator < 0 && !selectedProjectItem.signals.audio ? -1 : 1) * Math.max(1, Math.round(speed * 100)), denominator: 100 },
               })}/></Row>
-            {selectedProjectItem.signals.picture && !selectedProjectItem.signals.audio && <button type="button"
+            {rate.numerator !== 0 && selectedProjectItem.signals.picture && !selectedProjectItem.signals.audio && <button type="button"
               className="button" disabled={editingDisabled} onClick={() => place({
                 ...operationContext, kind: "timeline.retime", item: selectedProjectItem.id,
                 rate: { numerator: -rate.numerator, denominator: rate.denominator },
@@ -874,23 +1052,32 @@ export function Studio() {
       {!previewExpanded && <TimelineResizeHandle controls={timelineRegionId} onResize={resizeTimeline}/>}
       <div className="nle-timeline-mount" id={timelineRegionId} ref={timelineRoot}><AnimatePresence mode="popLayout" initial={false}><Timeline key={scene.composition} session={session} frame={frame} playing={playing} reveal={timelineReveal} selection={selection} busy={editingDisabled} gestureBlocked={timelineBlocked} canUndo={canReplay("undo")} canRedo={canReplay("redo")} onSeek={value => seekProgramme(value, false)} onSelect={selectTimeline}
         selectedTransition={activeTransition} onSelectTransition={selectTransition}
-        drop={assetDrag.drag?.drop} canFreeze={canFreeze} onFreeze={() => selectedProjectItem && place({
-          ...operationContext, kind: "media.freeze", item: selectedProjectItem.id, sampleFrame: frame,
-          atFrame: frame, durationFrames: Math.max(1, Math.round(fps * 3)),
-        })}
+        drop={mediaDrag === undefined ? assetDrag.drag?.drop : undefined} mediaPlacement={placementDraft}
+        fileDrop={filePlacement?.composition === scene.composition ? { frame: filePlacement.atFrame, pending: true }
+          : fileDragOverTimeline && !editingDisabled ? { frame, pending: false } : undefined}
+        isSampledMedia={item => mediaForItem(item)?.pictureKind === "signal"}
+        onFreeze={(item, atFrame) => place({ ...operationContext, kind: "media.freeze", item, atFrame })}
         selectedProcess={selectedProcess} onSelectProcess={setProcessSelection}
         onProcessTiming={edit => commitTimelineGesture({ ...operationContext, ...edit })}
-        onMove={intent => commitTimelineGesture({ ...operationContext, kind: "timeline.drop", ...intent })}
-        onTrimGesture={(item, edge, atFrame) => commitTimelineGesture({
-          ...operationContext, kind: "timeline.trim", item, edge, atFrame,
+        onMove={(intent, continuation) => commitTimelineEdit(current => {
+          const operation = { ...operationContext, kind: "timeline.drop" as const, ...intent,
+            expectedProjectRevision: current.status.projectRevision };
+          if (continuation === undefined) return operate(operation);
+          const track = current.timeline.scene.tracks.find(row => row.items.some(item => item.id === intent.anchor));
+          const anchor = track?.items.find(item => item.id === intent.anchor);
+          if (track === undefined || anchor === undefined) throw new Error("正在移动的片段已不在当前时间线。");
+          return operate({ ...operation, deltaFrames: Math.round(continuation.startFrame - anchor.startFrame),
+            target: continuation.followAnchorTrack ? { kind: "track", track: track.id } : intent.target });
         })}
-        onTrim={(items, edge, atFrame) => {
-          if (items.length === 1) editTime(items[0]!, edge, atFrame);
-          else if (items.length > 1) transact(items.map(item => ({ kind: "item.trim", id: item.id, edge, at: toTime(atFrame) })));
-        }}
+        onItemReorder={(item, direction) => place({ ...operationContext, kind: "timeline.item-reorder", item, direction })}
+        onTrimGesture={(item, edge, atFrame) => commitTimelineGesture({
+          ...operationContext, kind: "timeline.trim", items: [item], edge, atFrame,
+        })}
+        onTrim={(items, edge, atFrame) => place({ ...operationContext, kind: "timeline.trim", items, edge, atFrame })}
         onSplit={split}
         onRemove={removeSelection}
-        onTrackEnabled={(track, enabled) => transact([{ kind: "track.update", id: track, enabled }])}
+        onTrackSignal={(track, signal, enabled) => transact([{ kind: "track.update", id: track,
+          ...(signal === "picture" ? { pictureEnabled: enabled } : { audioEnabled: enabled }) }])}
         onTrackLocked={(track, locked) => place({ ...operationContext, kind: "track-lock.set", track, locked })}
         onCompositionCreate={(name, canvas) => void perform(async () => {
           const id = `composition-${crypto.randomUUID()}`;
@@ -899,6 +1086,10 @@ export function Studio() {
           await openCreatedComposition(id, result);
         })}
         onCompositionEdit={(id, fields) => transact([{ kind: "composition.update", id, ...fields }])}
+        onCompositionMove={(id, before) => commitTimelineEdit(current => sendCommand({
+          kind: "project.transact", expectedProjectRevision: current.status.projectRevision,
+          commands: [{ kind: "composition.move", id, ...(before === undefined ? {} : { before }) }],
+        }))}
         onCompositionInsert={source => place({ ...operationContext, kind: "composition.materialize", source, atFrame: frame })}
         onCompositionCopy={source => void perform(async () => {
           const result = await operate({ ...operationContext, kind: "composition.duplicate", source });
@@ -927,21 +1118,6 @@ export function Studio() {
             items: items.map(item => item.id), tracks: [...new Set(items.map(item => item.track))] }));
           selectItems([]);
         })}
-        onTrackRename={(id, name) => transact([{ kind: "track.update", id, name }])}
-        onTrackRemove={id => {
-          const track = scene.tracks.find(track => track.id === id);
-          if (track === undefined) return;
-          const ids = new Set(track.items.map(item => item.id));
-          const commands: NleCommand[] = [
-            ...scene.transitions.filter(entry => ids.has(entry.outgoing) || ids.has(entry.incoming))
-              .map(entry => ({ kind: "transition.remove" as const, id: entry.id })),
-            ...scene.mattes.filter(entry => ids.has(entry.content) || ids.has(entry.matte))
-              .map(entry => ({ kind: "matte.remove" as const, id: entry.id })),
-            ...(ids.size === 0 ? [] : [{ kind: "item.remove" as const, ids: [...ids] }]),
-            { kind: "track.remove", id },
-          ];
-          transact(commands);
-        }}
         onCloseGap={(track, atFrames) => void perform(async () => {
           for (const atFrame of atFrames) {
             const status = sessionRef.current!.status;
@@ -949,30 +1125,26 @@ export function Studio() {
               expectedProjectRevision: status.projectRevision }));
           }
         })}
-        onCompoundUnique={item => void perform(async () => {
-          const source = scene.tracks.flatMap(track => track.items).find(entry => entry.id === item)?.nestedComposition;
-          if (source === undefined) return;
-          const created = await operate({ ...operationContext, kind: "composition.materialize", source, atFrame: frame });
-          const copy = created.result?.item;
-          await acceptReceipt(created, typeof copy === "string" ? copy : undefined);
-          if (typeof copy === "string") await acceptReceipt(await operate({ ...operationContext, kind: "composition.make-unique", item: copy,
-            expectedProjectRevision: created.status.projectRevision }));
-        })}
+        onCompoundUnique={item => place({ ...operationContext, kind: "composition.make-unique", item })}
         onCompoundExplode={item => place({ ...operationContext, kind: "composition.explode", item })}
-        onTrackMove={(track, before) => place({ ...operationContext, kind: "timeline.track-reorder", track, ...(before === undefined ? {} : { before }) })}
+        onTrackMove={(track, before) => commitTimelineGesture({ ...operationContext, kind: "timeline.track-reorder", track, ...(before === undefined ? {} : { before }) })}
         onComposition={target => navigate({ ...operationContext, kind: "composition.select", target })}
         onEnterComposition={item => navigate({ ...operationContext, kind: "composition.enter", item, atFrame: frame })}
         onReturnComposition={() => navigate({ ...operationContext, kind: "composition.return" })}
-        onCompound={() => place({ ...operationContext, kind: "composition.compound", items: selection, name: "复合片段" })}
-        canToggleGroup={canToggleGroup} groupLabel={groupLabel} onToggleGroup={toggleGroup}
-        canDetachAudio={canDetachAudio} onDetachAudio={() => {
-          if (!canDetachAudio || selectedProjectItem === undefined) return;
-          place({ ...operationContext, kind: "audio.detach", item: selectedProjectItem.id });
-        }}
+        onCompound={items => place({ ...operationContext, kind: "composition.compound", items, name: "复合片段" })}
+        onBindMatte={(content, source) => place({ ...operationContext, kind: "matte.bind", content, source })}
+        onRemoveMatte={matte => place({ ...operationContext, kind: "matte.remove", matte })}
+        onEditGroup={editGroup}
+        onDetachAudio={item => place({ ...operationContext, kind: "audio.detach", item })}
         onUndo={() => replay("undo")}
         onRedo={() => replay("redo")}/></AnimatePresence></div>
       </div>
-      <AnimatePresence>{assetDrag.drag !== undefined && <motion.div {...fadeMotion(reduced)} className="nle-floating-preview" style={{ position: "fixed", left: assetDrag.drag.x + 12, top: assetDrag.drag.y + 12, pointerEvents: "none" }}>
+      {mediaDrag !== undefined && mediaDrag.mediaPosition === undefined && <div className="nle-floating-preview nle-media-float" aria-hidden="true"
+        style={{ left: Math.max(4, Math.min(mediaDrag.x + 12, window.innerWidth - 164)),
+          top: Math.max(4, Math.min(mediaDrag.y + 12, window.innerHeight - 46)) }}>
+        <MediaThumbnail entry={mediaDrag.entry} mediaGeneration={session.media.generation}/><span>{mediaDrag.entry.name}</span>
+      </div>}
+      <AnimatePresence>{assetDrag.drag !== undefined && mediaDrag === undefined && <motion.div {...fadeMotion(reduced)} className="nle-floating-preview" style={{ position: "fixed", left: assetDrag.drag.x + 12, top: assetDrag.drag.y + 12, pointerEvents: "none" }}>
         <MediaThumbnail entry={assetDrag.drag.entry}/><span>{assetDrag.drag.entry.name}</span>
       </motion.div>}</AnimatePresence>
     </div></div>;

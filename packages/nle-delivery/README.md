@@ -25,7 +25,8 @@ Components, resolved Media inputs and inline or shared slot values.
   receives the finite `sourceDuration` needed by the occurrence. It can name an `itemTimeControl` for behaviors
   attached to the visible window, and read it through `context.controlPosition(name, outputFrame)`.
 - A Picture Process or Adjust returns an `HtmlVisual` using `{{input:signal}}`. Transitions use `outgoing` and
-  `incoming`, and Mattes use `content` and `matte`. Each effect can declare the local control names it reads.
+  `incoming`. Each effect can declare the local control names it reads. NLE Mattes composite the source Picture's
+  alpha with the content Picture before the result enters a Transition or the Composition stack.
 - An Audio Process or Adjust returns an audio filter expression and its control names. Source reads use accepted Project Media.
 - A Picture Reconstruction returns the sampling implementation for one timed Media Picture.
 

@@ -1,7 +1,7 @@
 import type { TemporalRate } from "@hypit/temporal/algebra";
 import type { NlePictureExtent, NlePictureRect } from "../picture.js";
 import type { NleSpatialEdit } from "../spatial-authoring.js";
-import type { NleCanvas, NleEditGroup, NlePictureLayout, NleSharedValue, NleTrack } from "../types.js";
+import type { NleCanvas, NleEditGroup, NlePictureCrop, NlePictureLayout, NleSharedValue, NleTrack } from "../types.js";
 
 /** Invocation-local package or Host description for one exact Item. */
 export type NleTimelineItemObservation = {
@@ -40,6 +40,7 @@ export type NleTimelineSceneItem = {
   readonly durationFrames: number;
   readonly anchoredProcesses: readonly (NleProcessAddressProjection & NleEdgeProcessTiming)[];
   readonly group?: string;
+  readonly stacking?: { readonly up?: string; readonly down?: string };
   readonly display: {
     readonly title: string;
     readonly text?: string;
@@ -52,7 +53,8 @@ export type NleTimelineSceneTrack = {
   readonly name: string;
   readonly kind: NleTrack["kind"];
   readonly role: NleTrack["role"];
-  readonly enabled: boolean;
+  readonly pictureEnabled: boolean;
+  readonly audioEnabled: boolean;
   readonly locked: boolean;
   readonly items: readonly NleTimelineSceneItem[];
 };
@@ -68,6 +70,12 @@ export type NleTimelineScene = {
     readonly incoming: string;
     readonly operator: import("../implementation.js").PackageSymbol;
   }[];
+  readonly transitionCuts: readonly {
+    readonly frame: number;
+    readonly track: string;
+    readonly outgoing: string;
+    readonly incoming: string;
+  }[];
   readonly mattes: readonly { readonly id: string; readonly content: string; readonly matte: string }[];
   readonly tracks: readonly NleTimelineSceneTrack[];
   readonly maximumFrame: number;
@@ -80,6 +88,7 @@ export type NleSpatialItemCapabilities = {
   readonly resizeFrame: boolean;
   readonly setFit: boolean;
   readonly setFocus: boolean;
+  readonly setCrop: boolean;
   readonly shareLayout: boolean;
   readonly linkLayout: boolean;
   readonly unlinkLayout: boolean;
@@ -97,8 +106,10 @@ export type NleCanvasSceneLayer = {
   readonly role: "present" | "adjust";
   readonly source: "media" | "component" | "composition" | "adjust";
   readonly enabled: boolean;
-  readonly trackEnabled: boolean;
+  readonly trackPictureEnabled: boolean;
   readonly layout?: NlePictureLayout;
+  readonly layoutRef?: string;
+  readonly crop?: NlePictureCrop;
   readonly content?: NlePictureRect;
   readonly affordances: {
     readonly select: true;
