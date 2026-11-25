@@ -15,6 +15,11 @@ export function safePolloReason(value: string): string {
   return value.replace(/https?:\/\/\S+/giu, "[redacted-url]");
 }
 
+// Download and upload targets are signed URLs whose query is an access capability.
+function signedUrlTarget(path: string): string {
+  return /^https?:\/\//iu.test(path) ? path.replace(/[?#].*$/su, "") : path;
+}
+
 export class PolloServiceError extends EndpointServiceError {}
 
 export class PolloHttpError extends EndpointHttpError {
@@ -26,7 +31,7 @@ export class PolloHttpError extends EndpointHttpError {
     const reason = text(body?.message) ?? (body === undefined ? text(bodyText.slice(0, 2000)) : undefined);
     const requestId = text(body?.requestId);
     const facts = [
-      `Pollo HTTP ${status}`, code, `${request.method} ${request.path}`,
+      `Pollo HTTP ${status}`, code, `${request.method} ${signedUrlTarget(request.path)}`,
       ...(requestId === undefined ? [] : [`request=${requestId}`]),
     ];
     super(code, `${facts.join("; ")}${reason === undefined ? "" : `: ${safePolloReason(reason)}`}`,

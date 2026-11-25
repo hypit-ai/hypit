@@ -15,6 +15,11 @@ export function safeHiApiReason(value: string): string {
   return value.replace(/https?:\/\/\S+/giu, "[redacted-url]");
 }
 
+// Download and upload targets are signed URLs whose query is an access capability.
+function signedUrlTarget(path: string): string {
+  return /^https?:\/\//iu.test(path) ? path.replace(/[?#].*$/su, "") : path;
+}
+
 export class HiApiServiceError extends EndpointServiceError {}
 
 export class HiApiHttpError extends EndpointHttpError {
@@ -26,7 +31,7 @@ export class HiApiHttpError extends EndpointHttpError {
     const reason = text(body?.message) ?? (body === undefined ? text(bodyText.slice(0, 2000)) : undefined);
     const requestId = text(response.headers.get("x-request-id"));
     const facts = [
-      `HiAPI HTTP ${status}`, code, `${request.method} ${request.path}`,
+      `HiAPI HTTP ${status}`, code, `${request.method} ${signedUrlTarget(request.path)}`,
       ...(request.model === undefined ? [] : [`model=${request.model}`]),
       ...(requestId === undefined ? [] : [`request=${requestId}`]),
     ];
