@@ -36,6 +36,22 @@ test("version reads its Distribution without a project, Runtime or registry requ
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
+test("version accepts the global presentation options", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-version-"));
+  try {
+    await writeFile(join(root, "package.json"), JSON.stringify({ name: "@hypit/hypit", version: "0.1.8" }));
+    const run = (argv: readonly string[]) => runVersionCli(["version", ...argv], { write: () => {} }, {
+      packageRoot: root, launcher: join(root, "bin", "hypit.mjs"),
+      fetch: async () => { throw new Error("No network expected"); },
+    });
+    for (const argv of [["--color", "never"], ["--color", "always"], ["--no-color"], ["--verbose"], ["--debug"]]) {
+      await run(argv);
+    }
+    await assert.rejects(run(["--color", "sometimes"]), /--color requires auto, always or never/u);
+    await assert.rejects(run(["--colour"]), /Unknown version option: --colour/u);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test("version check reports the selected registry's evidence, including newer local checkouts", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-version-"));
   try {
