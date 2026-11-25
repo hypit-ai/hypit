@@ -280,3 +280,29 @@ test("word-located grids paginate dense samples without covering the source pict
     await rm(work, { recursive: true, force: true });
   }
 });
+
+test("probe reports the display size of video with a rotation", { skip: !ffmpeg && "ffmpeg is not installed" }, async () => {
+  const work = await mkdtemp(join(tmpdir(), "hypit-media-rotation-"));
+  try {
+    const coded = join(work, "coded.mp4");
+    const rotated = join(work, "rotated.mp4");
+    const encode = spawnSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y",
+      "-f", "lavfi", "-i", "color=c=red:s=64x36:r=24:d=1",
+      "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", coded], { encoding: "utf8" });
+    assert.equal(encode.status, 0, encode.stderr);
+    // `-display_rotation` is FFmpeg 6.1+; older builds still write the legacy `rotate` tag.
+    const remux = (rotation: readonly string[]) => spawnSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y",
+      ...rotation, "-c", "copy", rotated], { encoding: "utf8" }).status === 0;
+    assert.ok(remux(["-display_rotation", "90", "-i", coded])
+      || remux(["-i", coded, "-metadata:s:v:0", "rotate=90"]), "ffmpeg writes a rotated sample");
+    const info = await probeMedia(rotated);
+    assert.equal(info.hasVideo, true);
+    if (!info.hasVideo) throw new Error("rotated sample has no video stream");
+    assert.deepEqual([info.width, info.height], [36, 64]);
+    await cutFrame(rotated, 0.5, join(work, "frame.png"));
+    const frame = await sharp(join(work, "frame.png")).metadata();
+    assert.deepEqual([frame.width, frame.height], [info.width, info.height], "probe matches the frames ffmpeg writes");
+  } finally {
+    await rm(work, { recursive: true, force: true });
+  }
+});
