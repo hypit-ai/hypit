@@ -35,7 +35,7 @@ export type LocalRuntimeCliDistribution = {
 };
 
 function positiveInteger(value: string, name: string): number {
-  const parsed = Number(value);
+  const parsed = /^\d+$/u.test(value) ? Number(value) : Number.NaN;
   if (!Number.isSafeInteger(parsed) || parsed < 1) throw new Error(`${name} requires a positive integer`);
   return parsed;
 }
