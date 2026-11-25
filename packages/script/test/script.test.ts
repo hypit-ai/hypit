@@ -165,6 +165,20 @@ test("Script keeps ordinary compounds and formatted numbers lexical", () => {
   ]);
 });
 
+test("Comma-grouped numbers keep a hyphenated suffix in one lexical unit", () => {
+  const parsed = parseScript(
+    "comma-group-compound.svml",
+    "<line>a 1,000-word essay beats a 123,456,789-point list and 1，000-word的理由.</line>",
+  );
+  assert.deepEqual(parsed.tokens.map((token) => token.text), [
+    "a", "1,000-word", "essay", "beats", "a", "123,456,789-point", "list", "and", "1，000-word", "的", "理", "由",
+  ]);
+  const document = captionDocument(parsed, "story.caption", "story");
+  assert.deepEqual(document.words.map((word) => word.text), [
+    "a", "1,000-word", "essay", "beats", "a", "123,456,789-point", "list", "and", "1，000-word", "的", "理", "由.",
+  ]);
+});
+
 test("A single pipe is literal and a double pipe is an authored Cue Break", () => {
   const parsed = parseScript("pipes.svml", "<line>one | two || three \\|\\| four</line>");
   const document = captionDocument(parsed, "story.caption", "story");
