@@ -25,7 +25,9 @@ The Runtime creates or reconciles the cold environment in
 the machine Program Home and reuses a running service across projects and sessions. The commands below are contributor/operator
 diagnostics for a deliberately managed deployment:
 
-WhisperX 3.8.6 supports Python 3.10 through 3.13. The checked-in lock selects Python 3.13:
+WhisperX 3.8.6 supports Python 3.10 through 3.13; this runtime requires 3.11 or newer because its
+patched dependencies (Pillow 13, filelock 4.2) no longer support 3.10. The checked-in lock selects
+Python 3.13:
 
 ```bash
 uv python install 3.13
