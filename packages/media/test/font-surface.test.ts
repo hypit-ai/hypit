@@ -76,7 +76,7 @@ test("Font Surface preserves package assets and Unicode-range shards as one exac
         name: "media:Source",
         attributes: {
           src: "package:@company/type/files/han-1.woff2",
-          "unicode-range": "U+4E00-9FFF",
+          "unicode-range": "U+4E00-9FFF, U+3400-4DBF",
         },
         children: [],
         range,
@@ -103,7 +103,7 @@ test("Font Surface preserves package assets and Unicode-range shards as one exac
           size: 1_024,
           mediaType: "font/woff2",
         },
-        unicodeRange: "U+4E00-9FFF",
+        unicodeRange: "U+4E00-9FFF,U+3400-4DBF",
       }],
       weight: 600,
       style: "normal",

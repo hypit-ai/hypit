@@ -168,7 +168,8 @@ export const decodeMediaFontSurface: StructuredSurfaceHandler = async ({ element
           source: stringAttribute(child, "src"),
           unicodeRange: child.attributes["unicode-range"] === undefined
             ? undefined
-            : stringAttribute(child, "unicode-range"),
+            // Accept the list as a stylesheet writes it (`U+0000-00FF, U+0131`), as the fontsource adapter does.
+            : stringAttribute(child, "unicode-range").replace(/\s+/gu, ""),
         };
       })
     : [{ element, source: stringAttribute(element, "src"), unicodeRange: undefined }];
