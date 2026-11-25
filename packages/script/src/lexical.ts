@@ -18,6 +18,7 @@ function openingAt(gap: string, hasPrevious: boolean, beforeWord = true): number
   for (const match of gap.matchAll(/./gu)) {
     const character = match[0];
     if (/[\p{Ps}\p{Pi}\p{Sc}]/u.test(character)
+      || (beforeWord && /[¿¡]/u.test(character))
       || ((/["'`]/u.test(character) || (beforeWord && /\p{Pf}/u.test(character))) && (!hasPrevious || /\s$/u.test(gap.slice(0, match.index))))) return match.index;
   }
   return gap.length;
