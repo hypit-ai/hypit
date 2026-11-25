@@ -628,10 +628,7 @@ test("a paragraph's source indentation is not part of its words", async () => {
   const validators = new TypeValidatorRegistry();
   registerTypeValidatorFacets(validators, spatialComponent.validators ?? []);
   registerTypeValidatorFacets(validators, textComponent.validators ?? []);
-  const compiled = await compileSourceClosure({
-    entry: resolveSelfDescribedTextSource({
-      id: "/project/text.svml", name: "text.svml",
-      text: `<?svml using="@hypit/markup@1"?>
+  const source = `<?svml using="@hypit/markup@1"?>
         <svml>
           <import as="fixture" from="example.text-inputs@1"/>
           <import as="text" from="@hypit/text-fine@1"/>
@@ -645,31 +642,39 @@ test("a paragraph's source indentation is not part of its words", async () => {
               Ways to <text:Span style={poster}>learn AI</text:Span>
             </text:P>
           </text:Flow>
-        </svml>`,
-    }),
-    closure, frontends,
-    admitRecord: createRecordAdmitter(validators),
-    resolveSource() { throw new Error("Text fixture has no source imports."); },
-  });
-  const track = resolveCompiledSourceExport(compiled, "body.visual", compositionTypes.visualTrack);
-  assert.equal(track.ref.kind, "logical-output");
-  // The paragraph's words are the copy, not the indentation the file put around it.
-  const runs: unknown[] = [];
-  const visit = (value: unknown): void => {
-    if (Array.isArray(value)) { for (const item of value) visit(item); return; }
-    if (value !== null && typeof value === "object") {
-      const record = value as Record<string, unknown>;
-      if (typeof record.text === "string") runs.push(record.text);
-      for (const key of Object.keys(record)) visit(record[key]);
-    }
-  };
-  visit(compiled.program);
-  assert.ok(runs.length >= 2, "the compiled program holds the track's text runs");
-  const clean = runs.join("|");
-  // The paragraph's runs read as the copy written across two lines, not the file's layout.
-  assert.match(clean, /Top 5 Most Popular\nWays to /u,
-    "the two source lines remain one paragraph with a line break");
-  assert.match(clean, /learn AI/u, "the Span run keeps its words");
-  assert.doesNotMatch(clean, /\n +/u, "no line begins with indentation");
-  assert.doesNotMatch(clean, /\\n +Top 5/u, "leading indentation must not be part of the words");
+        </svml>`;
+  // Windows checkouts can carry CRLF line endings; the words must read the same.
+  for (const newline of ["\n", "\r\n"]) {
+    const compiled = await compileSourceClosure({
+      entry: resolveSelfDescribedTextSource({
+        id: "/project/text.svml", name: "text.svml",
+        text: source.replaceAll("\n", newline),
+      }),
+      closure, frontends,
+      admitRecord: createRecordAdmitter(validators),
+      resolveSource() { throw new Error("Text fixture has no source imports."); },
+    });
+    const track = resolveCompiledSourceExport(compiled, "body.visual", compositionTypes.visualTrack);
+    assert.equal(track.ref.kind, "logical-output");
+    // The paragraph's words are the copy, not the indentation the file put around it.
+    const runs: unknown[] = [];
+    const visit = (value: unknown): void => {
+      if (Array.isArray(value)) { for (const item of value) visit(item); return; }
+      if (value !== null && typeof value === "object") {
+        const record = value as Record<string, unknown>;
+        if (typeof record.text === "string") runs.push(record.text);
+        for (const key of Object.keys(record)) visit(record[key]);
+      }
+    };
+    visit(compiled.program);
+    assert.ok(runs.length >= 2, "the compiled program holds the track's text runs");
+    const clean = runs.join("|");
+    // The paragraph's runs read as the copy written across two lines, not the file's layout.
+    assert.match(clean, /Top 5 Most Popular\nWays to /u,
+      "the two source lines remain one paragraph with a line break");
+    assert.match(clean, /learn AI/u, "the Span run keeps its words");
+    assert.doesNotMatch(clean, /\n +/u, "no line begins with indentation");
+    assert.doesNotMatch(clean, /\\n +Top 5/u, "leading indentation must not be part of the words");
+    assert.doesNotMatch(clean, /\r/u, "line endings are not part of the words");
+  }
 });
