@@ -151,11 +151,18 @@ app.querySelectorAll<HTMLButtonElement>(".view-tabs [data-view]").forEach((butto
 window.addEventListener("hashchange", changeView);
 changeView();
 
-timeline.element.addEventListener("studio:write", (event) => {
-  const state = (event as CustomEvent<{ readonly state?: string }>).detail.state;
+const handleStudioWrite = (event: Event): void => {
+  const detail = (event as CustomEvent<{ readonly state?: string; readonly error?: unknown }>).detail;
+  const state = detail.state;
   status.className = state === "error" ? "status error" : state === "saved" ? "status saved" : "status saving";
+  status.title = state === "error" && detail.error !== undefined
+    ? (detail.error instanceof Error ? detail.error.message : String(detail.error))
+    : "";
   uiText(status, state === "error" ? "common.save-failed" : state === "saved" ? "common.saved" : "common.saving");
-});
+  if (state === "error") restoreParameterControls();
+};
+timeline.element.addEventListener("studio:write", handleStudioWrite);
+stage.element.addEventListener("studio:write", handleStudioWrite);
 
 // Program-level facts never change while a Source is being read, so they live in
 // the header rather than taking a panel that would have to sit over something.
@@ -690,7 +697,9 @@ function parameterControl(
         const scale = parameter.number?.scale ?? 1;
         const minimum = parameter.number?.minimum ?? (schema?.minimum === undefined ? undefined : schema.minimum * scale);
         const maximum = parameter.number?.maximum ?? (schema?.maximum === undefined ? undefined : schema.maximum * scale);
-        value.step = String(parameter.number?.step ?? (schema?.integer ? scale : "any"));
+        value.step = schema?.integer
+          ? String(parameter.number?.step ?? scale)
+          : Number.isInteger(numeric.value) ? String(parameter.number?.step ?? "any") : "any";
         if (minimum !== undefined) value.min = String(minimum);
         if (maximum !== undefined) value.max = String(maximum);
         value.required = true;
@@ -706,6 +715,8 @@ function parameterControl(
       if (value.type === "checkbox") {
         commit(value.checked);
       } else if (parameter.control === "number") {
+        const integerOnly = parameter.schema?.kind === "number" && parameter.schema.integer === true;
+        if (!integerOnly && !Number.isInteger(value.valueAsNumber)) value.step = "any";
         if (change) commit(Number.isFinite(value.valueAsNumber) ? value.valueAsNumber : null);
         else if (value.reportValidity()) commit(value.valueAsNumber);
       } else {
