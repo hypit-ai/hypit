@@ -1,0 +1,38 @@
+{
+  "format": "hypit.runtime-local@1",
+  "dataRoot": ".hypit/runtimes/local",
+  "credentials": {
+    "local": {
+      "use": "@hypit/credential-store-local"
+    }
+  },
+  "endpoints": {
+    "meta.image": {
+      "use": "@example/provider-meta-images",
+      "config": {
+        "baseUrl": "https://api.meta.ai/v1",
+        "model": "muse-image-1.0",
+        "apiKey": {
+          "store": "local",
+          "key": "meta.image"
+        }
+      }
+    },
+    "meta.voice": {
+      "use": "@example/provider-meta-voice",
+      "config": {
+        "baseUrl": "https://api.meta.ai/v1",
+        "model": "muse-voice-transcribe-1.0",
+        "mode": "ENDPOINTING",
+        "apiKey": {
+          "store": "local",
+          "key": "meta.voice"
+        }
+      }
+    }
+  },
+  "bindings": {
+    "@hypit/gpt-image@1#gpt-image-2": "meta.image",
+    "@hypit/whisperx@1#whisperx-alignment": "meta.voice"
+  }
+}
