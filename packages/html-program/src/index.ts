@@ -1,6 +1,7 @@
 export { htmlProgramFragment } from "./fragment.js";
 export { htmlProgramComponent } from "./component.js";
-export { assertHtmlProgram, assertHtmlFrameIndex, assertHtmlFrameSpan, compileHtmlProgram, htmlProgramResourceUri, htmlProgramTime, materializeHtmlProgram, selectHtmlArtifacts } from "./document.js";
+export { assertHtmlProgram, assertHtmlFrameIndex, assertHtmlFrameSpan, compileHtmlProgram, restrictCompositionToBand, htmlProgramResourceUri, htmlProgramTime, materializeHtmlProgram, selectHtmlArtifacts } from "./document.js";
+export type { PresentZBand } from "./document.js";
 export {
   htmlProgramSchema,
   htmlProgramCapabilities,

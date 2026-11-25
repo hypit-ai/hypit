@@ -36,6 +36,7 @@ import {
 } from "./operations.js";
 import type {
   AudioExtractionRequest,
+  CompositeMediaNeed,
   ExtractAudioNeed,
   ExtractFrameNeed,
   FrameExtractionRequest,
@@ -336,6 +337,23 @@ export const mediaOperationsComponent = {
       },
     },
     {
+      producer: mediaOperationsProducers.visualArtifact,
+      handler: ({ inputs }) => {
+        const visual = inline(inputs.visual!.value, "TimelineVisual");
+        verifyTimelineVisual(visual);
+        return { outputs: { artifact: visual.artifact }, needs: {} };
+      },
+    },
+    {
+      producer: mediaOperationsProducers.composite,
+      handler: ({ inputs }) => {
+        const under = blob(inputs.under!.value, "Composite under");
+        const over = blob(inputs.over!.value, "Composite over");
+        const need: CompositeMediaNeed = { under, over };
+        return { outputs: {}, needs: { video: canonicalize(need) } };
+      },
+    },
+    {
       producer: mediaOperationsProducers.projectMuxed,
       handler: ({ inputs }) => {
         const media = inline(inputs.media!.value, "MuxedMedia");
@@ -357,6 +375,7 @@ export const mediaOperationsComponent = {
     plannedMediaNeed(mediaOperationsProducers.renderAudio, "audio", mediaOperationsCapabilities.renderAudio, {}, presentAudioRender),
     plannedMediaNeed(mediaOperationsProducers.renderAudioRange, "audio", mediaOperationsCapabilities.renderAudio, {}, presentAudioRender),
     plannedMediaNeed(mediaOperationsProducers.mux, "media", mediaOperationsCapabilities.mux, { visual: "video", audio: "audio" }),
+    plannedMediaNeed(mediaOperationsProducers.composite, "video", mediaOperationsCapabilities.composite, { under: "video", over: "video" }),
   ],
 } satisfies ProducerPackage & AdmissionPackage;
 

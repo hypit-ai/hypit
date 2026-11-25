@@ -8,6 +8,7 @@ import { timelineTypes, type Clock } from "@hypit/timeline";
 import { recipeType, type Recipe } from "@hypit/hypit/recipe";
 
 import {
+  compositeMediaFragment,
   extractAudioFragment,
   extractFrameFragment,
   createStillVideoFragment,
@@ -365,5 +366,24 @@ export const decodeExtractFrameSurface: StructuredSurfaceHandler = ({ element, r
       range: element.range,
     }],
     fragments: [extractFrameFragment],
+  };
+};
+
+export const decodeCompositeSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
+  exactAttributes(element, ["id", "under", "over"]);
+  empty(element);
+  const id = text(element, "id");
+  const under = ref(element.attributes.under, `${element.name}.under`, resolveReference);
+  const over = ref(element.attributes.over, `${element.name}.over`, resolveReference);
+  return {
+    records: [],
+    components: [{
+      id,
+      fragment: compositeMediaFragment.id,
+      inputs: { under: under.ref, over: over.ref },
+      outputs: { video: `${id}.video` },
+      range: element.range,
+    }],
+    fragments: [compositeMediaFragment],
   };
 };
