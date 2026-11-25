@@ -37,7 +37,8 @@ function fineCaptionContentCues(timing: CaptionTiming, document: CaptionDocument
  *
  * Resolved unit timing stays untouched. `leadFrames` and `tailFrames` only
  * widen the visible envelope, and `cut` prevents adjacent Cues from competing
- * for the same handoff interval without shortening either Cue's spoken time.
+ * for the same handoff interval without shortening either Cue's spoken time,
+ * except the single Frame two contiguous Cues share after rounding.
  */
 export function scheduleFineCaption(
   timing: CaptionTiming,
@@ -82,9 +83,14 @@ export function scheduleFineCaption(
       const role = roleByCue.get(cue.cueId);
       const previousIndex = previousByRole.get(role);
       const previous = previousIndex === undefined ? undefined : envelopes[previousIndex];
-      if (previous !== undefined && style.timing.handoff === "cut" && previous.timedEndFrameExclusive <= cue.timedStartFrame) {
-        const previousEnd = Math.max(previous.timedEndFrameExclusive, Math.min(previous.visibleEndFrameExclusive, cue.timedStartFrame));
-        envelopes[previousIndex!] = { ...previous, visibleEndFrameExclusive: previousEnd };
+      // A word boundary inside Frame f floors the next start to f and ceils the previous end
+      // to f + 1, so contiguous speech can share that one Frame. It goes to the next Cue.
+      // Longer overlaps are simultaneous speech and keep both envelopes.
+      if (previous !== undefined && style.timing.handoff === "cut" && previous.timedStartFrame < cue.timedStartFrame
+        && previous.timedEndFrameExclusive <= cue.timedStartFrame + 1) {
+        const previousEnd = Math.min(previous.visibleEndFrameExclusive, cue.timedStartFrame);
+        envelopes[previousIndex!] = { ...previous,
+          timedEndFrameExclusive: Math.min(previous.timedEndFrameExclusive, previousEnd), visibleEndFrameExclusive: previousEnd };
         cue = { ...cue, visibleStartFrame: Math.min(cue.timedStartFrame, Math.max(cue.visibleStartFrame, previousEnd)) };
       }
       previousByRole.set(role, envelopes.length);
