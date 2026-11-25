@@ -16,7 +16,7 @@ export type CreateLocalHtmlProviderOptions = HtmlExecutionOptions & {
   readonly nodePath?: string;
   /** Whole render requests admitted concurrently; independent of frame workers. */
   readonly defaultConcurrency?: number;
-  /** Shared Chrome slots across Need executions using this pool. */
+  /** Shared capture worker slots across Need executions using this pool. */
   readonly browserCapacity?: number;
 };
 
@@ -45,7 +45,8 @@ export function createLocalHtmlProvider(config: CreateLocalHtmlProviderOptions) 
           const { program, range } = request.constraints;
           return { [browsers]: renderWorkerLimit(reserved,
             range === undefined ? program.frameCount : range.endFrameExclusive - range.startFrame,
-            program.frameRate.numerator / program.frameRate.denominator) };
+            program.frameRate.numerator / program.frameRate.denominator,
+            reserved.electronPath !== undefined && program.frameSources.length > 0) };
         },
       }),
       handler: async (context) => {
@@ -76,7 +77,7 @@ export function createLocalHtmlProvider(config: CreateLocalHtmlProviderOptions) 
           verifyHtmlFrameRequest(request.constraints);
           const document = request.constraints.program;
           return { [browsers]: renderWorkerLimit(reserved, request.constraints.frames.length,
-            document.frameRate.numerator / document.frameRate.denominator) };
+            document.frameRate.numerator / document.frameRate.denominator, false) };
         },
       }),
       handler: async context => {
