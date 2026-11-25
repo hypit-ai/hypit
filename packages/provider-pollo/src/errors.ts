@@ -17,9 +17,21 @@ export function safePolloReason(value: string): string {
 
 export class PolloServiceError extends EndpointServiceError {}
 
+// Only the redirect target's origin is reported: its path or query may carry a signed capability.
+function redirectFact(status: number, headers: Headers, url: string | undefined): string | undefined {
+  if (status < 300 || status >= 400) return undefined;
+  const location = headers.get("location");
+  let origin: string | undefined;
+  try { origin = location === null ? undefined : new URL(location, url).origin; } catch { origin = undefined; }
+  return origin === undefined || origin === "null"
+    ? "redirect not followed (no usable Location); the API key is never sent to a redirect target"
+    : `redirect to ${origin} not followed; the API key is never sent to a redirect target. `
+      + `If ${origin} is the genuine Pollo API, set baseUrl to that origin`;
+}
+
 export class PolloHttpError extends EndpointHttpError {
   constructor(status: number, response: { readonly headers: Headers }, bodyText: string,
-    request: { readonly method: string; readonly path: string }) {
+    request: { readonly method: string; readonly path: string; readonly url?: string }) {
     let body: Record<string, unknown> | undefined;
     try { body = record(JSON.parse(bodyText)); } catch { /* Non-JSON gateway failures still have HTTP evidence. */ }
     const code = text(body?.errorCode) ?? "POLLO_HTTP_ERROR";
@@ -29,6 +41,8 @@ export class PolloHttpError extends EndpointHttpError {
       `Pollo HTTP ${status}`, code, `${request.method} ${request.path}`,
       ...(requestId === undefined ? [] : [`request=${requestId}`]),
     ];
+    const redirect = redirectFact(status, response.headers, request.url);
+    if (redirect !== undefined) facts.push(redirect);
     super(code, `${facts.join("; ")}${reason === undefined ? "" : `: ${safePolloReason(reason)}`}`,
       status, retryAfterMs(response.headers));
   }
