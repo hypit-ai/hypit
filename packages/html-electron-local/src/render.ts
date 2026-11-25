@@ -1,12 +1,97 @@
 import { execFile, spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { once } from "node:events";
-import { constants } from "node:fs";
-import { access, stat, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { constants, existsSync } from "node:fs";
+import { access, mkdir, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import type { RenderedVisual } from "@hypit/html-program";
 import { terminateLocalProcessTree, type HtmlCaptureBackend } from "@hypit/html-render-local";
+
+const execFileAsync = promisify(execFile);
+
+function hasHeadlessPlistFlag(plist: string): boolean {
+  return /<key>\s*(?:LSUIElement|LSBackgroundOnly)\s*<\/key>\s*(?:<true\s*\/>|<string>\s*1\s*<\/string>)/u.test(plist);
+}
+
+function injectLsuiElement(plist: string): string {
+  if (hasHeadlessPlistFlag(plist)) return plist;
+  const replaced = plist.replace(
+    /<key>\s*LSUIElement\s*<\/key>\s*(?:<false\s*\/>|<string>\s*0\s*<\/string>)/u,
+    "<key>LSUIElement</key>\n\t<true/>",
+  );
+  if (replaced !== plist) return replaced;
+  return plist.replace("<dict>", "<dict>\n\t<key>LSUIElement</key>\n\t<true/>");
+}
+
+/**
+ * On macOS, spawning an Electron .app binary whose Info.plist lacks LSUIElement
+ * causes LaunchServices/WindowServer to register a regular Dock tile and bounce
+ * the Electron icon before JS can call app.setActivationPolicy("accessory").
+ * Clone the bundle with APFS copy-on-write (zero extra disk blocks) into a cache
+ * directory with LSUIElement=true so the worker never appears in the Dock.
+ */
+async function resolveMacHeadlessElectron(executable: string): Promise<string> {
+  if (process.platform !== "darwin") return executable;
+  try {
+    const resolved = await realpath(executable);
+    const macOsDir = dirname(resolved);
+    const contentsDir = dirname(macOsDir);
+    const appDir = dirname(contentsDir);
+    if (basename(macOsDir) !== "MacOS" || basename(contentsDir) !== "Contents" || !appDir.endsWith(".app")) {
+      return executable;
+    }
+    const sourcePlistPath = join(contentsDir, "Info.plist");
+    const sourcePlist = await readFile(sourcePlistPath, "utf8");
+    if (hasHeadlessPlistFlag(sourcePlist)) return executable;
+
+    const [plistInfo, binInfo] = await Promise.all([stat(sourcePlistPath), stat(resolved)]);
+    const hash = createHash("sha256")
+      .update(`${appDir}\0${plistInfo.mtimeMs}\0${plistInfo.size}\0${binInfo.mtimeMs}\0${binInfo.size}`)
+      .digest("hex")
+      .slice(0, 16);
+    const cacheBase = join(homedir() || tmpdir(), ".cache", "hypit", "electron-headless");
+    const targetDir = join(cacheBase, hash);
+    const appName = basename(appDir);
+    const binName = basename(resolved);
+    const targetApp = join(targetDir, appName);
+    const targetBin = join(targetApp, "Contents", "MacOS", binName);
+    const targetPlist = join(targetApp, "Contents", "Info.plist");
+
+    if (existsSync(targetBin)) {
+      const cachedPlist = await readFile(targetPlist, "utf8").catch(() => "");
+      if (hasHeadlessPlistFlag(cachedPlist)) return targetBin;
+    }
+
+    await mkdir(cacheBase, { recursive: true });
+    const stagingDir = join(cacheBase, `.staging-${hash}-${process.pid}-${Date.now()}`);
+    const stagingApp = join(stagingDir, appName);
+    await mkdir(stagingDir, { recursive: true });
+    try {
+      try {
+        await execFileAsync("cp", ["-cR", appDir, stagingApp], { timeout: 30_000 });
+      } catch {
+        await execFileAsync("cp", ["-R", appDir, stagingApp], { timeout: 60_000 });
+      }
+      await writeFile(join(stagingApp, "Contents", "Info.plist"), injectLsuiElement(sourcePlist), "utf8");
+      if (existsSync(join(stagingApp, "Contents", "_CodeSignature"))) {
+        await execFileAsync("codesign", ["--force", "--sign", "-", stagingApp], { timeout: 30_000 }).catch(() => {});
+      }
+      try {
+        await rename(stagingDir, targetDir);
+      } catch {
+        if (!existsSync(targetBin)) throw new Error("Failed to publish headless Electron bundle.");
+      }
+      return existsSync(targetBin) ? targetBin : executable;
+    } finally {
+      await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
+    }
+  } catch {
+    return executable;
+  }
+}
 
 function electronEnvironment(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
   const environment = { ...process.env, ...extra };
@@ -53,7 +138,8 @@ export function electronHtmlBackend(electronPath: string): HtmlCaptureBackend {
         quality: request.quality,
       }), "utf8");
       const runtime = fileURLToPath(new URL("../runtime/main.cjs", import.meta.url));
-      const child = spawn(executable, [runtime, config], {
+      const launchExecutable = await resolveMacHeadlessElectron(executable);
+      const child = spawn(launchExecutable, [runtime, config], {
         detached: process.platform !== "win32",
         env: electronEnvironment({
           HYPIT_ELECTRON_WORKER: runtime,
@@ -125,7 +211,8 @@ export function electronHtmlFrameBackend(electronPath: string): HtmlCaptureBacke
         userData: join(staged.directory, "electron-capture-profile"),
       }), "utf8");
       const runtime = fileURLToPath(new URL("../runtime/capture.cjs", import.meta.url));
-      const child = spawn(executable, [runtime, config], {
+      const launchExecutable = await resolveMacHeadlessElectron(executable);
+      const child = spawn(launchExecutable, [runtime, config], {
         detached: process.platform !== "win32",
         env: electronEnvironment({
           HYPIT_ELECTRON_WORKER: runtime,

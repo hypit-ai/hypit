@@ -171,7 +171,7 @@ function audioGraph(program: AudioProgram, start: number, end: number): {
 
 async function run(executable: string, args: readonly string[], signal?: AbortSignal): Promise<void> {
   signal?.throwIfAborted();
-  const process = spawn(executable, [...args], { stdio: ["ignore", "ignore", "pipe"] });
+  const process = spawn(executable, [...args], { stdio: ["ignore", "ignore", "pipe"], windowsHide: true });
   let diagnostic = "";
   process.stderr.on("data", (chunk: Buffer) => { diagnostic += chunk.toString("utf8"); });
   const abort = () => process.kill("SIGTERM");

@@ -72,7 +72,7 @@ export class ChromiumHtmlPage {
     const process = spawn(input.executable, ["--headless=new", "--hide-scrollbars", "--no-first-run",
       "--no-default-browser-check", "--allow-file-access-from-files", "--remote-debugging-port=0",
       `--user-data-dir=${join(directory, "profile")}`, `--window-size=${input.width},${input.height}`, "about:blank"],
-    { detached: globalThis.process.platform !== "win32", stdio: ["ignore", "pipe", "pipe"] });
+    { detached: globalThis.process.platform !== "win32", stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
     let socket: WebSocket | undefined;
     let stage = "opening DevTools";
     let rejectReadiness!: (error: unknown) => void;

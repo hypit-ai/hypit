@@ -14,7 +14,10 @@ function fail(error) {
 
 process.on("uncaughtException", fail);
 process.on("unhandledRejection", fail);
-if (process.platform === "darwin") app.setActivationPolicy("accessory");
+if (process.platform === "darwin") {
+  app.dock?.hide();
+  app.setActivationPolicy("accessory");
+}
 app.setPath("userData", config.userData);
 app.on("window-all-closed", () => {});
 
@@ -33,6 +36,8 @@ async function evaluate(dbg, expression) {
 async function run() {
   const win = new BrowserWindow({
     show: false,
+    skipTaskbar: true,
+    focusable: false,
     width: config.width,
     height: config.height,
     useContentSize: true,
