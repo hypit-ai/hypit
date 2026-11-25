@@ -7,7 +7,7 @@ const CHARACTER_UNIT = String.raw`[\p{Script=Han}\p{Script=Hiragana}\p{Script=Ka
 // A Latin name beside Han prose ends at the script boundary, even without an authored space.
 const WORD_CHARACTER = String.raw`(?:(?!${CHARACTER_UNIT})[\p{L}\p{M}\p{N}])`;
 const LEXICAL_UNIT = new RegExp([
-  String.raw`(?:\p{N}{1,3}(?:[,，]\p{N}{3})+|\p{N}+)(?:[.．]\p{N}+)?(?:-\p{N}+(?:[.．]\p{N}+)?)*(?!\p{N}|-[\p{L}\p{M}])`,
+  String.raw`(?:\p{N}{1,3}(?:[,，]\p{N}{3})+|\p{N}+)(?:[.．]\p{N}+)?(?:-\p{N}+(?:[.．]\p{N}+)?)*(?:-${WORD_CHARACTER}+(?:['’.-]${WORD_CHARACTER}+)*)?(?!\p{N}|-[\p{L}\p{M}])`,
   String.raw`${CHARACTER_UNIT}\p{M}*`,
   String.raw`(?:(?!${CHARACTER_UNIT})[\p{L}\p{N}])${WORD_CHARACTER}*(?:['’.-]${WORD_CHARACTER}+)*`,
 ].join("|"), "gu");

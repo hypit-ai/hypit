@@ -17,6 +17,25 @@ test("annotations cannot create speech boundaries inside words or attached punct
   assert.equal(caption('hello,@{beat!} world'), 'hello, world');
 });
 
+test("comma-grouped numbers keep a hyphenated suffix as one word", () => {
+  // A comma group is unreachable for the plain-word alternative, so the compound used to
+  // fall back to the bare prefix and accept a Cue break between `1,` and `000-word`.
+  const parsed = parse('a 1,000-word essay works');
+  assert.deepEqual(parsed.tokens.map(token => token.text), ['a', '1,000-word', 'essay', 'works']);
+  assert.equal(parse('123,456,789-point').tokens[0]!.text, '123,456,789-point');
+  assert.equal(parse('1,000.5-word').tokens[0]!.text, '1,000.5-word');
+  assert.equal(parse('a 1，000-word essay').tokens[1]!.text, '1，000-word');
+  // The number alternative now reaches hyphenated words first, so it must keep the word
+  // alternative's apostrophe and dot joins rather than cutting `'s` off a compound.
+  for (const word of ["90-year-old's", "2020-word's", "20-something’s", '3-in-1\'s', '2020-word.com', "1,000-dollar's"]) {
+    assert.deepEqual(parse(`the ${word} here`).tokens.map(token => token.text), ['the', word, 'here'], word);
+  }
+  assert.equal(parse('a 1,000-word.').tokens[1]!.text, '1,000-word');
+  for (const body of ['a 1,||000-word essay works', 'a 123,||456,789-point here', 'a 2020-||word essay works']) {
+    assert.throws(() => parse(body), /SCRIPT_CAPTION_BREAK_TOKEN_BOUNDARY/u, body);
+  }
+});
+
 test("comments do not divide words, and source edits retain the comment", () => {
   const source = '<line>hel<!-- note -->lo 한<!-- 설명 -->글. @{beat!}</line>';
   const parsed = parseScript("boundary", source);
