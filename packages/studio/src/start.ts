@@ -153,8 +153,9 @@ export async function runStudio(
       port,
       // Vite resolves package assets through pnpm's real paths. The package root
       // must therefore be readable for self-hosted fonts and other declared
-      // Studio dependencies, while the author workspace remains separately
-      // available for Source and material previews.
+      // Studio dependencies. The author workspace is the default package root,
+      // so it stays listed; Studio's own plugin marks raw workspace files that
+      // Vite serves through `/@fs` as inert documents (see inertWorkspaceFile).
       fs: { allow: [workspaceRoot, packageRoot, distributionPackageRoot, here] },
     },
     plugins: [distributionImports, studioLocalizationPlugin(languages), studioFeedbackPlugin(workspaceRoot, runPath), studioPlugin({
