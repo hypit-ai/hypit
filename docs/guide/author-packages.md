@@ -87,8 +87,10 @@ The [complex spoken explainer](https://github.com/hypit-ai/hypit/tree/main/examp
 combines presenter framing, independent captions, website demonstrations and coordinated animated
 scenes in one finished work. Its project guide follows each decision to the Source, Recipe or package
 that owns it. The example distinguishes a useful component boundary from the separate choices to
-expose parameters or design for reuse. Accepted material is supplied separately, so its default Run
-can open and render the composition without another generation request.
+expose parameters or design for reuse. Accepted material is supplied separately, but the hosted
+`20260914` archive contains legacy Results that are incompatible with 0.3.x. Follow the example's
+[archive compatibility instructions](https://github.com/hypit-ai/hypit/tree/main/examples/complex-explainer#archive-compatibility)
+to keep the source, executable and Results on the same legacy version when replaying it.
 
 [Watch the finished film](https://storage.googleapis.com/hypit-public-assets/assets/examples/complex-explainer/v1/20260914/final.mp4)
-or follow the example's download instructions to open its accepted material in Studio.
+or follow the example's pinned-checkout and download instructions to open its accepted material in Studio.
