@@ -136,7 +136,7 @@ async function* runFrameDecoder(input: FrameDecodeInput,
     "-vf", filters.join(","),
     "-fps_mode", "passthrough", "-frames:v", String(count),
     "-q:v", "0", "-compression_level", "1", "-f", "image2pipe", "-vcodec", "png", "pipe:1",
-  ], { stdio: ["ignore", "pipe", "pipe"] });
+  ], { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
   const abort = () => child.kill("SIGKILL");
   input.signal.addEventListener("abort", abort, { once: true });
   if (input.signal.aborted) abort();

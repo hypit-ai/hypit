@@ -88,7 +88,7 @@ async function frameBufferVisual(input: {
     "-framerate", `${input.request.program.frameRate.numerator}/${input.request.program.frameRate.denominator}`,
     "-i", "pipe:0", "-frames:v", String(frameCount), "-an", "-c:v", "libx264",
     "-pix_fmt", "yuv420p", "-movflags", "+faststart", input.destination,
-  ], { stdio: ["pipe", "ignore", "pipe"] });
+  ], { stdio: ["pipe", "ignore", "pipe"], windowsHide: true });
   let diagnostic = "";
   ffmpeg.stderr.on("data", (chunk: Buffer) => { diagnostic += chunk.toString("utf8"); });
   const encoderExit = once(ffmpeg, "exit") as Promise<[number | null]>;

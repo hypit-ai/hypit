@@ -17,7 +17,10 @@ function fail(error) {
 
 process.on("uncaughtException", fail);
 process.on("unhandledRejection", fail);
-if (process.platform === "darwin") app.setActivationPolicy("accessory");
+if (process.platform === "darwin") {
+  app.dock?.hide();
+  app.setActivationPolicy("accessory");
+}
 app.setPath("userData", join(dirname(config.document), "electron-profile"));
 app.commandLine.appendSwitch("disable-frame-rate-limit");
 app.commandLine.appendSwitch("disable-gpu-vsync");
@@ -39,7 +42,7 @@ function waitIpc(channel, trusted) {
 
 function runProcess(executable, args) {
   return new Promise((resolve, reject) => {
-    const child = spawn(executable, args, { stdio: ["ignore", "ignore", "pipe"] });
+    const child = spawn(executable, args, { stdio: ["ignore", "ignore", "pipe"], windowsHide: true });
     let diagnostic = "";
     child.stderr.on("data", chunk => { diagnostic += chunk.toString("utf8"); });
     child.once("error", reject);
@@ -62,6 +65,8 @@ async function run() {
 
   const output = new BrowserWindow({
     show: false,
+    skipTaskbar: true,
+    focusable: false,
     width: 320,
     height: 200,
     webPreferences: {
@@ -113,6 +118,8 @@ window.__hypitCaptureCommit=token=>{for(let bit=0;bit<32;bit++){const white=((to
 
   const scene = new BrowserWindow({
     show: false,
+    skipTaskbar: true,
+    focusable: false,
     width: Math.max(config.width, markerWidth),
     height: config.height + markerHeight,
     useContentSize: true,
