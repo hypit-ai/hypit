@@ -9,5 +9,13 @@
     "@fontsource-variable/montserrat": "5.3.0",
     "@hypit/hypit": "^0.3.1",
     "@hypit/ranking": "^0.1.0"
+  },
+  "overrides": {
+    "chromium-bidi": {
+      "zod": "^4.6.6"
+    },
+    "tsx": {
+      "esbuild": "~0.28.1"
+    }
   }
 }

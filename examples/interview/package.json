@@ -9,5 +9,13 @@
     "@hypit/hypit": "^0.3.1",
     "@hypit/interview-emoji-reveal": "^0.1.0",
     "@interview/flash": "file:packages/flash"
+  },
+  "overrides": {
+    "chromium-bidi": {
+      "zod": "^4.6.6"
+    },
+    "tsx": {
+      "esbuild": "~0.28.1"
+    }
   }
 }
