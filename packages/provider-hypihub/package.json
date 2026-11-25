@@ -1,6 +1,6 @@
 {
   "name": "@hypit/provider-hypihub",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
