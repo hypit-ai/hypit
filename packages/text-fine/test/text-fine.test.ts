@@ -586,7 +586,7 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
   assert.match(rendered.html, /data-hypit-text-path-margin/u);
 });
 
-test("a paragraph's source indentation is not part of its words", async () => {
+test("paragraph indentation stays out of the words and unlabelled paragraphs share one id space", async () => {
   const fixtureModule = { name: "example.text-inputs", version: "1" } as const;
   const fixtureSurface = {
     name: "inputs", tag: "Inputs", mode: "structured",
@@ -644,6 +644,7 @@ test("a paragraph's source indentation is not part of its words", async () => {
               Top 5 Most Popular
               Ways to <text:Span style={poster}>learn AI</text:Span>
             </text:P>
+            <text:P>Second paragraph without an id.</text:P>
           </text:Flow>
         </svml>`,
     }),
@@ -670,6 +671,7 @@ test("a paragraph's source indentation is not part of its words", async () => {
   assert.match(clean, /Top 5 Most Popular\nWays to /u,
     "the two source lines remain one paragraph with a line break");
   assert.match(clean, /learn AI/u, "the Span run keeps its words");
+  assert.match(clean, /Second paragraph without an id\./u, "the second paragraph is compiled");
   assert.doesNotMatch(clean, /\n +/u, "no line begins with indentation");
   assert.doesNotMatch(clean, /\\n +Top 5/u, "leading indentation must not be part of the words");
 });
