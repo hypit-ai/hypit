@@ -521,7 +521,13 @@ export const decodeTypographyPathMotionSurface: StructuredSurfaceHandler = ({ el
 };
 
 function dedent(value: string): string {
-  const lines = value.replace(/^\n/u, "").replace(/\n\s*$/u, "").split("\n");
+  let text = value.startsWith("\n") ? value.slice(1) : value;
+  // The trailing run is dropped only when it begins with a newline — what /\n\s*$/ did, but
+  // scanned backward: the regex retried the tail from every position and went quadratic.
+  let end = text.length;
+  while (end > 0 && /\s/u.test(text[end - 1]!)) end--;
+  if (end < text.length && text[end] === "\n") text = text.slice(0, end);
+  const lines = text.split("\n");
   const indentation = lines.filter((line) => line.trim()).reduce((min, line) => Math.min(min, /^\s*/u.exec(line)?.[0].length ?? 0), Number.POSITIVE_INFINITY);
   return lines.map((line) => line.slice(Number.isFinite(indentation) ? indentation : 0)).join("\n");
 }
