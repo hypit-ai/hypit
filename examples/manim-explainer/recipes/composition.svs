@@ -1,0 +1,6 @@
+<?svml using="@hypit/recipe@1"?>
+
+<sheet version="1" id="manim-showcase-composition">
+  /* The presenter uses Visual Clips; this component contributes the Manim card overlay. */
+  film.main { background: #07101F; }
+</sheet>

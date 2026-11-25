@@ -279,6 +279,7 @@ practical, revisit that choice and carry the improvement into the work and its n
 | writing `<script>`: current syntax, display/speech, spaces, grouping, Roles, authored Cues, attributes or marker affinities | `references/production/script-syntax.md` |
 | placing a component in time: semantic bindings, authored clock positions, offsets, durations or what a timeline edit changes | `references/production/timing.md` |
 | project layout, picking work back up, or handing an editable production to someone else | `references/creation/project-files.md` |
+| mathematical diagrams, plots, formulas, geometric animation or an explicit Manim request | `references/creation/manim.md` |
 | directing a generated person, setting, product, B-roll image, camera view, visual reference or image prompt | `references/playbooks/craft/image-direction.md` |
 | choosing, designing or adapting a character's voice, its appeal, vocal qualities or casting sample | `references/playbooks/craft/voice-direction.md` |
 | directing generated video, deciding when performed action or camera behavior needs source footage, visible speech, silent action, cuts or request duration | `references/playbooks/craft/video-direction.md` |

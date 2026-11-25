@@ -1,0 +1,28 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import from="@hypit/script@1"/>
+
+  <!-- The Script is the only source of spoken words. -->
+  <script id="story">
+    <opening>
+      <HOST> Hypit is not just for talking-head videos. During production, it can call Manim animations directly.
+    </opening>
+
+    <mathematics>
+      <HOST> @{first!}First, mathematics. The axes unfold, the function curve appears, and the tangent moves along the curve. The change is clear at a glance.
+    </mathematics>
+
+    <machine-learning>
+      <HOST> @{next!}Next, machine learning. A signal travels from the input layer to the output layer, the weights update, and the loss keeps falling.
+    </machine-learning>
+
+    <physics>
+      <HOST> @{finally!}Finally, physics. A pendulum, a force vector, and the rules of motion can all be demonstrated clearly.
+    </physics>
+
+    <closing>
+      <HOST> @{these!}These three animations can share the same production timeline as the narration. At the right moment, the one you need can move into focus.
+    </closing>
+  </script>
+</svml>
