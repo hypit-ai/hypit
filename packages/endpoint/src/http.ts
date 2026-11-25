@@ -112,6 +112,9 @@ export async function withRequestDeadline<T>(
 export function retryAfterMs(headers: Headers, now = Date.now()): number | undefined {
   const value = headers.get("retry-after")?.trim();
   if (value === undefined || value.length === 0) return undefined;
-  const delay = /^\d+$/u.test(value) ? Number(value) * 1000 : Date.parse(value) - now;
+  // Date.parse reads number-like text such as "1.5" or "-1" as a past calendar date, which
+  // would erase the wait; an HTTP-date always names its weekday and month.
+  const delay = /^\d+(?:\.\d+)?$/u.test(value) ? Number(value) * 1000
+    : /[a-z]/iu.test(value) ? Date.parse(value) - now : Number.NaN;
   return Number.isFinite(delay) ? Math.max(0, Math.round(delay)) : undefined;
 }
