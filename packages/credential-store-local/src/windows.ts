@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 type WindowsCredentialResult = {
@@ -8,6 +9,17 @@ type WindowsCredentialResult = {
 };
 
 const windowsScript = fileURLToPath(new URL("../runtime/windows-credential.ps1", import.meta.url));
+
+/**
+ * The OS copy of Windows PowerShell. Resolved through SystemRoot because a bare name lets
+ * CreateProcess search the current directory first, where a planted powershell.exe would run.
+ */
+function windowsPowerShell(): string {
+  const systemRoot = process.env.SystemRoot;
+  return systemRoot === undefined
+    ? "powershell.exe"
+    : join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+}
 
 /** PasswordVault password field; OAuth JSON routinely exceeds this. */
 export const windowsLockerPasswordLimit = 512;
@@ -31,7 +43,7 @@ export function windowsCredential(
 ): Promise<WindowsCredentialResult> {
   if (secret !== undefined) assertWindowsLockerSecret(secret, account);
   return new Promise((resolve, reject) => {
-    const child = execFile("powershell.exe", [
+    const child = execFile(windowsPowerShell(), [
       "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
       "-File", windowsScript, "-Operation", operation,
     ], {
