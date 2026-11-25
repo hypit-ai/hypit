@@ -48,7 +48,7 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
     await writeFile(join(pkg, "revision.ts"), `export const revision: string = ${JSON.stringify(revision)};`);
     await writeFile(join(pkg, "activation.ts"), `
       import { revision } from './revision.js';
-      import { access, writeFile, appendFile } from 'node:fs/promises';
+      import { access, writeFile, appendFile, rename } from 'node:fs/promises';
       import { setTimeout as pause } from 'node:timers/promises';
       import { createRuntimeEndpointAdapterFacet } from '@hypit/runtime-local/extension';
       import { defineEndpoint } from '@hypit/endpoint';
@@ -79,7 +79,9 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
             } : {
               lifecycle: 'immediate', capability: ${JSON.stringify(capabilities.generation)}, returns: ${JSON.stringify(types.generated)},
               async handler() {
-                await writeFile(config.entered, JSON.stringify({ revision, label: config.label, pid: process.pid }));
+                const marker = config.entered + '.tmp';
+                await writeFile(marker, JSON.stringify({ revision, label: config.label, pid: process.pid }));
+                await rename(marker, config.entered);
                 while (!await access(config.gate).then(() => true, () => false)) await pause(25);
                 return { value: { kind: 'inline', value: revision + ':' + config.label } };
               }
