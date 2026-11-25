@@ -1,11 +1,13 @@
 # `@hypit/noiz-audio`
 
-Exact model contracts and SVML Surfaces for [Noiz](https://developers.noiz.ai/api-docs) sound effect
-and music generation.
+Exact model contracts and SVML Surfaces for [Noiz](https://developers.noiz.ai/api-docs) speech, voice
+cloning, sound effect and music generation.
 
-The package owns three exact audio generation capabilities:
+The package owns five exact audio generation capabilities:
 
 - `noiz-text-to-sound` generates a sound effect from a text prompt (`POST /v1/text-to-sound`);
+- `noiz-tts` synthesizes speech from text with a Noiz `voice_id` (`POST /v1/text-to-speech`);
+- `noiz-voice-clone` clones a voice from a reference audio sample and synthesizes speech (`POST /v1/voices` + `POST /v1/text-to-speech`);
 - `noiz-yue2-music` generates a vocal song with YuE2 from a style prompt and lyrics (`POST /v1/text-to-music`);
 - `noiz-yue2-cover` generates a YuE2 cover of a source audio track with new lyrics and style (`POST /v1/text-to-music/cover`).
 
@@ -39,6 +41,21 @@ author Surface publishes its primary audio Artifact as `<id>.audio`.
 - `prompt`: required Text reference, 1 to 500 characters, non-whitespace.
 - `duration`: optional number from 1 to 30 seconds (defaults to 10; billing rounds up to whole seconds).
 - `output-format`: optional `wav` or `mp3` (defaults to `wav`).
+
+## Tts (`noiz-tts`)
+
+- `text`: required Text reference, 1 to 5,000 characters, non-whitespace.
+- `voice-id`: required Noiz voice ID.
+- `model-id`: optional `v1`, `v2`, or `v3`.
+- `output-format`: optional `wav` or `mp3` (defaults to `wav`).
+- `speed`, `duration`, `target-lang`, `quality-preset`, `similarity-enh`, `emo`, `trim-silence`: optional synthesis controls.
+
+## VoiceClone (`noiz-voice-clone`)
+
+- `text`: required Text reference, 1 to 5,000 characters, non-whitespace.
+- `voice-reference`: required audio Resource (`wav`, `mp3`, or `m4a`, at most 25 MB).
+- `denoise`: optional `true` or `false`.
+- `model-id`, `output-format`, `speed`, `duration`, `target-lang`, `quality-preset`, `similarity-enh`, `emo`, `trim-silence`: optional synthesis controls matching `Tts`.
 
 ## Music (`noiz-yue2-music`)
 

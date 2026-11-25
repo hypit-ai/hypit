@@ -5,6 +5,8 @@ import {
   decodeNoizMusicCoverSurface,
   decodeNoizMusicSurface,
   decodeNoizSoundEffectSurface,
+  decodeNoizTtsSurface,
+  decodeNoizVoiceCloneSurface,
   noizAudioComponent,
   noizAudioDefinition,
   noizAudioManifest,
@@ -23,6 +25,16 @@ export const hypitPackage = {
       module: noizAudioModuleRef,
       declaration: noizAudioMarkupSurfaces.find((item) => item.name === "sound-effect")!,
       handler: decodeNoizSoundEffectSurface,
+    }),
+    createMarkupSurfaceFacet({
+      module: noizAudioModuleRef,
+      declaration: noizAudioMarkupSurfaces.find((item) => item.name === "tts")!,
+      handler: decodeNoizTtsSurface,
+    }),
+    createMarkupSurfaceFacet({
+      module: noizAudioModuleRef,
+      declaration: noizAudioMarkupSurfaces.find((item) => item.name === "voice-clone")!,
+      handler: decodeNoizVoiceCloneSurface,
     }),
     createMarkupSurfaceFacet({
       module: noizAudioModuleRef,

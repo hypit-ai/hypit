@@ -17,7 +17,7 @@ import type {
 import { textTypes, verifyText } from "@hypit/hypit/text";
 import type { Text } from "@hypit/hypit/text";
 import { noizAudioEndpoints } from "./index.js";
-import { validateNoizCoverSourceAudio } from "./validation.js";
+import { validateNoizCoverSourceAudio, validateNoizVoiceCloneAudio } from "./validation.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -99,6 +99,7 @@ function audioRefAttr(
   element: StructuredElement,
   name: string,
   resolve: (path: string) => SurfaceResolvedReference | undefined,
+  validate: (artifact: import("@hypit/hypit/protocol").BlobRef) => void = validateNoizCoverSourceAudio,
 ): SurfaceResolvedReference {
   const result = refAttr(element, name, blobTypes.blob, resolve);
   if (result.record !== undefined) {
@@ -106,7 +107,7 @@ function audioRefAttr(
       result.record.value.kind === "blob" && result.record.value.mediaType.startsWith("audio/"),
       `${element.name}.${name} must reference audio media`,
     );
-    validateNoizCoverSourceAudio(result.record.value);
+    validate(result.record.value);
   }
   return result;
 }
@@ -174,6 +175,78 @@ function output(
     }],
   };
 }
+
+function populateSharedTtsPorts(
+  element: StructuredElement,
+  ports: Record<string, readonly GenerationPortValue[]>,
+): void {
+  const modelId = optionalTextAttr(element, "model-id");
+  if (modelId !== undefined) ports.modelId = [modelId.toLowerCase()];
+  const format = optionalTextAttr(element, "output-format");
+  if (format !== undefined) ports.outputFormat = [format.toLowerCase()];
+  if (element.attributes.speed !== undefined) ports.speed = [numberAttr(element, "speed")];
+  if (element.attributes.duration !== undefined) ports.duration = [numberAttr(element, "duration")];
+  const targetLang = optionalTextAttr(element, "target-lang");
+  if (targetLang !== undefined) ports.targetLang = [targetLang];
+  if (element.attributes["quality-preset"] !== undefined) {
+    ports.qualityPreset = [numberAttr(element, "quality-preset")];
+  }
+  if (element.attributes["similarity-enh"] !== undefined) {
+    ports.similarityEnh = [booleanAttr(element, "similarity-enh")];
+  }
+  const emo = optionalTextAttr(element, "emo");
+  if (emo !== undefined) ports.emo = [emo];
+  if (element.attributes["trim-silence"] !== undefined) {
+    ports.trimSilence = [booleanAttr(element, "trim-silence")];
+  }
+}
+
+const SHARED_TTS_ATTRS = [
+  "model-id",
+  "output-format",
+  "speed",
+  "duration",
+  "target-lang",
+  "quality-preset",
+  "similarity-enh",
+  "emo",
+  "trim-silence",
+] as const;
+
+export const decodeNoizTtsSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
+  exact(element, ["id", "text", "voice-id", ...SHARED_TTS_ATTRS], ["id", "text", "voice-id"]);
+  empty(element);
+  const text = textRefAttr(element, "text", resolveReference, 5_000);
+  const ports: Record<string, readonly GenerationPortValue[]> = {
+    voiceId: [textAttr(element, "voice-id")],
+  };
+  populateSharedTtsPorts(element, ports);
+  return output(
+    element,
+    noizAudioEndpoints.tts,
+    ports,
+    [{ input: { name: "text", port: "text" }, source: text }],
+  );
+};
+
+export const decodeNoizVoiceCloneSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
+  exact(element, ["id", "text", "voice-reference", ...SHARED_TTS_ATTRS, "denoise"], ["id", "text", "voice-reference"]);
+  empty(element);
+  const text = textRefAttr(element, "text", resolveReference, 5_000);
+  const voiceReference = audioRefAttr(element, "voice-reference", resolveReference, validateNoizVoiceCloneAudio);
+  const ports: Record<string, readonly GenerationPortValue[]> = {};
+  populateSharedTtsPorts(element, ports);
+  if (element.attributes.denoise !== undefined) {
+    ports.denoise = [booleanAttr(element, "denoise")];
+  }
+  return output(
+    element,
+    noizAudioEndpoints.voiceClone,
+    ports,
+    [{ input: { name: "text", port: "text" }, source: text }],
+    [{ input: { name: "voiceReference", port: "voiceReference" }, source: voiceReference }],
+  );
+};
 
 export const decodeNoizSoundEffectSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   exact(element, ["id", "prompt", "duration", "output-format"], ["id", "prompt"]);

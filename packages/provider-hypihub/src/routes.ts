@@ -72,7 +72,7 @@ function hypiHubGenerationRejection(
 function isAsyncAudioMapping(mapping: GenerationWireMapping): boolean {
   return mapping.result === "audio"
     && mapping.capability.module.name === "@hypit/noiz-audio"
-    && mapping.capability.name !== "noiz-text-to-sound";
+    && (mapping.capability.name === "noiz-yue2-music" || mapping.capability.name === "noiz-yue2-cover");
 }
 
 export const hypiHubRoutes: readonly HypiHubRoute[] = hypiHubMappings.map((mapping) => {
