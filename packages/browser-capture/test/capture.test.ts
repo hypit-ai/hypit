@@ -13,6 +13,9 @@ import type { CaptureOutput } from "../src/index.js";
 
 const executablePath = process.env.HYPIT_CAPTURE_TEST_BROWSER ?? await captureBrowserExecutablePath();
 const browserReady = existsSync(executablePath);
+const browserSkip = process.env.HYPIT_CAPTURE_BROWSER_TESTS === "0"
+  ? "Browser tests are disabled in the routine suite; run `node test/run.mjs browser`"
+  : !browserReady && "Chrome is not installed";
 const codecsReady = ["ffprobe"].every((name) => spawnSync(name, ["-version"], { stdio: "ignore" }).status === 0);
 
 test("a missing selected browser refuses capture without using another installed browser", async () => {
@@ -27,7 +30,7 @@ test("a missing selected browser refuses capture without using another installed
 });
 
 test("capture saves actual page pixels, transparent elements and rectangles at the chosen scale", {
-  skip: !browserReady && "Chrome is not installed", timeout: 30_000,
+  skip: browserSkip, timeout: 30_000,
 }, async () => {
   const work = await mkdtemp(join(tmpdir(), "hypit-capture-images-"));
   let launched: Awaited<ReturnType<typeof puppeteer.launch>> | undefined;
@@ -59,7 +62,7 @@ test("capture saves actual page pixels, transparent elements and rectangles at t
 });
 
 test("recording finalizes its file and reports actual dimensions and time", {
-  skip: (!browserReady || !codecsReady) && "Chrome and ffprobe are required", timeout: 30_000,
+  skip: browserSkip || (!codecsReady && "ffprobe is required"), timeout: 30_000,
 }, async () => {
   const work = await mkdtemp(join(tmpdir(), "hypit-capture-record-"));
   try {
@@ -99,7 +102,7 @@ test("recording finalizes its file and reports actual dimensions and time", {
 });
 
 test("a failed script closes the browser and preserves earlier completed captures", {
-  skip: !browserReady && "Chrome is not installed", timeout: 30_000,
+  skip: browserSkip, timeout: 30_000,
 }, async () => {
   const work = await mkdtemp(join(tmpdir(), "hypit-capture-failure-"));
   let launched: Awaited<ReturnType<typeof puppeteer.launch>> | undefined;

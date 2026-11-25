@@ -27,7 +27,7 @@ Use `hypit doctor --runtime <profile>` to inspect missing setup without installi
 corepack enable
 pnpm install --frozen-lockfile # after pulling or changing dependencies
 pnpm check            # TypeScript type-check
-pnpm test             # full test suite
+pnpm test             # routine test suite
 ```
 
 | Command | What it runs |

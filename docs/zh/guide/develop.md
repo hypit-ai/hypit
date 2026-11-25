@@ -27,7 +27,7 @@ description: 开始 Hypit 开发工作。
 corepack enable
 pnpm install --frozen-lockfile # 拉取代码或改动依赖之后
 pnpm check            # TypeScript 类型检查
-pnpm test             # 完整测试套件
+pnpm test             # 常规测试套件
 ```
 
 | 命令 | 实际执行什么 |
