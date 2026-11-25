@@ -43,8 +43,15 @@ function extension(mediaType: string): string {
   return known[mediaType.toLowerCase()] ?? "bin";
 }
 
+/** Same as `.replace(/\/+$/u, "")`, scanned from the end so a long run of slashes stays linear. */
+export function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === "/") end -= 1;
+  return value.slice(0, end);
+}
+
 function apiBaseUrl(value: string): string {
-  const trimmed = value.trim().replace(/\/+$/u, "");
+  const trimmed = trimTrailingSlashes(value.trim());
   assert(trimmed.length > 0, "HypiHub upload base URL is empty");
   return `${trimmed.replace(/\/(?:v1beta|v1)$/iu, "")}/v1`;
 }

@@ -195,3 +195,30 @@ test("Track Surface lowers literal and graph Text with a resolved Window to a fi
   ].sort());
   assert.equal(result.components.find((component) => component.outputs.visual !== undefined)?.outputs.visual, "comments.visual");
 });
+
+test("body comment text is dedented and a long trailing newline run stays linear", async () => {
+  const refs = new Map<string, SurfaceResolvedReference>([
+    ["video.timeline", authored("video.timeline", timelineTypes.timeline, semantic)],
+    ["layout.comment", authored("layout.comment", spatialTypes.frame, frame)],
+    ["social", authored("social", commentStickerTypes.style, style)],
+    ["whole", authored("whole", temporalTypes.window, projectProgramWindow({ itemId: "whole", semantic,
+      projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } } }))],
+  ]);
+  const decode = (body: string) => decodeCommentStickerTrackSurface({
+    sourceName: "fixture.svml",
+    element: parsed(`<comment:Track id="comments" timeline={video.timeline}><comment:Sticker id="one" frame={layout.comment} style={social} during={whole}>${body}</comment:Sticker></comment:Track>`),
+    resolveReference: (path) => refs.get(path),
+    resolveAsset: noAsset,
+  });
+  const comment = (result: Awaited<ReturnType<typeof decode>>) => {
+    const record = result.records.find((item) => item.id === "comments.item.0001.comment");
+    assert.equal(record?.value.kind, "inline");
+    return (record.value.value as { readonly value: string }).value;
+  };
+  assert.equal(comment(await decode("\n      First line\n        indented\n      ")), "First line\n  indented");
+  assert.equal(comment(await decode("Same line  \n \t\n  ")), "Same line");
+  const startedAt = performance.now();
+  const long = await decode(`\n  Hello${"\n".repeat(50_000)}  x\n  `);
+  assert.ok(performance.now() - startedAt < 2_000, "pathological comment body took too long");
+  assert.equal(comment(long), `Hello${"\n".repeat(50_000)}x`);
+});
