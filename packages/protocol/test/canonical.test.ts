@@ -35,7 +35,7 @@ test("Resource ids retain their narrow execution-reference syntax", () => {
 
 test("Build ids cannot address a parent or nested path", () => {
   assert.doesNotThrow(() => assertBuildId("build-19"));
-  for (const value of ["..", ".", "episode/19", "episode\\19", " padded "]) {
+  for (const value of ["..", ".", "episode/19", "episode\\19", " padded ", "c:", "d:build"]) {
     assert.throws(() => assertBuildId(value), /Build id/u);
   }
 });
