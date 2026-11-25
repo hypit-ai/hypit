@@ -35,7 +35,7 @@ function findClose(input: ScriptSurfaceInput): { readonly start: number; readonl
     if (input.source.startsWith("<!--", cursor)) {
       const commentEnd = input.source.indexOf("-->", cursor + 4);
       if (commentEnd < 0) {
-        throw new ScriptSyntaxError("SCRIPT_COMMENT", "Unclosed Script comment.", input.sourceName, cursor);
+        throw new ScriptSyntaxError("SCRIPT_COMMENT", "Unclosed Script comment.", input.sourceName, cursor, input.source);
       }
       cursor = commentEnd + 3;
       continue;
@@ -50,6 +50,7 @@ function findClose(input: ScriptSurfaceInput): { readonly start: number; readonl
     `Raw Surface <${input.tag}> is not closed.`,
     input.sourceName,
     input.openingStart,
+    input.source,
   );
 }
 
@@ -61,6 +62,7 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
       `<${input.tag}> does not declare attribute "${unknown[0]}".`,
       input.sourceName,
       input.openingStart,
+      input.source,
     );
   }
   const rawId = input.attributes.id ?? "script";
@@ -70,6 +72,7 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
       `<${input.tag}> id must be a canonical lower-case identifier.`,
       input.sourceName,
       input.openingStart,
+      input.source,
     );
   }
   const close = findClose(input);
@@ -77,6 +80,7 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
     input.sourceName,
     input.source.slice(input.contentStart, close.start),
     input.contentStart,
+    input.source,
   );
   const narrative = narrativeValue(parsed, rawId);
   const caption = captionDocumentValue(parsed, `${rawId}.caption`, rawId);

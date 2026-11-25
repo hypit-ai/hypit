@@ -173,6 +173,32 @@ test("A single pipe is literal and a double pipe is an authored Cue Break", () =
   assert.deepEqual(document.words.map((word) => word.text), ["one |", "two", "three ||", "four"]);
 });
 
+test("Script syntax errors report line and column", () => {
+  const source = "<one><HOST>alpha</one>\n<two><HOST>@{</two>";
+  assert.throws(
+    () => parseScript("lines.svml", source),
+    (error: unknown) => {
+      assert.ok(error instanceof ScriptSyntaxError);
+      assert.equal(error.line, 2);
+      assert.ok(error.column !== undefined && error.column >= 1);
+      assert.match(error.message, /lines\.svml:2:\d+/u);
+      return true;
+    },
+  );
+});
+
+test("Script keeps the offset form when a caller supplies no full source", () => {
+  assert.throws(
+    () => parseScript("slice.svml", "<one><HOST>@{</two>", 10),
+    (error: unknown) => {
+      assert.ok(error instanceof ScriptSyntaxError);
+      assert.equal(error.line, undefined);
+      assert.match(error.message, /slice\.svml:\d+/u);
+      return true;
+    },
+  );
+});
+
 test("Dual display text cannot contain semantic markers", () => {
   assert.throws(
     () => parseScript("dual-marker.svml", "<line><@{bad} | spoken></line>"),
