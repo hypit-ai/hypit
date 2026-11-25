@@ -33,7 +33,7 @@ importers:
         specifier: workspace:^0.2.2
         version: link:packages/studio
       '@hypit/video':
-        specifier: workspace:^0.2.3
+        specifier: workspace:^0.2.4
         version: link:packages/video
       '@hypit/whisperx':
         specifier: workspace:^0.2.0
@@ -174,6 +174,9 @@ importers:
       '@hypit/narrative-temporal':
         specifier: workspace:*
         version: link:packages/narrative-temporal
+      '@hypit/noiz-audio':
+        specifier: workspace:*
+        version: link:packages/noiz-audio
       '@hypit/pixverse':
         specifier: workspace:*
         version: link:packages/pixverse
@@ -1809,6 +1812,28 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  packages/noiz-audio:
+    dependencies:
+      '@hypit/generation':
+        specifier: workspace:^0.1.0
+        version: link:../generation
+    devDependencies:
+      '@hypit/blob':
+        specifier: workspace:*
+        version: link:../blob
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
+
   packages/pixverse:
     dependencies:
       '@hypit/generation':
@@ -2876,6 +2901,9 @@ importers:
       '@hypit/narrative-temporal':
         specifier: workspace:^0.1.0
         version: link:../narrative-temporal
+      '@hypit/noiz-audio':
+        specifier: workspace:^0.1.0
+        version: link:../noiz-audio
       '@hypit/pixverse':
         specifier: workspace:^0.2.1
         version: link:../pixverse
@@ -2883,7 +2911,7 @@ importers:
         specifier: workspace:^0.2.1
         version: link:../provider-html-local
       '@hypit/provider-hypihub':
-        specifier: workspace:^0.2.2
+        specifier: workspace:^0.2.3
         version: link:../provider-hypihub
       '@hypit/provider-image-opencv-local':
         specifier: workspace:^0.2.0

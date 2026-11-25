@@ -13,6 +13,7 @@ const BACH: ModuleRef = { name: "@hypit/bach", version: "1" };
 const MIMO_SPEECH: ModuleRef = { name: "@hypit/mimo-speech", version: "1" };
 const FISHAUDIO_SPEECH: ModuleRef = { name: "@hypit/fishaudio-speech", version: "1" };
 const ELEVENLABS_SPEECH: ModuleRef = { name: "@hypit/elevenlabs-speech", version: "1" };
+const NOIZ_AUDIO: ModuleRef = { name: "@hypit/noiz-audio", version: "1" };
 
 const seedance = (name: string): GenerationWireMapping => ({
   capability: { module: SEEDANCE, name }, result: "video", routes: [{ model: name }],
@@ -184,6 +185,42 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     fields: {
       text: { as: "value", field: "input" },
       voiceDescription: { as: "value", field: "voice_description" },
+    },
+  },
+  {
+    capability: { module: NOIZ_AUDIO, name: "noiz-text-to-sound" }, result: "audio", routes: [{ model: "noiz-text-to-sound" }],
+    fields: {
+      prompt: { as: "value", field: "input" },
+      duration: { as: "value", field: "duration_seconds" },
+      outputFormat: { as: "value", field: "response_format" },
+    },
+  },
+  {
+    capability: { module: NOIZ_AUDIO, name: "noiz-yue2-music" }, result: "audio", routes: [{ model: "noiz-yue2-music" }],
+    fields: {
+      prompt: { as: "value", field: "prompt" },
+      lyrics: { as: "value", field: "lyrics" },
+      lyricsPrompt: { as: "value", field: "lyrics_prompt" },
+      abc: { as: "value", field: "abc" },
+      cot: { as: "value", field: "cot" },
+      title: { as: "value", field: "title" },
+      tags: { as: "value", field: "tags" },
+      negativeTags: { as: "value", field: "negative_tags" },
+      vocalGender: { as: "value", field: "vocal_gender" },
+      lyricTimestamps: { as: "value", field: "lyric_timestamps" },
+    },
+  },
+  {
+    capability: { module: NOIZ_AUDIO, name: "noiz-yue2-cover" }, result: "audio", routes: [{ model: "noiz-yue2-cover" }],
+    fields: {
+      sourceAudio: { as: "urlArray", field: "reference_audio" },
+      lyrics: { as: "value", field: "lyrics" },
+      musicDescription: { as: "value", field: "music_description" },
+      style: { as: "value", field: "style" },
+      melodyAdherence: { as: "value", field: "melody_adherence" },
+      title: { as: "value", field: "title" },
+      vocalGender: { as: "value", field: "vocal_gender" },
+      lyricTimestamps: { as: "value", field: "lyric_timestamps" },
     },
   },
 ];

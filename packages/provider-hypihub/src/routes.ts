@@ -12,7 +12,7 @@ import type { BlobRef, CapabilityRef, CanonicalValue, StoredValue, TypeRef } fro
 import type { EndpointRequest, EndpointSupport } from "@hypit/hypit/endpoint";
 import { hypiHubMappings } from "./mapping.js";
 
-export type HypiHubModelOperation = "images" | "image_edits" | "videos" | "audio_speech" | "transcriptions";
+export type HypiHubModelOperation = "images" | "image_edits" | "videos" | "audio_speech" | "audio_music" | "transcriptions";
 
 /** Request identity is available before resolving any reference into a service URL. */
 export type HypiHubPreparedRequest = {
@@ -25,6 +25,7 @@ export type HypiHubRoute = (typeof hypiHubMappings)[number] & {
   readonly key: string;
   readonly returns: TypeRef;
   readonly media: "image" | "video" | "audio";
+  readonly lifecycle: "immediate" | "asynchronous";
   readonly supports?: (request: EndpointRequest) => EndpointSupport;
   readonly prepare: (constraints: CanonicalValue) => HypiHubPreparedRequest;
   readonly packageResult: (artifacts: readonly BlobRef[]) => StoredValue;
@@ -68,16 +69,24 @@ function hypiHubGenerationRejection(
   return undefined;
 }
 
+function isAsyncAudioMapping(mapping: GenerationWireMapping): boolean {
+  return mapping.result === "audio"
+    && mapping.capability.module.name === "@hypit/noiz-audio"
+    && mapping.capability.name !== "noiz-text-to-sound";
+}
+
 export const hypiHubRoutes: readonly HypiHubRoute[] = hypiHubMappings.map((mapping) => {
   const hasRequestLimits = mapping.capability.module.name === "@hypit/bach"
     || (mapping.capability.module.name === "@hypit/gpt-image"
       && mapping.capability.name === "gpt-image-2");
+  const asyncAudio = isAsyncAudioMapping(mapping);
   return {
     ...mapping,
     key: capabilityKey(mapping.capability),
     returns: mapping.result === "image" ? generationTypes.imageSet
       : mapping.result === "video" ? generationTypes.videoSet : generationTypes.audioSet,
     media: mapping.result,
+    lifecycle: mapping.result === "audio" && !asyncAudio ? "immediate" : "asynchronous",
     ...(hasRequestLimits ? {
       supports: (request: EndpointRequest) => {
         const reason = hypiHubGenerationRejection(mapping, request.constraints as unknown as GenerationRequest,
@@ -94,7 +103,9 @@ export const hypiHubRoutes: readonly HypiHubRoute[] = hypiHubMappings.map((mappi
       const hasReferences = Object.entries(mapping.fields).some(([port, field]) =>
         (field.as === "url" || field.as === "urlArray" || field.as === "itemObject")
           && (request.ports[port]?.length ?? 0) > 0);
-      const operation = mapping.result === "audio" ? "audio_speech" : mapping.result === "video" ? "videos"
+      const operation: HypiHubModelOperation = mapping.result === "audio"
+        ? (asyncAudio ? "audio_music" : "audio_speech")
+        : mapping.result === "video" ? "videos"
         : hasReferences ? "image_edits" : "images";
       return {
         model,
