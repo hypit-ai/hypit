@@ -51,7 +51,7 @@ Audio Track publishes `.audio` for Film and `.program` for declared tooling. Fil
 outputs explicitly. Using synchronized media in [Visual Track](visual-clips.md) does not select its
 audio, so include one intended voice path and avoid accidental duplication.
 
-## Generate sound effects and music (`@hypit/noiz-audio`)
+## Generate speech, sound effects and music (`@hypit/noiz-audio`)
 
 Generate audio when the project lacks a suitable recorded stem, rather than leaving silence or
 stretching unrelated clips. Normalize the generated `<id>.audio` through Media Operations before
@@ -59,6 +59,8 @@ placing it on `audio:Track`.
 
 | Surface | When to use | Key inputs |
 | --- | --- | --- |
+| `<noiz:Tts/>` | Text-to-speech with a Noiz voice ID (optional `v1`–`v3`, speed, emotion) | `text` (Text, ≤5000 chars), `voice-id`, optional `model-id`, `output-format`, `speed`, `target-lang` |
+| `<noiz:VoiceClone/>` | Zero-shot voice cloning from a reference audio sample | `text` (Text, ≤5000 chars), `voice-reference` (WAV/MP3/M4A Blob ≤25 MB), optional `denoise`, `model-id`, `speed` |
 | `<noiz:SoundEffect/>` | Short foley, transitions, UI/reveal hits, room ambience (1–30s) | `prompt` (Text, ≤500 chars), optional `duration`, `output-format` (`wav`\|`mp3`) |
 | `<noiz:Music/>` | Original vocal songs/themes (YuE2; requires lyrics, no instrumental-only mode) | `prompt` (Text), one of `lyrics` or `lyrics-prompt`, optional `abc`, `cot`, `vocal-gender` |
 | `<noiz:MusicCover/>` | Re-arranging or re-singing an existing audio track with new lyrics/style | `source-audio` (audio Blob ≤100 MB), `lyrics`, `melody-adherence` (`high`\|`main_melody`), `music-description` or `style` |

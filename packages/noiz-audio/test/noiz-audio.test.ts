@@ -11,9 +11,12 @@ import { sealText, textTypes } from "@hypit/text";
 import noizAudioPackage from "../src/activation.js";
 import {
   NOIZ_COVER_SOURCE_AUDIO_MAX_BYTES,
+  NOIZ_VOICE_CLONE_AUDIO_MAX_BYTES,
   decodeNoizMusicCoverSurface,
   decodeNoizMusicSurface,
   decodeNoizSoundEffectSurface,
+  decodeNoizTtsSurface,
+  decodeNoizVoiceCloneSurface,
   noizAudioEndpoints,
   noizAudioMarkupSurfaces,
   noizAudioModels,
@@ -67,8 +70,14 @@ const sampleAudioBlob: BlobRef = {
   mediaType: "audio/wav",
 };
 
-test("Noiz Audio declares the three exact audio capabilities and package activation", () => {
-  assert.deepEqual(noizAudioModels, ["noiz-text-to-sound", "noiz-yue2-music", "noiz-yue2-cover"]);
+test("Noiz Audio declares the five exact audio capabilities and package activation", () => {
+  assert.deepEqual(noizAudioModels, [
+    "noiz-text-to-sound",
+    "noiz-tts",
+    "noiz-voice-clone",
+    "noiz-yue2-music",
+    "noiz-yue2-cover",
+  ]);
   assert.ok(Object.values(noizAudioPorts).every((table) => table.result === "audio"));
   assert.ok(Object.values(noizAudioEndpoints).every(
     (endpoint) => endpoint.returns.name === generationTypes.audioSet.name,
@@ -77,7 +86,7 @@ test("Noiz Audio declares the three exact audio capabilities and package activat
   assert.equal(noizAudioPackage.modules[0]?.manifest.version, "1");
   assert.deepEqual(
     noizAudioMarkupSurfaces.map((surface) => surface.name),
-    ["sound-effect", "music", "music-cover"],
+    ["sound-effect", "tts", "voice-clone", "music", "music-cover"],
   );
 });
 
@@ -333,4 +342,68 @@ test("MusicCover surface binds audio and text ports and validates source audio",
     )),
     /must reference audio media/u,
   );
+});
+
+test("noiz-tts and noiz-voice-clone validate inputs and decode SVML surfaces", async () => {
+  const tts = sealNoizAudioRequest("noiz-tts", {
+    text: ["Hello from Noiz TTS"],
+    voiceId: ["95814add"],
+    modelId: ["v3"],
+    outputFormat: ["mp3"],
+    speed: [1.1],
+    qualityPreset: [3],
+    similarityEnh: [true],
+    trimSilence: [false],
+  });
+  assert.deepEqual(tts.ports.voiceId, ["95814add"]);
+  assert.deepEqual(tts.ports.modelId, ["v3"]);
+
+  assert.throws(
+    () => sealNoizAudioRequest("noiz-tts", { text: ["   "], voiceId: ["95814add"] }),
+    /non-whitespace/u,
+  );
+  assert.throws(
+    () => sealNoizAudioRequest("noiz-tts", { text: ["Hi"], voiceId: ["   "] }),
+    /non-whitespace/u,
+  );
+
+  const clone = sealNoizAudioRequest("noiz-voice-clone", {
+    text: ["Hello in a cloned voice"],
+    voiceReference: [{ role: "audio", artifact: sampleAudioBlob }],
+    denoise: [true],
+  });
+  assert.deepEqual(clone.ports.denoise, [true]);
+
+  assert.throws(
+    () => sealNoizAudioRequest("noiz-voice-clone", {
+      text: ["Hi"],
+      voiceReference: [{ role: "audio", artifact: { ...sampleAudioBlob, size: NOIZ_VOICE_CLONE_AUDIO_MAX_BYTES + 1 } }],
+    }),
+    /25 MB/u,
+  );
+  assert.throws(
+    () => sealNoizAudioRequest("noiz-voice-clone", {
+      text: ["Hi"],
+      voiceReference: [{ role: "audio", artifact: { ...sampleAudioBlob, mediaType: "audio/ogg" } }],
+    }),
+    /must use one of/u,
+  );
+
+  const refs = {
+    line: makeTextRef("line", "Welcome to the show."),
+    "ref.audio": makeBlobRef("ref.audio", "audio/wav", 2048),
+  };
+  const ttsSurface = await decodeNoizTtsSurface(makeContext(
+    `<noiz:Tts id="narrator" text={line} voice-id="95814add" model-id="v3" output-format="mp3" speed="1.1"/>`,
+    refs,
+  ));
+  assert.deepEqual(ttsSurface.components[0]!.outputs, { audio: "narrator.audio" });
+  assert.deepEqual(ttsSurface.components[0]!.inputs["text:text"], { kind: "record", id: "line" });
+
+  const cloneSurface = await decodeNoizVoiceCloneSurface(makeContext(
+    `<noiz:VoiceClone id="cloned" text={line} voice-reference={ref.audio} denoise="true" model-id="v2"/>`,
+    refs,
+  ));
+  assert.deepEqual(cloneSurface.components[0]!.outputs, { audio: "cloned.audio" });
+  assert.deepEqual(cloneSurface.components[0]!.inputs["voiceReference:artifact"], { kind: "record", id: "ref.audio" });
 });

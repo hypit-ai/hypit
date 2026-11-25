@@ -289,6 +289,35 @@ test("Noiz audio routes map text-to-sound immediately and YuE2 music/cover async
     response_format: "mp3",
   });
 
+  const tts = hypiHubRoutes.find((item) => item.capability.name === "noiz-tts")!;
+  assert.equal(tts.lifecycle, "immediate");
+  const ttsPrepared = tts.prepare({
+    ports: { text: ["Hello world"], voiceId: ["95814add"], modelId: ["v3"], outputFormat: ["mp3"], speed: [1.1] },
+  });
+  assert.equal(ttsPrepared.model, "noiz-tts");
+  assert.equal(ttsPrepared.operation, "audio_speech");
+  assert.deepEqual((await ttsPrepared.compile(resolveAudio)).input, {
+    input: "Hello world",
+    voice: "95814add",
+    model_id: "v3",
+    response_format: "mp3",
+    speed: 1.1,
+  });
+
+  const vc = hypiHubRoutes.find((item) => item.capability.name === "noiz-voice-clone")!;
+  assert.equal(vc.lifecycle, "immediate");
+  const vcAudio: BlobRef = { kind: "blob", resource: "res_hypihub-vc-1", size: 4, mediaType: "audio/wav" };
+  const vcPrepared = vc.prepare({
+    ports: { text: ["Cloned line"], voiceReference: [{ role: "audio", artifact: vcAudio }], denoise: [true] },
+  });
+  assert.equal(vcPrepared.model, "noiz-voice-clone");
+  assert.equal(vcPrepared.operation, "audio_speech");
+  assert.deepEqual((await vcPrepared.compile(resolveAudio)).input, {
+    input: "Cloned line",
+    reference_audio: ["data:audio/wav;base64,AQID"],
+    denoise: true,
+  });
+
   const music = hypiHubRoutes.find((item) => item.capability.name === "noiz-yue2-music")!;
   assert.equal(music.lifecycle, "asynchronous");
   const musicPrepared = music.prepare({
