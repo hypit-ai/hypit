@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
-import { mkdir, open, rm } from "node:fs/promises";
-import { dirname, extname, resolve } from "node:path";
+import { mkdir, open, readFile, rm } from "node:fs/promises";
+import { homedir } from "node:os";
+import { dirname, extname, join, resolve } from "node:path";
 import { Writable } from "node:stream";
 import { promisify } from "node:util";
 import { existsSync } from "node:fs";
@@ -12,6 +13,8 @@ import { captureBrowserExecutablePath } from "./browser.js";
 export { captureBrowserExecutablePath, installCaptureBrowser } from "./browser.js";
 
 export type { CaptureBrowserOptions } from "./browser.js";
+export { capturePlanRecipe, parseCapturePlan, planSelector, runCapturePlan } from "./plan.js";
+export type { CapturePlan, CapturePlanAction, CapturePlanOptions, CapturePlanReport, CapturePlanStep, CapturePlanStepReport } from "./plan.js";
 
 export type CaptureOptions = {
   readonly browser?: import("./browser.js").CaptureBrowserOptions;
@@ -21,7 +24,21 @@ export type CaptureOptions = {
   readonly timeoutMs?: number;
   /** Used to read the actual dimensions and duration after a recording finishes. */
   readonly ffprobePath?: string;
+  /**
+   * Login state exported as `{ cookies, origins }` (Playwright's storageState shape). Cookies are
+   * set before the task runs; each origin's localStorage is restored when a page of that origin loads.
+   */
+  readonly storageState?: string;
 };
+
+/**
+ * Named browser profiles live outside every project, so login state never becomes project material.
+ * `HYPIT_CAPTURE_PROFILES` relocates them.
+ */
+export function captureProfileDirectory(name: string): string {
+  if (!/^[\w.-]{1,80}$/u.test(name) || name.startsWith(".")) throw new Error("A capture profile name uses letters, digits, '.', '_' or '-'");
+  return join(process.env.HYPIT_CAPTURE_PROFILES ?? join(homedir(), ".cache", "hypit", "capture-profiles"), name);
+}
 
 export type CaptureOutput = {
   readonly kind: "image" | "video";
@@ -83,14 +100,34 @@ async function recordingInfo(path: string, ffprobe: string): Promise<Omit<Captur
 }
 
 /**
- * One browser for an authored capture task. The callback uses ordinary Puppeteer objects;
- * no website interpretation, Runtime, Build, or Source graph participates here.
+ * Headless Chrome names itself "HeadlessChrome" in the user agent and its client hints. Replace both
+ * together: a user agent whose client hints disagree (or are missing) is itself a bot signal, and
+ * verification widgets then refuse to load. A headed browser already reports itself normally.
  */
-export async function withCapture(
-  options: CaptureOptions,
-  task: (session: CaptureSession) => Promise<void>,
-  onOutput?: (output: CaptureOutput) => void,
-): Promise<readonly CaptureOutput[]> {
+async function ordinaryPage(browser: Browser, page: Page | null): Promise<void> {
+  if (page === null) return;
+  const native = await browser.userAgent();
+  if (!native.includes("HeadlessChrome/")) return;
+  // The same brands a headed Chrome of this version reports.
+  const full = /HeadlessChrome\/([\d.]+)/u.exec(native)?.[1] ?? "0.0.0.0", major = full.split(".")[0]!;
+  const brands = (version: (major: string, full: string) => string) => [
+    { brand: "Not:A-Brand", version: version("99", "99.0.0.0") },
+    { brand: "Chromium", version: version(major, full) },
+    { brand: "Google Chrome", version: version(major, full) },
+  ];
+  const platform = { darwin: "macOS", win32: "Windows", linux: "Linux" }[process.platform as string] ?? "Linux";
+  await page.setUserAgent({ userAgent: native.replace("HeadlessChrome/", "Chrome/"), userAgentMetadata: {
+    brands: brands((m) => m), fullVersionList: brands((_m, f) => f), platform, platformVersion: "",
+    architecture: process.arch.startsWith("arm") ? "arm" : "x86", model: "", mobile: false, bitness: "64",
+  } }).catch(() => {});
+}
+
+async function presentOrdinaryBrowser(browser: Browser): Promise<void> {
+  browser.on("targetcreated", (target) => { void target.page().then((page) => ordinaryPage(browser, page)).catch(() => {}); });
+  for (const page of await browser.pages()) await ordinaryPage(browser, page);
+}
+
+async function launchCaptureBrowser(options: CaptureOptions): Promise<Browser> {
   const launch = { ...options.launch };
   if ((launch.channel || launch.executablePath) && options.browser !== undefined) {
     throw new Error("Choose a managed capture browser or an explicit launch browser, not both");
@@ -100,10 +137,70 @@ export async function withCapture(
     if (!existsSync(launch.executablePath)) throw new Error(
       `Capture browser is not installed at ${launch.executablePath}. Run hypit capture install-browser with the same version and cache selection, or select an installed compatible browser.`);
   }
+  if (launch.userDataDir !== undefined) await mkdir(launch.userDataDir, { recursive: true, mode: 0o700 });
+  // Present the browser as an ordinary one (no automation switch or flag, no "HeadlessChrome" in
+  // the user agent). Sites otherwise serve bot-specific pages, and verification widgets refuse the
+  // person who is logging in by hand.
+  const ignored = launch.ignoreDefaultArgs === true ? true : [...(launch.ignoreDefaultArgs || []), "--enable-automation"];
   const browser = await puppeteer.launch({
     defaultViewport: { width: 1280, height: 720, deviceScaleFactor: 1 },
     ...launch,
+    ignoreDefaultArgs: ignored,
+    args: [...(launch.args ?? []), "--disable-blink-features=AutomationControlled"],
   });
+  await presentOrdinaryBrowser(browser);
+  if (options.storageState === undefined) return browser;
+  try {
+    const state = JSON.parse(await readFile(options.storageState, "utf8")) as {
+      cookies?: Array<Record<string, unknown>>;
+      origins?: Array<{ origin: string; localStorage?: Array<{ name: string; value: string }> }>;
+    };
+    const cookies = (state.cookies ?? []).map(({ name, value, domain, path, expires, httpOnly, secure, sameSite }) => ({
+      name, value, domain, path, httpOnly, secure, sameSite,
+      ...(typeof expires === "number" && expires > 0 ? { expires } : {}),
+    })) as Parameters<Browser["setCookie"]>;
+    if (cookies.length > 0) await browser.setCookie(...cookies);
+    if (state.origins?.length) {
+      // Pages created by the task restore their origin's storage before any page script runs.
+      const origins = JSON.stringify(state.origins);
+      const restore = `(() => { const entry = ${origins}.find((o) => o.origin === location.origin);
+        if (entry) for (const item of entry.localStorage ?? []) localStorage.setItem(item.name, item.value); })()`;
+      browser.on("targetcreated", (target) => { void target.page().then((page) => page?.evaluateOnNewDocument(restore)).catch(() => {}); });
+      for (const page of await browser.pages()) await page.evaluateOnNewDocument(restore);
+    }
+    return browser;
+  } catch (error) {
+    await browser.close();
+    throw new Error(`Could not apply login state ${options.storageState}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+  }
+}
+
+/**
+ * Open a visible browser on a persistent profile so a person can log in themselves; resolves when
+ * they close the window. Capture commands later reuse the profile's session without seeing a password.
+ */
+export async function openCaptureLogin(options: CaptureOptions & { readonly profileDirectory: string }, url: string): Promise<void> {
+  const { profileDirectory, ...rest } = options;
+  const browser = await launchCaptureBrowser({ ...rest, launch: { ...rest.launch, headless: false, defaultViewport: null,
+    userDataDir: profileDirectory } });
+  const closed = new Promise<void>((done) => browser.once("disconnected", () => done()));
+  try {
+    const [page] = await browser.pages();
+    await (page ?? await browser.newPage()).goto(url, { waitUntil: "domcontentloaded" });
+  } catch (error) { await browser.close(); throw error; }
+  await closed;
+}
+
+/**
+ * One browser for an authored capture task. The callback uses ordinary Puppeteer objects;
+ * no website interpretation, Runtime, Build, or Source graph participates here.
+ */
+export async function withCapture(
+  options: CaptureOptions,
+  task: (session: CaptureSession) => Promise<void>,
+  onOutput?: (output: CaptureOutput) => void,
+): Promise<readonly CaptureOutput[]> {
+  const browser = await launchCaptureBrowser(options);
   const outputs: CaptureOutput[] = [];
   const recordings = new Set<CaptureRecording>();
   const publish = (output: CaptureOutput): CaptureOutput => {
@@ -113,6 +210,7 @@ export async function withCapture(
   };
   try {
     const page = await browser.newPage();
+    await ordinaryPage(browser, page);
     if (options.timeoutMs !== undefined) {
       page.setDefaultTimeout(options.timeoutMs);
       page.setDefaultNavigationTimeout(options.timeoutMs);
