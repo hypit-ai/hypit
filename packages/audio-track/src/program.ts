@@ -88,8 +88,8 @@ function realizedClips(
   assertAudioClipSpec(spec);
   assertTemporalWindowFor(window, { subjectId: spec.id, timeline: timeline });
   const source = sourceFacts(media);
-  const fadeInSamples = temporalDurationInSamples(spec.mix.fadeIn, timeline);
-  const fadeOutSamples = temporalDurationInSamples(spec.mix.fadeOut, timeline);
+  const fadeInSamples = fadeSamples(spec.mix.fadeIn, timeline, window.span.startFrame, 1);
+  const fadeOutSamples = fadeSamples(spec.mix.fadeOut, timeline, window.span.endFrameExclusive, -1);
   const addition = {
     id: window.id,
     subjectId: spec.id,
@@ -157,6 +157,19 @@ export function assertAudioTrackProgram(value: AudioTrackProgram): void {
       && Number.isSafeInteger(clip.mix.fadeOutSamples) && clip.mix.fadeOutSamples >= 0,
     `Audio Clip ${clip.id} mix is invalid.`);
   }
+}
+
+/**
+ * A fade in frames spans whole frames from the Window edge it starts at. Converting it as a free
+ * duration can round one sample longer than the same frames inside the Window at 30000/1001.
+ */
+function fadeSamples(duration: TemporalDuration, timeline: Timeline, edgeFrame: number, direction: 1 | -1): number {
+  const otherFrame = duration.unit === "frames" ? edgeFrame + direction * duration.value : undefined;
+  if (otherFrame === undefined || otherFrame < 0 || otherFrame > timeline.frameCount) {
+    return temporalDurationInSamples(duration, timeline);
+  }
+  return Math.abs(timelineFrameSampleBoundary(timeline, otherFrame, 48_000)
+    - timelineFrameSampleBoundary(timeline, edgeFrame, 48_000));
 }
 
 function terminalClip(clip: AudioClipProgram, timeline: Timeline): AudioClip {

@@ -211,6 +211,27 @@ test("source bounds and fades quantize once into the same sample domain", () => 
   })), /fade exceeds its Window/u);
 });
 
+test("a fade in frames over a whole Clip fits wherever the Clip starts at 30000/1001", () => {
+  const ntsc = sealTimeline({ id: "ntsc-space", frameCount: 300, frameRate: { numerator: 30_000, denominator: 1_001 } });
+  const ntscSemantic = timelineFixture(ntsc, { narrativeId: "ntsc-narrative", segments: [{ id: "line", frameCount: 300 }], anchors: [] });
+  const sixteen = { unit: "frames" as const, value: 16 };
+  for (const startFrame of [0, 1, 2, 3]) {
+    const clip = spec({
+      mix: { gain: 1, fadeIn: sixteen, fadeOut: sixteen },
+      projection: {
+        start: { ref: "absolute", at: { unit: "frames", value: startFrame } },
+        end: { ref: "absolute", at: { unit: "frames", value: startFrame + 16 } },
+      },
+    });
+    const track = renderAudioTrack(ntsc, finalizeAudioTrack(
+      appendProgramAudioItem(createAudioTrackSet(), header, ntscSemantic, media("sting", 48_000), clip), header));
+    const rendered = track.clips[0]!;
+    const length = rendered.target.endSampleExclusive - rendered.target.startSample;
+    assert.equal(rendered.fadeInSamples, length, `fade-in from frame ${startFrame}`);
+    assert.equal(rendered.fadeOutSamples, length, `fade-out from frame ${startFrame}`);
+  }
+});
+
 test("piecewise audio maps preserve silent gaps while execution keeps one Clip-global fade clock", () => {
   const second = { unit: "seconds" as const, numerator: 1, denominator: 1 };
   const seconds = (value: number): TemporalDuration => ({ unit: "seconds", numerator: value, denominator: 1 });
