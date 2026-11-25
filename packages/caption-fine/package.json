@@ -38,7 +38,7 @@
     "@hypit/temporal": "workspace:*",
     "@hypit/script": "workspace:*",
     "@hypit/browser-capture": "workspace:*",
-    "sharp": "0.35.4"
+    "sharp": "0.35.5"
   },
   "dependencies": {
     "@hypit/caption": "workspace:^0.1.0",
