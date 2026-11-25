@@ -11,8 +11,14 @@ import "./library.css";
 import "./nle.css";
 import "./studio.css";
 
-const selectedTheme = localStorage.getItem("hypit:theme");
-if (selectedTheme === "dark") document.documentElement.dataset.theme = "dark";
+const scheme = matchMedia("(prefers-color-scheme: dark)");
+const syncTheme = () => {
+  const override = localStorage.getItem("hypit:theme");
+  document.documentElement.dataset.theme =
+    override === "dark" || override === "light" ? override : scheme.matches ? "dark" : "light";
+};
+syncTheme();
+scheme.addEventListener("change", syncTheme);
 const root = document.querySelector("#studio");
 if (root === null) throw new Error("NLE Studio root is missing.");
 createRoot(root).render(<StrictMode><MotionConfig reducedMotion="user"><NotificationScope><Studio/></NotificationScope></MotionConfig></StrictMode>);
