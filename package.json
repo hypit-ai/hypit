@@ -1,6 +1,6 @@
 {
   "name": "@hypit/hypit",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "homepage": "https://hypit.ai",
   "repository": {
     "type": "git",
@@ -333,7 +333,7 @@
     "@hypit/speech-estimate": "workspace:^0.1.1",
     "@hypit/media-local": "workspace:^0.2.1",
     "@hypit/runtime-local": "workspace:^0.1.1",
-    "@hypit/video": "workspace:^0.2.3",
+    "@hypit/video": "workspace:^0.2.4",
     "@hypit/studio": "workspace:^0.2.1",
     "@hypit/whisperx": "workspace:^0.2.0",
     "@hypit/yt-dlp": "workspace:^0.2.0",
