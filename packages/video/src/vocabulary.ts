@@ -245,8 +245,10 @@ function moduleSpecifier(surface: SurfaceListing): string {
 }
 
 function sourceImport(surface: SurfaceListing, vocabulary: SurfaceVocabulary): string {
-  const prefixedTag = vocabulary.example.match(/<([A-Za-z_][A-Za-z0-9_.-]*):([A-Za-z_][A-Za-z0-9_.-]*)\b/u);
-  const alias = prefixedTag?.[2] === surface.tag ? prefixedTag[1] : undefined;
+  // An example may open with another package's element (a Motion before its Track), so use the
+  // prefix of this Surface's own tag wherever it appears.
+  const alias = [...vocabulary.example.matchAll(/<([A-Za-z_][A-Za-z0-9_.-]*):([A-Za-z_][A-Za-z0-9_.-]*)\b/gu)]
+    .find((match) => match[2] === surface.tag)?.[1];
   return alias === undefined
     ? `<import from="${moduleSpecifier(surface)}"/>`
     : `<import as="${alias}" from="${moduleSpecifier(surface)}"/>`;
