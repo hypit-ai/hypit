@@ -83,6 +83,27 @@ test("download resolves its locked runtime from an installed package outside the
   assert.equal(calls, 3);
 });
 
+test("a link serving one muxed file is remuxed into the target container", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-remux-yt-dlp-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  t.mock.method(childProcess, "spawnSync", () => ({ status: 0, stderr: "", stdout: "2026.08.19\n" }));
+  t.mock.method(childProcess, "execFile", (command: string, ...rest: unknown[]) => {
+    const callback = (typeof rest.at(-1) === "function" ? rest.at(-1) : undefined) as ((err: Error | null, stdout: string, stderr: string) => void) | undefined;
+    const args = (Array.isArray(rest[0]) ? rest[0] : []) as string[];
+    if (command !== "ffmpeg") {
+      // The link offers only one muxed MP4 format, so `b` wins and no merge runs.
+      const remux = args.includes("--remux-video") ? args[args.indexOf("--remux-video") + 1]! : "mp4";
+      writeFileSync(args[args.indexOf("--output") + 1]!.replace("%(ext)s", remux), `${remux} container`);
+    }
+    callback?.(null, "", "");
+  });
+  syncBuiltinESMExports();
+  t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+  const target = join(directory, "reference.mkv");
+  await downloadVideo("https://example.test/video", target);
+  assert.equal(await readFile(target, "utf8"), "mkv container");
+});
+
 test("the pinned yt-dlp project belongs to its behavior package", () => {
   const project = fileURLToPath(new URL("../runtime", import.meta.url));
   assert.ok(existsSync(join(project, "pyproject.toml")));

@@ -49,7 +49,8 @@ export function isVideoUrl(value: string): boolean {
  * single file resolves to a video-only stream, and a video with no audio has no transcript. H.264 at
  * 1080 is preferred rather than required; a `height<=1080` filter would refuse a link that offers
  * nothing under the bound. `--no-playlist` keeps a link inside a playlist from fetching the playlist.
- * The container follows the target's extension.
+ * The container follows the target's extension. The merge format applies only when two streams are
+ * muxed; a site serving one muxed file resolves to `b`, so that file is remuxed into the container.
  */
 export async function downloadVideo(url: string, target: string, options: { readonly signal?: AbortSignal } = {}): Promise<void> {
   const container = extname(target).slice(1).toLowerCase();
@@ -72,6 +73,7 @@ export async function downloadVideo(url: string, target: string, options: { read
         "--no-playlist", "--no-progress", "--quiet",
         "--format", "bv*+ba/b",
         "--merge-output-format", container,
+        "--remux-video", container,
         "--format-sort", "res:1080,vcodec:h264",
         "--output", join(work, "video.%(ext)s"),
         url,
